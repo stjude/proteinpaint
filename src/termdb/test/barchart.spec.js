@@ -77,8 +77,62 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
+tape('single barchart, filtered', function(test) {
+	test.timeoutAfter(1000)
+
+	runpp({
+		state: {
+			termfilter: {
+				show_top_ui: true,
+				inclusions: [
+					[
+						{
+							term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+							values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+						},
+						{
+							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							values: [{ key: 'Male', label: 'Male' }]
+						}
+					],
+					[
+						{
+							term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
+							ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+						}
+					]
+				]
+			},
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: {
+							id: 'sex'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		test.pass('---  work in progress ---')
+		test.end()
+	}
+})
+
 tape('single chart, with overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, inclusions: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -291,7 +345,7 @@ let barDiv
 tape('click to add numeric, condition term filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, inclusions: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -352,12 +406,12 @@ tape('click to add numeric, condition term filter', function(test) {
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		test.equal(
-			termfilter.terms && termfilter.terms.length,
+			termfilter.inclusions && termfilter.inclusions[0].length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.terms[0],
+			termfilter.inclusions[0][0],
 			{
 				term: config.term.term,
 				ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
@@ -372,7 +426,7 @@ tape('click to add numeric, condition term filter', function(test) {
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		delete q.hiddenValues
 		test.deepEqual(
-			termfilter.terms[1],
+			termfilter.inclusions[0][1],
 			Object.assign(
 				{
 					term: config.term2.term,
@@ -398,7 +452,7 @@ tape('click to add numeric, condition term filter', function(test) {
 
 /*
 tape('click to add condition child term filter', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, inclusions: [] }
 	runpp({
 		termfilter,
 		plot2restore: {
@@ -433,23 +487,23 @@ tape('click to add condition child term filter', function(test) {
 	function testTermValues(plot, clickedData) {
 		setTimeout(() => {
 			test.equal(
-				termfilter.terms && termfilter.terms.length,
+				termfilter.inclusions && termfilter.inclusions.length,
 				1,
 				'should create one tvslst filter when a child bar is clicked'
 			)
 			test.equal(
-				termfilter.terms[0].bar_by_children,
+				termfilter.inclusions[0].bar_by_children,
 				1,
 				'should create a tvslst filter with bar_by_children set to true'
 			)
-			test.equal(termfilter.terms[0].value_by_computable_grade, 1, 'filter should support value_by_computable_grade')
+			test.equal(termfilter.inclusions[0].value_by_computable_grade, 1, 'filter should support value_by_computable_grade')
 			test.end()
 		}, 200)
 	}
 })
 
 tape('click to add condition grade and child term filter', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, inclusions: [] }
 	runpp({
 		termfilter,
 		plot2restore: {
@@ -485,14 +539,14 @@ tape('click to add condition grade and child term filter', function(test) {
 	function testTermValues(plot, clickedData) {
 		setTimeout(() => {
 			test.equal(
-				termfilter.terms && termfilter.terms.length,
+				termfilter.inclusions && termfilter.inclusions.length,
 				1,
 				'should create one tvslst filter when a grade and child bar/overlay is clicked'
 			)
-			test.true('grade_and_child' in termfilter.terms[0], 'should create a tvslst filter with a grade_and_child')
-			test.true(Array.isArray(termfilter.terms[0].grade_and_child), 'filter term.grade_and_child should be an array')
-			if (Array.isArray(termfilter.terms[0].grade_and_child)) {
-				const filter = termfilter.terms[0].grade_and_child[0]
+			test.true('grade_and_child' in termfilter.inclusions[0], 'should create a tvslst filter with a grade_and_child')
+			test.true(Array.isArray(termfilter.inclusions[0].grade_and_child), 'filter term.grade_and_child should be an array')
+			if (Array.isArray(termfilter.inclusions[0].grade_and_child)) {
+				const filter = termfilter.inclusions[0].grade_and_child[0]
 				test.notEqual(filter.grade, filter.child_id, 'filter grade and child_id should be different')
 				test.equal(typeof filter.grade, 'number', 'filter grade should be a number')
 				test.equal(typeof filter.child_id, 'string', 'filter grade should be a string')
@@ -504,7 +558,7 @@ tape('click to add condition grade and child term filter', function(test) {
 */
 /*
 tape('single chart, genotype overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, inclusions: [] }
 	runpp({
 		termfilter,
 		plot2restore: {

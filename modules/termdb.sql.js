@@ -29,7 +29,34 @@ get_label4key
 
 */
 
-function makesql_by_tvsfilter(tvslst, ds) {
+function makesql_filter_union(arrOfTvslst, ds, CTEname, values) {
+	if (!arrOfTvslst || !arrOfTvslst.length) return
+	const filters = []
+	let i = 0
+	for (const tvslst of arrOfTvslst) {
+		if (!tvslst.length) continue
+		const filter = makesql_by_tvsfilter(tvslst, ds, i++)
+		if (filter) {
+			values.push(...filter.values)
+			filters.push(filter)
+		}
+	}
+	if (filters.length < 2) return filters[0]
+	filters.push({
+		filters: `${CTEname} AS (
+			${filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\nUNION\n')}
+		)`,
+		CTEname
+	})
+
+	return {
+		filters: filters.map(f => f.filters).join(',\n'),
+		values,
+		CTEname
+	}
+}
+
+function makesql_by_tvsfilter(tvslst, ds, i = '') {
 	/*
 .tvslst[{}]
 	optional
@@ -68,7 +95,7 @@ returns:
 		}
 	}
 
-	const CTEname = 'filtered'
+	const CTEname = 'filter_' + i
 	return {
 		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
 		values,
@@ -309,7 +336,9 @@ opts{} options to tweak the query, see const default_opts = below
 							  or +" ORDER BY ..." + " LIMIT ..."
 
 */
-	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (typeof q.inclusions == 'string') q.inclusions = JSON.parse(decodeURIComponent(q.inclusions))
+	else if (typeof q.tvslst == 'string') q.inclusions = JSON.parse(decodeURIComponent(q.tvslst))
+	if (typeof q.exclusions == 'string') q.exclusions = JSON.parse(decodeURIComponent(q.exclusions))
 
 	// do not break code that still uses the opts.groupby key-value
 	// can take this out once all calling code has been migrated
@@ -323,15 +352,16 @@ opts{} options to tweak the query, see const default_opts = below
 		endclause: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
-	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
-	const values = filter ? filter.values.slice() : []
+	const values = []
+	const inclusions = makesql_filter_union(q.inclusions, q.ds, 'inclusions', values)
+	//const exclusions = makesql_filter_union(q.exclusions, q.ds, 'exclusions', values)
 
-	const CTE0 = get_term_cte(q, values, 0, filter)
-	const CTE1 = get_term_cte(q, values, 1, filter)
-	const CTE2 = get_term_cte(q, values, 2, filter)
+	const CTE0 = get_term_cte(q, values, 0, inclusions)
+	const CTE1 = get_term_cte(q, values, 1, inclusions)
+	const CTE2 = get_term_cte(q, values, 2, inclusions)
 
 	const statement = `WITH
-		${filter ? filter.filters + ',' : ''}
+		${inclusions ? inclusions.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
@@ -346,12 +376,12 @@ opts{} options to tweak the query, see const default_opts = below
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}
+		${inclusions ? 'WHERE t1.sample in ' + inclusions.CTEname : ''}
 		${opts.endclause}`
 	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
-	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter: inclusions }
 }
 
 /*
@@ -817,7 +847,7 @@ at a numeric barchart
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
-		${excludevalues.lenth ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}`
+		${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}`
 	values.push(term.id)
 
 	const s = ds.cohort.db.connection.prepare(string)

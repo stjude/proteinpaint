@@ -148,8 +148,16 @@ class TdbPlot {
 			}
 		}
 
-		if (state.termfilter && state.termfilter.terms && state.termfilter.terms.length) {
-			params.push('tvslst=' + encodeURIComponent(JSON.stringify(tvslst_to_parameter(state.termfilter.terms))))
+		if (state.termfilter) {
+			if (state.termfilter.terms && state.termfilter.terms.length) {
+				params.push('tvslst=' + encodeArrOfTvslst(state.termfilter.terms))
+			}
+			if (state.termfilter.inclusions && state.termfilter.inclusions.length) {
+				params.push('inclusions=' + encodeArrOfTvslst(state.termfilter.inclusions))
+			}
+			if (state.termfilter.exclusions && state.termfilter.exclusions.length) {
+				params.push('exclusions=' + encodeArrOfTvslst(state.termfilter.exclusions))
+			}
 		}
 
 		return '?' + params.join('&')
@@ -270,28 +278,34 @@ export function plotConfig(opts) {
 	return rx.copyMerge(config, opts)
 }
 
-function tvslst_to_parameter(terms) {
+function encodeArrOfTvslst(arrOfTvslst) {
+	return encodeURIComponent(JSON.stringify(arrOfTvslst.map(arrOfTvslst_to_parameter)))
+}
+
+function arrOfTvslst_to_parameter(tvslst) {
+	return tvslst.map(tvslst_to_parameter)
+}
+
+function tvslst_to_parameter(tv) {
 	// apply on the terms[] array of a group
 	// TODO and/or between multiple terms
-	return terms.map(i => {
-		return {
-			term: {
-				id: i.term.id,
-				iscategorical: i.term.iscategorical,
-				isfloat: i.term.isfloat,
-				isinteger: i.term.isinteger,
-				iscondition: i.term.iscondition
-			},
-			// must return original values[{key,label}] to keep the validator function happy on both client/server
-			values: i.values,
-			ranges: i.ranges,
-			isnot: i.isnot,
-			bar_by_grade: i.bar_by_grade,
-			bar_by_children: i.bar_by_children,
-			value_by_max_grade: i.value_by_max_grade,
-			value_by_most_recent: i.value_by_most_recent,
-			value_by_computable_grade: i.value_by_computable_grade,
-			grade_and_child: i.grade_and_child
-		}
-	})
+	return {
+		term: {
+			id: tv.term.id,
+			iscategorical: tv.term.iscategorical,
+			isfloat: tv.term.isfloat,
+			isinteger: tv.term.isinteger,
+			iscondition: tv.term.iscondition
+		},
+		// must return original values[{key,label}] to keep the validator function happy on both client/server
+		values: tv.values,
+		ranges: tv.ranges,
+		isnot: tv.isnot,
+		bar_by_grade: tv.bar_by_grade,
+		bar_by_children: tv.bar_by_children,
+		value_by_max_grade: tv.value_by_max_grade,
+		value_by_most_recent: tv.value_by_most_recent,
+		value_by_computable_grade: tv.value_by_computable_grade,
+		grade_and_child: tv.grade_and_child
+	}
 }

@@ -307,16 +307,20 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
   sets request-specific value and filter functions
   non-condition unannotated values will be processed but tracked separately
 */
-	if (q.tvslst) {
+	if (!q.inclusions && q.tvslst) q.inclusions = q.tvslst
+	for (const filterType of ['inclusions', 'exclusions']) {
+		if (!q[filterType]) continue
 		// for categorical terms, must convert values to valueset
-		for (const tv of q.tvslst) {
-			sjlife.setAnnoByTermId(tv.term.id)
-			if (tv.term.iscategorical) {
-				tv.valueset = new Set(tv.values.map(i => i.key))
+		for (const tvslst of q[filterType]) {
+			for (const tv of tvslst) {
+				sjlife.setAnnoByTermId(tv.term.id)
+				if (tv.term.iscategorical) {
+					tv.valueset = new Set(tv.values.map(i => i.key))
+				}
 			}
-		}
-		inReqs.filterFxn = row => {
-			return sample_match_termvaluesetting(row, q.tvslst)
+			inReqs.filterFxn = row => {
+				return sample_match_termvaluesetting(row, q[filterType])
+			}
 		}
 	}
 
@@ -525,80 +529,76 @@ arguments:
 	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
 }
 
-function sample_match_termvaluesetting(row, tvslst) {
-	/* for AND, require all terms to match */
+function sample_match_termvaluesetting(row, arrOftTvslst) {
+	for (const tvslst of arrOftTvslst) {
+		let numberofmatchedterms = 0
 
-	let usingAND = true
+		/* for AND, require all terms to match */
+		for (const t of tvslst) {
+			const samplevalue = row[t.term.id]
 
-	let numberofmatchedterms = 0
+			let thistermmatch
 
-	for (const t of tvslst) {
-		const samplevalue = row[t.term.id]
-
-		let thistermmatch
-
-		if (t.term.iscategorical) {
-			if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
-			thistermmatch = t.valueset.has(samplevalue)
-		} else if (t.term.isinteger || t.term.isfloat) {
-			if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
-			for (const range of t.ranges) {
-				if (range.value != undefined) {
-					thistermmatch = samplevalue == range.value
-				} else {
-					// actual range
-					if (t.term.values) {
-						const v = t.term.values[samplevalue.toString()]
-						if (v && v.uncomputable) {
-							continue
+			if (t.term.iscategorical) {
+				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				thistermmatch = t.valueset.has(samplevalue)
+			} else if (t.term.isinteger || t.term.isfloat) {
+				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				for (const range of t.ranges) {
+					if (range.value != undefined) {
+						thistermmatch = samplevalue == range.value
+					} else {
+						// actual range
+						if (t.term.values) {
+							const v = t.term.values[samplevalue.toString()]
+							if (v && v.uncomputable) {
+								continue
+							}
 						}
-					}
-					let left, right
-					if (range.startunbounded) {
-						left = true
-					} else if ('start' in range) {
-						if (range.startinclusive) {
-							left = samplevalue >= range.start
-						} else {
-							left = samplevalue > range.start
+						let left, right
+						if (range.startunbounded) {
+							left = true
+						} else if ('start' in range) {
+							if (range.startinclusive) {
+								left = samplevalue >= range.start
+							} else {
+								left = samplevalue > range.start
+							}
 						}
-					}
-					if (range.stopunbounded) {
-						right = true
-					} else if ('stop' in range) {
-						if (range.stopinclusive) {
-							right = samplevalue <= range.stop
-						} else {
-							right = samplevalue < range.stop
+						if (range.stopunbounded) {
+							right = true
+						} else if ('stop' in range) {
+							if (range.stopinclusive) {
+								right = samplevalue <= range.stop
+							} else {
+								right = samplevalue < range.stop
+							}
 						}
+						thistermmatch = left && right
 					}
-					thistermmatch = left && right
+					if (thistermmatch) break
 				}
-				if (thistermmatch) break
+			} else if (t.term.iscondition) {
+				const key = getPrecomputedKey(t)
+				const anno = samplevalue && samplevalue[key]
+				if (anno) {
+					thistermmatch = Array.isArray(anno)
+						? t.values.find(d => anno.includes(d.key))
+						: t.values.find(d => d.key == anno)
+				}
+			} else {
+				throw 'unknown term type'
 			}
-		} else if (t.term.iscondition) {
-			const key = getPrecomputedKey(t)
-			const anno = samplevalue && samplevalue[key]
-			if (anno) {
-				thistermmatch = Array.isArray(anno)
-					? t.values.find(d => anno.includes(d.key))
-					: t.values.find(d => d.key == anno)
+
+			if (t.isnot) {
+				thistermmatch = !thistermmatch
 			}
-		} else {
-			throw 'unknown term type'
+			if (thistermmatch) numberofmatchedterms++
 		}
 
-		if (t.isnot) {
-			thistermmatch = !thistermmatch
-		}
-		if (thistermmatch) numberofmatchedterms++
+		// if one tvslst is matched, then sample is okay
+		if (numberofmatchedterms == tvslst.length) return true
 	}
-
-	if (usingAND) {
-		return numberofmatchedterms == tvslst.length
-	}
-	// using OR
-	return numberofmatchedterms > 0
 }
 
 function boxplot_getvalue(lst) {

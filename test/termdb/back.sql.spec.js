@@ -36,10 +36,12 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Male' }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Male' }]
+					}
+				]
 			]
 		},
 		'categorical filter'
@@ -50,10 +52,12 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
-					ranges: [{ start: 0, stop: 5 }]
-				}
+				[
+					{
+						term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+						ranges: [{ start: 0, stop: 5 }]
+					}
+				]
 			]
 		},
 		'numerical filter, normal range of (start,stop)'
@@ -64,20 +68,22 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: {
-						id: 'hrtavg',
-						name: 'Heart',
-						isfloat: true,
-						// must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
-						values: {
-							'0': { label: 'Not exposed', uncomputable: true },
-							'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
-							'-9999': { label: 'Unknown treatment record', uncomputable: true }
-						}
-					},
-					ranges: [{ startunbounded: true, stop: 1000, stopinclusive: true }] // range includes special values and should be excluded
-				}
+				[
+					{
+						term: {
+							id: 'hrtavg',
+							name: 'Heart',
+							isfloat: true,
+							// must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
+							values: {
+								'0': { label: 'Not exposed', uncomputable: true },
+								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
+								'-9999': { label: 'Unknown treatment record', uncomputable: true }
+							}
+						},
+						ranges: [{ startunbounded: true, stop: 1000, stopinclusive: true }] // range includes special values and should be excluded
+					}
+				]
 			]
 		},
 		'numerical filter, one-side-unbound range with excluded values'
@@ -88,20 +94,22 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: {
-						id: 'hrtavg',
-						name: 'Heart',
-						isfloat: true,
-						values: {
-							// as above
-							'0': { label: 'Not exposed', uncomputable: true },
-							'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
-							'-9999': { label: 'Unknown treatment record', uncomputable: true }
-						}
-					},
-					ranges: [{ value: 0 }, { start: 100, stop: 1000 }]
-				}
+				[
+					{
+						term: {
+							id: 'hrtavg',
+							name: 'Heart',
+							isfloat: true,
+							values: {
+								// as above
+								'0': { label: 'Not exposed', uncomputable: true },
+								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
+								'-9999': { label: 'Unknown treatment record', uncomputable: true }
+							}
+						},
+						ranges: [{ value: 0 }, { start: 100, stop: 1000 }]
+					}
+				]
 			]
 		},
 		'numerical filter, combining {value} and normal range'
@@ -112,10 +120,12 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'hrtavg', name: 'Heart', isfloat: true }, // heart radiation
-					ranges: [{ value: 0 }] // not radiated
-				}
+				[
+					{
+						term: { id: 'hrtavg', name: 'Heart', isfloat: true }, // heart radiation
+						ranges: [{ value: 0 }] // not radiated
+					}
+				]
 			]
 		},
 		'numerical filter, using a special category'
@@ -126,12 +136,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Asthma', name: 'Asthma', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 3, label: '3' }],
-					value_by_max_grade: true
-				}
+				[
+					{
+						term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 3, label: '3' }],
+						value_by_max_grade: true
+					}
+				]
 			]
 		},
 		'condition filter, leaf, by maximum grade'
@@ -142,12 +154,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Asthma', name: 'Asthma', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 2, label: '2' }],
-					value_by_most_recent: true
-				}
+				[
+					{
+						term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 2, label: '2' }],
+						value_by_most_recent: true
+					}
+				]
 			]
 		},
 		'condition filter, leaf, by most recent grade'
@@ -158,12 +172,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Asthma', name: 'Asthma', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 2, label: '2' }],
-					value_by_computable_grade: true
-				}
+				[
+					{
+						term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 2, label: '2' }],
+						value_by_computable_grade: true
+					}
+				]
 			]
 		},
 		'condition filter, leaf, by computable grade'
@@ -174,12 +190,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 2, label: '2' }],
-					value_by_max_grade: true
-				}
+				[
+					{
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 2, label: '2' }],
+						value_by_max_grade: true
+					}
+				]
 			]
 		},
 		'condition filter, non-leaf, by maximum grade'
@@ -190,12 +208,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 2, label: '2' }],
-					value_by_most_recent: true
-				}
+				[
+					{
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 2, label: '2' }],
+						value_by_most_recent: true
+					}
+				]
 			]
 		},
 		'condition filter, non-leaf, by most-recent grade'
@@ -206,12 +226,14 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
-					bar_by_children: true,
-					value_by_computable_grade: true,
-					values: [{ key: 'Cardiac dysrhythmia', label: 'Cardiac dysrhythmia' }]
-				}
+				[
+					{
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						bar_by_children: true,
+						value_by_computable_grade: true,
+						values: [{ key: 'Cardiac dysrhythmia', label: 'Cardiac dysrhythmia' }]
+					}
+				]
 			]
 		},
 		'condition filter, non-leaf, by sub-condition'
@@ -222,20 +244,22 @@ tape('filters applied to categorical term', function(test) {
 		{
 			term1: 'diaggrp',
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Female' }]
-				},
-				{
-					term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
-					ranges: [{ start: 0, stop: 8 }]
-				},
-				{
-					term: { id: 'Asthma', name: 'Asthma', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 3, label: '3' }],
-					value_by_max_grade: true
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Female' }]
+					},
+					{
+						term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+						ranges: [{ start: 0, stop: 8 }]
+					},
+					{
+						term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 3, label: '3' }],
+						value_by_max_grade: true
+					}
+				]
 			]
 		},
 		'combined filtered results'
@@ -295,14 +319,16 @@ tape('categorical term1', function(test) {
 			term2: 'Asthma',
 			term2_q: { value_by_most_recent: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Female' }]
-				},
-				{
-					term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
-					ranges: [{ start: 1000, stop: 5000 }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Female' }]
+					},
+					{
+						term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
+						ranges: [{ start: 1000, stop: 5000 }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by diagnosis groups, leaf condition overlay'
@@ -338,10 +364,12 @@ tape('numerical term1', function(test) {
 			term1: 'agedx',
 			term1_q: termjson['agedx'].bins.less,
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'sex', iscategorical: true },
-					values: [{ key: 'Female', label: 'Female' }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'sex', iscategorical: true },
+						values: [{ key: 'Female', label: 'Female' }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by age of diagnosis, no overlay'
@@ -398,14 +426,16 @@ tape('numerical term1', function(test) {
 			term2: 'Asthma',
 			term2_q: { value_by_most_recent: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Female' }]
-				},
-				{
-					term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
-					ranges: [{ start: 1000, stop: 5000 }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Female' }]
+					},
+					{
+						term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
+						ranges: [{ start: 1000, stop: 5000 }]
+					}
+				]
 			]
 		},
 		'sample counts by age of diagnosis, filtered, condition overlay by most recent grade'
@@ -463,10 +493,12 @@ tape('leaf condition term1', function(test) {
 			term1: 'Asthma',
 			term1_q: { value_by_max_grade: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Male' }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Male' }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by Asthma condition max-grade, no overlay'
@@ -553,14 +585,16 @@ tape('leaf condition term1', function(test) {
 			term2: 'Hearing loss',
 			term2_q: { value_by_max_grade: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Female' }]
-				},
-				{
-					term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
-					ranges: [{ start: 0, stop: 8 }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Female' }]
+					},
+					{
+						term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+						ranges: [{ start: 0, stop: 8 }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade'
@@ -600,10 +634,12 @@ tape('non-leaf condition term1', function(test) {
 			term1: 'Cardiovascular System',
 			term1_q: { value_by_max_grade: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Male' }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Male' }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by Cardiovascular System condition max-grade, no overlay'
@@ -633,10 +669,12 @@ tape('non-leaf condition term1', function(test) {
 			term1: 'Arrhythmias',
 			term1_q: { value_by_computable_grade: 1, bar_by_children: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Male' }]
-				}
+				[
+					{
+						term: { id: 'sex', name: 'sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Male' }]
+					}
+				]
 			]
 		},
 		'filtered sample counts by Arrhythmias condition by children, no overlay'
@@ -714,20 +752,22 @@ tape('non-leaf condition term1', function(test) {
 			term2: 'Hearing loss',
 			term2_q: { value_by_max_grade: 1, bar_by_grade: 1 },
 			tvslst: [
-				{
-					term: { id: 'sex', name: 'Sex', iscategorical: true },
-					values: [{ key: 'Male', label: 'Female' }]
-				},
-				{
-					term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
-					ranges: [{ start: 0, stop: 8 }]
-				},
-				{
-					term: { id: 'Asthma', name: 'Asthma', iscondition: true },
-					bar_by_grade: true,
-					values: [{ key: 3, label: '3' }],
-					value_by_max_grade: true
-				}
+				[
+					{
+						term: { id: 'sex', name: 'Sex', iscategorical: true },
+						values: [{ key: 'Male', label: 'Female' }]
+					},
+					{
+						term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+						ranges: [{ start: 0, stop: 8 }]
+					},
+					{
+						term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+						bar_by_grade: true,
+						values: [{ key: 3, label: '3' }],
+						value_by_max_grade: true
+					}
+				]
 			]
 		},
 		'filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade'

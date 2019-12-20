@@ -168,6 +168,8 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_add(action) {
+		const filterType = this.state.termfilter.inclusions ? 'inclusions' : 'terms'
+		const filters = this.state.termfilter[filterType]
 		if ('termId' in action) {
 			/*
 				having one termId assumes dispatching one added tvs at a time, 
@@ -176,7 +178,7 @@ TdbStore.prototype.actions = {
 				should always use a tvslst instead, so may need to repeat this
 				match for existing term filter
 			*/
-			const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
+			const filter = filters.find(d => d.id == action.termId)
 			if (filter) {
 				const valueData =
 					filter.term.iscategorical || filter.term.iscondition
@@ -188,12 +190,11 @@ TdbStore.prototype.actions = {
 				if (!valueData.includes(action.value)) valueData.push(action.value)
 			}
 		} else if (action.tvslst) {
-			this.state.termfilter.terms.push(...action.tvslst)
+			filters.push(action.tvslst)
 		} else {
 			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
-			this.state.termfilter.terms.push(action.term)
+			filters.push([action.term])
 		}
-		console.log(this.state.termfilter.terms)
 	},
 
 	filter_grade_update(action) {
