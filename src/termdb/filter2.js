@@ -4,6 +4,7 @@ import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 // import { TVSInit } from './tvs'
 import { TvsLstInit } from '../common/tvslst'
+import { TvsLstBtnInit } from '../common/tvslstbtn'
 import { appInit } from './app'
 import * as client from '../client'
 /*
@@ -61,6 +62,14 @@ class TdbFilter {
 			}
 		})
 
+		this.includeBtn = TvsLstBtnInit({
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			holder: this.dom.inclusionsBtn,
+			debug: this.app.opts.debug,
+			tvslst: this.state.termfilter.inclusions
+		})
+
 		if (!this.state.termfilter.exclusions) return
 		this.exclusions = TvsLstInit({
 			adderLabel: '+Exclude',
@@ -76,6 +85,14 @@ class TdbFilter {
 				})
 			}
 		})
+
+		this.excludeBtn = TvsLstBtnInit({
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			holder: this.dom.exclusionsBtn,
+			debug: this.app.opts.debug,
+			tvslst: this.state.termfilter.exclusions
+		})
 	}
 }
 
@@ -89,21 +106,24 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('margin', '10px')
 			.style('margin-top', '5px')
-			.style('display', 'block')
+			.style('display', 'table')
 			.style('border', 'solid 1px #ddd')
 
-		div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('text-transform', 'uppercase')
-			.style('color', '#bbb')
-			.style('margin-right', '10px')
-			.html('Filter')
+		// div
+		// 	.append('div')
+		// 	.style('display', 'table-cell')
+		// 	.style('vertical-align','middle')
+		// 	.style('text-transform', 'uppercase')
+		// 	.style('color', '#bbb')
+		// 	.style('margin-right', '10px')
+		// 	.html('Filter')
 
-		this.setFilterBtn(div, 'Inclusions', 'inclusions')
+		const filter_div = div.append('div').style('display', 'table-cell')
+
+		this.setFilterBtn(filter_div, 'Inclusions', 'inclusions')
 		this.dom.inclusionsBtn.on('click', () => this.dom.inclusionsTip.showunder(this.dom.inclusionsBtn.node()))
 
-		this.setFilterBtn(div, 'Exclusions', 'exclusions')
+		this.setFilterBtn(filter_div, 'Exclusions', 'exclusions')
 		this.dom.exclusionsBtn.on('click', () => this.dom.exclusionsTip.showunder(this.dom.exclusionsBtn.node()))
 	}
 
@@ -112,15 +132,23 @@ function setRenderers(self) {
 		const tipName = prefix + 'Tip'
 		const divName = prefix + 'Div'
 
-		this.dom[btnName] = div
+		const filter_div = div.append('div').style('display', 'block')
+
+		//Title for the div - Inclusion/Exclusion
+		filter_div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin', '10px 15px')
+			.style('width', '70px')
+			.style('text-transform', 'uppercase')
+			.style('font-size', '.8em')
+			.style('color', '#bbb')
+			.html(label)
+
+		this.dom[btnName] = filter_div
 			.append('div')
 			.attr('class', 'sja_filter_btn')
 			.style('display', 'inline-block')
-			.style('padding', '5px')
-			.style('margin', '3px 10px')
-			.style('background', '#ececec')
-			.style('cursor', 'pointer')
-			.html(label)
 
 		this.dom[tipName] = new client.Menu({ padding: '5px' })
 		this.dom[divName] = this.dom[tipName].d
@@ -135,11 +163,13 @@ function setRenderers(self) {
 		this.dom.holder.style('display', 'inline-block')
 
 		self.inclusions.main(termfilter.inclusions ? termfilter.inclusions : termfilter.terms)
-		const inum = termfilter.inclusions.length
-		self.dom.inclusionsBtn.html(inum + ' inclusion' + (inum < 2 ? '' : 's') + ' criteria')
+		// const inum = termfilter.inclusions.length
+		// self.dom.inclusionsBtn.html(inum + ' inclusion' + (inum < 2 ? '' : 's') + ' criteria')
+		self.includeBtn.main(termfilter.inclusions)
 
 		self.exclusions.main(this.state.termfilter.exclusions)
-		const xnum = termfilter.exclusions.length
-		self.dom.exclusionsBtn.html(xnum + ' exclusion' + (xnum < 2 ? '' : 's') + ' criteria')
+		// const xnum = termfilter.exclusions.length
+		// self.dom.exclusionsBtn.html(xnum + ' exclusion' + (xnum < 2 ? '' : 's') + ' criteria')
+		self.excludeBtn.main(termfilter.exclusions)
 	}
 }
