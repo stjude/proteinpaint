@@ -35,7 +35,7 @@ function makesql_filter_union(arrOfTvslst, ds, CTEname, values) {
 	let i = 0
 	for (const tvslst of arrOfTvslst) {
 		if (!tvslst.length) continue
-		const filter = makesql_by_tvsfilter(tvslst, ds, i++)
+		const filter = makesql_by_tvsfilter(tvslst, ds, CTEname + '_' + i++)
 		if (filter) {
 			values.push(...filter.values)
 			filters.push(filter)
@@ -56,7 +56,7 @@ function makesql_filter_union(arrOfTvslst, ds, CTEname, values) {
 	}
 }
 
-function makesql_by_tvsfilter(tvslst, ds, i = '') {
+function makesql_by_tvsfilter(tvslst, ds, CTEname_i = '') {
 	/*
 .tvslst[{}]
 	optional
@@ -95,7 +95,7 @@ returns:
 		}
 	}
 
-	const CTEname = 'filter_' + i
+	const CTEname = CTEname_i ? CTEname_i : 'filter'
 	return {
 		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
 		values,
@@ -357,7 +357,7 @@ opts{} options to tweak the query, see const default_opts = below
 	const opts = Object.assign(default_opts, _opts)
 	const values = []
 	const inclusions = makesql_filter_union(q.inclusions, q.ds, 'inclusions', values)
-	//const exclusions = makesql_filter_union(q.exclusions, q.ds, 'exclusions', values)
+	const exclusions = makesql_filter_union(q.exclusions, q.ds, 'exclusions', values)
 
 	const CTE0 = get_term_cte(q, values, 0, inclusions)
 	const CTE1 = get_term_cte(q, values, 1, inclusions)
@@ -365,6 +365,7 @@ opts{} options to tweak the query, see const default_opts = below
 
 	const statement = `WITH
 		${inclusions ? inclusions.filters + ',' : ''}
+		${exclusions ? exclusions.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
@@ -379,7 +380,10 @@ opts{} options to tweak the query, see const default_opts = below
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${inclusions ? 'WHERE t1.sample in ' + inclusions.CTEname : ''}
+		${inclusions || exclusions ? 'WHERE' : ''}
+		${inclusions ? 't1.sample IN ' + inclusions.CTEname : ''}
+		${inclusions && exclusions ? 'AND' : ''}
+		${exclusions ? 't1.sample NOT IN ' + exclusions.CTEname : ''}
 		${opts.endclause}`
 	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
