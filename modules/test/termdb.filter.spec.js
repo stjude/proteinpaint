@@ -8,10 +8,13 @@ tape('\n', function(test) {
 
 tape('default', function(test) {
 	const filter = getFilterCTEs({
-		$and: [
+		$in: true,
+		$join: 'and',
+		$lst: [
 			{
-				$in: false,
-				$and: [
+				$in: true,
+				$join: 'or',
+				$lst: [
 					{
 						term: { id: 'sex', iscategorical: true },
 						values: [{ key: 'male', label: 'male' }]
@@ -19,24 +22,26 @@ tape('default', function(test) {
 					{
 						term: { id: 'diaggrp', iscategorical: true },
 						values: [{ key: 'ALL', label: 'ALL' }]
-					}
-					/*{
-						$or: [
+					},
+					{
+						$in: true,
+						$join: 'and',
+						$lst: [
 							{
-								term: "genotype-TNFR1",
-								mclass: ["*"] 
+								term: { id: 'agedx', isfloat: true },
+								ranges: [{ start: 1, stop: 5 }]
 							},
 							{
-								term: "genotype-FLT3",
-								mclass: ["F"] 
-							},
+								term: { id: 'aaclassic_5', isfloat: true },
+								ranges: [{ start: 1000, stop: 4000 }]
+							}
 						]
-					}*/
+					}
 				]
 			},
 			{
-				term: { id: 'age', isfloat: true },
-				ranges: [{ start: 10, stopunbounded: true }] // always assumed OR
+				term: { id: 'wgs_sequenced', iscategorical: true },
+				values: [{ key: '1', label: 'Yes' }] // always assumed OR
 			}
 		]
 	})

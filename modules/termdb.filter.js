@@ -5,32 +5,34 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 	lst,
 	{	
 		$in: bool, // defaults to true
-		$and || $or: [
-			tvs0, // {term, values, $in},
-			tvs1, // {term, ranges, $in},
+		$join: "and" || "or",
+		$lst: [
+			tvs0, // {term, values, $in}
+			tvs1, // {term, ranges, $in}
 			..., 
-			lst0{} // may contain arbitrary levels of nested lst{},
+			lst0{}, // may contain arbitrary levels of nested lst{}
 			lst1{},
 			...
 		]	
 	}
 */
 	if (!filter) throw 'empty filter argument'
-	if (!filter.$and && !filter.$or) throw 'filter.$and or filter.$or must be specified'
-	if (filter.$and && filter.$or) throw 'only one of filter.$and or filter.$or must be specified'
-	const joiner = filter.$and ? 'and' : 'or'
-	const lst = filter['$' + joiner]
-	if (!Array.isArray(lst)) throw `filter.$${joiner} must be an array`
+	if (filter.$lst) {
+		if (!Array.isArray(filter.$lst)) throw `filter.$lst must be an array`
+		if (!filter.$join) throw 'filter.$join must be specified when filter.$lst is specified'
+		if (filter.$join != 'or' && filter.$join != 'and') throw 'filter.$join must equal either "or" or "and"'
+	} else if (filter.$join) {
+		throw 'a filter.$lst[] is required when filter.$join is specified'
+	}
 	if (!('$in' in filter)) filter.$in = true
-
 	const filters = []
 	const CTEs = []
 	const values = []
 	let i = 0
-	for (const [i, tvs] of lst.entries()) {
+	for (const [i, tvs] of filter.$lst.entries()) {
 		const CTEname_i = CTEname + '_' + i
 		let f
-		if (tvs.$and || tvs.$or) {
+		if (tvs.$join) {
 			f = makesql_join_filters(tvs, ds, CTEname_i)
 		} else if (tvs.term.iscategorical) {
 			f = get_categorical(tvs, CTEname_i)
@@ -48,24 +50,24 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 		values.push(...f.values)
 	}
 
-	const JOINOPER = joiner == 'and' ? 'INTERSECT' : 'UNION'
+	const JOINOPER = filter.$join == 'and' ? 'INTERSECT' : 'UNION'
 	const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
 	if (filter.$in) {
-		CTEs.push(
-			`${CTEname} AS (
+		CTEs.push(`
+			${CTEname} AS (
 				${superCTE}
-			)`
-		)
+			)
+		`)
 	} else {
-		CTEs.push(
-			`${CTEname} AS (
+		CTEs.push(`
+			${CTEname} AS (
 				SELECT sample
 				FROM annotations
 				WHERE sample NOT IN (
 					${superCTE}
 				)
-			)`
-		)
+			)
+		`)
 	}
 
 	return {
