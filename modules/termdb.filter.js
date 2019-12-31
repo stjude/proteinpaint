@@ -44,36 +44,40 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 			throw 'unknown term type'
 		}
 		if (!f) continue
-		console.log(42, f)
+		//console.log(42, f)
 		filters.push(f)
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)
 	}
 
-	const JOINOPER = filter.$join == 'and' ? 'INTERSECT' : 'UNION'
-	const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
-	if (filter.$in) {
-		CTEs.push(`
-			${CTEname} AS (
-				${superCTE}
-			)
-		`)
+	if (filters.length == 1) {
+		return filters[0]
 	} else {
-		CTEs.push(`
-			${CTEname} AS (
-				SELECT sample
-				FROM annotations
-				WHERE sample NOT IN (
+		const JOINOPER = filter.$join == 'and' ? 'INTERSECT' : 'UNION'
+		const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
+		if (filter.$in) {
+			CTEs.push(`
+				${CTEname} AS (
 					${superCTE}
 				)
-			)
-		`)
-	}
+			`)
+		} else {
+			CTEs.push(`
+				${CTEname} AS (
+					SELECT sample
+					FROM annotations
+					WHERE sample NOT IN (
+						${superCTE}
+					)
+				)
+			`)
+		}
 
-	return {
-		CTEs,
-		values,
-		CTEname
+		return {
+			CTEs,
+			values,
+			CTEname
+		}
 	}
 }
 

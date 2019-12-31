@@ -167,7 +167,7 @@ function setRenderers(self) {
 		// self.dom.inclusionsBtn.html(inum + ' inclusion' + (inum < 2 ? '' : 's') + ' criteria')
 		self.includeBtn.main(termfilter.inclusions)
 
-		self.exclusions.main(this.state.termfilter.exclusions)
+		self.exclusions.main(termfilter.exclusions)
 		// const xnum = termfilter.exclusions.length
 		// self.dom.exclusionsBtn.html(xnum + ' exclusion' + (xnum < 2 ? '' : 's') + ' criteria')
 		self.excludeBtn.main(termfilter.exclusions)

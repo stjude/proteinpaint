@@ -6,11 +6,32 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('default', function(test) {
+tape('simple filter', function(test) {
 	const filter = getFilterCTEs({
 		$in: true,
 		$join: 'and',
 		$lst: [
+			{
+				term: { id: 'wgs_sequenced', iscategorical: true },
+				values: [{ key: '1', label: 'Yes' }] // always assumed OR
+			}
+		]
+	})
+
+	console.log(filter.CTEs.join(',\n'))
+	console.log(filter.values)
+	test.end()
+})
+
+tape('complex filter', function(test) {
+	const filter = getFilterCTEs({
+		$in: true,
+		$join: 'and',
+		$lst: [
+			{
+				term: { id: 'wgs_sequenced', iscategorical: true },
+				values: [{ key: '1', label: 'Yes' }] // always assumed OR
+			},
 			{
 				$in: true,
 				$join: 'or',
@@ -38,10 +59,6 @@ tape('default', function(test) {
 						]
 					}
 				]
-			},
-			{
-				term: { id: 'wgs_sequenced', iscategorical: true },
-				values: [{ key: '1', label: 'Yes' }] // always assumed OR
 			}
 		]
 	})
