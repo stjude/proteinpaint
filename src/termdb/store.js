@@ -103,14 +103,17 @@ class TdbStore {
 				throw `termfilter[filterKey] must be an array`
 			}
 			if (this.state) {
-				this.state.termfilter[filterKey].forEach((grp, i) => {
-					if ('id' in grp) obj[filterKey][i].id = grp.id
-				})
+				//this.state.termfilter[filterKey].$lst.forEach(this.setId)
 			}
-			for (const tvslst of obj[filterKey]) {
-				if (!('id' in tvslst)) {
-					tvslst.id = this.prevGeneratedId++
-				}
+		}
+	}
+
+	setId(item) {
+		item.$id = this.prevGeneratedId++
+		console.log(112, item.$id)
+		if (item.$lst) {
+			for (const subitem of item.$lst) {
+				this.setId(subitem)
 			}
 		}
 	}
