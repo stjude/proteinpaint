@@ -24,7 +24,7 @@ function getOpts(_opts = {}) {
 		.append('div')
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
-		.style('max-width', '300px')
+		.style('max-width', '600px')
 
 	const opts = Object.assign({ holder }, _opts)
 
@@ -33,6 +33,7 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		callback: function(filter) {
+			console.log(35, 'spec', filter)
 			//console.log(22, tvslst)
 			opts.filterData = filter
 			opts.filter.main(opts.filterData)
@@ -63,9 +64,13 @@ tape('empty filter $lst', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'block', 'should show the +NEW button')
 	test.equal(
-		opts.holder.select('.sja_filter_container').style('display'),
+		opts.holder.node().querySelector('.sja_new_filter_btn').style.display,
+		'block',
+		'should show the +NEW button'
+	)
+	test.equal(
+		opts.holder.node().querySelector('.sja_filter_container').style.display,
 		'none',
 		'should hide the filter container div'
 	)

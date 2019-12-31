@@ -27,7 +27,7 @@ class TvsLstUi {
 				this.setId(filter)
 				this.filter = filter
 				console.log(28, this.filter)
-				this.dom.grpAdderDiv.style('display', !filter.$lst || !filter.$lst.length ? 'block' : 'none')
+				this.dom.grpAdderDiv.datum(filter).style('display', !filter.$lst || !filter.$lst.length ? 'block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
 		}
@@ -75,6 +75,7 @@ function setRenderers(self) {
 			.style('text-align', 'center')
 			.style('color', '#000')
 			.style('background-color', '#EEEEEE')
+			.style('cursor', 'pointer')
 			.html('+NEW')
 			.on('click', self.displayTreeMenu)
 	}
@@ -83,7 +84,7 @@ function setRenderers(self) {
 		const pills = container
 			.datum(filter)
 			.style('display', !filter.$lst || !filter.$lst.length ? 'none' : 'block')
-			.selectAll('.tvs_pill_grp')
+			.selectAll(':scope > .tvs_pill_grp')
 			.data([filter], self.getId)
 
 		pills.exit().each(self.removePillGrp)
@@ -103,10 +104,10 @@ function setRenderers(self) {
 
 		const pills = select(this)
 			.style('border', item.$lst && filter !== self.filter ? '1px solid #ccc' : 'none')
-			.append('div')
-			.attr('class', 'sja_filter_grp_terms')
+			//.append('div')
+			//.attr('class', 'sja_filter_grp_terms')
 			.style('padding', '5px 5px 5px 0')
-			.selectAll('.tvs_pill_wrapper')
+			.selectAll(':scope > .tvs_pill_wrapper')
 			.data(item.$lst ? item.$lst : [item], self.getId)
 
 		pills
@@ -116,9 +117,8 @@ function setRenderers(self) {
 			.each(self.addPillTerm)
 
 		select(this)
-			.append('div')
-			.selectAll('.sja_filter_lst_appender')
-			.data([{ label: '+AND', join: 'and' }, { label: '+OR', join: 'or' }])
+			.selectAll(':scope > .sja_filter_lst_appender')
+			.data([{ label: '+AND', join: 'and', filter }, { label: '+OR', join: 'or', filter }])
 			.enter()
 			.append('div')
 			.attr('class', 'sja_filter_lst_appender')
@@ -132,17 +132,52 @@ function setRenderers(self) {
 			.style('background-color', self.grpJoinLabelBgColor)
 			.on('click', self.displayTreeMenu)
 			.each(self.updateFilterLstAppender)
+
+		/*
+		select(this)
+			.append('div')
+			.attr('class', 'sja_filter_term_join_label')
+			.style(
+				'display',
+				filter.$lst.length > 1 && item && filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none'
+			)
+			.style('width', '50px')
+			.style('margin-left', '10px')
+			.style('padding', '5px')
+			.style('border', 'none')
+			.style('border-radius', '5px')
+			.style('cursor', 'pointer')
+			.html(filter.$lst.length < 2 ? '' : filter.$join == 'and' ? 'AND' : 'OR')
+		*/
 	}
 
 	self.updatePillGrp = function(item, i) {
+		console.log(142, item, self.filter)
 		const pills = select(this)
-			.style('border', item.$lst && item.$lst.length > 1 ? '1px solid #ccc' : 'none')
-			.selectAll('.tvs_pill_wrapper')
+			.style('border', item.$lst && item.$lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
+			.selectAll(':scope > .tvs_pill_wrapper')
 			.data(item.$lst ? item.$lst : [item], self.getId)
 
 		pills.exit().each(self.removePillTerm)
 		pills.each(self.updatePillTerm)
-		pills.enter().each(self.addPillTerm)
+		pills
+			.enter()
+			.insert('div', ':scope > .sja_filter_lst_appender')
+			.attr('class', 'tvs_pill_wrapper')
+			.each(self.addPillTerm)
+
+		select(this)
+			.selectAll(':scope > .sja_filter_lst_appender')
+			.each(self.updateFilterLstAppender)
+		/*
+		select(this)
+			.selectAll(':scope > .sja_filter_term_join_label')
+			.style(
+				'display',
+				filter.$lst.length > 1 && item && filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none'
+			)
+			.html(filter.$lst.length < 2 ? '' : filter.$join == 'and' ? 'AND' : 'OR')
+		*/
 	}
 
 	self.removePillGrp = function(item) {
@@ -162,6 +197,8 @@ function setRenderers(self) {
 
 	self.updateFilterLstAppender = function(d) {
 		const filter = this.parentNode.__data__
+		d.filter = filter
+		console.log(177, filter, filter.$join, d.join)
 
 		select(this)
 			.style('display', !filter.$join || d.join === filter.$join ? 'inline-block' : 'none')
@@ -178,6 +215,7 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 		// holder for blue pill
 		const holder = select(this)
+			.style('white-space', 'nowrap')
 			.append('div')
 			.attr('class', 'tvs_pill_term_div')
 			.style('display', 'inline-block')
@@ -225,8 +263,7 @@ function setRenderers(self) {
 			.style('border-radius', '5px')
 			.style('cursor', 'pointer')
 			.html(filter.$lst.length < 2 ? '' : filter.$join == 'and' ? 'AND' : 'OR')
-			//.style('background-color', self.grpJoinLabelBgColor)
-			.on('click', self.displayTreeMenu)
+		//.style('background-color', self.grpJoinLabelBgColor)
 
 		const pill = TVSInit({
 			genome: self.genome,
@@ -265,11 +302,16 @@ function setRenderers(self) {
 		} else {
 			const tvs = self.pills[item.$id].getTerm()
 			const filter = this.parentNode.__data__
-			const joiner = filter.$join == 'and' ? 'OR' : 'AND'
+
 			select(this)
 				.select('.tvs_pill_term_adder')
-				.html('+' + joiner)
-			//.style('background-color', self.grpJoinLabelBgColor)
+				.style('display', filter.$lst.length > 1 ? 'inline-block' : 'none')
+				.html(filter.$join == 'and' ? '+OR' : '+AND')
+
+			select(this)
+				.select('.sja_filter_term_join_label')
+				.style('display', filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none')
+				.html(filter.$join == 'and' ? 'AND' : 'OR')
 
 			if (!self.pills[item.$id]) return
 			self.pills[item.$id].main(tvs)
@@ -294,6 +336,7 @@ function setRenderers(self) {
 		filterCopy.$lst.splice(i, 1)
 		console.log(287, JSON.parse(JSON.stringify(filterCopy.$lst)))
 		if (filterCopy.$lst.length == 1) {
+			filterCopy.$join = ''
 			const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
 			//if (!parent) return
 			const j = parent.$lst.findIndex(t => t.$id === tvs.$id)
@@ -301,10 +344,6 @@ function setRenderers(self) {
 			console.log(290, console.log(parent))
 		}
 		self.opts.callback(rootCopy)
-	}
-
-	self.getPillId = function(termsId, termId) {
-		return termsId + '-' + termId
 	}
 
 	self.grpJoinLabelBgColor = function() {
@@ -333,10 +372,18 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayTreeMenu = function(holder) {
-		console.log(264, this.innerHTML)
-		const filterHolder = holder instanceof Node ? holder || self.dom.holder.node() : this
-		self.dom.tip.clear().showunder(filterHolder)
+	self.displayTreeMenu = function(d) {
+		self.dom.tip.clear().showunder(this instanceof Node ? this : self.dom.grpAdderDiv.node())
+		const filter =
+			'$lst' in d
+				? d
+				: 'filter' in d
+				? d.filter
+				: this.className == 'sja_filter_lst_appender'
+				? this.parentNode.__data_
+				: this.__data__
+		console.log(352, d, this.className, filter)
+
 		appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
@@ -353,22 +400,36 @@ function setInteractivity(self) {
 				}
 			},
 			barchart: {
-				bar_click_override: tvslst => {
-					//console.log(187, tvslst, filterHolder.__data__)
-					self.dom.tip.hide()
-					console.log(self.filter)
-					const copy = self.copyTvsLst(self.filter)
-					console.log(copy)
-					if (filterHolder.className.includes('sja_filter_term_join_label')) {
-						const id = filterHolder.parentNode.parentNode.__data__.id
-						const grp = copy.$lst.find(grp => grp.id == id)
-						grp.push(tvslst[0])
-					} else {
-						copy.$lst.push(tvslst)
-					}
-					console.log(293, copy)
-					self.opts.callback(copy.$lst)
-				}
+				bar_click_override:
+					this.className == 'sja_filter_lst_appender'
+						? tvslst => {
+								console.log(373)
+								self.dom.tip.hide()
+								const rootCopy = JSON.parse(JSON.stringify(self.filter))
+								const filterCopy = self.findItem(rootCopy, filter.$id)
+								console.log(379, filterCopy, rootCopy)
+								filterCopy.$lst.push(...tvslst)
+								if (!filterCopy.$join) {
+									filterCopy.$join = filter.$join ? filter.$join : d.join
+									console.log(382, filterCopy.$join)
+								}
+								console.log(385, filterCopy, rootCopy)
+								self.opts.callback(rootCopy)
+						  }
+						: tvslst => {
+								console.log(388, 'TODO')
+								return
+								self.dom.tip.hide()
+								const rootCopy = JSON.parse(JSON.stringify(self.filter))
+								const filterCopy = self.findItem(rootCopy, filter.$id)
+								filterCopy.$lst.push(...tvslst)
+								if (!filterCopy.$join) {
+									filterCopy.$join = filter.$join ? filter.$join : d.join
+									console.log(382, filterCopy.$join)
+								}
+								console.log(395, filterCopy, rootCopy)
+								self.opts.callback(rootCopy)
+						  }
 			}
 		})
 	}
