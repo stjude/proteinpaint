@@ -33,8 +33,6 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		callback: function(filter) {
-			console.log(35, 'spec', filter)
-			//console.log(22, tvslst)
 			opts.filterData = filter
 			opts.filter.main(opts.filterData)
 		}
@@ -106,9 +104,13 @@ tape('single root filter', async test => {
 		'block',
 		'should show the filter container div'
 	)
-	test.equal(opts.holder.select('.tvs_pill_term_adder').style('display'), 'none', 'should hide the filter adder button')
 	test.equal(
-		opts.holder.select('.tvs_pill_term_remover').style('display'),
+		opts.holder.select('.sja_filter_add_transformer').style('display'),
+		'none',
+		'should hide the filter adder button'
+	)
+	test.equal(
+		opts.holder.select('.sja_filter_remove_transformer').style('display'),
 		'inline-block',
 		'should show the filter remover button'
 	)
@@ -178,17 +180,17 @@ tape('complex filter', async test => {
 		'should show the filter container div'
 	)
 	test.equal(
-		opts.holder.select('.tvs_pill_term_adder').style('display'),
+		opts.holder.select('.sja_filter_add_transformer').style('display'),
 		'inline-block',
 		'should show the filter adder button'
 	)
 	test.equal(
-		opts.holder.select('.tvs_pill_term_remover').style('display'),
+		opts.holder.select('.sja_filter_remove_transformer').style('display'),
 		'inline-block',
 		'should show the filter remover button'
 	)
 
-	const grpDivs = opts.holder.node().querySelectorAll('.tvs_pill_grp')
+	const grpDivs = opts.holder.node().querySelectorAll('.sja_filter_grp')
 	test.equal(grpDivs[0].style.border, 'none', 'should not show a border around the root-level group')
 	test.notEqual(grpDivs[1].style.border, 'none', 'should show a border around a filter with >1 terms')
 	test.end()
@@ -261,9 +263,9 @@ tape('filter removal', async test => {
 	await opts.filter.main(opts.filterData)
 	const grp2pill1label = opts.filterData[1][0].term.name
 
-	const removers1 = holder.node().querySelectorAll('.tvs_pill_term_remover')
+	const removers1 = holder.node().querySelectorAll('.sja_filter_remove_transformer')
 	removers1[removers1.length - 1].click()
-	const filterDiv1 = holder.node().querySelectorAll('.tvs_pill_grp') //[0]
+	const filterDiv1 = holder.node().querySelectorAll('.sja_filter_grp') //[0]
 	test.equal(
 		filterDiv1.length,
 		opts.filterData.length,
@@ -272,30 +274,30 @@ tape('filter removal', async test => {
 	test.equal(
 		holder
 			.node()
-			.querySelectorAll('.tvs_pill_grp')[1]
+			.querySelectorAll('.sja_filter_grp')[1]
 			.querySelectorAll('.term_name_btn')[0].innerHTML,
 		grp2pill1label,
 		'should remove the second pill of the second group'
 	)
 	let mismatchedNumTerms1 = 0
-	holder.selectAll('.tvs_pill_grp').each(function(d) {
-		if (d.length != this.querySelectorAll('.tvs_pill_wrapper').length) mismatchedNumTerms1++
+	holder.selectAll('.sja_filter_grp').each(function(d) {
+		if (d.length != this.querySelectorAll('.sja_filter_item').length) mismatchedNumTerms1++
 	})
 	test.true(mismatchedNumTerms1 < 1, 'should update to have fewer number of pill divs in the affected pill group')
 
 	const prevNumGrps = filterDiv1.length
-	const removers2 = holder.node().querySelectorAll('.tvs_pill_term_remover')
+	const removers2 = holder.node().querySelectorAll('.sja_filter_remove_transformer')
 	removers2[removers2.length - 1].click()
 
-	const filterDiv2 = holder.node().querySelectorAll('.tvs_pill_grp')
+	const filterDiv2 = holder.node().querySelectorAll('.sja_filter_grp')
 	test.equal(
 		prevNumGrps - 1,
 		opts.filterData.length,
 		'should have one less pill group after removing a pill from a single-pill group'
 	)
 	let mismatchedNumTerms2 = 0
-	holder.selectAll('.tvs_pill_grp').each(function(d) {
-		if (d.length != this.querySelectorAll('.tvs_pill_wrapper').length) mismatchedNumTerms1++
+	holder.selectAll('.sja_filter_grp').each(function(d) {
+		if (d.length != this.querySelectorAll('.sja_filter_item').length) mismatchedNumTerms1++
 	})
 	test.true(mismatchedNumTerms2 < 1, 'should have the correct number of pills')
 
@@ -339,7 +341,7 @@ tape('filter addition', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	const adders1 = holder.node().querySelectorAll('.sja_filter_term_join_label')
+	const adders1 = holder.node().querySelectorAll('.sja_filter_join_label')
 	const adder1 = adders1[adders1.length - 1]
 	adder1.click()
 	await sleep(200)

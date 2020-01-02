@@ -84,37 +84,36 @@ function setRenderers(self) {
 		const pills = container
 			.datum(filter)
 			.style('display', !filter.$lst || !filter.$lst.length ? 'none' : 'block')
-			.selectAll(':scope > .tvs_pill_grp')
+			.selectAll(':scope > .sja_filter_grp')
 			.data([filter], self.getId)
 
-		pills.exit().each(self.removePillGrp)
-		pills.each(self.updatePillGrp)
+		pills.exit().each(self.removeGrp)
+		pills.each(self.updateGrp)
 		pills
 			.enter()
 			.append('div')
-			.attr('class', 'tvs_pill_grp')
+			.attr('class', 'sja_filter_grp')
 			.style('margin', '5px')
 			.style('min-width', '250px')
-			.each(self.addPillGrp)
+			.each(self.addGrp)
 	}
 
-	self.addPillGrp = function(item, i) {
+	self.addGrp = function(item, i) {
 		const filter = this.parentNode.__data__
-		console.log(123, item, filter)
 
 		const pills = select(this)
 			.style('border', item.$lst && filter !== self.filter ? '1px solid #ccc' : 'none')
 			//.append('div')
 			//.attr('class', 'sja_filter_grp_terms')
 			.style('padding', '5px 5px 5px 0')
-			.selectAll(':scope > .tvs_pill_wrapper')
+			.selectAll(':scope > .sja_filter_item')
 			.data(item.$lst ? item.$lst : [item], self.getId)
 
 		pills
 			.enter()
 			.append('div')
-			.attr('class', 'tvs_pill_wrapper')
-			.each(self.addPillTerm)
+			.attr('class', 'sja_filter_item')
+			.each(self.addItem)
 
 		select(this)
 			.selectAll(':scope > .sja_filter_lst_appender')
@@ -131,42 +130,42 @@ function setRenderers(self) {
 			.style('cursor', 'pointer')
 			.style('background-color', self.grpJoinLabelBgColor)
 			.on('click', self.displayTreeMenu)
-			.each(self.updateFilterLstAppender)
+			.each(self.updateLstAppender)
 	}
 
-	self.updatePillGrp = function(item, i) {
+	self.updateGrp = function(item, i) {
 		const data = item.$lst ? item.$lst : [item]
 		const pills = select(this)
 			.style('border', item.$lst && item.$lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
-			.selectAll(':scope > .tvs_pill_wrapper')
+			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
 
-		pills.exit().each(self.removePillTerm)
-		pills.each(self.updatePillTerm)
+		pills.exit().each(self.removeItem)
+		pills.each(self.updateItem)
 		pills
 			.enter()
 			.insert('div', ':scope > .sja_filter_lst_appender')
-			.attr('class', 'tvs_pill_wrapper')
-			.each(self.addPillTerm)
+			.attr('class', 'sja_filter_item')
+			.each(self.addItem)
 
 		select(this)
-			.selectAll(':scope > .tvs_pill_wrapper')
+			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
 
 		select(this)
 			.selectAll(':scope > .sja_filter_lst_appender')
-			.each(self.updateFilterLstAppender)
+			.each(self.updateLstAppender)
 
 		const filter = item.$lst ? item : this.parentNode.__data__
 		select(this)
-			.selectAll(':scope > .tvs_pill_wrapper > .sja_filter_term_join_label')
-			.each(self.updateFilterJoinLabel)
+			.selectAll(':scope > .sja_filter_item > .sja_filter_join_label')
+			.each(self.updateJoinLabel)
 	}
 
-	self.removePillGrp = function(item) {
+	self.removeGrp = function(item) {
 		if (item.$lst) {
 			for (const subitem of item.$lst) {
-				if (subitem.$lst) self.removePillGrp(subitem)
+				if (subitem.$lst) self.removeGrp(subitem)
 				else {
 					delete self.pills[subitem.$id]
 				}
@@ -177,22 +176,21 @@ function setRenderers(self) {
 		if (this instanceof Node) select(this).remove()
 	}
 
-	self.updateFilterLstAppender = function(d) {
+	self.updateLstAppender = function(d) {
 		const filter = this.parentNode.__data__
 		d.filter = filter
-
 		select(this)
 			.style('display', !filter.$join || d.join === filter.$join ? 'inline-block' : 'none')
 			.html(d.label)
 	}
 
-	self.addPillTerm = function(item, i) {
+	self.addItem = function(item, i) {
 		const filter = this.parentNode.__data__
 
 		if (item.$lst) {
 			console.log(168, item)
 			self.updateUI(select(this), item)
-			self.addFilterJoinLabel(this, filter, item)
+			self.addJoinLabel(this, filter, item)
 			return
 		}
 
@@ -200,13 +198,13 @@ function setRenderers(self) {
 		const holder = select(this)
 			.style('white-space', 'nowrap')
 			.append('div')
-			.attr('class', 'tvs_pill_term_div')
+			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
 
 		// to add a new tvs in a subgroup
 		select(this)
 			.append('div')
-			.attr('class', 'tvs_pill_term_adder')
+			.attr('class', 'sja_filter_add_transformer')
 			.style('display', filter.$lst.length > 1 ? 'inline-block' : 'none')
 			//.style('width', '50px')
 			.style('margin-left', '10px')
@@ -222,7 +220,7 @@ function setRenderers(self) {
 		// to remove
 		select(this)
 			.append('div')
-			.attr('class', 'tvs_pill_term_remover')
+			.attr('class', 'sja_filter_remove_transformer')
 			.html('REMOVE')
 			.style('display', 'inline-block')
 			.style('margin', '3px')
@@ -230,9 +228,9 @@ function setRenderers(self) {
 			.style('color', 'rgba(255,100,100,0.8)')
 			//.style('font-weight', 500)
 			.style('cursor', 'pointer')
-			.on('click', self.removeTerm)
+			.on('click', self.removeTransform)
 
-		self.addFilterJoinLabel(this, filter, item)
+		self.addJoinLabel(this, filter, item)
 
 		const pill = TVSInit({
 			genome: self.genome,
@@ -242,7 +240,7 @@ function setRenderers(self) {
 			callback: new_term => {
 				// const filter = self.copyTvsLst(filter)
 				// the pill term is replaced with a copy in each dispatch cycle,
-				// so cannot use the closured addPillTerm(argument) as term
+				// so cannot use the closured addItem(argument) as term
 				// const term = pill.getTerm()
 				const i = filter.$lst.findIndex(grp => grp.indexOf(item) != -1)
 				if (i == -1) return
@@ -256,7 +254,6 @@ function setRenderers(self) {
 					// replace term
 					grp[j] = new_term
 				}
-				console.log(213, lst)
 				self.opts.callback(lst)
 			}
 		})
@@ -264,21 +261,20 @@ function setRenderers(self) {
 		pill.main(item)
 	}
 
-	self.updatePillTerm = function(item, i) {
+	self.updateItem = function(item, i) {
 		if (item.$lst) {
-			console.log(256, item)
 			self.updateUI(select(this), item)
 		} else {
 			const tvs = self.pills[item.$id].getTerm()
 			const filter = this.parentNode.__data__
 
 			select(this)
-				.select('.tvs_pill_term_adder')
+				.select('.sja_filter_add_transformer')
 				.style('display', filter.$lst.length > 1 ? 'inline-block' : 'none')
 				.html(filter.$join == 'and' ? '+OR' : '+AND')
 
 			select(this)
-				.select('.sja_filter_term_join_label')
+				.select('.sja_filter_join_label')
 				.style('display', filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none')
 				.html(filter.$join == 'and' ? 'AND' : 'OR')
 
@@ -287,40 +283,34 @@ function setRenderers(self) {
 		}
 	}
 
-	self.removePillTerm = function(term) {
-		console.log(283, '$id==', term.$id)
-		const terms = this.parentNode.parentNode.__data__
-		delete self.pills[term.$id]
+	self.removeItem = function(item) {
+		delete self.pills[item.$id]
 		select(this).remove()
 	}
 
-	self.removeTerm = function(tvs) {
+	self.removeTransform = function(item) {
 		const filter = this.parentNode.parentNode.__data__
-		const i = filter.$lst.findIndex(t => t.$id === tvs.$id)
+		const i = filter.$lst.findIndex(t => t.$id === item.$id)
 		if (i == -1) return
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		filterCopy.$lst.splice(i, 1)
-		if (filterCopy.$lst.length == 1) {
-			if (filterCopy.$lst[0].$lst) {
-				self.opts.callback(filterCopy.$lst[0])
-			} else {
-				filterCopy.$join = ''
-				const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
-				//if (!parent) return
-				const j = parent.$lst.findIndex(t => t.$id === tvs.$id)
-				parent.$lst[j] = filterCopy.$lst[0]
-				self.opts.callback(rootCopy)
-			}
+		if (filterCopy.$lst.length === 1) {
+			filterCopy.$join = ''
+			// convert tvslst to a tvs in the parent.$lst
+			const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
+			const j = parent.$lst.findIndex(t => t.$id === filterCopy.$id)
+			parent.$lst[j] = filterCopy.$lst[0]
+			self.opts.callback(rootCopy)
 		} else {
 			self.opts.callback(rootCopy)
 		}
 	}
 
-	self.addFilterJoinLabel = function(elem, filter, item) {
+	self.addJoinLabel = function(elem, filter, item) {
 		select(elem)
 			.append('div')
-			.attr('class', 'sja_filter_term_join_label')
+			.attr('class', 'sja_filter_join_label')
 			.style(
 				'display',
 				filter.$lst.length > 1 && item && filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none'
@@ -334,7 +324,7 @@ function setRenderers(self) {
 			.html(filter.$lst.length < 2 ? '' : filter.$join == 'and' ? 'AND' : 'OR')
 	}
 
-	self.updateFilterJoinLabel = function(item) {
+	self.updateJoinLabel = function(item) {
 		const filter = this.parentNode.parentNode.parentNode.__data__
 		const i = filter.$lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
@@ -379,7 +369,6 @@ function setInteractivity(self) {
 				: this.className == 'sja_filter_lst_appender'
 				? this.parentNode.__data_
 				: this.__data__
-		console.log(352, d, this.className, filter)
 
 		appInit(null, {
 			holder: self.dom.tip.d,
@@ -390,12 +379,13 @@ function setInteractivity(self) {
 					show_top_ui: false
 				}
 			},
-			modifiers: {
+			/*modifiers: {
 				//modifier to replace filter by clicking term btn
+				// NOT NEEDED ???
 				tvs_select: tvs => {
 					self.replaceFilter({ term: tvs })
 				}
-			},
+			},*/
 			barchart: {
 				bar_click_override:
 					this.className == 'sja_filter_lst_appender'
@@ -413,12 +403,13 @@ function setInteractivity(self) {
 								console.log(416, filterCopy, rootCopy)
 								self.opts.callback(rootCopy)
 						  }
-						: this.className == 'tvs_pill_term_adder'
+						: this.className == 'sja_filter_add_transformer'
 						? tvslst => {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const parent = self.findParent(rootCopy, filter.$id)
 								const i = parent.$lst.findIndex(f => f.$id === d.$id)
+								// transform from tvs to tvslst
 								parent.$lst[i] = {
 									$join: this.innerHTML === '+OR' ? 'or' : 'and',
 									$lst: [filter, ...tvslst]
