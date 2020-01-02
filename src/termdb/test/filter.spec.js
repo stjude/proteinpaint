@@ -73,11 +73,8 @@ tape('filter buttons', function(test) {
 		)
 
 		test.equal(
-			filter.Inner.dom.holder
-				.node()
-				.querySelectorAll('.sja_filter_btn')[0]
-				.innerHTML.slice(0, 2),
-			'1 ',
+			filter.Inner.dom.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
+			'Diagnosis Group',
 			'should label the inclusions button with the number of applied criteria'
 		)
 
@@ -85,8 +82,8 @@ tape('filter buttons', function(test) {
 			filter.Inner.dom.holder
 				.node()
 				.querySelectorAll('.sja_filter_btn')[1]
-				.innerHTML.slice(0, 2),
-			'0 ',
+				.querySelectorAll('div')[1].innerHTML,
+			'+ click to add',
 			'should label the exclusions button with the number of applied criteria'
 		)
 
@@ -307,7 +304,7 @@ tape('tvs filter: Numerical term', function(test) {
 })
 
 tape('tvs filter: : conditional term (grade)', function(test) {
-	test.timeoutAfter(6000)
+	test.timeoutAfter(7000)
 
 	const termfilter = {
 		show_top_ui: true,
@@ -352,7 +349,7 @@ tape('tvs filter: : conditional term (grade)', function(test) {
 			.run(testGradeChanage, 800)
 			.run(triggerBluePill)
 			.run(triggerValueTypeChanage)
-			.run(triggerSubSelect, 500)
+			.run(triggerSubSelect, 800)
 			.run(testSubSelelct, 800)
 			.done(test)
 	}
@@ -370,8 +367,9 @@ tape('tvs filter: : conditional term (grade)', function(test) {
 			'should change value from data'
 		)
 
-		test.true(
-			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn')._groups[0][0].innerText.includes('Max Grade'),
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.grade_type_btn').html(),
+			'[Max Grade]',
 			'should have grade type text'
 		)
 	}
@@ -415,8 +413,11 @@ tape('tvs filter: : conditional term (grade)', function(test) {
 
 	function testAddFilter(filter) {
 		test.equal(
-			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
-			filter.Inner.state.termfilter.inclusions[0][0].values.length + ' Grades (Max Grade)',
+			filter.Inner.dom.inclusionsDiv
+				.selectAll('.value_btn')
+				.html()
+				.split('<')[0],
+			filter.Inner.state.termfilter.inclusions[0][0].values.length + ' Grades',
 			'should change filter by selecting values from Menu'
 		)
 	}
@@ -429,9 +430,10 @@ tape('tvs filter: : conditional term (grade)', function(test) {
 	}
 
 	function testGradeChanage(filter) {
-		test.true(
-			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn')._groups[0][0].innerText.includes('Most Recent'),
-			'should change grade type from Menu'
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.grade_type_btn').html(),
+			'[Most Recent Grade]',
+			'should have grade type text'
 		)
 	}
 
@@ -451,7 +453,10 @@ tape('tvs filter: : conditional term (grade)', function(test) {
 
 	function testSubSelelct(filter) {
 		test.equal(
-			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
+			filter.Inner.dom.inclusionsDiv
+				.selectAll('.value_btn')
+				.html()
+				.split('<')[0],
 			filter.Inner.state.termfilter.inclusions[0][0].values[0].label,
 			'should change to subcondition'
 		)

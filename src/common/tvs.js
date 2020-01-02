@@ -667,7 +667,18 @@ function setRenderers(self) {
 
 		const value_text = self.get_value_text(term)
 
-		const value_btns = one_term_div.selectAll('.value_btn').data(value_text ? [{ txt: value_text }] : [], d => d.txt)
+		const grade_type =
+			term.bar_by_grade && term.value_by_max_grade
+				? '[Max Grade]'
+				: term.bar_by_grade && term.value_by_most_recent
+				? '[Most Recent Grade]'
+				: term.bar_by_grade && term.value_by_computable_grade
+				? '[Any Grade]'
+				: ''
+
+		const value_btns = one_term_div
+			.selectAll('.value_btn')
+			.data(value_text ? [{ txt: value_text, grade_type }] : [], d => d.txt + d.grade_type)
 
 		value_btns.exit().each(self.removeValueBtn)
 
@@ -681,6 +692,13 @@ function setRenderers(self) {
 			.style('background', '#4888BF')
 			.style('color', 'white')
 			.html(d => d.txt)
+			.append('div')
+			.attr('class', 'grade_type_btn')
+			.style('display', 'inline-block')
+			.style('margin', '0 5px')
+			.style('font-size', '.6em')
+			.style('text-transform', 'uppercase')
+			.html(d => d.grade_type)
 			.style('opacity', 0)
 			.transition()
 			.duration(200)
@@ -704,21 +722,8 @@ function setRenderers(self) {
 			else if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
 			else return term.ranges.length + ' Intervals'
 		} else if (term.bar_by_grade || term.bar_by_children) {
-			const grade_type =
-				term.bar_by_grade && term.value_by_max_grade
-					? ' (Max Grade)'
-					: term.bar_by_grade && term.value_by_most_recent
-					? ' (Most Recent Grade)'
-					: term.bar_by_grade && term.value_by_computable_grade
-					? ' (Any Grade)'
-					: ''
-			if (term.values.length == 1) return term.values[0].label + grade_type
-			else
-				return (
-					term.values.length +
-					(term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : '') +
-					grade_type
-				)
+			if (term.values.length == 1) return term.values[0].label
+			else return term.values.length + (term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : '')
 		} else if (term.grade_and_child) {
 			//TODO
 		} else {
