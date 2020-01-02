@@ -224,6 +224,7 @@ function setRenderers(self) {
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
+			.style('color', 'rgba(10,10,10,0.8)')
 			.html(filter.join == 'and' ? '+OR' : '+AND')
 			.on('click', self.displayTreeMenu)
 
