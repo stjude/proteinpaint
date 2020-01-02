@@ -6,6 +6,17 @@ import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 
+/*
+	Coding convenience:
+	- use $id for data binding to match  
+	  existing DOM elements with the corresponding
+	  data update
+	- use ':scope > .cls' to limit a selection
+		to immediate children -- important since the data
+		at the current nesting level must not be bound to 
+		non-child elements with the same classnames
+*/
+
 class TvsLstUi {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -27,7 +38,7 @@ class TvsLstUi {
 				this.setId(filter)
 				this.filter = filter
 				console.log(28, this.filter)
-				this.dom.grpAdderDiv.datum(filter).style('display', !filter.$lst || !filter.$lst.length ? 'block' : 'none')
+				this.dom.grpAdderDiv.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
 		}
@@ -42,8 +53,8 @@ class TvsLstUi {
 	setId(item) {
 		if (!('$id' in item)) item.$id = this.lastId++
 		else if (this.lastId < item.$id) this.lastId = item.$id + 1
-		if (!item.$lst) return
-		for (const [i, subitem] of item.$lst.entries()) {
+		if (!item.lst) return
+		for (const [i, subitem] of item.lst.entries()) {
 			this.setId(subitem)
 		}
 	}
@@ -83,7 +94,7 @@ function setRenderers(self) {
 	self.updateUI = function(container, filter) {
 		const pills = container
 			.datum(filter)
-			.style('display', !filter.$lst || !filter.$lst.length ? 'none' : 'block')
+			.style('display', !filter.lst || !filter.lst.length ? 'none' : 'block')
 			.selectAll(':scope > .sja_filter_grp')
 			.data([filter], self.getId)
 
@@ -102,12 +113,12 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 
 		const pills = select(this)
-			.style('border', item.$lst && filter !== self.filter ? '1px solid #ccc' : 'none')
+			.style('border', item.lst && filter !== self.filter ? '1px solid #ccc' : 'none')
 			//.append('div')
 			//.attr('class', 'sja_filter_grp_terms')
 			.style('padding', '5px 5px 5px 0')
 			.selectAll(':scope > .sja_filter_item')
-			.data(item.$lst ? item.$lst : [item], self.getId)
+			.data(item.lst ? item.lst : [item], self.getId)
 
 		pills
 			.enter()
@@ -128,15 +139,15 @@ function setRenderers(self) {
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
-			.style('background-color', self.grpJoinLabelBgColor)
+			.style('background-color', '#ececec')
 			.on('click', self.displayTreeMenu)
 			.each(self.updateLstAppender)
 	}
 
 	self.updateGrp = function(item, i) {
-		const data = item.$lst ? item.$lst : [item]
+		const data = item.lst ? item.lst : [item]
 		const pills = select(this)
-			.style('border', item.$lst && item.$lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
+			.style('border', item.lst && item.lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
 
@@ -156,16 +167,16 @@ function setRenderers(self) {
 			.selectAll(':scope > .sja_filter_lst_appender')
 			.each(self.updateLstAppender)
 
-		const filter = item.$lst ? item : this.parentNode.__data__
+		const filter = item.lst ? item : this.parentNode.__data__
 		select(this)
 			.selectAll(':scope > .sja_filter_item > .sja_filter_join_label')
 			.each(self.updateJoinLabel)
 	}
 
 	self.removeGrp = function(item) {
-		if (item.$lst) {
-			for (const subitem of item.$lst) {
-				if (subitem.$lst) self.removeGrp(subitem)
+		if (item.lst) {
+			for (const subitem of item.lst) {
+				if (subitem.lst) self.removeGrp(subitem)
 				else {
 					delete self.pills[subitem.$id]
 				}
@@ -180,14 +191,14 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 		d.filter = filter
 		select(this)
-			.style('display', !filter.$join || d.join === filter.$join ? 'inline-block' : 'none')
+			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
 			.html(d.label)
 	}
 
 	self.addItem = function(item, i) {
 		const filter = this.parentNode.__data__
 
-		if (item.$lst) {
+		if (item.lst) {
 			console.log(168, item)
 			self.updateUI(select(this), item)
 			self.addJoinLabel(this, filter, item)
@@ -201,11 +212,12 @@ function setRenderers(self) {
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
 
-		// to add a new tvs in a subgroup
+		// button to create a new subgroup with
+		// this term plus and a newly selected tree term
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_add_transformer')
-			.style('display', filter.$lst.length > 1 ? 'inline-block' : 'none')
+			.style('display', filter.lst.length > 1 ? 'inline-block' : 'none')
 			//.style('width', '50px')
 			.style('margin-left', '10px')
 			.style('padding', '5px')
@@ -213,11 +225,11 @@ function setRenderers(self) {
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
-			.html(filter.$join == 'and' ? '+OR' : '+AND')
-			//.style('background-color', self.grpJoinLabelBgColor)
+			.html(filter.join == 'and' ? '+OR' : '+AND')
 			.on('click', self.displayTreeMenu)
 
-		// to remove
+		// to remove an item from a lst and transform a tvslst
+		// into a tvs if there is only one entry in the resulting lst
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_remove_transformer')
@@ -242,10 +254,10 @@ function setRenderers(self) {
 				// the pill term is replaced with a copy in each dispatch cycle,
 				// so cannot use the closured addItem(argument) as term
 				// const term = pill.getTerm()
-				const i = filter.$lst.findIndex(grp => grp.indexOf(item) != -1)
+				const i = filter.lst.findIndex(grp => grp.indexOf(item) != -1)
 				if (i == -1) return
 				const grp = lst[i]
-				const j = filter.$lst[i].indexOf(item)
+				const j = filter.lst[i].indexOf(item)
 				if (!new_term) {
 					// remove term
 					grp.splice(j, 1)
@@ -262,21 +274,21 @@ function setRenderers(self) {
 	}
 
 	self.updateItem = function(item, i) {
-		if (item.$lst) {
+		if (item.lst) {
 			self.updateUI(select(this), item)
 		} else {
 			const tvs = self.pills[item.$id].getTerm()
 			const filter = this.parentNode.__data__
 
 			select(this)
-				.select('.sja_filter_add_transformer')
-				.style('display', filter.$lst.length > 1 ? 'inline-block' : 'none')
-				.html(filter.$join == 'and' ? '+OR' : '+AND')
+				.select(':scope > .sja_filter_add_transformer')
+				.style('display', filter.lst.length > 1 ? 'inline-block' : 'none')
+				.html(filter.join == 'and' ? '+OR' : '+AND')
 
 			select(this)
-				.select('.sja_filter_join_label')
-				.style('display', filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none')
-				.html(filter.$join == 'and' ? 'AND' : 'OR')
+				.select(':scope > .sja_filter_join_label')
+				.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'block' : 'none')
+				.html(filter.join == 'and' ? 'AND' : 'OR')
 
 			if (!self.pills[item.$id]) return
 			self.pills[item.$id].main(tvs)
@@ -288,36 +300,13 @@ function setRenderers(self) {
 		select(this).remove()
 	}
 
-	self.removeTransform = function(item) {
-		const filter = this.parentNode.parentNode.__data__
-		const i = filter.$lst.findIndex(t => t.$id === item.$id)
-		if (i == -1) return
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
-		filterCopy.$lst.splice(i, 1)
-		if (filterCopy.$lst.length === 1) {
-			if (filterCopy.$lst[0].$lst) {
-				self.opts.callback(filterCopy.$lst[0])
-			} else {
-				filterCopy.$join = ''
-				const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
-				//if (!parent) return
-				const j = parent.$lst.findIndex(t => t.$id === filterCopy.$id)
-				parent.$lst[j] = filterCopy.$lst[0]
-				self.opts.callback(rootCopy)
-			}
-		} else {
-			self.opts.callback(rootCopy)
-		}
-	}
-
 	self.addJoinLabel = function(elem, filter, item) {
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
 			.style(
 				'display',
-				filter.$lst.length > 1 && item && filter.$lst.indexOf(item) < filter.$lst.length - 1 ? 'block' : 'none'
+				filter.lst.length > 1 && item && filter.lst.indexOf(item) < filter.lst.length - 1 ? 'block' : 'none'
 			)
 			.style('width', '50px')
 			.style('margin-left', '10px')
@@ -325,36 +314,32 @@ function setRenderers(self) {
 			.style('border', 'none')
 			.style('border-radius', '5px')
 			.style('cursor', 'pointer')
-			.html(filter.$lst.length < 2 ? '' : filter.$join == 'and' ? 'AND' : 'OR')
+			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
 	}
 
 	self.updateJoinLabel = function(item) {
 		const filter = this.parentNode.parentNode.parentNode.__data__
-		const i = filter.$lst.findIndex(d => d.$id === item.$id)
+		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.$lst.length > 1 && item && i != -1 && i < filter.$lst.length - 1 ? 'block' : 'none'
+			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'block' : 'none'
 		)
-	}
-
-	self.grpJoinLabelBgColor = function() {
-		return this.innerHTML == 'AND' ? 'transparent' : '#ececec'
 	}
 
 	self.findItem = function(item, $id) {
 		if (item.$id === $id) return item
-		if (!item.$lst) return
-		for (const subitem of item.$lst) {
+		if (!item.lst) return
+		for (const subitem of item.lst) {
 			const matchingItem = self.findItem(subitem, $id)
 			if (matchingItem) return matchingItem
 		}
 	}
 
 	self.findParent = function(parent, $id) {
-		if (!parent.$lst) return
-		for (const item of parent.$lst) {
+		if (!parent.lst) return
+		for (const item of parent.lst) {
 			if (item.$id === $id) return parent
-			else if (item.$lst) {
+			else if (item.lst) {
 				const matchingParent = self.findParent(item, $id)
 				if (matchingParent) return matchingParent
 			}
@@ -366,7 +351,7 @@ function setInteractivity(self) {
 	self.displayTreeMenu = function(d) {
 		self.dom.tip.clear().showunder(this instanceof Node ? this : self.dom.grpAdderDiv.node())
 		const filter =
-			'$lst' in d
+			'lst' in d
 				? d
 				: 'filter' in d
 				? d.filter
@@ -397,9 +382,9 @@ function setInteractivity(self) {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.$lst.push(...tvslst)
-								if (!filterCopy.$join) {
-									filterCopy.$join = filter.$join ? filter.$join : d.join
+								filterCopy.lst.push(...tvslst)
+								if (!filterCopy.join) {
+									filterCopy.join = filter.join ? filter.join : d.join
 								}
 								self.opts.callback(rootCopy)
 						  }
@@ -408,11 +393,11 @@ function setInteractivity(self) {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const parent = self.findParent(rootCopy, filter.$id)
-								const i = parent.$lst.findIndex(f => f.$id === d.$id)
+								const i = parent.lst.findIndex(f => f.$id === d.$id)
 								// transform from tvs to tvslst
-								parent.$lst[i] = {
-									$join: this.innerHTML === '+OR' ? 'or' : 'and',
-									$lst: [filter, ...tvslst]
+								parent.lst[i] = {
+									join: this.innerHTML === '+OR' ? 'or' : 'and',
+									lst: [filter, ...tvslst]
 								}
 								self.opts.callback(rootCopy)
 						  }
@@ -420,13 +405,36 @@ function setInteractivity(self) {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.$lst.push(...tvslst)
-								if (!filterCopy.$join) {
-									filterCopy.$join = filter.$join ? filter.$join : d.join
+								filterCopy.lst.push(...tvslst)
+								if (!filterCopy.join) {
+									filterCopy.join = filter.join ? filter.join : d.join
 								}
 								self.opts.callback(rootCopy)
 						  }
 			}
 		})
+	}
+
+	self.removeTransform = function(item) {
+		const filter = this.parentNode.parentNode.__data__
+		const i = filter.lst.findIndex(t => t.$id === item.$id)
+		if (i == -1) return
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(rootCopy, filter.$id)
+		filterCopy.lst.splice(i, 1)
+		if (filterCopy.lst.length === 1) {
+			if (filterCopy.lst[0].lst) {
+				self.opts.callback(filterCopy.lst[0])
+			} else {
+				filterCopy.join = ''
+				const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
+				//if (!parent) return
+				const j = parent.lst.findIndex(t => t.$id === filterCopy.$id)
+				parent.lst[j] = filterCopy.lst[0]
+				self.opts.callback(rootCopy)
+			}
+		} else {
+			self.opts.callback(rootCopy)
+		}
 	}
 }

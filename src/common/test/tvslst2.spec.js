@@ -54,10 +54,10 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('empty filter $lst', async test => {
+tape('empty filter lst', async test => {
 	const opts = getOpts({
 		filterData: {
-			$lst: []
+			lst: []
 		}
 	})
 
@@ -78,8 +78,8 @@ tape('empty filter $lst', async test => {
 tape('single root filter', async test => {
 	const opts = getOpts({
 		filterData: {
-			//$join: 'and',
-			$lst: [
+			//join: 'and',
+			lst: [
 				{
 					term: {
 						id: 'abc',
@@ -120,9 +120,9 @@ tape('single root filter', async test => {
 tape('complex filter', async test => {
 	const opts = getOpts({
 		filterData: {
-			$in: true,
-			$join: 'and',
-			$lst: [
+			in: true,
+			join: 'and',
+			lst: [
 				{
 					term: {
 						id: 'abc',
@@ -137,9 +137,9 @@ tape('complex filter', async test => {
 					]
 				},
 				{
-					$in: true,
-					$join: 'or',
-					$lst: [
+					in: true,
+					join: 'or',
+					lst: [
 						{
 							term: {
 								id: 'abc',
