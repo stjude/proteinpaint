@@ -37,7 +37,7 @@ class TvsLstUi {
 			main: async filter => {
 				this.setId(filter)
 				this.filter = filter
-				console.log(28, this.filter)
+				//console.log(40, this.filter)
 				this.dom.grpAdderDiv.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
@@ -199,7 +199,6 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 
 		if (item.lst) {
-			console.log(168, item)
 			self.updateUI(select(this), item)
 			self.addJoinLabel(this, filter, item)
 			return
@@ -325,26 +324,6 @@ function setRenderers(self) {
 			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'block' : 'none'
 		)
 	}
-
-	self.findItem = function(item, $id) {
-		if (item.$id === $id) return item
-		if (!item.lst) return
-		for (const subitem of item.lst) {
-			const matchingItem = self.findItem(subitem, $id)
-			if (matchingItem) return matchingItem
-		}
-	}
-
-	self.findParent = function(parent, $id) {
-		if (!parent.lst) return
-		for (const item of parent.lst) {
-			if (item.$id === $id) return parent
-			else if (item.lst) {
-				const matchingParent = self.findParent(item, $id)
-				if (matchingParent) return matchingParent
-			}
-		}
-	}
 }
 
 function setInteractivity(self) {
@@ -435,6 +414,27 @@ function setInteractivity(self) {
 			}
 		} else {
 			self.opts.callback(rootCopy)
+		}
+	}
+
+	self.findItem = function(item, $id) {
+		if (item.$id === $id) return item
+		if (!item.lst) return
+		for (const subitem of item.lst) {
+			const matchingItem = self.findItem(subitem, $id)
+			if (matchingItem) return matchingItem
+		}
+	}
+
+	self.findParent = function(parent, $id) {
+		if (parent.$id === $id) return parent
+		if (!parent.lst) return
+		for (const item of parent.lst) {
+			if (item.$id === $id) return parent
+			else if (item.lst) {
+				const matchingParent = self.findParent(item, $id)
+				if (matchingParent) return matchingParent
+			}
 		}
 	}
 }
