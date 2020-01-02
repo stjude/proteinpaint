@@ -69,6 +69,7 @@ tape('\n', test => {
 tape('empty root filter', async test => {
 	const opts = getOpts({
 		filterData: {
+			type: 'tvslst',
 			join: '',
 			lst: []
 		}
@@ -142,20 +143,24 @@ tape('empty root filter', async test => {
 tape('root filter with a single-entry', async test => {
 	const opts = getOpts({
 		filterData: {
+			type: 'tvslst',
 			join: '',
 			lst: [
 				{
-					term: {
-						id: 'abc',
-						name: 'ABC',
-						iscategorical: true
-					},
-					values: [
-						{
-							key: 'cat1',
-							label: 'val 1'
-						}
-					]
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'abc',
+							name: 'ABC',
+							iscategorical: true
+						},
+						values: [
+							{
+								key: 'cat1',
+								label: 'val 1'
+							}
+						]
+					}
 				}
 			]
 		}
@@ -245,51 +250,62 @@ tape('root filter with a single-entry', async test => {
 tape('root filter with nested filters', async test => {
 	const opts = getOpts({
 		filterData: {
+			type: 'tvslst',
 			in: true,
 			join: 'and',
 			lst: [
 				{
-					term: {
-						id: 'abc',
-						name: 'ABC',
-						iscategorical: true
-					},
-					values: [
-						{
-							key: 'cat1',
-							label: 'val 1'
-						}
-					]
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'abc',
+							name: 'ABC',
+							iscategorical: true
+						},
+						values: [
+							{
+								key: 'cat1',
+								label: 'val 1'
+							}
+						]
+					}
 				},
 				{
+					type: 'tvslst',
 					in: true,
 					join: 'or',
 					lst: [
 						{
-							term: {
-								id: 'abc',
-								name: 'ABC',
-								iscategorical: true
-							},
-							values: [
-								{
-									key: 'cat2',
-									label: 'val 2'
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'abc',
+									name: 'ABC',
+									iscategorical: true
+								},
+								values: [
+									{
+										key: 'cat2',
+										label: 'val 2'
+									}
+								]
+							}
 						},
 						{
-							term: {
-								id: 'xyz',
-								name: 'XYZ',
-								iscategorical: true
-							},
-							values: [
-								{
-									key: 'catx',
-									label: 'Cat X'
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'xyz',
+									name: 'XYZ',
+									iscategorical: true
+								},
+								values: [
+									{
+										key: 'catx',
+										label: 'Cat X'
+									}
+								]
+							}
 						}
 					]
 				}

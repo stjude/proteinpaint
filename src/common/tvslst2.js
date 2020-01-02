@@ -35,7 +35,7 @@ class TvsLstUi {
 
 		this.api = {
 			main: async filter => {
-				this.setId(filter)
+				this.validateFilter(filter)
 				this.filter = filter
 				//console.log(40, this.filter)
 				this.dom.grpAdderDiv.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'block' : 'none')
@@ -50,12 +50,18 @@ class TvsLstUi {
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
-	setId(item) {
+	validateFilter(item) {
+		// for reliably binding data to DOM elements
+		// and associating updated data copy to
+		// the currently bound data
 		if (!('$id' in item)) item.$id = this.lastId++
 		else if (this.lastId < item.$id) this.lastId = item.$id + 1
-		if (!item.lst) return
+
+		if (!('type' in item)) throw 'missing filter.type'
+		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
+		if (item.type != 'tvslst') return
 		for (const [i, subitem] of item.lst.entries()) {
-			this.setId(subitem)
+			this.validateFilter(subitem)
 		}
 	}
 	getId(item) {
@@ -118,7 +124,7 @@ function setRenderers(self) {
 			//.attr('class', 'sja_filter_grp_terms')
 			.style('padding', '5px 5px 5px 0')
 			.selectAll(':scope > .sja_filter_item')
-			.data(item.lst ? item.lst : [item], self.getId)
+			.data(item.type == 'tvslst' ? item.lst : [item], self.getId)
 
 		pills
 			.enter()
@@ -145,9 +151,9 @@ function setRenderers(self) {
 	}
 
 	self.updateGrp = function(item, i) {
-		const data = item.lst ? item.lst : [item]
+		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
-			.style('border', item.lst && item.lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
+			.style('border', item.type == 'tvslst' && item.lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
 
@@ -167,14 +173,14 @@ function setRenderers(self) {
 			.selectAll(':scope > .sja_filter_lst_appender')
 			.each(self.updateLstAppender)
 
-		const filter = item.lst ? item : this.parentNode.__data__
+		const filter = item.type == 'tvslst' ? item : this.parentNode.__data__
 		select(this)
 			.selectAll(':scope > .sja_filter_item > .sja_filter_join_label')
 			.each(self.updateJoinLabel)
 	}
 
 	self.removeGrp = function(item) {
-		if (item.lst) {
+		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
 				if (subitem.lst) self.removeGrp(subitem)
 				else {
@@ -198,7 +204,7 @@ function setRenderers(self) {
 	self.addItem = function(item, i) {
 		const filter = this.parentNode.__data__
 
-		if (item.lst) {
+		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
 			self.addJoinLabel(this, filter, item)
 			return
@@ -249,21 +255,21 @@ function setRenderers(self) {
 			dslabel: self.dslabel,
 			holder,
 			debug: self.opts.debug,
-			callback: new_term => {
+			callback: tvs => {
 				const rootCopy = JSON.parse(JSON.stringify(self.filter))
 				const filterCopy = self.findItem(rootCopy, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
-				filterCopy.lst[i] = new_term
+				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
 				self.opts.callback(rootCopy)
 			}
 		})
 		self.pills[item.$id] = pill
-		pill.main(item)
+		pill.main(item.tvs)
 	}
 
 	self.updateItem = function(item, i) {
-		if (item.lst) {
+		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
 		} else {
 			//const tvs = self.pills[item.$id].getTerm()
@@ -280,7 +286,7 @@ function setRenderers(self) {
 				.html(filter.join == 'and' ? 'AND' : 'OR')
 
 			if (!self.pills[item.$id]) return
-			self.pills[item.$id].main(item)
+			self.pills[item.$id].main(item.tvs)
 		}
 	}
 
@@ -351,7 +357,7 @@ function setInteractivity(self) {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.lst.push(...tvslst)
+								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
 								if (!filterCopy.join) {
 									filterCopy.join = filter.join ? filter.join : d.join
 								}
@@ -365,8 +371,9 @@ function setInteractivity(self) {
 								const i = parent.lst.findIndex(f => f.$id === d.$id)
 								// transform from tvs to tvslst
 								parent.lst[i] = {
+									type: 'tvslst',
 									join: this.innerHTML === '+OR' ? 'or' : 'and',
-									lst: [filter, ...tvslst]
+									lst: [filter, ...tvslst.map(self.wrapTvs)]
 								}
 								self.opts.callback(rootCopy)
 						  }
@@ -374,7 +381,7 @@ function setInteractivity(self) {
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.lst.push(...tvslst)
+								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
 								if (!filterCopy.join) {
 									filterCopy.join = filter.join ? filter.join : d.join
 								}
@@ -409,7 +416,7 @@ function setInteractivity(self) {
 
 	self.findItem = function(item, $id) {
 		if (item.$id === $id) return item
-		if (!item.lst) return
+		if (item.type !== 'tvslst') return
 		for (const subitem of item.lst) {
 			const matchingItem = self.findItem(subitem, $id)
 			if (matchingItem) return matchingItem
@@ -421,10 +428,14 @@ function setInteractivity(self) {
 		if (!parent.lst) return
 		for (const item of parent.lst) {
 			if (item.$id === $id) return parent
-			else if (item.lst) {
+			else if (item.type == 'tvslst') {
 				const matchingParent = self.findParent(item, $id)
 				if (matchingParent) return matchingParent
 			}
 		}
+	}
+
+	self.wrapTvs = function(tvs) {
+		return { type: 'tvs', tvs }
 	}
 }
