@@ -296,12 +296,16 @@ function setRenderers(self) {
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		filterCopy.$lst.splice(i, 1)
 		if (filterCopy.$lst.length === 1) {
-			filterCopy.$join = ''
-			// convert tvslst to a tvs in the parent.$lst
-			const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
-			const j = parent.$lst.findIndex(t => t.$id === filterCopy.$id)
-			parent.$lst[j] = filterCopy.$lst[0]
-			self.opts.callback(rootCopy)
+			if (filterCopy.$lst[0].$lst) {
+				self.opts.callback(filterCopy.$lst[0])
+			} else {
+				filterCopy.$join = ''
+				const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
+				//if (!parent) return
+				const j = parent.$lst.findIndex(t => t.$id === filterCopy.$id)
+				parent.$lst[j] = filterCopy.$lst[0]
+				self.opts.callback(rootCopy)
+			}
 		} else {
 			self.opts.callback(rootCopy)
 		}
@@ -390,17 +394,13 @@ function setInteractivity(self) {
 				bar_click_override:
 					this.className == 'sja_filter_lst_appender'
 						? tvslst => {
-								console.log(406)
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
-								console.log(410, filterCopy, rootCopy)
 								filterCopy.$lst.push(...tvslst)
 								if (!filterCopy.$join) {
 									filterCopy.$join = filter.$join ? filter.$join : d.join
-									console.log(414, filterCopy.$join)
 								}
-								console.log(416, filterCopy, rootCopy)
 								self.opts.callback(rootCopy)
 						  }
 						: this.className == 'sja_filter_add_transformer'
@@ -414,20 +414,16 @@ function setInteractivity(self) {
 									$join: this.innerHTML === '+OR' ? 'or' : 'and',
 									$lst: [filter, ...tvslst]
 								}
-								console.log(429, i, filter, d, parent, rootCopy)
 								self.opts.callback(rootCopy)
 						  }
 						: tvslst => {
-								console.log(433)
 								self.dom.tip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								filterCopy.$lst.push(...tvslst)
 								if (!filterCopy.$join) {
 									filterCopy.$join = filter.$join ? filter.$join : d.join
-									console.log(439, filterCopy.$join)
 								}
-								console.log(441, filterCopy, rootCopy)
 								self.opts.callback(rootCopy)
 						  }
 			}
