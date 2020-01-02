@@ -250,23 +250,12 @@ function setRenderers(self) {
 			holder,
 			debug: self.opts.debug,
 			callback: new_term => {
-				// const filter = self.copyTvsLst(filter)
-				// the pill term is replaced with a copy in each dispatch cycle,
-				// so cannot use the closured addItem(argument) as term
-				// const term = pill.getTerm()
-				const i = filter.lst.findIndex(grp => grp.indexOf(item) != -1)
+				const rootCopy = JSON.parse(JSON.stringify(self.filter))
+				const filterCopy = self.findItem(rootCopy, filter.$id)
+				const i = filter.lst.indexOf(item)
 				if (i == -1) return
-				const grp = lst[i]
-				const j = filter.lst[i].indexOf(item)
-				if (!new_term) {
-					// remove term
-					grp.splice(j, 1)
-					if (!grp.length) lst.splice(lst.indexOf(grp), 1)
-				} else {
-					// replace term
-					grp[j] = new_term
-				}
-				self.opts.callback(lst)
+				filterCopy.lst[i] = new_term
+				self.opts.callback(rootCopy)
 			}
 		})
 		self.pills[item.$id] = pill
@@ -277,7 +266,7 @@ function setRenderers(self) {
 		if (item.lst) {
 			self.updateUI(select(this), item)
 		} else {
-			const tvs = self.pills[item.$id].getTerm()
+			//const tvs = self.pills[item.$id].getTerm()
 			const filter = this.parentNode.__data__
 
 			select(this)
@@ -291,7 +280,7 @@ function setRenderers(self) {
 				.html(filter.join == 'and' ? 'AND' : 'OR')
 
 			if (!self.pills[item.$id]) return
-			self.pills[item.$id].main(tvs)
+			self.pills[item.$id].main(item)
 		}
 	}
 
