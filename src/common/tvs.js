@@ -75,15 +75,6 @@ exports.TVSInit = rx.getInitFxn(TVS)
 
 function setRenderers(self) {
 	self.updateUI = function() {
-		// if (!self.termfilter.terms.length) {
-		// 	// no term
-		// 	self.dom.addpilldiv.style('display', 'inline-block')
-		// 	self.dom.pilldiv.style('display', 'none')
-		// } else {
-		// 	self.dom.addpilldiv.style('display', 'none')
-		// 	self.dom.pilldiv.style('display', 'inline-block')
-		// }
-
 		const terms_div = self.dom.holder
 		const filters = terms_div.selectAll('.tvs_pill').data([self.term], d => d.term.id)
 		filters.exit().each(self.exitPill)
@@ -117,6 +108,16 @@ function setRenderers(self) {
 			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
 
+		// // negate button
+		one_term_div
+			.append('div')
+			.attr('class', 'negate_btn')
+			.style('display', 'inline-block')
+			.style('padding', '6px 6px 3px 6px')
+			.style('background', d => (d.term.isnot ? '#660000' : '#134f5c'))
+			.style('color', 'white')
+			.html(d => (d.term.isnot ? 'NOT' : 'IS'))
+
 		self.updatePill.call(this)
 	}
 
@@ -124,8 +125,34 @@ function setRenderers(self) {
 		const term = d.term
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 
+		const term_negate_div = self.dom.tip.d.append('div')
 		const term_option_div = self.dom.tip.d.append('div')
 		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
+
+		const term_negate_select = term_negate_div
+			.append('select')
+			.attr('class', '.negate_select')
+			.style('display', 'block')
+			.style('margin', '5px 10px')
+			.style('padding', '3px')
+			.on('change', () => {
+				const new_term = JSON.parse(JSON.stringify(d))
+				new_term.term.isnot = term_negate_select.node().value == 'not' ? true : false
+				self.dom.tip.hide()
+				self.opts.callback(new_term)
+			})
+
+		term_negate_select
+			.append('option')
+			.attr('value', 'is')
+			.text('IS')
+
+		term_negate_select
+			.append('option')
+			.attr('value', 'not')
+			.text('IS NOT')
+
+		term_negate_select.node().selectedIndex = term.isnot ? 1 : 0
 
 		const optsFxn = term.iscategorical
 			? self.showCatOpts
@@ -665,6 +692,12 @@ function setRenderers(self) {
 		const one_term_div = select(this)
 		const term = one_term_div.datum()
 
+		// negate button
+		one_term_div
+			.select('.negate_btn')
+			.style('background', d => (d.term.isnot ? '#660000' : '#134f5c'))
+			.html(d => (d.term.isnot ? 'NOT' : 'IS'))
+
 		const value_text = self.get_value_text(term)
 
 		const grade_type =
@@ -733,7 +766,6 @@ function setRenderers(self) {
 	}
 
 	self.exitPill = async function(term) {
-		console.log(term)
 		select(this)
 			.style('opacity', 1)
 			.transition()
