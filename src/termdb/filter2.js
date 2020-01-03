@@ -3,8 +3,8 @@ import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 // import { TVSInit } from './tvs'
-import { TvsLstInit } from '../common/tvslst'
-import { TvsLstBtnInit } from '../common/tvslstbtn'
+import { filterInit } from '../common/filter'
+//import { TvsLstBtnInit } from '../common/tvslstbtn'
 import { appInit } from './app'
 import * as client from '../client'
 /*
@@ -41,11 +41,13 @@ class TdbFilter {
 
 	main() {
 		if (!this.inclusions) this.initFilter()
-		this.render()
+		// this.render()
 	}
 
 	initFilter() {
-		this.inclusions = TvsLstInit({
+		return
+		// TODO
+		this.inclusions = filterInit({
 			adderLabel: '+Include',
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
@@ -62,6 +64,7 @@ class TdbFilter {
 			}
 		})
 
+		/*
 		this.includeBtn = TvsLstBtnInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
@@ -93,6 +96,7 @@ class TdbFilter {
 			debug: this.app.opts.debug,
 			tvslst: this.state.termfilter.exclusions
 		})
+		*/
 	}
 }
 
