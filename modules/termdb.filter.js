@@ -4,11 +4,12 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 	/*
 	lst,
 	{	
-		$in: bool, // defaults to true
-		$join: "and" || "or",
-		$lst: [
-			tvs0, // {term, values, $in}
-			tvs1, // {term, ranges, $in}
+		type: 'tvslst',
+		in: bool, // defaults to true
+		join: "and" || "or",
+		lst: [
+			tvs0, // {type: 'tvs', tvs: {term, values, isnot}}
+			tvs1, // {type: 'tvs', tvs: {term, ranges, isnot}}
 			..., 
 			lst0{}, // may contain arbitrary levels of nested lst{}
 			lst1{},
@@ -17,29 +18,26 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 	}
 */
 	if (!filter) throw 'empty filter argument'
-	if (filter.$lst) {
-		if (!Array.isArray(filter.$lst)) throw `filter.$lst must be an array`
-		if (!filter.$join) throw 'filter.$join must be specified when filter.$lst is specified'
-		if (filter.$join != 'or' && filter.$join != 'and') throw 'filter.$join must equal either "or" or "and"'
-	} else if (filter.$join) {
-		throw 'a filter.$lst[] is required when filter.$join is specified'
-	}
-	if (!('$in' in filter)) filter.$in = true
+	if (filter.type != 'tvslst') throw 'invalid filter argument'
+	if (!Array.isArray(filter.lst)) throw `filter.lst must be an array`
+	if (!filter.join) throw 'filter.join must be specified when filter.lst is specified'
+	if (filter.join != 'or' && filter.join != 'and') throw 'filter.join must equal either "or" or "and"'
+	if (!('in' in filter)) filter.in = true
 	const filters = []
 	const CTEs = []
 	const values = []
 	let i = 0
-	for (const [i, tvs] of filter.$lst.entries()) {
+	for (const [i, item] of filter.lst.entries()) {
 		const CTEname_i = CTEname + '_' + i
 		let f
-		if (tvs.$join) {
-			f = makesql_join_filters(tvs, ds, CTEname_i)
-		} else if (tvs.term.iscategorical) {
-			f = get_categorical(tvs, CTEname_i)
-		} else if (tvs.term.isinteger || tvs.term.isfloat) {
-			f = get_numerical(tvs, CTEname_i, ds)
-		} else if (tvs.term.iscondition) {
-			f = get_condition(tvs, CTEname_i)
+		if (item.type == 'tvslst') {
+			f = makesql_join_filters(item, ds, CTEname_i)
+		} else if (item.tvs.term.iscategorical) {
+			f = get_categorical(item.tvs, CTEname_i)
+		} else if (item.tvs.term.isinteger || item.tvs.term.isfloat) {
+			f = get_numerical(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.iscondition) {
+			f = get_condition(item.tvs, CTEname_i)
 		} else {
 			throw 'unknown term type'
 		}
@@ -53,9 +51,9 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 	if (filters.length == 1) {
 		return filters[0]
 	} else {
-		const JOINOPER = filter.$join == 'and' ? 'INTERSECT' : 'UNION'
+		const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
 		const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
-		if (filter.$in) {
+		if (filter.in) {
 			CTEs.push(`
 				${CTEname} AS (
 					${superCTE}

@@ -1,3 +1,9 @@
+/*
+
+$ npx tape modules/test/*.spec.js
+
+*/
+
 const tape = require('tape')
 const getFilterCTEs = require('../termdb.filter').getFilterCTEs
 
@@ -8,12 +14,16 @@ tape('\n', function(test) {
 
 tape('simple filter', function(test) {
 	const filter = getFilterCTEs({
-		$in: true,
-		$join: 'and',
-		$lst: [
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
 			{
-				term: { id: 'wgs_sequenced', iscategorical: true },
-				values: [{ key: '1', label: 'Yes' }] // always assumed OR
+				type: 'tvs',
+				tvs: {
+					term: { id: 'wgs_sequenced', iscategorical: true },
+					values: [{ key: '1', label: 'Yes' }] // always assumed OR
+				}
 			}
 		]
 	})
@@ -23,38 +33,56 @@ tape('simple filter', function(test) {
 	test.end()
 })
 
-tape('complex filter', function(test) {
+tape.only('complex filter', function(test) {
 	const filter = getFilterCTEs({
-		$in: true,
-		$join: 'and',
-		$lst: [
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
 			{
-				term: { id: 'wgs_sequenced', iscategorical: true },
-				values: [{ key: '1', label: 'Yes' }] // always assumed OR
+				type: 'tvs',
+				tvs: {
+					term: { id: 'wgs_sequenced', iscategorical: true },
+					values: [{ key: '1', label: 'Yes' }] // always assumed OR
+				}
 			},
 			{
-				$in: true,
-				$join: 'or',
-				$lst: [
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [
 					{
-						term: { id: 'sex', iscategorical: true },
-						values: [{ key: 'male', label: 'male' }]
+						type: 'tvs',
+						tvs: {
+							term: { id: 'sex', iscategorical: true },
+							values: [{ key: 'male', label: 'male' }]
+						}
 					},
 					{
-						term: { id: 'diaggrp', iscategorical: true },
-						values: [{ key: 'ALL', label: 'ALL' }]
+						type: 'tvs',
+						tvs: {
+							term: { id: 'diaggrp', iscategorical: true },
+							values: [{ key: 'ALL', label: 'ALL' }]
+						}
 					},
 					{
-						$in: true,
-						$join: 'and',
-						$lst: [
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: [
 							{
-								term: { id: 'agedx', isfloat: true },
-								ranges: [{ start: 1, stop: 5 }]
+								type: 'tvs',
+								tvs: {
+									term: { id: 'agedx', isfloat: true },
+									ranges: [{ start: 1, stop: 5 }]
+								}
 							},
 							{
-								term: { id: 'aaclassic_5', isfloat: true },
-								ranges: [{ start: 1000, stop: 4000 }]
+								type: 'tvs',
+								tvs: {
+									term: { id: 'aaclassic_5', isfloat: true },
+									ranges: [{ start: 1000, stop: 4000 }]
+								}
 							}
 						]
 					}
