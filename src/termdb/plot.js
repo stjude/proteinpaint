@@ -148,18 +148,10 @@ class TdbPlot {
 			}
 		}
 
-		if (state.termfilter) {
-			if (state.termfilter.terms && state.termfilter.terms.length) {
-				params.push('tvslst=' + encodeArrOfTvslst(state.termfilter.terms))
-			}
-			if (state.termfilter.inclusions && state.termfilter.inclusions.length) {
-				params.push('inclusions=' + encodeArrOfTvslst(state.termfilter.inclusions))
-			}
-			if (state.termfilter.exclusions && state.termfilter.exclusions.length) {
-				params.push('exclusions=' + encodeArrOfTvslst(state.termfilter.exclusions))
-			}
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
-
 		return '?' + params.join('&')
 	}
 
@@ -278,12 +270,22 @@ export function plotConfig(opts) {
 	return rx.copyMerge(config, opts)
 }
 
-function encodeArrOfTvslst(arrOfTvslst) {
-	return encodeURIComponent(JSON.stringify(arrOfTvslst.map(arrOfTvslst_to_parameter)))
-}
-
-function arrOfTvslst_to_parameter(tvslst) {
-	return tvslst.map(tvslst_to_parameter)
+function normalizeFilterData(filter) {
+	const lst = []
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') lst.push(normalizeFilterData(item))
+		else
+			lst.push({
+				type: 'tvs',
+				tvs: tvslst_to_parameter(item.tvs)
+			})
+	}
+	return {
+		type: 'tvslst',
+		join: filter.join,
+		in: filter.in,
+		lst
+	}
 }
 
 function tvslst_to_parameter(tv) {

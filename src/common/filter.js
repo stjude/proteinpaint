@@ -34,7 +34,8 @@ class filterUi {
 		this.pills = {}
 
 		this.api = {
-			main: async filter => {
+			main: async _filter => {
+				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
 				this.filter = filter
 				//console.log(40, this.filter)

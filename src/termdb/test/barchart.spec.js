@@ -77,31 +77,48 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape('single barchart, filtered', function(test) {
+tape.only('single barchart, filtered', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
 		state: {
 			termfilter: {
 				show_top_ui: true,
-				inclusions: [
-					[
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: 'and',
+					lst: [
 						{
-							term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-							values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+							type: 'tvslst',
+							in: 1,
+							join: 'and',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+									}
+								},
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'sex', name: 'Sex', iscategorical: true },
+										values: [{ key: 'Male', label: 'Male' }]
+									}
+								}
+							]
 						},
 						{
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
-							values: [{ key: 'Male', label: 'Male' }]
-						}
-					],
-					[
-						{
-							term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
-							ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+							type: 'tvs',
+							tvs: {
+								term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
+								ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+							}
 						}
 					]
-				]
+				}
 			},
 			tree: {
 				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],

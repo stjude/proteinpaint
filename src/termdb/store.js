@@ -15,8 +15,12 @@ const defaultState = {
 	},
 	termfilter: {
 		terms: [],
-		inclusions: [],
-		exclusions: []
+		filter: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: []
+		}
 	},
 	autoSave: true
 }
@@ -37,14 +41,6 @@ class TdbStore {
 		if (!app.opts.state) throw '.state{} missing'
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 		this.validateOpts()
-
-		// increment when adding new filter groups
-		this.currFilterGrpId = this.state.termfilter.terms
-			? this.state.termfilter.terms.length
-			: this.state.termfilter.exclusions ||
-			  this.state.termfilter.exclusions.length < this.state.termfilter.inclusions.length
-			? this.state.termfilter.inclusions.length
-			: this.state.termfilter.exclusions.length
 
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
@@ -81,31 +77,11 @@ class TdbStore {
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
-		if (this.state.termfilter.terms && !this.state.termfilter.inclusions.length) {
-			this.state.termfilter.inclusions = this.state.termfilter.terms
-		}
-		this.addFilterIds()
 	}
 
 	fromJson(str) {
 		const obj = JSON.parse(str)
-		this.addFilterIds(obj)
 		return obj
-	}
-
-	addFilterIds(_obj = null) {
-		const obj = _obj && _obj.termfilter ? _obj.termfilter : this.state && this.state.termfilter
-		if (!obj) return
-		for (const filterKey of ['inclusions', 'exclusions']) {
-			if (!obj[filterKey]) continue
-			if (!Array.isArray(obj[filterKey])) {
-				console.log(obj[filterKey])
-				throw `termfilter[filterKey] must be an array`
-			}
-			if (this.state) {
-				//this.state.termfilter[filterKey].$lst.forEach(this.setId)
-			}
-		}
 	}
 
 	setId(item) {
@@ -171,7 +147,7 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_add(action) {
-		const filterType = this.state.termfilter.inclusions ? 'inclusions' : 'terms'
+		const filterType = 'terms'
 		const filters = this.state.termfilter[filterType]
 		if ('termId' in action) {
 			/*
@@ -251,13 +227,7 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
-		if (action.tvslst) {
-			if (!action.filterKey) throw 'missing action.filterKey'
-			this.state.termfilter[action.filterKey] = action.tvslst
-		} else {
-			this.state.termfilter = []
-			this.state.termfilter.terms.push(action.term)
-		}
+		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 	}
 }
 
