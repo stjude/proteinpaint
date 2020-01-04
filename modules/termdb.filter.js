@@ -1,6 +1,6 @@
 const termjson = require('../test/termdb/termjson').termjson
 
-function makesql_join_filters(filter, ds, CTEname = 'filter') {
+function getFilterCTEs(filter, ds, CTEname = 'f') {
 	/*
 	lst,
 	{	
@@ -17,11 +17,11 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 		]	
 	}
 */
-	if (!filter) throw 'empty filter argument'
-	if (filter.type != 'tvslst') throw 'invalid filter argument'
+	if (!filter) return
+	if (filter.type != 'tvslst') throw 'invalid filter argument' + JSON.stringify(filter)
 	if (!Array.isArray(filter.lst)) throw `filter.lst must be an array`
-	if (!filter.join) throw 'filter.join must be specified when filter.lst is specified'
-	if (filter.join != 'or' && filter.join != 'and') throw 'filter.join must equal either "or" or "and"'
+	if (filter.lst.length > 1 && filter.join != 'or' && filter.join != 'and')
+		throw 'filter.join must equal either "or" or "and"'
 	if (!('in' in filter)) filter.in = true
 	const filters = []
 	const CTEs = []
@@ -31,7 +31,7 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
-			f = makesql_join_filters(item, ds, CTEname_i)
+			f = getFilterCTEs(item, ds, CTEname_i)
 		} else if (item.tvs.term.iscategorical) {
 			f = get_categorical(item.tvs, CTEname_i)
 		} else if (item.tvs.term.isinteger || item.tvs.term.isfloat) {
@@ -48,19 +48,24 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 		values.push(...f.values)
 	}
 
-	if (filters.length == 1) {
-		return filters[0]
-	} else {
-		const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
-		const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
-		if (filter.in) {
-			CTEs.push(`
+	/*if (filters.length == 1) {
+		return {
+			filters: CTEs[0],
+			CTEs,
+			values,
+			CTEname
+		}
+	} else {*/
+	const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
+	const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
+	if (filter.in) {
+		CTEs.push(`
 				${CTEname} AS (
 					${superCTE}
 				)
 			`)
-		} else {
-			CTEs.push(`
+	} else {
+		CTEs.push(`
 				${CTEname} AS (
 					SELECT sample
 					FROM annotations
@@ -69,17 +74,18 @@ function makesql_join_filters(filter, ds, CTEname = 'filter') {
 					)
 				)
 			`)
-		}
-
-		return {
-			CTEs,
-			values,
-			CTEname
-		}
 	}
+	//console.log(72, CTEs)
+	return {
+		filters: CTEs.join(',\n'),
+		CTEs,
+		values,
+		CTEname
+	}
+	//}
 }
 
-exports.getFilterCTEs = makesql_join_filters
+exports.getFilterCTEs = getFilterCTEs
 
 // makesql_by_tvsfilter helpers
 // put here instead of inside makesql_by_tvsfilter
@@ -105,7 +111,7 @@ function get_numerical(tvs, CTEname, ds) {
 	if (!tvs.ranges) throw '.ranges{} missing'
 	const values = [tvs.term.id]
 	// get term object, in case isinteger flag is missing from tvs.term
-	const term = termjson['agedx'] // ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
 	const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
 
 	const rangeclauses = []
@@ -165,7 +171,7 @@ function get_numerical(tvs, CTEname, ds) {
 	}
 }
 
-function get_condition(tvs) {
+function get_condition(tvs, CTEname) {
 	let value_for
 	if (tvs.bar_by_children) value_for = 'child'
 	else if (tvs.bar_by_grade) value_for = 'grade'

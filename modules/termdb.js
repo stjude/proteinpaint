@@ -78,7 +78,7 @@ function trigger_testplot(q, res, tdb, ds) {
 	const result = { lst }
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (t1.isinteger || t1.isfloat) {
-		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds, q.tvslst)
+		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds)
 	}
 	if (q.term2_id) {
 		const t2 = tdb.q.termjsonByOneid(q.term2_id)
@@ -94,8 +94,8 @@ function trigger_testplot(q, res, tdb, ds) {
 					if (q.term1_q) {
 						Object.assign(t1q, q.term1_q)
 					}
-					const tvslst = (q.tvslst ? q.tvslst : []).concat(t1q)
-					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds, tvslst)
+					const filter = (q.filter ? q.filter : []).concat(t1q)
+					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds)
 				}
 			}
 		}

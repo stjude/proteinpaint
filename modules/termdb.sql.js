@@ -1,5 +1,6 @@
 const app = require('../app')
 const binsmodule = require('./termdb.bins')
+const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const connect_db = require('./utils').connect_db
 
 /*
@@ -13,10 +14,6 @@ get_rows_by_one_key
 get_rows_by_two_keys
 server_init_db_queries
 ********************** INTERNAL
-makesql_by_tvsfilter
-	add_categorical
-	add_numerical
-	add_condition
 get_term_cte
 	makesql_oneterm
 		makesql_oneterm_categorical
@@ -29,208 +26,13 @@ get_label4key
 
 */
 
-function makesql_filter_union(arrOfTvslst, ds, CTEname, values) {
-	if (!arrOfTvslst || !arrOfTvslst.length) return
-	const filters = []
-	let i = 0
-	for (const tvslst of arrOfTvslst) {
-		if (!tvslst.length) continue
-		const filter = makesql_by_tvsfilter(tvslst, ds, CTEname + '_' + i++)
-		if (filter) {
-			values.push(...filter.values)
-			filters.push(filter)
-		}
-	}
-	if (filters.length < 2) return filters[0]
-	filters.push({
-		filters: `${CTEname} AS (
-			${filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\nUNION\n')}
-		)`,
-		CTEname
-	})
-
-	return {
-		filters: filters.map(f => f.filters).join(',\n'),
-		values,
-		CTEname
-	}
-}
-
-function makesql_by_tvsfilter(tvslst, ds, CTEname_i = '') {
+export function get_samples(qfilter, ds) {
 	/*
-.tvslst[{}]
-	optional
-	each element is a term-value setting object
-	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
-
-_opts{}
-	options for minor tweaks to the generated statement to serve other purposes,
-	such as to help with getting min, max, percentiles for numeric terms 
-	.columnas    "", or set t ", value" to get values
-	.endclause   "GROUP BY sample",
-							 or "ORDER BY value ASC" if columnas == ", value" and getting min, max, percentile
-
-
-returns:
-	.filters:
-		one string of all filter statement intersects, with question marks
-	.values[]:
-		array of *bind parameters*
-	.CTEname:
-		the name of CTE, to be used in task-specific runner
-*/
-	if (!tvslst || !tvslst.length) return null
-	const filters = []
-	const values = []
-
-	for (const tvs of tvslst) {
-		if (tvs.term.iscategorical) {
-			add_categorical(tvs, filters, values)
-		} else if (tvs.term.isinteger || tvs.term.isfloat) {
-			add_numerical(tvs, filters, values, ds)
-		} else if (tvs.term.iscondition) {
-			add_condition(tvs, filters, values)
-		} else {
-			throw 'unknown term type'
-		}
-	}
-
-	const CTEname = CTEname_i ? CTEname_i : 'filter'
-	return {
-		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
-		values,
-		CTEname
-	}
-}
-
-// makesql_by_tvsfilter helpers
-// put here instead of inside makesql_by_tvsfilter
-// to parse function once at server start instead of
-// multiple times per server request
-function add_categorical(tvs, filters, values) {
-	filters.push(
-		`SELECT sample
-		FROM annotations
-		WHERE term_id = ?
-		AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	)
-	values.push(tvs.term.id, ...tvs.values.map(i => i.key))
-}
-
-function add_numerical(tvs, filters, values, ds) {
-	if (!tvs.ranges) throw '.ranges{} missing'
-	values.push(tvs.term.id)
-	// get term object, in case isinteger flag is missing from tvs.term
-	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-	const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
-
-	const rangeclauses = []
-	let hasactualrange = false // if true, will exclude special categories
-
-	for (const range of tvs.ranges) {
-		if (range.value != undefined) {
-			// special category
-			rangeclauses.push(cast + '=?')
-			values.push(range.value)
-		} else {
-			// actual range
-			hasactualrange = true
-			const lst = []
-			if (!range.startunbounded) {
-				if (range.startinclusive) {
-					lst.push(cast + ' >= ?')
-				} else {
-					lst.push(cast + ' > ? ')
-				}
-				values.push(range.start)
-			}
-			if (!range.stopunbounded) {
-				if (range.stopinclusive) {
-					lst.push(cast + ' <= ?')
-				} else {
-					lst.push(cast + ' < ? ')
-				}
-				values.push(range.stop)
-			}
-			rangeclauses.push('(' + lst.join(' AND ') + ')')
-		}
-	}
-
-	let excludevalues
-	if (hasactualrange && term.values) {
-		excludevalues = Object.keys(term.values)
-			.filter(key => term.values[key].uncomputable)
-			.map(Number)
-			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && range.value === key))
-		if (excludevalues.length) values.push(...excludevalues)
-	}
-
-	filters.push(
-		`SELECT sample
-		FROM annotations
-		WHERE term_id = ?
-		AND ( ${rangeclauses.join(' OR ')} )
-		${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}`
-	)
-}
-
-function add_condition(tvs, filters, values) {
-	let value_for
-	if (tvs.bar_by_children) value_for = 'child'
-	else if (tvs.bar_by_grade) value_for = 'grade'
-	else throw 'must set the bar_by_grade or bar_by_children query parameter'
-
-	let restriction
-	if (tvs.value_by_max_grade) restriction = 'max_grade'
-	else if (tvs.value_by_most_recent) restriction = 'most_recent'
-	else if (tvs.value_by_computable_grade) restriction = 'computable_grade'
-	else throw 'unknown setting of value_by_?'
-
-	if (tvs.values) {
-		values.push(tvs.term.id, value_for, ...tvs.values.map(i => '' + i.key))
-		filters.push(
-			`SELECT sample
-			FROM precomputed
-			WHERE term_id = ? 
-			AND value_for = ? 
-			AND ${restriction} = 1
-			AND value IN (${tvs.values.map(i => '?').join(', ')})`
-		)
-	} else if (tvs.grade_and_child) {
-		//grade_and_child: [{grade, child_id}]
-		for (const gc of tvs.grade_and_child) {
-			values.push(tvs.term.id, '' + gc.grade)
-			filters.push(
-				`SELECT sample
-				FROM precomputed
-				WHERE term_id = ? 
-				AND value_for = 'grade'
-				AND ${restriction} = 1
-				AND value IN (?)`
-			)
-
-			values.push(tvs.term.id, gc.child_id)
-			filters.push(
-				`SELECT sample
-				FROM precomputed
-				WHERE term_id = ? 
-				AND value_for = 'child'
-				AND ${restriction} = 1
-				AND value IN (?)`
-			)
-		}
-	} else {
-		throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
-	}
-}
-
-export function get_samples(tvslst, ds) {
-	/*
-must have tvslst[]
-as the actual query is embedded in tvslst
+must have qfilter[]
+as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
-	const filter = makesql_by_tvsfilter(tvslst, ds)
+	const filter = getFilterCTEs(qfilter, ds)
 	const string = `WITH ${filter.filters}
 		SELECT sample FROM ${filter.CTEname}`
 
@@ -265,7 +67,7 @@ q{}
   .ds
   .key
 */
-	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
+	const filter = getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
 	const CTE0 = get_term_cte(q, values, 0)
 	values.push(q.term1_id, q.term2_id)
@@ -321,7 +123,7 @@ returns all relevant rows of
 	}
 
 q{}
-	.tvslst
+	.filter
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
@@ -339,9 +141,8 @@ opts{} options to tweak the query, see const default_opts = below
 							  or +" ORDER BY ..." + " LIMIT ..."
 
 */
-	if (typeof q.inclusions == 'string') q.inclusions = JSON.parse(decodeURIComponent(q.inclusions))
-	else if (typeof q.tvslst == 'string') q.inclusions = JSON.parse(decodeURIComponent(q.tvslst))
-	if (typeof q.exclusions == 'string') q.exclusions = JSON.parse(decodeURIComponent(q.exclusions))
+
+	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 
 	// do not break code that still uses the opts.groupby key-value
 	// can take this out once all calling code has been migrated
@@ -355,17 +156,15 @@ opts{} options to tweak the query, see const default_opts = below
 		endclause: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
-	const values = []
-	const inclusions = makesql_filter_union(q.inclusions, q.ds, 'inclusions', values)
-	const exclusions = makesql_filter_union(q.exclusions, q.ds, 'exclusions', values)
+	const filter = getFilterCTEs(q.filter, q.ds)
+	const values = filter ? filter.values : []
 
-	const CTE0 = get_term_cte(q, values, 0, inclusions)
-	const CTE1 = get_term_cte(q, values, 1, inclusions)
-	const CTE2 = get_term_cte(q, values, 2, inclusions)
+	const CTE0 = get_term_cte(q, values, 0, filter)
+	const CTE1 = get_term_cte(q, values, 1, filter)
+	const CTE2 = get_term_cte(q, values, 2, filter)
 
 	const statement = `WITH
-		${inclusions ? inclusions.filters + ',' : ''}
-		${exclusions ? exclusions.filters + ',' : ''}
+		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
@@ -380,22 +179,19 @@ opts{} options to tweak the query, see const default_opts = below
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${inclusions || exclusions ? 'WHERE' : ''}
-		${inclusions ? 't1.sample IN ' + inclusions.CTEname : ''}
-		${inclusions && exclusions ? 'AND' : ''}
-		${exclusions ? 't1.sample NOT IN ' + exclusions.CTEname : ''}
+		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
 	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
-	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter: inclusions }
+	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
 }
 
 /*
 Generates one or more CTEs by a term
 
 q{}
-	.tvslst
+	.filter
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
@@ -413,7 +209,7 @@ index
 
 filter
 	{} or null
-	returned by makesql_by_tvsfilter
+	returned by getFilterCTEs
 	required when making numeric bins and need to compute percentile for first/last bin
 */
 function get_term_cte(q, values, index, filter) {
@@ -450,7 +246,7 @@ function get_term_cte(q, values, index, filter) {
 export function get_summary(q) {
 	/*
 q{}
-	.tvslst
+	.filter
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
@@ -479,7 +275,7 @@ function getlabeler(q, i, result) {
 Returns a function to (re)label a data object
 
 q{}
-	.tvslst
+	.filter
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
@@ -827,22 +623,25 @@ export function get_bins(q, term, ds, index, filter) {
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 
-export function get_numericsummary(q, term, ds, _tvslst = [], withValues = false) {
+export function get_numericsummary(q, term, ds, withValues = false) {
 	/*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
 
 */
-	const tvslst = typeof _tvslst == 'string' ? JSON.parse(decodeURIComponent(_tvslst)) : _tvslst
+	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
-	if ((term.isinteger || term.isfloat) && !tvslst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
-		tvslst.push({
-			term,
-			ranges: get_bins(q, term, ds)
-			// FIXME should tvslst be converted to filter and pass to get_bins()?
+	if ((term.isinteger || term.isfloat) && !filter.lst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
+		filter.lst.push({
+			type: 'tvs',
+			tvs: {
+				term,
+				ranges: get_bins(q, term, ds)
+				// FIXME should tvslst be converted to filter and pass to get_bins()?
+			}
 		})
 	}
-	const filter = makesql_by_tvsfilter(tvslst, ds)
+	const filter = getFilterCTEs(qfilter, ds)
 	const values = []
 	if (filter) {
 		values.push(...filter.values)
@@ -897,7 +696,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		values.push(...filter.values)
 	}
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
-	values.push(term.id)
+	if (!filter) values.push(term.id)
 
 	const ctes = []
 	const ptablenames = []
