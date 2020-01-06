@@ -68,7 +68,6 @@ class TdbTree {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = opts
-		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
 			searchDiv: opts.holder.append('div').style('margin', '10px'),
@@ -205,7 +204,6 @@ class TdbTree {
 					id: term.id,
 					holder: holder,
 					term: term,
-					modifiers: this.modifiers,
 					callbacks: {
 						// must use namespaced eventType otherwise will be rewritten..
 						'postRender.viewbtn': plot => {

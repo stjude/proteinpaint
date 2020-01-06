@@ -21,7 +21,6 @@ class TdbBarchart {
 		this.type = 'barchart'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
-		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
