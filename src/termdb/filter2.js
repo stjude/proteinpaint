@@ -2,9 +2,8 @@ import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
-// import { TVSInit } from './tvs'
-import { filterInit } from '../common/filter'
-//import { TvsLstBtnInit } from '../common/tvslstbtn'
+import { filterControlsInit } from '../common/filterControls'
+import { filterGlanceInit } from '../common/filterGlance'
 import { appInit } from './app'
 import * as client from '../client'
 /*
@@ -20,6 +19,7 @@ class TdbFilter {
 		this.type = 'filter'
 		this.app = app
 		this.validateOpts(opts)
+		setInteractivity(this)
 		setRenderers(this)
 		this.categoryData = {}
 		this.initHolder()
@@ -40,18 +40,25 @@ class TdbFilter {
 	}
 
 	main() {
-		if (!this.filterUi) this.initFilter()
+		if (!this.filterGlance) this.initFilter()
 		this.render()
 	}
 
 	initFilter() {
-		this.filterUi = filterInit({
+		this.filterGlance = filterGlanceInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
-			holder: this.dom.filterTip.d, //  this.dom.filterDiv,
+			holder: this.dom.filterGlanceHolder,
+			debug: this.app.opts.debug
+		})
+
+		this.filterControls = filterControlsInit({
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			holder: this.dom.filterControlsTip.d,
 			debug: this.app.opts.debug,
-			getData: () => this.state.termfilter.filter,
 			callback: filter => {
+				this.dom.filterControlsTip.hide()
 				this.app.dispatch({
 					type: 'filter_replace',
 					filter
@@ -65,59 +72,37 @@ exports.filterInit = rx.getInitFxn(TdbFilter)
 
 function setRenderers(self) {
 	self.initHolder = function() {
-		const div = this.dom.holder
+		const div = self.dom.holder
 			.attr('class', 'filter_div')
+			.style('position', 'relative')
 			.style('width', 'fit-content')
-			.style('padding', '5px')
+			//.style('padding', '5px')
 			.style('margin', '10px')
 			.style('margin-top', '5px')
 			.style('display', 'table')
 			.style('border', 'solid 1px #ddd')
 
-		// div
-		// 	.append('div')
-		// 	.style('display', 'table-cell')
-		// 	.style('vertical-align','middle')
-		// 	.style('text-transform', 'uppercase')
-		// 	.style('color', '#bbb')
-		// 	.style('margin-right', '10px')
-		// 	.html('Filter')
-
-		const filter_div = div.append('div').style('display', 'table-cell')
-		this.setFilterBtn(filter_div, 'Filter', 'filter')
-	}
-
-	self.setFilterBtn = function(div, label, prefix) {
-		const btnName = prefix + 'Btn'
-		const tipName = prefix + 'Tip'
-		const divName = prefix + 'Div'
-
-		const filter_div = div.append('div').style('display', 'block')
-
-		//Title for the div - Inclusion/Exclusion
-		/*filter_div
+		self.dom.filterBtn = div
 			.append('div')
+			.html('Filter')
 			.style('display', 'inline-block')
-			.style('margin', '10px 15px')
-			.style('width', '70px')
-			.style('text-transform', 'uppercase')
-			.style('font-size', '.8em')
-			.style('color', '#bbb')*/
-
-		this.dom[btnName] = filter_div
-			.append('div')
-			.html(label)
-			.attr('class', 'sja_filter_btn')
-			.style('display', 'inline-block')
+			.style('padding', '5px 10px')
 			.style('cursor', 'pointer')
-			.on('click', () => {
-				self.dom[tipName].showunder(btnElem)
-			})
+			.on('click', self.displayControls)
 
-		const btnElem = this.dom[btnName].node()
+		self.dom.filterGlanceHolder = div.append('div').style('display', 'inline-block')
 
-		this.dom[tipName] = new client.Menu({ padding: '5px' })
-		this.dom[divName] = this.dom[tipName].d
+		// filterUI mask
+		div
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('width', '100%')
+			.style('height', '100%')
+			.on('click', self.displayControls)
+
+		self.dom.filterControlsTip = new client.Menu({ padding: '5px' })
 	}
 
 	self.render = function() {
@@ -127,7 +112,13 @@ function setRenderers(self) {
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
+		self.filterGlance.main(termfilter.filter)
+		self.filterControls.main(termfilter.filter)
+	}
+}
 
-		self.filterUi.main(termfilter.filter)
+function setInteractivity(self) {
+	self.displayControls = function() {
+		self.dom.filterControlsTip.showunder(self.dom.holder.node())
 	}
 }

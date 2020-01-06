@@ -104,7 +104,7 @@ function setRenderers(self) {
 			.style('border-radius', '6px 0 0 6px')
 			.style('background-color', '#396C98')
 			.style('padding', '6px 6px 3px 6px')
-			.style('margin-left', '5px')
+			//.style('margin-left', '5px')
 			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
 

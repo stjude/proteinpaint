@@ -17,7 +17,7 @@ import * as client from '../client'
 		non-child elements with the same classnames
 */
 
-class filterUi {
+class filterControls {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
@@ -25,13 +25,12 @@ class filterUi {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 		this.lastId = 0
+		this.categoryData = {}
+		this.pills = {}
 
 		setRenderers(this)
 		setInteractivity(this)
-
-		this.categoryData = {}
 		this.initUI()
-		this.pills = {}
 
 		this.api = {
 			main: async _filter => {
@@ -70,7 +69,7 @@ class filterUi {
 	}
 }
 
-exports.filterInit = rx.getInitFxn(filterUi)
+exports.filterControlsInit = rx.getInitFxn(filterControls)
 
 function setRenderers(self) {
 	self.initUI = function() {
@@ -180,7 +179,7 @@ function setRenderers(self) {
 			.each(self.updateJoinLabel)
 	}
 
-	self.removeGrp = function(item) {
+	self.removeGrp = function(item) { console.log(182)
 		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
 				if (subitem.lst) self.removeGrp(subitem)
