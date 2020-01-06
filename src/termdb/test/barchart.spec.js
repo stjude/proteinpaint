@@ -77,77 +77,6 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape('single barchart, filtered', function(test) {
-	test.timeoutAfter(1000)
-
-	runpp({
-		state: {
-			termfilter: {
-				show_top_ui: true,
-				filter: {
-					type: 'tvslst',
-					in: 1,
-					join: 'and',
-					lst: [
-						{
-							type: 'tvslst',
-							in: 1,
-							join: 'and',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
-									}
-								},
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'sex', name: 'Sex', iscategorical: true },
-										values: [{ key: 'Male', label: 'Male' }]
-									}
-								}
-							]
-						},
-						{
-							type: 'tvs',
-							tvs: {
-								term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
-								ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
-							}
-						}
-					]
-				}
-			},
-			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
-				visiblePlotIds: ['sex'],
-				plots: {
-					sex: {
-						term: {
-							id: 'sex'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
-				}
-			}
-		},
-		plot: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(plot) {
-		test.pass('---  work in progress ---')
-		test.end()
-	}
-})
-
 tape('single chart, with overlay', function(test) {
 	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
@@ -358,8 +287,79 @@ tape('series visibility', function(test) {
 	}
 })
 
+tape('single barchart, filtered', function(test) {
+	test.timeoutAfter(1000)
+
+	runpp({
+		state: {
+			termfilter: {
+				show_top_ui: true,
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: 'and',
+					lst: [
+						{
+							type: 'tvslst',
+							in: 1,
+							join: 'and',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+									}
+								},
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'sex', name: 'Sex', iscategorical: true },
+										values: [{ key: 'Male', label: 'Male' }]
+									}
+								}
+							]
+						},
+						{
+							type: 'tvs',
+							tvs: {
+								term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
+								ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+							}
+						}
+					]
+				}
+			},
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: {
+							id: 'sex'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		test.pass()
+		test.end()
+	}
+})
+
 let barDiv
-tape('click to add numeric, condition term filter', function(test) {
+tape('click bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { show_top_ui: true, filter: [] }

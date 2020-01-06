@@ -28,8 +28,8 @@ class filterControls {
 		this.categoryData = {}
 		this.pills = {}
 
-		setRenderers(this)
 		setInteractivity(this)
+		setRenderers(this)
 		this.initUI()
 
 		this.api = {
@@ -38,8 +38,11 @@ class filterControls {
 				this.validateFilter(filter)
 				this.filter = filter
 				//console.log(40, this.filter)
-				this.dom.grpAdderDiv.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'block' : 'none')
+				this.dom.grpAdderDiv.datum(filter).html(this.opts.btnLabel) //!filter.lst || !filter.lst.length ? '+NEW FILTER' : this.opts.btnLabel)
 				this.updateUI(this.dom.filterContainer, filter)
+			},
+			clickNewBtn: () => {
+				this.dom.grpAdderDiv.node().click()
 			}
 		}
 	}
@@ -48,6 +51,8 @@ class filterControls {
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (!o.btn) throw '.btn missing'
+		if (!o.btnLabel) o.btnLabel = 'Filter' // throw '.btnLabel missing'
 		return o
 	}
 	validateFilter(item) {
@@ -82,7 +87,8 @@ function setRenderers(self) {
 			.style('padding', '5px')
 
 		// button to add new term
-		self.dom.grpAdderDiv = self.dom.holder
+		self.dom.grpAdderDiv = self.opts.btn
+			.datum(self.filter)
 			.append('div')
 			.attr('class', 'sja_new_filter_btn')
 			.style('padding', '4px 6px 2px 6px')
@@ -93,7 +99,6 @@ function setRenderers(self) {
 			.style('color', '#000')
 			.style('background-color', '#EEEEEE')
 			.style('cursor', 'pointer')
-			.html('+NEW')
 			.on('click', self.displayTreeMenu)
 	}
 
@@ -195,6 +200,7 @@ function setRenderers(self) {
 
 	self.updateLstAppender = function(d) {
 		const filter = this.parentNode.__data__
+		console.log(202, d.join, filter.join, filter.lst.length)
 		d.filter = filter
 		select(this)
 			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
@@ -295,6 +301,14 @@ function setRenderers(self) {
 		select(this).remove()
 	}
 
+	self.updateLstAppender = function(d) {
+		const filter = this.parentNode.__data__
+		d.filter = filter
+		select(this)
+			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
+			.html(d.label)
+	}
+
 	self.addJoinLabel = function(elem, filter, item) {
 		select(elem)
 			.append('div')
@@ -324,6 +338,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.displayTreeMenu = function(d) {
+		//console.log(339, d, this.__data__)
 		self.dom.tip.clear().showunder(this instanceof Node ? this : self.dom.grpAdderDiv.node())
 		const filter =
 			'lst' in d

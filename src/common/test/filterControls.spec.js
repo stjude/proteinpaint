@@ -6,7 +6,7 @@ const filterControlsInit = require('../filterControls').filterControlsInit
 the direct functional testing of the component, without the use of runpp()
 
 run it as:
-$ npx watchify filter.spec.js -o ../../../public/bin/spec.bundle.js -v
+$ npx watchify filterControls.spec.js -o ../../../public/bin/spec.bundle.js -v
 
 */
 
@@ -25,7 +25,9 @@ function getOpts(_opts = {}) {
 	const opts = Object.assign({ holder }, _opts)
 
 	opts.filter = filterControlsInit({
-		holder,
+		btn: holder.append('div'),
+		btnLabel: 'Filter',
+		holder: holder.append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		debug: true,
@@ -92,7 +94,7 @@ tape('empty root filter', async test => {
 	test.equal(opts.filterData.lst.length, 1, 'should create a one-entry filter.lst[]')
 	// behavioral repeat of the data-only test for
 	// a single-entry root filter test
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.equal(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'block',
@@ -167,7 +169,7 @@ tape('root filter with a single-entry', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.equal(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'block',
@@ -188,7 +190,7 @@ tape('root filter with a single-entry', async test => {
 	const lstAppender = opts.holder.node().querySelectorAll('.sja_filter_lst_appender')[0]
 	await addDemographicSexFilter(opts, lstAppender)
 	test.equal(opts.filterData.lst.length, 2, 'should create a two-entry filter.lst[]')
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.equal(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'block',
@@ -226,7 +228,7 @@ tape('root filter with a single-entry', async test => {
 	const secondItemRemover = opts.holder.node().querySelectorAll('.sja_filter_remove_transformer')[1]
 	secondItemRemover.click()
 	await sleep(300)
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.equal(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'block',
@@ -314,7 +316,7 @@ tape('root filter with nested filters', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.equal(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'block',

@@ -56,6 +56,8 @@ class TdbFilter {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.filterControlsTip.d,
+			btn: this.dom.filterBtn,
+			btnLabel: 'Filter',
 			debug: this.app.opts.debug,
 			callback: filter => {
 				this.dom.filterControlsTip.hide()
@@ -84,11 +86,10 @@ function setRenderers(self) {
 
 		self.dom.filterBtn = div
 			.append('div')
-			.html('Filter')
+			//.html('Filter')
 			.style('display', 'inline-block')
 			.style('padding', '5px 10px')
 			.style('cursor', 'pointer')
-			.on('click', self.displayControls)
 
 		self.dom.filterGlanceHolder = div.append('div').style('display', 'inline-block')
 
@@ -100,7 +101,7 @@ function setRenderers(self) {
 			.style('left', 0)
 			.style('width', '100%')
 			.style('height', '100%')
-			.on('click', self.displayControls)
+			.on('click', self.displayTreeOrControls)
 
 		self.dom.filterControlsTip = new client.Menu({ padding: '5px' })
 	}
@@ -118,7 +119,11 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayControls = function() {
-		self.dom.filterControlsTip.showunder(self.dom.holder.node())
+	self.displayTreeOrControls = function() {
+		if (self.state.termfilter.filter.lst.length) {
+			self.dom.filterControlsTip.showunder(self.dom.holder.node())
+		} else {
+			self.filterControls.clickNewBtn()
+		}
 	}
 }

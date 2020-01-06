@@ -94,9 +94,7 @@ function setRenderers(self) {
 	self.addGrp = function(item, i) {
 		const filter = this.parentNode.__data__
 
-		select(this)
-			//.style('padding', '5px 5px 5px 0')
-			.style('display', 'inline-block')
+		select(this).style('display', 'inline-block')
 
 		select(this)
 			.append('span')
@@ -161,14 +159,6 @@ function setRenderers(self) {
 			delete self.pills[item.$id]
 		}
 		if (this instanceof Node) select(this).remove()
-	}
-
-	self.updateLstAppender = function(d) {
-		const filter = this.parentNode.__data__
-		d.filter = filter
-		select(this)
-			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
-			.html(d.label)
 	}
 
 	self.addItem = function(item, i) {
