@@ -131,7 +131,7 @@ function setRenderers(self) {
 
 		const term_negate_select = term_negate_div
 			.append('select')
-			.attr('class', '.negate_select')
+			.attr('class', 'negate_select')
 			.style('display', 'block')
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
