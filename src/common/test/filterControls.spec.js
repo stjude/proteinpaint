@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const filterInit = require('../filter').filterInit
+const filterControlsInit = require('../filterControls').filterControlsInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -24,7 +24,7 @@ function getOpts(_opts = {}) {
 
 	const opts = Object.assign({ holder }, _opts)
 
-	opts.filter = filterInit({
+	opts.filter = filterControlsInit({
 		holder,
 		genome: 'hg38',
 		dslabel: 'SJLife',
@@ -62,7 +62,7 @@ async function addDemographicSexFilter(opts, btn) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- common/filter -***-')
+	test.pass('-***- common/filterControls -***-')
 	test.end()
 })
 

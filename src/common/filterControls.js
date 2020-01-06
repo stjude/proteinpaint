@@ -179,7 +179,7 @@ function setRenderers(self) {
 			.each(self.updateJoinLabel)
 	}
 
-	self.removeGrp = function(item) { console.log(182)
+	self.removeGrp = function(item) {
 		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
 				if (subitem.lst) self.removeGrp(subitem)

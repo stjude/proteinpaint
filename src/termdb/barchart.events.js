@@ -329,7 +329,7 @@ function menuoption_add_filter(self, tvslst) {
 	/*
 	self: the tree object
 	tvslst: an array of 1 or 2 term-value setting objects
-		this is to be added to the obj.termfilter.terms[]
+		this is to be added to the obj.termfilter.filter[]
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
   	*/
@@ -339,7 +339,14 @@ function menuoption_add_filter(self, tvslst) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
-	self.app.dispatch({ type: 'filter_add', tvslst })
+	const filter = JSON.parse(JSON.stringify(self.state.termfilter.filter))
+	filter.lst.push(...tvslst.map(wrapTvs))
+	if (!filter.join && filter.lst.length > 1) filter.join = 'and'
+	self.app.dispatch({ type: 'filter_replace', filter })
+}
+
+function wrapTvs(tvs) {
+	return { type: 'tvs', tvs }
 }
 
 /* 			TODO: add to cart and gp          */
@@ -347,7 +354,7 @@ function menuoption_add_filter(self, tvslst) {
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
 	for (const t of tvslst) lst.push(t)
-	if (self.termfilter && self.termfilter.terms) {
+	if (self.termfilter && self.termfilter.filter) {
 		for (const t of self.termfilter.terms) {
 			lst.push(JSON.parse(JSON.stringify(t)))
 		}

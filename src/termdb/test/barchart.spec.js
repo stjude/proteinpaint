@@ -77,7 +77,7 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape.only('single barchart, filtered', function(test) {
+tape('single barchart, filtered', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -149,7 +149,7 @@ tape.only('single barchart, filtered', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
-	const termfilter = { show_top_ui: true, inclusions: [] }
+	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -362,7 +362,7 @@ let barDiv
 tape('click to add numeric, condition term filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, inclusions: [] }
+	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -423,15 +423,18 @@ tape('click to add numeric, condition term filter', function(test) {
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		test.equal(
-			termfilter.inclusions && termfilter.inclusions[0].length,
+			termfilter.filter && termfilter.filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.inclusions[0][0],
+			termfilter.filter.lst[0],
 			{
-				term: config.term.term,
-				ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
+				type: 'tvs',
+				tvs: {
+					term: config.term.term,
+					ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
+				}
 			},
 			'should create a numeric term-value filter with a ranges key'
 		)
@@ -443,168 +446,26 @@ tape('click to add numeric, condition term filter', function(test) {
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		delete q.hiddenValues
 		test.deepEqual(
-			termfilter.inclusions[0][1],
-			Object.assign(
-				{
-					term: config.term2.term,
-					values: [
-						{
-							key: t2ValKey !== undefined ? t2ValKey : clickedData.dataId,
-							label:
-								clickedData.dataId in config.term2.term.values
-									? config.term2.term.values[clickedData.dataId].label
-									: clickedData.dataId
-						}
-					]
-				},
-				/*** 
-				 TODO: PENDING THE FILL-IN FOR TERM2 Q 
-				***/
-				q
-			),
+			termfilter.filter.lst[1],
+			{
+				type: 'tvs',
+				tvs: Object.assign(
+					{
+						term: config.term2.term,
+						values: [
+							{
+								key: t2ValKey !== undefined ? t2ValKey : clickedData.dataId,
+								label:
+									clickedData.dataId in config.term2.term.values
+										? config.term2.term.values[clickedData.dataId].label
+										: clickedData.dataId
+							}
+						]
+					},
+					q
+				)
+			},
 			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
 		)
 	}
 })
-
-/*
-tape('click to add condition child term filter', function(test) {
-	const termfilter = { show_top_ui: true, inclusions: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_computable_grade: 1 } }),
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: triggerClick
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		}
-	})
-
-	function triggerClick(plot) {
-		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
-		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-		setTimeout(() => {
-			plot.obj.tip.d
-				.selectAll('.sja_menuoption')
-				.filter(d => d.label.includes('filter'))
-				.node()
-				.dispatchEvent(new Event('click', { bubbles: true }))
-		}, 200)
-	}
-
-	function testTermValues(plot, clickedData) {
-		setTimeout(() => {
-			test.equal(
-				termfilter.inclusions && termfilter.inclusions.length,
-				1,
-				'should create one tvslst filter when a child bar is clicked'
-			)
-			test.equal(
-				termfilter.inclusions[0].bar_by_children,
-				1,
-				'should create a tvslst filter with bar_by_children set to true'
-			)
-			test.equal(termfilter.inclusions[0].value_by_computable_grade, 1, 'filter should support value_by_computable_grade')
-			test.end()
-		}, 200)
-	}
-})
-
-tape('click to add condition grade and child term filter', function(test) {
-	const termfilter = { show_top_ui: true, inclusions: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
-			term2: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: triggerClick
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		}
-	})
-
-	function triggerClick(plot) {
-		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
-		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-		setTimeout(() => {
-			plot.obj.tip.d
-				.selectAll('.sja_menuoption')
-				.filter(d => d.label.includes('filter'))
-				.node()
-				.dispatchEvent(new Event('click', { bubbles: true }))
-		}, 200)
-	}
-
-	function testTermValues(plot, clickedData) {
-		setTimeout(() => {
-			test.equal(
-				termfilter.inclusions && termfilter.inclusions.length,
-				1,
-				'should create one tvslst filter when a grade and child bar/overlay is clicked'
-			)
-			test.true('grade_and_child' in termfilter.inclusions[0], 'should create a tvslst filter with a grade_and_child')
-			test.true(Array.isArray(termfilter.inclusions[0].grade_and_child), 'filter term.grade_and_child should be an array')
-			if (Array.isArray(termfilter.inclusions[0].grade_and_child)) {
-				const filter = termfilter.inclusions[0].grade_and_child[0]
-				test.notEqual(filter.grade, filter.child_id, 'filter grade and child_id should be different')
-				test.equal(typeof filter.grade, 'number', 'filter grade should be a number')
-				test.equal(typeof filter.child_id, 'string', 'filter grade should be a string')
-			}
-			test.end()
-		}, 200)
-	}
-})
-*/
-/*
-tape('single chart, genotype overlay', function(test) {
-	const termfilter = { show_top_ui: true, inclusions: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term2: 'genotype',
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: testBarCount
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		},
-		modifier_ssid_barchart: {
-			mutation_name: 'TEST',
-			ssid: 'genotype-test.txt'
-		}
-	})
-
-	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
-		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
-		test.end()
-	}
-})
-*/
