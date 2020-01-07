@@ -367,15 +367,15 @@ tape('tvs : Conditional', async test => {
 		.click()
 
 	tipd
-		.selectAll('.apply_btn')
 		.node()
+		.querySelector('.apply_btn')
 		.click()
 
 	await sleep(800)
 	test.equal(
 		opts.holder
 			.node()
-			.querySelectorAll('.value_btn')[0]
+			.querySelector('.value_btn')
 			.innerHTML.split('<')[0],
 		opts.tvsData.values[0].label,
 		'should change pill value to subcondtion'

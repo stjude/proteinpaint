@@ -4,6 +4,7 @@ import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
+import { filterGlanceInit } from '../common/filterGlance'
 import * as client from '../client'
 
 /*
@@ -17,12 +18,12 @@ import * as client from '../client'
 		non-child elements with the same classnames
 */
 
-class filterControls {
+class Filter {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
+		this.dom = { holder: opts.holder }
 		this.durations = { exit: 500 }
 		this.lastId = 0
 		this.categoryData = {}
@@ -34,15 +35,17 @@ class filterControls {
 
 		this.api = {
 			main: async _filter => {
+				this.dom.controlsTip.hide()
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
 				this.filter = filter
 				//console.log(40, this.filter)
-				this.dom.grpAdderDiv.datum(filter).html(this.opts.btnLabel) //!filter.lst || !filter.lst.length ? '+NEW FILTER' : this.opts.btnLabel)
-				this.updateUI(this.dom.filterContainer, filter)
+				this.dom.newFilterBtn.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'inline-block' : 'none')
+				this.filterGlance.main(filter)
+				this.updateUI(this.dom.controlsTip.d, filter)
 			},
 			clickNewBtn: () => {
-				this.dom.grpAdderDiv.node().click()
+				this.dom.newFilterBtn.node().click()
 			}
 		}
 	}
@@ -51,7 +54,6 @@ class filterControls {
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
-		if (!o.btn) throw '.btn missing'
 		if (!o.btnLabel) o.btnLabel = 'Filter' // throw '.btnLabel missing'
 		return o
 	}
@@ -74,32 +76,62 @@ class filterControls {
 	}
 }
 
-exports.filterControlsInit = rx.getInitFxn(filterControls)
+exports.filterInit = rx.getInitFxn(Filter)
 
 function setRenderers(self) {
 	self.initUI = function() {
-		//console.log(45,self.opts)
-		self.dom.filterContainer = self.dom.holder
-			.append('div')
-			.attr('class', 'sja_filter_container')
-			//.style('border', '1px solid #ccc')
-			.style('margin', '5px')
-			.style('padding', '5px')
-
 		// button to add new term
-		self.dom.grpAdderDiv = self.opts.btn
+		/*self.dom.mainLabel = self.dom.holder
 			.datum(self.filter)
 			.append('div')
-			.attr('class', 'sja_new_filter_btn')
-			.style('padding', '4px 6px 2px 6px')
-			.style('display', 'block')
+			.style('display', 'inline-block')
+			.style('position','relative')
 			.style('margin', '7px')
+			.style('padding', '4px 6px 2px 6px')
 			.style('border-radius', '6px')
 			.style('text-align', 'center')
 			.style('color', '#000')
-			.style('background-color', '#EEEEEE')
 			.style('cursor', 'pointer')
+			.html('Filter')*/
+			
+		self.dom.newFilterBtn = self.dom.holder
+			.datum(self.filter)
+			.append('div')
+			.attr('class', 'sja_new_filter_btn')
+			.style('display', 'inline-block')
+			.style('position','relative')
+			.style('margin', '7px')
+			.style('padding', '4px 6px 2px 6px')
+			.style('border-radius', '6px')
+			.style('text-align', 'center')
+			.style('color', '#000')
+			.style('cursor', 'pointer')
+			.style('background', '#ececec')
+			.html('+NEW')
 			.on('click', self.displayTreeMenu)
+
+		self.dom.glanceHolder = self.dom.holder.append('div').style('display', 'inline-block')
+
+		self.filterGlance = filterGlanceInit({
+			genome: self.opts.genome,
+			dslabel: self.opts.dslabel,
+			holder: self.dom.glanceHolder,
+			debug: self.opts.debug
+		})
+
+		// mask
+		self.dom.holder
+			.append('div')
+			.attr('class', 'sja_filter_div_mask')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('width', '100%')
+			.style('height', '100%')
+			.on('click', self.displayTreeOrControls)
+
+		self.dom.controlsTip = new Menu({ padding: '5px' })
+		self.dom.treeTip = new Menu({ padding: '5px' }) 
 	}
 
 	self.updateUI = function(container, filter) {
@@ -116,7 +148,6 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_grp')
 			.style('margin', '5px')
-			.style('min-width', '250px')
 			.each(self.addGrp)
 	}
 
@@ -338,9 +369,17 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
+	self.displayTreeOrControls = function() {
+		if (self.filter.lst.length) {
+			self.dom.controlsTip.showunder(self.dom.glanceHolder.node())
+		} else {
+			self.dom.newFilterBtn.node().click()
+		}
+	}
+
 	self.displayTreeMenu = function(d) {
 		//console.log(339, d, this.__data__)
-		self.dom.tip.clear().showunder(this instanceof Node ? this : self.dom.grpAdderDiv.node())
+		self.dom.treeTip.clear().showunder(this instanceof Node ? this : self.dom.newFilterBtn.node())
 		const filter =
 			'lst' in d
 				? d
@@ -351,7 +390,7 @@ function setInteractivity(self) {
 				: this.__data__
 
 		appInit(null, {
-			holder: self.dom.tip.d,
+			holder: self.dom.treeTip.d,
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
@@ -370,7 +409,7 @@ function setInteractivity(self) {
 				bar_click_override:
 					this.className == 'sja_filter_lst_appender'
 						? tvslst => {
-								self.dom.tip.hide()
+								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
@@ -381,7 +420,7 @@ function setInteractivity(self) {
 						  }
 						: this.className == 'sja_filter_add_transformer'
 						? tvslst => {
-								self.dom.tip.hide()
+								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const parent = self.findParent(rootCopy, filter.$id)
 								const i = parent.lst.findIndex(f => f.$id === d.$id)
@@ -394,7 +433,7 @@ function setInteractivity(self) {
 								self.opts.callback(rootCopy)
 						  }
 						: tvslst => {
-								self.dom.tip.hide()
+								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								filterCopy.lst.push(...tvslst.map(self.wrapTvs))

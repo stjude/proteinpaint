@@ -353,7 +353,13 @@ tape('single barchart, filtered', function(test) {
 	})
 
 	function runTests(plot) {
-		test.pass()
+		plot.on('postRender.test', null)
+		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
+		test.equal(
+			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
+			'Male',
+			'should show one bar series that matches filter value'
+		)
 		test.end()
 	}
 })

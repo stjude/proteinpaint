@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
-import { filterInit } from './filter2'
+import { filterInit } from './filter3'
 import { recoverInit } from '../common/recover'
 import { sayerror, Menu } from '../client'
 

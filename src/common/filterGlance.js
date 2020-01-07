@@ -87,7 +87,6 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_grp')
 			.style('margin', '5px')
-			.style('min-width', '250px')
 			.each(self.addGrp)
 	}
 

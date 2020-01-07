@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const filterControlsInit = require('../filterControls').filterControlsInit
+const filterInit = require('../filter').filterInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -18,13 +18,14 @@ function getOpts(_opts = {}) {
 	const holder = d3s
 		.select('body')
 		.append('div')
+		.style('position', 'relative')
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
 		.style('max-width', '600px')
 
 	const opts = Object.assign({ holder }, _opts)
 
-	opts.filter = filterControlsInit({
+	opts.filter = filterInit({
 		btn: holder.append('div'),
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
@@ -48,13 +49,13 @@ async function addDemographicSexFilter(opts, btn) {
 	btn.click()
 	await sleep(200)
 	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = opts.filter.Inner.dom.tip.d.node().querySelectorAll('.termdiv')[1]
+	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[1]
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
 	const termdivSex = termdiv1.querySelectorAll('.termdiv')[2]
 	termdivSex.querySelectorAll('.termview')[0].click()
-	await sleep(500)
+	await sleep(800)
 
 	termdivSex.querySelector('.bars-cell > rect').dispatchEvent(new Event('click', { bubbles: true }))
 }
@@ -64,7 +65,7 @@ async function addDemographicSexFilter(opts, btn) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- common/filterControls -***-')
+	test.pass('-***- common/filter -***-')
 	test.end()
 })
 
@@ -77,10 +78,11 @@ tape('empty root filter', async test => {
 		}
 	})
 
+	const tipd = opts.filter.Inner.dom.controlsTip.d
 	await opts.filter.main(opts.filterData)
-	test.equal(
+	test.notEqual(
 		opts.holder.node().querySelector('.sja_new_filter_btn').style.display,
-		'block',
+		'none',
 		'should show the +NEW button'
 	)
 	test.equal(
@@ -95,23 +97,23 @@ tape('empty root filter', async test => {
 	// behavioral repeat of the data-only test for
 	// a single-entry root filter test
 	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
-	test.equal(
+	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
-		'block',
+		'none',
 		'should show the filter container div'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_add_transformer').style('display'),
+		tipd.select('.sja_filter_add_transformer').style('display'),
 		'none',
 		'should hide the filter adder button'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_remove_transformer').style('display'),
+		tipd.node().querySelector('.sja_filter_remove_transformer').style.display,
 		'inline-block',
 		'should show the filter remover button'
 	)
 	test.equal(
-		opts.holder
+		tipd
 			.selectAll('.sja_filter_lst_appender')
 			.filter(function() {
 				return this.style.display !== 'none'
@@ -121,16 +123,19 @@ tape('empty root filter', async test => {
 		'should show 2 filter list appender buttons'
 	)
 
+	opts.holder.select('.sja_filter_div_mask').node().click()
+	await sleep(50)
 	// remove the only entry from root filter.lst[]
-	opts.holder
-		.select('.sja_filter_remove_transformer')
+	tipd
 		.node()
+		.querySelector('.sja_filter_remove_transformer')
 		.click()
+
 	await sleep(200)
 	await opts.filter.main(opts.filterData)
-	test.equal(
+	test.notEqual(
 		opts.holder.node().querySelector('.sja_new_filter_btn').style.display,
-		'block',
+		'none',
 		'should show the +NEW button'
 	)
 	test.equal(
@@ -168,53 +173,58 @@ tape('root filter with a single-entry', async test => {
 		}
 	})
 
+	await sleep(150)
+	const tipd = opts.filter.Inner.dom.controlsTip.d
 	await opts.filter.main(opts.filterData)
+
 	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
-	test.equal(
+	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
-		'block',
+		'none',
 		'should show the filter container div'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_add_transformer').style('display'),
+		tipd.node().querySelector('.sja_filter_add_transformer').style.display,
 		'none',
 		'should hide the filter adder button'
 	)
-	test.equal(
-		opts.holder.select('.sja_filter_remove_transformer').style('display'),
-		'inline-block',
+	test.notEqual(
+		tipd.node().querySelector('.sja_filter_remove_transformer').style.display,
+		'none',
 		'should show the filter remover button'
 	)
 
+	opts.holder.select('.sja_filter_div_mask').node().click()
+
 	// simulate appending another tvs to the root filter.lst[]
-	const lstAppender = opts.holder.node().querySelectorAll('.sja_filter_lst_appender')[0]
+	const lstAppender = tipd.node().querySelector('.sja_filter_lst_appender')
 	await addDemographicSexFilter(opts, lstAppender)
 	test.equal(opts.filterData.lst.length, 2, 'should create a two-entry filter.lst[]')
 	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
-	test.equal(
-		opts.holder.select('.sja_filter_container').style('display'),
-		'block',
+	test.notEqual(
+		opts.holder.select('.sja_filter_container').style.display,
+		'none',
 		'should show the filter container div'
 	)
-	const addTransformer = opts.holder.select('.sja_filter_add_transformer').node()
+	const addTransformer = tipd.select('.sja_filter_add_transformer').node()
 	test.notEqual(addTransformer.style.display, 'none', 'should show the filter adder button')
 	test.notEqual(
 		addTransformer.innerHTML,
 		lstAppender.innerHTML,
 		'should label the add-transformer button with the opposite of the lst-appender button label'
 	)
-	test.equal(
-		opts.holder.select('.sja_filter_remove_transformer').style('display'),
-		'inline-block',
+	test.notEqual(
+		tipd.select('.sja_filter_remove_transformer').style.display,
+		'none',
 		'should show the filter remover button'
 	)
 	test.notEqual(
-		opts.holder.select('.sja_filter_join_label').style('display'),
+		tipd.select('.sja_filter_join_label').style.display,
 		'none',
 		'should show the filter join label'
 	)
 	test.equal(
-		opts.holder
+		tipd
 			.selectAll('.sja_filter_lst_appender')
 			.filter(function() {
 				return this.style.display !== 'none'
@@ -225,26 +235,26 @@ tape('root filter with a single-entry', async test => {
 	)
 	await sleep(100)
 
-	const secondItemRemover = opts.holder.node().querySelectorAll('.sja_filter_remove_transformer')[1]
+	const secondItemRemover = tipd.node().querySelectorAll('.sja_filter_remove_transformer')[1]
 	secondItemRemover.click()
 	await sleep(300)
 	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
-	test.equal(
+	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
-		'block',
+		'none',
 		'should show the filter container div'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_add_transformer').style('display'),
+		tipd.select('.sja_filter_add_transformer').style('display'),
 		'none',
 		'should hide the filter adder button'
 	)
-	test.equal(
-		opts.holder.select('.sja_filter_remove_transformer').style('display'),
-		'inline-block',
+	test.notEqual(
+		tipd.select('.sja_filter_remove_transformer').style('display'),
+		'none',
 		'should show the filter remover button'
 	)
-	test.equal(opts.holder.select('.sja_filter_join_label').style('display'), 'none', 'should hide the filter join label')
+	test.equal(tipd.select('.sja_filter_join_label').style('display'), 'none', 'should hide the filter join label')
 
 	test.end()
 })
@@ -315,20 +325,21 @@ tape('root filter with nested filters', async test => {
 		}
 	})
 
+	const tipd = opts.filter.Inner.dom.controlsTip.d
 	await opts.filter.main(opts.filterData)
 	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
-	test.equal(
+	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
-		'block',
+		'none',
 		'should show the filter container div'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_add_transformer').style('display'),
+		tipd.select('.sja_filter_add_transformer').style('display'),
 		'inline-block',
 		'should show the filter adder button'
 	)
 	test.equal(
-		opts.holder.select('.sja_filter_remove_transformer').style('display'),
+		tipd.select('.sja_filter_remove_transformer').style('display'),
 		'inline-block',
 		'should show the filter remover button'
 	)
@@ -340,14 +351,14 @@ tape('root filter with nested filters', async test => {
 		'should hide the join label after the last item'
 	)
 
-	const grpDivsA = opts.holder.node().querySelectorAll('.sja_filter_grp')
+	const grpDivsA = tipd.node().querySelectorAll('.sja_filter_grp')
 	test.equal(grpDivsA[0].style.border, 'none', 'should not show a border around the root-level group')
 	test.notEqual(grpDivsA[1].style.border, 'none', 'should show a border around a filter with >1 terms')
 
-	const nestedItemRemover = opts.holder.node().querySelectorAll('.sja_filter_remove_transformer')[2]
+	const nestedItemRemover = tipd.node().querySelectorAll('.sja_filter_remove_transformer')[2]
 	nestedItemRemover.click()
 	await sleep(300)
-	const grpDivsB = opts.holder.node().querySelectorAll('.sja_filter_grp')
+	const grpDivsB = tipd.node().querySelectorAll('.sja_filter_grp')
 	test.equal(
 		opts.filterData.lst.length,
 		2,
@@ -366,9 +377,9 @@ tape('root filter with nested filters', async test => {
 		'should hide the join label after the last item'
 	)
 
-	const addTransformer = opts.holder.node().querySelectorAll('.sja_filter_add_transformer')[0]
+	const addTransformer = tipd.node().querySelectorAll('.sja_filter_add_transformer')[0]
 	await addDemographicSexFilter(opts, addTransformer)
-	const grpDivsC = opts.holder.node().querySelectorAll('.sja_filter_grp')
+	const grpDivsC = tipd.node().querySelectorAll('.sja_filter_grp')
 	test.notEqual(
 		grpDivsC[1].style.border,
 		'none',
