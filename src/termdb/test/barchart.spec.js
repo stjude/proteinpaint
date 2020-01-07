@@ -287,7 +287,7 @@ tape('series visibility', function(test) {
 	}
 })
 
-tape('single barchart, filtered', function(test) {
+tape.only('single barchart, filtered', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -297,7 +297,7 @@ tape('single barchart, filtered', function(test) {
 				filter: {
 					type: 'tvslst',
 					in: 1,
-					join: 'and',
+					join: 'or',
 					lst: [
 						{
 							type: 'tvslst',
@@ -321,11 +321,25 @@ tape('single barchart, filtered', function(test) {
 							]
 						},
 						{
-							type: 'tvs',
-							tvs: {
-								term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
-								ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
-							}
+							type: 'tvslst',
+							in: 1,
+							join: 'and',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
+										ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+									}
+								},
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', iscategorical: true },
+										values: [{ key: '1', value: '1-yes' }]
+									}
+								}
+							]
 						}
 					]
 				}
@@ -354,7 +368,7 @@ tape('single barchart, filtered', function(test) {
 
 	function runTests(plot) {
 		plot.on('postRender.test', null)
-		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
+		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 2, 'should show two bar series')
 		test.equal(
 			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
 			'Male',
