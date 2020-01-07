@@ -10,7 +10,7 @@ class TVS {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
+		this.dom = { holder: opts.holder, control_holder: opts.control_holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -103,8 +103,8 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('background-color', '#396C98')
+			.style('color', 'white')
 			.style('padding', '6px 6px 3px 6px')
-			//.style('margin-left', '5px')
 			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
 
@@ -123,11 +123,40 @@ function setRenderers(self) {
 
 	self.showMenu = d => {
 		const term = d.term
-		self.dom.tip.clear().showunder(self.dom.holder.node())
+		const control_tip = self.dom.control_holder
+		const control_tip_dom = control_tip.node().getBoundingClientRect()
+		control_tip.style('opacity', '0')
+		self.dom.tip.clear().show(control_tip_dom.left - 20, control_tip_dom.top - 20)
 
+		const header_div = self.dom.tip.d.append('div')
 		const term_negate_div = self.dom.tip.d.append('div')
 		const term_option_div = self.dom.tip.d.append('div')
 		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
+
+		header_div
+			.append('div')
+			.attr('class', 'back_btn sja_menuoption')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.html('&#10094; Back')
+			.on('click', () => {
+				self.dom.tip.hide()
+				control_tip.style('opacity', '1')
+			})
+
+		header_div
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('margin', '5px')
+			.style('font-size', '.8em')
+			.style('font-style', 'italic')
+			.style('color', '#888')
+			.html('Configuring ' + term.name)
 
 		const term_negate_select = term_negate_div
 			.append('select')
@@ -718,7 +747,7 @@ function setRenderers(self) {
 		value_btns
 			.enter()
 			.append('div')
-			.attr('class', 'value_btn sja_filter_tag_btn')
+			.attr('class', 'value_btn')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')

@@ -260,6 +260,7 @@ function setRenderers(self) {
 			genome: self.genome,
 			dslabel: self.dslabel,
 			holder,
+			control_holder: self.dom.holder,
 			debug: self.opts.debug,
 			callback: tvs => {
 				const rootCopy = JSON.parse(JSON.stringify(self.filter))
