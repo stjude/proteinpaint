@@ -22,10 +22,16 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 		.style('max-width', '500px')
 
+	const control_holder = d3s
+		.select('body')
+		.append('div')
+		.style('margin', '0px 20px')
+
 	const opts = Object.assign({ holder }, _opts)
 
 	opts.tvs = TVSInit({
 		holder,
+		control_holder,
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		debug: true,
