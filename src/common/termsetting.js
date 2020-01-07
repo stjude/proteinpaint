@@ -1094,10 +1094,6 @@ function setInteractivity(self) {
 
 		function apply() {
 			try {
-				if (!custom_bins_q.last_bin) {
-					custom_bins_q.last_bin = {}
-				}
-
 				if (start_input.node().value && stop_input.node().value && start_input.node().value > stop_input.node().value)
 					throw 'start value must be smaller than stop value'
 
@@ -1184,6 +1180,9 @@ function setInteractivity(self) {
 	self.apply_last_bin_change = function(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q) {
 		if (last_bin_select.node().value == 'custom') {
 			//if custom_bin is set, replace default_last_bin with custom_last_bin
+			if (!custom_bins_q.last_bin) {
+				custom_bins_q.last_bin = {}
+			}
 			const last_bin = custom_bins_q.last_bin
 			if (last_bin) self.q.last_bin = last_bin
 			else delete self.q.last_bin
