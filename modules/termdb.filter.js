@@ -1,39 +1,55 @@
-const termjson = require('../test/termdb/termjson').termjson
+/*
+nested filter documented at:
+https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit?pli=1#heading=h.eeqtb17pxcp0
+
+ds: required by get_numerical()
+
+CTEname: Provides the prefix of CTEs at this level (filter.lst[])
+  Optional, not required for root level.
+  Each recursion will append a postfix "_i" to the CTEname
+
+Recursively generates CTE statements based on the nested filter
+each run processes one level of filter.lst[]
+One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
+A superCTE is made to cap this level, with name "CTEname"
+
+*/
 
 function getFilterCTEs(filter, ds, CTEname = 'f') {
-	/*
-	lst,
-	{	
-		type: 'tvslst',
-		in: bool, // defaults to true
-		join: "and" || "or",
-		lst: [
-			tvs0, // {type: 'tvs', tvs: {term, values, isnot}}
-			tvs1, // {type: 'tvs', tvs: {term, ranges, isnot}}
-			..., 
-			lst0{}, // may contain arbitrary levels of nested lst{}
-			lst1{},
-			...
-		]	
-	}
-*/
 	if (!filter) return
-	if (filter.type != 'tvslst') throw 'invalid filter argument' + JSON.stringify(filter)
-	if (!Array.isArray(filter.lst)) throw `filter.lst must be an array`
-	if (filter.lst.length > 1 && filter.join != 'or' && filter.join != 'and')
-		throw 'filter.join must equal either "or" or "and"'
-	if (!('in' in filter)) filter.in = true
-	const filters = []
+	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
+	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
+	if (filter.lst.length == 0) return console.error('filter.lst[] is zero length, see if is an error')
+	if (filter.lst.length == 1) {
+		// only one element at this level, disregard "join"
+		if (filter.lst[0].type == 'tvslst') throw 'only one element at a level: type should not be "tvslst"'
+	} else {
+		// multiple elements at this level
+		if (filter.join != 'or' && filter.join != 'and')
+			throw 'multiple elements at a level: filter.join must equal either "or" or "and"'
+	}
+	if (!('in' in filter)) filter.in = true // currently not handled by the client
+
+	// list of CTEnames in filter.lst[]
+	const thislevelCTEnames = []
+	// cumulative CTE of this level and sub levels
 	const CTEs = []
+	// cumulative values
 	const values = []
-	let i = 0
 	for (const [i, item] of filter.lst.entries()) {
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
 			f = getFilterCTEs(item, ds, CTEname_i)
+			// .filters: str, the CTE cascade, not used here!
+			// .CTEs: [] list of individual CTE string
+			// .values: []
+			// .CTEname: str
 		} else if (item.tvs.term.iscategorical) {
 			f = get_categorical(item.tvs, CTEname_i)
+			// .CTEs: []
+			// .values:[]
+			// .CTEname
 		} else if (item.tvs.term.isinteger || item.tvs.term.isfloat) {
 			f = get_numerical(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.iscondition) {
@@ -41,23 +57,13 @@ function getFilterCTEs(filter, ds, CTEname = 'f') {
 		} else {
 			throw 'unknown term type'
 		}
-		if (!f) continue
-		//console.log(42, f)
-		filters.push(f)
+		thislevelCTEnames.push(f.CTEname)
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)
 	}
 
-	/*if (filters.length == 1) {
-		return {
-			filters: CTEs[0],
-			CTEs,
-			values,
-			CTEname
-		}
-	} else {*/
 	const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
-	const superCTE = filters.map(f => 'SELECT * FROM ' + f.CTEname).join('\n' + JOINOPER + '\n')
+	const superCTE = thislevelCTEnames.map(name => 'SELECT * FROM ' + name).join('\n' + JOINOPER + '\n')
 	if (filter.in) {
 		CTEs.push(`
 				${CTEname} AS (
@@ -75,14 +81,12 @@ function getFilterCTEs(filter, ds, CTEname = 'f') {
 				)
 			`)
 	}
-	//console.log(72, CTEs)
 	return {
 		filters: CTEs.join(',\n'),
 		CTEs,
 		values,
 		CTEname
 	}
-	//}
 }
 
 exports.getFilterCTEs = getFilterCTEs
