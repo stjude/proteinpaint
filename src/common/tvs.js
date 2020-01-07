@@ -10,7 +10,7 @@ class TVS {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.dom = { holder: opts.holder, control_holder: opts.control_holder, tip: new Menu({ padding: '5px' }) }
+		this.dom = { holder: opts.holder, controlsTip: opts.controlsTip, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -123,7 +123,7 @@ function setRenderers(self) {
 
 	self.showMenu = d => {
 		const term = d.term
-		const control_tip = self.dom.control_holder
+		const control_tip = self.dom.controlsTip
 		const control_tip_dom = control_tip.node().getBoundingClientRect()
 		control_tip.style('opacity', '0')
 		self.dom.tip.clear().show(control_tip_dom.left - 20, control_tip_dom.top - 20)

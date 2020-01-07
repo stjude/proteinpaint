@@ -40,7 +40,9 @@ class Filter {
 				this.validateFilter(filter)
 				this.filter = filter
 				//console.log(40, this.filter)
-				this.dom.newFilterBtn.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'inline-block' : 'none')
+				this.dom.newFilterBtn
+					.datum(filter)
+					.style('display', !filter.lst || !filter.lst.length ? 'inline-block' : 'none')
 				this.filterGlance.main(filter)
 				this.updateUI(this.dom.controlsTip.d, filter)
 			},
@@ -93,13 +95,13 @@ function setRenderers(self) {
 			.style('color', '#000')
 			.style('cursor', 'pointer')
 			.html('Filter')*/
-			
+
 		self.dom.newFilterBtn = self.dom.holder
 			.datum(self.filter)
 			.append('div')
 			.attr('class', 'sja_new_filter_btn')
 			.style('display', 'inline-block')
-			.style('position','relative')
+			.style('position', 'relative')
 			.style('margin', '7px')
 			.style('padding', '4px 6px 2px 6px')
 			.style('border-radius', '6px')
@@ -131,7 +133,7 @@ function setRenderers(self) {
 			.on('click', self.displayTreeOrControls)
 
 		self.dom.controlsTip = new Menu({ padding: '5px' })
-		self.dom.treeTip = new Menu({ padding: '5px' }) 
+		self.dom.treeTip = new Menu({ padding: '5px' })
 	}
 
 	self.updateUI = function(container, filter) {
@@ -291,7 +293,7 @@ function setRenderers(self) {
 			genome: self.genome,
 			dslabel: self.dslabel,
 			holder,
-			control_holder: self.dom.holder,
+			controlsTip: self.dom.controlsTip.d,
 			debug: self.opts.debug,
 			callback: tvs => {
 				const rootCopy = JSON.parse(JSON.stringify(self.filter))
