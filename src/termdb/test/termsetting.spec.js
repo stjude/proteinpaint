@@ -161,7 +161,7 @@ tape('caterogical term overlay', function(test) {
 	}
 })
 
-tape('Numerical term overlay', function(test) {
+tape.only('Numerical term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
@@ -191,6 +191,13 @@ tape('Numerical term overlay', function(test) {
 		}
 	})
 
+	// create enter event to use for inputs of bin edit menu
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
 	function runTests(plotControls) {
 		helpers
 			.rideInit({ arg: plotControls, eventType: 'postRender.test' })
@@ -198,8 +205,9 @@ tape('Numerical term overlay', function(test) {
 			.to(testTerm2Pill, { wait: 600 })
 			.run(triggerBluePill)
 			.run(testGrpMenu)
-			// .run(triggerBinChange)  //TODO (draft)
-			// .run(testBinChange)  //TODO
+			.run(triggerBinChange)
+			.run(triggerBluePill)
+			.run(testBinChange)
 			.done(test)
 	}
 
@@ -249,33 +257,18 @@ tape('Numerical term overlay', function(test) {
 
 		bin_size_input.value = 5
 
-		//TODO: press 'Enter' to update bins
-		// const event = new KeyboardEvent('keydown', {
-		//     altKey:false,
-		//     bubbles: true,
-		//     cancelBubble: false,
-		//     cancelable: true,
-		//     charCode: 0,
-		//     code: 'Enter',
-		//     composed: true,
-		//     ctrlKey: false,
-		//     currentTarget: null,
-		//     defaultPrevented: true,
-		//     detail: 0,
-		//     eventPhase: 0,
-		//     isComposing: false,
-		//     isTrusted: true,
-		//     key: 'Enter',
-		//     keyCode: 13,
-		//     location: 0,
-		//     metaKey: false,
-		//     repeat: false,
-		//     returnValue: false,
-		//     shiftKey: false,
-		//     type: 'keydown',
-		//     which: 13})
-		// bin_size_input.addEventListener('keydown', ()=>{})
-		// bin_size_input.dispatchEvent(event)
+		//press 'Enter' to update bins
+		bin_size_input.addEventListener('keyup', () => {})
+		bin_size_input.dispatchEvent(enter_event)
+	}
+
+	function testBinChange(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
+			'5',
+			'Should change "bin size" from input'
+		)
 	}
 })
 
