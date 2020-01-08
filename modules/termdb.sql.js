@@ -61,7 +61,7 @@ works for all attributes, including non-termdb ones
 	const values = filter ? filter.values.slice() : []
 	values.push(q.key)
 	const sql = `
-		${filter ? 'WITH ' + filter.filters + ',' : ''}
+		${filter ? 'WITH ' + filter.filters : ''}
 		SELECT sample, value
 		FROM annotations
 		WHERE term_id=?

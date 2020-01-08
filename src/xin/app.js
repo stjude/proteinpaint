@@ -11,22 +11,29 @@ class App {
 	async run() {
 		try {
 			const data = await client.dofetch2(
-				'/termdb?density=1&genome=' + this.opts.genome + '&dslabel=' + this.opts.dslabel + '&termid=' + this.opts.id
+				'/termdb?density=1&genome=' +
+					this.opts.genome +
+					'&dslabel=' +
+					this.opts.dslabel +
+					'&termid=' +
+					this.opts.id +
+					(this.opts.filter ? '&filter=' + JSON.stringify(this.opts.filter) : '')
 			)
 			if (data.error) throw data.error
 			/*
-			width
-			height
-			xpad
-			ypad
-			minvalue
-			maxvalue
-			densitymax
+			width: image width
+			height: image height
+			xpad: left/right pad
+			ypad: top/bottom pad
+			minvalue: x axis
+			maxvalue: x axis
+			densitymax: y axis max
 			samplecount
 			*/
-			this.opts.holder
-				.append('div')
-				.text('min: ' + data.minvalue + ' max: ' + data.maxvalue + ' densityMax: ' + data.densitymax)
+			this.opts.holder.append('div').text('min: ' + data.minvalue)
+			this.opts.holder.append('div').text('max: ' + data.maxvalue)
+			this.opts.holder.append('div').text('densityMax: ' + data.densitymax)
+			this.opts.holder.append('div').text('samples: ' + data.samplecount)
 			this.opts.holder
 				.append('img')
 				.style('width', data.width + 'px')

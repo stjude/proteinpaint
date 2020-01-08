@@ -17,7 +17,7 @@ module.exports = (q, res, ds) => {
 	const rows = termdbsql.get_rows_by_one_key({
 		ds,
 		key: q.termid,
-		filter: q.filter
+		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
 	})
 	// each row is {sample, value:STR}
 
