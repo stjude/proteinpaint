@@ -44,15 +44,29 @@ return an array of sample names passing through the filter
 export function get_rows_by_one_key(q) {
 	/*
 get all sample and value by one key
-no filter or cte
-works for all attributes, including non-termdb ones
 
 q{}
-	.ds
-	.key
+  .filter:
+    {} optional nested filter
+  .key:
+    required term id
+  .ds:
+    required ds object
+
+works for all attributes, including non-termdb ones
 */
-	const sql = 'SELECT sample,value FROM annotations WHERE term_id=?'
-	return q.ds.cohort.db.connection.prepare(sql).all(q.key)
+	if (!q.key) throw '.key missing'
+	if (!q.ds) throw '.ds{} missing'
+	const filter = getFilterCTEs(q.filter, q.ds)
+	const values = filter ? filter.values.slice() : []
+	values.push(q.key)
+	const sql = `
+		${filter ? 'WITH ' + filter.filters + ',' : ''}
+		SELECT sample, value
+		FROM annotations
+		WHERE term_id=?
+		${filter ? ' AND sample IN ' + filter.CTEname : ''}`
+	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
 
 export function get_rows_by_two_keys(q, t1, t2) {

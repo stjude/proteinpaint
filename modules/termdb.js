@@ -4,6 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
+const density_plot = require('./termdb.densityPlot')
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
@@ -54,6 +55,7 @@ export function handle_request_closure(genomes) {
 				if (q.getgroup) return await phewas.getgroup(q, res)
 				return await phewas.trigger(q, res, ds) // also does precompute
 			}
+			if (q.density) return await density_plot(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {

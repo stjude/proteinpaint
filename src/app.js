@@ -767,6 +767,11 @@ function parseembedthenurl(arg, holder, selectgenome) {
 			}
 		}
 	}
+	if( arg.xintest) {
+		// a shortcut to xin's experiments and not to be used in prod
+		launchxintest(arg.xintest,holder)
+		return
+	}
 
 	if(arg.singlecell) {
 		launch_singlecell( arg.singlecell, holder )
@@ -901,7 +906,6 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, holder)
 	}
-	if( arg.xintest) launchxintest(arg.xintest,holder)
 }
 
 
