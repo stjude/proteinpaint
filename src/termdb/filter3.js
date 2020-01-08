@@ -71,7 +71,7 @@ class TdbFilter {
 		div
 			.append('span')
 			.text('Filter')
-			.style('padding-right', '10px')
+			.style('padding', '0 10px')
 
 		this.dom.filterDiv = div
 			.append('div')

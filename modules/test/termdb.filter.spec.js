@@ -7,8 +7,7 @@ $ npx tape modules/test/*.spec.js
 const tape = require('tape')
 const getFilterCTEs = require('../termdb.filter').getFilterCTEs
 const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
-const connect_db = require('../utils').connect_db
-server_init_db_queries(sjlfe.ds)
+server_init_db_queries(sjlife.ds, sjlife.cn)
 
 tape('\n', function(test) {
 	test.pass('-***- modules/termdb.filter specs -***-')
@@ -19,7 +18,7 @@ tape('simple filter', function(test) {
 	const filter = getFilterCTEs({
 		type: 'tvslst',
 		in: true,
-		join: 'and',
+		join: '',
 		lst: [
 			{
 				type: 'tvs',
@@ -33,10 +32,30 @@ tape('simple filter', function(test) {
 
 	//console.log(filter.CTEs.join(',\n'))
 	//console.log(filter.values)
+	test.deepEqual(
+		Object.keys(filter).sort((a,b) => a<b ? -1 : 1),
+		['CTEname', 'CTEs', 'filters', 'values'],
+		'should return an object with the four expected keys'
+	)
+	test.equal(
+		filter.CTEname,
+		'f',
+		'should return the default CTE name'
+	)
+	test.equal(
+		filter.filters.split('?').length - 1,
+		filter.values.length,
+		'CTE string should have the same number of ? as values[]'
+	)
+	test.equal(
+		filter.CTEs.length,
+		2,
+		'should return two CTE clauses for this simple filter'
+	)
 	test.end()
 })
 
-tape.only('complex filter', function(test) {
+tape('nested filter', function(test) {
 	const filter = getFilterCTEs(
 		{
 			type: 'tvslst',
@@ -99,10 +118,30 @@ tape.only('complex filter', function(test) {
 
 	//console.log(filter.CTEs.join(',\n'))
 	//console.log(filter.values)
+	test.deepEqual(
+		Object.keys(filter).sort((a,b) => a<b ? -1 : 1),
+		['CTEname', 'CTEs', 'filters', 'values'],
+		'should return an object with the four expected keys'
+	)
+	test.equal(
+		filter.CTEname,
+		'f',
+		'should return the default CTE name'
+	)
+	test.equal(
+		filter.filters.split('?').length - 1,
+		filter.values.length,
+		'CTE string should have the same number of ? as values[]'
+	)
+	test.equal(
+		filter.CTEs.length,
+		8,
+		'should return 8 CTE clauses for this complex filter'
+	)
 	test.end()
 })
 
-function server_init_db_queries(ds) {
+function server_init_db_queries(ds, cn) {
 	/*
 initiate db queries and produce function wrappers
 run only once
@@ -114,18 +153,6 @@ thus less things to worry about...
 */
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
-
-	let cn
-	if (ds.cohort.db.file) {
-		cn = connect_db(ds.cohort.db.file)
-	} else if (ds.cohort.db.file_fullpath) {
-		// only on ppr
-		cn = connect_db(ds.cohort.db.file_fullpath, true)
-	} else {
-		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
-	}
-	console.log(`DB connected for ${ds.label}: ${ds.cohort.db.file || ds.cohort.db.file_fullpath}`)
-
 	ds.cohort.db.connection = cn
 
 	if (!ds.cohort.termdb) throw 'ds.cohor.termdb missing'

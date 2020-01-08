@@ -18,11 +18,13 @@ function init(dslabel) {
 		fileMustExist: true
 	})
 	load_termjson(ds, db)
+	ds.cohort.cn = db
 	ds.cohort.annotation = {}
 	ds.cohort.annorows = []
 	loadedAnnoTerms = []
 	return {
 		ds,
+		cn: db,
 		setAnnoByTermId(term_id) {
 			if (!term_id || loadedAnnoTerms.includes(term_id)) return
 			loadedAnnoTerms.push(term_id)
