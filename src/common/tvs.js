@@ -221,10 +221,28 @@ function setRenderers(self) {
 			}
 		}
 
+		const width = 500,
+			height = 100,
+			xpad = 10,
+			ypad = 20
+
 		const density_data = await client.dofetch2(
-			'/termdb?density=1&genome=' + self.opts.genome + '&dslabel=' + self.opts.dslabel + '&termid=' + term.term.id
+			'/termdb?density=1&genome=' +
+				self.opts.genome +
+				'&dslabel=' +
+				self.opts.dslabel +
+				'&termid=' +
+				term.term.id +
+				'&width=' +
+				width +
+				'&height=' +
+				height +
+				'&xpad=' +
+				xpad +
+				'&ypad=' +
+				ypad
 		)
-		if (density_data.error) throw data.error
+		if (density_data.error) throw density_data.error
 
 		self.makeDensityPlot(div, density_data)
 
@@ -507,29 +525,43 @@ function setRenderers(self) {
 	}
 
 	self.makeDensityPlot = function(div, data) {
-		const padding = { top: 20, right: 20, bottom: 20, left: 20 }
+		const width = 500,
+			height = 100,
+			xpad = 10,
+			ypad = 20
 
-		const density_plot = div
+		// svg
+		const svg = div
 			.append('svg')
-			.attr('width', data.width + padding.left + padding.right)
-			.attr('height', data.height + padding.top + padding.bottom)
+			.attr('width', width + xpad * 2)
+			.attr('height', height + ypad * 2)
 
-		density_plot
+		// set plot image as background
+		svg
 			.append('image')
-			.attr('transform', 'translate(' + padding.left + ',' + padding.top + ')')
+			// .attr('transform', 'translate(' + xpad + ',' + ypad + ')')
 			.attr('xlink:href', data.img)
 
+		// x-axis
 		const xscale = d3s
 			.scaleLinear()
-			.domain([0, data.maxvalue])
-			.range([0, data.width])
+			.domain([data.minvalue, data.maxvalue])
+			.range([xpad, width - xpad])
 
 		const x_axis = d3s.axisBottom().scale(xscale)
 
-		density_plot
+		svg
 			.append('g')
-			.attr('transform', 'translate(' + padding.left + ',' + (data.height + padding.top) + ')')
+			.attr('transform', 'translate(' + xpad + ',' + (ypad + height) + ')')
 			.call(x_axis)
+
+		const brush = d3s.brushX().extent([[xpad, ypad], [width - xpad, height + ypad]])
+
+		svg
+			.append('g')
+			.attr('transform', 'translate(' + xpad + ',0)')
+			.call(brush)
+			.call(brush.move, [1, 5].map(xscale))
 	}
 
 	self.showConditionOpts = async function(div, term) {
