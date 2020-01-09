@@ -33,17 +33,18 @@ class TdbFilter {
 	}
 
 	main() {
-		const termfilter = this.state && this.state.termfilter
-		if (termfilter && !termfilter.show_top_ui) {
+		const f = this.state && this.state.termfilter
+		if (!f || !f.show_top_ui) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
 		if (!this.filterApi) this.initFilter()
-		this.filterApi.main(termfilter.filter)
+		this.filterApi.main(f.filter)
 	}
 
 	initFilter() {
+		// only call in main(), requires this.state{}
 		this.filterApi = filterInit({
 			mode: 'active',
 			genome: this.state.genome,
