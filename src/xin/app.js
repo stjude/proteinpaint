@@ -1,6 +1,12 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
 
+const width = 500,
+	height = 100,
+	xpad = 10,
+	ypad = 10
+// width/height is the dimension of the actual plotting area
+
 class App {
 	constructor(nouse, opts) {
 		this.type = 'app'
@@ -17,14 +23,18 @@ class App {
 					this.opts.dslabel +
 					'&termid=' +
 					this.opts.id +
+					'&width=' +
+					width +
+					'&height=' +
+					height +
+					'&xpad=' +
+					xpad +
+					'&ypad=' +
+					ypad +
 					(this.opts.filter ? '&filter=' + JSON.stringify(this.opts.filter) : '')
 			)
 			if (data.error) throw data.error
 			/*
-			width: image width
-			height: image height
-			xpad: left/right pad
-			ypad: top/bottom pad
 			minvalue: x axis
 			maxvalue: x axis
 			densitymax: y axis max
@@ -36,8 +46,8 @@ class App {
 			this.opts.holder.append('div').text('samples: ' + data.samplecount)
 			this.opts.holder
 				.append('img')
-				.style('width', data.width + 'px')
-				.style('height', data.height + 'px')
+				.style('width', width + xpad * 2 + 'px')
+				.style('height', height + ypad * 2 + 'px')
 				.attr('src', data.img)
 		} catch (e) {
 			client.sayerror(this.opts.holder, e)

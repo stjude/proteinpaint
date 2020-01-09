@@ -5,10 +5,26 @@ const scaleLinear = require('d3-scale').scaleLinear
 
 /*
 q: {} the query parameters
+  .width
+  .height
+    int, the dimension of the actual plotting area
+  .xpad
+  .ypad
+    int, x/y padding added to plotting area defined by width/height
+  .termid
+    required
 res: http response
 ds: {} the dataset object
 */
 module.exports = (q, res, ds) => {
+	const width = Number.parseInt(q.width)
+	if (Number.isNaN(width)) throw 'width is not integer'
+	const height = Number.parseInt(q.height)
+	if (Number.isNaN(height)) throw 'height is not integer'
+	const xpad = Number.parseInt(q.xpad)
+	if (Number.isNaN(xpad)) throw 'xpad is not integer'
+	const ypad = Number.parseInt(q.ypad)
+	if (Number.isNaN(ypad)) throw 'ypad is not integer'
 	if (!q.termid) throw 'termid missing'
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw 'invalid termid'
@@ -42,12 +58,6 @@ module.exports = (q, res, ds) => {
 			maxvalue = Math.max(maxvalue, v)
 		}
 	}
-
-	// canvas dimension
-	const width = 200,
-		height = 100,
-		xpad = 2,
-		ypad = 2
 
 	const canvas = createCanvas(width + xpad * 2, height + ypad * 2)
 	const ctx = canvas.getContext('2d')
@@ -89,10 +99,6 @@ module.exports = (q, res, ds) => {
 	ctx.fill()
 
 	const result = {
-		width: width + xpad * 2,
-		height: height + ypad * 2,
-		xpad,
-		ypad,
 		minvalue,
 		maxvalue,
 		densitymax,
