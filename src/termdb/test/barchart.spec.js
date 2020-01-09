@@ -287,7 +287,7 @@ tape('series visibility', function(test) {
 	}
 })
 
-tape.only('single barchart, filtered', function(test) {
+tape('single barchart, filtered', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({

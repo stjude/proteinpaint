@@ -28,7 +28,7 @@ class Filter {
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 35,
-				offsetY: -25
+				offsetY: -30
 			})
 		}
 		this.durations = { exit: 500 }
@@ -45,7 +45,9 @@ class Filter {
 				this.validateFilter(filter)
 				this.filter = filter
 				// clear menu click
-				this.activeData = { item: {}, filter: {} }
+				if (this.dom.controlsTip.d.style('display') == 'none') {
+					this.activeData = { item: {}, filter: {} }
+				}
 				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
@@ -83,6 +85,7 @@ function setRenderers(self) {
 	self.initUI = function() {
 		self.dom.newBtn = self.dom.holder
 			.append('div')
+			.attr('class', 'sja_new_filter_btn')
 			.html('+NEW')
 			.style('display', 'inline-block')
 			.style('margin-left', '10px')
@@ -284,18 +287,15 @@ function setRenderers(self) {
 		self.pills[item.$id] = pill
 		pill.main(item.tvs)
 
-		if (self.opts.mode == 'active') {
-			// mask
-			holder
-				.append('div')
-				.attr('class', 'sja_filter_div_mask')
-				.style('position', 'absolute')
-				.style('top', 0)
-				.style('left', 0)
-				.style('width', holder.style('width'))
-				.style('height', '100%')
-				.on('click', self.displayControlsMenu)
-		}
+		holder
+			.append('div')
+			.attr('class', 'sja_filter_div_mask')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('width', holder.style('width'))
+			.style('height', '100%')
+			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateItem = function(item, i) {
@@ -418,15 +418,17 @@ function setInteractivity(self) {
 	}
 
 	self.editTerm = function(elem) {
-		select(this.parentNode)
+		select(elem.parentNode)
 			.selectAll('tr')
-			.style('background-color', function() {
-				return this == elem ? '#eeee55' : 'transparent'
-			})
+			.style('background-color', self.highlightEditRow)
 		const holder = self.dom.treeTip.clear().d.append('div')
 		const item = self.activeData.item
 		self.pills[item.$id].showMenu(item.tvs, holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
+	}
+
+	self.highlightEditRow = function(d) {
+		return d.action == 'edit' ? '#eeee55' : 'transparent'
 	}
 
 	self.negateTerm = function() {
@@ -437,7 +439,6 @@ function setInteractivity(self) {
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-		console.log(409, filterCopy.lst[i].tvs)
 		filterCopy.lst[i].tvs.isnot = !filterCopy.lst[i].tvs.isnot
 		self.opts.callback(rootCopy)
 	}

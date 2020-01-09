@@ -69,7 +69,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('empty root filter', async test => {
+tape.only('empty root filter', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -103,32 +103,23 @@ tape('empty root filter', async test => {
 		'should show the filter container div'
 	)
 	test.equal(
-		tipd.select('.sja_filter_add_transformer').style('display'),
-		'none',
-		'should hide the filter adder button'
-	)
-	test.equal(
-		tipd.node().querySelector('.sja_filter_remove_transformer').style.display,
-		'inline-block',
-		'should show the filter remover button'
-	)
-	test.equal(
 		tipd
 			.selectAll('.sja_filter_lst_appender')
 			.filter(function() {
 				return this.style.display !== 'none'
 			})
 			.size(),
-		2,
-		'should show 2 filter list appender buttons'
+		0,
+		'should hide all filter list appender buttons'
 	)
 
 	opts.holder.select('.sja_filter_div_mask').node().click()
 	await sleep(50)
 	// remove the only entry from root filter.lst[]
 	tipd
+		.selectAll('tr')
+		.filter(d => d.action == 'remove')
 		.node()
-		.querySelector('.sja_filter_remove_transformer')
 		.click()
 
 	await sleep(200)
