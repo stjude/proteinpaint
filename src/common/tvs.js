@@ -30,7 +30,7 @@ class TVS {
 				// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
 				// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 			},
-			getTerm: () => this.term
+			showMenu: this.showMenu
 		}
 	}
 	validateOpts(o) {
@@ -121,15 +121,10 @@ function setRenderers(self) {
 		self.updatePill.call(this)
 	}
 
-	self.showMenu = d => {
-		const term = d.term
-		const control_tip = self.dom.controlsTip
-		const control_tip_dom = control_tip.node().getBoundingClientRect()
-		control_tip.style('opacity', '0')
-		self.dom.tip.clear().show(control_tip_dom.left - 20, control_tip_dom.top - 20)
-
-		const header_div = self.dom.tip.d.append('div')
-		const term_option_div = self.dom.tip.d.append('div')
+	self.showMenu = (tvs, holder) => {
+		const term = tvs.term
+		const header_div = holder.append('div')
+		const term_option_div = holder.append('div')
 
 		header_div
 			.append('div')
@@ -153,7 +148,7 @@ function setRenderers(self) {
 			.style('margin', '5px 2px')
 			.style('text-align', 'center')
 
-		optsFxn(term_option_div, d)
+		optsFxn(term_option_div, tvs)
 	}
 
 	self.showCatOpts = async function(div, term) {

@@ -43,10 +43,12 @@ class Filter {
 			main: async _filter => {
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
-				console.log(filter)
 				this.filter = filter
 				// clear menu click
 				this.activeData = { item: {}, filter: {} }
+				this.dom.newBtn
+					.html(filter.join ? '+' + filter.join.toUpperCase() : '+NEW')
+					.style('display', filter.lst.length == 1 ? 'none' : 'inline-block')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
 		}
@@ -81,8 +83,19 @@ exports.filterInit = rx.getInitFxn(Filter)
 
 function setRenderers(self) {
 	self.initUI = function() {
-		//console.log(45,self.opts)
 		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
+
+		self.dom.newBtn = self.dom.holder
+			.append('div')
+			.html('+NEW')
+			.style('display', 'inline-block')
+			.style('margin-left', '10px')
+			.style('padding', '5px')
+			.style('border-radius', '5px')
+			.style('background-color', '#ececec')
+			.style('cursor', 'pointer')
+			.datum({ action: 'new' })
+			.on('click', self.displayTreeNew)
 
 		self.dom.table = self.dom.controlsTip
 			.clear()
@@ -252,9 +265,7 @@ function setRenderers(self) {
 		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
 		} else {
-			//const tvs = self.pills[item.$id].getTerm()
 			const filter = this.parentNode.__data__
-
 			select(this)
 				.select(':scope > .sja_filter_join_label')
 				.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
@@ -299,14 +310,36 @@ function setInteractivity(self) {
 	self.displayControlsMenu = function() {
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
-		console.log(263, item, filter)
 		self.activeData = { item, filter }
 		self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
 		self.dom.controlsTip.showunder(this)
 	}
 
+	self.displayTreeNew = function(d) {
+		self.dom.treeTip.clear().showunder(this)
+		appInit(null, {
+			holder: self.dom.treeTip.d,
+			state: {
+				genome: self.genome,
+				dslabel: self.dslabel,
+				termfilter: {
+					show_top_ui: false
+				}
+			},
+			barchart: {
+				bar_click_override: tvslst => {
+					self.dom.controlsTip.hide()
+					self.dom.treeTip.hide()
+					const rootCopy = JSON.parse(JSON.stringify(self.filter))
+					rootCopy.lst.push(...tvslst.map(self.wrapTvs))
+					self.opts.callback(rootCopy)
+				}
+			}
+		})
+	}
+
 	self.displayTreeMenu = function(d) {
-		console.log(339, d, self.activeData, this)
+		//console.log(339, d, self.activeData, this)
 		const thisRow = this
 		select(this.parentNode)
 			.selectAll('tr')
@@ -317,13 +350,13 @@ function setInteractivity(self) {
 		if (d.action == 'remove') {
 			self.removeTransform(self.activeData.item)
 			self.dom.controlsTip.hide()
+			self.dom.treeTip.hide()
 			return
 		}
 		if (d.action == 'edit') {
-			self.dom.treeTip
-				.clear()
-				.d.append('div')
-				.html('**** TODO ****')
+			const holder = self.dom.treeTip.clear().d.append('div')
+			const item = self.activeData.item
+			self.pills[item.$id].showMenu(item.tvs, holder)
 			self.dom.treeTip.showunderoffset(this.lastChild)
 			return
 		}
@@ -332,7 +365,6 @@ function setInteractivity(self) {
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const joiner = d.action.split('-')[1]
-		console.log(322, joiner, filter.join, self.activeData)
 
 		appInit(null, {
 			holder: self.dom.treeTip.d,
@@ -352,7 +384,6 @@ function setInteractivity(self) {
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-								console.log(354, i, item, filterCopy)
 								// transform from tvs to tvslst
 								filterCopy.lst[i] =
 									tvslst.length < 2
@@ -366,7 +397,6 @@ function setInteractivity(self) {
 						  }
 						: joiner && (!filter.join || filter.join == joiner)
 						? tvslst => {
-								console.log(366)
 								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -379,13 +409,11 @@ function setInteractivity(self) {
 						  }
 						: joiner
 						? tvslst => {
-								console.log(347)
 								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-								console.log(354, i, item, filterCopy)
 								// transform from tvs to tvslst
 								filterCopy.lst[i] = {
 									type: 'tvslst',
@@ -395,7 +423,6 @@ function setInteractivity(self) {
 								self.opts.callback(rootCopy)
 						  }
 						: tvslst => {
-								console.log(360)
 								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))

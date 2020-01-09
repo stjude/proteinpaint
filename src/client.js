@@ -377,7 +377,6 @@ export class Menu {
 	}
 
 	showunderoffset(dom, yspace) {
-		console.log(362, this.offsetX, this.offsetY)
 		// route to .show()
 		const p = dom.getBoundingClientRect()
 		return this.show(p.left, p.top + p.height + (yspace || 5))
