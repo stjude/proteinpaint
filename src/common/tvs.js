@@ -94,7 +94,6 @@ function setRenderers(self) {
 
 	self.enterPill = async function() {
 		const one_term_div = select(this).style('font-size', '.9em')
-		//.on('click', self.showMenu)
 
 		//term name div
 		one_term_div
@@ -114,9 +113,9 @@ function setRenderers(self) {
 			.attr('class', 'negate_btn')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
-			.style('background', d => (d.term.isnot ? '#660000' : '#134f5c'))
+			.style('background', self.term.isnot ? '#660000' : '#134f5c')
 			.style('color', 'white')
-			.html(d => (d.term.isnot ? 'NOT' : 'IS'))
+			.html(self.term.isnot ? 'NOT' : 'IS')
 
 		self.updatePill.call(this)
 	}
@@ -678,8 +677,8 @@ function setRenderers(self) {
 		// negate button
 		one_term_div
 			.select('.negate_btn')
-			.style('background', d => (d.term.isnot ? '#660000' : '#134f5c'))
-			.html(d => (d.term.isnot ? 'NOT' : 'IS'))
+			.style('background', term.isnot ? '#660000' : '#134f5c')
+			.html(term.isnot ? 'NOT' : 'IS')
 
 		const value_text = self.get_value_text(term)
 

@@ -101,21 +101,23 @@ function setRenderers(self) {
 		self.dom.table
 			.selectAll('tr')
 			.data([
-				{ action: 'edit', html: ['Edit', '&#9658;'] },
-				{ action: 'replace', html: ['Replace', '&#9658;'] },
-				{ action: 'join-and', html: ['+AND', '&#9658;'] },
-				{ action: 'join-or', html: ['+OR', '&#9658;'] },
-				{ action: 'remove', html: ['Remove', '&#10006'] }
+				{ action: 'edit', html: ['', 'Edit', '&#9658;'], handler: self.editTerm },
+				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
+				{ action: 'join-and', html: ['&#10010;', 'AND', '&#9658;'] },
+				{ action: 'join-or', html: ['&#10010;', 'OR', '&#9658;'] },
+				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateTerm },
+				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
 			])
 			.enter()
 			.append('tr')
-			.on('click', self.displayTreeMenu)
+			.on('click', self.handleMenuOptionClick)
 			.selectAll('td')
 			.data(d => d.html)
 			.enter()
 			.append('td')
-			.style('padding', '1px 5px')
-			.style('color', d => (d == '&#10006' ? '#a00' : '#111'))
+			.style('padding', (d, i) => (i === 0 ? '1px' : '1px 5px'))
+			.style('color', (d, i) => (d == '&#10006;' ? '#a00' : i === 0 ? '#0a0' : '#111'))
+			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
 			.style('cursor', 'pointer')
 			.html(d => d)
 	}
@@ -352,6 +354,14 @@ function setInteractivity(self) {
 		self.dom.controlsTip.showunder(this)
 	}
 
+	self.handleMenuOptionClick = function(d) {
+		if (d.bar_click_override || !d.handler) {
+			self.displayTreeMenu.call(this, d)
+		} else {
+			d.handler()
+		}
+	}
+
 	self.displayTreeNew = function(d) {
 		self.dom.treeTip.clear().showunder(this)
 		appInit(null, {
@@ -384,24 +394,9 @@ function setInteractivity(self) {
 				return this == thisRow ? '#eeee55' : 'transparent'
 			})
 
-		if (d.action == 'remove') {
-			self.removeTransform(self.activeData.item)
-			self.dom.controlsTip.hide()
-			self.dom.treeTip.hide()
-			return
-		}
-		if (d.action == 'edit') {
-			const holder = self.dom.treeTip.clear().d.append('div')
-			const item = self.activeData.item
-			self.pills[item.$id].showMenu(item.tvs, holder)
-			self.dom.treeTip.showunderoffset(this.lastChild)
-			return
-		}
-
 		self.dom.treeTip.clear().showunderoffset(this.lastChild)
-		const item = self.activeData.item
+		self.activeData.joiner = d.action.split('-')[1]
 		const filter = self.activeData.filter
-		const joiner = d.action.split('-')[1]
 
 		appInit(null, {
 			holder: self.dom.treeTip.d,
@@ -413,68 +408,96 @@ function setInteractivity(self) {
 				}
 			},
 			barchart: {
-				bar_click_override:
-					d.action == 'replace'
-						? tvslst => {
-								self.dom.controlsTip.hide()
-								self.dom.treeTip.hide()
-								const rootCopy = JSON.parse(JSON.stringify(self.filter))
-								const filterCopy = self.findItem(rootCopy, filter.$id)
-								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-								// transform from tvs to tvslst
-								filterCopy.lst[i] =
-									tvslst.length < 2
-										? self.wrapTvs(tvslst[0])
-										: {
-												type: 'tvslst',
-												join: joiner,
-												lst: [item, ...tvslst.map(self.wrapTvs)]
-										  }
-								self.opts.callback(rootCopy)
-						  }
-						: joiner && (!filter.join || filter.join == joiner)
-						? tvslst => {
-								self.dom.controlsTip.hide()
-								self.dom.treeTip.hide()
-								const rootCopy = JSON.parse(JSON.stringify(self.filter))
-								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
-								if (!filterCopy.join) {
-									filterCopy.join = joiner
-								}
-								self.opts.callback(rootCopy)
-						  }
-						: joiner
-						? tvslst => {
-								self.dom.controlsTip.hide()
-								self.dom.treeTip.hide()
-								const rootCopy = JSON.parse(JSON.stringify(self.filter))
-								const filterCopy = self.findItem(rootCopy, filter.$id)
-								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-								// transform from tvs to tvslst
-								filterCopy.lst[i] = {
-									type: 'tvslst',
-									join: joiner,
-									lst: [item, ...tvslst.map(self.wrapTvs)]
-								}
-								self.opts.callback(rootCopy)
-						  }
-						: tvslst => {
-								self.dom.controlsTip.hide()
-								self.dom.treeTip.hide()
-								const rootCopy = JSON.parse(JSON.stringify(self.filter))
-								const filterCopy = self.findItem(rootCopy, filter.$id)
-								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
-								if (!filterCopy.join) {
-									filterCopy.join = filter.join ? filter.join : d.join
-								}
-								self.opts.callback(rootCopy)
-						  }
+				bar_click_override: d.bar_click_override
+					? d.bar_click_override
+					: self.activeData.joiner == filter.join || !filter.join || !filter.lst.length
+					? self.appendTerm
+					: self.subnestFilter
 			}
 		})
 	}
 
-	self.removeTransform = function(item) {
+	self.editTerm = function() {
+		const thisRow = this
+		select(this.parentNode)
+			.selectAll('tr')
+			.style('background-color', function() {
+				return this == thisRow ? '#eeee55' : 'transparent'
+			})
+		const holder = self.dom.treeTip.clear().d.append('div')
+		const item = self.activeData.item
+		self.pills[item.$id].showMenu(item.tvs, holder)
+		self.dom.treeTip.showunderoffset(this.lastChild)
+	}
+
+	self.negateTerm = function() {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+		console.log(409, filterCopy.lst[i].tvs)
+		filterCopy.lst[i].tvs.isnot = !filterCopy.lst[i].tvs.isnot
+		self.opts.callback(rootCopy)
+	}
+
+	self.replaceTerm = tvslst => {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+		filterCopy.lst[i] =
+			tvslst.length < 2
+				? self.wrapTvs(tvslst[0])
+				: {
+						// transform from tvs to tvslst
+						type: 'tvslst',
+						join: joiner,
+						lst: [item, ...tvslst.map(self.wrapTvs)]
+				  }
+		self.opts.callback(rootCopy)
+	}
+
+	self.appendTerm = tvslst => {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(rootCopy, filter.$id)
+		filterCopy.lst.push(...tvslst.map(self.wrapTvs))
+		if (!filterCopy.join) {
+			filterCopy.join = self.activeData.joiner
+		}
+		self.opts.callback(rootCopy)
+	}
+
+	self.subnestFilter = tvslst => {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+		// transform from tvs to tvslst
+		filterCopy.lst[i] = {
+			type: 'tvslst',
+			join: self.activeData.joiner,
+			lst: [item, ...tvslst.map(self.wrapTvs)]
+		}
+		self.opts.callback(rootCopy)
+	}
+
+	self.removeTransform = function() {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const i = filter.lst.findIndex(t => t.$id === item.$id)
 		if (i == -1) return
