@@ -1,5 +1,6 @@
 import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
+import * as d3s from 'd3'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
@@ -132,7 +133,7 @@ function setRenderers(self) {
 			.style('font-size', '.8em')
 			.style('font-style', 'italic')
 			.style('color', '#888')
-			.html('Configuring ' + term.name)
+			.html('Configuring <b>' + term.name + '</b>')
 
 		const optsFxn = term.iscategorical
 			? self.showCatOpts
@@ -226,12 +227,7 @@ function setRenderers(self) {
 		)
 		if (density_data.error) throw data.error
 
-		const density_plot = div
-			.append('svg')
-			.attr('width', density_data.width)
-			.attr('height', density_data.height)
-			.append('image')
-			.attr('xlink:href', density_data.img)
+		self.makeDensityPlot(div, density_data)
 
 		const range_divs = div.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
@@ -453,60 +449,88 @@ function setRenderers(self) {
 			}
 		}
 
-		const sortedVals = unannotated_cats.lst.sort((a, b) => {
-			return b.samplecount - a.samplecount
-		})
-
-		// // 'Apply' button
-		div
-			.append('div')
-			.style('text-align', 'center')
-			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '13px')
-			.style('background-color', '#23cba7')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-
-				const new_vals = []
-
-				for (const [i, v] of sortedVals.entries()) {
-					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push({ value: v.range.value })
-					}
-				}
-				const new_term = JSON.parse(JSON.stringify(term))
-				if (new_vals.length > 0 && (term.term.isinteger || term.term.isfloat)) {
-					for (const [i, d] of new_vals.entries()) {
-						if (!new_term.ranges.map(a => a.value).includes(d.value)) new_term.ranges.push({ value: d.value })
-					}
-				}
-
-				for (const [i, d] of new_term.ranges.entries()) {
-					if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
-				}
-
-				self.dom.tip.hide()
-				self.opts.callback(new_term)
+		if (unannotated_cats.lst.length > 0) {
+			const sortedVals = unannotated_cats.lst.sort((a, b) => {
+				return b.samplecount - a.samplecount
 			})
 
-		const values_table = self.makeValueTable(div, term, sortedVals)
+			// // 'Apply' button
+			div
+				.append('div')
+				.style('text-align', 'center')
+				.append('div')
+				.attr('class', 'apply_btn sja_filter_tag_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#23cba7')
+				.style('padding', '7px 15px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Apply')
+				.on('click', () => {
+					//update term values by ckeckbox values
+					let checked_vals = []
+					values_table
+						.selectAll('.value_checkbox')
+						.filter(function(d) {
+							return this.checked == true
+						})
+						.each(function(d) {
+							checked_vals.push(this.value)
+						})
+
+					const new_vals = []
+
+					for (const [i, v] of sortedVals.entries()) {
+						for (const [j, sv] of checked_vals.entries()) {
+							if (v.key == sv) new_vals.push({ value: v.range.value })
+						}
+					}
+					const new_term = JSON.parse(JSON.stringify(term))
+					if (new_vals.length > 0 && (term.term.isinteger || term.term.isfloat)) {
+						for (const [i, d] of new_vals.entries()) {
+							if (!new_term.ranges.map(a => a.value).includes(d.value)) new_term.ranges.push({ value: d.value })
+						}
+					}
+
+					for (const [i, d] of new_term.ranges.entries()) {
+						if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
+					}
+
+					self.dom.tip.hide()
+					self.opts.callback(new_term)
+				})
+
+			const values_table = self.makeValueTable(div, term, sortedVals)
+		}
+	}
+
+	self.makeDensityPlot = function(div, data) {
+		const padding = { top: 20, right: 20, bottom: 20, left: 20 }
+
+		const density_plot = div
+			.append('svg')
+			.attr('width', data.width + padding.left + padding.right)
+			.attr('height', data.height + padding.top + padding.bottom)
+
+		density_plot
+			.append('image')
+			.attr('transform', 'translate(' + padding.left + ',' + padding.top + ')')
+			.attr('xlink:href', data.img)
+
+		const xscale = d3s
+			.scaleLinear()
+			.domain([0, data.maxvalue])
+			.range([0, data.width])
+
+		const x_axis = d3s.axisBottom().scale(xscale)
+
+		density_plot
+			.append('g')
+			.attr('transform', 'translate(' + padding.left + ',' + (data.height + padding.top) + ')')
+			.call(x_axis)
 	}
 
 	self.showConditionOpts = async function(div, term) {
