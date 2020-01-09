@@ -129,25 +129,7 @@ function setRenderers(self) {
 		self.dom.tip.clear().show(control_tip_dom.left - 20, control_tip_dom.top - 20)
 
 		const header_div = self.dom.tip.d.append('div')
-		const term_negate_div = self.dom.tip.d.append('div')
 		const term_option_div = self.dom.tip.d.append('div')
-		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
-
-		header_div
-			.append('div')
-			.attr('class', 'back_btn sja_menuoption')
-			.style('display', 'inline-block')
-			.style('border-radius', '13px')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.html('&#10094; Back')
-			.on('click', () => {
-				self.dom.tip.hide()
-				control_tip.style('opacity', '1')
-			})
 
 		header_div
 			.append('div')
@@ -157,31 +139,6 @@ function setRenderers(self) {
 			.style('font-style', 'italic')
 			.style('color', '#888')
 			.html('Configuring ' + term.name)
-
-		const term_negate_select = term_negate_div
-			.append('select')
-			.attr('class', 'negate_select')
-			.style('display', 'block')
-			.style('margin', '5px 10px')
-			.style('padding', '3px')
-			.on('change', () => {
-				const new_term = JSON.parse(JSON.stringify(d))
-				new_term.term.isnot = term_negate_select.node().value == 'not' ? true : false
-				self.dom.tip.hide()
-				self.opts.callback(new_term)
-			})
-
-		term_negate_select
-			.append('option')
-			.attr('value', 'is')
-			.text('IS')
-
-		term_negate_select
-			.append('option')
-			.attr('value', 'not')
-			.text('IS NOT')
-
-		term_negate_select.node().selectedIndex = term.isnot ? 1 : 0
 
 		const optsFxn = term.iscategorical
 			? self.showCatOpts
@@ -197,39 +154,6 @@ function setRenderers(self) {
 			.style('text-align', 'center')
 
 		optsFxn(term_option_div, d)
-
-		if (!self.opts.disable_ReplaceRemove) {
-			term_edit_div
-				.append('div')
-				.attr('class', 'replace_btn sja_filter_tag_btn')
-				.style('display', 'inline-block')
-				.style('border-radius', '13px')
-				.style('background-color', '#74b9ff')
-				.style('padding', '7px 15px')
-				.style('margin', '5px')
-				.style('text-align', 'center')
-				.style('font-size', '.8em')
-				.style('text-transform', 'uppercase')
-				.text('Replace')
-				.on('click', self.displayTreeMenu)
-			term_edit_div
-				.append('div')
-				.attr('class', 'remove_btn sja_filter_tag_btn')
-				.style('display', 'inline-block')
-				.style('border-radius', '13px')
-				.style('background-color', '#ff7675')
-				.style('padding', '7px 15px')
-				.style('margin', '5px')
-				.style('text-align', 'center')
-				.style('font-size', '.8em')
-				.style('text-transform', 'uppercase')
-				.text('Remove')
-				// .on('click', self.removeTerm)
-				.on('click', () => {
-					self.dom.tip.hide()
-					self.removeTerm(d)
-				})
-		}
 	}
 
 	self.showCatOpts = async function(div, term) {
@@ -302,6 +226,18 @@ function setRenderers(self) {
 				ranges.push(range)
 			}
 		}
+
+		const density_data = await client.dofetch2(
+			'/termdb?density=1&genome=' + self.opts.genome + '&dslabel=' + self.opts.dslabel + '&termid=' + term.term.id
+		)
+		if (density_data.error) throw data.error
+
+		const density_plot = div
+			.append('svg')
+			.attr('width', density_data.width)
+			.attr('height', density_data.height)
+			.append('image')
+			.attr('xlink:href', density_data.img)
 
 		const range_divs = div.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 

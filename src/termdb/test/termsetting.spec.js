@@ -161,7 +161,7 @@ tape('caterogical term overlay', function(test) {
 	}
 })
 
-tape.only('Numerical term overlay', function(test) {
+tape('Numerical term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
