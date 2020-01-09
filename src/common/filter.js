@@ -358,7 +358,7 @@ function setInteractivity(self) {
 		if (d.bar_click_override || !d.handler) {
 			self.displayTreeMenu.call(this, d)
 		} else {
-			d.handler()
+			d.handler(this)
 		}
 	}
 
@@ -417,17 +417,16 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.editTerm = function() {
-		const thisRow = this
+	self.editTerm = function(elem) {
 		select(this.parentNode)
 			.selectAll('tr')
 			.style('background-color', function() {
-				return this == thisRow ? '#eeee55' : 'transparent'
+				return this == elem ? '#eeee55' : 'transparent'
 			})
 		const holder = self.dom.treeTip.clear().d.append('div')
 		const item = self.activeData.item
 		self.pills[item.$id].showMenu(item.tvs, holder)
-		self.dom.treeTip.showunderoffset(this.lastChild)
+		self.dom.treeTip.showunderoffset(elem.lastChild)
 	}
 
 	self.negateTerm = function() {
