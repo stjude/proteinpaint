@@ -45,6 +45,7 @@ class TdbFilter {
 
 	initFilter() {
 		this.filterApi = filterInit({
+			mode: 'active',
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.filterDiv,

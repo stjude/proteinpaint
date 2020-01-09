@@ -376,6 +376,24 @@ export class Menu {
 		*/
 	}
 
+	showunderoffset(dom, yspace) {
+		console.log(362, this.offsetX, this.offsetY)
+		// route to .show()
+		const p = dom.getBoundingClientRect()
+		return this.show(p.left, p.top + p.height + (yspace || 5))
+
+		/*
+		this.d
+			.style('display','block')
+			.style('right',null)
+			.style('bottom',null)
+			.style('left', (p.left+window.scrollX)+'px')
+			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
+			.transition().style('opacity',1)
+		return this
+		*/
+	}
+
 	hide() {
 		if (d3event) {
 			// d3event can be undefined

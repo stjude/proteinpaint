@@ -4,7 +4,6 @@ import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
-import { filterGlanceInit } from '../common/filterGlance'
 import * as client from '../client'
 
 /*
@@ -23,31 +22,32 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.dom = { holder: opts.holder }
+		this.dom = {
+			holder: opts.holder,
+			controlsTip: new Menu({ padding: '5px' }),
+			treeTip: new Menu({
+				padding: '5px',
+				offsetX: 35,
+				offsetY: -25
+			})
+		}
 		this.durations = { exit: 500 }
 		this.lastId = 0
 		this.categoryData = {}
 		this.pills = {}
-
 		setInteractivity(this)
 		setRenderers(this)
 		this.initUI()
 
 		this.api = {
 			main: async _filter => {
-				this.dom.controlsTip.hide()
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
+				console.log(filter)
 				this.filter = filter
-				//console.log(40, this.filter)
-				this.dom.newFilterBtn
-					.datum(filter)
-					.style('display', !filter.lst || !filter.lst.length ? 'inline-block' : 'none')
-				this.filterGlance.main(filter)
-				this.updateUI(this.dom.controlsTip.d, filter)
-			},
-			clickNewBtn: () => {
-				this.dom.newFilterBtn.node().click()
+				// clear menu click
+				this.activeData = { item: {}, filter: {} }
+				this.updateUI(this.dom.filterContainer, filter)
 			}
 		}
 	}
@@ -55,8 +55,7 @@ class Filter {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		if (typeof o.callback != 'function') throw '.callback() is not a function'
-		if (!o.btnLabel) o.btnLabel = 'Filter' // throw '.btnLabel missing'
+		//if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
 	validateFilter(item) {
@@ -82,64 +81,39 @@ exports.filterInit = rx.getInitFxn(Filter)
 
 function setRenderers(self) {
 	self.initUI = function() {
-		// button to add new term
-		/*self.dom.mainLabel = self.dom.holder
-			.datum(self.filter)
-			.append('div')
-			.style('display', 'inline-block')
-			.style('position','relative')
-			.style('margin', '7px')
-			.style('padding', '4px 6px 2px 6px')
-			.style('border-radius', '6px')
-			.style('text-align', 'center')
-			.style('color', '#000')
-			.style('cursor', 'pointer')
-			.html('Filter')*/
+		//console.log(45,self.opts)
+		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
 
-		self.dom.newFilterBtn = self.dom.holder
-			.datum(self.filter)
-			.append('div')
-			.attr('class', 'sja_new_filter_btn')
-			.style('display', 'inline-block')
-			.style('position', 'relative')
-			.style('margin', '7px')
-			.style('padding', '4px 6px 2px 6px')
-			.style('border-radius', '6px')
-			.style('text-align', 'center')
-			.style('color', '#000')
-			.style('cursor', 'pointer')
-			.style('background', '#ececec')
-			.html('+NEW')
+		self.dom.table = self.dom.controlsTip
+			.clear()
+			.d.append('table')
+			.style('border-collapse', 'collapse')
+		self.dom.table
+			.selectAll('tr')
+			.data([
+				{ action: 'edit', html: ['Edit', '&#9658;'] },
+				{ action: 'replace', html: ['Replace', '&#9658;'] },
+				{ action: 'join-and', html: ['+AND', '&#9658;'] },
+				{ action: 'join-or', html: ['+OR', '&#9658;'] },
+				{ action: 'remove', html: ['Remove', '&#10006'] }
+			])
+			.enter()
+			.append('tr')
 			.on('click', self.displayTreeMenu)
-
-		self.dom.glanceHolder = self.dom.holder.append('div').style('display', 'inline-block')
-
-		self.filterGlance = filterGlanceInit({
-			genome: self.opts.genome,
-			dslabel: self.opts.dslabel,
-			holder: self.dom.glanceHolder,
-			debug: self.opts.debug
-		})
-
-		// mask
-		self.dom.holder
-			.append('div')
-			.attr('class', 'sja_filter_div_mask')
-			.style('position', 'absolute')
-			.style('top', 0)
-			.style('left', 0)
-			.style('width', '100%')
-			.style('height', '100%')
-			.on('click', self.displayTreeOrControls)
-
-		self.dom.controlsTip = new Menu({ padding: '5px' })
-		self.dom.treeTip = new Menu({ padding: '5px' })
+			.selectAll('td')
+			.data(d => d.html)
+			.enter()
+			.append('td')
+			.style('padding', '1px 5px')
+			.style('color', d => (d == '&#10006' ? '#a00' : '#111'))
+			.style('cursor', 'pointer')
+			.html(d => d)
 	}
 
 	self.updateUI = function(container, filter) {
 		const pills = container
 			.datum(filter)
-			.style('display', !filter.lst || !filter.lst.length ? 'none' : 'block')
+			.style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
 			.selectAll(':scope > .sja_filter_grp')
 			.data([filter], self.getId)
 
@@ -156,11 +130,17 @@ function setRenderers(self) {
 	self.addGrp = function(item, i) {
 		const filter = this.parentNode.__data__
 
+		select(this).style('display', 'inline-block')
+
+		select(this)
+			.append('span')
+			.attr('class', 'sja_filter_paren_open')
+			.html('(')
+			.style('display', filter === self.filter ? 'none' : 'inline')
+			.style('font-weight', 500)
+			.style('font-size', '20px')
+
 		const pills = select(this)
-			.style('border', item.lst && filter !== self.filter ? '1px solid #ccc' : 'none')
-			//.append('div')
-			//.attr('class', 'sja_filter_grp_terms')
-			.style('padding', '5px 5px 5px 0')
 			.selectAll(':scope > .sja_filter_item')
 			.data(item.type == 'tvslst' ? item.lst : [item], self.getId)
 
@@ -171,27 +151,22 @@ function setRenderers(self) {
 			.each(self.addItem)
 
 		select(this)
-			.selectAll(':scope > .sja_filter_lst_appender')
-			.data([{ label: '+AND', join: 'and', filter }, { label: '+OR', join: 'or', filter }])
-			.enter()
-			.append('div')
-			.attr('class', 'sja_filter_lst_appender')
-			.style('width', '50px')
-			.style('margin', '5px 10px')
-			.style('padding', '5px')
-			.style('border', 'none')
-			.style('border-radius', '5px')
-			.style('text-align', 'center')
-			.style('cursor', 'pointer')
-			.style('background-color', '#ececec')
-			.on('click', self.displayTreeMenu)
-			.each(self.updateLstAppender)
+			.append('span')
+			.attr('class', 'sja_filter_paren_close')
+			.html(')')
+			.style('display', filter === self.filter ? 'none' : 'inline')
+			.style('font-weight', 500)
+			.style('font-size', '20px')
 	}
 
 	self.updateGrp = function(item, i) {
+		const filter = item.type == 'tvslst' ? item : this.parentNode.__data__
+		select(this)
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.style('display', filter === self.filter ? 'none' : 'inline')
+
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
-			.style('border', item.type == 'tvslst' && item.lst.length > 1 && item !== self.filter ? '1px solid #ccc' : 'none')
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
 
@@ -199,22 +174,13 @@ function setRenderers(self) {
 		pills.each(self.updateItem)
 		pills
 			.enter()
-			.insert('div', ':scope > .sja_filter_lst_appender')
+			.insert('div', ':scope > .sja_filter_paren_close')
 			.attr('class', 'sja_filter_item')
 			.each(self.addItem)
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
-
-		select(this)
-			.selectAll(':scope > .sja_filter_lst_appender')
-			.each(self.updateLstAppender)
-
-		const filter = item.type == 'tvslst' ? item : this.parentNode.__data__
-		select(this)
-			.selectAll(':scope > .sja_filter_item > .sja_filter_join_label')
-			.each(self.updateJoinLabel)
 	}
 
 	self.removeGrp = function(item) {
@@ -231,15 +197,6 @@ function setRenderers(self) {
 		if (this instanceof Node) select(this).remove()
 	}
 
-	self.updateLstAppender = function(d) {
-		const filter = this.parentNode.__data__
-		console.log(202, d.join, filter.join, filter.lst.length)
-		d.filter = filter
-		select(this)
-			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
-			.html(d.label)
-	}
-
 	self.addItem = function(item, i) {
 		const filter = this.parentNode.__data__
 
@@ -251,41 +208,12 @@ function setRenderers(self) {
 
 		// holder for blue pill
 		const holder = select(this)
+			.style('display', 'inline-block')
+			.style('position', 'relative')
 			.style('white-space', 'nowrap')
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
-
-		// button to create a new subgroup with
-		// this term plus and a newly selected tree term
-		select(this)
-			.append('div')
-			.attr('class', 'sja_filter_add_transformer')
-			.style('display', filter.lst.length > 1 ? 'inline-block' : 'none')
-			//.style('width', '50px')
-			.style('margin-left', '10px')
-			.style('padding', '5px')
-			.style('border', 'none')
-			.style('border-radius', '5px')
-			.style('text-align', 'center')
-			.style('cursor', 'pointer')
-			.style('color', 'rgba(10,10,10,0.8)')
-			.html(filter.join == 'and' ? '+OR' : '+AND')
-			.on('click', self.displayTreeMenu)
-
-		// to remove an item from a lst and transform a tvslst
-		// into a tvs if there is only one entry in the resulting lst
-		select(this)
-			.append('div')
-			.attr('class', 'sja_filter_remove_transformer')
-			.html('REMOVE')
-			.style('display', 'inline-block')
-			.style('margin', '3px')
-			.style('padding', '3px 3px')
-			.style('color', 'rgba(255,100,100,0.8)')
-			//.style('font-weight', 500)
-			.style('cursor', 'pointer')
-			.on('click', self.removeTransform)
 
 		self.addJoinLabel(this, filter, item)
 
@@ -293,7 +221,6 @@ function setRenderers(self) {
 			genome: self.genome,
 			dslabel: self.dslabel,
 			holder,
-			controlsTip: self.dom.controlsTip.d,
 			debug: self.opts.debug,
 			callback: tvs => {
 				const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -306,6 +233,19 @@ function setRenderers(self) {
 		})
 		self.pills[item.$id] = pill
 		pill.main(item.tvs)
+
+		if (self.opts.mode == 'active') {
+			// mask
+			holder
+				.append('div')
+				.attr('class', 'sja_filter_div_mask')
+				.style('position', 'absolute')
+				.style('top', 0)
+				.style('left', 0)
+				.style('width', holder.style('width'))
+				.style('height', '100%')
+				.on('click', self.displayControlsMenu)
+		}
 	}
 
 	self.updateItem = function(item, i) {
@@ -316,13 +256,8 @@ function setRenderers(self) {
 			const filter = this.parentNode.__data__
 
 			select(this)
-				.select(':scope > .sja_filter_add_transformer')
-				.style('display', filter.lst.length > 1 ? 'inline-block' : 'none')
-				.html(filter.join == 'and' ? '+OR' : '+AND')
-
-			select(this)
 				.select(':scope > .sja_filter_join_label')
-				.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'block' : 'none')
+				.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
 				.html(filter.join == 'and' ? 'AND' : 'OR')
 
 			if (!self.pills[item.$id]) return
@@ -335,22 +270,12 @@ function setRenderers(self) {
 		select(this).remove()
 	}
 
-	self.updateLstAppender = function(d) {
-		const filter = this.parentNode.__data__
-		d.filter = filter
-		select(this)
-			.style('display', !filter.join || d.join === filter.join ? 'inline-block' : 'none')
-			.html(d.label)
-	}
-
 	self.addJoinLabel = function(elem, filter, item) {
+		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style(
-				'display',
-				filter.lst.length > 1 && item && filter.lst.indexOf(item) < filter.lst.length - 1 ? 'block' : 'none'
-			)
+			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
 			.style('width', '50px')
 			.style('margin-left', '10px')
 			.style('padding', '5px')
@@ -365,31 +290,49 @@ function setRenderers(self) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'block' : 'none'
+			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
 		)
 	}
 }
 
 function setInteractivity(self) {
-	self.displayTreeOrControls = function() {
-		if (self.filter.lst.length) {
-			self.dom.controlsTip.showunder(self.dom.glanceHolder.node())
-		} else {
-			self.dom.newFilterBtn.node().click()
-		}
+	self.displayControlsMenu = function() {
+		const item = this.parentNode.__data__
+		const filter = self.findParent(self.filter, item.$id)
+		console.log(263, item, filter)
+		self.activeData = { item, filter }
+		self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		self.dom.controlsTip.showunder(this)
 	}
 
 	self.displayTreeMenu = function(d) {
-		//console.log(339, d, this.__data__)
-		self.dom.treeTip.clear().showunder(this instanceof Node ? this : self.dom.newFilterBtn.node())
-		const filter =
-			'lst' in d
-				? d
-				: 'filter' in d
-				? d.filter
-				: this.className == 'sja_filter_lst_appender'
-				? this.parentNode.__data_
-				: this.__data__
+		console.log(339, d, self.activeData, this)
+		const thisRow = this
+		select(this.parentNode)
+			.selectAll('tr')
+			.style('background-color', function() {
+				return this == thisRow ? '#eeee55' : 'transparent'
+			})
+
+		if (d.action == 'remove') {
+			self.removeTransform(self.activeData.item)
+			self.dom.controlsTip.hide()
+			return
+		}
+		if (d.action == 'edit') {
+			self.dom.treeTip
+				.clear()
+				.d.append('div')
+				.html('**** TODO ****')
+			self.dom.treeTip.showunderoffset(this.lastChild)
+			return
+		}
+
+		self.dom.treeTip.clear().showunderoffset(this.lastChild)
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const joiner = d.action.split('-')[1]
+		console.log(322, joiner, filter.join, self.activeData)
 
 		appInit(null, {
 			holder: self.dom.treeTip.d,
@@ -400,41 +343,60 @@ function setInteractivity(self) {
 					show_top_ui: false
 				}
 			},
-			/*modifiers: {
-				//modifier to replace filter by clicking term btn
-				// NOT NEEDED ???
-				tvs_select: tvs => {
-					self.replaceFilter({ term: tvs })
-				}
-			},*/
 			barchart: {
 				bar_click_override:
-					this.className == 'sja_filter_lst_appender'
+					d.action == 'replace'
 						? tvslst => {
+								self.dom.controlsTip.hide()
+								self.dom.treeTip.hide()
+								const rootCopy = JSON.parse(JSON.stringify(self.filter))
+								const filterCopy = self.findItem(rootCopy, filter.$id)
+								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+								console.log(354, i, item, filterCopy)
+								// transform from tvs to tvslst
+								filterCopy.lst[i] =
+									tvslst.length < 2
+										? self.wrapTvs(tvslst[0])
+										: {
+												type: 'tvslst',
+												join: joiner,
+												lst: [item, ...tvslst.map(self.wrapTvs)]
+										  }
+								self.opts.callback(rootCopy)
+						  }
+						: joiner && (!filter.join || filter.join == joiner)
+						? tvslst => {
+								console.log(366)
+								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
 								filterCopy.lst.push(...tvslst.map(self.wrapTvs))
 								if (!filterCopy.join) {
-									filterCopy.join = filter.join ? filter.join : d.join
+									filterCopy.join = joiner
 								}
 								self.opts.callback(rootCopy)
 						  }
-						: this.className == 'sja_filter_add_transformer'
+						: joiner
 						? tvslst => {
+								console.log(347)
+								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
-								const parent = self.findParent(rootCopy, filter.$id)
-								const i = parent.lst.findIndex(f => f.$id === d.$id)
+								const filterCopy = self.findItem(rootCopy, filter.$id)
+								const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+								console.log(354, i, item, filterCopy)
 								// transform from tvs to tvslst
-								parent.lst[i] = {
+								filterCopy.lst[i] = {
 									type: 'tvslst',
-									join: this.innerHTML === '+OR' ? 'or' : 'and',
-									lst: [filter, ...tvslst.map(self.wrapTvs)]
+									join: joiner,
+									lst: [item, ...tvslst.map(self.wrapTvs)]
 								}
 								self.opts.callback(rootCopy)
 						  }
 						: tvslst => {
+								console.log(360)
+								self.dom.controlsTip.hide()
 								self.dom.treeTip.hide()
 								const rootCopy = JSON.parse(JSON.stringify(self.filter))
 								const filterCopy = self.findItem(rootCopy, filter.$id)
@@ -449,7 +411,7 @@ function setInteractivity(self) {
 	}
 
 	self.removeTransform = function(item) {
-		const filter = this.parentNode.parentNode.__data__
+		const filter = self.activeData.filter
 		const i = filter.lst.findIndex(t => t.$id === item.$id)
 		if (i == -1) return
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
