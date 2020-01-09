@@ -287,7 +287,7 @@ tape('series visibility', function(test) {
 	}
 })
 
-tape('single barchart, filtered', function(test) {
+tape.only('single barchart, filtered', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -336,7 +336,7 @@ tape('single barchart, filtered', function(test) {
 									type: 'tvs',
 									tvs: {
 										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', iscategorical: true },
-										values: [{ key: '1', value: '1-yes' }]
+										values: [{ key: '1', label: '1-yes' }]
 									}
 								}
 							]

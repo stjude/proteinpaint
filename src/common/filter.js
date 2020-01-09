@@ -46,9 +46,7 @@ class Filter {
 				this.filter = filter
 				// clear menu click
 				this.activeData = { item: {}, filter: {} }
-				this.dom.newBtn
-					.html(filter.join ? '+' + filter.join.toUpperCase() : '+NEW')
-					.style('display', filter.lst.length == 1 ? 'none' : 'inline-block')
+				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
 		}
@@ -83,8 +81,6 @@ exports.filterInit = rx.getInitFxn(Filter)
 
 function setRenderers(self) {
 	self.initUI = function() {
-		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
-
 		self.dom.newBtn = self.dom.holder
 			.append('div')
 			.html('+NEW')
@@ -94,8 +90,9 @@ function setRenderers(self) {
 			.style('border-radius', '5px')
 			.style('background-color', '#ececec')
 			.style('cursor', 'pointer')
-			.datum({ action: 'new' })
 			.on('click', self.displayTreeNew)
+
+		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
 
 		self.dom.table = self.dom.controlsTip
 			.clear()
@@ -164,6 +161,23 @@ function setRenderers(self) {
 			.each(self.addItem)
 
 		select(this)
+			.append('div')
+			.attr('class', 'sja_filter_lst_appender')
+			.style(
+				'display',
+				filter === self.filter && filter.lst.length > 1 && filter.lst.filter(self.hasNestedTsv).length !== 0
+					? 'inline-block'
+					: 'none'
+			)
+			.style('margin-left', '10px')
+			.style('padding', '5px')
+			.style('border-radius', '5px')
+			.style('background-color', '#ececec')
+			.style('cursor', 'pointer')
+			.html('+' + filter.join.toUpperCase())
+			.on('click', self.displayTreeNew)
+
+		select(this)
 			.append('span')
 			.attr('class', 'sja_filter_paren_close')
 			.html(')')
@@ -187,13 +201,27 @@ function setRenderers(self) {
 		pills.each(self.updateItem)
 		pills
 			.enter()
-			.insert('div', ':scope > .sja_filter_paren_close')
+			.insert('div', ':scope > .sja_filter_lst_appender')
 			.attr('class', 'sja_filter_item')
 			.each(self.addItem)
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
+
+		select(this)
+			.select(':scope > .sja_filter_lst_appender')
+			.style(
+				'display',
+				filter == self.filter && filter.lst.length > 1 && filter.lst.filter(self.hasNestedTsv).length !== 0
+					? 'inline-block'
+					: 'none'
+			)
+			.html('+' + filter.join.toUpperCase())
+	}
+
+	self.hasNestedTsv = function(item) {
+		return item.type === 'tvslst'
 	}
 
 	self.removeGrp = function(item) {
@@ -207,7 +235,14 @@ function setRenderers(self) {
 		} else {
 			delete self.pills[item.$id]
 		}
-		if (this instanceof Node) select(this).remove()
+		if (this instanceof Node) {
+			select(this)
+				.selectAll('*')
+				.on('click', null)
+			select(this)
+				.on('click', null)
+				.remove()
+		}
 	}
 
 	self.addItem = function(item, i) {
@@ -262,15 +297,15 @@ function setRenderers(self) {
 	}
 
 	self.updateItem = function(item, i) {
+		const filter = this.parentNode.__data__
+		select(this)
+			.select(':scope > .sja_filter_join_label')
+			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.html(filter.join == 'and' ? 'AND' : 'OR')
+
 		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
 		} else {
-			const filter = this.parentNode.__data__
-			select(this)
-				.select(':scope > .sja_filter_join_label')
-				.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
-				.html(filter.join == 'and' ? 'AND' : 'OR')
-
 			if (!self.pills[item.$id]) return
 			self.pills[item.$id].main(item.tvs)
 		}
@@ -278,7 +313,9 @@ function setRenderers(self) {
 
 	self.removeItem = function(item) {
 		delete self.pills[item.$id]
-		select(this).remove()
+		select(this)
+			.on('click', null)
+			.remove()
 	}
 
 	self.addJoinLabel = function(elem, filter, item) {
@@ -292,7 +329,7 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('border', 'none')
 			.style('border-radius', '5px')
-			.style('cursor', 'pointer')
+			//.style('cursor', 'pointer')
 			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
 	}
 
