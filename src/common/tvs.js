@@ -92,9 +92,8 @@ function setRenderers(self) {
 	}
 
 	self.enterPill = async function() {
-		const one_term_div = select(this)
-			.style('font-size', '.9em')
-			.on('click', self.showMenu)
+		const one_term_div = select(this).style('font-size', '.9em')
+		//.on('click', self.showMenu)
 
 		//term name div
 		one_term_div
