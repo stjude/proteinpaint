@@ -21,7 +21,6 @@ function getOpts(_opts = {}) {
 		.style('position', 'relative')
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
-		.style('max-width', '600px')
 
 	const opts = Object.assign({ holder }, _opts)
 
@@ -69,7 +68,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape.only('empty root filter', async test => {
+tape('empty root filter', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -113,7 +112,10 @@ tape.only('empty root filter', async test => {
 		'should hide all filter list appender buttons'
 	)
 
-	opts.holder.select('.sja_filter_div_mask').node().click()
+	opts.holder
+		.select('.sja_filter_div_mask')
+		.node()
+		.click()
 	await sleep(50)
 	// remove the only entry from root filter.lst[]
 	tipd
@@ -138,7 +140,7 @@ tape.only('empty root filter', async test => {
 	test.end()
 })
 
-tape('root filter with a single-entry', async test => {
+tape.skip('root filter with a single-entry', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -185,7 +187,10 @@ tape('root filter with a single-entry', async test => {
 		'should show the filter remover button'
 	)
 
-	opts.holder.select('.sja_filter_div_mask').node().click()
+	opts.holder
+		.select('.sja_filter_div_mask')
+		.node()
+		.click()
 
 	// simulate appending another tvs to the root filter.lst[]
 	const lstAppender = tipd.node().querySelector('.sja_filter_lst_appender')
@@ -209,11 +214,7 @@ tape('root filter with a single-entry', async test => {
 		'none',
 		'should show the filter remover button'
 	)
-	test.notEqual(
-		tipd.select('.sja_filter_join_label').style.display,
-		'none',
-		'should show the filter join label'
-	)
+	test.notEqual(tipd.select('.sja_filter_join_label').style.display, 'none', 'should show the filter join label')
 	test.equal(
 		tipd
 			.selectAll('.sja_filter_lst_appender')
@@ -235,11 +236,7 @@ tape('root filter with a single-entry', async test => {
 		'none',
 		'should show the filter container div'
 	)
-	test.equal(
-		tipd.select('.sja_filter_add_transformer').style('display'),
-		'none',
-		'should hide the filter adder button'
-	)
+	test.equal(tipd.select('.sja_filter_add_transformer').style('display'), 'none', 'should hide the filter adder button')
 	test.notEqual(
 		tipd.select('.sja_filter_remove_transformer').style('display'),
 		'none',
@@ -250,7 +247,7 @@ tape('root filter with a single-entry', async test => {
 	test.end()
 })
 
-tape('root filter with nested filters', async test => {
+tape.skip('root filter with nested filters', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',

@@ -44,10 +44,7 @@ class Filter {
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
 				this.filter = filter
-				// clear menu click
-				if (this.dom.controlsTip.d.style('display') == 'none') {
-					this.activeData = { item: {}, filter: {} }
-				}
+				this.resetActiveData(filter)
 				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 			}
@@ -72,6 +69,18 @@ class Filter {
 		if (item.type != 'tvslst') return
 		for (const [i, subitem] of item.lst.entries()) {
 			this.validateFilter(subitem)
+		}
+	}
+	resetActiveData(filter) {
+		// clear menu click
+		if (this.dom.controlsTip.d.style('display') == 'none') {
+			this.activeData = { item: {}, filter: {} }
+		} else {
+			this.activeData = {
+				item: this.findItem(filter, this.activeData.item.$id),
+				filter: this.findItem(filter, this.activeData.filter.$id),
+				menuOpt: this.activeData.menuOpt
+			}
 		}
 	}
 	getId(item) {
@@ -355,6 +364,8 @@ function setInteractivity(self) {
 	}
 
 	self.handleMenuOptionClick = function(d) {
+		if (d == self.activeData.menuOpt) return
+		self.activeData.menuOpt = d
 		if (d.bar_click_override || !d.handler) {
 			self.displayTreeMenu.call(this, d)
 		} else {
