@@ -350,7 +350,15 @@ function setInteractivity(self) {
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter }
-		self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		self.dom.controlsTip.d
+			.selectAll('tr')
+			.style('background-color', 'transparent')
+			.filter(d => d.action == 'negate')
+			.selectAll('td')
+			.html(function(d, i) {
+				if (i !== 0) return null
+				return item.tvs.isnot ? '&#10004;' : ''
+			})
 		self.dom.controlsTip.showunder(this)
 	}
 
