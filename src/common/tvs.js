@@ -246,6 +246,104 @@ function setRenderers(self) {
 
 		self.makeDensityPlot(div, density_data)
 
+		const svg = div.select('svg')
+		const xscale = d3s
+			.scaleLinear()
+			.domain([density_data.minvalue, density_data.maxvalue])
+			.range([xpad, width - xpad])
+
+		const temp_ranges = JSON.parse(JSON.stringify(ranges))
+
+		for (const [i, r] of ranges.entries()) {
+			if (r.start == '') {
+				temp_ranges[i].start = Math.floor(density_data.maxvalue - (density_data.maxvalue - density_data.minvalue) / 10)
+			}
+			if (r.stop == '') {
+				temp_ranges[i].stop = Math.floor(density_data.maxvalue)
+			}
+		}
+
+		//brush
+		const g = svg.append('g').attr('transform', `translate(${xpad}, ${ypad})`)
+		const brushes = g.selectAll('.range_brush').data(temp_ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+
+		brushes.exit().each(() => {
+			select(this)
+				.style('opacity', 1)
+				.transition()
+				.duration(self.durations.exit)
+				.style('opacity', 0)
+				.remove()
+		})
+
+		// TODO: add update to brush if required
+		brushes.each(function(d, i) {
+			const brush_g = select(this)
+			brush_g.selectAll('.overlay').style('pointer-events', 'all')
+		})
+
+		brushes
+			.enter()
+			.append('g')
+			.attr('class', 'range_brush')
+			.each(enter_brush)
+
+		function enter_brush(d, i) {
+			const brush_g = select(this)
+			const range = JSON.parse(JSON.stringify(d))
+
+			// labels
+			const labelL = g
+				.append('text')
+				.attr('id', 'labelleft' + i)
+				.attr('x', 0)
+				.attr('y', -3)
+				.style('font-size', '.8em')
+
+			const labelR = g
+				.append('text')
+				.attr('id', 'labelright' + i)
+				.attr('x', 0)
+				.attr('y', -3)
+				.style('font-size', '.8em')
+
+			const brush_start = range.startunbounded ? density_data.minvalue : range.start
+			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
+
+			const brush = d3s
+				.brushX()
+				.extent([[xpad, 0], [width - xpad, height]])
+				.on('brush', function() {
+					const s = event.selection
+					// update and move labels
+					labelL.attr('x', s[0] - 10).text(xscale.invert(s[0]).toFixed(1))
+					labelR.attr('x', s[1] - 10).text(xscale.invert(s[1]).toFixed(1))
+				})
+				.on('end', function() {
+					//diable pointer-event for multiple brushes
+					brush_g.selectAll('.overlay').style('pointer-events', 'none')
+
+					const s = event.selection
+					//update temp_ranges
+					range.start = Number(xscale.invert(s[0]).toFixed(1))
+					range.stop = Number(xscale.invert(s[1]).toFixed(1))
+					if (div.selectAll('.start_input').size()) {
+						select(div.node().querySelectorAll('.start_input')[i])
+							.style('color', ranges[i].start == range.start ? '#000' : '#23cba7')
+							.html(range.start)
+						select(div.node().querySelectorAll('.stop_input')[i])
+							.style('color', ranges[i].stop == range.stop ? '#000' : '#23cba7')
+							.html(range.stop)
+						select(div.node().querySelectorAll('.apply_btn')[i]).style(
+							'display',
+							JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
+						)
+					}
+				})
+
+			brush_g.call(brush).call(brush.move, [brush_start, brush_stop].map(xscale))
+		}
+
 		const range_divs = div.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
 		range_divs.exit().each(() => {
@@ -261,10 +359,8 @@ function setRenderers(self) {
 			const div = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			div.select('start_input').attr('value', range.start)
-			div.select('start_select').node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
-			div.select('stop_input').attr('value', range.stop)
-			div.select('stop_select').node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+			div.select('start_input').html(range.start)
+			div.select('stop_input').html(range.stop)
 		})
 
 		range_divs
@@ -305,77 +401,54 @@ function setRenderers(self) {
 			const equation_div = range_div
 				.append('div')
 				.style('display', 'block')
-				.style('padding', '3px 5px')
+				.style('margin-left', '10px')
+				.style('padding', '3px 10px')
+				.style('font-size', '.9em')
+				.text('Interval ' + (i + 1) + ': ')
 
 			const start_input = equation_div
-				.append('input')
-				.attr('type', 'number')
-				.attr('value', range.start)
+				.append('div')
 				.attr('class', 'start_input')
-				.style('width', '60px')
-				.on('keyup', async () => {
-					if (!client.keyupEnter()) return
-					start_input.property('disabled', true)
-					await apply()
-					start_input.property('disabled', false)
-				})
-
-			// to replace operator_start_div
-			const startselect = equation_div
-				.append('select')
-				.attr('class', 'start_select')
+				.style('display', 'inline-block')
 				.style('margin-left', '10px')
+				.style('font-weight', 'bold')
+				.style('text-align', 'center')
+				.html(range.start)
 
-			startselect.append('option').html('&le;')
-			startselect.append('option').html('&lt;')
-			startselect.append('option').html('&#8734;')
-
-			startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
-
-			const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
+			// ' TO '
 			equation_div
 				.append('div')
 				.style('display', 'inline-block')
-				.style('padding', '3px 10px')
-				.html(x)
-
-			// to replace operator_end_div
-			const stopselect = equation_div
-				.append('select')
-				.attr('class', 'stop_select')
-				.style('margin-right', '10px')
-
-			stopselect.append('option').html('&le;')
-			stopselect.append('option').html('&lt;')
-			stopselect.append('option').html('&#8734;')
-
-			stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+				.style('margin-left', '10px')
+				.style('width', '10px')
+				.style('text-align', 'center')
+				.html('to')
 
 			const stop_input = equation_div
-				.append('input')
-				.attr('type', 'number')
+				.append('div')
 				.attr('class', 'stop_input')
-				.style('width', '60px')
-				.attr('value', range.stop)
-				.on('keyup', async () => {
-					if (!client.keyupEnter()) return
-					stop_input.property('disabled', true)
-					await apply()
-					stop_input.property('disabled', false)
-				})
+				.style('display', 'inline-block')
+				.style('margin-left', '10px')
+				.style('font-weight', 'bold')
+				.style('text-align', 'center')
+				.html(range.stop)
 
 			//'Apply' button
 			equation_div
 				.append('div')
 				.attr('class', 'sja_filter_tag_btn apply_btn')
-				.style('display', 'inline-block')
+				.style(
+					'display',
+					JSON.stringify(range) == JSON.stringify(temp_ranges[i]) || (range.start == '' && range.stop == '')
+						? 'none'
+						: 'inline-block'
+				)
 				.style('border-radius', '13px')
 				.style('background-color', '#23cba7')
 				.style('color', '#fff')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
-				.style('padding', '7px 15px')
+				.style('padding', '5px 12px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
 				.style('text-transform', 'uppercase')
@@ -395,7 +468,7 @@ function setRenderers(self) {
 				.style('color', '#fff')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
-				.style('padding', '7px 15px')
+				.style('padding', '5px 12px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
 				.style('text-transform', 'uppercase')
@@ -403,57 +476,214 @@ function setRenderers(self) {
 				.on('click', async () => {
 					// self.dom.tip.hide()
 					const new_term = JSON.parse(JSON.stringify(term))
-					const range_delete = new_term.ranges[i]
-					if (range_delete.start || range_delete.stop) {
-						self.dom.tip.hide()
-						if (new_term.ranges.length > 1) {
-							new_term.ranges.splice(i, 1)
-							self.opts.callback(new_term)
-						} else self.opts.callback(null)
-					} else {
-						new_term.ranges.splice(i, 1)
-						div.selectAll('*').remove()
-						self.showNumOpts(div, new_term)
-					}
+					new_term.ranges.splice(i, 1)
+					self.opts.callback(new_term)
+					div.selectAll('*').remove()
+					self.showNumOpts(div, new_term)
 				})
 
-			// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-			// self.dom.tip.showunder(holder.node())
+			// note for empty range
+			if (range.start == '' && range.stop == '') {
+				start_input.html('_____')
+				stop_input.html('_____')
+
+				equation_div
+					.append('div')
+					.style('font-size', '.8em')
+					.style('font-style', 'italic')
+					.style('color', '#888')
+					.html('Drag the <b>Interval</b> at the end of the plot to select new range')
+			}
 
 			async function apply() {
 				try {
-					if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
-						throw 'Both ends can not be unbounded'
-
-					const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
-					const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
+					const start = Number(start_input.node().innerHTML)
+					const stop = Number(stop_input.node().innerHTML)
 					if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
 
-					if (startselect.node().selectedIndex == 2) {
+					if (start == density_data.minvalue) {
 						range.startunbounded = true
 						delete range.start
 					} else {
 						delete range.startunbounded
 						range.start = start
-						range.startinclusive = startselect.node().selectedIndex == 0
+						range.startinclusive = true
 					}
-					if (stopselect.node().selectedIndex == 2) {
+					if (stop == density_data.maxvalue) {
 						range.stopunbounded = true
 						delete range.stop
 					} else {
 						delete range.stopunbounded
 						range.stop = stop
-						range.stopinclusive = stopselect.node().selectedIndex == 0
+						range.stopinclusive = true
 					}
-					self.dom.tip.hide()
 					const new_term = JSON.parse(JSON.stringify(term))
 					new_term.ranges[i] = range
 					self.opts.callback(new_term)
+					div.selectAll('*').remove()
+					self.showNumOpts(div, new_term)
 				} catch (e) {
 					window.alert(e)
 				}
 			}
 		}
+
+		// function enter_range(d, i) {
+		// 	const range_div = select(this)
+		// 	const range = JSON.parse(JSON.stringify(d))
+
+		// 	const equation_div = range_div
+		// 		.append('div')
+		// 		.style('display', 'block')
+		// 		.style('padding', '3px 5px')
+
+		// 	const start_input = equation_div
+		// 		.append('input')
+		// 		.attr('type', 'number')
+		// 		.attr('value', range.start)
+		// 		.attr('class', 'start_input')
+		// 		.style('width', '60px')
+		// 		.on('keyup', async () => {
+		// 			if (!client.keyupEnter()) return
+		// 			start_input.property('disabled', true)
+		// 			await apply()
+		// 			start_input.property('disabled', false)
+		// 		})
+
+		// 	// to replace operator_start_div
+		// 	const startselect = equation_div
+		// 		.append('select')
+		// 		.attr('class', 'start_select')
+		// 		.style('margin-left', '10px')
+
+		// 	startselect.append('option').html('&le;')
+		// 	startselect.append('option').html('&lt;')
+		// 	startselect.append('option').html('&#8734;')
+
+		// 	startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+
+		// 	const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+		// 	equation_div
+		// 		.append('div')
+		// 		.style('display', 'inline-block')
+		// 		.style('padding', '3px 10px')
+		// 		.html(x)
+
+		// 	// to replace operator_end_div
+		// 	const stopselect = equation_div
+		// 		.append('select')
+		// 		.attr('class', 'stop_select')
+		// 		.style('margin-right', '10px')
+
+		// 	stopselect.append('option').html('&le;')
+		// 	stopselect.append('option').html('&lt;')
+		// 	stopselect.append('option').html('&#8734;')
+
+		// 	stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+
+		// 	const stop_input = equation_div
+		// 		.append('input')
+		// 		.attr('type', 'number')
+		// 		.attr('class', 'stop_input')
+		// 		.style('width', '60px')
+		// 		.attr('value', range.stop)
+		// 		.on('keyup', async () => {
+		// 			if (!client.keyupEnter()) return
+		// 			stop_input.property('disabled', true)
+		// 			await apply()
+		// 			stop_input.property('disabled', false)
+		// 		})
+
+		// 	//'Apply' button
+		// 	equation_div
+		// 		.append('div')
+		// 		.attr('class', 'sja_filter_tag_btn apply_btn')
+		// 		.style('display', 'inline-block')
+		// 		.style('border-radius', '13px')
+		// 		.style('background-color', '#23cba7')
+		// 		.style('color', '#fff')
+		// 		.style('margin', '5px')
+		// 		.style('margin-left', '10px')
+		// 		.style('padding', '7px 15px')
+		// 		.style('text-align', 'center')
+		// 		.style('font-size', '.8em')
+		// 		.style('text-transform', 'uppercase')
+		// 		.text('apply')
+		// 		.on('click', async () => {
+		// 			self.dom.tip.hide()
+		// 			await apply()
+		// 		})
+
+		// 	//'Delete' button
+		// 	equation_div
+		// 		.append('div')
+		// 		.attr('class', 'sja_filter_tag_btn delete_btn')
+		// 		.style('display', 'inline-block')
+		// 		.style('border-radius', '13px')
+		// 		.style('background-color', '#ff7675')
+		// 		.style('color', '#fff')
+		// 		.style('margin', '5px')
+		// 		.style('margin-left', '10px')
+		// 		.style('padding', '7px 15px')
+		// 		.style('text-align', 'center')
+		// 		.style('font-size', '.8em')
+		// 		.style('text-transform', 'uppercase')
+		// 		.text('Delete')
+		// 		.on('click', async () => {
+		// 			// self.dom.tip.hide()
+		// 			const new_term = JSON.parse(JSON.stringify(term))
+		// 			const range_delete = new_term.ranges[i]
+		// 			if (range_delete.start || range_delete.stop) {
+		// 				self.dom.tip.hide()
+		// 				if (new_term.ranges.length > 1) {
+		// 					new_term.ranges.splice(i, 1)
+		// 					self.opts.callback(new_term)
+		// 				} else self.opts.callback(null)
+		// 			} else {
+		// 				new_term.ranges.splice(i, 1)
+		// 				div.selectAll('*').remove()
+		// 				self.showNumOpts(div, new_term)
+		// 			}
+		// 		})
+
+		// 	// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+		// 	// self.dom.tip.showunder(holder.node())
+
+		// 	async function apply() {
+		// 		try {
+		// 			if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
+		// 				throw 'Both ends can not be unbounded'
+
+		// 			const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
+		// 			const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
+		// 			if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
+
+		// 			if (startselect.node().selectedIndex == 2) {
+		// 				range.startunbounded = true
+		// 				delete range.start
+		// 			} else {
+		// 				delete range.startunbounded
+		// 				range.start = start
+		// 				range.startinclusive = startselect.node().selectedIndex == 0
+		// 			}
+		// 			if (stopselect.node().selectedIndex == 2) {
+		// 				range.stopunbounded = true
+		// 				delete range.stop
+		// 			} else {
+		// 				delete range.stopunbounded
+		// 				range.stop = stop
+		// 				range.stopinclusive = stopselect.node().selectedIndex == 0
+		// 			}
+		// 			self.dom.tip.hide()
+		// 			const new_term = JSON.parse(JSON.stringify(term))
+		// 			new_term.ranges[i] = range
+		// 			self.opts.callback(new_term)
+		// 		} catch (e) {
+		// 			window.alert(e)
+		// 		}
+		// 	}
+		// }
 
 		// numerical checkbox for unannotated cats
 		const data = await self.getCategories(term.term)
@@ -537,10 +767,7 @@ function setRenderers(self) {
 			.attr('height', height + ypad * 2)
 
 		// set plot image as background
-		svg
-			.append('image')
-			// .attr('transform', 'translate(' + xpad + ',' + ypad + ')')
-			.attr('xlink:href', data.img)
+		svg.append('image').attr('xlink:href', data.img)
 
 		// x-axis
 		const xscale = d3s
@@ -552,16 +779,8 @@ function setRenderers(self) {
 
 		svg
 			.append('g')
-			.attr('transform', 'translate(' + xpad + ',' + (ypad + height) + ')')
+			.attr('transform', `translate(${xpad}, ${ypad + height})`)
 			.call(x_axis)
-
-		const brush = d3s.brushX().extent([[xpad, ypad], [width - xpad, height + ypad]])
-
-		svg
-			.append('g')
-			.attr('transform', 'translate(' + xpad + ',0)')
-			.call(brush)
-			.call(brush.move, [1, 5].map(xscale))
 	}
 
 	self.showConditionOpts = async function(div, term) {
