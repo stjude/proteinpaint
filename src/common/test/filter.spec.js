@@ -113,7 +113,7 @@ tape('empty root filter', async test => {
 	)
 
 	opts.holder
-		.select('.sja_filter_div_mask')
+		.select('.sja_pill_wrapper')
 		.node()
 		.click()
 	await sleep(50)
@@ -140,7 +140,7 @@ tape('empty root filter', async test => {
 	test.end()
 })
 
-tape.skip('root filter with a single-entry', async test => {
+tape('root filter with a single-entry', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -170,84 +170,127 @@ tape.skip('root filter with a single-entry', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	await opts.filter.main(opts.filterData)
 
-	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'none',
 		'should show the filter container div'
 	)
 	test.equal(
-		tipd.node().querySelector('.sja_filter_add_transformer').style.display,
-		'none',
-		'should hide the filter adder button'
-	)
-	test.notEqual(
-		tipd.node().querySelector('.sja_filter_remove_transformer').style.display,
-		'none',
-		'should show the filter remover button'
+		opts.holder
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should hide all parentheses'
 	)
 
 	opts.holder
-		.select('.sja_filter_div_mask')
+		.select('.sja_pill_wrapper')
 		.node()
 		.click()
 
 	// simulate appending another tvs to the root filter.lst[]
-	const lstAppender = tipd.node().querySelector('.sja_filter_lst_appender')
-	await addDemographicSexFilter(opts, lstAppender)
+	await addDemographicSexFilter(
+		opts,
+		tipd
+			.selectAll('tr')
+			.filter(d => d.action == 'join-and')
+			.node()
+	)
 	test.equal(opts.filterData.lst.length, 2, 'should create a two-entry filter.lst[]')
-	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.notEqual(
 		opts.holder.select('.sja_filter_container').style.display,
 		'none',
 		'should show the filter container div'
 	)
-	const addTransformer = tipd.select('.sja_filter_add_transformer').node()
-	test.notEqual(addTransformer.style.display, 'none', 'should show the filter adder button')
-	test.notEqual(
-		addTransformer.innerHTML,
-		lstAppender.innerHTML,
-		'should label the add-transformer button with the opposite of the lst-appender button label'
-	)
-	test.notEqual(
-		tipd.select('.sja_filter_remove_transformer').style.display,
-		'none',
-		'should show the filter remover button'
-	)
-	test.notEqual(tipd.select('.sja_filter_join_label').style.display, 'none', 'should show the filter join label')
 	test.equal(
-		tipd
-			.selectAll('.sja_filter_lst_appender')
+		opts.holder
+			.selectAll('.sja_filter_join_label')
 			.filter(function() {
 				return this.style.display !== 'none'
 			})
 			.size(),
 		1,
-		'should show 1 filter list appender buttons'
+		'should show 1 filter join label'
 	)
-	await sleep(100)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_lst_appender')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show any filter list appender buttons when there are tvs-only root filters'
+	)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should hide all parentheses'
+	)
 
-	const secondItemRemover = tipd.node().querySelectorAll('.sja_filter_remove_transformer')[1]
-	secondItemRemover.click()
-	await sleep(300)
-	//test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
+	await sleep(100)
+	opts.holder
+		.node()
+		.querySelectorAll('.sja_pill_wrapper')[1]
+		.click()
+	await sleep(100)
+	tipd
+		.selectAll('tr')
+		.filter(d => d.action == 'remove')
+		.node()
+		.click()
+
+	test.equal(opts.holder.select('.sja_new_filter_btn').style('display'), 'none', 'should hide the +NEW button')
 	test.notEqual(
 		opts.holder.select('.sja_filter_container').style('display'),
 		'none',
 		'should show the filter container div'
 	)
-	test.equal(tipd.select('.sja_filter_add_transformer').style('display'), 'none', 'should hide the filter adder button')
-	test.notEqual(
-		tipd.select('.sja_filter_remove_transformer').style('display'),
-		'none',
-		'should show the filter remover button'
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_join_label')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should show no filter join label'
 	)
-	test.equal(tipd.select('.sja_filter_join_label').style('display'), 'none', 'should hide the filter join label')
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_lst_appender')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show any filter list appender buttons'
+	)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should hide all parentheses'
+	)
 
 	test.end()
 })
 
-tape.skip('root filter with nested filters', async test => {
+tape('root filter with nested filters', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -321,16 +364,6 @@ tape.skip('root filter with nested filters', async test => {
 		'none',
 		'should show the filter container div'
 	)
-	test.equal(
-		tipd.select('.sja_filter_add_transformer').style('display'),
-		'inline-block',
-		'should show the filter adder button'
-	)
-	test.equal(
-		tipd.select('.sja_filter_remove_transformer').style('display'),
-		'inline-block',
-		'should show the filter remover button'
-	)
 	const joinLabelsA = opts.holder.node().querySelectorAll('.sja_filter_join_label')
 	test.notEqual(joinLabelsA[0].style.display, 'none', 'should show the join label after the first item')
 	test.equal(
@@ -339,14 +372,53 @@ tape.skip('root filter with nested filters', async test => {
 		'should hide the join label after the last item'
 	)
 
-	const grpDivsA = tipd.node().querySelectorAll('.sja_filter_grp')
-	test.equal(grpDivsA[0].style.border, 'none', 'should not show a border around the root-level group')
-	test.notEqual(grpDivsA[1].style.border, 'none', 'should show a border around a filter with >1 terms')
+	const grpDivsA = opts.holder.node().querySelectorAll('.sja_filter_item')
+	test.equal(
+		d3s
+			.select(grpDivsA[0])
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show parentheses around the root-level group'
+	)
+	test.equal(
+		d3s
+			.select(grpDivsA[1])
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		2,
+		'should show parentheses around a filter with >1 terms'
+	)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_lst_appender')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		1,
+		'should show a filter list appender button'
+	)
 
-	const nestedItemRemover = tipd.node().querySelectorAll('.sja_filter_remove_transformer')[2]
-	nestedItemRemover.click()
+	await sleep(100)
+	opts.holder
+		.node()
+		.querySelectorAll('.sja_pill_wrapper')[2]
+		.click()
+	await sleep(100)
+	tipd
+		.selectAll('tr')
+		.filter(d => d.action == 'remove')
+		.node()
+		.click()
 	await sleep(300)
-	const grpDivsB = tipd.node().querySelectorAll('.sja_filter_grp')
+
 	test.equal(
 		opts.filterData.lst.length,
 		2,
@@ -357,28 +429,76 @@ tape.skip('root filter with nested filters', async test => {
 		2,
 		'should create tvs-only items in root filter.lst[]'
 	)
-	test.equal(grpDivsB[0].style.border, 'none', 'should not show a border around the root group')
-	test.notEqual(joinLabelsA[0].style.display, 'none', 'should show the join label after the first item')
+
 	test.equal(
-		joinLabelsA[joinLabelsA.length - 1].style.display,
-		'none',
-		'should hide the join label after the last item'
+		opts.holder
+			.selectAll('.sja_filter_item')
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show parentheses around any single-item groups'
+	)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_lst_appender')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show a root filter list appender when there are tvs-only entries'
 	)
 
-	const addTransformer = tipd.node().querySelectorAll('.sja_filter_add_transformer')[0]
-	await addDemographicSexFilter(opts, addTransformer)
-	const grpDivsC = tipd.node().querySelectorAll('.sja_filter_grp')
-	test.notEqual(
-		grpDivsC[1].style.border,
-		'none',
-		'should show a border around the first root filter.lst[] item, which is now a subnested group'
+	await sleep(100)
+	opts.holder
+		.node()
+		.querySelectorAll('.sja_pill_wrapper')[0]
+		.click()
+	await sleep(100)
+	await addDemographicSexFilter(
+		opts,
+		tipd
+			.selectAll('tr')
+			.filter(d => d.action == 'join-or')
+			.node()
 	)
-	test.equal(grpDivsC[0].style.border, 'none', 'should not show a border around the root group')
-	test.notEqual(joinLabelsA[0].style.display, 'none', 'should show the join label after the first item')
+	await sleep(200)
+
+	const grpDivsB = opts.holder.node().querySelectorAll('.sja_filter_item')
 	test.equal(
-		joinLabelsA[joinLabelsA.length - 1].style.display,
-		'none',
-		'should hide the join label after the last item'
+		d3s
+			.select(grpDivsB[0])
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		2,
+		'should show parentheses around the root-level group'
+	)
+	test.equal(
+		d3s
+			.select(grpDivsA[1])
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		0,
+		'should not show parentheses around a filter with >1 terms'
+	)
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_lst_appender')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size(),
+		1,
+		'should show a filter list appender button'
 	)
 
 	test.end()

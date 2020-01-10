@@ -97,7 +97,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_new_filter_btn')
 			.html('+NEW')
 			.style('display', 'inline-block')
-			.style('margin-left', '10px')
+			.style('margin', '2px 10px 2px 2px')
 			.style('padding', '5px')
 			.style('border-radius', '5px')
 			.style('background-color', '#ececec')
