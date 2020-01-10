@@ -201,7 +201,7 @@ function setRenderers(self) {
 	}
 
 	self.updateGrp = function(item, i) {
-		const filter = item.type == 'tvslst' ? item : this.parentNode.__data__
+		const filter = this.parentNode.__data__
 		select(this)
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
 			.style('display', filter === self.filter ? 'none' : 'inline')
@@ -276,6 +276,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
+			.on('click', self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)
 
@@ -295,16 +296,6 @@ function setRenderers(self) {
 		})
 		self.pills[item.$id] = pill
 		pill.main(item.tvs)
-
-		holder
-			.append('div')
-			.attr('class', 'sja_filter_div_mask')
-			.style('position', 'absolute')
-			.style('top', 0)
-			.style('left', 0)
-			.style('width', holder.style('width'))
-			.style('height', '100%')
-			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateItem = function(item, i) {
