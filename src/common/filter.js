@@ -356,7 +356,7 @@ function setInteractivity(self) {
 			.filter(d => d.action == 'negate')
 			.selectAll('td')
 			.html(function(d, i) {
-				if (i !== 0) return null
+				if (i !== 0) return this.innerHTML
 				return item.tvs.isnot ? '&#10004;' : ''
 			})
 		self.dom.controlsTip.showunder(this)
