@@ -327,11 +327,10 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_join_label')
 			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
 			.style('width', '50px')
-			.style('margin-left', '10px')
 			.style('padding', '5px')
 			.style('border', 'none')
 			.style('border-radius', '5px')
-			//.style('cursor', 'pointer')
+			.style('text-align', 'center')
 			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
 	}
 
@@ -354,11 +353,8 @@ function setInteractivity(self) {
 			.selectAll('tr')
 			.style('background-color', 'transparent')
 			.filter(d => d.action == 'negate')
-			.selectAll('td')
-			.html(function(d, i) {
-				if (i !== 0) return this.innerHTML
-				return item.tvs.isnot ? '&#10004;' : ''
-			})
+			.selectAll('td:first-child')
+			.html(() => (item.tvs.isnot ? '&#10004;' : ''))
 		self.dom.controlsTip.showunder(this)
 	}
 
