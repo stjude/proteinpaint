@@ -58,7 +58,8 @@ class Filter {
 		//if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
-	validateFilter(item) {
+	validateFilter(item, ancestry = []) {
+		item.ancestry = ancestry
 		// for reliably binding data to DOM elements
 		// and associating updated data copy to
 		// the currently bound data
@@ -68,8 +69,10 @@ class Filter {
 		if (!('type' in item)) throw 'missing filter.type'
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
 		if (item.type != 'tvslst') return
+		if (!Array.isArray(item.lst)) throw 'invalid or missing filter.lst[]'
+		if (!item.lst.length) item.in = true
 		for (const [i, subitem] of item.lst.entries()) {
-			this.validateFilter(subitem)
+			this.validateFilter(subitem, [{ $id: item.$id, in: item.in }, ...ancestry])
 		}
 	}
 	resetActiveData(filter) {
@@ -83,6 +86,12 @@ class Filter {
 				filter: this.findItem(filter, this.activeData.filter.$id),
 				menuOpt: this.activeData.menuOpt
 			}
+			this.dom.controlsTip.d
+				.selectAll('tr')
+				.style('background-color', 'transparent')
+				.filter(d => d.action == 'negate')
+				.selectAll('td:nth-child(2)')
+				.each(this.setNegateToggles)
 		}
 	}
 	getId(item) {
@@ -121,7 +130,7 @@ function setRenderers(self) {
 				{ action: 'join-and', html: ['&#10010;', 'AND', '&#9658;'] },
 				{ action: 'join-or', html: ['&#10010;', 'OR', '&#9658;'] },
 				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform },
-				{ action: 'negate', html: ['', 'Negate clause', ''], handler: self.negateClause }
+				{ action: 'negate', html: ['', '', ''], handler: self.negateClause }
 			])
 			.enter()
 			.append('tr')
@@ -140,7 +149,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_tree_tip_head')
 			.style('padding', '3px')
-			.style('background-color', '#eee')
+		//.style('background-color', '#eee')
 		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
@@ -163,6 +172,34 @@ function setRenderers(self) {
 			.style('margin-right', '5px')
 			.style('vertical-align', 'top')
 			.html(d => d.label)
+	}
+
+	self.setNegateToggles = function(d) {
+		if (!self.activeData) return
+		const item = self.activeData.item
+		const spans = select(this)
+			.selectAll('span')
+			.data([{ $id: item.$id, in: 'in' in item ? item.in : item.tvs.isnot }, ...item.ancestry])
+		spans.exit().remove()
+		spans
+			.enter()
+			.append('span')
+			.style('margin', '1px 3px 1px 0')
+			.style('padding', '1px 3px')
+			.style('border', '1px solid #777')
+
+		select(this)
+			.selectAll('span')
+			.style('color', d => {
+				if (d.$id === item.$id) return item.tvs.isnot ? '#fff' : '#000'
+				else return !d.in ? '#fff' : '#000'
+			})
+			.style('background', d => {
+				if (d.$id === item.$id) return item.tvs.isnot ? 'rgb(104,0,0)' : 'transparent'
+				else return !d.in ? 'rgb(104,0,0)' : 'transparent'
+			})
+			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
+			.html(d => (d.$id == item.$id ? 'Negate' : ')'))
 	}
 
 	self.updateUI = function(container, filter) {
@@ -197,7 +234,7 @@ function setRenderers(self) {
 			.append('span')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter === self.filter ? 'none' : 'inline')
+			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
 			.style('font-size', '20px')
 
@@ -232,7 +269,7 @@ function setRenderers(self) {
 			.append('span')
 			.attr('class', 'sja_filter_paren_close')
 			.html(')')
-			.style('display', filter === self.filter ? 'none' : 'inline')
+			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
 			.style('font-size', '20px')
 	}
@@ -389,15 +426,18 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.displayControlsMenu = function() {
+		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter }
+
 		self.dom.controlsTip.d
 			.selectAll('tr')
 			.style('background-color', 'transparent')
 			.filter(d => d.action == 'negate')
-			.selectAll('td:first-child')
-			.html(() => (!filter.in ? '&#10004;' : ''))
+			.selectAll('td:nth-child(2)')
+			.each(self.setNegateToggles)
+
 		self.dom.controlsTip.showunder(this)
 	}
 
@@ -483,15 +523,20 @@ function setInteractivity(self) {
 		return d.action == 'edit' ? '#eeee55' : 'transparent'
 	}
 
-	self.negateClause = function() {
+	self.negateClause = function(d) {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+		const t = event.target.__data__
+		//const item = self.activeData.item
+		//const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
-		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-		filterCopy.in = !filterCopy.in
+		const item = self.findItem(rootCopy, t.$id)
+		if (t.$id == item.$id) {
+			if (item.type == 'tvslst') item.in = !item.in
+			else item.tvs.isnot = !item.tvs.isnot
+		} else {
+			item.in = !item.in
+		}
 		self.opts.callback(rootCopy)
 	}
 
