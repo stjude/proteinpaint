@@ -28,7 +28,8 @@ class Filter {
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 35,
-				offsetY: -30
+				offsetY: -30,
+				clearSelector: '.sja_tree_tip_body'
 			})
 		}
 		this.durations = { exit: 500 }
@@ -75,6 +76,7 @@ class Filter {
 		// clear menu click
 		if (this.dom.controlsTip.d.style('display') == 'none') {
 			this.activeData = { item: {}, filter: {} }
+			this.dom.isNotInput.property('checked', false)
 		} else {
 			this.activeData = {
 				item: this.findItem(filter, this.activeData.item.$id),
@@ -110,6 +112,7 @@ function setRenderers(self) {
 			.clear()
 			.d.append('table')
 			.style('border-collapse', 'collapse')
+
 		self.dom.table
 			.selectAll('tr')
 			.data([
@@ -117,8 +120,8 @@ function setRenderers(self) {
 				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
 				{ action: 'join-and', html: ['&#10010;', 'AND', '&#9658;'] },
 				{ action: 'join-or', html: ['&#10010;', 'OR', '&#9658;'] },
-				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateTerm },
-				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
+				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform },
+				{ action: 'negate', html: ['', 'Negate clause', ''], handler: self.negateClause }
 			])
 			.enter()
 			.append('tr')
@@ -132,6 +135,34 @@ function setRenderers(self) {
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
 			.style('cursor', 'pointer')
 			.html(d => d)
+
+		self.dom.treeHead = self.dom.treeTip.d
+			.append('div')
+			.attr('class', 'sja_tree_tip_head')
+			.style('padding', '3px')
+			.style('background-color', '#eee')
+		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
+
+		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
+		const isNotLabels = self.dom.treeHead
+			.selectAll('label')
+			.data([{ label: 'Exclude', value: 'false', checked: false }])
+			.enter()
+			.append('label')
+			.style('margin', '0 5px')
+		self.dom.isNotInput = isNotLabels
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('name', 'sja_filter_isnot_input')
+			.attr('value', d => d.value)
+			.property('checked', d => d.checked)
+			.style('vertical-align', 'top')
+			.style('margin-right', '3px')
+		isNotLabels
+			.append('span')
+			.style('margin-right', '5px')
+			.style('vertical-align', 'top')
+			.html(d => d.label)
 	}
 
 	self.updateUI = function(container, filter) {
@@ -155,6 +186,12 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 
 		select(this).style('display', 'inline-block')
+
+		select(this)
+			.append('span')
+			.attr('class', 'sja_filter_clause_negate')
+			.html('NOT')
+			.style('display', filter.in ? 'none' : 'inline')
 
 		select(this)
 			.append('span')
@@ -202,9 +239,14 @@ function setRenderers(self) {
 
 	self.updateGrp = function(item, i) {
 		const filter = this.parentNode.__data__
+
+		select(this)
+			.select('.sja_filter_clause_negate')
+			.style('display', filter.in ? 'none' : 'inline')
+
 		select(this)
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.style('display', filter === self.filter ? 'none' : 'inline')
+			.style('display', filter !== self.filter || !filter.in ? 'inline' : 'none')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
@@ -290,6 +332,7 @@ function setRenderers(self) {
 				const filterCopy = self.findItem(rootCopy, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
+				tvs.isnot = self.dom.isNotInput.property('checked')
 				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
 				self.opts.callback(rootCopy)
 			}
@@ -354,7 +397,7 @@ function setInteractivity(self) {
 			.style('background-color', 'transparent')
 			.filter(d => d.action == 'negate')
 			.selectAll('td:first-child')
-			.html(() => (item.tvs.isnot ? '&#10004;' : ''))
+			.html(() => (!filter.in ? '&#10004;' : ''))
 		self.dom.controlsTip.showunder(this)
 	}
 
@@ -369,9 +412,10 @@ function setInteractivity(self) {
 	}
 
 	self.displayTreeNew = function(d) {
+		self.dom.isNotInput.property('checked', self.activeData.item.tvs.isnot)
 		self.dom.treeTip.clear().showunder(this)
 		appInit(null, {
-			holder: self.dom.treeTip.d,
+			holder: self.dom.treeBody,
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
@@ -405,7 +449,7 @@ function setInteractivity(self) {
 		const filter = self.activeData.filter
 
 		appInit(null, {
-			holder: self.dom.treeTip.d,
+			holder: self.dom.treeBody,
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
@@ -427,8 +471,10 @@ function setInteractivity(self) {
 		select(elem.parentNode)
 			.selectAll('tr')
 			.style('background-color', self.highlightEditRow)
-		const holder = self.dom.treeTip.clear().d.append('div')
+		const holder = self.dom.treeBody
 		const item = self.activeData.item
+		self.dom.isNotInput.property('checked', item.tvs.isnot)
+		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(item.tvs, holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
 	}
@@ -437,7 +483,7 @@ function setInteractivity(self) {
 		return d.action == 'edit' ? '#eeee55' : 'transparent'
 	}
 
-	self.negateTerm = function() {
+	self.negateClause = function() {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
 		const item = self.activeData.item
@@ -445,7 +491,7 @@ function setInteractivity(self) {
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-		filterCopy.lst[i].tvs.isnot = !filterCopy.lst[i].tvs.isnot
+		filterCopy.in = !filterCopy.in
 		self.opts.callback(rootCopy)
 	}
 
@@ -462,6 +508,7 @@ function setInteractivity(self) {
 				? self.wrapTvs(tvslst[0])
 				: {
 						// transform from tvs to tvslst
+						in: true,
 						type: 'tvslst',
 						join: joiner,
 						lst: [item, ...tvslst.map(self.wrapTvs)]
@@ -493,6 +540,7 @@ function setInteractivity(self) {
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		// transform from tvs to tvslst
 		filterCopy.lst[i] = {
+			in: true,
 			type: 'tvslst',
 			join: self.activeData.joiner,
 			lst: [item, ...tvslst.map(self.wrapTvs)]
@@ -511,7 +559,7 @@ function setInteractivity(self) {
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		filterCopy.lst.splice(i, 1)
 		if (filterCopy.lst.length === 1) {
-			if (filterCopy.lst[0].lst) {
+			if (filterCopy.lst[0].type == 'tvslst') {
 				self.opts.callback(filterCopy.lst[0])
 			} else {
 				filterCopy.join = ''
@@ -519,6 +567,7 @@ function setInteractivity(self) {
 				//if (!parent) return
 				const j = parent.lst.findIndex(t => t.$id === filterCopy.$id)
 				parent.lst[j] = filterCopy.lst[0]
+				parent.lst[j].tvs.isnot = parent.lst[j].tvs.isnot && filterCopy.in
 				self.opts.callback(rootCopy)
 			}
 		} else {
@@ -548,6 +597,7 @@ function setInteractivity(self) {
 	}
 
 	self.wrapTvs = function(tvs) {
+		tvs.isnot = self.dom.isNotInput.property('checked')
 		return { type: 'tvs', tvs }
 	}
 }

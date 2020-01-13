@@ -311,10 +311,17 @@ export class Menu {
 		this.hideYmute = Number.isInteger(arg.hideYmute) ? arg.hideYmute : 0
 		this.prevX = -1
 		this.prevY = -1
+		// string selector option to limit clear()/removal of elements
+		// so that other elements may persist within tip.d
+		this.clearSelector = arg.clearSelector
 	}
 
 	clear() {
-		this.d.selectAll('*').remove()
+		if (this.clearSelector)
+			d3select(this.clearSelector)
+				.selectAll('*')
+				.remove()
+		else this.d.selectAll('*').remove()
 		return this
 	}
 
