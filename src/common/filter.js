@@ -412,7 +412,7 @@ function setInteractivity(self) {
 	}
 
 	self.displayTreeNew = function(d) {
-		self.dom.isNotInput.property('checked', self.activeData.item.tvs.isnot)
+		self.dom.isNotInput.property('checked', self.activeData.item.tvs && self.activeData.item.tvs.isnot)
 		self.dom.treeTip.clear().showunder(this)
 		appInit(null, {
 			holder: self.dom.treeBody,
