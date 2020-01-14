@@ -88,7 +88,6 @@ class Filter {
 			}
 			this.dom.controlsTip.d
 				.selectAll('tr')
-				.style('background-color', 'transparent')
 				.filter(d => d.action == 'negate')
 				.selectAll('td:nth-child(2)')
 				.each(this.setNegateToggles)
@@ -129,8 +128,8 @@ function setRenderers(self) {
 				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
 				{ action: 'join-and', html: ['&#10010;', 'AND', '&#9658;'] },
 				{ action: 'join-or', html: ['&#10010;', 'OR', '&#9658;'] },
-				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform },
-				{ action: 'negate', html: ['', '', ''], handler: self.negateClause }
+				{ action: 'negate', html: ['', '', ''], handler: self.negateClause },
+				{ action: 'remove', html: ['&#10006;', '', ''], handler: self.removeTransform }
 			])
 			.enter()
 			.append('tr')
@@ -139,7 +138,13 @@ function setRenderers(self) {
 			.data(d => d.html)
 			.enter()
 			.append('td')
-			.style('padding', (d, i) => (i === 0 ? '1px' : '1px 5px'))
+			.style('padding', function(d, i) {
+				return this.parentNode.__data__.action == 'remove' || this.parentNode.__data__.action == 'negate'
+					? '3px 5px'
+					: i === 0
+					? '1px'
+					: '1px 5px'
+			})
 			.style('color', (d, i) => (d == '&#10006;' ? '#a00' : i === 0 ? '#0a0' : '#111'))
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
 			.style('cursor', 'pointer')
@@ -177,14 +182,16 @@ function setRenderers(self) {
 	self.setNegateToggles = function(d) {
 		if (!self.activeData) return
 		const item = self.activeData.item
+		const data = [{ $id: item.$id, in: 'in' in item ? item.in : item.tvs.isnot }]
+		if (self.filter.lst.length > 1) data.push(...item.ancestry)
 		const spans = select(this)
 			.selectAll('span')
-			.data([{ $id: item.$id, in: 'in' in item ? item.in : item.tvs.isnot }, ...item.ancestry])
+			.data(data)
 		spans.exit().remove()
 		spans
 			.enter()
 			.append('span')
-			.style('margin', '1px 3px 1px 0')
+			.style('margin', '3px 3px 1px 0')
 			.style('padding', '1px 3px')
 			.style('border', '1px solid #777')
 
@@ -200,6 +207,28 @@ function setRenderers(self) {
 			})
 			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
 			.html(d => (d.$id == item.$id ? 'Negate' : ')'))
+	}
+
+	self.setRemoveBtns = function(d) {
+		if (!self.activeData) return
+		const item = self.activeData.item
+		const data = [{ $id: item.$id }]
+		if (self.filter.lst.length > 1) data.push(...item.ancestry)
+		const spans = select(this)
+			.selectAll('span')
+			.data(data)
+		spans.exit().remove()
+		spans
+			.enter()
+			.append('span')
+			.style('margin', '1px 3px 1px 0')
+			.style('padding', '1px 3px')
+			.style('border', '1px solid #777')
+
+		select(this)
+			.selectAll('span')
+			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
+			.html(d => (d.$id == item.$id ? 'Remove' : ')'))
 	}
 
 	self.updateUI = function(container, filter) {
@@ -253,7 +282,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_lst_appender')
 			.style(
 				'display',
-				filter === self.filter && filter.lst.length > 1 && filter.lst.filter(self.hasNestedTsv).length !== 0
+				filter === self.filter && filter.lst.length > 1 //&& filter.lst.filter(self.hasNestedTsv).length !== 0
 					? 'inline-block'
 					: 'none'
 			)
@@ -431,12 +460,17 @@ function setInteractivity(self) {
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter }
 
-		self.dom.controlsTip.d
-			.selectAll('tr')
-			.style('background-color', 'transparent')
+		const trs = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+
+		trs
 			.filter(d => d.action == 'negate')
 			.selectAll('td:nth-child(2)')
 			.each(self.setNegateToggles)
+
+		trs
+			.filter(d => d.action == 'remove')
+			.selectAll('td:nth-child(2)')
+			.each(self.setRemoveBtns)
 
 		self.dom.controlsTip.showunder(this)
 	}
@@ -596,20 +630,41 @@ function setInteractivity(self) {
 	self.removeTransform = function() {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+		const t = event.target.__data__
+		const item = typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
+		const filter = self.findParent(self.filter, item.$id) //self.activeData.filter
+		if (item == filter) {
+			self.opts.callback({
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			})
+			return
+		}
 		const i = filter.lst.findIndex(t => t.$id === item.$id)
 		if (i == -1) return
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		filterCopy.lst.splice(i, 1)
 		if (filterCopy.lst.length === 1) {
+			const parent = self.findParent(rootCopy, filterCopy.$id)
 			if (filterCopy.lst[0].type == 'tvslst') {
-				self.opts.callback(filterCopy.lst[0])
+				if (parent == rootCopy) self.opts.callback(filterCopy.lst[0])
+				else {
+					const j = parent.lst.findIndex(t => t.$id == filterCopy.$id)
+					if (filterCopy.lst[0].join == parent.join) {
+						console.log(636)
+						parent.lst.splice(j, 1, ...filterCopy.lst[0].lst)
+						self.opts.callback(rootCopy)
+					} else {
+						console.log(639)
+						parent.lst[j] = filterCopy.lst[0]
+						self.opts.callback(rootCopy)
+					}
+				}
 			} else {
 				filterCopy.join = ''
-				const parent = rootCopy === filterCopy ? rootCopy : self.findParent(rootCopy, filterCopy.$id)
-				//if (!parent) return
 				const j = parent.lst.findIndex(t => t.$id === filterCopy.$id)
 				parent.lst[j] = filterCopy.lst[0]
 				parent.lst[j].tvs.isnot = parent.lst[j].tvs.isnot && filterCopy.in
