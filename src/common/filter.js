@@ -126,8 +126,8 @@ function setRenderers(self) {
 			.data([
 				{ action: 'edit', html: ['', 'Edit', '&#9658;'], handler: self.editTerm },
 				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
-				{ action: 'join-and', html: ['&#10010;', 'AND', '&#9658;'] },
-				{ action: 'join-or', html: ['&#10010;', 'OR', '&#9658;'] },
+				{ action: 'join-and', html: ['&#10010;', '', '&#9658;'] },
+				{ action: 'join-or', html: ['&#10010;', '', '&#9658;'] },
 				{ action: 'negate', html: ['', '', ''], handler: self.negateClause },
 				{ action: 'remove', html: ['&#10006;', '', ''], handler: self.removeTransform }
 			])
@@ -139,11 +139,7 @@ function setRenderers(self) {
 			.enter()
 			.append('td')
 			.style('padding', function(d, i) {
-				return this.parentNode.__data__.action == 'remove' || this.parentNode.__data__.action == 'negate'
-					? '3px 5px'
-					: i === 0
-					? '1px'
-					: '1px 5px'
+				return i === 0 ? '1px' : !d ? '3px 5px' : '1px 5px'
 			})
 			.style('color', (d, i) => (d == '&#10006;' ? '#a00' : i === 0 ? '#0a0' : '#111'))
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
@@ -193,7 +189,7 @@ function setRenderers(self) {
 			.append('span')
 			.style('margin', '3px 3px 1px 0')
 			.style('padding', '1px 3px')
-			.style('border', '1px solid #777')
+			.style('border', '1px solid #ccc')
 
 		select(this)
 			.selectAll('span')
@@ -223,12 +219,50 @@ function setRenderers(self) {
 			.append('span')
 			.style('margin', '1px 3px 1px 0')
 			.style('padding', '1px 3px')
-			.style('border', '1px solid #777')
+			.style('border', '1px solid #ccc')
 
 		select(this)
 			.selectAll('span')
 			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
 			.html(d => (d.$id == item.$id ? 'Remove' : ')'))
+	}
+
+	self.setJoinBtns = function(d) {
+		if (!self.activeData) return
+		const join = this.parentNode.__data__.action.split('-')[1]
+		const joiner = join.toUpperCase()
+		const filter = self.activeData.filter
+		const data = [joiner]
+		if (filter.join !== join && self.filter.lst.length > 1) data.push(')', joiner)
+		const spans = select(this)
+			.selectAll('span')
+			.data(data)
+		spans
+			.exit()
+			.on('click', null)
+			.remove()
+		spans
+			.enter()
+			.append('span')
+			.style('margin', '1px 3px 1px 0')
+			.style('padding', '1px 3px')
+
+		const currSpans = select(this)
+			.selectAll('span')
+			.html(d => d)
+
+		currSpans
+			.style('border', (d, i) => (d == joiner ? '1px solid #ccc' : 'none'))
+			.style('font-weight', d => (d === ')' ? '600' : '400'))
+			.style('background-color', 'transparent')
+			.style('color', '#000')
+			.on('click', (d, i) => {
+				self.activeData.spanD = d
+				self.activeData.spanI = i < 2 ? 0 : 2
+				currSpans
+					.style('background-color', (s, j) => (i == j && i !== 1 ? 'rgb(57, 108, 152)' : 'transparent'))
+					.style('color', (s, j) => (i == j && i !== 1 ? '#fff' : '#000'))
+			})
 	}
 
 	self.updateUI = function(container, filter) {
@@ -256,8 +290,10 @@ function setRenderers(self) {
 		select(this)
 			.append('span')
 			.attr('class', 'sja_filter_clause_negate')
-			.html('NOT')
 			.style('display', filter.in ? 'none' : 'inline')
+			.style('color', 'rgb(102,0,0)')
+			.style('font-weight', 500)
+			.html('NOT')
 
 		select(this)
 			.append('span')
@@ -278,23 +314,6 @@ function setRenderers(self) {
 			.each(self.addItem)
 
 		select(this)
-			.append('div')
-			.attr('class', 'sja_filter_lst_appender')
-			.style(
-				'display',
-				filter === self.filter && filter.lst.length > 1 //&& filter.lst.filter(self.hasNestedTsv).length !== 0
-					? 'inline-block'
-					: 'none'
-			)
-			.style('margin-left', '10px')
-			.style('padding', '5px')
-			.style('border-radius', '5px')
-			.style('background-color', '#ececec')
-			.style('cursor', 'pointer')
-			.html('+' + filter.join.toUpperCase())
-			.on('click', self.displayTreeNew)
-
-		select(this)
 			.append('span')
 			.attr('class', 'sja_filter_paren_close')
 			.html(')')
@@ -307,11 +326,11 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 
 		select(this)
-			.select('.sja_filter_clause_negate')
+			.select(':scope > .sja_filter_clause_negate')
 			.style('display', filter.in ? 'none' : 'inline')
 
 		select(this)
-			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
 			.style('display', filter !== self.filter || !filter.in ? 'inline' : 'none')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
@@ -323,27 +342,13 @@ function setRenderers(self) {
 		pills.each(self.updateItem)
 		pills
 			.enter()
-			.insert('div', ':scope > .sja_filter_lst_appender')
+			.insert('div', ':scope > .sja_filter_paren_close')
 			.attr('class', 'sja_filter_item')
 			.each(self.addItem)
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
-
-		select(this)
-			.select(':scope > .sja_filter_lst_appender')
-			.style(
-				'display',
-				filter == self.filter && filter.lst.length > 1 && filter.lst.filter(self.hasNestedTsv).length !== 0
-					? 'inline-block'
-					: 'none'
-			)
-			.html('+' + filter.join.toUpperCase())
-	}
-
-	self.hasNestedTsv = function(item) {
-		return item.type === 'tvslst'
 	}
 
 	self.removeGrp = function(item) {
@@ -463,6 +468,16 @@ function setInteractivity(self) {
 		const trs = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
 
 		trs
+			.filter(d => d.action == 'join-and')
+			.selectAll('td:nth-child(2)')
+			.each(self.setJoinBtns)
+
+		trs
+			.filter(d => d.action == 'join-or')
+			.selectAll('td:nth-child(2)')
+			.each(self.setJoinBtns)
+
+		trs
 			.filter(d => d.action == 'negate')
 			.selectAll('td:nth-child(2)')
 			.each(self.setNegateToggles)
@@ -478,6 +493,22 @@ function setInteractivity(self) {
 	self.handleMenuOptionClick = function(d) {
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
+
+		if (!d.action.startsWith('join-')) {
+			delete self.activeData.spanD
+			delete self.activeData.spanI
+
+			const trs = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+			trs
+				.filter(d => d.action == 'join-and')
+				.selectAll('td:nth-child(2)')
+				.each(self.setJoinBtns)
+			trs
+				.filter(d => d.action == 'join-or')
+				.selectAll('td:nth-child(2)')
+				.each(self.setJoinBtns)
+		}
+
 		if (d.bar_click_override || !d.handler) {
 			self.displayTreeMenu.call(this, d)
 		} else {
@@ -510,12 +541,20 @@ function setInteractivity(self) {
 	}
 
 	self.displayTreeMenu = function(d) {
-		//console.log(339, d, self.activeData, this)
+		//console.log(553, d, self.activeData, this)
 		const thisRow = this
 		select(this.parentNode)
 			.selectAll('tr')
 			.style('background-color', function() {
 				return this == thisRow ? '#eeee55' : 'transparent'
+			})
+			.filter(d => d.action.startsWith('join-'))
+			.selectAll('td > span')
+			.style('background-color', function(spanD) {
+				return spanD === self.activeData.spanD ? this.style.backgroundColor : 'transparent'
+			})
+			.style('color', function(spanD) {
+				return spanD === self.activeData.spanD ? this.style.color : '#000'
 			})
 
 		self.dom.treeTip.clear().showunderoffset(this.lastChild)
@@ -536,7 +575,9 @@ function setInteractivity(self) {
 					? d.bar_click_override
 					: self.activeData.joiner == filter.join || !filter.join || !filter.lst.length
 					? self.appendTerm
-					: self.subnestFilter
+					: self.activeData.spanI === 0
+					? self.subnestFilter
+					: self.editFilter
 			}
 		})
 	}
@@ -625,6 +666,26 @@ function setInteractivity(self) {
 			lst: [item, ...tvslst.map(self.wrapTvs)]
 		}
 		self.opts.callback(rootCopy)
+	}
+
+	self.editFilter = tvslst => {
+		self.dom.controlsTip.hide()
+		self.dom.treeTip.hide()
+		const item = self.activeData.item
+		const filter = self.activeData.filter
+		const rootCopy = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findParent(rootCopy, filter.$id)
+		if (filterCopy == rootCopy && filterCopy.join != self.activeData.spanD.toLowerCase()) {
+			self.opts.callback({
+				type: 'tvslst',
+				in: true,
+				join: filter.join == 'or' ? 'and' : 'or',
+				lst: [filterCopy, ...tvslst.map(self.wrapTvs)]
+			})
+		} else {
+			filterCopy.lst.push(...tvslst.map(self.wrapTvs))
+			self.opts.callback(rootCopy)
+		}
 	}
 
 	self.removeTransform = function() {

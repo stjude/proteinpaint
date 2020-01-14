@@ -159,6 +159,18 @@ function get_numerical(tvs, CTEname, ds) {
 		if (excludevalues.length) values.push(...excludevalues)
 	}
 
+	const combinedClauses = rangeclauses.join(' OR ')
+	const subclause = !tvs.isnot
+		? `( ${combinedClauses} )`
+		: `sample NOT IN ( 
+				SELECT sample
+				FROM annotations
+				WHERE term_id = ?
+				AND ( ${combinedClauses} )
+			)`
+
+	if (tvs.isnot) values.push(tvs.term.id)
+
 	return {
 		CTEs: [
 			`
@@ -166,7 +178,7 @@ function get_numerical(tvs, CTEname, ds) {
 				SELECT sample
 				FROM annotations
 				WHERE term_id = ?
-				AND ( ${rangeclauses.join(' OR ')} )
+				AND ${subclause}
 				${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}
 			)`
 		],
@@ -198,7 +210,7 @@ function get_condition(tvs, CTEname) {
 				WHERE term_id = ? 
 				AND value_for = ? 
 				AND ${restriction} = 1
-				AND value IN (${tvs.values.map(i => '?').join(', ')})
+				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
 			)`)
 	} else if (tvs.grade_and_child) {
 		throw `-- Todo: tvs.grade_and_child`
@@ -211,7 +223,7 @@ function get_condition(tvs, CTEname) {
 				WHERE term_id = ? 
 				AND value_for = 'grade'
 				AND ${restriction} = 1
-				AND value IN (?)`)
+				AND value ${tvs.isnot ? 'NOT' : ''} IN (?)`)
 
 			values.push(tvs.term.id, gc.child_id)
 			CTEs.push(`
@@ -220,7 +232,7 @@ function get_condition(tvs, CTEname) {
 				WHERE term_id = ? 
 				AND value_for = 'child'
 				AND ${restriction} = 1
-				AND value IN (?)`)
+				AND value ${tvs.isnot ? 'NOT' : ''} IN (?)`)
 		}
 	} else {
 		throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
