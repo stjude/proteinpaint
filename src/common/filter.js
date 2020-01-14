@@ -654,11 +654,9 @@ function setInteractivity(self) {
 				else {
 					const j = parent.lst.findIndex(t => t.$id == filterCopy.$id)
 					if (filterCopy.lst[0].join == parent.join) {
-						console.log(636)
 						parent.lst.splice(j, 1, ...filterCopy.lst[0].lst)
 						self.opts.callback(rootCopy)
 					} else {
-						console.log(639)
 						parent.lst[j] = filterCopy.lst[0]
 						self.opts.callback(rootCopy)
 					}
@@ -667,7 +665,10 @@ function setInteractivity(self) {
 				filterCopy.join = ''
 				const j = parent.lst.findIndex(t => t.$id === filterCopy.$id)
 				parent.lst[j] = filterCopy.lst[0]
-				parent.lst[j].tvs.isnot = parent.lst[j].tvs.isnot && filterCopy.in
+				if (!filterCopy.in) {
+					parent.lst[j].tvs.isnot = !parent.lst[j].tvs.isnot
+					if (parent == rootCopy) parent.in = true
+				}
 				self.opts.callback(rootCopy)
 			}
 		} else {
