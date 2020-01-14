@@ -292,21 +292,6 @@ function setRenderers(self) {
 			const brush_g = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			// labels
-			const labelL = g
-				.append('text')
-				.attr('id', 'labelleft' + i)
-				.attr('x', 0)
-				.attr('y', -3)
-				.style('font-size', '.8em')
-
-			const labelR = g
-				.append('text')
-				.attr('id', 'labelright' + i)
-				.attr('x', 0)
-				.attr('y', -3)
-				.style('font-size', '.8em')
-
 			const brush_start = range.startunbounded ? density_data.minvalue : range.start
 			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 
@@ -314,15 +299,6 @@ function setRenderers(self) {
 				.brushX()
 				.extent([[xpad, 0], [width - xpad, height]])
 				.on('brush', function() {
-					const s = event.selection
-					// update and move labels
-					labelL.attr('x', s[0] - 10).text(xscale.invert(s[0]).toFixed(1))
-					labelR.attr('x', s[1] - 10).text(xscale.invert(s[1]).toFixed(1))
-				})
-				.on('end', function() {
-					//diable pointer-event for multiple brushes
-					brush_g.selectAll('.overlay').style('pointer-events', 'none')
-
 					const s = event.selection
 					//update temp_ranges
 					range.start = Number(xscale.invert(s[0]).toFixed(1))
@@ -338,13 +314,26 @@ function setRenderers(self) {
 							'display',
 							JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
 						)
+						select(div.node().querySelectorAll('.reset_btn')[i]).style(
+							'display',
+							JSON.stringify(range) == JSON.stringify(ranges[i]) ||
+							(ranges[i].start == '' && ranges[i].stop == '')? 'none' : 'inline-block'
+						)
 					}
+				})
+				.on('end', function() {
+					//diable pointer-event for multiple brushes
+					brush_g.selectAll('.overlay').style('pointer-events', 'none')
 				})
 
 			brush_g.call(brush).call(brush.move, [brush_start, brush_stop].map(xscale))
 		}
 
-		const range_divs = div.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+		const range_table = div.append('table')
+			.style('table-layout', 'fixed')
+			.style('border-collapse','collapse')
+
+		const range_divs = range_table.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
 		range_divs.exit().each(() => {
 			select(this)
@@ -365,10 +354,10 @@ function setRenderers(self) {
 
 		range_divs
 			.enter()
-			.append('div')
+			.append('tr')
 			.attr('class', 'range_div')
 			.style('white-space', 'nowrap')
-			.style('display', 'block')
+			// .style('display', 'block')
 			.style('padding', '2px')
 			.transition()
 			.duration(200)
@@ -395,28 +384,34 @@ function setRenderers(self) {
 			})
 
 		function enter_range(d, i) {
-			const range_div = select(this)
+			const range_tr = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			const equation_div = range_div
-				.append('div')
-				.style('display', 'block')
+			const title_td = range_tr
+				.append('td')
+
+			title_td
+				.append('td')
+				.style('display', 'inline-block')
 				.style('margin-left', '10px')
 				.style('padding', '3px 10px')
 				.style('font-size', '.9em')
 				.text('Interval ' + (i + 1) + ': ')
 
-			const start_input = equation_div
+			const equation_td = range_tr
+				.append('td')
+				.style('width','150px')
+
+			const start_input = equation_td
 				.append('div')
 				.attr('class', 'start_input')
 				.style('display', 'inline-block')
-				.style('margin-left', '10px')
 				.style('font-weight', 'bold')
 				.style('text-align', 'center')
 				.html(range.start)
 
 			// ' TO '
-			equation_div
+			equation_td
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
@@ -424,7 +419,7 @@ function setRenderers(self) {
 				.style('text-align', 'center')
 				.html('to')
 
-			const stop_input = equation_div
+			const stop_input = equation_td
 				.append('div')
 				.attr('class', 'stop_input')
 				.style('display', 'inline-block')
@@ -433,9 +428,12 @@ function setRenderers(self) {
 				.style('text-align', 'center')
 				.html(range.stop)
 
+			const buttons_td = range_tr
+				.append('td')
+
 			//'Apply' button
-			equation_div
-				.append('div')
+			buttons_td
+				.append('td')
 				.attr('class', 'sja_filter_tag_btn apply_btn')
 				.style(
 					'display',
@@ -458,9 +456,65 @@ function setRenderers(self) {
 					await apply()
 				})
 
+			//'Reset' button
+			buttons_td
+				.append('td')
+				.attr('class', 'sja_filter_tag_btn reset_btn')
+				.style(
+					'display',
+					JSON.stringify(range) == JSON.stringify(temp_ranges[i]) || (range.start == '' && range.stop == '')
+						? 'none'
+						: 'inline-block'
+				)
+				.style('border-radius', '13px')
+				.style('background-color', '#74b9ff')
+				.style('color', '#fff')
+				.style('margin', '5px')
+				.style('margin-left', '10px')
+				.style('padding', '5px 12px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('reset')
+				.on('click', async () => {
+					self.dom.tip.hide()
+					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+					const brush = d3s
+						.brushX()
+						.extent([[xpad, 0], [width - xpad, height]])
+						.on('brush', function() {
+							const s = event.selection
+							//update temp_ranges
+							const range = temp_ranges[i]
+							range.start = Number(xscale.invert(s[0]).toFixed(1))
+							range.stop = Number(xscale.invert(s[1]).toFixed(1))
+							if (div.selectAll('.start_input').size()) {
+								select(div.node().querySelectorAll('.start_input')[i])
+									.style('color', ranges[i].start == range.start ? '#000' : '#23cba7')
+									.html(range.start)
+								select(div.node().querySelectorAll('.stop_input')[i])
+									.style('color', ranges[i].stop == range.stop ? '#000' : '#23cba7')
+									.html(range.stop)
+								select(div.node().querySelectorAll('.apply_btn')[i]).style(
+									'display',
+									JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
+								)
+								select(div.node().querySelectorAll('.reset_btn')[i]).style(
+									'display',
+									JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
+								)
+							}
+						})
+						.on('end', function() {
+							//diable pointer-event for multiple brushes
+							brush_g.selectAll('.overlay').style('pointer-events', 'none')
+						})
+					brush_g.call(brush).call(brush.move, [range.start, range.stop].map(xscale)) 
+				})
+
 			//'Delete' button
-			equation_div
-				.append('div')
+			buttons_td
+				.append('td')
 				.attr('class', 'sja_filter_tag_btn delete_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
@@ -487,12 +541,16 @@ function setRenderers(self) {
 				start_input.html('_____')
 				stop_input.html('_____')
 
-				equation_div
+				range_table
+					.append('tr')
+					.append('td')
+					.attr('colspan','3')
 					.append('div')
 					.style('font-size', '.8em')
+					.style('margin-left','20px')
 					.style('font-style', 'italic')
 					.style('color', '#888')
-					.html('Drag the <b>Interval</b> at the end of the plot to select new range')
+					.html('Note: Drag the <b>Interval</b> at the end of the plot to select new range')
 			}
 
 			async function apply() {
@@ -527,163 +585,6 @@ function setRenderers(self) {
 				}
 			}
 		}
-
-		// function enter_range(d, i) {
-		// 	const range_div = select(this)
-		// 	const range = JSON.parse(JSON.stringify(d))
-
-		// 	const equation_div = range_div
-		// 		.append('div')
-		// 		.style('display', 'block')
-		// 		.style('padding', '3px 5px')
-
-		// 	const start_input = equation_div
-		// 		.append('input')
-		// 		.attr('type', 'number')
-		// 		.attr('value', range.start)
-		// 		.attr('class', 'start_input')
-		// 		.style('width', '60px')
-		// 		.on('keyup', async () => {
-		// 			if (!client.keyupEnter()) return
-		// 			start_input.property('disabled', true)
-		// 			await apply()
-		// 			start_input.property('disabled', false)
-		// 		})
-
-		// 	// to replace operator_start_div
-		// 	const startselect = equation_div
-		// 		.append('select')
-		// 		.attr('class', 'start_select')
-		// 		.style('margin-left', '10px')
-
-		// 	startselect.append('option').html('&le;')
-		// 	startselect.append('option').html('&lt;')
-		// 	startselect.append('option').html('&#8734;')
-
-		// 	startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
-
-		// 	const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
-		// 	equation_div
-		// 		.append('div')
-		// 		.style('display', 'inline-block')
-		// 		.style('padding', '3px 10px')
-		// 		.html(x)
-
-		// 	// to replace operator_end_div
-		// 	const stopselect = equation_div
-		// 		.append('select')
-		// 		.attr('class', 'stop_select')
-		// 		.style('margin-right', '10px')
-
-		// 	stopselect.append('option').html('&le;')
-		// 	stopselect.append('option').html('&lt;')
-		// 	stopselect.append('option').html('&#8734;')
-
-		// 	stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
-
-		// 	const stop_input = equation_div
-		// 		.append('input')
-		// 		.attr('type', 'number')
-		// 		.attr('class', 'stop_input')
-		// 		.style('width', '60px')
-		// 		.attr('value', range.stop)
-		// 		.on('keyup', async () => {
-		// 			if (!client.keyupEnter()) return
-		// 			stop_input.property('disabled', true)
-		// 			await apply()
-		// 			stop_input.property('disabled', false)
-		// 		})
-
-		// 	//'Apply' button
-		// 	equation_div
-		// 		.append('div')
-		// 		.attr('class', 'sja_filter_tag_btn apply_btn')
-		// 		.style('display', 'inline-block')
-		// 		.style('border-radius', '13px')
-		// 		.style('background-color', '#23cba7')
-		// 		.style('color', '#fff')
-		// 		.style('margin', '5px')
-		// 		.style('margin-left', '10px')
-		// 		.style('padding', '7px 15px')
-		// 		.style('text-align', 'center')
-		// 		.style('font-size', '.8em')
-		// 		.style('text-transform', 'uppercase')
-		// 		.text('apply')
-		// 		.on('click', async () => {
-		// 			self.dom.tip.hide()
-		// 			await apply()
-		// 		})
-
-		// 	//'Delete' button
-		// 	equation_div
-		// 		.append('div')
-		// 		.attr('class', 'sja_filter_tag_btn delete_btn')
-		// 		.style('display', 'inline-block')
-		// 		.style('border-radius', '13px')
-		// 		.style('background-color', '#ff7675')
-		// 		.style('color', '#fff')
-		// 		.style('margin', '5px')
-		// 		.style('margin-left', '10px')
-		// 		.style('padding', '7px 15px')
-		// 		.style('text-align', 'center')
-		// 		.style('font-size', '.8em')
-		// 		.style('text-transform', 'uppercase')
-		// 		.text('Delete')
-		// 		.on('click', async () => {
-		// 			// self.dom.tip.hide()
-		// 			const new_term = JSON.parse(JSON.stringify(term))
-		// 			const range_delete = new_term.ranges[i]
-		// 			if (range_delete.start || range_delete.stop) {
-		// 				self.dom.tip.hide()
-		// 				if (new_term.ranges.length > 1) {
-		// 					new_term.ranges.splice(i, 1)
-		// 					self.opts.callback(new_term)
-		// 				} else self.opts.callback(null)
-		// 			} else {
-		// 				new_term.ranges.splice(i, 1)
-		// 				div.selectAll('*').remove()
-		// 				self.showNumOpts(div, new_term)
-		// 			}
-		// 		})
-
-		// 	// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-		// 	// self.dom.tip.showunder(holder.node())
-
-		// 	async function apply() {
-		// 		try {
-		// 			if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
-		// 				throw 'Both ends can not be unbounded'
-
-		// 			const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
-		// 			const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
-		// 			if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
-
-		// 			if (startselect.node().selectedIndex == 2) {
-		// 				range.startunbounded = true
-		// 				delete range.start
-		// 			} else {
-		// 				delete range.startunbounded
-		// 				range.start = start
-		// 				range.startinclusive = startselect.node().selectedIndex == 0
-		// 			}
-		// 			if (stopselect.node().selectedIndex == 2) {
-		// 				range.stopunbounded = true
-		// 				delete range.stop
-		// 			} else {
-		// 				delete range.stopunbounded
-		// 				range.stop = stop
-		// 				range.stopinclusive = stopselect.node().selectedIndex == 0
-		// 			}
-		// 			self.dom.tip.hide()
-		// 			const new_term = JSON.parse(JSON.stringify(term))
-		// 			new_term.ranges[i] = range
-		// 			self.opts.callback(new_term)
-		// 		} catch (e) {
-		// 			window.alert(e)
-		// 		}
-		// 	}
-		// }
 
 		// numerical checkbox for unannotated cats
 		const data = await self.getCategories(term.term)
