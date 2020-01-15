@@ -101,22 +101,13 @@ tape('empty root filter', async test => {
 		'none',
 		'should show the filter container div'
 	)
-	test.equal(
-		tipd
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		0,
-		'should hide all filter list appender buttons'
-	)
 
 	opts.holder
 		.select('.sja_pill_wrapper')
 		.node()
 		.click()
 	await sleep(50)
+
 	// remove the only entry from root filter.lst[]
 	tipd
 		.selectAll('tr')
@@ -144,6 +135,7 @@ tape('root filter with a single-entry', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
+			in: true,
 			join: '',
 			lst: [
 				{
@@ -219,16 +211,6 @@ tape('root filter with a single-entry', async test => {
 	)
 	test.equal(
 		opts.holder
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		0,
-		'should not show any filter list appender buttons when there are tvs-only root filters'
-	)
-	test.equal(
-		opts.holder
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
 			.filter(function() {
 				return this.style.display !== 'none'
@@ -265,16 +247,6 @@ tape('root filter with a single-entry', async test => {
 			.size(),
 		0,
 		'should show no filter join label'
-	)
-	test.equal(
-		opts.holder
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		0,
-		'should not show any filter list appender buttons'
 	)
 	test.equal(
 		opts.holder
@@ -395,16 +367,6 @@ tape('root filter with nested filters', async test => {
 		2,
 		'should show parentheses around a filter with >1 terms'
 	)
-	test.equal(
-		opts.holder
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		1,
-		'should show a filter list appender button'
-	)
 
 	await sleep(100)
 	opts.holder
@@ -441,16 +403,6 @@ tape('root filter with nested filters', async test => {
 		0,
 		'should not show parentheses around any single-item groups'
 	)
-	test.equal(
-		opts.holder
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		0,
-		'should not show a root filter list appender when there are tvs-only entries'
-	)
 
 	await sleep(100)
 	opts.holder
@@ -463,9 +415,9 @@ tape('root filter with nested filters', async test => {
 		tipd
 			.selectAll('tr')
 			.filter(d => d.action == 'join-or')
-			.node()
+			.node().firstChild
 	)
-	await sleep(200)
+	await sleep(500)
 
 	const grpDivsB = opts.holder.node().querySelectorAll('.sja_filter_item')
 	test.equal(
@@ -477,28 +429,18 @@ tape('root filter with nested filters', async test => {
 			})
 			.size(),
 		2,
-		'should show parentheses around the root-level group'
+		'should show parentheses around the first (2-item) group of the root filter'
 	)
 	test.equal(
 		d3s
-			.select(grpDivsA[1])
+			.select(grpDivsB[1])
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
 			.filter(function() {
 				return this.style.display !== 'none'
 			})
 			.size(),
 		0,
-		'should not show parentheses around a filter with >1 terms'
-	)
-	test.equal(
-		opts.holder
-			.selectAll('.sja_filter_lst_appender')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size(),
-		1,
-		'should show a filter list appender button'
+		'should not show parentheses around the second (1-item) group of the root filter'
 	)
 
 	test.end()

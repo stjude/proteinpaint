@@ -247,22 +247,23 @@ function setRenderers(self) {
 			.style('margin', '1px 3px 1px 0')
 			.style('padding', '1px 3px')
 
-		const currSpans = select(this)
+		select(this)
 			.selectAll('span')
 			.html(d => d)
-
-		currSpans
 			.style('border', (d, i) => (d == joiner ? '1px solid #ccc' : 'none'))
 			.style('font-weight', d => (d === ')' ? '600' : '400'))
 			.style('background-color', 'transparent')
 			.style('color', '#000')
-			.on('click', (d, i) => {
-				self.activeData.spanD = d
-				self.activeData.spanI = i < 2 ? 0 : 2
-				currSpans
-					.style('background-color', (s, j) => (i == j && i !== 1 ? 'rgb(57, 108, 152)' : 'transparent'))
-					.style('color', (s, j) => (i == j && i !== 1 ? '#fff' : '#000'))
-			})
+			.on('click', self.setActiveJoinSpan)
+	}
+
+	self.setActiveJoinSpan = function(d, i) {
+		self.activeData.spanD = d
+		self.activeData.spanI = i < 2 ? 0 : 2
+		select(this.parentNode)
+			.selectAll('span')
+			.style('background-color', (s, j) => (i == j && i !== 1 ? 'rgb(57, 108, 152)' : 'transparent'))
+			.style('color', (s, j) => (i == j && i !== 1 ? '#fff' : '#000'))
 	}
 
 	self.updateUI = function(container, filter) {
@@ -465,28 +466,16 @@ function setInteractivity(self) {
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter }
 
-		const trs = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-
-		trs
-			.filter(d => d.action == 'join-and')
-			.selectAll('td:nth-child(2)')
-			.each(self.setJoinBtns)
-
-		trs
-			.filter(d => d.action == 'join-or')
-			.selectAll('td:nth-child(2)')
-			.each(self.setJoinBtns)
-
-		trs
+		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		rows
 			.filter(d => d.action == 'negate')
 			.selectAll('td:nth-child(2)')
 			.each(self.setNegateToggles)
-
-		trs
+		rows
 			.filter(d => d.action == 'remove')
 			.selectAll('td:nth-child(2)')
 			.each(self.setRemoveBtns)
-
+		self.restyleMenuBtns(rows)
 		self.dom.controlsTip.showunder(this)
 	}
 
@@ -494,19 +483,13 @@ function setInteractivity(self) {
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
 
-		if (!d.action.startsWith('join-')) {
+		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		if (event.target.tagName.toUpperCase() == 'TD') {
+			this.firstChild.nextSibling.firstChild.click()
+		} else if (!d.action.startsWith('join-')) {
 			delete self.activeData.spanD
 			delete self.activeData.spanI
-
-			const trs = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-			trs
-				.filter(d => d.action == 'join-and')
-				.selectAll('td:nth-child(2)')
-				.each(self.setJoinBtns)
-			trs
-				.filter(d => d.action == 'join-or')
-				.selectAll('td:nth-child(2)')
-				.each(self.setJoinBtns)
+			self.restyleMenuBtns(rows)
 		}
 
 		if (d.bar_click_override || !d.handler) {
@@ -514,6 +497,17 @@ function setInteractivity(self) {
 		} else {
 			d.handler(this)
 		}
+	}
+
+	self.restyleMenuBtns = function(rows) {
+		rows
+			.filter(d => d.action == 'join-and')
+			.selectAll('td:nth-child(2)')
+			.each(self.setJoinBtns)
+		rows
+			.filter(d => d.action == 'join-or')
+			.selectAll('td:nth-child(2)')
+			.each(self.setJoinBtns)
 	}
 
 	self.displayTreeNew = function(d) {
@@ -601,7 +595,10 @@ function setInteractivity(self) {
 	self.negateClause = function(d) {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
-		const t = event.target.__data__
+		const t =
+			event.target.tagName.toUpperCase() == 'SPAN'
+				? event.target.__data__
+				: event.target.parentNode.firstChild.nextSibling.firstChild.__data__
 		//const item = self.activeData.item
 		//const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -692,7 +689,7 @@ function setInteractivity(self) {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
 		const t = event.target.__data__
-		const item = typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
+		const item = t.action || typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
 		const filter = self.findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
 			self.opts.callback({
