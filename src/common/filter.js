@@ -484,9 +484,11 @@ function setInteractivity(self) {
 		self.activeData.menuOpt = d
 
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-		if (event.target.tagName.toUpperCase() == 'TD') {
-			this.firstChild.nextSibling.firstChild.click()
-		} else if (!d.action.startsWith('join-')) {
+		if (d.action.startsWith('join-')) {
+			if (event.target.tagName.toUpperCase() == 'TD') {
+				this.firstChild.nextSibling.firstChild.click()
+			}
+		} else {
 			delete self.activeData.spanD
 			delete self.activeData.spanI
 			self.restyleMenuBtns(rows)
