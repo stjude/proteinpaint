@@ -3,7 +3,7 @@
 """SampleSplitter.py: Take snvindel vcf files and svcnv file (PCGP-TARGET project) and output one js file containing all variations for each sample
 """
 __author__ = 'Jian Wang'
-__copyright__ = 'Copyright 2018, St. Jude'
+__copyright__ = 'Copyright 2018, St. Jude Children's Hospital'
 
 
 import argparse,json,re,gzip,sys,os

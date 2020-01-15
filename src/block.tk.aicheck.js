@@ -1,43 +1,37 @@
-import {scaleLinear} from 'd3-scale'
-import {axisLeft,axisRight} from 'd3-axis'
+import { scaleLinear } from 'd3-scale'
+import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
-import {event as d3event} from 'd3-selection'
-
-
+import { event as d3event } from 'd3-selection'
+import { make_radios } from './dom'
 
 /*
 follows bigwig track, main & subpanel rendered separately
 */
 
-
-
-
-
-function makeTk(tk,block) {
-
-	tk.img=tk.glider.append('image')
-	if(!tk.dotsize) {
+function makeTk(tk, block) {
+	tk.img = tk.glider.append('image')
+	if (!tk.dotsize) {
 		tk.dotsize = 1
 	}
 
-	if(!tk.coveragemax) {
-		tk.coveragemax=100
+	if (!tk.coveragemax) {
+		tk.coveragemax = 100
 	}
 
-	if(!tk.vafheight) {
+	if (!tk.vafheight) {
 		tk.vafheight = 50
 	}
-	if(!tk.coverageheight) {
+	if (!tk.coverageheight) {
 		tk.coverageheight = 30
 	}
-	if(!tk.rowspace) {
-		tk.rowspace=5
+	if (!tk.rowspace) {
+		tk.rowspace = 5
 	}
 
 	tk.tklabel
-		.attr('y',20)
+		.attr('y', 20)
 		.text(tk.name)
-		.each(function(){
+		.each(function() {
 			tk.leftLabelMaxwidth = this.getBBox().width
 		})
 	block.setllabel()
@@ -45,319 +39,354 @@ function makeTk(tk,block) {
 	// left side axes
 	tk.Tvafaxis = tk.gleft.append('g')
 	tk.Nvafaxis = tk.gleft.append('g')
-	tk.aiaxis   = tk.gleft.append('g')
+	tk.aiaxis = tk.gleft.append('g')
 	// left labels
-	tk.label_tumor = tk.gleft.append('text')
-		.attr('font-family',client.font)
+	tk.label_tumor = tk.gleft
+		.append('text')
+		.attr('font-family', client.font)
 		.attr('font-size', block.labelfontsize)
-		.attr('dominant-baseline','central')
-		.attr('text-anchor','end')
+		.attr('dominant-baseline', 'central')
+		.attr('text-anchor', 'end')
 		.attr('x', block.tkleftlabel_xshift)
-		.attr('fill-opacity',.6)
+		.attr('fill-opacity', 0.6)
 		.text('Tumor')
-	tk.label_germline = tk.gleft.append('text')
-		.attr('font-family',client.font)
+	tk.label_germline = tk.gleft
+		.append('text')
+		.attr('font-family', client.font)
 		.attr('font-size', block.labelfontsize)
-		.attr('dominant-baseline','central')
-		.attr('text-anchor','end')
+		.attr('dominant-baseline', 'central')
+		.attr('text-anchor', 'end')
 		.attr('x', block.tkleftlabel_xshift)
-		.attr('fill-opacity',.6)
+		.attr('fill-opacity', 0.6)
 		.text('Germline')
-	tk.label_ai = tk.gleft.append('text')
-		.attr('font-family',client.font)
+	tk.label_ai = tk.gleft
+		.append('text')
+		.attr('font-family', client.font)
 		.attr('font-size', block.labelfontsize)
-		.attr('dominant-baseline','central')
-		.attr('text-anchor','end')
+		.attr('dominant-baseline', 'central')
+		.attr('text-anchor', 'end')
 		.attr('x', block.tkleftlabel_xshift)
-		.attr('fill-opacity',.6)
+		.attr('fill-opacity', 0.6)
 		.text('abs(T-G)')
 	// right side axes
 	tk.Tcovaxis = tk.gright.append('g')
 	tk.Ncovaxis = tk.gright.append('g')
 	// right labels
-	tk.label_tumorcoverage = tk.gright.append('text')
-		.attr('font-family',client.font)
+	tk.label_tumorcoverage = tk.gright
+		.append('text')
+		.attr('font-family', client.font)
 		.attr('font-size', block.labelfontsize)
-		.attr('dominant-baseline','central')
-		.attr('x',10)
-		.attr('fill-opacity',.6)
+		.attr('dominant-baseline', 'central')
+		.attr('x', 10)
+		.attr('fill-opacity', 0.6)
 		.text('T coverage')
-	tk.label_germlinecoverage = tk.gright.append('text')
-		.attr('font-family',client.font)
+	tk.label_germlinecoverage = tk.gright
+		.append('text')
+		.attr('font-family', client.font)
 		.attr('font-size', block.labelfontsize)
-		.attr('dominant-baseline','central')
-		.attr('x',10)
-		.attr('fill-opacity',.6)
+		.attr('dominant-baseline', 'central')
+		.attr('x', 10)
+		.attr('fill-opacity', 0.6)
 		.text('G coverage')
 
-	tk.config_handle = block.maketkconfighandle(tk)
-		.on('click',()=>{
-			tk.tkconfigtip.clear()
-				.showunder( tk.config_handle.node() )
-			configPanel( tk, block )
-		})
+	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
+		tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+		configPanel(tk, block)
+	})
 }
 
-
-
-
-
-function tkarg(tk,block) {
+function tkarg(tk, block) {
 	const a = {
 		jwt: block.jwt,
-		rglst:block.tkarg_rglst(),
-		regionspace:block.regionspace,
-		width:block.width,
+		rglst: block.tkarg_rglst(),
+		regionspace: block.regionspace,
+		width: block.width,
 
 		coveragemax: tk.coveragemax,
+		gtotalcutoff: tk.gtotalcutoff,
+		gmafrestrict: tk.gmafrestrict,
 
-		file:tk.file,
-		url:tk.url,
-		indexURL:tk.indexURL,
-		vafheight:tk.vafheight,
-		coverageheight:tk.coverageheight,
-		rowspace:tk.rowspace,
-		dotsize:tk.dotsize,
+		file: tk.file,
+		url: tk.url,
+		indexURL: tk.indexURL,
+		vafheight: tk.vafheight,
+		coverageheight: tk.coverageheight,
+		rowspace: tk.rowspace,
+		dotsize: tk.dotsize
 	}
 	return a
 }
 
-
-
-export function loadTk(tk,block) {
-	
+export function loadTk(tk, block) {
 	// load main part of track
 
-	if(tk.uninitialized) {
-		makeTk(tk,block)
+	if (tk.uninitialized) {
+		makeTk(tk, block)
 		delete tk.uninitialized
 	}
 
 	block.tkcloakon(tk)
 
-	const par=tkarg(tk,block)
+	const par = tkarg(tk, block)
 
-	client.dofetch('tkaicheck', par)
-	.then(data=>{
-		if(data.error) throw({message:data.error})
+	client
+		.dofetch('tkaicheck', par)
+		.then(data => {
+			if (data.error) throw { message: data.error }
 
-		const imgh = tk.vafheight*3 + tk.rowspace*4 + tk.coverageheight*2
+			const imgh = tk.vafheight * 3 + tk.rowspace * 4 + tk.coverageheight * 2
 
-		tk.height_main = tk.toppad + imgh + tk.bottompad
-		tk.img
-			.attr('width',block.width)
-			.attr('height', imgh)
-			.attr('xlink:href',data.src)
+			tk.height_main = tk.toppad + imgh + tk.bottompad
+			tk.img
+				.attr('width', block.width)
+				.attr('height', imgh)
+				.attr('xlink:href', data.src)
 
-		if(data.coveragemax) {
-			tk.coveragemax = data.coveragemax
-		}
+			if (data.coveragemax) {
+				tk.coveragemax = data.coveragemax
+			}
 
-		if(!data.nodata) {
-			const scale=scaleLinear().domain([0,1]).range([tk.vafheight,0])
+			if (!data.nodata) {
+				const scale = scaleLinear()
+					.domain([0, 1])
+					.range([tk.vafheight, 0])
 
-			let y = 0
-			client.axisstyle({
-				axis:tk.Tvafaxis
-					.attr('transform','translate(0,'+y+')')
-					.call(
-						axisLeft().scale(scale).tickValues([0,1])
+				let y = 0
+				client.axisstyle({
+					axis: tk.Tvafaxis.attr('transform', 'translate(0,' + y + ')').call(
+						axisLeft()
+							.scale(scale)
+							.tickValues([0, 1])
 					),
-				color:'black',
-				showline:true
-			})
-			tk.label_tumor.attr('y', y+tk.vafheight*3/4)
+					color: 'black',
+					showline: true
+				})
+				tk.label_tumor.attr('y', y + (tk.vafheight * 3) / 4)
 
-			y = tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace
-			client.axisstyle({
-				axis:tk.Nvafaxis
-					.attr('transform','translate(0,'+y+')')
-					.call(
-						axisLeft().scale(scale).tickValues([0,1])
+				y = tk.vafheight + tk.rowspace + tk.coverageheight + tk.rowspace
+				client.axisstyle({
+					axis: tk.Nvafaxis.attr('transform', 'translate(0,' + y + ')').call(
+						axisLeft()
+							.scale(scale)
+							.tickValues([0, 1])
 					),
-				color:'black',
-				showline:true
-			})
-			tk.label_germline.attr('y', y+tk.vafheight/2)
+					color: 'black',
+					showline: true
+				})
+				tk.label_germline.attr('y', y + tk.vafheight / 2)
 
-			y = 2*(tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace)
-			client.axisstyle({
-				axis:tk.aiaxis
-					.attr('transform','translate(0,'+y+')')
-					.call(
-						axisLeft().scale(scale).tickValues([0,1])
+				y = 2 * (tk.vafheight + tk.rowspace + tk.coverageheight + tk.rowspace)
+				client.axisstyle({
+					axis: tk.aiaxis.attr('transform', 'translate(0,' + y + ')').call(
+						axisLeft()
+							.scale(scale)
+							.tickValues([0, 1])
 					),
-				color:'black',
-				showline:true
-			})
-			tk.label_ai.attr('y', y+tk.vafheight/2 )
+					color: 'black',
+					showline: true
+				})
+				tk.label_ai.attr('y', y + tk.vafheight / 2)
 
-			const scale2=scaleLinear().domain([0,tk.coveragemax]).range([tk.coverageheight,0])
+				const scale2 = scaleLinear()
+					.domain([0, tk.coveragemax])
+					.range([tk.coverageheight, 0])
 
-			y = tk.vafheight+tk.rowspace
-			client.axisstyle({
-				axis:tk.Tcovaxis
-					.attr('transform','translate(0,'+y+')')
-					.call(
-						axisRight().scale(scale2).tickValues([0,tk.coveragemax])
+				y = tk.vafheight + tk.rowspace
+				client.axisstyle({
+					axis: tk.Tcovaxis.attr('transform', 'translate(0,' + y + ')').call(
+						axisRight()
+							.scale(scale2)
+							.tickValues([0, tk.coveragemax])
 					),
-				color:'black',
-				showline:true
-			})
-			tk.label_tumorcoverage.attr('y', y+tk.coverageheight/2)
+					color: 'black',
+					showline: true
+				})
+				tk.label_tumorcoverage.attr('y', y + tk.coverageheight / 2)
 
-			y = 2*(tk.vafheight+tk.rowspace)+tk.coverageheight+tk.rowspace
-			client.axisstyle({
-				axis:tk.Ncovaxis
-					.attr('transform','translate(0,'+y+')')
-					.call(
-						axisRight().scale(scale2).tickValues([0,tk.coveragemax])
+				y = 2 * (tk.vafheight + tk.rowspace) + tk.coverageheight + tk.rowspace
+				client.axisstyle({
+					axis: tk.Ncovaxis.attr('transform', 'translate(0,' + y + ')').call(
+						axisRight()
+							.scale(scale2)
+							.tickValues([0, tk.coveragemax])
 					),
-				color:'black',
-				showline:true
-			})
-			tk.label_germlinecoverage.attr('y', y+tk.coverageheight/2)
-		}
-		return null
-	})
-	.catch(obj=>{
-		tk.img.attr('width',1).attr('height',1)
-		if(obj.stack) {
-			// error
-			console.log(obj.stack)
-		}
-		return obj.message
-	})
-	.then((errtext)=>{
-		block.tkcloakoff(tk, {error:errtext} )
-		block.block_setheight()
+					color: 'black',
+					showline: true
+				})
+				tk.label_germlinecoverage.attr('y', y + tk.coverageheight / 2)
+			}
+			return null
+		})
+		.catch(obj => {
+			tk.img.attr('width', 1).attr('height', 1)
+			if (obj.stack) {
+				// error
+				console.log(obj.stack)
+			}
+			return obj.message
+		})
+		.then(errtext => {
+			block.tkcloakoff(tk, { error: errtext })
+			block.block_setheight()
 
-		// also load subpanels whenever main panel updates
-		for(const panel of tk.subpanels) {
-			loadTksubpanel( tk, block, panel )
-		}
-	})
+			// also load subpanels whenever main panel updates
+			for (const panel of tk.subpanels) {
+				loadTksubpanel(tk, block, panel)
+			}
+		})
 }
 
-
-
-
 export function loadTksubpanel(tk, block, panel) {
-
 	block.tkcloakon_subpanel(panel)
-	const par=tkarg(tk, block)
+	const par = tkarg(tk, block)
 
 	par.width = panel.width
-	par.rglst = [{
-		chr:panel.chr,
-		start:panel.start,
-		stop:panel.stop,
-		width:panel.width
-	}]
+	par.rglst = [
+		{
+			chr: panel.chr,
+			start: panel.start,
+			stop: panel.stop,
+			width: panel.width
+		}
+	]
 	//delete par.percentile
 	//delete par.autoscale
 
-	const req = new Request(block.hostURL+'/tkaicheck', {
-		method:'POST',
-		body:JSON.stringify(par)
+	const req = new Request(block.hostURL + '/tkaicheck', {
+		method: 'POST',
+		body: JSON.stringify(par)
 	})
 	fetch(req)
-	.then(data=>{return data.json()})
-	.then(data=>{
-		if(data.error) throw({message:data.error})
+		.then(data => {
+			return data.json()
+		})
+		.then(data => {
+			if (data.error) throw { message: data.error }
 
-		panel.img
-			.attr('width',panel.width)
-			.attr('height', tk.vafheight*3 + tk.rowspace*4 + tk.coverageheight*2)
-			.attr('xlink:href',data.src)
-		return null
-	})
-	.catch(obj=>{
-		panel.img.attr('width',1).attr('height',1)
-		if(obj.stack) {
-			// error
-			console.log(obj.stack)
-		}
-		return obj.message
-	})
-	.then(errtext=>{
-		block.tkcloakoff_subpanel(panel, {error:errtext} )
-	})
+			panel.img
+				.attr('width', panel.width)
+				.attr('height', tk.vafheight * 3 + tk.rowspace * 4 + tk.coverageheight * 2)
+				.attr('xlink:href', data.src)
+			return null
+		})
+		.catch(obj => {
+			panel.img.attr('width', 1).attr('height', 1)
+			if (obj.stack) {
+				// error
+				console.log(obj.stack)
+			}
+			return obj.message
+		})
+		.then(errtext => {
+			block.tkcloakoff_subpanel(panel, { error: errtext })
+		})
 }
 
-
-
-
 function configPanel(tk, block) {
+	tk.tkconfigtip.clear()
 
 	// height
 	{
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','15px')
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
 		row.append('span').html('Coverage max:&nbsp;')
-		row.append('input')
-			.attr('type','number')
-			.style('width','60px')
-			.property('value',tk.coveragemax)
-			.on('keyup',()=>{
-				if(d3event.code!='Enter') return
-				const s=d3event.target.value
-				if(s=='') return
-				const v=Number.parseInt(s)
-				if(Number.isNaN(v) || v<=1) {
+		row
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '60px')
+			.property('value', tk.coveragemax)
+			.on('keyup', () => {
+				if (!client.keyupEnter()) return
+				const s = d3event.target.value
+				if (s == '') return
+				const v = Number.parseInt(s)
+				if (Number.isNaN(v) || v <= 1) {
 					alert('coverage max must be positive integer')
 					return
 				}
-				tk.coveragemax=v
-				loadTk( tk, block)
+				tk.coveragemax = v
+				loadTk(tk, block)
 			})
 	}
 	// dot size
 	{
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','15px')
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
 		row.append('span').html('Marker dot size:&nbsp;')
-		const id = Math.random().toString()
-
-		const size1 = row.append('input')
-			.attr('type','radio')
-			.attr('name',id)
-			.attr('id',id+'1')
-			.on('change',()=> update(1))
-		if(tk.dotsize==1) {
-			size1.property('checked',1)
-		}
-		row.append('label')
-			.attr('for', id+'1')
-			.html('&nbsp;1 pixel&nbsp;')
-
-		const size2 = row.append('input')
-			.attr('type','radio')
-			.attr('name',id)
-			.attr('id',id+'2')
-			.on('change',()=> update(2))
-		if(tk.dotsize==2) {
-			size2.property('checked',1)
-		}
-		row.append('label')
-			.attr('for', id+'2')
-			.html('&nbsp;2 pixels&nbsp;')
-
-		const size3 = row.append('input')
-			.attr('type','radio')
-			.attr('name',id)
-			.attr('id',id+'3')
-			.on('change',()=> update(3))
-		if(tk.dotsize==3) {
-			size3.property('checked',3)
-		}
-		row.append('label')
-			.attr('for', id+'3')
-			.html('&nbsp;3 pixels')
-
-		function update(v) {
-			tk.dotsize=v
-			loadTk(tk,block)
-		}
+		make_radios({
+			holder: row,
+			options: [
+				{ label: '1 pixel', value: 1, checked: tk.dotsize == 1 },
+				{ label: '2 pixels', value: 2, checked: tk.dotsize == 2 },
+				{ label: '3 pixels', value: 3, checked: tk.dotsize == 3 }
+			],
+			callback: v => {
+				tk.dotsize = v
+				loadTk(tk, block)
+			},
+			styles: {
+				display: 'inline-block',
+				'margin-right': '5px'
+			}
+		})
+	}
+	// gtotalcutoff
+	{
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
+		row.append('span').html('Filter markers by minimum total germline coverage:&nbsp;')
+		row
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '60px')
+			.property('value', tk.gtotalcutoff || 0)
+			.on('keyup', () => {
+				if (!client.keyupEnter()) return
+				const s = d3event.target.value
+				if (s == '') return
+				const v = Number.parseInt(s)
+				if (Number.isNaN(v) || v < 0) {
+					alert('coverage max must be non-negative integer')
+					return
+				}
+				if (v == tk.gtotalcutoff) return
+				tk.gtotalcutoff = v
+				loadTk(tk, block)
+			})
+		row
+			.append('div')
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+			.text('Set to 0 to use all markers')
+	}
+	// gmafrestrict
+	{
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
+		row.append('span').html('Filter markers by narrowing range of germline B-allele fraction:&nbsp;')
+		row
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '60px')
+			.property('value', tk.gmafrestrict || 0)
+			.on('keyup', () => {
+				if (!client.keyupEnter()) return
+				const s = d3event.target.value
+				if (s == '') return
+				const v = Number.parseFloat(s)
+				if (Number.isNaN(v) || v < 0 || v > 0.5) {
+					alert('Must enter a value between 0 and 0.5')
+					return
+				}
+				if (tk.gmafrestrict == v) return
+				tk.gmafrestrict = v
+				loadTk(tk, block)
+				configPanel(tk, block)
+			})
+		row
+			.append('div')
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+			.text(
+				(tk.gmafrestrict
+					? 'Keeping markers with BAF range ' + tk.gmafrestrict + ' to ' + (1 - tk.gmafrestrict) + '. '
+					: '') + 'Set to 0 to use all markers'
+			)
 	}
 }
