@@ -102,8 +102,9 @@ module.exports = (q, res, ds) => {
 		minvalue,
 		maxvalue,
 		densitymax,
-		samplecount: values.length,
-		img: canvas.toDataURL()
+		density,
+		samplecount: values.length
+		// img: canvas.toDataURL()
 	}
 	res.send(result)
 }

@@ -316,8 +316,9 @@ function setRenderers(self) {
 						)
 						select(div.node().querySelectorAll('.reset_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(ranges[i]) ||
-							(ranges[i].start == '' && ranges[i].stop == '')? 'none' : 'inline-block'
+							JSON.stringify(range) == JSON.stringify(ranges[i]) || (ranges[i].start == '' && ranges[i].stop == '')
+								? 'none'
+								: 'inline-block'
 						)
 					}
 				})
@@ -329,9 +330,10 @@ function setRenderers(self) {
 			brush_g.call(brush).call(brush.move, [brush_start, brush_stop].map(xscale))
 		}
 
-		const range_table = div.append('table')
+		const range_table = div
+			.append('table')
 			.style('table-layout', 'fixed')
-			.style('border-collapse','collapse')
+			.style('border-collapse', 'collapse')
 
 		const range_divs = range_table.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
@@ -387,8 +389,7 @@ function setRenderers(self) {
 			const range_tr = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			const title_td = range_tr
-				.append('td')
+			const title_td = range_tr.append('td')
 
 			title_td
 				.append('td')
@@ -398,9 +399,7 @@ function setRenderers(self) {
 				.style('font-size', '.9em')
 				.text('Interval ' + (i + 1) + ': ')
 
-			const equation_td = range_tr
-				.append('td')
-				.style('width','150px')
+			const equation_td = range_tr.append('td').style('width', '150px')
 
 			const start_input = equation_td
 				.append('div')
@@ -428,8 +427,7 @@ function setRenderers(self) {
 				.style('text-align', 'center')
 				.html(range.stop)
 
-			const buttons_td = range_tr
-				.append('td')
+			const buttons_td = range_tr.append('td')
 
 			//'Apply' button
 			buttons_td
@@ -509,7 +507,7 @@ function setRenderers(self) {
 							//diable pointer-event for multiple brushes
 							brush_g.selectAll('.overlay').style('pointer-events', 'none')
 						})
-					brush_g.call(brush).call(brush.move, [range.start, range.stop].map(xscale)) 
+					brush_g.call(brush).call(brush.move, [range.start, range.stop].map(xscale))
 				})
 
 			//'Delete' button
@@ -544,10 +542,10 @@ function setRenderers(self) {
 				range_table
 					.append('tr')
 					.append('td')
-					.attr('colspan','3')
+					.attr('colspan', '3')
 					.append('div')
 					.style('font-size', '.8em')
-					.style('margin-left','20px')
+					.style('margin-left', '20px')
 					.style('font-style', 'italic')
 					.style('color', '#888')
 					.html('Note: Drag the <b>Interval</b> at the end of the plot to select new range')
@@ -667,8 +665,13 @@ function setRenderers(self) {
 			.attr('width', width + xpad * 2)
 			.attr('height', height + ypad * 2)
 
-		// set plot image as background
-		svg.append('image').attr('xlink:href', data.img)
+		// removed: set plot image as background
+		// svg.append('image').attr('xlink:href', data.img)
+
+		//density data, add first and last values to array
+		const density_data = data.density
+		density_data.unshift([data.minvalue, 0])
+		density_data.push([data.maxvalue, 0])
 
 		// x-axis
 		const xscale = d3s
@@ -678,9 +681,35 @@ function setRenderers(self) {
 
 		const x_axis = d3s.axisBottom().scale(xscale)
 
-		svg
-			.append('g')
-			.attr('transform', `translate(${xpad}, ${ypad + height})`)
+		// y-scale
+		const yscale = d3s
+			.scaleLinear()
+			.domain([0, data.densitymax])
+			.range([height + ypad, ypad])
+
+		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+
+		// SVG line generator
+		const line = d3s
+			.line()
+			.x(function(d) {
+				return xscale(d[0])
+			})
+			.y(function(d) {
+				return yscale(d[1])
+			})
+			.curve(d3s.curveMonotoneX)
+
+		// plot the data as a line
+		g.append('path')
+			.datum(density_data)
+			.attr('class', 'line')
+			.attr('d', line)
+			.style('fill', '#eee')
+			.style('stroke', '#000')
+
+		g.append('g')
+			.attr('transform', `translate(0, ${ypad + height})`)
 			.call(x_axis)
 	}
 
