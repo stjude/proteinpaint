@@ -187,7 +187,15 @@ function setRenderers(self) {
 			.html(d => d.label)
 
 		select('body').on('click.sja_filter', () => {
-			if (['sja_filter_join_label', 'sja_filter_clause_negate'].includes(event.target.className)) return
+			if (
+				[
+					'sja_filter_join_label',
+					'sja_filter_clause_negate',
+					'sja_filter_paren_open',
+					'sja_filter_paren_close'
+				].includes(event.target.className)
+			)
+				return
 			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		})
 	}
@@ -229,8 +237,11 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
 			.style('display', filter === self.filter && filter.in ? 'none' : 'inline-block')
+			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '20px')
+			.style('cursor', 'pointer')
+			.on('click', self.displayControlsMenu)
 
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -245,10 +256,13 @@ function setRenderers(self) {
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_paren_close')
+			.style('padding', '0 5px')
 			.html(')')
 			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
 			.style('font-size', '20px')
+			.style('cursor', 'pointer')
+			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateGrp = function(item, i) {
@@ -396,7 +410,8 @@ function setInteractivity(self) {
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter, elem: this }
 
-		const grpAction = this.className.includes('join') || this.className.includes('negate')
+		const grpAction =
+			this.className.includes('join') || this.className.includes('negate') || this.className.includes('paren')
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
 
 		rows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
@@ -405,15 +420,19 @@ function setInteractivity(self) {
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter == self.filter && filter.lst.length == 1) || this.className.includes('negate') ? 'none' : 'table-row'
+				(filter == self.filter && filter.lst.length == 1) ||
+					this.className.includes('negate') ||
+					this.className.includes('paren')
+					? 'none'
+					: 'table-row'
 			)
 			.select('td:nth-child(2)')
 			.html(grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND')
 
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (grpAction) {
-			if (this.className.includes('negate')) this.parentNode.style.backgroundColor = '#ee5'
-			else this.parentNode.parentNode.style.backgroundColor = '#ee5'
+			if (this.className.includes('join')) this.parentNode.parentNode.style.backgroundColor = '#ee5'
+			else this.parentNode.style.backgroundColor = '#ee5'
 		}
 
 		self.dom.controlsTip.showunder(this)
