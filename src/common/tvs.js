@@ -276,7 +276,7 @@ function setRenderers(self) {
 				.remove()
 		})
 
-		// TODO: add update to brush if required
+		// add update to brush if required
 		brushes.each(function(d, i) {
 			const brush_g = select(this)
 			brush_g.selectAll('.overlay').style('pointer-events', 'all')
@@ -295,7 +295,7 @@ function setRenderers(self) {
 			const brush_start = range.startunbounded ? density_data.minvalue : range.start
 			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 
-			const brush = d3s
+			self.brush = d3s
 				.brushX()
 				.extent([[xpad, 0], [width - xpad, height]])
 				.on('brush', function() {
@@ -327,7 +327,7 @@ function setRenderers(self) {
 					brush_g.selectAll('.overlay').style('pointer-events', 'none')
 				})
 
-			brush_g.call(brush).call(brush.move, [brush_start, brush_stop].map(xscale))
+			brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
 		}
 
 		const range_table = div
@@ -477,37 +477,7 @@ function setRenderers(self) {
 				.on('click', async () => {
 					self.dom.tip.hide()
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-					const brush = d3s
-						.brushX()
-						.extent([[xpad, 0], [width - xpad, height]])
-						.on('brush', function() {
-							const s = event.selection
-							//update temp_ranges
-							const range = temp_ranges[i]
-							range.start = Number(xscale.invert(s[0]).toFixed(1))
-							range.stop = Number(xscale.invert(s[1]).toFixed(1))
-							if (div.selectAll('.start_input').size()) {
-								select(div.node().querySelectorAll('.start_input')[i])
-									.style('color', ranges[i].start == range.start ? '#000' : '#23cba7')
-									.html(range.start)
-								select(div.node().querySelectorAll('.stop_input')[i])
-									.style('color', ranges[i].stop == range.stop ? '#000' : '#23cba7')
-									.html(range.stop)
-								select(div.node().querySelectorAll('.apply_btn')[i]).style(
-									'display',
-									JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
-								)
-								select(div.node().querySelectorAll('.reset_btn')[i]).style(
-									'display',
-									JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
-								)
-							}
-						})
-						.on('end', function() {
-							//diable pointer-event for multiple brushes
-							brush_g.selectAll('.overlay').style('pointer-events', 'none')
-						})
-					brush_g.call(brush).call(brush.move, [range.start, range.stop].map(xscale))
+					brush_g.call(self.brush).call(self.brush.move, [range.start, range.stop].map(xscale))
 				})
 
 			//'Delete' button
@@ -664,9 +634,6 @@ function setRenderers(self) {
 			.append('svg')
 			.attr('width', width + xpad * 2)
 			.attr('height', height + ypad * 2)
-
-		// removed: set plot image as background
-		// svg.append('image').attr('xlink:href', data.img)
 
 		//density data, add first and last values to array
 		const density_data = data.density

@@ -349,6 +349,8 @@ function setRenderers(self) {
 				tvs.isnot = self.dom.isNotInput.property('checked')
 				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
 				self.opts.callback(rootCopy)
+				self.dom.controlsTip.hide()
+				self.dom.treeTip.hide()
 			}
 		})
 		self.pills[item.$id] = pill

@@ -1,6 +1,6 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
-const TVSInit = require('../tvs').TVSInit
+const d3s = require('d3')
+const filterInit = require('../filter').filterInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -18,26 +18,22 @@ function getOpts(_opts = {}) {
 	const holder = d3s
 		.select('body')
 		.append('div')
+		.style('position', 'relative')
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
-		.style('max-width', '500px')
-
-	const controlsTip = d3s
-		.select('body')
-		.append('div')
-		.style('margin', '0px 20px')
 
 	const opts = Object.assign({ holder }, _opts)
 
-	opts.tvs = TVSInit({
-		holder,
-		controlsTip,
+	opts.filter = filterInit({
+		btn: holder.append('div'),
+		btnLabel: 'Filter',
+		holder: holder.append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		debug: true,
-		callback: function(tvs) {
-			opts.tvsData = tvs
-			opts.tvs.main(opts.tvsData)
+		callback: function(filter) {
+			opts.filterData = filter
+			opts.filter.main(opts.filterData)
 		}
 	})
 
@@ -59,20 +55,30 @@ tape('\n', test => {
 
 tape('tvs (common): buttons', async test => {
 	const opts = getOpts({
-		tvsData: {
-			term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-			values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+					}
+				}
+			]
 		}
 	})
 
-	await opts.tvs.main(opts.tvsData)
+	await opts.filter.main(opts.filterData)
 
 	// test common bluepill components
 	test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter buttons')
 
 	test.equal(
 		opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
-		opts.tvsData.term.name,
+		opts.filterData.lst[0].tvs.term.name,
 		'should label the pill with the correct term name'
 	)
 
@@ -87,21 +93,25 @@ tape('tvs (common): buttons', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		opts.tvsData.values[0].label,
+			opts.filterData.lst[0].tvs.values[0].label,
 		'should label the pill with the correct value label'
 	)
 
 	//trigger and check negate value change
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
-	await sleep(500)
-	const tipd = opts.tvs.Inner.dom.tip.d
-
-	tipd.node().querySelectorAll('.negate_select')[0].selectedIndex = 1
-	tipd
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(700)
+	const tipd = opts.filter.Inner.dom.treeHead
+	tipd.node().querySelectorAll('input')[0].click()
+	opts.filter.Inner.dom.treeBody
+		.selectAll('.apply_btn')
 		.node()
-		.querySelectorAll('.negate_select')[0]
-		.dispatchEvent(new Event('change'))
+		.click()
 
 	test.equal(
 		opts.holder.node().querySelectorAll('.negate_btn')[0].innerHTML,
@@ -113,23 +123,35 @@ tape('tvs (common): buttons', async test => {
 
 tape('tvs : Categorical', async test => {
 	const opts = getOpts({
-		tvsData: {
-			term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-			values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+					}
+				}
+			]
 		}
 	})
 
-	await opts.tvs.main(opts.tvsData)
+	await opts.filter.main(opts.filterData)
 
 	//trigeer and check tip menu
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(700)
+	const tipd = opts.filter.Inner.dom.treeBody
 
-	await sleep(500)
-	const tipd = opts.tvs.Inner.dom.tip.d
-
-	test.equal(tipd.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-	test.equal(tipd.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
 	test.equal(tipd.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
 	test.equal(
@@ -159,7 +181,7 @@ tape('tvs : Categorical', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		opts.tvsData.values.length + ' Groups',
+			opts.filterData.lst[0].tvs.values.length + ' Groups',
 		'should change the pill value btn after adding value from menu'
 	)
 
@@ -168,17 +190,28 @@ tape('tvs : Categorical', async test => {
 
 tape('tvs : Numerical', async test => {
 	const opts = getOpts({
-		tvsData: {
-			term: {
-				id: 'aaclassic_5',
-				name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
-				unit: 'mg/m²',
-				isfloat: true
-			},
-			ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'aaclassic_5',
+							name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
+							unit: 'mg/m²',
+							isfloat: true
+						},
+						ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+					}
+				}
+			]
 		}
 	})
-	await opts.tvs.main(opts.tvsData)
+
+	await opts.filter.main(opts.filterData)
 
 	// test common bluepill components
 	test.equal(
@@ -187,7 +220,7 @@ tape('tvs : Numerical', async test => {
 			.querySelectorAll('.term_name_btn')[0]
 			.querySelectorAll('label')[0]
 			.innerHTML.split(' ')[0],
-		opts.tvsData.term.name.split(' ')[0],
+		opts.filterData.lst[0].tvs.term.name.split(' ')[0],
 		'should label the pill with the correct term name'
 	)
 
@@ -196,7 +229,7 @@ tape('tvs : Numerical', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split(' ')[0],
-		String(opts.tvsData.ranges[0].start),
+		String(opts.filterData.lst[0].tvs.ranges[0].start),
 		'should label the pill with the correct range label'
 	)
 
@@ -204,20 +237,29 @@ tape('tvs : Numerical', async test => {
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
 
-	await sleep(500)
-	const tipd = opts.tvs.Inner.dom.tip.d
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(700)
+	const tipd = opts.filter.Inner.dom.treeBody
 
-	test.equal(tipd.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-	test.equal(tipd.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.equal(tipd.selectAll('.apply_btn').size(), 2, 'Should have 2 button to apply value change')
 	test.equal(tipd.selectAll('.delete_btn').size(), 1, 'Should have 1 button to remove the range')
-	test.true(tipd.selectAll('input').size() >= 2, 'Should have at least 2 inputs for range start and end')
-	test.equal(tipd.selectAll('input')._groups[0][0].value, '1000', 'Should match start value with data')
-	test.true(tipd.selectAll('select').size() >= 2, 'Should have at least 2 selects for range start and end')
+	test.equal(tipd.node().querySelectorAll('.start_input')[0].innerHTML, '1000', 'Should match start value with data')
+	test.equal(tipd.node().querySelectorAll('.stop_input')[0].innerHTML, '2000', 'Should match stop value with data')
 
 	//trigeer and check range edit
-	tipd.select('input').property('value', 1500)
+	const brush = opts.filter.Inner.pills['1'].Inner.brush
+	d3s.select(tipd
+		.node()
+		.querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511,30.9465])
+	test.equal(tipd.selectAll('table').selectAll('.apply_btn').size(), 1, 'Should have button to apply value change')
+	test.equal(tipd.selectAll('table').selectAll('.reset_btn').size(), 1, 'Should have button to reset the range')
+	
 	tipd
+		.selectAll('table')
 		.selectAll('.apply_btn')
 		.node()
 		.click()
@@ -227,14 +269,16 @@ tape('tvs : Numerical', async test => {
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split(' ')[0],
-		String(opts.tvsData.ranges[0].start),
+			.innerHTML.split(' ')[5].split('<')[0],
+		String(opts.filterData.lst[0].tvs.ranges[0].stop),
 		'should change range from the menu'
 	)
 
-	//trigger and check adding unannotated categories
+	// //trigger and check adding unannotated categories
 	pill.click()
-	await sleep(500)
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
 
 	tipd
 		.node()
@@ -258,19 +302,30 @@ tape('tvs : Numerical', async test => {
 
 tape('tvs : Conditional', async test => {
 	const opts = getOpts({
-		tvsData: {
-			term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
-			values: [{ key: 0, label: '0: No condition' }],
-			bar_by_grade: 1,
-			value_by_max_grade: 1
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						values: [{ key: 0, label: '0: No condition' }],
+						bar_by_grade: 1,
+						value_by_max_grade: 1
+					}
+				}
+			]
 		}
 	})
-	await opts.tvs.main(opts.tvsData)
+	
+	await opts.filter.main(opts.filterData)
 
 	// test common bluepill components
 	test.equal(
 		opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
-		opts.tvsData.term.name,
+		opts.filterData.lst[0].tvs.term.name,
 		'should label the pill with the correct term name'
 	)
 
@@ -279,7 +334,7 @@ tape('tvs : Conditional', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		opts.tvsData.values[0].label,
+		opts.filterData.lst[0].tvs.values[0].label,
 		'should label the pill with the correct value label'
 	)
 
@@ -293,11 +348,14 @@ tape('tvs : Conditional', async test => {
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
 
-	await sleep(500)
-	const tipd = opts.tvs.Inner.dom.tip.d
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(700)
+	const tipd = opts.filter.Inner.dom.treeBody
 
-	test.equal(tipd.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-	test.equal(tipd.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
 	test.equal(tipd.selectAll('.value_checkbox').size(), 5, 'Should have checkbox for each value')
 	test.equal(
@@ -327,18 +385,20 @@ tape('tvs : Conditional', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		opts.tvsData.values.length + ' Grades',
+		opts.filterData.lst[0].tvs.values.length + ' Grades',
 		'should change the pill value btn after adding value from menu'
 	)
 
 	// trigger and test grade type change
 	pill.click()
-	await sleep(500)
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(1000)
 
-	tipd.node().querySelectorAll('select')[2].selectedIndex = 1
+	tipd.node().querySelectorAll('select')[1].selectedIndex = 1
 	tipd
 		.node()
-		.querySelectorAll('select')[2]
+		.querySelectorAll('select')[1]
 		.dispatchEvent(new Event('change'))
 
 	await sleep(800)
@@ -351,12 +411,14 @@ tape('tvs : Conditional', async test => {
 
 	// trigger and test subcondition selection
 	pill.click()
-	await sleep(500)
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
 
-	tipd.node().querySelectorAll('select')[1].selectedIndex = 1
+	tipd.node().querySelectorAll('select')[0].selectedIndex = 1
 	tipd
 		.node()
-		.querySelectorAll('select')[1]
+		.querySelectorAll('select')[0]
 		.dispatchEvent(new Event('change'))
 
 	await sleep(500)
@@ -377,7 +439,7 @@ tape('tvs : Conditional', async test => {
 			.node()
 			.querySelector('.value_btn')
 			.innerHTML.split('<')[0],
-		opts.tvsData.values[0].label,
+		opts.filterData.lst[0].tvs.values[0].label,
 		'should change pill value to subcondtion'
 	)
 
