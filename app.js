@@ -5282,6 +5282,9 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 					}
 				} else if (j.dt == common.dtcnv) {
 					// cnv
+					if (req.query.hide_cnvloss && j.value < 0) return
+					if (req.query.hide_cnvgain && j.value > 0) return
+
 					if (req.query.valueCutoff) {
 						if (Math.abs(j.value) < req.query.valueCutoff) {
 							return
@@ -11556,7 +11559,6 @@ function downloadFile(url, tofile, cb) {
 	f.on('finish', () => {
 		f.close(cb)
 	})
-
 	;(url.startsWith('https') ? https : http)
 		.get(url, response => {
 			response.pipe(f)
