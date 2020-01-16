@@ -186,7 +186,10 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.html(d => d.label)
 
-		//select('body').on('click.sja_filter', ()=>self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent'))
+		select('body').on('click.sja_filter', () => {
+			if (['sja_filter_join_label', 'sja_filter_clause_negate'].includes(event.target.className)) return
+			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		})
 	}
 
 	self.updateUI = function(container, filter) {
@@ -409,13 +412,15 @@ function setInteractivity(self) {
 
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (grpAction) {
-			this.parentNode.parentNode.style.backgroundColor = '#ee5'
+			if (this.className.includes('negate')) this.parentNode.style.backgroundColor = '#ee5'
+			else this.parentNode.parentNode.style.backgroundColor = '#ee5'
 		}
 
 		self.dom.controlsTip.showunder(this)
 	}
 
 	self.handleMenuOptionClick = function(d) {
+		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
 		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
