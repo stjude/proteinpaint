@@ -49,7 +49,7 @@ class Filter {
 				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
 				this.dom.holder
-					.selectAll('.sja_filter_supernester')
+					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			}
@@ -73,6 +73,11 @@ class Filter {
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
 		if (item.type != 'tvslst') return
 		if (!Array.isArray(item.lst)) throw 'invalid or missing filter.lst[]'
+		if (item.lst.length > 1) {
+			if (item.join != 'and' && item.join != 'or') throw 'invalid filter.join value for lst.length > 1'
+		} else if (item.join !== '') {
+			throw 'filter.join must be an empty string when lst.length < 2'
+		}
 		if (!item.lst.length) item.in = true
 		for (const [i, subitem] of item.lst.entries()) {
 			this.validateFilter(subitem)
@@ -115,11 +120,11 @@ function setRenderers(self) {
 		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
 
 		self.dom.holder
-			.selectAll('.sja_filter_supernester')
+			.selectAll('.sja_filter_add_transformer')
 			.data(['and', 'or'])
 			.enter()
 			.append('div')
-			.attr('class', 'sja_filter_supernester')
+			.attr('class', 'sja_filter_add_transformer')
 			.style('display', d => (self.filter && self.filter.join != d ? 'inline-block' : 'none'))
 			.style('margin-left', '10px')
 			.style('padding', '5px')
@@ -186,7 +191,7 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.html(d => d.label)
 
-		select('body').on('click.sja_filter', () => {
+		select('body').on('mousedown.sja_filter', () => {
 			if (
 				[
 					'sja_filter_join_label',
