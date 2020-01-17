@@ -350,7 +350,7 @@ tape('2-entry root filter: visible controls', async test => {
 	test.end()
 })
 
-tape('+NEW button: behavior', async test => {
+tape('+NEW button interaction', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -389,7 +389,7 @@ tape('+NEW button: behavior', async test => {
 	test.end()
 })
 
-tape('add-transformer button: behavior', async test => {
+tape('add-transformer button interaction', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',

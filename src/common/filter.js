@@ -59,7 +59,7 @@ class Filter {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		//if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
 	validateFilter(item) {
