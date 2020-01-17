@@ -501,6 +501,7 @@ function setInteractivity(self) {
 									lst: tvslst.map(self.wrapTvs)
 								})
 							}
+							self.opts.callback(rootCopy)
 						} else if (d == 'and' || tvslst.length < 2) {
 							self.opts.callback({
 								type: 'tvslst',
