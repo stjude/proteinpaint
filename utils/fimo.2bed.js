@@ -1,5 +1,5 @@
-if (process.argv.length != 4) {
-	console.log('<fimo output file> <log likelihood ratio score max> output to stdout')
+if (process.argv.length != 5) {
+	console.log('<fimo output file> <log likelihood ratio score max> <score min> output to stdout')
 	process.exit()
 }
 
@@ -18,7 +18,9 @@ if (process.argv.length != 4) {
 
 const infile = process.argv[2]
 const maxscore = Number(process.argv[3])
-if (Number.isNaN(maxscore)) throw 'invalid score'
+if (Number.isNaN(maxscore)) throw 'invalid max score'
+const minscore = Number(process.argv[4])
+if (Number.isNaN(minscore)) throw 'invalid min score'
 
 const fs = require('fs')
 const readline = require('readline')
@@ -32,7 +34,7 @@ rl.on('line', line => {
 
 	const l = line.split('\t')
 	const score = Number.parseFloat(l[7 - 1])
-	if (score <= 0) return dropped_score++
+	if (score <= minscore) return dropped_score++
 	const j = {
 		strand: l[6 - 1],
 		name: Math.floor(score) + l[6 - 1]
