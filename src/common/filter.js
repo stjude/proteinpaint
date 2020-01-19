@@ -42,9 +42,11 @@ class Filter {
 
 		this.api = {
 			main: async _filter => {
+				// here may accept an object {filter,hiddenFilters}, to be easily extendable in future
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
 				this.filter = filter
+				//this.hiddenFilters = arg.hiddenFilters
 				this.resetActiveData(filter)
 				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
@@ -102,6 +104,41 @@ class Filter {
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
+
+function filterJoin(f1, f2) {
+	/* join two filters with "and", return joined filter
+filter.join can be three cases: "and", "or", ""
+*/
+	if (f1.join == 'or') {
+		// f1 is "or", wrap it with another root layer of "and"
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1]
+		}
+	} else if (f1.join == '') {
+		// f1 is single-tvs
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1.lst[0]]
+		}
+	}
+
+	// now, join f2 with f1
+	if (f2.join == 'and') {
+		f1.lst.push(...f2.lst)
+	} else if (f2.join == 'or') {
+		f1.lst.push(f2)
+	} else {
+		f1.lst.push(f2.lst[0])
+	}
+	return f1
+}
+
+exports.filterJoin = filterJoin
 
 function setRenderers(self) {
 	self.initUI = function() {
@@ -473,6 +510,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
+					// to do filterJoin here
 				}
 			},
 			barchart: {
@@ -550,6 +588,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
+					// to do filterJoin here
 				}
 			},
 			barchart: {
