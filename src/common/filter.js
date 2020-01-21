@@ -519,8 +519,8 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel,
 				termfilter: {
-					show_top_ui: false
-					// filter: self.joinHidden()
+					show_top_ui: false,
+					filter: self.joinHidden()
 				}
 			},
 			barchart: {
@@ -597,8 +597,8 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel,
 				termfilter: {
-					show_top_ui: false
-					// filter: self.joinHidden()
+					show_top_ui: false,
+					filter: self.joinHidden()
 				}
 			},
 			barchart: {

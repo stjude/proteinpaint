@@ -95,10 +95,20 @@ function diaggrp() {
 			},
 			values: [
 				{
-					key: `Wilm's tumor`,
-					label: `Wilm's tumor`
+					key: `Wilms tumor`,
+					label: `Wilms tumor`
 				}
 			]
+		}
+	}
+}
+
+function agedx() {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
+			ranges: [{ start: 2, stop: 5, startinclusive: true }]
 		}
 	}
 }
@@ -432,7 +442,7 @@ tape('add-transformer button interaction, 2-pill', async test => {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [diaggrp(), gettvs('abc')]
+			lst: [diaggrp(), agedx()]
 		}
 	})
 
@@ -451,6 +461,8 @@ tape('add-transformer button interaction, 2-pill', async test => {
 		'should display the tree menu when clicking the add-transformer button'
 	)
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
+	test.end()
+	return
 	await addDemographicSexFilter(opts, adder)
 	test.deepEqual(
 		opts.filter.Inner.filter.lst[0].lst.map(d => d.tvs.id),
@@ -730,12 +742,29 @@ tape('nested filters', async test => {
 			in: true,
 			join: 'and',
 			lst: [
-				gettvs('abc'),
+				agedx(),
 				{
 					type: 'tvslst',
 					in: true,
 					join: 'or',
-					lst: [gettvs('def'), gettvs('xyz')]
+					lst: [
+						diaggrp(),
+						{
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'Arrhythmias',
+									name: 'Arrhythmias',
+									iscondition: true
+								},
+								value: {
+									bar_by_grade: true,
+									values: [{ key: 2, label: '2' }],
+									value_by_max_grade: true
+								}
+							}
+						}
+					]
 				}
 			]
 		}
