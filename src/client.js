@@ -318,7 +318,8 @@ export class Menu {
 
 	clear() {
 		if (this.clearSelector)
-			d3select(this.clearSelector)
+			this.d
+				.select(this.clearSelector)
 				.selectAll('*')
 				.remove()
 		else this.d.selectAll('*').remove()

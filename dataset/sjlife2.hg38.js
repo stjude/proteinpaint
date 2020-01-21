@@ -339,7 +339,21 @@ module.exports = {
 									term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
 									values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 								}
-							]
+							],
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+											values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
+										}
+									}
+								]
+							}
 						},
 						{
 							is_population: true,

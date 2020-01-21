@@ -205,9 +205,17 @@ tape('Numerical term overlay', function(test) {
 			.to(testTerm2Pill, { wait: 600 })
 			.run(triggerBluePill)
 			.run(testGrpMenu)
-			.run(triggerBinChange)
-			.run(triggerBluePill)
+			.use(triggerBinChange)
+			.to(triggerBluePill, { wait: 600 })
 			.run(testBinChange)
+			.use(triggerFirstBinChange)
+			.to(triggerBluePill, { wait: 600 })
+			.run(testFirstBinChange)
+			.use(triggerLastBinChange)
+			.to(triggerBluePill, { wait: 600 })
+			.run(testLastBinChange)
+			.use(triggerResetBins, { wait: 600 })
+			.to(testResetBins)
 			.done(test)
 	}
 
@@ -268,6 +276,65 @@ tape('Numerical term overlay', function(test) {
 			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
 			'5',
 			'Should change "bin size" from input'
+		)
+	}
+
+	function triggerFirstBinChange(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1]
+
+		first_bin_input.value = 7
+
+		//press 'Enter' to update bins
+		first_bin_input.addEventListener('keyup', () => {})
+		first_bin_input.dispatchEvent(enter_event)
+	}
+
+	function testFirstBinChange(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value,
+			'7',
+			'Should change "first bin" from input'
+		)
+	}
+
+	function triggerLastBinChange(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		const last_bin_select = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('select')._groups[0][0]
+		last_bin_select.selectedIndex = 1
+		last_bin_select.dispatchEvent(new Event('change'))
+
+		const last_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0]
+
+		last_bin_input.value = 20
+
+		//press 'Enter' to update bins
+		last_bin_input.addEventListener('keyup', () => {})
+		last_bin_input.dispatchEvent(enter_event)
+	}
+
+	function testLastBinChange(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value,
+			'20',
+			'Should change "last bin" from input'
+		)
+	}
+
+	function triggerResetBins(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		const reset_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.sja_menuoption')._groups[0][0]
+		reset_btn.click()
+	}
+
+	function testResetBins(plotControls) {
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value,
+			'5',
+			'Should reset the bins by "Reset" button'
 		)
 	}
 })

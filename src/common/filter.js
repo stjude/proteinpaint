@@ -42,12 +42,18 @@ class Filter {
 
 		this.api = {
 			main: async _filter => {
+				// here may accept an object {filter,hiddenFilters}, to be easily extendable in future
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
 				this.filter = filter
+				//this.hiddenFilters = arg.hiddenFilters
 				this.resetActiveData(filter)
 				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, filter)
+				this.dom.holder
+					.selectAll('.sja_filter_add_transformer')
+					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
+				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			}
 		}
 	}
@@ -55,11 +61,10 @@ class Filter {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		//if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
-	validateFilter(item, ancestry = []) {
-		item.ancestry = ancestry
+	validateFilter(item) {
 		// for reliably binding data to DOM elements
 		// and associating updated data copy to
 		// the currently bound data
@@ -70,9 +75,14 @@ class Filter {
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
 		if (item.type != 'tvslst') return
 		if (!Array.isArray(item.lst)) throw 'invalid or missing filter.lst[]'
+		if (item.lst.length > 1) {
+			if (item.join != 'and' && item.join != 'or') throw 'invalid filter.join value for lst.length > 1'
+		} else if (item.join !== '') {
+			throw 'filter.join must be an empty string when lst.length < 2'
+		}
 		if (!item.lst.length) item.in = true
 		for (const [i, subitem] of item.lst.entries()) {
-			this.validateFilter(subitem, [{ $id: item.$id, in: item.in }, ...ancestry])
+			this.validateFilter(subitem)
 		}
 	}
 	resetActiveData(filter) {
@@ -86,11 +96,6 @@ class Filter {
 				filter: this.findItem(filter, this.activeData.filter.$id),
 				menuOpt: this.activeData.menuOpt
 			}
-			this.dom.controlsTip.d
-				.selectAll('tr')
-				.filter(d => d.action == 'negate')
-				.selectAll('td:nth-child(2)')
-				.each(this.setNegateToggles)
 		}
 	}
 	getId(item) {
@@ -99,6 +104,41 @@ class Filter {
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
+
+function filterJoin(f1, f2) {
+	/* join two filters with "and", return joined filter
+filter.join can be three cases: "and", "or", ""
+*/
+	if (f1.join == 'or') {
+		// f1 is "or", wrap it with another root layer of "and"
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1]
+		}
+	} else if (f1.join == '') {
+		// f1 is single-tvs
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1.lst[0]]
+		}
+	}
+
+	// now, join f2 with f1
+	if (f2.join == 'and') {
+		f1.lst.push(...f2.lst)
+	} else if (f2.join == 'or') {
+		f1.lst.push(f2)
+	} else {
+		f1.lst.push(f2.lst[0])
+	}
+	return f1
+}
+
+exports.filterJoin = filterJoin
 
 function setRenderers(self) {
 	self.initUI = function() {
@@ -110,11 +150,26 @@ function setRenderers(self) {
 			.style('margin', '2px 10px 2px 2px')
 			.style('padding', '5px')
 			.style('border-radius', '5px')
-			.style('background-color', '#ececec')
+			//.style('background-color', '#ececec')
 			.style('cursor', 'pointer')
 			.on('click', self.displayTreeNew)
 
 		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
+
+		self.dom.holder
+			.selectAll('.sja_filter_add_transformer')
+			.data(['and', 'or'])
+			.enter()
+			.append('div')
+			.attr('class', 'sja_filter_add_transformer')
+			.style('display', d => (self.filter && self.filter.join != d ? 'inline-block' : 'none'))
+			.style('margin-left', '10px')
+			.style('padding', '5px')
+			.style('border-radius', '5px')
+			//.style('background-color', '#ececec')
+			.style('cursor', 'pointer')
+			.html(d => '+' + d.toUpperCase())
+			.on('click', self.displayTreeNew)
 
 		self.dom.table = self.dom.controlsTip
 			.clear()
@@ -126,10 +181,9 @@ function setRenderers(self) {
 			.data([
 				{ action: 'edit', html: ['', 'Edit', '&#9658;'], handler: self.editTerm },
 				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
-				{ action: 'join-and', html: ['&#10010;', '', '&#9658;'] },
-				{ action: 'join-or', html: ['&#10010;', '', '&#9658;'] },
-				{ action: 'negate', html: ['', '', ''], handler: self.negateClause },
-				{ action: 'remove', html: ['&#10006;', '', ''], handler: self.removeTransform }
+				{ action: 'join', html: ['&#10010;', '', '&#9658;'] },
+				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
+				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
 			])
 			.enter()
 			.append('tr')
@@ -173,97 +227,19 @@ function setRenderers(self) {
 			.style('margin-right', '5px')
 			.style('vertical-align', 'top')
 			.html(d => d.label)
-	}
 
-	self.setNegateToggles = function(d) {
-		if (!self.activeData) return
-		const item = self.activeData.item
-		const data = [{ $id: item.$id, in: 'in' in item ? item.in : item.tvs.isnot }]
-		if (self.filter.lst.length > 1) data.push(...item.ancestry)
-		const spans = select(this)
-			.selectAll('span')
-			.data(data)
-		spans.exit().remove()
-		spans
-			.enter()
-			.append('span')
-			.style('margin', '3px 3px 1px 0')
-			.style('padding', '1px 3px')
-			.style('border', '1px solid #ccc')
-
-		select(this)
-			.selectAll('span')
-			.style('color', d => {
-				if (d.$id === item.$id) return item.tvs.isnot ? '#fff' : '#000'
-				else return !d.in ? '#fff' : '#000'
-			})
-			.style('background', d => {
-				if (d.$id === item.$id) return item.tvs.isnot ? 'rgb(104,0,0)' : 'transparent'
-				else return !d.in ? 'rgb(104,0,0)' : 'transparent'
-			})
-			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
-			.html(d => (d.$id == item.$id ? 'Negate' : ')'))
-	}
-
-	self.setRemoveBtns = function(d) {
-		if (!self.activeData) return
-		const item = self.activeData.item
-		const data = [{ $id: item.$id }]
-		if (self.filter.lst.length > 1) data.push(...item.ancestry)
-		const spans = select(this)
-			.selectAll('span')
-			.data(data)
-		spans.exit().remove()
-		spans
-			.enter()
-			.append('span')
-			.style('margin', '1px 3px 1px 0')
-			.style('padding', '1px 3px')
-			.style('border', '1px solid #ccc')
-
-		select(this)
-			.selectAll('span')
-			.style('font-weight', d => (d.$id == item.$id ? '400' : '600'))
-			.html(d => (d.$id == item.$id ? 'Remove' : ')'))
-	}
-
-	self.setJoinBtns = function(d) {
-		if (!self.activeData) return
-		const join = this.parentNode.__data__.action.split('-')[1]
-		const joiner = join.toUpperCase()
-		const filter = self.activeData.filter
-		const data = [joiner]
-		if (filter.join !== join && self.filter.lst.length > 1) data.push(')', joiner)
-		const spans = select(this)
-			.selectAll('span')
-			.data(data)
-		spans
-			.exit()
-			.on('click', null)
-			.remove()
-		spans
-			.enter()
-			.append('span')
-			.style('margin', '1px 3px 1px 0')
-			.style('padding', '1px 3px')
-
-		select(this)
-			.selectAll('span')
-			.html(d => d)
-			.style('border', (d, i) => (d == joiner ? '1px solid #ccc' : 'none'))
-			.style('font-weight', d => (d === ')' ? '600' : '400'))
-			.style('background-color', 'transparent')
-			.style('color', '#000')
-			.on('click', self.setActiveJoinSpan)
-	}
-
-	self.setActiveJoinSpan = function(d, i) {
-		self.activeData.spanD = d
-		self.activeData.spanI = i < 2 ? 0 : 2
-		select(this.parentNode)
-			.selectAll('span')
-			.style('background-color', (s, j) => (i == j && i !== 1 ? 'rgb(57, 108, 152)' : 'transparent'))
-			.style('color', (s, j) => (i == j && i !== 1 ? '#fff' : '#000'))
+		select('body').on('mousedown.sja_filter', () => {
+			if (
+				[
+					'sja_filter_join_label',
+					'sja_filter_clause_negate',
+					'sja_filter_paren_open',
+					'sja_filter_paren_close'
+				].includes(event.target.className)
+			)
+				return
+			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		})
 	}
 
 	self.updateUI = function(container, filter) {
@@ -289,20 +265,25 @@ function setRenderers(self) {
 		select(this).style('display', 'inline-block')
 
 		select(this)
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_filter_clause_negate')
-			.style('display', filter.in ? 'none' : 'inline')
+			.style('display', filter.in ? 'none' : 'inline-block')
 			.style('color', 'rgb(102,0,0)')
 			.style('font-weight', 500)
+			.style('cursor', 'pointer')
 			.html('NOT')
+			.on('click', self.displayControlsMenu)
 
 		select(this)
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
+			.style('display', filter === self.filter && filter.in ? 'none' : 'inline-block')
+			.style('padding', '0 5px')
 			.style('font-weight', 500)
-			.style('font-size', '20px')
+			.style('font-size', '24px')
+			.style('cursor', 'pointer')
+			.on('click', self.displayControlsMenu)
 
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -315,12 +296,15 @@ function setRenderers(self) {
 			.each(self.addItem)
 
 		select(this)
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_filter_paren_close')
+			.style('padding', '0 5px')
 			.html(')')
 			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
-			.style('font-size', '20px')
+			.style('font-size', '24px')
+			.style('cursor', 'pointer')
+			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateGrp = function(item, i) {
@@ -328,11 +312,11 @@ function setRenderers(self) {
 
 		select(this)
 			.select(':scope > .sja_filter_clause_negate')
-			.style('display', filter.in ? 'none' : 'inline')
+			.style('display', filter.in ? 'none' : 'inline-block')
 
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', filter !== self.filter || !filter.in ? 'inline' : 'none')
+			.style('display', filter !== self.filter || !filter.in ? 'inline-block' : 'none')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
@@ -407,6 +391,8 @@ function setRenderers(self) {
 				tvs.isnot = self.dom.isNotInput.property('checked')
 				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
 				self.opts.callback(rootCopy)
+				self.dom.controlsTip.hide()
+				self.dom.treeTip.hide()
 			}
 		})
 		self.pills[item.$id] = pill
@@ -446,7 +432,9 @@ function setRenderers(self) {
 			.style('border', 'none')
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
+			.style('cursor', 'pointer')
 			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
+			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateJoinLabel = function(item) {
@@ -464,36 +452,46 @@ function setInteractivity(self) {
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
-		self.activeData = { item, filter }
+		self.activeData = { item, filter, elem: this }
 
+		const grpAction =
+			this.className.includes('join') || this.className.includes('negate') || this.className.includes('paren')
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+
+		rows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
+
 		rows
-			.filter(d => d.action == 'negate')
-			.selectAll('td:nth-child(2)')
-			.each(self.setNegateToggles)
-		rows
-			.filter(d => d.action == 'remove')
-			.selectAll('td:nth-child(2)')
-			.each(self.setRemoveBtns)
-		self.restyleMenuBtns(rows)
+			.filter(d => d.action == 'join')
+			.style(
+				'display',
+				(filter == self.filter && filter.lst.length == 1) ||
+					this.className.includes('negate') ||
+					this.className.includes('paren')
+					? 'none'
+					: 'table-row'
+			)
+			.select('td:nth-child(2)')
+			.html(grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND')
+
+		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		if (grpAction) {
+			if (this.className.includes('join')) this.parentNode.parentNode.style.backgroundColor = '#ee5'
+			else this.parentNode.style.backgroundColor = '#ee5'
+		}
+
 		self.dom.controlsTip.showunder(this)
 	}
 
 	self.handleMenuOptionClick = function(d) {
+		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
-
-		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-		if (d.action.startsWith('join-')) {
-			if (event.target.tagName.toUpperCase() == 'TD') {
-				this.firstChild.nextSibling.firstChild.click()
-			}
-		} else {
-			delete self.activeData.spanD
-			delete self.activeData.spanI
-			self.restyleMenuBtns(rows)
+		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
+			self.activeData.item = self.activeData.filter
+			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
 		}
 
+		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
 		if (d.bar_click_override || !d.handler) {
 			self.displayTreeMenu.call(this, d)
 		} else {
@@ -501,18 +499,8 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.restyleMenuBtns = function(rows) {
-		rows
-			.filter(d => d.action == 'join-and')
-			.selectAll('td:nth-child(2)')
-			.each(self.setJoinBtns)
-		rows
-			.filter(d => d.action == 'join-or')
-			.selectAll('td:nth-child(2)')
-			.each(self.setJoinBtns)
-	}
-
 	self.displayTreeNew = function(d) {
+		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		self.dom.isNotInput.property('checked', self.activeData.item.tvs && self.activeData.item.tvs.isnot)
 		self.dom.treeTip.clear().showunder(this)
 		appInit(null, {
@@ -522,6 +510,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
+					// to do filterJoin here
 				}
 			},
 			barchart: {
@@ -529,8 +518,52 @@ function setInteractivity(self) {
 					self.dom.controlsTip.hide()
 					self.dom.treeTip.hide()
 					const rootCopy = JSON.parse(JSON.stringify(self.filter))
-					rootCopy.lst.push(...tvslst.map(self.wrapTvs))
-					self.opts.callback(rootCopy)
+
+					if (!rootCopy.lst.length) {
+						if (tvslst.length > 1) rootCopy.join = 'and'
+						rootCopy.lst.push(...tvslst.map(self.wrapTvs))
+						self.opts.callback(rootCopy)
+					} else if (d != 'or' && d != 'and') {
+						throw 'unhandled new term(s): invalid appender join value'
+					} else {
+						if (!rootCopy.join) rootCopy.join = d // 'and' || 'or'
+
+						if (rootCopy.join == d) {
+							if (tvslst.length < 2 || rootCopy.join == 'and') {
+								rootCopy.lst.push(...tvslst.map(self.wrapTvs))
+							} else {
+								rootCopy.push({
+									type: 'tvslst',
+									in: true,
+									join: 'and',
+									lst: tvslst.map(self.wrapTvs)
+								})
+							}
+							self.opts.callback(rootCopy)
+						} else if (d == 'and' || tvslst.length < 2) {
+							self.opts.callback({
+								type: 'tvslst',
+								in: true,
+								join: d,
+								lst: [rootCopy, ...tvslst.map(self.wrapTvs)]
+							})
+						} else {
+							self.opts.callback({
+								type: 'tvslst',
+								in: true,
+								join: 'or',
+								lst: [
+									rootCopy,
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: tvslst.map(self.wrapTvs)
+									}
+								]
+							})
+						}
+					}
 				}
 			}
 		})
@@ -544,17 +577,8 @@ function setInteractivity(self) {
 			.style('background-color', function() {
 				return this == thisRow ? '#eeee55' : 'transparent'
 			})
-			.filter(d => d.action.startsWith('join-'))
-			.selectAll('td > span')
-			.style('background-color', function(spanD) {
-				return spanD === self.activeData.spanD ? this.style.backgroundColor : 'transparent'
-			})
-			.style('color', function(spanD) {
-				return spanD === self.activeData.spanD ? this.style.color : '#000'
-			})
 
 		self.dom.treeTip.clear().showunderoffset(this.lastChild)
-		self.activeData.joiner = d.action.split('-')[1]
 		const filter = self.activeData.filter
 
 		appInit(null, {
@@ -564,14 +588,17 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
+					// to do filterJoin here
 				}
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
 					? d.bar_click_override
-					: self.activeData.joiner == filter.join || !filter.join || !filter.lst.length
+					: !filter.join ||
+					  !filter.lst.length ||
+					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 					? self.appendTerm
-					: self.activeData.spanI === 0
+					: 1 //self.activeData.item.type == 'tvs'
 					? self.subnestFilter
 					: self.editFilter
 			}
@@ -594,23 +621,21 @@ function setInteractivity(self) {
 		return d.action == 'edit' ? '#eeee55' : 'transparent'
 	}
 
-	self.negateClause = function(d) {
+	self.handleNotLabelClick = function(d) {
+		self.activeData = {
+			item: this.__data__
+		}
+		self.negateClause()
+	}
+
+	self.negateClause = function() {
 		self.dom.controlsTip.hide()
 		self.dom.treeTip.hide()
-		const t =
-			event.target.tagName.toUpperCase() == 'SPAN'
-				? event.target.__data__
-				: event.target.parentNode.firstChild.nextSibling.firstChild.__data__
-		//const item = self.activeData.item
 		//const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const item = self.findItem(rootCopy, t.$id)
-		if (t.$id == item.$id) {
-			if (item.type == 'tvslst') item.in = !item.in
-			else item.tvs.isnot = !item.tvs.isnot
-		} else {
-			item.in = !item.in
-		}
+		const item = self.findItem(rootCopy, self.activeData.item.$id)
+		if (item.type == 'tvslst') item.in = !item.in
+		else item.tvs.isnot = !item.tvs.isnot
 		self.opts.callback(rootCopy)
 	}
 
@@ -622,16 +647,17 @@ function setInteractivity(self) {
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
-		filterCopy.lst[i] =
-			tvslst.length < 2
-				? self.wrapTvs(tvslst[0])
-				: {
-						// transform from tvs to tvslst
-						in: true,
-						type: 'tvslst',
-						join: joiner,
-						lst: [item, ...tvslst.map(self.wrapTvs)]
-				  }
+		if (tvslst.length < 2 || filterCopy.join == 'and') {
+			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapTvs))
+		} else {
+			filterCopy.lst[i] = {
+				// transform from tvs to tvslst
+				in: !self.dom.isNotInput.property('checked'),
+				type: 'tvslst',
+				join: 'and',
+				lst: tvslst.map(self.wrapTvs)
+			}
+		}
 		self.opts.callback(rootCopy)
 	}
 
@@ -642,9 +668,16 @@ function setInteractivity(self) {
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
-		filterCopy.lst.push(...tvslst.map(self.wrapTvs))
-		if (!filterCopy.join) {
-			filterCopy.join = self.activeData.joiner
+		if (tvslst.length < 2 || filterCopy.join == 'and') {
+			filterCopy.lst.push(...tvslst.map(self.wrapTvs))
+		} else {
+			filterCopy.lst.push({
+				// transform from tvs to tvslst
+				in: !self.dom.isNotInput.property('checked'),
+				type: 'tvslst',
+				join: 'and',
+				lst: tvslst.map(self.wrapTvs)
+			})
 		}
 		self.opts.callback(rootCopy)
 	}
@@ -659,9 +692,9 @@ function setInteractivity(self) {
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		// transform from tvs to tvslst
 		filterCopy.lst[i] = {
-			in: true,
+			in: !self.dom.isNotInput.property('checked'),
 			type: 'tvslst',
-			join: self.activeData.joiner,
+			join: filter.join == 'or' ? 'and' : 'or',
 			lst: [item, ...tvslst.map(self.wrapTvs)]
 		}
 		self.opts.callback(rootCopy)
@@ -674,10 +707,10 @@ function setInteractivity(self) {
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findParent(rootCopy, filter.$id)
-		if (filterCopy == rootCopy && filterCopy.join != self.activeData.spanD.toLowerCase()) {
+		if (filterCopy == rootCopy) {
 			self.opts.callback({
 				type: 'tvslst',
-				in: true,
+				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
 				lst: [filterCopy, ...tvslst.map(self.wrapTvs)]
 			})

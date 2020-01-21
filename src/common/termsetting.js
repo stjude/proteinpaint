@@ -806,10 +806,12 @@ function setInteractivity(self) {
 			.style('margin-bottom', '7px')
 			.on('change', () => {
 				self.apply_last_bin_change(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q)
-				self.opts.callback({
-					term: self.term,
-					q: self.q
-				})
+				if (last_bin_select.node().value == 'auto') {
+					self.opts.callback({
+						term: self.term,
+						q: self.q
+					})
+				}
 			})
 
 		last_bin_select
