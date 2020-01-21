@@ -101,14 +101,22 @@ class Filter {
 	getId(item) {
 		return item.$id
 	}
+	joinHidden() {
+		if (this.hiddenFilters) return filterJoin(this.filter, this.hiddenFilters)
+		return this.filter
+	}
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
 
-function filterJoin(f1, f2) {
-	/* join two filters with "and", return joined filter
-filter.join can be three cases: "and", "or", ""
+/* join a list of filters into the first (f1)with "and", return joined filter
+f1:{}
+  a filter
+  if f1.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
+lst:[]
+  a list of filters to join into f1, each element is a full blown filter
 */
+function filterJoin(f1, lst) {
 	if (f1.join == 'or') {
 		// f1 is "or", wrap it with another root layer of "and"
 		f1 = {
@@ -126,14 +134,16 @@ filter.join can be three cases: "and", "or", ""
 			lst: [f1.lst[0]]
 		}
 	}
+	// now, f1.join should be "and"
 
-	// now, join f2 with f1
-	if (f2.join == 'and') {
-		f1.lst.push(...f2.lst)
-	} else if (f2.join == 'or') {
-		f1.lst.push(f2)
-	} else {
-		f1.lst.push(f2.lst[0])
+	for (const f of lst) {
+		if (f.join == 'and') {
+			f1.lst.push(...f.lst)
+		} else if (f.join == 'or') {
+			f1.lst.push(f)
+		} else {
+			f1.lst.push(f.lst[0])
+		}
 	}
 	return f1
 }
@@ -510,7 +520,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
-					// to do filterJoin here
+					// filter: self.joinHidden()
 				}
 			},
 			barchart: {
@@ -588,7 +598,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
-					// to do filterJoin here
+					// filter: self.joinHidden()
 				}
 			},
 			barchart: {
