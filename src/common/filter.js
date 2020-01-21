@@ -281,7 +281,7 @@ function setRenderers(self) {
 			.style('display', filter === self.filter && filter.in ? 'none' : 'inline-block')
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
-			.style('font-size', '20px')
+			.style('font-size', '24px')
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
 
@@ -302,7 +302,7 @@ function setRenderers(self) {
 			.html(')')
 			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
-			.style('font-size', '20px')
+			.style('font-size', '24px')
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
 	}
