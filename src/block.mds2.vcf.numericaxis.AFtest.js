@@ -430,9 +430,11 @@ function show_group_termdb(group, tk, block) {
 		callback: async f => {
 			group.filter = f
 			await tk.load()
+			group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk), { visibility: 'hidden' })
+			// async!
+			group.filterApi.main(group.filterCombined)
 		}
 	})
-	console.log(get_hidden_filters(tk))
 	group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk), { visibility: 'hidden' })
 	// async!
 	group.filterApi.main(group.filterCombined)
