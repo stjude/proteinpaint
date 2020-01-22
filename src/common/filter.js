@@ -41,28 +41,15 @@ class Filter {
 		this.initUI()
 
 		this.api = {
-			main: async arg => {
+			main: async _filter => {
 				/*
-				.filter{}
-				  the visible filter
-				.hiddenFilters[]
-				  each element is a full filter
-				  the list will be joined with this.filter by "and" at root level, each has the ".hidden" flag
-				  if the resulting this.filter is {join:"and",lst:{ {visiblefilter}, {hiddenfilter} }}
-				  then it must not render the root level "and"
+				_filter{}
+				  the filter data structure
+				  when .hidden is set to an item, it will be hidden from at-a-glance UI
 				*/
-				if (!arg.filter) throw 'main(): .filter{} missing'
-				const filter = JSON.parse(JSON.stringify(arg.filter))
+				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
-				if (arg.hiddenFilters && arg.hiddenFilters.length > 0) {
-					for (const f of arg.hiddenFilters) {
-						this.validateFilter(f)
-						f.hidden = true
-					}
-					this.filter = filterJoin(filter, arg.hiddenFilters)
-				} else {
-					this.filter = filter
-				}
+				this.filter = filter
 				this.resetActiveData(this.filter)
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, this.filter)
@@ -122,6 +109,8 @@ class Filter {
 exports.filterInit = rx.getInitFxn(Filter)
 
 /* join a list of filters into the first (f1)with "and", return joined filter
+right now only used by caller app, not filter.js
+
 f1:{}
   a filter
   if f1.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
