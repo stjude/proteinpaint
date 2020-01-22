@@ -34,7 +34,7 @@ runproteinpaint({
 						groups:[
 							{
 								is_termdb:true,
-								terms:[
+								filter:{ type:'tvslst',join:'',in:true,lst:[ {type:'tvs',tvs:
 									{
 										term:{id:'diaggrp',name:'Diagnosis group',iscategorical:true},
 										values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
@@ -73,7 +73,8 @@ runproteinpaint({
 										value_by_max_grade:true,
 									}
 									*/
-								]
+									}]
+								}
 							},
 							{ is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true }
 						]
