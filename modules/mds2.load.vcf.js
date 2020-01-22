@@ -4,7 +4,6 @@ const spawn = require('child_process').spawn
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
-const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').validate_termvaluesetting
 const termdbsql = require('./termdb.sql')
 
 /*
@@ -13,7 +12,6 @@ handle_vcfbyrange
 handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
-wrap_validate_termvaluesetting
 set_querymode
 	get_columnidx_byterms
 	filter_samples_by_termvalue
@@ -212,12 +210,7 @@ generate the "querymode" object that drives subsequent queries
 				continue
 			}
 			if (g.is_termdb) {
-				wrap_validate_termvaluesetting(g.terms, 'AFtest.group')
-				g.columnidx = get_columnidx_byterms(g.terms, ds)
-				if (q.AFtest.termfilter) {
-					// further filter samples
-					g.columnidx = filter_samples_by_termvalue(g.columnidx, ds, q.AFtest.termfilter)
-				}
+				g.columnidx = get_columnidx_byterms(g.filter, ds)
 				continue
 			}
 			if (g.is_population) {
@@ -312,19 +305,14 @@ vcftk
 	return pop2average
 }
 
-function get_columnidx_byterms(terms, ds) {
+function get_columnidx_byterms(filter, ds) {
 	/*
-terms is a list, each ele is one term-value setting
+filter is the filter of the group
 a sample must meet all term conditions
 */
 
 	if (!ds.track) throw 'ds.track{} missing'
-	const filters = [] // temp filter lst
-	if (ds.track.sample_termfilter) {
-		filters.push(...ds.track.sample_termfilter)
-	}
-	filters.push(...terms)
-	const samples = termdbsql.get_samples(filters, ds)
+	const samples = termdbsql.get_samples(filter, ds)
 	return samples.reduce((lst, samplename) => {
 		const i = ds.track.vcf.sample2arrayidx.get(samplename)
 		if (i >= 0) lst.push(i)
@@ -334,6 +322,7 @@ a sample must meet all term conditions
 
 function filter_samples_by_termvalue(sampleidx, ds, termfilter) {
 	/*
+	not in use
 for a termdb group from AFtest
 
 sampleidx[]
@@ -762,8 +751,8 @@ function _m_is_filtered(q, result, mockblock) {
 	}
 }
 
-function wrap_validate_termvaluesetting(terms, where) {
-	validate_termvaluesetting(terms, where)
+function prep_termdbgrp(terms) {
+	// not in use
 	for (const t of terms) {
 		if (t.term.iscategorical) {
 			// convert values[{key,label}] to set

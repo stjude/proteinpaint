@@ -284,6 +284,7 @@ groupindex:
 		tabs.push({
 			label: '<span style="background:' + color_termdb + ';border-radius:4px">&nbsp;&nbsp;</span> Clinical info',
 			callback: async div => {
+				// FIXME
 				let filter = []
 				if (tk.sample_termfilter) {
 					filter = JSON.parse(JSON.stringify(tk.sample_termfilter))
@@ -404,9 +405,9 @@ function show_group(tk, block, group) {
 
 function get_hidden_filters(tk) {
 	// to get the list of hidden filters to be passed to filterInit
-	// FIXME to support full filter at following locations, right now they are just barebone tvs
 	const lst = []
 	const v = may_get_param_AFtest_termfilter(tk)
+	// keep AFtest.termfilter as a single tvs
 	if (v) {
 		lst.push({
 			type: 'tvslst',
@@ -416,14 +417,7 @@ function get_hidden_filters(tk) {
 		})
 	}
 	if (tk.sample_termfilter) {
-		lst.push({
-			type: 'tvslst',
-			join: tk.sample_termfilter.length > 1 ? 'and' : '',
-			in: true,
-			lst: tk.sample_termfilter.map(f => {
-				return { type: 'tvs', tvs: JSON.parse(JSON.stringify(f)) }
-			})
-		})
+		lst.push(JSON.parse(JSON.stringify(tk.sample_termfilter)))
 	}
 	return lst.length ? lst : undefined
 }
@@ -438,11 +432,9 @@ function show_group_termdb(group, tk, block) {
 			await tk.load()
 		}
 	})
+	group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk))
 	// async!
-	group.filterApi.main({
-		filter: group.filter,
-		hiddenFilters: get_hidden_filters(tk)
-	})
+	group.filterApi.main(group.filterCombined)
 
 	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = group.dom.td3

@@ -6,8 +6,6 @@ import * as common from './common'
 import * as client from './client'
 import { vcf_m_color, divide_data_to_group } from './block.mds2.vcf'
 import { vcf_clickvariant } from './block.mds2.vcf.clickvariant'
-import { validate_termvaluesetting } from './mds.termdb.termvaluesetting'
-import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
 /*
 adapted from legacy code
@@ -868,7 +866,8 @@ and switching numeric axis category
 		if (nm.AFtest.groups.length < 2) throw 'AFtest.groups[] must have at least two elements'
 		for (const g of nm.AFtest.groups) {
 			if (g.is_termdb) {
-				validate_termvaluesetting(g.terms, 'one group of AFtest.groups')
+				if (!g.filter) throw '.filter{} missing from a is_termdb group'
+				// TODO validate filter
 			} else if (g.is_infofield) {
 				if (!g.key) throw 'key missing from a is_infofield group'
 				if (!nm.AFtest.allowed_infofields.find(i => i.key == g.key))
@@ -1020,7 +1019,7 @@ append numeric axis parameter to object for loadTk
 			if (g.is_termdb) {
 				par.AFtest.groups.push({
 					is_termdb: true,
-					terms: termvaluesettingui.to_parameter(g.terms)
+					filter: g.filterCombined // filterCombined will contain active hidden filters
 				})
 				continue
 			}
