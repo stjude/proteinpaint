@@ -45,11 +45,11 @@ class Filter {
 				/*
 				_filter{}
 				  the filter data structure
-				  when .hidden is set to an item, it will be hidden from at-a-glance UI
+				  when item.visibility=='hidden', it will be hidden from at-a-glance UI
 				*/
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
-				this.filter = filter
+				this.filter = this.getVisibleFilter(filter)
 				this.resetActiveData(this.filter)
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.updateUI(this.dom.filterContainer, this.filter)
@@ -76,6 +76,9 @@ class Filter {
 
 		if (!('type' in item)) throw 'missing filter.type'
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
+		if (!('visibility' in item)) item.visibility = 'default'
+		if (!['default', 'collapsed', 'hidden'].includes(item.visibility)) throw 'invalid filter.visibility value'
+
 		if (item.type != 'tvslst') return
 		if (!Array.isArray(item.lst)) throw 'invalid or missing filter.lst[]'
 		if (item.lst.length > 1) {
@@ -107,51 +110,6 @@ class Filter {
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
-
-/* join a list of filters into the first (f1)with "and", return joined filter
-right now only used by caller app, not filter.js
-
-f1:{}
-  a filter
-  if f1.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
-lst:[]
-  a list of filters to join into f1, each element is a full blown filter
-*/
-function filterJoin(f1, lst) {
-	if (!lst || lst.length == 0) return f1
-	// TODO needs unit testing
-	if (f1.join == 'or') {
-		// f1 is "or", wrap it with another root layer of "and"
-		f1 = {
-			type: 'tvslst',
-			join: 'and',
-			in: true,
-			lst: [f1]
-		}
-	} else if (f1.join == '') {
-		// f1 is single-tvs
-		f1 = {
-			type: 'tvslst',
-			join: 'and',
-			in: true,
-			lst: [f1.lst[0]]
-		}
-	}
-	// now, f1.join should be "and"
-
-	for (const f of lst) {
-		if (f.join == 'and') {
-			f1.lst.push(...f.lst)
-		} else if (f.join == 'or') {
-			f1.lst.push(f)
-		} else {
-			f1.lst.push(f.lst[0])
-		}
-	}
-	return f1
-}
-
-exports.filterJoin = filterJoin
 
 function setRenderers(self) {
 	self.initUI = function() {
@@ -255,12 +213,24 @@ function setRenderers(self) {
 		})
 	}
 
+	self.getVisibleFilter = function(filter) {
+		const lst = filter.lst.filter(d => d.visibility != 'hidden')
+		return {
+			$id: filter.$id,
+			type: filter.type,
+			in: filter.in,
+			join: lst.length > 1 ? filter.join : '',
+			lst
+		}
+	}
+
 	self.updateUI = function(container, filter) {
+		const visibleFilter = self.getVisibleFilter(filter)
 		const pills = container
-			.datum(filter)
-			.style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
+			.datum(visibleFilter)
+			.style('display', !visibleFilter.lst || !visibleFilter.lst.length ? 'none' : 'inline-block')
 			.selectAll(':scope > .sja_filter_grp')
-			.data([filter], self.getId)
+			.data([visibleFilter], self.getId)
 
 		pills.exit().each(self.removeGrp)
 		pills.each(self.updateGrp)
@@ -291,7 +261,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter === self.filter && filter.in ? 'none' : 'inline-block')
+			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline-block')
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
@@ -313,7 +283,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_paren_close')
 			.style('padding', '0 5px')
 			.html(')')
-			.style('display', filter === self.filter && filter.in ? 'none' : 'inline')
+			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
@@ -329,7 +299,7 @@ function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', filter !== self.filter || !filter.in ? 'inline-block' : 'none')
+			.style('display', 1 || filter.$id !== self.filter.$id || !filter.in ? 'inline-block' : 'none')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
@@ -477,7 +447,7 @@ function setInteractivity(self) {
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter == self.filter && filter.lst.length == 1) ||
+				(filter.$id == self.filter.$id && filter.lst.length == 1) ||
 					this.className.includes('negate') ||
 					this.className.includes('paren')
 					? 'none'
@@ -808,3 +778,54 @@ function setInteractivity(self) {
 		return { type: 'tvs', tvs }
 	}
 }
+
+/* join a list of filters into the first (f1)with "and", return joined filter
+right now only used by caller app, not filter.js
+
+f1:{}
+  a filter
+  if f1.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
+lst:[]
+  a list of filters to join into f1, each element is a full blown filter
+overrides:{}
+	optional filter key-values to apply to all of the items in the lst[] argument
+	example: {visibility: 'hidden'}
+*/
+function filterJoin(f1, lst, overrides = {}) {
+	if (!lst || lst.length == 0) return f1
+	// TODO needs unit testing
+	if (f1.join == 'or') {
+		// f1 is "or", wrap it with another root layer of "and"
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1]
+		}
+	} else if (f1.join == '') {
+		// f1 is single-tvs
+		f1 = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f1.lst[0]]
+		}
+	}
+	// now, f1.join should be "and"
+
+	for (const f of lst) {
+		// need to handle potentially frozen f object
+		const ff = Object.assign({}, f, overrides)
+		if (ff.join == 'and') {
+			f1.lst.push(...ff.lst.map(d => Object.assign(d, overrides)))
+		} else if (f.join == 'or') {
+			f1.lst.push(ff)
+		} else {
+			const item = Object.assign(ff.lst[0], overrides)
+			f1.lst.push(item)
+		}
+	}
+	return f1
+}
+
+exports.filterJoin = filterJoin

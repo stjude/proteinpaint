@@ -84,53 +84,65 @@ function getHighlightedRowCount(menuRows, action) {
 		.size()
 }
 
-function diaggrp() {
-	return {
-		type: 'tvs',
-		tvs: {
-			term: {
-				id: 'diaggrp',
-				name: 'Diagnosis Group',
-				iscategorical: true
-			},
-			values: [
-				{
-					key: `Wilms tumor`,
-					label: `Wilms tumor`
-				}
-			]
-		}
-	}
+function diaggrp(overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			visibility: 'default',
+			tvs: {
+				term: {
+					id: 'diaggrp',
+					name: 'Diagnosis Group',
+					iscategorical: true
+				},
+				values: [
+					{
+						key: `Wilms tumor`,
+						label: `Wilms tumor`
+					}
+				]
+			}
+		},
+		overrides
+	)
 }
 
-function agedx() {
-	return {
-		type: 'tvs',
-		tvs: {
-			term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
-			ranges: [{ start: 2, stop: 5, startinclusive: true }]
-		}
-	}
+function agedx(overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			visibility: 'default',
+			tvs: {
+				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
+				ranges: [{ start: 2, stop: 5, startinclusive: true }]
+			}
+		},
+		overrides
+	)
 }
 
 let i = 0
-function gettvs(id, val = '') {
-	return {
-		type: 'tvs',
-		tvs: {
-			term: {
-				id,
-				name: id.toUpperCase(),
-				iscategorical: true
-			},
-			values: [
-				{
-					key: val ? val : i++,
-					label: val ? val : i.toString()
-				}
-			]
-		}
-	}
+function gettvs(id, val = '', overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			visibility: 'default',
+			tvs: {
+				term: {
+					id,
+					name: id.toUpperCase(),
+					iscategorical: true
+				},
+				values: [
+					{
+						key: val ? val : i++,
+						label: val ? val : i.toString()
+					}
+				]
+			}
+		},
+		overrides
+	)
 }
 
 /**************
@@ -751,6 +763,7 @@ tape('nested filters', async test => {
 						diaggrp(),
 						{
 							type: 'tvs',
+							visibility: 'default',
 							tvs: {
 								term: {
 									id: 'Arrhythmias',
@@ -882,5 +895,21 @@ tape('nested filters', async test => {
 		'should not show parentheses around the second (1-item) group of the root filter'
 	)
 
+	test.end()
+})
+
+tape('hidden filters', async test => {
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [agedx({ visibility: 'hidden' }), gettvs('abc', '123', { visibility: 'hidden' }), diaggrp()]
+		}
+	})
+
+	const tipd = opts.filter.Inner.dom.controlsTip.d
+	await opts.filter.main(opts.filterData)
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 1, 'should display 1 pill')
 	test.end()
 })
