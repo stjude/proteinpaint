@@ -41,15 +41,31 @@ class Filter {
 		this.initUI()
 
 		this.api = {
-			main: async _filter => {
-				// here may accept an object {filter,hiddenFilters}, to be easily extendable in future
-				const filter = JSON.parse(JSON.stringify(_filter))
+			main: async arg => {
+				/*
+				.filter{}
+				  the visible filter
+				.hiddenFilters[]
+				  each element is a full filter
+				  the list will be joined with this.filter by "and" at root level, each has the ".hidden" flag
+				  if the resulting this.filter is {join:"and",lst:{ {visiblefilter}, {hiddenfilter} }}
+				  then it must not render the root level "and"
+				*/
+				if (!arg.filter) throw 'main(): .filter{} missing'
+				const filter = JSON.parse(JSON.stringify(arg.filter))
 				this.validateFilter(filter)
-				this.filter = filter
-				//this.hiddenFilters = arg.hiddenFilters
-				this.resetActiveData(filter)
-				this.dom.newBtn.style('display', filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.updateUI(this.dom.filterContainer, filter)
+				if (arg.hiddenFilters && arg.hiddenFilters.length > 0) {
+					for (const f of arg.hiddenFilters) {
+						this.validateFilter(f)
+						f.hidden = true
+					}
+					this.filter = filterJoin(filter, arg.hiddenFilters)
+				} else {
+					this.filter = filter
+				}
+				this.resetActiveData(this.filter)
+				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
+				this.updateUI(this.dom.filterContainer, this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
@@ -101,10 +117,6 @@ class Filter {
 	getId(item) {
 		return item.$id
 	}
-	joinHidden() {
-		if (this.hiddenFilters) return filterJoin(this.filter, this.hiddenFilters)
-		return this.filter
-	}
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
@@ -117,6 +129,7 @@ lst:[]
   a list of filters to join into f1, each element is a full blown filter
 */
 function filterJoin(f1, lst) {
+	// TODO needs unit testing
 	if (f1.join == 'or') {
 		// f1 is "or", wrap it with another root layer of "and"
 		f1 = {
@@ -520,7 +533,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.joinHidden()
+					filter: self.filter // XXX if this is for Replace, should take out the tvs being replaced
 				}
 			},
 			barchart: {
@@ -598,7 +611,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.joinHidden()
+					filter: self.filter // XXX if this is for Replace, should take out the tvs being replaced
 				}
 			},
 			barchart: {
