@@ -402,24 +402,30 @@ function show_group(tk, block, group) {
 	group.dom.td3.text('Unknown group type!')
 }
 
-function groupFilter_joinWith_extras(group, tk) {
-	/* to get a termdb filter from a group, need to combine with tk.sample_termfilter if provided
-group: must be .is_termdb
-
-tk.sample_termfilter will be combined with "and" at root level
-*/
-	if (!group.is_termdb) throw 'group is not .is_termdb'
-	let f1 = JSON.parse(JSON.stringify(group.filter))
+function get_hidden_filters(tk) {
+	// to get the list of hidden filters to be passed to filterInit
+	// FIXME to support full filter at following locations, right now they are just barebone tvs
+	const lst = []
 	const v = may_get_param_AFtest_termfilter(tk)
 	if (v) {
-		f1 = filterJoin(f1, {
+		lst.push({
 			type: 'tvslst',
 			join: '',
 			in: true,
 			lst: [{ type: 'tvs', tvs: v }]
 		})
 	}
-	return f1
+	if (tk.sample_termfilter) {
+		lst.push({
+			type: 'tvslst',
+			join: tk.sample_termfilter.length > 1 ? 'and' : '',
+			in: true,
+			lst: tk.sample_termfilter.map(f => {
+				return { type: 'tvs', tvs: JSON.parse(JSON.stringify(f)) }
+			})
+		})
+	}
+	return lst.length ? lst : undefined
 }
 
 function show_group_termdb(group, tk, block) {
@@ -432,8 +438,11 @@ function show_group_termdb(group, tk, block) {
 			await tk.load()
 		}
 	})
-	group.filterApi.main(groupFilter_joinWith_extras(group, tk))
-	// TODO to add tk.sample_termfilter as hidden
+	// async!
+	group.filterApi.main({
+		filter: group.filter,
+		hiddenFilters: get_hidden_filters(tk)
+	})
 
 	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = group.dom.td3
