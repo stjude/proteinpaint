@@ -118,6 +118,7 @@ lst:[]
   a list of filters to join into f1, each element is a full blown filter
 */
 function filterJoin(f1, lst) {
+	if (!lst || lst.length == 0) return f1
 	// TODO needs unit testing
 	if (f1.join == 'or') {
 		// f1 is "or", wrap it with another root layer of "and"
