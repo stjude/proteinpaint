@@ -334,12 +334,6 @@ module.exports = {
 					groups: [
 						{
 							is_termdb: true,
-							terms: [
-								{
-									term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-									values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
-								}
-							],
 							filter: {
 								type: 'tvslst',
 								in: true,
@@ -431,7 +425,25 @@ module.exports = {
 			}
 		},
 		// to restrict samples
-		sample_termfilter: [{ term: { id: 'wgs_curated', iscategorical: true }, values: [{ key: '1' }] }],
+		sample_termfilter: {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							name: 'wgs',
+							id: 'wgs_curated',
+							iscategorical: true,
+							values: { '0': { label: 'No' }, '1': { label: 'Yes' } }
+						},
+						values: [{ key: '1', label: 'Yes' }]
+					}
+				}
+			]
+		},
 		ld: {
 			tracks: [
 				{
