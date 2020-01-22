@@ -509,7 +509,9 @@ function setInteractivity(self) {
 		const groupset =
 			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				: self.q.groupsetting.customset || undefined
+				: self.q.groupsetting && self.q.groupsetting.customset
+				? self.q.groupsetting.customset
+				: undefined
 
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =

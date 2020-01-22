@@ -10,6 +10,45 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
 
 */
 
+/*************************
+ reusable helper functions
+**************************/
+
+function getOpts(_opts = {}) {
+	const holder = d3s
+		.select('body')
+		.append('div')
+		.style('position', 'relative')
+		.style('margin', '20px')
+		.style('padding', '5px')
+		.style('border', '1px solid #000')
+
+	const opts = Object.assign({ holder }, _opts)
+
+	opts.pill = termsettingInit({
+		holder,
+		genome: 'hg38',
+		dslabel: 'SJLife',
+		use_bins_less: opts.use_bins_less,
+		disable_ReplaceRemove: opts.disable_ReplaceRemove,
+		debug: true,
+		callback: function(termsetting) {
+			opts.tsData = termsetting
+			opts.pill.main(opts.tsData)
+		}
+	})
+
+	return opts
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**************
+ test sections
+ ***************/
+
 tape('\n', test => {
 	test.pass('-***- common/termsetting -***-')
 	test.end()
@@ -18,35 +57,26 @@ tape('\n', test => {
 tape.skip('menu', test => {})
 
 tape('disable_ReplaceRemove', async test => {
-	const holder = d3s
-		.select('body')
-		.append('div')
-		.style('margin', '20px')
-
-	const pill = termsettingInit({
-		holder,
-		genome: 'hg38',
-		dslabel: 'SJLife',
+	const opts = getOpts({
 		disable_ReplaceRemove: true,
-		debug: true,
-		callback: () => {}
-	})
-
-	await pill.main({
-		term: {
-			id: 'dummy',
-			name: 'disable_ReplaceRemove',
-			iscategorical: true,
-			values: {
-				cat1: { label: 'Cat 1' }
+		tsData: {
+			term: {
+				id: 'dummy',
+				name: 'disable_ReplaceRemove',
+				iscategorical: true,
+				values: {
+					cat1: { label: 'Cat 1' }
+				}
 			}
 		}
 	})
 
-	const pilldiv = holder.node().querySelectorAll('.ts_pill')[0]
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	test.ok(pilldiv, 'a <div class=ts_pill> is created for the pill')
 	pilldiv.click()
-	const tipd = pill.Inner.dom.tip.d
+	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
 	test.equal(
 		tipd.node().childNodes[1].childNodes.length,
@@ -56,7 +86,7 @@ tape('disable_ReplaceRemove', async test => {
 
 	// delete the flag and click pill again to see if showing replace/remove buttons in tip
 	// if pill.opts is frozen in future, just create a new pill
-	delete pill.Inner.opts.disable_ReplaceRemove
+	delete opts.pill.Inner.opts.disable_ReplaceRemove
 	pilldiv.click()
 	test.equal(
 		tipd.node().childNodes[1].childNodes.length,
@@ -64,47 +94,77 @@ tape('disable_ReplaceRemove', async test => {
 		'the second row of tip now contains replace/remove buttons after deleting opts.disable_ReplaceRemove'
 	)
 
+	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })
 
 tape('use_bins_less', async test => {
-	const holder = d3s
-		.select('body')
-		.append('div')
-		.style('margin', '20px')
-	const pill = termsettingInit({
-		holder,
-		genome: 'hg38',
-		dslabel: 'SJLife',
+	const opts = getOpts({
 		use_bins_less: true,
-		debug: true,
-		callback: () => {}
-	})
-
-	await pill.main({
-		term: {
-			id: 'dummy',
-			name: 'use_bins_less',
-			isfloat: true,
-			bins: {
-				less: { bin_size: 10, first_bin: { start: 0 } },
-				default: { bin_size: 1, first_bin: { start: 0 } }
+		tsData: {
+			term: {
+				id: 'dummy',
+				name: 'use_bins_less',
+				isfloat: true,
+				bins: {
+					less: { bin_size: 10, first_bin: { start: 0 } },
+					default: { bin_size: 1, first_bin: { start: 0 } }
+				}
 			}
 		}
 	})
 
-	const pilldiv = holder.node().querySelectorAll('.ts_pill')[0]
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
 
-	const tip = pill.Inner.dom.tip.d.node()
+	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0] // div // table // tr // td
 
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
-	delete pill.Inner.opts.use_bins_less
+	delete opts.pill.Inner.opts.use_bins_less
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
 	const bin_size_input2 = tip.childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0]
 	test.equal(bin_size_input2.value, '1', 'has term.bins.default.bin_size as value')
+	opts.pill.Inner.dom.tip.hide()
+	test.end()
+})
+
+tape('caterogical term', async test => {
+	const opts = getOpts({
+		tsData: {
+			term: {
+				id: 'diaggrp',
+				name: 'Diagnosis Group',
+				iscategorical: true,
+				isleaf: true,
+				graph: {
+					barchart: {
+						categorical: {}
+					}
+				},
+				values: {
+					'Acute lymphoblastic leukemia': { label: 'Acute lymphoblastic leukemia' },
+					'Acute myeloid leukemia': { label: 'Acute myeloid leukemia' },
+					'Blood disorder': { label: 'Blood disorder' },
+					'Central nervous system (CNS)': { label: 'Central nervous system (CNS)' },
+					'Wilms tumor': { label: 'Wilms tumor' }
+				}
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+	const tip = opts.pill.Inner.dom.tip
+
+	test.equal(tip.d.selectAll('.group_btn').size(), 2, 'Should have 2 buttons for group config')
+	test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+	test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.end()
 })
