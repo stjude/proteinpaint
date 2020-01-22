@@ -863,6 +863,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('margin', '0 5px')
 			.style('font-size', '.6em')
+			.style('font-style', 'italic')
 			.style('text-transform', 'uppercase')
 			.html(d => d.grade_type)
 			.style('opacity', 0)
