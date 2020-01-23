@@ -429,7 +429,7 @@ function show_group_termdb(group, tk, block) {
 		dslabel: tk.dslabel,
 		callback: async f => {
 			group.filter = f
-			// async!
+			group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk), { visibility: 'hidden' })
 			await tk.load()
 		}
 	})
