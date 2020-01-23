@@ -49,14 +49,15 @@ class Filter {
 				*/
 				const filter = JSON.parse(JSON.stringify(_filter))
 				this.validateFilter(filter)
-				this.filter = this.getVisibleFilter(filter)
+				this.filter = filter
 				this.resetActiveData(this.filter)
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder.selectAll('.sja_filter_blank_pill').remove()
 				this.updateUI(this.dom.filterContainer, this.filter)
+				const visibleFilter = this.getVisibleFilter(this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
-					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
+					.style('display', d => (visibleFilter.lst.length > 0 && visibleFilter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			}
 		}
@@ -109,14 +110,15 @@ class Filter {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
 		this.api.main(filter)
-		this.opts.callback(filter)
+		const arg = this.opts.callbackArgPreprocessor == 'getVisibleFilter' ? this.getVisibleFilter(filter) : filter
+		this.opts.callback(arg)
 	}
 	getId(item) {
 		return item.$id
 	}
 	getVisibleFilter(filter) {
 		const lst = filter.lst.filter(d => d.visibility != 'hidden')
-		return lst.length == filter.lst.length
+		return lst.length === filter.lst.length
 			? filter
 			: {
 					$id: filter.$id,
@@ -239,7 +241,7 @@ function setRenderers(self) {
 			.datum(visibleFilter)
 			.style('display', !visibleFilter.lst || !visibleFilter.lst.length ? 'none' : 'inline-block')
 
-		const pills = container.selectAll(':scope > .sja_filter_grp').data([visibleFilter], self.getId)
+		const pills = container.selectAll(':scope > .sja_filter_grp').data([filter], self.getId)
 
 		pills.exit().each(self.removeGrp)
 		pills.each(self.updateGrp)
@@ -308,11 +310,13 @@ function setRenderers(self) {
 			.select(':scope > .sja_filter_clause_negate')
 			.style('display', filter.in ? 'none' : 'inline-block')
 
+		const lst = item.type == 'tvslst' ? item.lst : [item]
+		const data = lst.filter(d => d.visibility !== 'hidden')
+
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', filter.$id !== self.filter.$id || !filter.in ? 'inline-block' : 'none')
+			.style('display', (filter.$id !== self.filter.$id || !filter.in) && data.length > 1 ? 'inline-block' : 'none')
 
-		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
@@ -328,10 +332,10 @@ function setRenderers(self) {
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort(
-				(a, b) =>
-					// because visibleFilter may be different from the element-bound filter data,
-					// has to find index by item.$id instead of directly using data.indexOf(a)
-					data.findIndex(e => e.$id === a.$id) - data.findIndex(e => e.$id === b.$id)
+				(a, b) => data.indexOf(a) - data.indexOf(b)
+				// because visibleFilter may be different from the element-bound filter data,
+				// has to find index by item.$id instead of directly using data.indexOf(a)
+				// data.findIndex(e => e.$id === a.$id) - data.findIndex(e => e.$id === b.$id)
 			)
 	}
 
@@ -398,9 +402,10 @@ function setRenderers(self) {
 
 	self.updateItem = function(item, i) {
 		const filter = this.parentNode.__data__
+		const visibleFilter = self.getVisibleFilter(filter)
 		select(this)
 			.select(':scope > .sja_filter_join_label')
-			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style('display', visibleFilter.lst.indexOf(item) < visibleFilter.lst.length - 1 ? 'inline-block' : 'none')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
 		if (item.type == 'tvslst') {
@@ -419,27 +424,32 @@ function setRenderers(self) {
 	}
 
 	self.addJoinLabel = function(elem, filter, item) {
-		const i = filter.lst.findIndex(d => d.$id === item.$id)
+		const visibleFilter = self.getVisibleFilter(filter)
+		const i = visibleFilter.lst.findIndex(d => d.$id === item.$id)
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				visibleFilter.lst.length > 1 && item && i != -1 && i < visibleFilter.lst.length - 1 ? 'inline-block' : 'none'
+			)
 			.style('width', '50px')
 			.style('padding', '5px')
 			.style('border', 'none')
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
-			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
+			.html(visibleFilter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
 			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateJoinLabel = function(item) {
 		const filter = this.parentNode.parentNode.parentNode.__data__
+		const visibleFilter = self.getVisibleFilter(filter)
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
+			visibleFilter.lst.length > 1 && item && i != -1 && i < visibleFilter.lst.length - 1 ? 'inline-block' : 'none'
 		)
 	}
 }
@@ -449,6 +459,7 @@ function setInteractivity(self) {
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
+		const visibleFilter = self.getVisibleFilter(filter)
 		self.activeData = { item, filter, elem: this }
 
 		const grpAction =
@@ -462,7 +473,7 @@ function setInteractivity(self) {
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && filter.lst.length == 1) ||
+				(filter.$id == self.filter.$id && visibleFilter.lst.length == 1) ||
 					this.className.includes('negate') ||
 					this.className.includes('paren')
 					? 'none'
