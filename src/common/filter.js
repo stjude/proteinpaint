@@ -819,19 +819,21 @@ function setInteractivity(self) {
 	}
 }
 
-/* join a list of filters into the first (f1)with "and", return joined filter
-right now only used by caller app, not filter.js
+/* join a list of filters into the first filter with "and", return joined filter
+to be used by caller app to join hidden filters into a visible filter
 
-f1:{}
+f0:{}
   a filter
-  if f1.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
+  the function returns a (modified) copy of f0, and will not modify f0
+  if f0.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
 lst:[]
   a list of filters to join into f1, each element is a full blown filter
 overrides:{}
-	optional filter key-values to apply to all of the items in the lst[] argument
+	optional filter key-values to apply to the root-level of all of the items in the lst[] argument
 	example: {visibility: 'hidden'}
 */
-function filterJoin(f1, lst, overrides = {}) {
+function filterJoin(f0, lst, overrides = {}) {
+	let f1 = JSON.parse(JSON.stringify(f0))
 	if (!lst || lst.length == 0) return f1
 	// TODO needs unit testing
 	if (f1.join == 'or') {
