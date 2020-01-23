@@ -104,6 +104,12 @@ class Filter {
 			}
 		}
 	}
+	refresh(filter) {
+		this.dom.controlsTip.hide()
+		this.dom.treeTip.hide()
+		this.api.main(filter)
+		this.opts.callback(filter)
+	}
 	getId(item) {
 		return item.$id
 	}
@@ -373,9 +379,7 @@ function setRenderers(self) {
 				if (i == -1) return
 				tvs.isnot = self.dom.isNotInput.property('checked')
 				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
-				self.opts.callback(rootCopy)
-				self.dom.controlsTip.hide()
-				self.dom.treeTip.hide()
+				self.refresh(rootCopy)
 			}
 		})
 		self.pills[item.$id] = pill
@@ -498,14 +502,12 @@ function setInteractivity(self) {
 			},
 			barchart: {
 				bar_click_override: tvslst => {
-					self.dom.controlsTip.hide()
-					self.dom.treeTip.hide()
 					const rootCopy = JSON.parse(JSON.stringify(self.filter))
 
 					if (!rootCopy.lst.length) {
 						if (tvslst.length > 1) rootCopy.join = 'and'
 						rootCopy.lst.push(...tvslst.map(self.wrapTvs))
-						self.opts.callback(rootCopy)
+						self.refresh(rootCopy)
 					} else if (d != 'or' && d != 'and') {
 						throw 'unhandled new term(s): invalid appender join value'
 					} else {
@@ -522,16 +524,16 @@ function setInteractivity(self) {
 									lst: tvslst.map(self.wrapTvs)
 								})
 							}
-							self.opts.callback(rootCopy)
+							self.refresh(rootCopy)
 						} else if (d == 'and' || tvslst.length < 2) {
-							self.opts.callback({
+							self.refresh({
 								type: 'tvslst',
 								in: true,
 								join: d,
 								lst: [rootCopy, ...tvslst.map(self.wrapTvs)]
 							})
 						} else {
-							self.opts.callback({
+							self.refresh({
 								type: 'tvslst',
 								in: true,
 								join: 'or',
@@ -612,19 +614,15 @@ function setInteractivity(self) {
 	}
 
 	self.negateClause = function() {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		//const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const item = self.findItem(rootCopy, self.activeData.item.$id)
 		if (item.type == 'tvslst') item.in = !item.in
 		else item.tvs.isnot = !item.tvs.isnot
-		self.opts.callback(rootCopy)
+		self.refresh(rootCopy)
 	}
 
 	self.replaceTerm = tvslst => {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -641,12 +639,10 @@ function setInteractivity(self) {
 				lst: tvslst.map(self.wrapTvs)
 			}
 		}
-		self.opts.callback(rootCopy)
+		self.refresh(rootCopy)
 	}
 
 	self.appendTerm = tvslst => {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -662,12 +658,10 @@ function setInteractivity(self) {
 				lst: tvslst.map(self.wrapTvs)
 			})
 		}
-		self.opts.callback(rootCopy)
+		self.refresh(rootCopy)
 	}
 
 	self.subnestFilter = tvslst => {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
@@ -680,18 +674,16 @@ function setInteractivity(self) {
 			join: filter.join == 'or' ? 'and' : 'or',
 			lst: [item, ...tvslst.map(self.wrapTvs)]
 		}
-		self.opts.callback(rootCopy)
+		self.refresh(rootCopy)
 	}
 
 	self.editFilter = tvslst => {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findParent(rootCopy, filter.$id)
 		if (filterCopy == rootCopy) {
-			self.opts.callback({
+			self.refresh({
 				type: 'tvslst',
 				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
@@ -699,18 +691,16 @@ function setInteractivity(self) {
 			})
 		} else {
 			filterCopy.lst.push(...tvslst.map(self.wrapTvs))
-			self.opts.callback(rootCopy)
+			self.refresh(rootCopy)
 		}
 	}
 
 	self.removeTransform = function() {
-		self.dom.controlsTip.hide()
-		self.dom.treeTip.hide()
 		const t = event.target.__data__
 		const item = t.action || typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
 		const filter = self.findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
-			self.opts.callback({
+			self.refresh({
 				type: 'tvslst',
 				in: true,
 				join: '',
@@ -726,15 +716,15 @@ function setInteractivity(self) {
 		if (filterCopy.lst.length === 1) {
 			const parent = self.findParent(rootCopy, filterCopy.$id)
 			if (filterCopy.lst[0].type == 'tvslst') {
-				if (parent == rootCopy) self.opts.callback(filterCopy.lst[0])
+				if (parent == rootCopy) self.refresh(filterCopy.lst[0])
 				else {
 					const j = parent.lst.findIndex(t => t.$id == filterCopy.$id)
 					if (filterCopy.lst[0].join == parent.join) {
 						parent.lst.splice(j, 1, ...filterCopy.lst[0].lst)
-						self.opts.callback(rootCopy)
+						self.refresh(rootCopy)
 					} else {
 						parent.lst[j] = filterCopy.lst[0]
-						self.opts.callback(rootCopy)
+						self.refresh(rootCopy)
 					}
 				}
 			} else {
@@ -745,10 +735,10 @@ function setInteractivity(self) {
 					parent.lst[j].tvs.isnot = !parent.lst[j].tvs.isnot
 					if (parent == rootCopy) parent.in = true
 				}
-				self.opts.callback(rootCopy)
+				self.refresh(rootCopy)
 			}
 		} else {
-			self.opts.callback(rootCopy)
+			self.refresh(rootCopy)
 		}
 	}
 
