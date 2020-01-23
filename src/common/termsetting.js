@@ -177,6 +177,10 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		// only modify right half of the pill
 		const one_term_div = select(this)
+		if (self.term.iscondition && !self.q.bar_by_children && !self.q.bar_by_grade){
+			self.q.bar_by_grade = true
+			self.q.value_by_max_grade = true
+		} 
 
 		// if using group setting, will show right half
 		// allow more than 1 flags for future expansion
@@ -445,7 +449,7 @@ function setInteractivity(self) {
 		//show button/s for default groups
 		if (self.term.groupsetting && self.term.groupsetting.lst) {
 			for (const [i, group] of self.term.groupsetting.lst.entries()) {
-				if (self.q.groupsetting.predefined_groupset_idx != i)
+				if (self.q.groupsetting && self.q.groupsetting.predefined_groupset_idx != i)
 					div
 						.append('div')
 						.attr('class', 'group_btn sja_filter_tag_btn')
@@ -1227,6 +1231,7 @@ function setInteractivity(self) {
 	}
 
 	self.showConditionOpts = async function(div) {
+		console.log(self.term)
 		// grade/subcondtion value type
 		const value_type_select = div
 			.append('select')
