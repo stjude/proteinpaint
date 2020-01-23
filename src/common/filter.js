@@ -114,6 +114,18 @@ class Filter {
 	getId(item) {
 		return item.$id
 	}
+	getVisibleFilter(filter) {
+		const lst = filter.lst.filter(d => d.visibility != 'hidden')
+		return lst.length == filter.lst.length
+			? filter
+			: {
+					$id: filter.$id,
+					type: filter.type,
+					in: filter.in,
+					join: lst.length > 1 ? filter.join : '',
+					lst
+			  }
+	}
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
@@ -221,24 +233,13 @@ function setRenderers(self) {
 		})
 	}
 
-	self.getVisibleFilter = function(filter) {
-		const lst = filter.lst.filter(d => d.visibility != 'hidden')
-		return {
-			$id: filter.$id,
-			type: filter.type,
-			in: filter.in,
-			join: lst.length > 1 ? filter.join : '',
-			lst
-		}
-	}
-
 	self.updateUI = function(container, filter) {
 		const visibleFilter = self.getVisibleFilter(filter)
-		const pills = container
+		container
 			.datum(visibleFilter)
 			.style('display', !visibleFilter.lst || !visibleFilter.lst.length ? 'none' : 'inline-block')
-			.selectAll(':scope > .sja_filter_grp')
-			.data([visibleFilter], self.getId)
+
+		const pills = container.selectAll(':scope > .sja_filter_grp').data([visibleFilter], self.getId)
 
 		pills.exit().each(self.removeGrp)
 		pills.each(self.updateGrp)
@@ -276,9 +277,11 @@ function setRenderers(self) {
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
 
+		const lst = item.type == 'tvslst' ? item.lst : [item]
+		const data = lst.filter(d => d.visibility !== 'hidden')
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
-			.data(item.type == 'tvslst' ? item.lst : [item], self.getId)
+			.data(data, self.getId)
 
 		pills
 			.enter()
@@ -324,7 +327,12 @@ function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
-			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
+			.sort(
+				(a, b) =>
+					// because visibleFilter may be different from the element-bound filter data,
+					// has to find index by item.$id instead of directly using data.indexOf(a)
+					data.findIndex(e => e.$id === a.$id) - data.findIndex(e => e.$id === b.$id)
+			)
 	}
 
 	self.removeGrp = function(item) {

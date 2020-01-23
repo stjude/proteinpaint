@@ -492,7 +492,8 @@ tape('pill Edit interaction', async test => {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [diaggrp()]
+			lst: [diaggrp()],
+			visibility: 'default'
 		}
 	})
 
@@ -530,7 +531,8 @@ tape('pill Replace interaction', async test => {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [diaggrp()]
+			lst: [diaggrp()],
+			visibility: 'default'
 		}
 	})
 
