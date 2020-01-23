@@ -52,6 +52,7 @@ class Filter {
 				this.filter = this.getVisibleFilter(filter)
 				this.resetActiveData(this.filter)
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
+				this.dom.holder.selectAll('.sja_filter_blank_pill').remove()
 				this.updateUI(this.dom.filterContainer, this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
@@ -216,6 +217,7 @@ function setRenderers(self) {
 			)
 				return
 			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+			self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
 		})
 	}
 
@@ -305,7 +307,7 @@ function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', 1 || filter.$id !== self.filter.$id || !filter.in ? 'inline-block' : 'none')
+			.style('display', filter.$id !== self.filter.$id || !filter.in ? 'inline-block' : 'none')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
@@ -447,6 +449,7 @@ function setInteractivity(self) {
 
 		rows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
 
+		const joiner = grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND'
 		rows
 			.filter(d => d.action == 'join')
 			.style(
@@ -458,15 +461,47 @@ function setInteractivity(self) {
 					: 'table-row'
 			)
 			.select('td:nth-child(2)')
-			.html(grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND')
+			.html(joiner)
 
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (grpAction) {
 			if (this.className.includes('join')) this.parentNode.parentNode.style.backgroundColor = '#ee5'
 			else this.parentNode.style.backgroundColor = '#ee5'
 		}
-
 		self.dom.controlsTip.showunder(this)
+	}
+
+	self.displayBlankPill = function(parentDiv, joiner) {
+		self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+
+		const blank = select(parentDiv)
+			.insert('div', ':scope > .sja_filter_paren_close')
+			.attr('class', 'sja_filter_blank_pill')
+			.style('display', 'inline-block')
+			//.style('width', '120px')
+			.style('height', '20px')
+			//.style('margin-right', '20px')
+			.style('overflow', 'visible')
+
+		blank
+			.append('div')
+			.style('display', 'inline-block')
+			.style('width', '50px')
+			.style('text-align', 'center')
+			.html(joiner)
+
+		blank
+			.append('div')
+			.style('position', 'relative')
+			.style('top', '-7px')
+			.style('display', 'inline-block')
+			.style('width', '80px')
+			.style('height', '22px')
+			.style('margin-right', '5px')
+			.style('border', '3px dashed #b8d3ea')
+			.style('vertical-align', 'top')
+			.style('background-color', '#ee5')
 	}
 
 	self.handleMenuOptionClick = function(d) {
@@ -476,6 +511,13 @@ function setInteractivity(self) {
 		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
 			self.activeData.item = self.activeData.filter
 			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
+		}
+		if (d.action === 'join') {
+			const elem =
+				self.activeData.item.type == 'tvs'
+					? self.activeData.elem.parentNode.parentNode
+					: self.activeData.elem.parentNode.parentNode
+			self.displayBlankPill(elem, self.activeData.filter.join.toUpperCase())
 		}
 
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
