@@ -4,6 +4,7 @@ import * as dom from './dom'
 import { init as termdbinit } from './mds.termdb'
 import { filterInit, filterJoin } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
+import { appInit } from './termdb/app'
 
 /*
 
@@ -136,7 +137,7 @@ function make_option_termfilter(af, tk, block, table) {
 			*/
 		for (const g of af.groups) {
 			if (g.is_termdb) {
-				g.dom.td3.selectAll('*').remove()
+				//g.dom.td3.selectAll('*').remove()
 				show_group_termdb(g, tk, block)
 			}
 		}
@@ -284,22 +285,17 @@ groupindex:
 		tabs.push({
 			label: '<span style="background:' + color_termdb + ';border-radius:4px">&nbsp;&nbsp;</span> Clinical info',
 			callback: async div => {
-				// FIXME
-				let filter = []
-				if (tk.sample_termfilter) {
-					filter = JSON.parse(JSON.stringify(tk.sample_termfilter))
-				}
-				const v = may_get_param_AFtest_termfilter(tk)
-				if (v) filter.push(v)
 				const obj = {
-					genome: block.genome,
-					mds: tk.mds,
-					div,
-					default_rootterm: {},
-					modifier_barchart_selectbar: {
-						callback: result => {
+					holder: div,
+					state: {
+						genome: block.genome.name,
+						dslabel: tk.mds.label
+					},
+					barchart: {
+						bar_click_override: result => {
 							tip.hide()
-							group.terms = result.terms
+							// FIXME
+							group.filter = result.terms
 							delete group.key
 							delete group.is_infofield
 							delete group.is_population
@@ -308,8 +304,9 @@ groupindex:
 						}
 					}
 				}
-				if (filter.length) obj.termfilter = { terms: filter }
-				await termdbinit(obj)
+				const filters = filterJoin(get_hidden_filters(tk), { visibility: 'hidden' })
+				if (filters) obj.state.termfilter = { filter: filters }
+				appInit(null, obj)
 			}
 		})
 	}
@@ -332,6 +329,7 @@ groupindex:
 							tip.hide()
 							delete group.is_termdb
 							delete group.is_population
+							delete group.filterApi
 							group.is_infofield = true
 							group.key = i.key
 							_updatetk()
@@ -357,6 +355,7 @@ groupindex:
 							tip.hide()
 							delete group.is_termdb
 							delete group.is_infofield
+							delete group.filterApi
 							group.is_population = true
 							group.key = population.key
 							group.allowto_adjust_race = population.allowto_adjust_race
@@ -419,46 +418,48 @@ function get_hidden_filters(tk) {
 	if (tk.sample_termfilter) {
 		lst.push(JSON.parse(JSON.stringify(tk.sample_termfilter)))
 	}
-	return lst.length ? lst : undefined
+	return lst
 }
 
 function show_group_termdb(group, tk, block) {
-	group.filterApi = filterInit({
-		holder: group.dom.td3,
-		genome: block.genome.name,
-		dslabel: tk.dslabel,
-		callback: async f => {
-			group.filter = f
-			group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk), { visibility: 'hidden' })
-			await tk.load()
-		}
-	})
-	group.filterCombined = filterJoin(group.filter, get_hidden_filters(tk), { visibility: 'hidden' })
-	// async!
-	group.filterApi.main(group.filterCombined)
-
-	// "n=?, view stats" handle and for porting to term tree filter
-	group.dom.samplehandle = group.dom.td3
-		.append('span')
-		.style('margin-left', '15px')
-		.style('opacity', '.6')
-		.attr('class', 'sja_clbtext')
-		.text('Loading...')
-		.on('click', () => {
-			// TODO use appInit()
-			// click label to embed tree
-			const filterlst = JSON.parse(JSON.stringify(group.terms)) // apply terms of this group as filter
-			filterlst.push(...tvslst)
-
-			tk.legend.tip.clear().showunder(group.dom.samplehandle.node())
-			termdbinit({
-				genome: block.genome,
-				mds: tk.mds,
-				div: tk.legend.tip.d.append('div').style('margin', '5px'),
-				default_rootterm: {},
-				termfilter: { terms: filterlst }
-			})
+	if (!group.filterApi) {
+		group.filterApi = filterInit({
+			holder: group.dom.td3,
+			genome: block.genome.name,
+			dslabel: tk.dslabel,
+			callbackArgPreprocessor: 'getVisibleFilter',
+			callback: async f => {
+				group.filter = f
+				group.filterCombined = filterJoin([group.filter, ...get_hidden_filters(tk)], { visibility: 'hidden' })
+				await tk.load()
+			}
 		})
+	}
+	group.filterCombined = filterJoin([group.filter, ...get_hidden_filters(tk)], { visibility: 'hidden' })
+	group.filterApi.main(group.filterCombined) // async
+	if (!group.dom.samplehandle) {
+		// "n=?, view stats" handle and for porting to term tree filter
+		group.dom.samplehandle = group.dom.td3
+			.append('span')
+			.style('margin-left', '15px')
+			.style('opacity', '.6')
+			.attr('class', 'sja_clbtext')
+			.text('Loading...')
+			.on('click', () => {
+				// click label to embed tree
+				tk.legend.tip.clear().showunder(group.dom.samplehandle.node())
+				appInit(null, {
+					holder: tk.legend.tip.d.append('div').style('margin', '5px'),
+					state: {
+						genome: block.genome.name,
+						dslabel: tk.mds.label,
+						termfilter: {
+							filter: group.filterCombined
+						}
+					}
+				})
+			})
+	}
 }
 
 function show_group_infofield(group, tk) {
