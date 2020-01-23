@@ -822,20 +822,19 @@ function setInteractivity(self) {
 /* join a list of filters into the first filter with "and", return joined filter
 to be used by caller app to join hidden filters into a visible filter
 
-f0:{}
-  a filter
-  the function returns a (modified) copy of f0, and will not modify f0
-  if f0.join is not "and", will be wrapped into an extra root layer of "and" for joining with lst
 lst:[]
-  a list of filters to join into f1, each element is a full blown filter
+  a list of filters
+  the function returns a (modified) copy of the first filter, and will not modify it
+  rest of the array will be joined to the first one under "and"
 overrides:{}
 	optional filter key-values to apply to the root-level of all of the items in the lst[] argument
 	example: {visibility: 'hidden'}
 */
-function filterJoin(f0, lst, overrides = {}) {
-	let f1 = JSON.parse(JSON.stringify(f0))
-	if (!lst || lst.length == 0) return f1
-	// TODO needs unit testing
+function filterJoin(lst, overrides = {}) {
+	if (!lst || lst.length == 0) return
+	let f1 = JSON.parse(JSON.stringify(lst[0]))
+	if (lst.length == 1) return f1
+	// more than 1 item, will join
 	if (f1.join == 'or') {
 		// f1 is "or", wrap it with another root layer of "and"
 		f1 = {
@@ -854,8 +853,8 @@ function filterJoin(f0, lst, overrides = {}) {
 		}
 	}
 	// now, f1.join should be "and"
-
-	for (const f of lst) {
+	for (let i = 1; i < lst.length; i++) {
+		const f = lst[i]
 		// need to handle potentially frozen f object
 		const ff = Object.assign({}, f, overrides)
 		if (ff.join == 'and') {
