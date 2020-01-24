@@ -441,8 +441,8 @@ function setRenderers(self) {
 						: 'inline-block'
 				)
 				.style('border-radius', '13px')
-				.style('background-color', '#23cba7')
-				.style('color', '#fff')
+				.style('background-color', '#d0e0e3')
+				.style('color', 'black')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
 				.style('padding', '5px 12px')
@@ -466,8 +466,8 @@ function setRenderers(self) {
 						: 'inline-block'
 				)
 				.style('border-radius', '13px')
-				.style('background-color', '#74b9ff')
-				.style('color', '#fff')
+				.style('background-color', '#cfe2f3')
+				.style('color', 'black')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
 				.style('padding', '5px 12px')
