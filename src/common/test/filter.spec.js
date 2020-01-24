@@ -22,7 +22,16 @@ function getOpts(_opts = {}) {
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
 
-	const opts = Object.assign({ holder }, _opts)
+	const opts = Object.assign(
+		{
+			holder,
+			callback(filter) {
+				opts.filterData = filter
+				opts.filter.main(opts.filterData)
+			}
+		},
+		_opts
+	)
 
 	opts.filter = filterInit({
 		btn: holder.append('div'),
@@ -31,10 +40,8 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		debug: true,
-		callback: function(filter) {
-			opts.filterData = filter
-			opts.filter.main(opts.filterData)
-		}
+		getVisibleRoot: opts.getVisibleRoot,
+		callback: opts.callback
 	})
 
 	return opts
@@ -473,8 +480,6 @@ tape('add-transformer button interaction, 2-pill', async test => {
 		'should display the tree menu when clicking the add-transformer button'
 	)
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
-	test.end()
-	return
 	await addDemographicSexFilter(opts, adder)
 	test.deepEqual(
 		opts.filter.Inner.filter.lst[0].lst.map(d => d.tvs.id),
@@ -510,11 +515,10 @@ tape('pill Edit interaction', async test => {
 
 	editOpt.node().click()
 	test.equal(getHighlightedRowCount(menuRows, 'edit'), 1, 'should highlight only the edit row when clicked')
-	test.deepEqual(
-		normalizeActiveData(opts),
-		{ item: opts.filterData.lst[0], filter: opts.filterData },
-		'should set the expected edit activeData'
-	)
+	const expected = { item: opts.filterData.lst[0], filter: opts.filterData }
+	delete expected.item.$id
+	delete expected.filter.$id
+	test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected edit activeData')
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.style('display'),
 		'none',
@@ -549,11 +553,10 @@ tape('pill Replace interaction', async test => {
 
 	replaceOpt.node().click()
 	test.equal(getHighlightedRowCount(menuRows, 'replace'), 1, 'should highlight only the replace row when clicked')
-	test.deepEqual(
-		normalizeActiveData(opts),
-		{ item: opts.filterData.lst[0], filter: opts.filterData },
-		'should set the expected replace activeData'
-	)
+	const expected = { item: opts.filterData.lst[0], filter: opts.filterData }
+	delete expected.item.$id
+	delete expected.filter.$id
+	test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected replace activeData')
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.style('display'),
 		'none',
@@ -906,12 +909,72 @@ tape('hidden filters', async test => {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [agedx({ visibility: 'hidden' }), gettvs('abc', '123', { visibility: 'hidden' }), diaggrp()]
+			lst: [
+				agedx(),
+				{
+					type: 'tvslst',
+					join: '',
+					in: true,
+					lst: [diaggrp()]
+				}
+			]
+		},
+		getVisibleRoot(rawFilter) {
+			return rawFilter.lst[1]
+		},
+		callback(filter) {
+			opts.filterData.lst[1] = filter
+			opts.filter.main(opts.filterData)
 		}
 	})
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	await opts.filter.main(opts.filterData)
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 1, 'should display 1 pill')
+
+	const adder = opts.holder
+		.selectAll('.sja_filter_add_transformer')
+		.filter(function(d) {
+			return this.style.display !== 'none' && d == 'and'
+		})
+		.node()
+	adder.click()
+	await sleep(50)
+	test.notEqual(
+		opts.filter.Inner.dom.treeTip.d.node().style.display,
+		'none',
+		'should display the tree menu when clicking the add-transformer button'
+	)
+	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
+	await addDemographicSexFilter(opts, adder)
+	const origLst = origFilter.lst[1].lst
+	const lst = opts.filterData.lst[1] && opts.filterData.lst[1].lst
+	test.deepEqual(
+		lst[0].type && lst[0].tvs && lst[0].tvs.term.id,
+		origLst[0].type && origLst[0].tvs && origLst[0].tvs.term.id,
+		'should not subnest the filter.lst[0] entry'
+	)
+	test.equal(lst[1] && lst[1].tvs && lst[1].tvs.term.id, 'sex', 'should append the new term to the root filter')
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 2, 'should display 2 pills')
+
+	const adderOr = opts.holder
+		.selectAll('.sja_filter_add_transformer')
+		.filter(function(d) {
+			return this.style.display !== 'none' && d == 'or'
+		})
+		.node()
+	adderOr.click()
+	await sleep(50)
+	test.notEqual(
+		opts.filter.Inner.dom.treeTip.d.node().style.display,
+		'none',
+		'should display the tree menu when clicking the add-transformer button'
+	)
+	await addDemographicSexFilter(opts, adderOr)
+	const lstOr = opts.filterData.lst[1] && opts.filterData.lst[1].lst
+	test.deepEqual(lstOr.map(d => d.tvs.id), lst.map(d => d.tvs.id), 'should subnest the original filter tvslst')
+	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
+	//test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+
 	test.end()
 })

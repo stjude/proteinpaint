@@ -41,23 +41,31 @@ class Filter {
 		this.initUI()
 
 		this.api = {
-			main: async _filter => {
+			main: async rawFilter => {
 				/*
-				_filter{}
-				  the filter data structure
-				  when item.visibility=='hidden', it will be hidden from at-a-glance UI
+				rawFilter{}
+				  the raw filter data structure
 				*/
-				const filter = JSON.parse(JSON.stringify(_filter))
-				this.validateFilter(filter)
+
+				// should use deepEquals as part of rx.core
+				const rawCopy = JSON.stringify(rawFilter)
+				if (this.rawCopy == rawCopy) return
+				this.rawCopy = rawCopy
+				this.rawFilter = JSON.parse(this.rawCopy)
+				this.validateFilter(this.rawFilter)
+
+				const filter = this.opts.getVisibleRoot
+					? this.opts.getVisibleRoot(this.rawFilter)
+					: this.getVisibleRoot(this.rawFilter)
 				this.filter = filter
 				this.resetActiveData(this.filter)
+
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder.selectAll('.sja_filter_blank_pill').remove()
 				this.updateUI(this.dom.filterContainer, this.filter)
-				const visibleFilter = this.getVisibleFilter(this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
-					.style('display', d => (visibleFilter.lst.length > 0 && visibleFilter.join !== d ? 'inline-block' : 'none'))
+					.style('display', d => (filter.lst.length > 0 && filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			}
 		}
@@ -78,8 +86,8 @@ class Filter {
 
 		if (!('type' in item)) throw 'missing filter.type'
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
-		if (!('visibility' in item)) item.visibility = 'default'
-		if (!['default', 'collapsed', 'hidden'].includes(item.visibility)) throw 'invalid filter.visibility value'
+		//if (!('visibility' in item)) item.visibility = 'default'
+		//if (!['default', 'collapsed', 'hidden'].includes(item.visibility)) throw 'invalid filter.visibility value'
 
 		if (item.type != 'tvslst') return
 		if (!Array.isArray(item.lst)) throw 'invalid or missing filter.lst[]'
@@ -106,27 +114,52 @@ class Filter {
 			}
 		}
 	}
+	// default method to set the nested level/item
+	// which this filter UI will use as root filter data
+	// may be overriden via the opts.getRoot(filter) option
+	getVisibleRoot(rawFilter) {
+		return rawFilter
+	}
+	// get valid filter data to be used for server requests
+	// will remove empty lsts and "level-up" or "hoist" any single lst entry
+	getStandardRoot(filter) {
+		const lst = filter.lst
+			.filter(f => f.type !== 'tvslst' || f.length > 0)
+			.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
+
+		if (!lst.length) {
+			return self.getWrappedTvslst(filter.$id, [])
+		} else if (lst.length == 1) {
+			return self.getStandardRoot(lst[0])
+		} else {
+			return Object.assign({}, filter, { lst })
+		}
+	}
 	refresh(filter) {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
-		this.api.main(filter)
-		const arg = this.opts.callbackArgPreprocessor == 'getVisibleFilter' ? this.getVisibleFilter(filter) : filter
-		this.opts.callback(arg)
+		const rawParent = this.findParent(this.rawFilter, this.filter.$id)
+		if (rawParent.$id === this.filter.$id) {
+			this.api.main(filter)
+			this.opts.callback(this.filter)
+		} else {
+			const i = rawParent.lst.findIndex(f => f.$id == filter.$id)
+			rawParent.lst[i] = filter
+			this.api.main(rawParent)
+			this.opts.callback(this.filter)
+		}
+	}
+	getWrappedTvslst($id, lst = []) {
+		return {
+			$id,
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst
+		}
 	}
 	getId(item) {
 		return item.$id
-	}
-	getVisibleFilter(filter) {
-		const lst = filter.lst.filter(d => d.visibility != 'hidden')
-		return lst.length === filter.lst.length
-			? filter
-			: {
-					$id: filter.$id,
-					type: filter.type,
-					in: filter.in,
-					join: lst.length > 1 ? filter.join : '',
-					lst
-			  }
 	}
 }
 
@@ -236,10 +269,7 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = function(container, filter) {
-		const visibleFilter = self.getVisibleFilter(filter)
-		container
-			.datum(visibleFilter)
-			.style('display', !visibleFilter.lst || !visibleFilter.lst.length ? 'none' : 'inline-block')
+		container.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
 
 		const pills = container.selectAll(':scope > .sja_filter_grp').data([filter], self.getId)
 
@@ -279,8 +309,7 @@ function setRenderers(self) {
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
 
-		const lst = item.type == 'tvslst' ? item.lst : [item]
-		const data = lst.filter(d => d.visibility !== 'hidden')
+		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
@@ -310,9 +339,7 @@ function setRenderers(self) {
 			.select(':scope > .sja_filter_clause_negate')
 			.style('display', filter.in ? 'none' : 'inline-block')
 
-		const lst = item.type == 'tvslst' ? item.lst : [item]
-		const data = lst.filter(d => d.visibility !== 'hidden')
-
+		const data = item.type == 'tvslst' ? item.lst : [item]
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
 			.style('display', (filter.$id !== self.filter.$id || !filter.in) && data.length > 1 ? 'inline-block' : 'none')
@@ -331,12 +358,7 @@ function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
-			.sort(
-				(a, b) => data.indexOf(a) - data.indexOf(b)
-				// because visibleFilter may be different from the element-bound filter data,
-				// has to find index by item.$id instead of directly using data.indexOf(a)
-				// data.findIndex(e => e.$id === a.$id) - data.findIndex(e => e.$id === b.$id)
-			)
+			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
 	}
 
 	self.removeGrp = function(item) {
@@ -402,10 +424,9 @@ function setRenderers(self) {
 
 	self.updateItem = function(item, i) {
 		const filter = this.parentNode.__data__
-		const visibleFilter = self.getVisibleFilter(filter)
 		select(this)
 			.select(':scope > .sja_filter_join_label')
-			.style('display', visibleFilter.lst.indexOf(item) < visibleFilter.lst.length - 1 ? 'inline-block' : 'none')
+			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
 		if (item.type == 'tvslst') {
@@ -424,32 +445,27 @@ function setRenderers(self) {
 	}
 
 	self.addJoinLabel = function(elem, filter, item) {
-		const visibleFilter = self.getVisibleFilter(filter)
-		const i = visibleFilter.lst.findIndex(d => d.$id === item.$id)
+		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style(
-				'display',
-				visibleFilter.lst.length > 1 && item && i != -1 && i < visibleFilter.lst.length - 1 ? 'inline-block' : 'none'
-			)
+			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
 			.style('width', '50px')
 			.style('padding', '5px')
 			.style('border', 'none')
 			.style('border-radius', '5px')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
-			.html(visibleFilter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
+			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')
 			.on('click', self.displayControlsMenu)
 	}
 
 	self.updateJoinLabel = function(item) {
 		const filter = this.parentNode.parentNode.parentNode.__data__
-		const visibleFilter = self.getVisibleFilter(filter)
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			visibleFilter.lst.length > 1 && item && i != -1 && i < visibleFilter.lst.length - 1 ? 'inline-block' : 'none'
+			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
 		)
 	}
 }
@@ -459,7 +475,6 @@ function setInteractivity(self) {
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
-		const visibleFilter = self.getVisibleFilter(filter)
 		self.activeData = { item, filter, elem: this }
 
 		const grpAction =
@@ -473,7 +488,7 @@ function setInteractivity(self) {
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && visibleFilter.lst.length == 1) ||
+				(filter.$id == self.filter.$id && filter.lst.length == 1) ||
 					this.className.includes('negate') ||
 					this.className.includes('paren')
 					? 'none'
@@ -558,8 +573,9 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.filter // XXX if this is for Replace, should take out the tvs being replaced
-				}
+					filter: self.rawFilter
+				},
+				disable_terms: [self.activeData.item.$id]
 			},
 			barchart: {
 				bar_click_override: tvslst => {
@@ -587,6 +603,7 @@ function setInteractivity(self) {
 							}
 							self.refresh(rootCopy)
 						} else if (d == 'and' || tvslst.length < 2) {
+							//console.log(603, [rootCopy, ...tvslst.map(self.wrapTvs)])
 							self.refresh({
 								type: 'tvslst',
 								in: true,
@@ -634,7 +651,8 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.filter // XXX if this is for Replace, should take out the tvs being replaced
+					filter: self.rawFilter,
+					disable_terms: [self.activeData.item.$id]
 				}
 			},
 			barchart: {
@@ -761,12 +779,7 @@ function setInteractivity(self) {
 		const item = t.action || typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
 		const filter = self.findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
-			self.refresh({
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: []
-			})
+			self.refresh(self.getWrappedTvslst(item.$id, []))
 			return
 		}
 		const i = filter.lst.findIndex(t => t.$id === item.$id)

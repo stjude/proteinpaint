@@ -46,11 +46,11 @@ class TdbFilter {
 	initFilter() {
 		// only call in main(), requires this.state{}
 		this.filterApi = filterInit({
-			mode: 'active',
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
+			getVisibleRoot: this.opts.getVisibleRoot,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
