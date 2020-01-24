@@ -972,9 +972,12 @@ tape('hidden filters', async test => {
 	)
 	await addDemographicSexFilter(opts, adderOr)
 	const lstOr = opts.filterData.lst[1] && opts.filterData.lst[1].lst
-	test.deepEqual(lstOr.map(d => d.tvs.id), lst.map(d => d.tvs.id), 'should subnest the original filter tvslst')
+	test.deepEqual(
+		lstOr[0] && lstOr[0].lst && lstOr[0].lst.map(d => d.tvs.id),
+		lst.map(d => d.tvs.id),
+		'should subnest the original filter tvslst'
+	)
 	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
-	//test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
-
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
 	test.end()
 })

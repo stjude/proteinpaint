@@ -54,10 +54,7 @@ class Filter {
 				this.rawFilter = JSON.parse(this.rawCopy)
 				this.validateFilter(this.rawFilter)
 
-				const filter = this.opts.getVisibleRoot
-					? this.opts.getVisibleRoot(this.rawFilter)
-					: this.getVisibleRoot(this.rawFilter)
-				this.filter = filter
+				this.filter = this.opts.getVisibleRoot ? this.opts.getVisibleRoot(this.rawFilter) : this.rawFilter
 				this.resetActiveData(this.filter)
 
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
@@ -65,7 +62,7 @@ class Filter {
 				this.updateUI(this.dom.filterContainer, this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
-					.style('display', d => (filter.lst.length > 0 && filter.join !== d ? 'inline-block' : 'none'))
+					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			},
 			getStandardRoot: self.getStandardRoot
@@ -115,12 +112,6 @@ class Filter {
 			}
 		}
 	}
-	// default method to set the nested level/item
-	// which this filter UI will use as root filter data
-	// may be overriden via the opts.getRoot(filter) option
-	getVisibleRoot(rawFilter) {
-		return rawFilter
-	}
 	refresh(filter) {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
@@ -129,7 +120,7 @@ class Filter {
 			this.api.main(filter)
 			this.opts.callback(this.filter)
 		} else {
-			const i = rawParent.lst.findIndex(f => f.$id == filter.$id)
+			const i = rawParent.lst.findIndex(f => f.$id == this.filter.$id)
 			rawParent.lst[i] = filter
 			this.api.main(rawParent)
 			this.opts.callback(this.filter)
@@ -589,7 +580,6 @@ function setInteractivity(self) {
 							}
 							self.refresh(rootCopy)
 						} else if (d == 'and' || tvslst.length < 2) {
-							//console.log(603, [rootCopy, ...tvslst.map(self.wrapTvs)])
 							self.refresh({
 								type: 'tvslst',
 								in: true,
