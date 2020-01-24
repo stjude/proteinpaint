@@ -470,13 +470,11 @@ function show_group_termdb(group, tk, block) {
 			getVisibleRoot: root => root.lst[0],
 			callback: async f => {
 				group.filter = f
-				group.filterCombined = combine_groupfilter_with_hidden(f, tk)
 				await tk.load()
 			}
 		})
 	}
-	group.filterCombined = combine_groupfilter_with_hidden(group.filter, tk)
-	group.filterApi.main(group.filterCombined) // async
+	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async
 	if (!group.dom.samplehandle) {
 		// "n=?, view stats" handle and for porting to term tree filter
 		group.dom.samplehandle = group.dom.td3
@@ -494,7 +492,7 @@ function show_group_termdb(group, tk, block) {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
 						termfilter: {
-							filter: group.filterCombined
+							filter: group.filterApi.getStandardRoot()
 						}
 					}
 				})

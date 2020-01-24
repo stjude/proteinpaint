@@ -1019,7 +1019,7 @@ append numeric axis parameter to object for loadTk
 			if (g.is_termdb) {
 				par.AFtest.groups.push({
 					is_termdb: true,
-					filter: g.filterCombined // filterCombined will contain active hidden filters
+					filter: g.filterApi.getStandardRoot()
 				})
 				continue
 			}
