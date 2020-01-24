@@ -162,7 +162,7 @@ tape('Caterogical term', async test => {
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
 	const tip = opts.pill.Inner.dom.tip
-	
+
 	//check menu buttons on first menu
 	test.equal(tip.d.selectAll('.group_btn').size(), 2, 'Should have 2 buttons for group config')
 	test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
@@ -176,27 +176,48 @@ tape('Caterogical term', async test => {
 		'Should have rows for each caterory'
 	)
 	test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
-	test.equal(tip.d.selectAll('.group_edit_div').selectAll('label').html(), '#groups',
+	test.equal(
+		tip.d
+			.selectAll('.group_edit_div')
+			.selectAll('label')
+			.html(),
+		'#groups',
 		'Should have "Groups" as first column group'
 	)
-	test.equal(tip.d.selectAll('.group_edit_div').selectAll('select').size(), 1,
+	test.equal(
+		tip.d
+			.selectAll('.group_edit_div')
+			.selectAll('select')
+			.size(),
+		1,
 		'Should have dropdown for group count change'
 	)
 	test.true(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input').size() >= 3,
+		d3s
+			.select(tip.d.selectAll('tr')._groups[0][1])
+			.selectAll('input')
+			.size() >= 3,
 		'Should have 3 or more radio buttons for first category'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][4].innerText, 'Acute lymphoblastic leukemia',
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][4].innerText,
+		'Acute lymphoblastic leukemia',
 		'Should have first cateogry as "ALL"'
 	)
 
 	//devide categories to the groups
-	d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][2].click()
-	tip.d.selectAll('.apply_btn').node().click()
+	d3s
+		.select(tip.d.selectAll('tr')._groups[0][1])
+		.selectAll('input')
+		._groups[0][2].click()
+	tip.d
+		.selectAll('.apply_btn')
+		.node()
+		.click()
 
 	test.equal(
-		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText, 'Divided into 2 groups',
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		'Divided into 2 groups',
 		'Should have blue pill changed from group select'
 	)
 
@@ -204,7 +225,6 @@ tape('Caterogical term', async test => {
 })
 
 tape('Numerical term', async test => {
-
 	const opts = getOpts({
 		tsData: {
 			term: {
@@ -214,7 +234,7 @@ tape('Numerical term', async test => {
 				isfloat: true,
 				bins: {
 					default: {
-						bin_size: 3, 
+						bin_size: 3,
 						stopinclusive: true,
 						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
 					}
@@ -241,15 +261,18 @@ tape('Numerical term', async test => {
 	test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 	test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText, 'Bin Size',
+		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+		'Bin Size',
 		'Should have section for "bin size" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText, 'First Bin',
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+		'First Bin',
 		'Should have section for "First bin" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText, 'Last Bin',
+		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+		'Last Bin',
 		'Should have section for "Last bin" edit'
 	)
 
@@ -261,8 +284,11 @@ tape('Numerical term', async test => {
 	bin_size_input.addEventListener('keyup', () => {})
 	bin_size_input.dispatchEvent(enter_event)
 
-	test.equal(d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value, '5',
-	'Should change "bin size" from input')
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
+		'5',
+		'Should change "bin size" from input'
+	)
 
 	//trigger and test first_bin_change
 	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1]
@@ -272,7 +298,8 @@ tape('Numerical term', async test => {
 	first_bin_input.addEventListener('keyup', () => {})
 	first_bin_input.dispatchEvent(enter_event)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value, '7',
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value,
+		'7',
 		'Should change "first bin" from input'
 	)
 
@@ -290,7 +317,8 @@ tape('Numerical term', async test => {
 	last_bin_input.dispatchEvent(enter_event)
 
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value, '20',
+		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value,
+		'20',
 		'Should change "last bin" from input'
 	)
 
@@ -299,7 +327,8 @@ tape('Numerical term', async test => {
 	reset_btn.click()
 
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value, '2',
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value,
+		'2',
 		'Should reset the bins by "Reset" button'
 	)
 
@@ -324,28 +353,38 @@ tape('Conditional term', async test => {
 					5: { label: '5: Death' },
 					9: { label: 'Unknown status', uncomputable: true }
 				},
+				subconditions: {
+					'Atrioventricular heart block': { label: 'Atrioventricular heart block' },
+					'Conduction abnormalities': { label: 'Conduction abnormalities' },
+					'Prolonged QT interval': { label: 'Prolonged QT interval' },
+					'Cardiac dysrhythmia': { label: 'Cardiac dysrhythmia' },
+					'Sinus bradycardia': { label: 'Sinus bradycardia' },
+					'Sinus tachycardia': { label: 'Sinus tachycardia' }
+				},
 				groupsetting: {
-					useIndex:-1,
-					lst:[{
-							name:'Any condition vs normal',
-							is_grade:true,
-							groups:[
+					useIndex: -1,
+					lst: [
+						{
+							name: 'Any condition vs normal',
+							is_grade: true,
+							groups: [
 								{
-									name:'No condition',
-									values:[{key:'0',label:'No condition'}]
+									name: 'No condition',
+									values: [{ key: '0', label: 'No condition' }]
 								},
 								{
-									name:'Has condition',
-									values:[
-										{key:'1',label:'1: Mild'},
-										{key:'2',label:'2: Moderate'},
-										{key:'3',label:'3: Severe'},
-										{key:'4',label:'4: Life-threatening'},
-										{key:'5',label:'5: Death'}
+									name: 'Has condition',
+									values: [
+										{ key: '1', label: '1: Mild' },
+										{ key: '2', label: '2: Moderate' },
+										{ key: '3', label: '3: Severe' },
+										{ key: '4', label: '4: Life-threatening' },
+										{ key: '5', label: '5: Death' }
 									]
 								}
 							]
-					}]
+						}
+					]
 				}
 			}
 		}
@@ -356,11 +395,115 @@ tape('Conditional term', async test => {
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
 	const tip = opts.pill.Inner.dom.tip
-	
+
 	//check menu buttons on first menu
-	test.equal(tip.d.selectAll('.group_btn').size(), 2, 'Should have 2 buttons for group config')
+	test.equal(tip.d.selectAll('select').size(), 1, 'Should have 1 dropdown to change grade setting')
+	test.equal(tip.d.selectAll('.group_btn').size(), 3, 'Should have 3 buttons for group config')
 	test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 	test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+	test.true(
+		tip.d.selectAll('.group_btn')._groups[0][0].innerText.includes('Using'),
+		'Should have "default" group button be active'
+	)
+
+	//change grade type
+	tip.d.select('select')._groups[0][0].selectedIndex = 1
+	tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
+	test.equal(
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		'Most Recent Grade',
+		'Should have bluepill summary btn changed to "By Most Recent Grade"'
+	)
+
+	// select 'Any condition vs normal'
+	pilldiv.click()
+	tip.d.selectAll('.group_btn')._groups[0][1].click()
+
+	// check tvspill and group menu
+	const groupset_idx = opts.pill.Inner.q.groupsetting.predefined_groupset_idx
+	const groupset = opts.tsData.term.groupsetting.lst[groupset_idx]
+	test.equal(
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		groupset.name,
+		'Should have bluepill summary btn match group name'
+	)
+
+	pilldiv.click()
+	test.equal(tip.d.selectAll('select')._groups[0][0].selectedIndex, 1, 'Should have "Most recent" option selected')
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+		groupset.groups[0].name + ':',
+		'Should have group 1 name same as predefined group1 name'
+	)
+	test.equal(
+		d3s
+			.select(d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][1])
+			.selectAll('div')
+			.size(),
+		groupset.groups[0].values.length,
+		'Should have same number of grades to group as predefined group1'
+	)
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+		groupset.groups[1].name + ':',
+		'Should have group 2 name same as predefined group2 name'
+	)
+	test.equal(
+		d3s
+			.select(d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][1])
+			.selectAll('div')
+			.size(),
+		groupset.groups[1].values.length,
+		'Should have same number of grades to group as predefined group2'
+	)
+	test.true(
+		tip.d.selectAll('.group_btn')._groups[0][1].innerText.includes('Use'),
+		'Should have "default" group button be inactive'
+	)
+
+	//chage to subcondition
+	pilldiv.click()
+	tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
+	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	test.equal(
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		'Sub-condition',
+		'Should have bluepill summary btn changed to "By Subcondition"'
+	)
+
+	// devide into 2 groups
+	pilldiv.click()
+	tip.d.selectAll('.group_btn')._groups[0][2].click()
+	d3s
+		.select(tip.d.selectAll('tr')._groups[0][3])
+		.selectAll('input')
+		._groups[0][2].click()
+	tip.d
+		.selectAll('.apply_btn')
+		.node()
+		.click()
+
+	test.equal(
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		'2 groups of sub-conditions',
+		'Should have blue pill summary changed by group change'
+	)
+
+	//change back subcondition to grade
+	pilldiv.click()
+	tip.d.selectAll('select')._groups[0][0].selectedIndex = 0
+	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+
+	test.equal(
+		opts.holder.selectAll('.ts_name_btn')._groups[0][0].innerText,
+		opts.tsData.term.name,
+		'Should have 1 pill for overlay term'
+	)
+	test.equal(
+		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+		'Max. Grade',
+		'Should have bluepill summary btn "By Max Grade" as default'
+	)
 
 	test.end()
 })
