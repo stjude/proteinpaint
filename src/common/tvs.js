@@ -914,9 +914,9 @@ function setRenderers(self) {
 		// this row will have group names/number
 		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
 
-		const all_checkbox = all_checkbox_tr
-			.append('td')
-			.style('padding', '2px 5px')
+		const all_checkbox_label = all_checkbox_tr.append('td').style('padding', '2px 5px')
+
+		const all_checkbox = all_checkbox_label
 			.append('input')
 			.attr('type', 'checkbox')
 			.style('position', 'relative')
@@ -926,8 +926,8 @@ function setRenderers(self) {
 				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
 			})
 
-		all_checkbox_tr
-			.append('td')
+		all_checkbox_label
+			.append('span')
 			.style('padding', '2px 5px')
 			.style('font-size', '.8em')
 			.style('font-weight', 'bold')
@@ -957,9 +957,12 @@ function setRenderers(self) {
 		function enter_td(d) {
 			const value_tr = select(this)
 
-			value_tr
+			const value_label = value_tr
 				.append('td')
 				.style('padding', '2px 5px')
+				.append('label')
+
+			value_label
 				.append('input')
 				.attr('class', 'value_checkbox')
 				.attr('type', 'checkbox')
@@ -980,8 +983,8 @@ function setRenderers(self) {
 					}
 				})
 
-			value_tr
-				.append('td')
+			value_label
+				.append('span')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
 				.html(d.label + ' (n=' + d.samplecount + ')')
