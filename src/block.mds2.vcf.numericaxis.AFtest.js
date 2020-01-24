@@ -314,7 +314,7 @@ groupindex:
 						}
 					}
 				}
-				const filters = filterJoin(get_hidden_filters(tk), { visibility: 'hidden' })
+				const filters = filterJoin(get_hidden_filters(tk))
 				if (filters) obj.state.termfilter = { filter: filters }
 				appInit(null, obj)
 			}
@@ -439,21 +439,43 @@ function get_hidden_filters(tk) {
 	return lst
 }
 
+function combine_groupfilter_with_hidden(f, tk) {
+	/*
+f:{}
+  the visible filter from a group of AFtest, to be put as the first of array
+  and this logic is hardcoded in opts.getVisibleRoot() 
+
+tk:
+  may provide additional hidden filters
+*/
+	const combined = {
+		type: 'tvslst',
+		join: 'and',
+		in: true,
+		lst: [f]
+	}
+	const hiddenlst = get_hidden_filters(tk)
+	if (hiddenlst.length) {
+		combined.lst.push(filterJoin(hiddenlst))
+	}
+	return combined
+}
+
 function show_group_termdb(group, tk, block) {
 	if (!group.filterApi) {
 		group.filterApi = filterInit({
 			holder: group.dom.td3,
 			genome: block.genome.name,
 			dslabel: tk.dslabel,
-			callbackArgPreprocessor: 'getVisibleFilter',
+			getVisibleRoot: root => root.lst[0],
 			callback: async f => {
 				group.filter = f
-				group.filterCombined = filterJoin([group.filter, ...get_hidden_filters(tk)], { visibility: 'hidden' })
+				group.filterCombined = combine_groupfilter_with_hidden(f, tk)
 				await tk.load()
 			}
 		})
 	}
-	group.filterCombined = filterJoin([group.filter, ...get_hidden_filters(tk)], { visibility: 'hidden' })
+	group.filterCombined = combine_groupfilter_with_hidden(group.filter, tk)
 	group.filterApi.main(group.filterCombined) // async
 	if (!group.dom.samplehandle) {
 		// "n=?, view stats" handle and for porting to term tree filter
