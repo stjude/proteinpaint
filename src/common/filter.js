@@ -529,6 +529,8 @@ function setInteractivity(self) {
 					? self.activeData.elem.parentNode.parentNode
 					: self.activeData.elem.parentNode.parentNode
 			self.displayBlankPill(elem, self.activeData.filter.join.toUpperCase())
+		} else {
+			self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
 		}
 
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
