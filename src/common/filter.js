@@ -47,7 +47,7 @@ class Filter {
 				  the raw filter data structure
 				*/
 
-				// should use deepEquals as part of rx.core
+				// to-do: should use deepEquals as part of rx.core
 				const rawCopy = JSON.stringify(rawFilter)
 				if (this.rawCopy == rawCopy) return
 				this.rawCopy = rawCopy
@@ -67,7 +67,8 @@ class Filter {
 					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (filter.lst.length > 0 && filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-			}
+			},
+			getStandardRoot: self.getStandardRoot
 		}
 	}
 	validateOpts(o) {
@@ -119,21 +120,6 @@ class Filter {
 	// may be overriden via the opts.getRoot(filter) option
 	getVisibleRoot(rawFilter) {
 		return rawFilter
-	}
-	// get valid filter data to be used for server requests
-	// will remove empty lsts and "level-up" or "hoist" any single lst entry
-	getStandardRoot(filter) {
-		const lst = filter.lst
-			.filter(f => f.type !== 'tvslst' || f.length > 0)
-			.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
-
-		if (!lst.length) {
-			return self.getWrappedTvslst(filter.$id, [])
-		} else if (lst.length == 1) {
-			return self.getStandardRoot(lst[0])
-		} else {
-			return Object.assign({}, filter, { lst })
-		}
 	}
 	refresh(filter) {
 		this.dom.controlsTip.hide()
@@ -840,6 +826,22 @@ function setInteractivity(self) {
 	self.wrapTvs = function(tvs) {
 		tvs.isnot = self.dom.isNotInput.property('checked')
 		return { type: 'tvs', tvs }
+	}
+
+	// get valid filter data to be used for server requests
+	// will remove empty lsts and "level-up" or "hoist" any single lst entry
+	self.getStandardRoot = filter => {
+		const lst = filter.lst
+			.filter(f => f.type !== 'tvslst' || f.length > 0)
+			.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
+
+		if (!lst.length) {
+			return self.getWrappedTvslst(filter.$id, [])
+		} else if (lst.length == 1) {
+			return self.getStandardRoot(lst[0])
+		} else {
+			return Object.assign({}, filter, { lst })
+		}
 	}
 }
 
