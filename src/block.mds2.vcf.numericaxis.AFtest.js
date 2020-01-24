@@ -1,7 +1,6 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as dom from './dom'
-import { init as termdbinit } from './mds.termdb'
 import { filterInit, filterJoin } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 import { appInit } from './termdb/app'
@@ -292,10 +291,21 @@ groupindex:
 						dslabel: tk.mds.label
 					},
 					barchart: {
-						bar_click_override: result => {
+						bar_click_override: tvslst => {
 							tip.hide()
-							// FIXME
-							group.filter = result.terms
+							if (tvslst.length == 0) return // should not happen
+							if (tvslst.length == 1) {
+								group.filter = { type: 'tvslst', join: '', in: true, lst: [{ type: 'tvs', tvs: tvslst[0] }] }
+							} else {
+								group.filter = {
+									type: 'tvslst',
+									join: 'and',
+									in: true,
+									lst: tvslst.map(i => {
+										return { type: 'tvs', tvs: i }
+									})
+								}
+							}
 							delete group.key
 							delete group.is_infofield
 							delete group.is_population
@@ -330,6 +340,10 @@ groupindex:
 							delete group.is_termdb
 							delete group.is_population
 							delete group.filterApi
+							if (group.dom.samplehandle) {
+								group.dom.samplehandle.remove()
+								delete group.dom.samplehandle
+							}
 							group.is_infofield = true
 							group.key = i.key
 							_updatetk()
@@ -356,6 +370,10 @@ groupindex:
 							delete group.is_termdb
 							delete group.is_infofield
 							delete group.filterApi
+							if (group.dom.samplehandle) {
+								group.dom.samplehandle.remove()
+								delete group.dom.samplehandle
+							}
 							group.is_population = true
 							group.key = population.key
 							group.allowto_adjust_race = population.allowto_adjust_race
@@ -403,7 +421,7 @@ function show_group(tk, block, group) {
 }
 
 function get_hidden_filters(tk) {
-	// to get the list of hidden filters to be passed to filterInit
+	// get the list of hidden filters
 	const lst = []
 	const v = may_get_param_AFtest_termfilter(tk)
 	// keep AFtest.termfilter as a single tvs
