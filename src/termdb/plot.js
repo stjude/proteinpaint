@@ -93,10 +93,13 @@ class TdbPlot {
 		if (!(this.id in appState.tree.plots)) {
 			throw `No plot with id='${this.id}' found.`
 		}
+
+		const filterUi = this.app.getComponents('terms')
+		const filter = filterUi ? filterUi.getStandardRoot(appState.termfilter.filter) : appState.termfilter.filter
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			termfilter: appState.termfilter,
+			termfilter: { filter },
 			config: appState.tree.plots[this.id]
 		}
 	}

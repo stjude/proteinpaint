@@ -95,7 +95,6 @@ function diaggrp(overrides = {}) {
 	return Object.assign(
 		{
 			type: 'tvs',
-			visibility: 'default',
 			tvs: {
 				term: {
 					id: 'diaggrp',
@@ -118,7 +117,6 @@ function agedx(overrides = {}) {
 	return Object.assign(
 		{
 			type: 'tvs',
-			visibility: 'default',
 			tvs: {
 				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
 				ranges: [{ start: 2, stop: 5, startinclusive: true }]
@@ -133,7 +131,6 @@ function gettvs(id, val = '', overrides = {}) {
 	return Object.assign(
 		{
 			type: 'tvs',
-			visibility: 'default',
 			tvs: {
 				term: {
 					id,
@@ -497,8 +494,7 @@ tape('pill Edit interaction', async test => {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [diaggrp()],
-			visibility: 'default'
+			lst: [diaggrp()]
 		}
 	})
 
@@ -535,8 +531,7 @@ tape('pill Replace interaction', async test => {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [diaggrp()],
-			visibility: 'default'
+			lst: [diaggrp()]
 		}
 	})
 
@@ -768,7 +763,6 @@ tape('nested filters', async test => {
 						diaggrp(),
 						{
 							type: 'tvs',
-							visibility: 'default',
 							tvs: {
 								term: {
 									id: 'Arrhythmias',
@@ -979,5 +973,212 @@ tape('hidden filters', async test => {
 	)
 	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	test.end()
+})
+
+tape('hidden filters', async test => {
+	const hidden = {
+		// HIDDEN static filters
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [diaggrp(), agedx()]
+	}
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [
+						{
+							type: 'tvslst',
+							in: true,
+							join: 'and',
+							lst: []
+						},
+						hidden
+					]
+				},
+				{
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: []
+				}
+			]
+		},
+		getVisibleRoot(rawFilter) {
+			return rawFilter.lst[0].lst[0]
+		},
+		callback(filter) {
+			opts.filterData.lst[0].lst[0] = filter
+			opts.filter.main(opts.filterData)
+		}
+	})
+
+	//await opts.filter.main(opts.filterData)
+
+	test.deepEqual(
+		opts.filter.getStandardRoot(opts.filterData),
+		hidden,
+		'should return only the hidden parts when the user configurable parts are empty'
+	)
+
+	const singleUserConfig = gettvs('abc', 123)
+	await opts.filter.main({
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: [singleUserConfig]
+					},
+					hidden
+				]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		]
+	})
+
+	test.deepEqual(
+		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [singleUserConfig, hidden]
+		},
+		'should return only the hidden -AND- one additional restriction'
+	)
+
+	const twoEntryLst = [gettvs('abc', 123), gettvs('xyz', '999')]
+	const userConfiguredFilters = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: twoEntryLst
+	}
+	await opts.filter.main({
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [userConfiguredFilters, hidden]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		]
+	})
+
+	test.deepEqual(
+		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [userConfiguredFilters, hidden]
+		},
+		'should return only the hidden -AND- two-entry tvslst restrictions'
+	)
+
+	const filterData2 = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [userConfiguredFilters, hidden]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [gettvs('def', '444'), gettvs('rst', '555')]
+			}
+		]
+	}
+	await opts.filter.main(filterData2)
+	test.deepEqual(
+		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		filterData2,
+		'should return the hidden plus all user configured options'
+	)
+
+	const filterData3 = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					},
+					hidden
+				]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [gettvs('def', '444'), gettvs('rst', '555')]
+			}
+		]
+	}
+	await opts.filter.main(filterData3)
+	test.deepEqual(
+		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				hidden,
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'or',
+					lst: [gettvs('def', '444'), gettvs('rst', '555')]
+				}
+			]
+		},
+		'should return the hidden plus user configured options after removing empty tvslst'
+	)
+
 	test.end()
 })

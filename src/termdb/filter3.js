@@ -19,6 +19,8 @@ class TdbFilter {
 		this.validateOpts(opts)
 		this.initHolder()
 		this.api = rx.getComponentApi(this)
+		this.api.getStandardRoot = filter =>
+			this.filterApi ? this.filterApi.getStandardRoot(filter) : this.state.termfilter.filter
 		this.eventTypes = ['postInit', 'postRender']
 	}
 

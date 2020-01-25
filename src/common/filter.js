@@ -65,7 +65,7 @@ class Filter {
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			},
-			getStandardRoot: self.getStandardRoot
+			getStandardRoot: this.getStandardRoot
 		}
 	}
 	validateOpts(o) {
@@ -822,17 +822,56 @@ function setInteractivity(self) {
 
 	// get valid filter data to be used for server requests
 	// will remove empty lsts and "level-up" or "hoist" any single lst entry
-	self.getStandardRoot = filter => {
+	self.getStandardRoot = _filter => {
+		const filter = JSON.parse(JSON.stringify(_filter))
+		return self.normalizeFilter(filter)
+	}
+
+	self.normalizeFilter = function(filter) {
+		delete filter.$id
 		const lst = filter.lst
-			.filter(f => f.type !== 'tvslst' || f.length > 0)
+			// keep non-tvslst entries or tvslst with non-empty lst.length
+			.filter(f => f.type !== 'tvslst' || f.lst.length > 0)
+			// do not reformat an entry unless it is a tvslst with only one entry,
+			// in which case just return that filter's first lst entry instead
+			// of the filter itself
 			.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
 
+		lst.forEach(self.normalizeProps)
+
 		if (!lst.length) {
+			//console.log(834)
+			// return a default empty filter = {type: 'tvslst', lst:[], ...}
 			return self.getWrappedTvslst(filter.$id, [])
 		} else if (lst.length == 1) {
-			return self.getStandardRoot(lst[0])
+			//console.log(837, lst[0])
+			// return the only entry
+			if (lst[0].type === 'tvslst') {
+				return self.normalizeFilter(lst[0])
+			} else {
+				return self.normalizeProps(lst[0])
+			}
 		} else {
-			return Object.assign({}, filter, { lst })
+			const _lst = []
+			for (const item of lst) {
+				if (item.type === 'tvslst') {
+					const normalizedItem = self.normalizeFilter(item)
+					if (normalizedItem.lst.length) _lst.push(normalizedItem)
+				} else {
+					_lst.push(item)
+				}
+			}
+			filter.lst = _lst
+			return filter
+		}
+	}
+
+	self.normalizeProps = filter => {
+		delete filter.$id
+		if (filter.type == 'tvslst') {
+			for (const item of filter.lst) {
+				self.normalizeProps(item)
+			}
 		}
 	}
 }
