@@ -65,7 +65,7 @@ class Filter {
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			},
-			getStandardRoot: this.getStandardRoot
+			getNormalRoot: this.getNormalRoot
 		}
 	}
 	validateOpts(o) {
@@ -552,7 +552,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.rawFilter
+					filter: self.getNormalRoot(self.rawFilter)
 				},
 				disable_terms: [self.activeData.item.$id]
 			},
@@ -629,7 +629,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.rawFilter,
+					filter: self.getNormalRoot(self.rawFilter),
 					disable_terms: [self.activeData.item.$id]
 				}
 			},
@@ -820,13 +820,28 @@ function setInteractivity(self) {
 		return { type: 'tvs', tvs }
 	}
 
-	// get valid filter data to be used for server requests
-	// will remove empty lsts and "level-up" or "hoist" any single lst entry
-	self.getStandardRoot = _filter => {
+	/*
+		get valid filter data to be used for server requests
+		will use normalizeFilter recursively as needed
+
+		.filter{} the raw filter root
+	*/
+	self.getNormalRoot = _filter => {
 		const filter = JSON.parse(JSON.stringify(_filter ? _filter : self.rawFilter))
 		return self.normalizeFilter(filter)
 	}
 
+	/* 
+		Potentially
+		- restructure the filter data in a shape 
+		allowed by the server, such as by
+	  removing an empty tvslst or converting a 
+		single-entry tvslst into a tvs
+		- also will remove unnecessary filter properties
+		via normalizeProps()
+
+		.filter{} the raw filter root or a subnested filter
+	*/
 	self.normalizeFilter = function(filter) {
 		delete filter.$id
 		const lst = filter.lst
@@ -840,32 +855,38 @@ function setInteractivity(self) {
 		lst.forEach(self.normalizeProps)
 
 		if (!lst.length) {
-			//console.log(834)
 			// return a default empty filter = {type: 'tvslst', lst:[], ...}
 			return self.getWrappedTvslst(filter.$id, [])
 		} else if (lst.length == 1) {
-			//console.log(837, lst[0])
-			// return the only entry
+			// return the only lst entry after normalizing
 			if (lst[0].type === 'tvslst') {
 				return self.normalizeFilter(lst[0])
 			} else {
 				return self.normalizeProps(lst[0])
 			}
 		} else {
-			const _lst = []
+			// reset and fill-in filter.lst with normalized entries
+			filter.lst = []
 			for (const item of lst) {
 				if (item.type === 'tvslst') {
-					const normalizedItem = self.normalizeFilter(item)
-					if (normalizedItem.lst.length) _lst.push(normalizedItem)
+					const normalItem = self.normalizeFilter(item)
+					if (normalItem.type !== 'tvslst' || normalItem.lst.length) {
+						filter.lst.push(normalItem)
+					}
 				} else {
-					_lst.push(item)
+					filter.lst.push(item)
 				}
 			}
-			filter.lst = _lst
 			return filter
 		}
 	}
 
+	/*
+		will remove unnecessary filter properties
+		that are not expected in a server request
+
+		.filter{} the raw filter root or a subnested filter
+	*/
 	self.normalizeProps = filter => {
 		delete filter.$id
 		if (filter.type == 'tvslst') {

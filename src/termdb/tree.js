@@ -116,12 +116,14 @@ class TdbTree {
 	}
 
 	getState(appState) {
+		const filterUi = this.app.getComponents('terms')
+		const filter = filterUi ? filterUi.getNormalRoot(appState.termfilter.filter) : appState.termfilter.filter
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
-			termfilter: appState.termfilter,
+			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu
 		}
 	}

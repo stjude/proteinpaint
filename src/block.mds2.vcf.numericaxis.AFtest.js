@@ -492,7 +492,7 @@ function show_group_termdb(group, tk, block) {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
 						termfilter: {
-							filter: group.filterApi.getStandardRoot()
+							filter: group.filterApi.getNormalRoot()
 						}
 					}
 				})

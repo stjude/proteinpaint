@@ -979,6 +979,7 @@ tape('hidden filters', async test => {
 tape('hidden filters', async test => {
 	const hidden = {
 		// HIDDEN static filters
+		// not accessible to users
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -1014,17 +1015,13 @@ tape('hidden filters', async test => {
 		},
 		getVisibleRoot(rawFilter) {
 			return rawFilter.lst[0].lst[0]
-		},
-		callback(filter) {
-			opts.filterData.lst[0].lst[0] = filter
-			opts.filter.main(opts.filterData)
 		}
 	})
 
 	test.deepEqual(
 		// optional to supply a filterData argument
 		// otherwise the filter UI will use its own rawFilter
-		opts.filter.getStandardRoot(opts.filterData),
+		opts.filter.getNormalRoot(opts.filterData),
 		hidden,
 		'should return only the hidden parts when the user configurable parts are empty'
 	)
@@ -1059,7 +1056,7 @@ tape('hidden filters', async test => {
 	})
 
 	test.deepEqual(
-		opts.filter.getStandardRoot(),
+		opts.filter.getNormalRoot(),
 		{
 			type: 'tvslst',
 			in: true,
@@ -1097,7 +1094,7 @@ tape('hidden filters', async test => {
 	})
 
 	test.deepEqual(
-		opts.filter.getStandardRoot(),
+		opts.filter.getNormalRoot(),
 		{
 			type: 'tvslst',
 			in: true,
@@ -1127,11 +1124,7 @@ tape('hidden filters', async test => {
 		]
 	}
 	await opts.filter.main(filterData2)
-	test.deepEqual(
-		opts.filter.getStandardRoot(),
-		filterData2,
-		'should return the hidden plus all user configured options'
-	)
+	test.deepEqual(opts.filter.getNormalRoot(), filterData2, 'should return the hidden plus all user configured options')
 
 	const filterData3 = {
 		type: 'tvslst',
@@ -1162,7 +1155,7 @@ tape('hidden filters', async test => {
 	}
 	await opts.filter.main(filterData3)
 	test.deepEqual(
-		opts.filter.getStandardRoot(),
+		opts.filter.getNormalRoot(),
 		{
 			type: 'tvslst',
 			in: true,
