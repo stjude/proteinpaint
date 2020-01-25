@@ -10,6 +10,7 @@ import { scatterInit } from './scatter'
 import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
 
 class TdbPlot {
 	constructor(app, opts) {
@@ -93,9 +94,7 @@ class TdbPlot {
 		if (!(this.id in appState.tree.plots)) {
 			throw `No plot with id='${this.id}' found.`
 		}
-
-		const filterUi = this.app.getComponents('terms')
-		const filter = filterUi ? filterUi.getNormalRoot(appState.termfilter.filter) : appState.termfilter.filter
+		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,

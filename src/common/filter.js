@@ -65,7 +65,17 @@ class Filter {
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
 				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			},
-			getNormalRoot: this.getNormalRoot
+			/*
+				WARNING!!!
+				When using this filter.api.getNormalRoot(),
+				make sure this instance has been updated before the caller,
+				otherwise the normalized root will be stale
+
+				or for reliability, import getNormalRoot() directly 
+				from the common/filter.js component and supply the 
+				caller's known raw filter state
+			*/
+			getNormalRoot: () => getNormalRoot(this.rawFilter)
 		}
 	}
 	validateOpts(o) {
@@ -124,15 +134,6 @@ class Filter {
 			rawParent.lst[i] = filter
 			this.api.main(rawParent)
 			this.opts.callback(this.filter)
-		}
-	}
-	getWrappedTvslst($id, lst = []) {
-		return {
-			$id,
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst
 		}
 	}
 	getId(item) {
@@ -552,7 +553,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.getNormalRoot(self.rawFilter)
+					filter: self.rawFilter
 				},
 				disable_terms: [self.activeData.item.$id]
 			},
@@ -562,7 +563,7 @@ function setInteractivity(self) {
 
 					if (!rootCopy.lst.length) {
 						if (tvslst.length > 1) rootCopy.join = 'and'
-						rootCopy.lst.push(...tvslst.map(self.wrapTvs))
+						rootCopy.lst.push(...tvslst.map(self.wrapInputTvs))
 						self.refresh(rootCopy)
 					} else if (d != 'or' && d != 'and') {
 						throw 'unhandled new term(s): invalid appender join value'
@@ -571,13 +572,13 @@ function setInteractivity(self) {
 
 						if (rootCopy.join == d) {
 							if (tvslst.length < 2 || rootCopy.join == 'and') {
-								rootCopy.lst.push(...tvslst.map(self.wrapTvs))
+								rootCopy.lst.push(...tvslst.map(self.wrapInputTvs))
 							} else {
 								rootCopy.push({
 									type: 'tvslst',
 									in: true,
 									join: 'and',
-									lst: tvslst.map(self.wrapTvs)
+									lst: tvslst.map(self.wrapInputTvs)
 								})
 							}
 							self.refresh(rootCopy)
@@ -586,7 +587,7 @@ function setInteractivity(self) {
 								type: 'tvslst',
 								in: true,
 								join: d,
-								lst: [rootCopy, ...tvslst.map(self.wrapTvs)]
+								lst: [rootCopy, ...tvslst.map(self.wrapInputTvs)]
 							})
 						} else {
 							self.refresh({
@@ -599,7 +600,7 @@ function setInteractivity(self) {
 										type: 'tvslst',
 										in: true,
 										join: 'and',
-										lst: tvslst.map(self.wrapTvs)
+										lst: tvslst.map(self.wrapInputTvs)
 									}
 								]
 							})
@@ -629,7 +630,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false,
-					filter: self.getNormalRoot(self.rawFilter),
+					filter: self.rawFilter,
 					disable_terms: [self.activeData.item.$id]
 				}
 			},
@@ -686,14 +687,14 @@ function setInteractivity(self) {
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapTvs))
+			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapInputTvs))
 		} else {
 			filterCopy.lst[i] = {
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapTvs)
+				lst: tvslst.map(self.wrapInputTvs)
 			}
 		}
 		self.refresh(rootCopy)
@@ -705,14 +706,14 @@ function setInteractivity(self) {
 		const rootCopy = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = self.findItem(rootCopy, filter.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.push(...tvslst.map(self.wrapTvs))
+			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapTvs)
+				lst: tvslst.map(self.wrapInputTvs)
 			})
 		}
 		self.refresh(rootCopy)
@@ -729,7 +730,7 @@ function setInteractivity(self) {
 			in: !self.dom.isNotInput.property('checked'),
 			type: 'tvslst',
 			join: filter.join == 'or' ? 'and' : 'or',
-			lst: [item, ...tvslst.map(self.wrapTvs)]
+			lst: [item, ...tvslst.map(self.wrapInputTvs)]
 		}
 		self.refresh(rootCopy)
 	}
@@ -744,10 +745,10 @@ function setInteractivity(self) {
 				type: 'tvslst',
 				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
-				lst: [filterCopy, ...tvslst.map(self.wrapTvs)]
+				lst: [filterCopy, ...tvslst.map(self.wrapInputTvs)]
 			})
 		} else {
-			filterCopy.lst.push(...tvslst.map(self.wrapTvs))
+			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
 			self.refresh(rootCopy)
 		}
 	}
@@ -757,7 +758,7 @@ function setInteractivity(self) {
 		const item = t.action || typeof t !== 'object' ? self.activeData.item : self.findItem(self.filter, t.$id)
 		const filter = self.findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
-			self.refresh(self.getWrappedTvslst(item.$id, []))
+			self.refresh(getWrappedTvslst([], '', item.$id))
 			return
 		}
 		const i = filter.lst.findIndex(t => t.$id === item.$id)
@@ -815,86 +816,106 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.wrapTvs = function(tvs) {
+	self.wrapInputTvs = function(tvs) {
 		tvs.isnot = self.dom.isNotInput.property('checked')
 		return { type: 'tvs', tvs }
 	}
+}
 
-	/*
-		get valid filter data to be used for server requests
-		will use normalizeFilter recursively as needed
+/***********************
+ Utilities
+*************************/
 
-		.filter{} the raw filter root
-	*/
-	self.getNormalRoot = _filter => {
-		const filter = JSON.parse(JSON.stringify(_filter ? _filter : self.rawFilter))
-		return self.normalizeFilter(filter)
+function getWrappedTvslst(lst = [], join = '', $id = null) {
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join,
+		lst
 	}
+	if ($id !== null && filter.$id !== undefined) filter.$id = $id
+	return filter
+}
 
-	/* 
-		Potentially
-		- restructure the filter data in a shape 
-		allowed by the server, such as by
-	  removing an empty tvslst or converting a 
-		single-entry tvslst into a tvs
-		- also will remove unnecessary filter properties
-		via normalizeProps()
+/*
+	get valid filter data to be used for server requests
+	will use normalizeFilter recursively as needed
 
-		.filter{} the raw filter root or a subnested filter
-	*/
-	self.normalizeFilter = function(filter) {
-		delete filter.$id
-		const lst = filter.lst
-			// keep non-tvslst entries or tvslst with non-empty lst.length
-			.filter(f => f.type !== 'tvslst' || f.lst.length > 0)
-			// do not reformat an entry unless it is a tvslst with only one entry,
-			// in which case just return that filter's first lst entry instead
-			// of the filter itself
-			.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
+	.filter{} the raw filter root
+*/
+function getNormalRoot(rawFilter) {
+	if (!rawFilter) return getWrappedTvslst([])
+	const filter = JSON.parse(JSON.stringify(rawFilter))
+	const processedFilter = normalizeFilter(filter)
+	return processedFilter.type == 'tvslst' ? processedFilter : getWrappedTvslst([processedFilter])
+}
 
-		lst.forEach(self.normalizeProps)
+exports.getNormalRoot = getNormalRoot
 
-		if (!lst.length) {
-			// return a default empty filter = {type: 'tvslst', lst:[], ...}
-			return self.getWrappedTvslst(filter.$id, [])
-		} else if (lst.length == 1) {
-			// return the only lst entry after normalizing
-			if (lst[0].type === 'tvslst') {
-				return self.normalizeFilter(lst[0])
-			} else {
-				return self.normalizeProps(lst[0])
-			}
+/* 
+	Potentially
+	- restructure the filter data in a shape 
+	allowed by the server, such as by
+  removing an empty tvslst or converting a 
+	single-entry tvslst into a tvs
+	- also will remove unnecessary filter properties
+	via normalizeProps()
+
+	.filter{} the raw filter root or a subnested filter
+*/
+function normalizeFilter(filter) {
+	delete filter.$id
+	const lst = filter.lst
+		// keep non-tvslst entries or tvslst with non-empty lst.length
+		.filter(f => f.type !== 'tvslst' || f.lst.length > 0)
+		// do not reformat an entry unless it is a tvslst with only one entry,
+		// in which case just return that filter's first lst entry instead
+		// of the filter itself
+		.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
+
+	lst.forEach(normalizeProps)
+
+	if (!lst.length) {
+		// return a default empty filter = {type: 'tvslst', lst:[], ...}
+		return getWrappedTvslst([], '', filter.$id)
+	} else if (lst.length == 1) {
+		// return the only lst entry after normalizing
+		if (lst[0].type === 'tvslst') {
+			return normalizeFilter(lst[0])
 		} else {
-			// reset and fill-in filter.lst with normalized entries
-			filter.lst = []
-			for (const item of lst) {
-				if (item.type === 'tvslst') {
-					const normalItem = self.normalizeFilter(item)
-					if (normalItem.type !== 'tvslst' || normalItem.lst.length) {
-						filter.lst.push(normalItem)
-					}
-				} else {
-					filter.lst.push(item)
+			return normalizeProps(lst[0])
+		}
+	} else {
+		// reset and fill-in filter.lst with normalized entries
+		filter.lst = []
+		for (const item of lst) {
+			if (item.type === 'tvslst') {
+				const normalItem = normalizeFilter(item)
+				if (normalItem.type !== 'tvslst' || normalItem.lst.length) {
+					filter.lst.push(normalItem)
 				}
-			}
-			return filter
-		}
-	}
-
-	/*
-		will remove unnecessary filter properties
-		that are not expected in a server request
-
-		.filter{} the raw filter root or a subnested filter
-	*/
-	self.normalizeProps = filter => {
-		delete filter.$id
-		if (filter.type == 'tvslst') {
-			for (const item of filter.lst) {
-				self.normalizeProps(item)
+			} else {
+				filter.lst.push(item)
 			}
 		}
+		return filter
 	}
+}
+
+/*
+	will remove unnecessary filter properties
+	that are not expected in a server request
+
+	.filter{} the raw filter root or a subnested filter
+*/
+function normalizeProps(filter) {
+	delete filter.$id
+	if (filter.type == 'tvslst') {
+		for (const item of filter.lst) {
+			normalizeProps(item)
+		}
+	}
+	return filter
 }
 
 /* join a list of filters into the first filter with "and", return joined filter

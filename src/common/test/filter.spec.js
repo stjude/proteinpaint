@@ -999,7 +999,7 @@ tape('hidden filters', async test => {
 						{
 							type: 'tvslst',
 							in: true,
-							join: 'and',
+							join: '',
 							lst: []
 						},
 						hidden
@@ -1018,6 +1018,7 @@ tape('hidden filters', async test => {
 		}
 	})
 
+	await opts.filter.main(opts.filterData)
 	test.deepEqual(
 		// optional to supply a filterData argument
 		// otherwise the filter UI will use its own rawFilter
@@ -1172,6 +1173,35 @@ tape('hidden filters', async test => {
 		},
 		'should return the hidden plus user configured options after removing empty tvslst'
 	)
+
+	const filterData4 = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					},
+					hidden
+				]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		]
+	}
+	await opts.filter.main(filterData4)
 
 	test.end()
 })

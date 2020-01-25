@@ -4,6 +4,7 @@ import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
 import { graphable } from '../common/graphable'
+import { getNormalRoot } from '../common/filter'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -116,8 +117,7 @@ class TdbTree {
 	}
 
 	getState(appState) {
-		const filterUi = this.app.getComponents('terms')
-		const filter = filterUi ? filterUi.getNormalRoot(appState.termfilter.filter) : appState.termfilter.filter
+		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
