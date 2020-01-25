@@ -823,7 +823,7 @@ function setInteractivity(self) {
 	// get valid filter data to be used for server requests
 	// will remove empty lsts and "level-up" or "hoist" any single lst entry
 	self.getStandardRoot = _filter => {
-		const filter = JSON.parse(JSON.stringify(_filter))
+		const filter = JSON.parse(JSON.stringify(_filter ? _filter : self.rawFilter))
 		return self.normalizeFilter(filter)
 	}
 

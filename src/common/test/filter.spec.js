@@ -1021,9 +1021,9 @@ tape('hidden filters', async test => {
 		}
 	})
 
-	//await opts.filter.main(opts.filterData)
-
 	test.deepEqual(
+		// optional to supply a filterData argument
+		// otherwise the filter UI will use its own rawFilter
 		opts.filter.getStandardRoot(opts.filterData),
 		hidden,
 		'should return only the hidden parts when the user configurable parts are empty'
@@ -1059,7 +1059,7 @@ tape('hidden filters', async test => {
 	})
 
 	test.deepEqual(
-		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		opts.filter.getStandardRoot(),
 		{
 			type: 'tvslst',
 			in: true,
@@ -1097,7 +1097,7 @@ tape('hidden filters', async test => {
 	})
 
 	test.deepEqual(
-		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		opts.filter.getStandardRoot(),
 		{
 			type: 'tvslst',
 			in: true,
@@ -1128,7 +1128,7 @@ tape('hidden filters', async test => {
 	}
 	await opts.filter.main(filterData2)
 	test.deepEqual(
-		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		opts.filter.getStandardRoot(),
 		filterData2,
 		'should return the hidden plus all user configured options'
 	)
@@ -1162,7 +1162,7 @@ tape('hidden filters', async test => {
 	}
 	await opts.filter.main(filterData3)
 	test.deepEqual(
-		opts.filter.getStandardRoot(opts.filter.Inner.rawFilter),
+		opts.filter.getStandardRoot(),
 		{
 			type: 'tvslst',
 			in: true,
