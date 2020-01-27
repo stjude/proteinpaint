@@ -1028,7 +1028,38 @@ tape('hidden filters', async test => {
 	test.end()
 })
 
-tape.only('getNormalRoot()', async test => {
+tape('getNormalRoot()', async test => {
+	{
+		// direct testing of getNormalRoot
+		const A = { type: 'tvs', tvs: { term_A: true } }
+		const B = { type: 'tvs', tvs: { term_B: true } }
+		const C = { type: 'tvs', tvs: { term_C: true } }
+		const D = { type: 'tvs', tvs: { term_D: true } }
+		const input = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [A, B]
+				},
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [C, D]
+				}
+			]
+		}
+		const output = getNormalRoot(input)
+		const expectedOutput = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [A, B, C, D]
+		}
+		test.deepEqual(output, expectedOutput, '(A && B) && (C && D) should be flattened into A && B && C && D')
+	}
+
 	const hidden = {
 		// HIDDEN static filters
 		// not accessible to users
@@ -1114,7 +1145,7 @@ tape.only('getNormalRoot()', async test => {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [singleUserConfig, hidden]
+			lst: [singleUserConfig, ...hidden.lst]
 		},
 		'should return only the hidden -AND- one additional restriction'
 	)
@@ -1152,7 +1183,7 @@ tape.only('getNormalRoot()', async test => {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [userConfiguredFilters, hidden]
+			lst: [...userConfiguredFilters.lst, ...hidden.lst]
 		},
 		'should return only the hidden -AND- two-entry tvslst restrictions'
 	)
@@ -1177,7 +1208,25 @@ tape.only('getNormalRoot()', async test => {
 		]
 	}
 	await opts.filter.main(filterData2)
-	test.deepEqual(opts.filter.getNormalRoot(), filterData2, 'should return the hidden plus all user configured options')
+	test.deepEqual(
+		opts.filter.getNormalRoot(),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [...userConfiguredFilters.lst, ...hidden.lst]
+				},
+				gettvs('def', '444'),
+				gettvs('rst', '555')
+			]
+		},
+		'should return the hidden plus all user configured options'
+	)
 
 	const filterData3 = {
 		type: 'tvslst',
@@ -1201,7 +1250,7 @@ tape.only('getNormalRoot()', async test => {
 			{
 				type: 'tvslst',
 				in: true,
-				join: 'or',
+				join: 'and',
 				lst: [gettvs('def', '444'), gettvs('rst', '555')]
 			}
 		]
@@ -1218,74 +1267,13 @@ tape.only('getNormalRoot()', async test => {
 				{
 					type: 'tvslst',
 					in: true,
-					join: 'or',
+					join: 'and',
 					lst: [gettvs('def', '444'), gettvs('rst', '555')]
 				}
 			]
 		},
 		'should return the hidden plus user configured options after removing empty tvslst'
 	)
-
-	const filterData4 = {
-		type: 'tvslst',
-		in: true,
-		join: 'or',
-		lst: [
-			{
-				type: 'tvslst',
-				in: true,
-				join: 'and',
-				lst: [
-					{
-						type: 'tvslst',
-						in: true,
-						join: '',
-						lst: []
-					},
-					hidden
-				]
-			},
-			{
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: []
-			}
-		]
-	}
-	await opts.filter.main(filterData4)
-
-	{
-		// direct testing of getNormalRoot
-		const input = {
-			type: 'tvslst',
-			join: 'and',
-			lst: [
-				{
-					type: 'tvslst',
-					join: 'and',
-					lst: [{ type: 'tvs', tvs: { term_A: true } }, { type: 'tvs', tvs: { term_B: true } }]
-				},
-				{
-					type: 'tvslst',
-					join: 'and',
-					lst: [{ type: 'tvs', tvs: { term_C: true } }, { type: 'tvs', tvs: { term_D: true } }]
-				}
-			]
-		}
-		const output = getNormalRoot(input)
-		const expectedOutput = {
-			type: 'tvslst',
-			join: 'and',
-			lst: [
-				{ type: 'tvs', tvs: { term_A: true } },
-				{ type: 'tvs', tvs: { term_B: true } },
-				{ type: 'tvs', tvs: { term_C: true } },
-				{ type: 'tvs', tvs: { term_D: true } }
-			]
-		}
-		test.deepEqual(output, expectedOutput, '(A&&B) && (C&&D) should be flatten out into A&&B&&C&&D')
-	}
 
 	test.end()
 })

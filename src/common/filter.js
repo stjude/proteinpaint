@@ -990,8 +990,10 @@ function normalizeFilter(filter) {
 		for (const item of lst) {
 			if (item.type === 'tvslst') {
 				const normalItem = normalizeFilter(item)
-				if (normalItem.type !== 'tvslst' || normalItem.lst.length) {
+				if (normalItem.type !== 'tvslst' || normalItem.join != filter.join || normalItem.in != filter.in) {
 					filter.lst.push(normalItem)
+				} else if (normalItem.lst.length) {
+					filter.lst.push(...normalItem.lst)
 				}
 			} else {
 				filter.lst.push(item)
