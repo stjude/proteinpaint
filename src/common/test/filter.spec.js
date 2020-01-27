@@ -573,15 +573,34 @@ tape('pill menu-append interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	const pillWrapper = opts.holder.select('.sja_pill_wrapper').node()
+	pillWrapper.click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const joinOpt = menuRows.filter(d => d.action == 'join')
+	joinOpt.node().click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly one blank pill when clicking a pill-menu append option'
+	)
+	test.equal(
+		pillWrapper.querySelectorAll('.sja_filter_paren_open, .sja_filter_paren_close').length,
+		2,
+		'should show parentheses to indicate that a newly selected term-value will be placed in a subnested pill group'
+	)
+	menuRows
+		.filter(d => d.action == 'replace')
+		.node()
+		.click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		0,
+		'should remove the blank pill when clicking away from a pill menu-append option'
+	)
+
 	const origLstLength = opts.filterData.lst.length
 	await addDemographicSexFilter(opts, joinOpt.node())
 	const lst = opts.filter.Inner.filter.lst
@@ -675,6 +694,27 @@ tape('group menu-append interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const joinOpt = menuRows.filter(d => d.action == 'join')
+	joinOpt.node().click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly one blank pill when clicking a group-menu append option'
+	)
+	test.equal(
+		opts.holder
+			.node()
+			.querySelectorAll('.sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close')
+			.length,
+		0,
+		'should not show parentheses to indicate no subnesting'
+	)
+	const childNodes = joinLabel.node().parentNode.parentNode.childNodes
+	test.equal(
+		childNodes[childNodes.length - 2].className,
+		'sja_filter_blank_pill',
+		'should create a blank pill to indicate that a newly selected term-value will be placed at the end of the filter group'
+	)
+
 	const origLstLength = opts.filterData.lst.length
 	await addDemographicSexFilter(opts, joinOpt.node())
 	const lst = opts.filter.Inner.filter.lst
@@ -976,7 +1016,7 @@ tape('hidden filters', async test => {
 	test.end()
 })
 
-tape('hidden filters', async test => {
+tape('getNormalRoot()', async test => {
 	const hidden = {
 		// HIDDEN static filters
 		// not accessible to users

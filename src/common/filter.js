@@ -58,7 +58,11 @@ class Filter {
 				this.resetActiveData(this.filter)
 
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+				this.dom.holder
+					.selectAll(
+						'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+					)
+					.remove()
 				this.updateUI(this.dom.filterContainer, this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
@@ -242,7 +246,11 @@ function setRenderers(self) {
 			)
 				return
 			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-			self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+			self.dom.holder
+				.selectAll(
+					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+				)
+				.remove()
 		})
 	}
 
@@ -451,7 +459,9 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.displayControlsMenu = function() {
 		if (!self.activeData) return
-		const item = this.parentNode.__data__
+		const item = this.className.includes('join_label')
+			? this.parentNode.parentNode.parentNode.__data__
+			: this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter, elem: this }
 
@@ -484,8 +494,24 @@ function setInteractivity(self) {
 	}
 
 	self.displayBlankPill = function(parentDiv, joiner) {
-		self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+		self.dom.holder
+			.selectAll(
+				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+			)
+			.remove()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+
+		if (self.activeData.item.type == 'tvs') {
+			select(parentDiv)
+				.insert('div', 'div')
+				.attr('class', 'sja_filter_paren_open')
+				.style('display', 'inline-block')
+				.style('padding', '0 5px')
+				.style('font-weight', 500)
+				.style('font-size', '24px')
+				.style('cursor', 'pointer')
+				.html('(')
+		}
 
 		const blank = select(parentDiv)
 			.insert('div', ':scope > .sja_filter_paren_close')
@@ -514,6 +540,18 @@ function setInteractivity(self) {
 			.style('border', '3px dashed #b8d3ea')
 			.style('vertical-align', 'top')
 			.style('background-color', '#ee5')
+
+		if (self.activeData.item.type == 'tvs') {
+			select(parentDiv)
+				.append('div')
+				.attr('class', 'sja_filter_paren_close')
+				.style('display', 'inline-block')
+				.style('padding', '0 5px')
+				.style('font-weight', 500)
+				.style('font-size', '24px')
+				.style('cursor', 'pointer')
+				.html(')')
+		}
 	}
 
 	self.handleMenuOptionClick = function(d) {
@@ -527,11 +565,21 @@ function setInteractivity(self) {
 		if (d.action === 'join') {
 			const elem =
 				self.activeData.item.type == 'tvs'
-					? self.activeData.elem.parentNode.parentNode
+					? self.activeData.elem //.parentNode.parentNode
 					: self.activeData.elem.parentNode.parentNode
-			self.displayBlankPill(elem, self.activeData.filter.join.toUpperCase())
+			const joiner =
+				self.activeData.item.type == 'tvslst'
+					? self.activeData.filter.join.toUpperCase()
+					: self.activeData.filter.join == 'or'
+					? 'AND'
+					: 'OR'
+			self.displayBlankPill(elem, joiner)
 		} else {
-			self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+			self.dom.holder
+				.selectAll(
+					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+				)
+				.remove()
 		}
 
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
