@@ -459,6 +459,8 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.displayControlsMenu = function() {
 		if (!self.activeData) return
+		self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+
 		const item = this.className.includes('join_label')
 			? this.parentNode.parentNode.parentNode.__data__
 			: this.parentNode.__data__
@@ -489,6 +491,14 @@ function setInteractivity(self) {
 		if (grpAction) {
 			if (this.className.includes('join')) this.parentNode.parentNode.style.backgroundColor = '#ee5'
 			else this.parentNode.style.backgroundColor = '#ee5'
+		}
+
+		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'none')
 		}
 		self.dom.controlsTip.showunder(this)
 	}
@@ -552,6 +562,14 @@ function setInteractivity(self) {
 				.style('cursor', 'pointer')
 				.html(')')
 		}
+
+		if (parentDiv == self.dom.filterContainer.node()) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'inline-block')
+		}
 	}
 
 	self.handleMenuOptionClick = function(d) {
@@ -582,6 +600,14 @@ function setInteractivity(self) {
 				.remove()
 		}
 
+		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'none')
+		}
+
 		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
 		if (d.bar_click_override || !d.handler) {
 			self.displayTreeMenu.call(this, d)
@@ -592,8 +618,12 @@ function setInteractivity(self) {
 
 	self.displayTreeNew = function(d) {
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-		self.dom.isNotInput.property('checked', self.activeData.item.tvs && self.activeData.item.tvs.isnot)
+		self.dom.isNotInput.property('checked', !self.filter.in)
+		if (self.filter.lst.length > 1) {
+			self.displayBlankPill(self.dom.filterContainer.node(), d.toUpperCase())
+		}
 		self.dom.treeTip.clear().showunder(this)
+
 		appInit(null, {
 			holder: self.dom.treeBody,
 			state: {

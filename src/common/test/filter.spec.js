@@ -439,6 +439,11 @@ tape('add-transformer button interaction, 1-pill', async test => {
 		'none',
 		'should display the tree menu when clicking the add-transformer button'
 	)
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		0,
+		'should create no blank pills when clicking on a one-pill root add-transformer'
+	)
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
 	const lst = opts.filterData.lst
@@ -470,12 +475,19 @@ tape('add-transformer button interaction, 2-pill', async test => {
 		})
 		.node()
 	adder.click()
+
 	await sleep(50)
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.node().style.display,
 		'none',
 		'should display the tree menu when clicking the add-transformer button'
 	)
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly 1 blank pill when clicking on a two-pill root add-transformer'
+	)
+
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
 	test.deepEqual(
