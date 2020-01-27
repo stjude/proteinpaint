@@ -304,20 +304,23 @@ function setRenderers(self) {
 					//update temp_ranges
 					range.start = Number(xscale.invert(s[0]).toFixed(1))
 					range.stop = Number(xscale.invert(s[1]).toFixed(1))
+					const a_range = JSON.parse(JSON.stringify(ranges[i]))
+					if (range.start == density_data.minvalue.toFixed(1)) a_range.start = range.start
+					if (range.stop == density_data.maxvalue.toFixed(1)) a_range.stop = range.stop
 					if (div.selectAll('.start_input').size()) {
 						select(div.node().querySelectorAll('.start_input')[i])
-							.style('color', ranges[i].start == range.start ? '#000' : '#23cba7')
+							.style('color', a_range.start == range.start ? '#000' : '#23cba7')
 							.html(range.start)
 						select(div.node().querySelectorAll('.stop_input')[i])
-							.style('color', ranges[i].stop == range.stop ? '#000' : '#23cba7')
+							.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 							.html(range.stop)
 						select(div.node().querySelectorAll('.apply_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
+							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
 						)
 						select(div.node().querySelectorAll('.reset_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(ranges[i]) || (ranges[i].start == '' && ranges[i].stop == '')
+							JSON.stringify(range) == JSON.stringify(a_range) || (a_range.start == '' && a_range.stop == '')
 								? 'none'
 								: 'inline-block'
 						)
@@ -360,7 +363,6 @@ function setRenderers(self) {
 			.append('tr')
 			.attr('class', 'range_div')
 			.style('white-space', 'nowrap')
-			// .style('display', 'block')
 			.style('padding', '2px')
 			.transition()
 			.duration(200)
@@ -389,6 +391,7 @@ function setRenderers(self) {
 		function enter_range(d, i) {
 			const range_tr = select(this)
 			const range = JSON.parse(JSON.stringify(d))
+			// console.log(range)
 
 			const title_td = range_tr.append('td')
 
@@ -408,7 +411,7 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('font-weight', 'bold')
 				.style('text-align', 'center')
-				.html(range.start)
+				.html(range.stopunbounded ? '>= ' + range.start : range.start)
 
 			// ' TO '
 			equation_td
@@ -417,7 +420,7 @@ function setRenderers(self) {
 				.style('margin-left', '10px')
 				.style('width', '10px')
 				.style('text-align', 'center')
-				.html('to')
+				.html(range.startunbounded ? '<=' : range.stopunbounded ? '' : 'to')
 
 			const stop_input = equation_td
 				.append('div')
@@ -478,7 +481,9 @@ function setRenderers(self) {
 				.on('click', async () => {
 					self.dom.tip.hide()
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-					brush_g.call(self.brush).call(self.brush.move, [range.start, range.stop].map(xscale))
+					const start = range.startunbounded ? density_data.minvalue : range.start
+					const stop = range.stopunbounded ? density_data.maxvalue : range.stop
+					brush_g.call(self.brush).call(self.brush.move, [start, stop].map(xscale))
 				})
 
 			//'Delete' button
@@ -975,7 +980,10 @@ function setRenderers(self) {
 						return true
 					} else if (
 						(term.term.isfloat || term.term.isinteger) &&
-						term.ranges.map(a => a.value).includes(d.range.value)
+						term.ranges
+							.map(a => a.value)
+							.map(String)
+							.includes(d.range.value.toString())
 					) {
 						return true
 					} else if (term.term.iscondition && term.values.map(a => a.label).includes(d.label)) {
