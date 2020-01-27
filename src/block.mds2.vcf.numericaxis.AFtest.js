@@ -136,7 +136,6 @@ function make_option_termfilter(af, tk, block, table) {
 			*/
 		for (const g of af.groups) {
 			if (g.is_termdb) {
-				//g.dom.td3.selectAll('*').remove()
 				show_group_termdb(g, tk, block)
 			}
 		}
@@ -309,6 +308,11 @@ groupindex:
 							delete group.key
 							delete group.is_infofield
 							delete group.is_population
+							/* poor fix because of the poor design of rerendering DOM on every update;
+							must delete filter api if the group is already is termdb
+							as it will remove all dom elements from this part of the legend
+							*/
+							delete group.filterApi
 							group.is_termdb = true
 							_updatetk()
 						}
