@@ -9,10 +9,17 @@ import * as client from '../client'
 /*
 	opts{}
 	.holder
+	
+	.callback()
+		When a filter change (add, edit, remove) is made,
+		the callback will receive the updated visible filter
+		as argument
+	
 	.getVisibleRoot()
-	  optional method that returns
-		the raw filter's level/item to use as the
-		visible filter root to render
+	  optional method that returns the raw filter's level/item 
+	  to use as the visible filter root to render; defaults
+	  to the raw filter root object
+	
 	.emptyLabel "+NEW"
 		options to use a different label for the
 		button or prompt to add the 
@@ -28,7 +35,6 @@ import * as client from '../client'
 		at the current nesting level must not be bound to 
 		non-child elements with the same classnames
 */
-
 class Filter {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
