@@ -7,6 +7,18 @@ import { TVSInit } from './tvs'
 import * as client from '../client'
 
 /*
+	opts{}
+	.holder
+	.getVisibleRoot()
+	  optional method that returns
+		the raw filter's level/item to use as the
+		visible filter root to render
+	.emptyLabel "+NEW"
+		options to use a different label for the
+		button or prompt to add the 
+		first user-configurable filter item
+
+
 	Coding convenience:
 	- use $id for data binding to match  
 	  existing DOM elements with the corresponding
@@ -87,6 +99,9 @@ class Filter {
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (o.getVisibleRoot && typeof o.getVisibleRoot != 'function')
+			throw '.getVisibleRoot() must be a function if set as an option'
+		if (!o.emptyLabel) o.emptyLabel = '+NEW'
 		return o
 	}
 	validateFilter(item) {
@@ -152,7 +167,7 @@ function setRenderers(self) {
 		self.dom.newBtn = self.dom.holder
 			.append('div')
 			.attr('class', 'sja_new_filter_btn')
-			.html('+NEW')
+			.html(self.opts.emptyLabel)
 			.style('display', 'inline-block')
 			.style('margin', '2px 10px 2px 2px')
 			.style('padding', '5px')
