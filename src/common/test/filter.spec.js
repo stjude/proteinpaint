@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const filterInit = require('../filter').filterInit
+const { filterInit, getNormalRoot } = require('../filter')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -1028,7 +1028,7 @@ tape('hidden filters', async test => {
 	test.end()
 })
 
-tape('getNormalRoot()', async test => {
+tape.only('getNormalRoot()', async test => {
 	const hidden = {
 		// HIDDEN static filters
 		// not accessible to users
@@ -1254,6 +1254,38 @@ tape('getNormalRoot()', async test => {
 		]
 	}
 	await opts.filter.main(filterData4)
+
+	{
+		// direct testing of getNormalRoot
+		const input = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [{ type: 'tvs', tvs: { term_A: true } }, { type: 'tvs', tvs: { term_B: true } }]
+				},
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [{ type: 'tvs', tvs: { term_C: true } }, { type: 'tvs', tvs: { term_D: true } }]
+				}
+			]
+		}
+		const output = getNormalRoot(input)
+		const expectedOutput = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [
+				{ type: 'tvs', tvs: { term_A: true } },
+				{ type: 'tvs', tvs: { term_B: true } },
+				{ type: 'tvs', tvs: { term_C: true } },
+				{ type: 'tvs', tvs: { term_D: true } }
+			]
+		}
+		test.deepEqual(output, expectedOutput, '(A&&B) && (C&&D) should be flatten out into A&&B&&C&&D')
+	}
 
 	test.end()
 })
