@@ -226,7 +226,7 @@ class TdbBarchart {
 			})
 			chart.settings.colLabels = chart.visibleSerieses.map(series => {
 				const id = series.seriesId
-				const label = t1.values && id in t1.values ? t1.values[id].label : id
+				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
 				const ntotal = t2 && t2.term.iscondition ? '' : `, n=${series.visibleTotal}`
 				return {
