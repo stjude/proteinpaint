@@ -13,11 +13,12 @@
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
     "irt": "./scripts/deploy.sh internal-stage",
-    "test": "tape test/**/back.*.spec.js && browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
-    "test-back": "tape test/**/back.*.spec.js",
-    "test-front": "browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
-    "test-browser": "watchify test/**/front.*.spec.js src/termdb/test/*.spec.js -o public/bin/spec.bundle.js -v",
-    "test-response": "nodemon test/test.server.js --watch test/termdb",
+    "test": "tape modules/test/*.spec.js && browserify public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
+    "test-back": "tape modules/test/*.spec.js",
+    "test-front": "browserify public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
+    "test-browser": "watchify src/**/test/*.spec.js -o public/bin/spec.bundle.js -v",
+    "test-browser-umd": "watchify -t [ babelify --presets [ env ] --plugins [ transform-es2015-modules-umd ] ] src/**/test/*.spec.js -o public/bin/spec.bundle.js -v",
+    "test-response": "nodemon modules/test/test.server.js --watch modules",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
@@ -30,6 +31,18 @@
     "printWidth": 120,
     "singleQuote": true
   },
+  "browserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "es2015"
+          ]
+        }
+      ]
+    ]
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {
@@ -40,13 +53,15 @@
     "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-runtime": "^6.18.0",
+    "babelify": "^8.0.0",
     "css-loader": "^0.23.1",
     "deep-object-diff": "^1.1.0",
+    "electron-rebuild": "^1.8.8",
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
     "style-loader": "^0.13.1",
     "tape": "^4.10.1",
-    "tape-run": "^6.0.0",
+    "tape-run": "^6.0.1",
     "uglify-es": "^3.3.9",
     "uglify-js": "^3.4.6",
     "uglifyjs-webpack-plugin": "^1.2.7",
@@ -59,9 +74,9 @@
   "dependencies": {
     "async": "^2.6.0",
     "babel-polyfill": "^6.9.1",
-    "better-sqlite3": "^5.4.2",
+    "better-sqlite3": "^5.4.3",
     "body-parser": "^1.15.2",
-    "canvas": "^2.5.0",
+    "canvas": "^2.6.0",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
     "d3": "^4.12.2",

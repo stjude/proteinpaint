@@ -1,7 +1,7 @@
 const serverconfig = require('../../serverconfig.json')
 const path = require('path')
 const fs = require('fs')
-const Partjson = require('partjson').Partjson
+const Partjson = require('partjson')
 
 /*
   Precompute dataset values to help speed up 

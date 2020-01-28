@@ -4,6 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
+const density_plot = require('./termdb.densityPlot')
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
@@ -54,6 +55,7 @@ export function handle_request_closure(genomes) {
 				if (q.getgroup) return await phewas.getgroup(q, res)
 				return await phewas.trigger(q, res, ds) // also does precompute
 			}
+			if (q.density) return await density_plot(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -78,7 +80,7 @@ function trigger_testplot(q, res, tdb, ds) {
 	const result = { lst }
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (t1.isinteger || t1.isfloat) {
-		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds, q.tvslst)
+		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds)
 	}
 	if (q.term2_id) {
 		const t2 = tdb.q.termjsonByOneid(q.term2_id)
@@ -94,8 +96,8 @@ function trigger_testplot(q, res, tdb, ds) {
 					if (q.term1_q) {
 						Object.assign(t1q, q.term1_q)
 					}
-					const tvslst = (q.tvslst ? q.tvslst : []).concat(t1q)
-					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds, tvslst)
+					const filter = (q.filter ? q.filter : []).concat(t1q)
+					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds)
 				}
 			}
 		}
@@ -166,16 +168,21 @@ function trigger_getcategories(q, res, tdb, ds) {
 	// thin wrapper of get_summary
 	// works for all types of terms, not just categorical
 	if (!q.tid) throw '.tid missing'
+	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
 		term1_id: q.tid,
-		term1_q: {
-			bar_by_grade: q.bar_by_grade,
-			bar_by_children: q.bar_by_children,
-			value_by_max_grade: q.value_by_max_grade,
-			value_by_most_recent: q.value_by_most_recent,
-			value_by_computable_grade: q.value_by_computable_grade
-		}
+		term1_q: q.term1_q
+			? q.term1_q
+			: term.isinteger || term.isfloat
+			? term.bins.default
+			: {
+					bar_by_grade: q.bar_by_grade,
+					bar_by_children: q.bar_by_children,
+					value_by_max_grade: q.value_by_max_grade,
+					value_by_most_recent: q.value_by_most_recent,
+					value_by_computable_grade: q.value_by_computable_grade
+			  }
 	}
 	if (q.tvslst) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const lst = termdbsql.get_summary(arg)

@@ -6,9 +6,9 @@ for configuring term1; just a thin wrapper of blue pill UI
 
 execution flow:
 
-1. constructor builds and returns this.api{}
-2. no state available for constructor so cannot do term-type specific things
-3. upon getting state from plot.controls.config.js, call api.main() with latest state
+1. constructor builds and returns this.api{} via getInitFxn
+2. no state available for constructor so cannot do term-type specific things in constructor
+3. upon notified by plot.controls.config.js and api.main() is called, this.state is ready
 4. then call this.render() to:
 4.1 if plot.term cannot be configured, quit
 4.2 initiate this.pill if missing
@@ -17,25 +17,31 @@ execution flow:
 */
 
 class Term1ui {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'term1Input'
+		this.id = opts.id
+		this.app = app
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
-		this.api = {
-			usestate: true,
-			main: state => {
-				this.state = state
-				this.render()
-			}
-		}
-		if (opts.debug) this.api.Inner = this
+		this.api = rx.getComponentApi(this)
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'
 		if (!o.holder) throw 'opts.holder missing'
-		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { tr: o.holder }
+	}
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			plot: appState.tree.plots[this.id]
+		}
+	}
+	main() {
+		this.render()
 	}
 	setPill() {
 		// can only call after getting this.state
@@ -43,15 +49,27 @@ class Term1ui {
 			disable_ReplaceRemove: true, // to disable Replace/Remove buttons
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
-			holder: this.dom.td2,
+			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null
 				if (!data.q) throw 'data.q{} missing from pill callback'
-				this.opts.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: { term: { q: data.q } }
+					config: {
+						term: {
+							/* though the purpose is only to update plot.term.q,
+							must specifiy plot.term as {id, term, q}
+							but not just {q}
+							which copyMerge( plot, {term:{q:{...}}}, ['term']) won't allow to work
+							will replace plot.term with {q}
+							*/
+							id: this.state.plot.term.term.id,
+							term: this.state.plot.term.term,
+							q: data.q
+						}
+					}
 				})
 			}
 		})
@@ -71,9 +89,9 @@ function setRenderers(self) {
 	self.render = function() {
 		/* state and plot are frozen from app.state
 		 */
-		const plot = this.state.config
-		if (!plot.term) throw 'state.config.plot.term{} is missing'
-		if (!plot.term.q) throw 'state.config.plot.term.q{} is missing'
+		const plot = this.state.plot
+		if (!plot.term) throw 'state.plot.term{} is missing'
+		if (!plot.term.q) throw 'state.plot.term.q{} is missing'
 
 		if (plot.term.q.groupsetting && plot.term.q.groupsetting.disabled) {
 			///////////////////////////////////
@@ -89,7 +107,7 @@ function setRenderers(self) {
 			self.dom.td1.text('Group categories')
 			// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
 		} else if (plot.term.term.iscondition) {
-			self.dom.td1.text('Group ' + (plot.term.q.bar_by_grade ? 'grades' : 'sub-conditions'))
+			self.dom.td1.text('Customize')
 		} else if (plot.term.term.isinteger || plot.term.term.isfloat) {
 			self.dom.td1.text('Customize bins')
 		} else {

@@ -1,17 +1,13 @@
-import {event as d3event} from 'd3-selection'
+import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
-import {init as termdbinit} from './mds.termdb'
-import {make_ui as AFtest_make_ui} from './block.mds2.vcf.numericaxis.AFtest'
+import { make_ui as AFtest_make_ui } from './block.mds2.vcf.numericaxis.AFtest'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
 	get_axis_label_AFtest,
 	may_get_param_AFtest_termfilter
-	} from './block.mds2.vcf.numericaxis'
-
-
-
+} from './block.mds2.vcf.numericaxis'
 
 /*
 
@@ -22,25 +18,21 @@ showmenu_numericaxis
 __update_legend
 */
 
-
-
-
-
-export function may_create_vcflegend_numericalaxis( tk, block ) {
-/*
+export function may_create_vcflegend_numericalaxis(tk, block) {
+	/*
 run only upon initiating track
 */
-	if( !tk.vcf ) return
+	if (!tk.vcf) return
 	const nm = tk.vcf.numerical_axis
-	if( !nm ) return
+	if (!nm) return
 
 	const row = tk.legend.table.append('tr')
 
 	// td1
 	row
 		.append('td')
-		.style('text-align','right')
-		.style('opacity',.3)
+		.style('text-align', 'right')
+		.style('opacity', 0.3)
 		.text('Numerical axis')
 
 	// td2
@@ -52,26 +44,23 @@ run only upon initiating track
 	const menubutton = tr
 		.append('td')
 		.append('button')
-		.style('margin','0px 10px')
+		.style('margin', '0px 10px')
 
 	// following menubutton, show settings folder
 
-	const settingholder = tr
-		.append('td')
+	const settingholder = tr.append('td')
 
-	const update_legend_func = __update_legend( menubutton, settingholder, tk, block )
+	const update_legend_func = __update_legend(menubutton, settingholder, tk, block)
 
 	update_legend_func()
 
-	menubutton.on('click', ()=> {
-		showmenu_numericaxis( menubutton, tk, block, update_legend_func )
+	menubutton.on('click', () => {
+		showmenu_numericaxis(menubutton, tk, block, update_legend_func)
 	})
 }
 
-
-
-function showmenu_numericaxis ( menubutton, tk, block, update_legend_func ) {
-/* called upon clicking the menubutton
+function showmenu_numericaxis(menubutton, tk, block, update_legend_func) {
+	/* called upon clicking the menubutton
 show menu for numerical axis, under menubutton
 */
 	tk.legend.tip.clear()
@@ -79,62 +68,65 @@ show menu for numerical axis, under menubutton
 
 	const nm = tk.vcf.numerical_axis
 
-	if( nm.info_keys ) {
-		for(const key of nm.info_keys) {
-			if( nm.inuse_infokey && key.in_use ) {
+	if (nm.info_keys) {
+		for (const key of nm.info_keys) {
+			if (nm.inuse_infokey && key.in_use) {
 				// using this info key right now, do not show it in menu
 				continue
 			}
 			let name = key.key
-			if( tk.info_fields ) {
-				const i = tk.info_fields.find( i=> i.key == key.key )
-				if(i) name = i.label
+			if (tk.info_fields) {
+				const i = tk.info_fields.find(i => i.key == key.key)
+				if (i) name = i.label
 			}
-			menudiv.append('div')
-				.text( name )
-				.attr('class','sja_menuoption')
-				.on('click', ()=>{
+			menudiv
+				.append('div')
+				.text(name)
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
 					// selected an info key
-					nm.in_use=true
+					nm.in_use = true
 					nm.inuse_AFtest = false
 					nm.inuse_infokey = true
-					nm.info_keys.forEach( i=> i.in_use=false )
+					nm.info_keys.forEach(i => (i.in_use = false))
 					key.in_use = true
 					update()
 				})
 		}
 	}
 
-	if( nm.AFtest && !nm.inuse_AFtest ) {
+	if (nm.AFtest && !nm.inuse_AFtest) {
 		// show this option when the data structure is available and is not in use
-		menudiv.append('div')
-			.style('margin-top','10px')
-			.attr('class','sja_menuoption')
-			.text( get_axis_label_AFtest() )
-			.on('click', ()=>{
-				nm.in_use=true
+		menudiv
+			.append('div')
+			.style('margin-top', '10px')
+			.attr('class', 'sja_menuoption')
+			.text(get_axis_label_AFtest())
+			.on('click', () => {
+				nm.in_use = true
 				nm.inuse_infokey = false
 				nm.inuse_AFtest = true
 				update()
 			})
 	}
 
-	if( nm.in_use ) {
+	if (nm.in_use) {
 		// show cancel option
-		menudiv.append('div')
-			.style('margin-top','10px')
-			.attr('class','sja_menuoption')
+		menudiv
+			.append('div')
+			.style('margin-top', '10px')
+			.attr('class', 'sja_menuoption')
 			.html('&times;&nbsp;&nbsp;Disable')
-			.on('click', ()=>{
+			.on('click', () => {
 				nm.in_use = false
-				nm.inuse_infokey=false
-				nm.inuse_AFtest=false
+				nm.inuse_infokey = false
+				nm.inuse_AFtest = false
 				update()
 			})
 	}
 
 	// all contents for the menu created
-	tk.legend.tip.showunder( menubutton.node() )
+	tk.legend.tip.showunder(menubutton.node())
 
 	async function update() {
 		tk.legend.tip.hide()
@@ -145,11 +137,8 @@ show menu for numerical axis, under menubutton
 	}
 }
 
-
-
-
-function __update_legend ( menubutton, settingholder, tk, block ) {
-/*
+function __update_legend(menubutton, settingholder, tk, block) {
+	/*
 returned function to be called at two occasions:
 1. at initiating legend options
 2. after changing menu option
@@ -162,26 +151,25 @@ but will not update track
 */
 
 	return () => {
-
-		may_setup_numerical_axis( tk )
-		menubutton.html( get_axis_label(tk) + ' &#9662;' )
+		may_setup_numerical_axis(tk)
+		menubutton.html(get_axis_label(tk) + ' &#9662;')
 
 		settingholder.selectAll('*').remove()
 
 		const nm = tk.vcf.numerical_axis
-		if( !nm.in_use ) {
+		if (!nm.in_use) {
 			// not in use
 			return
 		}
 
-		if( nm.inuse_infokey ) {
+		if (nm.inuse_infokey) {
 			// do not show any controls for info field
 			return
 		}
 
-		if( nm.inuse_AFtest ) {
+		if (nm.inuse_AFtest) {
 			tk.vcf.numerical_axis.AFtest.dom = { holder: settingholder } // clears .dom, should be fine
-			AFtest_make_ui( tk, block )
+			AFtest_make_ui(tk, block)
 			return
 		}
 

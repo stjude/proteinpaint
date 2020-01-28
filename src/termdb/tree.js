@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
+import { graphable } from '../common/graphable'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -19,7 +20,6 @@ const cls_termdiv = 'termdiv',
 /*
 ******************** EXPORTED
 treeInit()
-graphable()
 root_ID
 
 ******************** constructor opts{}
@@ -68,7 +68,6 @@ class TdbTree {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = opts
-		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
 			searchDiv: opts.holder.append('div').style('margin', '10px'),
@@ -205,7 +204,6 @@ class TdbTree {
 					id: term.id,
 					holder: holder,
 					term: term,
-					modifiers: this.modifiers,
 					callbacks: {
 						// must use namespaced eventType otherwise will be rewritten..
 						'postRender.viewbtn': plot => {
@@ -435,10 +433,4 @@ function setInteractivity(self) {
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
 	}
-}
-
-export function graphable(term) {
-	// TODO move to ./common/term.js
-	// terms with a valid type supports graph
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }

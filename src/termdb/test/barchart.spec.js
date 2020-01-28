@@ -1,3 +1,4 @@
+'use strict'
 const tape = require('tape')
 const termjson = require('../../../test/termdb/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
@@ -77,7 +78,7 @@ tape('single barchart, categorical bars', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -182,6 +183,44 @@ tape('multiple charts', function(test) {
 })
 
 tape('series visibility', function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+
+	const hiddenValues = { Male: 1 }
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: {
+							id: 'sex',
+							q: {
+								hiddenValues
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testHiddenValues
+			}
+		}
+	})
+
+	function testHiddenValues(plot) {
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
+		test.true(
+			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
+			'should have the correct number of hidden bars by q.hiddenValues'
+		)
+	}
+
 	runpp({
 		state: {
 			tree: {
@@ -207,16 +246,143 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == bar.settings.unannotatedLabels.term1.length,
-			'should have the correct number of hidden bars'
+			'should have the correct number of hidden bars by unannotatedLabels'
+		)
+	}
+
+	const conditionHiddenValues = { '1: Mild': 1 }
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				visiblePlotIds: ['Arrhythmias'],
+				plots: {
+					Arrhythmias: {
+						term: {
+							id: 'Arrhythmias',
+							q: {
+								hiddenValues: conditionHiddenValues
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testConditionHiddenValues
+			}
+		}
+	})
+
+	function testConditionHiddenValues(plot) {
+		return
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
+		test.true(
+			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
+			'should have the correct number of hidden bars by q.hiddenValues'
+		)
+	}
+})
+
+tape('single barchart, filtered', function(test) {
+	test.timeoutAfter(1000)
+
+	runpp({
+		state: {
+			termfilter: {
+				show_top_ui: true,
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: 'or',
+					lst: [
+						{
+							type: 'tvslst',
+							in: 1,
+							join: 'and',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+									}
+								},
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'sex', name: 'Sex', iscategorical: true },
+										values: [{ key: 'Male', label: 'Male' }]
+									}
+								}
+							]
+						},
+						{
+							type: 'tvslst',
+							in: 1,
+							join: 'and',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
+										ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
+									}
+								},
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', iscategorical: true },
+										values: [{ key: '1', label: '1-yes' }]
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: {
+							id: 'sex'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 2, 'should show two bar series')
+		test.equal(
+			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
+			'Male',
+			'should show one bar series that matches filter value'
 		)
 		test.end()
 	}
 })
 
-tape('click to add numeric, condition term filter', function(test) {
+let barDiv
+tape('click bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -226,7 +392,7 @@ tape('click to add numeric, condition term filter', function(test) {
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
-						term: { id: 'agedx', term: termjson['agedx'] },
+						term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
 						term2: {
 							id: 'Arrhythmias',
 							term: termjson['Arrhythmias']
@@ -243,8 +409,8 @@ tape('click to add numeric, condition term filter', function(test) {
 		}
 	})
 
-	let barDiv
 	function runTests(plot) {
+		if (barDiv) return //console.log(322, barDiv)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
@@ -277,178 +443,49 @@ tape('click to add numeric, condition term filter', function(test) {
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		test.equal(
-			termfilter.terms && termfilter.terms.length,
+			termfilter.filter && termfilter.filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.terms[0],
+			termfilter.filter.lst[0],
 			{
-				term: config.term.term,
-				ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
+				type: 'tvs',
+				tvs: {
+					term: config.term.term,
+					ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
+				}
 			},
 			'should create a numeric term-value filter with a ranges key'
 		)
+		// config.term2.q is frozen
+		const q = JSON.parse(JSON.stringify(config.term2.q))
+		const t2ValKey =
+			config.term2 &&
+			config.term2.term.values &&
+			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
+		delete q.hiddenValues
 		test.deepEqual(
-			termfilter.terms[1],
-			Object.assign(
-				{
-					term: config.term2.term,
-					values: [
-						{
-							key: clickedData.dataId,
-							label: config.term2.term.values[clickedData.dataId].label
-						}
-					]
-				},
-				/*** 
-				 TODO: PENDING THE FILL-IN FOR TERM2 Q 
-				***/
-				config.term2.q
-			),
-			'(!!! NEEDS FILLED-IN q{} !!!) should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
+			termfilter.filter.lst[1],
+			{
+				type: 'tvs',
+				tvs: Object.assign(
+					{
+						term: config.term2.term,
+						values: [
+							{
+								key: t2ValKey !== undefined ? t2ValKey : clickedData.dataId,
+								label:
+									clickedData.dataId in config.term2.term.values
+										? config.term2.term.values[clickedData.dataId].label
+										: clickedData.dataId
+							}
+						]
+					},
+					q
+				)
+			},
+			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
 		)
 	}
 })
-
-/*
-tape('click to add condition child term filter', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_computable_grade: 1 } }),
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: triggerClick
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		}
-	})
-
-	function triggerClick(plot) {
-		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
-		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-		setTimeout(() => {
-			plot.obj.tip.d
-				.selectAll('.sja_menuoption')
-				.filter(d => d.label.includes('filter'))
-				.node()
-				.dispatchEvent(new Event('click', { bubbles: true }))
-		}, 200)
-	}
-
-	function testTermValues(plot, clickedData) {
-		setTimeout(() => {
-			test.equal(
-				termfilter.terms && termfilter.terms.length,
-				1,
-				'should create one tvslst filter when a child bar is clicked'
-			)
-			test.equal(
-				termfilter.terms[0].bar_by_children,
-				1,
-				'should create a tvslst filter with bar_by_children set to true'
-			)
-			test.equal(termfilter.terms[0].value_by_computable_grade, 1, 'filter should support value_by_computable_grade')
-			test.end()
-		}, 200)
-	}
-})
-
-tape('click to add condition grade and child term filter', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
-			term2: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: triggerClick
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		}
-	})
-
-	function triggerClick(plot) {
-		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
-		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-		setTimeout(() => {
-			plot.obj.tip.d
-				.selectAll('.sja_menuoption')
-				.filter(d => d.label.includes('filter'))
-				.node()
-				.dispatchEvent(new Event('click', { bubbles: true }))
-		}, 200)
-	}
-
-	function testTermValues(plot, clickedData) {
-		setTimeout(() => {
-			test.equal(
-				termfilter.terms && termfilter.terms.length,
-				1,
-				'should create one tvslst filter when a grade and child bar/overlay is clicked'
-			)
-			test.true('grade_and_child' in termfilter.terms[0], 'should create a tvslst filter with a grade_and_child')
-			test.true(Array.isArray(termfilter.terms[0].grade_and_child), 'filter term.grade_and_child should be an array')
-			if (Array.isArray(termfilter.terms[0].grade_and_child)) {
-				const filter = termfilter.terms[0].grade_and_child[0]
-				test.notEqual(filter.grade, filter.child_id, 'filter grade and child_id should be different')
-				test.equal(typeof filter.grade, 'number', 'filter grade should be a number')
-				test.equal(typeof filter.child_id, 'string', 'filter grade should be a string')
-			}
-			test.end()
-		}, 200)
-	}
-})
-*/
-/*
-tape('single chart, genotype overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term2: 'genotype',
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		plot: {
-			callbacks: {
-				postRender: testBarCount
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		},
-		modifier_ssid_barchart: {
-			mutation_name: 'TEST',
-			ssid: 'genotype-test.txt'
-		}
-	})
-
-	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
-		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
-		test.end()
-	}
-})
-*/

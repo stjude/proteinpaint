@@ -1,5 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
+const graphable = require('../../common/graphable').graphable
 
 /*************************
  reusable helper functions
@@ -265,8 +266,3 @@ tape('error handling', function(test) {
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
 	}
 })
-
-function graphable(term) {
-	if (!term) throw 'missing term'
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
-}

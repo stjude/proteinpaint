@@ -1,62 +1,33 @@
-import { getInitFxn } from '../common/rx.core'
-import { overlayInputInit } from './plot.controls.overlay'
+import * as rx from '../common/rx.core'
+import { overlayInit } from './plot.controls.overlay'
 import { term1uiInit } from './plot.controls.term1'
-import { divideByInputInit } from './plot.controls.divideBy'
+import { divideInit } from './plot.controls.divide'
 import { initRadioInputs } from '../common/dom'
-// temporarily use legacy termui_display to prototype the barsAs input
-import { numeric_bin_edit, display as termui_display } from '../mds.termdb.termsetting.ui'
-import { termSettingInit } from './termsetting'
 
 class TdbConfigUiInit {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'controlsConfig'
 		this.opts = opts
 		this.id = opts.id
+		this.app = app
 		setInteractivity(this)
 
-		const dispatch = opts.dispatch
+		const dispatch = app.dispatch
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			term1: term1uiInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			/************* replaced by term1uiInit
-			barsAs: setBarsAsOpts({
-				holder: table.append('tr'),
-				label: 'Bars as',
-				dispatch,
-				tip: opts.tip,
-				id: this.id,
-				debug
-			}),
-			*/
-			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			/************* replaced by term1uiInit
-			bin: setBinOpts({
-				holder: table.append('tr'),
-				label: 'Primary Bins',
-				dispatch,
-				id: this.id,
-				tip: opts.tip,
-				termNum: 'term',
-				debug
-			}),
-			*/
-			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
+			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug }),
+			orientation: setOrientationOpts({ holder: this.dom.orientationTr, dispatch, id: this.id, debug }),
+			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug })
+		}
+		this.components = {
+			term1: term1uiInit(app, { holder: this.dom.term1Tr, id: this.id, debug }),
+			overlay: overlayInit(app, { holder: this.dom.overlayTr, id: this.id, debug }),
+			divideBy: divideInit(app, { holder: this.dom.divideTr, id: this.id, debug })
 		}
 
-		this.api = {
-			main: (state, isOpen) => {
-				this.render(isOpen)
-				if (!state) return
-				const plot = state.config
-				for (const name in this.inputs) {
-					const o = this.inputs[name]
-					o.main(o.usestate ? state : plot)
-				}
-			}
-		}
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	setDom() {
@@ -76,8 +47,35 @@ class TdbConfigUiInit {
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
 			.style('white-space', 'nowrap')
+		// specify input row order
+		this.dom.term1Tr = this.dom.table.append('tr')
+		this.dom.overlayTr = this.dom.table.append('tr')
+		this.dom.viewTr = this.dom.table.append('tr')
+		this.dom.orientationTr = this.dom.table.append('tr')
+		this.dom.scaleTr = this.dom.table.append('tr')
+		this.dom.divideTr = this.dom.table.append('tr')
 
 		return this.dom.table
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+
+	main() {
+		const plot = this.state.config
+		const isOpen = plot.settings.controls.isOpen
+
+		this.render(isOpen)
+		for (const name in this.inputs) {
+			const o = this.inputs[name]
+			o.main(o.usestate ? this.state : plot)
+		}
 	}
 
 	render(isOpen) {
@@ -95,7 +93,7 @@ class TdbConfigUiInit {
 	}
 }
 
-export const configUiInit = getInitFxn(TdbConfigUiInit)
+export const configUiInit = rx.getInitFxn(TdbConfigUiInit)
 
 function setInteractivity(self) {
 	self.rowIsVisible = function() {
@@ -162,11 +160,7 @@ function setScaleOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-scale-unit',
 		holder: self.dom.inputTd,
-		options: [
-			{ label: 'Absolute', value: 'abs' },
-			{ label: 'Log', value: 'log' },
-			{ label: 'Proportion', value: 'pct' }
-		],
+		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
 		listeners: {
 			input(d) {
 				opts.dispatch({
@@ -268,117 +262,3 @@ function setViewOpts(opts) {
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
 }
-
-/*
-function setBarsAsOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTd: opts.holder
-				.append('td')
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		},
-		async setPill() {
-			// temporarily use the legacy termui_display to prototype the barsAs input
-			// to be replaced by common/termsetting initializer
-			const q = self.plot.term.q ? self.plot.term.q : {}
-			self.pill = {
-				holder: self.dom.inputTd,
-				genome: self.state.genome,
-				mds: self.state.mds,
-				tip: opts.tip,
-				currterm: self.term,
-				termsetting: { term: Object.assign({}, self.plot.term.term, { q }), q },
-				is_term1: true,
-				callback: self.editTerm,
-				isCoordinated: true
-				// update_ui: will be attached by term_display
-			}
-			await termui_display(self.pill)
-		},
-		editTerm(term) {
-			//self.plot.term = Object.assign({}, self.plot.term, {q: term.q})
-			console.log(term)
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: { term: { id: term.id, term, q: term.q ? term.q : {} } }
-			})
-		}
-	}
-
-	const api = {
-		usestate: true,
-		async main(state) {
-			self.state = state
-			self.plot = state.config
-			if (!self.plot.term || !self.plot.term.term.iscondition) {
-				self.dom.row.style('display', 'none')
-				return
-			}
-			self.dom.row.style('display', 'table-row')
-			if (!self.pill) {
-				await self.setPill()
-			} else {
-				const q = self.plot.term.q ? self.plot.term.q : {}
-				self.pill.termsetting = {
-					term: Object.assign({}, self.plot.term.term, { q }),
-					q
-				}
-				self.pill.update_ui()
-			}
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-
-
-function setBinOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTd: opts.holder
-				.append('td')
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		},
-		edit() {
-			// click to show ui and customize binning
-			const term = self.plot[opts.termNum]
-			numeric_bin_edit(opts.tip, term.term, term.q, true, q => {
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						term: { term: term.term, q }
-					}
-				})
-			})
-		}
-	}
-
-	self.dom.inputTd
-		.append('div')
-		.attr('class', 'sja_edit_btn')
-		.style('margin-left', '0px')
-		.html('EDIT')
-		.on('click', self.edit)
-
-	const api = {
-		main(plot) {
-			self.plot = plot
-			const term = self.plot[opts.termNum]
-			opts.holder.style('display', term && (term.term.isfloat || term.term.isinteger) ? 'table-row' : 'none')
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-*/

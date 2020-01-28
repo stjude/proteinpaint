@@ -1078,9 +1078,10 @@ export function may_get_param_AFtest_termfilter(tk) {
 	return {
 		term: {
 			id: af.termfilter.id,
+			name: af.termfilter.name,
 			iscategorical: true // hardcoded
 		},
-		values: [{ key: v.key }]
+		values: [{ key: v.key, label: v.label || v.key }]
 	}
 }
 

@@ -8,7 +8,7 @@ import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
 import { termInfoInit } from './termInfo'
-import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
+//import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
 
 class TdbPlot {
@@ -105,6 +105,7 @@ class TdbPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		const data = await this.requestData(this.state)
+		if (data.error) throw data.error
 		this.syncParams(this.config, data)
 		this.currData = data
 		return data
@@ -132,23 +133,7 @@ class TdbPlot {
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
 			if (isscatter) return
 			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + encodeURIComponent(JSON.stringify(term.q)))
-			/*
-			to delete legacy code
-
-			if (term.term.iscondition && !term.q) term.q = {}
-			if (term.q && typeof term.q == 'object') {
-				let q = {}
-				if (term.term.iscondition) {
-					q = Object.keys(term.q).length ? Object.assign({}, term.q) : { bar_by_grade: 1, value_by_max_grade: 1 }
-				}
-				if (term.q.binconfig) {
-					q = Object.assign({}, term.q)
-					delete q.binconfig.results
-				}
-				params.push(key + '_q=' + encodeURIComponent(JSON.stringify(q)))
-			}
-			*/
+			params.push(key + '_q=' + q_to_param(term.q))
 		})
 
 		if (!isscatter) {
@@ -163,10 +148,10 @@ class TdbPlot {
 			}
 		}
 
-		if (state.termfilter && state.termfilter.terms && state.termfilter.terms.length) {
-			params.push('tvslst=' + encodeURIComponent(JSON.stringify(tvslst_to_parameter(state.termfilter.terms))))
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
-
 		return '?' + params.join('&')
 	}
 
@@ -198,76 +183,131 @@ class TdbPlot {
 
 export const plotInit = rx.getInitFxn(TdbPlot)
 
+function q_to_param(q) {
+	// exclude certain attributes of q from dataName
+	const q2 = JSON.parse(JSON.stringify(q))
+	delete q2.hiddenValues
+	return encodeURIComponent(JSON.stringify(q2))
+}
+
 export function plotConfig(opts) {
-	if (!opts.term) throw `missing opts.term for plotConfig()`
+	if (!opts.term) throw 'plotConfig: opts.term{} missing'
+	if (!opts.term.term) throw 'plotConfig: opts.term.term{} missing'
+	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
 
 	// initiate .q{}
+	if (!('id' in opts.term)) opts.term.id = opts.term.term.id
 	if (!opts.term.q) opts.term.q = {}
 	termsetting_fill_q(opts.term.q, opts.term.term)
 	if (opts.term2) {
+		if (!('id' in opts.term2)) opts.term2.id = opts.term2.term.id
 		if (!opts.term2.q) opts.term2.q = {}
 		termsetting_fill_q(opts.term2.q, opts.term2.term)
 	}
 	if (opts.term0) {
+		if (!('id' in opts.term0)) opts.term0.id = opts.term0.term.id
 		if (!opts.term0.q) opts.term0.q = {}
 		termsetting_fill_q(opts.term0.q, opts.term0.term)
 	}
 
-	return rx.copyMerge(
-		{
-			id: opts.term.id,
-			settings: {
-				currViews: ['barchart'],
-				controls: {
-					isOpen: false, // control panel is hidden by default
-					term2: null, // the previous overlay value may be displayed as a convenience for toggling
-					term0: null
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			currViews: ['barchart'],
+			controls: {
+				isOpen: false, // control panel is hidden by default
+				term2: null, // the previous overlay value may be displayed as a convenience for toggling
+				term0: null
+			},
+			common: {
+				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+				use_percentage: false,
+				barheight: 300, // maximum bar length
+				barwidth: 20, // bar thickness
+				barspace: 2 // space between two bars
+			},
+			boxplot: {
+				toppad: 20, // top padding
+				yaxis_width: 100,
+				label_fontsize: 15,
+				barheight: 400, // maximum bar length
+				barwidth: 25, // bar thickness
+				barspace: 5 // space between two bars
+			},
+			barchart: {
+				orientation: 'horizontal',
+				unit: 'abs',
+				overlay: 'none',
+				divideBy: 'none'
+			},
+			scatter: {
+				currLine: 0,
+				svgw: 400,
+				svgh: 400,
+				svgPadding: {
+					top: 10,
+					left: 80,
+					right: 10,
+					bottom: 50
 				},
-				common: {
-					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-					use_percentage: false,
-					barheight: 300, // maximum bar length
-					barwidth: 20, // bar thickness
-					barspace: 2 // space between two bars
-				},
-				boxplot: {
-					toppad: 20, // top padding
-					yaxis_width: 100,
-					label_fontsize: 15,
-					barheight: 400, // maximum bar length
-					barwidth: 25, // bar thickness
-					barspace: 5 // space between two bars
-				},
-				barchart: {
-					orientation: 'horizontal',
-					unit: 'abs',
-					overlay: 'none',
-					divideBy: 'none'
-				},
-				scatter: {
-					currLine: 0,
-					svgw: 400,
-					svgh: 400,
-					svgPadding: {
-						top: 10,
-						left: 80,
-						right: 10,
-						bottom: 50
-					},
-					chartMargin: 5,
-					chartTitleDivHt: 30,
-					radius: 5,
-					axisTitleFontSize: 14,
-					scale: 'byChart', // byGroup | byChart
-					ciVisible: true,
-					fillOpacity: 0.2,
-					duration: 1000
-				},
-				termInfo: {
-					isVisible: false
-				}
+				chartMargin: 5,
+				chartTitleDivHt: 30,
+				radius: 5,
+				axisTitleFontSize: 14,
+				scale: 'byChart', // byGroup | byChart
+				ciVisible: true,
+				fillOpacity: 0.2,
+				duration: 1000
+			},
+			termInfo: {
+				isVisible: false
 			}
+		}
+	}
+
+	// may apply term-specific changes to the default object
+
+	return rx.copyMerge(config, opts)
+}
+
+function normalizeFilterData(filter) {
+	const lst = []
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') lst.push(normalizeFilterData(item))
+		else
+			lst.push({
+				type: 'tvs',
+				tvs: tvslst_to_parameter(item.tvs)
+			})
+	}
+	return {
+		type: 'tvslst',
+		join: filter.join,
+		in: filter.in,
+		lst
+	}
+}
+
+function tvslst_to_parameter(tv) {
+	// apply on the terms[] array of a group
+	// TODO and/or between multiple terms
+	return {
+		term: {
+			id: tv.term.id,
+			iscategorical: tv.term.iscategorical,
+			isfloat: tv.term.isfloat,
+			isinteger: tv.term.isinteger,
+			iscondition: tv.term.iscondition
 		},
-		opts
-	)
+		// must return original values[{key,label}] to keep the validator function happy on both client/server
+		values: tv.values,
+		ranges: tv.ranges,
+		isnot: tv.isnot,
+		bar_by_grade: tv.bar_by_grade,
+		bar_by_children: tv.bar_by_children,
+		value_by_max_grade: tv.value_by_max_grade,
+		value_by_most_recent: tv.value_by_most_recent,
+		value_by_computable_grade: tv.value_by_computable_grade,
+		grade_and_child: tv.grade_and_child
+	}
 }

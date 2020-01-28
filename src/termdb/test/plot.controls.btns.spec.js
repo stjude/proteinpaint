@@ -114,7 +114,7 @@ tape('info btn', function(test) {
 
 	function checkVisibleIfTermHasInfo(plotControls) {
 		plotControls.on('postRender.test', null)
-		const infobtn = plotControls.Inner.features.topbar.Inner.features.infobtn.Inner
+		const infobtn = plotControls.Inner.components.topbar.Inner.features.infobtn.Inner
 		test.notEqual(infobtn.dom.btn.style('display'), 'none', 'should be visible when a term has html info')
 	}
 
@@ -122,7 +122,7 @@ tape('info btn', function(test) {
 
 	function checkVisibleIfTermHasNoInfo(plotControls) {
 		plotControls.on('postRender.test', null)
-		const infobtn = plotControls.Inner.features.topbar.Inner.features.infobtn.Inner
+		const infobtn = plotControls.Inner.components.topbar.Inner.features.infobtn.Inner
 		test.equal(infobtn.dom.btn.style('display'), 'none', 'should be hidden when a term has html info')
 	}
 })

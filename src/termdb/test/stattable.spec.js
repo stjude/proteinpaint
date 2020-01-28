@@ -32,7 +32,14 @@ tape('barchart-dependent display', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents', 'aaclassic_5'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alklaying Agents',
+					'aaclassic_5'
+				],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -40,12 +47,10 @@ tape('barchart-dependent display', function(test) {
 							id: 'aaclassic_5'
 						},
 						term2: {
-							id: "diaggrp"
+							id: 'diaggrp'
 						},
-						config: {
-							settings: {
-								currViews: ['table']
-							}
+						settings: {
+							currViews: ['table']
 						}
 					}
 				}
@@ -61,18 +66,19 @@ tape('barchart-dependent display', function(test) {
 	function runTests(plot) {
 		plot.on('postRender.test', null)
 		const stattable = plot.Inner.components.stattable
-		helpers.rideInit({ arg: stattable, bus: stattable, eventType: 'postRender.test' })
+		helpers
+			.rideInit({ arg: stattable, bus: stattable, eventType: 'postRender.test' })
 			.run(testHiddenWithNoBarchart)
-			//.use(triggerViewBarchart, {wait: 100})
-			//.to(testVisibleWithBarchart, {wait: 100})
+			.use(triggerViewBarchart, { wait: 100 })
+			.to(testVisibleWithBarchart, { wait: 100 })
 			.done(test)
 	}
 
 	function testHiddenWithNoBarchart(stattable) {
 		test.equal(
-			stattable.Inner.dom.div.style("display"),
-			"none",
-			"should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
+			stattable.Inner.dom.div.style('display'),
+			'none',
+			'should have a hidden stattable when the barchart is not in the settings.currViews array'
 		)
 	}
 
@@ -81,31 +87,28 @@ tape('barchart-dependent display', function(test) {
 			type: 'plot_edit',
 			id: stattable.Inner.id,
 			config: {
-				settings: { currViews: ["barchart"] } //, "stattable"] }
+				settings: { currViews: ['barchart'] } //, "stattable"] }
 			}
 		})
 	}
 
 	function testVisibleWithBarchart(stattable) {
 		test.equal(
-			stattable.Inner.dom.div.style("display"),
-			"block",
-			"should have a visible stattable when the barchart is in the settings.currViews array"
+			stattable.Inner.dom.div.style('display'),
+			'block',
+			'should have a visible stattable when the barchart is in the settings.currViews array'
 		)
 	}
 })
 
-
-tape("term.isfloat-dependent display", function(test) {
+tape('term.isfloat-dependent display', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(3)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: [
-					'root', 'Cancer-related Variables', 'Diagnosis'
-				],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis'],
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
@@ -113,7 +116,7 @@ tape("term.isfloat-dependent display", function(test) {
 							id: 'diaggrp'
 						},
 						settings: {
-							currViews: ['barchart', 'stattable']
+							currViews: ['barchart']
 						}
 					}
 				}
@@ -129,9 +132,9 @@ tape("term.isfloat-dependent display", function(test) {
 	function testHiddenIfCategoricalTerm(plot) {
 		plot.on('postRender.test', null)
 		test.equal(
-			plot.Inner.components.stattable.Inner.dom.div.style("display"),
-			"none",
-			"should have a hidden stattable when plot.term.iscategorical"
+			plot.Inner.components.stattable.Inner.dom.div.style('display'),
+			'none',
+			'should have a hidden stattable when plot.term.iscategorical'
 		)
 	}
 
@@ -162,9 +165,9 @@ tape("term.isfloat-dependent display", function(test) {
 	function testHiddenIfConditionTerm(plot) {
 		plot.on('postRender.test', null)
 		test.equal(
-			plot.Inner.components.stattable.Inner.dom.div.style("display"),
-			"none",
-			"should have a hidden stattable when plot.term.iscondition"
+			plot.Inner.components.stattable.Inner.dom.div.style('display'),
+			'none',
+			'should have a hidden stattable when plot.term.iscondition'
 		)
 	}
 
@@ -195,9 +198,9 @@ tape("term.isfloat-dependent display", function(test) {
 	function testVisibleWithNumericTerm(plot) {
 		plot.on('postRender.test', null)
 		test.equal(
-			plot.Inner.components.stattable.Inner.dom.div.style("display"),
-			"block",
-			"should have a visible stattable when plot.term is numeric"
+			plot.Inner.components.stattable.Inner.dom.div.style('display'),
+			'block',
+			'should have a visible stattable when plot.term is numeric'
 		)
 	}
 })

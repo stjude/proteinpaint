@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
-import { filterInit } from './filter'
+import { filterInit } from './filter3'
 import { recoverInit } from '../common/recover'
 import { sayerror, Menu } from '../client'
 
@@ -10,32 +10,9 @@ import { sayerror, Menu } from '../client'
 opts{}
 .state{}
 	required, will fill-in or override store.defaultState
-	https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
-.modifiers{}
-	optional
-	contains key-fxn() pairs
-	a component will consume a specific modifier (addressed by its key) to alter its behavior
-	can run the callback supplied with results to other apps (e.g. click a term in tree)
-	app and components will refer to the same frozen object of "modifiers{}", in a read-only way
-component specific callbacks and customizations
-
-
-******************* modifiers
-TODO modifiers to be moved into opts[componentType]
-
-a set of predefined keys, each pointing to a callback so as to supply user selected term or tvs to that callback
-will also alter the appearance and behavior of UIs, so components need to access this
-
-< no modifier >
-tree: display all terms under a parent, just show name;
-non-leaf terms will have a +/- button in the front
-graphable terms will have a VIEW button at the back
-
-< modifiers.tvs_select >
-at barchart, click a bar to select to a tvs
-
-Compared to previous version:
-ssid is no longer a modifier, but as a customization attribute for barchart
+.app{} .tree{} etc
+see doc for full spec
+https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
 
 */
 
@@ -53,7 +30,7 @@ class TdbApp {
 		this.app = coordApp ? coordApp : this.api
 
 		this.dom = {
-			holder: opts.holder.style('margin', '10px'),
+			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder
 				.append('div')
 				.style('position', 'sticky')
@@ -70,21 +47,11 @@ class TdbApp {
 		// catch initialization error
 		try {
 			if (!coordApp) this.store = storeInit(this.api)
-			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {}
-			if ((this.opts.tree && this.opts.tree.click_term) || modifiers.tvs_select) {
-				// has modifier
-			} else {
-				// no modifier, show these components
-				this.components.recover = recoverInit(
-					this.app,
-					{ holder: this.dom.holder, appType: 'termdb' },
-					this.opts.recover
-				)
 
-				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
-			}
-			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }, this.opts.tree)
+			this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover)
+			this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
+			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
 		} catch (e) {
 			this.printError(e)
 		}
@@ -115,13 +82,6 @@ class TdbApp {
 		if (!o.fetchOpts) o.fetchOpts = {}
 		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
 		return o
-	}
-
-	validateModifiers(tmp = {}) {
-		for (const k in tmp) {
-			if (typeof tmp[k] != 'function') throw 'modifier "' + k + '" not a function'
-		}
-		return Object.freeze(tmp)
 	}
 
 	printError(e) {

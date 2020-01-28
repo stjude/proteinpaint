@@ -74,7 +74,8 @@ tape('default behavior', function(test) {
 			config: {
 				term2: {
 					id: 'agedx',
-					term: termjson['agedx']
+					term: termjson['agedx'],
+					q: termjson['agedx'].bins.default
 				},
 				settings: {
 					currViews: ['table']

@@ -1,9 +1,8 @@
 import { event } from 'd3-selection'
 import { Menu } from '../client'
 
-const tip = new Menu({ padding: '5px' })
-
 export default function getHandlers(self) {
+	const tip = new Menu({ padding: '5px' })
 	const s = self.settings
 
 	return {
@@ -22,6 +21,9 @@ export default function getHandlers(self) {
 		},
 		series: {
 			mouseover(d) {
+				event.stopPropagation()
+				//console.log(26, tip.d.node() instanceof Node, tip, tip.d.node())
+				//if (!(tip.d.node() instanceof Node)) return
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
 				const term1unit = t1.unit
@@ -75,8 +77,21 @@ export default function getHandlers(self) {
 			click: () => {
 				const d = event.target.__data__
 				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.id] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -97,8 +112,21 @@ export default function getHandlers(self) {
 			click: () => {
 				const d = event.target.__data__
 				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.id] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -113,21 +141,28 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-				if (d.type == 'col') {
-					const i = self.settings.exclude.cols.indexOf(d.id)
-					if (i == -1) return
-					self.settings.exclude.cols.splice(i, 1)
-					self.main()
+				const id = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
+				const termNum = d.type == 'col' ? 'term' : 'term2'
+				const term = self.config[termNum]
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				if (!q.hiddenValues[id]) {
+					q.hiddenValues[id] = 1
+				} else {
+					delete q.hiddenValues[id]
 				}
-				if (d.type == 'row') {
-					const i = self.settings.exclude.rows.indexOf(d.dataId)
-					if (i == -1) {
-						self.settings.exclude.rows.push(d.dataId)
-					} else {
-						self.settings.exclude.rows.splice(i, 1)
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.config.term.id,
+					config: {
+						[termNum]: {
+							id: term.id,
+							term: term.term,
+							q
+						}
 					}
-					self.main()
-				}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -205,8 +240,21 @@ function handle_click(self) {
 		options.push({
 			label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 			callback: () => {
-				self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.seriesId] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			}
 		})
 
@@ -214,8 +262,21 @@ function handle_click(self) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
-					self.settings.exclude.rows.push(d.dataId)
-					self.main()
+					const term2 = self.config.term2
+					const q = JSON.parse(JSON.stringify(term2.q))
+					if (!q.hiddenValues) q.hiddenValues = {}
+					q.hiddenValues[d.dataId] = 1
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.config.term.id,
+						config: {
+							term2: {
+								id: term2.id,
+								term: term2.term,
+								q
+							}
+						}
+					})
 				}
 			})
 		}
@@ -268,7 +329,7 @@ function menuoption_add_filter(self, tvslst) {
 	/*
 	self: the tree object
 	tvslst: an array of 1 or 2 term-value setting objects
-		this is to be added to the obj.termfilter.terms[]
+		this is to be added to the obj.termfilter.filter[]
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
   	*/
@@ -278,7 +339,14 @@ function menuoption_add_filter(self, tvslst) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
-	self.app.dispatch({ type: 'filter_add', tvslst })
+	const filter = JSON.parse(JSON.stringify(self.state.termfilter.filter))
+	filter.lst.push(...tvslst.map(wrapTvs))
+	if (!filter.join && filter.lst.length > 1) filter.join = 'and'
+	self.app.dispatch({ type: 'filter_replace', filter })
+}
+
+function wrapTvs(tvs) {
+	return { type: 'tvs', tvs }
 }
 
 /* 			TODO: add to cart and gp          */
@@ -286,7 +354,7 @@ function menuoption_add_filter(self, tvslst) {
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
 	for (const t of tvslst) lst.push(t)
-	if (self.termfilter && self.termfilter.terms) {
+	if (self.termfilter && self.termfilter.filter) {
 		for (const t of self.termfilter.terms) {
 			lst.push(JSON.parse(JSON.stringify(t)))
 		}
@@ -346,11 +414,18 @@ function getTermValues(d, self) {
 
 	const termValues = []
 	const t1 = self.config.term
+	const t1ValKey =
+		t1.term.values && Object.keys(t1.term.values).filter(key => t1.term.values[key].label === d.seriesId)[0]
+	const t1ValId = t1.term.values && t1ValKey in t1.term.values ? t1ValKey : d.seriesId
 	const t2 = self.config.term2
+	const t2ValKey =
+		t2 && t2.term.values && Object.keys(t2.term.values).filter(key => t2.term.values[key].label === d.dataId)[0]
+	const t2ValId = t2 && t2.term.values && t2ValKey in t2.term.values ? t2ValKey : d.dataId
+
 	for (const term of [t1, t2]) {
 		if (!term) continue
 		const i = term == t1 ? 1 : 2
-		const key = term == t1 ? d.seriesId : d.dataId
+		const key = term == t1 ? t1ValId : t2ValId
 		// const q = term ? term.q : {}
 		const q = self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key

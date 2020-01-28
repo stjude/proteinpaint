@@ -289,11 +289,12 @@ function getPj(q, inReqs, data, tdb, ds) {
 			},
 			q() {
 				return inReqs.map(d => {
+					if (d.binconfig) return d.binconfig
 					const q = {}
 					for (const key in d.q) {
 						if (key != 'index') q[key] = d.q[key]
 					}
-					if (d.binconfig) q.binconfig = d.binconfig
+					//if (d.binconfig) q.binconfig = d.binconfig
 					return q
 				})
 			}
@@ -306,16 +307,20 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
   sets request-specific value and filter functions
   non-condition unannotated values will be processed but tracked separately
 */
-	if (q.tvslst) {
+	if (!q.inclusions && q.tvslst) q.inclusions = q.tvslst
+	for (const filterType of ['inclusions', 'exclusions']) {
+		if (!q[filterType]) continue
 		// for categorical terms, must convert values to valueset
-		for (const tv of q.tvslst) {
-			sjlife.setAnnoByTermId(tv.term.id)
-			if (tv.term.iscategorical) {
-				tv.valueset = new Set(tv.values.map(i => i.key))
+		for (const tvslst of q[filterType]) {
+			for (const tv of tvslst) {
+				sjlife.setAnnoByTermId(tv.term.id)
+				if (tv.term.iscategorical) {
+					tv.valueset = new Set(tv.values.map(i => i.key))
+				}
 			}
-		}
-		inReqs.filterFxn = row => {
-			return sample_match_termvaluesetting(row, q.tvslst)
+			inReqs.filterFxn = row => {
+				return sample_match_termvaluesetting(row, q[filterType])
+			}
 		}
 	}
 
@@ -341,8 +346,12 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 		const term = termid ? tdb.termjson.map.get(termid) : null
 		if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
 
-		inReq.unannotatedValues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
-		inReq.unannotatedLabels = term.values ? inReq.unannotatedValues.map(key => term.values[key].label) : []
+		inReq.unannotatedValues = term.values
+			? Object.keys(term.values).filter(key => key in term.values && term.values[key].uncomputable)
+			: []
+		inReq.unannotatedLabels = term.values
+			? inReq.unannotatedValues.map(key => key in term.values && term.values[key].label)
+			: []
 
 		if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
 		if (term.iscategorical) {
@@ -354,21 +363,26 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 			if (!tdb.patient_condition) throw 'missing termdb patient_condition'
 			if (!tdb.patient_condition.events_key) throw 'missing termdb patient_condition.events_key'
 			inReq.orderedLabels = term.grades ? term.grades : [0, 1, 2, 3, 4, 5, 9] // hardcoded default order
-			set_condition_fxn(termid, term.graph.barchart, tdb, inReq, i)
+			set_condition_fxn(termid, term.values, tdb, inReq, i)
 		} else {
 			throw 'unable to handle request, unknown term type'
 		}
 	}
 }
 
-function set_condition_fxn(termid, b, tdb, inReq, index) {
+function set_condition_fxn(termid, values, tdb, inReq, index) {
 	const q = inReq.q
 	const precomputedKey = getPrecomputedKey(q)
 
 	inReq.joinFxns[termid] = row => {
 		if (!(termid in row) || !(precomputedKey in row[termid])) return []
 		const value = row[termid][precomputedKey]
-		return Array.isArray(value) ? value : [value]
+		if (q.bar_by_grade) {
+			const grades = Array.isArray(value) ? value : [value]
+			return grades.map(grade => values[grade].label)
+		} else {
+			return Array.isArray(value) ? value : [value]
+		}
 	}
 
 	inReq.un
@@ -397,7 +411,7 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 	if (!data0.refs.bins) throw 'missing bins array in server response of /termdb-barsql'
 	const index = +termnum.slice(-1)
 	const bins = data0.refs.bins[index]
-	const binconfig = data0.refs.q[index].binconfig
+	const binconfig = data0.refs.q[index] //.binconfig
 	inReq.bins = bins
 	inReq.binconfig = binconfig
 	inReq.orderedLabels = bins.map(d => d.label)
@@ -515,80 +529,76 @@ arguments:
 	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
 }
 
-function sample_match_termvaluesetting(row, tvslst) {
-	/* for AND, require all terms to match */
+function sample_match_termvaluesetting(row, arrOftTvslst) {
+	for (const tvslst of arrOftTvslst) {
+		let numberofmatchedterms = 0
 
-	let usingAND = true
+		/* for AND, require all terms to match */
+		for (const t of tvslst) {
+			const samplevalue = row[t.term.id]
 
-	let numberofmatchedterms = 0
+			let thistermmatch
 
-	for (const t of tvslst) {
-		const samplevalue = row[t.term.id]
-
-		let thistermmatch
-
-		if (t.term.iscategorical) {
-			if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
-			thistermmatch = t.valueset.has(samplevalue)
-		} else if (t.term.isinteger || t.term.isfloat) {
-			if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
-			for (const range of t.ranges) {
-				if (range.value != undefined) {
-					thistermmatch = samplevalue == range.value
-				} else {
-					// actual range
-					if (t.term.values) {
-						const v = t.term.values[samplevalue.toString()]
-						if (v && v.uncomputable) {
-							continue
+			if (t.term.iscategorical) {
+				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				thistermmatch = t.valueset.has(samplevalue)
+			} else if (t.term.isinteger || t.term.isfloat) {
+				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				for (const range of t.ranges) {
+					if (range.value != undefined) {
+						thistermmatch = samplevalue == range.value
+					} else {
+						// actual range
+						if (t.term.values) {
+							const v = t.term.values[samplevalue.toString()]
+							if (v && v.uncomputable) {
+								continue
+							}
 						}
-					}
-					let left, right
-					if (range.startunbounded) {
-						left = true
-					} else if ('start' in range) {
-						if (range.startinclusive) {
-							left = samplevalue >= range.start
-						} else {
-							left = samplevalue > range.start
+						let left, right
+						if (range.startunbounded) {
+							left = true
+						} else if ('start' in range) {
+							if (range.startinclusive) {
+								left = samplevalue >= range.start
+							} else {
+								left = samplevalue > range.start
+							}
 						}
-					}
-					if (range.stopunbounded) {
-						right = true
-					} else if ('stop' in range) {
-						if (range.stopinclusive) {
-							right = samplevalue <= range.stop
-						} else {
-							right = samplevalue < range.stop
+						if (range.stopunbounded) {
+							right = true
+						} else if ('stop' in range) {
+							if (range.stopinclusive) {
+								right = samplevalue <= range.stop
+							} else {
+								right = samplevalue < range.stop
+							}
 						}
+						thistermmatch = left && right
 					}
-					thistermmatch = left && right
+					if (thistermmatch) break
 				}
-				if (thistermmatch) break
+			} else if (t.term.iscondition) {
+				const key = getPrecomputedKey(t)
+				const anno = samplevalue && samplevalue[key]
+				if (anno) {
+					thistermmatch = Array.isArray(anno)
+						? t.values.find(d => anno.includes(d.key))
+						: t.values.find(d => d.key == anno)
+				}
+			} else {
+				throw 'unknown term type'
 			}
-		} else if (t.term.iscondition) {
-			const key = getPrecomputedKey(t)
-			const anno = samplevalue && samplevalue[key]
-			if (anno) {
-				thistermmatch = Array.isArray(anno)
-					? t.values.find(d => anno.includes(d.key))
-					: t.values.find(d => d.key == anno)
+
+			if (t.isnot) {
+				thistermmatch = !thistermmatch
 			}
-		} else {
-			throw 'unknown term type'
+			if (thistermmatch) numberofmatchedterms++
 		}
 
-		if (t.isnot) {
-			thistermmatch = !thistermmatch
-		}
-		if (thistermmatch) numberofmatchedterms++
+		// if one tvslst is matched, then sample is okay
+		if (numberofmatchedterms == tvslst.length) return true
 	}
-
-	if (usingAND) {
-		return numberofmatchedterms == tvslst.length
-	}
-	// using OR
-	return numberofmatchedterms > 0
 }
 
 function boxplot_getvalue(lst) {

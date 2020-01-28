@@ -2,7 +2,8 @@ import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
-import getterm from '../common/getterm'
+import { getterm } from '../common/getterm'
+import { graphable } from '../common/graphable'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -13,7 +14,13 @@ const defaultState = {
 		plots: {}
 	},
 	termfilter: {
-		terms: []
+		terms: [],
+		filter: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: []
+		}
 	},
 	autoSave: true
 }
@@ -25,14 +32,16 @@ class TdbStore {
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		this.fromJson = rx.fromJson // used in store.api.state()
+		//this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
 		this.getterm = getterm
+		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
 
 		this.app = app
 		if (!app.opts.state) throw '.state{} missing'
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 		this.validateOpts()
+
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
 		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
@@ -67,6 +76,21 @@ class TdbStore {
 				savedPlot[t].term = await this.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+		}
+	}
+
+	fromJson(str) {
+		const obj = JSON.parse(str)
+		return obj
+	}
+
+	setId(item) {
+		item.$id = this.prevGeneratedId++
+		console.log(112, item.$id)
+		if (item.$lst) {
+			for (const subitem of item.$lst) {
+				this.setId(subitem)
+			}
 		}
 	}
 }
@@ -116,10 +140,15 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.tree.plots[action.id]
-		if (plot) this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
+		if (plot) {
+			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
+			validatePlot(plot)
+		}
 	},
 
 	filter_add(action) {
+		const filterType = 'terms'
+		const filters = this.state.termfilter[filterType]
 		if ('termId' in action) {
 			/*
 				having one termId assumes dispatching one added tvs at a time, 
@@ -128,7 +157,7 @@ TdbStore.prototype.actions = {
 				should always use a tvslst instead, so may need to repeat this
 				match for existing term filter
 			*/
-			const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
+			const filter = filters.find(d => d.id == action.termId)
 			if (filter) {
 				const valueData =
 					filter.term.iscategorical || filter.term.iscondition
@@ -140,10 +169,10 @@ TdbStore.prototype.actions = {
 				if (!valueData.includes(action.value)) valueData.push(action.value)
 			}
 		} else if (action.tvslst) {
-			this.state.termfilter.terms.push(...action.tvslst)
+			filters.push(action.tvslst)
 		} else {
 			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
-			this.state.termfilter.terms.push(action.term)
+			filters.push([action.term])
 		}
 	},
 
@@ -198,24 +227,76 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
-		this.state.termfilter.terms = []
-		this.state.termfilter.terms.push(action.term)
+		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 	}
 }
 
 exports.storeInit = rx.getInitFxn(TdbStore)
 
-/******* helper functions for fill-in q{} from term{}
-term-type specific logic in doing the fill
-for numeric term as term2, term.bins.less (if available) will be used but not term.bins.default
-*/
-
-function numeric_fill_q(q, b) {
+function validatePlot(p) {
 	/*
-	situation-specific logic
-	when term is term1, will call as "numeric_fill_q( q, term.bins.default )"
-	when term is term2 or term0 and has .bins.less, call as "numeric_fill_q( q, term.bins.less )"
-
+	only work for hydrated plot object already in the state
+	not for the saved state
 	*/
-	rx.copyMerge(q, b)
+	if (!p.id) throw 'plot error: plot.id missing'
+	if (!p.term) throw 'plot error: plot.term{} not an object'
+	try {
+		validatePlotTerm(p.term)
+	} catch (e) {
+		throw 'plot.term error: ' + e
+	}
+	if (p.term2) {
+		try {
+			validatePlotTerm(p.term2)
+		} catch (e) {
+			throw 'plot.term2 error: ' + e
+		}
+		if (p.term.term.iscondition && p.term.id == p.term2.id) {
+			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
+			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
+				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
+			if (p.term.q.bar_by_children && p.term2.q.bar_by_children)
+				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_children'
+		}
+	}
+	if (p.term0) {
+		try {
+			validatePlotTerm(p.term0)
+		} catch (e) {
+			throw 'plot.term0 error: ' + e
+		}
+	}
+}
+
+function validatePlotTerm(t) {
+	/*
+	for p.term, p.term2, p.term0
+	{ id, term, q }
+	*/
+
+	// somehow plots are missing this
+	if (!t.term) throw '.term{} missing'
+	if (!graphable(t.term)) throw '.term is not graphable (not a valid type)'
+	if (!t.term.name) throw '.term.name missing'
+	t.id = t.term.id
+
+	if (!t.q) throw '.q{} missing'
+	// term-type specific validation of q
+	if (t.term.isinteger || t.term.isfloat) {
+		// t.q is binning scheme, it is validated on server
+	} else if (t.term.iscategorical) {
+		if (t.q.groupsetting && !t.q.groupsetting.disabled) {
+			// groupsetting allowed on this term
+			if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
+			// groupsetting is validated on server
+		}
+		// term may not have .values{} when groupsetting is disabled
+	} else if (t.term.iscondition) {
+		if (!t.term.values) throw '.values{} missing'
+		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
+		if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
+			throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
+	} else {
+		throw 'unknown term type'
+	}
 }

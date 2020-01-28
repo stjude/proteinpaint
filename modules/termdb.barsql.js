@@ -166,9 +166,9 @@ function getPj(q, data, tdb, ds) {
 			q: d.q,
 			orderedLabels:
 				d.term.iscondition && d.term.grades
-					? d.term.grades
+					? d.term.grades.map(grade => d.term.values[grade].label)
 					: d.term.iscondition
-					? [0, 1, 2, 3, 4, 5, 9] // hardcoded default order
+					? [0, 1, 2, 3, 4, 5, 9].map(grade => d.term.values[grade].label) // hardcoded default order
 					: bins.map(bin => (bin.name ? bin.name : bin.label))
 		})
 	})
@@ -180,16 +180,16 @@ function getPj(q, data, tdb, ds) {
 		'=': {
 			prep(row) {
 				// mutates the data row, ok since
-				// rows from db query are unique to request;
-				// do not do this with ds.cohort.annorows in termdb.barchart
-				// since that is shared across requests -
-				// use partjson @join() instead
+				// rows from db query are unique to request
 				for (const d of terms) {
 					if (d.isGenotype) {
 						const genotype = q.sample2gt.get(row.sample)
 						if (!genotype) return
 						row[d.key] = genotype
 						row[d.val] = genotype
+					} else if (d.term.iscondition) {
+						row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
+						row[d.val] = row[d.key]
 					} else if (d.isAnnoVal(row[d.val])) {
 						row[d.nval] = row[d.val]
 					}

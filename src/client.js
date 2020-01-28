@@ -46,6 +46,13 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
+// in test browser environment like Electron or headless Chrome,
+// the native fetch API will not know the default host or might
+// not have access to the localStorage, so
+// configHost will be used as default as needed
+const serverconfig = require('../serverconfig')
+const configHost = 'http://localhost:' + serverconfig.port
+
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -69,7 +76,7 @@ export function dofetch(path, arg, opts = null) {
 	}
 
 	let url
-	const host = localStorage.getItem('hostURL')
+	const host = localStorage.getItem('hostURL') || configHost
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -77,8 +84,6 @@ export function dofetch(path, arg, opts = null) {
 		} else {
 			url = host + '/' + path
 		}
-	} else {
-		url = path
 	}
 
 	trackfetch(url, arg)
@@ -114,7 +119,7 @@ init {}
 	}
 
 	let url = path
-	const host = localStorage.getItem('hostURL')
+	const host = localStorage.getItem('hostURL') || configHost
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -306,10 +311,18 @@ export class Menu {
 		this.hideYmute = Number.isInteger(arg.hideYmute) ? arg.hideYmute : 0
 		this.prevX = -1
 		this.prevY = -1
+		// string selector option to limit clear()/removal of elements
+		// so that other elements may persist within tip.d
+		this.clearSelector = arg.clearSelector
 	}
 
 	clear() {
-		this.d.selectAll('*').remove()
+		if (this.clearSelector)
+			this.d
+				.select(this.clearSelector)
+				.selectAll('*')
+				.remove()
+		else this.d.selectAll('*').remove()
 		return this
 	}
 
@@ -358,6 +371,23 @@ export class Menu {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
 		return this.show(p.left - this.offsetX, p.top + p.height + (yspace || 5) - this.offsetY)
+
+		/*
+		this.d
+			.style('display','block')
+			.style('right',null)
+			.style('bottom',null)
+			.style('left', (p.left+window.scrollX)+'px')
+			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
+			.transition().style('opacity',1)
+		return this
+		*/
+	}
+
+	showunderoffset(dom, yspace) {
+		// route to .show()
+		const p = dom.getBoundingClientRect()
+		return this.show(p.left, p.top + p.height + (yspace || 5))
 
 		/*
 		this.d

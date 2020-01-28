@@ -14,7 +14,7 @@ otherwise, do:
 
 const cache = { serverData: {} }
 
-export default async function(termid, dslabel = null, genome = null) {
+exports.getterm = async function(termid, dslabel = null, genome = null) {
 	if (!termid) throw 'getterm: termid missing'
 	if (this && this.state) {
 		if (this.state.dslabel) dslabel = this.state.dslabel
