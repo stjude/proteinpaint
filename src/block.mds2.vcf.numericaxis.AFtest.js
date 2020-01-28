@@ -471,6 +471,7 @@ function show_group_termdb(group, tk, block) {
 			holder: group.dom.td3,
 			genome: block.genome.name,
 			dslabel: tk.dslabel,
+			emptyLabel: 'Entire cohort',
 			getVisibleRoot: root => root.lst[0],
 			callback: async f => {
 				group.filter = f
