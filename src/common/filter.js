@@ -480,11 +480,13 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.displayControlsMenu = function() {
 		if (!self.activeData) return
-		self.dom.holder.selectAll('.sja_filter_blank_pill').remove()
+		self.dom.holder
+			.selectAll(
+				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+			)
+			.remove()
 
-		const item = this.className.includes('join_label')
-			? this.parentNode.parentNode.parentNode.__data__
-			: this.parentNode.__data__
+		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter, elem: this }
 
@@ -524,6 +526,52 @@ function setInteractivity(self) {
 		self.dom.controlsTip.showunder(this)
 	}
 
+	self.handleMenuOptionClick = function(d) {
+		event.stopPropagation()
+		if (d == self.activeData.menuOpt) return
+		self.activeData.menuOpt = d
+		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
+			self.activeData.item = self.activeData.filter
+			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
+		}
+		if (d.action === 'join') {
+			const elem = self.activeData.elem.className.includes('join_label')
+				? self.activeData.elem.parentNode.parentNode
+				: self.activeData.item.type == 'tvs'
+				? self.activeData.elem //.parentNode.parentNode
+				: self.activeData.elem.parentNode.parentNode
+			const joiner = self.activeData.elem.className.includes('join_label')
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.item.type == 'tvslst'
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.filter.join == 'or'
+				? 'AND'
+				: 'OR'
+			self.displayBlankPill(elem, joiner)
+		} else {
+			self.dom.holder
+				.selectAll(
+					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+				)
+				.remove()
+		}
+
+		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'none')
+		}
+
+		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		if (d.bar_click_override || !d.handler) {
+			self.displayTreeMenu.call(this, d)
+		} else {
+			d.handler(this)
+		}
+	}
+
 	self.displayBlankPill = function(parentDiv, joiner) {
 		self.dom.holder
 			.selectAll(
@@ -532,7 +580,11 @@ function setInteractivity(self) {
 			.remove()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 
-		if (self.activeData.item.type == 'tvs') {
+		if (
+			self.activeData.item.type == 'tvs' &&
+			//&& self.activeData.filter != self.filter
+			!self.activeData.elem.className.includes('join_label')
+		) {
 			select(parentDiv)
 				.insert('div', 'div')
 				.attr('class', 'sja_filter_paren_open')
@@ -572,7 +624,11 @@ function setInteractivity(self) {
 			.style('vertical-align', 'top')
 			.style('background-color', '#ee5')
 
-		if (self.activeData.item.type == 'tvs') {
+		if (
+			self.activeData.item.type == 'tvs' &&
+			//&& self.activeData.filter != self.filter
+			!self.activeData.elem.className.includes('join_label')
+		) {
 			select(parentDiv)
 				.append('div')
 				.attr('class', 'sja_filter_paren_close')
@@ -590,50 +646,6 @@ function setInteractivity(self) {
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
 				.style('display', 'inline-block')
-		}
-	}
-
-	self.handleMenuOptionClick = function(d) {
-		event.stopPropagation()
-		if (d == self.activeData.menuOpt) return
-		self.activeData.menuOpt = d
-		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
-			self.activeData.item = self.activeData.filter
-			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
-		}
-		if (d.action === 'join') {
-			const elem =
-				self.activeData.item.type == 'tvs'
-					? self.activeData.elem //.parentNode.parentNode
-					: self.activeData.elem.parentNode.parentNode
-			const joiner =
-				self.activeData.item.type == 'tvslst'
-					? self.activeData.filter.join.toUpperCase()
-					: self.activeData.filter.join == 'or'
-					? 'AND'
-					: 'OR'
-			self.displayBlankPill(elem, joiner)
-		} else {
-			self.dom.holder
-				.selectAll(
-					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-				)
-				.remove()
-		}
-
-		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
-			self.dom.filterContainer
-				.selectAll(
-					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
-				)
-				.style('display', 'none')
-		}
-
-		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-		if (d.bar_click_override || !d.handler) {
-			self.displayTreeMenu.call(this, d)
-		} else {
-			d.handler(this)
 		}
 	}
 
@@ -993,6 +1005,7 @@ function normalizeFilter(filter) {
 				if (normalItem.type !== 'tvslst' || normalItem.join != filter.join || normalItem.in != filter.in) {
 					filter.lst.push(normalItem)
 				} else if (normalItem.lst.length) {
+					// can flatten and level up the subnested filter.lst items with matching join, in
 					filter.lst.push(...normalItem.lst)
 				}
 			} else {

@@ -603,6 +603,7 @@ tape('pill menu-append interaction', async test => {
 		2,
 		'should show parentheses to indicate that a newly selected term-value will be placed in a subnested pill group'
 	)
+
 	menuRows
 		.filter(d => d.action == 'replace')
 		.node()
@@ -1057,7 +1058,8 @@ tape('getNormalRoot()', async test => {
 			join: 'and',
 			lst: [A, B, C, D]
 		}
-		test.deepEqual(output, expectedOutput, '(A && B) && (C && D) should be flattened into A && B && C && D')
+		test.deepEqual(output, expectedOutput, 'should flatten (A && B) && (C && D) into A && B && C && D')
+		test.notEqual(output.lst[0], A, 'should not output original filter data')
 	}
 
 	const hidden = {
