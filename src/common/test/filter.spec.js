@@ -487,6 +487,11 @@ tape('add-transformer button interaction, 2-pill', async test => {
 		1,
 		'should create exactly 1 blank pill when clicking on a two-pill root add-transformer'
 	)
+	test.equal(
+		opts.holder.node().querySelector('.sja_filter_blank_pill').firstChild.innerHTML,
+		'OR',
+		'should correctly label the join label between the potentially subnested root and blank pill'
+	)
 
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)

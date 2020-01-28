@@ -75,17 +75,15 @@ class Filter {
 				this.filter = this.opts.getVisibleRoot ? this.opts.getVisibleRoot(this.rawFilter) : this.rawFilter
 				this.resetActiveData(this.filter)
 
+				// reset interaction-related styling
+				this.removeBlankPill()
 				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder
-					.selectAll(
-						'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-					)
-					.remove()
-				this.updateUI(this.dom.filterContainer, this.filter)
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
-				this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+
+				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+				this.updateUI(this.dom.filterContainer, this.filter)
 			},
 			/*
 				WARNING!!!
@@ -168,6 +166,12 @@ class Filter {
 
 exports.filterInit = rx.getInitFxn(Filter)
 
+// will assign an incremented index to each filter UI instance
+// to help namespace the body.on('click') event handler;
+// other click handlers are specific to the rendered
+// elements within instance.dom.holder, so no need for this index
+let filterIndex = 0
+
 function setRenderers(self) {
 	self.initUI = function() {
 		self.dom.newBtn = self.dom.holder
@@ -208,8 +212,13 @@ function setRenderers(self) {
 			.selectAll('tr')
 			.data([
 				{ action: 'edit', html: ['', 'Edit', '&#9658;'], handler: self.editTerm },
-				{ action: 'replace', html: ['', 'Replace', '&#9658;'], bar_click_override: self.replaceTerm },
-				{ action: 'join', html: ['&#10010;', '', '&#9658;'] },
+				{
+					action: 'replace',
+					html: ['', 'Replace', '&#9658;'],
+					handler: self.displayTreeMenu,
+					bar_click_override: self.replaceTerm
+				},
+				{ action: 'join', html: ['&#10010;', '', '&#9658;'], handler: self.displayTreeMenu },
 				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
 				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
 			])
@@ -256,7 +265,7 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.html(d => d.label)
 
-		select('body').on('mousedown.sja_filter', () => {
+		select('body').on('mousedown.sja_filter_' + filterIndex++, () => {
 			if (
 				[
 					'sja_filter_join_label',
@@ -267,18 +276,17 @@ function setRenderers(self) {
 			)
 				return
 			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-			self.dom.holder
-				.selectAll(
-					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-				)
-				.remove()
+			self.removeBlankPill()
 		})
 	}
 
 	self.updateUI = function(container, filter) {
 		container.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
 
-		const pills = container.selectAll(':scope > .sja_filter_grp').data([filter], self.getId)
+		const pills = container
+			.selectAll(':scope > .sja_filter_grp')
+			.style('background-color', 'transparent')
+			.data([filter], self.getId)
 
 		pills.exit().each(self.removeGrp)
 		pills.each(self.updateGrp)
@@ -480,50 +488,35 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.displayControlsMenu = function() {
 		if (!self.activeData) return
-		self.dom.holder
-			.selectAll(
-				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-			)
-			.remove()
-
 		const item = this.parentNode.__data__
 		const filter = self.findParent(self.filter, item.$id)
 		self.activeData = { item, filter, elem: this }
+		self.removeBlankPill()
+		self.resetGrpHighlights(this, filter)
+		self.dom.controlsTip.showunder(this)
+	}
 
-		const grpAction =
-			this.className.includes('join') || this.className.includes('negate') || this.className.includes('paren')
-		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-
-		rows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
-
-		const joiner = grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND'
-		rows
+	self.resetGrpHighlights = function(elem, filter) {
+		const cls = elem.className
+		const grpAction = cls.includes('join') || cls.includes('negate') || cls.includes('paren')
+		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		menuRows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
+		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && filter.lst.length == 1) ||
-					this.className.includes('negate') ||
-					this.className.includes('paren')
+				(filter.$id == self.filter.$id && filter.lst.length == 1) || cls.includes('negate') || cls.includes('paren')
 					? 'none'
 					: 'table-row'
 			)
 			.select('td:nth-child(2)')
-			.html(joiner)
+			.html(grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND')
 
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (grpAction) {
-			if (this.className.includes('join')) this.parentNode.parentNode.style.backgroundColor = '#ee5'
-			else this.parentNode.style.backgroundColor = '#ee5'
+			if (cls.includes('join')) elem.parentNode.parentNode.style.backgroundColor = '#ee5'
+			else elem.parentNode.style.backgroundColor = '#ee5'
 		}
-
-		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
-			self.dom.filterContainer
-				.selectAll(
-					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
-				)
-				.style('display', 'none')
-		}
-		self.dom.controlsTip.showunder(this)
 	}
 
 	self.handleMenuOptionClick = function(d) {
@@ -534,58 +527,37 @@ function setInteractivity(self) {
 			self.activeData.item = self.activeData.filter
 			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
 		}
-		if (d.action === 'join') {
-			const elem = self.activeData.elem.className.includes('join_label')
-				? self.activeData.elem.parentNode.parentNode
-				: self.activeData.item.type == 'tvs'
-				? self.activeData.elem //.parentNode.parentNode
-				: self.activeData.elem.parentNode.parentNode
-			const joiner = self.activeData.elem.className.includes('join_label')
-				? self.activeData.filter.join.toUpperCase()
-				: self.activeData.item.type == 'tvslst'
-				? self.activeData.filter.join.toUpperCase()
-				: self.activeData.filter.join == 'or'
-				? 'AND'
-				: 'OR'
-			self.displayBlankPill(elem, joiner)
-		} else {
-			self.dom.holder
-				.selectAll(
-					'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-				)
-				.remove()
-		}
-
-		if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
-			self.dom.filterContainer
-				.selectAll(
-					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
-				)
-				.style('display', 'none')
-		}
-
-		const rows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
-		if (d.bar_click_override || !d.handler) {
-			self.displayTreeMenu.call(this, d)
-		} else {
-			d.handler(this)
-		}
+		self.resetBlankPill(d.action)
+		self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		d.handler(this, d)
 	}
 
-	self.displayBlankPill = function(parentDiv, joiner) {
-		self.dom.holder
-			.selectAll(
-				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
-			)
-			.remove()
+	self.resetBlankPill = function(action) {
+		// clear any currently highlighted blank pill/parenthesis
+		self.removeBlankPill()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		if (action != 'join') return
+		const elem = self.activeData.elem.className.includes('join_label')
+			? self.activeData.elem.parentNode.parentNode
+			: self.activeData.item.type == 'tvs' || self.activeData.filter === self.filter
+			? self.activeData.elem
+			: self.activeData.elem.parentNode.parentNode
+		const joiner = self.activeData.elem.className.includes('join_label')
+			? self.activeData.filter.join.toUpperCase()
+			: self.activeData.btn
+			? self.activeData.btn.__data__.toUpperCase()
+			: self.activeData.item.type == 'tvslst'
+			? self.activeData.filter.join.toUpperCase()
+			: self.activeData.filter.join == 'or'
+			? 'AND'
+			: 'OR'
 
 		if (
 			self.activeData.item.type == 'tvs' &&
 			//&& self.activeData.filter != self.filter
 			!self.activeData.elem.className.includes('join_label')
 		) {
-			select(parentDiv)
+			select(elem)
 				.insert('div', 'div')
 				.attr('class', 'sja_filter_paren_open')
 				.style('display', 'inline-block')
@@ -596,7 +568,7 @@ function setInteractivity(self) {
 				.html('(')
 		}
 
-		const blank = select(parentDiv)
+		const blank = select(elem)
 			.insert('div', ':scope > .sja_filter_paren_close')
 			.attr('class', 'sja_filter_blank_pill')
 			.style('display', 'inline-block')
@@ -629,7 +601,7 @@ function setInteractivity(self) {
 			//&& self.activeData.filter != self.filter
 			!self.activeData.elem.className.includes('join_label')
 		) {
-			select(parentDiv)
+			select(elem)
 				.append('div')
 				.attr('class', 'sja_filter_paren_close')
 				.style('display', 'inline-block')
@@ -640,7 +612,7 @@ function setInteractivity(self) {
 				.html(')')
 		}
 
-		if (parentDiv == self.dom.filterContainer.node()) {
+		if (elem == self.dom.filterContainer.node()) {
 			self.dom.filterContainer
 				.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
@@ -649,11 +621,36 @@ function setInteractivity(self) {
 		}
 	}
 
+	self.removeBlankPill = function() {
+		self.dom.holder
+			.selectAll(
+				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
+			)
+			.remove()
+
+		// in case of potentially root filter subnesting, may have to
+		// revert the visibility of root filter group parentheses
+		// that subnest existing pill + blank pill
+		//if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+		self.dom.filterContainer
+			.selectAll(
+				':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+			)
+			.style('display', 'none')
+		//}
+	}
+
 	self.displayTreeNew = function(d) {
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		self.dom.isNotInput.property('checked', !self.filter.in)
 		if (self.filter.lst.length > 1) {
-			self.displayBlankPill(self.dom.filterContainer.node(), d.toUpperCase())
+			self.activeData = {
+				item: self.filter,
+				filter: self.filter,
+				elem: self.dom.filterContainer.node(), //.select(':scope > .sja_filter_grp').node()
+				btn: this
+			}
+			self.resetBlankPill('join')
 		}
 		self.dom.treeTip.clear().showunder(this)
 
@@ -722,16 +719,11 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.displayTreeMenu = function(d) {
-		//console.log(553, d, self.activeData, this)
-		const thisRow = this
-		select(this.parentNode)
-			.selectAll('tr')
-			.style('background-color', function() {
-				return this == thisRow ? '#eeee55' : 'transparent'
-			})
-
-		self.dom.treeTip.clear().showunderoffset(this.lastChild)
+	// elem: the clicked menu row option
+	// d: elem.__data__
+	self.displayTreeMenu = function(elem, d) {
+		select(elem).style('background-color', '#eeee55')
+		self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		const filter = self.activeData.filter
 
 		appInit(null, {
