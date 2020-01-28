@@ -218,6 +218,7 @@ function setRenderers(self) {
 
 		for (const [index, range] of term.ranges.entries()) {
 			if (range.value == undefined) {
+				range.index = index
 				ranges.push(range)
 			}
 		}
@@ -293,9 +294,10 @@ function setRenderers(self) {
 			const brush_g = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			const brush_start = range.startunbounded ? density_data.minvalue : range.start
-			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
+			apply_brush(range, i, brush_g)
+		}
 
+		function apply_brush(range, i, brush_g) {
 			self.brush = d3s
 				.brushX()
 				.extent([[xpad, 0], [width - xpad, height]])
@@ -330,7 +332,12 @@ function setRenderers(self) {
 					//diable pointer-event for multiple brushes
 					brush_g.selectAll('.overlay').style('pointer-events', 'none')
 				})
+			move_brush(range, brush_g)
+		}
 
+		function move_brush(range, brush_g) {
+			const brush_start = range.startunbounded ? density_data.minvalue : range.start
+			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 			brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
 		}
 
@@ -391,7 +398,7 @@ function setRenderers(self) {
 		function enter_range(d, i) {
 			const range_tr = select(this)
 			const range = JSON.parse(JSON.stringify(d))
-			// console.log(range)
+			const index = range.index
 
 			const title_td = range_tr.append('td')
 
@@ -481,9 +488,7 @@ function setRenderers(self) {
 				.on('click', async () => {
 					self.dom.tip.hide()
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-					const start = range.startunbounded ? density_data.minvalue : range.start
-					const stop = range.stopunbounded ? density_data.maxvalue : range.stop
-					brush_g.call(self.brush).call(self.brush.move, [start, stop].map(xscale))
+					apply_brush(JSON.parse(JSON.stringify(ranges[i])), i, brush_g)
 				})
 
 			//'Delete' button
@@ -550,7 +555,7 @@ function setRenderers(self) {
 						range.stopinclusive = true
 					}
 					const new_term = JSON.parse(JSON.stringify(term))
-					new_term.ranges[i] = range
+					new_term.ranges[index] = range
 					self.opts.callback(new_term)
 					div.selectAll('*').remove()
 					self.showNumOpts(div, new_term)
