@@ -5,6 +5,27 @@ export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
 	const s = self.settings
 
+	function barLabelClickHandler() {
+		// same handler for row label click in horziontal orientation
+		// or col label click in vertical orientation, since
+		// row/column labels only apply to bars
+		const d = event.target.__data__
+		if (d === undefined) return
+		const termNum = d.type == 'col' ? 'term' : 'term2'
+		const term = self.config.term
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: term.id,
+			config: {
+				term: {
+					id: term.id,
+					term: term.term,
+					q: getUpdatedQfromClick(d, term, true)
+				}
+			}
+		})
+	}
+
 	return {
 		chart: {
 			title(chart) {
@@ -74,21 +95,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__
-				if (d === undefined) return
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: term.id,
-					config: {
-						term: {
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(d, term, true)
-						}
-					}
-				})
-			},
+			click: barLabelClickHandler,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -105,22 +112,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__
-				if (d === undefined) return
-				const term = self.config.term
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: term.id,
-					config: {
-						term: {
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(d, term, true)
-						}
-					}
-				})
-			},
+			click: barLabelClickHandler,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
