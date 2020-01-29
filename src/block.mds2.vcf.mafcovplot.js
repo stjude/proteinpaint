@@ -48,7 +48,7 @@ will include tk.vcf.plot_mafcov.overlay_term
 			.style('margin-bottom', '10px')
 			.html('Overlay term&nbsp;')
 
-		const tsholder = row.append('div').attr('root', 1)
+		const tsholder = row.append('div')
 		const api = termsettingInit({
 			holder: tsholder,
 			genome: obj.block.genome.name,
