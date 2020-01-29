@@ -106,7 +106,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('cursor', 'pointer')
 			.on('click', self.showTree)
-		self.dom.pilldiv = self.dom.holder
+		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
 		self.dom.nopilldiv
@@ -136,7 +136,7 @@ function setRenderers(self) {
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
 
-		const pills = self.dom.holder.selectAll('.ts_pill').data([self.term], d => d.id)
+		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], d => d.id)
 
 		// this exit is really nice
 		pills.exit().each(self.exitPill)
@@ -167,8 +167,8 @@ function setRenderers(self) {
 			.attr('class', 'ts_name_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.style('background', '#4888BF')
-			.style('color', 'white')
+			.style('background-color', '#cfe2f3')
+			.style('color', 'black')
 			.text(d => d.name) // TODO trim long string
 
 		self.updatePill.call(this)
@@ -177,6 +177,11 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		// only modify right half of the pill
 		const one_term_div = select(this)
+		if (self.term.iscondition && !self.q.bar_by_children && !self.q.bar_by_grade) {
+			self.q.bar_by_grade = true
+			self.q.value_by_max_grade = true
+			self.q.groupsetting = {}
+		}
 
 		// if using group setting, will show right half
 		// allow more than 1 flags for future expansion
@@ -201,8 +206,9 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#674EA7')
-			.style('color', 'white')
+			.style('background', '#d9d2e9')
+			.style('color', 'black')
+			.style('font-style', 'italic')
 			.html(d => d.txt)
 			.style('opacity', 0)
 			.transition()
@@ -312,7 +318,8 @@ function setInteractivity(self) {
 				.attr('class', 'replace_btn sja_filter_tag_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#74b9ff')
+				.style('background-color', '#cfe2f3')
+				.style('color', 'black')
 				.style('padding', '7px 15px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
@@ -328,7 +335,8 @@ function setInteractivity(self) {
 				.attr('class', 'remove_btn sja_filter_tag_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#ff7675')
+				.style('background-color', '#f4cccc')
+				.style('color', 'black')
 				.style('padding', '7px 15px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
@@ -442,7 +450,7 @@ function setInteractivity(self) {
 		//show button/s for default groups
 		if (self.term.groupsetting && self.term.groupsetting.lst) {
 			for (const [i, group] of self.term.groupsetting.lst.entries()) {
-				if (self.q.groupsetting.predefined_groupset_idx != i)
+				if (self.q.groupsetting && self.q.groupsetting.predefined_groupset_idx != i)
 					div
 						.append('div')
 						.attr('class', 'group_btn sja_filter_tag_btn')
@@ -509,7 +517,9 @@ function setInteractivity(self) {
 		const groupset =
 			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				: self.q.groupsetting.customset || undefined
+				: self.q.groupsetting && self.q.groupsetting.customset
+				? self.q.groupsetting.customset
+				: undefined
 
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =
@@ -718,7 +728,8 @@ function setInteractivity(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '10px')
-			.style('background-color', '#74b9ff')
+			.style('background-color', '#d0e0e3')
+			.style('color', 'black')
 			.style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -1308,24 +1319,11 @@ function termsetting_fill_q(q, term) {
 			*/
 			rx.copyMerge(q, term.bins.default)
 		}
-		if (!q.hiddenValues) {
-			// to initiate this for a brand new q by adding term.values to it
-			q.hiddenValues = {}
-			if (term.values) {
-				// special categories
-				for (const k in term.values) {
-					q.hiddenValues[k] = 1
-				}
-			}
-		}
+		set_hiddenvalues(q, term)
 		return
 	}
 	if (term.iscategorical || term.iscondition) {
-		if (!q.hiddenValues) {
-			// no need to add initial values to be hidden
-			q.hiddenValues = {}
-		}
-
+		set_hiddenvalues(q, term)
 		if (!q.groupsetting) q.groupsetting = {}
 		if (term.groupsetting.disabled) {
 			q.groupsetting.disabled = true
@@ -1364,6 +1362,17 @@ function termsetting_fill_q(q, term) {
 	throw 'unknown term type'
 }
 exports.termsetting_fill_q = termsetting_fill_q
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
+	}
+}
 
 function valid_binscheme(q) {
 	if (Number.isFinite(q.bin_size) && q.first_bin) {

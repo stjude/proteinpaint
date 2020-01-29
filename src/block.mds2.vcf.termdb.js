@@ -3,9 +3,8 @@ import * as client from './client'
 import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { event as d3event } from 'd3-selection'
-import { init as tvs_ui_init } from './mds.termdb.termvaluesetting.ui'
-import { init as termdbinit } from './mds.termdb'
-//import { may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
+import { filterInit } from './common/filter'
+import { appInit } from './termdb/app'
 
 /*
 obj{}
@@ -69,7 +68,7 @@ official track only
 			tip: tk.legend.tip,
 			mds: tk.mds,
 			genome: block.genome,
-			termfilter: { terms: [] },
+			termfilter: {},
 			dom: {}
 		}
 
@@ -79,25 +78,8 @@ official track only
 			const af = tk.vcf.numerical_axis.AFtest
 			const tdbgrp = af.groups.find(i => i.is_termdb)
 			if (tdbgrp) {
-				obj.termfilter.terms.push(...JSON.parse(JSON.stringify(tdbgrp.terms)))
+				obj.termfilter.filter = tdbgrp.filterApi.getNormalRoot()
 			}
-			/*
-			disable for the moment
-			may_get_param_AFtest_termfilter
-
-			if(af.termfilter && af.termfilter.inuse) {
-				// this can only be in use at AFtest
-				const k = af.termfilter.values[ af.termfilter.value_index ]
-				obj.termfilter.terms.push({
-					term:{
-						id: af.termfilter.id,
-						name: af.termfilter.name,
-						iscategorical:true // hardcoded!!!
-					},
-					values:[ {key: k.key, label:(k.label || k.key)} ]
-				})
-			}
-			*/
 		}
 
 		make_phewas_ui(obj, div, tk)
@@ -126,7 +108,7 @@ function get_args(obj) {
 		'toppad=' + obj.svg.toppad,
 		'bottompad=' + obj.svg.bottompad
 	]
-	if (obj.termfilter.terms.length) lst.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
+	if (obj.termfilter.filter) lst.push('filter=' + encodeURIComponent(JSON.stringify(obj.termfilter.filter)))
 	return lst
 }
 
@@ -169,42 +151,21 @@ function make_phewas_ui(obj, div, tk) {
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
 
-		const tvsuiObj = {
-			group_div: obj.dom.row_filter
+		filterInit({
+			genome: obj.genome.name,
+			dslabel: obj.mds.label,
+			holder: obj.dom.row_filter
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin', '0px 10px'),
-			group: obj.termfilter,
-			mds: obj.mds,
-			genome: obj.genome,
-			tvslst_filter: tk.sample_termfilter,
-			callback: async () => {
-				tvsuiObj.main()
+			//getVisibleRoot:root=>root.lst[0],
+			callback: async f => {
+				obj.termfilter.filter = f
 				await run_phewas(obj)
 			}
-		}
+		}).main(obj.termfilter.filter)
 
-		tvs_ui_init(tvsuiObj)
-
-		obj.dom.filter_says = obj.dom.row_filter
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'sja_clbtext')
-			.style('opacity', 0.6)
-			.on('click', () => {
-				obj.tip.clear().showunder(d3event.target)
-				const lst = JSON.parse(JSON.stringify(obj.termfilter.terms))
-				if (tk.sample_termfilter) {
-					lst.push(...JSON.parse(JSON.stringify(tk.sample_termfilter)))
-				}
-				termdbinit({
-					genome: obj.genome,
-					mds: obj.mds,
-					div: obj.tip.d,
-					default_rootterm: {},
-					termfilter: { terms: lst }
-				})
-			})
+		obj.dom.filter_says = obj.dom.row_filter.append('div').style('display', 'inline-block')
 	}
 
 	// controls
@@ -488,12 +449,14 @@ official track only
 				.text(name)
 		}
 	}
-	const par = {
-		mds: tk.mds,
-		genome: block.genome,
-		div: plotdiv,
+	const opt = {
+		state: {
+			dslabel: tk.mds.label,
+			genome: block.genome.name
+		},
+		holder: plotdiv,
 		default_rootterm: {},
-		modifier_ssid_barchart: {
+		barchart: {
 			chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
 			pos: m.pos,
 			mutation_name: m.mname,
@@ -501,6 +464,11 @@ official track only
 			groups: groups
 		}
 	}
-	const _ = await import('./mds.termdb')
-	_.init(par)
+	if (tk.sample_termfilter) {
+		// just use a single filter, no race grp restriction
+		opt.state.termfilter = {
+			filter: JSON.parse(JSON.stringify(tk.sample_termfilter))
+		}
+	}
+	appInit(null, opt)
 }

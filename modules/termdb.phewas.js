@@ -43,8 +43,8 @@ export async function trigger(q, res, ds) {
 
 	// optional filter on samples
 	let samplefilterset
-	if (q.tvslst) {
-		samplefilterset = new Set(termdbsql.get_samples(JSON.parse(decodeURIComponent(q.tvslst)), ds))
+	if (q.filter) {
+		samplefilterset = new Set(termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds))
 	}
 
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid(q.ssid, samplefilterset)

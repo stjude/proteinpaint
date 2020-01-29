@@ -4,6 +4,7 @@ import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
 import { graphable } from '../common/graphable'
+import { getNormalRoot } from '../common/filter'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -116,12 +117,13 @@ class TdbTree {
 	}
 
 	getState(appState) {
+		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
-			termfilter: appState.termfilter,
+			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu
 		}
 	}
@@ -341,9 +343,10 @@ function setRenderers(self) {
 					labeldiv
 						// need better css class
 						.attr('class', 'sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+						.style('color', 'black')
 						.style('padding', '5px 8px')
 						.style('border-radius', '6px')
-						.style('background-color', '#4888BF')
+						.style('background-color', '#cfe2f3')
 						.style('margin', '1px 0px')
 						.on('click', () => {
 							self.opts.click_term(term)

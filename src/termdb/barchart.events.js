@@ -77,10 +77,6 @@ export default function getHandlers(self) {
 			click: () => {
 				const d = event.target.__data__
 				if (d === undefined) return
-				const term = self.config.term
-				const q = JSON.parse(JSON.stringify(term.q))
-				if (!q.hiddenValues) q.hiddenValues = {}
-				q.hiddenValues[d.id] = 1
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: term.id,
@@ -88,7 +84,7 @@ export default function getHandlers(self) {
 						term: {
 							id: term.id,
 							term: term.term,
-							q
+							q: getUpdatedQfromClick(d, term, true)
 						}
 					}
 				})
@@ -113,9 +109,6 @@ export default function getHandlers(self) {
 				const d = event.target.__data__
 				if (d === undefined) return
 				const term = self.config.term
-				const q = JSON.parse(JSON.stringify(term.q))
-				if (!q.hiddenValues) q.hiddenValues = {}
-				q.hiddenValues[d.id] = 1
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: term.id,
@@ -123,7 +116,7 @@ export default function getHandlers(self) {
 						term: {
 							id: term.id,
 							term: term.term,
-							q
+							q: getUpdatedQfromClick(d, term, true)
 						}
 					}
 				})
@@ -141,17 +134,8 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-				const id = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
 				const termNum = d.type == 'col' ? 'term' : 'term2'
 				const term = self.config[termNum]
-				const q = JSON.parse(JSON.stringify(term.q))
-				if (!q.hiddenValues) q.hiddenValues = {}
-				if (!q.hiddenValues[id]) {
-					q.hiddenValues[id] = 1
-				} else {
-					delete q.hiddenValues[id]
-				}
-
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.config.term.id,
@@ -159,7 +143,7 @@ export default function getHandlers(self) {
 						[termNum]: {
 							id: term.id,
 							term: term.term,
-							q
+							q: getUpdatedQfromClick(d, term, false)
 						}
 					}
 				})
@@ -206,6 +190,17 @@ export default function getHandlers(self) {
 			}
 		}
 	}
+}
+
+function getUpdatedQfromClick(d, term, isHidden = false) {
+	const label = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
+	const valueId = term.term.values && Object.keys(term.term.values).find(id => term.term.values[id].label === label)
+	const id = !valueId ? label : valueId
+	const q = JSON.parse(JSON.stringify(term.q))
+	if (!q.hiddenValues) q.hiddenValues = {}
+	if (isHidden) q.hiddenValues[id] = 1
+	else delete q.hiddenValues[id]
+	return q
 }
 
 function handle_click(self) {
@@ -427,7 +422,7 @@ function getTermValues(d, self) {
 		const i = term == t1 ? 1 : 2
 		const key = term == t1 ? t1ValId : t2ValId
 		// const q = term ? term.q : {}
-		const q = self.currServerData.refs.q[i]
+		const q = term.q //self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (term.term.iscondition) {
@@ -466,7 +461,6 @@ function getTermValues(d, self) {
 				)
 			}
 		} else {
-			// const bins = term.term.bins
 			const bins = self.currServerData.refs.bins[i]
 			if (!bins || !bins.length) {
 				// not associated with numeric bins
@@ -474,16 +468,6 @@ function getTermValues(d, self) {
 			} else {
 				const range = bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
-				else if (term == t1 && d.unannotatedSeries) {
-					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedSeries.value, label }] })
-				} else if (term == t2 && d.unannotatedData) {
-					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedData.value, label }] })
-				} else if (q && q.binconfig && q.binconfig.unannotated) {
-					for (const id in q.binconfig.unannotated._labels) {
-						const _label = q.binconfig.unannotated._labels[id]
-						if (_label == label) termValues.push({ term: term.term, ranges: [{ value: id, label }] })
-					}
-				}
 			}
 		}
 	}

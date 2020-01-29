@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const filterInit = require('../filter').filterInit
+const { filterInit, getNormalRoot } = require('../filter')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -22,7 +22,16 @@ function getOpts(_opts = {}) {
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
 
-	const opts = Object.assign({ holder }, _opts)
+	const opts = Object.assign(
+		{
+			holder,
+			callback(filter) {
+				opts.filterData = filter
+				opts.filter.main(opts.filterData)
+			}
+		},
+		_opts
+	)
 
 	opts.filter = filterInit({
 		btn: holder.append('div'),
@@ -31,10 +40,8 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		debug: true,
-		callback: function(filter) {
-			opts.filterData = filter
-			opts.filter.main(opts.filterData)
-		}
+		getVisibleRoot: opts.getVisibleRoot,
+		callback: opts.callback
 	})
 
 	return opts
@@ -84,43 +91,62 @@ function getHighlightedRowCount(menuRows, action) {
 		.size()
 }
 
-function diaggrp() {
-	return {
-		type: 'tvs',
-		tvs: {
-			term: {
-				id: 'diaggrp',
-				name: 'Diagnosis Group',
-				iscategorical: true
-			},
-			values: [
-				{
-					key: `Wilm's tumor`,
-					label: `Wilm's tumor`
-				}
-			]
-		}
-	}
+function diaggrp(overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'diaggrp',
+					name: 'Diagnosis Group',
+					iscategorical: true
+				},
+				values: [
+					{
+						key: `Wilms tumor`,
+						label: `Wilms tumor`
+					}
+				]
+			}
+		},
+		overrides
+	)
+}
+
+function agedx(overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			tvs: {
+				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
+				ranges: [{ start: 2, stop: 5, startinclusive: true }]
+			}
+		},
+		overrides
+	)
 }
 
 let i = 0
-function gettvs(id, val = '') {
-	return {
-		type: 'tvs',
-		tvs: {
-			term: {
-				id,
-				name: id.toUpperCase(),
-				iscategorical: true
-			},
-			values: [
-				{
-					key: val ? val : i++,
-					label: val ? val : i.toString()
-				}
-			]
-		}
-	}
+function gettvs(id, val = '', overrides = {}) {
+	return Object.assign(
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id,
+					name: id.toUpperCase(),
+					iscategorical: true
+				},
+				values: [
+					{
+						key: val ? val : i++,
+						label: val ? val : i.toString()
+					}
+				]
+			}
+		},
+		overrides
+	)
 }
 
 /**************
@@ -413,6 +439,11 @@ tape('add-transformer button interaction, 1-pill', async test => {
 		'none',
 		'should display the tree menu when clicking the add-transformer button'
 	)
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		0,
+		'should create no blank pills when clicking on a one-pill root add-transformer'
+	)
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
 	const lst = opts.filterData.lst
@@ -432,7 +463,7 @@ tape('add-transformer button interaction, 2-pill', async test => {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [diaggrp(), gettvs('abc')]
+			lst: [diaggrp(), agedx()]
 		}
 	})
 
@@ -444,12 +475,24 @@ tape('add-transformer button interaction, 2-pill', async test => {
 		})
 		.node()
 	adder.click()
+
 	await sleep(50)
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.node().style.display,
 		'none',
 		'should display the tree menu when clicking the add-transformer button'
 	)
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly 1 blank pill when clicking on a two-pill root add-transformer'
+	)
+	test.equal(
+		opts.holder.node().querySelector('.sja_filter_blank_pill').firstChild.innerHTML,
+		'OR',
+		'should correctly label the join label between the potentially subnested root and blank pill'
+	)
+
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
 	test.deepEqual(
@@ -485,11 +528,10 @@ tape('pill Edit interaction', async test => {
 
 	editOpt.node().click()
 	test.equal(getHighlightedRowCount(menuRows, 'edit'), 1, 'should highlight only the edit row when clicked')
-	test.deepEqual(
-		normalizeActiveData(opts),
-		{ item: opts.filterData.lst[0], filter: opts.filterData },
-		'should set the expected edit activeData'
-	)
+	const expected = { item: opts.filterData.lst[0], filter: opts.filterData }
+	delete expected.item.$id
+	delete expected.filter.$id
+	test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected edit activeData')
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.style('display'),
 		'none',
@@ -523,11 +565,10 @@ tape('pill Replace interaction', async test => {
 
 	replaceOpt.node().click()
 	test.equal(getHighlightedRowCount(menuRows, 'replace'), 1, 'should highlight only the replace row when clicked')
-	test.deepEqual(
-		normalizeActiveData(opts),
-		{ item: opts.filterData.lst[0], filter: opts.filterData },
-		'should set the expected replace activeData'
-	)
+	const expected = { item: opts.filterData.lst[0], filter: opts.filterData }
+	delete expected.item.$id
+	delete expected.filter.$id
+	test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected replace activeData')
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.style('display'),
 		'none',
@@ -549,15 +590,35 @@ tape('pill menu-append interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	const pillWrapper = opts.holder.select('.sja_pill_wrapper').node()
+	pillWrapper.click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const joinOpt = menuRows.filter(d => d.action == 'join')
+	joinOpt.node().click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly one blank pill when clicking a pill-menu append option'
+	)
+	test.equal(
+		pillWrapper.querySelectorAll('.sja_filter_paren_open, .sja_filter_paren_close').length,
+		2,
+		'should show parentheses to indicate that a newly selected term-value will be placed in a subnested pill group'
+	)
+
+	menuRows
+		.filter(d => d.action == 'replace')
+		.node()
+		.click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		0,
+		'should remove the blank pill when clicking away from a pill menu-append option'
+	)
+
 	const origLstLength = opts.filterData.lst.length
 	await addDemographicSexFilter(opts, joinOpt.node())
 	const lst = opts.filter.Inner.filter.lst
@@ -651,6 +712,27 @@ tape('group menu-append interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const joinOpt = menuRows.filter(d => d.action == 'join')
+	joinOpt.node().click()
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly one blank pill when clicking a group-menu append option'
+	)
+	test.equal(
+		opts.holder
+			.node()
+			.querySelectorAll('.sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close')
+			.length,
+		0,
+		'should not show parentheses to indicate no subnesting'
+	)
+	const childNodes = joinLabel.node().parentNode.parentNode.childNodes
+	test.equal(
+		childNodes[childNodes.length - 2].className,
+		'sja_filter_blank_pill',
+		'should create a blank pill to indicate that a newly selected term-value will be placed at the end of the filter group'
+	)
+
 	const origLstLength = opts.filterData.lst.length
 	await addDemographicSexFilter(opts, joinOpt.node())
 	const lst = opts.filter.Inner.filter.lst
@@ -730,12 +812,29 @@ tape('nested filters', async test => {
 			in: true,
 			join: 'and',
 			lst: [
-				gettvs('abc'),
+				agedx(),
 				{
 					type: 'tvslst',
 					in: true,
 					join: 'or',
-					lst: [gettvs('def'), gettvs('xyz')]
+					lst: [
+						diaggrp(),
+						{
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'Arrhythmias',
+									name: 'Arrhythmias',
+									iscondition: true
+								},
+								value: {
+									bar_by_grade: true,
+									values: [{ key: 2, label: '2' }],
+									value_by_max_grade: true
+								}
+							}
+						}
+					]
 				}
 			]
 		}
@@ -851,6 +950,336 @@ tape('nested filters', async test => {
 			.size(),
 		0,
 		'should not show parentheses around the second (1-item) group of the root filter'
+	)
+
+	test.end()
+})
+
+tape('hidden filters', async test => {
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				agedx(),
+				{
+					type: 'tvslst',
+					join: '',
+					in: true,
+					lst: [diaggrp()]
+				}
+			]
+		},
+		getVisibleRoot(rawFilter) {
+			return rawFilter.lst[1]
+		},
+		callback(filter) {
+			opts.filterData.lst[1] = filter
+			opts.filter.main(opts.filterData)
+		}
+	})
+
+	const tipd = opts.filter.Inner.dom.controlsTip.d
+	await opts.filter.main(opts.filterData)
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 1, 'should display 1 pill')
+
+	const adder = opts.holder
+		.selectAll('.sja_filter_add_transformer')
+		.filter(function(d) {
+			return this.style.display !== 'none' && d == 'and'
+		})
+		.node()
+	adder.click()
+	await sleep(50)
+	test.notEqual(
+		opts.filter.Inner.dom.treeTip.d.node().style.display,
+		'none',
+		'should display the tree menu when clicking the add-transformer button'
+	)
+	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
+	await addDemographicSexFilter(opts, adder)
+	const origLst = origFilter.lst[1].lst
+	const lst = opts.filterData.lst[1] && opts.filterData.lst[1].lst
+	test.deepEqual(
+		lst[0].type && lst[0].tvs && lst[0].tvs.term.id,
+		origLst[0].type && origLst[0].tvs && origLst[0].tvs.term.id,
+		'should not subnest the filter.lst[0] entry'
+	)
+	test.equal(lst[1] && lst[1].tvs && lst[1].tvs.term.id, 'sex', 'should append the new term to the root filter')
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 2, 'should display 2 pills')
+
+	const adderOr = opts.holder
+		.selectAll('.sja_filter_add_transformer')
+		.filter(function(d) {
+			return this.style.display !== 'none' && d == 'or'
+		})
+		.node()
+	adderOr.click()
+	await sleep(50)
+	test.notEqual(
+		opts.filter.Inner.dom.treeTip.d.node().style.display,
+		'none',
+		'should display the tree menu when clicking the add-transformer button'
+	)
+	await addDemographicSexFilter(opts, adderOr)
+	const lstOr = opts.filterData.lst[1] && opts.filterData.lst[1].lst
+	test.deepEqual(
+		lstOr[0] && lstOr[0].lst && lstOr[0].lst.map(d => d.tvs.id),
+		lst.map(d => d.tvs.id),
+		'should subnest the original filter tvslst'
+	)
+	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	test.end()
+})
+
+tape('getNormalRoot()', async test => {
+	{
+		// direct testing of getNormalRoot
+		const A = { type: 'tvs', tvs: { term_A: true } }
+		const B = { type: 'tvs', tvs: { term_B: true } }
+		const C = { type: 'tvs', tvs: { term_C: true } }
+		const D = { type: 'tvs', tvs: { term_D: true } }
+		const input = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [A, B]
+				},
+				{
+					type: 'tvslst',
+					join: 'and',
+					lst: [C, D]
+				}
+			]
+		}
+		const output = getNormalRoot(input)
+		const expectedOutput = {
+			type: 'tvslst',
+			join: 'and',
+			lst: [A, B, C, D]
+		}
+		test.deepEqual(output, expectedOutput, 'should flatten (A && B) && (C && D) into A && B && C && D')
+		test.notEqual(output.lst[0], A, 'should not output original filter data')
+	}
+
+	const hidden = {
+		// HIDDEN static filters
+		// not accessible to users
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [diaggrp(), agedx()]
+	}
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [
+						{
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: []
+						},
+						hidden
+					]
+				},
+				{
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: []
+				}
+			]
+		},
+		getVisibleRoot(rawFilter) {
+			return rawFilter.lst[0].lst[0]
+		}
+	})
+
+	await opts.filter.main(opts.filterData)
+	test.deepEqual(
+		// optional to supply a filterData argument
+		// otherwise the filter UI will use its own rawFilter
+		opts.filter.getNormalRoot(opts.filterData),
+		hidden,
+		'should return only the hidden parts when the user configurable parts are empty'
+	)
+
+	const singleUserConfig = gettvs('abc', 123)
+	await opts.filter.main({
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: [singleUserConfig]
+					},
+					hidden
+				]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		]
+	})
+
+	test.deepEqual(
+		opts.filter.getNormalRoot(),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [singleUserConfig, ...hidden.lst]
+		},
+		'should return only the hidden -AND- one additional restriction'
+	)
+
+	const twoEntryLst = [gettvs('abc', 123), gettvs('xyz', '999')]
+	const userConfiguredFilters = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: twoEntryLst
+	}
+	await opts.filter.main({
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [userConfiguredFilters, hidden]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		]
+	})
+
+	test.deepEqual(
+		opts.filter.getNormalRoot(),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [...userConfiguredFilters.lst, ...hidden.lst]
+		},
+		'should return only the hidden -AND- two-entry tvslst restrictions'
+	)
+
+	const filterData2 = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [userConfiguredFilters, hidden]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [gettvs('def', '444'), gettvs('rst', '555')]
+			}
+		]
+	}
+	await opts.filter.main(filterData2)
+	test.deepEqual(
+		opts.filter.getNormalRoot(),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [...userConfiguredFilters.lst, ...hidden.lst]
+				},
+				gettvs('def', '444'),
+				gettvs('rst', '555')
+			]
+		},
+		'should return the hidden plus all user configured options'
+	)
+
+	const filterData3 = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					},
+					hidden
+				]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [gettvs('def', '444'), gettvs('rst', '555')]
+			}
+		]
+	}
+	await opts.filter.main(filterData3)
+	test.deepEqual(
+		opts.filter.getNormalRoot(),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				hidden,
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [gettvs('def', '444'), gettvs('rst', '555')]
+				}
+			]
+		},
+		'should return the hidden plus user configured options after removing empty tvslst'
 	)
 
 	test.end()

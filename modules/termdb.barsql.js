@@ -96,8 +96,7 @@ const template = JSON.stringify({
 							{
 								dataId: '@key',
 								'~samples': ['$sample', 'set'],
-								'__:total': '=sampleCount()',
-								'__:unannotated': '=unannotatedData()'
+								'__:total': '=sampleCount()'
 							},
 							'$key2'
 						],
@@ -107,8 +106,7 @@ const template = JSON.stringify({
 						'~samples': ['$sample', 'set'],
 						'__:total': '=sampleCount()',
 						'__:boxplot': '=boxplot()',
-						'__:AF': '=getAF()',
-						'__:unannotated': '=unannotatedSeries()'
+						'__:AF': '=getAF()'
 					},
 					'$key1'
 				]
@@ -135,7 +133,6 @@ const template = JSON.stringify({
 					grp: '-'
 				}
 			},
-			'__:unannotatedLabels': '=unannotatedLabels()',
 			'__:useColOrder': '=useColOrder()',
 			'__:useRowOrder': '=useRowOrder()',
 			'__:bins': '=bins()',
@@ -250,25 +247,6 @@ function getPj(q, data, tdb, ds) {
 					ds
 				)
 			},
-			unannotatedLabels() {
-				const unannotated = {}
-				terms.forEach((kv, i) => {
-					unannotated['term' + i] = kv.unannotatedLabels ? kv.unannotatedLabels : []
-				})
-				return unannotated
-			},
-			unannotatedSeries(row, context) {
-				if (!terms[1] || !terms[1].unannotatedLabels.length) return
-				const i = terms[1].unannotatedLabels.indexOf(context.self.seriesId)
-				if (i == -1) return
-				return { value: terms[1].unannotatedValues[i] }
-			},
-			unannotatedData(row, context) {
-				if (!terms[2] || !terms[2].unannotatedLabels.length) return
-				const i = terms[2].unannotatedLabels.indexOf(context.self.seriesId)
-				if (i == -1) return
-				return { value: terms[2].unannotatedValues[i] }
-			},
 			filterEmptySeries(result) {
 				const nonempty = result.serieses.filter(series => series.total)
 				result.serieses.splice(0, result.serieses.length, ...nonempty)
@@ -321,10 +299,9 @@ function getTermDetails(q, tdb, index) {
 				.filter(key => term.values[key].uncomputable)
 				.map(v => +v)
 		: []
-	const unannotatedLabels = term.values ? unannotatedValues.map(key => term.values[key].label) : []
 	const isAnnoVal = val => termIsNumeric && !unannotatedValues.includes(val)
 	const termq = q['term' + index + '_q'] ? q['term' + index + '_q'] : {}
-	return { term, isAnnoVal, unannotatedValues, unannotatedLabels, q: termq }
+	return { term, isAnnoVal, q: termq }
 }
 
 function get_AF(samples, chr, pos, genotype2sample, ds) {

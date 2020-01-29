@@ -101,8 +101,8 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
-			.style('background-color', '#396C98')
-			.style('color', 'white')
+			.style('background-color', '#cfe2f3')
+			.style('color', 'black')
 			.style('padding', '6px 6px 3px 6px')
 			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
@@ -113,8 +113,8 @@ function setRenderers(self) {
 			.attr('class', 'negate_btn')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
-			.style('background', self.term.isnot ? '#660000' : '#134f5c')
-			.style('color', 'white')
+			.style('background', self.term.isnot ? '#f4cccc' : '#a2c4c9')
+			.style('color', 'black')
 			.html(self.term.isnot ? 'NOT' : 'IS')
 
 		self.updatePill.call(this)
@@ -122,17 +122,7 @@ function setRenderers(self) {
 
 	self.showMenu = (tvs, holder) => {
 		const term = tvs.term
-		const header_div = holder.append('div')
 		const term_option_div = holder.append('div')
-
-		header_div
-			.append('div')
-			.style('padding-bottom', '5px')
-			.style('margin', '5px')
-			.style('font-size', '.8em')
-			.style('font-style', 'italic')
-			.style('color', '#888')
-			.html('Configuring <b>' + term.name + '</b>')
 
 		const optsFxn = term.iscategorical
 			? self.showCatOpts
@@ -177,7 +167,8 @@ function setRenderers(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#23cba7')
+			.style('background-color', '#d0e0e3')
+			.style('color', 'black')
 			.style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -213,10 +204,35 @@ function setRenderers(self) {
 	}
 
 	self.showNumOpts = async function(div, term) {
+		const num_div = div
+			.append('div')
+			.style('font-size', '.9em')
+			.style('color', '#888')
+			.html('Numerical Ranges')
+			.append('div')
+			.style('padding', '5px')
+			.style('border-style', 'solid')
+			.style('border-width', '2px')
+			.style('border-color', '#eee')
+
+		const unanno_div = div
+			.append('div')
+			.attr('class', 'unannotated_div')
+			.style('margin-top', '10px')
+			.style('font-size', '.9em')
+			.style('color', '#888')
+			.html('Other Categories')
+			.append('div')
+			.style('padding', '5px')
+			.style('border-style', 'solid')
+			.style('border-width', '2px')
+			.style('border-color', '#eee')
+
 		const ranges = []
 
 		for (const [index, range] of term.ranges.entries()) {
 			if (range.value == undefined) {
+				range.index = index
 				ranges.push(range)
 			}
 		}
@@ -244,9 +260,9 @@ function setRenderers(self) {
 		)
 		if (density_data.error) throw density_data.error
 
-		self.makeDensityPlot(div, density_data)
+		self.makeDensityPlot(num_div, density_data)
 
-		const svg = div.select('svg')
+		const svg = num_div.select('svg')
 		const xscale = d3s
 			.scaleLinear()
 			.domain([density_data.minvalue, density_data.maxvalue])
@@ -292,9 +308,10 @@ function setRenderers(self) {
 			const brush_g = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			const brush_start = range.startunbounded ? density_data.minvalue : range.start
-			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
+			apply_brush(range, i, brush_g)
+		}
 
+		function apply_brush(range, i, brush_g) {
 			self.brush = d3s
 				.brushX()
 				.extent([[xpad, 0], [width - xpad, height]])
@@ -303,20 +320,23 @@ function setRenderers(self) {
 					//update temp_ranges
 					range.start = Number(xscale.invert(s[0]).toFixed(1))
 					range.stop = Number(xscale.invert(s[1]).toFixed(1))
-					if (div.selectAll('.start_input').size()) {
-						select(div.node().querySelectorAll('.start_input')[i])
-							.style('color', ranges[i].start == range.start ? '#000' : '#23cba7')
+					const a_range = JSON.parse(JSON.stringify(ranges[i]))
+					if (range.start == density_data.minvalue.toFixed(1)) a_range.start = range.start
+					if (range.stop == density_data.maxvalue.toFixed(1)) a_range.stop = range.stop
+					if (num_div.selectAll('.start_input').size()) {
+						select(num_div.node().querySelectorAll('.start_input')[i])
+							.style('color', a_range.start == range.start ? '#000' : '#23cba7')
 							.html(range.start)
-						select(div.node().querySelectorAll('.stop_input')[i])
-							.style('color', ranges[i].stop == range.stop ? '#000' : '#23cba7')
+						select(num_div.node().querySelectorAll('.stop_input')[i])
+							.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 							.html(range.stop)
-						select(div.node().querySelectorAll('.apply_btn')[i]).style(
+						select(num_div.node().querySelectorAll('.apply_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(ranges[i]) ? 'none' : 'inline-block'
+							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
 						)
-						select(div.node().querySelectorAll('.reset_btn')[i]).style(
+						select(num_div.node().querySelectorAll('.reset_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(ranges[i]) || (ranges[i].start == '' && ranges[i].stop == '')
+							JSON.stringify(range) == JSON.stringify(a_range) || (a_range.start == '' && a_range.stop == '')
 								? 'none'
 								: 'inline-block'
 						)
@@ -326,11 +346,12 @@ function setRenderers(self) {
 					//diable pointer-event for multiple brushes
 					brush_g.selectAll('.overlay').style('pointer-events', 'none')
 				})
-
+			const brush_start = range.startunbounded ? density_data.minvalue : range.start
+			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 			brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
 		}
 
-		const range_table = div
+		const range_table = num_div
 			.append('table')
 			.style('table-layout', 'fixed')
 			.style('border-collapse', 'collapse')
@@ -359,23 +380,22 @@ function setRenderers(self) {
 			.append('tr')
 			.attr('class', 'range_div')
 			.style('white-space', 'nowrap')
-			// .style('display', 'block')
 			.style('padding', '2px')
 			.transition()
 			.duration(200)
 			.each(enter_range)
 
-		div
+		num_div
 			.append('div')
-			.style('text-align', 'center')
-			.append('div')
+			.style('width', '100px')
 			.attr('class', 'add_btn sja_menuoption')
 			.style('border-radius', '10px')
 			.style('padding', '7px 6px')
 			.style('margin', '5px')
+			.style('margin-left', '20px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
-			.text('Add Interval')
+			.text('Add a Range')
 			.on('click', () => {
 				//Add new blank range temporary, save after entering values
 				const new_term = JSON.parse(JSON.stringify(term))
@@ -388,6 +408,7 @@ function setRenderers(self) {
 		function enter_range(d, i) {
 			const range_tr = select(this)
 			const range = JSON.parse(JSON.stringify(d))
+			const index = range.index
 
 			const title_td = range_tr.append('td')
 
@@ -397,7 +418,7 @@ function setRenderers(self) {
 				.style('margin-left', '10px')
 				.style('padding', '3px 10px')
 				.style('font-size', '.9em')
-				.text('Interval ' + (i + 1) + ': ')
+				.text('Range ' + (i + 1) + ': ')
 
 			const equation_td = range_tr.append('td').style('width', '150px')
 
@@ -407,16 +428,16 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('font-weight', 'bold')
 				.style('text-align', 'center')
-				.html(range.start)
+				.html(range.stopunbounded ? '>= ' + range.start : range.start)
 
 			// ' TO '
 			equation_td
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
-				.style('width', '10px')
+				.style('width', '40px')
 				.style('text-align', 'center')
-				.html('to')
+				.html(range.startunbounded ? '&leq;&nbsp;' : range.stopunbounded ? '' : ' &leq;&nbsp; x  &nbsp;&leq;')
 
 			const stop_input = equation_td
 				.append('div')
@@ -440,8 +461,8 @@ function setRenderers(self) {
 						: 'inline-block'
 				)
 				.style('border-radius', '13px')
-				.style('background-color', '#23cba7')
-				.style('color', '#fff')
+				.style('background-color', '#d0e0e3')
+				.style('color', 'black')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
 				.style('padding', '5px 12px')
@@ -465,8 +486,8 @@ function setRenderers(self) {
 						: 'inline-block'
 				)
 				.style('border-radius', '13px')
-				.style('background-color', '#74b9ff')
-				.style('color', '#fff')
+				.style('background-color', '#cfe2f3')
+				.style('color', 'black')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
 				.style('padding', '5px 12px')
@@ -477,7 +498,7 @@ function setRenderers(self) {
 				.on('click', async () => {
 					self.dom.tip.hide()
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-					brush_g.call(self.brush).call(self.brush.move, [range.start, range.stop].map(xscale))
+					apply_brush(JSON.parse(JSON.stringify(ranges[i])), i, brush_g)
 				})
 
 			//'Delete' button
@@ -486,8 +507,8 @@ function setRenderers(self) {
 				.attr('class', 'sja_filter_tag_btn delete_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#ff7675')
-				.style('color', '#fff')
+				.style('background-color', '#f4cccc')
+				.style('color', 'black')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
 				.style('padding', '5px 12px')
@@ -498,7 +519,7 @@ function setRenderers(self) {
 				.on('click', async () => {
 					// self.dom.tip.hide()
 					const new_term = JSON.parse(JSON.stringify(term))
-					new_term.ranges.splice(i, 1)
+					new_term.ranges.splice(index, 1)
 					self.opts.callback(new_term)
 					div.selectAll('*').remove()
 					self.showNumOpts(div, new_term)
@@ -544,7 +565,7 @@ function setRenderers(self) {
 						range.stopinclusive = true
 					}
 					const new_term = JSON.parse(JSON.stringify(term))
-					new_term.ranges[i] = range
+					new_term.ranges[index] = range
 					self.opts.callback(new_term)
 					div.selectAll('*').remove()
 					self.showNumOpts(div, new_term)
@@ -570,15 +591,16 @@ function setRenderers(self) {
 				return b.samplecount - a.samplecount
 			})
 
-			// // 'Apply' button
-			div
+			// 'Apply' button
+			unanno_div
 				.append('div')
 				.style('text-align', 'center')
 				.append('div')
 				.attr('class', 'apply_btn sja_filter_tag_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#23cba7')
+				.style('background-color', '#d0e0e3')
+				.style('color', 'black')
 				.style('padding', '7px 15px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
@@ -619,7 +641,9 @@ function setRenderers(self) {
 					self.opts.callback(new_term)
 				})
 
-			const values_table = self.makeValueTable(div, term, sortedVals)
+			const values_table = self.makeValueTable(unanno_div, term, sortedVals)
+		} else {
+			div.select('.unannotated_div').style('display', 'none')
 		}
 	}
 
@@ -778,7 +802,8 @@ function setRenderers(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#23cba7')
+			.style('background-color', '#d0e0e3')
+			.style('color', 'black')
 			.style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -825,7 +850,7 @@ function setRenderers(self) {
 		// negate button
 		one_term_div
 			.select('.negate_btn')
-			.style('background', term.isnot ? '#660000' : '#134f5c')
+			.style('background', self.term.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(term.isnot ? 'NOT' : 'IS')
 
 		const value_text = self.get_value_text(term)
@@ -852,8 +877,9 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#4888BF')
-			.style('color', 'white')
+			.style('background', '#cfe2f3')
+			.style('color', 'black')
+			.style('font-style', 'italic')
 			.html(d => d.txt)
 			.append('div')
 			.attr('class', 'grade_type_btn')
@@ -910,9 +936,9 @@ function setRenderers(self) {
 		// this row will have group names/number
 		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
 
-		const all_checkbox = all_checkbox_tr
-			.append('td')
-			.style('padding', '2px 5px')
+		const all_checkbox_label = all_checkbox_tr.append('td').style('padding', '2px 5px')
+
+		const all_checkbox = all_checkbox_label
 			.append('input')
 			.attr('type', 'checkbox')
 			.style('position', 'relative')
@@ -922,8 +948,8 @@ function setRenderers(self) {
 				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
 			})
 
-		all_checkbox_tr
-			.append('td')
+		all_checkbox_label
+			.append('span')
 			.style('padding', '2px 5px')
 			.style('font-size', '.8em')
 			.style('font-weight', 'bold')
@@ -953,9 +979,12 @@ function setRenderers(self) {
 		function enter_td(d) {
 			const value_tr = select(this)
 
-			value_tr
+			const value_label = value_tr
 				.append('td')
 				.style('padding', '2px 5px')
+				.append('label')
+
+			value_label
 				.append('input')
 				.attr('class', 'value_checkbox')
 				.attr('type', 'checkbox')
@@ -968,7 +997,10 @@ function setRenderers(self) {
 						return true
 					} else if (
 						(term.term.isfloat || term.term.isinteger) &&
-						term.ranges.map(a => a.value).includes(d.range.value)
+						term.ranges
+							.map(a => a.value)
+							.map(String)
+							.includes(d.range.value.toString())
 					) {
 						return true
 					} else if (term.term.iscondition && term.values.map(a => a.label).includes(d.label)) {
@@ -976,8 +1008,8 @@ function setRenderers(self) {
 					}
 				})
 
-			value_tr
-				.append('td')
+			value_label
+				.append('span')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
 				.html(d.label + ' (n=' + d.samplecount + ')')

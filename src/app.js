@@ -43,7 +43,6 @@ launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
-launch_termdb
 launch_singlecell
 
 */
@@ -122,7 +121,6 @@ window.runproteinpaint=(arg)=>{
 	const serverData = arg.serverData 
 		// allow server data caching by app, 
 		// may generalize later
-		|| (arg.display_termdb && arg.display_termdb.serverData)
 		|| (arg.termdb && arg.termdb.serverData)
 		|| (arg.toy && arg.toy.serverData)
 	// load genomes
@@ -783,10 +781,6 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		launch_singlecell( arg.singlecell, holder )
 		return
 	}
-	if(arg.display_termdb) {
-		launch_termdb( arg.display_termdb, holder )
-		return
-	}
 
 	if(arg.fimo) {
 		launch_fimo( arg.fimo, holder )
@@ -975,35 +969,6 @@ function launchmdssurvivalplot(arg, holder) {
 	}
 	import('./mds.survivalplot').then(_=>{
 		_.init(arg, holder, debugmode)
-	})
-}
-
-
-
-function launch_termdb ( arg, holder ) {
-	if(!arg.genome) {
-		error0('missing genome for termdb')
-		return
-	}
-	const genome = genomes[arg.genome]
-	if(!genome) {
-		error0('invalid genome for termdb')
-		return
-	}
-	arg.genome = genome
-	if(!arg.dslabel) {
-		error0('missing dslabel for termdb')
-		return
-	}
-	arg.mds = genome.datasets[ arg.dslabel ]
-	if(!arg.mds) {
-		error0('unknown dataset for termdb')
-		return
-	}
-	arg.div = holder
-	arg.debugmode = debugmode
-	import('./mds.termdb').then(_=>{
-		_.init(arg)
 	})
 }
 

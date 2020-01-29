@@ -59,9 +59,6 @@ module.exports = (q, res, ds) => {
 		}
 	}
 
-	const canvas = createCanvas(width + xpad * 2, height + ypad * 2)
-	const ctx = canvas.getContext('2d')
-
 	const xscale = scaleLinear()
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
@@ -69,34 +66,8 @@ module.exports = (q, res, ds) => {
 	const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
 	let densitymax = 0
 	for (const d of density) {
-		// d: [ x value, density ]
 		densitymax = Math.max(densitymax, d[1])
 	}
-
-	const yscale = scaleLinear()
-		.domain([densitymax, 0])
-		.range([ypad, ypad + height])
-	ctx.beginPath()
-	ctx.moveTo(ypad, ypad + height)
-	let i = 0
-	for (; i < density.length - 2; i++) {
-		ctx.quadraticCurveTo(
-			xscale(density[i][0]),
-			yscale(density[i][1]),
-			xscale((density[i][0] + density[i + 1][0]) / 2),
-			yscale((density[i][1] + density[i + 1][1]) / 2)
-		)
-	}
-	ctx.quadraticCurveTo(
-		xscale(density[i][0]),
-		yscale(density[i][1]),
-		xscale(density[i + 1][0]),
-		yscale(density[i + 1][1])
-	)
-	ctx.stroke()
-	ctx.closePath()
-	ctx.fillStyle = '#ededed'
-	ctx.fill()
 
 	const result = {
 		minvalue,
@@ -104,7 +75,6 @@ module.exports = (q, res, ds) => {
 		densitymax,
 		density,
 		samplecount: values.length
-		// img: canvas.toDataURL()
 	}
 	res.send(result)
 }
