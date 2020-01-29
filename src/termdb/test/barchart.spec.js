@@ -184,7 +184,7 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(2)
+	test.plan(6)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
@@ -214,9 +214,9 @@ tape('series visibility', function(test) {
 
 	function testHiddenValues(plot) {
 		const bar = plot.Inner.components.barchart.Inner
-		const excluded = bar.settings.exclude.cols
-		test.true(
-			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
+		test.equal(
+			bar.settings.exclude.cols.length,
+			Object.keys(hiddenValues).length,
 			'should have the correct number of hidden bars by q.hiddenValues'
 		)
 	}
@@ -236,17 +236,55 @@ tape('series visibility', function(test) {
 		},
 		plot: {
 			callbacks: {
-				'postRender.test': testExcluded
+				'postRender.test': runNumericExcludedTests
 			}
 		}
 	})
 
-	function testExcluded(plot) {
+	function runNumericExcludedTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testHiddenByUnannotatedLabels)
+			.use(triggerHiddenLegendClick, { wait: 800 })
+			.to(testRevealedUnannotatedBar, { wait: 100 })
+			.done(test)
+	}
+
+	function testHiddenByUnannotatedLabels(plot) {
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.true(
-			excluded.length > 1 && excluded.length == bar.settings.unannotatedLabels.term1.length,
-			'should have the correct number of hidden bars by unannotatedLabels'
+			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
+			'should have the correct number of excluded series data by q.hiddenValues'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
+			excluded.length,
+			'should display the correct number of hidden legend labels'
+		)
+	}
+
+	let numHiddenLegendBeforeClick
+	function triggerHiddenLegendClick(plot) {
+		numHiddenLegendBeforeClick = plot.Inner.components.barchart.Inner.settings.exclude.cols.length
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.node()
+			.querySelector('.legend-row')
+			.click()
+	}
+
+	function testRevealedUnannotatedBar(plot) {
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
+		test.equal(
+			excluded.length,
+			numHiddenLegendBeforeClick - 1,
+			'should adjust the number of excluded series data by unannotatedLabels'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
+			excluded.length,
+			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
 
@@ -277,13 +315,9 @@ tape('series visibility', function(test) {
 	})
 
 	function testConditionHiddenValues(plot) {
-		return
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
-		test.true(
-			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
-			'should have the correct number of hidden bars by q.hiddenValues'
-		)
+		test.equal(excluded.length, 1, 'should have the correct number of hidden bars by q.hiddenValues')
 	}
 })
 
@@ -395,7 +429,12 @@ tape('click bar to add filter', function(test) {
 						term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
 						term2: {
 							id: 'Arrhythmias',
-							term: termjson['Arrhythmias']
+							term: termjson['Arrhythmias'],
+							q: {
+								hiddenValues: {
+									'Unknown status': 1
+								}
+							}
 						},
 						settings: { currViews: ['barchart'] }
 					}
@@ -464,7 +503,6 @@ tape('click bar to add filter', function(test) {
 			config.term2 &&
 			config.term2.term.values &&
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
-		delete q.hiddenValues
 		test.deepEqual(
 			termfilter.filter.lst[1],
 			{

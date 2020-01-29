@@ -282,6 +282,12 @@ function getPj(q, data, tdb, ds) {
 					for (const key in d.q) {
 						if (key != 'index') q[key] = d.q[key]
 					}
+					if (Object.keys(q).length) {
+						q.hiddenValues = {}
+						if (d.unannotatedLabels) {
+							for (const id of d.unannotatedLabels) q.hiddenValues[id] = 1
+						}
+					}
 					return q
 				})
 			},

@@ -141,9 +141,13 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-				const id = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
 				const termNum = d.type == 'col' ? 'term' : 'term2'
 				const term = self.config[termNum]
+				const label = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
+				const vid =
+					term.term.values &&
+					Object.keys(term.term.values).find(id => term.term.values[id] && term.term.values[id].label === label)
+				const id = !term.term.values || !vid ? label : vid
 				const q = JSON.parse(JSON.stringify(term.q))
 				if (!q.hiddenValues) q.hiddenValues = {}
 				if (!q.hiddenValues[id]) {

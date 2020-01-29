@@ -41,7 +41,6 @@ class TdbBarchart {
 		})
 		this.controls = {}
 		this.term2toColor = {}
-		this.processedExcludes = []
 		this.eventTypes = ['postInit', 'postRender']
 		opts.controls.on('downloadClick.barchart', this.download)
 
@@ -125,40 +124,19 @@ class TdbBarchart {
 	}
 
 	initExclude() {
-		const refs = this.currServerData.refs
-		if (this.processedExcludes.includes(refs)) {
-			this.settings.exclude.cols = Object.keys(this.config.term.q.hiddenValues)
-			this.settings.exclude.rows = this.config.term2 ? Object.keys(this.config.term2.q.hiddenValues) : []
-			return
-		}
-		// do not filter out bar series or overlay data when it will result in no chart being displayed
-		const unannotatedColLabels = refs.unannotatedLabels.term1
-		const unannotatedRowLabels = refs.unannotatedLabels.term2
-		const dataFilter = data => !unannotatedRowLabels.includes(data.dataId)
-		const seriesFilter = series =>
-			!unannotatedColLabels.includes(series.seriesId) && series.data.filter(dataFilter).length
-		if (!this.currServerData.charts.filter(chart => chart.serieses.filter(seriesFilter).length).length) {
-			// has to make at least series or overlay visible
-			const chart = this.currServerData.charts[0]
-			const i = this.settings.exclude.cols.indexOf(chart.serieses[0].seriesId)
-			if (i != -1) this.settings.exclude.cols.splice(i, 1)
-			const j = this.settings.exclude.rows.indexOf(chart.serieses[0].data[0].dataId)
-			if (j != -1) this.settings.exclude.rows.splice(j, 1)
-			return
-		}
-
-		this.processedExcludes.push(refs)
 		const term = this.config.term
-		this.settings.exclude.cols = term.q.hiddenValues
-			? Object.keys(term.q.hiddenValues).map(val =>
-					term.term.values && val in term.term.values ? term.term.values[val].label : val
-			  )
-			: []
+		this.settings.exclude.cols = Object.keys(term.q.hiddenValues)
+			.filter(id => term.q.hiddenValues[id])
+			.map(id => (term.term.values && id in term.term.values ? term.term.values[id].label : id))
+		//console.log(130, this.settings.exclude.cols, term.q.hiddenValues)
+
 		const term2 = this.config.term2
 		this.settings.exclude.rows =
-			term2 && term2.q && term2.q.hiddenValues
-				? Object.keys(term2.q.hiddenValues).map(val => (term2.term.values ? term2.term.values[val].label : val))
-				: []
+			!term2 || !term2.q || !term2.q.hiddenValues
+				? []
+				: Object.keys(term2.q.hiddenValues)
+						.filter(id => term2.q.hiddenValues[id])
+						.map(id => (term2.term.values && id in term2.term.values ? term2.term.values[id].label : id))
 	}
 
 	processData(chartsData) {
