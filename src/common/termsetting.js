@@ -106,7 +106,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('cursor', 'pointer')
 			.on('click', self.showTree)
-		self.dom.pilldiv = self.dom.holder
+		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
 		self.dom.nopilldiv
@@ -136,7 +136,7 @@ function setRenderers(self) {
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
 
-		const pills = self.dom.holder.selectAll('.ts_pill').data([self.term], d => d.id)
+		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], d => d.id)
 
 		// this exit is really nice
 		pills.exit().each(self.exitPill)
