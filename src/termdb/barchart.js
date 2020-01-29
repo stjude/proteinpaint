@@ -291,7 +291,9 @@ class TdbBarchart {
 						border: '1px solid #333',
 						//inset: total ? "n="+total : '',
 						noIcon: true,
-						type: 'col'
+						type: 'col',
+						isHidden: true,
+						hiddenOpacity: 1
 					}
 				})
 				.sort(this.barSorter)

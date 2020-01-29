@@ -150,7 +150,9 @@ export default function getHandlers(self) {
 			},
 			mouseover: () => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html('Click to unhide bar')
+				const d = event.target.__data__
+				if (d === undefined) return
+				if (d.isHidden) tip.show(event.clientX, event.clientY).d.html('Click to unhide bar')
 			},
 			mouseout: () => {
 				tip.hide()

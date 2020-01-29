@@ -78,6 +78,7 @@ tape('single barchart, categorical bars', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
+	test.timeoutAfter(4000)
 	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
@@ -112,9 +113,11 @@ tape('single chart, with overlay', function(test) {
 	let barDiv
 	function runTests(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		testBarCount(plot)
-		testOverlayOrder(plot)
-		test.end()
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.run(testOverlayOrder)
+			.done(test)
 	}
 
 	function testBarCount(plot) {
@@ -184,7 +187,7 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(5) //(6)
+	test.plan(6)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
@@ -255,7 +258,7 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
-			'should have the correct number of excluded series data by q.hiddenValues'
+			'should have the correct number of excluded numeric series by q.hiddenValues'
 		)
 		test.equal(
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
@@ -283,7 +286,7 @@ tape('series visibility', function(test) {
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
-	return
+
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
@@ -313,7 +316,8 @@ tape('series visibility', function(test) {
 	function testConditionHiddenValues(plot) {
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
-		test.equal(excluded.length, 1, 'should have the correct number of hidden bars by q.hiddenValues')
+		// exclude "Unknown status" and "1: Mild"
+		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
 	}
 })
 
