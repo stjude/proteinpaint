@@ -128,7 +128,6 @@ class TdbBarchart {
 		this.settings.exclude.cols = Object.keys(term.q.hiddenValues)
 			.filter(id => term.q.hiddenValues[id])
 			.map(id => (term.term.values && id in term.term.values ? term.term.values[id].label : id))
-		//console.log(130, this.settings.exclude.cols, term.q.hiddenValues)
 
 		const term2 = this.config.term2
 		this.settings.exclude.rows =
@@ -239,8 +238,6 @@ class TdbBarchart {
 			seriesLogTotal += result.logTotal
 			this.setTerm2Color(result)
 			result.color = this.term2toColor[result.dataId]
-			result.unannotatedSeries = series.unannotated
-			result.unannotatedData = result.unannotated
 		}
 		if (seriesLogTotal > chart.maxSeriesLogTotal) {
 			chart.maxSeriesLogTotal = seriesLogTotal

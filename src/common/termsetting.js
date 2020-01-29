@@ -1319,24 +1319,11 @@ function termsetting_fill_q(q, term) {
 			*/
 			rx.copyMerge(q, term.bins.default)
 		}
-		if (!q.hiddenValues) {
-			// to initiate this for a brand new q by adding term.values to it
-			q.hiddenValues = {}
-			if (term.values) {
-				// special categories
-				for (const k in term.values) {
-					q.hiddenValues[k] = 1
-				}
-			}
-		}
+		set_hiddenvalues(q, term)
 		return
 	}
 	if (term.iscategorical || term.iscondition) {
-		if (!q.hiddenValues) {
-			// no need to add initial values to be hidden
-			q.hiddenValues = {}
-		}
-
+		set_hiddenvalues(q, term)
 		if (!q.groupsetting) q.groupsetting = {}
 		if (term.groupsetting.disabled) {
 			q.groupsetting.disabled = true
@@ -1375,6 +1362,17 @@ function termsetting_fill_q(q, term) {
 	throw 'unknown term type'
 }
 exports.termsetting_fill_q = termsetting_fill_q
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
+	}
+}
 
 function valid_binscheme(q) {
 	if (Number.isFinite(q.bin_size) && q.first_bin) {

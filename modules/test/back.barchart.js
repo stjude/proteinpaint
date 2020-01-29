@@ -42,9 +42,7 @@ function getTrackers() {
 	return {
 		joinFxns: { '': () => '' }, // keys are term0, term1, term2 names; ...
 		numValFxns: { '': () => {} }, // ... if key == empty string then the term is not specified
-		unannotated: '',
 		orderedLabels: [],
-		unannotatedLabels: [],
 		bins: []
 	}
 }
@@ -75,12 +73,10 @@ const templateBar = JSON.stringify({
 						'__:boxplot': '=boxplot()',
 						'~samples': ['$sample', 'set'],
 						'__:AF': '=getAF()',
-						'__:unannotated': '=unannotatedSeries()',
 						data: [
 							{
 								dataId: '@key',
-								total: '+1',
-								'__:unannotated': '=unannotatedData()'
+								total: '+1'
 							},
 							'&idVal.dataId[]'
 						]
@@ -112,7 +108,6 @@ const templateBar = JSON.stringify({
 			},
 			'__:useColOrder': '=useColOrder()',
 			'__:useRowOrder': '=useRowOrder()',
-			'__:unannotatedLabels': '=unannotatedLabels()',
 			'__:bins': '=bins()',
 			'__:q': '=q()',
 			'@done()': '=sortColsRows()'
@@ -156,9 +151,8 @@ function getPj(q, inReqs, data, tdb, ds) {
 					const id = inReqs[term.i].joinFxns[termid](row, context, joinAlias)
 					if (id === undefined || (Array.isArray(id) && !id.length)) return
 					csd[term.key] = Array.isArray(id) ? id : [id]
-					const value =
+					csd[term.val] =
 						typeof inReqs[term.i].numValFxns[termid] == 'function' ? inReqs[term.i].numValFxns[termid](row) : undefined
-					csd[term.val] = 0 && inReqs[term.i].unannotatedLabels.includes(value) ? undefined : value
 				}
 				return csd
 			},
@@ -222,40 +216,6 @@ function getPj(q, inReqs, data, tdb, ds) {
 				const nonempty = result.serieses.filter(series => series.total)
 				result.serieses.splice(0, result.serieses.length, ...nonempty)
 			},
-			unannotated(row, context) {
-				const series = context.joins.get('series')
-				if (!series) return
-				let total = 0
-				for (const s of idVal.seriesId) {
-					if (inReqs[1].unannotatedLabels.includes(s)) {
-						total += 1
-					}
-				}
-				return total
-			},
-			unannotatedSeries(row, context) {
-				if (!inReqs[1].unannotatedLabels.length) return
-				const i = inReqs[1].unannotatedLabels.indexOf(context.self.seriesId)
-				if (i == -1) return
-				return { value: inReqs[2].unannotatedValues[i] }
-			},
-			unannotatedData(row, context) {
-				if (!inReqs[2].unannotatedLabels.length) return
-				const i = inReqs[2].unannotatedLabels.indexOf(context.self.seriesId)
-				if (i == -1) return
-				return { value: inReqs[2].unannotatedValues[i] }
-			},
-			annotated(row, context) {
-				const series = context.joins.get('series')
-				if (!series) return
-				let total = 0
-				for (const s of idVal.seriesId) {
-					if (!inReqs[1].unannotatedLabels.includes(s)) {
-						total += 1
-					}
-				}
-				return total
-			},
 			sortColsRows(result) {
 				if (inReqs[1].orderedLabels.length) {
 					const labels = inReqs[1].orderedLabels
@@ -277,13 +237,6 @@ function getPj(q, inReqs, data, tdb, ds) {
 			useRowOrder() {
 				return inReqs[2].orderedLabels.length > 0
 			},
-			unannotatedLabels() {
-				return {
-					term0: inReqs[0].unannotatedLabels,
-					term1: inReqs[1].unannotatedLabels,
-					term2: inReqs[2].unannotatedLabels
-				}
-			},
 			bins() {
 				return inReqs.map(d => d.bins)
 			},
@@ -292,12 +245,6 @@ function getPj(q, inReqs, data, tdb, ds) {
 					const q = {}
 					for (const key in d.q) {
 						if (key != 'index') q[key] = d.q[key]
-					}
-					if (Object.keys(q).length) {
-						q.hiddenValues = {}
-						if (d.unannotatedLabels) {
-							for (const id of d.unannotatedLabels) q.hiddenValues[id] = 1
-						}
 					}
 					return q
 				})
@@ -309,7 +256,6 @@ function getPj(q, inReqs, data, tdb, ds) {
 function setValFxns(q, inReqs, ds, tdb, data0) {
 	/*
   sets request-specific value and filter functions
-  non-condition unannotated values will be processed but tracked separately
 */
 	if (q.filter) {
 		if (!q.filter.join) q.filter.join = 'or'
@@ -328,7 +274,6 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 		term_q.index = i
 		if (!inReq.orderedLabels) {
 			inReq.orderedLabels = []
-			inReq.unannotatedLabels = []
 		}
 		if (q[termnum + '_is_genotype']) {
 			if (!q.ssid) throw `missing ssid for genotype`
@@ -340,14 +285,6 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 		sjlife.setAnnoByTermId(termid)
 		const term = termid ? tdb.termjson.map.get(termid) : null
 		if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
-
-		inReq.unannotatedValues = term.values
-			? Object.keys(term.values).filter(key => key in term.values && term.values[key].uncomputable)
-			: []
-		inReq.unannotatedLabels = term.values
-			? inReq.unannotatedValues.map(key => key in term.values && term.values[key].label)
-			: []
-
 		if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
 		if (term.iscategorical) {
 			inReq.joinFxns[termid] = row => row[termid]

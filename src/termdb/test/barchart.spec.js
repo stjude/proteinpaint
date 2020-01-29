@@ -11,7 +11,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		termfilter: { show_top_ui: true }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -184,7 +184,7 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(6)
+	test.plan(5) //(6)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
@@ -244,13 +244,13 @@ tape('series visibility', function(test) {
 	function runNumericExcludedTests(plot) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
-			.run(testHiddenByUnannotatedLabels)
+			.run(testHiddenByValues)
 			.use(triggerHiddenLegendClick, { wait: 800 })
-			.to(testRevealedUnannotatedBar, { wait: 100 })
+			.to(testRevealedBar, { wait: 100 })
 			.done(test)
 	}
 
-	function testHiddenByUnannotatedLabels(plot) {
+	function testHiddenByValues(plot) {
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.true(
@@ -273,21 +273,17 @@ tape('series visibility', function(test) {
 			.click()
 	}
 
-	function testRevealedUnannotatedBar(plot) {
+	function testRevealedBar(plot) {
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
-		test.equal(
-			excluded.length,
-			numHiddenLegendBeforeClick - 1,
-			'should adjust the number of excluded series data by unannotatedLabels'
-		)
+		test.equal(excluded.length, numHiddenLegendBeforeClick - 1, 'should adjust the number of excluded series data')
 		test.equal(
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
 			excluded.length,
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
-
+	return
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
