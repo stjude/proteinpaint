@@ -31,9 +31,6 @@ menu_editgroup
 */
 
 // hardcoded colors
-const color_infofield = '#674EA7'
-const color_population = '#A64D79'
-const color_termdb = '#4888BF'
 
 export function make_ui(tk, block) {
 	/*
@@ -281,7 +278,7 @@ groupindex:
 
 	if (tk.mds && tk.mds.termdb) {
 		tabs.push({
-			label: '<span style="background:' + color_termdb + ';border-radius:4px">&nbsp;&nbsp;</span> Clinical info',
+			label: 'Clinical info',
 			callback: async div => {
 				const obj = {
 					holder: div,
@@ -327,7 +324,7 @@ groupindex:
 
 	if (af.allowed_infofields) {
 		tabs.push({
-			label: '<span style="background:' + color_infofield + ';border-radius:4px">&nbsp;&nbsp;</span> Numerical value',
+			label: 'Numerical value',
 			callback: div => {
 				for (const i of af.allowed_infofields) {
 					if (group.is_infofield && group.key == i.key) {
@@ -359,7 +356,7 @@ groupindex:
 
 	if (tk.populations) {
 		tabs.push({
-			label: '<span style="background:' + color_population + ';border-radius:4px">&nbsp;&nbsp;</span> Population',
+			label: 'Population',
 			callback: div => {
 				for (const population of tk.populations) {
 					if (group.is_population && group.key == population.key) {
@@ -537,9 +534,9 @@ function show_group_infofield(group, tk) {
 
 	const f = tk.info_fields.find(j => j.key == group.key)
 	btn
-		.style('color', '#FFF')
 		.style('border-radius', '6px')
-		.style('background-color', color_infofield)
+		.style('background-color', '#ddd')
+		.style('color', 'black')
 		.style('padding', '3px 6px 3px 6px')
 		.style('margin-left', '5px')
 		.html(f.label + ' &#9662;')
@@ -580,9 +577,9 @@ also <select> for changing group
 	select.node().value = group.key
 
 	btn
-		.style('color', '#FFF')
 		.style('border-radius', '6px')
-		.style('background-color', color_population)
+		.style('background-color', '#ddd')
+		.style('color', 'black')
 		.style('padding', '3px 6px 3px 6px')
 		.style('margin-left', '5px')
 		.html(p.label + (tk.populations.length > 1 ? ' &#9662;' : ''))
