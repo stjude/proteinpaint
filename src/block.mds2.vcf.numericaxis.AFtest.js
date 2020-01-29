@@ -395,6 +395,11 @@ groupindex:
 
 	async function _updatetk() {
 		af.dom.holder.selectAll('*').remove()
+		/* quick fix!
+		as af.dom.holder has been emptied, so is the filter UI of existing termdb group
+		thus must delete the api so as to redo it again
+		*/
+		af.groups.forEach(i => delete i.filterApi)
 		make_ui(tk, block)
 		group.dom.td2.text('UPDATING...')
 		may_setup_numerical_axis(tk)
