@@ -1,6 +1,6 @@
 'use strict'
 const tape = require('tape')
-const termjson = require('../../../test/termdb/termjson').termjson
+const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
 
 /*************************
