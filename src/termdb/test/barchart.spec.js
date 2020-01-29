@@ -77,7 +77,7 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape.only('single chart, with overlay', function(test) {
+tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
 	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
