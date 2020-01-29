@@ -93,7 +93,7 @@ tape('tvs (common): buttons', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-			opts.filterData.lst[0].tvs.values[0].label,
+		opts.filterData.lst[0].tvs.values[0].label,
 		'should label the pill with the correct value label'
 	)
 
@@ -107,7 +107,10 @@ tape('tvs (common): buttons', async test => {
 	editOpt.node().click()
 	await sleep(700)
 	const tipd = opts.filter.Inner.dom.treeHead
-	tipd.node().querySelectorAll('input')[0].click()
+	tipd
+		.node()
+		.querySelectorAll('input')[0]
+		.click()
 	opts.filter.Inner.dom.treeBody
 		.selectAll('.apply_btn')
 		.node()
@@ -181,7 +184,7 @@ tape('tvs : Categorical', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-			opts.filterData.lst[0].tvs.values.length + ' Groups',
+		opts.filterData.lst[0].tvs.values.length + ' Groups',
 		'should change the pill value btn after adding value from menu'
 	)
 
@@ -247,17 +250,29 @@ tape('tvs : Numerical', async test => {
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 2, 'Should have 2 button to apply value change')
 	test.equal(tipd.selectAll('.delete_btn').size(), 1, 'Should have 1 button to remove the range')
-	test.equal(tipd.node().querySelectorAll('.start_input')[0].innerHTML, '1000', 'Should match start value with data')
-	test.equal(tipd.node().querySelectorAll('.stop_input')[0].innerHTML, '2000', 'Should match stop value with data')
+	test.equal(tipd.node().querySelectorAll('.start_text')[0].innerHTML, '1000', 'Should match start value with data')
+	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
 
 	//trigeer and check range edit
 	const brush = opts.filter.Inner.pills['1'].Inner.brush
-	d3s.select(tipd
-		.node()
-		.querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511,30.9465])
-	test.equal(tipd.selectAll('table').selectAll('.apply_btn').size(), 1, 'Should have button to apply value change')
-	test.equal(tipd.selectAll('table').selectAll('.reset_btn').size(), 1, 'Should have button to reset the range')
-	
+	d3s.select(tipd.node().querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511, 30.9465])
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.apply_btn')
+			.size(),
+		1,
+		'Should have button to apply value change'
+	)
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.reset_btn')
+			.size(),
+		1,
+		'Should have button to reset the range'
+	)
+
 	tipd
 		.selectAll('table')
 		.selectAll('.apply_btn')
@@ -269,7 +284,8 @@ tape('tvs : Numerical', async test => {
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split(' ')[5].split('<')[0],
+			.innerHTML.split(' ')[5]
+			.split('<')[0],
 		String(opts.filterData.lst[0].tvs.ranges[0].stop),
 		'should change range from the menu'
 	)
@@ -319,7 +335,7 @@ tape('tvs : Conditional', async test => {
 			]
 		}
 	})
-	
+
 	await opts.filter.main(opts.filterData)
 
 	// test common bluepill components

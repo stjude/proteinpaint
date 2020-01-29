@@ -324,22 +324,48 @@ function setRenderers(self) {
 					if (range.start == density_data.minvalue.toFixed(1)) a_range.start = range.start
 					if (range.stop == density_data.maxvalue.toFixed(1)) a_range.stop = range.stop
 					if (num_div.selectAll('.start_input').size()) {
+						// update inputs from brush move
 						select(num_div.node().querySelectorAll('.start_input')[i])
 							.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-							.html(range.start)
+							.attr('value', range.start)
+							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
 						select(num_div.node().querySelectorAll('.stop_input')[i])
 							.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-							.html(range.stop)
+							.attr('value', range.stop)
+							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
+
+						//update 'edit', 'apply' and 'reset' buttons based on brush change
+						select(num_div.node().querySelectorAll('.edit_btn')[i]).style(
+							'display',
+							JSON.stringify(range) != JSON.stringify(a_range) || (a_range.start == '' || a_range.stop == '')
+								? 'none'
+								: 'inline-block'
+						)
 						select(num_div.node().querySelectorAll('.apply_btn')[i]).style(
 							'display',
 							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
 						)
 						select(num_div.node().querySelectorAll('.reset_btn')[i]).style(
 							'display',
-							JSON.stringify(range) == JSON.stringify(a_range) || (a_range.start == '' && a_range.stop == '')
+							JSON.stringify(range) == JSON.stringify(a_range) || (a_range.start == '' || a_range.stop == '')
 								? 'none'
 								: 'inline-block'
 						)
+
+						// hide start and stop text if brush moved
+						select(num_div.node().querySelectorAll('.start_text')[i]).style(
+							'display',
+							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
+						select(num_div.node().querySelectorAll('.stop_text')[i]).style(
+							'display',
+							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
+
+						// make brush green if changed
+						brush_g
+							.selectAll('.selection')
+							.style('fill', JSON.stringify(range) != JSON.stringify(a_range) ? '#23cba7' : '#777777')
 					}
 				})
 				.on('end', function() {
@@ -349,6 +375,9 @@ function setRenderers(self) {
 			const brush_start = range.startunbounded ? density_data.minvalue : range.start
 			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 			brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
+			brush_g
+				.selectAll('.selection')
+				.style('fill', ranges[i].start == '' && ranges[i].stop == '' ? '#23cba7' : '#777777')
 		}
 
 		const range_table = num_div
@@ -422,33 +451,91 @@ function setRenderers(self) {
 
 			const equation_td = range_tr.append('td').style('width', '150px')
 
-			const start_input = equation_td
+			const start_text = equation_td
 				.append('div')
-				.attr('class', 'start_input')
+				.attr('class', 'start_text')
 				.style('display', 'inline-block')
 				.style('font-weight', 'bold')
 				.style('text-align', 'center')
 				.html(range.stopunbounded ? '>= ' + range.start : range.start)
 
-			// ' TO '
+			const start_input = equation_td
+				.append('input')
+				.attr('class', 'start_input')
+				.attr('type', 'number')
+				.style('display', 'none')
+				.style('width', '80px')
+				.style('margin-left', '15px')
+				.attr('value', range.start)
+				.on('keyup', async () => {
+					if (!client.keyupEnter()) return
+					start_input.property('disabled', true)
+					await apply()
+					start_input.property('disabled', false)
+				})
+
+			// 'x' and relation symbols
+			const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 			equation_td
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
 				.style('width', '40px')
 				.style('text-align', 'center')
-				.html(range.startunbounded ? '&leq;&nbsp;' : range.stopunbounded ? '' : ' &leq;&nbsp; x  &nbsp;&leq;')
+				.html(range.startunbounded ? '&leq;&nbsp;' : range.stopunbounded ? '' : ` &leq;&nbsp; ${x}  &nbsp;&leq;`)
 
-			const stop_input = equation_td
+			const stop_text = equation_td
 				.append('div')
-				.attr('class', 'stop_input')
+				.attr('class', 'stop_text')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
 				.style('font-weight', 'bold')
 				.style('text-align', 'center')
 				.html(range.stop)
 
+			const stop_input = equation_td
+				.append('input')
+				.attr('class', 'stop_input')
+				.attr('type', 'number')
+				.style('display', 'none')
+				.style('width', '80px')
+				.style('margin-left', '15px')
+				.attr('value', range.stop)
+				.on('keyup', async () => {
+					if (!client.keyupEnter()) return
+					stop_input.property('disabled', true)
+					await apply()
+					stop_input.property('disabled', false)
+				})
+
 			const buttons_td = range_tr.append('td')
+
+			//'edit' button
+			const edit_btn = buttons_td
+				.append('td')
+				.attr('class', 'sja_menuoption edit_btn')
+				.style(
+					'display',
+					JSON.stringify(range) == JSON.stringify(temp_ranges[i]) || (range.start == '' && range.stop == '')
+						? 'inline-block'
+						: 'none'
+				)
+				.style('border-radius', '13px')
+				.style('color', 'black')
+				.style('margin', '5px')
+				.style('margin-left', '10px')
+				.style('padding', '5px 12px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('edit')
+				.on('click', async () => {
+					start_text.style('display', 'none')
+					stop_text.style('display', 'none')
+					start_input.style('display', 'inline-block')
+					stop_input.style('display', 'inline-block')
+					edit_btn.style('display', 'none')
+				})
 
 			//'Apply' button
 			buttons_td
@@ -505,7 +592,7 @@ function setRenderers(self) {
 			buttons_td
 				.append('td')
 				.attr('class', 'sja_filter_tag_btn delete_btn')
-				.style('display', 'inline-block')
+				.style('display', term.ranges.length == 1 ? 'none' : 'inline-block')
 				.style('border-radius', '13px')
 				.style('background-color', '#f4cccc')
 				.style('color', 'black')
@@ -527,8 +614,8 @@ function setRenderers(self) {
 
 			// note for empty range
 			if (range.start == '' && range.stop == '') {
-				start_input.html('_____')
-				stop_input.html('_____')
+				start_text.html('_____')
+				stop_text.html('_____')
 
 				range_table
 					.append('tr')
@@ -539,13 +626,13 @@ function setRenderers(self) {
 					.style('margin-left', '20px')
 					.style('font-style', 'italic')
 					.style('color', '#888')
-					.html('Note: Drag the <b>Interval</b> at the end of the plot to select new range')
+					.html('Note: Drag the <b>green rectangle</b> at the end of the plot to select new range')
 			}
 
 			async function apply() {
 				try {
-					const start = Number(start_input.node().innerHTML)
-					const stop = Number(stop_input.node().innerHTML)
+					const start = Number(start_input.node().value)
+					const stop = Number(stop_input.node().value)
 					if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
 
 					if (start == density_data.minvalue) {
@@ -657,7 +744,7 @@ function setRenderers(self) {
 		const svg = div
 			.append('svg')
 			.attr('width', width + xpad * 2)
-			.attr('height', height + ypad * 2)
+			.attr('height', height + ypad * 2 + 20)
 
 		//density data, add first and last values to array
 		const density_data = data.density
@@ -702,6 +789,11 @@ function setRenderers(self) {
 		g.append('g')
 			.attr('transform', `translate(0, ${ypad + height})`)
 			.call(x_axis)
+
+		g.append('text')
+			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+			.attr('font-size', '13px')
+			.text(self.term.term.unit)
 	}
 
 	self.showConditionOpts = async function(div, term) {
