@@ -211,6 +211,7 @@ function setRenderers(self) {
 			.html('Numerical Ranges')
 			.append('div')
 			.style('padding', '5px')
+			.style('color', '#000')
 			.style('border-style', 'solid')
 			.style('border-width', '2px')
 			.style('border-color', '#eee')
@@ -321,8 +322,8 @@ function setRenderers(self) {
 					range.start = Number(xscale.invert(s[0]).toFixed(1))
 					range.stop = Number(xscale.invert(s[1]).toFixed(1))
 					const a_range = JSON.parse(JSON.stringify(ranges[i]))
-					if (range.start == density_data.minvalue.toFixed(1)) a_range.start = range.start
-					if (range.stop == density_data.maxvalue.toFixed(1)) a_range.stop = range.stop
+					// if (range.start == density_data.minvalue.toFixed(1)) a_range.start = range.start
+					// if (range.stop == density_data.maxvalue.toFixed(1)) a_range.stop = range.stop
 					if (num_div.selectAll('.start_input').size()) {
 						// update inputs from brush move
 						select(num_div.node().querySelectorAll('.start_input')[i])
@@ -375,9 +376,16 @@ function setRenderers(self) {
 			const brush_start = range.startunbounded ? density_data.minvalue : range.start
 			const brush_stop = range.stopunbounded ? density_data.maxvalue : range.stop
 			brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
+			if (range.startunbounded) delete range.start
+			if (range.stopunbounded) delete range.stop
 			brush_g
 				.selectAll('.selection')
-				.style('fill', ranges[i].start == '' && ranges[i].stop == '' ? '#23cba7' : '#777777')
+				.style(
+					'fill',
+					(ranges[i].start == '' && ranges[i].stop == '') || JSON.stringify(range) != JSON.stringify(ranges[i])
+						? '#23cba7'
+						: '#777777'
+				)
 		}
 
 		const range_table = num_div
@@ -418,7 +426,11 @@ function setRenderers(self) {
 			.append('div')
 			.style('width', '100px')
 			.attr('class', 'add_btn sja_menuoption')
-			.style('border-radius', '10px')
+			.style(
+				'display',
+				ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == '' ? 'none' : 'inline-block'
+			)
+			.style('border-radius', '13px')
 			.style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('margin-left', '20px')
@@ -470,7 +482,18 @@ function setRenderers(self) {
 				.on('keyup', async () => {
 					if (!client.keyupEnter()) return
 					start_input.property('disabled', true)
-					await apply()
+					try {
+						if (start_input.node().value < density_data.minvalue) throw 'entered value is lower than minimum value'
+						const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
+						new_range.start = Number(start_input.node().value)
+						new_range.stop = Number(stop_input.node().value)
+						if (new_range.start != density_data.minvalue.toFixed(1)) delete new_range.startunbounded
+						if (new_range.stop != density_data.maxvalue.toFixed(1)) delete new_range.stopunbounded
+						const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+						apply_brush(new_range, i, brush_g)
+					} catch (e) {
+						window.alert(e)
+					}
 					start_input.property('disabled', false)
 				})
 
@@ -504,10 +527,20 @@ function setRenderers(self) {
 				.on('keyup', async () => {
 					if (!client.keyupEnter()) return
 					stop_input.property('disabled', true)
-					await apply()
+					try {
+						if (stop_input.node().value > density_data.maxvalue) throw 'entered value is higher than maximum value'
+						const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
+						new_range.start = Number(start_input.node().value)
+						new_range.stop = Number(stop_input.node().value)
+						if (new_range.start != density_data.minvalue.toFixed(1)) delete new_range.startunbounded
+						if (new_range.stop != density_data.maxvalue.toFixed(1)) delete new_range.stopunbounded
+						const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+						apply_brush(new_range, i, brush_g)
+					} catch (e) {
+						window.alert(e)
+					}
 					stop_input.property('disabled', false)
 				})
-
 			const buttons_td = range_tr.append('td')
 
 			//'edit' button
