@@ -1020,30 +1020,43 @@ function setRenderers(self) {
 	}
 
 	self.get_value_text = function(term) {
-		const valueData = term.term.iscategorical
-			? term.values
-			: term.term.isfloat || term.term.isinteger
-			? term.ranges
-			: term.bar_by_grade || term.bar_by_children
-			? term.values
-			: term.grade_and_child
-
 		if (term.term.iscategorical) {
-			if (term.values.length == 1) return term.values[0].label
-			else return term.values.length + ' Groups'
-		} else if (term.term.isfloat || term.term.isinteger) {
-			if (term.ranges.length == 1 && term.ranges[0].value) return '1 Category'
-			else if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
-			else return term.ranges.length + ' Intervals'
-		} else if (term.bar_by_grade || term.bar_by_children) {
-			if (term.values.length == 1) return term.values[0].label
-			else return term.values.length + (term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : '')
-		} else if (term.grade_and_child) {
-			//TODO
-		} else {
-			return 'Unknown term value setting'
+			if (term.values.length == 1) {
+				// single
+				return term.values[0].label
+			}
+			// multiple
+			return term.values.length + ' groups'
 		}
-		return null
+		if (term.term.isfloat || term.term.isinteger) {
+			if (term.ranges.length == 1) {
+				const v = term.ranges[0]
+				if (v.value != undefined) {
+					// category
+					return v.label || v.value
+				}
+				// numeric range
+				return self.numeric_val_text(v)
+			}
+			// multiple
+			return term.ranges.length + ' intervals'
+		}
+		if (term.term.iscondition) {
+			if (term.bar_by_grade || term.bar_by_children) {
+				if (term.values.length == 1) {
+					// single
+					return term.values[0].label
+				}
+				// multiple
+				return term.values.length + (term.bar_by_grade ? ' Grades' : 'Subconditions')
+			}
+			if (term.grade_and_child) {
+				//TODO
+				console.error(term)
+				return 'todo'
+			}
+		}
+		throw 'unknown term type'
 	}
 
 	self.exitPill = async function(term) {
