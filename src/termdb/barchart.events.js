@@ -230,9 +230,6 @@ function handle_click(self) {
 			label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 			callback: () => {
 				const term = self.config.term
-				const q = JSON.parse(JSON.stringify(term.q))
-				if (!q.hiddenValues) q.hiddenValues = {}
-				q.hiddenValues[d.seriesId] = 1
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: term.id,
@@ -240,7 +237,7 @@ function handle_click(self) {
 						term: {
 							id: term.id,
 							term: term.term,
-							q
+							q: getUpdatedQfromClick({ id: d.seriesId, type: 'col' }, term, true)
 						}
 					}
 				})
@@ -252,9 +249,6 @@ function handle_click(self) {
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
 					const term2 = self.config.term2
-					const q = JSON.parse(JSON.stringify(term2.q))
-					if (!q.hiddenValues) q.hiddenValues = {}
-					q.hiddenValues[d.dataId] = 1
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.config.term.id,
@@ -262,7 +256,7 @@ function handle_click(self) {
 							term2: {
 								id: term2.id,
 								term: term2.term,
-								q
+								q: getUpdatedQfromClick({ id: d.dataId, type: 'row' }, term2, true)
 							}
 						}
 					})
@@ -462,6 +456,13 @@ function getTermValues(d, self) {
 			} else {
 				const range = bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
+				else if (term == t1) {
+					termValues.push({ term: term.term, ranges: [{ value: key }] })
+				} else if (term == t2) {
+					termValues.push({ term: term.term, ranges: [{ value: key }] })
+				} else {
+					throw 'should not happen'
+				}
 			}
 		}
 	}

@@ -187,7 +187,7 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(6)
+	test.plan(7)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
@@ -250,6 +250,8 @@ tape('series visibility', function(test) {
 			.run(testHiddenByValues)
 			.use(triggerHiddenLegendClick, { wait: 800 })
 			.to(testRevealedBar, { wait: 100 })
+			.use(triggerMenuClickToHide, { wait: 100 })
+			.to(testHiddenLegendDisplay, { wait: 600 })
 			.done(test)
 	}
 
@@ -284,6 +286,33 @@ tape('series visibility', function(test) {
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
 			excluded.length,
 			'should adjust the number of hidden legend labels after clicking to reveal one'
+		)
+	}
+
+	function triggerMenuClickToHide(plot) {
+		plot.Inner.components.barchart.Inner.dom.holder
+			.selectAll('.bars-cell-grp')
+			.filter(d => d.seriesId == 'Not exposed')
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('Hide'))
+			.node()
+			.click()
+	}
+
+	function testHiddenLegendDisplay(plot) {
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.legendDiv
+				.selectAll('.legend-row')
+				.filter(function() {
+					return this.innerHTML.includes('Not exposed')
+				})
+				.size(),
+			1,
+			'should hide a special numeric value by menu click'
 		)
 	}
 
