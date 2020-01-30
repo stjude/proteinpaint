@@ -204,11 +204,16 @@ function setRenderers(self) {
 	}
 
 	self.showNumOpts = async function(div, term) {
-		const num_div = div
+		//numerical range div
+		const num_parent_div = div.append('div')
+
+		const numeric_title = num_parent_div
 			.append('div')
 			.style('font-size', '.9em')
 			.style('color', '#888')
 			.html('Numerical Ranges')
+
+		const num_div = num_parent_div
 			.append('div')
 			.style('padding', '5px')
 			.style('color', '#000')
@@ -216,6 +221,7 @@ function setRenderers(self) {
 			.style('border-width', '2px')
 			.style('border-color', '#eee')
 
+		// other categories div	(only appear if unannotated categories present)
 		const unanno_div = div
 			.append('div')
 			.attr('class', 'unannotated_div')
@@ -225,6 +231,7 @@ function setRenderers(self) {
 			.html('Other Categories')
 			.append('div')
 			.style('padding', '5px')
+			.style('color', '#000')
 			.style('border-style', 'solid')
 			.style('border-width', '2px')
 			.style('border-color', '#eee')
@@ -428,7 +435,9 @@ function setRenderers(self) {
 			.attr('class', 'add_btn sja_menuoption')
 			.style(
 				'display',
-				ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == '' ? 'none' : 'inline-block'
+				ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
+					? 'none'
+					: 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('padding', '7px 6px')
@@ -743,13 +752,14 @@ function setRenderers(self) {
 
 					for (const [i, v] of sortedVals.entries()) {
 						for (const [j, sv] of checked_vals.entries()) {
-							if (v.key == sv) new_vals.push({ value: v.range.value })
+							if (v.key == sv) new_vals.push({ value: v.range.value, label: v.range.label })
 						}
 					}
 					const new_term = JSON.parse(JSON.stringify(term))
 					if (new_vals.length > 0 && (term.term.isinteger || term.term.isfloat)) {
 						for (const [i, d] of new_vals.entries()) {
-							if (!new_term.ranges.map(a => a.value).includes(d.value)) new_term.ranges.push({ value: d.value })
+							if (!new_term.ranges.map(a => a.value).includes(d.value))
+								new_term.ranges.push({ value: d.value, label: d.label })
 						}
 					}
 
@@ -764,6 +774,8 @@ function setRenderers(self) {
 			const values_table = self.makeValueTable(unanno_div, term, sortedVals)
 		} else {
 			div.select('.unannotated_div').style('display', 'none')
+			numeric_title.style('display', 'none')
+			num_div.style('border-color', '#fff')
 		}
 	}
 
@@ -771,13 +783,14 @@ function setRenderers(self) {
 		const width = 500,
 			height = 100,
 			xpad = 10,
-			ypad = 20
+			ypad = 20,
+			xaxis_height = 20
 
 		// svg
 		const svg = div
 			.append('svg')
 			.attr('width', width + xpad * 2)
-			.attr('height', height + ypad * 2 + 20)
+			.attr('height', height + ypad * 2 + xaxis_height)
 
 		//density data, add first and last values to array
 		const density_data = data.density

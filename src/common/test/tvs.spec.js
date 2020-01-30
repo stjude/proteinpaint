@@ -184,7 +184,7 @@ tape('tvs : Categorical', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		opts.filterData.lst[0].tvs.values.length + ' Groups',
+		opts.filterData.lst[0].tvs.values.length + ' groups',
 		'should change the pill value btn after adding value from menu'
 	)
 
@@ -309,7 +309,7 @@ tape('tvs : Numerical', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		'2 Intervals',
+		'2 intervals',
 		'should change value btn text after selecting unannotated value'
 	)
 
