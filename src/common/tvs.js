@@ -70,6 +70,14 @@ class TVS {
 		}
 		return data
 	}
+	async getNumericCategories(termid) {
+		// get number of samples for each category of a numeric term
+		const args = ['genome=' + this.genome + '&dslabel=' + this.dslabel + '&getnumericcategories=1&tid=' + termid]
+		// may add filter
+		const data = await dofetch2('termdb?' + args.join('&'))
+		if (data.error) throw data.error
+		return data.lst
+	}
 }
 
 exports.TVSInit = rx.getInitFxn(TVS)
@@ -207,34 +215,39 @@ function setRenderers(self) {
 		//numerical range div
 		const num_parent_div = div.append('div')
 
-		const numeric_title = num_parent_div
-			.append('div')
-			.style('font-size', '.9em')
-			.style('color', '#888')
-			.html('Numerical Ranges')
+		let num_div = div,
+			unanno_div
 
-		const num_div = num_parent_div
-			.append('div')
-			.style('padding', '5px')
-			.style('color', '#000')
-			.style('border-style', 'solid')
-			.style('border-width', '2px')
-			.style('border-color', '#eee')
+		if (term.term.values) {
+			num_parent_div
+				.append('div')
+				.style('font-size', '.9em')
+				.style('color', '#888')
+				.html('Numerical Ranges')
 
-		// other categories div	(only appear if unannotated categories present)
-		const unanno_div = div
-			.append('div')
-			.attr('class', 'unannotated_div')
-			.style('margin-top', '10px')
-			.style('font-size', '.9em')
-			.style('color', '#888')
-			.html('Other Categories')
-			.append('div')
-			.style('padding', '5px')
-			.style('color', '#000')
-			.style('border-style', 'solid')
-			.style('border-width', '2px')
-			.style('border-color', '#eee')
+			num_div = num_parent_div
+				.append('div')
+				.style('padding', '5px')
+				.style('color', '#000')
+				.style('border-style', 'solid')
+				.style('border-width', '2px')
+				.style('border-color', '#eee')
+
+			// other categories div	(only appear if unannotated categories present)
+			unanno_div = div
+				.append('div')
+				.attr('class', 'unannotated_div')
+				.style('margin-top', '10px')
+				.style('font-size', '.9em')
+				.style('color', '#888')
+				.html('Other Categories')
+				.append('div')
+				.style('padding', '5px')
+				.style('color', '#000')
+				.style('border-style', 'solid')
+				.style('border-width', '2px')
+				.style('border-color', '#eee')
+		}
 
 		const ranges = []
 
@@ -813,8 +826,19 @@ function setRenderers(self) {
 			}
 		}
 
+		await self.showCheckList_numeric(term, unanno_div)
+	}
+
+	self.showCheckList_numeric = async (tvs, unanno_div) => {
+		if (!tvs.term.values) {
+			// no special categories available for this term
+			return
+		}
 		// numerical checkbox for unannotated cats
-		const data = await self.getCategories(term.term)
+		const data = await self.getCategories(tvs.term)
+
+		// please generate checklist based on this data
+		console.log(await self.getNumericCategories(tvs.term.id))
 
 		const unannotated_cats = { lst: [] }
 
@@ -824,68 +848,62 @@ function setRenderers(self) {
 			}
 		}
 
-		if (unannotated_cats.lst.length > 0) {
-			const sortedVals = unannotated_cats.lst.sort((a, b) => {
-				return b.samplecount - a.samplecount
+		const sortedVals = unannotated_cats.lst.sort((a, b) => {
+			return b.samplecount - a.samplecount
+		})
+
+		// 'Apply' button
+		unanno_div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#d0e0e3')
+			.style('color', 'black')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+
+				const new_vals = []
+
+				for (const [i, v] of sortedVals.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push({ value: v.range.value, label: v.range.label })
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				if (new_vals.length > 0 && (tvs.term.isinteger || tvs.term.isfloat)) {
+					for (const [i, d] of new_vals.entries()) {
+						if (!new_term.ranges.map(a => a.value).includes(d.value))
+							new_term.ranges.push({ value: d.value, label: d.label })
+					}
+				}
+
+				for (const [i, d] of new_term.ranges.entries()) {
+					if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
+				}
+
+				self.dom.tip.hide()
+				self.opts.callback(new_term)
 			})
 
-			// 'Apply' button
-			unanno_div
-				.append('div')
-				.style('text-align', 'center')
-				.append('div')
-				.attr('class', 'apply_btn sja_filter_tag_btn')
-				.style('display', 'inline-block')
-				.style('border-radius', '13px')
-				.style('background-color', '#d0e0e3')
-				.style('color', 'black')
-				.style('padding', '7px 15px')
-				.style('margin', '5px')
-				.style('text-align', 'center')
-				.style('font-size', '.8em')
-				.style('text-transform', 'uppercase')
-				.text('Apply')
-				.on('click', () => {
-					//update term values by ckeckbox values
-					let checked_vals = []
-					values_table
-						.selectAll('.value_checkbox')
-						.filter(function(d) {
-							return this.checked == true
-						})
-						.each(function(d) {
-							checked_vals.push(this.value)
-						})
-
-					const new_vals = []
-
-					for (const [i, v] of sortedVals.entries()) {
-						for (const [j, sv] of checked_vals.entries()) {
-							if (v.key == sv) new_vals.push({ value: v.range.value, label: v.range.label })
-						}
-					}
-					const new_term = JSON.parse(JSON.stringify(term))
-					if (new_vals.length > 0 && (term.term.isinteger || term.term.isfloat)) {
-						for (const [i, d] of new_vals.entries()) {
-							if (!new_term.ranges.map(a => a.value).includes(d.value))
-								new_term.ranges.push({ value: d.value, label: d.label })
-						}
-					}
-
-					for (const [i, d] of new_term.ranges.entries()) {
-						if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
-					}
-
-					self.dom.tip.hide()
-					self.opts.callback(new_term)
-				})
-
-			const values_table = self.makeValueTable(unanno_div, term, sortedVals)
-		} else {
-			div.select('.unannotated_div').style('display', 'none')
-			numeric_title.style('display', 'none')
-			num_div.style('border-color', '#fff')
-		}
+		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals)
 	}
 
 	self.makeDensityPlot = function(div, data) {
