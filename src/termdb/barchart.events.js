@@ -202,7 +202,7 @@ function handle_click(self) {
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
 	const term1 = self.config.term.term
-	const term2 = self.config.term2 ? self.config.term2 : null
+	const term2 = self.config.term2 ? self.config.term2.term : null
 	const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
 	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
 	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
