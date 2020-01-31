@@ -86,7 +86,6 @@ class TdbStore {
 
 	setId(item) {
 		item.$id = this.prevGeneratedId++
-		console.log(112, item.$id)
 		if (item.$lst) {
 			for (const subitem of item.$lst) {
 				this.setId(subitem)
@@ -296,6 +295,8 @@ function validatePlotTerm(t) {
 		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
 		if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
 			throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
+	} else if (t.term.isgenotype) {
+		// don't do anything for now
 	} else {
 		throw 'unknown term type'
 	}

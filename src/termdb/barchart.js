@@ -70,7 +70,8 @@ class TdbBarchart {
 					common: config.settings.common,
 					barchart: config.settings.barchart
 				}
-			}
+			},
+			ssid: appState.ssid
 		}
 	}
 
@@ -118,8 +119,8 @@ class TdbBarchart {
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
 		}
-		if (this.settings.term2 == 'genotype') {
-			this.config.term2 = { term: { name: this.settings.mname } }
+		if (this.state.ssid) {
+			this.config.term2 = { term: { id: 'genotype', name: this.state.ssid.mutation_name, isgenotype: true }, q: {} }
 		}
 	}
 

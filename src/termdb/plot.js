@@ -99,7 +99,8 @@ class TdbPlot {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			termfilter: { filter },
-			config: appState.tree.plots[this.id]
+			config: appState.tree.plots[this.id],
+			ssid: appState.ssid
 		}
 	}
 
@@ -139,13 +140,13 @@ class TdbPlot {
 		})
 
 		if (!isscatter) {
-			if (state.modifier_ssid_barchart) {
+			if (state.ssid) {
 				params.push(
 					'term2_is_genotype=1',
-					'ssid=' + state.modifier_ssid_barchart.ssid,
-					'mname=' + state.modifier_ssid_barchart.mutation_name,
-					'chr=' + state.modifier_ssid_barchart.chr,
-					'pos=' + state.modifier_ssid_barchart.pos
+					'ssid=' + state.ssid.ssid,
+					'mname=' + state.ssid.mutation_name,
+					'chr=' + state.ssid.chr,
+					'pos=' + state.ssid.pos
 				)
 			}
 		}

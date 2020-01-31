@@ -556,3 +556,41 @@ tape('click bar to add filter', function(test) {
 		)
 	}
 })
+
+tape('single chart, genotype overlay', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp', term: termjson['diaggrp'] },
+						term2: 'genotype',
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			ssid: {
+				mutation_name: 'TEST',
+				ssid: 'genotype-test.txt'
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testBarCount
+			}
+		}
+	})
+
+	function testBarCount(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
+		test.end()
+	}
+})
