@@ -1032,42 +1032,54 @@ function setRenderers(self) {
 			.style('opacity', 1)
 	}
 
-	self.get_value_text = function(term) {
-		if (term.term.iscategorical) {
-			if (term.values.length == 1) {
+	self.get_value_text = function(t) {
+		// t is {term, values/ranges, ... }, a tvs object
+		if (t.term.iscategorical) {
+			if (t.values.length == 1) {
 				// single
-				return term.values[0].label
+				const v = t.values[0]
+				if (v.label) return v.label
+				if (t.term.values && t.term.values[v.key] && t.term.values[v.key].label) return t.term.values[v.key].label
+				console.error(`key "${v.key}" not found in values{} of ${t.term.name}`)
+				return v.key
 			}
 			// multiple
-			return term.values.length + ' groups'
+			if (t.groupset_label) return t.groupset_label
+			return t.values.length + ' groups'
 		}
-		if (term.term.isfloat || term.term.isinteger) {
-			if (term.ranges.length == 1) {
-				const v = term.ranges[0]
-				if (v.value != undefined) {
+		if (t.term.isfloat || t.term.isinteger) {
+			if (t.ranges.length == 1) {
+				const v = t.ranges[0]
+				if ('value' in v) {
 					// category
-					return v.label || v.value
+					if (v.label) return v.label
+					if (t.term.values && t.term.values[v.value] && t.term.values[v.value].label)
+						return t.term.values[v.value].label
+					console.error(`key "${v.value}" not found in values{} of ${t.term.name}`)
+					return v.value
 				}
 				// numeric range
 				return self.numeric_val_text(v)
 			}
 			// multiple
-			return term.ranges.length + ' intervals'
+			return t.ranges.length + ' intervals'
 		}
-		if (term.term.iscondition) {
-			if (term.bar_by_grade || term.bar_by_children) {
-				if (term.values.length == 1) {
+		if (t.term.iscondition) {
+			if (t.bar_by_grade || t.bar_by_children) {
+				if (t.values.length == 1) {
 					// single
-					return term.values[0].label
+					return t.values[0].label
 				}
 				// multiple
-				return term.values.length + (term.bar_by_grade ? ' Grades' : 'Subconditions')
+				if (t.groupset_label) return t.groupset_label
+				return t.values.length + (t.bar_by_grade ? ' Grades' : 'Subconditions')
 			}
-			if (term.grade_and_child) {
+			if (t.grade_and_child) {
 				//TODO
 				console.error(term)
 				return 'todo'
 			}
+			throw 'unknown tvs setting for a condition term'
 		}
 		throw 'unknown term type'
 	}
