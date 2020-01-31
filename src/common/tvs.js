@@ -341,6 +341,14 @@ function setRenderers(self) {
 							.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 							.attr('value', range.stop)
 							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
+						select(num_div.node().querySelectorAll('.start_select')[i]).style(
+							'display',
+							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
+						select(num_div.node().querySelectorAll('.stop_select')[i]).style(
+							'display',
+							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
 
 						//update 'edit', 'apply' and 'reset' buttons based on brush change
 						select(num_div.node().querySelectorAll('.edit_btn')[i]).style(
@@ -360,12 +368,20 @@ function setRenderers(self) {
 								: 'inline-block'
 						)
 
-						// hide start and stop text if brush moved
+						// hide start and stop text and relation symbols if brush moved
 						select(num_div.node().querySelectorAll('.start_text')[i]).style(
 							'display',
 							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
 						)
 						select(num_div.node().querySelectorAll('.stop_text')[i]).style(
+							'display',
+							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
+						select(num_div.node().querySelectorAll('.start_relation_text')[i]).style(
+							'display',
+							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
+						)
+						select(num_div.node().querySelectorAll('.stop_relation_text')[i]).style(
 							'display',
 							JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
 						)
@@ -493,28 +509,99 @@ function setRenderers(self) {
 					start_input.property('disabled', true)
 					try {
 						if (start_input.node().value < density_data.minvalue) throw 'entered value is lower than minimum value'
-						const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
-						new_range.start = Number(start_input.node().value)
-						new_range.stop = Number(stop_input.node().value)
-						if (new_range.start != density_data.minvalue.toFixed(1)) delete new_range.startunbounded
-						if (new_range.stop != density_data.maxvalue.toFixed(1)) delete new_range.stopunbounded
-						const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-						apply_brush(new_range, i, brush_g)
+						update_input()
 					} catch (e) {
 						window.alert(e)
 					}
 					start_input.property('disabled', false)
 				})
 
+			// select realation for start value
+			const start_select = equation_td
+				.append('select')
+				.attr('class', 'start_select')
+				.style('display', 'none')
+				.style('margin-left', '10px')
+				.on('change', () => {
+					// make changes based on start select
+					const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
+					if (start_select.node().selectedIndex == 2) {
+						new_range.startunbounded = true
+						new_range.start = density_data.minvalue.toFixed(1)
+						start_input.property('disabled', true)
+					} else if (start_select.node().selectedIndex == 0) {
+						new_range.startinclusive = true
+						start_input.property('disabled', false)
+					} else if (start_select.node().selectedIndex == 1) {
+						delete new_range.startunbounded
+						delete new_range.startinclusive
+						start_input.property('disabled', false)
+					}
+					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+					apply_brush(new_range, i, brush_g)
+				})
+
+			start_select.append('option').html('&le;')
+			start_select.append('option').html('&lt;')
+			start_select.append('option').html('&#8734;')
+
+			start_select.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+
 			// 'x' and relation symbols
+			equation_td
+				.append('div')
+				.attr('class', 'start_relation_text')
+				.style('display', 'inline-block')
+				.style('margin-left', '5px')
+				.style('text-align', 'center')
+				.html(range.startunbounded ? ' ' : range.startinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
+
 			const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 			equation_td
 				.append('div')
 				.style('display', 'inline-block')
-				.style('margin-left', '10px')
-				.style('width', '40px')
+				.style('margin-left', '5px')
 				.style('text-align', 'center')
-				.html(range.startunbounded ? '&leq;&nbsp;' : range.stopunbounded ? '' : ` &leq;&nbsp; ${x}  &nbsp;&leq;`)
+				.html(x)
+
+			equation_td
+				.append('div')
+				.attr('class', 'stop_relation_text')
+				.style('display', 'inline-block')
+				.style('margin-left', '5px')
+				.style('text-align', 'center')
+				.html(range.stopunbounded ? ' ' : range.stopinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
+
+			// select realation for stop value
+			const stop_select = equation_td
+				.append('select')
+				.attr('class', 'stop_select')
+				.style('display', 'none')
+				.style('margin-left', '10px')
+				.on('change', () => {
+					// make changes based on stop select
+					const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
+					if (stop_select.node().selectedIndex == 2) {
+						new_range.stopunbounded = true
+						new_range.stop = density_data.maxvalue.toFixed(1)
+						stop_input.property('disabled', true)
+					} else if (stop_select.node().selectedIndex == 0) {
+						new_range.stopinclusive = true
+						stop_input.property('disabled', false)
+					} else if (stop_select.node().selectedIndex == 1) {
+						delete new_range.stopunbounded
+						delete new_range.stopinclusive
+						stop_input.property('disabled', false)
+					}
+					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+					apply_brush(new_range, i, brush_g)
+				})
+
+			stop_select.append('option').html('&le;')
+			stop_select.append('option').html('&lt;')
+			stop_select.append('option').html('&#8734;')
+
+			stop_select.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
 
 			const stop_text = equation_td
 				.append('div')
@@ -538,13 +625,7 @@ function setRenderers(self) {
 					stop_input.property('disabled', true)
 					try {
 						if (stop_input.node().value > density_data.maxvalue) throw 'entered value is higher than maximum value'
-						const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
-						new_range.start = Number(start_input.node().value)
-						new_range.stop = Number(stop_input.node().value)
-						if (new_range.start != density_data.minvalue.toFixed(1)) delete new_range.startunbounded
-						if (new_range.stop != density_data.maxvalue.toFixed(1)) delete new_range.stopunbounded
-						const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-						apply_brush(new_range, i, brush_g)
+						update_input()
 					} catch (e) {
 						window.alert(e)
 					}
@@ -574,8 +655,12 @@ function setRenderers(self) {
 				.on('click', async () => {
 					start_text.style('display', 'none')
 					stop_text.style('display', 'none')
+					equation_td.selectAll('.start_relation_text').style('display', 'none')
+					equation_td.selectAll('.stop_relation_text').style('display', 'none')
 					start_input.style('display', 'inline-block')
 					stop_input.style('display', 'inline-block')
+					equation_td.selectAll('.start_select').style('display', 'inline-block')
+					equation_td.selectAll('.stop_select').style('display', 'inline-block')
 					edit_btn.style('display', 'none')
 				})
 
@@ -701,6 +786,16 @@ function setRenderers(self) {
 				} catch (e) {
 					window.alert(e)
 				}
+			}
+
+			function update_input() {
+				const new_range = JSON.parse(JSON.stringify(temp_ranges[i]))
+				new_range.start = Number(start_input.node().value)
+				new_range.stop = Number(stop_input.node().value)
+				if (new_range.start != density_data.minvalue.toFixed(1)) delete new_range.startunbounded
+				if (new_range.stop != density_data.maxvalue.toFixed(1)) delete new_range.stopunbounded
+				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
+				apply_brush(new_range, i, brush_g)
 			}
 		}
 
