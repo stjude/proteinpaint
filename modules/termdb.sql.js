@@ -202,7 +202,10 @@ opts{} options to tweak the query, see const default_opts = below
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = getFilterCTEs(q.filter, q.ds)
-	const values = filter ? filter.values : []
+	// must copy filter.values as its copy may be used in separate SQL statements,
+	// for example get_rows or numeric min-max, and each CTE generator would
+	// have to independently extend its copy of filter values
+	const values = filter ? filter.values.slice() : []
 
 	const CTE0 = get_term_cte(q, values, 0, filter)
 	const CTE1 = get_term_cte(q, values, 1, filter)
@@ -226,7 +229,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
+	// console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -317,16 +320,16 @@ q{}
 
 function getlabeler(q, i, result) {
 	/*
-Returns a function to (re)label a data object
+	Returns a function to (re)label a data object
 
-q{}
-	.filter
-	.ds
-	.term[0,1,2]_id
-	.term[0,1,2]_q
-i       0,1,2 corresponding to term[i]_[id|q]
-result  returned by get_rows(, {withCTEs: 1})
-*/
+	q{}
+		.filter
+		.ds
+		.term[0,1,2]_id
+		.term[0,1,2]_q
+	i       0,1,2 corresponding to term[i]_[id|q]
+	result  returned by get_rows(, {withCTEs: 1})
+	*/
 	const key = 'key' + i
 	const value = 'val' + i
 	const label = 'label' + i
@@ -413,12 +416,10 @@ returns { sql, tablename }
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
 	if (term.iscategorical) {
-		values.push(term.id)
-		return makesql_oneterm_categorical(tablename, term, q)
+		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
 	if (term.isfloat || term.isinteger) {
-		values.push(term.id)
-		const bins = makesql_numericBinCTE(term, q, ds, index, filter)
+		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -436,7 +437,8 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 	throw 'unknown term type'
 }
 
-function makesql_oneterm_categorical(tablename, term, q) {
+function makesql_oneterm_categorical(tablename, term, q, values) {
+	values.push(term.id)
 	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
 		// groupsetting not applied
 		return {
@@ -564,7 +566,8 @@ filter
 
 returns { sql, tablename, name2bin, bins }
 */
-function makesql_numericBinCTE(term, q, ds, index = '', filter) {
+function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
+	values.push(term.id)
 	const bins = get_bins(q, term, ds, index, filter)
 	//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
 	const bin_def_lst = []
@@ -647,6 +650,7 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter) {
 			WHERE
 			term_id=?
 		)`
+
 	return {
 		sql,
 		tablename: bin_sample_table,
@@ -740,8 +744,8 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	if (filter) {
 		values.push(...filter.values)
 	}
+	values.push(term.id)
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
-	if (!filter) values.push(term.id)
 
 	const ctes = []
 	const ptablenames = []
@@ -789,8 +793,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 			${cols.length ? ',\n' + cols.join(',\n') : ''} 
 		FROM vals ${ptablenames.length ? ',' + ptablenames.join(',') : ''}`
 
-	const s = ds.cohort.db.connection.prepare(sql)
-	const result = s.all(values)
+	const result = ds.cohort.db.connection.prepare(sql).all(values)
 
 	const summary = !result.length ? {} : result[0]
 	summary.max = result[0].vmax
