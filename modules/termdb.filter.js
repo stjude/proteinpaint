@@ -131,7 +131,7 @@ so here need to allow both string and number as range.value
 			// special category
 			// where value for ? can be number or string, doesn't matter
 			rangeclauses.push('value = ?')
-			values.push(range.value)
+			values.push('' + range.value)
 			continue
 		}
 		// actual range

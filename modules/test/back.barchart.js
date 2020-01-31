@@ -258,7 +258,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
   sets request-specific value and filter functions
 */
 	if (q.filter) {
-		if (!q.filter.join) q.filter.join = 'or'
+		if (!q.filter.join) q.filter.join = ''
 		setDatasetAnnotations(q.filter)
 		inReqs.filterFxn = row => {
 			return sample_match_termvaluesetting(row, q.filter)
@@ -492,13 +492,14 @@ function sample_match_termvaluesetting(row, filter) {
 			let thistermmatch
 
 			if (t.term.iscategorical) {
-				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 				thistermmatch = t.valueset.has(samplevalue)
 			} else if (t.term.isinteger || t.term.isfloat) {
-				if (samplevalue == undefined) continue // this sample has no anno for this term, do not count
+				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 				for (const range of t.ranges) {
-					if (range.value != undefined) {
-						thistermmatch = samplevalue == range.value
+					if ('value' in range) {
+						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)
+						if (thistermmatch) break
 					} else {
 						// actual range
 						if (t.term.values) {
