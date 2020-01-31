@@ -40,6 +40,37 @@ return an array of sample names passing through the filter
 	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
 	return re.map(i => i.sample)
 }
+export function get_summary_numericcategories(q) {
+	/*
+	q{}
+	.term_id
+	.ds
+	.filter
+	*/
+	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.term_id)
+	if (!term.isinteger && !term.isfloat) throw 'term is not numeric'
+	if (!term.values) {
+		// term does not have special categories
+		return []
+	}
+	const filter = getFilterCTEs(q.filter, q.ds)
+	const values = filter ? filter.values.slice() : []
+	values.push(q.term_id)
+	const keylst = []
+	for (const k in term.values) {
+		keylst.push(k)
+		values.push(k)
+	}
+	const sql = `
+		${filter ? 'WITH ' + filter.filters : ''}
+		SELECT count(sample) AS samplecount,value
+		FROM annotations
+		WHERE term_id=?
+		${filter ? 'AND sample IN ' + filter.CTEname : ''}
+		AND value IN (${keylst.map(i => '?').join(',')})
+		GROUP BY value`
+	return q.ds.cohort.db.connection.prepare(sql).all(values)
+}
 
 export function get_rows_by_one_key(q) {
 	/*
