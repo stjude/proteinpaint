@@ -341,14 +341,18 @@ function setRenderers(self) {
 							.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 							.attr('value', range.stop)
 							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
-						select(num_div.node().querySelectorAll('.start_select')[i]).style(
-							'display',
-							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
-						)
-						select(num_div.node().querySelectorAll('.stop_select')[i]).style(
-							'display',
-							JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
-						)
+						select(num_div.node().querySelectorAll('.start_select')[i])
+							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
+							.property(
+								'selectedIndex',
+								range.start == density_data.minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1
+							)
+						select(num_div.node().querySelectorAll('.stop_select')[i])
+							.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
+							.property(
+								'selectedIndex',
+								range.stop == density_data.maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1
+							)
 
 						//update 'edit', 'apply' and 'reset' buttons based on brush change
 						select(num_div.node().querySelectorAll('.edit_btn')[i]).style(
@@ -529,13 +533,18 @@ function setRenderers(self) {
 						new_range.startunbounded = true
 						new_range.start = density_data.minvalue.toFixed(1)
 						start_input.property('disabled', true)
-					} else if (start_select.node().selectedIndex == 0) {
-						new_range.startinclusive = true
-						start_input.property('disabled', false)
-					} else if (start_select.node().selectedIndex == 1) {
+					} else {
 						delete new_range.startunbounded
-						delete new_range.startinclusive
+						new_range.start = start_input.node().value || density_data.minvalue.toFixed(1)
+						new_range.stop = stop_input.node().value || density_data.maxvalue.toFixed(1)
 						start_input.property('disabled', false)
+
+						if (start_select.node().selectedIndex == 0) new_range.startinclusive = true
+						else if (start_select.node().selectedIndex == 1) delete new_range.startinclusive
+					}
+					if (stop_input.node().value != density_data.maxvalue.toFixed(1)) {
+						new_range.stop = stop_input.node().value
+						delete new_range.stopunbounded
 					}
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
 					apply_brush(new_range, i, brush_g)
@@ -585,13 +594,18 @@ function setRenderers(self) {
 						new_range.stopunbounded = true
 						new_range.stop = density_data.maxvalue.toFixed(1)
 						stop_input.property('disabled', true)
-					} else if (stop_select.node().selectedIndex == 0) {
-						new_range.stopinclusive = true
-						stop_input.property('disabled', false)
-					} else if (stop_select.node().selectedIndex == 1) {
+					} else {
 						delete new_range.stopunbounded
-						delete new_range.stopinclusive
+						new_range.start = start_input.node().value || density_data.minvalue.toFixed(1)
+						new_range.stop = stop_input.node().value || density_data.maxvalue.toFixed(1)
 						stop_input.property('disabled', false)
+
+						if (stop_select.node().selectedIndex == 0) new_range.stopinclusive = true
+						else if (stop_select.node().selectedIndex == 1) delete new_range.stopinclusive
+					}
+					if (start_input.node().value != density_data.minvalue.toFixed(1)) {
+						new_range.start = start_input.node().value
+						delete new_range.startunbounded
 					}
 					const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
 					apply_brush(new_range, i, brush_g)
