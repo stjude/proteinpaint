@@ -427,8 +427,8 @@ official track only
 	// sample session id
 	const { ssid, groups } = await get_ssid_by_onevcfm(m, tk.mds.label, block.genome.name)
 
-	// assign a color for each group, show color legend
-	{
+	if (0) {
+		// assign a color for each group, show color legend
 		const row = plotdiv.append('div').style('margin', '10px')
 		const f = scaleOrdinal(schemeCategory10)
 		for (const name in groups) {
