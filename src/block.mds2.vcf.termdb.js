@@ -452,17 +452,17 @@ official track only
 	const opt = {
 		state: {
 			dslabel: tk.mds.label,
-			genome: block.genome.name
+			genome: block.genome.name,
+			ssid: {
+				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
+				pos: m.pos,
+				mutation_name: m.mname,
+				ssid: ssid,
+				groups: groups
+			}
 		},
 		holder: plotdiv,
-		default_rootterm: {},
-		barchart: {
-			chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
-			pos: m.pos,
-			mutation_name: m.mname,
-			ssid: ssid,
-			groups: groups
-		}
+		default_rootterm: {}
 	}
 	if (tk.sample_termfilter) {
 		// just use a single filter, no race grp restriction
