@@ -21,7 +21,7 @@ class TVS {
 
 		this.api = {
 			main: async (data = {}) => {
-				this.term = data
+				this.tvs = data
 				this.updateUI()
 
 				// when there are filters to be removed, must account for the delayed
@@ -85,7 +85,7 @@ exports.TVSInit = rx.getInitFxn(TVS)
 function setRenderers(self) {
 	self.updateUI = function() {
 		const terms_div = self.dom.holder
-		const filters = terms_div.selectAll('.tvs_pill').data([self.term], d => d.term.id)
+		const filters = terms_div.selectAll('.tvs_pill').data([self.tvs], d => d.term.id)
 		filters.exit().each(self.exitPill)
 		filters.each(self.updatePill)
 		filters
@@ -121,9 +121,9 @@ function setRenderers(self) {
 			.attr('class', 'negate_btn')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
-			.style('background', self.term.isnot ? '#f4cccc' : '#a2c4c9')
+			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.style('color', 'black')
-			.html(self.term.isnot ? 'NOT' : 'IS')
+			.html(self.tvs.isnot ? 'NOT' : 'IS')
 
 		self.updatePill.call(this)
 	}
@@ -133,11 +133,11 @@ function setRenderers(self) {
 		const term_option_div = holder.append('div')
 
 		const optsFxn = term.iscategorical
-			? self.showCatOpts
+			? self.fillCatMenu
 			: term.isfloat || term.isinteger
-			? self.showNumOpts
+			? self.fillNumMenu
 			: term.iscondition
-			? self.showConditionOpts
+			? self.fillConditionMenu
 			: null
 
 		term_option_div
@@ -148,21 +148,21 @@ function setRenderers(self) {
 		optsFxn(term_option_div, tvs)
 	}
 
-	self.showCatOpts = async function(div, term) {
+	self.fillCatMenu = async function(div, tvs) {
 		let lst
-		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
+		lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
 
 		lst.push(
-			term.value_by_max_grade
+			tvs.value_by_max_grade
 				? 'value_by_max_grade=1'
-				: term.value_by_most_recent
+				: tvs.value_by_most_recent
 				? 'value_by_most_recent=1'
-				: term.value_by_computable_grade
+				: tvs.value_by_computable_grade
 				? 'value_by_computable_grade=1'
 				: null
 		)
 
-		const data = await self.getCategories(term.term, lst)
+		const data = await self.getCategories(tvs.term, lst)
 		const sortedVals = data.lst.sort((a, b) => {
 			return b.samplecount - a.samplecount
 		})
@@ -202,23 +202,23 @@ function setRenderers(self) {
 						if (v.key == sv) new_vals.push(v)
 					}
 				}
-				const new_term = JSON.parse(JSON.stringify(term))
-				new_term.values = new_vals
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
+				new_tvs.values = new_vals
 				self.dom.tip.hide()
-				self.opts.callback(new_term)
+				self.opts.callback(new_tvs)
 			})
 
-		const values_table = self.makeValueTable(div, term, sortedVals)
+		const values_table = self.makeValueTable(div, tvs, sortedVals)
 	}
 
-	self.showNumOpts = async function(div, term) {
+	self.fillNumMenu = async function(div, tvs) {
 		//numerical range div
 		const num_parent_div = div.append('div')
 
 		let num_div = div,
 			unanno_div
 
-		if (term.term.values) {
+		if (tvs.term.values) {
 			num_parent_div
 				.append('div')
 				.style('font-size', '.9em')
@@ -251,7 +251,7 @@ function setRenderers(self) {
 
 		const ranges = []
 
-		for (const [index, range] of term.ranges.entries()) {
+		for (const [index, range] of tvs.ranges.entries()) {
 			if (range.value == undefined) {
 				range.index = index
 				ranges.push(range)
@@ -269,7 +269,7 @@ function setRenderers(self) {
 				'&dslabel=' +
 				self.opts.dslabel +
 				'&termid=' +
-				term.term.id +
+				tvs.term.id +
 				'&width=' +
 				width +
 				'&height=' +
@@ -481,11 +481,11 @@ function setRenderers(self) {
 			.text('Add a Range')
 			.on('click', () => {
 				//Add new blank range temporary, save after entering values
-				const new_term = JSON.parse(JSON.stringify(term))
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				const range_temp = { start: '', stop: '' }
-				new_term.ranges.push(range_temp)
+				new_tvs.ranges.push(range_temp)
 				div.selectAll('*').remove()
-				self.showNumOpts(div, new_term)
+				self.fillNumMenu(div, new_tvs)
 			})
 
 		function enter_range(d, i) {
@@ -746,7 +746,7 @@ function setRenderers(self) {
 			buttons_td
 				.append('td')
 				.attr('class', 'sja_filter_tag_btn delete_btn')
-				.style('display', term.ranges.length == 1 ? 'none' : 'inline-block')
+				.style('display', tvs.ranges.length == 1 ? 'none' : 'inline-block')
 				.style('border-radius', '13px')
 				.style('background-color', '#f4cccc')
 				.style('color', 'black')
@@ -758,12 +758,12 @@ function setRenderers(self) {
 				.style('text-transform', 'uppercase')
 				.text('Delete')
 				.on('click', async () => {
-					// self.dom.tip.hide()
-					const new_term = JSON.parse(JSON.stringify(term))
-					new_term.ranges.splice(index, 1)
-					self.opts.callback(new_term)
+					const new_tvs = JSON.parse(JSON.stringify(tvs))
+					const deleted_range = new_tvs.ranges.splice(index, 1)
+					// callback only if range have non-empty start and end
+					if (deleted_range[0].start != '' && deleted_range[0].stop != '') self.opts.callback(new_tvs)
 					div.selectAll('*').remove()
-					self.showNumOpts(div, new_term)
+					self.fillNumMenu(div, new_tvs)
 				})
 
 			// note for empty range
@@ -805,11 +805,11 @@ function setRenderers(self) {
 						range.stop = stop
 						range.stopinclusive = true
 					}
-					const new_term = JSON.parse(JSON.stringify(term))
-					new_term.ranges[index] = range
-					self.opts.callback(new_term)
+					const new_tvs = JSON.parse(JSON.stringify(tvs))
+					new_tvs.ranges[index] = range
+					self.opts.callback(new_tvs)
 					div.selectAll('*').remove()
-					self.showNumOpts(div, new_term)
+					self.fillNumMenu(div, new_tvs)
 				} catch (e) {
 					window.alert(e)
 				}
@@ -826,7 +826,7 @@ function setRenderers(self) {
 			}
 		}
 
-		await self.showCheckList_numeric(term, unanno_div)
+		await self.showCheckList_numeric(tvs, unanno_div)
 	}
 
 	self.showCheckList_numeric = async (tvs, unanno_div) => {
@@ -835,20 +835,14 @@ function setRenderers(self) {
 			return
 		}
 		// numerical checkbox for unannotated cats
-		const data = await self.getCategories(tvs.term)
+		const unannotated_cats = await self.getNumericCategories(tvs.term.id)
 
-		// please generate checklist based on this data
-		console.log(await self.getNumericCategories(tvs.term.id))
-
-		const unannotated_cats = { lst: [] }
-
-		for (const [index, cat] of data.lst.entries()) {
-			if (cat.range.value != undefined) {
-				unannotated_cats.lst.push(cat)
-			}
+		for (const [index, cat] of unannotated_cats.entries()) {
+			cat.label = tvs.term.values[cat.value].label
+			cat.key = cat.value
 		}
 
-		const sortedVals = unannotated_cats.lst.sort((a, b) => {
+		const sortedVals = unannotated_cats.sort((a, b) => {
 			return b.samplecount - a.samplecount
 		})
 
@@ -884,23 +878,24 @@ function setRenderers(self) {
 
 				for (const [i, v] of sortedVals.entries()) {
 					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push({ value: v.range.value, label: v.range.label })
+						if (v.key == sv) new_vals.push({ value: v.value, label: v.label })
 					}
 				}
-				const new_term = JSON.parse(JSON.stringify(term))
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				if (new_vals.length > 0 && (tvs.term.isinteger || tvs.term.isfloat)) {
 					for (const [i, d] of new_vals.entries()) {
-						if (!new_term.ranges.map(a => a.value).includes(d.value))
-							new_term.ranges.push({ value: d.value, label: d.label })
+						if (!new_tvs.ranges.map(a => a.value).includes(d.value))
+							new_tvs.ranges.push({ value: d.value, label: d.label })
 					}
 				}
 
-				for (const [i, d] of new_term.ranges.entries()) {
-					if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
+				for (const [i, d] of new_tvs.ranges.entries()) {
+					if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_tvs.ranges.splice(i, 1)
 				}
 
 				self.dom.tip.hide()
-				self.opts.callback(new_term)
+				//callback only if tvs is changed
+				if (JSON.parse(JSON.stringify(tvs) != new_tvs)) self.opts.callback(new_tvs)
 			})
 
 		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals)
@@ -966,10 +961,10 @@ function setRenderers(self) {
 		g.append('text')
 			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 			.attr('font-size', '13px')
-			.text(self.term.term.unit)
+			.text(self.tvs.term.unit)
 	}
 
-	self.showConditionOpts = async function(div, term) {
+	self.fillConditionMenu = async function(div, tvs) {
 		// grade/subcondtion select
 		const value_type_select = div
 			.append('select')
@@ -978,11 +973,11 @@ function setRenderers(self) {
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
 			.on('change', () => {
-				const new_term = JSON.parse(JSON.stringify(term))
-				new_term.bar_by_grade = value_type_select.node().value == 'grade' ? true : false
-				new_term.bar_by_children = value_type_select.node().value == 'sub' ? true : false
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
+				new_tvs.bar_by_grade = value_type_select.node().value == 'grade' ? true : false
+				new_tvs.bar_by_children = value_type_select.node().value == 'sub' ? true : false
 				div.selectAll('*').remove()
-				self.showConditionOpts(div, new_term)
+				self.fillConditionMenu(div, new_tvs)
 			})
 
 		value_type_select
@@ -995,7 +990,7 @@ function setRenderers(self) {
 			.attr('value', 'sub')
 			.text('By Subcondition')
 
-		value_type_select.node().selectedIndex = term.bar_by_children ? 1 : 0
+		value_type_select.node().selectedIndex = tvs.bar_by_children ? 1 : 0
 
 		// grade type type
 		const grade_type_select = div
@@ -1003,19 +998,19 @@ function setRenderers(self) {
 			.attr('class', '.grade_select')
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
-			.style('display', term.bar_by_grade ? 'block' : 'none')
+			.style('display', tvs.bar_by_grade ? 'block' : 'none')
 			.on('change', () => {
-				const new_term = JSON.parse(JSON.stringify(term))
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
 
-				new_term.bar_by_grade = grade_type_select.node().value == 'sub' ? false : true
-				new_term.bar_by_children = grade_type_select.node().value == 'sub' ? true : false
-				new_term.value_by_max_grade = grade_type_select.node().value == 'max' ? true : false
-				new_term.value_by_most_recent = grade_type_select.node().value == 'recent' ? true : false
-				new_term.value_by_computable_grade =
+				new_tvs.bar_by_grade = grade_type_select.node().value == 'sub' ? false : true
+				new_tvs.bar_by_children = grade_type_select.node().value == 'sub' ? true : false
+				new_tvs.value_by_max_grade = grade_type_select.node().value == 'max' ? true : false
+				new_tvs.value_by_most_recent = grade_type_select.node().value == 'recent' ? true : false
+				new_tvs.value_by_computable_grade =
 					grade_type_select.node().value == 'computable' || grade_type_select.node().value == 'sub' ? true : false
 
 				self.dom.tip.hide()
-				self.opts.callback(new_term)
+				self.opts.callback(new_tvs)
 			})
 
 		grade_type_select
@@ -1033,31 +1028,31 @@ function setRenderers(self) {
 			.attr('value', 'computable')
 			.text('Any grade per patient')
 
-		grade_type_select.node().selectedIndex = term.value_by_computable_grade ? 2 : term.value_by_most_recent ? 1 : 0
+		grade_type_select.node().selectedIndex = tvs.value_by_computable_grade ? 2 : tvs.value_by_most_recent ? 1 : 0
 
 		// display note if bar by subcondition selected
 		div
 			.append('span')
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
-			.style('display', term.bar_by_children ? 'block' : 'none')
+			.style('display', tvs.bar_by_children ? 'block' : 'none')
 			.style('color', '#888')
 			.html('Using any grade per patient')
 
 		let lst
-		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
+		lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
 
 		lst.push(
-			term.value_by_max_grade
+			tvs.value_by_max_grade
 				? 'value_by_max_grade=1'
-				: term.value_by_most_recent
+				: tvs.value_by_most_recent
 				? 'value_by_most_recent=1'
-				: term.value_by_computable_grade
+				: tvs.value_by_computable_grade
 				? 'value_by_computable_grade=1'
 				: null
 		)
 
-		const data = await self.getCategories(term.term, lst)
+		const data = await self.getCategories(tvs.term, lst)
 
 		// 'Apply' button
 		div
@@ -1094,17 +1089,17 @@ function setRenderers(self) {
 						if (v.key == sv) new_vals.push(v)
 					}
 				}
-				const new_term = JSON.parse(JSON.stringify(term))
-				new_term.values = new_vals
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
+				new_tvs.values = new_vals
 				self.dom.tip.hide()
-				self.opts.callback(new_term)
+				self.opts.callback(new_tvs)
 			})
 
-		const values_table = self.makeValueTable(div, term, data.lst)
+		const values_table = self.makeValueTable(div, tvs, data.lst)
 	}
 
-	self.removeTerm = term => {
-		// const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
+	self.removeTerm = tvs => {
+		// const termfilter = self.termfilter.terms.filter(d => d.term.id != tvs.term.id)
 		self.opts.callback(null)
 	}
 
@@ -1115,7 +1110,7 @@ function setRenderers(self) {
 		// negate button
 		one_term_div
 			.select('.negate_btn')
-			.style('background', self.term.isnot ? '#f4cccc' : '#a2c4c9')
+			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(term.isnot ? 'NOT' : 'IS')
 
 		const value_text = self.get_value_text(term)
@@ -1220,7 +1215,7 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	self.makeValueTable = function(div, term, values) {
+	self.makeValueTable = function(div, tvs, values) {
 		const values_table = div.append('table').style('border-collapse', 'collapse')
 
 		// this row will have group names/number
@@ -1283,17 +1278,17 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (term.term.iscategorical && term.values.map(a => a.label).includes(d.label)) {
+					if (tvs.term.iscategorical && tvs.values.map(a => a.label).includes(d.label)) {
 						return true
 					} else if (
-						(term.term.isfloat || term.term.isinteger) &&
-						term.ranges
+						(tvs.term.isfloat || tvs.term.isinteger) &&
+						tvs.ranges
 							.map(a => a.value)
 							.map(String)
-							.includes(d.range.value.toString())
+							.includes(d.value.toString())
 					) {
 						return true
-					} else if (term.term.iscondition && term.values.map(a => a.label).includes(d.label)) {
+					} else if (tvs.term.iscondition && tvs.values.map(a => a.label).includes(d.label)) {
 						return true
 					}
 				})
@@ -1309,9 +1304,9 @@ function setRenderers(self) {
 
 	self.removeValueBtn = function(d, j) {
 		const one_term_div = select(this.parentNode)
-		const term = one_term_div.datum()
+		const tvs = one_term_div.datum()
 		const select_remove_pos =
-			term.term.isinteger || term.term.isfloat ? j - term.ranges.slice(0, j).filter(a => a.start || a.stop).length : j
+			tvs.term.isinteger || tvs.term.isfloat ? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length : j
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()

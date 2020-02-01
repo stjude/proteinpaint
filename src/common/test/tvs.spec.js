@@ -205,7 +205,12 @@ tape('tvs : Numerical', async test => {
 							id: 'aaclassic_5',
 							name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 							unit: 'mg/m²',
-							isfloat: true
+							isfloat: true,
+							values: {
+								'0': { label: 'Not exposed', uncomputable: true },
+								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
+								'-9999': { label: 'Unknown treatment record', uncomputable: true }
+							}
 						},
 						ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
 					}
