@@ -61,7 +61,8 @@ class Overlay {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			config: appState.tree.plots[this.id],
+			ssid: appState.ssid
 		}
 	}
 	main() {
@@ -108,6 +109,18 @@ function setRenderers(self) {
 		self.dom.tip = new Menu({ padding: '0px' })
 	}
 	self.updateUI = function() {
+		if (this.state.ssid) {
+			/*
+			quick fix --
+			state has ssid, only display variant name at handle and not operable
+			there lacks a way to manage the multiple overlaying choices
+			wait for next version of termdb-chart
+			*/
+			self.dom.menuBtn.style('display', 'none')
+			self.dom.pilldiv.style('display', 'inline-block')
+			self.dom.pilldiv.text(this.state.ssid.mutation_name)
+			return
+		}
 		const plot = this.state.config
 		// only show pill for (2), not at the other cases
 		if (!plot.term2 || (plot.term2 && plot.term2.term.iscondition && plot.term2.id == plot.term.id)) {
