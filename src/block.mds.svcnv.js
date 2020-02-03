@@ -2625,25 +2625,34 @@ function maysortsamplesingroupbydt(g) {
 	*/
 	const cnv = []
 	const fusioninter = []
+	const fusionintra = []
 	const rest = []
 	for (const s of g.samples) {
 		if (s.items.find(m => m.dt == common.dtcnv)) {
 			cnv.push(s)
 			continue
 		}
-		if (
-			s.items.find(m => {
-				return m.dt == common.dtfusionrna && m.chrA != m.chrB
-			})
-		) {
-			fusioninter.push(s)
-			continue
+		{
+			const m = s.items.find(m => m.dt == common.dtfusionrna)
+			if (m) {
+				if (m.chrA == m.chrB) {
+					// intra-chr
+					if (m.posA < 48000000 && m.posB < 48000000) {
+						cnv.push(s)
+					} else {
+						fusionintra.push(s)
+					}
+				} else {
+					// inter-chr
+					fusioninter.push(s)
+				}
+				continue
+			}
 		}
-
 		rest.push(s)
 	}
 
-	g.samples = [...cnv, ...fusioninter, ...rest]
+	g.samples = [...cnv, ...fusionintra, ...fusioninter, ...rest]
 }
 
 ////////////////////// __multi ends
