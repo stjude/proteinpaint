@@ -146,7 +146,7 @@ rl.on('close',()=>{
 				for(const b of isoform.coding) a=Math.min(a,b[0])
 				isoform.codingstart=a
 			}
-			if(!isoform.codingsstop) {
+			if(!isoform.codingstop) {
 				let a = isoform.coding[0][1]
 				for(const b of isoform.coding) a=Math.max(a,b[1])
 				isoform.codingstop=a
