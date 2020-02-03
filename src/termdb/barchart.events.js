@@ -265,7 +265,7 @@ function handle_click(self) {
 		}
 	}
 
-	if (self.opts.bar_click_opts.includes('add_filter')) {
+	if (self.opts.bar_click_opts.includes('add_filter') && (!term2 || !term2.isgenotype)) {
 		options.push({
 			label: 'Add as filter',
 			callback: menuoption_add_filter
