@@ -256,8 +256,11 @@ class TdbBarchart {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
 		if (result.dataId in this.term2toColor) return
+		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
 		this.term2toColor[result.dataId] = !this.config.term2
 			? 'rgb(144, 23, 57)'
+			: group && 'color' in group
+			? group.color
 			: rgb(
 					this.settings.rows && this.settings.rows.length < 11 ? colors.c10(result.dataId) : colors.c20(result.dataId)
 			  ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')

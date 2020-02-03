@@ -427,13 +427,15 @@ official track only
 	// sample session id
 	const { ssid, groups } = await get_ssid_by_onevcfm(m, tk.mds.label, block.genome.name)
 
-	if (0) {
+	// activate to use the assigned colors via ssid.groups
+	if (1) {
 		// assign a color for each group, show color legend
 		const row = plotdiv.append('div').style('margin', '10px')
 		const f = scaleOrdinal(schemeCategory10)
 		for (const name in groups) {
 			groups[name].color = f(name)
-			row
+			// un-comment these rows as needed
+			/*row
 				.append('div')
 				.style('font-size', '.7em')
 				.style('color', 'white')
@@ -446,7 +448,7 @@ official track only
 				.style('display', 'inline-block')
 				.style('padding', '1px 5px')
 				.style('margin-right', '5px')
-				.text(name)
+				.text(name)*/
 		}
 	}
 	const opt = {

@@ -575,7 +575,12 @@ tape('single chart, genotype overlay', function(test) {
 			},
 			ssid: {
 				mutation_name: 'TEST',
-				ssid: 'genotype-test.txt'
+				ssid: 'genotype-test.txt',
+				groups: {
+					Heterozygous: { color: 'red' },
+					'Homozygous reference': { color: 'blue' },
+					'Homozygous alternative': { color: 'green' }
+				}
 			}
 		},
 		plot: {
