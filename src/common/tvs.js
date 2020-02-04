@@ -220,7 +220,7 @@ function setRenderers(self) {
 		let num_div = div,
 			unanno_div
 
-		self.num_obj.div = num_div
+		self.num_obj.num_div = num_div
 
 		if (tvs.term.values) {
 			num_parent_div
@@ -342,7 +342,7 @@ function setRenderers(self) {
 			const brush_g = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			self.applyBrush(range, i, brush_g, num_div)
+			self.applyBrush(range, i, brush_g)
 		}
 
 		const range_table = num_div
@@ -410,12 +410,13 @@ function setRenderers(self) {
 		await self.showCheckList_numeric(tvs, unanno_div)
 	}
 
-	self.applyBrush = function(range, i, brush_g, num_div) {
+	self.applyBrush = function(range, i, brush_g) {
 		const plot_size = self.num_obj.plot_size
 		const ranges = self.num_obj.ranges
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
+		const num_div = self.num_obj.num_div
 
 		self.brush = d3s
 			.brushX()
@@ -585,6 +586,7 @@ function setRenderers(self) {
 		const brush_range = self.num_obj.temp_ranges[i]
 		const minvalue = self.num_obj.density_data.minvalue
 		const maxvalue = self.num_obj.density_data.maxvalue
+		const svg = self.num_obj.num_div.select('svg')
 
 		const title_td = range_tr.append('td')
 
@@ -653,7 +655,7 @@ function setRenderers(self) {
 					delete new_range.stopunbounded
 				}
 				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(new_range, i, brush_g, self.num_obj.div)
+				self.applyBrush(new_range, i, brush_g)
 			})
 
 		start_select.append('option').html('&le;')
@@ -714,7 +716,7 @@ function setRenderers(self) {
 					delete new_range.startunbounded
 				}
 				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(new_range, i, brush_g, self.num_obj.div)
+				self.applyBrush(new_range, i, brush_g)
 			})
 
 		stop_select.append('option').html('&le;')
@@ -760,7 +762,7 @@ function setRenderers(self) {
 			start_text.html('_____')
 			stop_text.html('_____')
 
-			self.num_obj.div
+			self.num_obj.num_div
 				.select('table')
 				.append('tr')
 				.append('td')
@@ -780,7 +782,7 @@ function setRenderers(self) {
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
 			const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-			self.applyBrush(new_range, i, brush_g, self.num_obj.div)
+			self.applyBrush(new_range, i, brush_g)
 		}
 	}
 
@@ -863,9 +865,9 @@ function setRenderers(self) {
 			.text('reset')
 			.on('click', async () => {
 				self.dom.tip.hide()
-				const svg = self.num_obj.div.select('svg')
+				const svg = self.num_obj.num_div.select('svg')
 				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, brush_g, self.num_obj.div)
+				self.applyBrush(JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, brush_g)
 			})
 
 		//'Delete' button
@@ -888,8 +890,8 @@ function setRenderers(self) {
 				const deleted_range = new_tvs.ranges.splice(range.index, 1)
 				// callback only if range have non-empty start and end
 				if (deleted_range[0].start != '' && deleted_range[0].stop != '') self.opts.callback(new_tvs)
-				self.num_obj.div.selectAll('*').remove()
-				self.fillNumMenu(self.num_obj.div, new_tvs)
+				self.num_obj.num_div.selectAll('*').remove()
+				self.fillNumMenu(self.num_obj.num_div, new_tvs)
 			})
 
 		async function apply() {
@@ -918,8 +920,8 @@ function setRenderers(self) {
 				delete new_tvs.groupset_label
 				new_tvs.ranges[range.index] = range
 				self.opts.callback(new_tvs)
-				self.num_obj.div.selectAll('*').remove()
-				self.fillNumMenu(self.num_obj.div, new_tvs)
+				self.num_obj.num_div.selectAll('*').remove()
+				self.fillNumMenu(self.num_obj.num_div, new_tvs)
 			} catch (e) {
 				window.alert(e)
 			}
