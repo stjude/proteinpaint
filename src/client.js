@@ -46,13 +46,6 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
-// in test browser environment like Electron or headless Chrome,
-// the native fetch API will not know the default host or might
-// not have access to the localStorage, so
-// configHost will be used as default as needed
-const serverconfig = require('../serverconfig')
-const configHost = 'http://localhost:' + serverconfig.port
-
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -76,7 +69,7 @@ export function dofetch(path, arg, opts = null) {
 	}
 
 	let url
-	const host = localStorage.getItem('hostURL') || configHost
+	const host = localStorage.getItem('hostURL') || window.testHost
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -119,7 +112,7 @@ init {}
 	}
 
 	let url = path
-	const host = localStorage.getItem('hostURL') || configHost
+	const host = localStorage.getItem('hostURL') || window.testHost
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
