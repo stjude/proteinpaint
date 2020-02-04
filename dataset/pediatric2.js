@@ -192,7 +192,8 @@ module.exports = {
 					signatures: {
 						1: {
 							name: 'Accumulation with age (COSMIC 1)',
-							color: '#1DA850'
+							//color: '#1DA850'
+							color: '#676767'
 						},
 						2: {
 							name: 'APOBEC 3A/3B (COSMIC 2)',
