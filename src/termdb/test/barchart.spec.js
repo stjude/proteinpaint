@@ -1,6 +1,6 @@
 'use strict'
 const tape = require('tape')
-const termjson = require('../../../test/termdb/termjson').termjson
+const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
 
 /*************************
@@ -78,6 +78,7 @@ tape('single barchart, categorical bars', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
+	test.timeoutAfter(4000)
 	const termfilter = { show_top_ui: true, filter: [] }
 	runpp({
 		termfilter,
@@ -112,9 +113,11 @@ tape('single chart, with overlay', function(test) {
 	let barDiv
 	function runTests(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		testBarCount(plot)
-		testOverlayOrder(plot)
-		test.end()
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.run(testOverlayOrder)
+			.done(test)
 	}
 
 	function testBarCount(plot) {
@@ -184,7 +187,7 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(5) //(6)
+	test.plan(7)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
@@ -247,6 +250,8 @@ tape('series visibility', function(test) {
 			.run(testHiddenByValues)
 			.use(triggerHiddenLegendClick, { wait: 800 })
 			.to(testRevealedBar, { wait: 100 })
+			.use(triggerMenuClickToHide, { wait: 100 })
+			.to(testHiddenLegendDisplay, { wait: 600 })
 			.done(test)
 	}
 
@@ -255,7 +260,7 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
-			'should have the correct number of excluded series data by q.hiddenValues'
+			'should have the correct number of excluded numeric series by q.hiddenValues'
 		)
 		test.equal(
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
@@ -283,7 +288,34 @@ tape('series visibility', function(test) {
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
-	return
+
+	function triggerMenuClickToHide(plot) {
+		plot.Inner.components.barchart.Inner.dom.holder
+			.selectAll('.bars-cell-grp')
+			.filter(d => d.seriesId == 'Not exposed')
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('Hide'))
+			.node()
+			.click()
+	}
+
+	function testHiddenLegendDisplay(plot) {
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.legendDiv
+				.selectAll('.legend-row')
+				.filter(function() {
+					return this.innerHTML.includes('Not exposed')
+				})
+				.size(),
+			1,
+			'should hide a special numeric value by menu click'
+		)
+	}
+
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
@@ -313,7 +345,8 @@ tape('series visibility', function(test) {
 	function testConditionHiddenValues(plot) {
 		const bar = plot.Inner.components.barchart.Inner
 		const excluded = bar.settings.exclude.cols
-		test.equal(excluded.length, 1, 'should have the correct number of hidden bars by q.hiddenValues')
+		// exclude "Unknown status" and "1: Mild"
+		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
 	}
 })
 
@@ -521,5 +554,48 @@ tape('click bar to add filter', function(test) {
 			},
 			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
 		)
+	}
+})
+
+tape('single chart, genotype overlay', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp', term: termjson['diaggrp'] },
+						term2: 'genotype',
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			ssid: {
+				mutation_name: 'TEST',
+				ssid: 'genotype-test.txt',
+				groups: {
+					Heterozygous: { color: 'red' },
+					'Homozygous reference': { color: 'blue' },
+					'Homozygous alternative': { color: 'green' }
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testBarCount
+			}
+		}
+	})
+
+	function testBarCount(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
+		test.end()
 	}
 })

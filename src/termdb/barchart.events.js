@@ -5,6 +5,27 @@ export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
 	const s = self.settings
 
+	function barLabelClickHandler() {
+		// same handler for row label click in horziontal orientation
+		// or col label click in vertical orientation, since
+		// row/column labels only apply to bars
+		const d = event.target.__data__
+		if (d === undefined) return
+		const termNum = d.type == 'col' ? 'term' : 'term2'
+		const term = self.config.term
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: term.id,
+			config: {
+				term: {
+					id: term.id,
+					term: term.term,
+					q: getUpdatedQfromClick(d, term, true)
+				}
+			}
+		})
+	}
+
 	return {
 		chart: {
 			title(chart) {
@@ -74,21 +95,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__
-				if (d === undefined) return
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: term.id,
-					config: {
-						term: {
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(d, term, true)
-						}
-					}
-				})
-			},
+			click: barLabelClickHandler,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -105,22 +112,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__
-				if (d === undefined) return
-				const term = self.config.term
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: term.id,
-					config: {
-						term: {
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(d, term, true)
-						}
-					}
-				})
-			},
+			click: barLabelClickHandler,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -150,7 +142,9 @@ export default function getHandlers(self) {
 			},
 			mouseover: () => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html('Click to unhide bar')
+				const d = event.target.__data__
+				if (d === undefined) return
+				if (d.isHidden) tip.show(event.clientX, event.clientY).d.html('Click to unhide bar')
 			},
 			mouseout: () => {
 				tip.hide()
@@ -208,7 +202,7 @@ function handle_click(self) {
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
 	const term1 = self.config.term.term
-	const term2 = self.config.term2 ? self.config.term2 : null
+	const term2 = self.config.term2 ? self.config.term2.term : null
 	const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
 	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
 	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
@@ -236,9 +230,6 @@ function handle_click(self) {
 			label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 			callback: () => {
 				const term = self.config.term
-				const q = JSON.parse(JSON.stringify(term.q))
-				if (!q.hiddenValues) q.hiddenValues = {}
-				q.hiddenValues[d.seriesId] = 1
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: term.id,
@@ -246,7 +237,7 @@ function handle_click(self) {
 						term: {
 							id: term.id,
 							term: term.term,
-							q
+							q: getUpdatedQfromClick({ id: d.seriesId, type: 'col' }, term, true)
 						}
 					}
 				})
@@ -258,9 +249,6 @@ function handle_click(self) {
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
 					const term2 = self.config.term2
-					const q = JSON.parse(JSON.stringify(term2.q))
-					if (!q.hiddenValues) q.hiddenValues = {}
-					q.hiddenValues[d.dataId] = 1
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.config.term.id,
@@ -268,7 +256,7 @@ function handle_click(self) {
 							term2: {
 								id: term2.id,
 								term: term2.term,
-								q
+								q: getUpdatedQfromClick({ id: d.dataId, type: 'row' }, term2, true)
 							}
 						}
 					})
@@ -277,7 +265,7 @@ function handle_click(self) {
 		}
 	}
 
-	if (self.opts.bar_click_opts.includes('add_filter')) {
+	if (self.opts.bar_click_opts.includes('add_filter') && (!term2 || !term2.isgenotype)) {
 		options.push({
 			label: 'Add as filter',
 			callback: menuoption_add_filter
@@ -468,6 +456,13 @@ function getTermValues(d, self) {
 			} else {
 				const range = bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
+				else if (term == t1) {
+					termValues.push({ term: term.term, ranges: [{ value: key }] })
+				} else if (term == t2) {
+					termValues.push({ term: term.term, ranges: [{ value: key }] })
+				} else {
+					throw 'should not happen'
+				}
 			}
 		}
 	}

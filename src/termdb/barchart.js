@@ -70,7 +70,8 @@ class TdbBarchart {
 					common: config.settings.common,
 					barchart: config.settings.barchart
 				}
-			}
+			},
+			ssid: appState.ssid
 		}
 	}
 
@@ -118,8 +119,8 @@ class TdbBarchart {
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
 		}
-		if (this.settings.term2 == 'genotype') {
-			this.config.term2 = { term: { name: this.settings.mname } }
+		if (this.state.ssid) {
+			this.config.term2 = { term: { id: 'genotype', name: this.state.ssid.mutation_name, isgenotype: true }, q: {} }
 		}
 	}
 
@@ -255,8 +256,11 @@ class TdbBarchart {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
 		if (result.dataId in this.term2toColor) return
+		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
 		this.term2toColor[result.dataId] = !this.config.term2
 			? 'rgb(144, 23, 57)'
+			: group && 'color' in group
+			? group.color
 			: rgb(
 					this.settings.rows && this.settings.rows.length < 11 ? colors.c10(result.dataId) : colors.c20(result.dataId)
 			  ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
@@ -291,7 +295,9 @@ class TdbBarchart {
 						border: '1px solid #333',
 						//inset: total ? "n="+total : '',
 						noIcon: true,
-						type: 'col'
+						type: 'col',
+						isHidden: true,
+						hiddenOpacity: 1
 					}
 				})
 				.sort(this.barSorter)

@@ -4,7 +4,7 @@ import { Menu } from '../client'
 class Recover {
 	constructor(app, opts) {
 		this.type = 'recover'
-		this.opts = this.opts
+		this.opts = opts
 		this.app = app
 		this.api = rx.getComponentApi(this)
 		this.app = app
@@ -23,7 +23,7 @@ class Recover {
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
-		this.isActive = !isNaN(this.app.opts.maxRecoverableHistory) && +this.app.opts.maxRecoverableHistory > 0
+		this.isActive = !isNaN(this.opts.maxHistoryLen) && +this.opts.maxHistoryLen > 0
 		if (this.isActive) {
 			setInteractivity(this)
 			setRenderers(this)
@@ -58,7 +58,7 @@ class Recover {
 		this.history.push(this.state)
 		this.currIndex += 1
 
-		if (this.history.length > this.app.opts.maxRecoverableHistory) {
+		if (this.history.length > this.opts.maxHistoryLen) {
 			this.history.shift()
 			this.currIndex += -1
 		}

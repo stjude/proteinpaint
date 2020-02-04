@@ -14,7 +14,9 @@ const runpp = helpers.getRunPp('termdb', {
 	fetchOpts: {
 		serverData: helpers.serverData
 	},
-	maxRecoverableHistory: 8
+	recover: {
+		maxHistoryLen: 8
+	}
 })
 
 /**************

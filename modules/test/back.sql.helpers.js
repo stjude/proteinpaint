@@ -172,6 +172,7 @@ function dataSorter(a, b) {
 }
 
 function normalizeRefs(refs, comparedRefs) {
+	if (!refs || !Object.keys(refs).length) return
 	delete refs['@errors']
 	delete refs.row2name['@errors']
 	if (!refs.useColOrder) refs.cols.sort(valueSort)

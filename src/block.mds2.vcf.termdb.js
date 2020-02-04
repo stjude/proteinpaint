@@ -428,41 +428,40 @@ official track only
 	const { ssid, groups } = await get_ssid_by_onevcfm(m, tk.mds.label, block.genome.name)
 
 	// assign a color for each group, show color legend
-	{
-		const row = plotdiv.append('div').style('margin', '10px')
-		const f = scaleOrdinal(schemeCategory10)
-		for (const name in groups) {
-			groups[name].color = f(name)
-			row
-				.append('div')
-				.style('font-size', '.7em')
-				.style('color', 'white')
-				.style('display', 'inline-block')
-				.style('background', groups[name].color)
-				.style('padding', '2px 4px')
-				.text(groups[name].size)
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '1px 5px')
-				.style('margin-right', '5px')
-				.text(name)
-		}
+	const row = plotdiv.append('div').style('margin', '10px')
+	const f = scaleOrdinal(schemeCategory10)
+	for (const name in groups) {
+		groups[name].color = f(name)
+		// un-comment these rows as needed
+		row
+			.append('div')
+			.style('font-size', '.7em')
+			.style('color', 'white')
+			.style('display', 'inline-block')
+			.style('background', groups[name].color)
+			.style('padding', '2px 4px')
+			.text(groups[name].size)
+		row
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '1px 5px')
+			.style('margin-right', '5px')
+			.text(name)
 	}
 	const opt = {
 		state: {
 			dslabel: tk.mds.label,
-			genome: block.genome.name
+			genome: block.genome.name,
+			ssid: {
+				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
+				pos: m.pos,
+				mutation_name: m.mname,
+				ssid: ssid,
+				groups: groups
+			}
 		},
 		holder: plotdiv,
-		default_rootterm: {},
-		barchart: {
-			chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
-			pos: m.pos,
-			mutation_name: m.mname,
-			ssid: ssid,
-			groups: groups
-		}
+		default_rootterm: {}
 	}
 	if (tk.sample_termfilter) {
 		// just use a single filter, no race grp restriction

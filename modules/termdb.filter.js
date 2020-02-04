@@ -112,6 +112,11 @@ function get_categorical(tvs, CTEname) {
 }
 
 function get_numerical(tvs, CTEname, ds) {
+	/*
+for the case e.g. '0' is for "Not exposed", range.value can be either '0' or 0, string or number
+as it cannot be decided what client will provide
+so here need to allow both string and number as range.value
+*/
 	if (!tvs.ranges) throw '.ranges{} missing'
 	const values = [tvs.term.id]
 	// get term object, in case isinteger flag is missing from tvs.term
@@ -122,32 +127,33 @@ function get_numerical(tvs, CTEname, ds) {
 	let hasactualrange = false // if true, will exclude special categories
 
 	for (const range of tvs.ranges) {
-		if (range.value != undefined) {
+		if ('value' in range) {
 			// special category
-			rangeclauses.push(cast + '=?')
-			values.push(range.value)
-		} else {
-			// actual range
-			hasactualrange = true
-			const lst = []
-			if (!range.startunbounded) {
-				if (range.startinclusive) {
-					lst.push(cast + ' >= ?')
-				} else {
-					lst.push(cast + ' > ? ')
-				}
-				values.push(range.start)
-			}
-			if (!range.stopunbounded) {
-				if (range.stopinclusive) {
-					lst.push(cast + ' <= ?')
-				} else {
-					lst.push(cast + ' < ? ')
-				}
-				values.push(range.stop)
-			}
-			rangeclauses.push('(' + lst.join(' AND ') + ')')
+			// where value for ? can be number or string, doesn't matter
+			rangeclauses.push('value = ?')
+			values.push('' + range.value)
+			continue
 		}
+		// actual range
+		hasactualrange = true
+		const lst = []
+		if (!range.startunbounded) {
+			if (range.startinclusive) {
+				lst.push(cast + ' >= ?')
+			} else {
+				lst.push(cast + ' > ? ')
+			}
+			values.push(range.start)
+		}
+		if (!range.stopunbounded) {
+			if (range.stopinclusive) {
+				lst.push(cast + ' <= ?')
+			} else {
+				lst.push(cast + ' < ? ')
+			}
+			values.push(range.stop)
+		}
+		rangeclauses.push('(' + lst.join(' AND ') + ')')
 	}
 
 	let excludevalues
@@ -155,7 +161,7 @@ function get_numerical(tvs, CTEname, ds) {
 		excludevalues = Object.keys(term.values)
 			.filter(key => term.values[key].uncomputable)
 			.map(Number)
-			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && range.value === key))
+			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && Number(range.value) == key))
 		if (excludevalues.length) values.push(...excludevalues)
 	}
 
