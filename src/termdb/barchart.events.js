@@ -413,7 +413,10 @@ function getTermValues(d, self) {
 		const q = term.q //self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
-		if (term.term.iscondition) {
+		if (q.groupsetting && q.groupsetting.inuse) {
+			const group = q.groupsetting.customset.groups.find(g => g.name === key)
+			termValues.push({ term: term.term, values: group.values })
+		} else if (term.term.iscondition) {
 			if (!t2 || t1.id != t2.id) {
 				termValues.push(
 					Object.assign(

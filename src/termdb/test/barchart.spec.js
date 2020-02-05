@@ -441,8 +441,7 @@ tape('single barchart, filtered', function(test) {
 	}
 })
 
-let barDiv
-tape('click bar to add filter', function(test) {
+tape('click non-group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { show_top_ui: true, filter: [] }
@@ -477,8 +476,8 @@ tape('click bar to add filter', function(test) {
 		}
 	})
 
+	let barDiv
 	function runTests(plot) {
-		if (barDiv) return //console.log(322, barDiv)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
@@ -553,6 +552,126 @@ tape('click bar to add filter', function(test) {
 				)
 			},
 			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
+		)
+	}
+})
+
+tape('click custom categorical group bar to add filter', function(test) {
+	test.timeoutAfter(3000)
+
+	const termfilter = { show_top_ui: true, filter: [] }
+	const customset = {
+		name: 'A versus B',
+		groups: [
+			{
+				name: 'Test A',
+				values: [
+					{
+						key: 'Acute lymphoblastic leukemia',
+						label: 'Acute lymphoblastic leukemia'
+					},
+					{
+						key: 'Acute myeloid leukemia',
+						label: 'Acute myeloid leukemia'
+					}
+				]
+			},
+			{
+				name: 'Test B',
+				values: [
+					{
+						key: 'Central nervous system (CNS)',
+						label: 'Central nervous system (CNS)'
+					},
+					{
+						key: 'Wilms tumor',
+						label: 'Wilms tumor'
+					}
+				]
+			}
+		]
+	}
+	runpp({
+		termfilter,
+		state: {
+			termfilter,
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: {
+							id: 'diaggrp',
+							term: termjson['diaggrp'],
+							q: {
+								groupsetting: {
+									disabled: false,
+									inuse: true,
+									//predefined_groupset_idx: INT,
+									customset
+								}
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	function runTests(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(triggerBarClick, { wait: 600 })
+			.use(triggerMenuClick, { wait: 500 })
+			.to(testTermValues, { wait: 100 })
+			.done(test)
+	}
+
+	let clickedData
+	function triggerBarClick(plot) {
+		const elem = barDiv
+			.node()
+			.querySelector('.bars-cell')
+			.querySelector('rect')
+		clickedData = elem.__data__
+		elem.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('filter'))
+			.node()
+			.click() //dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testTermValues(plot) {
+		const config = plot.Inner.state.config
+		const currData = plot.Inner.currData
+		const termfilter = plot.Inner.app.Inner.state.termfilter
+		test.equal(
+			termfilter.filter && termfilter.filter.lst.length,
+			1,
+			'should create two tvslst filters when a numeric term overlay is clicked'
+		)
+		test.deepEqual(
+			termfilter.filter.lst[0],
+			{
+				type: 'tvs',
+				tvs: {
+					term: config.term.term,
+					values: customset.groups[0].values
+				}
+			},
+			'should create a customset filter with the clicked group.values array'
 		)
 	}
 })
