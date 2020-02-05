@@ -1346,7 +1346,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (tvs.term.iscategorical && tvs.values.map(a => a.label).includes(d.label)) {
+					if (tvs.term.iscategorical && tvs.values.map(a => a.key).includes(d.key)) {
 						return true
 					} else if (
 						(tvs.term.isfloat || tvs.term.isinteger) &&
