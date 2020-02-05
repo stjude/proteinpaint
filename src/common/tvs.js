@@ -923,7 +923,7 @@ function setRenderers(self) {
 		let merged_flag = false
 		for (const [i, range] of ranges.entries()) {
 			// skip unannotated categories and same range edits
-			if (!range.value && range.index != i) {
+			if (!range.value && new_range.index != i) {
 				if (new_range.start <= range.start && new_range.stop >= range.stop) {
 					// if new range is covering any existing range
 					range.start = new_range.start
@@ -943,8 +943,12 @@ function setRenderers(self) {
 				}
 			}
 		}
-		//if not overlapped then add to ranges[]
-		if (!merged_flag) {
+
+		if (merged_flag) {
+			// if overlapped and existing range merged then remove existing merged range
+			if (new_range.index <= ranges.length - 1) ranges.splice(new_range.index, 1)
+		} else {
+			//if not overlapped then add to ranges[]
 			ranges = JSON.parse(JSON.stringify(self.tvs.ranges))
 			ranges[new_range.index] = new_range
 		}
