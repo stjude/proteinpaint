@@ -672,7 +672,8 @@ tape('click custom categorical group bar to add filter', function(test) {
 				type: 'tvs',
 				tvs: {
 					term: config.term.term,
-					values: customset.groups[0].values
+					values: customset.groups[0].values,
+					groupset_label: customset.groups[0].name
 				}
 			},
 			'should create a customset filter with the clicked group.values array'
@@ -810,6 +811,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 				tvs: {
 					term: config.term.term,
 					values: customset.groups[0].values,
+					groupset_label: customset.groups[0].name,
 					bar_by_children: true,
 					value_by_max_grade: 1
 				}

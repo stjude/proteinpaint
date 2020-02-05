@@ -415,7 +415,7 @@ function getTermValues(d, self) {
 
 		if (q.groupsetting && q.groupsetting.inuse) {
 			const group = q.groupsetting.customset.groups.find(g => g.name === key)
-			const tvs = { term: term.term, values: group.values }
+			const tvs = { term: term.term, values: group.values, groupset_label: group.name }
 			if (term.term.iscondition) {
 				tvs.bar_by_children = term.q.bar_by_children
 				tvs.bar_by_grade = term.q.bar_by_grade
