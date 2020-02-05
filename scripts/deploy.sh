@@ -215,6 +215,7 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	cp -r $REMOTEDIR/$APP/node_modules $REMOTEDIR/$APP-new/
 	cp $REMOTEDIR/$APP/serverconfig.json $REMOTEDIR/$APP-new/
 	cp -Rn $REMOTEDIR/$APP/public/ $REMOTEDIR/$APP-new/
+	cp -Rn $REMOTEDIR/$APP/dataset/ $REMOTEDIR/$APP-new/
 
 	rm -Rf $REMOTEDIR/$APP-prev
 	mv $REMOTEDIR/$APP $REMOTEDIR/$APP-prev

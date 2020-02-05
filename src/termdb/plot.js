@@ -24,7 +24,7 @@ class TdbPlot {
 			holder: opts.holder
 				.style('margin-top', '-1px')
 				.style('white-space', 'nowrap')
-				.style('overflow-x', 'scroll'),
+				.style('overflow-x', 'auto'),
 
 			// will hold no data notice or the page title in multichart views
 			banner: opts.holder.append('div').style('display', 'none'),

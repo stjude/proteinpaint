@@ -68,8 +68,8 @@ export function dofetch(path, arg, opts = null) {
 		arg.jwt = jwt
 	}
 
-	let url
-	const host = localStorage.getItem('hostURL') || window.testHost
+	let url = path
+	const host = localStorage.getItem('hostURL') || window.testHost || ''
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -112,7 +112,7 @@ init {}
 	}
 
 	let url = path
-	const host = localStorage.getItem('hostURL') || window.testHost
+	const host = localStorage.getItem('hostURL') || window.testHost || ''
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
