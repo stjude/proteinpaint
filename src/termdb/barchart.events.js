@@ -415,7 +415,14 @@ function getTermValues(d, self) {
 
 		if (q.groupsetting && q.groupsetting.inuse) {
 			const group = q.groupsetting.customset.groups.find(g => g.name === key)
-			termValues.push({ term: term.term, values: group.values })
+			const tvs = { term: term.term, values: group.values }
+			if (term.term.iscondition) {
+				tvs.bar_by_children = term.q.bar_by_children
+				tvs.bar_by_grade = term.q.bar_by_grade
+				tvs.value_by_most_recent = term.q.value_by_most_recent
+				tvs.value_by_max_grade = term.q.value_by_max_grade
+			}
+			termValues.push(tvs)
 		} else if (term.term.iscondition) {
 			if (!t2 || t1.id != t2.id) {
 				termValues.push(
