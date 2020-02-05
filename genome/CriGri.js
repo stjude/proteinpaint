@@ -19,9 +19,9 @@ module.exports={
         }
     ],
     defaultcoord:{
-        chr:'RAZU01000074.1',
-        start:81725,
-        stop:6199080
+        chr:'RAZU01000265.1',
+        start:3866092,
+        stop:4073253
     },
 majorchr:`
 RAZU01000074.1	80584097
