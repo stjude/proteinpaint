@@ -367,8 +367,8 @@ function setRenderers(self) {
 			const div = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			div.select('start_input').html(range.start)
-			div.select('stop_input').html(range.stop)
+			div.select('.start_text').html(range.start)
+			div.select('.stop_text').html(range.stop)
 		})
 
 		range_divs
@@ -408,6 +408,69 @@ function setRenderers(self) {
 			})
 
 		await self.showCheckList_numeric(tvs, unanno_div)
+	}
+
+	self.makeDensityPlot = function(div, data) {
+		const width = 500,
+			height = 100,
+			xpad = 10,
+			ypad = 20,
+			xaxis_height = 20
+
+		// svg
+		const svg = div
+			.append('svg')
+			.attr('width', width + xpad * 2)
+			.attr('height', height + ypad * 2 + xaxis_height)
+
+		//density data, add first and last values to array
+		const density_data = data.density
+		density_data.unshift([data.minvalue, 0])
+		density_data.push([data.maxvalue, 0])
+
+		// x-axis
+		const xscale = d3s
+			.scaleLinear()
+			.domain([data.minvalue, data.maxvalue])
+			.range([xpad, width - xpad])
+
+		const x_axis = d3s.axisBottom().scale(xscale)
+
+		// y-scale
+		const yscale = d3s
+			.scaleLinear()
+			.domain([0, data.densitymax])
+			.range([height + ypad, ypad])
+
+		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+
+		// SVG line generator
+		const line = d3s
+			.line()
+			.x(function(d) {
+				return xscale(d[0])
+			})
+			.y(function(d) {
+				return yscale(d[1])
+			})
+			.curve(d3s.curveMonotoneX)
+
+		// plot the data as a line
+		g.append('path')
+			.datum(density_data)
+			.attr('class', 'line')
+			.attr('d', line)
+			.style('fill', '#eee')
+			.style('stroke', '#000')
+
+		g.append('g')
+			.attr('transform', `translate(0, ${ypad + height})`)
+			.call(x_axis)
+
+		g.append('text')
+			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+			.attr('font-size', '13px')
+			.text(self.tvs.term.unit)
 	}
 
 	self.applyBrush = function(range, i, brush_g) {
@@ -503,81 +566,6 @@ function setRenderers(self) {
 					? '#23cba7'
 					: '#777777'
 			)
-	}
-
-	self.showCheckList_numeric = async (tvs, unanno_div) => {
-		if (!tvs.term.values) {
-			// no special categories available for this term
-			return
-		}
-		// numerical checkbox for unannotated cats
-		const unannotated_cats = await self.getNumericCategories(tvs.term.id)
-
-		for (const [index, cat] of unannotated_cats.entries()) {
-			cat.label = tvs.term.values[cat.value].label
-			cat.key = cat.value
-		}
-
-		const sortedVals = unannotated_cats.sort((a, b) => {
-			return b.samplecount - a.samplecount
-		})
-
-		// 'Apply' button
-		unanno_div
-			.append('div')
-			.style('text-align', 'center')
-			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '13px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-				try {
-					const new_tvs = JSON.parse(JSON.stringify(tvs))
-					delete new_tvs.groupset_label
-
-					// add checked categories to ranges[]
-					for (const [i, sorted_v] of sortedVals.entries()) {
-						for (const [j, checked_v] of checked_vals.entries()) {
-							if (sorted_v.key == checked_v && !new_tvs.ranges.map(a => a.value).includes(sorted_v.value))
-								new_tvs.ranges.push({ value: sorted_v.value, label: sorted_v.label })
-						}
-					}
-
-					// remove unchecked categories from ranges[] if previously checked
-					for (const [i, range] of new_tvs.ranges.entries()) {
-						if (range.value && !checked_vals.includes(range.value)) new_tvs.ranges.splice(i, 1)
-					}
-
-					self.dom.tip.hide()
-
-					if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
-
-					//callback only if tvs is changed
-					if (JSON.parse(JSON.stringify(tvs) != new_tvs)) self.opts.callback(new_tvs)
-				} catch (e) {
-					window.alert(e)
-				}
-			})
-
-		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals)
 	}
 
 	self.enterRange = async function(d, i) {
@@ -906,7 +894,7 @@ function setRenderers(self) {
 				} else {
 					delete range.startunbounded
 					range.start = start
-					range.startinclusive = true
+					range.startinclusive = equation_td.selectAll('.start_select').node().selectedIndex == 0
 				}
 				if (stop == self.num_obj.density_data.maxvalue) {
 					range.stopunbounded = true
@@ -914,11 +902,13 @@ function setRenderers(self) {
 				} else {
 					delete range.stopunbounded
 					range.stop = stop
-					range.stopinclusive = true
+					range.stopinclusive = equation_td.selectAll('.stop_select').node().selectedIndex == 0
 				}
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				delete new_tvs.groupset_label
-				new_tvs.ranges[range.index] = range
+				// merge overlapping ranges
+				if (self.num_obj.ranges.length > 1) new_tvs.ranges = self.mergeOverlapRanges(range)
+				else new_tvs.ranges[range.index] = range
 				self.opts.callback(new_tvs)
 				self.num_obj.num_div.selectAll('*').remove()
 				self.fillNumMenu(self.num_obj.num_div, new_tvs)
@@ -928,67 +918,112 @@ function setRenderers(self) {
 		}
 	}
 
-	self.makeDensityPlot = function(div, data) {
-		const width = 500,
-			height = 100,
-			xpad = 10,
-			ypad = 20,
-			xaxis_height = 20
+	self.mergeOverlapRanges = function(new_range) {
+		let ranges = JSON.parse(JSON.stringify(self.tvs.ranges))
+		let merged_flag = false
+		for (const [i, range] of ranges.entries()) {
+			// skip unannotated categories and same range edits
+			if (!range.value && range.index != i) {
+				if (new_range.start <= range.start && new_range.stop >= range.stop) {
+					// if new range is covering any existing range
+					range.start = new_range.start
+					range.stop = new_range.stop
+					merged_flag = true
+				} else if (new_range.start <= range.stop && new_range.stop >= range.stop) {
+					// if overlapping only at start of new range
+					range.stop = new_range.stop
+					merged_flag = true
+				} else if (new_range.stop >= range.start && new_range.start <= range.start) {
+					// if overlapping only at end of new range
+					range.start = new_range.start
+					merged_flag = true
+				} else if (new_range.start >= range.start && new_range.stop <= range.stop) {
+					//new_range is covered by existing range
+					merged_flag = true
+				}
+			}
+		}
+		//if not overlapped then add to ranges[]
+		if (!merged_flag) {
+			ranges = JSON.parse(JSON.stringify(self.tvs.ranges))
+			ranges[new_range.index] = new_range
+		}
+		return ranges
+	}
 
-		// svg
-		const svg = div
-			.append('svg')
-			.attr('width', width + xpad * 2)
-			.attr('height', height + ypad * 2 + xaxis_height)
+	self.showCheckList_numeric = async (tvs, unanno_div) => {
+		if (!tvs.term.values) {
+			// no special categories available for this term
+			return
+		}
+		// numerical checkbox for unannotated cats
+		const unannotated_cats = await self.getNumericCategories(tvs.term.id)
 
-		//density data, add first and last values to array
-		const density_data = data.density
-		density_data.unshift([data.minvalue, 0])
-		density_data.push([data.maxvalue, 0])
+		for (const [index, cat] of unannotated_cats.entries()) {
+			cat.label = tvs.term.values[cat.value].label
+			cat.key = cat.value
+		}
 
-		// x-axis
-		const xscale = d3s
-			.scaleLinear()
-			.domain([data.minvalue, data.maxvalue])
-			.range([xpad, width - xpad])
+		const sortedVals = unannotated_cats.sort((a, b) => {
+			return b.samplecount - a.samplecount
+		})
 
-		const x_axis = d3s.axisBottom().scale(xscale)
+		// 'Apply' button
+		unanno_div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#d0e0e3')
+			.style('color', 'black')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+				try {
+					const new_tvs = JSON.parse(JSON.stringify(tvs))
+					delete new_tvs.groupset_label
 
-		// y-scale
-		const yscale = d3s
-			.scaleLinear()
-			.domain([0, data.densitymax])
-			.range([height + ypad, ypad])
+					// add checked categories to ranges[]
+					for (const [i, sorted_v] of sortedVals.entries()) {
+						for (const [j, checked_v] of checked_vals.entries()) {
+							if (sorted_v.key == checked_v && !new_tvs.ranges.map(a => a.value).includes(sorted_v.value))
+								new_tvs.ranges.push({ value: sorted_v.value, label: sorted_v.label })
+						}
+					}
 
-		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+					// remove unchecked categories from ranges[] if previously checked
+					for (const [i, range] of new_tvs.ranges.entries()) {
+						if (range.value && !checked_vals.includes(range.value)) new_tvs.ranges.splice(i, 1)
+					}
 
-		// SVG line generator
-		const line = d3s
-			.line()
-			.x(function(d) {
-				return xscale(d[0])
+					self.dom.tip.hide()
+
+					if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
+
+					//callback only if tvs is changed
+					if (JSON.parse(JSON.stringify(tvs) != new_tvs)) self.opts.callback(new_tvs)
+				} catch (e) {
+					window.alert(e)
+				}
 			})
-			.y(function(d) {
-				return yscale(d[1])
-			})
-			.curve(d3s.curveMonotoneX)
 
-		// plot the data as a line
-		g.append('path')
-			.datum(density_data)
-			.attr('class', 'line')
-			.attr('d', line)
-			.style('fill', '#eee')
-			.style('stroke', '#000')
-
-		g.append('g')
-			.attr('transform', `translate(0, ${ypad + height})`)
-			.call(x_axis)
-
-		g.append('text')
-			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
-			.attr('font-size', '13px')
-			.text(self.tvs.term.unit)
+		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals)
 	}
 
 	self.fillConditionMenu = async function(div, tvs) {
