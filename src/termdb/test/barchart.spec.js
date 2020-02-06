@@ -478,6 +478,8 @@ tape('click non-group bar to add filter', function(test) {
 
 	let barDiv
 	function runTests(plot) {
+		if (barDiv) return
+		plot.Inner.bus.on('postRender.test', null)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
@@ -626,6 +628,8 @@ tape('click custom categorical group bar to add filter', function(test) {
 
 	let barDiv
 	function runTests(plot) {
+		if (barDiv) return
+		plot.Inner.bus.on('postRender.test', null)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
@@ -660,7 +664,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 		test.equal(
 			termfilter.filter && termfilter.filter.lst.length,
 			1,
-			'should create two tvslst filters when a numeric term overlay is clicked'
+			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
 			termfilter.filter.lst[0],
@@ -668,7 +672,148 @@ tape('click custom categorical group bar to add filter', function(test) {
 				type: 'tvs',
 				tvs: {
 					term: config.term.term,
-					values: customset.groups[0].values
+					values: customset.groups[0].values,
+					groupset_label: customset.groups[0].name
+				}
+			},
+			'should create a customset filter with the clicked group.values array'
+		)
+	}
+})
+
+tape('click custom subcondition group bar to add filter', function(test) {
+	test.timeoutAfter(3000)
+
+	const termfilter = { show_top_ui: true, filter: [] }
+	const customset = {
+		name: 'A vs. B vs. C',
+		groups: [
+			{
+				name: 'Test A',
+				values: [
+					{
+						key: 'Sinus tachycardia',
+						label: 'Sinus tachycardia'
+					},
+					{
+						key: 'Sinus bradycardia',
+						label: 'Sinus bradycardia'
+					}
+				]
+			},
+			{
+				name: 'Test B',
+				values: [
+					{
+						key: 'Conduction abnormalities',
+						label: 'Conduction abnormalities'
+					},
+					{
+						key: 'Atrioventricular heart block',
+						label: 'Atrioventricular heart block'
+					}
+				]
+			},
+			{
+				name: 'Test C',
+				values: [
+					{
+						key: 'Prolonged QT interval',
+						label: 'Prolonged QT interval'
+					},
+					{
+						key: 'Cardiac dysrhythmia',
+						label: 'Cardiac dysrhythmia'
+					}
+				]
+			}
+		]
+	}
+	runpp({
+		termfilter,
+		state: {
+			termfilter,
+			tree: {
+				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				visiblePlotIds: ['Arrhythmias'],
+				plots: {
+					Arrhythmias: {
+						term: {
+							id: 'Arrhythmias',
+							term: termjson['Arrhythmias'],
+							q: {
+								bar_by_children: true,
+								value_by_max_grade: 1,
+								groupsetting: {
+									disabled: false,
+									inuse: true,
+									//predefined_groupset_idx: INT,
+									customset
+								}
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	function runTests(plot) {
+		if (barDiv) return
+		plot.Inner.bus.on('postRender.test', null)
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(triggerBarClick, { wait: 600 })
+			.use(triggerMenuClick, { wait: 500 })
+			.to(testTermValues, { wait: 100 })
+			.done(test)
+	}
+
+	let clickedData
+	function triggerBarClick(plot) {
+		const elem = barDiv
+			.node()
+			.querySelector('.bars-cell')
+			.querySelector('rect')
+		clickedData = elem.__data__
+		elem.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('filter'))
+			.node()
+			.click()
+	}
+
+	function testTermValues(plot) {
+		const config = plot.Inner.state.config
+		const currData = plot.Inner.currData
+		const termfilter = plot.Inner.app.Inner.state.termfilter
+		test.equal(
+			termfilter.filter && termfilter.filter.lst.length,
+			1,
+			'should create one tvslst filters when a numeric term overlay is clicked'
+		)
+		test.deepEqual(
+			termfilter.filter.lst[0],
+			{
+				type: 'tvs',
+				tvs: {
+					term: config.term.term,
+					values: customset.groups[0].values,
+					groupset_label: customset.groups[0].name,
+					bar_by_children: true,
+					value_by_max_grade: 1
 				}
 			},
 			'should create a customset filter with the clicked group.values array'

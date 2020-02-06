@@ -229,7 +229,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	// console.log(statement, values)
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -463,7 +463,7 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 				${table2}.name AS value
 			FROM annotations a
 			JOIN
-				${table2} ON a.value == ${table2}.value
+				${table2} ON a.value = ${table2}.value
 			WHERE
 				term_id=?
 		) `,
@@ -507,7 +507,7 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 	}
 	// use groupset
 	const table2 = tablename + '_groupset'
-	const a = {
+	return {
 		sql: `${table2} AS (
 			${makesql_groupset(term, q)}
 		),
@@ -517,7 +517,7 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 				${table2}.name AS key,
 				${table2}.name AS value
 			FROM precomputed a
-			JOIN ${table2} ON ${table2}.value==${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
+			JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
 			WHERE
 				term_id=?
 				AND value_for=?
@@ -525,7 +525,6 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 		)`,
 		tablename
 	}
-	return a
 }
 
 function makesql_groupset(term, q) {
