@@ -185,18 +185,20 @@ function trigger_getcategories(q, res, tdb, ds) {
 					value_by_computable_grade: q.value_by_computable_grade
 			  }
 	}
-	if (q.tvslst) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
 	const lst = termdbsql.get_summary(arg)
 	res.send({ lst })
 }
 function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (!q.tid) throw '.tid missing'
 	const term = tdb.q.termjsonByOneid(q.tid)
-	const lst = termdbsql.get_summary_numericcategories({
+	const arg = {
 		ds,
 		term_id: q.tid
 		//filter
-	})
+	}
+	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
+	const lst = termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
 }
 

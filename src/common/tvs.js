@@ -12,7 +12,7 @@ class TVS {
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
 		this.dom = { holder: opts.holder, controlsTip: opts.controlsTip, tip: new Menu({ padding: '5px' }) }
-		this.durations = { exit: 500 }
+		this.durations = { exit: 0 }
 
 		setRenderers(this)
 		setInteractivity(this)
@@ -21,7 +21,8 @@ class TVS {
 
 		this.api = {
 			main: async (data = {}) => {
-				this.tvs = data
+				this.tvs = data.tvs
+				this.filter = data.filter
 				this.updateUI()
 
 				// when there are filters to be removed, must account for the delayed
@@ -42,37 +43,33 @@ class TVS {
 		return o
 	}
 
-	async getCategories(term, lst) {
-		let tvslst_filter_str = false
-
-		if (this.termfilter) {
-			tvslst_filter_str = encodeURIComponent(JSON.stringify(this.term))
-		}
-
+	async getCategories(term, lst=[]) {
 		const args = [
-			'genome=' +
-				this.genome +
-				'&dslabel=' +
-				this.dslabel +
-				'&getcategories=1&tid=' +
-				term.id +
-				'&tvslst=' +
-				tvslst_filter_str
+			'getcategories=1',
+			'genome=' + this.genome,
+			'dslabel=' + this.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(this.filter)),
+			...lst
 		]
-		if (lst) args.push(...lst)
 
-		let data
 		try {
-			data = await dofetch2('/termdb?' + args.join('&'), {})
+			const data = await dofetch2('/termdb?' + args.join('&'), {})
 			if (data.error) throw data.error
+			return data
 		} catch (e) {
 			window.alert(e.message || e)
 		}
-		return data
 	}
 	async getNumericCategories(termid) {
 		// get number of samples for each category of a numeric term
-		const args = ['genome=' + this.genome + '&dslabel=' + this.dslabel + '&getnumericcategories=1&tid=' + termid]
+		const args = [ 
+			'getnumericcategories=1',
+			'genome=' + this.genome,
+			'dslabel=' + this.dslabel,
+			'tid=' + termid,
+			'filter=' + encodeURIComponent(JSON.stringify(this.filter)),
+		]
 		// may add filter
 		const data = await dofetch2('termdb?' + args.join('&'))
 		if (data.error) throw data.error
@@ -85,6 +82,13 @@ exports.TVSInit = rx.getInitFxn(TVS)
 function setRenderers(self) {
 	self.updateUI = function() {
 		const terms_div = self.dom.holder
+		/*
+			Currently, only a single pill per tvs is rendered, so using the 
+			array [self.tvs] may seem unnecessary. However, using the
+			enter/update/exit pattern helps with coding consistency across components,
+			and more clearly indicates whether the whole pill is replaced
+			or if only its values are updated.
+		*/
 		const filters = terms_div.selectAll('.tvs_pill').data([self.tvs], d => d.term.id)
 		filters.exit().each(self.exitPill)
 		filters.each(self.updatePill)
@@ -124,10 +128,16 @@ function setRenderers(self) {
 		self.updatePill.call(this)
 	}
 
-	self.showMenu = (tvs, holder) => {
-		const term = tvs.term
+	// optional _holder, for example when called by filter.js
+	self.showMenu = (_holder) => {
+		const holder = _holder ? _holder : self.dom.tip
 		const term_option_div = holder.append('div')
+		term_option_div
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('text-align', 'center')
 
+		const term = self.tvs.term
 		const optsFxn = term.iscategorical
 			? self.fillCatMenu
 			: term.isfloat || term.isinteger
@@ -136,29 +146,11 @@ function setRenderers(self) {
 			? self.fillConditionMenu
 			: null
 
-		term_option_div
-			.append('div')
-			.style('margin', '5px 2px')
-			.style('text-align', 'center')
-
-		optsFxn(term_option_div, tvs)
+		optsFxn(term_option_div, self.tvs)
 	}
 
 	self.fillCatMenu = async function(div, tvs) {
-		let lst
-		lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
-
-		lst.push(
-			tvs.value_by_max_grade
-				? 'value_by_max_grade=1'
-				: tvs.value_by_most_recent
-				? 'value_by_most_recent=1'
-				: tvs.value_by_computable_grade
-				? 'value_by_computable_grade=1'
-				: null
-		)
-
-		const data = await self.getCategories(tvs.term, lst)
+		const data = await self.getCategories(tvs.term)
 		const sortedVals = data.lst.sort((a, b) => {
 			return b.samplecount - a.samplecount
 		})
@@ -264,7 +256,8 @@ function setRenderers(self) {
 		}
 
 		self.num_obj.density_data = await client.dofetch2(
-			'/termdb?density=1&genome=' +
+			'/termdb?density=1' + 
+				'&genome=' +
 				self.opts.genome +
 				'&dslabel=' +
 				self.opts.dslabel +
@@ -277,7 +270,8 @@ function setRenderers(self) {
 				'&xpad=' +
 				self.num_obj.plot_size.xpad +
 				'&ypad=' +
-				self.num_obj.plot_size.ypad
+				self.num_obj.plot_size.ypad +
+				'&filter=' + encodeURIComponent(JSON.stringify(self.filter))
 		)
 		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
@@ -1090,9 +1084,7 @@ function setRenderers(self) {
 			.style('color', '#888')
 			.html('Using any grade per patient')
 
-		let lst
-		lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
-
+		let lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
 		lst.push(
 			tvs.value_by_max_grade
 				? 'value_by_max_grade=1'

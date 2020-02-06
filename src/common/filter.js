@@ -162,6 +162,14 @@ class Filter {
 	getId(item) {
 		return item.$id
 	}
+	getFilterExcludingPill($id) {
+		const rootCopy = JSON.parse(JSON.stringify(this.filter))
+		const parentCopy = this.findParent(rootCopy, $id)
+		const i = parentCopy.lst.findIndex(f => f.$id === $id)
+		if (i == -1) return null
+		parentCopy.lst.splice(i, 1)
+		return getNormalRoot(rootCopy)
+	}
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
@@ -434,7 +442,7 @@ function setRenderers(self) {
 			}
 		})
 		self.pills[item.$id] = pill
-		pill.main(item.tvs)
+		pill.main({tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id)})
 	}
 
 	self.updateItem = function(item, i) {
@@ -448,7 +456,7 @@ function setRenderers(self) {
 			self.updateUI(select(this), item)
 		} else {
 			if (!self.pills[item.$id]) return
-			self.pills[item.$id].main(item.tvs)
+			self.pills[item.$id].main({tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id)})
 		}
 	}
 
@@ -759,7 +767,7 @@ function setInteractivity(self) {
 		const item = self.activeData.item
 		self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()
-		self.pills[item.$id].showMenu(item.tvs, holder)
+		self.pills[item.$id].showMenu(holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
 	}
 

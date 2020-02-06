@@ -827,11 +827,9 @@ tape('nested filters', async test => {
 									name: 'Arrhythmias',
 									iscondition: true
 								},
-								value: {
-									bar_by_grade: true,
-									values: [{ key: 2, label: '2' }],
-									value_by_max_grade: true
-								}
+								bar_by_grade: true,
+								value_by_max_grade: true,
+								values: [{ key: 2, label: '2' }]
 							}
 						}
 					]
