@@ -94,7 +94,6 @@ function setRenderers(self) {
 			.attr('class', 'tvs_pill sja_filter_tag_btn')
 			.style('white-space', 'nowrap')
 			.style('display', 'inline-block')
-			.style('padding', '2px')
 			.transition()
 			.duration(200)
 			.each(self.enterPill)
@@ -109,8 +108,6 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
-			.style('background-color', '#cfe2f3')
-			.style('color', 'black')
 			.style('padding', '6px 6px 3px 6px')
 			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
@@ -122,7 +119,6 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
-			.style('color', 'black')
 			.html(self.tvs.isnot ? 'NOT' : 'IS')
 
 		self.updatePill.call(this)
@@ -175,8 +171,6 @@ function setRenderers(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
 			.style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -786,10 +780,9 @@ function setRenderers(self) {
 					: 'none'
 			)
 			.style('border-radius', '13px')
-			.style('color', 'black')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
-			.style('padding', '5px 12px')
+			// .style('padding', '5px 12px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
@@ -817,11 +810,9 @@ function setRenderers(self) {
 					: 'inline-block'
 			)
 			.style('border-radius', '13px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
-			.style('padding', '5px 12px')
+			// .style('padding', '5px 12px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
@@ -842,11 +833,9 @@ function setRenderers(self) {
 					: 'inline-block'
 			)
 			.style('border-radius', '13px')
-			.style('background-color', '#cfe2f3')
-			.style('color', 'black')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
-			.style('padding', '5px 12px')
+			// .style('padding', '5px 12px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
@@ -864,11 +853,9 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style('display', self.tvs.ranges.length == 1 ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#f4cccc')
-			.style('color', 'black')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
-			.style('padding', '5px 12px')
+			// .style('padding', '5px 12px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
@@ -980,12 +967,10 @@ function setRenderers(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
-			.style('padding', '7px 15px')
+			// .style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
-			.style('font-size', '.8em')
+			// .style('font-size', '.9em')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
@@ -1128,12 +1113,10 @@ function setRenderers(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
-			.style('padding', '7px 15px')
+			// .style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
-			.style('font-size', '.8em')
+			.style('font-size', '.9em')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
@@ -1204,8 +1187,6 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#cfe2f3')
-			.style('color', 'black')
 			.style('font-style', 'italic')
 			.html(d => d.txt)
 			.append('div')
@@ -1346,7 +1327,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (tvs.term.iscategorical && tvs.values.map(a => a.key).includes(d.key)) {
+					if (tvs.term.iscategorical && tvs.values.find(a => a.key === d.key)) {
 						return true
 					} else if (
 						(tvs.term.isfloat || tvs.term.isinteger) &&
@@ -1356,7 +1337,7 @@ function setRenderers(self) {
 							.includes(d.value.toString())
 					) {
 						return true
-					} else if (tvs.term.iscondition && tvs.values.map(a => a.label).includes(d.label)) {
+					} else if (tvs.term.iscondition && tvs.values.find(a => a.key === d.key)) {
 						return true
 					}
 				})

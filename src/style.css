@@ -48,11 +48,23 @@ table {
 
 .sja_filter_tag_btn {
 	display :inline-block;
-	color:white;
+	color:black;
+	padding: 5px 8px;
 }
 .sja_filter_tag_btn:hover { opacity: 0.8; cursor:default}
 .sja_filter_tag_btn:active {color:#cc0000; opacity: 0.6;}
 
+.term_name_btn, .value_btn, .reset_btn {
+	background-color: #cfe2f3;
+}
+
+.apply_btn {
+	background-color: #d0e0e3;
+}
+
+.delete_btn {
+	background-color: #f4cccc;
+}
 
 /* mostly for table tr */
 .sja_clb { padding:5px 10px; cursor:default; }
