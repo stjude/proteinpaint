@@ -229,7 +229,7 @@ function setRenderers(self) {
 		const ranges = []
 
 		for (const [index, range] of tvs.ranges.entries()) {
-			if (range.value == undefined) {
+			if (!('value' in range)) {
 				range.index = index
 				ranges.push(range)
 			}
@@ -892,7 +892,7 @@ function setRenderers(self) {
 		let merged_flag = false
 		for (const [i, range] of ranges.entries()) {
 			// skip unannotated categories and same range edits
-			if (!range.value && new_range.index != i) {
+			if (!('value' in range) && new_range.index != i) {
 				if (new_range.start <= range.start && new_range.stop >= range.stop) {
 					// if new range is covering any existing range
 					range.start = new_range.start
@@ -962,11 +962,12 @@ function setRenderers(self) {
 					delete new_tvs.groupset_label
 					const checked_vals = [ ...values_table.querySelectorAll('.value_checkbox')]
 							.filter(elem => elem.checked)
-							.map(elem => elem.value)
-					const current_vals = new_tvs.ranges.map(a => 'value' in a && a.value)
+							.map(elem => elem.value) // input.value is a string
+					const current_vals = new_tvs.ranges.filter(a => 'value' in a).map(a => ""+a.value)
 					for(const v of sortedVals) {
-						const i = checked_vals.indexOf(v.value)
-						const j = current_vals.indexOf(v.value)
+						const value = ""+v.value // make sure this is a string
+						const i = checked_vals.indexOf(value)
+						const j = current_vals.indexOf(value)
 						if (i === -1 && j !== -1) new_tvs.ranges.splice(j, 1)
 						else if (i !== -1 && j === -1) new_tvs.ranges.push({ value: v.value, label: v.label })
 					}
