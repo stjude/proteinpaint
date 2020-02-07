@@ -3,7 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
-import { graphable } from '../common/graphable'
+import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 
 const childterm_indent = '25px'

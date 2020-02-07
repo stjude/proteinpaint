@@ -1,6 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-const graphable = require('../../common/graphable').graphable
+const graphable = require('../../common/termutils').graphable
 
 /*************************
  reusable helper functions

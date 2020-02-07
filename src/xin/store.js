@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import getterm from '../common/getterm'
+import getterm from '../common/termutils'
 
 const defaultState = {
 	term0: {},
