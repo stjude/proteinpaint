@@ -737,10 +737,14 @@ function setInteractivity(self) {
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
+				const name_inputs = group_rename_div.node().querySelectorAll('input')
 				//update customset and add to self.q
-				for (const [key, val] of Object.entries(cat_grps)) {
-					for (let i = 0; i < default_grp_count; i++) {
-						if (cat_grps[key].group == i + 1) customset.groups[i].values.push({ key: key })
+				for (const key in cat_grps) {
+					const i = cat_grps[key].group - 1
+					const group = customset.groups[i]
+					if (group) {
+						group.name = name_inputs[i].value
+						group.values.push({ key })
 					}
 				}
 				self.q.groupsetting = {

@@ -51,6 +51,10 @@ export function gmtkfromtemplate(tk) {
 
 export function gmtkmaketk(tk, block) {
 	tk.tklabel.text(block.usegm.name)
+	tk.isoformlabel = block
+		.maketklefthandle(tk, 13)
+		.attr('class', null)
+		.text(block.usegm.isoform)
 	domainlegend(tk, block)
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
 		configpanel(tk, block)
@@ -272,6 +276,7 @@ export function gmtkrender(tk, block) {
 
 	if (block.gmmode == client.gmmode.gmsum) {
 		tk.tklabel.text('')
+		tk.isoformlabel.text('')
 		tk.isoformnames = []
 		const h = tk.stackheight * 0.7
 
@@ -311,6 +316,9 @@ export function gmtkrender(tk, block) {
 		render1gm(block.usegm, tk.stackheight, tk, block)
 		tk.height_main = tk.toppad + tk.stackheight + tk.bottompad
 		tk.tklabel.text(block.usegm.name).each(function() {
+			collectlabw.push(this.getBBox().width)
+		})
+		tk.isoformlabel.text(block.usegm.isoform).each(function() {
 			collectlabw.push(this.getBBox().width)
 		})
 	}
