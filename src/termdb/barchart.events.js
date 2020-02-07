@@ -323,9 +323,25 @@ function menuoption_add_filter(self, tvslst) {
 		return
 	}
 	const filter = JSON.parse(JSON.stringify(self.state.termfilter.filter))
-	filter.lst.push(...tvslst.map(wrapTvs))
-	if (!filter.join && filter.lst.length > 1) filter.join = 'and'
-	self.app.dispatch({ type: 'filter_replace', filter })
+	if (!filter.join && (filter.lst.length || tvslst.length > 1)) filter.join = 'and'
+	if (filter.join == 'and' || !filter.lst.length) {
+		filter.lst.push(...tvslst.map(wrapTvs))
+		self.app.dispatch({ type: 'filter_replace', filter })
+	}
+	else {
+		self.app.dispatch({
+			type: 'filter_replace', 
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: "and",
+				lst: [
+					filter,
+					...tvslst.map(wrapTvs)
+				]
+			}
+		})
+	}
 }
 
 function wrapTvs(tvs) {
