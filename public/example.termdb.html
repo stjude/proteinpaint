@@ -43,6 +43,37 @@ runproteinpaint({
 						}}
 					]
 				}
+			},
+			tree:{
+				expandedTermIds:['root','Outcomes','CTCAE Graded Events','Cardiovascular System'],
+				visiblePlotIds:['Arrhythmias'],
+				plots:{
+					'Arrhythmias':{
+						term:{ q:{
+							//bar_by_children:true,
+							bar_by_grade:true,
+							value_by_max_grade:true,
+							groupsetting:{
+								inuse:true,
+								predefined_groupset_idx:0
+							}
+							/*
+							"groupsetting":{
+								inuse:true,
+								customset:{ is_subcondition:true, groups:[
+								{name:'Group1',
+									values:[{key:'Sinus bradycardia'},{key:'Sinus tachycardia'}]
+								},
+								{name:'Group2',
+									values:[{key:'Conduction abnormalities'},{key:'Cardiac dysrhythmia'},{key:'Prolonged QT interval'},{key:'Atrioventricular heart block'} ]
+								}
+								]}
+							}
+							*/
+						}},
+						//term2:{ id:'sex' }
+					}
+				}
 			}
 		},
 		/*recover: {
