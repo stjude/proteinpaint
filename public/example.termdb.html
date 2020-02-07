@@ -22,38 +22,33 @@ runproteinpaint({
 			dslabel:'SJLife',
 			genome:'hg38',
 			termfilter:{
-				show_top_ui:true
+				show_top_ui:true,
+				filter:{
+					type:'tvslst',
+					join:'',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true,
+								"values":{
+        					        "0": { "label":"Not exposed", "uncomputable":true },
+                					"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+                					"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+        						}
+							},
+							ranges: [
+								{ value: 0, label: "Not exposed"},
+								{startunbounded:true,stop:2000,stopinclusive:true}
+							]
+						}}
+					]
+				}
 			}
 		},
 		/*recover: {
 			maxHistoryLen: 5
 		}*/
 	}
-/*
-	display_termdb:{
-		dslabel:'SJLife',
-		genome:'hg38',
-		default_rootterm:{},
-		termfilter:{show_top_ui:true},
-		bar_click_menu:{
-			add_filter:true,
-			select_group_add_to_cart:true,
-			select_to_gp: {
-				group_compare_against: {
-					is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true
-				}
-			}
-		},
-		// could be URL-encoded string, or an object
-		plot2restore: window.location.search.slice(1),
-		modifier_ssid_barchart: window.location.search.slice(1).includes('term2=genotype')
-			? {
-				mutation_name: 'TEST',
-				ssid: 'genotype-test.txt',
-			}
-			: null
-	},
-	*/
 })
 </script>
 
