@@ -170,24 +170,11 @@ function setRenderers(self) {
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
-				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-
-				const new_vals = []
-
-				for (const [i, v] of sortedVals.entries()) {
-					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push(v)
-					}
-				}
+				// update term values by ckeckbox values
+				const checked_vals = [ ...values_table.querySelectorAll('.value_checkbox') ]	
+					.filter(elem => elem.checked)
+					.map(elem => elem.value )
+				const new_vals = sortedVals.filter(v => checked_vals.includes(v.key))
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
@@ -195,7 +182,7 @@ function setRenderers(self) {
 				self.opts.callback(new_tvs)
 			})
 
-		const values_table = self.makeValueTable(div, tvs, sortedVals)
+		const values_table = self.makeValueTable(div, tvs, sortedVals).node()
 	}
 
 	self.fillNumMenu = async function(div, tvs) {
@@ -288,10 +275,11 @@ function setRenderers(self) {
 		self.num_obj.temp_ranges = JSON.parse(JSON.stringify(ranges))
 
 		for (const [i, r] of ranges.entries()) {
-			if (r.start == '') {
+			// strict equality to not have false positive with start=0
+			if (r.start === '') {
 				self.num_obj.temp_ranges[i].start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
 			}
-			if (r.stop == '') {
+			if (r.stop === '') {
 				self.num_obj.temp_ranges[i].stop = Math.floor(maxvalue)
 			}
 		}
@@ -969,36 +957,22 @@ function setRenderers(self) {
 			.text('Apply')
 			.on('click', () => {
 				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
 				try {
 					const new_tvs = JSON.parse(JSON.stringify(tvs))
 					delete new_tvs.groupset_label
-
-					// add checked categories to ranges[]
-					for (const [i, sorted_v] of sortedVals.entries()) {
-						for (const [j, checked_v] of checked_vals.entries()) {
-							if (sorted_v.key == checked_v && !new_tvs.ranges.map(a => a.value).includes(sorted_v.value))
-								new_tvs.ranges.push({ value: sorted_v.value, label: sorted_v.label })
-						}
-					}
-
-					// remove unchecked categories from ranges[] if previously checked
-					for (const [i, range] of new_tvs.ranges.entries()) {
-						if (range.value && !checked_vals.includes(range.value)) new_tvs.ranges.splice(i, 1)
+					const checked_vals = [ ...values_table.querySelectorAll('.value_checkbox')]
+							.filter(elem => elem.checked)
+							.map(elem => elem.value)
+					const current_vals = new_tvs.ranges.map(a => 'value' in a && a.value)
+					for(const v of sortedVals) {
+						const i = checked_vals.indexOf(v.value)
+						const j = current_vals.indexOf(v.value)
+						if (i === -1 && j !== -1) new_tvs.ranges.splice(j, 1)
+						else if (i !== -1 && j === -1) new_tvs.ranges.push({ value: v.value, label: v.label })
 					}
 
 					self.dom.tip.hide()
-
 					if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
-
 					//callback only if tvs is changed
 					if (JSON.parse(JSON.stringify(tvs) != new_tvs)) self.opts.callback(new_tvs)
 				} catch (e) {
@@ -1006,12 +980,12 @@ function setRenderers(self) {
 				}
 			})
 
-		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals)
+		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
 	}
 
 	self.fillConditionMenu = async function(div, tvs) {
 		// grade/subcondtion select
-		const value_type_select = div
+		const bar_by_select = div
 			.append('select')
 			.attr('class', '.value_select')
 			.style('display', 'block')
@@ -1019,23 +993,24 @@ function setRenderers(self) {
 			.style('padding', '3px')
 			.on('change', () => {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
-				new_tvs.bar_by_grade = value_type_select.node().value == 'grade' ? true : false
-				new_tvs.bar_by_children = value_type_select.node().value == 'sub' ? true : false
+				const value = bar_by_select.node().value
+				new_tvs.bar_by_grade = value === 'grade'
+				new_tvs.bar_by_children = value === 'sub'
 				div.selectAll('*').remove()
 				self.fillConditionMenu(div, new_tvs)
 			})
 
-		value_type_select
+		bar_by_select
 			.append('option')
 			.attr('value', 'grade')
 			.text('By Grade')
+			.property('selected', tvs.bar_by_grade)
 
-		value_type_select
+		bar_by_select
 			.append('option')
 			.attr('value', 'sub')
 			.text('By Subcondition')
-
-		value_type_select.node().selectedIndex = tvs.bar_by_children ? 1 : 0
+			.property('selected', tvs.bar_by_children)
 
 		// grade type type
 		const grade_type_select = div
@@ -1046,14 +1021,12 @@ function setRenderers(self) {
 			.style('display', tvs.bar_by_grade ? 'block' : 'none')
 			.on('change', () => {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
-
-				new_tvs.bar_by_grade = grade_type_select.node().value == 'sub' ? false : true
-				new_tvs.bar_by_children = grade_type_select.node().value == 'sub' ? true : false
-				new_tvs.value_by_max_grade = grade_type_select.node().value == 'max' ? true : false
-				new_tvs.value_by_most_recent = grade_type_select.node().value == 'recent' ? true : false
-				new_tvs.value_by_computable_grade =
-					grade_type_select.node().value == 'computable' || grade_type_select.node().value == 'sub' ? true : false
-
+				const value = grade_type_select.node().value
+				new_tvs.bar_by_grade = value !== 'sub'
+				new_tvs.bar_by_children = value === 'sub'
+				new_tvs.value_by_max_grade = value === 'max'
+				new_tvs.value_by_most_recent = value === 'recent'
+				new_tvs.value_by_computable_grade = value === 'computable' || value === 'sub'
 				self.dom.tip.hide()
 				self.opts.callback(new_tvs)
 			})
@@ -1062,18 +1035,19 @@ function setRenderers(self) {
 			.append('option')
 			.attr('value', 'max')
 			.text('Max grade per patient')
+			.property('selected', tvs.value_by_max_grade)
 
 		grade_type_select
 			.append('option')
 			.attr('value', 'recent')
 			.text('Most recent grade per patient')
+			.property('selected', tvs.value_by_most_recent)
 
 		grade_type_select
 			.append('option')
 			.attr('value', 'computable')
 			.text('Any grade per patient')
-
-		grade_type_select.node().selectedIndex = tvs.value_by_computable_grade ? 2 : tvs.value_by_most_recent ? 1 : 0
+			.property('selected', tvs.value_by_computable_grade)
 
 		// display note if bar by subcondition selected
 		div
@@ -1084,7 +1058,7 @@ function setRenderers(self) {
 			.style('color', '#888')
 			.html('Using any grade per patient')
 
-		let lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
+		const lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
 		lst.push(
 			tvs.value_by_max_grade
 				? 'value_by_max_grade=1'
@@ -1113,23 +1087,10 @@ function setRenderers(self) {
 			.text('Apply')
 			.on('click', () => {
 				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-
-				const new_vals = []
-
-				for (const [i, v] of data.lst.entries()) {
-					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push(v)
-					}
-				}
+				const checked_vals = [ ...self.values_table.querySelectorAll('.value_checkbox') ]
+					.filter(elem => elem.checked)
+					.map(elem => elem.value)
+				const new_vals = data.lst.filter(v => checked_vals.includes(v.key))
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
@@ -1137,7 +1098,7 @@ function setRenderers(self) {
 				self.opts.callback(new_tvs)
 			})
 
-		const values_table = self.makeValueTable(div, tvs, data.lst)
+		self.values_table = self.makeValueTable(div, tvs, data.lst).node()
 	}
 
 	self.removeTerm = tvs => {
@@ -1157,14 +1118,15 @@ function setRenderers(self) {
 
 		const value_text = self.get_value_text(term)
 
-		const grade_type =
-			term.bar_by_grade && term.value_by_max_grade
-				? '[Max Grade]'
-				: term.bar_by_grade && term.value_by_most_recent
-				? '[Most Recent Grade]'
-				: term.bar_by_grade && term.value_by_computable_grade
-				? '[Any Grade]'
-				: ''
+		const grade_type = term.bar_by_children 
+			? ''
+			: term.value_by_max_grade
+			? '[Max Grade]'
+			: term.value_by_most_recent
+			? '[Most Recent Grade]'
+			: term.value_by_computable_grade
+			? '[Any Grade]'
+			: ''
 
 		const value_btns = one_term_div
 			.selectAll('.value_btn')
@@ -1485,20 +1447,4 @@ function setInteractivity(self) {
 			}
 		})
 	}
-
-	// self.updateGradeType = opts =>
-	// 	self.app.dispatch({ type: 'filter_grade_update', termId: opts.term.id, updated_term: opts.updated_term })
-
-	// self.removeFilter = term => self.app.dispatch({ type: 'filter_remove', termId: term.id })
-
-	// self.filterNegate = term => self.app.dispatch({ type: 'filter_negate', termId: term.id })
-
-	// self.addValue = opts => self.app.dispatch({ type: 'filter_add', termId: opts.term.id, value: opts.new_value })
-
-	// self.changeValue = opts =>
-	// 	self.app.dispatch({ type: 'filter_value_change', termId: opts.term.id, value: opts.value, valueId: opts.j })
-
-	// self.removeValue = opts => self.app.dispatch({ type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j })
-
-	// self.replaceFilter = opts => self.app.dispatch({ type: 'filter_replace', term: opts.term })
 }
