@@ -80,14 +80,14 @@ tape('caterogical term overlay', function(test) {
 
 	function testTerm2Pill(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].innerText,
+			plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].innerText,
 			plotControls.Inner.state.config.term2.term.name,
 			'Should have 1 pill for overlay term'
 		)
 	}
 
 	function triggerBluePill(plotControls) {
-		plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].click()
+		plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].click()
 	}
 
 	function testGrpMenu(plotControls) {
@@ -228,14 +228,14 @@ tape('Numerical term overlay', function(test) {
 
 	function testTerm2Pill(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].innerText,
+			plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].innerText,
 			plotControls.Inner.state.config.term2.term.name,
 			'Should have 1 pill for overlay term'
 		)
 	}
 
 	function triggerBluePill(plotControls) {
-		plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].click()
+		plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].click()
 	}
 
 	function testGrpMenu(plotControls) {
@@ -402,7 +402,7 @@ tape('Conditional term overlay', function(test) {
 
 	function testTerm2Pill(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].innerText,
+			plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].innerText,
 			plotControls.Inner.state.config.term2.term.name,
 			'Should have 1 pill for overlay term'
 		)
@@ -414,7 +414,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerBluePill(plotControls) {
-		plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].click()
+		plotControls.Inner.dom.config_div.selectAll('.term_name_btn')._groups[0][1].click()
 	}
 
 	function testGrpMenu(plotControls) {

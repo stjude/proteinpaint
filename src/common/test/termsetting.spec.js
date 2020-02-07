@@ -495,7 +495,7 @@ tape('Conditional term', async test => {
 	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
 
 	test.equal(
-		opts.holder.selectAll('.ts_name_btn')._groups[0][0].innerText,
+		opts.holder.selectAll('.term_name_btn')._groups[0][0].innerText,
 		opts.tsData.term.name,
 		'Should have 1 pill for overlay term'
 	)

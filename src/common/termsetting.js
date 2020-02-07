@@ -164,11 +164,9 @@ function setRenderers(self) {
 		self.dom.pill_termname = one_term_div
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'ts_name_btn')
+			.attr('class', 'term_name_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.style('background-color', '#cfe2f3')
-			.style('color', 'black')
 			.text(d => d.name) // TODO trim long string
 
 		self.updatePill.call(this)
@@ -206,8 +204,6 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#d9d2e9')
-			.style('color', 'black')
 			.style('font-style', 'italic')
 			.html(d => d.txt)
 			.style('opacity', 0)
@@ -318,9 +314,7 @@ function setInteractivity(self) {
 				.attr('class', 'replace_btn sja_filter_tag_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#cfe2f3')
-				.style('color', 'black')
-				.style('padding', '7px 15px')
+				// .style('padding', '7px 15px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
@@ -335,9 +329,7 @@ function setInteractivity(self) {
 				.attr('class', 'remove_btn sja_filter_tag_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
-				.style('background-color', '#f4cccc')
-				.style('color', 'black')
-				.style('padding', '7px 15px')
+				// .style('padding', '7px 15px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
@@ -402,15 +394,13 @@ function setInteractivity(self) {
 			//redevide groups btn
 			div
 				.append('div')
-				.attr('class', 'group_btn sja_filter_tag_btn')
+				.attr('class', 'group_btn sja_menuoption')
 				.style('display', 'block')
-				.style('padding', '7px 6px')
+				// .style('padding', '7px 6px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
 				.style('border-radius', '12px')
-				.style('background-color', '#eee')
-				.style('color', '#000')
 				.html('Redivide groups')
 				.on('click', () => {
 					const valGrp = self.grpSet2valGrp(groupset)
@@ -426,9 +416,9 @@ function setInteractivity(self) {
 		// default overlay btn - devide to n groups (n=total)
 		div
 			.append('div')
-			.attr('class', 'group_btn sja_filter_tag_btn')
+			.attr('class', 'group_btn sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 6px')
+			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
@@ -453,20 +443,18 @@ function setInteractivity(self) {
 				if (self.q.groupsetting && self.q.groupsetting.predefined_groupset_idx != i)
 					div
 						.append('div')
-						.attr('class', 'group_btn sja_filter_tag_btn')
+						.attr('class', 'group_btn sja_menuoption')
 						.style(
 							'display',
 							(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
 								? 'none'
 								: 'block'
 						)
-						.style('padding', '7px 6px')
+						// .style('padding', '7px 6px')
 						.style('margin', '5px')
 						.style('text-align', 'center')
 						.style('font-size', '.8em')
 						.style('border-radius', '13px')
-						.style('background-color', '#eee')
-						.style('color', '#000')
 						.html('Use <b>' + group.name + '</b>')
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
@@ -483,18 +471,16 @@ function setInteractivity(self) {
 		// devide to grpups btn
 		div
 			.append('div')
-			.attr('class', 'group_btn sja_filter_tag_btn')
+			.attr('class', 'group_btn sja_menuoption')
 			.style(
 				'display',
 				(self.term.groupsetting && self.term.groupsetting.disabled) || grpsetting_flag ? 'none' : 'block'
 			)
-			.style('padding', '7px 6px')
+			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('border-radius', '13px')
-			.style('background-color', '#eee')
-			.style('color', '#000')
 			.html('Divide <b>' + self.term.name + '</b> to groups')
 			.on('click', () => {
 				self.regroupMenu()
@@ -727,10 +713,8 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
-			.style('border-radius', '10px')
-			.style('background-color', '#d0e0e3')
-			.style('color', 'black')
-			.style('padding', '7px 6px')
+			.style('border-radius', '13px')
+			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
