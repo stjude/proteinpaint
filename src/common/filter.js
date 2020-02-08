@@ -1039,16 +1039,16 @@ lst:[]
   a list of filters
   the function returns a (modified) copy of the first filter, and will not modify it
   rest of the array will be joined to the first one under "and"
-overrides:{}
-	optional filter key-values to apply to the root-level of all of the items in the lst[] argument
-	example: {visibility: 'hidden'}
 */
-function filterJoin(lst, overrides = {}) {
+function filterJoin(lst) {
 	if (!lst || lst.length == 0) return
 	let f1 = JSON.parse(JSON.stringify(lst[0]))
 	if (lst.length == 1) return f1
 	// more than 1 item, will join
-	if (f1.join == 'or') {
+	if (f1.lst.length < 2) {
+		if (f1.join !== '') throw 'filter.join must be an empty string "" when filter.lst.length < 2'
+		f1.join = 'and'
+	} else if (f1.join == 'or') {
 		// f1 is "or", wrap it with another root layer of "and"
 		f1 = {
 			type: 'tvslst',
@@ -1056,28 +1056,17 @@ function filterJoin(lst, overrides = {}) {
 			in: true,
 			lst: [f1]
 		}
-	} else if (f1.join == '') {
-		// f1 is single-tvs
-		f1 = {
-			type: 'tvslst',
-			join: 'and',
-			in: true,
-			lst: [f1.lst[0]]
-		}
+	} else if (f1.join != 'and') {
+		throw 'filter.join must be either "and" or "or" when .lst length > 1'
 	}
 	// now, f1.join should be "and"
+	// if the argument lst[0].join == "and", 
+	// then the f1.in boolean value is reused
 	for (let i = 1; i < lst.length; i++) {
-		const f = lst[i]
-		// need to handle potentially frozen f object
-		const ff = Object.assign({}, f, overrides)
-		if (ff.join == 'and') {
-			f1.lst.push(...ff.lst.map(d => Object.assign(d, overrides)))
-		} else if (f.join == 'or') {
-			f1.lst.push(ff)
-		} else {
-			const item = Object.assign(ff.lst[0], overrides)
-			f1.lst.push(item)
-		}
+		const f = JSON.parse(JSON.stringify(lst[i]))
+		if (f.join == 'or') f1.lst.push(f)
+		// assume f.join == 'and'
+		else f1.lst.push(...f.lst)
 	}
 	return f1
 }

@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { filterInit, getNormalRoot } = require('../filter')
+const { filterInit, getNormalRoot, filterJoin } = require('../filter')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -1279,6 +1279,120 @@ tape('getNormalRoot()', async test => {
 		},
 		'should return the hidden plus user configured options after removing empty tvslst'
 	)
+
+	test.end()
+})
+
+tape('filterJoin()', async test => {
+	const abc = Object.freeze({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			Object.freeze(gettvs('abc', 123))
+		]
+	})
+
+	test.notEqual(
+		filterJoin([abc]),
+		abc,
+		'should return a copy of any filter in the argument instead of modifying the original'
+	)
+
+	test.deepEqual(
+		filterJoin([abc]),
+		abc,
+		'should return an only-filter of the lst argument'
+	)
+
+	test.deepEqual(
+		filterJoin([
+			abc, 
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					gettvs('xyz', 444)
+				]
+			}
+		]),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				gettvs('abc', 123),
+				gettvs('xyz', 444)
+			]
+		},
+		'should combine two single-entry filters into one filter with join="and"'
+	)
+
+	test.equal(
+		abc.join,
+		'',
+		'should not modify any filter in the argument'
+	)
+
+	test.deepEqual(
+		filterJoin([{
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [
+				gettvs('abc', 123),
+				gettvs('def', 'test'),
+			]
+		},{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				gettvs('xyz', 444)
+			]
+		}]),
+		{
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'or',
+					lst: [
+						gettvs('abc', 123),
+						gettvs('def', 'test'),
+					]
+				},
+				gettvs('xyz', 444)
+			]
+		},
+		'should subnest an or-joined filter when combining with another under a parent filter joined by "and"'
+	)
+
+	const mssg1 = 'should throw with a non-empty filter.join value when filter.lst.length < 2'
+	try {
+		filterJoin([{
+			type: 'tvslst',
+			in: true,
+			join: 'and', // should be empty since there is only one .lst[] item
+			lst: [
+				gettvs('abc', 123),
+			]
+		},{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				gettvs('xyz', 444)
+			]
+		}])
+		test.fail(mssg1)
+	} catch(e) {
+		test.pass(mssg1)
+	}
 
 	test.end()
 })

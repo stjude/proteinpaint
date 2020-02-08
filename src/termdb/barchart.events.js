@@ -1,5 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu } from '../client'
+import { filterJoin } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -322,26 +323,18 @@ function menuoption_add_filter(self, tvslst) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
-	const filter = JSON.parse(JSON.stringify(self.state.termfilter.filter))
-	if (!filter.join && (filter.lst.length || tvslst.length > 1)) filter.join = 'and'
-	if (filter.join == 'and' || !filter.lst.length) {
-		filter.lst.push(...tvslst.map(wrapTvs))
-		self.app.dispatch({ type: 'filter_replace', filter })
-	}
-	else {
-		self.app.dispatch({
-			type: 'filter_replace', 
-			filter: {
+	self.app.dispatch({
+		type: 'filter_replace', 
+		filter: filterJoin([
+			self.state.termfilter.filter, 
+			{
 				type: 'tvslst',
 				in: true,
-				join: "and",
-				lst: [
-					filter,
-					...tvslst.map(wrapTvs)
-				]
+				join: tvslst.length > 1 ? 'and' : '',
+				lst: [...tvslst.map(wrapTvs)]
 			}
-		})
-	}
+		])
+	})
 }
 
 function wrapTvs(tvs) {
