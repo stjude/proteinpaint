@@ -194,8 +194,6 @@ function setRenderers(self) {
 		let num_div = div,
 			unanno_div
 
-		self.num_obj.num_div = num_div
-
 		if (tvs.term.values) {
 			num_parent_div
 				.append('div')
@@ -205,6 +203,7 @@ function setRenderers(self) {
 
 			num_div = num_parent_div
 				.append('div')
+				.attr('class','num_div')
 				.style('padding', '5px')
 				.style('color', '#000')
 				.style('border-style', 'solid')
@@ -267,123 +266,16 @@ function setRenderers(self) {
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
 
-		const svg = num_div.select('svg')
 		self.num_obj.xscale = d3s
 			.scaleLinear()
 			.domain([minvalue, maxvalue])
 			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
-
-		self.num_obj.temp_ranges = JSON.parse(JSON.stringify(ranges))
-
-		for (const [i, r] of ranges.entries()) {
-			// strict equality to not have false positive with start=0
-			if (r.start === '') {
-				self.num_obj.temp_ranges[i].start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
-			}
-			if (r.stop === '') {
-				self.num_obj.temp_ranges[i].stop = Math.floor(maxvalue)
-			}
-		}
-
-		//brush
-		const g = svg
-			.append('g')
-			.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
-		const brushes = g
-			.selectAll('.range_brush')
-			.data(self.num_obj.temp_ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+		
 		self.num_obj.ranges = ranges
-
-		brushes.exit().each(() => {
-			select(this)
-				.style('opacity', 1)
-				.transition()
-				.duration(self.durations.exit)
-				.style('opacity', 0)
-				.remove()
-		})
-
-		// add update to brush if required
-		brushes.each(function(d, i) {
-			const brush_g = select(this)
-			brush_g.selectAll('.overlay').style('pointer-events', 'all')
-		})
-
-		brushes
-			.enter()
-			.append('g')
-			.attr('class', 'range_brush')
-			.each(enter_brush)
-
-		function enter_brush(d, i) {
-			const brush_g = select(this)
-			const range = JSON.parse(JSON.stringify(d))
-
-			self.applyBrush(range, i, brush_g)
-		}
-
-		const range_table = num_div
-			.append('table')
-			.style('table-layout', 'fixed')
-			.style('border-collapse', 'collapse')
-
-		const range_divs = range_table
-			.selectAll('.range_div')
-			.data(self.num_obj.ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
-
-		range_divs.exit().each(() => {
-			select(this)
-				.style('opacity', 1)
-				.transition()
-				.duration(self.durations.exit)
-				.style('opacity', 0)
-				.remove()
-		})
-
-		range_divs.each(function(d) {
-			const div = select(this)
-			const range = JSON.parse(JSON.stringify(d))
-
-			div.select('.start_text').html(range.start)
-			div.select('.stop_text').html(range.stop)
-		})
-
-		range_divs
-			.enter()
-			.append('tr')
-			.attr('class', 'range_div')
-			.style('white-space', 'nowrap')
-			.style('padding', '2px')
-			.transition()
-			.duration(200)
-			.each(self.enterRange)
-
-		num_div
-			.append('div')
-			.style('width', '100px')
-			.attr('class', 'add_btn sja_menuoption')
-			.style(
-				'display',
-				ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
-					? 'none'
-					: 'inline-block'
-			)
-			.style('border-radius', '13px')
-			.style('padding', '7px 6px')
-			.style('margin', '5px')
-			.style('margin-left', '20px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.text('Add a Range')
-			.on('click', () => {
-				//Add new blank range temporary, save after entering values
-				const new_tvs = JSON.parse(JSON.stringify(tvs))
-				const range_temp = { start: '', stop: '' }
-				new_tvs.ranges.push(range_temp)
-				div.selectAll('*').remove()
-				self.fillNumMenu(div, new_tvs)
-			})
-
+		self.num_obj.temp_ranges = JSON.parse(JSON.stringify(ranges))
+		self.num_obj.num_div = num_div
+		self.addBrushes()
+		self.addRangeTable()
 		await self.showCheckList_numeric(tvs, unanno_div)
 	}
 
@@ -448,6 +340,126 @@ function setRenderers(self) {
 			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 			.attr('font-size', '13px')
 			.text(self.tvs.term.unit)
+	}
+
+	self.addBrushes = function(){
+
+		const num_div = self.num_obj.num_div
+		const svg = num_div.select('svg')
+		const ranges = self.num_obj.ranges
+		const temp_ranges = self.num_obj.temp_ranges
+		const maxvalue = self.num_obj.density_data.maxvalue
+		const minvalue = self.num_obj.density_data.minvalue
+
+		for (const [i, r] of ranges.entries()) {
+			// strict equality to not have false positive with start=0
+			if (r.start === '') {
+				temp_ranges[i].start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
+			}
+			if (r.stop === '') {
+				temp_ranges[i].stop = Math.floor(maxvalue)
+			}
+		}
+
+		//brush
+		const g = svg.selectAll('.brush_g').size() 
+			? svg.select('.brush_g') 
+			: svg
+				.append('g')
+				.attr('class','brush_g')
+				.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
+		const brushes = g
+			.selectAll('.range_brush')
+			.data(temp_ranges, d => (d.start ? d.start : d.stop))
+
+		brushes.exit().remove()
+
+		// add update to brush if required
+		brushes.each(function(d, i) {
+			const brush_g = select(this)
+			brush_g.selectAll('.overlay').style('pointer-events', 'all')
+		})
+
+		brushes
+			.enter()
+			.append('g')
+			.attr('class', 'range_brush')
+			.each(enter_brush)
+
+		function enter_brush(d, i) {
+			const brush_g = select(this)
+			const range = JSON.parse(JSON.stringify(d))
+			self.applyBrush(range, i, brush_g)
+		}
+	}
+
+	self.addRangeTable = function(){
+		const num_div = self.num_obj.num_div
+		const ranges = self.num_obj.ranges
+		const range_table = num_div.selectAll('table').size() 
+			? num_div.select('table') 
+			: num_div.append('table')
+				.style('table-layout', 'fixed')
+				.style('border-collapse', 'collapse')
+
+		const range_divs = range_table
+			.selectAll('.range_div')
+			.data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+
+		range_divs.exit().each(function(){
+			select(this)
+				.style('opacity', 1)
+				.transition()
+				.duration(100)
+				.style('opacity', 0)
+				.remove()
+		})
+
+		range_divs.each(function(d) {
+			const div = select(this)
+			const range = JSON.parse(JSON.stringify(d))
+
+			div.select('.start_text').html(range.start)
+			div.select('.stop_text').html(range.stop)
+		})
+
+		range_divs
+			.enter()
+			.append('tr')
+			.attr('class', 'range_div')
+			.style('white-space', 'nowrap')
+			.style('padding', '2px')
+			.transition()
+			.duration(200)
+			.each(self.enterRange)
+
+		const add_range_btn = num_div.selectAll('.add_range_btn').size() 
+		? num_div.select('.add_range_btn') 
+		: num_div
+			.append('div')
+			.style('width', '100px')
+			.attr('class', 'add_range_btn sja_menuoption')
+			.style('border-radius', '13px')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('margin-left', '20px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.text('Add a Range')
+			.on('click', () => {
+				//Add new blank range temporary, save after entering values
+				const range_temp = { start: '', stop: '' }
+				self.num_obj.ranges.push(range_temp)
+				self.num_obj.temp_ranges.push({start:0, stop:0})
+				self.addBrushes()
+				self.addRangeTable()
+			})
+
+			add_range_btn.style('display',
+				ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
+					? 'none'
+					: 'inline-block'
+			)
 	}
 
 	self.applyBrush = function(range, i, brush_g) {
@@ -730,6 +742,7 @@ function setRenderers(self) {
 			self.num_obj.num_div
 				.select('table')
 				.append('tr')
+				.attr('class','note_tr')
 				.append('td')
 				.attr('colspan', '3')
 				.append('div')
@@ -845,11 +858,17 @@ function setRenderers(self) {
 			.text('Delete')
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-				const deleted_range = new_tvs.ranges.splice(range.index, 1)
+				new_tvs.ranges.splice(range.index, 1)
+				const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
 				// callback only if range have non-empty start and end
-				if (deleted_range[0].start != '' && deleted_range[0].stop != '') self.opts.callback(new_tvs)
-				self.num_obj.num_div.selectAll('*').remove()
-				self.fillNumMenu(self.num_obj.num_div, new_tvs)
+				if (deleted_range.start != '' && deleted_range.stop != '') self.opts.callback(new_tvs)
+				else{
+					self.num_obj.ranges.pop()
+					self.num_obj.temp_ranges.pop()
+					self.num_obj.num_div.select('.note_tr').remove()
+					self.addBrushes()
+					self.addRangeTable()
+				}
 			})
 
 		async function apply() {
@@ -880,8 +899,6 @@ function setRenderers(self) {
 				if (self.num_obj.ranges.length > 1) new_tvs.ranges = self.mergeOverlapRanges(range)
 				else new_tvs.ranges[range.index] = range
 				self.opts.callback(new_tvs)
-				self.num_obj.num_div.selectAll('*').remove()
-				self.fillNumMenu(self.num_obj.num_div, new_tvs)
 			} catch (e) {
 				window.alert(e)
 			}
@@ -920,7 +937,8 @@ function setRenderers(self) {
 		} else {
 			//if not overlapped then add to ranges[]
 			ranges = JSON.parse(JSON.stringify(self.tvs.ranges))
-			ranges[new_range.index] = new_range
+			if (new_range.index) ranges[new_range.index] = new_range
+			else ranges.push(new_range)
 		}
 		return ranges
 	}
