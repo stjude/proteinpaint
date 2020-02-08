@@ -50,13 +50,12 @@ table {
 	display :inline-block;
 	color:black;
 	padding: 5px 8px;
-}
-.sja_filter_tag_btn:hover { opacity: 0.8; cursor:default}
-.sja_filter_tag_btn:active {color:#cc0000; opacity: 0.6;}
-
-.term_name_btn, .value_btn, .reset_btn, .replace_btn {
 	background-color: #cfe2f3;
 }
+/* .sja_filter_tag_btn:hover { opacity: 0.8; cursor:default} */
+.sja_filter_tag_btn:active {color:#cc0000; opacity: 0.6;}
+
+.ts_pill:hover, .tvs_pill:hover {opacity: 0.8; cursor:default}
 
 .apply_btn {
 	background-color: #d0e0e3;

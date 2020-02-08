@@ -149,8 +149,9 @@ function setRenderers(self) {
 		pills
 			.enter()
 			.append('div')
-			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.attr('class', 'ts_pill')
 			.style('cursor', 'pointer')
+			.style('margin','2px')
 			.on('click', self.showMenu)
 			.transition()
 			.duration(200)
@@ -164,7 +165,7 @@ function setRenderers(self) {
 		self.dom.pill_termname = one_term_div
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'term_name_btn')
+			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
 			.text(d => d.name) // TODO trim long string
@@ -200,7 +201,7 @@ function setRenderers(self) {
 		pill_settingSummary
 			.enter()
 			.append('div')
-			.attr('class', 'ts_summary_btn')
+			.attr('class', 'ts_summary_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')

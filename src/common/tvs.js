@@ -95,7 +95,7 @@ function setRenderers(self) {
 		filters
 			.enter()
 			.append('div')
-			.attr('class', 'tvs_pill sja_filter_tag_btn')
+			.attr('class', 'tvs_pill')
 			.style('white-space', 'nowrap')
 			.style('display', 'inline-block')
 			.transition()
@@ -109,7 +109,7 @@ function setRenderers(self) {
 		//term name div
 		one_term_div
 			.append('div')
-			.attr('class', 'term_name_btn')
+			.attr('class', 'term_name_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('padding', '6px 6px 3px 6px')
@@ -120,6 +120,7 @@ function setRenderers(self) {
 		one_term_div
 			.append('div')
 			.attr('class', 'negate_btn')
+			.style('cursor', 'default')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
@@ -1137,7 +1138,7 @@ function setRenderers(self) {
 		value_btns
 			.enter()
 			.append('div')
-			.attr('class', 'value_btn')
+			.attr('class', 'value_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
