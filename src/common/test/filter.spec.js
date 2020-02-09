@@ -1283,7 +1283,7 @@ tape('getNormalRoot()', async test => {
 	test.end()
 })
 
-tape.only('filterJoin()', async test => {
+tape('filterJoin()', async test => {
 	const abc = Object.freeze({
 		type: 'tvslst',
 		in: true,
