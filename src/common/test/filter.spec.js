@@ -1283,14 +1283,12 @@ tape('getNormalRoot()', async test => {
 	test.end()
 })
 
-tape('filterJoin()', async test => {
+tape.only('filterJoin()', async test => {
 	const abc = Object.freeze({
 		type: 'tvslst',
 		in: true,
 		join: '',
-		lst: [
-			Object.freeze(gettvs('abc', 123))
-		]
+		lst: [Object.freeze(gettvs('abc', 123))]
 	})
 
 	test.notEqual(
@@ -1299,59 +1297,44 @@ tape('filterJoin()', async test => {
 		'should return a copy of any filter in the argument instead of modifying the original'
 	)
 
-	test.deepEqual(
-		filterJoin([abc]),
-		abc,
-		'should return an only-filter of the lst argument'
-	)
+	test.deepEqual(filterJoin([abc]), abc, 'should return an only-filter of the lst argument')
 
 	test.deepEqual(
 		filterJoin([
-			abc, 
+			abc,
 			{
 				type: 'tvslst',
 				in: true,
 				join: '',
-				lst: [
-					gettvs('xyz', 444)
-				]
+				lst: [gettvs('xyz', 444)]
 			}
 		]),
 		{
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [
-				gettvs('abc', 123),
-				gettvs('xyz', 444)
-			]
+			lst: [gettvs('abc', 123), gettvs('xyz', 444)]
 		},
 		'should combine two single-entry filters into one filter with join="and"'
 	)
 
-	test.equal(
-		abc.join,
-		'',
-		'should not modify any filter in the argument'
-	)
+	test.equal(abc.join, '', 'should not modify any filter in the argument')
 
 	test.deepEqual(
-		filterJoin([{
-			type: 'tvslst',
-			in: true,
-			join: 'or',
-			lst: [
-				gettvs('abc', 123),
-				gettvs('def', 'test'),
-			]
-		},{
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [
-				gettvs('xyz', 444)
-			]
-		}]),
+		filterJoin([
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [gettvs('abc', 123), gettvs('def', 'test')]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [gettvs('xyz', 444)]
+			}
+		]),
 		{
 			type: 'tvslst',
 			in: true,
@@ -1361,10 +1344,7 @@ tape('filterJoin()', async test => {
 					type: 'tvslst',
 					in: true,
 					join: 'or',
-					lst: [
-						gettvs('abc', 123),
-						gettvs('def', 'test'),
-					]
+					lst: [gettvs('abc', 123), gettvs('def', 'test')]
 				},
 				gettvs('xyz', 444)
 			]
@@ -1374,24 +1354,37 @@ tape('filterJoin()', async test => {
 
 	const mssg1 = 'should throw with a non-empty filter.join value when filter.lst.length < 2'
 	try {
-		filterJoin([{
-			type: 'tvslst',
-			in: true,
-			join: 'and', // should be empty since there is only one .lst[] item
-			lst: [
-				gettvs('abc', 123),
-			]
-		},{
+		filterJoin([
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and', // should be empty since there is only one .lst[] item
+				lst: [gettvs('abc', 123)]
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [gettvs('xyz', 444)]
+			}
+		])
+		test.fail(mssg1)
+	} catch (e) {
+		test.pass(mssg1)
+	}
+
+	{
+		const singleTvs = {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [
-				gettvs('xyz', 444)
-			]
-		}])
-		test.fail(mssg1)
-	} catch(e) {
-		test.pass(mssg1)
+			lst: [gettvs('aaa', 11)]
+		}
+		test.deepEqual(
+			filterJoin([{ type: 'tvslst', in: true, join: '', lst: [] }, singleTvs]),
+			singleTvs,
+			'joining single tvs into empty filter should yield join=""'
+		)
 	}
 
 	test.end()

@@ -442,7 +442,7 @@ function setRenderers(self) {
 			}
 		})
 		self.pills[item.$id] = pill
-		pill.main({tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id)})
+		pill.main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
 	}
 
 	self.updateItem = function(item, i) {
@@ -456,7 +456,7 @@ function setRenderers(self) {
 			self.updateUI(select(this), item)
 		} else {
 			if (!self.pills[item.$id]) return
-			self.pills[item.$id].main({tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id)})
+			self.pills[item.$id].main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
 		}
 	}
 
@@ -1042,33 +1042,36 @@ lst:[]
 */
 function filterJoin(lst) {
 	if (!lst || lst.length == 0) return
-	let f1 = JSON.parse(JSON.stringify(lst[0]))
-	if (lst.length == 1) return f1
+	let f = JSON.parse(JSON.stringify(lst[0]))
+	if (lst.length == 1) return f
 	// more than 1 item, will join
-	if (f1.lst.length < 2) {
-		if (f1.join !== '') throw 'filter.join must be an empty string "" when filter.lst.length < 2'
-		f1.join = 'and'
-	} else if (f1.join == 'or') {
-		// f1 is "or", wrap it with another root layer of "and"
-		f1 = {
+	if (f.lst.length < 2) {
+		if (f.join !== '') throw 'filter.join must be an empty string "" when filter.lst.length < 2'
+		f.join = 'and'
+	} else if (f.join == 'or') {
+		// f is "or", wrap it with another root layer of "and"
+		f = {
 			type: 'tvslst',
 			join: 'and',
 			in: true,
-			lst: [f1]
+			lst: [f]
 		}
-	} else if (f1.join != 'and') {
+	} else if (f.join != 'and') {
 		throw 'filter.join must be either "and" or "or" when .lst length > 1'
 	}
-	// now, f1.join should be "and"
-	// if the argument lst[0].join == "and", 
-	// then the f1.in boolean value is reused
+	// now, f.join should be "and"
+	// if the argument lst[0].join == "and",
+	// then the f.in boolean value is reused
 	for (let i = 1; i < lst.length; i++) {
-		const f = JSON.parse(JSON.stringify(lst[i]))
-		if (f.join == 'or') f1.lst.push(f)
-		// assume f.join == 'and'
-		else f1.lst.push(...f.lst)
+		const f2 = JSON.parse(JSON.stringify(lst[i]))
+		if (f2.join == 'or') f.lst.push(f)
+		else f.lst.push(...f2.lst)
 	}
-	return f1
+	// if f ends up single-tvs item (from joining single tvs to empty filter), need to set join to '' per filter spec
+	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
+		f.join = ''
+	}
+	return f
 }
 
 exports.filterJoin = filterJoin
