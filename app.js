@@ -4405,8 +4405,15 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 			}
 		}
 
+		// done grouping all samples
+
 		for (const g of key2group.values()) {
 			samplegroups.push(g)
+			// add precomputed total count for each group
+			if (dsquery.groupsamplebyattr.key2group) {
+				const o = dsquery.groupsamplebyattr.key2group.get(g.name)
+				if (o) g.sampletotalnum = o.samples.length
+			}
 		}
 
 		if (headlesssamples.length) {
@@ -12591,6 +12598,8 @@ function mds_init(ds, genome, _servconfig) {
 				/* maf-db
 				 * fpkm expression
 				 */
+
+				mds_mayPrecompute_grouptotal(query, ds)
 			} else if (query.isgenenumeric) {
 				const err = mds_init_genenumeric(query, ds, genome)
 				if (err) return querykey + ' (genenumeric) error: ' + err
@@ -12667,6 +12676,14 @@ function mds_init(ds, genome, _servconfig) {
 	}
 
 	return null
+}
+
+function mds_mayPrecompute_grouptotal(query, ds) {
+	if (!query.groupsamplebyattr) return
+	query.groupsamplebyattr.key2group = new Map()
+	for (const samplename in ds.cohort.annotation) {
+		mdssvcnv_grouper(samplename, [], query.groupsamplebyattr.key2group, [], ds, query)
+	}
 }
 
 async function mds2_init_wrap(ds, genome) {
