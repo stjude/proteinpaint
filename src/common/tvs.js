@@ -43,7 +43,7 @@ class TVS {
 		return o
 	}
 
-	async getCategories(term, lst=[]) {
+	async getCategories(term, lst = []) {
 		const args = [
 			'getcategories=1',
 			'genome=' + this.genome,
@@ -63,12 +63,12 @@ class TVS {
 	}
 	async getNumericCategories(termid) {
 		// get number of samples for each category of a numeric term
-		const args = [ 
+		const args = [
 			'getnumericcategories=1',
 			'genome=' + this.genome,
 			'dslabel=' + this.dslabel,
 			'tid=' + termid,
-			'filter=' + encodeURIComponent(JSON.stringify(this.filter)),
+			'filter=' + encodeURIComponent(JSON.stringify(this.filter))
 		]
 		// may add filter
 		const data = await dofetch2('termdb?' + args.join('&'))
@@ -130,7 +130,7 @@ function setRenderers(self) {
 	}
 
 	// optional _holder, for example when called by filter.js
-	self.showMenu = (_holder) => {
+	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
 		const term_option_div = holder.append('div')
 		term_option_div
@@ -172,9 +172,9 @@ function setRenderers(self) {
 			.text('Apply')
 			.on('click', () => {
 				// update term values by ckeckbox values
-				const checked_vals = [ ...values_table.querySelectorAll('.value_checkbox') ]	
+				const checked_vals = [...values_table.querySelectorAll('.value_checkbox')]
 					.filter(elem => elem.checked)
-					.map(elem => elem.value )
+					.map(elem => elem.value)
 				const new_vals = sortedVals.filter(v => checked_vals.includes(v.key))
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
@@ -203,7 +203,7 @@ function setRenderers(self) {
 
 			num_div = num_parent_div
 				.append('div')
-				.attr('class','num_div')
+				.attr('class', 'num_div')
 				.style('padding', '5px')
 				.style('color', '#000')
 				.style('border-style', 'solid')
@@ -243,7 +243,7 @@ function setRenderers(self) {
 		}
 
 		self.num_obj.density_data = await client.dofetch2(
-			'/termdb?density=1' + 
+			'/termdb?density=1' +
 				'&genome=' +
 				self.opts.genome +
 				'&dslabel=' +
@@ -258,7 +258,8 @@ function setRenderers(self) {
 				self.num_obj.plot_size.xpad +
 				'&ypad=' +
 				self.num_obj.plot_size.ypad +
-				'&filter=' + encodeURIComponent(JSON.stringify(self.filter))
+				'&filter=' +
+				encodeURIComponent(JSON.stringify(self.filter))
 		)
 		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
@@ -270,7 +271,7 @@ function setRenderers(self) {
 			.scaleLinear()
 			.domain([minvalue, maxvalue])
 			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
-		
+
 		self.num_obj.ranges = ranges
 		self.num_obj.temp_ranges = JSON.parse(JSON.stringify(ranges))
 		self.num_obj.num_div = num_div
@@ -342,8 +343,7 @@ function setRenderers(self) {
 			.text(self.tvs.term.unit)
 	}
 
-	self.addBrushes = function(){
-
+	self.addBrushes = function() {
 		const num_div = self.num_obj.num_div
 		const svg = num_div.select('svg')
 		const ranges = self.num_obj.ranges
@@ -362,15 +362,13 @@ function setRenderers(self) {
 		}
 
 		//brush
-		const g = svg.selectAll('.brush_g').size() 
-			? svg.select('.brush_g') 
+		const g = svg.selectAll('.brush_g').size()
+			? svg.select('.brush_g')
 			: svg
-				.append('g')
-				.attr('class','brush_g')
-				.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
-		const brushes = g
-			.selectAll('.range_brush')
-			.data(temp_ranges, d => (d.start ? d.start : d.stop))
+					.append('g')
+					.attr('class', 'brush_g')
+					.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
+		const brushes = g.selectAll('.range_brush').data(temp_ranges, d => (d.start ? d.start : d.stop))
 
 		brushes.exit().remove()
 
@@ -393,20 +391,19 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addRangeTable = function(){
+	self.addRangeTable = function() {
 		const num_div = self.num_obj.num_div
 		const ranges = self.num_obj.ranges
-		const range_table = num_div.selectAll('table').size() 
-			? num_div.select('table') 
-			: num_div.append('table')
-				.style('table-layout', 'fixed')
-				.style('border-collapse', 'collapse')
+		const range_table = num_div.selectAll('table').size()
+			? num_div.select('table')
+			: num_div
+					.append('table')
+					.style('table-layout', 'fixed')
+					.style('border-collapse', 'collapse')
 
-		const range_divs = range_table
-			.selectAll('.range_div')
-			.data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+		const range_divs = range_table.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
-		range_divs.exit().each(function(){
+		range_divs.exit().each(function() {
 			select(this)
 				.style('opacity', 1)
 				.transition()
@@ -433,33 +430,34 @@ function setRenderers(self) {
 			.duration(200)
 			.each(self.enterRange)
 
-		const add_range_btn = num_div.selectAll('.add_range_btn').size() 
-		? num_div.select('.add_range_btn') 
-		: num_div
-			.append('div')
-			.style('width', '100px')
-			.attr('class', 'add_range_btn sja_menuoption')
-			.style('border-radius', '13px')
-			.style('padding', '7px 6px')
-			.style('margin', '5px')
-			.style('margin-left', '20px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.text('Add a Range')
-			.on('click', () => {
-				//Add new blank range temporary, save after entering values
-				const range_temp = { start: '', stop: '' }
-				self.num_obj.ranges.push(range_temp)
-				self.num_obj.temp_ranges.push({start:0, stop:0})
-				self.addBrushes()
-				self.addRangeTable()
-			})
+		const add_range_btn = num_div.selectAll('.add_range_btn').size()
+			? num_div.select('.add_range_btn')
+			: num_div
+					.append('div')
+					.style('width', '100px')
+					.attr('class', 'add_range_btn sja_menuoption')
+					.style('border-radius', '13px')
+					.style('padding', '7px 6px')
+					.style('margin', '5px')
+					.style('margin-left', '20px')
+					.style('text-align', 'center')
+					.style('font-size', '.8em')
+					.text('Add a Range')
+					.on('click', () => {
+						//Add new blank range temporary, save after entering values
+						const range_temp = { start: '', stop: '' }
+						self.num_obj.ranges.push(range_temp)
+						self.num_obj.temp_ranges.push({ start: 0, stop: 0 })
+						self.addBrushes()
+						self.addRangeTable()
+					})
 
-			add_range_btn.style('display',
-				ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
-					? 'none'
-					: 'inline-block'
-			)
+		add_range_btn.style(
+			'display',
+			ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
+				? 'none'
+				: 'inline-block'
+		)
 	}
 
 	self.applyBrush = function(range, i, brush_g) {
@@ -479,6 +477,8 @@ function setRenderers(self) {
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
 				const a_range = JSON.parse(JSON.stringify(self.num_obj.ranges[i]))
+				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
+				if (range.stopunbounded) a_range.stop = Number(minvalue.toFixed(1))
 				if (num_div.selectAll('.start_input').size()) {
 					// update inputs from brush move
 					select(num_div.node().querySelectorAll('.start_input')[i])
@@ -742,7 +742,7 @@ function setRenderers(self) {
 			self.num_obj.num_div
 				.select('table')
 				.append('tr')
-				.attr('class','note_tr')
+				.attr('class', 'note_tr')
 				.append('td')
 				.attr('colspan', '3')
 				.append('div')
@@ -847,7 +847,7 @@ function setRenderers(self) {
 		buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn delete_btn')
-			.style('display', self.tvs.ranges.length == 1 ? 'none' : 'inline-block')
+			.style('display', self.tvs.ranges.length == 1 && self.num_obj.ranges.length == 1 ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -862,7 +862,7 @@ function setRenderers(self) {
 				const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
 				// callback only if range have non-empty start and end
 				if (deleted_range.start != '' && deleted_range.stop != '') self.opts.callback(new_tvs)
-				else{
+				else {
 					self.num_obj.ranges.pop()
 					self.num_obj.temp_ranges.pop()
 					self.num_obj.num_div.select('.note_tr').remove()
@@ -979,11 +979,11 @@ function setRenderers(self) {
 				try {
 					const new_tvs = JSON.parse(JSON.stringify(tvs))
 					delete new_tvs.groupset_label
-					const checked_vals = [ ...values_table.querySelectorAll('.value_checkbox')]
-							.filter(elem => elem.checked)
-							.map(elem => elem.value)
+					const checked_vals = [...values_table.querySelectorAll('.value_checkbox')]
+						.filter(elem => elem.checked)
+						.map(elem => elem.value)
 					const current_vals = new_tvs.ranges.map(a => 'value' in a && a.value)
-					for(const v of sortedVals) {
+					for (const v of sortedVals) {
 						const i = checked_vals.indexOf(v.value)
 						const j = current_vals.indexOf(v.value)
 						if (i === -1 && j !== -1) new_tvs.ranges.splice(j, 1)
@@ -1106,7 +1106,7 @@ function setRenderers(self) {
 			.text('Apply')
 			.on('click', () => {
 				//update term values by ckeckbox values
-				const checked_vals = [ ...self.values_table.querySelectorAll('.value_checkbox') ]
+				const checked_vals = [...self.values_table.querySelectorAll('.value_checkbox')]
 					.filter(elem => elem.checked)
 					.map(elem => elem.value)
 				const new_vals = data.lst.filter(v => checked_vals.includes(v.key))
@@ -1137,7 +1137,7 @@ function setRenderers(self) {
 
 		const value_text = self.get_value_text(term)
 
-		const grade_type = term.bar_by_children 
+		const grade_type = term.bar_by_children
 			? ''
 			: term.value_by_max_grade
 			? '[Max Grade]'
