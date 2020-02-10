@@ -1,12 +1,5 @@
 const common = require('../src/common')
 
-const cohorthierarchy = [
-	{ k: 'diagnosis_group_short', label: 'Group', full: 'diagnosis_group_full' },
-	{ k: 'diagnosis_short', label: 'Cancer', full: 'diagnosis_full' },
-	{ k: 'diagnosis_subtype_short', label: 'Subtype', full: 'diagnosis_subtype_full' },
-	{ k: 'diagnosis_subgroup_short', label: 'Subgroup', full: 'diagnosis_subgroup_full' }
-]
-
 const valuePerSample = {
 	key: 'percentage',
 	label: 'Percentage',
@@ -90,14 +83,6 @@ module.exports = {
 				// new sample
 				ds.cohort.annotation[samplename] = item
 			}
-		},
-		hierarchies: {
-			lst: [
-				{
-					name: 'Cancer',
-					levels: cohorthierarchy
-				}
-			]
 		},
 		sampleAttribute: {
 			attributes: {
