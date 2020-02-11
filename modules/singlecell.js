@@ -389,7 +389,7 @@ async function get_heatmap(q, gn, res) {
 
 		await utils.get_lines_tabix([ge.expfile, coord], null, line => {
 			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene != gene.gene) return
+			if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
 			if (!j.sample) return
 			if (!Number.isFinite(j.value)) return
 
