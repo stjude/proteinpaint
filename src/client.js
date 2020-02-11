@@ -490,7 +490,8 @@ export function menuunderdom(d, opts = {}) {
 
 export function sayerror(holder, msg) {
 	const div = holder.append('div').attr('class', 'sja_errorbar')
-	div.append('div').html(msg)
+	// msg can contain injected XSS, so never do .html(msg)
+	div.append('div').text(msg)
 	div
 		.append('div')
 		.html('&#10005;')
