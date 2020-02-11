@@ -483,11 +483,11 @@ function setRenderers(self) {
 					// update inputs from brush move
 					select(num_div.node().querySelectorAll('.start_input')[i])
 						.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-						.attr('value', range.start)
+						.attr('value', range.start == minvalue.toFixed(1) ? '' : range.start)
 						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
 					select(num_div.node().querySelectorAll('.stop_input')[i])
 						.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-						.attr('value', range.stop)
+						.attr('value', range.stop == maxvalue.toFixed(1) ? '' : range.stop)
 						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
 					select(num_div.node().querySelectorAll('.start_select')[i])
 						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
@@ -847,7 +847,10 @@ function setRenderers(self) {
 		buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn delete_btn')
-			.style('display', self.tvs.ranges.length == 1 && self.num_obj.ranges.length == 1 ? 'none' : 'inline-block')
+			.style(
+				'display',
+				self.tvs.ranges.length == 1 && (range.start != '' && range.stop != '') ? 'none' : 'inline-block'
+			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
