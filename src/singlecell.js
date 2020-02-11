@@ -1050,7 +1050,7 @@ function heatmap_menu(obj) {
 					const geneidx = obj.gene_expression.heatmap_genes.findIndex(i => i.gene == gene)
 					if (geneidx == -1) {
 						obj.gene_expression.heatmap_genes.push({
-							gene: gene.charAt(0).toUpperCase() + gene.slice(1).toLowerCase(),
+							gene: gene,
 							chr: gm.chr,
 							start: gm.start,
 							stop: gm.stop
