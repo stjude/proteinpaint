@@ -167,7 +167,9 @@ function init_view(obj) {
 		obj.scene.background = new THREE.Color(0xffffff)
 	}
 
-	obj.camera = new THREE.PerspectiveCamera(45, obj.width / obj.height, 0.1, 1000)
+	const default_zoom = obj.default_zoom ? 100 - obj.default_zoom : 45
+
+	obj.camera = new THREE.PerspectiveCamera(default_zoom, obj.width / obj.height, 0.1, 1000)
 
 	obj.camera.position.x = obj.canvas_2d ? 0 : 20
 	obj.camera.position.y = obj.canvas_2d ? 0 : -10
@@ -618,8 +620,8 @@ function make_zoom_panel(obj) {
 			.style('display', 'block')
 			.style('padding', '5px')
 			.attr('type', 'range')
-			.attr('min', 5)
-			.attr('max', 70)
+			.attr('min', 1)
+			.attr('max', 100)
 			.attr('value', obj.camera.fov)
 			.style('direction', 'rtl')
 			.on('change', () => {
