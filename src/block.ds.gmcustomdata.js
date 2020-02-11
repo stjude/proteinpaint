@@ -230,7 +230,7 @@ function customdataui_sv(block, x, y) {
 				mlst.push(m)
 			}
 			if (bad.length) {
-				says.style('display', 'block').html('Rejected:<br>' + bad.join('<br>'))
+				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
 			const ds = {
@@ -384,7 +384,7 @@ function customdataui_snv(block) {
 				})
 			}
 			if (bad.length) {
-				says.style('display', 'block').html('Rejected:<br>' + bad.join('<br>'))
+				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
 			const ds = {
@@ -510,7 +510,7 @@ function customdataui_itd(block, x, y) {
 				mlst.push(m)
 			}
 			if (bad.length) {
-				says.style('display', 'block').html('Rejected:<br>' + bad.join('<br>'))
+				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
 			const ds = {
@@ -630,7 +630,7 @@ function customdataui_del(block, x, y) {
 				mlst.push(m)
 			}
 			if (bad.length) {
-				says.style('display', 'block').html('Rejected:<br>' + bad.join('<br>'))
+				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
 			const ds = {
