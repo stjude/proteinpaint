@@ -61,7 +61,6 @@ class TdbStore {
 	}
 
 	async rehydrate() {
-		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
 		// maybe no need to provide term filter at this query
 		for (const plotId in this.state.tree.plots) {
 			const savedPlot = this.state.tree.plots[plotId]
@@ -77,6 +76,14 @@ class TdbStore {
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
+		this.state.termdbConfig = await this.getTermdbConfig()
+	}
+
+	async getTermdbConfig() {
+		const data = await dofetch2(
+			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
+		)
+		return data.termdbConfig
 	}
 
 	fromJson(str) {
