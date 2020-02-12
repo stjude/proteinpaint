@@ -191,7 +191,7 @@ tape('tvs : Categorical', async test => {
 	test.end()
 })
 
-tape('tvs : Numerical', async test => {
+tape.only('tvs : Numerical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -250,6 +250,8 @@ tape('tvs : Numerical', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
+	test.end()
+	return
 	await sleep(700)
 	const tipd = opts.filter.Inner.dom.treeBody
 
