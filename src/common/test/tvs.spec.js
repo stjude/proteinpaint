@@ -250,8 +250,7 @@ tape.only('tvs : Numerical', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	test.end()
-	return
+
 	await sleep(700)
 	const tipd = opts.filter.Inner.dom.treeBody
 
@@ -261,7 +260,7 @@ tape.only('tvs : Numerical', async test => {
 	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
 
 	//trigeer and check range edit
-	const brush = opts.filter.Inner.pills['1'].Inner.brush
+	const brush = opts.filter.Inner.pills['1'].Inner.num_obj.brushes[0].d3brush
 	d3s.select(tipd.node().querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511, 30.9465])
 	test.equal(
 		tipd

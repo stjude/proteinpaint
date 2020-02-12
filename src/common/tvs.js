@@ -1,8 +1,6 @@
 import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
-// Try to import only what is needed,
-// the whole d3 bundle is too big module to import as-is
-import * as d3s from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX } from 'd3'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
@@ -134,12 +132,6 @@ function setRenderers(self) {
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		const term_option_div = holder.append('div')
-		/* what is this div for ? */
-		term_option_div
-			.append('div')
-			.style('margin', '5px 2px')
-			.style('text-align', 'center')
 
 		const term = self.tvs.term
 		const optsFxn = term.iscategorical
@@ -150,7 +142,7 @@ function setRenderers(self) {
 			? self.fillConditionMenu
 			: null
 
-		optsFxn(term_option_div, self.tvs)
+		optsFxn(holder, self.tvs)
 	}
 
 	self.fillCatMenu = async function(div, tvs) {
@@ -255,12 +247,11 @@ function setRenderers(self) {
 		)
 		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-		self.makeDensityPlot(self.num_obj.num_div, self.num_obj.density_data)
+		self.makeDensityPlot(self.num_obj.density_data)
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
 
-		self.num_obj.xscale = d3s
-			.scaleLinear()
+		self.num_obj.xscale = scaleLinear()
 			.domain([minvalue, maxvalue])
 			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
@@ -272,7 +263,7 @@ function setRenderers(self) {
 		await self.showCheckList_numeric(tvs, div)
 	}
 
-	self.makeDensityPlot = function(div, data) {
+	self.makeDensityPlot = function(data) {
 		const width = 500,
 			height = 100,
 			xpad = 10,
@@ -287,31 +278,28 @@ function setRenderers(self) {
 		density_data.push([data.maxvalue, 0])
 
 		// x-axis
-		const xscale = d3s
-			.scaleLinear()
+		const xscale = scaleLinear()
 			.domain([data.minvalue, data.maxvalue])
 			.range([xpad, width - xpad])
 
-		const x_axis = d3s.axisBottom().scale(xscale)
+		const x_axis = axisBottom().scale(xscale)
 
 		// y-scale
-		const yscale = d3s
-			.scaleLinear()
+		const yscale = scaleLinear()
 			.domain([0, data.densitymax])
 			.range([height + ypad, ypad])
 
 		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
 
 		// SVG line generator
-		const line = d3s
-			.line()
+		const line = d3line()
 			.x(function(d) {
 				return xscale(d[0])
 			})
 			.y(function(d) {
 				return yscale(d[1])
 			})
-			.curve(d3s.curveMonotoneX)
+			.curve(curveMonotoneX)
 
 		// plot the data as a line
 		g.append('path')
@@ -337,7 +325,7 @@ function setRenderers(self) {
 	}
 
 	self.addBrushes = function() {
-		const ranges = self.num_obj.ranges
+		// const ranges = self.num_obj.ranges
 		const brushes = self.num_obj.brushes
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
@@ -426,9 +414,11 @@ function setRenderers(self) {
 					.text('Add a Range')
 					.on('click', () => {
 						//Add new blank range temporary, save after entering values
-						const range_temp = { start: '', stop: '' }
-						self.num_obj.ranges.push(range_temp)
-						self.num_obj.temp_ranges.push({ start: 0, stop: 0 })
+						const new_range = { start: '', stop: '' }
+						self.num_obj.ranges.push(new_range)
+						// self.num_obj.temp_ranges.push({ start: 0, stop: 0 })
+						// const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
+						// self.num_obj.brushes.push(brush)
 						self.addBrushes()
 						self.addRangeTable()
 					})
@@ -442,24 +432,24 @@ function setRenderers(self) {
 	}
 
 	self.applyBrush = function(brush) {
+		console.log(brush)
 		if (!brush.elem) brush.elem = select(this)
 		const range = brush.range
 		const plot_size = self.num_obj.plot_size
-		const ranges = self.num_obj.ranges
+		// const ranges = self.num_obj.ranges
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
-		const num_div = self.num_obj.num_div
+		// const num_div = self.num_obj.num_div
 
-		const d3brush = d3s
-			.brushX()
+		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('brush', function() {
 				const s = event.selection
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
-				const a_range = JSON.parse(JSON.stringify(range))
+				const a_range = JSON.parse(JSON.stringify(brush.orig))
 				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
 				if (range.stopunbounded) a_range.stop = Number(minvalue.toFixed(1))
 
@@ -507,7 +497,7 @@ function setRenderers(self) {
 
 		const brush_start = range.startunbounded ? minvalue : range.start
 		const brush_stop = range.stopunbounded ? maxvalue : range.stop
-		brush.init = () => brush.elem.call(d3brush).call(d3brush.move, [brush_start, brush_stop].map(xscale))
+		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
 
 		if (range.startunbounded) delete range.start
 		if (range.stopunbounded) delete range.stop
@@ -558,7 +548,7 @@ function setRenderers(self) {
 			.attr('value', range.start)
 			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				start_input.property('disabled', true)
+				brush.start_input.property('disabled', true)
 				try {
 					if (brush.start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
 					update_input()
@@ -596,7 +586,7 @@ function setRenderers(self) {
 				}
 				const i = self.num_obj.brushes.findIndex((b = b == brush))
 				self.num_obj.brushes[i] = new_range
-				self.applyBrush.call(brush.elem)
+				self.applyBrush(brush)
 			})
 
 		brush.start_select
@@ -675,7 +665,7 @@ function setRenderers(self) {
 				}
 				const i = self.num_obj.brushes.findIndex((b = b == brush))
 				brush.range = new_range
-				self.applyBrush(brush.elem)
+				self.applyBrush(brush)
 			})
 
 		brush.stop_select
@@ -720,7 +710,7 @@ function setRenderers(self) {
 				if (!client.keyupEnter()) return
 				brush.stop_input.property('disabled', true)
 				try {
-					if (stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
+					if (brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
 					update_input()
 				} catch (e) {
 					window.alert(e)
@@ -732,8 +722,8 @@ function setRenderers(self) {
 
 		// note for empty range
 		if (range.start == '' && range.stop == '') {
-			start_text.html('_____')
-			stop_text.html('_____')
+			brush.start_text.html('_____')
+			brush.stop_text.html('_____')
 
 			self.num_obj.range_table
 				.append('tr')
@@ -755,12 +745,13 @@ function setRenderers(self) {
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
 			brush.range = new_range
-			self.applyBrush.call(brush.elem)
+			self.applyBrush(brush)
 		}
 	}
 
 	self.makeRangeButtons = function(brush) {
 		//equation_td, buttons_td, range, brush_range, i) {
+		const brushes = self.num_obj.brushes
 		const buttons_td = brush.range_tr.append('td')
 		const range = brush.range
 		const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
@@ -825,7 +816,7 @@ function setRenderers(self) {
 				self.dom.tip.hide()
 				const i = brushes.indexOf(brush)
 				brush.range = JSON.parse(JSON.stringify(self.tvs.ranges[i]))
-				self.applyBrush.call(brush.elem) //JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, range_brush)
+				self.applyBrush(brush) //JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, range_brush)
 			})
 
 		//'Delete' button
