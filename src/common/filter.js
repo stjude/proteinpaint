@@ -44,11 +44,11 @@ class Filter {
 		this.dslabel = opts.dslabel
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({ padding: '5px' }),
+			controlsTip: new Menu({ padding: '0px' }),
 			treeTip: new Menu({
 				padding: '5px',
-				offsetX: 35,
-				offsetY: -30,
+				offsetX: 20,
+				offsetY: -34,
 				clearSelector: '.sja_tree_tip_body'
 			})
 		}
@@ -215,8 +215,7 @@ function setRenderers(self) {
 
 		self.dom.table = self.dom.controlsTip
 			.clear()
-			.d.style('background-color', '#f2f2f2')
-			.append('table')
+			.d.append('table')
 			.style('border-collapse', 'collapse')
 
 		self.dom.table
@@ -241,19 +240,16 @@ function setRenderers(self) {
 			.data(d => d.html)
 			.enter()
 			.append('td')
-			.style('padding', function(d, i) {
-				return i === 0 ? '1px' : !d ? '3px 5px' : '1px 5px'
-			})
+			.style('padding', '5px')
+			.style('border-top', 'solid 1px white')
 			.style('color', (d, i) => (d == '&#10006;' ? '#a00' : i === 0 ? '#0a0' : '#111'))
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
-			//.style('cursor', 'pointer')
 			.html(d => d)
 
 		self.dom.treeHead = self.dom.treeTip.d
 			.append('div')
 			.attr('class', 'sja_tree_tip_head')
 			.style('padding', '3px')
-		//.style('background-color', '#eee')
 		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
