@@ -64,6 +64,7 @@ class TdbApp {
 				.copyState({ rehydrate: true })
 				.then(state => {
 					this.state = state
+					console.log(this.state.termdbConfig)
 				})
 				.then(() => this.api.dispatch())
 				.catch(e => this.printError(e))
