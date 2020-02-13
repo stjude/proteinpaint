@@ -65,7 +65,12 @@ module.exports = {
 			phewas: {
 				samplefilter4termtype: {
 					condition: {
-						tvslst: [{ term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] }]
+						filter: {
+							type: 'tvslst',
+							join: '',
+							in: true,
+							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] } }]
+						}
 					}
 				}
 			},
