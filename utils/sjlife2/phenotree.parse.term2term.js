@@ -148,27 +148,6 @@ function addattributes_conditionterm(t) {
 		'9': { label: 'Unknown status', uncomputable: true }
 	}
 
-	/***********************************
-	term.graph{} will be phased out
-	keep below to be compatible with old code
-	*/
-	t.graph = {
-		barchart: {
-			bar_choices: [
-				{
-					// this option is available for both leaf and non-leaf terms
-					by_grade: true,
-					label: 'Grades'
-				}
-			],
-			value_choices: [
-				{ max_grade_perperson: true, label: 'Max grade per patient' },
-				{ most_recent_grade: true, label: 'Most recent grade per patient' },
-				{ total_measured: true, label: 'Total number of patients' }
-			]
-		}
-	}
-
 	if (!t.isleaf) {
 		// a non-leaf CHC term
 		// collect sub-conditions, so that termsetting UI can generate list of subconditions for grouping
@@ -178,14 +157,6 @@ function addattributes_conditionterm(t) {
 			// if not the case, must need id2name mapping
 			t.subconditions[c] = { label: c }
 		}
-
-		//////////// to be removed
-		t.graph.barchart.bar_choices[0].allow_to_stackby_children = true
-		t.graph.barchart.bar_choices.push({
-			by_children: true,
-			label: 'Sub-conditions',
-			allow_to_stackby_grade: true
-		})
 	}
 
 	t.groupsetting = {
