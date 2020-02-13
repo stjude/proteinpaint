@@ -87,21 +87,21 @@ module.exports = {
 <table>
 <thead>
   <tr>
-    <td>Characteristic</td>
-	<td>SJLIFE</td>
-	<td>CCSS</td>
+    <td>Features</td>
+	<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>
+	<td>Childhood Cancer Survivor Study (CCSS)</td>
   </tr>
 </thead>
 <tbody>
   <tr>
     <td>Survivors on Portal</td>
 	<td>4402</td>
-	<td>29xx</td>
+	<td>2936</td>
   </tr>
   <tr>
 	<td>Years of cancer diagnosis</td>
 	<td>1962-2012</td>
-	<td>1970-1999</td>
+	<td>1987-1999 ("Expanded Cohort")</td>
   </tr>
   <tr>
 	<td>Inclusion criteria</td>
@@ -127,19 +127,18 @@ module.exports = {
 	<td>Surveys</td>
   </tr>
   <tr>
-	<td>Source of germline DNA</td>
+	<td>Source of sequenced germline DNA</td>
 	<td>Blood</td>
 	<td>Saliva or blood</td>
   </tr>
   <tr>
 	<td>Therapeutic exposures</td>
-	<td>Chemotherapy, radiation, surgery, aminoglycosides</td>
-	<td>Chemotherapy, radiation, surgery</td>
+	<td colspan=2>Chemotherapy, radiation, surgery</td>
   </tr>
   <tr>
 	<td>Methods for ascertainment of outcomes</td>
-	<td>Medical assessments, self-report, medical reports, NDI</td>
-	<td>Self-report, medical reports, NDI</td>
+	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
+	<td>Self-report, pathology reports, NDI</td>
   </tr>
 </tbody>
 </table>`
