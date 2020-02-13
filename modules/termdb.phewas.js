@@ -197,7 +197,11 @@ use get_rows()
 		if (term.iscategorical) {
 			qlst.push({ ds, term1_id: term.id })
 		} else if (term.isfloat || term.isinteger) {
-			qlst.push({ ds, term1_id: term.id })
+			qlst.push({
+				ds,
+				term1_id: term.id,
+				term1_q: term.bins.default
+			})
 		} else if (term.iscondition) {
 			// for both leaf and non-leaf
 			// should only use grades as bars to go along with termdb.comparison_groups
@@ -513,7 +517,7 @@ only used for precomputing, not for on the fly
 
 	if (ds.cohort.termdb.phewas.samplefilter4termtype) {
 		if (ds.cohort.termdb.phewas.samplefilter4termtype.condition) {
-			const samples = termdbsql.get_samples(ds.cohort.termdb.phewas.samplefilter4termtype.condition.tvslst, ds)
+			const samples = termdbsql.get_samples(ds.cohort.termdb.phewas.samplefilter4termtype.condition.filter, ds)
 			if (ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
 				// must also restrict to vcf samples
 				condition_samples = []
