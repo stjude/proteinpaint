@@ -416,11 +416,11 @@ function setRenderers(self) {
 						//Add new blank range temporary, save after entering values
 						const new_range = { start: '', stop: '' }
 						self.num_obj.ranges.push(new_range)
-						// self.num_obj.temp_ranges.push({ start: 0, stop: 0 })
-						// const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
-						// self.num_obj.brushes.push(brush)
+						const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
+						brushes.push(brush)
 						self.addBrushes()
 						self.addRangeTable()
+						brush.init()
 					})
 
 		add_range_btn.style(
@@ -432,7 +432,6 @@ function setRenderers(self) {
 	}
 
 	self.applyBrush = function(brush) {
-		console.log(brush)
 		if (!brush.elem) brush.elem = select(this)
 		const range = brush.range
 		const plot_size = self.num_obj.plot_size
@@ -452,17 +451,18 @@ function setRenderers(self) {
 				const a_range = JSON.parse(JSON.stringify(brush.orig))
 				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
 				if (range.stopunbounded) a_range.stop = Number(minvalue.toFixed(1))
-
 				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
 				// update inputs from brush move
 				brush.start_input
 					.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-					.attr('value', range.start)
 					.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.start_input.node().value = range.start
+
 				brush.stop_input
 					.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-					.attr('value', range.stop)
 					.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.stop_input.node().value = range.stop
+
 				brush.start_select
 					.style('display', similarRanges ? 'none' : 'inline-block')
 					.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
@@ -744,8 +744,9 @@ function setRenderers(self) {
 			new_range.stop = Number(brush.stop_input.node().value)
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
-			brush.range = new_range
-			self.applyBrush(brush)
+			// brush.range = new_range
+			const xscale = self.num_obj.xscale
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 		}
 	}
 
@@ -754,6 +755,7 @@ function setRenderers(self) {
 		const brushes = self.num_obj.brushes
 		const buttons_td = brush.range_tr.append('td')
 		const range = brush.range
+		const orig_range = brush.orig
 		const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
 		//'edit' button
@@ -814,9 +816,8 @@ function setRenderers(self) {
 			.text('reset')
 			.on('click', async () => {
 				self.dom.tip.hide()
-				const i = brushes.indexOf(brush)
-				brush.range = JSON.parse(JSON.stringify(self.tvs.ranges[i]))
-				self.applyBrush(brush) //JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, range_brush)
+				brush.range = JSON.parse(JSON.stringify(brush.orig))
+				brush.init()
 			})
 
 		//'Delete' button
@@ -838,12 +839,12 @@ function setRenderers(self) {
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				new_tvs.ranges.splice(range.index, 1)
-				const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
+				// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
 				// callback only if range have non-empty start and end
-				if (deleted_range.start != '' && deleted_range.stop != '') self.opts.callback(new_tvs)
+				if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
 				else {
 					self.num_obj.ranges.pop()
-					self.num_obj.temp_ranges.pop()
+					self.num_obj.brushes.pop()
 					self.num_obj.num_div.select('.note_tr').remove()
 					self.addBrushes()
 					self.addRangeTable()
