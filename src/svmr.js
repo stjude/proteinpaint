@@ -118,9 +118,9 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 		)
 	inputdiv
 		.append('p')
-		.html('<a href=https://www.dropbox.com/s/6b6x2iwmh3p5yf4/CICERO-output.txt?dl=0 target=_blank>Example file</a>')
+		.html('<a href=https://pecan.stjude.cloud/static/hg19/fusioneditor/cicero.output target=_blank>Example file</a>')
 	function cmt(t, red) {
-		saydiv.style('color', red ? 'red' : 'black').html(t)
+		saydiv.style('color', red ? 'red' : 'black').text(t)
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
