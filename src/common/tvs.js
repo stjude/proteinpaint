@@ -414,7 +414,7 @@ function setRenderers(self) {
 					.text('Add a Range')
 					.on('click', () => {
 						//Add new blank range temporary, save after entering values
-						const new_range = { start: '', stop: '' }
+						const new_range = { start: '', stop: '', index: self.tvs.ranges.length }
 						self.num_obj.ranges.push(new_range)
 						const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
 						brushes.push(brush)
@@ -435,11 +435,9 @@ function setRenderers(self) {
 		if (!brush.elem) brush.elem = select(this)
 		const range = brush.range
 		const plot_size = self.num_obj.plot_size
-		// const ranges = self.num_obj.ranges
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
-		// const num_div = self.num_obj.num_div
 
 		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
@@ -456,12 +454,12 @@ function setRenderers(self) {
 				brush.start_input
 					.style('color', a_range.start == range.start ? '#000' : '#23cba7')
 					.style('display', similarRanges ? 'none' : 'inline-block')
-				brush.start_input.node().value = range.start
+				brush.start_input.node().value = range.start == minvalue.toFixed(1) ? '' : range.start
 
 				brush.stop_input
 					.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 					.style('display', similarRanges ? 'none' : 'inline-block')
-				brush.stop_input.node().value = range.stop
+				brush.stop_input.node().value = range.stop == maxvalue.toFixed(1) ? '' : range.stop
 
 				brush.start_select
 					.style('display', similarRanges ? 'none' : 'inline-block')
@@ -514,7 +512,8 @@ function setRenderers(self) {
 	self.enterRange = async function(brush, i) {
 		if (!brush.range_tr) brush.range_tr = select(this)
 		const range_tr = brush.range_tr
-		const range = brush.range // or brush.orig
+		const range = brush.range
+		const orig_range = brush.orig
 		const minvalue = self.num_obj.density_data.minvalue
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const svg = self.num_obj.svg
@@ -721,10 +720,7 @@ function setRenderers(self) {
 		self.makeRangeButtons(brush)
 
 		// note for empty range
-		if (range.start == '' && range.stop == '') {
-			brush.start_text.html('_____')
-			brush.stop_text.html('_____')
-
+		if (orig_range.start == '' && orig_range.stop == '') {
 			self.num_obj.range_table
 				.append('tr')
 				.attr('class', 'note_tr')
@@ -751,8 +747,6 @@ function setRenderers(self) {
 	}
 
 	self.makeRangeButtons = function(brush) {
-		//equation_td, buttons_td, range, brush_range, i) {
-		const brushes = self.num_obj.brushes
 		const buttons_td = brush.range_tr.append('td')
 		const range = brush.range
 		const orig_range = brush.orig
@@ -826,7 +820,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style(
 				'display',
-				self.tvs.ranges.length == 1 && (range.start != '' && range.stop != '') ? 'none' : 'inline-block'
+				self.tvs.ranges.length == 1 && (orig_range.start != '' && orig_range.stop != '') ? 'none' : 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
@@ -857,7 +851,7 @@ function setRenderers(self) {
 				const stop = Number(brush.stop_input.node().value)
 				if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
 
-				if (start == self.num_obj.density_data.minvalue) {
+				if (start == '') {
 					range.startunbounded = true
 					delete range.start
 				} else {
@@ -865,7 +859,7 @@ function setRenderers(self) {
 					range.start = start
 					range.startinclusive = brush.start_select.property('value') === 'startinclusive'
 				}
-				if (stop == self.num_obj.density_data.maxvalue) {
+				if (stop == '') {
 					range.stopunbounded = true
 					delete range.stop
 				} else {
@@ -966,7 +960,6 @@ function setRenderers(self) {
 			// .style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
-			// .style('font-size', '.9em')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
