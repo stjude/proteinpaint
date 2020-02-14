@@ -8,9 +8,6 @@ const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
 //const common = require('../src/common')
 
-
-
-
 /*
 ********************** EXPORTED
 handle_singlecell_closure
@@ -23,57 +20,42 @@ get_geneboxplot
 TODO need to test the existence of the json file
 */
 
-
-
-
-
-exports.handle_singlecell_closure = ( genomes ) => {
-
+exports.handle_singlecell_closure = genomes => {
 	return async (req, res) => {
-
-		if( app.reqbodyisinvalidjson(req,res) ) return
+		if (app.reqbodyisinvalidjson(req, res)) return
 
 		try {
-
 			const q = req.query
-			const gn = genomes[ q.genome ]
-			if(!gn) throw 'invalid genome'
+			const gn = genomes[q.genome]
+			if (!gn) throw 'invalid genome'
 
-			if( q.getpcd ) {
-				await get_pcd( q, gn, res )
+			if (q.getpcd) {
+				await get_pcd(q, gn, res)
 				return
 			}
-			if( q.getgeneboxplot ) {
-				await get_geneboxplot( q, gn, res )
+			if (q.getgeneboxplot) {
+				await get_geneboxplot(q, gn, res)
 				return
 			}
-			if( q.getheatmap ) {
-				await get_heatmap( q, gn, res )
+			if (q.getheatmap) {
+				await get_heatmap(q, gn, res)
 				return
 			}
-
-
-		} catch(e) {
-			res.send({error: (e.message || e)})
-			if(e.stack) console.log(e.stack)
+		} catch (e) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
 	}
 }
 
-
-
-
-
-
-
-async function get_pcd ( q, gn, res ) {
-/* hardcoded to 3d
+async function get_pcd(q, gn, res) {
+	/* hardcoded to 3d
 TODO 2d, svg
 */
 
 	const result = {}
 
-	const lines = await slice_file_add_color( q, gn, result )
+	const lines = await slice_file_add_color(q, gn, result)
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
@@ -89,33 +71,25 @@ DATA ascii
 `
 
 	result.pcddata = header + lines.join('\n')
-	res.send( result )
+	res.send(result)
 }
 
-
-
-
-
-
-
-
-
-async function slice_file_add_color ( q, gn, result ) {
-/*
+async function slice_file_add_color(q, gn, result) {
+	/*
 to slice the csv/tab file of all cells
 for each cell, assign color based on desired method
 return pcd format data
 may attach coloring scheme to result{} for returning to client
 */
 
-	if( !q.textfile ) throw '.textfile missing'
+	if (!q.textfile) throw '.textfile missing'
 	{
-		const [e,file,isurl] = app.fileurl( {query:{file:q.textfile}} )
-		if(e) throw '.textfile error: '+e
+		const [e, file, isurl] = app.fileurl({ query: { file: q.textfile } })
+		if (e) throw '.textfile error: ' + e
 
-		if(!isurl) {
-			if(await utils.file_not_exist(file)) throw 'file not exist: '+q.textfile
-			if(await utils.file_not_readable(file)) throw 'file not readable: '+q.textfile
+		if (!isurl) {
+			if (await utils.file_not_exist(file)) throw 'file not exist: ' + q.textfile
+			if (await utils.file_not_readable(file)) throw 'file not readable: ' + q.textfile
 		}
 
 		q.textfile = file
@@ -123,38 +97,38 @@ may attach coloring scheme to result{} for returning to client
 
 	// set up coloring scheme
 	let categorical_color_function
-	let cell2color_byexp  // color by gene expression values 
+	let cell2color_byexp // color by gene expression values
 	let collect_category2color
+	let collect_category_count
 	// if color scheme is automatic, collect colors here for returning to client
 
-	if( q.getpcd.category_autocolor ) {
-
+	if (q.getpcd.category_autocolor) {
 		// using a category with automatic color
-		categorical_color_function = d3scale.scaleOrdinal( d3scale.schemeCategory20 )
+		categorical_color_function = d3scale.scaleOrdinal(d3scale.schemeCategory20)
 		collect_category2color = {}
+		collect_category_count = {}
 		// k: category, v: color
-
-	} else if( q.getpcd.gene_expression ) {
-
+	} else if (q.getpcd.gene_expression) {
 		const ge = q.getpcd.gene_expression
-		if(!ge.file) throw 'gene_expression.file missing'
+		if (!ge.file) throw 'gene_expression.file missing'
 		{
-			const [e,file,isurl] = app.fileurl( {query:{file:ge.file}} )
-			if(e) throw e
+			const [e, file, isurl] = app.fileurl({ query: { file: ge.file } })
+			if (e) throw e
 			ge.file = file
 		}
-		if(!Number.isInteger( ge.barcodecolumnidx )) throw 'gene_expression.barcodecolumnidx missing'
-		//if(!ge.chr) throw 'gene_expression.chr missing'
-		//if(!ge.start) throw 'gene_expression.start missing'
-		//if(!ge.stop)  throw 'gene_expression.stop missing'
-		if(!ge.genename) throw 'gene_expression.genename missing'
-		if(ge.autoscale) {
-			if(!ge.color_min) throw 'gene_expression.color_min missing at autoscale'
-			if(!ge.color_max) throw 'gene_expression.color_max missing at autoscale'
+		if (!Number.isInteger(ge.barcodecolumnidx)) throw 'gene_expression.barcodecolumnidx missing'
+		if (!ge.chr) throw 'gene_expression.chr missing'
+		if (!ge.start) throw 'gene_expression.start missing'
+		if (!ge.stop) throw 'gene_expression.stop missing'
+		if (!ge.genename) throw 'gene_expression.genename missing'
+		if (ge.autoscale) {
+			if (!ge.color_min) throw 'gene_expression.color_min missing at autoscale'
+			if (!ge.color_max) throw 'gene_expression.color_max missing at autoscale'
 		} else {
 			throw 'gene_expression: unknown scaling method'
 		}
 
+		const coord = (ge.nochr ? ge.chr.replace('chr', '') : ge.chr) + ':' + ge.start + '-' + ge.stop
 		const cell2value = new Map()
 		cell2color_byexp = new Map()
 
@@ -165,229 +139,219 @@ may attach coloring scheme to result{} for returning to client
 		result.numbercellwithgeneexp = 0
 		result.numbercelltotal = 0
 
-		for(const r of ge.regions_quickfix) {
-			// use whichever region that can get data
-			const coord = (ge.nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
-			await utils.get_lines_tabix( [ge.file,coord], null, line=>{
-				const j = JSON.parse( line.split('\t')[3] )
-				if(j.gene.toLowerCase() != ge.genename.toLowerCase()) return
-				if(!Number.isFinite( j.value )) return
-				result.numbercellwithgeneexp++
+		await utils.get_lines_tabix([ge.file, coord], null, line => {
+			const j = JSON.parse(line.split('\t')[3])
+			if (j.gene != ge.genename) return
+			if (!Number.isFinite(j.value)) return
+			result.numbercellwithgeneexp++
 
-				if( ge.autoscale ) {
-					minexpvalue = Math.min( minexpvalue, j.value )
-					maxexpvalue = Math.max( maxexpvalue, j.value )
-				}
-
-				cell2value.set( j.sample, j.value )
-			})
-			if(result.numbercellwithgeneexp) {
-				// got data for this region
-				break
+			if (ge.autoscale) {
+				minexpvalue = Math.min(minexpvalue, j.value)
+				maxexpvalue = Math.max(maxexpvalue, j.value)
 			}
-		}
+
+			cell2value.set(j.sample, j.value)
+		})
 
 		// record scaling to return to client
-		if( ge.autoscale ) {
+		if (ge.autoscale) {
 			result.minexpvalue = minexpvalue
 			result.maxexpvalue = maxexpvalue
-			const interpolate = d3interpolate.interpolateRgb( ge.color_min, ge.color_max )
-			for(const [k,v] of cell2value ) {
-				const c = d3color.color( interpolate( (v-minexpvalue)/(maxexpvalue-minexpvalue) ) )
+			const interpolate = d3interpolate.interpolateRgb(ge.color_min, ge.color_max)
+			for (const [k, v] of cell2value) {
+				const c = d3color.color(interpolate((v - minexpvalue) / (maxexpvalue - minexpvalue)))
 
-				cell2color_byexp.set(
-					k,
-					Number.parseInt( rgbToHex( c.r, c.g, c.b ), 16 )
-				)
+				cell2color_byexp.set(k, Number.parseInt(rgbToHex(c.r, c.g, c.b), 16))
 			}
 		}
 	}
 
+	return new Promise((resolve, reject) => {
+		const lines = []
+		const rl = readline.createInterface({ input: fs.createReadStream(q.textfile) })
+		let firstline = true
+		// get max and min from all 3 coordinates and to get radius of point cloud
+		let maxcord = 0,
+			mincord = 0
 
-	return new Promise((resolve,reject)=>{
-
-	const lines = []
-	const rl = readline.createInterface({input: fs.createReadStream( q.textfile )})
-	let firstline = true
-	// get max and min from all 3 coordinates and to get radius of point cloud
-	let maxcord = 0, 
-		mincord = 0
-
-	rl.on('line',line=>{
-
-		if(firstline) {
-			firstline=false
-			return
-		}
-
-		const l = line.split( q.delimiter )
-
-		const newl = []
-
-		for(const i of q.getpcd.coord) {
-			newl.push( l[i] )
-			maxcord = Math.max( maxcord, l[i] )
-			mincord = Math.min( mincord, l[i] )
-		}
-
-		if(q.getpcd.coord.length == 2){
-			newl.push( '0' )
-		}
-
-		if( categorical_color_function ) {
-
-			const ca = l[ q.getpcd.category_index ]
-			const co = categorical_color_function( ca )
-			newl.push( Number.parseInt( co.slice(1) , 16 ) )
-			if( collect_category2color ) {
-				collect_category2color[ ca ] = co
+		rl.on('line', line => {
+			if (firstline) {
+				firstline = false
+				return
 			}
 
-		} else if( cell2color_byexp ) {
+			const l = line.split(q.delimiter)
 
-			result.numbercelltotal++
+			const newl = []
 
-			const barcode = l[ q.getpcd.gene_expression.barcodecolumnidx ]
-			let color = cell2color_byexp.get(barcode)
-			// if(!color) return
+			for (const i of q.getpcd.coord) {
+				newl.push(l[i])
+				maxcord = Math.max(maxcord, l[i])
+				mincord = Math.min(mincord, l[i])
+			}
 
-			// add color for cells without expression to retain cluster shape
-			if(!color){
-				if(q.getpcd.gene_expression.color_no_exp){
-					const c = d3color.color( q.getpcd.gene_expression.color_no_exp )
-					color = Number.parseInt( rgbToHex( c.r, c.g, c.b ), 16 )
-				}else{
-					color = '2894892' // dark grey
-					//color = '14540253' //light grey
+			if (q.getpcd.coord.length == 2) {
+				newl.push('0')
+			}
+
+			if (categorical_color_function) {
+				const ca = l[q.getpcd.category_index]
+				const co = categorical_color_function(ca)
+				if (q.hidden_types.includes(ca)) {
+					if (q.background_color) {
+						const c = d3color.color(q.background_color)
+						color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
+						newl.push(color)
+					} else newl.push(16777215) //white color
+				} else {
+					newl.push(Number.parseInt(co.slice(1), 16))
 				}
-			} 
-			newl.push(color)
-		}
+				if (collect_category2color) {
+					collect_category2color[ca] = co
+				}
+				if (collect_category_count) {
+					if (ca in collect_category_count) {
+						collect_category_count[ca] = collect_category_count[ca] + 1
+					} else {
+						collect_category_count[ca] = 1
+					}
+				}
+			} else if (cell2color_byexp) {
+				result.numbercelltotal++
 
-		lines.push( newl.join(' ') )
+				const barcode = l[q.getpcd.gene_expression.barcodecolumnidx]
+				let color = cell2color_byexp.get(barcode)
+				// if(!color) return
 
-	})
-	rl.on('close',()=>{
+				// add color for cells without expression to retain cluster shape
+				if (!color) {
+					if (q.getpcd.gene_expression.color_no_exp) {
+						const c = d3color.color(q.getpcd.gene_expression.color_no_exp)
+						color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
+					} else {
+						color = '2894892' // dark grey
+						//color = '14540253' //light grey
+					}
+				}
+				newl.push(color)
+			}
 
-		if( collect_category2color ) {
-			result.category2color = collect_category2color
-		}
+			lines.push(newl.join(' '))
+		})
+		rl.on('close', () => {
+			if (collect_category2color) {
+				result.category2color = collect_category2color
+				result.categorycount = collect_category_count
+			}
 
-		// get abs of min and max to get radius of point cloud
-		result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
-		resolve( lines )
-	})
-
+			// get abs of min and max to get radius of point cloud
+			result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
+			resolve(lines)
+		})
 	})
 }
 
-
-
-
 function componentToHex(c) {
-    const hex = c.toString(16)
-    return hex.length == 1 ? "0" + hex : hex
+	const hex = c.toString(16)
+	return hex.length == 1 ? '0' + hex : hex
 }
 
 function rgbToHex(r, g, b) {
-    return componentToHex(r) + componentToHex(g) + componentToHex(b)
+	return componentToHex(r) + componentToHex(g) + componentToHex(b)
 }
 
-
-
-
-async function get_geneboxplot ( q, gn, res ) {
-// also get kernel density for violin plot
+async function get_geneboxplot(q, gn, res) {
+	// also get kernel density for violin plot
 
 	const ge = q.getgeneboxplot
+	const categorical_color_function = d3scale.scaleOrdinal(d3scale.schemeCategory20)
 
-	if(!ge.expfile) throw 'getgeneboxplot.expfile missing'
+	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{
-		const [e,file,isurl] = app.fileurl({query:{file:ge.expfile}})
-		if(e) throw 'getgeneboxplot.expfile error: '+e
+		const [e, file, isurl] = app.fileurl({ query: { file: ge.expfile } })
+		if (e) throw 'getgeneboxplot.expfile error: ' + e
 		ge.expfile = file
 	}
-	if(!ge.chr) throw 'getgeneboxplot.chr missing'
-	if(!ge.start) throw 'getgeneboxplot.start missing'
-	if(!ge.stop)  throw 'getgeneboxplot.stop missing'
-	if(!ge.genename) throw 'getgeneboxplot.genename missing'
+	if (!ge.chr) throw 'getgeneboxplot.chr missing'
+	if (!ge.start) throw 'getgeneboxplot.start missing'
+	if (!ge.stop) throw 'getgeneboxplot.stop missing'
+	if (!ge.genename) throw 'getgeneboxplot.genename missing'
 
-	const barcode2catvalue = await cellfile_get_barcode2category( ge )
+	const barcode2catvalue = await cellfile_get_barcode2category(ge)
 	// k: barcode, v: {category, expvalue}
 
-	const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
+	const coord = (ge.nochr ? ge.chr.replace('chr', '') : ge.chr) + ':' + ge.start + '-' + ge.stop
 
 	let minexpvalue = 0,
 		maxexpvalue = 0
 
-	await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
+	await utils.get_lines_tabix([ge.expfile, coord], null, line => {
+		const j = JSON.parse(line.split('\t')[3])
+		if (j.gene != ge.genename) return
+		if (!j.sample) return
+		if (!Number.isFinite(j.value)) return
 
-		const j = JSON.parse( line.split('\t')[3] )
-		if(j.gene != ge.genename) return
-		if(!j.sample) return
-		if(!Number.isFinite( j.value )) return
-
-		const c = barcode2catvalue.get( j.sample )
-		if(!c) return
+		const c = barcode2catvalue.get(j.sample)
+		if (!c) return
 		c.expvalue = j.value
 
-		minexpvalue = Math.min( minexpvalue, j.value )
-		maxexpvalue = Math.max( maxexpvalue, j.value )
+		minexpvalue = Math.min(minexpvalue, j.value)
+		maxexpvalue = Math.max(maxexpvalue, j.value)
 	})
 
 	const category2values = new Map()
 	// k: category, v: array of exp values, from all cells of that category
 
 	// divide cells to categories
-	for(const [barcode,v] of barcode2catvalue) {
-		if(!category2values.has(v.category)) category2values.set( v.category, [] )
-		category2values.get( v.category ).push( { value: v.expvalue } )
+	for (const [barcode, v] of barcode2catvalue) {
+		if (!category2values.has(v.category)) category2values.set(v.category, [])
+		if (ge.exclude_cells && parseInt(v.expvalue) == 0) continue
+		category2values.get(v.category).push({ value: v.expvalue })
 	}
 
 	const boxplots = []
 	// each element is one category
 
-	const scaleticks = d3scale.scaleLinear().domain([minexpvalue,maxexpvalue]).ticks(20)
+	const scaleticks = d3scale
+		.scaleLinear()
+		.domain([minexpvalue, maxexpvalue])
+		.ticks(20)
 
 	// kde doesn't work -- using the wrong kernel??
 	//const kde = kernelDensityEstimator( kernelEpanechnikov(7), scaleticks )
 
-	const histofunc = get_histogram( scaleticks )
+	const histofunc = get_histogram(scaleticks)
 
-	for(const [category, values] of category2values ) {
+	for (const [category, values] of category2values) {
+		values.sort((i, j) => i.value - j.value)
 
-		values.sort((i,j)=> i.value-j.value )
-
-		const b = app.boxplot_getvalue( values )
+		const b = app.boxplot_getvalue(values)
 		delete b.out // remove outliers
+		const co = categorical_color_function(category)
 
 		b.category = category
+		b.color = co
 
 		b.numberofcells = values.length // now is just the total number of cells
 
+		//b.density =  kde( values.map( i=> i.value ) )
+		b.density = histofunc(values)
 
-  		//b.density =  kde( values.map( i=> i.value ) )
-		b.density = histofunc( values )
-
-		boxplots.push( b )
+		boxplots.push(b)
 	}
 
 	res.send({ boxplots, minexpvalue, maxexpvalue })
 }
 
-
-
-
-
-function get_histogram ( ticks ) {
-	return (values) => {
+function get_histogram(ticks) {
+	return values => {
 		// array of {value}
 		const bins = []
-		for(let i=1; i<ticks.length; i++) bins.push(0)
-		for(const v of values) {
-			for(let i=1; i<ticks.length; i++) {
-				if( v.value <= ticks[i] ) {
-					bins[i-1]++
+		for (let i = 1; i < ticks.length; i++) bins.push(0)
+		for (const v of values) {
+			for (let i = 1; i < ticks.length; i++) {
+				if (v.value <= ticks[i]) {
+					bins[i - 1]++
 					break
 				}
 			}
@@ -396,84 +360,80 @@ function get_histogram ( ticks ) {
 	}
 }
 
-
-
-async function get_heatmap ( q, gn, res ) {
+async function get_heatmap(q, gn, res) {
 	const ge = q.getheatmap
 	const gene_heatmap = [] //for each gene, new array will be created with each catagory
 
-	if(!ge.expfile) throw 'getgeneboxplot.expfile missing'
+	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{
-		const [e,file,isurl] = app.fileurl({query:{file:ge.expfile}})
-		if(e) throw 'getgeneboxplot.expfile error: '+e
+		const [e, file, isurl] = app.fileurl({ query: { file: ge.expfile } })
+		if (e) throw 'getgeneboxplot.expfile error: ' + e
 		ge.expfile = file
 	}
-	ge.gene_list.forEach( (gene) => {
-		if(!gene.chr) throw 'getgeneboxplot.chr missing'
-		if(!gene.start) throw 'getgeneboxplot.start missing'
-		if(!gene.stop)  throw 'getgeneboxplot.stop missing'
-		if(!gene.gene) throw 'getgeneboxplot.genename missing'
+	ge.gene_list.forEach(gene => {
+		if (!gene.chr) throw 'getgeneboxplot.chr missing'
+		if (!gene.start) throw 'getgeneboxplot.start missing'
+		if (!gene.stop) throw 'getgeneboxplot.stop missing'
+		if (!gene.gene) throw 'getgeneboxplot.genename missing'
 	})
 
-	const barcode2catvalue = await cellfile_get_barcode2category( ge )
+	const barcode2catvalue = await cellfile_get_barcode2category(ge)
 
-	for(const gene of ge.gene_list){
-
-		const coord = (gene.nochr ? gene.chr.replace('chr','') : gene.chr)+':'+gene.start+'-'+gene.stop
+	for (const gene of ge.gene_list) {
+		const coord = (gene.nochr ? gene.chr.replace('chr', '') : gene.chr) + ':' + gene.start + '-' + gene.stop
 
 		let minexpvalue = 0,
 			maxexpvalue = 0
 
 		const genename = gene.gene
 
-		await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
+		await utils.get_lines_tabix([ge.expfile, coord], null, line => {
+			const j = JSON.parse(line.split('\t')[3])
+			if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
+			if (!j.sample) return
+			if (!Number.isFinite(j.value)) return
 
-			const j = JSON.parse( line.split('\t')[3] )
-			if(j.gene != gene.gene) return
-			if(!j.sample) return
-			if(!Number.isFinite( j.value )) return
-
-			const c = barcode2catvalue.get( j.sample )
-			if(!c) return
+			const c = barcode2catvalue.get(j.sample)
+			if (!c) return
 			c.expvalue = j.value
 
-			minexpvalue = Math.min( minexpvalue, j.value )
-			maxexpvalue = Math.max( maxexpvalue, j.value )
+			minexpvalue = Math.min(minexpvalue, j.value)
+			maxexpvalue = Math.max(maxexpvalue, j.value)
 		})
 
 		const category2values = new Map()
 		// k: category, v: array of exp values, from all cells of that category
 
 		// divide cells to categories
-		for(const [barcode,v] of barcode2catvalue) {
-			if(!category2values.has(v.category)) category2values.set( v.category, [] )
-			category2values.get( v.category ).push( { value: v.expvalue } )
+		for (const [barcode, v] of barcode2catvalue) {
+			if (!category2values.has(v.category)) category2values.set(v.category, [])
+			category2values.get(v.category).push({ value: v.expvalue })
 		}
 
 		const heatmap = []
 		// each element is one category
 
-		for(const [category, values] of category2values ) {
-
+		for (const [category, values] of category2values) {
 			// values.sort((i,j)=> i.value-j.value )
 			let total = 0
-			for (const v of values) {total += v.value}
-			
+			for (const v of values) {
+				total += v.value
+			}
+
 			const numberofcells = values.length
 
-			const mean = (total/numberofcells).toFixed(3)
+			const mean = (total / numberofcells).toFixed(3)
 
-			heatmap.push( {category, mean, numberofcells} )
+			heatmap.push({ category, mean, numberofcells })
 		}
 		// const heatmap_data = {boxplots, maxexpvalue, minexpvalue}
-		gene_heatmap.push({genename, heatmap})
+		gene_heatmap.push({ genename, heatmap })
 	}
-	res.send( {gene_heatmap} )
+	res.send({ gene_heatmap })
 }
 
-
-function cellfile_get_barcode2category ( p ) {
-/*
+function cellfile_get_barcode2category(p) {
+	/*
 .cellfile
 .barcodecolumnidx
 .categorycolumnidx
@@ -483,39 +443,35 @@ returns map, note the value is an object!!
 k: barcode
 v: { category, expvalue }
 */
-	if(!p.cellfile) throw 'cellfile missing'
+	if (!p.cellfile) throw 'cellfile missing'
 	{
-		const [e,file,isurl] = app.fileurl({query:{file:p.cellfile}})
-		if(e) throw 'cellfile error: '+e
+		const [e, file, isurl] = app.fileurl({ query: { file: p.cellfile } })
+		if (e) throw 'cellfile error: ' + e
 		p.cellfile = file
 	}
-	if(!p.delimiter) throw 'delimiter missing'
-	if(!Number.isInteger( p.barcodecolumnidx ) ) throw 'barcodecolumnidx missing'
-	if(!Number.isInteger( p.categorycolumnidx) ) throw 'categorycolumnidx missing'
+	if (!p.delimiter) throw 'delimiter missing'
+	if (!Number.isInteger(p.barcodecolumnidx)) throw 'barcodecolumnidx missing'
+	if (!Number.isInteger(p.categorycolumnidx)) throw 'categorycolumnidx missing'
 
-	return new Promise((resolve,reject)=>{
-
+	return new Promise((resolve, reject) => {
 		const barcode2category = new Map()
 
-		const rl = readline.createInterface({ input: fs.createReadStream( p.cellfile ) })
-		let first=true
-		rl.on('line',line=>{
-			if(first) {
-				first=false
+		const rl = readline.createInterface({ input: fs.createReadStream(p.cellfile) })
+		let first = true
+		rl.on('line', line => {
+			if (first) {
+				first = false
 				return
 			}
-			const l = line.split( p.delimiter )
+			const l = line.split(p.delimiter)
 			//barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
-			barcode2category.set( l[ p.barcodecolumnidx ], 
-				{
-					category: l[ p.categorycolumnidx ],
-					expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
-				}
-			)
+			barcode2category.set(l[p.barcodecolumnidx], {
+				category: l[p.categorycolumnidx],
+				expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
+			})
 		})
-		rl.on('close',()=>{
-			resolve( barcode2category )
+		rl.on('close', () => {
+			resolve(barcode2category)
 		})
-
 	})
 }

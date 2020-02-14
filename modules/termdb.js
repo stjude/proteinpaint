@@ -57,6 +57,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds) // also does precompute
 			}
 			if (q.density) return await density_plot(q, res, ds)
+			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -64,6 +65,15 @@ export function handle_request_closure(genomes) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+function trigger_gettermdbconfig(res, tdb) {
+	res.send({
+		termdbConfig: {
+			// add attributes here to reveal to client
+			selectCohort: tdb.selectCohort
+		}
+	})
 }
 
 function trigger_gettermbyid(q, res, tdb) {

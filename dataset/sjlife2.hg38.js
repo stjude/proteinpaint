@@ -65,9 +65,88 @@ module.exports = {
 			phewas: {
 				samplefilter4termtype: {
 					condition: {
-						tvslst: [{ term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] }]
+						filter: {
+							type: 'tvslst',
+							join: '',
+							in: true,
+							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] } }]
+						}
 					}
 				}
+			},
+			selectCohort: {
+				term_id: 'subcohort',
+				values: [
+					// <ul><li> for items, with a radio button for each.
+					{ keys: ['SJLIFE'], label: 'St. Jude Lifetime Cohort (SJLIFE)', isdefault: true },
+					{ keys: ['CCSS'], label: 'Childhood Cancer Survivor Study (CCSS)' },
+					{
+						keys: ['SJLIFE', 'CCSS'],
+						label: 'Combined SJLIFE+CCSS',
+						// show note under label in smaller text size
+						note:
+							'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
+					}
+				],
+				htmlinfo: `
+<table>
+<thead>
+  <tr>
+    <td>Features</td>
+	<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>
+	<td>Childhood Cancer Survivor Study (CCSS)</td>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>Survivors on Portal</td>
+	<td>4402</td>
+	<td>2936</td>
+  </tr>
+  <tr>
+	<td>Years of cancer diagnosis</td>
+	<td>1962-2012</td>
+	<td>1987-1999 ("Expanded Cohort")</td>
+  </tr>
+  <tr>
+	<td>Inclusion criteria</td>
+	<td colspan=2>Survived &ge; 5 years from diagnosis</td>
+  </tr>
+  <tr>
+	<td>Age at cancer diagnosis</td>
+	<td><25 years</td>
+	<td><21 years</td>
+  </tr>
+  <tr>
+	<td>Cancer diagnosis</td>
+	<td>All diagnoses</td>
+	<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>
+  </tr>
+  <tr>
+	<td>Study design</td>
+	<td colspan=2>Retrospective cohort with prospective follow-up, hospital-based</td>
+  </tr>
+  <tr>
+	<td>Methods of contact</td>
+	<td>Clinic visits and surveys</td>
+	<td>Surveys</td>
+  </tr>
+  <tr>
+	<td>Source of sequenced germline DNA</td>
+	<td>Blood</td>
+	<td>Saliva or blood</td>
+  </tr>
+  <tr>
+	<td>Therapeutic exposures</td>
+	<td colspan=2>Chemotherapy, radiation, surgery</td>
+  </tr>
+  <tr>
+	<td>Methods for ascertainment of outcomes</td>
+	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
+	<td>Self-report, pathology reports, NDI</td>
+  </tr>
+</tbody>
+</table>`
 			}
 		}
 	},

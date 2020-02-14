@@ -6,6 +6,8 @@ import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 
+const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
+
 /*
 	opts{}
 	.holder
@@ -42,11 +44,11 @@ class Filter {
 		this.dslabel = opts.dslabel
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({ padding: '5px' }),
+			controlsTip: new Menu({ padding: '0px' }),
 			treeTip: new Menu({
 				padding: '5px',
-				offsetX: 35,
-				offsetY: -30,
+				offsetX: 20,
+				offsetY: -34,
 				clearSelector: '.sja_tree_tip_body'
 			})
 		}
@@ -219,37 +221,35 @@ function setRenderers(self) {
 		self.dom.table
 			.selectAll('tr')
 			.data([
-				{ action: 'edit', html: ['', 'Edit', '&#9658;'], handler: self.editTerm },
+				{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
 				{
 					action: 'replace',
-					html: ['', 'Replace', '&#9658;'],
+					html: ['', 'Replace', '&rsaquo;'],
 					handler: self.displayTreeMenu,
 					bar_click_override: self.replaceTerm
 				},
-				{ action: 'join', html: ['&#10010;', '', '&#9658;'], handler: self.displayTreeMenu },
+				{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
 				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
 				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
 			])
 			.enter()
 			.append('tr')
+			.attr('class', 'sja_menuoption')
 			.on('click', self.handleMenuOptionClick)
 			.selectAll('td')
 			.data(d => d.html)
 			.enter()
 			.append('td')
-			.style('padding', function(d, i) {
-				return i === 0 ? '1px' : !d ? '3px 5px' : '1px 5px'
-			})
+			.style('padding', '5px')
+			.style('border-top', 'solid 1px white')
 			.style('color', (d, i) => (d == '&#10006;' ? '#a00' : i === 0 ? '#0a0' : '#111'))
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
-			.style('cursor', 'pointer')
 			.html(d => d)
 
 		self.dom.treeHead = self.dom.treeTip.d
 			.append('div')
 			.attr('class', 'sja_tree_tip_head')
 			.style('padding', '3px')
-		//.style('background-color', '#eee')
 		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
@@ -507,7 +507,7 @@ function setInteractivity(self) {
 	self.resetGrpHighlights = function(elem, filter) {
 		const cls = elem.className
 		const grpAction = cls.includes('join') || cls.includes('negate') || cls.includes('paren')
-		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
 		menuRows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
 		menuRows
 			.filter(d => d.action == 'join')
@@ -536,7 +536,7 @@ function setInteractivity(self) {
 			self.activeData.filter = self.findParent(self.filter, self.activeData.item)
 		}
 		self.resetBlankPill(d.action)
-		self.dom.controlsTip.d.selectAll('tr').style('background-color', 'transparent')
+		self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
 		d.handler(this, d)
 	}
 
@@ -730,7 +730,7 @@ function setInteractivity(self) {
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
-		select(elem).style('background-color', '#eeee55')
+		select(elem).style('background-color', MENU_OPTION_HIGHLIGHT_COLOR)
 		self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		const filter = self.activeData.filter
 
@@ -772,7 +772,7 @@ function setInteractivity(self) {
 	}
 
 	self.highlightEditRow = function(d) {
-		return d.action == 'edit' ? '#eeee55' : 'transparent'
+		return d.action == 'edit' ? MENU_OPTION_HIGHLIGHT_COLOR : ''
 	}
 
 	self.handleNotLabelClick = function(d) {
