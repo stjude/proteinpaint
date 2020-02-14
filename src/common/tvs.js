@@ -517,6 +517,7 @@ function setRenderers(self) {
 		const minvalue = self.num_obj.density_data.minvalue
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const svg = self.num_obj.svg
+		const xscale = self.num_obj.xscale
 
 		range_tr
 			.append('td')
@@ -569,23 +570,21 @@ function setRenderers(self) {
 				const value = brush.start_select.property('value')
 
 				if (value == 'startunbounded') {
-					new_range.startunbounded = true
+					range.startunbounded = true
 					new_range.start = minvalue.toFixed(1)
 					brush.start_input.property('disabled', true)
 				} else {
-					delete new_range.startunbounded
+					delete range.startunbounded
 					new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
 					new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
 					brush.start_input.property('disabled', false)
-					new_range.startinclusive = value == 'startinclusive'
+					range.startinclusive = value == 'startinclusive'
 				}
 				if (brush.stop_input.node().value != maxvalue.toFixed(1)) {
 					new_range.stop = brush.stop_input.node().value
-					delete new_range.stopunbounded
+					delete range.stopunbounded
 				}
-				const i = self.num_obj.brushes.findIndex((b = b == brush))
-				self.num_obj.brushes[i] = new_range
-				self.applyBrush(brush)
+				brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 			})
 
 		brush.start_select
@@ -606,6 +605,7 @@ function setRenderers(self) {
 			])
 			.enter()
 			.append('option')
+			.attr('value', d => d.value)
 			.property('selected', d => range[d.value] || (d.value == 'startexclusive' && !range.startinclusive))
 			.html(d => d.label)
 
@@ -644,27 +644,22 @@ function setRenderers(self) {
 				// make changes based on stop select
 				const new_range = JSON.parse(JSON.stringify(brush.range))
 				const value = brush.stop_select.property('value')
-				if (value == 'unbounded') {
-					delete new_range.stop_inclusive
-					new_range.stopunbounded = true
+				if (value == 'stopunbounded') {
+					range.stopunbounded = true
 					new_range.stop = maxvalue.toFixed(1)
 					brush.stop_input.property('disabled', true)
 				} else {
-					delete new_range.stopunbounded
+					delete range.stopunbounded
 					new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
 					new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
 					brush.stop_input.property('disabled', false)
-
-					if (stop_select.node().selectedIndex == 0) new_range.stopinclusive = true
-					else if (stop_select.node().selectedIndex == 1) delete new_range.stopinclusive
+					range.stopinclusive = value == 'stopinclusive'
 				}
 				if (start_input.node().value != minvalue.toFixed(1)) {
 					new_range.start = start_input.node().value
-					delete new_range.startunbounded
+					delete range.startunbounded
 				}
-				const i = self.num_obj.brushes.findIndex((b = b == brush))
-				brush.range = new_range
-				self.applyBrush(brush)
+				brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 			})
 
 		brush.stop_select
@@ -685,6 +680,7 @@ function setRenderers(self) {
 			])
 			.enter()
 			.append('option')
+			.attr('value', d => d.value)
 			.property('selected', d => range[d.value] || (d.value == 'stopexclusive' && !range.stopinclusive))
 			.html(d => d.label)
 
@@ -741,7 +737,6 @@ function setRenderers(self) {
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
 			// brush.range = new_range
-			const xscale = self.num_obj.xscale
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 		}
 	}

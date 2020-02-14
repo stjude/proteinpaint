@@ -219,6 +219,12 @@ tape('tvs : Numerical', async test => {
 		}
 	})
 
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
 	await opts.filter.main(opts.filterData)
 
 	// test common bluepill components
@@ -317,6 +323,118 @@ tape('tvs : Numerical', async test => {
 			.innerHTML.split('<')[0],
 		'2 intervals',
 		'should change value btn text after selecting unannotated value'
+	)
+
+	// //trigger and check adding new range
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
+
+	tipd
+		.node()
+		.querySelectorAll('.add_range_btn')[0]
+		.click()
+
+	await sleep(1000)
+
+	test.equal(
+		tipd.node().querySelectorAll('.add_range_btn')[0].style.display,
+		'none',
+		'Should hide button to add new range'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.apply_btn')
+			.size(),
+		2,
+		'Should have button to apply new range'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.delete_btn')
+			.size(),
+		2,
+		'Should have buttons to delete the ranges'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.note_tr')
+			.size(),
+		1,
+		'Should have note to select new range'
+	)
+
+	//delete new range without applying new range
+	tipd
+		.node()
+		.querySelectorAll('.delete_btn')[1]
+		.click()
+
+	await sleep(800)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.note_tr')
+			.size(),
+		0,
+		'Should hide note to select new range'
+	)
+
+	test.equal(
+		tipd.node().querySelectorAll('.add_range_btn')[0].style.display,
+		'inline-block',
+		'Should unhide button to add new range'
+	)
+
+	//test merging ranges by adding new range
+	tipd
+		.node()
+		.querySelectorAll('.value_checkbox')[0]
+		.click()
+
+	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	await sleep(800)
+
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
+
+	tipd
+		.node()
+		.querySelectorAll('.add_range_btn')[0]
+		.click()
+	await sleep(1000)
+
+	tipd.node().querySelectorAll('.start_select')[1].selectedIndex = 2
+	tipd
+		.node()
+		.querySelectorAll('.start_select')[1]
+		.dispatchEvent(new Event('change'))
+
+	const stop_input = tipd.node().querySelectorAll('.stop_input')[1]
+	stop_input.value = 5000
+	//press 'Enter' to update bins
+	stop_input.addEventListener('keyup', () => {})
+	stop_input.dispatchEvent(enter_event)
+
+	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	await sleep(800)
+
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('≤ 5000'),
+		'should merge ranges into 1 range'
 	)
 
 	test.end()
