@@ -448,7 +448,7 @@ function setRenderers(self) {
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
 				const a_range = JSON.parse(JSON.stringify(brush.orig))
 				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
-				if (range.stopunbounded) a_range.stop = Number(minvalue.toFixed(1))
+				if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
 				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
 				// update inputs from brush move
 				brush.start_input
@@ -535,7 +535,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
 			.style('text-align', 'center')
-			.html(range.stopunbounded ? '>= ' + range.start : range.start)
+			.html(range.start)
 
 		brush.start_input = brush.equation_td
 			.append('input')
@@ -849,7 +849,7 @@ function setRenderers(self) {
 			try {
 				const start = Number(brush.start_input.node().value)
 				const stop = Number(brush.stop_input.node().value)
-				if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
+				if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
 
 				if (start == '') {
 					range.startunbounded = true
@@ -900,6 +900,22 @@ function setRenderers(self) {
 					merged_flag = true
 				} else if (new_range.start >= range.start && new_range.stop <= range.stop) {
 					//new_range is covered by existing range
+					merged_flag = true
+				} else if (new_range.startunbounded) {
+					if (new_range.stop > range.stop) {
+						// if new_range is startunbounded and covering existing range
+						range.stop = new_range.stop
+					}
+					delete range.start
+					range.startunbounded = true
+					merged_flag = true
+				} else if (new_range.stopunbounded) {
+					if (new_range.start < range.start) {
+						// if new_range is stopunbounded and covering existing range
+						range.start = new_range.start
+					}
+					delete range.stop
+					range.stopunbounded = true
 					merged_flag = true
 				}
 			}
