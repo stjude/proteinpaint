@@ -1715,7 +1715,8 @@ reverseorient() {
 		this.coord.inputtipshow()
 		this.coord.inputtip.d
 			.append('div')
-			.html(msg)
+			// must not do .html(), msg is user-provided
+			.text(msg)
 			.style('border', 'solid 1px red')
 			.style('padding', '10px 20px')
 	}
