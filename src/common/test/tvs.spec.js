@@ -191,7 +191,7 @@ tape('tvs : Categorical', async test => {
 	test.end()
 })
 
-tape.only('tvs : Numerical', async test => {
+tape('tvs : Numerical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',

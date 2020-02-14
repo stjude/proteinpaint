@@ -1113,7 +1113,7 @@ function setRenderers(self) {
 				const checked_vals = [...self.values_table.querySelectorAll('.value_checkbox')]
 					.filter(elem => elem.checked)
 					.map(elem => elem.value)
-				const new_vals = data.lst.filter(v => checked_vals.includes(v.key))
+				const new_vals = data.lst.filter(v => checked_vals.includes(v.key.toString()))
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
