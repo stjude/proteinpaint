@@ -2,7 +2,6 @@ import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
-import { searchInit } from './search'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 
@@ -71,7 +70,6 @@ class TdbTree {
 		this.opts = opts
 		this.dom = {
 			holder: opts.holder,
-			searchDiv: opts.holder.append('div').style('margin', '10px'),
 			treeDiv: opts.holder.append('div')
 		}
 
@@ -80,32 +78,16 @@ class TdbTree {
 		setRenderers(this)
 
 		this.components = { plots: {} }
-		{
-			// the search component will share some attributes with tree
-			// cherry-pick here but not copyMerge( opts.search, opts.tree ) so as not to override attributes of same name
-			const arg = {
-				click_term: opts.click_term,
-				disable_terms: opts.disable_terms
-			}
-			this.components.search = searchInit(
-				this.app,
-				{ holder: this.dom.searchDiv },
-				rx.copyMerge(arg, this.app.opts.search)
-			)
-		}
-
-		// privately defined root term
-		const _root = {
-			id: root_ID,
-			__tree_isroot: true // must not delete this flag
-		}
-
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
-
-		this.termsById = {}
-		this.termsById[root_ID] = _root
+		this.termsById = {
+			// privately defined root term
+			[root_ID]: {
+				id: root_ID,
+				__tree_isroot: true // must not delete this flag
+			}
+		}
 		this.eventTypes = ['postInit', 'postRender']
 	}
 

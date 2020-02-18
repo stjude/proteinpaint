@@ -68,17 +68,21 @@ class TdbFilter {
 			.style('margin', '10px')
 			.style('margin-top', '5px')
 			.style('display', 'table')
-			.style('border', 'solid 1px #ddd')
+			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
 
-		div
-			.append('span')
-			.text('Filter')
-			.style('padding', '0 10px')
+		if (this.opts.hideLabel) {
+			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
+		} else {
+			div
+				.append('span')
+				.text('Filter')
+				.style('padding', '0 10px')
 
-		this.dom.filterDiv = div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '5px 10px')
+			this.dom.filterDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '5px 10px')
+		}
 	}
 }
 

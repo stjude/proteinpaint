@@ -10,7 +10,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		termfilter: { show_top_ui: true }
 	},
 	app: {
 		standalone: true
@@ -36,9 +36,6 @@ tape('default behavior', function(test) {
 			callbacks: {
 				'postRender.test': runTests
 			}
-		},
-		nav: {
-			enabled: true
 		}
 	})
 	function runTests() {}

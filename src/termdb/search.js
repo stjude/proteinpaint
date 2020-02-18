@@ -79,9 +79,10 @@ function setRenderers(self) {
 			.style('width', '120px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
-		self.dom.resultDiv = self.dom.holder
-			.append('div')
-			.style('border-left', 'solid 1px rgb(133,182,225)')
+
+		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
+		self.dom.resultDiv
+			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 	}
