@@ -143,7 +143,7 @@ function setRenderers(self) {
 	self.updateUI = () => {
 		//self.dom.trs.style('color', d => (d.rowNum == 0 ? '#aaa' : '#000'))
 		self.dom.tds
-			.style('color', d => (d.colNum == self.activeTab ? '#000' : '#aaa'))
+			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
 				if (d.colNum === 0) {
