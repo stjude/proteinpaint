@@ -14,7 +14,8 @@ class TdbNav {
 		this.api.getDom = () => {
 			return {
 				searchDiv: this.dom.searchDiv,
-				subheader: this.dom.subheader
+				subheader: this.dom.subheader,
+				filterTab: this.dom.tds.filter(d => d.colNum === 1)
 			}
 		}
 		this.api.clearSubheader = () => {
@@ -55,6 +56,7 @@ class TdbNav {
 		this.searching = false
 		this.components = {}
 		this.samplecounts = {}
+		this.initUI()
 	}
 	getState(appState) {
 		return {
@@ -76,13 +78,12 @@ class TdbNav {
 		this.activeTab = this.state.activeTab
 		this.activeCohort = this.state.activeCohort
 		if (!this.dom.cohortTable) {
-			this.initUI()
+			//this.initUI()
 			this.initCohort()
 		}
 		this.activeCohortName = this.cohortNames[this.activeCohort]
 		await this.getSampleCount()
 		this.updateUI()
-		this.searching = false
 	}
 	async getSampleCount() {
 		const lst = [
@@ -92,7 +93,6 @@ class TdbNav {
 			'filter=' + encodeURIComponent(JSON.stringify(this.state.filter))
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		console.log(data)
 		for (const row of data) {
 			this.samplecounts[row.subcohort] = row.samplecount
 		}
@@ -137,7 +137,7 @@ function setRenderers(self) {
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
-		self.updateUI()
+		//self.updateUI()
 	}
 	self.updateUI = () => {
 		//self.dom.trs.style('color', d => (d.rowNum == 0 ? '#aaa' : '#000'))
@@ -158,7 +158,10 @@ function setRenderers(self) {
 				}
 			})
 
-		self.dom.subheaderDiv.style('display', self.activeTab === 1 && !self.state.filter.lst.length ? 'none' : 'block')
+		self.dom.subheaderDiv.style(
+			'display',
+			self.searching || (self.activeTab === 1 && !self.state.filter.lst.length) ? 'none' : 'block'
+		)
 
 		for (const key in self.dom.subheader) {
 			self.dom.subheader[key].style(
@@ -236,8 +239,9 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.setTab = d => {
-		if (d.colNum == self.activeTab) return
+		if (d.colNum == self.activeTab && !self.searching) return
 		self.activeTab = d.colNum
+		self.searching = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 	}
 }

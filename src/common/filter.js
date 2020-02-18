@@ -79,7 +79,7 @@ class Filter {
 
 				// reset interaction-related styling
 				this.removeBlankPill()
-				this.dom.newBtn.style('display', this.filter.lst.length == 0 ? 'inline-block' : 'none')
+				this.dom.newBtn.style('display', this.opts.newBtn || this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
@@ -184,17 +184,21 @@ let filterIndex = 0
 
 function setRenderers(self) {
 	self.initUI = function() {
-		self.dom.newBtn = self.dom.holder
-			.append('div')
-			.attr('class', 'sja_new_filter_btn')
-			.html(self.opts.emptyLabel)
-			.style('display', 'inline-block')
-			.style('margin', '2px 10px 2px 2px')
-			.style('padding', '5px')
-			.style('border-radius', '5px')
-			//.style('background-color', '#ececec')
-			.style('cursor', 'pointer')
-			.on('click', self.displayTreeNew)
+		if (self.opts.newBtn) {
+			self.dom.newBtn = self.opts.newBtn.on('click.filter', self.displayTreeNew)
+		} else {
+			self.dom.newBtn = self.dom.holder
+				.append('div')
+				.attr('class', 'sja_new_filter_btn')
+				.html(self.opts.emptyLabel)
+				.style('display', 'inline-block')
+				.style('margin', '2px 10px 2px 2px')
+				.style('padding', '5px')
+				.style('border-radius', '5px')
+				//.style('background-color', '#ececec')
+				.style('cursor', 'pointer')
+				.on('click', self.displayTreeNew)
+		}
 
 		self.dom.filterContainer = self.dom.holder.append('div').attr('class', 'sja_filter_container')
 
@@ -552,7 +556,7 @@ function setInteractivity(self) {
 			: self.activeData.elem.parentNode.parentNode
 		const joiner = self.activeData.elem.className.includes('join_label')
 			? self.activeData.filter.join.toUpperCase()
-			: self.activeData.btn
+			: self.activeData.btn && typeof self.activeData.btn.__data__ === 'string'
 			? self.activeData.btn.__data__.toUpperCase()
 			: self.activeData.item.type == 'tvslst'
 			? self.activeData.filter.join.toUpperCase()
@@ -649,6 +653,7 @@ function setInteractivity(self) {
 	}
 
 	self.displayTreeNew = function(d) {
+		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		self.dom.isNotInput.property('checked', !self.filter.in)
 		if (self.filter.lst.length > 1) {

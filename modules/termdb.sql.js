@@ -50,11 +50,11 @@ return an array of sample names passing through the filter
 	if (!q.filter || !q.filter.lst.length) {
 		// this option will be removed and instead
 		// processed as part of the root filter.lst[]
-		return q.getsamplecount == 'SJLIFE'
-			? [{ subcohort: 'SJLIFE', samplecount: 4402 }]
-			: q.getsamplecount == 'CCSS'
-			? [{ subcohort: 'CCSS', samplecount: 2936 }]
-			: [{ subcohort: 'SJLIFE,CCSS', samplecount: 'XXXX' }]
+		return [
+			{ subcohort: 'SJLIFE', samplecount: 4402 },
+			{ subcohort: 'CCSS', samplecount: 2936 },
+			{ subcohort: 'SJLIFE,CCSS', samplecount: 'XXXX' }
+		]
 	} else {
 		const filter = getFilterCTEs(q.filter, ds)
 		const statement = `WITH ${filter.filters}

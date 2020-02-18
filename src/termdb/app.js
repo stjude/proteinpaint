@@ -68,7 +68,8 @@ class TdbApp {
 				this.app,
 				{
 					holder: this.opts.app.standalone ? this.navDom.subheader.filter.append('div') : this.dom.holder.append('div'),
-					hideLabel: this.opts.app.standalone
+					hideLabel: this.opts.app.standalone,
+					newBtn: this.navDom.filterTab
 				},
 				this.opts.filter
 			)

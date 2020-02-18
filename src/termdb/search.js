@@ -72,12 +72,14 @@ export const searchInit = rx.getInitFxn(TermSearch)
 function setRenderers(self) {
 	self.initUI = () => {
 		self.dom.input = self.dom.holder
+			.style('text-align', 'center')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search')
-			.style('width', '120px')
+			.style('width', '180px')
 			.style('display', 'block')
+			.style('font-size', '24px')
 			.on('input', debounce(self.onInput, 300))
 
 		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
