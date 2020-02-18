@@ -40,6 +40,30 @@ return an array of sample names passing through the filter
 	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
 	return re.map(i => i.sample)
 }
+export function get_samplecount(q, ds) {
+	/*
+must have qfilter[]
+as the actual query is embedded in qfilter
+return an array of sample names passing through the filter
+*/
+	q.filter = JSON.parse(decodeURIComponent(q.filter))
+	if (!q.filter || !q.filter.lst.length) {
+		// this option will be removed and instead
+		// processed as part of the root filter.lst[]
+		return q.getsamplecount == 'SJLIFE'
+			? [{ subcohort: 'SJLIFE', samplecount: 4402 }]
+			: q.getsamplecount == 'CCSS'
+			? [{ subcohort: 'CCSS', samplecount: 2936 }]
+			: [{ subcohort: 'SJLIFE,CCSS', samplecount: 'XXXX' }]
+	} else {
+		const filter = getFilterCTEs(q.filter, ds)
+		const statement = `WITH ${filter.filters}
+			SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
+			FROM ${filter.CTEname}`
+		// may cache statement
+		return ds.cohort.db.connection.prepare(statement).all(filter.values)
+	}
+}
 export function get_summary_numericcategories(q) {
 	/*
 	q{}

@@ -39,7 +39,6 @@ export function handle_request_closure(genomes) {
 			if (!tdb) throw 'no termdb for this dataset'
 
 			// process triggers
-
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
@@ -58,6 +57,7 @@ export function handle_request_closure(genomes) {
 			}
 			if (q.density) return await density_plot(q, res, ds)
 			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
+			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -81,6 +81,10 @@ function trigger_gettermbyid(q, res, tdb) {
 	res.send({
 		term: t ? copy_term(t) : undefined
 	})
+}
+
+function trigger_getsamplecount(q, res, ds) {
+	res.send(termdbsql.get_samplecount(q, ds))
 }
 
 function trigger_testplot(q, res, tdb, ds) {
