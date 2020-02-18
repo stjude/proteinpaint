@@ -54,6 +54,7 @@ class TdbNav {
 		setRenderers(this)
 		this.activeTab = 0
 		this.searching = false
+		this.hideSubheader = false
 		this.components = {}
 		this.samplecounts = {}
 		this.initUI()
@@ -160,7 +161,11 @@ function setRenderers(self) {
 
 		self.dom.subheaderDiv.style(
 			'display',
-			self.searching || (self.activeTab === 1 && !self.state.filter.lst.length) ? 'none' : 'block'
+			self.hideSubheader
+				? 'none'
+				: self.searching || (self.activeTab === 1 && !self.state.filter.lst.length)
+				? 'none'
+				: 'block'
 		)
 
 		for (const key in self.dom.subheader) {
@@ -239,9 +244,14 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.setTab = d => {
-		if (d.colNum == self.activeTab && !self.searching) return
+		if (d.colNum == self.activeTab && !self.searching) {
+			self.hideSubheader = !self.hideSubheader //; console.log(248, self.hideSubheader)
+			self.updateUI()
+			return
+		}
 		self.activeTab = d.colNum
 		self.searching = false
+		self.hideSubheader = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 	}
 }
