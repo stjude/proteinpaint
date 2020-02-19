@@ -63,7 +63,9 @@ module.exports = (q, res, ds) => {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 
-	const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
+	// kernal density replaced with histogram
+	// const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
+	const density = get_histogram(xscale.ticks(40))(values)
 	let densitymax = 0
 	for (const d of density) {
 		densitymax = Math.max(densitymax, d[1])
@@ -94,5 +96,22 @@ function kernelDensityEstimator(kernel, X) {
 function kernelEpanechnikov(k) {
 	return function(v) {
 		return Math.abs((v /= k)) <= 1 ? (0.75 * (1 - v * v)) / k : 0
+	}
+}
+
+function get_histogram(ticks) {
+	return values => {
+		// array of {value}
+		const bins = []
+		for (let i = 0; i < ticks.length; i++) bins.push([ticks[i], 0])
+		for (const v of values) {
+			for (let i = 1; i < ticks.length; i++) {
+				if (v <= ticks[i]) {
+					bins[i - 1][1]++
+					break
+				}
+			}
+		}
+		return bins
 	}
 }
