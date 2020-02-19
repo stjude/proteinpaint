@@ -489,13 +489,14 @@ tape('click non-group bar to add filter', function(test) {
 			.done(test)
 	}
 
-	let clickedData
+	let clickedData, currData
 	function triggerBarClick(plot) {
 		const elem = barDiv
 			.node()
 			.querySelector('.bars-cell')
 			.querySelector('rect')
 		clickedData = elem.__data__
+		currData = plot.Inner.currData
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -509,7 +510,6 @@ tape('click non-group bar to add filter', function(test) {
 
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
-		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		test.equal(
 			termfilter.filter && termfilter.filter.lst.length,

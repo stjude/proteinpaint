@@ -83,10 +83,7 @@ function normalizeActiveData(opts) {
 function getHighlightedRowCount(menuRows, action) {
 	return menuRows
 		.filter(function(d) {
-			return (
-				(d.action == action && this.style.backgroundColor != 'transparent') ||
-				this.style.backgroundColor != 'transparent'
-			)
+			return this.style.backgroundColor != ''
 		})
 		.size()
 }

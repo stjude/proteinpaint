@@ -493,7 +493,7 @@ tape('tvs : Conditional', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(700)
+	await sleep(1000)
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
@@ -561,8 +561,7 @@ tape('tvs : Conditional', async test => {
 		.querySelectorAll('select')[0]
 		.dispatchEvent(new Event('change'))
 
-	await sleep(500)
-
+	await sleep(800)
 	tipd
 		.node()
 		.querySelectorAll('.value_checkbox')[1]
