@@ -960,13 +960,15 @@ function setRenderers(self) {
 			.style('border-width', '2px')
 			.style('border-color', '#eee')
 
+		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
+
 		// 'Apply' button
-		unanno_div
+		const apply_btn = unanno_div
 			.append('div')
 			.style('text-align', 'center')
 			.append('div')
 			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', 'none')
 			.style('border-radius', '13px')
 			// .style('padding', '7px 15px')
 			.style('margin', '5px')
@@ -998,7 +1000,21 @@ function setRenderers(self) {
 				}
 			})
 
-		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
+		const checkboxes = values_table.querySelectorAll('.value_checkbox')
+		// checked values when tip lauch
+		const orig_vals = [...checkboxes].filter(elem => elem.checked).map(elem => elem.value)
+
+		for (const [i, checkbox] of checkboxes.entries()) {
+			select(checkbox).on('change', () => {
+				//changed values after tip launch
+				const changed_vals = [...values_table.querySelectorAll('.value_checkbox')]
+					.filter(elem => elem.checked)
+					.map(elem => elem.value)
+				const similarVals = JSON.stringify(orig_vals) === JSON.stringify(changed_vals)
+				//show apply button if values changed
+				apply_btn.style('display', similarVals ? 'none' : 'inline-block')
+			})
+		}
 	}
 
 	self.fillConditionMenu = async function(div, tvs) {
@@ -1251,7 +1267,10 @@ function setRenderers(self) {
 			.style('vertical-align', 'middle')
 			.style('bottom', '3px')
 			.on('change', () => {
-				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
+				values_table
+					.selectAll('.value_checkbox')
+					.property('checked', all_checkbox.node().checked)
+					.dispatch('change')
 			})
 
 		all_checkbox_label
