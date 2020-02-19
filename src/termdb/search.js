@@ -52,6 +52,7 @@ class TermSearch {
 	async doSearch(str) {
 		if (!str) {
 			this.clear()
+			this.bus.emit('postSearch')
 			return
 		}
 		const lst = ['genome=' + this.state.genome, 'dslabel=' + this.state.dslabel, 'findterm=' + encodeURIComponent(str)]

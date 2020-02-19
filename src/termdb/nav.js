@@ -24,6 +24,8 @@ class TdbNav {
 			for (const key in this.dom.subheader) {
 				this.dom.subheader[key].style('display', key == 'search' ? 'block' : 'none')
 			}
+			// assumes search results are rendered in a table
+			this.dom.subheaderDiv.style('display', this.dom.subheader.search.select('table').size() ? 'block' : 'none')
 		}
 
 		const header = opts.holder.append('div').style('border-bottom', '1px solid #000')
@@ -39,6 +41,7 @@ class TdbNav {
 			sessionDiv: header.append('div'),
 			subheaderDiv: opts.holder
 				.append('div')
+				.style('display', 'none')
 				.style('padding-top', '5px')
 				.style('border-bottom', '1px solid #000')
 		}
@@ -52,7 +55,9 @@ class TdbNav {
 		})
 		setInteractivity(this)
 		setRenderers(this)
-		this.activeTab = 0
+		this.eventTypes = ['postInit', 'postRender']
+
+		this.activeTab = 0 // filter tab, will switch to cohort tab during init if exists
 		this.searching = false
 		this.hideSubheader = false
 		this.components = {}
@@ -66,7 +71,7 @@ class TdbNav {
 			searching: this.searching,
 			activeTab: appState.activeTab,
 			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig,
+			termdbConfig: {}, //appState.termdbConfig,
 			filter: appState.termfilter.filter
 		}
 	}
@@ -78,11 +83,8 @@ class TdbNav {
 		if (!this.opts.enabled) return
 		this.activeTab = this.state.activeTab
 		this.activeCohort = this.state.activeCohort
-		if (!this.dom.cohortTable) {
-			//this.initUI()
-			this.initCohort()
-		}
-		this.activeCohortName = this.cohortNames[this.activeCohort]
+		if (!this.dom.cohortTable) this.initCohort()
+		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		this.hideSubheader = false
 		await this.getSampleCount()
 		this.updateUI()
@@ -127,11 +129,14 @@ function setRenderers(self) {
 			)
 			.enter()
 			.append('td')
+			// hide the cohort tab until there is termdbConfig.selectCohort
+			.style('display', d => (d.colNum === 0 ? 'none' : ''))
 			.style('width', '100px')
 			.style('padding', '5px 12px')
 			.style('text-align', 'center')
 			.style('border-left', '1px solid #ccc')
 			.style('border-right', '1px solid #ccc')
+			.style('color', '#aaa')
 			.style('cursor', 'pointer')
 			.html(d => d.label)
 			.on('click', self.setTab)
@@ -139,7 +144,6 @@ function setRenderers(self) {
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
-		//self.updateUI()
 	}
 	self.updateUI = () => {
 		//self.dom.trs.style('color', d => (d.rowNum == 0 ? '#aaa' : '#000'))
@@ -177,14 +181,19 @@ function setRenderers(self) {
 		}
 	}
 	self.initCohort = () => {
-		self.cohortNames = self.state.termdbConfig.selectCohort.values.map(d => d.keys.join(','))
+		const selectCohort = self.state.termdbConfig && self.state.termdbConfig.selectCohort
+		if (!selectCohort) {
+			if (self.activeTab === 0) self.activeTab = 1
+			return
+		}
+		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
+		self.cohortNames = selectCohort.values.map(d => d.keys.join(','))
 		self.dom.cohortOpts = self.dom.subheader.cohort.append('div')
-
 		const trs = self.dom.cohortOpts
 			.append('table')
 			.style('margin', '20px')
 			.selectAll('tr')
-			.data(self.state.termdbConfig.selectCohort.values)
+			.data(selectCohort.values)
 			.enter()
 			.append('tr')
 			.each(function(d, i) {
@@ -218,7 +227,7 @@ function setRenderers(self) {
 					.style('vertical-align', 'top')
 			})
 
-		self.dom.cohortTable = self.dom.subheader.cohort.append('div').html(self.state.termdbConfig.selectCohort.htmlinfo)
+		self.dom.cohortTable = self.dom.subheader.cohort.append('div').html(selectCohort.htmlinfo)
 
 		self.dom.cohortTable
 			.select('table')

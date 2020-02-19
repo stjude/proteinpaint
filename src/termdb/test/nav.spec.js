@@ -31,13 +31,16 @@ tape('\n', function(test) {
 
 tape('default behavior', function(test) {
 	runpp({
-		state: {},
-		plot: {
+		nav: {
 			callbacks: {
-				'postRender.test': runTests
+				'postInit.test': runTests
 			}
 		}
 	})
-	function runTests() {}
-	test.end()
+	function runTests(nav) {
+		const tds = nav.Inner.dom.tabDiv.node().querySelectorAll('td')
+		const trs = nav.Inner.dom.tabDiv.node().querySelectorAll('tr')
+		test.equal(tds.length / trs.length, 3, 'should have three tabs')
+		test.end()
+	}
 })
