@@ -19,7 +19,8 @@ class TdbStatTable {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('barchart') && config.term.term.isfloat,
+			isVisible:
+				config.settings.currViews.includes('barchart') && config.term.term.isfloat && !config.term.term.noStatTable,
 			config: {
 				term: config.term,
 				term0: config.term0,
