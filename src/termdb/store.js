@@ -8,8 +8,11 @@ import { graphable } from '../common/termutils'
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
-	activeTab: 0,
-	activeCohort: 0,
+	nav: {
+		show_tabs: false,
+		activeTab: 0,
+		activeCohort: 0
+	},
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
@@ -120,10 +123,10 @@ TdbStore.prototype.actions = {
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
 	},
 	tab_set(action) {
-		this.state.activeTab = action.activeTab
+		this.state.nav.activeTab = action.activeTab
 	},
 	cohort_set(action) {
-		this.state.activeCohort = action.activeCohort
+		this.state.nav.activeCohort = action.activeCohort
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return

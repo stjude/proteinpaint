@@ -1,8 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 import { navInit } from './nav'
-import { searchInit } from './search'
-import { filterInit } from './filter3'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { recoverInit } from '../common/recover'
@@ -40,47 +38,10 @@ class TdbApp {
 		try {
 			if (!coordApp) this.store = storeInit(this.api)
 			this.components = {
-				nav: navInit(this.app, { holder: this.dom.topbar, enabled: this.opts.app.standalone }, this.opts.nav)
+				nav: navInit(this.app, { holder: this.dom.topbar }, this.opts.nav),
+				recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
+				tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
 			}
-
-			this.navDom = this.components.nav.getDom()
-			this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover)
-
-			this.components.search = searchInit(
-				this.app,
-				{
-					holder: this.opts.app.standalone ? this.navDom.searchDiv : this.dom.holder.append('div'),
-					resultsHolder: this.opts.app.standalone ? this.navDom.subheader.search : null
-				},
-				rx.copyMerge(
-					{
-						click_term: this.opts.tree && this.opts.tree.click_term,
-						disable_terms: this.opts.tree && this.opts.tree.disable_terms,
-						callbacks: {
-							'postSearch.nav': this.components.nav.clearSubheader
-						}
-					},
-					this.app.opts.search
-				)
-			)
-
-			this.components.terms = filterInit(
-				this.app,
-				{
-					holder: this.opts.app.standalone ? this.navDom.subheader.filter.append('div') : this.dom.holder.append('div'),
-					hideLabel: this.opts.app.standalone,
-					newBtn: this.navDom.filterTab
-				},
-				this.opts.filter
-			)
-
-			this.components.tree = treeInit(
-				this.app,
-				{
-					holder: this.dom.holder.append('div')
-				},
-				this.opts.tree
-			)
 		} catch (e) {
 			this.printError(e)
 		}
@@ -112,7 +73,6 @@ class TdbApp {
 		if (!o.fetchOpts) o.fetchOpts = {}
 		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
 		if (!('app' in o)) o.app = {}
-		if (!('standalone' in o.app)) o.app.standalone = false
 		return o
 	}
 

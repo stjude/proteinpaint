@@ -1,5 +1,6 @@
 import * as rx from '../common/rx.core'
 import { searchInit } from './search'
+import { filterInit } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch2 } from '../client'
 
@@ -9,80 +10,78 @@ class TdbNav {
 		this.app = app
 		this.opts = opts
 		this.id = opts.id
-
 		this.api = rx.getComponentApi(this)
-		this.api.getDom = () => {
-			return {
-				searchDiv: this.dom.searchDiv,
-				subheader: this.dom.subheader,
-				filterTab: this.dom.tds.filter(d => d.colNum === 1)
-			}
-		}
-		this.api.clearSubheader = () => {
-			this.searching = true
-			this.dom.subheaderDiv.style('display', 'block')
-			for (const key in this.dom.subheader) {
-				this.dom.subheader[key].style('display', key == 'search' ? 'block' : 'none')
-			}
-			// assumes search results are rendered in a table
-			this.dom.subheaderDiv.style('display', this.dom.subheader.search.select('table').size() ? 'block' : 'none')
-		}
 
-		const header = opts.holder.append('div').style('border-bottom', '1px solid #000')
-		this.dom = {
-			holder: opts.holder.style('display', this.opts.enabled ? 'block' : 'none').style('margin-bottom', '20px'),
-			searchDiv: header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('width', '300px')
-				.style('margin', '10px')
-				.style('vertical-align', 'top'),
-			tabDiv: header.append('div').style('display', 'inline-block'),
-			sessionDiv: header.append('div'),
-			subheaderDiv: opts.holder
-				.append('div')
-				.style('display', 'none')
-				.style('padding-top', '5px')
-				.style('border-bottom', '1px solid #000')
-		}
-		this.dom.subheader = Object.freeze({
-			search: this.dom.subheaderDiv.append('div'),
-			cohort: this.dom.subheaderDiv.append('div'),
-			filter: this.dom.subheaderDiv.append('div'),
-			cart: this.dom.subheaderDiv
-				.append('div')
-				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
-		})
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-
-		this.activeTab = 0 // filter tab, will switch to cohort tab during init if exists
+		this.activeCohort = 0
+		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
+		this.activeTab = 0
 		this.searching = false
 		this.hideSubheader = false
-		this.components = {}
 		this.samplecounts = {}
 		this.initUI()
+
+		this.components = {
+			search: searchInit(
+				this.app,
+				{
+					holder: this.dom.searchDiv,
+					resultsHolder: this.opts.show_tabs ? this.navDom.subheader.search : null
+				},
+				rx.copyMerge(
+					{
+						click_term: this.app.opts.tree && this.app.opts.tree.click_term,
+						disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
+						callbacks: {
+							'postSearch.nav': () => {
+								this.searching = true
+								this.dom.subheaderDiv.style('display', 'block')
+								for (const key in this.dom.subheader) {
+									this.dom.subheader[key].style('display', key == 'search' ? 'block' : 'none')
+								}
+								// assumes search results are rendered in a table
+								this.dom.subheaderDiv.style(
+									'display',
+									this.dom.subheader.search.select('table').size() ? 'block' : 'none'
+								)
+							}
+						}
+					},
+					this.app.opts.search
+				)
+			),
+
+			filter: filterInit(
+				this.app,
+				{
+					holder: this.dom.subheader.filter.append('div'),
+					hideLabel: this.opts.show_tabs,
+					newBtn: this.dom.tds.filter(d => d.colNum === 1)
+				},
+				this.opts.filter
+			)
+		}
 	}
 	getState(appState) {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			searching: this.searching,
-			activeTab: appState.activeTab,
-			activeCohort: appState.activeCohort,
+			searching: this.searching, // for detection of internal state change
+			nav: appState.nav,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter
 		}
 	}
 	reactsTo(action) {
-		return true // console.log(58, action.type == 'app_refresh')
-		return action.type.startsWith('tab_') || action.type == 'app_refresh'
+		//return true // console.log(58, action.type == 'app_refresh')
+		return action.type.startsWith('tab_') || action.type.startsWith('filter_') || action.type == 'app_refresh'
 	}
 	async main() {
-		if (!this.opts.enabled) return
-		this.activeTab = this.state.activeTab
-		this.activeCohort = this.state.activeCohort
+		this.dom.tabDiv.style('display', this.state.nav.show_tabs ? 'inline-block' : 'none')
+		this.activeTab = this.state.nav.activeTab
+		this.activeCohort = this.state.nav.activeCohort
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		this.hideSubheader = false
@@ -107,6 +106,33 @@ export const navInit = rx.getInitFxn(TdbNav)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		const header = self.opts.holder.append('div')
+		self.dom = {
+			holder: self.opts.holder,
+			header,
+			tabDiv: header.append('div').style('display', 'none'),
+			searchDiv: header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('width', '300px')
+				.style('margin', '10px')
+				.style('vertical-align', 'top'),
+			sessionDiv: header.append('div'),
+			subheaderDiv: self.opts.holder
+				.append('div')
+				.style('display', 'none')
+				.style('padding-top', '5px')
+				.style('border-bottom', '1px solid #000')
+		}
+		self.dom.subheader = Object.freeze({
+			search: self.dom.subheaderDiv.append('div'),
+			cohort: self.dom.subheaderDiv.append('div'),
+			filter: self.dom.subheaderDiv.append('div'),
+			cart: self.dom.subheaderDiv
+				.append('div')
+				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
+		})
+
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
 		self.tabs = [
 			{ top: 'COHORT', mid: 'SJLIFE', btm: '' }, //, hidetab: !self.state.termdbConfig.selectCohort },
@@ -146,7 +172,8 @@ function setRenderers(self) {
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
 	}
 	self.updateUI = () => {
-		//self.dom.trs.style('color', d => (d.rowNum == 0 ? '#aaa' : '#000'))
+		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
+		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
 			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
 			.html(function(d, i) {
@@ -155,12 +182,12 @@ function setRenderers(self) {
 					return d.key == 'mid' ? self.activeCohortName : 'n=' + self.samplecounts[self.activeCohortName]
 				} else if (d.colNum === 1) {
 					if (self.state.filter.lst.length === 0) {
-						return d.key === 'mid' ? '+NEW' : ''
+						return d.key === 'mid' ? '+NEW' : '&nbsp;'
 					} else {
 						return d.key === 'mid' ? self.state.filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
 					}
 				} else {
-					return d.key === 'mid' ? this.innerHTML : ''
+					return d.key === 'mid' ? this.innerHTML : '&nbsp;'
 				}
 			})
 
@@ -169,6 +196,8 @@ function setRenderers(self) {
 			self.hideSubheader
 				? 'none'
 				: self.searching || (self.activeTab === 1 && !self.state.filter.lst.length)
+				? 'none'
+				: !self.state.nav.show_tabs && self.activeTab !== 1
 				? 'none'
 				: 'block'
 		)
