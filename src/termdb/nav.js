@@ -71,7 +71,7 @@ class TdbNav {
 			searching: this.searching,
 			activeTab: appState.activeTab,
 			activeCohort: appState.activeCohort,
-			termdbConfig: {}, //appState.termdbConfig,
+			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter
 		}
 	}
