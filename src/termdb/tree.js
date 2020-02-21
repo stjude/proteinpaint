@@ -95,6 +95,7 @@ class TdbTree {
 		if (action.type.startsWith('tree_')) return true
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('plot_')) return true
+		if (action.type.startsWith('cohort_')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -103,6 +104,7 @@ class TdbTree {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			nav: appState.nav,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
@@ -111,6 +113,7 @@ class TdbTree {
 	}
 
 	async main() {
+		if (this.state.nav.activeCohort == -1) return
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)

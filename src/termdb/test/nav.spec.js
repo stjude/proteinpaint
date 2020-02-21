@@ -29,6 +29,32 @@ tape('\n', function(test) {
 
 tape('default behavior', function(test) {
 	runpp({
+		state: {
+			nav: { show_tabs: false }
+		},
+		nav: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+	function runTests(nav) {
+		test.equal(nav.Inner.dom.tabDiv.style('display'), 'none', 'should hide the tabs by default')
+		test.equal(nav.Inner.dom.holder.style('margin-bottom'), '0px', 'should not set a margin-bottom')
+		test.equal(nav.Inner.dom.holder.style('border-bottom'), '0px none rgb(0, 0, 0)', 'should not show a border-bottom')
+		test.notEqual(nav.Inner.dom.searchDiv.style('display'), 'none', 'should show the search input')
+		test.end()
+	}
+})
+
+tape.only('visible tabs', function(test) {
+	runpp({
+		state: {
+			nav: {
+				show_tabs: true,
+				activeCohort: -1
+			}
+		},
 		nav: {
 			callbacks: {
 				'postInit.test': runTests
@@ -38,7 +64,7 @@ tape('default behavior', function(test) {
 	function runTests(nav) {
 		const tds = nav.Inner.dom.tabDiv.node().querySelectorAll('td')
 		const trs = nav.Inner.dom.tabDiv.node().querySelectorAll('tr')
-		test.equal(tds.length / trs.length, 3, 'should have three tabs')
+		test.equal(tds.length / trs.length, 3, 'should show 3 tabs')
 		test.end()
 	}
 })

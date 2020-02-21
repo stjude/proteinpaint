@@ -2,7 +2,12 @@ import * as rx from '../common/rx.core'
 import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch2, Menu } from '../client'
+
+// to be used for assigning unique
+// radio button names by object instance
+// otherwise termdp app popups
+let instanceNum = 0
 
 class TdbNav {
 	constructor(app, opts) {
@@ -11,6 +16,7 @@ class TdbNav {
 		this.opts = opts
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
+		this.instanceNum = instanceNum++
 
 		setInteractivity(this)
 		setRenderers(this)
@@ -28,7 +34,7 @@ class TdbNav {
 				this.app,
 				{
 					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.show_tabs ? this.navDom.subheader.search : null
+					resultsHolder: this.opts.show_tabs ? this.dom.subheader.search : null
 				},
 				rx.copyMerge(
 					{
@@ -65,6 +71,7 @@ class TdbNav {
 		}
 	}
 	getState(appState) {
+		//console.log(64, appState.nav.activeCohort)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
@@ -76,15 +83,21 @@ class TdbNav {
 	}
 	reactsTo(action) {
 		//return true // console.log(58, action.type == 'app_refresh')
-		return action.type.startsWith('tab_') || action.type.startsWith('filter_') || action.type == 'app_refresh'
+		return (
+			action.type.startsWith('tab_') ||
+			action.type.startsWith('filter_') ||
+			action.type.startsWith('cohort_') ||
+			action.type == 'app_refresh'
+		)
 	}
 	async main() {
 		this.dom.tabDiv.style('display', this.state.nav.show_tabs ? 'inline-block' : 'none')
 		this.activeTab = this.state.nav.activeTab
+		this.prevCohort = this.activeCohort
 		this.activeCohort = this.state.nav.activeCohort
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
-		this.hideSubheader = false
+		//this.hideSubheader = false
 		await this.getSampleCount()
 		this.updateUI()
 	}
@@ -175,11 +188,17 @@ function setRenderers(self) {
 		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
-			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
+			.style('color', d =>
+				d.colNum == self.activeTab && !self.hideSubheader && self.prevCohort != -1 ? '#000' : '#aaa'
+			)
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
 				if (d.colNum === 0) {
-					return d.key == 'mid' ? self.activeCohortName : 'n=' + self.samplecounts[self.activeCohortName]
+					if (self.activeCohortName in self.samplecounts) {
+						return d.key == 'mid' ? self.activeCohortName : 'n=' + self.samplecounts[self.activeCohortName]
+					} else {
+						return d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
+					}
 				} else if (d.colNum === 1) {
 					if (self.state.filter.lst.length === 0) {
 						return d.key === 'mid' ? '+NEW' : '&nbsp;'
@@ -202,14 +221,25 @@ function setRenderers(self) {
 				: 'block'
 		)
 
+		const visibleSubheaders = []
 		for (const key in self.dom.subheader) {
-			self.dom.subheader[key].style(
-				'display',
-				key == 'search' || self.activeTab == self.subheaderKeys.indexOf(key) ? 'block' : 'none'
-			)
+			const display =
+				key == 'cohort' && self.prevCohort == -1 && self.activeCohort != -1
+					? 'none'
+					: key == 'search' || self.activeTab == self.subheaderKeys.indexOf(key)
+					? 'block'
+					: 'none'
+
+			self.dom.subheader[key].style('display', display)
+			if (display != 'none' && key != 'search') visibleSubheaders.push(key)
 		}
+		self.dom.subheaderDiv.style(
+			'border-bottom',
+			self.state.nav.show_tabs && visibleSubheaders.length ? '1px solid #000' : ''
+		)
 	}
 	self.initCohort = () => {
+		if (self.dom.cohortTable) return
 		const selectCohort = self.state.termdbConfig && self.state.termdbConfig.selectCohort
 		if (!selectCohort) {
 			if (self.activeTab === 0) self.activeTab = 1
@@ -228,15 +258,16 @@ function setRenderers(self) {
 			.each(function(d, i) {
 				const tr = select(this)
 				const td0 = tr.append('td')
+				const radioName = 'sja-termdb-cohort-' + self.instanceNum
 				td0
 					.append('input')
 					.attr('type', 'radio')
-					.attr('name', 'sja-termdb-cohort')
-					.attr('id', 'sja-termdb-cohort' + i)
+					.attr('name', radioName)
+					.attr('id', radioName + '-' + i)
 					.attr('value', i)
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '3px')
-					.on('change', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
+					.on('click', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
 
 				td0
 					.append('label')
@@ -284,7 +315,8 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.setTab = d => {
 		if (d.colNum == self.activeTab && !self.searching) {
-			self.hideSubheader = !self.hideSubheader //; console.log(248, self.hideSubheader)
+			self.hideSubheader = self.prevCohort != -1 && !self.hideSubheader
+			self.prevCohort = self.activeCohort
 			self.updateUI()
 			return
 		}

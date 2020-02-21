@@ -38,7 +38,11 @@ class TdbApp {
 		try {
 			if (!coordApp) this.store = storeInit(this.api)
 			this.components = {
-				nav: navInit(this.app, { holder: this.dom.topbar }, this.opts.nav),
+				nav: navInit(
+					this.app,
+					{ holder: this.dom.topbar, show_tabs: opts.state && opts.state.nav && opts.state.nav.show_tabs },
+					this.opts.nav
+				),
 				recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
 				tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
 			}

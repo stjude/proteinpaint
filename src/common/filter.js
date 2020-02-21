@@ -79,7 +79,7 @@ class Filter {
 
 				// reset interaction-related styling
 				this.removeBlankPill()
-				this.dom.newBtn.style('display', this.opts.newBtn || this.filter.lst.length == 0 ? 'inline-block' : 'none')
+				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder
 					.selectAll('.sja_filter_add_transformer')
 					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
