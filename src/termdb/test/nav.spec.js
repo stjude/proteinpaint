@@ -47,7 +47,7 @@ tape('default behavior', function(test) {
 	}
 })
 
-tape.only('visible tabs', function(test) {
+tape('visible tabs', function(test) {
 	runpp({
 		state: {
 			nav: {

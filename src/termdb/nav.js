@@ -90,7 +90,7 @@ class TdbNav {
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		//this.hideSubheader = false
-		await this.getSampleCount()
+		if (this.state.nav.show_tabs) await this.getSampleCount()
 		this.updateUI()
 	}
 	async getSampleCount() {
@@ -101,8 +101,12 @@ class TdbNav {
 			'filter=' + encodeURIComponent(JSON.stringify(this.state.filter))
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		for (const row of data) {
-			this.samplecounts[row.subcohort] = row.samplecount
+		if (!data) throw `missing data`
+		else if (data.error) throw data.error
+		else {
+			for (const row of data) {
+				this.samplecounts[row.subcohort] = row.samplecount
+			}
 		}
 	}
 }
