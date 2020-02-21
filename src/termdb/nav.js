@@ -34,24 +34,16 @@ class TdbNav {
 				this.app,
 				{
 					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.show_tabs ? this.dom.subheader.search : null
+					resultsHolder: this.opts.show_tabs ? this.dom.tip.d : null
 				},
 				rx.copyMerge(
 					{
 						click_term: this.app.opts.tree && this.app.opts.tree.click_term,
 						disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
 						callbacks: {
-							'postSearch.nav': () => {
-								this.searching = true
-								this.dom.subheaderDiv.style('display', 'block')
-								for (const key in this.dom.subheader) {
-									this.dom.subheader[key].style('display', key == 'search' ? 'block' : 'none')
-								}
-								// assumes search results are rendered in a table
-								this.dom.subheaderDiv.style(
-									'display',
-									this.dom.subheader.search.select('table').size() ? 'block' : 'none'
-								)
+							'postSearch.nav': data => {
+								if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
+								else this.dom.tip.showunder(this.dom.searchDiv.node())
 							}
 						}
 					},
@@ -135,7 +127,8 @@ function setRenderers(self) {
 				.append('div')
 				.style('display', 'none')
 				.style('padding-top', '5px')
-				.style('border-bottom', '1px solid #000')
+				.style('border-bottom', '1px solid #000'),
+			tip: new Menu({ padding: '5px' })
 		}
 		self.dom.subheader = Object.freeze({
 			search: self.dom.subheaderDiv.append('div'),

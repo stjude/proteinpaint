@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2, sayerror } from '../client'
+import { dofetch2, sayerror, Menu } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
@@ -52,7 +52,7 @@ class TermSearch {
 	async doSearch(str) {
 		if (!str) {
 			this.clear()
-			this.bus.emit('postSearch')
+			this.bus.emit('postSearch', [])
 			return
 		}
 		const lst = ['genome=' + this.state.genome, 'dslabel=' + this.state.dslabel, 'findterm=' + encodeURIComponent(str)]
@@ -64,7 +64,7 @@ class TermSearch {
 			// found terms
 			this.showTerms(data)
 		}
-		this.bus.emit('postSearch')
+		this.bus.emit('postSearch', data)
 	}
 }
 
