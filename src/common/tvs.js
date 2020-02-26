@@ -104,6 +104,7 @@ function setRenderers(self) {
 	}
 
 	self.enterPill = async function() {
+		console.log(self.tvs)
 		const one_term_div = select(this).style('font-size', '.9em')
 
 		//term name div
@@ -134,13 +135,14 @@ function setRenderers(self) {
 		const holder = _holder ? _holder : self.dom.tip
 
 		const term = self.tvs.term
-		const optsFxn = term.iscategorical
-			? self.fillCatMenu
-			: term.isfloat || term.isinteger
-			? self.fillNumMenu
-			: term.iscondition
-			? self.fillConditionMenu
-			: null
+		const optsFxn =
+			term.type == 'categorical'
+				? self.fillCatMenu
+				: term.type == 'float' || term.type == 'integer'
+				? self.fillNumMenu
+				: term.type == 'condition'
+				? self.fillConditionMenu
+				: null
 
 		optsFxn(holder, self.tvs)
 	}
@@ -1192,7 +1194,7 @@ function setRenderers(self) {
 
 	self.get_value_text = function(tvs) {
 		// tvs is {term, values/ranges, ... }, a tvs object
-		if (tvs.term.iscategorical) {
+		if (tvs.term.type == 'categorical') {
 			if (tvs.values.length == 1) {
 				// single
 				const v = tvs.values[0]
@@ -1206,7 +1208,7 @@ function setRenderers(self) {
 			if (tvs.groupset_label) return tvs.groupset_label
 			return tvs.values.length + ' groups'
 		}
-		if (tvs.term.isfloat || tvs.term.isinteger) {
+		if (tvs.term.type == 'float' || tvs.type == 'integer') {
 			if (tvs.ranges.length == 1) {
 				const v = tvs.ranges[0]
 				if ('value' in v) {
@@ -1223,7 +1225,7 @@ function setRenderers(self) {
 			// multiple
 			return tvs.ranges.length + ' intervals'
 		}
-		if (tvs.term.iscondition) {
+		if (tvs.term.type == 'condition') {
 			if (tvs.bar_by_grade || tvs.bar_by_children) {
 				if (tvs.values.length == 1) {
 					// single
@@ -1318,11 +1320,11 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (tvs.term.iscategorical) {
+					if (tvs.term.type == 'categorical') {
 						return tvs.values.find(a => a.key === d.key)
-					} else if (tvs.term.isfloat || tvs.term.isinteger) {
+					} else if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
 						return tvs.ranges.find(a => String(a.value) == d.value.toString())
-					} else if (tvs.term.iscondition) {
+					} else if (tvs.term.type == 'condition') {
 						return tvs.values.find(a => String(a.key) === String(d.key))
 					}
 				})
@@ -1340,7 +1342,9 @@ function setRenderers(self) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
 		const select_remove_pos =
-			tvs.term.isinteger || tvs.term.isfloat ? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length : j
+			tvs.term.type == 'float' || tvs.term.type == 'integer'
+				? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
+				: j
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
@@ -1412,9 +1416,9 @@ function setRenderers(self) {
 		let term_name = d.term.name
 
 		// trim long term name with '...' at end and hover to see full term_name
-		if ((d.term.isfloat || d.term.isinteger) && d.term.name.length > 25) {
+		if ((d.term.type == 'float' || d.term.type == 'integer') && d.term.name.length > 25) {
 			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 24) + '...' + '</label>'
-		} else if (d.term.iscondition && d.term.name.length > 20) {
+		} else if (d.term.type == 'condition' && d.term.name.length > 20) {
 			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 18) + '...' + '</label>'
 		}
 		return term_name

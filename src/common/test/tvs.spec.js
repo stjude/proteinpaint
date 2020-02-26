@@ -63,7 +63,7 @@ tape('tvs (common): buttons', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical', iscategorical: true },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}
@@ -134,7 +134,7 @@ tape('tvs : Categorical', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}
@@ -205,7 +205,7 @@ tape('tvs : Numerical', async test => {
 							id: 'aaclassic_5',
 							name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 							unit: 'mg/m²',
-							isfloat: true,
+							type: 'float',
 							values: {
 								'0': { label: 'Not exposed', uncomputable: true },
 								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
@@ -450,7 +450,7 @@ tape('tvs : Conditional', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', type: 'condition' },
 						values: [{ key: 0, label: '0: No condition' }],
 						bar_by_grade: 1,
 						value_by_max_grade: 1
