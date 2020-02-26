@@ -124,6 +124,7 @@ each word is a term
 
 		if (patientcondition_terms.has(id)) {
 			// belongs to patient conditions
+			j.type = 'condition'
 			j.iscondition = true
 			addattributes_conditionterm(j)
 		}
