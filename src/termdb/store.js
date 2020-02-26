@@ -19,7 +19,6 @@ const defaultState = {
 		plots: {}
 	},
 	termfilter: {
-		terms: [],
 		filter: {
 			type: 'tvslst',
 			in: true,
@@ -163,86 +162,6 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	filter_add(action) {
-		const filterType = 'terms'
-		const filters = this.state.termfilter[filterType]
-		if ('termId' in action) {
-			/*
-				having one termId assumes dispatching one added tvs at a time, 
-				whereas a bar with overlay will require adding two tvs at the same time;
-
-				should always use a tvslst instead, so may need to repeat this
-				match for existing term filter
-			*/
-			const filter = filters.find(d => d.id == action.termId)
-			if (filter) {
-				const valueData =
-					filter.term.iscategorical || filter.term.iscondition
-						? filter.values
-						: filter.term.isfloat || filter.term.isinteger
-						? filter.ranges
-						: filter.grade_and_child
-				// may need to add check if value is already present
-				if (!valueData.includes(action.value)) valueData.push(action.value)
-			}
-		} else if (action.tvslst) {
-			filters.push(action.tvslst)
-		} else {
-			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
-			filters.push([action.term])
-		}
-	},
-
-	filter_grade_update(action) {
-		const t = this.state.termfilter.terms.find(d => d.id == action.termId)
-		if (!t) return
-		t.bar_by_grade = action.updated_term.bar_by_grade
-		t.bar_by_children = action.updated_term.bar_by_children
-		t.value_by_max_grade = action.updated_term.value_by_max_grade
-		t.value_by_most_recent = action.updated_term.value_by_most_recent
-		t.value_by_computable_grade = action.updated_term.value_by_computable_grade
-	},
-
-	filter_remove(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		this.state.termfilter.terms.splice(i, 1)
-	},
-
-	filter_negate(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.isnot = term.isnot ? false : true
-	},
-
-	filter_value_add(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical ? term.values.push(action.value) : term.ranges.push(action.value)
-	},
-
-	filter_value_change(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical || term.term.iscondition
-			? (term.values[action.valueId] = action.value)
-			: (term.ranges[action.valueId] = action.value)
-	},
-
-	filter_value_remove(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		const values = term.term.iscategorical || term.term.iscondition ? term.values : term.ranges
-		values.splice(action.valueId, 1)
-		if (values.length == 0) {
-			this.state.termfilter.terms.splice(i, 1)
-		}
-	},
-
 	filter_replace(action) {
 		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 	}
@@ -268,7 +187,7 @@ function validatePlot(p) {
 		} catch (e) {
 			throw 'plot.term2 error: ' + e
 		}
-		if (p.term.term.iscondition && p.term.id == p.term2.id) {
+		if (p.term.term.type == 'condition' && p.term.id == p.term2.id) {
 			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
 			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
 				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
@@ -299,23 +218,31 @@ function validatePlotTerm(t) {
 
 	if (!t.q) throw '.q{} missing'
 	// term-type specific validation of q
-	if (t.term.isinteger || t.term.isfloat) {
-		// t.q is binning scheme, it is validated on server
-	} else if (t.term.iscategorical) {
-		if (t.q.groupsetting && !t.q.groupsetting.disabled) {
-			// groupsetting allowed on this term
-			if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
-			// groupsetting is validated on server
-		}
-		// term may not have .values{} when groupsetting is disabled
-	} else if (t.term.iscondition) {
-		if (!t.term.values) throw '.values{} missing'
-		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
-		if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
-			throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
-	} else if (t.term.isgenotype) {
-		// don't do anything for now
-	} else {
-		throw 'unknown term type'
+	switch (t.term.type) {
+		case 'integer':
+		case 'float':
+			// t.q is binning scheme, it is validated on server
+			break
+		case 'categorical':
+			if (t.q.groupsetting && !t.q.groupsetting.disabled) {
+				// groupsetting allowed on this term
+				if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
+				// groupsetting is validated on server
+			}
+			// term may not have .values{} when groupsetting is disabled
+			break
+		case 'condition':
+			if (!t.term.values) throw '.values{} missing'
+			if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
+			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
+				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
+			break
+		default:
+			if (t.term.isgenotype) {
+				// don't do anything for now
+				console.log('to add in type:"genotype"')
+				break
+			}
+			throw 'unknown term type'
 	}
 }
