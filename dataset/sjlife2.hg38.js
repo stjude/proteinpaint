@@ -78,16 +78,27 @@ module.exports = {
 				term_id: 'subcohort',
 				values: [
 					// <ul><li> for items, with a radio button for each.
-					{ keys: ['SJLIFE'], label: 'St. Jude Lifetime Cohort (SJLIFE)', isdefault: true },
-					{ keys: ['CCSS'], label: 'Childhood Cancer Survivor Study (CCSS)' },
+					{
+						keys: ['SJLIFE'],
+						label: 'St. Jude Lifetime Cohort (SJLIFE)',
+						isdefault: true,
+						cssSelector: 'tbody > tr > td:nth-child(2)'
+					},
+					{
+						keys: ['CCSS'],
+						label: 'Childhood Cancer Survivor Study (CCSS)',
+						cssSelector: 'tbody > tr > td:nth-child(3)'
+					},
 					{
 						keys: ['SJLIFE', 'CCSS'],
 						label: 'Combined SJLIFE+CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
 						// show note under label in smaller text size
 						note:
 							'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
 					}
 				],
+				highlightCohortBy: 'cssSelector',
 				htmlinfo: `
 <table>
 <thead>
@@ -110,7 +121,8 @@ module.exports = {
   </tr>
   <tr>
 	<td>Inclusion criteria</td>
-	<td colspan=2>Survived &ge; 5 years from diagnosis</td>
+	<td>Survived &ge; 5 years from diagnosis</td>
+	<td>Survived &ge; 5 years from diagnosis</td>
   </tr>
   <tr>
 	<td>Age at cancer diagnosis</td>
@@ -124,7 +136,8 @@ module.exports = {
   </tr>
   <tr>
 	<td>Study design</td>
-	<td colspan=2>Retrospective cohort with prospective follow-up, hospital-based</td>
+	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
+	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
   </tr>
   <tr>
 	<td>Methods of contact</td>
@@ -138,7 +151,8 @@ module.exports = {
   </tr>
   <tr>
 	<td>Therapeutic exposures</td>
-	<td colspan=2>Chemotherapy, radiation, surgery</td>
+	<td>Chemotherapy, radiation, surgery</td>
+	<td>Chemotherapy, radiation, surgery</td>
   </tr>
   <tr>
 	<td>Methods for ascertainment of outcomes</td>

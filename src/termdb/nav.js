@@ -50,7 +50,6 @@ class TdbNav {
 					this.app.opts.search
 				)
 			),
-
 			filter: filterInit(
 				this.app,
 				{
@@ -186,7 +185,7 @@ function setRenderers(self) {
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
 			.style('color', d =>
-				d.colNum == self.activeTab && !self.hideSubheader && self.prevCohort != -1 ? '#000' : '#aaa'
+				d.colNum == self.activeTab && !self.hideSubheader /*&& self.prevCohort != -1 */ ? '#000' : '#aaa'
 			)
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
@@ -194,7 +193,7 @@ function setRenderers(self) {
 					if (self.activeCohortName in self.samplecounts) {
 						return d.key == 'mid' ? self.activeCohortName : 'n=' + self.samplecounts[self.activeCohortName]
 					} else {
-						return d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
+						return '' // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
 					if (self.state.filter.lst.length === 0) {
@@ -221,9 +220,10 @@ function setRenderers(self) {
 		const visibleSubheaders = []
 		for (const key in self.dom.subheader) {
 			const display =
-				key == 'cohort' && self.prevCohort == -1 && self.activeCohort != -1
+				/*key == 'cohort' && self.prevCohort == -1 && self.activeCohort != -1
 					? 'none'
-					: key == 'search' || self.activeTab == self.subheaderKeys.indexOf(key)
+					:*/ key == 'search' ||
+				self.activeTab == self.subheaderKeys.indexOf(key)
 					? 'block'
 					: 'none'
 
@@ -232,8 +232,19 @@ function setRenderers(self) {
 		}
 		self.dom.subheaderDiv.style(
 			'border-bottom',
-			self.state.nav.show_tabs && visibleSubheaders.length ? '1px solid #000' : ''
+			self.state.nav.show_tabs && visibleSubheaders.length && self.activeCohort != -1 ? '1px solid #000' : ''
 		)
+		if (self.highlightCohortBy && self.activeCohort != -1) {
+			const activeCohort = self.state.termdbConfig.selectCohort.values[self.activeCohort]
+			const activeSelector = activeCohort[self.highlightCohortBy]
+			for (const cohort of self.state.termdbConfig.selectCohort.values) {
+				if (cohort[self.highlightCohortBy] !== activeSelector) {
+					self.dom.cohortTable.selectAll(cohort[self.highlightCohortBy]).style('background-color', 'transparent')
+				}
+			}
+			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
+		}
+		self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
 	}
 	self.initCohort = () => {
 		if (self.dom.cohortTable) return
@@ -244,6 +255,11 @@ function setRenderers(self) {
 		}
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
 		self.cohortNames = selectCohort.values.map(d => d.keys.join(','))
+
+		self.dom.cohortPrompt = self.dom.subheader.cohort
+			.append('div')
+			.html('<h4 style="margin-left: 30px; color: red">SELECT BELOW</h4>')
+
 		self.dom.cohortOpts = self.dom.subheader.cohort.append('div')
 		const trs = self.dom.cohortOpts
 			.append('table')
@@ -298,21 +314,21 @@ function setRenderers(self) {
 			.style('background-color', 'rgba(20, 20, 180, 0.8)')
 			.style('color', '#fff')
 
-		self.dom.cohortTable
-			.select('tbody')
-			.selectAll('tr')
-			.style('background-color', (d, i) => (i % 2 == 0 ? 'rgba(220, 180, 0, 0.4)' : '#fff'))
+		self.dom.cohortTable.select('tbody').selectAll('tr')
+		//.style('background-color', (d, i) => (i % 2 == 0 ? 'rgba(220, 180, 0, 0.4)' : '#fff'))
 
 		self.dom.cohortTable.selectAll('td').style('padding', '5px')
 
 		self.dom.cohortTable.selectAll('td').style('border', 'solid 2px rgba(220, 180, 0, 1)')
+
+		self.highlightCohortBy = selectCohort.highlightCohortBy
 	}
 }
 
 function setInteractivity(self) {
 	self.setTab = d => {
 		if (d.colNum == self.activeTab && !self.searching) {
-			self.hideSubheader = self.prevCohort != -1 && !self.hideSubheader
+			self.hideSubheader = /*self.prevCohort != -1 &&*/ !self.hideSubheader
 			self.prevCohort = self.activeCohort
 			self.updateUI()
 			return
