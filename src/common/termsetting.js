@@ -756,14 +756,12 @@ function setInteractivity(self) {
 			custom_bins_q = JSON.parse(JSON.stringify(self.q))
 		} else if (self.term.bins) {
 			//if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
-			const bins = self.opts.use_bins_less ? self.term.bins.less : self.term.bins.default
+			const bins = self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default
 			custom_bins_q = JSON.parse(JSON.stringify(bins))
 		}
 
 		// (termporary) set default_bins_q as self.bins.default
-		// default_bins_q =
-		// 	self.term.bins.less && !self.opts.disable_ReplaceRemove ? self.term.bins.less : self.term.bins.default
-		default_bins_q = self.opts.use_bins_less ? self.term.bins.less : self.term.bins.default
+		default_bins_q = self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default
 
 		const config_table = div
 			.append('table')
