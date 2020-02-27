@@ -1301,6 +1301,7 @@ function setInteractivity(self) {
 }
 
 function termsetting_fill_q(q, term) {
+	// to-do: delete this code block when all term.is* has been removed from code
 	if (!term.type) {
 		term.type = term.iscategorical
 			? 'categorical'

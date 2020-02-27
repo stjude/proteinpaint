@@ -150,7 +150,7 @@ tape('overlay input', function(test) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay') return
 			test.true(
-				this.parentNode.lastChild.innerHTML.toLowerCase().includes('sub-conditions'),
+				this.parentNode.lastChild.innerHTML.toLowerCase().includes('sub-condition'),
 				'should overlay subconditions'
 			)
 		})

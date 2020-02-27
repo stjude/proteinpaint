@@ -100,8 +100,7 @@ function diaggrp(overrides = {}) {
 				term: {
 					type: 'categorical',
 					id: 'diaggrp',
-					name: 'Diagnosis Group',
-					iscategorical: true
+					name: 'Diagnosis Group'
 				},
 				values: [
 					{
@@ -120,7 +119,7 @@ function agedx(overrides = {}) {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true, type: 'float' },
+				term: { id: 'agedx', name: 'Age of diagnosis', type: 'float' },
 				ranges: [{ start: 2, stop: 5, startinclusive: true }]
 			}
 		},

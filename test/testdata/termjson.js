@@ -2,7 +2,6 @@ exports.termjson = {
 	diaggrp: {
 		id: 'diaggrp',
 		name: 'Diagnosis Group',
-		iscategorical: true,
 		type: 'categorical',
 		isleaf: true,
 		graph: {
@@ -44,7 +43,6 @@ exports.termjson = {
 		id: 'agedx',
 		name: 'Age at Cancer Diagnosis',
 		unit: 'Years',
-		isfloat: true,
 		type: 'float',
 		bins: {
 			default: {
@@ -75,7 +73,6 @@ exports.termjson = {
 	Arrhythmias: {
 		id: 'Arrhythmias',
 		name: 'Arrhythmias',
-		iscondition: true,
 		type: 'condition',
 		graph: {
 			barchart: {
@@ -121,7 +118,6 @@ exports.termjson = {
 		id: 'aaclassic_5',
 		name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 		unit: 'mg/m²',
-		isfloat: true,
 		type: 'float',
 		bins: {
 			default: {
@@ -148,6 +144,6 @@ exports.termjson = {
 	sex: {
 		id: 'sex',
 		name: 'Sex',
-		iscategorical: true
+		type: 'categorical'
 	}
 }

@@ -28,6 +28,7 @@ exports.getterm = async function(termid, dslabel = null, genome = null) {
 	return data.term
 }
 
+
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
 // shared in client, server, and tape test

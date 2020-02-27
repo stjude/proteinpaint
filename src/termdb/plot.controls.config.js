@@ -250,9 +250,9 @@ function setViewOpts(opts) {
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && plot.term2.term.isfloat
+					: d.value == 'boxplot' && plot.term2 && plot.term2.term.type == 'float'
 					? 'inline-block'
-					: d.value == 'scatter' && plot.term.term.isfloat && plot.term2 && plot.term2.term.isfloat
+					: d.value == 'scatter' && plot.term.term.type == 'float' && plot.term2 && plot.term2.term.type == 'float'
 					? 'inline-block'
 					: 'none'
 			)

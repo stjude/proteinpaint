@@ -206,7 +206,7 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = t2 && t2.term.iscondition ? '' : `, n=${series.visibleTotal}`
+				const ntotal = t2 && t2.term.type == 'condition' ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -279,7 +279,7 @@ class TdbBarchart {
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
-						t2 && t2.term.iscondition
+						t2 && t2.term.type == 'condition'
 							? 0
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
@@ -312,7 +312,7 @@ class TdbBarchart {
 		if (s.rows && s.rows.length > 1 && !s.hidelegend && t2 && this.term2toColor) {
 			const b = t2.term.graph && t2.term.graph.barchart ? t2.term.graph.barchart : null
 			const value_by_label =
-				!t2.term.iscondition || !t2.term.q
+				t2.term.type != 'condition' || !t2.term.q
 					? ''
 					: t2.term.q.value_by_max_grade
 					? 'max. grade'
