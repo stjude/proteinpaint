@@ -144,8 +144,8 @@ function setRenderers(self) {
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
 		self.tabs = [
-			{ top: 'COHORT', mid: 'SJLIFE', btm: '' }, //, hidetab: !self.state.termdbConfig.selectCohort },
-			{ top: 'FILTER', mid: '+NEW', btm: '' },
+			{ top: 'COHORT', mid: 'NONE', btm: '' }, //, hidetab: !self.state.termdbConfig.selectCohort },
+			{ top: 'FILTER', mid: 'NONE', btm: '' },
 			{ top: 'CART', mid: 'NONE', btm: '' }
 		]
 		table
@@ -167,7 +167,7 @@ function setRenderers(self) {
 			// hide the cohort tab until there is termdbConfig.selectCohort
 			.style('display', d => (d.colNum === 0 ? 'none' : ''))
 			.style('width', '100px')
-			.style('padding', '5px 12px')
+			.style('padding', d => (d.rowNum === 0 ? '12px' : '3px 12px'))
 			.style('text-align', 'center')
 			.style('border-left', '1px solid #ccc')
 			.style('border-right', '1px solid #ccc')
@@ -184,20 +184,25 @@ function setRenderers(self) {
 		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
-			.style('color', d =>
-				d.colNum == self.activeTab && !self.hideSubheader /*&& self.prevCohort != -1 */ ? '#000' : '#aaa'
-			)
+			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
+			.style('background-color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
 				if (d.colNum === 0) {
 					if (self.activeCohortName in self.samplecounts) {
-						return d.key == 'mid' ? self.activeCohortName : 'n=' + self.samplecounts[self.activeCohortName]
+						return d.key != 'mid'
+							? ''
+							: self.activeCohort == -1
+							? 'NONE'
+							: self.activeCohortName
+							? 'n=' + self.samplecounts[self.activeCohortName]
+							: 'NONE'
 					} else {
-						return '' // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
+						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
 					if (self.state.filter.lst.length === 0) {
-						return d.key === 'mid' ? '+NEW' : '&nbsp;'
+						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {
 						return d.key === 'mid' ? self.state.filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
 					}
