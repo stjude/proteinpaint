@@ -97,7 +97,7 @@ class TdbNav {
 			'genome=' + this.state.genome,
 			'dslabel=' + this.state.dslabel,
 			'getsamplecount=' + this.activeCohortName,
-			'filter=' + encodeURIComponent(JSON.stringify(this.state.filter))
+			'filter=' + (this.activeCohort == -1 ? 'null' : encodeURIComponent(JSON.stringify(this.state.filter)))
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
@@ -272,11 +272,12 @@ function setRenderers(self) {
 				const tr = select(this)
 				const td0 = tr.append('td')
 				const radioName = 'sja-termdb-cohort-' + self.instanceNum
+				const radioId = radioName + '-' + i
 				td0
 					.append('input')
 					.attr('type', 'radio')
 					.attr('name', radioName)
-					.attr('id', radioName + '-' + i)
+					.attr('id', radioId)
 					.attr('value', i)
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '3px')
@@ -284,7 +285,7 @@ function setRenderers(self) {
 
 				td0
 					.append('label')
-					.attr('for', 'sja-termdb-cohort' + i)
+					.attr('for', radioId)
 					.style('cursor', 'pointer')
 					.html(d => d.label)
 

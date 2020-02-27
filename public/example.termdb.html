@@ -28,9 +28,15 @@ runproteinpaint({
 					join:'',
 					in:true,
 					lst:[
-						{type:'tvs',tvs: {
-							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true,
-								"values":{
+						{
+							type:'tvs',
+							tvs: {
+								term: {
+									id: "aaclassic_5", 
+									name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", 
+									isfloat: true,
+									type: 'float',
+									values:{
         					        "0": { "label":"Not exposed", "uncomputable":true },
                 					"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
                 					"-9999": { "label":"Unknown treatment record", "uncomputable":true }
@@ -43,6 +49,9 @@ runproteinpaint({
 						}}
 					]
 				}
+			},
+			nav: {
+				show_tabs: true
 			},
 			tree:{
 				expandedTermIds:['root','Outcomes','CTCAE Graded Events','Cardiovascular System'],
