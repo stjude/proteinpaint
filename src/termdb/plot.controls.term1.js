@@ -103,15 +103,20 @@ function setRenderers(self) {
 			return
 		}
 
-		if (plot.term.term.iscategorical) {
-			self.dom.td1.text('Group categories')
-			// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
-		} else if (plot.term.term.iscondition) {
-			self.dom.td1.text('Customize')
-		} else if (plot.term.term.isinteger || plot.term.term.isfloat) {
-			self.dom.td1.text('Customize bins')
-		} else {
-			throw 'unknown term type'
+		switch (plot.term.term.type) {
+			case 'categorical':
+				self.dom.td1.text('Group categories')
+				// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
+				break
+			case 'condition':
+				self.dom.td1.text('Customize')
+				break
+			case 'integer':
+			case 'float':
+				self.dom.td1.text('Customize bins')
+				break
+			default:
+				throw 'unknown term type'
 		}
 		if (!self.pill) self.setPill()
 		self.pill.main({
