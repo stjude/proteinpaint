@@ -72,7 +72,7 @@ export function get_summary_numericcategories(q) {
 	.filter
 	*/
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.term_id)
-	if (!term.isinteger && !term.isfloat) throw 'term is not numeric'
+	if (term.type != 'integer' && term.type != 'float') throw 'term is not numeric'
 	if (!term.values) {
 		// term does not have special categories
 		return []
@@ -372,7 +372,7 @@ function getlabeler(q, i, result) {
 	// -- consider keeping key1 terminology consistent later?
 	const tkey = i != 1 || q.term0_id || q.term2_id ? key : 'key'
 	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : 'label'
-	if (term.isinteger || term.isfloat) {
+	if (term.type == 'integer' || term.type == 'float') {
 		const CTE = result['CTE' + i]
 		const range = 'range' + (i != 1 || q.term0_id || q.term2_id ? i : '')
 		return row => {
@@ -401,10 +401,10 @@ function getlabeler(q, i, result) {
 
 function get_label4key(key, term, q, ds) {
 	// get label for a key based on term type and setting
-	if (term.iscategorical) {
+	if (term.type == 'categorical') {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
-	if (term.iscondition) {
+	if (term.type == 'condition') {
 		if (!term.values) throw 'missing term.values for condition term'
 		if (q.bar_by_grade) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
@@ -416,7 +416,7 @@ function get_label4key(key, term, q, ds) {
 	if (term.values) {
 		return key in term.values ? term.values[key].label : key
 	}
-	if (term.isinteger || term.isfloat) throw 'should not work for numeric term'
+	if (term.type == 'integer' || term.type == 'float') throw 'should not work for numeric term'
 	throw 'unknown term type'
 }
 
@@ -439,10 +439,10 @@ returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
-	if (term.iscategorical) {
+	if (term.type == 'categorical') {
 		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
-	if (term.isfloat || term.isinteger) {
+	if (term.type == 'float' || term.type == 'integer') {
 		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
 		return {
 			sql: `${bins.sql},
@@ -455,7 +455,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 			bins: bins.bins
 		}
 	}
-	if (term.iscondition) {
+	if (term.type == 'condition') {
 		return makesql_oneterm_condition(tablename, term, q, values)
 	}
 	throw 'unknown term type'
@@ -647,8 +647,8 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 		${bin_sample_table} AS (
 			SELECT
 				sample,
-				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS v,
-				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value,
+				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS v,
+				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value,
 				b.name AS bname,
 				b.binorder AS binorder
 			FROM
@@ -703,7 +703,10 @@ at a numeric barchart
 */
 	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
-	if ((term.isinteger || term.isfloat) && !filter.lst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
+	if (
+		(term.type == 'integer' || term.type == 'float') &&
+		!filter.lst.find(tv => tv.term.id == term.id && 'ranges' in tv)
+	) {
 		filter.lst.push({
 			type: 'tvs',
 			tvs: {
@@ -720,7 +723,7 @@ at a numeric barchart
 	}
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	const string = `${filter ? 'WITH ' + filter.filters + ' ' : ''}
-		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+		SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 		FROM annotations
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
@@ -797,7 +800,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	const sql = `WITH
 		${filter ? filter.filters + ', ' : ''} 
 		vals AS (
-			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+			SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 			FROM annotations
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}

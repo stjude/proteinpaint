@@ -754,7 +754,7 @@ function _m_is_filtered(q, result, mockblock) {
 function prep_termdbgrp(terms) {
 	// not in use
 	for (const t of terms) {
-		if (t.term.iscategorical) {
+		if (t.term.type == 'categorical') {
 			// convert values[{key,label}] to set
 			t.valueset = new Set(t.values.map(i => i.key))
 		}

@@ -128,7 +128,7 @@ function show_legend(obj, categories) {
 	let cats = categories
 
 	// for numerical term sort the categories, and attach unannotated at the end of cats[]
-	if (obj.overlay_term.isinteger || obj.overlay_term.isfloat) {
+	if (obj.overlay_term.type == 'integer' || obj.overlay_term.type == 'float') {
 		let unannoated_cats = []
 		for (const [i, cat] of categories.entries()) {
 			if (isNaN(cat.label.split(' ')[0])) {

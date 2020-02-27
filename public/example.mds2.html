@@ -36,18 +36,18 @@ runproteinpaint({
 								is_termdb:true,
 								filter:{ type:'tvslst',join:'and',in:true,lst:[
 									{type:'tvs',tvs: {
-										term:{id:'diaggrp',name:'Diagnosis group',iscategorical:true},
+										term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
 										values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
 									}},
 									{type:'tvs',tvs: {
-										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true},
+										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float'},
 										ranges: [ { value: '0', label: "Not exposed"},
-										{startunbounded:true,stop:2000,stopinclusive:true}
+											{startunbounded:true,stop:2000,stopinclusive:true}
 										]
 									}},
 									/*
-										//term:{id:'Asthma',name:'Asthma',iscondition:true},
-										term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
+										//term:{id:'Asthma',name:'Asthma',type:'condition'},
+										term:{id:'Arrhythmias',name:'Arrhythmias',type:'condition'},
 										bar_by_grade:true,
 										value_by_max_grade:true,
 										values:[{key:1,label:'1 - mild'}],
@@ -59,22 +59,6 @@ runproteinpaint({
 											child_id:'Conduction abnormalities'
 										}],
 										*/
-									/*
-									{
-										term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
-										bar_by_grade:true,
-										//bar_by_children:true,
-										//value_by_max_grade:true,
-										value_by_most_recent:true,
-										values:[{key:1,label:'1: Mild'}]
-										//values:[{key:'Conduction abnormalities',label:'Conduction abnormalities'}]
-									}
-									{
-										term:{id:'Cardiovascular System',name:'Cardiovascular System',iscondition:true},
-										grade_and_child:[{grade:1,child_id:'Arrhythmias',grade_label:'1',child_label:'Arr'}],
-										value_by_max_grade:true,
-									}
-									*/
 									]
 								}
 							},

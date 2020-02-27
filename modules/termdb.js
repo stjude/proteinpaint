@@ -48,7 +48,6 @@ export function handle_request_closure(genomes) {
 			if (q.treeto) return trigger_treeto(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
-			if (q.testplot) return trigger_testplot(q, res, tdb, ds) // this is required for running test cases!!
 			if (q.phewas) {
 				if (q.precompute) return await phewas.do_precompute(q, res, ds)
 				if (q.update) return await phewas.update_image(q, res)
@@ -85,40 +84,6 @@ function trigger_gettermbyid(q, res, tdb) {
 
 function trigger_getsamplecount(q, res, ds) {
 	res.send(termdbsql.get_samplecount(q, ds))
-}
-
-function trigger_testplot(q, res, tdb, ds) {
-	// XXX still being used??
-	q.ds = ds
-	const startTime = +new Date()
-	const lst = termdbsql.get_summary(q)
-	const result = { lst }
-	const t1 = tdb.q.termjsonByOneid(q.term1_id)
-	if (t1.isinteger || t1.isfloat) {
-		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds)
-	}
-	if (q.term2_id) {
-		const t2 = tdb.q.termjsonByOneid(q.term2_id)
-		if (t2.isinteger || t2.isfloat) {
-			result.summary_term2 = {}
-			for (const item of result.lst) {
-				if (!(item.key1 in result.summary_term2)) {
-					const t1q = {
-						term: t1,
-						values: t1.iscategorical || t1.iscondition ? [{ key: item.key1, label: item.label }] : null,
-						ranges: t1.isinteger || t1.isfloat ? [item.range1] : null
-					}
-					if (q.term1_q) {
-						Object.assign(t1q, q.term1_q)
-					}
-					const filter = (q.filter ? q.filter : []).concat(t1q)
-					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds)
-				}
-			}
-		}
-	}
-	result.time = +new Date() - startTime
-	res.send(result)
 }
 
 function trigger_rootterm(res, tdb) {
@@ -186,18 +151,27 @@ function trigger_getcategories(q, res, tdb, ds) {
 	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
-		term1_id: q.tid,
-		term1_q: q.term1_q
-			? q.term1_q
-			: term.isinteger || term.isfloat
-			? term.bins.default
-			: {
-					bar_by_grade: q.bar_by_grade,
-					bar_by_children: q.bar_by_children,
-					value_by_max_grade: q.value_by_max_grade,
-					value_by_most_recent: q.value_by_most_recent,
-					value_by_computable_grade: q.value_by_computable_grade
-			  }
+		term1_id: q.tid
+	}
+	switch (term.type) {
+		case 'categorical':
+			arg.term1_q = q.term1_q
+			break
+		case 'integer':
+		case 'float':
+			arg.term1_q = term.bins.default
+			break
+		case 'condition':
+			arg.term1_q = {
+				bar_by_grade: q.bar_by_grade,
+				bar_by_children: q.bar_by_children,
+				value_by_max_grade: q.value_by_max_grade,
+				value_by_most_recent: q.value_by_most_recent,
+				value_by_computable_grade: q.value_by_computable_grade
+			}
+			break
+		default:
+			throw 'unknown term type'
 	}
 	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
 	const lst = termdbsql.get_summary(arg)
@@ -222,11 +196,11 @@ function trigger_scatter(q, res, tdb, ds) {
 	const startTime = +new Date()
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (!t1) throw `Invalid term1_id="${q.term1_id}"`
-	if (!t1.isfloat) throw `term must be a float data type for scatter data`
+	if (t1.type != 'float' && t1.type != 'integer') throw `term is not integer/float for scatter data`
 
 	const t2 = tdb.q.termjsonByOneid(q.term2_id)
 	if (!t2) throw `Invalid term1_id="${q.term2_id}"`
-	if (!t2.isfloat) throw `term2 must be a float data type for scatter data`
+	if (t2.type != 'float' && t2.type != 'integer') throw `term2 is not integer/float for scatter data`
 
 	const rows = termdbsql.get_rows_by_two_keys(q, t1, t2)
 	const result = {

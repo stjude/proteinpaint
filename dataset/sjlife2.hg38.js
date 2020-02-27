@@ -15,7 +15,7 @@ module.exports = {
 
 		termdb: {
 			patient_condition: {
-				// solely for the "iscondition" terms
+				// solely for the type:condition terms
 				events_key: 'conditionevents',
 				grade_key: 'grade',
 				grade_labels: [
@@ -69,7 +69,7 @@ module.exports = {
 							type: 'tvslst',
 							join: '',
 							in: true,
-							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] } }]
+							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
 						}
 					}
 				}
@@ -435,7 +435,7 @@ module.exports = {
 									{
 										type: 'tvs',
 										tvs: {
-											term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+											term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 											values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 										}
 									}
@@ -449,21 +449,6 @@ module.exports = {
 							allowto_adjust_race: true,
 							adjust_race: true
 						}
-						/*
-						{
-							is_termdb:true,
-							terms:[
-								{
-									term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-									values:[
-										{key:'Neuroblastoma',label:'Neuroblastoma'}
-									]
-								}
-							]
-						},
-						{ is_infofield:true, key:'gnomAD_AF' },
-						{ is_infofield:true, key:'gnomAD_AF_afr' },
-						*/
 					],
 					allowed_infofields: [
 						{ key: 'AF' },
@@ -482,7 +467,8 @@ module.exports = {
 					termfilter: {
 						id: 'genetic_race',
 						name: 'Genetically defined race',
-						iscategorical: true,
+						type: 'categorical',
+						// need to provide type/name/values besides id; in p4 with state rehydration, just need to provide term id
 						values: [{ key: 'European Ancestry' }, { key: 'African Ancestry' }, { key: 'Asian Ancestry' }],
 						inuse: true,
 						value_index: 0
@@ -529,7 +515,8 @@ module.exports = {
 						term: {
 							name: 'wgs',
 							id: 'wgs_curated',
-							iscategorical: true,
+							type: 'categorical',
+							// need to provide type/name/values besides id; in p4 with state rehydration, just need to provide term id
 							values: { '0': { label: 'No' }, '1': { label: 'Yes' } }
 						},
 						values: [{ key: '1', label: 'Yes' }]

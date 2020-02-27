@@ -184,7 +184,10 @@ use get_rows()
 	const rows = []
 
 	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
-		if (!term.iscategorical && !term.isinteger && !term.isfloat && !term.iscondition) continue
+		if (!term.type) {
+			// requires a valid term type
+			continue
+		}
 
 		let parentname = ''
 		{
@@ -194,25 +197,30 @@ use get_rows()
 
 		//////////// prep query for this term
 		const qlst = []
-		if (term.iscategorical) {
-			qlst.push({ ds, term1_id: term.id })
-		} else if (term.isfloat || term.isinteger) {
-			qlst.push({
-				ds,
-				term1_id: term.id,
-				term1_q: term.bins.default
-			})
-		} else if (term.iscondition) {
-			// for both leaf and non-leaf
-			// should only use grades as bars to go along with termdb.comparison_groups
-			// no need to test on subconditions
-			qlst.push({
-				ds,
-				term1_id: term.id,
-				term1_q: { bar_by_grade: true, value_by_max_grade: true }
-			})
-		} else {
-			throw 'unknown term type'
+		switch (term.type) {
+			case 'categorical':
+				qlst.push({ ds, term1_id: term.id })
+				break
+			case 'float':
+			case 'integer':
+				qlst.push({
+					ds,
+					term1_id: term.id,
+					term1_q: term.bins.default
+				})
+				break
+			case 'condition':
+				// for both leaf and non-leaf
+				// should only use grades as bars to go along with termdb.comparison_groups
+				// no need to test on subconditions
+				qlst.push({
+					ds,
+					term1_id: term.id,
+					term1_q: { bar_by_grade: true, value_by_max_grade: true }
+				})
+				break
+			default:
+				throw 'unknown term type'
 		}
 
 		for (const q of qlst) {
@@ -229,9 +237,9 @@ use get_rows()
 			   may only be used for condition terms since they may have type-specific filter
 			*/
 
-			if (term.iscategorical || term.isinteger || term.isfloat) {
+			if (term.type == 'categorical' || term.type == 'integer' || term.type == 'float') {
 				categories.push(...helper_rows2categories(re.lst, term))
-			} else if (term.iscondition) {
+			} else if (term.type == 'condition') {
 				if (ds.cohort.termdb.patient_condition && ds.cohort.termdb.patient_condition.comparison_groups) {
 					// predefined comparison groups
 					categories.push(...helper_conditiongroups2categories(re.lst))
