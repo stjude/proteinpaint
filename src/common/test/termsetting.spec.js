@@ -63,7 +63,7 @@ tape('disable_ReplaceRemove', async test => {
 			term: {
 				id: 'dummy',
 				name: 'disable_ReplaceRemove',
-				iscategorical: true,
+				type: 'categorical',
 				values: {
 					cat1: { label: 'Cat 1' }
 				}
@@ -105,7 +105,7 @@ tape('use_bins_less', async test => {
 			term: {
 				id: 'dummy',
 				name: 'use_bins_less',
-				isfloat: true,
+				type: 'float',
 				bins: {
 					less: { bin_size: 10, first_bin: { start: 0 } },
 					default: { bin_size: 1, first_bin: { start: 0 } }
@@ -139,7 +139,7 @@ tape('Caterogical term', async test => {
 			term: {
 				id: 'diaggrp',
 				name: 'Diagnosis Group',
-				iscategorical: true,
+				type: 'categorical',
 				isleaf: true,
 				graph: {
 					barchart: {
@@ -231,7 +231,7 @@ tape('Numerical term', async test => {
 				id: 'agedx',
 				name: 'Age at Cancer Diagnosis',
 				unit: 'Years',
-				isfloat: true,
+				type: 'float',
 				bins: {
 					default: {
 						bin_size: 3,
@@ -343,7 +343,7 @@ tape('Conditional term', async test => {
 			term: {
 				id: 'Arrhythmias',
 				name: 'Arrhythmias',
-				iscondition: true,
+				type: 'condition',
 				values: {
 					0: { label: '0: No condition' },
 					1: { label: '1: Mild' },

@@ -63,7 +63,7 @@ tape('tvs (common): buttons', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical', iscategorical: true },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}

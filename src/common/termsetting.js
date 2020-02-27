@@ -176,7 +176,7 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		// only modify right half of the pill
 		const one_term_div = select(this)
-		if (self.term.iscondition && !self.q.bar_by_children && !self.q.bar_by_grade) {
+		if (self.term.type == 'condition' && !self.q.bar_by_children && !self.q.bar_by_grade) {
 			self.q.bar_by_grade = true
 			self.q.value_by_max_grade = true
 			self.q.groupsetting = {}
@@ -188,7 +188,10 @@ function setRenderers(self) {
 
 		const status_msg = self.get_status_msg()
 
-		self.dom.pill_termname.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
+		self.dom.pill_termname.style(
+			'border-radius',
+			grpsetting_flag || self.term.type == 'condition' ? '6px 0 0 6px' : '6px'
+		)
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
@@ -231,7 +234,7 @@ function setRenderers(self) {
 			}
 			return 'Unknown setting for groupsetting'
 		}
-		if (self.term.iscondition) {
+		if (self.term.type == 'condition') {
 			if (self.q.bar_by_grade) {
 				if (self.q.value_by_max_grade) return 'Max. Grade'
 				if (self.q.value_by_most_recent) return 'Most Recent Grade'
@@ -241,7 +244,7 @@ function setRenderers(self) {
 			if (self.q.bar_by_children) {
 				return 'Sub-condition'
 			}
-			return 'Error: unknown setting for term.iscondition'
+			return 'Error: unknown setting for term.type == "condition"'
 		}
 		return null // for no label
 	}
@@ -274,7 +277,7 @@ function setInteractivity(self) {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
 					let _term = term
-					if (self.opts.use_bins_less && (term.isinteger || term.isfloat) && term.bins.less) {
+					if (self.opts.use_bins_less && (term.type == 'integer' || term.type == 'float') && term.bins.less) {
 						// instructed to use bins.less which is present
 						// make a decoy term replacing bins.default with bins.less
 						_term = JSON.parse(JSON.stringify(term))
@@ -294,13 +297,14 @@ function setInteractivity(self) {
 		const term_option_div = self.dom.tip.d.append('div')
 		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
 
-		const optsFxn = self.term.iscategorical
-			? self.showGrpOpts
-			: self.term.isfloat || self.term.isinteger
-			? self.showNumOpts
-			: self.term.iscondition
-			? self.showConditionOpts
-			: null
+		const optsFxn =
+			self.term.type == 'categorical'
+				? self.showGrpOpts
+				: self.term.type == 'float' || self.term.type == 'integer'
+				? self.showNumOpts
+				: self.term.type == 'condition'
+				? self.showConditionOpts
+				: null
 
 		term_option_div
 			.append('div')
@@ -1311,7 +1315,7 @@ function termsetting_fill_q(q, term) {
 			: ''
 	}
 
-	if (term.isinteger || term.isfloat) {
+	if (term.type == 'integer' || term.type == 'float') {
 		if (!valid_binscheme(q)) {
 			/*
 			if q is already initiated, do not overwrite
@@ -1323,7 +1327,7 @@ function termsetting_fill_q(q, term) {
 		set_hiddenvalues(q, term)
 		return
 	}
-	if (term.iscategorical || term.iscondition) {
+	if (term.type == 'categorical' || term.type == 'condition') {
 		set_hiddenvalues(q, term)
 		if (!q.groupsetting) q.groupsetting = {}
 		if (term.groupsetting.disabled) {
@@ -1333,7 +1337,7 @@ function termsetting_fill_q(q, term) {
 		delete q.groupsetting.disabled
 		if (!('inuse' in q.groupsetting)) q.groupsetting.inuse = false // do not apply by default
 
-		if (term.iscondition) {
+		if (term.type == 'condition') {
 			/*
 			for condition term, must set up bar/value flags before quiting for inuse:false
 			*/
