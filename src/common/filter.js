@@ -62,19 +62,20 @@ class Filter {
 		this.initUI()
 
 		this.api = {
-			main: async rawFilter => {
+			main: async (rawFilter, opts = {}) => {
 				/*
 				rawFilter{}
 				  the raw filter data structure
 				*/
 
+				const tempNav = Object.assign({}, this.opts, opts)
 				// to-do: should use deepEquals as part of rx.core
 				const rawCopy = JSON.stringify(rawFilter)
-				if (this.rawCopy == rawCopy) return
+				if (this.rawCopy == rawCopy && JSON.stringify(this.nav) == JSON.stringify(tempNav)) return
+				this.nav = tempNav
 				this.rawCopy = rawCopy
 				this.rawFilter = JSON.parse(this.rawCopy)
 				this.validateFilter(this.rawFilter)
-
 				this.filter = this.opts.getVisibleRoot ? this.opts.getVisibleRoot(this.rawFilter) : this.rawFilter
 				this.resetActiveData(this.filter)
 
@@ -196,7 +197,7 @@ function setRenderers(self) {
 				.style('margin', '2px 10px 2px 2px')
 				.style('padding', '5px')
 				.style('border-radius', '5px')
-				//.style('background-color', '#ececec')
+				.style('background-color', '#ececec')
 				.style('cursor', 'pointer')
 				.on('click', self.displayTreeNew)
 		}
@@ -674,6 +675,7 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel,
 				nav: {
+					show_tabs: false,
 					activeCohort: self.nav.activeCohort
 				},
 				termfilter: {
@@ -749,6 +751,7 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel,
 				nav: {
+					show_tabs: false,
 					activeCohort: self.nav.activeCohort
 				},
 				termfilter: {

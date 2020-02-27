@@ -40,7 +40,7 @@ class TdbFilter {
 		}
 		this.dom.holder.style('display', 'inline-block')
 		if (!this.filterApi) this.initFilter()
-		this.filterApi.main(f.filter)
+		this.filterApi.main(f.filter, { nav: this.state.nav })
 	}
 
 	initFilter() {
@@ -53,6 +53,7 @@ class TdbFilter {
 			debug: this.app.opts.debug,
 			getVisibleRoot: this.opts.getVisibleRoot,
 			newBtn: this.opts.newBtn,
+			emptyLabel: this.opts.emptyLabel,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',

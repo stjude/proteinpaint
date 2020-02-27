@@ -21,7 +21,7 @@ class TdbNav {
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-		this.activeCohort = 0
+		this.activeCohort = -1
 		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
 		this.activeTab = 0
 		this.searching = false
@@ -55,14 +55,13 @@ class TdbNav {
 				{
 					holder: this.dom.subheader.filter.append('div'),
 					hideLabel: this.opts.show_tabs,
-					newBtn: this.dom.tds.filter(d => d.colNum === 1)
+					emptyLabel: '+Add new filter'
 				},
 				this.opts.filter
 			)
 		}
 	}
 	getState(appState) {
-		//console.log(64, appState.nav.activeCohort)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
@@ -73,7 +72,6 @@ class TdbNav {
 		}
 	}
 	reactsTo(action) {
-		//return true // console.log(58, action.type == 'app_refresh')
 		return (
 			action.type.startsWith('tab_') ||
 			action.type.startsWith('filter_') ||
@@ -165,7 +163,7 @@ function setRenderers(self) {
 			.enter()
 			.append('td')
 			// hide the cohort tab until there is termdbConfig.selectCohort
-			.style('display', d => (d.colNum === 0 ? 'none' : ''))
+			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
 			.style('padding', d => (d.rowNum === 0 ? '12px' : '3px 12px'))
 			.style('text-align', 'center')
@@ -181,9 +179,11 @@ function setRenderers(self) {
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
 	}
 	self.updateUI = () => {
+		self.dom.searchDiv.style('display', self.activeCohort == -1 ? 'none' : 'inline-block')
 		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
+			.style('display', d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
 			.style('background-color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
@@ -213,13 +213,7 @@ function setRenderers(self) {
 
 		self.dom.subheaderDiv.style(
 			'display',
-			self.hideSubheader
-				? 'none'
-				: self.searching || (self.activeTab === 1 && !self.state.filter.lst.length)
-				? 'none'
-				: !self.state.nav.show_tabs && self.activeTab !== 1
-				? 'none'
-				: 'block'
+			self.hideSubheader ? 'none' : !self.state.nav.show_tabs && self.activeTab !== 1 ? 'none' : 'block'
 		)
 
 		const visibleSubheaders = []
