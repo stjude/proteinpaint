@@ -68,7 +68,7 @@ export default function getHandlers(self) {
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
-				if (!t1.iscondition && (!t2 || !t2.iscondition)) {
+				if (!t1.type == 'condition' && (!t2 || !t2.type == 'condition')) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
@@ -157,11 +157,11 @@ export default function getHandlers(self) {
 					return s.unit == 'pct' ? '% of patients' : '# of patients'
 				} else {
 					const term = self.config.term
-					return term.iscondition && self.config.term.q.value_by_max_grade
+					return term.type == 'condition' && self.config.term.q.value_by_max_grade
 						? 'Maximum grade'
-						: term.iscondition && self.config.term.q.value_by_most_recent
+						: term.type == 'condition' && self.config.term.q.value_by_most_recent
 						? 'Most recent grade'
-						: term.iscategorical || !term.unit
+						: term.type == 'categorical' || !term.unit
 						? ''
 						: term.unit //term.name[0].toUpperCase() + term.name.slice(1)
 				}
@@ -172,11 +172,11 @@ export default function getHandlers(self) {
 				if (s.orientation == 'vertical') {
 					const term = self.config.term
 					const q1 = term.q
-					return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
+					return term.type == 'condition' && q1.bar_by_grade && q1.value_by_max_grade
 						? 'Maximum grade'
-						: term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
+						: term.type == 'condition' && q1.bar_by_grade && q1.value_by_most_recent
 						? 'Most recent grades'
-						: term.iscategorical || !term.unit
+						: term.type == 'categorical' || !term.unit
 						? ''
 						: term.unit // term.name[0].toUpperCase() + term.name.slice(1)
 				} else {
@@ -324,9 +324,9 @@ function menuoption_add_filter(self, tvslst) {
 		return
 	}
 	self.app.dispatch({
-		type: 'filter_replace', 
+		type: 'filter_replace',
 		filter: filterJoin([
-			self.state.termfilter.filter, 
+			self.state.termfilter.filter,
 			{
 				type: 'tvslst',
 				in: true,
@@ -423,19 +423,20 @@ function getTermValues(d, self) {
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (q.groupsetting && q.groupsetting.inuse) {
-			const groupset = 'predefined_groupset_idx' in q.groupsetting
-				? term.term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
-				: q.groupsetting.customset
+			const groupset =
+				'predefined_groupset_idx' in q.groupsetting
+					? term.term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+					: q.groupsetting.customset
 			const group = groupset.groups.find(g => g.name === key)
 			const tvs = { term: term.term, values: group.values, groupset_label: group.name }
-			if (term.term.iscondition) {
+			if (term.term.type == 'condition') {
 				tvs.bar_by_children = term.q.bar_by_children
 				tvs.bar_by_grade = term.q.bar_by_grade
 				tvs.value_by_most_recent = term.q.value_by_most_recent
 				tvs.value_by_max_grade = term.q.value_by_max_grade
 			}
 			termValues.push(tvs)
-		} else if (term.term.iscondition) {
+		} else if (term.term.type == 'condition') {
 			if (!t2 || t1.id != t2.id) {
 				termValues.push(
 					Object.assign(

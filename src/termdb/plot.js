@@ -301,7 +301,9 @@ function tvslst_to_parameter(tv) {
 			isfloat: tv.term.isfloat,
 			isinteger: tv.term.isinteger,
 			iscondition: tv.term.iscondition,
-			type: tv.term.iscategorical
+			type: tv.term.type
+				? tv.term.type
+				: tv.term.iscategorical
 				? 'categorical'
 				: tv.term.isfloat
 				? 'float'

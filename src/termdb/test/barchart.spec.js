@@ -371,14 +371,14 @@ tape('single barchart, filtered', function(test) {
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true, type: 'categorical' },
+										term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 									}
 								},
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'sex', name: 'Sex', iscategorical: true, type: 'categorical' },
+										term: { id: 'sex', name: 'Sex', type: 'categorical' },
 										values: [{ key: 'Male', label: 'Male' }]
 									}
 								}
@@ -392,14 +392,14 @@ tape('single barchart, filtered', function(test) {
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true, type: 'float' },
+										term: { id: 'agedx', name: 'Age of Diagnosis', type: 'float' },
 										ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
 									}
 								},
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', iscategorical: true, type: 'categorical' },
+										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', type: 'categorical' },
 										values: [{ key: '1', label: '1-yes' }]
 									}
 								}
