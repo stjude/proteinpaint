@@ -25,7 +25,7 @@ column 6:
 
 special handling of chronic condition terms (3: organ system, 4: grouped condition, 5: condition):
 - all under "CTCAE Graded Events"
-- type flag ".iscondition:true"
+- type:"condition"
 - chart configs
 
 
@@ -125,7 +125,6 @@ each word is a term
 		if (patientcondition_terms.has(id)) {
 			// belongs to patient conditions
 			j.type = 'condition'
-			j.iscondition = true
 			addattributes_conditionterm(j)
 		}
 
@@ -135,7 +134,7 @@ each word is a term
 }
 
 function addattributes_conditionterm(t) {
-	/* make graph config for a iscondition term
+	/* make graph config for a condition term
    options a bit different for leaf and non-leaf terms
 */
 
