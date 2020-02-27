@@ -28,7 +28,7 @@ module.exports = (q, res, ds) => {
 	if (!q.termid) throw 'termid missing'
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw 'invalid termid'
-	if (term.type != 'float' && term.type == 'integer') throw 'not numerical term'
+	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
 
 	const rows = termdbsql.get_rows_by_one_key({
 		ds,
