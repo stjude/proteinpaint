@@ -121,7 +121,7 @@ tape('click_term', test => {
 		const tree = search.Inner.app.getComponents('tree')
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
-			.use(triggerSearch)
+			.use(triggerSearch, { wait: 200 })
 			.to(testSearchResult, { wait: 100 })
 			.done(test)
 	}

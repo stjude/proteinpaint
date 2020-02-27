@@ -300,7 +300,16 @@ function tvslst_to_parameter(tv) {
 			iscategorical: tv.term.iscategorical,
 			isfloat: tv.term.isfloat,
 			isinteger: tv.term.isinteger,
-			iscondition: tv.term.iscondition
+			iscondition: tv.term.iscondition,
+			type: tv.term.iscategorical
+				? 'categorical'
+				: tv.term.isfloat
+				? 'float'
+				: tv.term.isinteger
+				? 'integer'
+				: tv.term.iscondition
+				? 'condition'
+				: ''
 		},
 		// must return original values[{key,label}] to keep the validator function happy on both client/server
 		values: tv.values,

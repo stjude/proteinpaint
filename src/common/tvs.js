@@ -104,7 +104,6 @@ function setRenderers(self) {
 	}
 
 	self.enterPill = async function() {
-		console.log(self.tvs)
 		const one_term_div = select(this).style('font-size', '.9em')
 
 		//term name div
@@ -1208,7 +1207,7 @@ function setRenderers(self) {
 			if (tvs.groupset_label) return tvs.groupset_label
 			return tvs.values.length + ' groups'
 		}
-		if (tvs.term.type == 'float' || tvs.type == 'integer') {
+		if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
 			if (tvs.ranges.length == 1) {
 				const v = tvs.ranges[0]
 				if ('value' in v) {

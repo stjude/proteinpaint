@@ -244,7 +244,7 @@ function setRenderers(self) {
 			}
 			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
 		}
-		self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
+		if (self.dom.cohortPrompt) self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
 	}
 	self.initCohort = () => {
 		if (self.dom.cohortTable) return

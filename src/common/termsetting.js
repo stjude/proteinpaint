@@ -151,7 +151,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'ts_pill')
 			.style('cursor', 'pointer')
-			.style('margin','2px')
+			.style('margin', '2px')
 			.on('click', self.showMenu)
 			.transition()
 			.duration(200)
@@ -1299,6 +1299,18 @@ function setInteractivity(self) {
 }
 
 function termsetting_fill_q(q, term) {
+	if (!term.type) {
+		term.type = term.iscategorical
+			? 'categorical'
+			: term.isfloat
+			? 'float'
+			: term.isinteger
+			? 'integer'
+			: term.iscondition
+			? 'condition'
+			: ''
+	}
+
 	if (term.isinteger || term.isfloat) {
 		if (!valid_binscheme(q)) {
 			/*

@@ -94,6 +94,7 @@ function diaggrp(overrides = {}) {
 			type: 'tvs',
 			tvs: {
 				term: {
+					type: 'categorical',
 					id: 'diaggrp',
 					name: 'Diagnosis Group',
 					iscategorical: true
@@ -115,7 +116,7 @@ function agedx(overrides = {}) {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true },
+				term: { id: 'agedx', name: 'Age of diagnosis', isfloat: true, type: 'float' },
 				ranges: [{ start: 2, stop: 5, startinclusive: true }]
 			}
 		},
@@ -132,7 +133,8 @@ function gettvs(id, val = '', overrides = {}) {
 				term: {
 					id,
 					name: id.toUpperCase(),
-					iscategorical: true
+					iscategorical: true,
+					type: 'categorical'
 				},
 				values: [
 					{
@@ -822,7 +824,8 @@ tape('nested filters', async test => {
 								term: {
 									id: 'Arrhythmias',
 									name: 'Arrhythmias',
-									iscondition: true
+									iscondition: true,
+									type: 'condition'
 								},
 								bar_by_grade: true,
 								value_by_max_grade: true,
