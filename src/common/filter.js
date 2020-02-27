@@ -673,7 +673,9 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
-				nav: self.nav,
+				nav: {
+					activeCohort: self.nav.activeCohort
+				},
 				termfilter: {
 					show_top_ui: false,
 					filter: self.rawFilter
@@ -746,7 +748,9 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
-				nav: self.nav,
+				nav: {
+					activeCohort: self.nav.activeCohort
+				},
 				termfilter: {
 					show_top_ui: false,
 					filter: self.rawFilter,
