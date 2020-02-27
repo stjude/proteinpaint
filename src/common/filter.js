@@ -42,6 +42,7 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
+		this.nav = opts.nav
 		this.dom = {
 			holder: opts.holder,
 			controlsTip: new Menu({ padding: '0px' }),
@@ -672,6 +673,7 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
+				nav: self.nav,
 				termfilter: {
 					show_top_ui: false,
 					filter: self.rawFilter
@@ -744,6 +746,7 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
+				nav: self.nav,
 				termfilter: {
 					show_top_ui: false,
 					filter: self.rawFilter,

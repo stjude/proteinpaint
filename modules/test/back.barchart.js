@@ -284,13 +284,13 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 		}
 		sjlife.setAnnoByTermId(termid)
 		const term = termid ? tdb.termjson.map.get(termid) : null
-		if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
+		if ((!termid || term.type == 'categorical') && termid in inReq.joinFxns) continue
 		if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
-		if (term.iscategorical) {
+		if (term.type == 'categorical') {
 			inReq.joinFxns[termid] = row => row[termid]
-		} else if (term.isinteger || term.isfloat) {
+		} else if (term.type == 'integer' || term.type == 'float') {
 			get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0)
-		} else if (term.iscondition) {
+		} else if (term.type == 'condition') {
 			// tdb.patient_condition
 			if (!tdb.patient_condition) throw 'missing termdb patient_condition'
 			if (!tdb.patient_condition.events_key) throw 'missing termdb patient_condition.events_key'
@@ -309,7 +309,7 @@ function setDatasetAnnotations(item) {
 		}
 	} else {
 		sjlife.setAnnoByTermId(item.tvs.term.id)
-		if (item.tvs.term.iscategorical) {
+		if (item.tvs.term.type == 'categorical') {
 			item.tvs.valueset = new Set(item.tvs.values.map(i => i.key))
 		}
 	}
@@ -491,10 +491,10 @@ function sample_match_termvaluesetting(row, filter) {
 
 			let thistermmatch
 
-			if (t.term.iscategorical) {
+			if (t.term.type == 'categorical') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 				thistermmatch = t.valueset.has(samplevalue)
-			} else if (t.term.isinteger || t.term.isfloat) {
+			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 				for (const range of t.ranges) {
 					if ('value' in range) {
@@ -531,7 +531,7 @@ function sample_match_termvaluesetting(row, filter) {
 					}
 					if (thistermmatch) break
 				}
-			} else if (t.term.iscondition) {
+			} else if (t.term.type == 'condition') {
 				const key = getPrecomputedKey(t)
 				const anno = samplevalue && samplevalue[key]
 				if (anno) {

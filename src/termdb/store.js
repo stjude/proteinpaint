@@ -11,7 +11,7 @@ const defaultState = {
 	nav: {
 		show_tabs: false,
 		activeTab: 0,
-		activeCohort: -1
+		activeCohort: 0
 	},
 	tree: {
 		expandedTermIds: [],

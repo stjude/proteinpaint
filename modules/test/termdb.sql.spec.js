@@ -43,7 +43,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Male' }]
 						}
 					}
@@ -65,7 +65,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
 							ranges: [{ start: 0, stop: 5 }]
 						}
 					}
@@ -90,7 +90,7 @@ tape('filters applied to categorical term', function(test) {
 							term: {
 								id: 'hrtavg',
 								name: 'Heart',
-								isfloat: true,
+								type: 'float',
 								// must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
 								values: {
 									'0': { label: 'Not exposed', uncomputable: true },
@@ -122,7 +122,7 @@ tape('filters applied to categorical term', function(test) {
 							term: {
 								id: 'hrtavg',
 								name: 'Heart',
-								isfloat: true,
+								type: 'float',
 								values: {
 									// as above
 									'0': { label: 'Not exposed', uncomputable: true },
@@ -151,7 +151,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'hrtavg', name: 'Heart', isfloat: true }, // heart radiation
+							term: { id: 'hrtavg', name: 'Heart', type: 'float' }, // heart radiation
 							ranges: [{ value: 0 }] // not radiated
 						}
 					}
@@ -173,7 +173,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 3, label: '3' }],
 							value_by_max_grade: true
@@ -197,7 +197,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 2, label: '2' }],
 							value_by_most_recent: true
@@ -221,7 +221,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 2, label: '2' }],
 							value_by_computable_grade: true
@@ -245,7 +245,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+							term: { id: 'Arrhythmias', name: 'Arrhythmias', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 2, label: '2' }],
 							value_by_max_grade: true
@@ -269,7 +269,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+							term: { id: 'Arrhythmias', name: 'Arrhythmias', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 2, label: '2' }],
 							value_by_most_recent: true
@@ -293,7 +293,7 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+							term: { id: 'Arrhythmias', name: 'Arrhythmias', type: 'condition' },
 							bar_by_children: true,
 							value_by_computable_grade: true,
 							values: [{ key: 'Cardiac dysrhythmia', label: 'Cardiac dysrhythmia' }]
@@ -317,21 +317,21 @@ tape('filters applied to categorical term', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
 							ranges: [{ start: 0, stop: 8 }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 3, label: '3' }],
 							value_by_max_grade: true
@@ -404,14 +404,14 @@ tape('categorical term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
+							term: { id: 'aaclassic_5', name: 'alkaline dosage', type: 'float' },
 							ranges: [{ start: 1000, stop: 5000 }]
 						}
 					}
@@ -458,7 +458,7 @@ tape('numerical term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'sex', iscategorical: true },
+							term: { id: 'sex', name: 'sex', type: 'categorical' },
 							values: [{ key: 'Female', label: 'Female' }]
 						}
 					}
@@ -526,14 +526,14 @@ tape('numerical term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'aaclassic_5', name: 'alkaline dosage', isfloat: true },
+							term: { id: 'aaclassic_5', name: 'alkaline dosage', type: 'float' },
 							ranges: [{ start: 1000, stop: 5000 }]
 						}
 					}
@@ -604,7 +604,7 @@ tape('leaf condition term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'sex', iscategorical: true },
+							term: { id: 'sex', name: 'sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Male' }]
 						}
 					}
@@ -702,14 +702,14 @@ tape('leaf condition term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
 							ranges: [{ start: 0, stop: 8 }]
 						}
 					}
@@ -760,7 +760,7 @@ tape('non-leaf condition term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'sex', iscategorical: true },
+							term: { id: 'sex', name: 'sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Male' }]
 						}
 					}
@@ -801,7 +801,7 @@ tape('non-leaf condition term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'sex', iscategorical: true },
+							term: { id: 'sex', name: 'sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Male' }]
 						}
 					}
@@ -890,21 +890,21 @@ tape('non-leaf condition term1', function(test) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'sex', name: 'Sex', iscategorical: true },
+							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: 'Male', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'agedx', name: 'Age at diagnosis', isfloat: true },
+							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
 							ranges: [{ start: 0, stop: 8 }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
-							term: { id: 'Asthma', name: 'Asthma', iscondition: true },
+							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
 							values: [{ key: 3, label: '3' }],
 							value_by_max_grade: true

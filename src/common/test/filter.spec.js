@@ -25,6 +25,9 @@ function getOpts(_opts = {}) {
 	const opts = Object.assign(
 		{
 			holder,
+			nav: {
+				activeCohort: 0
+			},
 			callback(filter) {
 				opts.filterData = filter
 				opts.filter.main(opts.filterData)
@@ -39,6 +42,7 @@ function getOpts(_opts = {}) {
 		holder: holder.append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
+		nav: { activeCohort: 0 },
 		debug: true,
 		getVisibleRoot: opts.getVisibleRoot,
 		callback: opts.callback

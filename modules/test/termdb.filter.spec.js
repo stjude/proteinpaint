@@ -23,7 +23,7 @@ tape('simple filter', function(test) {
 			{
 				type: 'tvs',
 				tvs: {
-					term: { id: 'wgs_sequenced', iscategorical: true },
+					term: { id: 'wgs_sequenced', type: 'categorical' },
 					values: [{ key: '1', label: 'Yes' }] // always assumed OR
 				}
 			}
@@ -33,25 +33,17 @@ tape('simple filter', function(test) {
 	//console.log(filter.CTEs.join(',\n'))
 	//console.log(filter.values)
 	test.deepEqual(
-		Object.keys(filter).sort((a,b) => a<b ? -1 : 1),
+		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
 		['CTEname', 'CTEs', 'filters', 'values'],
 		'should return an object with the four expected keys'
 	)
-	test.equal(
-		filter.CTEname,
-		'f',
-		'should return the default CTE name'
-	)
+	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
 		filter.filters.split('?').length - 1,
 		filter.values.length,
 		'CTE string should have the same number of ? as values[]'
 	)
-	test.equal(
-		filter.CTEs.length,
-		2,
-		'should return two CTE clauses for this simple filter'
-	)
+	test.equal(filter.CTEs.length, 2, 'should return two CTE clauses for this simple filter')
 	test.end()
 })
 
@@ -65,7 +57,7 @@ tape('nested filter', function(test) {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'wgs_sequenced', iscategorical: true },
+						term: { id: 'wgs_sequenced', type: 'categorical' },
 						values: [{ key: '1', label: 'Yes' }] // always assumed OR
 					}
 				},
@@ -77,14 +69,14 @@ tape('nested filter', function(test) {
 						{
 							type: 'tvs',
 							tvs: {
-								term: { id: 'sex', iscategorical: true },
+								term: { id: 'sex', type: 'categorical' },
 								values: [{ key: 'male', label: 'male' }]
 							}
 						},
 						{
 							type: 'tvs',
 							tvs: {
-								term: { id: 'diaggrp', iscategorical: true },
+								term: { id: 'diaggrp', type: 'categorical' },
 								values: [{ key: 'ALL', label: 'ALL' }]
 							}
 						},
@@ -96,14 +88,14 @@ tape('nested filter', function(test) {
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'agedx', isfloat: true },
+										term: { id: 'agedx', type: 'float' },
 										ranges: [{ start: 1, stop: 5 }]
 									}
 								},
 								{
 									type: 'tvs',
 									tvs: {
-										term: { id: 'aaclassic_5', isfloat: true },
+										term: { id: 'aaclassic_5', type: 'float' },
 										ranges: [{ start: 1000, stop: 4000 }]
 									}
 								}
@@ -119,25 +111,17 @@ tape('nested filter', function(test) {
 	//console.log(filter.CTEs.join(',\n'))
 	//console.log(filter.values)
 	test.deepEqual(
-		Object.keys(filter).sort((a,b) => a<b ? -1 : 1),
+		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
 		['CTEname', 'CTEs', 'filters', 'values'],
 		'should return an object with the four expected keys'
 	)
-	test.equal(
-		filter.CTEname,
-		'f',
-		'should return the default CTE name'
-	)
+	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
 		filter.filters.split('?').length - 1,
 		filter.values.length,
 		'CTE string should have the same number of ? as values[]'
 	)
-	test.equal(
-		filter.CTEs.length,
-		8,
-		'should return 8 CTE clauses for this complex filter'
-	)
+	test.equal(filter.CTEs.length, 8, 'should return 8 CTE clauses for this complex filter')
 	test.end()
 })
 

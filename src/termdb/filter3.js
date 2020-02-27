@@ -48,6 +48,7 @@ class TdbFilter {
 		this.filterApi = filterInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
 			getVisibleRoot: this.opts.getVisibleRoot,

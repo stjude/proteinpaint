@@ -147,6 +147,7 @@ tape('single chart, with overlay', function(test) {
 })
 
 tape('multiple charts', function(test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			tree: {
