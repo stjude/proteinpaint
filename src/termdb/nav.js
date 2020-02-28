@@ -165,7 +165,7 @@ function setRenderers(self) {
 			// hide the cohort tab until there is termdbConfig.selectCohort
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
-			.style('padding', d => (d.rowNum === 0 ? '12px' : '3px 12px'))
+			.style('padding', d => (d.rowNum === 0 ? '12px 12px 3px 12px' : '3px 12px'))
 			.style('text-align', 'center')
 			.style('border-left', '1px solid #ccc')
 			.style('border-right', '1px solid #ccc')
@@ -190,13 +190,11 @@ function setRenderers(self) {
 				if (d.key == 'top') return this.innerHTML
 				if (d.colNum === 0) {
 					if (self.activeCohortName in self.samplecounts) {
-						return d.key != 'mid'
-							? ''
-							: self.activeCohort == -1
-							? 'NONE'
-							: self.activeCohortName
-							? 'n=' + self.samplecounts[self.activeCohortName]
-							: 'NONE'
+						return d.key == 'top'
+							? this.innerHTML
+							: d.key == 'mid'
+							? self.activeCohortName
+							: 'n=' + self.samplecounts[self.activeCohortName]
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
