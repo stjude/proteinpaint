@@ -9,9 +9,42 @@
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
+<div id=exp style="margin:10px"></div>
 <div id=aaa style="margin:10px"></div>
 
 <script>
+runproteinpaint({
+	holder:document.getElementById('exp'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	genome:'hg19',
+	mdssurvivalplot:{
+		dataset:'Pediatric2',
+		plotlist:[
+			{
+				type:'efs',
+				samplerule:{
+					full:{
+						byattr:1,
+						key:'diagnosis_short',
+						value:'AML'
+					},
+					set:{
+						geneexpression:1,
+						byquartile:1,
+						against1st:1,
+						gene:'MDM2',
+						chr:'chr12',
+						start:69201951,
+						stop:69244466
+					}
+				}
+			},
+		]
+	}
+})
+
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -19,7 +52,7 @@ runproteinpaint({
 	noheader:1,
 
 
-	genome:'hg19',
+	agenome:'hg19',
 
 	mdssurvivalplot:{
 		dataset:'Pediatric2',

@@ -9067,6 +9067,7 @@ async function handle_mdssurvivalplot(req, res) {
 		}
 
 		await handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets)
+		await handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets)
 
 		for (const s of samplesets) {
 			handle_mdssurvivalplot_plot(s)
@@ -9121,6 +9122,23 @@ async function handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets) {
 		// is a not mutated set
 		const pvalue = await handle_mdssurvivalplot_pvalue([s, nomut_set])
 		s.pvalue = pvalue
+	}
+}
+async function handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets) {
+	if (!q.samplerule.set.geneexpression) return // hardcoded for gene exp
+	if (!q.samplerule.set.byquartile) return // hardcoded for quartile
+	if (samplesets.length != 4) return // should throw
+	if (q.samplerule.set.against1st) {
+		for (let i = 1; i < 4; i++) {
+			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[0], samplesets[i]])
+		}
+		return
+	}
+	if (q.samplerule.set.against4th) {
+		for (let i = 0; i < 3; i++) {
+			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[i], samplesets[3]])
+		}
+		return
 	}
 }
 
@@ -9552,7 +9570,8 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q
 	return [
 		{
 			name: st.gene + ' ' + genenumquery.datatype + ' from 1st quartile (n=' + i1 + ', value<' + v1 + ')',
-			lst: samplewithvalue.slice(0, i1)
+			lst: samplewithvalue.slice(0, i1),
+			isfirstquartile: true
 		},
 		{
 			name:
@@ -9592,7 +9611,8 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q
 				', value>=' +
 				v3 +
 				')',
-			lst: samplewithvalue.slice(i3, samplewithvalue.length)
+			lst: samplewithvalue.slice(i3, samplewithvalue.length),
+			isfourthquartile: true
 		}
 	]
 }
