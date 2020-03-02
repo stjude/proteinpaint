@@ -329,6 +329,9 @@ function setInteractivity(self) {
 			self.hideSubheader = /*self.prevCohort != -1 &&*/ !self.hideSubheader
 			self.prevCohort = self.activeCohort
 			self.updateUI()
+			// since the app.dispatch() is not called directly,
+			// must trigger the event bus here
+			if (self.bus) self.bus.emit('postRender')
 			return
 		}
 		self.activeTab = d.colNum
