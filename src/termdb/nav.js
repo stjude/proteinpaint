@@ -333,6 +333,7 @@ function setInteractivity(self) {
 		}
 		self.activeTab = d.colNum
 		self.searching = false
+		self.hideSubheader = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 	}
 }
