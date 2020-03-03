@@ -21,6 +21,10 @@ runproteinpaint({
 		state:{
 			dslabel:'SJLife',
 			genome:'hg38',
+			nav: {
+				show_tabs: true,
+				activeCohort: -1
+			},
 			termfilter:{
 				//show_top_ui:true,
 				filter:{
@@ -49,9 +53,6 @@ runproteinpaint({
 						}}
 					]
 				}
-			},
-			nav: {
-				show_tabs: true
 			},
 			tree:{
 				expandedTermIds:['root','Clinically-assessed Variables','CTCAE Graded Events','Cardiovascular System'],
