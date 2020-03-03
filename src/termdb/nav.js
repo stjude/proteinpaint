@@ -116,7 +116,10 @@ function setRenderers(self) {
 		self.dom = {
 			holder: self.opts.holder,
 			header,
-			tabDiv: header.append('div').style('display', 'none'),
+			tabDiv: header
+				.append('div')
+				.style('display', 'none')
+				.style('vertical-align', 'bottom'),
 			searchDiv: header
 				.append('div')
 				.style('display', 'inline-block')
