@@ -301,8 +301,10 @@ for (let i = 1; i < lines.length; i++) {
 		leaflevel = 4
 	}
 
-	// this only applies to the leaf level of this line
-	const tempid = str2level(l[5])
+	/* this only applies to the leaf level of this line
+	somehow a ctcae line at the end of file may not have 6 fields
+	*/
+	const tempid = l[5] ? str2level(l[5]) : null
 
 	if (level1) {
 		let id
