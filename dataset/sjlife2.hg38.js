@@ -76,6 +76,8 @@ module.exports = {
 			},
 			selectCohort: {
 				term_id: 'subcohort',
+				showMessageWhenNotSelected:
+					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 				values: [
 					// <ul><li> for items, with a radio button for each.
 					{
