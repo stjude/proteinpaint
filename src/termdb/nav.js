@@ -255,7 +255,7 @@ function setRenderers(self) {
 
 		self.dom.cohortPrompt = self.dom.subheader.cohort
 			.append('div')
-			.html('<h4 style="margin-left: 30px; color: red">SELECT BELOW</h4>')
+			.html(`<h4 style="margin-left: 30px;">${selectCohort.showMessageWhenNotSelected}</h4>`)
 
 		self.dom.cohortOpts = self.dom.subheader.cohort.append('div')
 		const trs = self.dom.cohortOpts
