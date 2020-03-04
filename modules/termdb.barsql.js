@@ -221,7 +221,7 @@ function getPj(q, data, tdb, ds) {
 				values.sort((i, j) => i - j)
 				const stat = app.boxplot_getvalue(
 					values.map(v => {
-						return { value: v }
+						return { value: +v }
 					})
 				)
 				stat.mean = context.self.sum / values.length

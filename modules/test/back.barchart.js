@@ -181,7 +181,7 @@ function getPj(q, inReqs, data, tdb, ds) {
 				values.sort((i, j) => i - j) //console.log(values.slice(0,5), values.slice(-5), context.self.values.sort((i,j)=> i - j ).slice(0,5))
 				const stat = boxplot_getvalue(
 					values.map(v => {
-						return { value: v }
+						return { value: +v }
 					})
 				)
 				stat.mean = context.self.sum / values.length
@@ -582,7 +582,7 @@ function boxplot_getvalue(lst) {
 		const i = lst.findIndex(i => i.value > p25 - iqr)
 		w1 = lst[i == -1 ? 0 : i].value
 		const j = lst.findIndex(i => i.value > p75 + iqr)
-		w2 = lst[j == -1 ? l - 1 : j - 1].value
+		w2 = lst[j == -1 ? l - 1 : Math.max(0, j - 1)].value
 	}
 	const out = lst.filter(i => i.value < p25 - iqr || i.value > p75 + iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
