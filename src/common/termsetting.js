@@ -765,50 +765,54 @@ function setInteractivity(self) {
 		// (termporary) set default_bins_q as self.bins.default
 		default_bins_q = self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default
 
-		// svg for range plot
-		self.num_obj.svg = div.append('svg')
-
 		self.num_obj.plot_size = {
 			width: 500,
 			height: 100,
 			xpad: 10,
 			ypad: 20
 		}
+		try {
+			self.num_obj.density_data = await client.dofetch2(
+				'/termdb?density=1' +
+					'&genome=' +
+					self.opts.genome +
+					'&dslabel=' +
+					self.opts.dslabel +
+					'&termid=' +
+					self.term.id +
+					'&width=' +
+					self.num_obj.plot_size.width +
+					'&height=' +
+					self.num_obj.plot_size.height +
+					'&xpad=' +
+					self.num_obj.plot_size.xpad +
+					'&ypad=' +
+					self.num_obj.plot_size.ypad
+			)
+			if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
+			else {
+				// svg for range plot
+				self.num_obj.svg = div.append('svg')
 
-		self.num_obj.density_data = await client.dofetch2(
-			'/termdb?density=1' +
-				'&genome=' +
-				self.opts.genome +
-				'&dslabel=' +
-				self.opts.dslabel +
-				'&termid=' +
-				self.term.id +
-				'&width=' +
-				self.num_obj.plot_size.width +
-				'&height=' +
-				self.num_obj.plot_size.height +
-				'&xpad=' +
-				self.num_obj.plot_size.xpad +
-				'&ypad=' +
-				self.num_obj.plot_size.ypad
-		)
-		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
+				self.makeDensityPlot()
 
-		self.makeDensityPlot()
+				const maxvalue = self.num_obj.density_data.maxvalue
+				const minvalue = self.num_obj.density_data.minvalue
 
-		const maxvalue = self.num_obj.density_data.maxvalue
-		const minvalue = self.num_obj.density_data.minvalue
+				self.num_obj.xscale = scaleLinear()
+					.domain([minvalue, maxvalue])
+					.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
-		self.num_obj.xscale = scaleLinear()
-			.domain([minvalue, maxvalue])
-			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
-
-		self.num_obj.ranges = []
-		if (default_bins_q.first_bin) self.num_obj.ranges.push(default_bins_q.first_bin)
-		if (default_bins_q.last_bin) self.num_obj.ranges.push(default_bins_q.last_bin)
-		self.num_obj.brushes = []
-		self.addBrushes()
-		self.num_obj.brushes.forEach(brush => brush.init())
+				self.num_obj.ranges = []
+				if (default_bins_q.first_bin) self.num_obj.ranges.push(default_bins_q.first_bin)
+				if (default_bins_q.last_bin) self.num_obj.ranges.push(default_bins_q.last_bin)
+				self.num_obj.brushes = []
+				self.addBrushes()
+				self.num_obj.brushes.forEach(brush => brush.init())
+			}
+		} catch (err) {
+			console.log(err)
+		}
 
 		// config table with inputs
 		const config_table = div
