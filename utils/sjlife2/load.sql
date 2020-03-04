@@ -79,7 +79,9 @@ create table annotations (
 );
 
 .import annotation.matrix annotations
+.import annotation.matrix.ccss annotations
 .import annotation.admix annotations
+.import annotation.subcohort annotations
 
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);
