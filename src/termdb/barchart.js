@@ -272,7 +272,6 @@ class TdbBarchart {
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		if (s.exclude.cols.length) {
-			const b = t1.term.graph && t1.term.graph.barchart ? t1.term.graph.barchart : null
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
 				.filter(collabel => s.cols.includes(collabel)) // && (!t1.term.values || collabel in t1.term.values))
@@ -310,7 +309,6 @@ class TdbBarchart {
 			}
 		}
 		if (s.rows && s.rows.length > 1 && !s.hidelegend && t2 && this.term2toColor) {
-			const b = t2.term.graph && t2.term.graph.barchart ? t2.term.graph.barchart : null
 			const value_by_label =
 				t2.term.type != 'condition' || !t2.term.q
 					? ''

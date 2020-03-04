@@ -37,7 +37,7 @@ tape('barchart-dependent display', function(test) {
 					'Cancer-related Variables',
 					'Treatment',
 					'Chemotherapy',
-					'Alklaying Agents',
+					'Alkylating Agents',
 					'aaclassic_5'
 				],
 				visiblePlotIds: ['aaclassic_5'],
@@ -101,7 +101,7 @@ tape('barchart-dependent display', function(test) {
 	}
 })
 
-tape('term.isfloat-dependent display', function(test) {
+tape('term.type == "float" dependent display', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(3)
 
@@ -141,7 +141,7 @@ tape('term.isfloat-dependent display', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System'],
+				expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events', 'Cardiovascular System'],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -174,7 +174,7 @@ tape('term.isfloat-dependent display', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {

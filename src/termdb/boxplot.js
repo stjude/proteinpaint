@@ -57,7 +57,7 @@ class TdbBoxplot {
 			return
 		}
 		const t2 = this.config.term2
-		if (!t2 || !t2.term.isfloat) {
+		if (!t2 || !t2.termtype == 'float') {
 			this.dom.div.style('display', 'none')
 			throw `${t2 ? 'numeric ' : ''}term2 is required for boxplot view`
 		}

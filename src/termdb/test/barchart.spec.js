@@ -186,15 +186,14 @@ tape('multiple charts', function(test) {
 	}
 })
 
-tape('series visibility', function(test) {
+tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(7)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -223,12 +222,17 @@ tape('series visibility', function(test) {
 			Object.keys(hiddenValues).length,
 			'should have the correct number of hidden bars by q.hiddenValues'
 		)
+		test.end()
 	}
+})
+
+tape('series visibility - numeric', function(test) {
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -316,12 +320,22 @@ tape('series visibility', function(test) {
 			'should hide a special numeric value by menu click'
 		)
 	}
+})
+
+tape('series visibility - condition', function(test) {
+	test.timeoutAfter(5000)
 
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'CTCAE Graded Events',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -348,6 +362,7 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		test.end()
 	}
 })
 
@@ -409,7 +424,7 @@ tape('single barchart, filtered', function(test) {
 				}
 			},
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -451,7 +466,7 @@ tape('click non-group bar to add filter', function(test) {
 		state: {
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -735,7 +750,13 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		state: {
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'CTCAE Graded Events',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {

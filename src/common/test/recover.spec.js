@@ -60,13 +60,16 @@ tape('history processing', function(test) {
 	}
 
 	function triggerExpand1(tree) {
-		tree.Inner.app.dispatch({ type: 'app_refresh', state: { tree: { expandedTermIds: ['root', 'Outcomes'] } } })
+		tree.Inner.app.dispatch({
+			type: 'app_refresh',
+			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables'] } }
+		})
 	}
 
 	function triggerExpand2(tree) {
 		tree.Inner.app.dispatch({
 			type: 'app_refresh',
-			state: { tree: { expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events'] } }
+			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events'] } }
 		})
 	}
 
@@ -123,7 +126,7 @@ tape('rendered buttons', function(test) {
 	function dispatchFake1(recover) {
 		recover.Inner.app.dispatch({
 			type: 'app_refresh',
-			state: { tree: { expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events'] } }
+			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events'] } }
 		})
 	}
 
@@ -148,7 +151,7 @@ tape('stored state recovery', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {

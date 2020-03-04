@@ -98,7 +98,7 @@ tape('disable_ReplaceRemove', async test => {
 	test.end()
 })
 
-tape('use_bins_less', async test => {
+tape.skip('use_bins_less', async test => {
 	const opts = getOpts({
 		use_bins_less: true,
 		tsData: {

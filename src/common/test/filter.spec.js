@@ -59,11 +59,11 @@ async function addDemographicSexFilter(opts, btn) {
 	btn.click()
 	await sleep(200)
 	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[1]
+	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[2]
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
-	const termdivSex = termdiv1.querySelectorAll('.termdiv')[2]
+	const termdivSex = [...termdiv1.querySelectorAll('.termdiv')].find(elem => elem.__data__.id === 'sex')
 	termdivSex.querySelectorAll('.termview')[0].click()
 	await sleep(800)
 
