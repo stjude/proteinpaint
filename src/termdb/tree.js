@@ -101,19 +101,34 @@ class TdbTree {
 
 	getState(appState) {
 		const filter = getNormalRoot(appState.termfilter.filter)
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			nav: appState.nav,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu
 		}
+		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
+		if (appState.termdbConfig.selectCohort) {
+			state.toSelectCohort = true
+			const choice = appState.termdbConfig.selectCohort.values[appState.nav.activeCohort]
+			if (choice) {
+				// a selection has been made
+				state.cohortValuelst = choice.keys
+			}
+		}
+		return state
 	}
 
 	async main() {
-		if (this.state.nav.activeCohort == -1) return
+		if (this.state.toSelectCohort) {
+			// dataset requires a cohort to be selected
+			if (!this.state.cohortValuelst) {
+				// a selection has not been made; do not render tree
+				return
+			}
+		}
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
@@ -142,8 +157,14 @@ class TdbTree {
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
 		*/
-		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
-		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
+		const lst = [
+			'genome=' + this.state.genome,
+			'&dslabel=' + this.state.dslabel,
+			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
+		]
+		if (this.state.toSelectCohort) {
+			lst.push('cohortValues=' + this.state.cohortValuelst.join(','))
+		}
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
