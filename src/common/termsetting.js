@@ -808,7 +808,6 @@ function setInteractivity(self) {
 				if (default_bins_q.last_bin) self.num_obj.ranges.push(default_bins_q.last_bin)
 				self.num_obj.brushes = []
 				self.addBrushes()
-				self.num_obj.brushes.forEach(brush => brush.init())
 			}
 		} catch (err) {
 			console.log(err)
@@ -820,6 +819,189 @@ function setInteractivity(self) {
 			.style('border-spacing', '7px')
 			.style('border-collapse', 'separate')
 
+		self.addDefaultBinsTable(config_table, custom_bins_q, default_bins_q)
+		self.num_obj.brushes.forEach(brush => brush.init())
+	}
+
+	self.makeDensityPlot = function() {
+		const svg = self.num_obj.svg
+		const data = self.num_obj.density_data
+
+		const width = 500,
+			height = 100,
+			xpad = 10,
+			ypad = 20,
+			xaxis_height = 20
+
+		svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
+
+		//density data, add first and last values to array
+		const density_data = data.density
+		density_data.unshift([data.minvalue, 0])
+		density_data.push([data.maxvalue, 0])
+
+		// x-axis
+		const xscale = scaleLinear()
+			.domain([data.minvalue, data.maxvalue])
+			.range([xpad, width - xpad])
+
+		const x_axis = axisBottom().scale(xscale)
+
+		// y-scale
+		const yscale = scaleLinear()
+			.domain([0, data.densitymax])
+			.range([height + ypad, ypad])
+
+		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+
+		// SVG line generator
+		const line = d3line()
+			.x(function(d) {
+				return xscale(d[0])
+			})
+			.y(function(d) {
+				return yscale(d[1])
+			})
+			.curve(curveMonotoneX)
+
+		// plot the data as a line
+		g.append('path')
+			.datum(density_data)
+			.attr('class', 'line')
+			.attr('d', line)
+			.style('fill', '#eee')
+			.style('stroke', '#000')
+
+		g.append('g')
+			.attr('transform', `translate(0, ${ypad + height})`)
+			.call(x_axis)
+
+		g.append('text')
+			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+			.attr('font-size', '13px')
+			.text(self.term.unit)
+
+		self.num_obj.brush_g = svg
+			.append('g')
+			.attr('class', 'brush_g')
+			.attr('transform', `translate(${xpad}, ${ypad})`)
+	}
+
+	self.addBrushes = function() {
+		// const ranges = self.num_obj.ranges
+		const brushes = self.num_obj.brushes
+		const maxvalue = self.num_obj.density_data.maxvalue
+		const minvalue = self.num_obj.density_data.minvalue
+
+		for (const [i, r] of self.num_obj.ranges.entries()) {
+			const _b = brushes.find(b => b.orig === r)
+			let brush
+			if (!_b) {
+				brush = { orig: r, range: JSON.parse(JSON.stringify(r)) }
+				brushes.push(brush)
+			} else {
+				brush = _b
+			}
+
+			// strict equality to not have false positive with start=0
+			if (r.start === '') {
+				brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
+			}
+			if (r.stop === '') {
+				brush.range.stop = Math.floor(maxvalue)
+			}
+		}
+
+		const range_brushes = self.num_obj.brush_g.selectAll('.range_brush').data(brushes, d => brushes.indexOf(d))
+
+		range_brushes.exit().remove()
+
+		// add update to brush if required
+		range_brushes.each(function(d, i) {
+			select(this)
+				.selectAll('.overlay')
+				.style('pointer-events', 'all')
+		})
+
+		range_brushes
+			.enter()
+			.append('g')
+			.attr('class', 'range_brush')
+			.each(self.applyBrush)
+	}
+
+	self.applyBrush = function(brush) {
+		if (!brush.elem) brush.elem = select(this)
+		const range = brush.range
+		const plot_size = self.num_obj.plot_size
+		const xscale = self.num_obj.xscale
+		const maxvalue = self.num_obj.density_data.maxvalue
+		const minvalue = self.num_obj.density_data.minvalue
+
+		brush.d3brush = brushX()
+			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
+			.on('brush', function() {
+				const s = event.selection
+				//update temp_ranges
+				range.start = Number(xscale.invert(s[0]).toFixed(1))
+				range.stop = Number(xscale.invert(s[1]).toFixed(1))
+				const a_range = JSON.parse(JSON.stringify(brush.orig))
+				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
+				if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
+				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
+
+				// update inputs from brush move
+				select(brush.start_input._groups[0][0]).style('color', a_range.start == range.start ? '#000' : '#23cba7')
+				brush.start_input._groups[0][0].value = range.start == minvalue.toFixed(1) ? '' : range.start
+
+				select(brush.stop_input._groups[0][0]).style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
+				brush.stop_input._groups[0][0].value = range.stop == maxvalue.toFixed(1) ? '' : range.stop
+
+				// brush.start_select
+				// 	.style('display', similarRanges ? 'none' : 'inline-block')
+				// 	.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
+				// brush.stop_select
+				// 	.style('display', similarRanges ? 'none' : 'inline-block')
+				// 	.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
+
+				// //update 'apply' and 'reset' buttons based on brush change
+				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.reset_btn.style(
+					'display',
+					similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
+				)
+
+				// // hide start and stop text and relation symbols if brush moved
+				// brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				// brush.stop_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				// brush.start_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				// brush.stop_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
+
+				// make brush green if changed
+				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
+			})
+			.on('end', function() {
+				//diable pointer-event for multiple brushes
+				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
+			})
+
+		const brush_start = range.startunbounded ? minvalue : range.start
+		const brush_stop = range.stopunbounded ? maxvalue : range.stop
+		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+
+		if (range.startunbounded) delete range.start
+		if (range.stopunbounded) delete range.stop
+		brush.elem
+			.selectAll('.selection')
+			.style(
+				'fill',
+				(brush.orig.start == '' && brush.orig.stop == '') || JSON.stringify(range) != JSON.stringify(brush.orig)
+					? '#23cba7'
+					: '#777777'
+			)
+	}
+
+	self.addDefaultBinsTable = function(config_table, custom_bins_q, default_bins_q) {
 		//Bin Size edit row
 		const bin_size_tr = config_table.append('tr')
 
@@ -949,192 +1131,6 @@ function setInteractivity(self) {
 		if (self.bins_customized(custom_bins_q, default_bins_q)) reset_bins_tr.style('display', 'table-row')
 	}
 
-	self.makeDensityPlot = function() {
-		const svg = self.num_obj.svg
-		const data = self.num_obj.density_data
-
-		const width = 500,
-			height = 100,
-			xpad = 10,
-			ypad = 20,
-			xaxis_height = 20
-
-		svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
-
-		//density data, add first and last values to array
-		const density_data = data.density
-		density_data.unshift([data.minvalue, 0])
-		density_data.push([data.maxvalue, 0])
-
-		// x-axis
-		const xscale = scaleLinear()
-			.domain([data.minvalue, data.maxvalue])
-			.range([xpad, width - xpad])
-
-		const x_axis = axisBottom().scale(xscale)
-
-		// y-scale
-		const yscale = scaleLinear()
-			.domain([0, data.densitymax])
-			.range([height + ypad, ypad])
-
-		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
-
-		// SVG line generator
-		const line = d3line()
-			.x(function(d) {
-				return xscale(d[0])
-			})
-			.y(function(d) {
-				return yscale(d[1])
-			})
-			.curve(curveMonotoneX)
-
-		// plot the data as a line
-		g.append('path')
-			.datum(density_data)
-			.attr('class', 'line')
-			.attr('d', line)
-			.style('fill', '#eee')
-			.style('stroke', '#000')
-
-		g.append('g')
-			.attr('transform', `translate(0, ${ypad + height})`)
-			.call(x_axis)
-
-		g.append('text')
-			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
-			.attr('font-size', '13px')
-			.text(self.term.unit)
-
-		self.num_obj.brush_g = svg
-			.append('g')
-			.attr('class', 'brush_g')
-			.attr('transform', `translate(${xpad}, ${ypad})`)
-	}
-
-	self.addBrushes = function() {
-		// const ranges = self.num_obj.ranges
-		const brushes = self.num_obj.brushes
-		const maxvalue = self.num_obj.density_data.maxvalue
-		const minvalue = self.num_obj.density_data.minvalue
-
-		for (const [i, r] of self.num_obj.ranges.entries()) {
-			const _b = brushes.find(b => b.orig === r)
-			let brush
-			if (!_b) {
-				brush = { orig: r, range: JSON.parse(JSON.stringify(r)) }
-				brushes.push(brush)
-			} else {
-				brush = _b
-			}
-
-			// strict equality to not have false positive with start=0
-			if (r.start === '') {
-				brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
-			}
-			if (r.stop === '') {
-				brush.range.stop = Math.floor(maxvalue)
-			}
-		}
-
-		const range_brushes = self.num_obj.brush_g.selectAll('.range_brush').data(brushes, d => brushes.indexOf(d))
-
-		range_brushes.exit().remove()
-
-		// add update to brush if required
-		range_brushes.each(function(d, i) {
-			select(this)
-				.selectAll('.overlay')
-				.style('pointer-events', 'all')
-		})
-
-		range_brushes
-			.enter()
-			.append('g')
-			.attr('class', 'range_brush')
-			.each(self.applyBrush)
-	}
-
-	self.applyBrush = function(brush) {
-		if (!brush.elem) brush.elem = select(this)
-		const range = brush.range
-		const plot_size = self.num_obj.plot_size
-		const xscale = self.num_obj.xscale
-		const maxvalue = self.num_obj.density_data.maxvalue
-		const minvalue = self.num_obj.density_data.minvalue
-
-		brush.d3brush = brushX()
-			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
-			.on('brush', function() {
-				const s = event.selection
-				//update temp_ranges
-				range.start = Number(xscale.invert(s[0]).toFixed(1))
-				range.stop = Number(xscale.invert(s[1]).toFixed(1))
-				const a_range = JSON.parse(JSON.stringify(brush.orig))
-				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
-				if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
-				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
-				// TODO: attach input with brushes
-				// // update inputs from brush move
-				// brush.start_input
-				// 	.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// brush.start_input.node().value = range.start == minvalue.toFixed(1) ? '' : range.start
-
-				// brush.stop_input
-				// 	.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// brush.stop_input.node().value = range.stop == maxvalue.toFixed(1) ? '' : range.stop
-
-				// brush.start_select
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// 	.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
-				// brush.stop_select
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// 	.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
-
-				// //update 'edit', 'apply' and 'reset' buttons based on brush change
-				// brush.edit_btn.style(
-				// 	'display',
-				// 	!similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
-				// )
-				// brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
-				// brush.reset_btn.style(
-				// 	'display',
-				// 	similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
-				// )
-
-				// // hide start and stop text and relation symbols if brush moved
-				// brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.stop_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.start_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.stop_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
-
-				// make brush green if changed
-				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
-			})
-			.on('end', function() {
-				//diable pointer-event for multiple brushes
-				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
-			})
-
-		const brush_start = range.startunbounded ? minvalue : range.start
-		const brush_stop = range.stopunbounded ? maxvalue : range.stop
-		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
-
-		if (range.startunbounded) delete range.start
-		if (range.stopunbounded) delete range.stop
-		brush.elem
-			.selectAll('.selection')
-			.style(
-				'fill',
-				(brush.orig.start == '' && brush.orig.stop == '') || JSON.stringify(range) != JSON.stringify(brush.orig)
-					? '#23cba7'
-					: '#777777'
-			)
-	}
-
 	// function to edit bin_size options
 	self.bin_size_edit = function(bin_size_td, custom_bins_q, default_bins_q, reset_bins_tr) {
 		bin_size_td.selectAll('*').remove()
@@ -1209,23 +1205,29 @@ function setInteractivity(self) {
 				}
 			}
 		}
+		const brush =
+			bin_flag == 'first'
+				? self.num_obj.brushes[0]
+				: custom_bins_q.last_bin
+				? self.num_obj.brushes[1]
+				: { orig: bin, range: JSON.parse(JSON.stringify(bin)) }
 
-		const start_input = bin_edit_td
+		brush.start_input = bin_edit_td
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '60px')
 			.style('margin-left', '15px')
 			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				start_input.property('disabled', true)
+				brush.start_input.property('disabled', true)
 				await apply()
-				start_input.property('disabled', false)
+				brush.start_input.property('disabled', false)
 			})
 
 		if (isFinite(bin.start_percentile)) {
-			start_input.attr('value', parseFloat(bin.start_percentile))
+			brush.start_input.attr('value', parseFloat(bin.start_percentile))
 		} else if (isFinite(bin.start)) {
-			start_input.attr('value', parseFloat(bin.start))
+			brush.start_input.attr('value', parseFloat(bin.start))
 		}
 
 		// select realation between lowerbound and first bin/last bin
@@ -1284,112 +1286,122 @@ function setInteractivity(self) {
 			stopselect.node().selectedIndex = bin.stopinclusive ? 0 : 1
 		}
 
-		const stop_input = bin_edit_td
+		brush.stop_input = bin_edit_td
 			.append('input')
 			.style('margin-left', '10px')
 			.attr('type', 'number')
 			.style('width', '60px')
 			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				stop_input.property('disabled', true)
+				brush.stop_input.property('disabled', true)
 				await apply()
-				stop_input.property('disabled', false)
+				brush.stop_input.property('disabled', false)
 			})
 
 		if (isFinite(bin.stop_percentile)) {
-			stop_input.attr('value', parseFloat(bin.stop_percentile))
+			brush.stop_input.attr('value', parseFloat(bin.stop_percentile))
 		} else if (isFinite(bin.stop)) {
-			stop_input.attr('value', parseFloat(bin.stop))
+			brush.stop_input.attr('value', parseFloat(bin.stop))
 		}
 
+		self.makeRangeButtons(brush, bin_edit_td)
+
 		// percentile checkbox
-		const id = Math.random()
-		const percentile_checkbox = bin_edit_td
-			.append('input')
-			.attr('type', 'checkbox')
-			.style('margin', '0px 5px 0px 10px')
-			.attr('id', id)
-			.on('change', async () => {
-				try {
-					if (percentile_checkbox.node().checked) {
-						if (
-							parseFloat(start_input.node().value) > 100 ||
-							parseFloat(start_input.node().value) < 0 ||
-							parseFloat(stop_input.node().value) > 100 ||
-							parseFloat(stop_input.node().value) < 0
-						)
-							throw 'Percentile value must be within 0 to 100'
-					}
-				} catch (e) {
-					window.alert(e)
-				}
-			})
+		// const id = Math.random()
+		// const percentile_checkbox = bin_edit_td
+		// 	.append('input')
+		// 	.attr('type', 'checkbox')
+		// 	.style('margin', '0px 5px 0px 10px')
+		// 	.attr('id', id)
+		// 	.on('change', async () => {
+		// 		try {
+		// 			if (percentile_checkbox.node().checked) {
+		// 				if (
+		// 					parseFloat(brush.start_input.node().value) > 100 ||
+		// 					parseFloat(brush.start_input.node().value) < 0 ||
+		// 					parseFloat(brush.stop_input.node().value) > 100 ||
+		// 					parseFloat(brush.stop_input.node().value) < 0
+		// 				)
+		// 					throw 'Percentile value must be within 0 to 100'
+		// 			}
+		// 		} catch (e) {
+		// 			window.alert(e)
+		// 		}
+		// 	})
 
-		bin_edit_td
-			.append('label')
-			.attr('for', id)
-			.text('Percentile')
-			.style('font-size', '.8em')
-			.attr('class', 'sja_clbtext')
+		// bin_edit_td
+		// 	.append('label')
+		// 	.attr('for', id)
+		// 	.text('Percentile')
+		// 	.style('font-size', '.8em')
+		// 	.attr('class', 'sja_clbtext')
 
-		if (bin.start_percentile || bin.stop_percentile) percentile_checkbox.property('checked', true)
+		// if (bin.start_percentile || bin.stop_percentile) percentile_checkbox.property('checked', true)
 
 		function apply() {
 			try {
-				if (start_input.node().value && stop_input.node().value && start_input.node().value > stop_input.node().value)
+				if (
+					brush.start_input.node().value &&
+					brush.stop_input.node().value &&
+					brush.start_input.node().value > brush.stop_input.node().value
+				)
 					throw 'start value must be smaller than stop value'
 
-				if (percentile_checkbox.node().checked) {
-					if (
-						parseFloat(start_input.node().value) > 100 ||
-						parseFloat(start_input.node().value) < 0 ||
-						parseFloat(stop_input.node().value) > 100 ||
-						parseFloat(stop_input.node().value) < 0
-					)
-						throw 'Percentile value must be within 0 to 100'
-				}
+				// if (percentile_checkbox.node().checked) {
+				// 	if (
+				// 		parseFloat(brush.start_input.node().value) > 100 ||
+				// 		parseFloat(brush.start_input.node().value) < 0 ||
+				// 		parseFloat(brush.stop_input.node().value) > 100 ||
+				// 		parseFloat(brush.stop_input.node().value) < 0
+				// 	)
+				// 		throw 'Percentile value must be within 0 to 100'
+				// }
 
 				//first_bin parameter setup from input
 				if (bin_flag == 'first') {
-					if (start_input.node().value) {
+					if (brush.start_input.node().value) {
 						delete custom_bins_q.first_bin.startunbounded
-						if (percentile_checkbox.node().checked)
-							custom_bins_q.first_bin.start_percentile = parseFloat(start_input.node().value)
-						else custom_bins_q.first_bin.start = parseFloat(start_input.node().value)
+						// if (percentile_checkbox.node().checked)
+						// 	custom_bins_q.first_bin.start_percentile = parseFloat(brush.start_input.node().value)
+						// else
+						custom_bins_q.first_bin.start = parseFloat(brush.start_input.node().value)
 					} else {
 						delete custom_bins_q.first_bin.start
 						delete custom_bins_q.first_bin.start_percentile
 						custom_bins_q.first_bin.startunbounded = true
 					}
-					if (stop_input.node().value) {
-						if (percentile_checkbox.node().checked)
-							custom_bins_q.first_bin.stop_percentile = parseFloat(stop_input.node().value)
-						else custom_bins_q.first_bin.stop = parseFloat(stop_input.node().value)
-					} else if (!start_input.node().value) throw 'If start is empty, stop is required for first bin.'
+					if (brush.stop_input.node().value) {
+						// if (percentile_checkbox.node().checked)
+						// 	custom_bins_q.first_bin.stop_percentile = parseFloat(brush.stop_input.node().value)
+						// else
+						custom_bins_q.first_bin.stop = parseFloat(brush.stop_input.node().value)
+					} else if (!brush.start_input.node().value) throw 'If start is empty, stop is required for first bin.'
 
 					if (startselect.node().selectedIndex == 0) custom_bins_q.first_bin.startinclusive = true
 					else if (custom_bins_q.first_bin.startinclusive) delete custom_bins_q.first_bin.startinclusive
 
 					// if percentile checkbox is unchecked, delete start/stop_percentile
-					if (!percentile_checkbox.node().checked) {
-						delete custom_bins_q.first_bin.start_percentile
-						delete custom_bins_q.first_bin.stop_percentile
-					}
+					// if (!percentile_checkbox.node().checked) {
+					// 	delete custom_bins_q.first_bin.start_percentile
+					// 	delete custom_bins_q.first_bin.stop_percentile
+					// }
 				}
 
 				//last_bin parameter setup from input
 				else if (bin_flag == 'last') {
-					if (start_input.node().value) {
-						if (percentile_checkbox.node().checked)
-							custom_bins_q.last_bin.start_percentile = parseFloat(start_input.node().value)
-						else custom_bins_q.last_bin.start = parseFloat(start_input.node().value)
-					} else if (!stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
+					if (brush.start_input.node().value) {
+						// if (percentile_checkbox.node().checked)
+						// 	custom_bins_q.last_bin.start_percentile = parseFloat(brush.start_input.node().value)
+						// else
+						custom_bins_q.last_bin.start = parseFloat(brush.start_input.node().value)
+					} else if (!brush.stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
 
-					if (stop_input.node().value) {
+					if (brush.stop_input.node().value) {
 						delete custom_bins_q.last_bin.stopunbounded
-						if (percentile_checkbox.node().checked)
-							custom_bins_q.last_bin.stop_percentile = parseFloat(stop_input.node().value)
-						else custom_bins_q.last_bin.stop = parseFloat(stop_input.node().value)
+						// if (percentile_checkbox.node().checked)
+						// 	custom_bins_q.last_bin.stop_percentile = parseFloat(brush.stop_input.node().value)
+						// else
+						custom_bins_q.last_bin.stop = parseFloat(brush.stop_input.node().value)
 					} else {
 						delete custom_bins_q.last_bin.stop
 						delete custom_bins_q.last_bin.stop_percentile
@@ -1400,10 +1412,10 @@ function setInteractivity(self) {
 					else if (custom_bins_q.last_bin.stopinclusive) delete custom_bins_q.last_bin.stopinclusive
 
 					// if percentile checkbox is unchecked, delete start/stop_percentile
-					if (!percentile_checkbox.node().checked) {
-						delete custom_bins_q.last_bin.start_percentile
-						delete custom_bins_q.last_bin.stop_percentile
-					}
+					// if (!percentile_checkbox.node().checked) {
+					// 	delete custom_bins_q.last_bin.start_percentile
+					// 	delete custom_bins_q.last_bin.stop_percentile
+					// }
 				}
 				if (self.bins_customized(custom_bins_q, default_bins_q)) {
 					reset_bins_tr.style('display', 'table-row')
@@ -1413,6 +1425,77 @@ function setInteractivity(self) {
 					term: self.term,
 					q: self.q
 				})
+			} catch (e) {
+				window.alert(e)
+			}
+		}
+	}
+
+	self.makeRangeButtons = function(brush, buttons_td) {
+		const range = brush.range
+		const orig_range = brush.orig
+		const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
+
+		//'Apply' button
+		brush.apply_btn = buttons_td
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn apply_btn')
+			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			.style('border-radius', '13px')
+			.style('margin-left', '10px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('apply')
+			.on('click', async () => {
+				self.dom.tip.hide()
+				await apply()
+			})
+
+		//'Reset' button
+		brush.reset_btn = buttons_td
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn reset_btn')
+			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			.style('border-radius', '13px')
+			.style('margin-left', '10px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('reset')
+			.on('click', async () => {
+				brush.range = JSON.parse(JSON.stringify(brush.orig))
+				brush.init()
+			})
+
+		async function apply() {
+			try {
+				const start = Number(brush.start_input.node().value)
+				const stop = Number(brush.stop_input.node().value)
+				if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
+
+				if (start == '') {
+					range.startunbounded = true
+					delete range.start
+				} else {
+					delete range.startunbounded
+					range.start = start
+					range.startinclusive = brush.start_select.property('value') === 'startinclusive'
+				}
+				if (stop == '') {
+					range.stopunbounded = true
+					delete range.stop
+				} else {
+					delete range.stopunbounded
+					range.stop = stop
+					range.stopinclusive = brush.stop_select.property('value') === 'stopinclusive'
+				}
+				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
+				delete new_tvs.groupset_label
+				// merge overlapping ranges
+				if (self.num_obj.ranges.length > 1) new_tvs.ranges = self.mergeOverlapRanges(range)
+				else new_tvs.ranges[range.index] = range
+				self.opts.callback(new_tvs)
 			} catch (e) {
 				window.alert(e)
 			}
