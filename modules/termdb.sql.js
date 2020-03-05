@@ -925,16 +925,27 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
-		let cache = null
-		q.getRootTerms = () => {
-			if (cache) return cache
-			cache = s.all().map(i => {
+		const getCohortJoinClause = initCohortJoinFxn(
+			`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE parent_id is null
+			GROUP BY id`
+		)
+		const cache = new Map()
+		q.getRootTerms = (cohortStr = '') => {
+			const cacheId = cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const tmp = cohortStr
+				? getCohortJoinClause(cohortStr).all(cohortStr.split(','))
+				: getCohortJoinClause(cohortStr).all()
+			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
-			return cache
+			cache.set(cacheId, re)
+			return re
 		}
 	}
 	{
@@ -975,12 +986,46 @@ thus less things to worry about...
 			}
 		}
 	}
+
+	/*
+		template: STR
+		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
+	*/
+	function initCohortJoinFxn(template) {
+		// will hold prepared statements, with object key = one or more comma-separated '?'
+		const s_cohort = {
+			'': cn.prepare(template.replace('JOINCLAUSE', ''))
+		}
+		return function getCohortJoinClause(cohortStr) {
+			const cohort = cohortStr.split(',').filter(d => d != '')
+			const questionmarks = cohort.map(() => '?').join(',')
+			console.log(998, cohort, questionmarks)
+			if (!(questionmarks in s_cohort)) {
+				const statement = template.replace(
+					'JOINCLAUSE',
+					`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
+				)
+				s_cohort[questionmarks] = cn.prepare(statement)
+			}
+			console.log(1002, s_cohort[questionmarks].source)
+			return s_cohort[questionmarks]
+		}
+	}
+
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		const getCohortJoinClause = initCohortJoinFxn(`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
+			GROUP BY id`)
+
 		const cache = new Map()
-		q.getTermChildren = id => {
-			if (cache.has(id)) return cache.get(id)
-			const tmp = s.all(id)
+		q.getTermChildren = (id, cohortStr = '') => {
+			const cacheId = id + ';;' + cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const values = cohortStr ? [...cohort, id] : id
+			console.log(1016, values)
+			const tmp = getCohortJoinClause(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
@@ -989,7 +1034,7 @@ thus less things to worry about...
 					return j
 				})
 			}
-			cache.set(id, re)
+			cache.set(cacheId, re)
 			return re
 		}
 	}

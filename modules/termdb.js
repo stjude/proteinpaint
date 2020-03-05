@@ -42,7 +42,7 @@ export function handle_request_closure(genomes) {
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.default_rootterm) return trigger_rootterm(res, tdb)
+			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
 			if (q.get_children) return trigger_children(q, res, tdb)
 			if (q.findterm) return trigger_findterm(q, res, tdb)
 			if (q.treeto) return trigger_treeto(q, res, tdb)
@@ -86,8 +86,9 @@ function trigger_getsamplecount(q, res, ds) {
 	res.send(termdbsql.get_samplecount(q, ds))
 }
 
-function trigger_rootterm(res, tdb) {
-	res.send({ lst: tdb.q.getRootTerms() })
+function trigger_rootterm(q, res, tdb) {
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getRootTerms(cohortValues) })
 }
 
 function trigger_children(q, res, tdb) {
@@ -95,7 +96,8 @@ function trigger_children(q, res, tdb) {
 may apply ssid: a premade sample set
 */
 	if (!q.tid) throw 'no parent term id'
-	res.send({ lst: tdb.q.getTermChildren(q.tid).map(copy_term) })
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getTermChildren(q.tid, cohortValues).map(copy_term) })
 }
 
 export function copy_term(t) {

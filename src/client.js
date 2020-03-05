@@ -46,6 +46,10 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
+/*
+	path: URL
+		
+*/
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -190,58 +194,6 @@ export function may_get_locationsearch() {
 		h.set(key, l[1] || 1)
 	}
 	return h
-}
-
-export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null) {
-	/*
-	Event bus pattern inspired by vue-bus and d3-dispatch
-  
-  eventTypes              array of allowed string event type[.name]
-
-  callbacks{}
-  .$eventType[.name]:     callback function or [functions]
-
-  defaultArg              the default argument to supply to 
-                          dispatcher.call() below
-*/
-	const events = {}
-	const chain = []
-	const bus = {
-		on(eventType, callback, opts = {}) {
-			const [type, name] = eventType.split('.')
-			if (!eventTypes.includes(type)) {
-				throw `Unknown event type '${type}' (client.get_event_bus)`
-			} else if (!callback) {
-				delete events[eventType]
-			} else if (typeof callback == 'function') {
-				events[eventType] = opts.timeout ? arg => setTimeout(() => callback(arg), opts.timeout) : callback
-			} else if (Array.isArray(callback)) {
-				const wrapperFxn = arg => {
-					for (const fxn of callback) fxn(arg)
-				}
-				events[eventType] = opts.timeout ? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) : wrapperFxn
-			} else {
-				throw `invalid callback for eventType=${eventType}`
-			}
-			return bus
-		},
-		emit(eventType, arg = null) {
-			setTimeout(() => {
-				for (const type in events) {
-					if (type == eventType || type.startsWith(eventType + '.')) {
-						events[type](arg ? arg : defaultArg)
-					}
-				}
-			}, 0)
-			return bus
-		}
-	}
-	if (callbacks) {
-		for (const eventType in callbacks) {
-			bus.on(eventType, callbacks[eventType])
-		}
-	}
-	return bus
 }
 
 export function appear(d, display) {
