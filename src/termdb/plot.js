@@ -87,6 +87,7 @@ class TdbPlot {
 			return action.id == this.id
 		}
 		if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -98,6 +99,7 @@ class TdbPlot {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.nav.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid

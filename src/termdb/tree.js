@@ -81,13 +81,7 @@ class TdbTree {
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
-		this.termsById = {
-			// privately defined root term
-			[root_ID]: {
-				id: root_ID,
-				__tree_isroot: true // must not delete this flag
-			}
-		}
+		this.termsByCohort = {}
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
@@ -104,6 +98,7 @@ class TdbTree {
 		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.nav.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
@@ -129,6 +124,8 @@ class TdbTree {
 				return
 			}
 		}
+		// refer to the current cohort's termsById
+		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
@@ -138,6 +135,18 @@ class TdbTree {
 				this.newPlot(this.termsById[termId])
 			}
 		}
+	}
+
+	getTermsById() {
+		if (!(this.state.activeCohort in this.termsByCohort)) {
+			this.termsByCohort[this.state.activeCohort] = {
+				[root_ID]: {
+					id: root_ID,
+					__tree_isroot: true // must not delete this flag
+				}
+			}
+		}
+		return this.termsByCohort[this.state.activeCohort]
 	}
 
 	async requestTermRecursive(term) {
@@ -253,7 +262,10 @@ function setRenderers(self) {
 		button, optional, the toggle button
 		*/
 		if (!term || !term.terms) return
-		if (!(term.id in self.termsById)) return
+		if (!(term.id in self.termsById)) {
+			div.style('display', 'none')
+			return
+		}
 
 		if (self.loadingTermSet.has(term.id)) {
 			self.loadingTermSet.delete(term.id)
@@ -272,7 +284,7 @@ function setRenderers(self) {
 		const childTermIds = new Set(term.terms.map(self.bindKey))
 		const divs = div
 			.selectAll('.' + cls_termdiv)
-			.filter(t => childTermIds.has(t.id))
+			//.filter(t => childTermIds.has(t.id)) // can change based on cohort
 			.data(term.terms, self.bindKey)
 
 		divs.exit().each(self.hideTerm)
@@ -297,12 +309,17 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function(term) {
-		if (self.tree.expandedTermIds.includes(term.id)) return
+		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function(term) {
 		const div = select(this)
+		if (!(term.id in self.termsById)) {
+			div.style('display', 'none')
+			return
+		}
+		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
