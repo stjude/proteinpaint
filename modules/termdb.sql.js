@@ -1023,7 +1023,7 @@ thus less things to worry about...
 		q.getTermChildren = (id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const values = cohortStr ? [...cohort, id] : id
+			const values = cohortStr ? [...cohortStr.split(','), id] : id
 			console.log(1016, values)
 			const tmp = getCohortJoinClause(cohortStr).all(values)
 			let re = undefined
