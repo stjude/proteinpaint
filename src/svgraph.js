@@ -269,7 +269,7 @@ export default function(arg) {
 	}
 
 	async function getPdomains(loadlst) {
-		const data = await client.dofetch2(hostURL + '/pdomain', {
+		const data = await client.dofetch2('pdomain', {
 			method: 'POST',
 			body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
 		})
