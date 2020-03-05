@@ -1079,7 +1079,7 @@ function filterJoin(lst) {
 	// then the f.in boolean value is reused
 	for (let i = 1; i < lst.length; i++) {
 		const f2 = JSON.parse(JSON.stringify(lst[i]))
-		if (f2.join == 'or') f.lst.push(f)
+		if (f2.join == 'or') f.lst.push(f2)
 		else f.lst.push(...f2.lst)
 	}
 	// if f ends up single-tvs item (from joining single tvs to empty filter), need to set join to '' per filter spec

@@ -82,9 +82,9 @@ class TdbStore {
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
 		this.state.termdbConfig = await this.getTermdbConfig()
-		if (this.state.termdbConfig.selectCohort) {
+		if (this.state.termdbConfig && this.state.termdbConfig.selectCohort) {
 			// maybe move this logic into termdbConfig.selectCohort ???
-			const i = this.state.termfilter.filter.lst.findIndex(tv => tv.type == 'tvs' && tv.term.id == 'subcohort')
+			const i = this.state.termfilter.filter.lst.findIndex(tv => tv.type == 'tvs' && tv.tvs.term.id == 'subcohort')
 			if (i == -1) {
 				// support legacy scripts, tests that do not supply a cohort argument
 				const cohortFilter = {
