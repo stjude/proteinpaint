@@ -925,7 +925,7 @@ thus less things to worry about...
 	}
 
 	{
-		const getCohortJoinClause = initCohortJoinFxn(
+		const getStatement = initCohortJoinFxn(
 			`SELECT id,jsondata 
 			FROM terms t
 			JOINCLAUSE 
@@ -936,9 +936,7 @@ thus less things to worry about...
 		q.getRootTerms = (cohortStr = '') => {
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = cohortStr
-				? getCohortJoinClause(cohortStr).all(cohortStr.split(','))
-				: getCohortJoinClause(cohortStr).all()
+			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr.split(',')) : getStatement(cohortStr).all()
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
@@ -996,14 +994,19 @@ thus less things to worry about...
 		const s_cohort = {
 			'': cn.prepare(template.replace('JOINCLAUSE', ''))
 		}
-		return function getCohortJoinClause(cohortStr) {
+		return function getStatement(cohortStr) {
 			const cohort = cohortStr.split(',').filter(d => d != '')
 			const questionmarks = cohort.map(() => '?').join(',')
 			console.log(998, cohort, questionmarks)
 			if (!(questionmarks in s_cohort)) {
 				const statement = template.replace(
 					'JOINCLAUSE',
+					// get intersection where a term is annotated in ALL of the cohortValues
+					cohort.map((d, i) => `JOIN subcohort_terms s${i} ON s${i}.term_id = t.id AND s${i}.cohort=?`).join('\n')
+					/*
+					// get union where a term is annotated in ANY of the cohortValues
 					`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
+					*/
 				)
 				s_cohort[questionmarks] = cn.prepare(statement)
 			}
@@ -1013,7 +1016,7 @@ thus less things to worry about...
 	}
 
 	{
-		const getCohortJoinClause = initCohortJoinFxn(`SELECT id,jsondata 
+		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
 			FROM terms t
 			JOINCLAUSE 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -1025,7 +1028,7 @@ thus less things to worry about...
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const values = cohortStr ? [...cohortStr.split(','), id] : id
 			console.log(1016, values)
-			const tmp = getCohortJoinClause(cohortStr).all(values)
+			const tmp = getStatement(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
