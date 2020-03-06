@@ -464,6 +464,9 @@ tape('click non-group bar to add filter', function(test) {
 	runpp({
 		termfilter,
 		state: {
+			nav: {
+				activeCohort: 0
+			},
 			termfilter,
 			tree: {
 				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
@@ -527,13 +530,14 @@ tape('click non-group bar to add filter', function(test) {
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = termfilter.filter.lst[1]
 		test.equal(
 			termfilter.filter && termfilter.filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -550,7 +554,7 @@ tape('click non-group bar to add filter', function(test) {
 			config.term2.term.values &&
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		test.deepEqual(
-			termfilter.filter.lst[1],
+			filter.lst[1],
 			{
 				type: 'tvs',
 				tvs: Object.assign(
@@ -677,13 +681,14 @@ tape('click custom categorical group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = termfilter.filter && termfilter.filter.lst[1] // lst[0] == cohort filter
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -821,13 +826,14 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = termfilter.filter && termfilter.filter.lst[1] // lst[0] == cohort filter
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {

@@ -69,9 +69,10 @@ class TdbNav {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
 			termdbConfig: appState.termdbConfig,
-			filter: this.app.opts.filter.getVisibleRoot
-				? this.app.opts.filter.getVisibleRoot(appState.termfilter.filter)
-				: appState.termfilter.filter
+			filter:
+				this.app.opts.filter && this.app.opts.filter.getVisibleRoot
+					? this.app.opts.filter.getVisibleRoot(appState.termfilter.filter)
+					: appState.termfilter.filter
 		}
 	}
 	reactsTo(action) {
