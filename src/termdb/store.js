@@ -115,6 +115,10 @@ class TdbStore {
 			if (!this.app.opts.filter) this.app.opts.filter = {}
 			if (!this.app.opts.filter.getVisibleRoot) {
 				this.app.opts.filter.getVisibleRoot = () => this.state.termfilter.filter.lst[1]
+				this.app.opts.filter.getRootFilter = filter => {
+					this.state.termfilter.filter.lst[1] = filter
+					return this.state.termfilter.filter
+				}
 			}
 		}
 	}

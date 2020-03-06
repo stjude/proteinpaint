@@ -323,17 +323,18 @@ function menuoption_add_filter(self, tvslst) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
+	const filter = filterJoin([
+		self.state.termfilter.filter.lst[1],
+		{
+			type: 'tvslst',
+			in: true,
+			join: tvslst.length > 1 ? 'and' : '',
+			lst: [...tvslst.map(wrapTvs)]
+		}
+	])
 	self.app.dispatch({
 		type: 'filter_replace',
-		filter: filterJoin([
-			self.state.termfilter.filter,
-			{
-				type: 'tvslst',
-				in: true,
-				join: tvslst.length > 1 ? 'and' : '',
-				lst: [...tvslst.map(wrapTvs)]
-			}
-		])
+		filter: self.app.opts.filter.getRootFilter ? self.app.opts.filter.getRootFilter(filter) : filter
 	})
 }
 

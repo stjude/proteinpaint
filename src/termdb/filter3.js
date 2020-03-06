@@ -57,7 +57,7 @@ class TdbFilter {
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter
+					filter: this.opts.getRootFilter ? this.opts.getRootFilter(filter) : filter
 				})
 			}
 		})

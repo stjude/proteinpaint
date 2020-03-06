@@ -206,10 +206,11 @@ function setRenderers(self) {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
-					if (self.state.filter.lst.length === 0) {
+					const filter = self.state.filter ? self.state.filter : { lst: [] }
+					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {
-						return d.key === 'mid' ? self.state.filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
+						return d.key === 'mid' ? filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
 					}
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'

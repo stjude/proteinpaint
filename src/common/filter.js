@@ -63,16 +63,18 @@ class Filter {
 
 		this.api = {
 			main: async (rawFilter, opts = {}) => {
+				//console.log(65, 'filter.main', rawFilter.$id)
 				/*
 				rawFilter{}
 				  the raw filter data structure
 				*/
 
-				const tempNav = Object.assign({}, this.opts, opts)
+				const tempOpts = Object.assign({}, this.opts, opts)
 				// to-do: should use deepEquals as part of rx.core
 				const rawCopy = JSON.stringify(rawFilter)
-				if (this.rawCopy == rawCopy && JSON.stringify(this.nav) == JSON.stringify(tempNav)) return
-				this.nav = tempNav
+				if (this.rawCopy == rawCopy && JSON.stringify(this.nav) == JSON.stringify(tempOpts.nav)) return
+				this.opts = tempOpts
+				this.nav = tempOpts.nav
 				this.rawCopy = rawCopy
 				this.rawFilter = JSON.parse(this.rawCopy)
 				this.validateFilter(this.rawFilter)
@@ -153,14 +155,14 @@ class Filter {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
 		const rawParent = this.findParent(this.rawFilter, this.filter.$id)
-		if (rawParent.$id === this.filter.$id) {
+		if (!rawParent || rawParent.$id === this.filter.$id) {
 			this.api.main(filter)
-			this.opts.callback(this.filter)
+			this.opts.callback(filter)
 		} else {
 			const i = rawParent.lst.findIndex(f => f.$id == this.filter.$id)
 			rawParent.lst[i] = filter
 			this.api.main(rawParent)
-			this.opts.callback(this.filter)
+			this.opts.callback(filter)
 		}
 	}
 	getId(item) {
