@@ -34,34 +34,27 @@ class TdbApp {
 
 		this.eventTypes = ['postInit', 'postRender']
 
-		// catch initialization error
-		try {
-			if (!coordApp) this.store = storeInit(this.api)
-			this.components = {
-				nav: navInit(
-					this.app,
-					{ holder: this.dom.topbar, show_tabs: opts.state && opts.state.nav && opts.state.nav.show_tabs },
-					this.opts.nav
-				),
-				recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
-				tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
+		if (!coordApp) {
+			// catch initialization error
+			try {
+				this.store = storeInit(this.api)
+				this.store
+					.copyState({ rehydrate: true })
+					.then(state => {
+						this.state = state
+						this.setComponents()
+					})
+					.then(() => this.api.dispatch())
+					.catch(e => this.printError(e))
+			} catch (e) {
+				this.printError(e)
 			}
-		} catch (e) {
-			this.printError(e)
-		}
-
-		this.eventTypes = ['postInit', 'postRender']
-
-		if (this.store) {
-			// trigger the initial render after initialization, store state is ready
-			this.store
-				.copyState({ rehydrate: true })
-				.then(state => {
-					this.state = state
-					//console.log(this.state.termdbConfig)
-				})
-				.then(() => this.api.dispatch())
-				.catch(e => this.printError(e))
+		} else {
+			try {
+				this.setComponents()
+			} catch (e) {
+				this.printError(e)
+			}
 		}
 	}
 	/*
@@ -78,6 +71,18 @@ class TdbApp {
 		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
 		if (!('app' in o)) o.app = {}
 		return o
+	}
+
+	setComponents() {
+		this.components = {
+			nav: navInit(
+				this.app,
+				{ holder: this.dom.topbar, show_tabs: this.opts.state && this.opts.state.nav && this.opts.state.nav.show_tabs },
+				this.opts.nav
+			),
+			recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
+			tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
+		}
 	}
 
 	printError(e) {

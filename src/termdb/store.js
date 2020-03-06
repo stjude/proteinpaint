@@ -88,30 +88,33 @@ class TdbStore {
 			if (i == -1) {
 				// support legacy scripts, tests that do not supply a cohort argument
 				const cohortFilter = {
+					type: 'tvs',
+					tvs: {
+						term: { id: 'subcohort', type: 'categorical' },
+						values: this.state.termdbConfig.selectCohort.values[0].keys.map(key => {
+							return { key, label: key }
+						})
+					}
+				}
+				this.state.termfilter.filter = {
 					type: 'tvslst',
 					in: true,
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: { id: 'subcohort', type: 'categorical' },
-								values: this.state.termdbConfig.selectCohort.values[0].keys.map(key => {
-									return { key, label: key }
-								})
-							}
-						}
-					]
+					join: 'and',
+					lst: [cohortFilter, this.state.termfilter.filter]
 				}
-				this.state.termfilter.filter = filterJoin([cohortFilter, this.state.termfilter.filter])
 			} else if (i !== 0) {
 				const cohortFilter = this.state.termfilter.filter.lst.splice(i, 1)
 				// force the cohort filter into the first position
-				filterJoin([{ type: 'tvslst', in: true, join: '', lst: [cohortFilter] }, this.state.termfilter.filter])
+				this.state.termfilter.filter = {
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [cohortFilter, this.state.termfilter.filter]
+				}
 			}
 			if (!this.app.opts.filter) this.app.opts.filter = {}
-			if (!this.app.opts.filter.getVisibleFilter) {
-				this.app.opts.filter.getVisibleFilter = () => this.state.termfilter.filter.lst[1]
+			if (!this.app.opts.filter.getVisibleRoot) {
+				this.app.opts.filter.getVisibleRoot = () => this.state.termfilter.filter.lst[1]
 			}
 		}
 	}

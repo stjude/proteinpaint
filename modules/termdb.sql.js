@@ -997,7 +997,6 @@ thus less things to worry about...
 		return function getStatement(cohortStr) {
 			const cohort = cohortStr.split(',').filter(d => d != '')
 			const questionmarks = cohort.map(() => '?').join(',')
-			console.log(998, cohort, questionmarks)
 			if (!(questionmarks in s_cohort)) {
 				const statement = template.replace(
 					'JOINCLAUSE',
@@ -1010,7 +1009,6 @@ thus less things to worry about...
 				)
 				s_cohort[questionmarks] = cn.prepare(statement)
 			}
-			console.log(1002, s_cohort[questionmarks].source)
 			return s_cohort[questionmarks]
 		}
 	}

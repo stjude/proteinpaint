@@ -3,6 +3,7 @@ import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
+import { getNormalRoot } from '../common/filter'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -57,7 +58,7 @@ class TdbNav {
 					hideLabel: this.opts.show_tabs,
 					emptyLabel: '+Add new filter'
 				},
-				this.opts.filter
+				this.app.opts.filter
 			)
 		}
 	}
@@ -68,7 +69,9 @@ class TdbNav {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
 			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter
+			filter: this.app.opts.filter.getVisibleRoot
+				? this.app.opts.filter.getVisibleRoot(appState.termfilter.filter)
+				: appState.termfilter.filter
 		}
 	}
 	reactsTo(action) {
@@ -95,7 +98,8 @@ class TdbNav {
 			'genome=' + this.state.genome,
 			'dslabel=' + this.state.dslabel,
 			'getsamplecount=' + this.activeCohortName,
-			'filter=' + (this.activeCohort == -1 ? 'null' : encodeURIComponent(JSON.stringify(this.state.filter)))
+			'filter=' +
+				(this.activeCohort == -1 ? 'null' : encodeURIComponent(JSON.stringify(getNormalRoot(this.state.filter))))
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
