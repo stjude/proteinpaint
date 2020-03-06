@@ -77,6 +77,11 @@ class TdbTree {
 		setInteractivity(this)
 		setRenderers(this)
 
+		// track plots by term ID separately from components,
+		// since active plots is dependent on the active cohort
+		this.plots = {}
+		// this.components.plots will point the applicable
+		// termIds of the active cohort
 		this.components = { plots: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
@@ -131,8 +136,18 @@ class TdbTree {
 		this.renderBranch(root, this.dom.treeDiv)
 
 		for (const termId of this.state.visiblePlotIds) {
-			if (!this.components.plots[termId]) {
+			if (!this.plots[termId]) {
 				this.newPlot(this.termsById[termId])
+			}
+		}
+
+		for (const termId in this.plots) {
+			if (termId in this.termsById) {
+				if (!(termId in this.components.plots)) {
+					this.components.plots[termId] = this.plots[termId]
+				}
+			} else if (termId in this.components.plots) {
+				delete this.components.plots[termId]
 			}
 		}
 	}
@@ -233,7 +248,7 @@ class TdbTree {
 				this.app.opts.plot || {}
 			)
 		)
-		this.components.plots[term.id] = plot
+		this.plots[term.id] = plot
 	}
 
 	bindKey(term) {
@@ -452,7 +467,7 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		if (!self.components.plots[term.id]) {
+		if (!self.plots[term.id]) {
 			// no plot component for this term yet, first time loading this plot
 			self.loadingPlotSet.add(term.id)
 		}
