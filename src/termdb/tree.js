@@ -110,7 +110,7 @@ class TdbTree {
 			bar_click_menu: appState.bar_click_menu
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
-		if (appState.termdbConfig && appState.termdbConfig.selectCohort) {
+		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
 			const choice = appState.termdbConfig.selectCohort.values[appState.nav.activeCohort]
 			if (choice) {
