@@ -11,12 +11,25 @@ output:
 json object for all atomic terms, but not CHC!!
 
 step 1:
-	go over phenotree to get a json backbone of all atomic terms, identify numeric terms
+	go over phenotree to initialize json backbone of categorical and numeric terms
+	for categorical terms:
+		if have predefined categories:
+			populate .values{} with categories
+			runtime SET ._values_foundinmatrix, for identifying items from .values not showing up in matrix
+			runtime SET ._values_newinmatrix, for matrix values not in .values
+		else:
+			runtime SET ._set  to receive categories from matrix
+	for numeric terms:
+		runtime .bins._min, .bins._max to get range
+		if have predefined categories:
+			populate .values{} with categories
+			runtime SET ._values_foundinmatrix
 step 2:
-	go over each matrix file to set the min/max of each numeric term
+	go over each matrix file to fill in runtime holders
 step 3:
 	finalize bin scheme of numeric terms
 	output
+	print out alerts and diagnostic info
 
 CHC is dealt in validate.ctcae.js
 */
@@ -101,15 +114,10 @@ function step1_parsephenotree() {
 				L5 = t5.trim(),
 				configstr = configstr0.trim()
 
-			if (!L1) throw 'L1 missing'
-			if (!L2) throw 'L2 missing'
-			if (!L3) throw 'L3 missing'
-			if (!L4) throw 'L4 missing'
-			if (!L5) throw 'L5 missing'
+			const name = get_name(L2, L3, L4, L5) // must have a name; throws if not
 			// if key0 is missing, use name
 			let key = key0 ? key0.trim() : ''
 
-			const name = get_name(L2, L3, L4, L5) // must have a name; throws if not
 			if (!key) key = name
 
 			const term = parseconfig(configstr)
@@ -123,6 +131,10 @@ function step1_parsephenotree() {
 	return key2terms
 }
 function get_name(L2, L3, L4, L5) {
+	if (!L2) throw 'L2 missing'
+	if (!L3) throw 'L3 missing'
+	if (!L4) throw 'L4 missing'
+	if (!L5) throw 'L5 missing'
 	if (L5 != '-') return L5
 	if (L4 != '-') return L4
 	if (L3 != '-') return L3
@@ -133,9 +145,8 @@ function get_name(L2, L3, L4, L5) {
 function parseconfig(str) {
 	const term = {}
 
-	// categorical term can be made at two places
-	// numeric term is made at just one
 	if (str == 'string') {
+		// is categorical term without predefined categories, need to collect from matrix, no further validation
 		term.type = 'categorical'
 		term.values = {}
 		// list of categories not provided in configstr so need to sum it up from matrix
@@ -157,8 +168,11 @@ function parseconfig(str) {
 			term.type = 'categorical'
 			term.values = {}
 			term.values[key] = { label: value }
-			// now that
+			term._values_newinmatrix = new Set() // only for categorical but not numeric
 		}
+
+		// for all above cases, will have these two
+		term._values_foundinmatrix = new Set()
 
 		for (let i = 1; i < l.length; i++) {
 			const field = l[i].trim()
@@ -191,28 +205,37 @@ function step2_parsematrix(file, key2terms) {
 			for (let i = 0; i < l.length; i++) {
 				const headerfield = headerlst[i]
 				if (!headerfield) throw 'headerfield missing: ' + i
+				const str = l[i]
 				const term = key2terms[headerfield]
 				if (!term) {
 					header_notermmatch.add(headerfield)
 					continue
 				}
-				if (term.type == 'categorical' && term._set) {
-					// to collect categories
-					term._set.add(l[i])
+				if (term.type == 'categorical') {
+					if (term._set) {
+						// to collect categories
+						term._set.add(str)
+					} else {
+						// to compare against .values
+						if (term.values[str]) {
+							// found
+							term._values_foundinmatrix.add(str)
+						} else {
+							term._values_newinmatrix.add(str)
+						}
+					}
 					continue
 				}
-				if (term.type != 'integer' && term.type != 'float') {
-					// not numeric
-					continue
-				}
+				if (term.type != 'integer' && term.type != 'float') throw 'term type is not the expected integer/float'
 				if (term.values) {
 					// has special categories
-					if (term.values[l[i]]) {
-						// the value is a special category
+					if (term.values[str]) {
+						// found; do not consider for range
+						term._values_foundinmatrix.add(str)
 						continue
 					}
 				}
-				const value = Number(l[i])
+				const value = Number(str)
 				term.bins._min = Math.min(value, term.bins._min)
 				term.bins._max = Math.max(value, term.bins._max)
 			}
@@ -232,21 +255,47 @@ function step3_finalizeterms(key2terms) {
 		if (term.type == 'categorical') {
 			if (term._set) {
 				if (term._set.size == 0) {
-					console.error('empty _set for ' + termID)
+					console.error('ERR - ' + termID + ': no categories specified in phenotree and not loaded in matrix')
 					continue
 				}
 				for (const s of term._set) {
 					term.values[s] = { label: s }
 				}
 				delete term._set
+			} else {
+				// has predefined categories in .values
+				for (const k in term.values) {
+					if (!term._values_foundinmatrix.has(k)) {
+						console.error('ERR - ' + termID + ': category "' + k + '" not found in matrix')
+					}
+				}
+				if (term._values_newinmatrix.size) {
+					for (const k of term._values_newinmatrix) {
+						console.error('ERR - ' + termID + ': undeclared categories from matrix: ' + k)
+						term.values[k] = { label: k }
+					}
+				}
+				delete term._values_foundinmatrix
+				delete term._values_newinmatrix
 			}
 			continue
 		}
+		// numeric term
+		if (term.values) {
+			// has special cate, do the same validation
+			for (const k in term.values) {
+				if (!term._values_foundinmatrix.has(k)) {
+					console.error('ERR - ' + termID + ': category "' + k + '" not found in matrix')
+				}
+			}
+			delete term._values_foundinmatrix
+		}
 		if (!('_min' in term.bins)) throw '.bins._min missing'
 		if (term.bins._min == term.bins._max) {
-			console.error('no numeric data for ' + term.name)
+			console.error('ERR - ' + termID + ': no numeric data')
 			continue
 		}
+		console.error('RANGE - ' + termID + ': ' + term.bins._min + ' ' + term.bins._max)
 		// find bin size
 		const range = term.bins._max - term.bins._min
 		if (range > 10000) {
