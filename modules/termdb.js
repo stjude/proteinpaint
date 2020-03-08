@@ -13,11 +13,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 handle_request_closure
 copy_term
 ********************** INTERNAL
-trigger_rootterm
-trigger_getcategories
-trigger_children
-trigger_findterm
-trigger_treeto
+trigger_*
 */
 
 export function handle_request_closure(genomes) {
@@ -45,7 +41,6 @@ export function handle_request_closure(genomes) {
 			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
 			if (q.get_children) return trigger_children(q, res, tdb)
 			if (q.findterm) return trigger_findterm(q, res, tdb)
-			if (q.treeto) return trigger_treeto(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
@@ -121,29 +116,6 @@ function trigger_findterm(q, res, termdb) {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 	})
 	res.send({ lst: terms })
-}
-
-function trigger_treeto(q, res, termdb) {
-	const term = termdb.q.termjsonByOneid(q.treeto)
-	if (!term) throw 'unknown term id'
-	const levels = [
-		{
-			focusid: q.treeto
-		}
-	]
-	let thisid = q.treeto
-	while (termdb.q.termHasParent(thisid)) {
-		const parentid = termdb.q.getTermParentId(thisid)
-		levels[0].terms = termdb.q.getTermChildren(parentid).map(copy_term)
-		const ele = {
-			// new element for the lst
-			focusid: parentid
-		}
-		levels.unshift(ele)
-		thisid = parentid
-	}
-	levels[0].terms = termdb.q.getRootTerms()
-	res.send({ levels })
 }
 
 function trigger_getcategories(q, res, tdb, ds) {
