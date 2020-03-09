@@ -33,6 +33,9 @@ class TdbApp {
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
+		if (this.opts.dev) {
+			window.tt = this
+		}
 
 		if (!coordApp) {
 			// catch initialization error
