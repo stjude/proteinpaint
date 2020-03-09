@@ -754,7 +754,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				nav: {
 					show_tabs: false,
-					activeCohort: self.nav.activeCohort
+					activeCohort: self.nav ? self.nav.activeCohort : 0
 				},
 				termfilter: {
 					show_top_ui: false,

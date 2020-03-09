@@ -452,6 +452,11 @@ official track only
 		state: {
 			dslabel: tk.mds.label,
 			genome: block.genome.name,
+			nav: {
+				// default to the first cohort value,
+				// will be ignored if not applicable
+				activeCohort: 0
+			},
 			ssid: {
 				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
 				pos: m.pos,
