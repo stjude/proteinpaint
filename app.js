@@ -9125,6 +9125,7 @@ async function handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets) {
 	}
 }
 async function handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets) {
+	if (!q.samplerule.set) return // possible when using "mutated_sets"
 	if (!q.samplerule.set.geneexpression) return // hardcoded for gene exp
 	if (!q.samplerule.set.byquartile) return // hardcoded for quartile
 	if (samplesets.length != 4) return // should throw
