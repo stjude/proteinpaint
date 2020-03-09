@@ -74,7 +74,10 @@ module.exports = {
 					}
 				}
 			},
+
+			//// this attribute is optional
 			selectCohort: {
+				// key specific to this dataset, should not use literally in client/server code but always through a variable
 				term_id: 'subcohort',
 				showMessageWhenNotSelected:
 					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
@@ -163,6 +166,16 @@ module.exports = {
   </tr>
 </tbody>
 </table>`
+			},
+
+			//// this attribute is optional
+			// provides array index of root-level filter.lst[] for various functional parts
+			filterRootLstIndices: {
+				// required; index of visible filters
+				visibleRootIndex: 1,
+				// optional; index of cohort selection tvs
+				// only specify this when cohort selection is enabled for this dataset
+				index_selectCohort: 0
 			}
 		}
 	},
