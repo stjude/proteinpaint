@@ -103,7 +103,7 @@ class TdbStore {
 						values:
 							this.state.nav.activeCohort == -1
 								? []
-								: this.state.termdbConfig.selectCohort.values[1].keys.map(key => {
+								: this.state.termdbConfig.selectCohort.values[this.state.nav.activeCohort].keys.map(key => {
 										return { key, label: key }
 								  })
 					}
