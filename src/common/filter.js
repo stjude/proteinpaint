@@ -17,11 +17,6 @@ const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 		the callback will receive the updated visible filter
 		as argument
 	
-	.getVisibleRoot()
-	  optional method that returns the raw filter's level/item 
-	  to use as the visible filter root to render; defaults
-	  to the raw filter root object
-	
 	.emptyLabel "+NEW"
 		options to use a different label for the
 		button or prompt to add the 
@@ -78,7 +73,11 @@ class Filter {
 				this.rawCopy = rawCopy
 				this.rawFilter = JSON.parse(this.rawCopy)
 				this.validateFilter(this.rawFilter)
-				this.filter = this.opts.getVisibleRoot ? this.opts.getVisibleRoot(this.rawFilter) : this.rawFilter
+				this.filter = getFilterItemByTag(this.rawFilter, 'filterUiRoot')
+				if (!this.filter) {
+					this.filter = this.rawFilter
+					this.filter.tag = 'filterUiRoot'
+				}
 				this.resetActiveData(this.filter)
 
 				// reset interaction-related styling
@@ -151,18 +150,19 @@ class Filter {
 			}
 		}
 	}
-	refresh(filter) {
+	refresh(filterUiRoot) {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
-		const rawParent = this.findParent(this.rawFilter, this.filter.$id)
-		if (!rawParent || rawParent.$id === this.filter.$id) {
-			this.api.main(filter)
-			this.opts.callback(filter)
+		const rootCopy = JSON.parse(this.rawCopy)
+		const rawParent = this.findParent(rootCopy, this.filter.$id)
+		if (!rawParent || rawParent.$id === this.rawFilter.$id) {
+			this.api.main(rootCopy)
+			this.opts.callback(filterUiRoot, rootCopy)
 		} else {
 			const i = rawParent.lst.findIndex(f => f.$id == this.filter.$id)
-			rawParent.lst[i] = filter
-			this.api.main(rawParent)
-			this.opts.callback(filter)
+			rawParent.lst[i] = filterUiRoot
+			this.api.main(rootCopy)
+			this.opts.callback(filterUiRoot, rootCopy)
 		}
 	}
 	getId(item) {
@@ -175,6 +175,27 @@ class Filter {
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
 		return getNormalRoot(rootCopy)
+	}
+
+	findItem(item, $id) {
+		if (item.$id === $id) return item
+		if (item.type !== 'tvslst') return
+		for (const subitem of item.lst) {
+			const matchingItem = this.findItem(subitem, $id)
+			if (matchingItem) return matchingItem
+		}
+	}
+
+	findParent(parent, $id) {
+		if (parent.$id === $id) return parent
+		if (!parent.lst) return
+		for (const item of parent.lst) {
+			if (item.$id === $id) return parent
+			else if (item.type == 'tvslst') {
+				const matchingParent = this.findParent(item, $id)
+				if (matchingParent) return matchingParent
+			}
+		}
 	}
 }
 
@@ -440,13 +461,13 @@ function setRenderers(self) {
 			holder,
 			debug: self.opts.debug,
 			callback: tvs => {
-				const rootCopy = JSON.parse(JSON.stringify(self.filter))
-				const filterCopy = self.findItem(rootCopy, filter.$id)
+				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+				const filterCopy = self.findItem(filterUiRoot, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
 				tvs.isnot = self.dom.isNotInput.property('checked')
 				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
-				self.refresh(rootCopy)
+				self.refresh(filterUiRoot)
 			}
 		})
 		self.pills[item.$id] = pill
@@ -688,43 +709,47 @@ function setInteractivity(self) {
 			},
 			barchart: {
 				bar_click_override: tvslst => {
-					const rootCopy = JSON.parse(JSON.stringify(self.filter))
+					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 
-					if (!rootCopy.lst.length) {
-						if (tvslst.length > 1) rootCopy.join = 'and'
-						rootCopy.lst.push(...tvslst.map(self.wrapInputTvs))
-						self.refresh(rootCopy)
+					if (!filterUiRoot.lst.length) {
+						if (tvslst.length > 1) filterUiRoot.join = 'and'
+						filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
+						self.refresh(filterUiRoot)
 					} else if (d != 'or' && d != 'and') {
 						throw 'unhandled new term(s): invalid appender join value'
 					} else {
-						if (!rootCopy.join) rootCopy.join = d // 'and' || 'or'
+						if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
 
-						if (rootCopy.join == d) {
-							if (tvslst.length < 2 || rootCopy.join == 'and') {
-								rootCopy.lst.push(...tvslst.map(self.wrapInputTvs))
+						if (filterUiRoot.join == d) {
+							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
+								filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
 							} else {
-								rootCopy.push({
+								filterUiRoot.push({
 									type: 'tvslst',
 									in: true,
 									join: 'and',
 									lst: tvslst.map(self.wrapInputTvs)
 								})
 							}
-							self.refresh(rootCopy)
+							self.refresh(filterUiRoot)
 						} else if (d == 'and' || tvslst.length < 2) {
+							delete filterUiRoot.tag
 							self.refresh({
+								tag: 'filterUiRoot',
 								type: 'tvslst',
 								in: true,
 								join: d,
-								lst: [rootCopy, ...tvslst.map(self.wrapInputTvs)]
+								lst: [filterUiRoot, ...tvslst.map(self.wrapInputTvs)]
 							})
 						} else {
+							delete filterUiRoot.tag
 							self.refresh({
+								tag: 'filterUiRoot',
 								type: 'tvslst',
 								in: true,
 								join: 'or',
 								lst: [
-									rootCopy,
+									filterUiRoot,
 									{
 										type: 'tvslst',
 										in: true,
@@ -801,18 +826,18 @@ function setInteractivity(self) {
 
 	self.negateClause = function() {
 		//const filter = self.activeData.filter
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const item = self.findItem(rootCopy, self.activeData.item.$id)
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const item = self.findItem(filterUiRoot, self.activeData.item.$id)
 		if (item.type == 'tvslst') item.in = !item.in
 		else item.tvs.isnot = !item.tvs.isnot
-		self.refresh(rootCopy)
+		self.refresh(filterUiRoot)
 	}
 
 	self.replaceTerm = tvslst => {
 		const item = self.activeData.item
 		const filter = self.activeData.filter
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(filterUiRoot, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapInputTvs))
@@ -825,14 +850,14 @@ function setInteractivity(self) {
 				lst: tvslst.map(self.wrapInputTvs)
 			}
 		}
-		self.refresh(rootCopy)
+		self.refresh(filterUiRoot)
 	}
 
 	self.appendTerm = tvslst => {
 		const item = self.activeData.item
 		const filter = self.activeData.filter
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(filterUiRoot, filter.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
 		} else {
@@ -844,14 +869,14 @@ function setInteractivity(self) {
 				lst: tvslst.map(self.wrapInputTvs)
 			})
 		}
-		self.refresh(rootCopy)
+		self.refresh(filterUiRoot)
 	}
 
 	self.subnestFilter = tvslst => {
 		const item = self.activeData.item
 		const filter = self.activeData.filter
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(filterUiRoot, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		// transform from tvs to tvslst
 		filterCopy.lst[i] = {
@@ -860,16 +885,18 @@ function setInteractivity(self) {
 			join: filter.join == 'or' ? 'and' : 'or',
 			lst: [item, ...tvslst.map(self.wrapInputTvs)]
 		}
-		self.refresh(rootCopy)
+		self.refresh(filterUiRoot)
 	}
 
 	self.editFilter = tvslst => {
 		const item = self.activeData.item
 		const filter = self.activeData.filter
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findParent(rootCopy, filter.$id)
-		if (filterCopy == rootCopy) {
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findParent(filterUiRoot, filter.$id)
+		if (filterCopy == filterUiRoot) {
+			delete filterCopy.tag
 			self.refresh({
+				tag: 'filterUiRoot',
 				type: 'tvslst',
 				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
@@ -877,7 +904,7 @@ function setInteractivity(self) {
 			})
 		} else {
 			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
-			self.refresh(rootCopy)
+			self.refresh(filterUiRoot)
 		}
 	}
 
@@ -891,21 +918,23 @@ function setInteractivity(self) {
 		}
 		const i = filter.lst.findIndex(t => t.$id === item.$id)
 		if (i == -1) return
-		const rootCopy = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = self.findItem(rootCopy, filter.$id)
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = self.findItem(filterUiRoot, filter.$id)
 		filterCopy.lst.splice(i, 1)
 		if (filterCopy.lst.length === 1) {
-			const parent = self.findParent(rootCopy, filterCopy.$id)
+			const parent = self.findParent(filterUiRoot, filterCopy.$id)
 			if (filterCopy.lst[0].type == 'tvslst') {
-				if (parent == rootCopy) self.refresh(filterCopy.lst[0])
-				else {
+				if (parent == filterUiRoot) {
+					filterCopy.lst[0].tag = 'filterUiRoot'
+					self.refresh(filterCopy.lst[0])
+				} else {
 					const j = parent.lst.findIndex(t => t.$id == filterCopy.$id)
 					if (filterCopy.lst[0].join == parent.join) {
 						parent.lst.splice(j, 1, ...filterCopy.lst[0].lst)
-						self.refresh(rootCopy)
+						self.refresh(filterUiRoot)
 					} else {
 						parent.lst[j] = filterCopy.lst[0]
-						self.refresh(rootCopy)
+						self.refresh(filterUiRoot)
 					}
 				}
 			} else {
@@ -914,33 +943,12 @@ function setInteractivity(self) {
 				parent.lst[j] = filterCopy.lst[0]
 				if (!filterCopy.in) {
 					parent.lst[j].tvs.isnot = !parent.lst[j].tvs.isnot
-					if (parent == rootCopy) parent.in = true
+					if (parent == filterUiRoot) parent.in = true
 				}
-				self.refresh(rootCopy)
+				self.refresh(filterUiRoot)
 			}
 		} else {
-			self.refresh(rootCopy)
-		}
-	}
-
-	self.findItem = function(item, $id) {
-		if (item.$id === $id) return item
-		if (item.type !== 'tvslst') return
-		for (const subitem of item.lst) {
-			const matchingItem = self.findItem(subitem, $id)
-			if (matchingItem) return matchingItem
-		}
-	}
-
-	self.findParent = function(parent, $id) {
-		if (parent.$id === $id) return parent
-		if (!parent.lst) return
-		for (const item of parent.lst) {
-			if (item.$id === $id) return parent
-			else if (item.type == 'tvslst') {
-				const matchingParent = self.findParent(item, $id)
-				if (matchingParent) return matchingParent
-			}
+			self.refresh(filterUiRoot)
 		}
 	}
 
@@ -953,6 +961,17 @@ function setInteractivity(self) {
 /***********************
  Utilities
 *************************/
+
+function getFilterItemByTag(item, tag) {
+	if (item.tag === tag) return item
+	if (item.type !== 'tvslst') return
+	for (const subitem of item.lst) {
+		const matchingItem = getFilterItemByTag(subitem, tag)
+		if (matchingItem) return matchingItem
+	}
+}
+
+exports.getFilterItemByTag = getFilterItemByTag
 
 function getWrappedTvslst(lst = [], join = '', $id = null) {
 	const filter = {
@@ -993,6 +1012,7 @@ exports.getNormalRoot = getNormalRoot
 */
 function normalizeFilter(filter) {
 	delete filter.$id
+	delete filter.tag
 	const lst = filter.lst
 		// keep non-tvslst entries or tvslst with non-empty lst.length
 		.filter(f => f.type !== 'tvslst' || f.lst.length > 0)

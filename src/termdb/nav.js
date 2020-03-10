@@ -3,7 +3,7 @@ import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
-import { getNormalRoot } from '../common/filter'
+import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -69,10 +69,7 @@ class TdbNav {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
 			termdbConfig: appState.termdbConfig,
-			filter:
-				this.app.opts.filter && this.app.opts.filter.getVisibleRoot
-					? this.app.opts.filter.getVisibleRoot(appState.termfilter.filter)
-					: appState.termfilter.filter
+			filter: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot')
 		}
 	}
 	reactsTo(action) {
@@ -106,8 +103,9 @@ class TdbNav {
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
+			const cohortKey = this.state.termdbConfig.selectCohort && this.state.termdbConfig.selectCohort.term_id
 			for (const row of data) {
-				this.samplecounts[row.subcohort] = row.samplecount
+				if (cohortKey in row) this.samplecounts[row[cohortKey]] = row.samplecount
 			}
 		}
 	}

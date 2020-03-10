@@ -2,6 +2,7 @@
 const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
+const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
 
 /*************************
  reusable helper functions
@@ -530,9 +531,9 @@ tape('click non-group bar to add filter', function(test) {
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
 		const termfilter = plot.Inner.app.Inner.state.termfilter
-		const filter = termfilter.filter.lst[1]
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
@@ -681,7 +682,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
-		const filter = termfilter.filter && termfilter.filter.lst[1] // lst[0] == cohort filter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
 			filter && filter.lst.length,
 			1,
@@ -826,7 +827,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
-		const filter = termfilter.filter && termfilter.filter.lst[1] // lst[0] == cohort filter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
 			filter && filter.lst.length,
 			1,

@@ -51,13 +51,12 @@ class TdbFilter {
 			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
-			getVisibleRoot: this.opts.getVisibleRoot,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
-			callback: filter => {
+			callback: (filterUiRoot, rootFilter) => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter: this.opts.getRootFilter ? this.opts.getRootFilter(filter) : filter
+					filter: rootFilter
 				})
 			}
 		})

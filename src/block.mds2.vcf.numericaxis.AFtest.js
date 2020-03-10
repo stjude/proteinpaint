@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as dom from './dom'
-import { filterInit, filterJoin } from './common/filter'
+import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 import { appInit } from './termdb/app'
 
@@ -468,12 +468,13 @@ function get_hidden_filters(tk) {
 function combine_groupfilter_with_hidden(f, tk) {
 	/*
 f:{}
-  the visible filter from a group of AFtest, to be put as the first of array
-  and this logic is hardcoded in opts.getVisibleRoot() 
+  the visible filter from a group of AFtest, to be tagged as 'filterUiRoot' 
 
 tk:
   may provide additional hidden filters
 */
+	const fcopy = JSON.parse(JSON.stringify(f))
+	f.copy.tag = 'filterUiRoot'
 	const combined = {
 		type: 'tvslst',
 		join: 'and',
@@ -497,7 +498,6 @@ function show_group_termdb(group, tk, block) {
 			},
 			dslabel: tk.dslabel,
 			emptyLabel: 'Entire cohort',
-			getVisibleRoot: root => root.lst[0],
 			callback: async f => {
 				group.filter = f
 				await tk.load()

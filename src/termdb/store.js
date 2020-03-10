@@ -4,7 +4,7 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
-import { filterJoin } from '../common/filter'
+import { filterJoin, getFilterItemByTag } from '../common/filter'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -81,17 +81,27 @@ class TdbStore {
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
+
+		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+		if (!filterUiRoot) {
+			this.state.termfilter.filter.tag = 'filterUiRoot'
+			filterUiRoot = this.state.termfilter.filter
+		}
+
 		this.state.termdbConfig = await this.getTermdbConfig()
-		if (this.state.termdbConfig && this.state.termdbConfig.selectCohort) {
-			// maybe move this logic into termdbConfig.selectCohort ???
-			const i = this.state.termfilter.filter.lst.findIndex(tv => tv.type == 'tvs' && tv.tvs.term.id == 'subcohort')
-			if (i == -1) {
-				// support legacy scripts, tests that do not supply a cohort argument
-				const cohortFilter = {
+		if (this.state.termdbConfig.selectCohort) {
+			const cohortKey = this.state.termdbConfig.selectCohort.term_id
+			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+			if (!cohortFilter) {
+				// support legacy state.termfilter and test scripts that
+				// that does not specify a cohort when required
+				const activeCohort = this.state.nav.activeCohort != -1 ? this.state.nav.activeCohort : 0
+				cohortFilter = {
+					tag: 'cohortFilter',
 					type: 'tvs',
 					tvs: {
-						term: { id: 'subcohort', type: 'categorical' },
-						values: this.state.termdbConfig.selectCohort.values[0].keys.map(key => {
+						term: { id: cohortKey, type: 'categorical' },
+						values: this.state.termdbConfig.selectCohort.values[activeCohort].keys.map(key => {
 							return { key, label: key }
 						})
 					}
@@ -100,24 +110,7 @@ class TdbStore {
 					type: 'tvslst',
 					in: true,
 					join: 'and',
-					lst: [cohortFilter, this.state.termfilter.filter]
-				}
-			} else if (i !== 0) {
-				const cohortFilter = this.state.termfilter.filter.lst.splice(i, 1)
-				// force the cohort filter into the first position
-				this.state.termfilter.filter = {
-					type: 'tvslst',
-					in: true,
-					join: 'and',
-					lst: [cohortFilter, this.state.termfilter.filter]
-				}
-			}
-			if (!this.app.opts.filter) this.app.opts.filter = {}
-			if (!this.app.opts.filter.getVisibleRoot) {
-				this.app.opts.filter.getVisibleRoot = () => this.state.termfilter.filter.lst[1]
-				this.app.opts.filter.getRootFilter = filter => {
-					this.state.termfilter.filter.lst[1] = filter
-					return this.state.termfilter.filter
+					lst: [cohortFilter, filterUiRoot]
 				}
 			}
 		}
@@ -127,7 +120,8 @@ class TdbStore {
 		const data = await dofetch2(
 			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
 		)
-		return data.termdbConfig
+		// note: in case of error such as missing dataset, supply empty object
+		return data.termdbConfig || {}
 	}
 
 	fromJson(str) {

@@ -334,7 +334,7 @@ function menuoption_add_filter(self, tvslst) {
 	])
 	self.app.dispatch({
 		type: 'filter_replace',
-		filter: self.app.opts.filter.getRootFilter ? self.app.opts.filter.getRootFilter(filter) : filter
+		filter
 	})
 }
 

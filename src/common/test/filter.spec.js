@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { filterInit, getNormalRoot, filterJoin } = require('../filter')
+const { filterInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -30,6 +30,7 @@ function getOpts(_opts = {}) {
 			},
 			callback(filter) {
 				opts.filterData = filter
+				opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
 				opts.filter.main(opts.filterData)
 			}
 		},
@@ -44,7 +45,6 @@ function getOpts(_opts = {}) {
 		dslabel: 'SJLife',
 		nav: { activeCohort: 0 },
 		debug: true,
-		getVisibleRoot: opts.getVisibleRoot,
 		callback: opts.callback
 	})
 
@@ -76,8 +76,10 @@ function normalizeActiveData(opts) {
 	// delete UI assigned tracking/binding values from activeData
 	delete activeData.item.$id
 	delete activeData.item.ancestry
+	delete activeData.item.tag
 	delete activeData.filter.$id
 	delete activeData.filter.ancestry
+	delete activeData.filter.tag
 	for (const item of activeData.filter.lst) {
 		delete item.$id
 	}
@@ -498,8 +500,8 @@ tape('add-transformer button interaction, 2-pill', async test => {
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
 	test.deepEqual(
-		opts.filter.Inner.filter.lst[0].lst.map(d => d.tvs.id),
-		origFilter.lst.map(d => d.tvs.id),
+		opts.filter.Inner.filter.lst[0].lst.map(d => d.tvs.term.id),
+		origFilter.lst.map(d => d.tvs.term.id),
 		'should subnest the original filter tvslst'
 	)
 	test.equal(opts.filterData.lst[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
@@ -533,7 +535,7 @@ tape('pill Edit interaction', async test => {
 	const expected = { item: opts.filterData.lst[0], filter: opts.filterData }
 	delete expected.item.$id
 	delete expected.filter.$id
-	test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected edit activeData')
+	delete test.deepEqual(normalizeActiveData(opts), expected, 'should set the expected edit activeData')
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.style('display'),
 		'none',
@@ -965,15 +967,13 @@ tape('hidden filters', async test => {
 			lst: [
 				agedx(),
 				{
+					tag: 'filterUiRoot',
 					type: 'tvslst',
 					join: '',
 					in: true,
 					lst: [diaggrp()]
 				}
 			]
-		},
-		getVisibleRoot(rawFilter) {
-			return rawFilter.lst[1]
 		},
 		callback(filter) {
 			opts.filterData.lst[1] = filter
@@ -1088,6 +1088,7 @@ tape('getNormalRoot()', async test => {
 					join: 'and',
 					lst: [
 						{
+							tag: 'filterUiRoot',
 							type: 'tvslst',
 							in: true,
 							join: '',
@@ -1103,9 +1104,6 @@ tape('getNormalRoot()', async test => {
 					lst: []
 				}
 			]
-		},
-		getVisibleRoot(rawFilter) {
-			return rawFilter.lst[0].lst[0]
 		}
 	})
 
