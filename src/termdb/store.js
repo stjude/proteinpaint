@@ -95,15 +95,17 @@ class TdbStore {
 			if (!cohortFilter) {
 				// support legacy state.termfilter and test scripts that
 				// that does not specify a cohort when required
-				const activeCohort = this.state.nav.activeCohort != -1 ? this.state.nav.activeCohort : 0
 				cohortFilter = {
 					tag: 'cohortFilter',
 					type: 'tvs',
 					tvs: {
 						term: { id: cohortKey, type: 'categorical' },
-						values: this.state.termdbConfig.selectCohort.values[activeCohort].keys.map(key => {
-							return { key, label: key }
-						})
+						values:
+							this.state.nav.activeCohort == -1
+								? []
+								: this.state.termdbConfig.selectCohort.values[1].keys.map(key => {
+										return { key, label: key }
+								  })
 					}
 				}
 				this.state.termfilter.filter = {

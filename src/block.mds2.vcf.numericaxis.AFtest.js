@@ -283,11 +283,6 @@ groupindex:
 				const obj = {
 					holder: div,
 					state: {
-						nav: {
-							// default to the first cohort value,
-							// will be ignored if not applicable
-							activeCohort: 0
-						},
 						genome: block.genome.name,
 						dslabel: tk.mds.label
 					},
@@ -433,22 +428,7 @@ function show_group(tk, block, group) {
 
 function get_hidden_filters(tk) {
 	// get the list of hidden filters
-	const lst = [
-		{
-			type: 'tvslst',
-			join: '',
-			in: true,
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						term: { id: 'subcohort' },
-						values: [{ key: 'CCSS' }]
-					}
-				}
-			]
-		}
-	]
+	const lst = []
 	const v = may_get_param_AFtest_termfilter(tk)
 	// keep AFtest.termfilter as a single tvs
 	if (v) {
@@ -474,12 +454,12 @@ tk:
   may provide additional hidden filters
 */
 	const fcopy = JSON.parse(JSON.stringify(f))
-	f.copy.tag = 'filterUiRoot'
+	fcopy.tag = 'filterUiRoot'
 	const combined = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
-		lst: [f]
+		lst: [fcopy]
 	}
 	const hiddenlst = get_hidden_filters(tk)
 	if (hiddenlst.length) {
@@ -493,9 +473,6 @@ function show_group_termdb(group, tk, block) {
 		group.filterApi = filterInit({
 			holder: group.dom.td3,
 			genome: block.genome.name,
-			nav: {
-				activeCohort: 0 // 0='SJLIFE', 1='CCSS'
-			},
 			dslabel: tk.dslabel,
 			emptyLabel: 'Entire cohort',
 			callback: async f => {
@@ -521,11 +498,6 @@ function show_group_termdb(group, tk, block) {
 					state: {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
-						nav: {
-							// default to the first cohort value,
-							// will be ignored if not applicable
-							activeCohort: 0
-						},
 						termfilter: {
 							filter: group.filterApi.getNormalRoot()
 						}
