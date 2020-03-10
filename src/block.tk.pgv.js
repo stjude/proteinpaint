@@ -1350,6 +1350,13 @@ function gvtklabelclick(gvtk, tk, block) {
 			.text('Sort samples')
 			.on('click', () => {
 				tk.tracks.sort((a, b) => {
+					const va = a.gvtkattr.get(gvtk.name).value
+					const vb = b.gvtkattr.get(gvtk.name).value
+					if (vb == undefined) {
+						if (va == undefined) return 0
+						return -1
+					}
+					if (va == undefined) return 1
 					return b.gvtkattr.get(gvtk.name).value - a.gvtkattr.get(gvtk.name).value
 				})
 				render_tk(tk, block)
