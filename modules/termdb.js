@@ -65,8 +65,7 @@ function trigger_gettermdbconfig(res, tdb) {
 	res.send({
 		termdbConfig: {
 			// add attributes here to reveal to client
-			selectCohort: tdb.selectCohort, // optional
-			filterRootLstIndices: tdb.filterRootLstIndices // optional
+			selectCohort: tdb.selectCohort // optional
 		}
 	})
 }

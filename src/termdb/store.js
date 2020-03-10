@@ -90,7 +90,6 @@ class TdbStore {
 
 		this.state.termdbConfig = await this.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
-			const cohortKey = this.state.termdbConfig.selectCohort.term_id
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
 				// support legacy state.termfilter and test scripts that
@@ -99,7 +98,7 @@ class TdbStore {
 					tag: 'cohortFilter',
 					type: 'tvs',
 					tvs: {
-						term: { id: cohortKey, type: 'categorical' },
+						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
 						values:
 							this.state.nav.activeCohort == -1
 								? []

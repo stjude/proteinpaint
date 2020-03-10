@@ -103,7 +103,7 @@ class TdbNav {
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
-			const cohortKey = this.state.termdbConfig.selectCohort && this.state.termdbConfig.selectCohort.term_id
+			const cohortKey = this.state.termdbConfig.selectCohort && this.state.termdbConfig.selectCohort.term.id
 			for (const row of data) {
 				if (cohortKey in row) this.samplecounts[row[cohortKey]] = row.samplecount
 			}
