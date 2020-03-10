@@ -161,7 +161,9 @@ TdbStore.prototype.actions = {
 	cohort_set(action) {
 		this.state.nav.activeCohort = action.activeCohort
 		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
-		this.state.termfilter.filter.lst[0].tvs.values = cohort.keys.map(key => {
+		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+		if (!cohortFilter) throw `No item tagged with 'cohortFilter'`
+		cohortFilter.tvs.values = cohort.keys.map(key => {
 			return { key, label: key }
 		})
 	},
