@@ -1,116 +1,4 @@
-module.exports = {
-	isMds: true,
-
-	cohort: {
-		db: {
-			file: 'files/hg38/sjlife/clinical/db'
-			// may describe keywords about table and field names
-			/*
-			k:{
-				sample:'sample',
-				term_id:'term_id'
-			},
-			*/
-		},
-
-		termdb: {
-			patient_condition: {
-				// solely for the type:condition terms
-				events_key: 'conditionevents',
-				grade_key: 'grade',
-				grade_labels: [
-					// computable grades
-					{ grade: 0, label: '0: No condition' },
-					{ grade: 1, label: '1: Mild' },
-					{ grade: 2, label: '2: Moderate' },
-					{ grade: 3, label: '3: Severe' },
-					{ grade: 4, label: '4: Life-threatening' },
-					{ grade: 5, label: '5: Death' }
-				],
-				uncomputable_grades: {
-					9: 'Unknown status'
-				},
-				comparison_groups: [
-					/* only for condition terms
-					for the moment this is only for phewas precompute
-					later it may work for barchart too
-					*/
-					{
-						group1label: 'Grades 1-5',
-						group1grades: new Set([1, 2, 3, 4, 5]),
-						group2label: 'Condition not present'
-						// group2 is not defined and will use the rest of the ctcae-graded samples
-					},
-					{
-						group1label: 'Grades 2-5',
-						group1grades: new Set([2, 3, 4, 5]),
-						group2label: 'Condition not present',
-						copycontrolfrom1stgroup: true
-						/* group2 is still not defined, but here cannot simply use the rest of the ctcae-graded samples
-						but must exclude grade 1 from group2
-						as the control of the first group meets this requirement, thus this very tricky flag
-						*/
-					},
-					{
-						group1label: 'Grades 3-5',
-						group1grades: new Set([3, 4, 5]),
-						group2label: 'Condition not present',
-						copycontrolfrom1stgroup: true
-					}
-					// to add later 1+2 vs 3+4+5
-				],
-				age_key: 'age',
-				yearstoevent_key: 'yearstoevent'
-			},
-			phewas: {
-				samplefilter4termtype: {
-					condition: {
-						filter: {
-							type: 'tvslst',
-							join: '',
-							in: true,
-							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
-						}
-					}
-				}
-			},
-
-			//// this attribute is optional
-			selectCohort: {
-				// wrap term.id into a term json object so as to use it in tvs;
-				// the term is not required to exist in termdb
-				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
-				term: {
-					id: 'subcohort',
-					type: 'categorical'
-				},
-				showMessageWhenNotSelected:
-					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
-				values: [
-					// <ul><li> for items, with a radio button for each.
-					{
-						keys: ['SJLIFE'],
-						label: 'St. Jude Lifetime Cohort (SJLIFE)',
-						isdefault: true,
-						cssSelector: 'tbody > tr > td:nth-child(2)'
-					},
-					{
-						keys: ['CCSS'],
-						label: 'Childhood Cancer Survivor Study (CCSS)',
-						cssSelector: 'tbody > tr > td:nth-child(3)'
-					},
-					{
-						keys: ['SJLIFE', 'CCSS'],
-						label: 'Combined SJLIFE+CCSS',
-						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
-						// show note under label in smaller text size
-						note:
-							'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
-					}
-				],
-				highlightCohortBy: 'cssSelector',
-				htmlinfo: `
-<table>
+const cohorthtmltable = `<table>
 <thead>
   <tr>
     <td>Features</td>
@@ -171,6 +59,99 @@ module.exports = {
   </tr>
 </tbody>
 </table>`
+
+module.exports = {
+	isMds: true,
+
+	cohort: {
+		db: {
+			file: 'files/hg38/sjlife/clinical/db'
+			// may describe keywords about table and field names
+			/*
+			k:{
+				sample:'sample',
+				term_id:'term_id'
+			},
+			*/
+		},
+
+		termdb: {
+			//// this attribute is optional
+			phewas: {
+				samplefilter4termtype: {
+					condition: {
+						filter: {
+							type: 'tvslst',
+							join: '',
+							in: true,
+							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
+						}
+					}
+				},
+				comparison_groups: [
+					/* only for condition terms
+					 */
+					{
+						group1label: 'Grades 1-5',
+						group1grades: new Set([1, 2, 3, 4, 5]),
+						group2label: 'Condition not present'
+						// group2 is not defined and will use the rest of the ctcae-graded samples
+					},
+					{
+						group1label: 'Grades 2-5',
+						group1grades: new Set([2, 3, 4, 5]),
+						group2label: 'Condition not present',
+						copycontrolfrom1stgroup: true
+						/* group2 is still not defined, but here cannot simply use the rest of the ctcae-graded samples
+						but must exclude grade 1 from group2
+						as the control of the first group meets this requirement, thus this very tricky flag
+						*/
+					},
+					{
+						group1label: 'Grades 3-5',
+						group1grades: new Set([3, 4, 5]),
+						group2label: 'Condition not present',
+						copycontrolfrom1stgroup: true
+					}
+					// to add later 1+2 vs 3+4+5
+				]
+			},
+
+			//// this attribute is optional
+			selectCohort: {
+				// wrap term.id into a term json object so as to use it in tvs;
+				// the term is not required to exist in termdb
+				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
+				term: {
+					id: 'subcohort',
+					type: 'categorical'
+				},
+				showMessageWhenNotSelected:
+					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				values: [
+					// <ul><li> for items, with a radio button for each.
+					{
+						keys: ['SJLIFE'],
+						label: 'St. Jude Lifetime Cohort (SJLIFE)',
+						isdefault: true,
+						cssSelector: 'tbody > tr > td:nth-child(2)'
+					},
+					{
+						keys: ['CCSS'],
+						label: 'Childhood Cancer Survivor Study (CCSS)',
+						cssSelector: 'tbody > tr > td:nth-child(3)'
+					},
+					{
+						keys: ['SJLIFE', 'CCSS'],
+						label: 'Combined SJLIFE+CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
+						// show note under label in smaller text size
+						note:
+							'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
+					}
+				],
+				highlightCohortBy: 'cssSelector',
+				htmlinfo: cohorthtmltable
 			}
 		}
 	},
