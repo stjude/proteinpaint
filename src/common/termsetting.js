@@ -941,12 +941,18 @@ function setInteractivity(self) {
 		if (!brush.elem) brush.elem = select(this)
 		const range = brush.range
 		const plot_size = self.num_obj.plot_size
+		const xpad = plot_size.xpad
+		const ypad = plot_size.ypad
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
+		let brush_drag_start
 
 		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
+			.on('start', function() {
+				brush_drag_start = event.selection[1]
+			})
 			.on('brush', function() {
 				const s = event.selection
 				//update temp_ranges
@@ -986,6 +992,8 @@ function setInteractivity(self) {
 
 				// make brush green if changed
 				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
+				//move lines_g with brush move
+				self.num_obj.binsize_g.attr('transform', `translate(${xpad + s[1] - brush_drag_start}, ${ypad})`)
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
@@ -1019,6 +1027,7 @@ function setInteractivity(self) {
 		const xscale = self.num_obj.xscale
 		const end_bins = self.num_obj.ranges
 		const first_bin = self.num_obj.brushes[0].range
+		const first_bin_orig = JSON.parse(JSON.stringify(self.num_obj.brushes[0].orig))
 		const last_bin = self.num_obj.ranges[1] || undefined
 		const line_x = []
 		let drag_start,
@@ -1028,10 +1037,10 @@ function setInteractivity(self) {
 			line_x.push(i)
 		}
 
-		const drag = d3drag()
-			.on('start', dragstarted)
-			.on('drag', dragged)
-			.on('end', dragended)
+		// const drag = d3drag()
+		// 	.on('start', dragstarted)
+		// 	.on('drag', dragged)
+		// 	.on('end', dragended)
 
 		self.num_obj.binsize_g.selectAll('line').remove()
 
@@ -1047,24 +1056,30 @@ function setInteractivity(self) {
 			.attr('x2', d => xscale(d))
 			.attr('y2', plot_size.height)
 
-		self.num_obj.binsize_g.call(drag)
+		// self.num_obj.binsize_g.call(drag)
+		//move lines_g with brush move
+		// console.log(first_bin_orig.stop, first_bin.stop)
+		// self.num_obj.binsize_g.attr(
+		// 	'transform',
+		// 	`translate(${self.num_obj.plot_size.xpad - xscale(first_bin.stop - first_bin_orig.stop)}, ${self.num_obj.plot_size.ypad})`
+		// )
 
-		function dragstarted() {
-			drag_start = event.x
-		}
+		// function dragstarted() {
+		// 	drag_start = event.x
+		// }
 
-		function dragged() {
-			self.num_obj.binsize_g.attr(
-				'transform',
-				`translate(
-						${self.num_obj.plot_size.xpad + event.x - drag_start + drag_pad}, 
-						${self.num_obj.plot_size.ypad})`
-			)
-		}
+		// function dragged() {
+		// 	self.num_obj.binsize_g.attr(
+		// 		'transform',
+		// 		`translate(
+		// 				${self.num_obj.plot_size.xpad + event.x - drag_start + drag_pad},
+		// 				${self.num_obj.plot_size.ypad})`
+		// 	)
+		// }
 
-		function dragended() {
-			drag_pad = drag_pad + event.x - drag_start
-		}
+		// function dragended() {
+		// 	drag_pad = drag_pad + event.x - drag_start
+		// }
 	}
 
 	self.addDefaultBinsTable = function(custom_bins_q, default_bins_q) {
@@ -1262,6 +1277,10 @@ function setInteractivity(self) {
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
+		const plot_size = self.num_obj.plot_size
+		const xpad = plot_size.xpad
+		const ypad = plot_size.ypad
+
 		bin_edit_td.selectAll('*').remove()
 
 		let bin
@@ -1449,12 +1468,13 @@ function setInteractivity(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = Number(brush.start_input.node().value)
-			new_range.stop = Number(brush.stop_input.node().value)
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue
+			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
-			// brush.range = new_range
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
+			self.num_obj.binsize_g.attr('transform', `translate(${xpad}, ${ypad})`)
+			self.addBinSizeLines(default_bins_q, custom_bins_q)
 		}
 	}
 
