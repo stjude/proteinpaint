@@ -5,6 +5,7 @@
 ---------------------------------------------
 
 
+
 DROP TABLE IF EXISTS subcohort_terms;
 DROP INDEX IF EXISTS subcohort_terms_cohort;
 DROP INDEX IF EXISTS subcohort_terms_termid;
@@ -29,7 +30,7 @@ cohort AS (
   GROUP BY subcohort, sample
 ),
 nonconditions AS (
-  SELECT subcohort, ancestor_id, COUNT(DISTINCT(a.sample)) 
+  SELECT subcohort, ancestor_id, COUNT(DISTINCT(a.sample))
   FROM annotations a
   JOIN ancestors l ON l.term_id = a.term_id
   JOIN cohort c ON c.sample = a.sample
@@ -42,15 +43,23 @@ conditions AS (
   JOIN cohort c ON c.sample = a.sample
   GROUP BY subcohort, ancestor_id
 ),
+rootcounts AS (
+  SELECT subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample)) 
+  FROM cohort
+  GROUP BY subcohort
+  UNION ALL
+  SELECT 'SJLIFE,CCSS' as subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample))
+  FROM cohort
+),
 combined AS (
   SELECT * FROM nonconditions
   UNION ALL
   SELECT * FROM conditions
+  UNION ALL
+  SELECT * FROM rootcounts
 )
 -- select * from combined; /*** to test in command line ***/
 INSERT INTO subcohort_terms SELECT * FROM combined; /*** to materialize ***/
 
 CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);
 CREATE INDEX subcohort_terms_termid ON subcohort_terms(term_id);
-
-
