@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
+import { getNormalRoot } from '../common/filter'
 
 /*
 model after overlay2.js
@@ -17,7 +18,8 @@ pill is only for altering between (1) and (2)
 class Divide {
 	constructor(app, opts) {
 		this.type = 'divideByInput'
-		;(this.id = opts.id), (this.app = app)
+		this.id = opts.id
+		this.app = app
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
@@ -37,6 +39,7 @@ class Divide {
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
 			debug: this.opts.debug,
+			showMenu: true, // to show edit/replace/remove menu upon clicking pill
 			callback: term0 => {
 				// term0 is {term,q} and can be null
 				if (term0) {
@@ -51,12 +54,16 @@ class Divide {
 		})
 	}
 	getState(appState) {
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id]
 		}
+		if (appState.termfilter && appState.termfilter.filter) {
+			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		return state
 	}
 	main() {
 		this.mayRegisterTerm(this.state.config.term0)
@@ -72,6 +79,7 @@ class Divide {
 		// after updating this.state, call pill.main() to update info in pill
 		const plot = this.state.config
 		const a = {
+			filter: this.state.filter,
 			disable_terms: [plot.term.id]
 		}
 		if (plot.term0) {
