@@ -154,9 +154,11 @@ class Filter {
 	refresh(filterUiRoot) {
 		this.dom.controlsTip.hide()
 		this.dom.treeTip.hide()
-		const rootCopy = JSON.parse(this.rawCopy)
+		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
+		delete rootCopy.tag
+		filterUiRoot.tag = 'filterUiRoot'
 		const rawParent = this.findParent(rootCopy, this.filter.$id)
-		if (!rawParent || rawParent.$id === this.rawFilter.$id) {
+		if (!rawParent || this.rawFilter.$id === this.filter.$id) {
 			this.api.main(rootCopy)
 			this.opts.callback(filterUiRoot, rootCopy)
 		} else {
