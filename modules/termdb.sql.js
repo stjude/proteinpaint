@@ -40,29 +40,18 @@ return an array of sample names passing through the filter
 	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
 	return re.map(i => i.sample)
 }
-export function get_samplecount(q, ds) {
+export function get_cohortsamplecount(q, ds) {
 	/*
-must have qfilter[]
-as the actual query is embedded in qfilter
-return an array of sample names passing through the filter
+must have q.cohortValues string
+return an array of sample names for the given cohort
 */
-	q.filter = JSON.parse(decodeURIComponent(q.filter))
-	if (!q.filter || !q.filter.lst.length) {
-		// this option will be removed and instead
-		// processed as part of the root filter.lst[]
-		return [
-			{ subcohort: 'SJLIFE', samplecount: 4402 },
-			{ subcohort: 'CCSS', samplecount: 2936 },
-			{ subcohort: 'SJLIFE,CCSS', samplecount: 'XXXX' }
-		]
-	} else {
-		const filter = getFilterCTEs(q.filter, ds)
-		const statement = `WITH ${filter.filters}
-			SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
-			FROM ${filter.CTEname}`
-		// may cache statement
-		return ds.cohort.db.connection.prepare(statement).all(filter.values)
-	}
+	if (!q.cohortValues) throw `missing q.cohortValues`
+	const cohortKey = ds.cohort.termdb.selectCohort.term.id
+	const statement = `SELECT cohort as ${cohortKey}, count as samplecount
+		FROM subcohort_terms
+		WHERE cohort=? and term_id='$ROOT$'`
+	// may cache statement
+	return ds.cohort.db.connection.prepare(statement).all(q.cohortValues)
 }
 export function get_summary_numericcategories(q) {
 	/*
@@ -989,30 +978,6 @@ thus less things to worry about...
 		template: STR
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
-	function initCohortJoinFxn(template) {
-		// will hold prepared statements, with object key = one or more comma-separated '?'
-		const s_cohort = {
-			'': cn.prepare(template.replace('JOINCLAUSE', ''))
-		}
-		return function getStatement(cohortStr) {
-			const cohort = cohortStr.split(',').filter(d => d != '')
-			const questionmarks = cohort.map(() => '?').join(',')
-			if (!(questionmarks in s_cohort)) {
-				const statement = template.replace(
-					'JOINCLAUSE',
-					// get intersection where a term is annotated in ALL of the cohortValues
-					cohort.map((d, i) => `JOIN subcohort_terms s${i} ON s${i}.term_id = t.id AND s${i}.cohort=?`).join('\n')
-					/*
-					// get union where a term is annotated in ANY of the cohortValues
-					`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
-					*/
-				)
-				s_cohort[questionmarks] = cn.prepare(statement)
-			}
-			return s_cohort[questionmarks]
-		}
-	}
-
 	{
 		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
 			FROM terms t
@@ -1104,6 +1069,30 @@ thus less things to worry about...
 				return j
 			}
 			return undefined
+		}
+	}
+
+	function initCohortJoinFxn(template) {
+		// will hold prepared statements, with object key = one or more comma-separated '?'
+		const s_cohort = {
+			'': cn.prepare(template.replace('JOINCLAUSE', ''))
+		}
+		return function getStatement(cohortStr) {
+			const cohort = cohortStr.split(',').filter(d => d != '')
+			const questionmarks = cohort.map(() => '?').join(',')
+			if (!(questionmarks in s_cohort)) {
+				const statement = template.replace(
+					'JOINCLAUSE',
+					// get intersection where a term is annotated in ALL of the cohortValues
+					cohort.map((d, i) => `JOIN subcohort_terms s${i} ON s${i}.term_id = t.id AND s${i}.cohort=?`).join('\n')
+					/*
+				// get union where a term is annotated in ANY of the cohortValues
+				`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
+				*/
+				)
+				s_cohort[questionmarks] = cn.prepare(statement)
+			}
+			return s_cohort[questionmarks]
 		}
 	}
 }

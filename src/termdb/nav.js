@@ -63,13 +63,15 @@ class TdbNav {
 		}
 	}
 	getState(appState) {
+		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
 			termdbConfig: appState.termdbConfig,
-			filter: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot')
+			filterUiRoot: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot'),
+			cohortFilter: getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 		}
 	}
 	reactsTo(action) {
@@ -88,25 +90,22 @@ class TdbNav {
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		//this.hideSubheader = false
-		if (this.state.nav.show_tabs) await this.getSampleCount()
+		if (this.state.nav.show_tabs && !(this.activeCohortName in this.samplecounts)) await this.getSampleCount()
 		this.updateUI()
 	}
 	async getSampleCount() {
+		if (this.activeCohort == -1) return
 		const lst = [
 			'genome=' + this.state.genome,
 			'dslabel=' + this.state.dslabel,
-			'getsamplecount=' + this.activeCohortName,
-			'filter=' +
-				(this.activeCohort == -1 ? 'null' : encodeURIComponent(JSON.stringify(getNormalRoot(this.state.filter))))
+			'getcohortsamplecount=' + this.activeCohortName,
+			'cohortValues=' + this.activeCohortName
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
-			const cohortKey = this.state.termdbConfig.selectCohort && this.state.termdbConfig.selectCohort.term.id
-			for (const row of data) {
-				if (cohortKey in row) this.samplecounts[row[cohortKey]] = row.samplecount
-			}
+			this.samplecounts[this.activeCohortName] = data[0].samplecount
 		}
 	}
 }

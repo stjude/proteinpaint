@@ -1013,6 +1013,8 @@ exports.getNormalRoot = getNormalRoot
 function normalizeFilter(filter) {
 	delete filter.$id
 	delete filter.tag
+	if (filter.type != 'tvslst') return filter
+
 	const lst = filter.lst
 		// keep non-tvslst entries or tvslst with non-empty lst.length
 		.filter(f => f.type !== 'tvslst' || f.lst.length > 0)
