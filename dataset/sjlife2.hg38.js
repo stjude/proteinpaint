@@ -428,6 +428,7 @@ module.exports = {
 								lst: [
 									{
 										type: 'tvs',
+										tag: 'cohortFilter',
 										renderAs: 'htmlSelect',
 										selectOptionsFrom: 'selectCohort',
 										tvs: {
