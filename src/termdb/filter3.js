@@ -40,7 +40,7 @@ class TdbFilter {
 		}
 		this.dom.holder.style('display', 'inline-block')
 		if (!this.filterApi) this.initFilter()
-		this.filterApi.main(f.filter, { nav: this.state.nav })
+		this.filterApi.main(f.filter, { activeCohort: this.state.activeCohort })
 	}
 
 	initFilter() {

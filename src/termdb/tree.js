@@ -103,7 +103,7 @@ class TdbTree {
 		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			activeCohort: appState.nav.activeCohort,
+			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
@@ -112,7 +112,7 @@ class TdbTree {
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
-			const choice = appState.termdbConfig.selectCohort.values[appState.nav.activeCohort]
+			const choice = appState.termdbConfig.selectCohort.values[appState.activeCohort]
 			if (choice) {
 				// a selection has been made
 				state.cohortValuelst = choice.keys

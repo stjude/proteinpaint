@@ -69,6 +69,7 @@ class TdbNav {
 			dslabel: appState.dslabel,
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
+			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filterUiRoot: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot'),
 			cohortFilter: getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
@@ -86,7 +87,7 @@ class TdbNav {
 		this.dom.tabDiv.style('display', this.state.nav.show_tabs ? 'inline-block' : 'none')
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
-		this.activeCohort = this.state.nav.activeCohort
+		this.activeCohort = this.state.activeCohort
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		//this.hideSubheader = false

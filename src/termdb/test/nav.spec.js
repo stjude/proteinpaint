@@ -53,9 +53,9 @@ tape('empty cohort, then selected', function(test) {
 
 	runpp({
 		state: {
+			activeCohort: -1,
 			nav: {
-				show_tabs: true,
-				activeCohort: -1
+				show_tabs: true
 			}
 		},
 		nav: {

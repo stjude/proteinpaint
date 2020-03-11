@@ -11,9 +11,10 @@ import { filterJoin, getFilterItemByTag } from '../common/filter'
 const defaultState = {
 	nav: {
 		show_tabs: false,
-		activeTab: 0,
-		activeCohort: 0
+		activeTab: 0
 	},
+	// will be ignored if there is no dataset termdb.selectCohort
+	activeCohort: 0,
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
@@ -100,9 +101,9 @@ class TdbStore {
 					tvs: {
 						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
 						values:
-							this.state.nav.activeCohort == -1
+							this.state.activeCohort == -1
 								? []
-								: this.state.termdbConfig.selectCohort.values[this.state.nav.activeCohort].keys.map(key => {
+								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
 										return { key, label: key }
 								  })
 					}
@@ -160,7 +161,7 @@ TdbStore.prototype.actions = {
 		this.state.nav.activeTab = action.activeTab
 	},
 	cohort_set(action) {
-		this.state.nav.activeCohort = action.activeCohort
+		this.state.activeCohort = action.activeCohort
 		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
 		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 		if (!cohortFilter) throw `No item tagged with 'cohortFilter'`

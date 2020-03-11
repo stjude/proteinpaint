@@ -67,9 +67,10 @@ class Filter {
 				const tempOpts = Object.assign({}, this.opts, opts)
 				// to-do: should use deepEquals as part of rx.core
 				const rawCopy = JSON.stringify(rawFilter)
-				if (this.rawCopy == rawCopy && JSON.stringify(this.nav) == JSON.stringify(tempOpts.nav)) return
+				if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(tempOpts.activeCohort))
+					return
 				this.opts = tempOpts
-				this.nav = tempOpts.nav
+				this.activeCohort = tempOpts.activeCohort
 				this.rawCopy = rawCopy
 				this.rawFilter = JSON.parse(this.rawCopy)
 				this.validateFilter(this.rawFilter)
@@ -697,9 +698,9 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
+				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false,
-					activeCohort: self.nav.activeCohort
+					show_tabs: false
 				},
 				termfilter: {
 					show_top_ui: false,
@@ -777,9 +778,9 @@ function setInteractivity(self) {
 			state: {
 				genome: self.genome,
 				dslabel: self.dslabel,
+				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false,
-					activeCohort: self.nav ? self.nav.activeCohort : 0
+					show_tabs: false
 				},
 				termfilter: {
 					show_top_ui: false,

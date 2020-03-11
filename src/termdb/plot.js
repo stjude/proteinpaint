@@ -99,7 +99,7 @@ class TdbPlot {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			activeCohort: appState.nav.activeCohort,
+			activeCohort: appState.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid
