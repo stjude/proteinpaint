@@ -60,6 +60,178 @@ const cohorthtmltable = `<table>
 </tbody>
 </table>`
 
+// the vcf file
+const info_fields = [
+	{
+		key: 'QC',
+		label: 'Good/Bad List',
+		isfilter: true,
+		isactivefilter: true,
+		iscategorical: true,
+		values: [
+			{ key: 'SuperGood', label: 'SuperGood' },
+			{ key: 'Good', label: 'Good' },
+			{ key: 'Ambiguous', label: 'Ambiguous' },
+			{ key: 'Bad', label: 'Bad', ishidden: true }
+		]
+	},
+	{
+		key: 'AF',
+		label: 'SJLIFE allele frequency',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_AF',
+		label: 'SJLIFE control allele frequency',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_CEU_AF',
+		label: 'SJLIFE control allele frequency, Caucasian',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_YRI_AF',
+		label: 'SJLIFE control allele frequency, African American',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_CR',
+		label: 'SJLIFE control call rate',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'CR',
+		label: 'SJLIFE call rate',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'gnomAD_CR',
+		label: 'gnmoAD call rate',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'gnomAD_AF',
+		label: 'gnomAD allele frequency',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_afr',
+		label: 'gnomAD allele frequency, African-American',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_eas',
+		label: 'gnomAD allele frequency, East Asian',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_nfe',
+		label: 'gnomAD allele frequency, non-Finnish European',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'PG',
+		label: 'Committee classification',
+		iscategorical: true,
+		isfilter: true,
+		values: [{ key: 'P', label: 'Pathogenic' }, { key: 'LP', label: 'Likely pathogenic' }]
+	},
+	{
+		key: 'BadBLAT',
+		label: 'Paralog',
+		isfilter: true,
+		isactivefilter: true,
+		isflag: true,
+		remove_yes: true
+	},
+	{
+		key: 'Polymer_region',
+		label: 'Polymer region',
+		isflag: true,
+		isfilter: true,
+		isactivefilter: true,
+		remove_yes: true
+	}
+]
+
 module.exports = {
 	isMds: true,
 
@@ -159,176 +331,7 @@ module.exports = {
 	track: {
 		name: 'SJLife germline SNV',
 
-		info_fields: [
-			{
-				key: 'QC',
-				label: 'Good/Bad List',
-				isfilter: true,
-				isactivefilter: true,
-				iscategorical: true,
-				values: [
-					{ key: 'SuperGood', label: 'SuperGood' },
-					{ key: 'Good', label: 'Good' },
-					{ key: 'Ambiguous', label: 'Ambiguous' },
-					{ key: 'Bad', label: 'Bad', ishidden: true }
-				]
-			},
-			{
-				key: 'AF',
-				label: 'SJLIFE allele frequency',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_AF',
-				label: 'SJLIFE control allele frequency',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_CEU_AF',
-				label: 'SJLIFE control allele frequency, Caucasian',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_YRI_AF',
-				label: 'SJLIFE control allele frequency, African American',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_CR',
-				label: 'SJLIFE control call rate',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'CR',
-				label: 'SJLIFE call rate',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'gnomAD_CR',
-				label: 'gnmoAD call rate',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'gnomAD_AF',
-				label: 'gnomAD allele frequency',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_afr',
-				label: 'gnomAD allele frequency, African-American',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_eas',
-				label: 'gnomAD allele frequency, East Asian',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_nfe',
-				label: 'gnomAD allele frequency, non-Finnish European',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'PG',
-				label: 'Committee classification',
-				iscategorical: true,
-				isfilter: true,
-				values: [{ key: 'P', label: 'Pathogenic' }, { key: 'LP', label: 'Likely pathogenic' }]
-			},
-			{
-				key: 'BadBLAT',
-				label: 'Paralog',
-				isfilter: true,
-				isactivefilter: true,
-				isflag: true,
-				remove_yes: true
-			},
-			{
-				key: 'Polymer_region',
-				label: 'Polymer region',
-				isflag: true,
-				isfilter: true,
-				isactivefilter: true,
-				remove_yes: true
-			}
-		],
+		info_fields,
 
 		populations: [
 			{
@@ -421,8 +424,17 @@ module.exports = {
 							filter: {
 								type: 'tvslst',
 								in: true,
-								join: '',
+								join: 'and',
 								lst: [
+									{
+										type: 'tvs',
+										renderAs: 'htmlSelect',
+										selectOptionsFrom: 'selectCohort',
+										tvs: {
+											term: { id: 'subcohort', type: 'categorical' },
+											values: [{ key: 'SJLIFE', label: 'SJLIFE' }]
+										}
+									},
 									{
 										type: 'tvs',
 										tvs: {
