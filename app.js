@@ -352,7 +352,9 @@ function mds_clientcopy(ds) {
 	if (ds.cohort) {
 		if (ds.cohort.termdb) {
 			// let client know the existance, do not reveal details unless needed
-			ds2.termdb = 1
+			ds2.termdb = {
+				selectCohort: ds.cohort.termdb.selectCohort
+			}
 		}
 
 		if (ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
