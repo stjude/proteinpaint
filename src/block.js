@@ -368,6 +368,7 @@ export class Block {
 						// old ds, do not show mds here
 						continue
 					}
+					if (this.genome.datasets[n].noHandleOnClient) continue
 					this.old_dshandle_new(n)
 				}
 			}

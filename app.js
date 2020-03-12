@@ -231,6 +231,7 @@ function handle_genomes(req, res) {
 			// old official ds
 			const ds2 = {
 				isofficial: true,
+				noHandleOnClient: ds.noHandleOnClient,
 				sampleselectable: ds.sampleselectable,
 				label: ds.label,
 				dsinfo: ds.dsinfo,
