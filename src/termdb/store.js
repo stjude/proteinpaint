@@ -14,6 +14,8 @@ const defaultState = {
 		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort
+	// or value will be set to match a filter node that has been tagged
+	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
 	tree: {
 		expandedTermIds: [],

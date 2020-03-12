@@ -475,6 +475,7 @@ function show_group_termdb(group, tk, block) {
 			genome: block.genome.name,
 			dslabel: tk.dslabel,
 			emptyLabel: 'Entire cohort',
+			termdbConfig: block.genome.datasets[tk.dslabel].termdb,
 			callback: async f => {
 				group.filter = f
 				await tk.load()

@@ -58,7 +58,6 @@ class Filter {
 
 		this.api = {
 			main: async (rawFilter, opts = {}) => {
-				//console.log(65, 'filter.main', rawFilter.$id)
 				/*
 				rawFilter{}
 				  the raw filter data structure
@@ -454,27 +453,52 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
-			.on('click', self.displayControlsMenu)
+			.on('click', item.renderAs === 'htmlSelect' ? null : self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)
+		if (item.renderAs == 'htmlSelect') {
+			const values = item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.values
+			const selectElem = holder.append('select')
+			selectElem
+				.selectAll('option')
+				.data(values)
+				.enter()
+				.append('option')
+				.property('value', (d, i) => i)
+				.html(d => (d.label ? d.label : d.key))
 
-		const pill = TVSInit({
-			genome: self.genome,
-			dslabel: self.dslabel,
-			holder,
-			debug: self.opts.debug,
-			callback: tvs => {
+			selectElem.on('change', function() {
 				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 				const filterCopy = self.findItem(filterUiRoot, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
-				tvs.isnot = self.dom.isNotInput.property('checked')
-				filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
+				const index = +this.value
+				const itemCopy = JSON.parse(JSON.stringify(item))
+				itemCopy.tvs.values = values[index].keys.map(key => {
+					return { key, label: key }
+				})
+				filterCopy.lst[i] = itemCopy
 				self.refresh(filterUiRoot)
-			}
-		})
-		self.pills[item.$id] = pill
-		pill.main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
+			})
+		} else {
+			const pill = TVSInit({
+				genome: self.genome,
+				dslabel: self.dslabel,
+				holder,
+				debug: self.opts.debug,
+				callback: tvs => {
+					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+					const filterCopy = self.findItem(filterUiRoot, filter.$id)
+					const i = filter.lst.indexOf(item)
+					if (i == -1) return
+					tvs.isnot = self.dom.isNotInput.property('checked')
+					filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
+					self.refresh(filterUiRoot)
+				}
+			})
+			self.pills[item.$id] = pill
+			pill.main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
+		}
 	}
 
 	self.updateItem = function(item, i) {
