@@ -83,9 +83,14 @@ class Filter {
 				// reset interaction-related styling
 				this.removeBlankPill()
 				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder
-					.selectAll('.sja_filter_add_transformer')
-					.style('display', d => (this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'))
+				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', d => {
+					if (this.filter.lst.length == 1 && this.filter.lst[0].renderAs == 'htmlSelect') {
+						// assume that select dropdown filters are always joined via intersection with other filters
+						return d == 'and' ? 'inline-block' : 'none'
+					} else {
+						return this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'
+					}
+				})
 
 				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 				this.updateUI(this.dom.filterContainer, this.filter)
