@@ -1,20 +1,20 @@
 module.exports = {
-	color:'#545454',
-	dsinfo:[
-		{k:'Source',v:'<a href=https://civicdb.org>CIViC</a>'},
-		{k:'Data type',v:'SNV/Indel'},
-		{k:'Gene annotation',v:'VEP version 99'},
-		{k:'Download date',v:'March 2020'},
+	color: '#545454',
+	dsinfo: [
+		{ k: 'Source', v: '<a href=https://civicdb.org>CIViC</a>' },
+		{ k: 'Data type', v: 'SNV/Indel' },
+		{ k: 'Gene annotation', v: 'VEP version 99' },
+		{ k: 'Download date', v: 'March 2020' }
 	],
-	genome:'hg19',
-	queries:[
+	genome: 'hg19',
+	queries: [
 		{
-			name:'CIViC',
-			vcffile:'hg19/CIViC.hg19.vcf.gz',
-			hlinfo:{
-			},
+			name: 'CIViC',
+			vcffile: 'hg19/CIViC.hg19.vcf.gz',
+			hlinfo: {}
 		}
 	],
+	/*
 	vcfinfofilter:{
 		lst:[
 			{
@@ -28,5 +28,35 @@ module.exports = {
 				}
 			}
 		]
+	},
+	*/
+	info2table: {
+		civic_csq: {
+			col_separator: '|',
+			fields: [
+				// each field is a column
+				{ name: 'Allele' },
+				{ name: 'Consequence' },
+				{ name: 'SYMBOL' },
+				{ name: 'Entrez Gene ID' },
+				{ name: 'Feature_type' },
+				{ name: 'Feature' },
+				{ name: 'HGVSc' },
+				{ name: 'HGVSp' },
+				{ name: 'CIViC Variant Name' },
+				{ name: 'CIViC Variant ID' },
+				{ name: 'CIViC Variant Aliases' },
+				{ name: 'CIViC HGVS', decodeURI: true },
+				{ name: 'Allele Registry ID' },
+				{ name: 'ClinVar IDs' },
+				{ name: 'CIViC Variant Evidence Score' },
+				{ name: 'CIViC Entity Type' },
+				{ name: 'CIViC Entity ID' },
+				{ name: 'CIViC Entity URL', isurl: true },
+				{ name: 'CIViC Entity Source' },
+				{ name: 'CIViC Entity Variant Origin' },
+				{ name: 'CIViC Entity Status' }
+			]
+		}
 	}
 }

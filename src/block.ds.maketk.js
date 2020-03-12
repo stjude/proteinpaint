@@ -111,6 +111,9 @@ export default function dsmaketk(tk, block) {
 	if (tk.ds.vcfinfofilter) {
 		tk.vcfinfofilter = tk.ds.vcfinfofilter
 	}
+	if (tk.ds.info2table) {
+		tk.info2table = tk.ds.info2table
+	}
 	if (tk.ds.itemlabelname) {
 		tk.itemlabelname = tk.ds.itemlabelname
 	}
@@ -128,6 +131,9 @@ export default function dsmaketk(tk, block) {
 			showlegend = true
 		}
 		if (tk.vcfinfofilter) {
+			showlegend = true
+		}
+		if (tk.info2table) {
 			showlegend = true
 		}
 		if (tk.ds.cohort && tk.ds.cohort.sampleattribute) {

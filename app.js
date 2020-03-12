@@ -238,6 +238,7 @@ function handle_genomes(req, res) {
 				stratify: ds.stratify,
 				cohort: ds.cohort,
 				vcfinfofilter: ds.vcfinfofilter,
+				info2table: ds.info2table,
 				url4variant: ds.url4variant,
 				vcfcohorttrack: ds.vcfcohorttrack, // new
 				itemlabelname: ds.itemlabelname
