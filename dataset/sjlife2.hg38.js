@@ -305,17 +305,20 @@ module.exports = {
 					{
 						keys: ['SJLIFE'],
 						label: 'St. Jude Lifetime Cohort (SJLIFE)',
+						shortLabel: 'SJLIFE',
 						isdefault: true,
 						cssSelector: 'tbody > tr > td:nth-child(2)'
 					},
 					{
 						keys: ['CCSS'],
 						label: 'Childhood Cancer Survivor Study (CCSS)',
+						shortLabel: 'CCSS',
 						cssSelector: 'tbody > tr > td:nth-child(3)'
 					},
 					{
 						keys: ['SJLIFE', 'CCSS'],
 						label: 'Combined SJLIFE+CCSS',
+						shortLabel: 'SJLIFE+CCSS',
 						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
 						// show note under label in smaller text size
 						note:

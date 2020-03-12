@@ -465,7 +465,7 @@ function setRenderers(self) {
 				.enter()
 				.append('option')
 				.property('value', (d, i) => i)
-				.html(d => (d.label ? d.label : d.key))
+				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 
 			selectElem.on('change', function() {
 				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
