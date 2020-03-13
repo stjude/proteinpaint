@@ -915,6 +915,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 			const rawvaluelst = m.info[infokey]
 			if (!rawvaluelst) continue
 			if (rawvaluelst.length == 1) {
+				// single
 				const table = []
 				const lst = rawvaluelst[0].split(icfg.col_separator)
 				for (let i = 0; i < icfg.fields.length; i++) {
@@ -927,14 +928,19 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 				client.make_table_2col(holder, table)
 				continue
 			}
-			const table = holder.append('table')
+			// multiple
+			const table = holder
+				.append('table')
+				.style('border-spacing', '2px')
+				.style('border-collapse', 'separate')
+				.style('font-size', '90%')
 			const tr = table.append('tr')
 			for (const field of icfg.fields) {
 				if (field.hide) continue
 				tr.append('td').text(field.name)
 			}
 			for (const row of rawvaluelst) {
-				const tr = table.append('tr')
+				const tr = table.append('tr').attr('class', 'sja_tr')
 				const lst = row.split(icfg.col_separator)
 				for (let i = 0; i < icfg.fields.length; i++) {
 					if (icfg.fields[i].hide) continue
@@ -1004,6 +1010,10 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 		// locus info
 		const lst = []
 		for (const k in m.info) {
+			if (tk.info2table && tk.info2table[k]) {
+				// already shown in previous section
+				continue
+			}
 			const infovalue = Array.isArray(m.info[k]) ? m.info[k] : [m.info[k]]
 			let showvalue
 			if (lockey2category[k]) {
@@ -1046,9 +1056,8 @@ function info2table_value(icfg, lst, i) {
 	if (field.hide) return
 	const value = lst[i]
 	if (value == undefined) return
-	if (field.decodeURI) {
-		console.log(field)
-		return window.decodeURIComponent(value)
+	if (field.eval) {
+		return eval('"' + value + '"')
 	}
 	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
 	return value

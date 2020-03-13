@@ -46,7 +46,7 @@ module.exports = {
 				{ name: 'CIViC Variant Name' },
 				{ name: 'CIViC Variant ID' },
 				{ name: 'CIViC Variant Aliases' },
-				{ name: 'CIViC HGVS', decodeURI: true },
+				{ name: 'CIViC HGVS', eval: true },
 				{ name: 'Allele Registry ID' },
 				{ name: 'ClinVar IDs' },
 				{ name: 'CIViC Variant Evidence Score' },
