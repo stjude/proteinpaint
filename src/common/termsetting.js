@@ -753,6 +753,7 @@ function setInteractivity(self) {
 	self.showNumOpts = async function(div) {
 		// let custom_bins_q, default_bins_q
 		self.num_obj = {}
+		console.log(self.q)
 
 		if (self.q && Object.keys(self.q).length !== 0) {
 			//if bincoinfig initiated by user/by default
@@ -806,8 +807,8 @@ function setInteractivity(self) {
 					.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
 				self.num_obj.ranges = []
-				if (self.num_obj.default_bins_q.first_bin) self.num_obj.ranges.push(self.num_obj.default_bins_q.first_bin)
-				if (self.num_obj.default_bins_q.last_bin) self.num_obj.ranges.push(self.num_obj.default_bins_q.last_bin)
+				if (self.num_obj.custom_bins_q.first_bin) self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
+				if (self.num_obj.custom_bins_q.last_bin) self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
 				self.num_obj.brushes = []
 				self.addBrushes()
 				self.addBinSizeLines()
@@ -1086,7 +1087,8 @@ function setInteractivity(self) {
 		const default_bins_q = self.num_obj.default_bins_q
 		const config_table = self.num_obj.config_table
 		//Bin Size edit row
-		const bin_size_tr = config_table.append('tr')
+		self.num_obj.bin_size_tr = config_table.append('tr')
+		const bin_size_tr = self.num_obj.bin_size_tr
 
 		bin_size_tr
 			.append('td')
@@ -1264,11 +1266,15 @@ function setInteractivity(self) {
 		include_select.node().selectedIndex = custom_bins_q.startinclusive ? 1 : 0
 
 		function apply() {
+			const first_bin_range = self.num_obj.brushes[0].range
+			const first_bin_orig = self.num_obj.brushes[0].orig
+			const minvalue = self.num_obj.density_data.minvalue
+			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
+			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
 			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
 			custom_bins_q.stopinclusive = include_select.node().value == 'stopinclusive'
 			if (!custom_bins_q.stopinclusive) custom_bins_q.startinclusive = include_select.node().value == 'startinclusive'
-
-			edit_btns_tr.style('display', self.bins_customized() ? 'table-row' : 'none')
+			edit_btns_tr.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
 			// self.q = custom_bins_q
 
 			self.addBinSizeLines()
@@ -1477,10 +1483,11 @@ function setInteractivity(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue
-			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue.toFixed(1)
+			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue.toFixed(1)
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
+			self.num_obj.brushes[0].range = new_range
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 			self.num_obj.binsize_g.attr('transform', `translate(${xpad}, ${ypad})`)
 			self.addBinSizeLines()
@@ -1493,6 +1500,8 @@ function setInteractivity(self) {
 		// const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
+		const maxvalue = self.num_obj.density_data.maxvalue
+		const minvalue = self.num_obj.density_data.minvalue
 
 		const buttons_td = self.num_obj.config_table.edit_btns_tr.append('td').attr('colspan', 2)
 		//'Apply' button
@@ -1528,36 +1537,24 @@ function setInteractivity(self) {
 					brush.init()
 				}
 				self.q = default_bins_q
+				self.num_obj.custom_bins_q = default_bins_q
+				const bin_size_td = select(self.num_obj.bin_size_tr.selectAll('td')._groups[0][1])
+				self.bin_size_edit(bin_size_td)
 				self.addBinSizeLines()
+				self.num_obj.config_table.edit_btns_tr.style('display', 'none')
 			})
 
 		async function apply() {
 			try {
-				// const start = Number(brush.start_input.node().value)
-				// const stop = Number(brush.stop_input.node().value)
-				// if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
-				// if (start == '') {
-				// 	range.startunbounded = true
-				// 	delete range.start
-				// } else {
-				// 	delete range.startunbounded
-				// 	range.start = start
-				// 	range.startinclusive = brush.start_select.property('value') === 'startinclusive'
-				// }
-				// if (stop == '') {
-				// 	range.stopunbounded = true
-				// 	delete range.stop
-				// } else {
-				// 	delete range.stopunbounded
-				// 	range.stop = stop
-				// 	range.stopinclusive = brush.stop_select.property('value') === 'stopinclusive'
-				// }
-				// const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-				// delete new_tvs.groupset_label
-				// // merge overlapping ranges
-				// if (self.num_obj.ranges.length > 1) new_tvs.ranges = self.mergeOverlapRanges(range)
-				// else new_tvs.ranges[range.index] = range
-				// self.opts.callback(new_tvs)
+				custom_bins_q.first_bin = JSON.parse(JSON.stringify(self.num_obj.brushes[0].range))
+				if (custom_bins_q.first_bin.start == minvalue.toFixed(1)) delete custom_bins_q.first_bin.start
+				custom_bins_q.last_bin =
+					self.num_obj.brushes.length > 1 ? JSON.parse(JSON.stringify(self.num_obj.brushes[1].range)) : undefined
+				self.q = custom_bins_q
+				self.opts.callback({
+					term: self.term,
+					q: self.q
+				})
 			} catch (e) {
 				window.alert(e)
 			}
