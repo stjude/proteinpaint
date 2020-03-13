@@ -84,7 +84,7 @@ class Filter {
 				this.removeBlankPill()
 				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', d => {
-					if (this.filter.lst[0].renderAs == 'htmlSelect') {
+					if (this.filter.lst[0] && this.filter.lst[0].renderAs == 'htmlSelect') {
 						// assume that select dropdown filters are always joined via intersection with other filters
 						return this.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 					} else {

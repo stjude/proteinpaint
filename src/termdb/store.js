@@ -116,6 +116,12 @@ class TdbStore {
 					join: 'and',
 					lst: [cohortFilter, filterUiRoot]
 				}
+			} else if (this.state.activeCohort == -1) {
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key))
+				this.state.activeCohort = this.state.termdbConfig.selectCohort.values.findIndex(
+					v => keysStr == JSON.stringify(v.keys)
+				)
+				console.log(122, this.state.activeCohort)
 			}
 		}
 	}
