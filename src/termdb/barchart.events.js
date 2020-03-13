@@ -319,7 +319,7 @@ function menuoption_add_filter(self, tvslst) {
   	*/
 	if (!tvslst) return
 
-	if (!self.state.termfilter || !self.state.termfilter.show_top_ui) {
+	if (!self.state.termfilter || !self.state.nav.show_tabs) {
 		// do not display ui, and do not collect callbacks
 		return
 	}

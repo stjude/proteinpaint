@@ -10,8 +10,7 @@ const d3s = require('d3-selection')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		genome: 'hg38'
 	},
 	debug: 1,
 	fetchOpts: {

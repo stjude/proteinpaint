@@ -49,8 +49,7 @@ class TdbBarchart {
 			// and will not set up bar click menu
 		} else if (!this.opts.bar_click_opts) {
 			this.opts.bar_click_opts = ['hide_bar', 'add_to_gp']
-			const filter = this.app.getState().termfilter
-			if (filter && filter.show_top_ui) this.opts.bar_click_opts.push('add_filter')
+			if (this.app.getState().nav.show_tabs) this.opts.bar_click_opts.push('add_filter')
 		}
 	}
 
@@ -61,6 +60,7 @@ class TdbBarchart {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('barchart'),
+			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
 				term: config.term,

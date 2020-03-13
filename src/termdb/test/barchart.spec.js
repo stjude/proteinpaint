@@ -12,7 +12,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: true }
+		nav: { show_tabs: true }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -80,7 +80,7 @@ tape('single barchart, categorical bars', function(test) {
 
 tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -373,7 +373,6 @@ tape('single barchart, filtered', function(test) {
 	runpp({
 		state: {
 			termfilter: {
-				show_top_ui: true,
 				filter: {
 					type: 'tvslst',
 					in: 1,
@@ -461,7 +460,7 @@ tape('single barchart, filtered', function(test) {
 tape('click non-group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -582,7 +581,7 @@ tape('click non-group bar to add filter', function(test) {
 tape('click custom categorical group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A versus B',
 		groups: [
@@ -706,7 +705,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 tape('click custom subcondition group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A vs. B vs. C',
 		groups: [

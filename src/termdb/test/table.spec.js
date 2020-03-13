@@ -9,8 +9,7 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		genome: 'hg38'
 	},
 	debug: 1,
 	fetchOpts: {
@@ -29,10 +28,11 @@ tape('\n', function(test) {
 tape('default behavior', function(test) {
 	test.timeoutAfter(2000)
 
-	const termfilter = { show_top_ui: true, terms: [] }
+	const termfilter = { terms: [] }
 	runpp({
 		termfilter,
 		state: {
+			nav: { show_tabs: true },
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],

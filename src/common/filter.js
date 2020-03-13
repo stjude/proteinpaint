@@ -734,7 +734,6 @@ function setInteractivity(self) {
 					show_tabs: false
 				},
 				termfilter: {
-					show_top_ui: false,
 					filter: self.rawFilter
 				},
 				disable_terms: [self.activeData.item.$id]
@@ -814,7 +813,6 @@ function setInteractivity(self) {
 					show_tabs: false
 				},
 				termfilter: {
-					show_top_ui: false,
 					filter: self.rawFilter,
 					disable_terms: [self.activeData.item.$id]
 				}

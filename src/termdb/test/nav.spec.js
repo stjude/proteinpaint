@@ -10,7 +10,6 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: true },
 		nav: { show_tabs: true }
 	},
 	debug: 1,
