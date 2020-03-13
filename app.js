@@ -231,12 +231,14 @@ function handle_genomes(req, res) {
 			// old official ds
 			const ds2 = {
 				isofficial: true,
+				noHandleOnClient: ds.noHandleOnClient,
 				sampleselectable: ds.sampleselectable,
 				label: ds.label,
 				dsinfo: ds.dsinfo,
 				stratify: ds.stratify,
 				cohort: ds.cohort,
 				vcfinfofilter: ds.vcfinfofilter,
+				info2table: ds.info2table,
 				url4variant: ds.url4variant,
 				vcfcohorttrack: ds.vcfcohorttrack, // new
 				itemlabelname: ds.itemlabelname
@@ -9127,6 +9129,7 @@ async function handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets) {
 	}
 }
 async function handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets) {
+	if (!q.samplerule.set) return // possible when using "mutated_sets"
 	if (!q.samplerule.set.geneexpression) return // hardcoded for gene exp
 	if (!q.samplerule.set.byquartile) return // hardcoded for quartile
 	if (samplesets.length != 4) return // should throw

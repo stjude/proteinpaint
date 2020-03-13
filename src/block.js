@@ -368,6 +368,7 @@ export class Block {
 						// old ds, do not show mds here
 						continue
 					}
+					if (this.genome.datasets[n].noHandleOnClient) continue
 					this.old_dshandle_new(n)
 				}
 			}
@@ -4703,7 +4704,7 @@ function maygetdna(block, tip) {
 	}
 	const totallen = regions.reduce((i, j) => i + j.stop - j.start, 0)
 	if (totallen > dnalenlimit) {
-		tip.d.append('div').text('Please zoom in under ' + client.bplen(dnalenlimit) + ' to get DNA sequence.')
+		tip.d.append('div').text('Please zoom in under ' + common.bplen(dnalenlimit) + ' to get DNA sequence.')
 		return
 	}
 	const wait = tip.d.append('div').text('Loading DNA sequence ...')

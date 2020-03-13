@@ -3,8 +3,8 @@ module.exports = {
 	dsinfo:[
 		{k:'Source',v:'<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>'},
 		{k:'Data type',v:'SNV/Indel'},
-		{k:'Gene annotation',v:'VEP version 88'},
-		{k:'Download date',v:'September 2017'},
+		{k:'Gene annotation',v:'VEP version 96'},
+		{k:'Download date',v:'March 2020'},
 	],
 	genome:'hg38',
 	queries:[
