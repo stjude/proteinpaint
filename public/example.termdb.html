@@ -9,12 +9,13 @@
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
-<div id=aaa style="margin:10px"></div>
+<div id=a style="margin:30px"></div>
+<div id=b style="margin:30px"></div>
 
 <script>
 
 runproteinpaint({
-	holder:document.getElementById('aaa'),
+	holder:document.getElementById('a'),
 	noheader:1,
 	nobox:true,
 	termdb:{
@@ -29,8 +30,7 @@ runproteinpaint({
 					in:true,
 					lst:[
 						{type:'tvs',tvs: {
-							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true,
-							type:'float',
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
 								"values":{
         					        "0": { "label":"Not exposed", "uncomputable":true },
                 					"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
@@ -42,6 +42,63 @@ runproteinpaint({
 								{startunbounded:true,stop:2000,stopinclusive:true}
 							]
 						}}
+					]
+				}
+			},
+			nav: {
+				show_tabs: true,
+			},
+			activeCohort:-1
+		}
+	}
+})
+
+
+
+runproteinpaint({
+	holder:document.getElementById('b'),
+	noheader:1,
+	nobox:true,
+	termdb:{
+		dev:true,
+		state:{
+			dslabel:'SJLife',
+			genome:'hg38',
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'and',
+					in:true,
+					lst:[
+						{type:'tvs',tag:'cohortFilter',
+							tvs:{
+								term:{id:'subcohort',type:'categorical'},
+								values:[
+									//{key:'SJLIFE',label:'SJLIFE'},
+									{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{type:'tvslst',tag:'filterUiRoot',join:'',in:true,
+							lst:[
+								{
+									type:'tvs',
+									tvs: {
+										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+											"values":{
+												"0": { "label":"Not exposed", "uncomputable":true },
+												"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+												"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+											}
+										},
+										ranges: [
+											{ value: '0', label: "Not exposed"},
+											{startunbounded:true,stop:2000,stopinclusive:true}
+										]
+									}
+								}
+							]
+						}
 					]
 				}
 			},
