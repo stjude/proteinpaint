@@ -52,6 +52,7 @@ export function handle_request_closure(genomes) {
 			if (q.density) return await density_plot(q, res, ds)
 			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
+			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -79,6 +80,10 @@ function trigger_gettermbyid(q, res, tdb) {
 
 function trigger_getcohortsamplecount(q, res, ds) {
 	res.send(termdbsql.get_cohortsamplecount(q, ds))
+}
+
+function trigger_getsamplecount(q, res, ds) {
+	res.send(termdbsql.get_samplecount(q, ds))
 }
 
 function trigger_rootterm(q, res, tdb) {

@@ -71,6 +71,7 @@ class TdbNav {
 			nav: appState.nav,
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
+			filter: appState.termfilter.filter,
 			filterUiRoot: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot'),
 			cohortFilter: getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 		}
@@ -90,11 +91,18 @@ class TdbNav {
 		this.activeCohort = this.state.activeCohort
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
+		this.filterJSON = JSON.stringify(this.state.filter)
 		//this.hideSubheader = false
-		if (this.state.nav.show_tabs && !(this.activeCohortName in this.samplecounts)) await this.getSampleCount()
+
+		if (this.state.nav.show_tabs) {
+			const promises = []
+			if (!(this.activeCohortName in this.samplecounts)) promises.push(this.getCohortSampleCount())
+			if (!(this.filterJSON in this.samplecounts)) promises.push(this.getFilteredSampleCount())
+			if (promises.length) await Promise.all(promises)
+		}
 		this.updateUI()
 	}
-	async getSampleCount() {
+	async getCohortSampleCount() {
 		if (this.activeCohort == -1) return
 		const lst = [
 			'genome=' + this.state.genome,
@@ -107,6 +115,25 @@ class TdbNav {
 		else if (data.error) throw data.error
 		else {
 			this.samplecounts[this.activeCohortName] = data[0].samplecount
+		}
+	}
+	async getFilteredSampleCount() {
+		if (this.activeCohort == -1) return
+		if (!this.state.filter.lst.length || !this.state.filter.lst[1].lst || !this.state.filter.lst[1].lst.length) {
+			this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
+			return
+		}
+		const lst = [
+			'genome=' + this.state.genome,
+			'dslabel=' + this.state.dslabel,
+			'getsamplecount=' + this.activeCohortName,
+			'filter=' + encodeURIComponent(this.filterJSON)
+		]
+		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		if (!data) throw `missing data`
+		else if (data.error) throw data.error
+		else {
+			this.samplecounts[this.filterJSON] = data[0].samplecount
 		}
 	}
 }
@@ -205,11 +232,11 @@ function setRenderers(self) {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
-					const filter = self.state.filter ? self.state.filter : { lst: [] }
+					const filter = self.state.filterUiRoot ? self.state.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {
-						return d.key === 'mid' ? filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
+						return d.key === 'mid' ? filter.lst.length : 'n=' + self.samplecounts[self.filterJSON]
 					}
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'

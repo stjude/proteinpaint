@@ -53,6 +53,23 @@ return an array of sample names for the given cohort
 	// may cache statement
 	return ds.cohort.db.connection.prepare(statement).all(q.cohortValues)
 }
+export function get_samplecount(q, ds) {
+	/*
+must have q.filter[]
+return a sample count of sample names passing through the filter
+ */
+	q.filter = JSON.parse(decodeURIComponent(q.filter))
+	if (!q.filter || !q.filter.lst.length) {
+		throw `missing q.filter`
+	} else {
+		const filter = getFilterCTEs(q.filter, ds)
+		const statement = `WITH ${filter.filters}
+			SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
+			FROM ${filter.CTEname}`
+		// may cache statement
+		return ds.cohort.db.connection.prepare(statement).all(filter.values)
+	}
+}
 export function get_summary_numericcategories(q) {
 	/*
 	q{}
