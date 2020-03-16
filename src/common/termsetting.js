@@ -169,7 +169,7 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.text(d => d.name) // TODO trim long string
+			.html(self.term_name_gen) // TODO trim long string
 
 		self.updatePill.call(this)
 	}
@@ -257,6 +257,18 @@ function setRenderers(self) {
 			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
+	}
+
+	self.term_name_gen = function(d) {
+		let term_name = d.name
+
+		// trim long term name with '...' at end and hover to see full term_name
+		if ((d.type == 'float' || d.type == 'integer') && d.name.length > 25) {
+			term_name = '<label title="' + d.name + '">' + d.name.substring(0, 24) + '...' + '</label>'
+		} else if (d.type == 'condition' && d.name.length > 20) {
+			term_name = '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+		}
+		return term_name
 	}
 }
 
@@ -753,7 +765,6 @@ function setInteractivity(self) {
 	self.showNumOpts = async function(div) {
 		// let custom_bins_q, default_bins_q
 		self.num_obj = {}
-		console.log(self.q)
 
 		if (self.q && Object.keys(self.q).length !== 0) {
 			//if bincoinfig initiated by user/by default
@@ -807,8 +818,14 @@ function setInteractivity(self) {
 					.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
 				self.num_obj.ranges = []
-				if (self.num_obj.custom_bins_q.first_bin) self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
-				if (self.num_obj.custom_bins_q.last_bin) self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
+				if (self.num_obj.custom_bins_q.first_bin) {
+					self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
+					self.num_obj.ranges[0].bin = 'first'
+				}
+				if (self.num_obj.custom_bins_q.last_bin) {
+					self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
+					self.num_obj.ranges[1].bin = 'last'
+				}
 				self.num_obj.brushes = []
 				self.addBrushes()
 				self.addBinSizeLines()
@@ -954,6 +971,9 @@ function setInteractivity(self) {
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('start', function() {
 				brush_drag_start = event.selection[1]
+				brush.elem.selectAll('.selection').attr('cursor', 'default')
+				if (brush.orig.bin == 'first') brush.elem.selectAll('.handle--w').attr('pointer-events', 'none')
+				else if (brush.orig.bin == 'last') brush.elem.selectAll('.handle--e').attr('pointer-events', 'none')
 			})
 			.on('brush', function() {
 				const s = event.selection
@@ -1031,10 +1051,9 @@ function setInteractivity(self) {
 		const first_bin_orig = JSON.parse(JSON.stringify(self.num_obj.brushes[0].orig))
 		const last_bin = self.num_obj.ranges[1] || undefined
 		const line_x = []
-		let drag_start,
-			drag_pad = 0
+		const binLinesStop = last_bin ? last_bin.start : maxvalue
 
-		for (let i = first_bin.stop; i < maxvalue; i = i + bin_size) {
+		for (let i = first_bin.stop; i < binLinesStop; i = i + bin_size) {
 			line_x.push(i)
 		}
 
@@ -1086,16 +1105,12 @@ function setInteractivity(self) {
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
 		const config_table = self.num_obj.config_table
+
 		//Bin Size edit row
 		self.num_obj.bin_size_tr = config_table.append('tr')
-		const bin_size_tr = self.num_obj.bin_size_tr
 
-		bin_size_tr
-			.append('td')
-			.style('margin', '5px')
-			.html('Bin Size')
-
-		const bin_size_td = bin_size_tr.append('td')
+		//Bin bountry edit row
+		self.num_obj.bin_bountry_tr = config_table.append('tr')
 
 		//First Bin edit row
 		const first_bin_tr = config_table.append('tr')
@@ -1185,49 +1200,26 @@ function setInteractivity(self) {
 		// const reset_bins_tr = config_table.append('tr').style('display', 'none')
 		self.num_obj.config_table.edit_btns_tr = self.num_obj.config_table.append('tr')
 
-		self.bin_size_edit(bin_size_td)
+		self.bins_size_edit()
+		self.bins_boundries_edit()
 		self.end_bin_edit(first_bin_td, 'first')
 		self.end_bin_edit(last_bin_edit_div, 'last')
 
 		self.makeRangeButtons()
-
-		// const button_div = reset_bins_tr.append('td').style('display', 'block')
-
-		// // reset button
-		// button_div
-		// 	.append('div')
-		// 	.style('font-size', '.8em')
-		// 	.style('margin-left', '10px')
-		// 	.style('display', 'inline-block')
-		// 	.style('border-radius', '5px')
-		// 	.attr('class', 'sja_menuoption')
-		// 	.text('RESET TO DEFAULT')
-		// 	.on('click', () => {
-		// 		self.q = JSON.parse(JSON.stringify(default_bins_q))
-		// 		custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
-		// 		self.opts.callback({
-		// 			term: self.term,
-		// 			q: self.q
-		// 		})
-		// 		self.bin_size_edit(bin_size_td, custom_bins_q, default_bins_q, reset_bins_tr)
-		// 		self.end_bin_edit(first_bin_td, 'first', custom_bins_q, default_bins_q, reset_bins_tr)
-		// 		last_bin_select.node().value = 'auto'
-		// 		self.apply_last_bin_change(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q)
-		// 		reset_bins_tr.style('display', 'none')
-		// 		self.end_bin_edit(last_bin_edit_div, 'last', custom_bins_q, default_bins_q, reset_bins_tr)
-		// 	})
-
-		// self.num_obj.config_table.edit_btns_tr.style('display', self.bins_customized() ? 'table-row' : 'none')
 	}
 
 	// function to edit bin_size options
-	self.bin_size_edit = function(bin_size_td) {
-		const custom_bins_q = self.num_obj.custom_bins_q
-		const default_bins_q = self.num_obj.default_bins_q
-		const edit_btns_tr = self.num_obj.config_table.edit_btns_tr
-		bin_size_td.selectAll('*').remove()
+	self.bins_size_edit = function() {
+		self.num_obj.bin_size_tr.selectAll('*').remove()
 
-		const x = '<span style="font-family:Times;font-style:italic">x</span>'
+		self.num_obj.bin_size_tr
+			.append('td')
+			.style('margin', '5px')
+			.html('Bin Size')
+
+		const bin_size_td = self.num_obj.bin_size_tr.append('td')
+		const custom_bins_q = self.num_obj.custom_bins_q
+		const edit_btns_tr = self.num_obj.config_table.edit_btns_tr
 
 		const bin_size_input = bin_size_td
 			.append('input')
@@ -1246,13 +1238,39 @@ function setInteractivity(self) {
 					.focus()
 			})
 
+		function apply() {
+			const first_bin_range = self.num_obj.brushes[0].range
+			const first_bin_orig = self.num_obj.brushes[0].orig
+			const minvalue = self.num_obj.density_data.minvalue
+			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
+			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
+			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
+			edit_btns_tr.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
+			self.addBinSizeLines()
+		}
+	}
+
+	self.bins_boundries_edit = function() {
+		const custom_bins_q = self.num_obj.custom_bins_q
+		const default_bins_q = self.num_obj.default_bins_q
+		const edit_btns_tr = self.num_obj.config_table.edit_btns_tr
+
+		self.num_obj.bin_bountry_tr
+			.append('td')
+			.style('margin', '5px')
+			.html('Boundries')
+
+		const bin_boundry_td = self.num_obj.bin_bountry_tr.append('td')
+
 		// select between start/stop inclusive
-		const include_select = bin_size_td
+		const include_select = bin_boundry_td
 			.append('select')
 			.style('margin-left', '10px')
 			.on('change', () => {
 				apply()
 			})
+
+		const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
 		include_select
 			.append('option')
@@ -1265,13 +1283,13 @@ function setInteractivity(self) {
 
 		include_select.node().selectedIndex = custom_bins_q.startinclusive ? 1 : 0
 
+		//TODO: fix apply function for boundry edit
 		function apply() {
 			const first_bin_range = self.num_obj.brushes[0].range
 			const first_bin_orig = self.num_obj.brushes[0].orig
 			const minvalue = self.num_obj.density_data.minvalue
 			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
 			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
-			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
 			custom_bins_q.stopinclusive = include_select.node().value == 'stopinclusive'
 			if (!custom_bins_q.stopinclusive) custom_bins_q.startinclusive = include_select.node().value == 'startinclusive'
 			edit_btns_tr.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
@@ -1286,6 +1304,7 @@ function setInteractivity(self) {
 	}
 
 	// function to edit first and last bin
+	//TODO: replace this with sepeate function for first and last bins
 	self.end_bin_edit = function(bin_edit_td, bin_flag) {
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
@@ -1539,7 +1558,7 @@ function setInteractivity(self) {
 				self.q = default_bins_q
 				self.num_obj.custom_bins_q = default_bins_q
 				const bin_size_td = select(self.num_obj.bin_size_tr.selectAll('td')._groups[0][1])
-				self.bin_size_edit(bin_size_td)
+				self.bins_size_edit()
 				self.addBinSizeLines()
 				self.num_obj.config_table.edit_btns_tr.style('display', 'none')
 			})
