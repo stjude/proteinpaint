@@ -50,6 +50,9 @@ rootcounts AS (
   UNION ALL
   SELECT 'SJLIFE,CCSS' as subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample))
   FROM cohort
+  UNION ALL
+  SELECT 'CCSS,SJLIFE' as subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample))
+  FROM cohort
 ),
 combined AS (
   SELECT * FROM nonconditions

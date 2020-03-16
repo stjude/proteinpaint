@@ -119,7 +119,8 @@ class TdbStore {
 				}
 			} else {
 				const sorter = (a, b) => (a < b ? -1 : 1)
-				const keysStr = JSON.stringify(cohortFilter.tvs.values.sort(sorter).map(v => v.key))
+				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
 				const i = this.state.termdbConfig.selectCohort.values.findIndex(
 					v => keysStr == JSON.stringify(v.keys.sort(sorter))
 				)
