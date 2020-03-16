@@ -29,7 +29,7 @@ tape('\n', function(test) {
 })
 
 tape('single barchart, categorical bars', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
@@ -368,7 +368,7 @@ tape('series visibility - condition', function(test) {
 })
 
 tape('single barchart, filtered', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {

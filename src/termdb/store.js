@@ -4,7 +4,7 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
-import { filterJoin, getFilterItemByTag } from '../common/filter'
+import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -218,7 +218,20 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
-		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		if (!action.filter.tag) {
+			this.state.termfilter.filter = replacementFilter
+		} else {
+			const filter = getFilterItemByTag(this.state.termfilter.filter, action.filter.tag)
+			if (!filter) throw `cannot replace missing filter with tag '${action.filter.tag}'`
+			const parent = findParent(this.state.termfilter.filter, filter.$id)
+			if (parent == filter) {
+				this.state.termfilter.filter = replacementFilter
+			} else {
+				const i = parent.lst.indexOf(filter)
+				parent.lst[i] = replacementFilter
+			}
+		}
 	}
 }
 

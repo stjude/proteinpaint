@@ -53,10 +53,10 @@ class TdbFilter {
 			debug: this.app.opts.debug,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
-			callback: (filterUiRoot, rootFilter) => {
+			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter: rootFilter
+					filter: filter
 				})
 			}
 		})

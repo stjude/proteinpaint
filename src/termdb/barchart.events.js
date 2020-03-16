@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu } from '../client'
-import { filterJoin } from '../common/filter'
+import { filterJoin, getFilterItemByTag } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -323,8 +323,9 @@ function menuoption_add_filter(self, tvslst) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
+	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 	const filter = filterJoin([
-		self.state.termfilter.filter.lst[1],
+		filterUiRoot,
 		{
 			type: 'tvslst',
 			in: true,
@@ -332,6 +333,7 @@ function menuoption_add_filter(self, tvslst) {
 			lst: [...tvslst.map(wrapTvs)]
 		}
 	])
+	filter.tag = 'filterUiRoot'
 	self.app.dispatch({
 		type: 'filter_replace',
 		filter
