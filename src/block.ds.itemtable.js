@@ -1052,14 +1052,22 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 }
 
 function info2table_value(icfg, lst, i) {
+	/*
+icfg: dataset.info2table
+lst: array of fields of a variant
+i: array index of both icfg.fields[] and lst[]
+*/
+
 	const field = icfg.fields[i]
 	if (field.hide) return
-	const value = lst[i]
+	let value = lst[i]
 	if (value == undefined) return
 	if (field.eval) {
-		return eval('"' + value + '"')
+		// somehow decodeURIComponent() won't work here!!
+		value = eval('"' + value + '"')
 	}
 	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
+	if (field.ampersand2br) return value.replace(/&/g, '<br>')
 	return value
 }
 
