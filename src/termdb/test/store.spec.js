@@ -1,5 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
+const ds = require('../../../dataset/sjlife2.hg38.js')
 
 /*************************
  reusable helper functions
@@ -12,6 +13,10 @@ const runpp = helpers.getRunPp('termdb', {
 	}
 })
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**************
  test sections
 ***************/
@@ -22,7 +27,7 @@ tape('\n', function(test) {
 })
 
 tape('init errors', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(1300)
 	test.plan(3)
 	runpp({
 		app: {
@@ -70,4 +75,184 @@ tape('init errors', function(test) {
 	}
 })
 
-tape.skip('state overrides', function(test) {})
+tape('state rehydrate: default cohort', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'SJLife'
+		},
+		app: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(app) {
+		app.Inner.bus.on('postRender.test', null)
+		test.equal(app.Inner.state.activeCohort, 0, 'should set the default activeCohort')
+		const selectCohort = (app.Inner.state.termdbConfig && app.Inner.state.termdbConfig.selectCohort) || { values: [] }
+		test.deepEqual(
+			app.Inner.state.termfilter.filter,
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						tag: 'cohortFilter',
+						type: 'tvs',
+						tvs: {
+							term: selectCohort.term,
+							values: selectCohort.values[0].keys.map(key => {
+								return { key, label: key }
+							})
+						}
+					},
+					{
+						tag: 'filterUiRoot',
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					}
+				]
+			},
+			'should have matching cohort filter data'
+		)
+		test.end()
+	}
+})
+
+tape('state rehydrate: activeCohort=1', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			activeCohort: 1
+		},
+		app: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(app) {
+		app.Inner.bus.on('postRender.test', null)
+		test.equal(app.Inner.state.activeCohort, 1, 'should set activeCohort = 1')
+		const selectCohort = (app.Inner.state.termdbConfig && app.Inner.state.termdbConfig.selectCohort) || { values: [] }
+		test.deepEqual(
+			app.Inner.state.termfilter.filter,
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						tag: 'cohortFilter',
+						type: 'tvs',
+						tvs: {
+							term: selectCohort.term,
+							values: selectCohort.values[1].keys.map(key => {
+								return { key, label: key }
+							})
+						}
+					},
+					{
+						tag: 'filterUiRoot',
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					}
+				]
+			},
+			'should have matching cohort filter data'
+		)
+		test.end()
+	}
+})
+
+tape('state rehydrate: by cohortFilter', function(test) {
+	test.timeoutAfter(3000)
+	const selectCohort = ds.cohort.termdb.selectCohort || { values: [] }
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [
+						{
+							tag: 'cohortFilter',
+							type: 'tvs',
+							tvs: {
+								term: selectCohort.term,
+								/*** REVERSE the order of value keys for testing insensitivity to that order ***/
+								values: selectCohort.values[1].keys.reverse().map(key => {
+									return { key, label: key }
+								})
+							}
+						},
+						{
+							tag: 'filterUiRoot',
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: []
+						}
+					]
+				}
+			},
+			nav: {
+				show_tabs: true
+			}
+		},
+		app: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(app) {
+		app.Inner.bus.on('postRender.test', null)
+		test.equal(app.Inner.state.activeCohort, 1, 'should set activeCohort = 1')
+		const selectCohort = (app.Inner.state.termdbConfig && app.Inner.state.termdbConfig.selectCohort) || { values: [] }
+		test.deepEqual(
+			app.Inner.state.termfilter.filter,
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						tag: 'cohortFilter',
+						type: 'tvs',
+						tvs: {
+							term: selectCohort.term,
+							values: selectCohort.values[1].keys.map(key => {
+								return { key, label: key }
+							})
+						}
+					},
+					{
+						tag: 'filterUiRoot',
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: []
+					}
+				]
+			},
+			'should have matching cohort filter data regardless of value.keys order'
+		)
+		test.end()
+	}
+})

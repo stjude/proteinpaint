@@ -124,7 +124,7 @@ class TdbStore {
 				const i = this.state.termdbConfig.selectCohort.values.findIndex(
 					v => keysStr == JSON.stringify(v.keys.sort(sorter))
 				)
-				if (this.state.activeCohort !== -1 && i !== this.state.activeCohort) {
+				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
 					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
 				}
 				this.state.activeCohort = i
