@@ -96,7 +96,8 @@ class TdbStore {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
 				// support legacy state.termfilter and test scripts that
-				// that does not specify a cohort when required
+				// that does not specify a cohort when required;
+				// will use state.activeCohort if not -1
 				cohortFilter = {
 					tag: 'cohortFilter',
 					type: 'tvs',
@@ -116,12 +117,13 @@ class TdbStore {
 					join: 'and',
 					lst: [cohortFilter, filterUiRoot]
 				}
-			} else if (this.state.activeCohort == -1) {
+			} else {
 				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key))
-				this.state.activeCohort = this.state.termdbConfig.selectCohort.values.findIndex(
-					v => keysStr == JSON.stringify(v.keys)
-				)
-				console.log(122, this.state.activeCohort)
+				const i = this.state.termdbConfig.selectCohort.values.findIndex(v => keysStr == JSON.stringify(v.keys))
+				if (this.state.activeCohort !== -1 && i !== this.state.activeCohort) {
+					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+				}
+				this.state.activeCohort = i
 			}
 		}
 	}
