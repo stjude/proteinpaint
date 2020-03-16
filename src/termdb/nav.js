@@ -71,9 +71,7 @@ class TdbNav {
 			nav: appState.nav,
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter,
-			filterUiRoot: getFilterItemByTag(appState.termfilter.filter, 'filterUiRoot'),
-			cohortFilter: getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
+			filter: appState.termfilter.filter
 		}
 	}
 	reactsTo(action) {
@@ -89,6 +87,8 @@ class TdbNav {
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
 		this.activeCohort = this.state.activeCohort
+		;(this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')),
+			(this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter'))
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		this.filterJSON = JSON.stringify(this.state.filter)
@@ -119,7 +119,7 @@ class TdbNav {
 	}
 	async getFilteredSampleCount() {
 		if (this.activeCohort == -1) return
-		if (!this.state.filter.lst.length || !this.state.filter.lst[1].lst || !this.state.filter.lst[1].lst.length) {
+		if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
 			this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
 			return
 		}
@@ -232,7 +232,7 @@ function setRenderers(self) {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
-					const filter = self.state.filterUiRoot ? self.state.filterUiRoot : { lst: [] }
+					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {

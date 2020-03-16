@@ -118,8 +118,11 @@ class TdbStore {
 					lst: [cohortFilter, filterUiRoot]
 				}
 			} else {
-				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key))
-				const i = this.state.termdbConfig.selectCohort.values.findIndex(v => keysStr == JSON.stringify(v.keys))
+				const sorter = (a, b) => (a < b ? -1 : 1)
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.sort(sorter).map(v => v.key))
+				const i = this.state.termdbConfig.selectCohort.values.findIndex(
+					v => keysStr == JSON.stringify(v.keys.sort(sorter))
+				)
 				if (this.state.activeCohort !== -1 && i !== this.state.activeCohort) {
 					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
 				}
