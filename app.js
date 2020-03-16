@@ -239,6 +239,7 @@ function handle_genomes(req, res) {
 				cohort: ds.cohort,
 				vcfinfofilter: ds.vcfinfofilter,
 				info2table: ds.info2table,
+				info2singletable: ds.info2singletable,
 				url4variant: ds.url4variant,
 				vcfcohorttrack: ds.vcfcohorttrack, // new
 				itemlabelname: ds.itemlabelname

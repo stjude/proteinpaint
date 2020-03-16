@@ -909,47 +909,8 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 		}
 	}
 
-	if (tk.info2table) {
-		for (const infokey in tk.info2table) {
-			const icfg = tk.info2table[infokey]
-			const rawvaluelst = m.info[infokey]
-			if (!rawvaluelst) continue
-			if (rawvaluelst.length == 1) {
-				// single
-				const table = []
-				const lst = rawvaluelst[0].split(icfg.col_separator)
-				for (let i = 0; i < icfg.fields.length; i++) {
-					if (icfg.fields[i].hide) continue
-					table.push({
-						k: icfg.fields[i].name,
-						v: info2table_value(icfg, lst, i)
-					})
-				}
-				client.make_table_2col(holder, table)
-				continue
-			}
-			// multiple
-			const table = holder
-				.append('table')
-				.style('border-spacing', '2px')
-				.style('border-collapse', 'separate')
-				.style('font-size', '90%')
-			const tr = table.append('tr')
-			for (const field of icfg.fields) {
-				if (field.hide) continue
-				tr.append('td').text(field.name)
-			}
-			for (const row of rawvaluelst) {
-				const tr = table.append('tr').attr('class', 'sja_tr')
-				const lst = row.split(icfg.col_separator)
-				for (let i = 0; i < icfg.fields.length; i++) {
-					if (icfg.fields[i].hide) continue
-					const td = tr.append('td')
-					td.html(info2table_value(icfg, lst, i))
-				}
-			}
-		}
-	}
+	may_info2singletable(m, holder, tk)
+	may_info2table(m, holder, tk)
 
 	const altkey2category = {} // alt allele
 	const lockey2category = {} // locus
@@ -1051,6 +1012,69 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 	}
 }
 
+function may_info2singletable(m, holder, tk) {
+	// from a csq-like field, only show first item as a vertical table with each row as a field of icfg.fields[]
+	if (!tk.info2singletable) return
+	for (const infokey in tk.info2singletable) {
+		const icfg = tk.info2singletable[infokey]
+		const rawvaluelst = m.info[infokey]
+		if (!rawvaluelst || !rawvaluelst[0]) continue
+		const table = []
+		const lst = rawvaluelst[0].split(icfg.col_separator)
+		for (let i = 0; i < icfg.fields.length; i++) {
+			if (icfg.fields[i].hide) continue
+			table.push({
+				k: icfg.fields[i].name,
+				v: info2table_value(icfg, lst, i)
+			})
+		}
+		client.make_table_2col(holder, table)
+	}
+}
+
+function may_info2table(m, holder, tk) {
+	if (!tk.info2table) return
+	for (const infokey in tk.info2table) {
+		const icfg = tk.info2table[infokey]
+		const rawvaluelst = m.info[infokey]
+		if (!rawvaluelst) continue
+		if (rawvaluelst.length == 1) {
+			// single
+			const table = []
+			const lst = rawvaluelst[0].split(icfg.col_separator)
+			for (let i = 0; i < icfg.fields.length; i++) {
+				if (icfg.fields[i].hide) continue
+				table.push({
+					k: icfg.fields[i].name,
+					v: info2table_value(icfg, lst, i)
+				})
+			}
+			client.make_table_2col(holder, table)
+			continue
+		}
+		// multiple
+		const table = holder
+			.append('table')
+			.style('border-spacing', '2px')
+			.style('border-collapse', 'separate')
+			.style('font-size', '90%')
+		const tr = table.append('tr')
+		for (const field of icfg.fields) {
+			if (field.hide) continue
+			tr.append('td').text(field.name)
+		}
+		for (const row of rawvaluelst) {
+			const tr = table.append('tr').attr('class', 'sja_tr')
+			const lst = row.split(icfg.col_separator)
+			for (let i = 0; i < icfg.fields.length; i++) {
+				if (icfg.fields[i].hide) continue
+				const td = tr.append('td')
+				td.html(info2table_value(icfg, lst, i))
+			}
+		}
+	}
+}
+
 function info2table_value(icfg, lst, i) {
 	/*
 icfg: dataset.info2table
@@ -1067,6 +1091,7 @@ i: array index of both icfg.fields[] and lst[]
 		value = eval('"' + value + '"')
 	}
 	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
+	if (field.appendUrl) return '<a href=' + field.appendUrl + value + ' target=_blank>' + value + '</a>'
 	if (field.ampersand2br) return value.replace(/&/g, '<br>')
 	return value
 }

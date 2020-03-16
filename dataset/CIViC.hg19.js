@@ -30,11 +30,10 @@ module.exports = {
 		]
 	},
 	*/
-	info2table: {
+	info2singletable: {
 		civic_csq: {
 			col_separator: '|',
 			fields: [
-				// each field is a column
 				{ name: 'Allele' },
 				{ name: 'Consequence' },
 				{ name: 'SYMBOL' },
@@ -48,8 +47,31 @@ module.exports = {
 				{ name: 'CIViC Variant Aliases', ampersand2br: true },
 				{ name: 'CIViC HGVS', eval: true, ampersand2br: true },
 				{ name: 'Allele Registry ID' },
-				{ name: 'ClinVar IDs' },
-				{ name: 'CIViC Variant Evidence Score' },
+				{ name: 'ClinVar IDs', appendUrl: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' },
+				{ name: 'CIViC Variant Evidence Score' }
+			]
+		}
+	},
+	info2table: {
+		civic_csq: {
+			col_separator: '|',
+			fields: [
+				// each field is a column
+				{ hide: true, name: 'Allele' },
+				{ hide: true, name: 'Consequence' },
+				{ hide: true, name: 'SYMBOL' },
+				{ hide: true, name: 'Entrez Gene ID' },
+				{ hide: true, name: 'Feature_type' },
+				{ hide: true, name: 'Feature' },
+				{ hide: true, name: 'HGVSc' },
+				{ hide: true, name: 'HGVSp' },
+				{ hide: true, name: 'CIViC Variant Name' },
+				{ hide: true, name: 'CIViC Variant ID' },
+				{ hide: true, name: 'CIViC Variant Aliases', ampersand2br: true },
+				{ hide: true, name: 'CIViC HGVS', eval: true, ampersand2br: true },
+				{ hide: true, name: 'Allele Registry ID' },
+				{ hide: true, name: 'ClinVar IDs' },
+				{ hide: true, name: 'CIViC Variant Evidence Score' },
 				{ name: 'CIViC Entity Type' },
 				{ name: 'CIViC Entity ID' },
 				{ name: 'CIViC Entity URL', isurl: true },
