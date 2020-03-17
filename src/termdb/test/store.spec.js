@@ -1,6 +1,8 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
+const store = require('../store')
 const ds = require('../../../dataset/sjlife2.hg38.js')
+const rx = require('../../common/rx.core')
 
 /*************************
  reusable helper functions
@@ -72,6 +74,27 @@ tape('init errors', function(test) {
 			test.equal(d.text(), 'Error: .state.dslabel missing', 'should be displayed for missing .state.dslabel')
 			test.end()
 		}, 400)
+	}
+})
+
+tape('state: no cohort.termdb.selectCohort', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'NoCohortSJLife'
+		},
+		app: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(app) {
+		app.Inner.bus.on('postRender.test', null)
+		test.equal(app.Inner.state.activeCohort, -1, 'should not set the default activeCohort')
+		test.end()
 	}
 })
 

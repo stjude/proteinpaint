@@ -129,6 +129,9 @@ class TdbStore {
 				}
 				this.state.activeCohort = i
 			}
+		} else {
+			this.state.activeCohort = -1
+			if (this.state.activeTab === 0) this.state.activeTab = 1
 		}
 	}
 

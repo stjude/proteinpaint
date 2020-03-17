@@ -87,8 +87,8 @@ class TdbNav {
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
 		this.activeCohort = this.state.activeCohort
-		;(this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')),
-			(this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter'))
+		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
+		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
 		this.filterJSON = JSON.stringify(this.state.filter)
@@ -212,11 +212,20 @@ function setRenderers(self) {
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
 	}
 	self.updateUI = () => {
-		self.dom.searchDiv.style('display', self.activeCohort == -1 ? 'none' : 'inline-block')
+		const selectCohort = self.state.termdbConfig.selectCohort
+		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
 		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
-			.style('display', d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
+			.style('display', d =>
+				(self.activeCohort !== -1 || !selectCohort) && d.colNum !== 0
+					? ''
+					: !selectCohort && d.colNum === 0
+					? 'none'
+					: d.colNum === 0 || self.activeCohort !== -1
+					? ''
+					: 'none'
+			)
 			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
 			.style('background-color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
@@ -263,12 +272,14 @@ function setRenderers(self) {
 		}
 		self.dom.subheaderDiv.style(
 			'border-bottom',
-			self.state.nav.show_tabs && visibleSubheaders.length && self.activeCohort != -1 ? '1px solid #000' : ''
+			self.state.nav.show_tabs && visibleSubheaders.length && (self.activeCohort != -1 || !selectCohort)
+				? '1px solid #000'
+				: ''
 		)
 		if (self.highlightCohortBy && self.activeCohort != -1) {
-			const activeCohort = self.state.termdbConfig.selectCohort.values[self.activeCohort]
+			const activeCohort = selectCohort.values[self.activeCohort]
 			const activeSelector = activeCohort[self.highlightCohortBy]
-			for (const cohort of self.state.termdbConfig.selectCohort.values) {
+			for (const cohort of selectCohort.values) {
 				if (cohort[self.highlightCohortBy] !== activeSelector) {
 					self.dom.cohortTable.selectAll(cohort[self.highlightCohortBy]).style('background-color', 'transparent')
 				}
@@ -279,7 +290,7 @@ function setRenderers(self) {
 	}
 	self.initCohort = () => {
 		if (self.dom.cohortTable) return
-		const selectCohort = self.state.termdbConfig && self.state.termdbConfig.selectCohort
+		const selectCohort = self.state.termdbConfig.selectCohort
 		if (!selectCohort) {
 			if (self.activeTab === 0) self.activeTab = 1
 			return

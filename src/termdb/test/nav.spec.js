@@ -255,3 +255,66 @@ tape('filter subheader', async function(test) {
 		)
 	}
 })
+
+tape.only('no termd.selectCohort', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'NoCohortSJLife',
+			activeCohort: -1,
+			nav: {
+				show_tabs: true
+			}
+		},
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let tds, trs
+	function runTests(nav) {
+		tds = nav.Inner.dom.tabDiv.selectAll('td')
+		trs = nav.Inner.dom.tabDiv.node().querySelectorAll('tr')
+		helpers
+			.rideInit({ arg: nav, bus: nav, eventType: 'postRender.test' })
+			.run(testPreCohortSelection)
+			//.use(triggerCohortSelection)
+			//.to(testPostCohortSelection, 100)
+			//.use(triggerTabFold)
+			//.to(testTabFold, 100)
+			//.use(triggerTabUnfold)
+			//.to(testTabUnfold, 100)
+			.done(test)
+	}
+
+	function testPreCohortSelection(nav) {
+		test.equal(
+			tds
+				.filter(function() {
+					return this.style.display !== 'none'
+				})
+				.size() / trs.length,
+			2,
+			'should show 2 tabs'
+		)
+		test.equal(
+			tds
+				.filter(function(d) {
+					return d.colNum === 0 && this.style.display === 'none'
+				})
+				.size() / trs.length,
+			1,
+			'should not show the cohort tab'
+		)
+		/*
+		test.notEqual(
+			tds.filter((d, i) => i === 0).style('background-color'),
+			'transparent',
+			'should highlight the active cohort tab'
+		)*/
+	}
+})
