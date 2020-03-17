@@ -37,6 +37,10 @@ mayshowgenotype2boxplot
 
 vcfvepbutton
 vcfannbutton
+
+may_info2singletable
+may_info2table
+info2table_value
 */
 
 const separatorvp = '__'
@@ -1075,24 +1079,57 @@ function may_info2table(m, holder, tk) {
 	}
 }
 
-function info2table_value(icfg, lst, i) {
-	/*
+/*
+at index i, to match field config "icfg.fields[i]" with raw value "lst[i]" to produce a display value
+
 icfg: dataset.info2table
 lst: array of fields of a variant
 i: array index of both icfg.fields[] and lst[]
 */
-
+function info2table_value(icfg, lst, i) {
 	const field = icfg.fields[i]
 	if (field.hide) return
 	let value = lst[i]
 	if (value == undefined) return
+	// field config attributes are processed based on order of precedence
 	if (field.eval) {
 		// somehow decodeURIComponent() won't work here!!
 		value = eval('"' + value + '"')
 	}
 	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
-	if (field.appendUrl) return '<a href=' + field.appendUrl + value + ' target=_blank>' + value + '</a>'
+	if (field.appendUrl) {
+		if (field.separator) {
+			return value
+				.split(field.separator)
+				.map(v => '<a href=' + field.appendUrl + v + ' target=_blank>' + v + '</a>')
+				.join(', ')
+		}
+		return '<a href=' + field.appendUrl + value + ' target=_blank>' + value + '</a>'
+	}
 	if (field.ampersand2br) return value.replace(/&/g, '<br>')
+	if (field.urlMatchLst) {
+		// 31566309_(PubMed), or 168986_(ASCO)
+		const lowervalue = value.toLowerCase()
+		const id = lowervalue.split(field.urlMatchLst.separator)[field.urlMatchLst.idIndex]
+		if (id) {
+			for (const type of field.urlMatchLst.types) {
+				if (lowervalue.indexOf(type.type) != -1) {
+					if (type.appendUrl) {
+						return (
+							'<span style="font-size:.7em">' +
+							type.type.toUpperCase() +
+							'</span> <a href=' +
+							type.appendUrl +
+							id +
+							' target=_blank>' +
+							id +
+							'</a>'
+						)
+					}
+				}
+			}
+		}
+	}
 	return value
 }
 

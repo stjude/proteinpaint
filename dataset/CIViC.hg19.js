@@ -47,7 +47,7 @@ module.exports = {
 				{ name: 'CIViC Variant Aliases', ampersand2br: true },
 				{ name: 'CIViC HGVS', eval: true, ampersand2br: true },
 				{ name: 'Allele Registry ID' },
-				{ name: 'ClinVar IDs', appendUrl: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' },
+				{ name: 'ClinVar IDs', separator: '&', appendUrl: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' },
 				{ name: 'CIViC Variant Evidence Score' }
 			]
 		}
@@ -75,7 +75,17 @@ module.exports = {
 				{ name: 'CIViC Entity Type' },
 				{ name: 'CIViC Entity ID' },
 				{ name: 'CIViC Entity URL', isurl: true },
-				{ name: 'CIViC Entity Source' },
+				{
+					name: 'CIViC Entity Source',
+					urlMatchLst: {
+						separator: '_',
+						idIndex: 0,
+						types: [
+							{ type: 'pubmed', appendUrl: 'https://www.ncbi.nlm.nih.gov/pubmed/' },
+							{ type: 'asco', appendUrl: 'https://meetinglibrary.asco.org/record/' }
+						]
+					}
+				},
 				{ name: 'CIViC Entity Variant Origin' },
 				{ name: 'CIViC Entity Status' }
 			]
