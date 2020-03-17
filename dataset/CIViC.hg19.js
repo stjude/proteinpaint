@@ -43,7 +43,7 @@ module.exports = {
 				{ name: 'HGVSc' },
 				{ name: 'HGVSp' },
 				{ name: 'CIViC Variant Name' },
-				{ name: 'CIViC Variant ID' },
+				{ name: 'CIViC Variant ID', appendUrl: 'https://civicdb.org/links/variant/' },
 				{ name: 'CIViC Variant Aliases', ampersand2br: true },
 				{ name: 'CIViC HGVS', eval: true, ampersand2br: true },
 				{ name: 'Allele Registry ID' },
