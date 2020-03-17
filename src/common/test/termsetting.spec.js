@@ -270,12 +270,12 @@ tape('Numerical term', async test => {
 	)
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
-		'First Bin',
+		'First Bin Stop',
 		'Should have section for "First bin" edit'
 	)
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][3]).selectAll('td')._groups[0][0].innerText,
-		'Last Bin',
+		'Last Bin Start',
 		'Should have section for "Last bin" edit'
 	)
 
@@ -294,14 +294,14 @@ tape('Numerical term', async test => {
 	)
 
 	//trigger and test first_bin_change
-	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][1]
+	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0]
 	first_bin_input.value = 7
 
 	//press 'Enter' to update bins
 	first_bin_input.addEventListener('keyup', () => {})
 	first_bin_input.dispatchEvent(enter_event)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][1].value,
+		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value,
 		'7',
 		'Should change "first bin" from input'
 	)
