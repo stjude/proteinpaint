@@ -46,6 +46,13 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
+export async function get_one_genome(name) {
+	const data = await dofetch2('genomes', { method: 'POST', body: JSON.stringify({ genome: name }) })
+	if (!data.genomes) throw 'error'
+	if (!data.genomes[name]) throw 'unknown genome: ' + name
+	return data.genomes[name]
+}
+
 /*
 	path: URL
 		
