@@ -48,7 +48,7 @@ class TdbBarchart {
 			// will use this as callback to bar click
 			// and will not set up bar click menu
 		} else if (!this.opts.bar_click_opts) {
-			this.opts.bar_click_opts = ['hide_bar', 'add_to_gp']
+			this.opts.bar_click_opts = ['hide_bar', 'select_to_gp']
 			if (this.app.getState().nav.show_tabs) this.opts.bar_click_opts.push('add_filter')
 		}
 	}
@@ -60,6 +60,8 @@ class TdbBarchart {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('barchart'),
+			genome: appState.genome,
+			dslabel: appState.dslabel,
 			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
@@ -71,7 +73,8 @@ class TdbBarchart {
 					barchart: config.settings.barchart
 				}
 			},
-			ssid: appState.ssid
+			ssid: appState.ssid,
+			bar_click_menu: appState.bar_click_menu || {}
 		}
 	}
 

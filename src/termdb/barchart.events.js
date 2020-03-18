@@ -1,5 +1,5 @@
 import { event } from 'd3-selection'
-import { Menu } from '../client'
+import { Menu, newpane, get_one_genome } from '../client'
 import { filterJoin, getFilterItemByTag } from '../common/filter'
 
 export default function getHandlers(self) {
@@ -273,13 +273,13 @@ function handle_click(self) {
 		})
 	}
 
-	// TODO: add to cart and gp
-	// if (self.opts.bar_click_opts.includes('select_to_gp')) {
-	// 	options.push({
-	// 		label: 'Select to GenomePaint',
-	// 		callback: menuoption_select_to_gp
-	// 	})
-	// }
+	if (self.opts.bar_click_opts.includes('select_to_gp')) {
+		options.push({
+			label: 'Select to GenomePaint',
+			callback: menuoption_select_to_gp
+		})
+	}
+	// TODO: add to cart
 	//
 	// if (self.opts.bar_click_opts.includes('add_to_cart')) {
 	// 	options.push({
@@ -350,37 +350,44 @@ function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
 	for (const t of tvslst) lst.push(t)
 	if (self.termfilter && self.termfilter.filter) {
-		for (const t of self.termfilter.terms) {
-			lst.push(JSON.parse(JSON.stringify(t)))
+		for (const t of self.termfilter.filter.lst) {
+			lst.push(JSON.parse(JSON.stringify(t.type.startsWith('tvs') ? t : wrapTvs(t))))
 		}
 	}
 
-	// const pane = newpane({ x: 100, y: 100 })
-	// import('./block').then(_ => {
-	// 	new _.Block({
-	// 		hostURL: localStorage.getItem('hostURL'),
-	// 		holder: pane.body,
-	// 		genome: obj.genome,
-	// 		nobox: true,
-	// 		chr: obj.genome.defaultcoord.chr,
-	// 		start: obj.genome.defaultcoord.start,
-	// 		stop: obj.genome.defaultcoord.stop,
-	// 		nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
-	// 		tklst: [
-	// 			{
-	// 				type: tkt.mds2,
-	// 				dslabel: obj.dslabel,
-	// 				vcf: {
-	// 					numerical_axis: {
-	// 						AFtest: {
-	// 							groups: [{ is_termdb: true, terms: lst }, obj.bar_click_menu.select_to_gp.group_compare_against]
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		]
-	// 	})
-	// })
+	import('../block').then(async _ => {
+		const obj = {
+			genome: await get_one_genome(self.state.genome),
+			dslabel: self.state.dslabel
+		}
+		const pane = newpane({ x: 100, y: 100 })
+		new _.Block({
+			hostURL: localStorage.getItem('hostURL'),
+			holder: pane.body,
+			genome: obj.genome,
+			nobox: true,
+			chr: obj.genome.defaultcoord.chr,
+			start: obj.genome.defaultcoord.start,
+			stop: obj.genome.defaultcoord.stop,
+			nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
+			tklst: [
+				{
+					type: 'mds2',
+					dslabel: obj.dslabel,
+					vcf: {
+						numerical_axis: {
+							AFtest: {
+								groups: [
+									{ is_termdb: true, filter: JSON.parse(JSON.stringify(self.state.termfilter.filter)) },
+									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
+								]
+							}
+						}
+					}
+				}
+			]
+		})
+	})
 }
 
 function menuoption_select_group_add_to_cart(self, tvslst) {
