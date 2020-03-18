@@ -118,7 +118,6 @@ class TdbNav {
 		}
 	}
 	async getFilteredSampleCount() {
-		if (this.activeCohort == -1) return
 		if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
 			this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
 			return

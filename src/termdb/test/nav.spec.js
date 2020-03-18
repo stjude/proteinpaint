@@ -256,7 +256,7 @@ tape('filter subheader', async function(test) {
 	}
 })
 
-tape.only('no termd.selectCohort', function(test) {
+tape('no termd.selectCohort', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
