@@ -1054,11 +1054,11 @@ function setInteractivity(self) {
 		const end_bins = self.num_obj.ranges
 		const first_bin = self.num_obj.brushes[0].range
 		const first_bin_orig = JSON.parse(JSON.stringify(self.num_obj.brushes[0].orig))
-		const last_bin = self.num_obj.ranges[1] || undefined
+		const last_bin = self.num_obj.brushes[1] ? self.num_obj.brushes[1].range : undefined
 		const line_x = []
 		const binLinesStop = last_bin ? last_bin.start : maxvalue
 
-		for (let i = first_bin.stop; i < binLinesStop; i = i + bin_size) {
+		for (let i = first_bin.stop; i <= binLinesStop; i = i + bin_size) {
 			line_x.push(i)
 		}
 
@@ -1124,33 +1124,29 @@ function setInteractivity(self) {
 		config_table.last_bin_tr = config_table.append('tr')
 
 		// note for users to press enter to make changes to bins
-		const note_tr = config_table.append('tr')
+		// const note_tr = config_table.append('tr')
 
-		note_tr.append('td')
+		// note_tr.append('td')
 
-		note_tr
-			.append('td')
-			.append('div')
-			.style('font-size', '.6em')
-			.style('margin-left', '10px')
-			.style('color', '#858585')
-			.text(
-				'Note: Press ENTER to update.' +
-					(!self.opts.disable_ReplaceRemove ? ' To Replace/Update use following buttons.' : '')
-			)
+		// note_tr
+		// 	.append('td')
+		// 	.append('div')
+		// 	.style('font-size', '.6em')
+		// 	.style('margin-left', '10px')
+		// 	.style('color', '#858585')
+		// 	.text(
+		// 		'Note: Press ENTER to update.' +
+		// 			(!self.opts.disable_ReplaceRemove ? ' To Replace/Update use following buttons.' : '')
+		// 	)
 
 		//TODO: 'reset to default' - can be click menu option or remove if unnecessary
 		// reset row with 'reset to default' button if any changes detected
-		// const reset_bins_tr = config_table.append('tr').style('display', 'none')
 		self.num_obj.config_table.edit_btns_tr = self.num_obj.config_table.append('tr')
 
 		self.bins_size_edit()
 		self.bins_boundries_edit()
 		self.first_bin_edit()
 		self.last_bin_edit()
-		// self.end_bin_edit(first_bin_td, 'first')
-		// self.end_bin_edit(last_bin_edit_div, 'last')
-
 		self.makeRangeButtons()
 	}
 
@@ -1164,6 +1160,7 @@ function setInteractivity(self) {
 			.html('Bin Size')
 
 		const bin_size_td = self.num_obj.config_table.bin_size_tr.append('td')
+		const note_td = self.num_obj.config_table.bin_size_tr.append('td')
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const edit_btns_tr = self.num_obj.config_table.edit_btns_tr
 
@@ -1184,6 +1181,13 @@ function setInteractivity(self) {
 					.focus()
 			})
 
+		note_td
+			.append('div')
+			.style('font-size', '.6em')
+			.style('margin-left', '1px')
+			.style('color', '#858585')
+			.text('Red lines indicate bins automatically generated based on this value.')
+
 		function apply() {
 			const first_bin_range = self.num_obj.brushes[0].range
 			const first_bin_orig = self.num_obj.brushes[0].orig
@@ -1197,6 +1201,7 @@ function setInteractivity(self) {
 	}
 
 	self.bins_boundries_edit = function() {
+		self.num_obj.config_table.bin_bountry_tr.selectAll('*').remove()
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
 		const edit_btns_tr = self.num_obj.config_table.edit_btns_tr
@@ -1269,6 +1274,7 @@ function setInteractivity(self) {
 			.html('First Bin Stop')
 
 		const first_bin_td = self.num_obj.config_table.first_bin_tr.append('td')
+		const note_td = self.num_obj.config_table.first_bin_tr.append('td')
 
 		brush.input = first_bin_td
 			.append('input')
@@ -1290,6 +1296,13 @@ function setInteractivity(self) {
 		if (isFinite(bin.stop)) {
 			brush.input.attr('value', parseFloat(bin.stop))
 		}
+
+		note_td
+			.append('div')
+			.style('font-size', '.6em')
+			.style('margin-left', '1px')
+			.style('color', '#858585')
+			.html('<b>Left</b>-side gray box indicates the first bin. <br> Drag to change its size.')
 
 		function update_first_bin() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
@@ -1325,6 +1338,15 @@ function setInteractivity(self) {
 		const last_bin_select_div = last_bin_td.append('div')
 
 		const last_bin_edit_div = last_bin_td.append('div').style('display', 'none')
+
+		const note_td = self.num_obj.config_table.last_bin_tr.append('td').style('display', 'none')
+
+		note_td
+			.append('div')
+			.style('font-size', '.6em')
+			.style('margin-left', '1px')
+			.style('color', '#858585')
+			.html('<b>Right</b>-side gray box indicates the last bin. <br> Drag to change its size.')
 
 		brush.input = last_bin_edit_div
 			.append('input')
@@ -1402,212 +1424,6 @@ function setInteractivity(self) {
 		}
 	}
 
-	// function to edit first and last bin
-	//TODO: replace this with sepeate function for first and last bins
-	// self.end_bin_edit = function(bin_edit_td, bin_flag) {
-	// 	const custom_bins_q = self.num_obj.custom_bins_q
-	// 	const default_bins_q = self.num_obj.default_bins_q
-	// 	const xscale = self.num_obj.xscale
-	// 	const maxvalue = self.num_obj.density_data.maxvalue
-	// 	const minvalue = self.num_obj.density_data.minvalue
-	// 	const plot_size = self.num_obj.plot_size
-	// 	const xpad = plot_size.xpad
-	// 	const ypad = plot_size.ypad
-
-	// 	bin_edit_td.selectAll('*').remove()
-
-	// 	let bin
-	// 	if (bin_flag == 'first') {
-	// 		bin = custom_bins_q.first_bin
-	// 	} else if (bin_flag == 'last') {
-	// 		if (custom_bins_q.last_bin) {
-	// 			bin = custom_bins_q.last_bin
-	// 		} else {
-	// 			bin = {
-	// 				start: '',
-	// 				stop: ''
-	// 			}
-	// 		}
-	// 	}
-	// 	const brush =
-	// 		bin_flag == 'first'
-	// 			? self.num_obj.brushes[0]
-	// 			: custom_bins_q.last_bin
-	// 			? self.num_obj.brushes[1]
-	// 			: { orig: bin, range: JSON.parse(JSON.stringify(bin)) }
-
-	// 	brush.input = bin_edit_td
-	// 		.append('input')
-	// 		.attr('type', 'number')
-	// 		.style('width', '60px')
-	// 		.style('margin-left', '15px')
-	// 		.on('keyup', async () => {
-	// 			if (!client.keyupEnter()) return
-	// 			brush.input.property('disabled', true)
-	// 			try {
-	// 				if (brush.input.node().value < minvalue) throw 'entered value is lower than minimum value'
-	// 				update_input()
-	// 			} catch (e) {
-	// 				window.alert(e)
-	// 			}
-	// 			brush.input.property('disabled', false)
-	// 		})
-
-	// 	if (isFinite(bin.start)) {
-	// 		brush.input.attr('value', parseFloat(bin.start))
-	// 	}
-
-	// 	// select realation between lowerbound and first bin/last bin
-	// 	let startselect
-	// 	if (bin_flag == 'first') {
-	// 		startselect = bin_edit_td
-	// 			.append('select')
-	// 			.style('margin-left', '10px')
-	// 			.on('change', () => {
-	// 				// apply()
-	// 			})
-
-	// 		startselect.append('option').html('&le;')
-	// 		startselect.append('option').html('&lt;')
-
-	// 		startselect.node().selectedIndex = bin.startinclusive ? 0 : 1
-	// 	} else {
-	// 		bin_edit_td
-	// 			.append('div')
-	// 			.style('display', 'inline-block')
-	// 			.style('padding', '3px 10px')
-	// 			.style('margin-left', '10px')
-	// 			.style('width', '15px')
-	// 			.html(custom_bins_q.startinclusive ? ' &le;' : ' &lt;')
-	// 	}
-
-	// 	const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
-	// 	bin_edit_td
-	// 		.append('div')
-	// 		.style('display', 'inline-block')
-	// 		.style('padding', '3px 10px')
-	// 		.html(x)
-
-	// 	// relation between first bin and upper value
-	// 	let stopselect
-	// 	if (bin_flag == 'first') {
-	// 		bin_edit_td
-	// 			.append('div')
-	// 			.style('display', 'inline-block')
-	// 			.style('padding', '3px 10px')
-	// 			.style('margin-left', '10px')
-	// 			.style('width', '15px')
-	// 			.html(custom_bins_q.stopinclusive ? ' &le;' : ' &lt;')
-	// 	} else {
-	// 		stopselect = bin_edit_td
-	// 			.append('select')
-	// 			.style('margin-left', '10px')
-	// 			.on('change', () => {
-	// 				// apply()
-	// 			})
-
-	// 		stopselect.append('option').html('&le;')
-	// 		stopselect.append('option').html('&lt;')
-
-	// 		stopselect.node().selectedIndex = bin.stopinclusive ? 0 : 1
-	// 	}
-
-	// 	brush.input = bin_edit_td
-	// 		.append('input')
-	// 		.style('margin-left', '10px')
-	// 		.attr('type', 'number')
-	// 		.style('width', '60px')
-	// 		.on('keyup', async () => {
-	// 			if (!client.keyupEnter()) return
-	// 			brush.input.property('disabled', true)
-	// 			try {
-	// 				if (brush.input.node().value > maxvalue) throw 'entered value is higher than maximum value'
-	// 				update_input()
-	// 			} catch (e) {
-	// 				window.alert(e)
-	// 			}
-	// 			brush.input.property('disabled', false)
-	// 		})
-
-	// 	if (isFinite(bin.stop)) {
-	// 		brush.input.attr('value', parseFloat(bin.stop))
-	// 	}
-
-	// const edit_btns_tr = self.num_obj.config_table.append('tr')
-	// self.makeRangeButtons(brush, edit_btns_tr)
-
-	// function apply() {
-	// 	try {
-	// 		if (
-	// 			brush.start_input.node().value &&
-	// 			brush.stop_input.node().value &&
-	// 			brush.start_input.node().value > brush.stop_input.node().value
-	// 		)
-	// 			throw 'start value must be smaller than stop value'
-
-	// 		//first_bin parameter setup from input
-	// 		if (bin_flag == 'first') {
-	// 			if (brush.start_input.node().value) {
-	// 				delete custom_bins_q.first_bin.startunbounded
-	// 				custom_bins_q.first_bin.start = parseFloat(brush.start_input.node().value)
-	// 			} else {
-	// 				delete custom_bins_q.first_bin.start
-	// 				delete custom_bins_q.first_bin.start_percentile
-	// 				custom_bins_q.first_bin.startunbounded = true
-	// 			}
-	// 			if (brush.stop_input.node().value) {
-	// 				custom_bins_q.first_bin.stop = parseFloat(brush.stop_input.node().value)
-	// 			} else if (!brush.start_input.node().value) throw 'If start is empty, stop is required for first bin.'
-
-	// 			if (startselect.node().selectedIndex == 0) custom_bins_q.first_bin.startinclusive = true
-	// 			else if (custom_bins_q.first_bin.startinclusive) delete custom_bins_q.first_bin.startinclusive
-	// 		}
-
-	// 		//last_bin parameter setup from input
-	// 		else if (bin_flag == 'last') {
-	// 			if (brush.start_input.node().value) {
-	// 				custom_bins_q.last_bin.start = parseFloat(brush.start_input.node().value)
-	// 			} else if (!brush.stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
-
-	// 			if (brush.stop_input.node().value) {
-	// 				delete custom_bins_q.last_bin.stopunbounded
-	// 				custom_bins_q.last_bin.stop = parseFloat(brush.stop_input.node().value)
-	// 			} else {
-	// 				delete custom_bins_q.last_bin.stop
-	// 				delete custom_bins_q.last_bin.stop_percentile
-	// 				custom_bins_q.last_bin.stopunbounded = true
-	// 			}
-
-	// 			if (stopselect.node().selectedIndex == 0) custom_bins_q.last_bin.stopinclusive = true
-	// 			else if (custom_bins_q.last_bin.stopinclusive) delete custom_bins_q.last_bin.stopinclusive
-	// 		}
-	// 		if (self.bins_customized(custom_bins_q, default_bins_q)) {
-	// 			edit_btns_tr.style('display', 'table-row')
-	// 			self.q = custom_bins_q
-	// 		}
-	// 		self.opts.callback({
-	// 			term: self.term,
-	// 			q: self.q
-	// 		})
-	// 	} catch (e) {
-	// 		window.alert(e)
-	// 	}
-	// }
-
-	// 	function update_input() {
-	// 		const new_range = JSON.parse(JSON.stringify(brush.range))
-	// 		new_range.start = brush.input.node().value ? Number(brush.input.node().value) : minvalue.toFixed(1)
-	// 		new_range.stop = brush.input.node().value ? Number(brush.input.node().value) : maxvalue.toFixed(1)
-	// 		if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
-	// 		if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
-	// 		self.num_obj.brushes[0].range = new_range
-	// 		brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
-	// 		self.num_obj.binsize_g.attr('transform', `translate(${xpad}, ${ypad})`)
-	// 		self.addBinSizeLines()
-	// 	}
-	// }
-
 	self.makeRangeButtons = function() {
 		// const range = brush.range
 		// const orig_range = brush.orig
@@ -1650,10 +1466,12 @@ function setInteractivity(self) {
 					brush.range = JSON.parse(JSON.stringify(brush.orig))
 					brush.init()
 				}
-				self.q = default_bins_q
-				self.num_obj.custom_bins_q = default_bins_q
+				self.q = JSON.parse(JSON.stringify(default_bins_q))
+				self.num_obj.custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
 				self.bins_size_edit()
-				self.addBinSizeLines()
+				self.bins_boundries_edit()
+				self.first_bin_edit()
+				self.last_bin_edit()
 				self.num_obj.config_table.edit_btns_tr.style('display', 'none')
 			})
 
@@ -1677,21 +1495,24 @@ function setInteractivity(self) {
 	self.apply_last_bin_change = function(last_bin_edit_div, last_bin_select) {
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
+		const note_td = select(self.num_obj.config_table.last_bin_tr.node().querySelectorAll('td')[2])
 		if (last_bin_select.node().value == 'custom') {
 			//if custom_bin is set, replace default_last_bin with custom_last_bin
 			if (!custom_bins_q.last_bin) {
 				custom_bins_q.last_bin = {}
 			}
-			const last_bin = custom_bins_q.last_bin
+			const last_bin = JSON.parse(JSON.stringify(custom_bins_q.last_bin))
 			if (last_bin) self.q.last_bin = last_bin
 			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'block')
+			note_td.style('display', 'block')
 		} else if (last_bin_select.node().value == 'auto') {
 			//if default_last_bin is empty, delete last_bin
 			const last_bin = default_bins_q.last_bin
 			if (last_bin) self.q.last_bin = last_bin
 			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'none')
+			note_td.style('display', 'none')
 			// last_bin_select.style('display','block')
 		}
 	}
