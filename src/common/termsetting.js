@@ -1005,9 +1005,9 @@ function setInteractivity(self) {
 				// 	.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
 
 				// //update 'apply' and 'reset' buttons based on brush change
-				self.num_obj.config_table.edit_btns_tr.style(
+				self.num_obj.config_table.reset_btn.style(
 					'display',
-					similarRanges && !self.bins_customized() ? 'none' : 'table-row'
+					similarRanges && !self.bins_customized() ? 'none' : 'inline-block'
 				)
 
 				// // hide start and stop text and relation symbols if brush moved
@@ -1286,7 +1286,7 @@ function setInteractivity(self) {
 				brush.input.property('disabled', true)
 				try {
 					if (brush.input.node().value < minvalue) throw 'entered value is lower than minimum value'
-					update_first_bin()
+					self.update_first_bin(brush)
 				} catch (e) {
 					window.alert(e)
 				}
@@ -1303,15 +1303,19 @@ function setInteractivity(self) {
 			.style('margin-left', '1px')
 			.style('color', '#858585')
 			.html('<b>Left</b>-side gray box indicates the first bin. <br> Drag to change its size.')
+	}
 
-		function update_first_bin() {
-			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.stop = parseFloat(brush.input.node().value)
-			self.num_obj.brushes[0].range = new_range
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [minvalue, new_range.stop].map(xscale))
-			self.num_obj.binsize_g.attr('transform', `translate(${xpad}, ${ypad})`)
-			self.addBinSizeLines()
-		}
+	self.update_first_bin = function(brush){
+		const new_range = JSON.parse(JSON.stringify(brush.range))
+		const plot_size = self.num_obj.plot_size
+		new_range.stop = parseFloat(brush.input.node().value)
+		self.num_obj.brushes[0].range = new_range
+		brush.elem.call(brush.d3brush).call(
+				brush.d3brush.move, 
+				[self.num_obj.density_data.minvalue, new_range.stop].map(self.num_obj.xscale)
+			)
+		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
+		self.addBinSizeLines()
 	}
 
 	self.last_bin_edit = function() {
@@ -1358,7 +1362,7 @@ function setInteractivity(self) {
 				brush.input.property('disabled', true)
 				try {
 					if (brush.input.node().value < minvalue) throw 'entered value is lower than minimum value'
-					update_last_bin()
+					self.update_last_bin(brush)
 				} catch (e) {
 					window.alert(e)
 				}
@@ -1409,26 +1413,30 @@ function setInteractivity(self) {
 		} else {
 			last_bin_edit_div.style('display', 'block')
 		}
+	}
 
-		function update_last_bin() {
-			const new_range = JSON.parse(JSON.stringify(brush.range))
+	self.update_last_bin = function(brush){
+		const new_range = JSON.parse(JSON.stringify(brush.range))
+		const plot_size = self.num_obj.plot_size
 			new_range.start = parseFloat(brush.input.node().value)
 			if (!self.num_obj.brushes[1]) {
 				self.num_obj.brushes[1] = brush
 				self.addBrushes()
 			}
 			self.num_obj.brushes[1].range = new_range
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, maxvalue].map(xscale))
-			self.num_obj.binsize_g.attr('transform', `translate(${xpad}, ${ypad})`)
+			brush.elem.call(
+				brush.d3brush).call(brush.d3brush.move, 
+				[new_range.start, self.num_obj.density_data.maxvalue].map(self.num_obj.xscale)
+			)
+			self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
 			self.addBinSizeLines()
-		}
 	}
 
 	self.makeRangeButtons = function() {
 		// const range = brush.range
 		// const orig_range = brush.orig
 		// const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
-		const custom_bins_q = self.num_obj.custom_bins_q
+		// let custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
@@ -1466,22 +1474,28 @@ function setInteractivity(self) {
 					brush.range = JSON.parse(JSON.stringify(brush.orig))
 					brush.init()
 				}
-				self.q = JSON.parse(JSON.stringify(default_bins_q))
-				self.num_obj.custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
+				self.q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
+				self.num_obj.custom_bins_q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
+				self.num_obj.brushes[0].range.stop = default_bins_q.first_bin.stop
+				if(self.num_obj.brushes[1]) self.num_obj.brushes[1].range.start = default_bins_q.last_bin.start
 				self.bins_size_edit()
+				self.addBinSizeLines()
 				self.bins_boundries_edit()
 				self.first_bin_edit()
+				self.update_first_bin(self.num_obj.brushes[0])
 				self.last_bin_edit()
-				self.num_obj.config_table.edit_btns_tr.style('display', 'none')
+				if(self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
+				self.num_obj.config_table.reset_btn.style('display', 'none')
 			})
 
 		async function apply() {
 			try {
+				const custom_bins_q = JSON.parse(JSON.stringify(self.num_obj.custom_bins_q))
 				custom_bins_q.first_bin = JSON.parse(JSON.stringify(self.num_obj.brushes[0].range))
-				if (custom_bins_q.first_bin.start == minvalue.toFixed(1)) delete custom_bins_q.first_bin.start
+				// if (custom_bins_q.first_bin.start == minvalue.toFixed(1)) delete custom_bins_q.first_bin.start
 				custom_bins_q.last_bin =
 					self.num_obj.brushes.length > 1 ? JSON.parse(JSON.stringify(self.num_obj.brushes[1].range)) : undefined
-				self.q = custom_bins_q
+				self.q = JSON.parse(JSON.stringify(custom_bins_q))
 				self.opts.callback({
 					term: self.term,
 					q: self.q
