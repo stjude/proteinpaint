@@ -83,15 +83,7 @@ class Filter {
 				// reset interaction-related styling
 				this.removeBlankPill()
 				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', d => {
-					if (this.filter.lst[0] && this.filter.lst[0].renderAs == 'htmlSelect') {
-						// assume that select dropdown filters are always joined via intersection with other filters
-						return this.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
-					} else {
-						return this.filter.lst.length > 0 && this.filter.join !== d ? 'inline-block' : 'none'
-					}
-				})
-
+				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
 				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 				this.updateUI(this.dom.filterContainer, this.filter)
 			},
@@ -300,6 +292,7 @@ function setRenderers(self) {
 				return
 			self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 			self.removeBlankPill()
+			this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
 		})
 	}
 
@@ -531,6 +524,15 @@ function setRenderers(self) {
 			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
 		)
 	}
+
+	self.getAddTransformerBtnDisplay = function(d) {
+		if (self.filter.lst[0] && self.filter.lst[0].renderAs == 'htmlSelect') {
+			// assume that select dropdown filters are always joined via intersection with other filters
+			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
+		} else {
+			return self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
+		}
+	}
 }
 
 function setInteractivity(self) {
@@ -665,7 +667,7 @@ function setInteractivity(self) {
 				.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', 'inline-block')
+				.style('display', self.filter.lst.length > 1 ? 'inline-block' : 'none')
 		}
 	}
 
@@ -692,16 +694,22 @@ function setInteractivity(self) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		self.dom.isNotInput.property('checked', !self.filter.in)
-		if (self.filter.lst.length > 1) {
+		if (self.filter.lst.length > 0) {
 			self.activeData = {
 				item: self.filter,
 				filter: self.filter,
 				elem: self.dom.filterContainer.node(), //.select(':scope > .sja_filter_grp').node()
 				btn: this
 			}
-			self.resetBlankPill('join')
 		}
-		self.dom.treeTip.clear().showunder(this)
+		if (self.filter.lst.length) self.resetBlankPill('join')
+		const blankPill = self.dom.filterContainer.select('.sja_filter_blank_pill').node()
+		if (blankPill) {
+			self.dom.holder.selectAll('.sja_filter_add_transformer').style('display', 'none')
+			self.dom.treeTip.clear().showunder(blankPill)
+		} else {
+			self.dom.treeTip.clear().showunder(this)
+		}
 
 		appInit(null, {
 			holder: self.dom.treeBody,
@@ -778,8 +786,12 @@ function setInteractivity(self) {
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
+		self.dom.controlsTip.hide()
 		select(elem).style('background-color', MENU_OPTION_HIGHLIGHT_COLOR)
-		self.dom.treeTip.clear().showunderoffset(elem.lastChild)
+		self.dom.holder.selectAll('.sja_filter_add_transformer').style('display', 'none')
+		const blankPill = self.dom.filterContainer.select('.sja_filter_blank_pill').node()
+		if (blankPill) self.dom.treeTip.clear().showunder(blankPill)
+		else self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		const filter = self.activeData.filter
 
 		appInit(null, {

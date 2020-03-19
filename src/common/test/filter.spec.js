@@ -445,8 +445,8 @@ tape('add-transformer button interaction, 1-pill', async test => {
 	)
 	test.equal(
 		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
-		0,
-		'should create no blank pills when clicking on a one-pill root add-transformer'
+		1,
+		'should create one blank pill when clicking on a one-pill root add-transformer'
 	)
 	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
 	await addDemographicSexFilter(opts, adder)
