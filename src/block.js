@@ -12,6 +12,7 @@ import blockinit from './block.init'
 import * as Legend from './block.legend'
 
 // track types
+import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
 import { pgvfromtemplate, pgvmaketk, pgvload } from './block.tk.pgv.adaptor'
 import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction'
 import { bampilefromtemplate, bampilemaketk, bampileload } from './block.tk.bampile'
@@ -2232,6 +2233,13 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.bam:
+				const e12 = bamfromtemplate(tk, template)
+				if (e12) {
+					this.error(e12)
+					return
+				}
+				break
 			case client.tkt.usegm:
 				gmtkfromtemplate(tk)
 				break
@@ -2420,6 +2428,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.pgv:
 				pgvmaketk(tk, this)
+				break
+			case client.tkt.bam:
+				bammaketk(tk, this)
 				break
 			case client.tkt.usegm:
 				gmtkmaketk(tk, this)
@@ -2755,6 +2766,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.pgv:
 				pgvload(tk, this)
+				break
+			case client.tkt.bam:
+				bamload(tk, this)
 				break
 			case client.tkt.ds:
 				const hd = this.ds2handle[tk.name]
