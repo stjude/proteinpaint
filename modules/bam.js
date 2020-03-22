@@ -8,7 +8,12 @@ const readline = require('readline')
 const basecolor = require('../src/common.js').basecolor
 
 /*
- */
+TODO
+draw line between segments
+if ntwidth>4:
+	print mismatching nt
+	show base quality
+*/
 const fcolor = '#d3d3d3'
 const rcolor = '#D7F1D5'
 
@@ -57,6 +62,7 @@ async function do_query(genome, req) {
 	const regions = JSON.parse(req.query.regions)
 	for (const r of regions) {
 		await query_region(r, q)
+		r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
 	}
@@ -99,6 +105,13 @@ async function do_query(genome, req) {
 		nochr: q.nochr
 	}
 	return result
+}
+
+async function get_refseq(g, coord) {
+	const tmp = await utils.get_fasta(g, coord)
+	const l = tmp.split('\n')
+	l.shift()
+	return l.join('').toUpperCase()
 }
 
 function query_region(r, q) {
@@ -200,8 +213,8 @@ function parse_one_segment(line, r, ridx) {
 						opr: 'M',
 						start: pos,
 						len
-						// is match, no need to provide seq
 					})
+					get_mismatch(boxes, r, pos, s)
 				}
 				pos += len
 				break
@@ -274,6 +287,27 @@ function parse_one_segment(line, r, ridx) {
 		ridx
 	}
 	return segment
+}
+
+function get_mismatch(boxes, r, pos, readseq) {
+	// pos: absolute start position of this read chunck
+	// readseq: sequence of this read chunck
+	for (let i = 0; i < readseq.length; i++) {
+		if (pos + i < r.start || pos + i > r.stop) {
+			// to skip bases beyond view range
+			continue
+		}
+		const readnt = readseq[i]
+		const refnt = r.referenceseq[pos + i - r.start]
+		if (refnt != readnt.toUpperCase()) {
+			boxes.push({
+				opr: 'X', // mismatch
+				start: pos + i,
+				len: 1,
+				s: readnt
+			})
+		}
+	}
 }
 
 function render_template(ctx, template, q, regions) {
