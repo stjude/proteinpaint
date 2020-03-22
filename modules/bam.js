@@ -5,7 +5,7 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
-const basecolor = require('../src/common.js').basecolor
+//const basecolor = require('../src/common.js').basecolor
 
 /*
 TODO
@@ -13,26 +13,47 @@ draw line between segments
 if ntwidth>4:
 	print mismatching nt
 	show base quality
+
+no region size restriction
+render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
+then show an alert row on top
+
+template {}
+  .start
+  .stop
+  .segments[]
+
+segment {}
+  .qname
+  .boxes[]
+  .forward
+  .ridx
+  .x2  // screen px
+
+box {}
+  .opr
+  .start // absolute bp
+  .len   // #bp
+  .s (read sequence)
 */
-const fcolor = '#d3d3d3'
-const rcolor = '#D7F1D5'
+const fcolor = 'rgb(88,88,88)'
+const color_i = 88
+const mismatchbg = 'rgb(223,92,97)' // for only filling mismatch box without quality and nt
+const softclipbg = 'rgb(198,153,114)' // for only filling softclip box without quality and nt
+const mismatchtextcolor = 'rgb(255,29,17)' // for text color of mismatching nt but with graying background
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
 
 module.exports = genomes => {
 	return async (req, res) => {
-		//if(app.reqbodyisinvalidjson(req,res)) return
+		app.log(req)
 		try {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			if (!req.query.regions) throw '.regions[] missing'
-			if (!req.query.stackheight) throw '.stackheight missing'
-			req.query.stackheight = Number.parseInt(req.query.stackheight)
-			if (Number.isNaN(req.query.stackheight)) throw '.stackheight not integer'
-			if (req.query.nochr) req.query.nochr = JSON.parse(req.query.nochr)
-			const result = await do_query(genome, req)
+			const q = await get_q(genome, req)
+			const result = await do_query(q)
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -41,7 +62,36 @@ module.exports = genomes => {
 	}
 }
 
-async function do_query(genome, req) {
+async function do_query(q) {
+	for (const r of q.regions) {
+		await query_region(r, q)
+	}
+
+	const templates = parse_all_reads(q.regions)
+	console.log(q.regions.reduce((i, j) => i + j.lines.length, 0), 'reads', templates.length, 'templates')
+
+	const stacks = do_stack(q, templates)
+
+	const canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
+	const canvasheight = stacks.length * (q.stackheight + q.stackspace)
+	const canvas = createCanvas(canvaswidth, canvasheight)
+	const ctx = canvas.getContext('2d')
+	ctx.textAlign = 'center'
+	ctx.textBaseline = 'middle'
+	for (const template of templates) {
+		render_template(ctx, template, q)
+	}
+
+	const result = {
+		src: canvas.toDataURL(),
+		width: canvaswidth,
+		height: canvasheight,
+		nochr: q.nochr
+	}
+	return result
+}
+
+async function get_q(genome, req) {
 	const [e, _file, isurl] = app.fileurl(req)
 	if (e) throw e
 	// a query object to collect all the bits
@@ -54,24 +104,37 @@ async function do_query(genome, req) {
 		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
 	}
 
-	q.nochr = req.query.nochr
-	if (q.nochr == undefined) {
+	if (!req.query.stackheight) throw '.stackheight missing'
+	q.stackheight = Number.parseInt(req.query.stackheight)
+	if (Number.isNaN(q.stackheight)) throw '.stackheight not integer'
+	if (!req.query.stackspace) throw '.stackspace missing'
+	q.stackspace = Number.parseInt(req.query.stackspace)
+	if (Number.isNaN(q.stackspace)) throw '.stackspace not integer'
+
+	if (req.query.nochr) {
+		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
+	} else {
+		// info not provided, first time loading
 		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
 	}
-
-	const regions = JSON.parse(req.query.regions)
-	for (const r of regions) {
-		await query_region(r, q)
-		r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
+	if (!req.query.regions) throw '.regions[] missing'
+	q.regions = JSON.parse(req.query.regions)
+	for (const r of q.regions) {
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
+		// based on resolution, decide if to do following
+		if (r.ntwidth >= 0.5) {
+			r.to_checkmismatch = true
+			r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
+		}
+		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
+		r.to_qual = r.ntwidth >= 2
 	}
+	return q
+}
 
-	const qname2template = parse_all_reads(regions)
-	console.log(regions.reduce((i, j) => i + j.lines.length, 0), 'reads', qname2template.size, 'templates')
-
-	// do stacking
-	const templates = [...qname2template.values()].sort((i, j) => i.start - j.start)
+function do_stack(q, templates) {
+	templates.sort((i, j) => i.start - j.start)
 	const stacks = [] // each value is stop coord of each stack
 	for (const template of templates) {
 		// {start, stop, segments}
@@ -87,24 +150,9 @@ async function do_query(genome, req) {
 			stackidx = stacks.length
 			stacks[stackidx] = template.stop
 		}
-		template.y = stackidx * q.query.stackheight
+		template.y = stackidx * (q.stackheight + q.stackspace)
 	}
-
-	const canvaswidth = regions[regions.length - 1].x + regions[regions.length - 1].width
-	const canvasheight = stacks.length * q.query.stackheight
-	const canvas = createCanvas(canvaswidth, canvasheight)
-	const ctx = canvas.getContext('2d')
-	for (const template of qname2template.values()) {
-		render_template(ctx, template, q, regions)
-	}
-
-	const result = {
-		src: canvas.toDataURL(),
-		width: canvaswidth,
-		height: canvasheight,
-		nochr: q.nochr
-	}
-	return result
+	return stacks
 }
 
 async function get_refseq(g, coord) {
@@ -141,7 +189,6 @@ function parse_all_reads(regions) {
 	// parse reads from all regions
 	// a template with segments possibly from multiple regions
 	const qname2template = new Map()
-	// one item for each template (read pair)
 	// key: qname
 	// value: template, a list of segments
 	for (let i = 0; i < regions.length; i++) {
@@ -149,23 +196,26 @@ function parse_all_reads(regions) {
 		for (const line of r.lines) {
 			const segment = parse_one_segment(line, r, [i])
 			if (!segment || !segment.qname) continue
-			const lastbox = segment.boxes[segment.boxes.length - 1]
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
 				// add this segment to existing template
 				temp.segments.push(segment)
-				temp.stop = lastbox.start + lastbox.len
+				temp.stop = segmentstop(segment.boxes)
 			} else {
 				qname2template.set(segment.qname, {
 					start: segment.boxes[0].start,
-					stop: lastbox.start + lastbox.len,
+					stop: segmentstop(segment.boxes),
 					segments: [segment]
 				})
 			}
 		}
 	}
-	return qname2template
+	console.log(qmin, qmax)
+	return [...qname2template.values()]
 }
+
+let qmin = 0,
+	qmax = 0
 
 function parse_one_segment(line, r, ridx) {
 	// line
@@ -175,14 +225,27 @@ function parse_one_segment(line, r, ridx) {
 	const boxes = []
 	const qname = l[0],
 		flag = l[2 - 1],
+		segstart = Number.parseInt(l[4 - 1]) - 1, // change to 0-based
 		cigarstr = l[6 - 1],
 		rnext = l[7 - 1],
 		pnext = l[8 - 1],
-		seq = l[10 - 1]
-	let pos = Number.parseInt(l[4 - 1]) - 1, // change to 0-based
-		stop = r.start,
-		prev = 0,
-		cum = 0
+		seq = l[10 - 1],
+		qual = l[11 - 1]
+
+	let quallst = []
+	if (r.to_qual) {
+		// convert bp quality
+		for (let i = 0; i < qual.length; i++) {
+			const v = qual[i].charCodeAt(0) - 33
+			qmin = Math.min(qmin, v)
+			qmax = Math.max(qmax, v)
+			quallst.push(v)
+		}
+	}
+	let pos = segstart,
+		prev = 0, // cigar char offset
+		cum = 0 // read seq offset
+
 	for (let i = 0; i < cigarstr.length; i++) {
 		const cigar = cigarstr[i]
 		if (cigar.match(/[0-9]/)) continue
@@ -190,15 +253,19 @@ function parse_one_segment(line, r, ridx) {
 			// ignore
 			continue
 		}
+		// read bp length of this part
 		const len = Number.parseInt(cigarstr.substring(prev, i))
+		// read seq of this part
 		let s = ''
 		if (cigar == 'N') {
 			// no seq
 		} else if (cigar == 'P' || cigar == 'D') {
 			// padding or del, no sequence in read
+			/*
 			for (let j = 0; j < len; j++) {
 				s += '*'
 			}
+			*/
 		} else {
 			s = seq.substr(cum, len)
 			cum += len
@@ -209,23 +276,30 @@ function parse_one_segment(line, r, ridx) {
 			case 'M':
 				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
 					// visible
-					boxes.push({
+					const b = {
 						opr: 'M',
 						start: pos,
 						len
-					})
-					get_mismatch(boxes, r, pos, s)
+					}
+					if (r.to_printnt) b.s = s
+					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+					boxes.push(b)
+					if (r.to_checkmismatch) {
+						check_mismatch(boxes, r, pos, s, quallst, cum)
+					}
 				}
 				pos += len
 				break
 			case 'I':
 				if (pos > r.start && pos < r.stop) {
-					boxes.push({
+					const b = {
 						opr: 'I',
 						start: pos,
 						len,
 						s
-					})
+					}
+					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+					boxes.push(b)
 				}
 				break
 			case 'D':
@@ -233,8 +307,7 @@ function parse_one_segment(line, r, ridx) {
 					boxes.push({
 						opr: 'D',
 						start: pos,
-						len,
-						s
+						len
 					})
 				}
 				pos += len
@@ -244,8 +317,7 @@ function parse_one_segment(line, r, ridx) {
 					boxes.push({
 						opr: 'N',
 						start: pos,
-						len,
-						s
+						len
 					})
 				}
 				pos += len
@@ -253,23 +325,27 @@ function parse_one_segment(line, r, ridx) {
 			case 'X':
 			case 'S':
 				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					boxes.push({
+					const b = {
 						opr: cigar,
 						start: pos,
 						len,
 						s
-					})
+					}
+					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+					boxes.push(b)
 				}
 				pos += len
 				break
 			case 'P':
 				if (pos > r.start && pos < r.stop) {
-					boxes.push({
+					const b = {
 						opr: 'P',
 						start: pos,
 						len,
 						s
-					})
+					}
+					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+					boxes.push(b)
 				}
 				break
 			default:
@@ -284,14 +360,20 @@ function parse_one_segment(line, r, ridx) {
 		qname,
 		boxes,
 		forward: !(flag & 0x10),
-		ridx
+		ridx,
+		x2: r.x + r.scale(segmentstop(boxes)) // x stop position, for drawing connect line
 	}
 	return segment
 }
 
-function get_mismatch(boxes, r, pos, readseq) {
+function segmentstop(boxes) {
+	return Math.max(...boxes.map(i => i.start + i.len))
+}
+
+function check_mismatch(boxes, r, pos, readseq, quallst, cum) {
 	// pos: absolute start position of this read chunck
 	// readseq: sequence of this read chunck
+	// quallst, cum: for getting quality of mismatching base
 	for (let i = 0; i < readseq.length; i++) {
 		if (pos + i < r.start || pos + i > r.stop) {
 			// to skip bases beyond view range
@@ -300,36 +382,51 @@ function get_mismatch(boxes, r, pos, readseq) {
 		const readnt = readseq[i]
 		const refnt = r.referenceseq[pos + i - r.start]
 		if (refnt != readnt.toUpperCase()) {
-			boxes.push({
+			const b = {
 				opr: 'X', // mismatch
 				start: pos + i,
 				len: 1,
 				s: readnt
-			})
+			}
+			if (r.to_qual) b.qual = [quallst[cum]]
+			boxes.push(b)
 		}
 	}
 }
 
-function render_template(ctx, template, q, regions) {
+function render_template(ctx, template, q) {
 	// segments: a list of segments consisting this template, maybe at different regions
-	const fontsize = q.query.stackheight
+	const fontsize = q.stackheight
 	//ctx.font = fontsize + 'px arial'
 	//ctx.textBaseline = 'middle'
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
-		plot_segment(ctx, seg, template.y, q, regions)
+		plot_segment(ctx, seg, template.y, q)
 		if (i > 0) {
+			// this segment is not the first of the list
+			const currentr = q.regions[seg.ridx]
+			const currentx = currentr.x + currentr.scale(seg.boxes[0].start)
 			const prevseg = template.segments[i - 1]
-			//const prevlastbox =
+			if (prevseg.x2 < currentx) {
+				const y = Math.floor(template.y + q.stackheight / 2) + 0.5
+				ctx.strokeStyle = fcolor
+				ctx.beginPath()
+				ctx.moveTo(prevseg.x2, y)
+				ctx.lineTo(currentx, y)
+				ctx.stroke()
+			}
 		}
 	}
 }
 
-function plot_segment(ctx, segment, y, q, regions) {
-	const r = regions[segment.ridx] // this region where the segment falls into
+function plot_segment(ctx, segment, y, q) {
+	const r = q.regions[segment.ridx] // this region where the segment falls into
 	// what if segment spans multiple regions
 
-	let xstop = 0
+	if (r.to_printnt) {
+		ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
+	}
+
 	segment.boxes.forEach(b => {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P') {
@@ -341,27 +438,53 @@ function plot_segment(ctx, segment, y, q, regions) {
 			return
 		}
 		if (b.opr == 'N') {
-			ctx.strokeStyle = fcolor //segment.forward ? fcolor : rcolor
-			const y2 = Math.floor(y + q.query.stackheight / 2) + 0.5
+			ctx.strokeStyle = fcolor // may use blue line
+			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
 			ctx.beginPath()
 			ctx.moveTo(x, y2)
 			ctx.lineTo(x + b.len * r.ntwidth, y2)
 			ctx.stroke()
-			xstop = x + b.len * r.ntwidth
 			return
 		}
 		if (b.opr == 'X' || b.opr == 'S') {
-			//ctx.fillStyle = 'white'
-			//ctx.fillText(b.s, x, y + fontsize / 2)
-			for (let j = 0; j < b.s.length; j++) {
-				ctx.fillStyle = basecolor[b.s[j]] || 'black'
-				ctx.fillRect(x + r.ntwidth * j, y, r.ntwidth, q.query.stackheight)
+			if (r.to_printnt) {
+				// draw background with basepair quality, print letter on top
+				for (let i = 0; i < b.s.length; i++) {
+					ctx.fillStyle = qual2bgcolor(b.qual[i])
+					ctx.fillRect(x + r.ntwidth * i, y, r.ntwidth, q.stackheight)
+					ctx.fillStyle = mismatchtextcolor
+					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
+				}
+			} else {
+				ctx.fillStyle = b.opr == 'X' ? mismatchbg : softclipbg
+				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
 			}
 			return
 		}
 		// match
-		ctx.fillStyle = fcolor // segment.forward ? fcolor : rcolor
-		ctx.fillRect(x, y, b.len * r.ntwidth, q.query.stackheight)
-		xstop = x + b.len * r.ntwidth
+		if (r.to_qual) {
+			for (let i = 0; i < b.qual.length; i++) {
+				ctx.fillStyle = qual2bgcolor(b.qual[i])
+				ctx.fillRect(x + i * r.ntwidth, y, r.ntwidth, q.stackheight)
+			}
+		} else {
+			// not showing qual, one box
+			ctx.fillStyle = fcolor
+			ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
+		}
+		/*
+		if(r.to_printnt) {
+			ctx.fillStyle = 'white'
+			for(let i=0; i<b.s.length; i++) {
+				ctx.fillText(b.s[i], x+r.ntwidth*(i+.5), y+q.stackheight/2)
+			}
+		}
+		*/
 	})
+}
+
+function qual2bgcolor(v) {
+	if (v > 40) console.log('big', v)
+	const c = Math.ceil(255 - (255 - color_i) * (v / 40))
+	return 'rgb(' + c + ',' + c + ',' + c + ')'
 }

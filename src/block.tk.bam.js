@@ -73,7 +73,12 @@ export async function loadTk(tk, block) {
 }
 
 async function getData(tk, block) {
-	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), 'stackheight=' + tk.stackheight]
+	const lst = [
+		'genome=' + block.genome.name,
+		'regions=' + JSON.stringify(tk.regions),
+		'stackheight=' + tk.stackheight,
+		'stackspace=' + tk.stackspace
+	]
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
@@ -104,6 +109,7 @@ function makeTk(tk, block) {
 	delete tk.uninitialized
 	tk.img = tk.glider.append('image')
 	if (!tk.stackheight) tk.stackheight = 13 // make it dependent on range size
+	if (!tk.stackspace) tk.stackspace = 1
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 
