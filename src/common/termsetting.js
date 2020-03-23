@@ -834,11 +834,55 @@ function setInteractivity(self) {
 			console.log(err)
 		}
 
+		//div for 'fix_bins' and 'custom_bins'
+		const bins_div = div.append('div').style('padding', '5px')
+
+		const fixed_radio_btn = bins_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'fix')
+			.attr('name', 'bins_type')
+			.attr('value', 'fix')
+			.property('checked', 'true')
+			.on('change', () => {
+				fixed_bins_div.style('display', fixed_radio_btn.node().checked ? 'block' : 'none')
+			})
+
+		bins_div
+			.append('label')
+			.attr('for', 'fix')
+			.style('padding-left', '10px')
+			.style('padding-right', '10px')
+			.html('Use regular-sized bins</br>')
+
+		const fixed_bins_div = bins_div.append('div')
+
+		const custom_radio_btn = bins_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'custom')
+			.attr('name', 'bins_type')
+			.attr('value', 'custom')
+			.on('change', () => {
+				fixed_bins_div.style('display', custom_radio_btn.node().checked ? 'none' : 'block')
+			})
+
+		bins_div
+			.append('label')
+			.attr('for', 'custom')
+			.style('padding-left', '10px')
+			.style('padding-right', '10px')
+			.html('Use custom bin set')
+
 		// config table with inputs
-		self.num_obj.config_table = div
+		self.num_obj.config_table = fixed_bins_div
 			.append('table')
 			.style('border-spacing', '7px')
+			.style('margin', '10px')
+			.style('margin-left', '20px')
+			.style('padding-left', '5px')
 			.style('border-collapse', 'separate')
+			.style('border-left', '1px solid #eee')
 
 		self.addDefaultBinsTable()
 		self.num_obj.brushes.forEach(brush => brush.init())
@@ -1123,22 +1167,6 @@ function setInteractivity(self) {
 		//Last Bin edit row
 		config_table.last_bin_tr = config_table.append('tr')
 
-		// note for users to press enter to make changes to bins
-		// const note_tr = config_table.append('tr')
-
-		// note_tr.append('td')
-
-		// note_tr
-		// 	.append('td')
-		// 	.append('div')
-		// 	.style('font-size', '.6em')
-		// 	.style('margin-left', '10px')
-		// 	.style('color', '#858585')
-		// 	.text(
-		// 		'Note: Press ENTER to update.' +
-		// 			(!self.opts.disable_ReplaceRemove ? ' To Replace/Update use following buttons.' : '')
-		// 	)
-
 		//TODO: 'reset to default' - can be click menu option or remove if unnecessary
 		// reset row with 'reset to default' button if any changes detected
 		self.num_obj.config_table.edit_btns_tr = self.num_obj.config_table.append('tr')
@@ -1305,15 +1333,14 @@ function setInteractivity(self) {
 			.html('<b>Left</b>-side gray box indicates the first bin. <br> Drag to change its size.')
 	}
 
-	self.update_first_bin = function(brush){
+	self.update_first_bin = function(brush) {
 		const new_range = JSON.parse(JSON.stringify(brush.range))
 		const plot_size = self.num_obj.plot_size
 		new_range.stop = parseFloat(brush.input.node().value)
 		self.num_obj.brushes[0].range = new_range
-		brush.elem.call(brush.d3brush).call(
-				brush.d3brush.move, 
-				[self.num_obj.density_data.minvalue, new_range.stop].map(self.num_obj.xscale)
-			)
+		brush.elem
+			.call(brush.d3brush)
+			.call(brush.d3brush.move, [self.num_obj.density_data.minvalue, new_range.stop].map(self.num_obj.xscale))
 		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
 		self.addBinSizeLines()
 	}
@@ -1337,7 +1364,7 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.html('Last Bin Start')
 
-		const last_bin_td = self.num_obj.config_table.last_bin_tr.append('td')
+		const last_bin_td = self.num_obj.config_table.last_bin_tr.append('td').style('padding-left', '15px')
 
 		const last_bin_select_div = last_bin_td.append('div')
 
@@ -1349,6 +1376,7 @@ function setInteractivity(self) {
 			.append('div')
 			.style('font-size', '.6em')
 			.style('margin-left', '1px')
+			.style('padding-top', '30px')
 			.style('color', '#858585')
 			.html('<b>Right</b>-side gray box indicates the last bin. <br> Drag to change its size.')
 
@@ -1370,13 +1398,30 @@ function setInteractivity(self) {
 			})
 
 		// if last bin is not defined, it will be auto, can be edited from dropdown
-		const last_bin_select = last_bin_select_div
-			.append('select')
-			.style('margin-left', '15px')
-			.style('margin-bottom', '7px')
+		// const last_bin_select = last_bin_select_div
+		// 	.append('select')
+		// 	.style('margin-left', '15px')
+		// 	.style('margin-bottom', '7px')
+		// 	.on('change', () => {
+		// 		self.apply_last_bin_change(last_bin_edit_div, last_bin_select)
+		// 		if (last_bin_select.node().value == 'auto') {
+		// 			self.opts.callback({
+		// 				term: self.term,
+		// 				q: self.q
+		// 			})
+		// 		}
+		// 	})
+
+		const auto_radio_btn = last_bin_select_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'auto')
+			.attr('name', 'last_bin_opt')
+			.attr('value', 'auto')
+			.property('checked', 'true')
 			.on('change', () => {
-				self.apply_last_bin_change(last_bin_edit_div, last_bin_select)
-				if (last_bin_select.node().value == 'auto') {
+				self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
+				if (auto_radio_btn.node().checked == true) {
 					self.opts.callback({
 						term: self.term,
 						q: self.q
@@ -1384,26 +1429,40 @@ function setInteractivity(self) {
 				}
 			})
 
-		last_bin_select
-			.append('option')
-			.attr('value', 'auto')
-			.html('Auto')
+		last_bin_select_div
+			.append('label')
+			.attr('for', 'auto')
+			.style('padding-left', '10px')
+			.style('padding-right', '10px')
+			.html('Auto<br>')
 
-		last_bin_select
-			.append('option')
+		const custom_radio_btn = last_bin_select_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'custom')
+			.attr('name', 'last_bin_opt')
 			.attr('value', 'custom')
+			.style('margin-top', '10px')
+			.on('change', () => {
+				self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
+			})
+
+		last_bin_select_div
+			.append('label')
+			.attr('for', 'custom')
+			.style('padding-left', '10px')
 			.html('Custom Bin')
 
 		if (
 			!custom_bins_q.last_bin ||
 			(Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object)
 		) {
-			last_bin_select.node().selectedIndex = 0
+			auto_radio_btn.node().checked = true
 		} else if (JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)) {
-			last_bin_select.node().selectedIndex = 1
+			custom_radio_btn.node().checked = true
 		}
 
-		self.apply_last_bin_change(last_bin_edit_div, last_bin_select)
+		self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
 
 		if (
 			!default_bins_q.last_bin ||
@@ -1415,38 +1474,38 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.update_last_bin = function(brush){
+	self.update_last_bin = function(brush) {
 		const new_range = JSON.parse(JSON.stringify(brush.range))
 		const plot_size = self.num_obj.plot_size
-			new_range.start = parseFloat(brush.input.node().value)
-			if (!self.num_obj.brushes[1]) {
-				self.num_obj.brushes[1] = brush
-				self.addBrushes()
-			}
-			self.num_obj.brushes[1].range = new_range
-			brush.elem.call(
-				brush.d3brush).call(brush.d3brush.move, 
-				[new_range.start, self.num_obj.density_data.maxvalue].map(self.num_obj.xscale)
-			)
-			self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
-			self.addBinSizeLines()
+		new_range.start = parseFloat(brush.input.node().value)
+		if (!self.num_obj.brushes[1]) {
+			self.num_obj.brushes[1] = brush
+			self.addBrushes()
+		}
+		self.num_obj.brushes[1].range = new_range
+		brush.elem
+			.call(brush.d3brush)
+			.call(brush.d3brush.move, [new_range.start, self.num_obj.density_data.maxvalue].map(self.num_obj.xscale))
+		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
+		self.addBinSizeLines()
 	}
 
 	self.makeRangeButtons = function() {
-		// const range = brush.range
-		// const orig_range = brush.orig
-		// const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 		// let custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
+		let similarRanges = false
+		for (const brush of self.num_obj.brushes) {
+			similarRanges = JSON.stringify(brush.range) == JSON.stringify(brush.orig)
+		}
 
 		const buttons_td = self.num_obj.config_table.edit_btns_tr.append('td').attr('colspan', 2)
 		//'Apply' button
 		self.num_obj.config_table.apply_btn = buttons_td
 			.append('div')
 			.attr('class', 'sja_filter_tag_btn apply_btn')
-			// .style('display', !self.bins_customized() || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			// .style('display', similarRanges || !self.bins_customized() ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin-left', '10px')
 			.style('text-align', 'center')
@@ -1462,7 +1521,7 @@ function setInteractivity(self) {
 		self.num_obj.config_table.reset_btn = buttons_td
 			.append('div')
 			.attr('class', 'sja_filter_tag_btn reset_btn')
-			// .style('display', !self.bins_customized() || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			.style('display', similarRanges || !self.bins_customized() ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin-left', '10px')
 			.style('text-align', 'center')
@@ -1477,14 +1536,16 @@ function setInteractivity(self) {
 				self.q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
 				self.num_obj.custom_bins_q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
 				self.num_obj.brushes[0].range.stop = default_bins_q.first_bin.stop
-				if(self.num_obj.brushes[1]) self.num_obj.brushes[1].range.start = default_bins_q.last_bin.start
+				if (self.num_obj.brushes[1] && default_bins_q.last_bin)
+					self.num_obj.brushes[1].range.start = default_bins_q.last_bin.start
+				else delete self.num_obj.brushes[1]
 				self.bins_size_edit()
 				self.addBinSizeLines()
 				self.bins_boundries_edit()
 				self.first_bin_edit()
 				self.update_first_bin(self.num_obj.brushes[0])
 				self.last_bin_edit()
-				if(self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
+				if (self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
 				self.num_obj.config_table.reset_btn.style('display', 'none')
 			})
 
@@ -1506,11 +1567,11 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.apply_last_bin_change = function(last_bin_edit_div, last_bin_select) {
+	self.apply_last_bin_change = function(last_bin_edit_div, auto_radio_btn) {
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
 		const note_td = select(self.num_obj.config_table.last_bin_tr.node().querySelectorAll('td')[2])
-		if (last_bin_select.node().value == 'custom') {
+		if (auto_radio_btn.node().checked == false) {
 			//if custom_bin is set, replace default_last_bin with custom_last_bin
 			if (!custom_bins_q.last_bin) {
 				custom_bins_q.last_bin = {}
@@ -1520,14 +1581,13 @@ function setInteractivity(self) {
 			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'block')
 			note_td.style('display', 'block')
-		} else if (last_bin_select.node().value == 'auto') {
+		} else if (auto_radio_btn.node().checked == true) {
 			//if default_last_bin is empty, delete last_bin
 			const last_bin = default_bins_q.last_bin
 			if (last_bin) self.q.last_bin = last_bin
 			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'none')
 			note_td.style('display', 'none')
-			// last_bin_select.style('display','block')
 		}
 	}
 
