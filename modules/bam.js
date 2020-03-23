@@ -8,11 +8,14 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
+TODO
+* error rendering, N junction overlaps with another read in stacking
+* toggle between single read and paired read mode, if paired, join by dashed lines
+* no region size restriction
+  render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
+  then show an alert row on top
 
-no region size restriction
-render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
-then show an alert row on top
-
+************* data structure
 template {}
   .start
   .stop
@@ -30,8 +33,24 @@ box {}
   .start // absolute bp
   .len   // #bp
   .s (read sequence)
+  .qual[]
+
+
+*********** function cascade
+get_q
+	get_refseq
+do_query
+	query_region
+	parse_all_reads
+		parse_one_segment
+			check_mismatch
+			segmentstop
+			segmentstart
+	do_stack
+	plot_template
+		plot_segment
 */
-const fcolor = 'rgb(100,100,100)'
+const fcolor = 'rgb(120,120,120)'
 const fcolor_lowq = 'rgb(230,230,230)'
 const qual2fcolor = interpolateRgb(fcolor_lowq, fcolor)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
@@ -127,7 +146,7 @@ async function do_query(q) {
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 	for (const template of templates) {
-		render_template(ctx, template, q)
+		plot_template(ctx, template, q)
 	}
 
 	const result = {
@@ -146,7 +165,7 @@ function do_stack(q, templates) {
 		// {start, stop, segments}
 		let stackidx = null
 		for (let i = 0; i < stacks.length; i++) {
-			if (stacks[i] < template.start) {
+			if (stacks[i] + q.ntspace < template.start) {
 				stackidx = i
 				stacks[i] = template.stop
 				break
@@ -216,19 +235,14 @@ function parse_all_reads(regions) {
 			}
 		}
 	}
-	console.log(qmin, qmax)
 	return [...qname2template.values()]
 }
-
-let qmin = 0,
-	qmax = 0
 
 function parse_one_segment(line, r, ridx) {
 	// line
 	// r, a region
 	// ridx: region array index
 	const l = line.split('\t')
-	const boxes = []
 	const qname = l[0],
 		flag = l[2 - 1],
 		segstart = Number.parseInt(l[4 - 1]) - 1, // change to 0-based
@@ -238,13 +252,17 @@ function parse_one_segment(line, r, ridx) {
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
+	if (cigarstr == '*') {
+		console.log('cigar is *')
+		return
+	}
+
+	const boxes = [] // collect plottable segments
 	let quallst = []
 	if (r.to_qual) {
 		// convert bp quality
 		for (let i = 0; i < qual.length; i++) {
 			const v = qual[i].charCodeAt(0) - 33
-			qmin = Math.min(qmin, v)
-			qmax = Math.max(qmax, v)
 			quallst.push(v)
 		}
 	}
@@ -267,97 +285,118 @@ function parse_one_segment(line, r, ridx) {
 			// no seq
 		} else if (cigar == 'P' || cigar == 'D') {
 			// padding or del, no sequence in read
-			/*
-			for (let j = 0; j < len; j++) {
-				s += '*'
-			}
-			*/
 		} else {
+			// will consume read seq
 			s = seq.substr(cum, len)
 			cum += len
 		}
 		prev = i + 1
-		switch (cigar) {
-			case '=':
-			case 'M':
-				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					// visible
-					const b = {
-						opr: 'M',
-						start: pos,
-						len
-					}
-					if (r.to_printnt) b.s = s
-					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
-					boxes.push(b)
-					if (r.to_checkmismatch) {
-						check_mismatch(boxes, r, pos, s, b.qual)
-					}
+		if (cigar == '=' || cigar == 'M') {
+			if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+				// visible
+				const b = {
+					opr: 'M',
+					start: pos,
+					len
 				}
-				pos += len
-				break
-			case 'I':
-				if (pos > r.start && pos < r.stop) {
-					const b = {
-						opr: 'I',
-						start: pos,
-						len,
-						s
-					}
-					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
-					boxes.push(b)
+				if (r.to_printnt) b.s = s
+				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				boxes.push(b)
+				if (r.to_checkmismatch) {
+					check_mismatch(boxes, r, pos, s, b.qual)
 				}
-				break
-			case 'D':
-				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					boxes.push({
-						opr: 'D',
-						start: pos,
-						len
-					})
-					console.log('d', len)
-				}
-				pos += len
-				break
-			case 'N':
-				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					boxes.push({
-						opr: 'N',
-						start: pos,
-						len
-					})
-				}
-				pos += len
-				break
-			case 'X':
-			case 'S':
-				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					const b = {
-						opr: cigar,
-						start: pos,
-						len,
-						s
-					}
-					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
-					boxes.push(b)
-				}
-				pos += len
-				break
-			case 'P':
-				if (pos > r.start && pos < r.stop) {
-					const b = {
-						opr: 'P',
-						start: pos,
-						len,
-						s
-					}
-					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
-					boxes.push(b)
-				}
-				break
-			default:
-				console.log('unknown cigar: ' + cigar)
+			}
+			pos += len
+			continue
 		}
+		if (cigar == 'I') {
+			if (pos > r.start && pos < r.stop) {
+				const b = {
+					opr: 'I',
+					start: pos,
+					len,
+					s
+				}
+				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				boxes.push(b)
+			}
+			continue
+		}
+		if (cigar == 'D') {
+			if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+				boxes.push({
+					opr: 'D',
+					start: pos,
+					len
+				})
+				console.log('d', len)
+			}
+			pos += len
+			continue
+		}
+		if (cigar == 'N') {
+			// for skipped region, must have at least one end within region;
+			// if both ends are outside of region e.g. intron-spanning rna read, will not include
+			if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
+				boxes.push({
+					opr: 'N',
+					start: pos,
+					len
+				})
+			}
+			pos += len
+			continue
+		}
+		if (cigar == 'X') {
+			if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+				const b = {
+					opr: cigar,
+					start: pos,
+					len,
+					s
+				}
+				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				boxes.push(b)
+			}
+			pos += len
+			continue
+		}
+		if (cigar == 'S') {
+			const b = {
+				opr: cigar,
+				start: pos,
+				len,
+				s
+			}
+			if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+			if (boxes.length == 0) {
+				// this is the first box, will not consume ref
+				// shift softclip start to left, so its end will be pos, will not increment pos
+				b.start -= len
+				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+					boxes.push(b)
+				}
+			} else {
+				// not the first box, so should be the last box
+				// do not shift start
+				boxes.push(b)
+			}
+			continue
+		}
+		if (cigar == 'P') {
+			if (pos > r.start && pos < r.stop) {
+				const b = {
+					opr: 'P',
+					start: pos,
+					len,
+					s
+				}
+				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				boxes.push(b)
+			}
+			continue
+		}
+		console.log('unknown cigar: ' + cigar)
 	}
 	if (boxes.length == 0) {
 		// no visible boxes, do not show this segment
@@ -370,6 +409,8 @@ function parse_one_segment(line, r, ridx) {
 		ridx,
 		x2: r.x + r.scale(segmentstop(boxes)) // x stop position, for drawing connect line
 	}
+	if (boxes.find(i => i.opr == 'S') && boxes[0].opr != 'S' && boxes[boxes.length - 1].opr != 'S') console.log(cigarstr)
+	//if(boxes[0].opr=='S') console.log(cigarstr)
 	return segment
 }
 
@@ -401,7 +442,7 @@ function check_mismatch(boxes, r, pos, readseq, quallst) {
 	}
 }
 
-function render_template(ctx, template, q) {
+function plot_template(ctx, template, q) {
 	// segments: a list of segments consisting this template, maybe at different regions
 	const fontsize = q.stackheight
 	//ctx.font = fontsize + 'px arial'
@@ -410,6 +451,7 @@ function render_template(ctx, template, q) {
 		const seg = template.segments[i]
 		plot_segment(ctx, seg, template.y, q)
 		if (i > 0) {
+			// make it optional
 			// this segment is not the first of the list
 			const currentr = q.regions[seg.ridx]
 			const currentx = currentr.x + currentr.scale(seg.boxes[0].start)
@@ -417,6 +459,7 @@ function render_template(ctx, template, q) {
 			if (prevseg.x2 < currentx) {
 				const y = Math.floor(template.y + q.stackheight / 2) + 0.5
 				ctx.strokeStyle = fcolor
+				ctx.setLineDash([5, 3]) // dash for read pairs
 				ctx.beginPath()
 				ctx.moveTo(prevseg.x2, y)
 				ctx.lineTo(currentx, y)
@@ -446,6 +489,7 @@ function plot_segment(ctx, segment, y, q) {
 		}
 		if (b.opr == 'D' || b.opr == 'N') {
 			ctx.strokeStyle = fcolor // may use blue line
+			ctx.setLineDash([]) // use solid lines
 			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
 			ctx.beginPath()
 			ctx.moveTo(x, y2)
