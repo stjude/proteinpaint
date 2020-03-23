@@ -5,14 +5,9 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
-//const basecolor = require('../src/common.js').basecolor
+const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
-TODO
-draw line between segments
-if ntwidth>4:
-	print mismatching nt
-	show base quality
 
 no region size restriction
 render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
@@ -36,11 +31,19 @@ box {}
   .len   // #bp
   .s (read sequence)
 */
-const fcolor = 'rgb(88,88,88)'
-const color_i = 88
-const mismatchbg = 'rgb(223,92,97)' // for only filling mismatch box without quality and nt
-const softclipbg = 'rgb(198,153,114)' // for only filling softclip box without quality and nt
-const mismatchtextcolor = 'rgb(255,29,17)' // for text color of mismatching nt but with graying background
+const fcolor = 'rgb(100,100,100)'
+const fcolor_lowq = 'rgb(230,230,230)'
+const qual2fcolor = interpolateRgb(fcolor_lowq, fcolor)
+// mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
+const mismatchbg = 'rgb(223,92,97)'
+const mismatchbg_lowq = 'rgb(255,184,187)'
+const qual2mismatchbg = interpolateRgb(mismatchbg_lowq, mismatchbg)
+// softclip: soft blue for background only, strong blue for printing nt
+const softclipbg = 'rgb(72,136,191)'
+const softclipbg_lowq = 'rgb(173,217,255)'
+const qual2softclipbg = interpolateRgb(softclipbg_lowq, softclipbg)
+
+const maxqual = 40
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
@@ -60,6 +63,51 @@ module.exports = genomes => {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+async function get_q(genome, req) {
+	const [e, _file, isurl] = app.fileurl(req)
+	if (e) throw e
+	// a query object to collect all the bits
+	const q = {
+		file: _file, // may change if is url
+		collapse_density: false,
+		query: req.query
+	}
+	if (isurl) {
+		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
+	}
+
+	if (!req.query.stackheight) throw '.stackheight missing'
+	q.stackheight = Number.parseInt(req.query.stackheight)
+	if (Number.isNaN(q.stackheight)) throw '.stackheight not integer'
+	if (!req.query.stackspace) throw '.stackspace missing'
+	q.stackspace = Number.parseInt(req.query.stackspace)
+	if (Number.isNaN(q.stackspace)) throw '.stackspace not integer'
+	if (!req.query.ntspace) throw '.ntspace missing'
+	q.ntspace = Number.parseInt(req.query.ntspace)
+	if (Number.isNaN(q.ntspace)) throw '.ntspace not integer'
+
+	if (req.query.nochr) {
+		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
+	} else {
+		// info not provided, first time loading
+		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
+	}
+	if (!req.query.regions) throw '.regions[] missing'
+	q.regions = JSON.parse(req.query.regions)
+	for (const r of q.regions) {
+		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
+		r.ntwidth = r.width / (r.stop - r.start)
+		// based on resolution, decide if to do following
+		if (r.ntwidth >= 0.5) {
+			r.to_checkmismatch = true
+			r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
+		}
+		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
+		r.to_qual = r.ntwidth >= 2
+	}
+	return q
 }
 
 async function do_query(q) {
@@ -89,48 +137,6 @@ async function do_query(q) {
 		nochr: q.nochr
 	}
 	return result
-}
-
-async function get_q(genome, req) {
-	const [e, _file, isurl] = app.fileurl(req)
-	if (e) throw e
-	// a query object to collect all the bits
-	const q = {
-		file: _file, // may change if is url
-		collapse_density: false,
-		query: req.query
-	}
-	if (isurl) {
-		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
-	}
-
-	if (!req.query.stackheight) throw '.stackheight missing'
-	q.stackheight = Number.parseInt(req.query.stackheight)
-	if (Number.isNaN(q.stackheight)) throw '.stackheight not integer'
-	if (!req.query.stackspace) throw '.stackspace missing'
-	q.stackspace = Number.parseInt(req.query.stackspace)
-	if (Number.isNaN(q.stackspace)) throw '.stackspace not integer'
-
-	if (req.query.nochr) {
-		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
-	} else {
-		// info not provided, first time loading
-		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
-	}
-	if (!req.query.regions) throw '.regions[] missing'
-	q.regions = JSON.parse(req.query.regions)
-	for (const r of q.regions) {
-		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
-		r.ntwidth = r.width / (r.stop - r.start)
-		// based on resolution, decide if to do following
-		if (r.ntwidth >= 0.5) {
-			r.to_checkmismatch = true
-			r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
-		}
-		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
-		r.to_qual = r.ntwidth >= 2
-	}
-	return q
 }
 
 function do_stack(q, templates) {
@@ -285,7 +291,7 @@ function parse_one_segment(line, r, ridx) {
 					if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
 					boxes.push(b)
 					if (r.to_checkmismatch) {
-						check_mismatch(boxes, r, pos, s, quallst, cum)
+						check_mismatch(boxes, r, pos, s, b.qual)
 					}
 				}
 				pos += len
@@ -309,6 +315,7 @@ function parse_one_segment(line, r, ridx) {
 						start: pos,
 						len
 					})
+					console.log('d', len)
 				}
 				pos += len
 				break
@@ -370,10 +377,10 @@ function segmentstop(boxes) {
 	return Math.max(...boxes.map(i => i.start + i.len))
 }
 
-function check_mismatch(boxes, r, pos, readseq, quallst, cum) {
+function check_mismatch(boxes, r, pos, readseq, quallst) {
 	// pos: absolute start position of this read chunck
 	// readseq: sequence of this read chunck
-	// quallst, cum: for getting quality of mismatching base
+	// quallst: for getting quality of mismatching base
 	for (let i = 0; i < readseq.length; i++) {
 		if (pos + i < r.start || pos + i > r.stop) {
 			// to skip bases beyond view range
@@ -388,7 +395,7 @@ function check_mismatch(boxes, r, pos, readseq, quallst, cum) {
 				len: 1,
 				s: readnt
 			}
-			if (r.to_qual) b.qual = [quallst[cum]]
+			if (r.to_qual && quallst) b.qual = [quallst[i]]
 			boxes.push(b)
 		}
 	}
@@ -437,7 +444,7 @@ function plot_segment(ctx, segment, y, q) {
 			console.log('insertion')
 			return
 		}
-		if (b.opr == 'N') {
+		if (b.opr == 'D' || b.opr == 'N') {
 			ctx.strokeStyle = fcolor // may use blue line
 			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
 			ctx.beginPath()
@@ -447,44 +454,44 @@ function plot_segment(ctx, segment, y, q) {
 			return
 		}
 		if (b.opr == 'X' || b.opr == 'S') {
-			if (r.to_printnt) {
-				// draw background with basepair quality, print letter on top
+			if (r.to_qual) {
 				for (let i = 0; i < b.s.length; i++) {
-					ctx.fillStyle = qual2bgcolor(b.qual[i])
+					const v = b.qual[i] / maxqual
+					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
 					ctx.fillRect(x + r.ntwidth * i, y, r.ntwidth, q.stackheight)
-					ctx.fillStyle = mismatchtextcolor
-					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
+					if (r.to_printnt) {
+						ctx.fillStyle = 'white'
+						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
+					}
 				}
 			} else {
-				ctx.fillStyle = b.opr == 'X' ? mismatchbg : softclipbg
+				// not printing text or rendering qual
+				ctx.fillStyle = b.opr == 'S' ? softclipbg : mismatchbg
 				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
 			}
 			return
 		}
-		// match
-		if (r.to_qual) {
-			for (let i = 0; i < b.qual.length; i++) {
-				ctx.fillStyle = qual2bgcolor(b.qual[i])
-				ctx.fillRect(x + i * r.ntwidth, y, r.ntwidth, q.stackheight)
+		if (b.opr == 'M') {
+			if (r.to_qual) {
+				for (let i = 0; i < b.qual.length; i++) {
+					ctx.fillStyle = qual2fcolor(b.qual[i] / maxqual)
+					ctx.fillRect(x + i * r.ntwidth, y, r.ntwidth, q.stackheight)
+				}
+			} else {
+				// not showing qual, one box
+				ctx.fillStyle = fcolor
+				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
 			}
-		} else {
-			// not showing qual, one box
-			ctx.fillStyle = fcolor
-			ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
-		}
-		/*
-		if(r.to_printnt) {
-			ctx.fillStyle = 'white'
-			for(let i=0; i<b.s.length; i++) {
-				ctx.fillText(b.s[i], x+r.ntwidth*(i+.5), y+q.stackheight/2)
+			/*
+			if(r.to_printnt) {
+				ctx.fillStyle = 'white'
+				for(let i=0; i<b.s.length; i++) {
+					ctx.fillText(b.s[i], x+r.ntwidth*(i+.5), y+q.stackheight/2)
+				}
 			}
+			*/
+			return
 		}
-		*/
+		throw 'unknown opr at rendering: ' + b.opr
 	})
-}
-
-function qual2bgcolor(v) {
-	if (v > 40) console.log('big', v)
-	const c = Math.ceil(255 - (255 - color_i) * (v / 40))
-	return 'rgb(' + c + ',' + c + ',' + c + ')'
 }

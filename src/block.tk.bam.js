@@ -65,6 +65,7 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
+		tk.img.attr('width', 0).attr('height', 0)
 		tk.height_main = tk.height = 100
 		block.tkcloakoff(tk, { error: e.message || e })
 	}
@@ -77,7 +78,8 @@ async function getData(tk, block) {
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'stackheight=' + tk.stackheight,
-		'stackspace=' + tk.stackspace
+		'stackspace=' + tk.stackspace,
+		'ntspace=' + tk.ntspace
 	]
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
 	if (tk.file) lst.push('file=' + tk.file)
@@ -110,6 +112,7 @@ function makeTk(tk, block) {
 	tk.img = tk.glider.append('image')
 	if (!tk.stackheight) tk.stackheight = 13 // make it dependent on range size
 	if (!tk.stackspace) tk.stackspace = 1
+	if (!tk.ntspace) tk.ntspace = 5 // reads in the same stack are spaced by this # of nt apart
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 
