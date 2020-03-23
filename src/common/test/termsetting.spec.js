@@ -226,7 +226,7 @@ tape('Caterogical term', async test => {
 	test.end()
 })
 
-tape.only('Numerical term', async test => {
+tape('Numerical term', async test => {
 	const opts = getOpts({
 		tsData: {
 			term: {
