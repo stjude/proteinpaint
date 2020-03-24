@@ -158,6 +158,7 @@ function make_phewas_ui(obj, div, tk) {
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin', '0px 10px'),
+			termdbConfig: obj.mds.termdb,
 			callback: async f => {
 				obj.termfilter.filter = f
 				await run_phewas(obj)
