@@ -37,7 +37,6 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.nav = opts.nav
 		this.dom = {
 			holder: opts.holder,
 			controlsTip: new Menu({ padding: '0px' }),
