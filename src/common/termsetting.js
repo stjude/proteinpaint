@@ -71,6 +71,7 @@ class TermSetting {
 				this.term = data.term
 				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
 				this.disable_terms = data.disable_terms
+				this.filter = data.filter
 				this.updateUI()
 			},
 			showTree: this.showTree
@@ -794,6 +795,8 @@ function setInteractivity(self) {
 					self.opts.dslabel +
 					'&termid=' +
 					self.term.id +
+					'&filter=' +
+					encodeURIComponent(JSON.stringify(self.filter)) +
 					'&width=' +
 					self.num_obj.plot_size.width +
 					'&height=' +
