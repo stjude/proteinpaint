@@ -241,10 +241,11 @@ function clientside_plot(obj, plotgroups) {
 							genome: obj.block.genome,
 							nobox: true,
 							chr: obj.m.chr,
-							start: obj.m.pos,
-							stop: obj.m.pos,
+							start: obj.m.pos - 30,
+							stop: obj.m.pos + 30,
 							nativetracks: [obj.block.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
-							tklst: [{ type: 'bam', name: d.sampleobj.name, file }]
+							tklst: [{ type: 'bam', name: d.sampleobj.name, file }],
+							hlregions: [{ chr: obj.m.chr, start: obj.m.pos, stop: obj.m.pos }]
 						})
 					})
 				}
