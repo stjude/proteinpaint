@@ -219,13 +219,13 @@ function parse_all_reads(regions) {
 	for (let i = 0; i < regions.length; i++) {
 		const r = regions[i]
 		for (const line of r.lines) {
-			const segment = parse_one_segment(line, r, [i])
+			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
 				// add this segment to existing template
 				temp.segments.push(segment)
-				temp.stop = segmentstop(segment.boxes)
+				temp.stop = Math.max(temp.stop, segmentstop(segment.boxes))
 			} else {
 				qname2template.set(segment.qname, {
 					start: segment.boxes[0].start,
@@ -407,7 +407,10 @@ function parse_one_segment(line, r, ridx) {
 		boxes,
 		forward: !(flag & 0x10),
 		ridx,
-		x2: r.x + r.scale(segmentstop(boxes)) // x stop position, for drawing connect line
+		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
+		cigarstr, // temp
+		segstart, // temp
+		segstop: segmentstop(boxes)
 	}
 	if (boxes.find(i => i.opr == 'S') && boxes[0].opr != 'S' && boxes[boxes.length - 1].opr != 'S') console.log(cigarstr)
 	//if(boxes[0].opr=='S') console.log(cigarstr)
@@ -447,6 +450,7 @@ function plot_template(ctx, template, q) {
 	const fontsize = q.stackheight
 	//ctx.font = fontsize + 'px arial'
 	//ctx.textBaseline = 'middle'
+	if (template.y == 28) console.log(template)
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
 		plot_segment(ctx, seg, template.y, q)
@@ -539,3 +543,34 @@ function plot_segment(ctx, segment, y, q) {
 		throw 'unknown opr at rendering: ' + b.opr
 	})
 }
+
+/*
+puzzling case of HWI-ST988:130:D1TFEACXX:4:1201:10672:53382 from SJBALL021856_D1
+{
+  start: 5072626,
+  stop: 5078394,
+  segments: [
+    {
+      qname: 'HWI-ST988:130:D1TFEACXX:4:2306:16068:71448',
+      boxes: [Array],
+      forward: false,
+      ridx: 0,
+      x2: 850,
+      cigarstr: '9M1I2M5679N89M',
+      segstart: 5072615,
+      segstop: 5078394
+    },
+    {
+      qname: 'HWI-ST988:130:D1TFEACXX:4:2306:16068:71448',
+      boxes: [Array],
+      forward: true,
+      ridx: 0,
+      x2: 723,
+      cigarstr: '53S48M',
+      segstart: 5078303,
+      segstop: 5078351
+    }
+  ],
+  y: 28
+}
+*/
