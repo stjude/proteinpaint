@@ -34,13 +34,13 @@ class TdbFilter {
 
 	main() {
 		const f = this.state && this.state.termfilter
-		if (!f || !f.show_top_ui) {
+		if (!f || !this.state.nav.show_tabs) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
 		if (!this.filterApi) this.initFilter()
-		this.filterApi.main(f.filter, { nav: this.state.nav })
+		this.filterApi.main(f.filter, { activeCohort: this.state.activeCohort })
 	}
 
 	initFilter() {
@@ -51,13 +51,12 @@ class TdbFilter {
 			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
-			getVisibleRoot: this.opts.getVisibleRoot,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter
+					filter: filter
 				})
 			}
 		})

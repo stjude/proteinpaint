@@ -3,6 +3,7 @@ import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
+import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -57,16 +58,18 @@ class TdbNav {
 					hideLabel: this.opts.show_tabs,
 					emptyLabel: '+Add new filter'
 				},
-				this.opts.filter
+				this.app.opts.filter
 			)
 		}
 	}
 	getState(appState) {
+		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
+			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter
 		}
@@ -83,27 +86,53 @@ class TdbNav {
 		this.dom.tabDiv.style('display', this.state.nav.show_tabs ? 'inline-block' : 'none')
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
-		this.activeCohort = this.state.nav.activeCohort
+		this.activeCohort = this.state.activeCohort
+		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
+		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
 		if (!this.dom.cohortTable) this.initCohort()
 		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
+		this.filterJSON = JSON.stringify(this.state.filter)
 		//this.hideSubheader = false
-		if (this.state.nav.show_tabs) await this.getSampleCount()
+
+		if (this.state.nav.show_tabs) {
+			const promises = []
+			if (!(this.activeCohortName in this.samplecounts)) promises.push(this.getCohortSampleCount())
+			if (!(this.filterJSON in this.samplecounts)) promises.push(this.getFilteredSampleCount())
+			if (promises.length) await Promise.all(promises)
+		}
 		this.updateUI()
 	}
-	async getSampleCount() {
+	async getCohortSampleCount() {
+		if (this.activeCohort == -1) return
 		const lst = [
 			'genome=' + this.state.genome,
 			'dslabel=' + this.state.dslabel,
-			'getsamplecount=' + this.activeCohortName,
-			'filter=' + (this.activeCohort == -1 ? 'null' : encodeURIComponent(JSON.stringify(this.state.filter)))
+			'getcohortsamplecount=' + this.activeCohortName,
+			'cohortValues=' + this.activeCohortName
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
-			for (const row of data) {
-				this.samplecounts[row.subcohort] = row.samplecount
-			}
+			this.samplecounts[this.activeCohortName] = data[0].samplecount
+		}
+	}
+	async getFilteredSampleCount() {
+		if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
+			this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
+			return
+		}
+		const lst = [
+			'genome=' + this.state.genome,
+			'dslabel=' + this.state.dslabel,
+			'getsamplecount=' + this.activeCohortName,
+			'filter=' + encodeURIComponent(this.filterJSON)
+		]
+		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		if (!data) throw `missing data`
+		else if (data.error) throw data.error
+		else {
+			this.samplecounts[this.filterJSON] = data[0].samplecount
 		}
 	}
 }
@@ -182,11 +211,20 @@ function setRenderers(self) {
 		self.subheaderKeys = ['cohort', 'filter', 'cart']
 	}
 	self.updateUI = () => {
-		self.dom.searchDiv.style('display', self.activeCohort == -1 ? 'none' : 'inline-block')
+		const selectCohort = self.state.termdbConfig.selectCohort
+		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
 		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
 		self.dom.tds
-			.style('display', d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
+			.style('display', d =>
+				(self.activeCohort !== -1 || !selectCohort) && d.colNum !== 0
+					? ''
+					: !selectCohort && d.colNum === 0
+					? 'none'
+					: d.colNum === 0 || self.activeCohort !== -1
+					? ''
+					: 'none'
+			)
 			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
 			.style('background-color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
@@ -202,10 +240,11 @@ function setRenderers(self) {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.colNum === 1) {
-					if (self.state.filter.lst.length === 0) {
+					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
+					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {
-						return d.key === 'mid' ? self.state.filter.lst.length : 'n=' + self.samplecounts['FILTERED_COHORT']
+						return d.key === 'mid' ? filter.lst.length : 'n=' + self.samplecounts[self.filterJSON]
 					}
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'
@@ -232,12 +271,14 @@ function setRenderers(self) {
 		}
 		self.dom.subheaderDiv.style(
 			'border-bottom',
-			self.state.nav.show_tabs && visibleSubheaders.length && self.activeCohort != -1 ? '1px solid #000' : ''
+			self.state.nav.show_tabs && visibleSubheaders.length && (self.activeCohort != -1 || !selectCohort)
+				? '1px solid #000'
+				: ''
 		)
 		if (self.highlightCohortBy && self.activeCohort != -1) {
-			const activeCohort = self.state.termdbConfig.selectCohort.values[self.activeCohort]
+			const activeCohort = selectCohort.values[self.activeCohort]
 			const activeSelector = activeCohort[self.highlightCohortBy]
-			for (const cohort of self.state.termdbConfig.selectCohort.values) {
+			for (const cohort of selectCohort.values) {
 				if (cohort[self.highlightCohortBy] !== activeSelector) {
 					self.dom.cohortTable.selectAll(cohort[self.highlightCohortBy]).style('background-color', 'transparent')
 				}
@@ -248,7 +289,7 @@ function setRenderers(self) {
 	}
 	self.initCohort = () => {
 		if (self.dom.cohortTable) return
-		const selectCohort = self.state.termdbConfig && self.state.termdbConfig.selectCohort
+		const selectCohort = self.state.termdbConfig.selectCohort
 		if (!selectCohort) {
 			if (self.activeTab === 0) self.activeTab = 1
 			return

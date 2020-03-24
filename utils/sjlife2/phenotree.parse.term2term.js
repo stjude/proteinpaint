@@ -31,9 +31,10 @@ special handling of chronic condition terms (3: organ system, 4: grouped conditi
 
 
 
-second optional input is keep/termjson, 2 column:
-1  term_id
-2  {}
+second optional input is keep/*:
+key: term id
+value: term json obj
+
 
 to override automatically generated contents in termjson file
 
@@ -48,11 +49,14 @@ const abort = m => {
 	process.exit()
 }
 
-if (process.argv.length < 3) abort('<phenotree txt file> <keep/termjson file> outputs to: termdb, ancestry')
+if (process.argv.length < 3)
+	abort('<phenotree txt file> <keep/: folder of predefined term json files> outputs to: termdb, ancestry')
 const infile_phenotree = process.argv[2]
-const infile_keeptermjson = process.argv[3] // optional
+const keep_dir = process.argv[3] // optional
 
 const fs = require('fs')
+const glob = require('glob')
+const path = require('path')
 
 /////////////////// helpers
 
@@ -480,15 +484,17 @@ for (const n of map4.keys()) {
 
 const keep_termjson = new Map()
 
-if (infile_keeptermjson) {
-	/* keep/termjson file is given
-	this file is one single object, of key:value pairs
+if (keep_dir) {
+	/* keep/ directory is given
+	each file is one single object, of key:value pairs
 	key: term id
 	value: term json definition
 	*/
-	const j = JSON.parse(fs.readFileSync(infile_keeptermjson, { encoding: 'utf8' }))
-	for (const id in j) {
-		keep_termjson.set(id, j[id])
+	for (const f of glob.sync(path.join(keep_dir, '*'))) {
+		const j = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
+		for (const id in j) {
+			keep_termjson.set(id, j[id])
+		}
 	}
 }
 

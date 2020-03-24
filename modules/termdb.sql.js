@@ -40,21 +40,27 @@ return an array of sample names passing through the filter
 	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
 	return re.map(i => i.sample)
 }
+export function get_cohortsamplecount(q, ds) {
+	/*
+must have q.cohortValues string
+return an array of sample names for the given cohort
+*/
+	if (!q.cohortValues) throw `missing q.cohortValues`
+	const cohortKey = ds.cohort.termdb.selectCohort.term.id
+	const statement = `SELECT cohort as ${cohortKey}, count as samplecount
+		FROM subcohort_terms
+		WHERE cohort=? and term_id='$ROOT$'`
+	// may cache statement
+	return ds.cohort.db.connection.prepare(statement).all(q.cohortValues)
+}
 export function get_samplecount(q, ds) {
 	/*
-must have qfilter[]
-as the actual query is embedded in qfilter
-return an array of sample names passing through the filter
-*/
+must have q.filter[]
+return a sample count of sample names passing through the filter
+ */
 	q.filter = JSON.parse(decodeURIComponent(q.filter))
 	if (!q.filter || !q.filter.lst.length) {
-		// this option will be removed and instead
-		// processed as part of the root filter.lst[]
-		return [
-			{ subcohort: 'SJLIFE', samplecount: 4402 },
-			{ subcohort: 'CCSS', samplecount: 2936 },
-			{ subcohort: 'SJLIFE,CCSS', samplecount: 'XXXX' }
-		]
+		throw `missing q.filter`
 	} else {
 		const filter = getFilterCTEs(q.filter, ds)
 		const statement = `WITH ${filter.filters}
@@ -925,16 +931,25 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
-		let cache = null
-		q.getRootTerms = () => {
-			if (cache) return cache
-			cache = s.all().map(i => {
+		const getStatement = initCohortJoinFxn(
+			`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE parent_id is null
+			GROUP BY id`
+		)
+		const cache = new Map()
+		q.getRootTerms = (cohortStr = '') => {
+			const cacheId = cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr.split(',')) : getStatement(cohortStr).all()
+			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
-			return cache
+			cache.set(cacheId, re)
+			return re
 		}
 	}
 	{
@@ -975,12 +990,25 @@ thus less things to worry about...
 			}
 		}
 	}
+
+	/*
+		template: STR
+		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
+	*/
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
+			GROUP BY id`)
+
 		const cache = new Map()
-		q.getTermChildren = id => {
-			if (cache.has(id)) return cache.get(id)
-			const tmp = s.all(id)
+		q.getTermChildren = (id, cohortStr = '') => {
+			const cacheId = id + ';;' + cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const values = cohortStr ? [...cohortStr.split(','), id] : id
+			console.log(1016, values)
+			const tmp = getStatement(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
@@ -989,7 +1017,7 @@ thus less things to worry about...
 					return j
 				})
 			}
-			cache.set(id, re)
+			cache.set(cacheId, re)
 			return re
 		}
 	}
@@ -1058,6 +1086,30 @@ thus less things to worry about...
 				return j
 			}
 			return undefined
+		}
+	}
+
+	function initCohortJoinFxn(template) {
+		// will hold prepared statements, with object key = one or more comma-separated '?'
+		const s_cohort = {
+			'': cn.prepare(template.replace('JOINCLAUSE', ''))
+		}
+		return function getStatement(cohortStr) {
+			const cohort = cohortStr.split(',').filter(d => d != '')
+			const questionmarks = cohort.map(() => '?').join(',')
+			if (!(questionmarks in s_cohort)) {
+				const statement = template.replace(
+					'JOINCLAUSE',
+					// get intersection where a term is annotated in ALL of the cohortValues
+					cohort.map((d, i) => `JOIN subcohort_terms s${i} ON s${i}.term_id = t.id AND s${i}.cohort=?`).join('\n')
+					/*
+				// get union where a term is annotated in ANY of the cohortValues
+				`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
+				*/
+				)
+				s_cohort[questionmarks] = cn.prepare(statement)
+			}
+			return s_cohort[questionmarks]
 		}
 	}
 }

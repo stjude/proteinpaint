@@ -90,7 +90,7 @@ tape('default view', function(test) {
 			.run(triggerTermRemove)
 			.run(testTermRemove, 600)
 			.run(triggerHideRow)
-			.run(testHideRow, 200)
+			.run(testHideRow, 300)
 			.done(test)
 	}
 
@@ -124,7 +124,7 @@ tape('default view', function(test) {
 	}
 
 	function triggerHideRow(app) {
-		app.dispatch({ type: 'term_row_hide', row_name: 'graph' })
+		app.dispatch({ type: 'term_row_hide', row_name: 'name' })
 	}
 
 	function testHideRow(app) {
@@ -132,7 +132,7 @@ tape('default view', function(test) {
 			app.Inner.dom.holder
 				.selectAll('.table-wrapper')
 				.selectAll('tr')
-				.filter(d => d[0] == 'graph')
+				.filter(d => d[0] == 'name')
 				.style('opacity'),
 			'0',
 			'should remove row from table'

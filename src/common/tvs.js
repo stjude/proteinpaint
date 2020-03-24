@@ -1457,11 +1457,7 @@ function setInteractivity(self) {
 			holder: self.dom.tip.d,
 			state: {
 				genome: self.genome,
-				dslabel: self.dslabel,
-				termfilter: {
-					show_top_ui: false
-					// 	terms: terms
-				}
+				dslabel: self.dslabel
 			},
 			modifiers: {
 				//modifier to replace filter by clicking term btn

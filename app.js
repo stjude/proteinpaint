@@ -199,107 +199,12 @@ const infoFilter_unannotated = 'Unannotated'
 
 function handle_genomes(req, res) {
 	const hash = {}
-	for (const genomename in genomes) {
-		const g = genomes[genomename]
-		const g2 = {
-			species: g.species,
-			name: genomename,
-			hasSNP: g.snp ? true : false,
-			hasClinvarVCF: g.clinvarVCF ? true : false,
-			fimo_motif: g.fimo_motif ? true : false,
-			geneset: g.geneset,
-			defaultcoord: g.defaultcoord,
-			isdefault: g.isdefault,
-			majorchr: g.majorchr,
-			majorchrorder: g.majorchrorder,
-			minorchr: g.minorchr,
-			tracks: g.tracks,
-			hicenzymefragment: g.hicenzymefragment,
-			datasets: {}
+	if (req.query && req.query.genome) {
+		hash[req.query.genome] = clientcopy_genome(req.query.genome)
+	} else {
+		for (const genomename in genomes) {
+			hash[genomename] = clientcopy_genome(genomename)
 		}
-		for (const dsname in g.datasets) {
-			const ds = g.datasets[dsname]
-
-			if (ds.isMds) {
-				const _ds = mds_clientcopy(ds)
-				if (_ds) {
-					g2.datasets[ds.label] = _ds
-				}
-				continue
-			}
-
-			// old official ds
-			const ds2 = {
-				isofficial: true,
-				noHandleOnClient: ds.noHandleOnClient,
-				sampleselectable: ds.sampleselectable,
-				label: ds.label,
-				dsinfo: ds.dsinfo,
-				stratify: ds.stratify,
-				cohort: ds.cohort,
-				vcfinfofilter: ds.vcfinfofilter,
-				info2table: ds.info2table,
-				info2singletable: ds.info2singletable,
-				url4variant: ds.url4variant,
-				vcfcohorttrack: ds.vcfcohorttrack, // new
-				itemlabelname: ds.itemlabelname
-			}
-
-			if (ds.snvindel_attributes) {
-				ds2.snvindel_attributes = []
-				for (const at of ds.snvindel_attributes) {
-					const rep = {}
-					for (const k in at) {
-						if (k == 'lst') {
-							rep.lst = []
-							for (const e of at.lst) {
-								const rep2 = {}
-								for (const k2 in e) rep2[k2] = e[k2]
-								rep.lst.push(rep2)
-							}
-						} else {
-							rep[k] = at[k]
-						}
-					}
-					ds2.snvindel_attributes.push(rep)
-				}
-			}
-			if (ds.snvindel_legend) {
-				ds2.snvindel_legend = ds.snvindel_legend
-			}
-			const vcfinfo = {}
-			let hasvcf = false
-			for (const q of ds.queries) {
-				if (q.vcf) {
-					hasvcf = true
-					vcfinfo[q.vcf.vcfid] = q.vcf
-				}
-			}
-			if (hasvcf) {
-				ds2.id2vcf = vcfinfo
-			}
-			g2.datasets[dsname] = ds2
-		}
-
-		if (g.hicdomain) {
-			g2.hicdomain = { groups: {} }
-			for (const s1 in g.hicdomain.groups) {
-				const tt = g.hicdomain.groups[s1]
-				g2.hicdomain.groups[s1] = {
-					name: tt.name,
-					reference: tt.reference,
-					sets: {}
-				}
-				for (const s2 in tt.sets) {
-					g2.hicdomain.groups[s1].sets[s2] = {
-						name: tt.sets[s2].name,
-						longname: tt.sets[s2].longname
-					}
-				}
-			}
-		}
-
-		hash[genomename] = g2
 	}
 	const date1 = fs.statSync('server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
@@ -311,6 +216,106 @@ function handle_genomes(req, res) {
 		base_zindex: serverconfig.base_zindex,
 		lastdate: lastdate.toDateString()
 	})
+}
+function clientcopy_genome(genomename) {
+	const g = genomes[genomename]
+	const g2 = {
+		species: g.species,
+		name: genomename,
+		hasSNP: g.snp ? true : false,
+		hasClinvarVCF: g.clinvarVCF ? true : false,
+		fimo_motif: g.fimo_motif ? true : false,
+		geneset: g.geneset,
+		defaultcoord: g.defaultcoord,
+		isdefault: g.isdefault,
+		majorchr: g.majorchr,
+		majorchrorder: g.majorchrorder,
+		minorchr: g.minorchr,
+		tracks: g.tracks,
+		hicenzymefragment: g.hicenzymefragment,
+		datasets: {}
+	}
+	for (const dsname in g.datasets) {
+		const ds = g.datasets[dsname]
+
+		if (ds.isMds) {
+			const _ds = mds_clientcopy(ds)
+			if (_ds) {
+				g2.datasets[ds.label] = _ds
+			}
+			continue
+		}
+
+		// old official ds
+		const ds2 = {
+			isofficial: true,
+			noHandleOnClient: ds.noHandleOnClient,
+			sampleselectable: ds.sampleselectable,
+			label: ds.label,
+			dsinfo: ds.dsinfo,
+			stratify: ds.stratify,
+			cohort: ds.cohort,
+			vcfinfofilter: ds.vcfinfofilter,
+			info2table: ds.info2table,
+			url4variant: ds.url4variant,
+			vcfcohorttrack: ds.vcfcohorttrack, // new
+			itemlabelname: ds.itemlabelname
+		}
+
+		if (ds.snvindel_attributes) {
+			ds2.snvindel_attributes = []
+			for (const at of ds.snvindel_attributes) {
+				const rep = {}
+				for (const k in at) {
+					if (k == 'lst') {
+						rep.lst = []
+						for (const e of at.lst) {
+							const rep2 = {}
+							for (const k2 in e) rep2[k2] = e[k2]
+							rep.lst.push(rep2)
+						}
+					} else {
+						rep[k] = at[k]
+					}
+				}
+				ds2.snvindel_attributes.push(rep)
+			}
+		}
+		if (ds.snvindel_legend) {
+			ds2.snvindel_legend = ds.snvindel_legend
+		}
+		const vcfinfo = {}
+		let hasvcf = false
+		for (const q of ds.queries) {
+			if (q.vcf) {
+				hasvcf = true
+				vcfinfo[q.vcf.vcfid] = q.vcf
+			}
+		}
+		if (hasvcf) {
+			ds2.id2vcf = vcfinfo
+		}
+		g2.datasets[dsname] = ds2
+	}
+
+	if (g.hicdomain) {
+		g2.hicdomain = { groups: {} }
+		for (const s1 in g.hicdomain.groups) {
+			const tt = g.hicdomain.groups[s1]
+			g2.hicdomain.groups[s1] = {
+				name: tt.name,
+				reference: tt.reference,
+				sets: {}
+			}
+			for (const s2 in tt.sets) {
+				g2.hicdomain.groups[s1].sets[s2] = {
+					name: tt.sets[s2].name,
+					longname: tt.sets[s2].longname
+				}
+			}
+		}
+	}
+	return g2
 }
 
 function mds_clientcopy(ds) {
@@ -355,7 +360,9 @@ function mds_clientcopy(ds) {
 	if (ds.cohort) {
 		if (ds.cohort.termdb) {
 			// let client know the existance, do not reveal details unless needed
-			ds2.termdb = 1
+			ds2.termdb = {
+				selectCohort: ds.cohort.termdb.selectCohort
+			}
 		}
 
 		if (ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {

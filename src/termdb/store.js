@@ -4,15 +4,19 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
+import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
 	nav: {
 		show_tabs: false,
-		activeTab: 0,
-		activeCohort: 0
+		activeTab: 0
 	},
+	// will be ignored if there is no dataset termdb.selectCohort
+	// or value will be set to match a filter node that has been tagged
+	// as 'cohortfilter' in state.termfilter.filter
+	activeCohort: 0,
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
@@ -80,14 +84,63 @@ class TdbStore {
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
+
+		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+		if (!filterUiRoot) {
+			this.state.termfilter.filter.tag = 'filterUiRoot'
+			filterUiRoot = this.state.termfilter.filter
+		}
+
 		this.state.termdbConfig = await this.getTermdbConfig()
+		if (this.state.termdbConfig.selectCohort) {
+			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+			if (!cohortFilter) {
+				// support legacy state.termfilter and test scripts that
+				// that does not specify a cohort when required;
+				// will use state.activeCohort if not -1
+				cohortFilter = {
+					tag: 'cohortFilter',
+					type: 'tvs',
+					tvs: {
+						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
+						values:
+							this.state.activeCohort == -1
+								? []
+								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
+										return { key, label: key }
+								  })
+					}
+				}
+				this.state.termfilter.filter = {
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [cohortFilter, filterUiRoot]
+				}
+			} else {
+				const sorter = (a, b) => (a < b ? -1 : 1)
+				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
+				const i = this.state.termdbConfig.selectCohort.values.findIndex(
+					v => keysStr == JSON.stringify(v.keys.sort(sorter))
+				)
+				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
+					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+				}
+				this.state.activeCohort = i
+			}
+		} else {
+			this.state.activeCohort = -1
+			if (this.state.activeTab === 0) this.state.activeTab = 1
+		}
 	}
 
 	async getTermdbConfig() {
 		const data = await dofetch2(
 			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
 		)
-		return data.termdbConfig
+		// note: in case of error such as missing dataset, supply empty object
+		return data.termdbConfig || {}
 	}
 
 	fromJson(str) {
@@ -125,7 +178,13 @@ TdbStore.prototype.actions = {
 		this.state.nav.activeTab = action.activeTab
 	},
 	cohort_set(action) {
-		this.state.nav.activeCohort = action.activeCohort
+		this.state.activeCohort = action.activeCohort
+		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
+		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+		if (!cohortFilter) throw `No item tagged with 'cohortFilter'`
+		cohortFilter.tvs.values = cohort.keys.map(key => {
+			return { key, label: key }
+		})
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return
@@ -163,7 +222,20 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
-		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		if (!action.filter.tag) {
+			this.state.termfilter.filter = replacementFilter
+		} else {
+			const filter = getFilterItemByTag(this.state.termfilter.filter, action.filter.tag)
+			if (!filter) throw `cannot replace missing filter with tag '${action.filter.tag}'`
+			const parent = findParent(this.state.termfilter.filter, filter.$id)
+			if (parent == filter) {
+				this.state.termfilter.filter = replacementFilter
+			} else {
+				const i = parent.lst.indexOf(filter)
+				parent.lst[i] = replacementFilter
+			}
+		}
 	}
 }
 

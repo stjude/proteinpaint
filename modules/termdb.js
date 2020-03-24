@@ -13,11 +13,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 handle_request_closure
 copy_term
 ********************** INTERNAL
-trigger_rootterm
-trigger_getcategories
-trigger_children
-trigger_findterm
-trigger_treeto
+trigger_*
 */
 
 export function handle_request_closure(genomes) {
@@ -42,10 +38,9 @@ export function handle_request_closure(genomes) {
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.default_rootterm) return trigger_rootterm(res, tdb)
+			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
 			if (q.get_children) return trigger_children(q, res, tdb)
 			if (q.findterm) return trigger_findterm(q, res, tdb)
-			if (q.treeto) return trigger_treeto(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
@@ -56,6 +51,7 @@ export function handle_request_closure(genomes) {
 			}
 			if (q.density) return await density_plot(q, res, ds)
 			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
+			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 
 			throw "termdb: don't know what to do"
@@ -70,7 +66,7 @@ function trigger_gettermdbconfig(res, tdb) {
 	res.send({
 		termdbConfig: {
 			// add attributes here to reveal to client
-			selectCohort: tdb.selectCohort
+			selectCohort: tdb.selectCohort // optional
 		}
 	})
 }
@@ -82,12 +78,17 @@ function trigger_gettermbyid(q, res, tdb) {
 	})
 }
 
+function trigger_getcohortsamplecount(q, res, ds) {
+	res.send(termdbsql.get_cohortsamplecount(q, ds))
+}
+
 function trigger_getsamplecount(q, res, ds) {
 	res.send(termdbsql.get_samplecount(q, ds))
 }
 
-function trigger_rootterm(res, tdb) {
-	res.send({ lst: tdb.q.getRootTerms() })
+function trigger_rootterm(q, res, tdb) {
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getRootTerms(cohortValues) })
 }
 
 function trigger_children(q, res, tdb) {
@@ -95,7 +96,8 @@ function trigger_children(q, res, tdb) {
 may apply ssid: a premade sample set
 */
 	if (!q.tid) throw 'no parent term id'
-	res.send({ lst: tdb.q.getTermChildren(q.tid).map(copy_term) })
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getTermChildren(q.tid, cohortValues).map(copy_term) })
 }
 
 export function copy_term(t) {
@@ -119,29 +121,6 @@ function trigger_findterm(q, res, termdb) {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 	})
 	res.send({ lst: terms })
-}
-
-function trigger_treeto(q, res, termdb) {
-	const term = termdb.q.termjsonByOneid(q.treeto)
-	if (!term) throw 'unknown term id'
-	const levels = [
-		{
-			focusid: q.treeto
-		}
-	]
-	let thisid = q.treeto
-	while (termdb.q.termHasParent(thisid)) {
-		const parentid = termdb.q.getTermParentId(thisid)
-		levels[0].terms = termdb.q.getTermChildren(parentid).map(copy_term)
-		const ele = {
-			// new element for the lst
-			focusid: parentid
-		}
-		levels.unshift(ele)
-		thisid = parentid
-	}
-	levels[0].terms = termdb.q.getRootTerms()
-	res.send({ levels })
 }
 
 function trigger_getcategories(q, res, tdb, ds) {
@@ -193,6 +172,7 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 function trigger_scatter(q, res, tdb, ds) {
 	q.ds = ds
 	if (q.tvslst) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (q.filter) q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const startTime = +new Date()
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (!t1) throw `Invalid term1_id="${q.term1_id}"`

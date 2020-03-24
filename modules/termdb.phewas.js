@@ -240,7 +240,7 @@ use get_rows()
 			if (term.type == 'categorical' || term.type == 'integer' || term.type == 'float') {
 				categories.push(...helper_rows2categories(re.lst, term))
 			} else if (term.type == 'condition') {
-				if (ds.cohort.termdb.patient_condition && ds.cohort.termdb.patient_condition.comparison_groups) {
+				if (ds.cohort.termdb.phewas.comparison_groups) {
 					// predefined comparison groups
 					categories.push(...helper_conditiongroups2categories(re.lst))
 				} else {
@@ -335,7 +335,7 @@ use get_rows()
 		/* with predefined comparison groups in ds
 		 */
 		const categories = []
-		for (const groupdef of ds.cohort.termdb.patient_condition.comparison_groups) {
+		for (const groupdef of ds.cohort.termdb.phewas.comparison_groups) {
 			// divide samples from rows into two groups based on group definition
 
 			const group1lst = []

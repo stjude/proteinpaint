@@ -158,7 +158,6 @@ function make_phewas_ui(obj, div, tk) {
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin', '0px 10px'),
-			//getVisibleRoot:root=>root.lst[0],
 			callback: async f => {
 				obj.termfilter.filter = f
 				await run_phewas(obj)

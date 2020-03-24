@@ -441,6 +441,8 @@ tape('tvs : Numerical', async test => {
 })
 
 tape('tvs : Conditional', async test => {
+	test.timeoutAfter(8000)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',

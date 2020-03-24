@@ -9,8 +9,7 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		genome: 'hg38'
 	},
 	debug: 1,
 	fetchOpts: {

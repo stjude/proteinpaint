@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
+import { getNormalRoot } from '../common/filter'
 
 /*
 options for term2:
@@ -41,6 +42,7 @@ class Overlay {
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
 			debug: this.opts.debug,
+			showMenu: true, // to show edit/replace/remove menu upon clicking pill
 			callback: term2 => {
 				// term2 is {term,q} and can be null
 				if (term2) {
@@ -57,13 +59,16 @@ class Overlay {
 		})
 	}
 	getState(appState) {
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid
 		}
+		if (appState.termfilter && appState.termfilter.filter) {
+			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		return state
 	}
 	main() {
 		this.mayRegisterTerm(this.state.config.term2)
@@ -79,6 +84,7 @@ class Overlay {
 		// after updating this.state, call pill.main() to update info in pill
 		const plot = this.state.config
 		const a = {
+			filter: this.state.filter,
 			disable_terms: [plot.term.id]
 		}
 		if (plot.term2) {

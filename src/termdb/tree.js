@@ -77,17 +77,16 @@ class TdbTree {
 		setInteractivity(this)
 		setRenderers(this)
 
+		// track plots by term ID separately from components,
+		// since active plots is dependent on the active cohort
+		this.plots = {}
+		// this.components.plots will point the applicable
+		// termIds of the active cohort
 		this.components = { plots: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
-		this.termsById = {
-			// privately defined root term
-			[root_ID]: {
-				id: root_ID,
-				__tree_isroot: true // must not delete this flag
-			}
-		}
+		this.termsByCohort = {}
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
@@ -101,28 +100,68 @@ class TdbTree {
 
 	getState(appState) {
 		const filter = getNormalRoot(appState.termfilter.filter)
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			nav: appState.nav,
+			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu
 		}
+		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
+		if (appState.termdbConfig.selectCohort) {
+			state.toSelectCohort = true
+			const choice = appState.termdbConfig.selectCohort.values[appState.activeCohort]
+			if (choice) {
+				// a selection has been made
+				state.cohortValuelst = choice.keys
+			}
+		}
+		return state
 	}
 
 	async main() {
-		if (this.state.nav.activeCohort == -1) return
+		if (this.state.toSelectCohort) {
+			// dataset requires a cohort to be selected
+			if (!this.state.cohortValuelst) {
+				// a selection has not been made; do not render tree
+				return
+			}
+		}
+		// refer to the current cohort's termsById
+		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
 
 		for (const termId of this.state.visiblePlotIds) {
-			if (!this.components.plots[termId]) {
+			if (!this.plots[termId]) {
 				this.newPlot(this.termsById[termId])
 			}
 		}
+
+		for (const termId in this.plots) {
+			if (termId in this.termsById) {
+				if (!(termId in this.components.plots)) {
+					this.components.plots[termId] = this.plots[termId]
+				}
+			} else if (termId in this.components.plots) {
+				delete this.components.plots[termId]
+			}
+		}
+	}
+
+	getTermsById() {
+		if (!(this.state.activeCohort in this.termsByCohort)) {
+			this.termsByCohort[this.state.activeCohort] = {
+				[root_ID]: {
+					id: root_ID,
+					__tree_isroot: true // must not delete this flag
+				}
+			}
+		}
+		return this.termsByCohort[this.state.activeCohort]
 	}
 
 	async requestTermRecursive(term) {
@@ -142,8 +181,14 @@ class TdbTree {
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
 		*/
-		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
-		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
+		const lst = [
+			'genome=' + this.state.genome,
+			'&dslabel=' + this.state.dslabel,
+			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
+		]
+		if (this.state.toSelectCohort) {
+			lst.push('cohortValues=' + this.state.cohortValuelst.join(','))
+		}
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
@@ -203,7 +248,7 @@ class TdbTree {
 				this.app.opts.plot || {}
 			)
 		)
-		this.components.plots[term.id] = plot
+		this.plots[term.id] = plot
 	}
 
 	bindKey(term) {
@@ -232,7 +277,10 @@ function setRenderers(self) {
 		button, optional, the toggle button
 		*/
 		if (!term || !term.terms) return
-		if (!(term.id in self.termsById)) return
+		if (!(term.id in self.termsById)) {
+			div.style('display', 'none')
+			return
+		}
 
 		if (self.loadingTermSet.has(term.id)) {
 			self.loadingTermSet.delete(term.id)
@@ -251,7 +299,7 @@ function setRenderers(self) {
 		const childTermIds = new Set(term.terms.map(self.bindKey))
 		const divs = div
 			.selectAll('.' + cls_termdiv)
-			.filter(t => childTermIds.has(t.id))
+			//.filter(t => childTermIds.has(t.id)) // can change based on cohort
 			.data(term.terms, self.bindKey)
 
 		divs.exit().each(self.hideTerm)
@@ -276,12 +324,17 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function(term) {
-		if (self.tree.expandedTermIds.includes(term.id)) return
+		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function(term) {
 		const div = select(this)
+		if (!(term.id in self.termsById)) {
+			div.style('display', 'none')
+			return
+		}
+		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
@@ -414,7 +467,7 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		if (!self.components.plots[term.id]) {
+		if (!self.plots[term.id]) {
 			// no plot component for this term yet, first time loading this plot
 			self.loadingPlotSet.add(term.id)
 		}

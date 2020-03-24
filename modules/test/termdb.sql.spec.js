@@ -130,7 +130,7 @@ tape('filters applied to categorical term', function(test) {
 									'-9999': { label: 'Unknown treatment record', uncomputable: true }
 								}
 							},
-							ranges: [{ value: 0 }, { start: 100, stop: 1000 }]
+							ranges: [{ value: '0' }, { start: 100, stop: 1000 }]
 						}
 					}
 				]
@@ -152,7 +152,7 @@ tape('filters applied to categorical term', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'hrtavg', name: 'Heart', type: 'float' }, // heart radiation
-							ranges: [{ value: 0 }] // not radiated
+							ranges: [{ value: '0' }] // not radiated
 						}
 					}
 				]
@@ -562,6 +562,7 @@ tape('numerical term1', function(test) {
 		{
 			term1: 'agedx',
 			term1_q: {
+				type: 'regular',
 				bin_size: 5,
 				first_bin: {
 					start: 0,

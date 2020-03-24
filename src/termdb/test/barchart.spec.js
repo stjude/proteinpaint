@@ -2,6 +2,7 @@
 const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
+const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
 
 /*************************
  reusable helper functions
@@ -11,7 +12,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: true }
+		nav: { show_tabs: true }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -28,7 +29,7 @@ tape('\n', function(test) {
 })
 
 tape('single barchart, categorical bars', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
@@ -79,7 +80,7 @@ tape('single barchart, categorical bars', function(test) {
 
 tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
 		termfilter,
 		state: {
@@ -186,15 +187,14 @@ tape('multiple charts', function(test) {
 	}
 })
 
-tape('series visibility', function(test) {
+tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(7)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -223,12 +223,17 @@ tape('series visibility', function(test) {
 			Object.keys(hiddenValues).length,
 			'should have the correct number of hidden bars by q.hiddenValues'
 		)
+		test.end()
 	}
+})
+
+tape('series visibility - numeric', function(test) {
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -316,12 +321,22 @@ tape('series visibility', function(test) {
 			'should hide a special numeric value by menu click'
 		)
 	}
+})
+
+tape('series visibility - condition', function(test) {
+	test.timeoutAfter(5000)
 
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'CTCAE Graded Events',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -348,16 +363,16 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		test.end()
 	}
 })
 
 tape('single barchart, filtered', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
 			termfilter: {
-				show_top_ui: true,
 				filter: {
 					type: 'tvslst',
 					in: 1,
@@ -409,7 +424,7 @@ tape('single barchart, filtered', function(test) {
 				}
 			},
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -445,13 +460,16 @@ tape('single barchart, filtered', function(test) {
 tape('click non-group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
 		termfilter,
 		state: {
+			nav: {
+				activeCohort: 0
+			},
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -512,13 +530,14 @@ tape('click non-group bar to add filter', function(test) {
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -535,7 +554,7 @@ tape('click non-group bar to add filter', function(test) {
 			config.term2.term.values &&
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		test.deepEqual(
-			termfilter.filter.lst[1],
+			filter.lst[1],
 			{
 				type: 'tvs',
 				tvs: Object.assign(
@@ -562,7 +581,7 @@ tape('click non-group bar to add filter', function(test) {
 tape('click custom categorical group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A versus B',
 		groups: [
@@ -662,13 +681,14 @@ tape('click custom categorical group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -685,7 +705,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 tape('click custom subcondition group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A vs. B vs. C',
 		groups: [
@@ -735,7 +755,13 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		state: {
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'CTCAE Graded Events',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -800,13 +826,14 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {

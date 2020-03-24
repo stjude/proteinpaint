@@ -238,7 +238,8 @@ tape('error handling', function(test) {
 
 	runpp({
 		state: {
-			genome: 'ahg38'
+			genome: 'ahg38',
+			termdbConfig: {}
 		},
 		app: {
 			callbacks: {
@@ -253,7 +254,8 @@ tape('error handling', function(test) {
 
 	runpp({
 		state: {
-			dslabel: 'xxx'
+			dslabel: 'xxx',
+			termdbConfig: {}
 		},
 		app: {
 			callbacks: {

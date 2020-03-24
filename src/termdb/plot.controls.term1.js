@@ -1,8 +1,9 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
 
 /*
-for configuring term1; just a thin wrapper of blue pill UI 
+for configuring term1; wraps termsetting
 
 execution flow:
 
@@ -33,12 +34,15 @@ class Term1ui {
 		this.dom = { tr: o.holder }
 	}
 	getState(appState) {
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			termfilter: appState.termfilter,
 			plot: appState.tree.plots[this.id]
 		}
+		if (appState.termfilter && appState.termfilter.filter) {
+			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		return state
 	}
 	main() {
 		this.render()
@@ -122,7 +126,7 @@ function setRenderers(self) {
 		self.pill.main({
 			term: plot.term.term,
 			q: plot.term.q,
-			termfilter: this.state.termfilter
+			filter: this.state.filter
 			// no need for disable_terms as pill won't show tree
 		})
 	}
