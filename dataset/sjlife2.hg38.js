@@ -235,6 +235,11 @@ const info_fields = [
 module.exports = {
 	isMds: true,
 
+	sample2bam: {
+		// this is just a quick fix
+		SJL5088613: 'files/hg38/sjlife/wgs-bam/SJST041646_G1.bam'
+	},
+
 	cohort: {
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'
