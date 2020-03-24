@@ -627,6 +627,8 @@ export function AFtest_groupname(tk, gi) {
 		return i ? i.label : g.key
 	}
 	if (g.is_termdb) {
+		return 'Group ' + (gi + 1) // quick fix not having to figure out a non-cohort tvs from g.filter
+		/*
 		const otherg = tk.vcf.numerical_axis.AFtest.groups[gi == 0 ? 1 : 0]
 		if (otherg.is_termdb) {
 			// both termdb
@@ -636,6 +638,7 @@ export function AFtest_groupname(tk, gi) {
 		const term1name = g.terms[0].term.name
 		if (term1name.length <= 20) return term1name
 		return term1name.substr(0, 17) + '...'
+		*/
 	}
 	throw 'unknown AFtest group type'
 }
