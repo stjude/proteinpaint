@@ -50,6 +50,7 @@ const express = require('express'),
 	termdb = require('./modules/termdb'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
+	bam_request_closure = require('./modules/bam'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
@@ -137,6 +138,7 @@ app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get('/tkbam', bam_request_closure(genomes))
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -185,7 +187,6 @@ app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
 // obsolete
-app.get('/tpbam', handle_tpbam)
 app.get('/tpvafs1', handle_tpvafs1)
 
 const port = serverconfig.port || 3000
@@ -6501,6 +6502,7 @@ function bam_ifnochr(file, genome, dir) {
 		})
 	})
 }
+exports.bam_ifnochr = bam_ifnochr
 
 function get_rank_from_sortedarray(v, lst) {
 	// [ { value: v } ]
@@ -11005,254 +11007,6 @@ function handle_translategm(req, res) {
 /****************************************************************************************************/
 
 /* __tp__ */
-
-function handle_tpbam(req, res) {
-	var [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	var start = parseInt(req.query.start),
-		stop = parseInt(req.query.stop),
-		barheight = parseInt(req.query.barheight),
-		width = parseInt(req.query.width),
-		stackheight = parseInt(req.query.stackheight)
-	if (isNaN(start)) return res.send({ error: 'invalid start' })
-	if (isNaN(stop)) return res.send({ error: 'invalid stop' })
-	if (isNaN(barheight)) return res.send({ error: 'invalid barheight' })
-	if (isNaN(width)) return res.send({ error: 'invalid width' })
-	if (isNaN(stackheight)) return res.send({ error: 'invalid stackheight' })
-	var nochr = false
-	if (req.query.nochr) {
-		nochr = true
-	}
-	log(req)
-	if (isurl) {
-		if (!serverconfig.cachedir) return res.send({ error: 'cachedir not specified in serverconfig' })
-		var tmp = file.split('//')
-		if (tmp.length != 2) return res.send({ error: 'irregular URL: ' + file })
-		var dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-		var loader = new load(dir)
-		fs.stat(dir, function(err, stat) {
-			if (err) {
-				switch (err.code) {
-					case 'ENOENT':
-						exec('mkdir -p ' + dir, function(err) {
-							if (err) {
-								res.send({ error: 'cannot create dir for caching' })
-								return
-							}
-							loader.load()
-						})
-						return
-					case 'EACCES':
-						return res.send({ error: 'permission denied when stating cache dir' })
-					default:
-						return res.send({ error: 'unknown error code when stating: ' + err.code })
-				}
-			}
-			loader.load()
-		})
-	} else {
-		var loader = new load()
-		loader.load()
-	}
-	function load(dir) {
-		this.name = req.query.name
-		this.start = start
-		this.stop = stop
-		this.chr = req.query.chr
-		this.nochr = nochr
-		this.width = width
-		this.barheight = barheight
-		this.stackheight = stackheight
-		this.fcolor = req.query.fcolor
-		this.rcolor = req.query.rcolor
-		this.mmcolor = req.query.mmcolor
-		this.load = () => {
-			var ps = spawn(
-				samtools,
-				['view', file, (this.nochr ? this.chr.replace('chr', '') : this.chr) + ':' + this.start + '-' + this.stop],
-				{ cwd: dir }
-			)
-			var out = [],
-				out2 = []
-			ps.stdout.on('data', data => {
-				// TODO detect amount of data, terminate if too big
-				out.push(data)
-			})
-			ps.stderr.on('data', data => {
-				out2.push(data)
-			})
-			ps.on('close', code => {
-				if (out2.length > 0) {
-					//res.send({error:out2.join('')})
-					//return
-				}
-				var lines = out
-					.join('')
-					.trim()
-					.split('\n')
-				var ntwidth = this.width / (this.stop - this.start)
-				var readsf = [],
-					readsr = []
-				lines.forEach(line => {
-					var l = line.split('\t')
-					var pos = parseInt(l[3]) - 1
-					var stop = start
-					var boxes = []
-					var flag = l[1],
-						seq = l[9],
-						cigarstr = l[5]
-					var prev = 0
-					var cum = 0
-					for (var i = 0; i < cigarstr.length; i++) {
-						if (cigarstr[i].match(/[0-9]/)) continue
-						var cigar = cigarstr[i]
-						if (cigar == 'H') {
-							// ignore
-							continue
-						}
-						var len = parseInt(cigarstr.substring(prev, i))
-						var s = ''
-						if (cigar == 'N') {
-							// no seq
-						} else if (cigar == 'P' || cigar == 'D') {
-							// padding or del, no sequence in read
-							for (var j = 0; j < len; j++) {
-								s += '*'
-							}
-						} else {
-							s = seq.substr(cum, len)
-							cum += len
-						}
-						prev = i + 1
-						switch (cigar) {
-							case '=':
-							case 'M':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									// visible
-									boxes.push({
-										opr: 'M',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'I':
-								if (pos > this.start && pos < this.stop) {
-									boxes.push({
-										opr: 'I',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								break
-							case 'D':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: 'D',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'N':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: 'N',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'X':
-							case 'S':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: cigar,
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'P':
-								if (pos > this.start && pos < this.stop) {
-									boxes.push({
-										opr: 'P',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								break
-							default:
-								console.log('unknown cigar: ' + cigar)
-						}
-					}
-					if (boxes.length == 0) return
-					var read = {
-						name: l[0],
-						forward: !(flag & 0x10),
-						boxes: boxes
-					}
-					if (read.forward) readsf.push(read)
-					else readsr.push(read)
-				})
-				var reads = readsf.concat(readsr)
-				//reads.sort((i,j)=>{ return i.boxes[0].start-j.boxes[0].start})
-				var canvas = createCanvas(this.width, reads.length * this.stackheight)
-				var ctx = canvas.getContext('2d')
-				var fontsize = this.stackheight
-				ctx.font = fontsize + 'px arial'
-				ctx.textBaseline = 'middle'
-				var scale = p => Math.ceil((this.width * (p - 0.5 - this.start)) / (this.stop - this.start))
-				reads.forEach((read, i) => {
-					var y = i * this.stackheight
-					var xstop = 0
-					read.boxes.forEach(b => {
-						var x = scale(b.start)
-						switch (b.opr) {
-							case 'P':
-							case 'I':
-								// ignore
-								return
-							case 'N':
-								ctx.strokeStyle = read.forward ? this.fcolor : this.rcolor
-								var y2 = Math.floor(y + this.stackheight / 2) + 0.5
-								ctx.beginPath()
-								ctx.moveTo(x, y2)
-								ctx.lineTo(x + b.len * ntwidth, y2)
-								ctx.stroke()
-								xstop = x + b.len * ntwidth
-								return
-							case 'X':
-								ctx.fillStyle = 'white'
-								ctx.fillText(b.s, x, y + fontsize / 2)
-								return
-							default:
-								ctx.fillStyle = read.forward ? this.fcolor : this.rcolor
-								ctx.fillRect(x, y, b.len * ntwidth, this.stackheight)
-								xstop = x + b.len * ntwidth
-						}
-					})
-					ctx.fillStyle = read.forward ? this.fcolor : this.rcolor
-					ctx.fillText(read.name, xstop, y + fontsize / 2)
-				})
-				res.send({
-					src: canvas.toDataURL(),
-					height: reads.length * this.stackheight
-				})
-			})
-		}
-	}
-}
 
 function handle_tpvafs1(req, res) {
 	var [e, file, isurl] = fileurl(req)
