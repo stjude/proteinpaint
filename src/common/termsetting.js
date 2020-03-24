@@ -787,25 +787,27 @@ function setInteractivity(self) {
 			ypad: 20
 		}
 		try {
-			self.num_obj.density_data = await client.dofetch2(
+			let density_q =
 				'/termdb?density=1' +
-					'&genome=' +
-					self.opts.genome +
-					'&dslabel=' +
-					self.opts.dslabel +
-					'&termid=' +
-					self.term.id +
-					'&filter=' +
-					encodeURIComponent(JSON.stringify(self.filter)) +
-					'&width=' +
-					self.num_obj.plot_size.width +
-					'&height=' +
-					self.num_obj.plot_size.height +
-					'&xpad=' +
-					self.num_obj.plot_size.xpad +
-					'&ypad=' +
-					self.num_obj.plot_size.ypad
-			)
+				'&genome=' +
+				self.opts.genome +
+				'&dslabel=' +
+				self.opts.dslabel +
+				'&termid=' +
+				self.term.id +
+				'&width=' +
+				self.num_obj.plot_size.width +
+				'&height=' +
+				self.num_obj.plot_size.height +
+				'&xpad=' +
+				self.num_obj.plot_size.xpad +
+				'&ypad=' +
+				self.num_obj.plot_size.ypad
+
+			if (typeof self.filter != 'undefined') {
+				density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(self.filter))
+			}
+			self.num_obj.density_data = await client.dofetch2(density_q)
 			if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 			else {
 				// svg for range plot
@@ -977,12 +979,12 @@ function setInteractivity(self) {
 			}
 
 			// strict equality to not have false positive with start=0
-			if (r.start === '') {
-				brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
-			}
-			if (r.stop === '') {
-				brush.range.stop = Math.floor(maxvalue)
-			}
+			// if (r.start === '') {
+			// 	brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
+			// }
+			// if (r.stop === '') {
+			// 	brush.range.stop = Math.floor(maxvalue)
+			// }
 		}
 
 		const range_brushes = self.num_obj.brush_g.selectAll('.range_brush').data(brushes, d => brushes.indexOf(d))
