@@ -308,9 +308,20 @@ function setInteractivity(self) {
 	self.showMenu = () => {
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 
-		const term_option_div = self.dom.tip.d.append('div')
-		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
+		const optsFxn = self.opts.showMenu
+			? self.showEditMenu
+			: self.term.type == 'categorical'
+			? self.showGrpOpts
+			: self.term.type == 'float' || self.term.type == 'integer'
+			? self.showNumOpts
+			: self.term.type == 'condition'
+			? self.showConditionOpts
+			: null
 
+		optsFxn(self.dom.tip.d)
+	}
+
+	self.showEditMenu = async function(div) {
 		const optsFxn =
 			self.term.type == 'categorical'
 				? self.showGrpOpts
@@ -320,46 +331,48 @@ function setInteractivity(self) {
 				? self.showConditionOpts
 				: null
 
-		term_option_div
+		div
 			.append('div')
-			.style('margin', '5px 2px')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'block')
+			.style('padding', '7px 15px')
+			.style('margin', '2px')
 			.style('text-align', 'center')
-
-		optsFxn(term_option_div)
-
-		// TODO: move 'edit', 'replace' and 'remove' to click menu
-		// if (!self.opts.disable_ReplaceRemove) {
-		// 	term_edit_div
-		// 		.append('div')
-		// 		.attr('class', 'replace_btn sja_filter_tag_btn')
-		// 		.style('display', 'inline-block')
-		// 		.style('border-radius', '13px')
-		// 		// .style('padding', '7px 15px')
-		// 		.style('margin', '5px')
-		// 		.style('text-align', 'center')
-		// 		.style('font-size', '.8em')
-		// 		.style('text-transform', 'uppercase')
-		// 		.text('Replace')
-		// 		.on('click', () => {
-		// 			self.dom.tip.clear()
-		// 			self.showTree()
-		// 		})
-		// 	term_edit_div
-		// 		.append('div')
-		// 		.attr('class', 'remove_btn sja_filter_tag_btn')
-		// 		.style('display', 'inline-block')
-		// 		.style('border-radius', '13px')
-		// 		// .style('padding', '7px 15px')
-		// 		.style('margin', '5px')
-		// 		.style('text-align', 'center')
-		// 		.style('font-size', '.8em')
-		// 		.style('text-transform', 'uppercase')
-		// 		.text('Remove')
-		// 		.on('click', () => {
-		// 			self.dom.tip.hide()
-		// 			self.removeTerm()
-		// 		})
-		// }
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('edit')
+			.on('click', () => {
+				self.dom.tip.clear()
+				optsFxn(self.dom.tip.d)
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'block')
+			.style('padding', '7px 15px')
+			.style('margin', '2px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Replace')
+			.on('click', () => {
+				self.dom.tip.clear()
+				self.showTree()
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'block')
+			.style('padding', '7px 15px')
+			.style('margin', '2px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Remove')
+			.on('click', () => {
+				self.dom.tip.hide()
+				self.removeTerm()
+			})
 	}
 
 	self.showGrpOpts = async function(div) {

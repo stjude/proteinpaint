@@ -50,7 +50,6 @@ class Term1ui {
 	setPill() {
 		// can only call after getting this.state
 		this.pill = termsettingInit({
-			disable_ReplaceRemove: true, // to disable Replace/Remove buttons
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
