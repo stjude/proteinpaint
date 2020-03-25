@@ -62,7 +62,14 @@ const softclipbg = 'rgb(72,136,191)'
 const softclipbg_lowq = 'rgb(173,217,255)'
 const qual2softclipbg = interpolateRgb(softclipbg_lowq, softclipbg)
 
+const deletion_linecolor = 'red'
+
 const maxqual = 40
+
+// tricky: on retina screen the individual nt boxes appear to have slight gaps in between
+// adding this increment to the rendering of each nt box appear to fix the issue
+// yet to be tested on a low-res screen
+const ntboxwidthincrement = 0.5
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
@@ -245,21 +252,34 @@ function parse_one_segment(line, r, ridx) {
 	const l = line.split('\t')
 	const qname = l[0],
 		flag = l[2 - 1],
-		segstart = Number.parseInt(l[4 - 1]) - 1, // change to 0-based
+		segstart_1based = Number.parseInt(l[4 - 1]),
 		cigarstr = l[6 - 1],
 		rnext = l[7 - 1],
 		pnext = l[8 - 1],
+		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
+
+	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
+		// invalid
+		return
+	}
+	const segstart = segstart_1based - 1
 
 	if (cigarstr == '*') {
 		console.log('cigar is *')
 		return
 	}
 
+	if (tlen == 0) {
+		// invalid
+		return
+	}
+
 	const boxes = [] // collect plottable segments
-	let quallst = []
-	if (r.to_qual) {
+	let quallst // default undefined, if qual is *
+	if (r.to_qual && qual != '*') {
+		quallst = []
 		// convert bp quality
 		for (let i = 0; i < qual.length; i++) {
 			const v = qual[i].charCodeAt(0) - 33
@@ -300,7 +320,7 @@ function parse_one_segment(line, r, ridx) {
 					len
 				}
 				if (r.to_printnt) b.s = s
-				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				if (r.to_qual && quallst) b.qual = quallst.slice(cum - len, cum)
 				boxes.push(b)
 				if (r.to_checkmismatch) {
 					check_mismatch(boxes, r, pos, s, b.qual)
@@ -317,7 +337,7 @@ function parse_one_segment(line, r, ridx) {
 					len,
 					s
 				}
-				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				if (r.to_qual && quallst) b.qual = quallst.slice(cum - len, cum)
 				boxes.push(b)
 			}
 			continue
@@ -329,7 +349,6 @@ function parse_one_segment(line, r, ridx) {
 					start: pos,
 					len
 				})
-				console.log('d', len)
 			}
 			pos += len
 			continue
@@ -355,7 +374,7 @@ function parse_one_segment(line, r, ridx) {
 					len,
 					s
 				}
-				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				if (r.to_qual && quallst) b.qual = quallst.slice(cum - len, cum)
 				boxes.push(b)
 			}
 			pos += len
@@ -368,7 +387,7 @@ function parse_one_segment(line, r, ridx) {
 				len,
 				s
 			}
-			if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+			if (r.to_qual && quallst) b.qual = quallst.slice(cum - len, cum)
 			if (boxes.length == 0) {
 				// this is the first box, will not consume ref
 				// shift softclip start to left, so its end will be pos, will not increment pos
@@ -391,7 +410,7 @@ function parse_one_segment(line, r, ridx) {
 					len,
 					s
 				}
-				if (r.to_qual) b.qual = quallst.slice(cum - len, cum)
+				if (r.to_qual && quallst) b.qual = quallst.slice(cum - len, cum)
 				boxes.push(b)
 			}
 			continue
@@ -407,13 +426,9 @@ function parse_one_segment(line, r, ridx) {
 		boxes,
 		forward: !(flag & 0x10),
 		ridx,
-		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
-		cigarstr, // temp
-		segstart, // temp
-		segstop: segmentstop(boxes)
+		x2: r.x + r.scale(segmentstop(boxes)) // x stop position, for drawing connect line
+		//tlen,
 	}
-	if (boxes.find(i => i.opr == 'S') && boxes[0].opr != 'S' && boxes[boxes.length - 1].opr != 'S') console.log(cigarstr)
-	//if(boxes[0].opr=='S') console.log(cigarstr)
 	return segment
 }
 
@@ -448,9 +463,6 @@ function check_mismatch(boxes, r, pos, readseq, quallst) {
 function plot_template(ctx, template, q) {
 	// segments: a list of segments consisting this template, maybe at different regions
 	const fontsize = q.stackheight
-	//ctx.font = fontsize + 'px arial'
-	//ctx.textBaseline = 'middle'
-	if (template.y == 28) console.log(template)
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
 		plot_segment(ctx, seg, template.y, q)
@@ -486,13 +498,9 @@ function plot_segment(ctx, segment, y, q) {
 		if (b.opr == 'P') {
 			return
 		}
-		if (b.opr == 'I') {
-			// insertion, show a round dot
-			console.log('insertion')
-			return
-		}
+		if (b.opr == 'I') return // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
-			ctx.strokeStyle = fcolor // may use blue line
+			ctx.strokeStyle = b.opr == 'D' ? deletion_linecolor : fcolor
 			ctx.setLineDash([]) // use solid lines
 			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
 			ctx.beginPath()
@@ -501,19 +509,23 @@ function plot_segment(ctx, segment, y, q) {
 			ctx.stroke()
 			return
 		}
+
 		if (b.opr == 'X' || b.opr == 'S') {
-			if (r.to_qual) {
+			if (r.to_qual && b.qual) {
+				// to show quality and indeed there is quality
+				let xoff = x
 				for (let i = 0; i < b.s.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					ctx.fillRect(x + r.ntwidth * i, y, r.ntwidth, q.stackheight)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, q.stackheight)
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
+						ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + q.stackheight / 2)
 					}
+					xoff += r.ntwidth
 				}
 			} else {
-				// not printing text or rendering qual
+				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg : mismatchbg
 				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
 			}
@@ -521,10 +533,12 @@ function plot_segment(ctx, segment, y, q) {
 		}
 		if (b.opr == 'M') {
 			if (r.to_qual) {
-				for (let i = 0; i < b.qual.length; i++) {
-					ctx.fillStyle = qual2fcolor(b.qual[i] / maxqual)
-					ctx.fillRect(x + i * r.ntwidth, y, r.ntwidth, q.stackheight)
-				}
+				let xoff = x
+				b.qual.forEach(v => {
+					ctx.fillStyle = qual2fcolor(v / maxqual)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, q.stackheight)
+					xoff += r.ntwidth
+				})
 			} else {
 				// not showing qual, one box
 				ctx.fillStyle = fcolor
@@ -542,6 +556,24 @@ function plot_segment(ctx, segment, y, q) {
 		}
 		throw 'unknown opr at rendering: ' + b.opr
 	})
+
+	// second pass to draw insertions
+	segment.boxes
+		.filter(i => i.opr == 'I')
+		.forEach(b => {
+			const pxwidth = b.s.length * r.ntwidth
+			if (pxwidth <= 1) {
+				// too narrow, don't show
+				return
+			}
+			const x = r.x + r.scale(b.start - 1)
+			ctx.fillStyle = 'white'
+			ctx.beginPath()
+			ctx.arc(x, y + q.stackheight / 2, q.stackheight / 2, 0, 2 * Math.PI)
+			ctx.closePath()
+			ctx.stroke()
+			// to show letter
+		})
 }
 
 /*
