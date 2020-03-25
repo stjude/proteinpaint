@@ -1,5 +1,5 @@
-#node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js raw/phenotree.par > keep/additional
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree keep/
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree matrix > keep/termjson 2>err
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree keep/termjson
 node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/files/hg38/sjlife/clinical/
 mv termdb.updated termdb
 

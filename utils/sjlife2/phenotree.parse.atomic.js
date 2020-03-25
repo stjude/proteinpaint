@@ -1,5 +1,5 @@
 if (process.argv.length != 4) {
-	console.log('<phenotree> <matrices/ folder> output termjson to stdout')
+	console.log('<phenotree> <matrix> output termjson to stdout')
 	process.exit()
 }
 /*
@@ -35,10 +35,9 @@ CHC is dealt in validate.ctcae.js
 */
 
 const file_phenotree = process.argv[2]
-const dir_matrix = process.argv[3]
+const file_matrix = process.argv[3]
 const fs = require('fs')
 const readline = require('readline')
-const glob = require('glob')
 const path = require('path')
 
 // lines with this as L2 are CHC and not dealt with here
@@ -65,9 +64,8 @@ const bins = {
 	// value: term json obj
 
 	// step 2
-	for (const file of glob.sync(path.join(dir_matrix, '*'))) {
-		await step2_parsematrix(file, key2terms)
-	}
+	//for (const file of glob.sync(path.join(dir_matrix, '*'))) { }
+	await step2_parsematrix(file_matrix, key2terms)
 
 	// step 3
 	step3_finalizeterms(key2terms)
@@ -101,8 +99,13 @@ function step1_parsephenotree() {
 
 		const L2 = t2.trim()
 		if (L2 == L2_CHC) {
-			skip_CHC++
-			continue
+			if (!key0) {
+				// key not provided, this line is a chc term, not parsed here
+				skip_CHC++
+				continue
+			} else {
+				// the key should be ctcae_graded and is a categorical, to be parsed here
+			}
 		}
 		// rest of lines are expected to be atomic term
 
@@ -202,10 +205,17 @@ function step2_parsematrix(file, key2terms) {
 				headerlst = l
 				return
 			}
-			for (let i = 0; i < l.length; i++) {
+
+			// do not parse first 1-4 columns, starting from 5th column
+			for (let i = 4; i < l.length; i++) {
 				const headerfield = headerlst[i]
 				if (!headerfield) throw 'headerfield missing: ' + i
 				const str = l[i]
+				if (str == '') {
+					// empty
+					continue
+				}
+
 				const term = key2terms[headerfield]
 				if (!term) {
 					header_notermmatch.add(headerfield)
@@ -271,7 +281,7 @@ function step3_finalizeterms(key2terms) {
 				}
 				if (term._values_newinmatrix.size) {
 					for (const k of term._values_newinmatrix) {
-						console.error('ERR - ' + termID + ': undeclared categories from matrix: ' + k)
+						console.error('ERR - ' + termID + ': categories undeclared in phenotree: ' + k)
 						term.values[k] = { label: k }
 					}
 				}

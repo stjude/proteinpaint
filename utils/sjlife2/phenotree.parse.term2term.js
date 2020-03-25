@@ -44,18 +44,18 @@ outputs these files
 * ancestry  - load to "ancestry" table
 */
 
+const level2_ctcaegraded = 'Graded Adverse Events'
+
 const abort = m => {
 	console.error('ERROR: ' + m)
 	process.exit()
 }
 
-if (process.argv.length < 3)
-	abort('<phenotree txt file> <keep/: folder of predefined term json files> outputs to: termdb, ancestry')
+if (process.argv.length < 3) abort('<phenotree txt file> <keep/termjson> outputs to: termdb, ancestry')
 const infile_phenotree = process.argv[2]
-const keep_dir = process.argv[3] // optional
+const keep_file = process.argv[3] // optional
 
 const fs = require('fs')
-const glob = require('glob')
 const path = require('path')
 
 /////////////////// helpers
@@ -263,6 +263,7 @@ for (let i = 1; i < lines.length; i++) {
 
 	const l = line.split('\t')
 
+	// names of each level, may be empty; if id is provided, levelX will be term name, otherwise will be term ID
 	let level1 = str2level(l[0]),
 		level2 = str2level(l[1]),
 		level3 = str2level(l[2]),
@@ -356,7 +357,7 @@ for (let i = 1; i < lines.length; i++) {
 		}
 		if (!c2p.has(id)) c2p.set(id, new Map())
 		c2p.get(id).set(level1, 0)
-		c2immediatep.set(id, level1)
+		c2immediatep.set(id, name2id.get(level1) || level1)
 		allterms_byorder.add(id)
 	}
 
@@ -384,10 +385,10 @@ for (let i = 1; i < lines.length; i++) {
 		if (!c2p.has(id)) c2p.set(id, new Map())
 		c2p.get(id).set(level1, 0)
 		c2p.get(id).set(level2, 1)
-		c2immediatep.set(id, level2)
+		c2immediatep.set(id, name2id.get(level2) || level2)
 
 		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id)
 	}
 
 	if (level4) {
@@ -415,10 +416,10 @@ for (let i = 1; i < lines.length; i++) {
 		c2p.get(id).set(level1, 0)
 		c2p.get(id).set(level2, 1)
 		c2p.get(id).set(level3, 2)
-		c2immediatep.set(id, level3)
+		c2immediatep.set(id, name2id.get(level3) || level3)
 
 		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id)
 	}
 
 	if (level5) {
@@ -443,10 +444,10 @@ for (let i = 1; i < lines.length; i++) {
 		c2p.get(id).set(level2, 1)
 		c2p.get(id).set(level3, 2)
 		c2p.get(id).set(level4, 3)
-		c2immediatep.set(id, level4)
+		c2immediatep.set(id, name2id.get(level4) || level4)
 
 		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id)
 	}
 }
 
@@ -484,17 +485,14 @@ for (const n of map4.keys()) {
 
 const keep_termjson = new Map()
 
-if (keep_dir) {
-	/* keep/ directory is given
-	each file is one single object, of key:value pairs
+if (keep_file) {
+	/* keep file is one single object, of key:value pairs
 	key: term id
 	value: term json definition
 	*/
-	for (const f of glob.sync(path.join(keep_dir, '*'))) {
-		const j = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
-		for (const id in j) {
-			keep_termjson.set(id, j[id])
-		}
+	const j = JSON.parse(fs.readFileSync(keep_file, { encoding: 'utf8' }))
+	for (const id in j) {
+		keep_termjson.set(id, j[id])
 	}
 }
 
