@@ -306,15 +306,20 @@ tape('Numerical term', async test => {
 		'Should change "first bin" from input'
 	)
 
-	test.end()
-	return
-
 	//trigger and test last_bin change
-	const last_bin_select = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('select')._groups[0][0]
-	last_bin_select.selectedIndex = 1
-	last_bin_select.dispatchEvent(new Event('change'))
+	const last_bin_custom_radio = tip.d
+		.node()
+		.querySelectorAll('tr')[3]
+		.querySelectorAll('div')[0]
+		.querySelectorAll('input')[1]
+	d3s.select(last_bin_custom_radio).property('checked', true)
+	last_bin_custom_radio.dispatchEvent(new Event('change'))
 
-	const last_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0]
+	const last_bin_input = tip.d
+		.node()
+		.querySelectorAll('tr')[3]
+		.querySelectorAll('div')[1]
+		.querySelectorAll('input')[0]
 
 	last_bin_input.value = 20
 
@@ -323,18 +328,43 @@ tape('Numerical term', async test => {
 	last_bin_input.dispatchEvent(enter_event)
 
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value,
+		tip.d
+			.node()
+			.querySelectorAll('tr')[3]
+			.querySelectorAll('div')[1]
+			.querySelectorAll('input')[0].value,
 		'20',
 		'Should change "last bin" from input'
 	)
 
-	// test 'reset' button
-	const reset_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.sja_menuoption')._groups[0][0]
-	reset_btn.click()
+	// test 'apply' button
+	const apply_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.apply_btn')._groups[0][0]
+	apply_btn.click()
+	pilldiv.click()
+	await sleep(500)
 
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][1].value,
-		'2',
+		tip.d
+			.node()
+			.querySelectorAll('tr')[0]
+			.querySelectorAll('input')[0].value,
+		'5',
+		'Should apply the change by "Apply" button'
+	)
+
+	// test 'reset' button
+	const reset_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.reset_btn')._groups[0][0]
+	reset_btn.click()
+	apply_btn.click()
+	pilldiv.click()
+	await sleep(500)
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelectorAll('tr')[0]
+			.querySelectorAll('input')[0].value,
+		'3',
 		'Should reset the bins by "Reset" button'
 	)
 

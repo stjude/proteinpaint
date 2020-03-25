@@ -1550,6 +1550,7 @@ function setInteractivity(self) {
 				self.first_bin_edit()
 				self.update_first_bin(self.num_obj.brushes[0])
 				self.last_bin_edit()
+				if (!self.num_obj.default_bins_q.last_bin && self.num_obj.brushes.length > 1) self.num_obj.brushes.pop()
 				if (self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
 				self.num_obj.config_table.reset_btn.style('display', 'none')
 			})
@@ -1559,8 +1560,12 @@ function setInteractivity(self) {
 				const custom_bins_q = JSON.parse(JSON.stringify(self.num_obj.custom_bins_q))
 				custom_bins_q.first_bin = JSON.parse(JSON.stringify(self.num_obj.brushes[0].range))
 				// if (custom_bins_q.first_bin.start == minvalue.toFixed(1)) delete custom_bins_q.first_bin.start
-				custom_bins_q.last_bin =
-					self.num_obj.brushes.length > 1 ? JSON.parse(JSON.stringify(self.num_obj.brushes[1].range)) : undefined
+				if (self.num_obj.brushes.length > 1) {
+					custom_bins_q.last_bin =
+						self.num_obj.brushes.length > 1 ? JSON.parse(JSON.stringify(self.num_obj.brushes[1].range)) : undefined
+				} else {
+					delete custom_bins_q.last_bin
+				}
 				self.q = JSON.parse(JSON.stringify(custom_bins_q))
 				self.opts.callback({
 					term: self.term,
