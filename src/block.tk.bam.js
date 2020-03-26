@@ -83,8 +83,7 @@ async function getData(tk, block) {
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'stackheight=' + tk.stackheight,
-		'stackspace=' + tk.stackspace,
-		'ntspace=' + tk.ntspace
+		'stackspace=' + tk.stackspace
 	]
 	if (tk.asPaired) lst.push('asPaired=1')
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
@@ -118,7 +117,6 @@ function makeTk(tk, block) {
 	tk.img = tk.glider.append('image')
 	if (!tk.stackheight) tk.stackheight = 13 // make it dependent on range size
 	if (!tk.stackspace) tk.stackspace = 1
-	if (!tk.ntspace) tk.ntspace = 5 // reads in the same stack are spaced by this # of nt apart
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')

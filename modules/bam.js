@@ -9,6 +9,7 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
+* dynamic stack height
 * server pass read region data to client, click on tk img to fetch full info of that read
 * no region size restriction
   render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
@@ -17,8 +18,8 @@ TODO
 
 ************* data structure
 template {}
-  .start
-  .stop
+  .x1, x2
+  .ridx2 // region idx of the stop position
   .segments[]
 
 segment {}
@@ -80,6 +81,10 @@ const maxqual = 40
 // yet to be tested on a low-res screen
 const ntboxwidthincrement = 0.5
 
+// space between reads in the same stack, either 5 bp or 5 px, which ever greater
+const readspace_px = 2
+const readspace_bp = 5
+
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
 
@@ -119,9 +124,6 @@ async function get_q(genome, req) {
 	if (!req.query.stackspace) throw '.stackspace missing'
 	q.stackspace = Number.parseInt(req.query.stackspace)
 	if (Number.isNaN(q.stackspace)) throw '.stackspace not integer'
-	if (!req.query.ntspace) throw '.ntspace missing'
-	q.ntspace = Number.parseInt(req.query.ntspace)
-	if (Number.isNaN(q.ntspace)) throw '.ntspace not integer'
 
 	if (req.query.nochr) {
 		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
@@ -179,21 +181,20 @@ async function do_query(q) {
 }
 
 function do_stack(q, templates) {
-	templates.sort((i, j) => i.start - j.start)
-	const stacks = [] // each value is stop coord of each stack
+	templates.sort((i, j) => i.x1 - j.x1)
+	const stacks = [] // each value is screen pixel pos of each stack
 	for (const template of templates) {
-		// {start, stop, segments}
 		let stackidx = null
 		for (let i = 0; i < stacks.length; i++) {
-			if (stacks[i] + q.ntspace < template.start) {
+			if (stacks[i] + Math.max(readspace_px, readspace_bp * q.regions[template.ridx2].ntwidth) < template.x1) {
 				stackidx = i
-				stacks[i] = template.stop
+				stacks[i] = template.x2
 				break
 			}
 		}
 		if (stackidx == null) {
 			stackidx = stacks.length
-			stacks[stackidx] = template.stop
+			stacks[stackidx] = template.x2
 		}
 		template.y = stackidx * (q.stackheight + q.stackspace)
 	}
@@ -242,9 +243,12 @@ function parse_all_reads(q) {
 			for (const line of r.lines) {
 				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
+				const start = segment.boxes[0].start
+				const stop = segmentstop(segment.boxes)
 				lst.push({
-					start: segment.boxes[0].start,
-					stop: segmentstop(segment.boxes),
+					x1: r.scale(start),
+					x2: r.scale(stop),
+					ridx2: i, // r idx of stop
 					segments: [segment]
 				})
 			}
@@ -264,11 +268,15 @@ function parse_all_reads(q) {
 			if (temp) {
 				// add this segment to existing template
 				temp.segments.push(segment)
-				temp.stop = Math.max(temp.stop, segmentstop(segment.boxes))
+				temp.x2 = Math.max(temp.x2, r.scale(segmentstop(segment.boxes)))
+				temp.ridx2 = i
 			} else {
 				qname2template.set(segment.qname, {
-					start: segment.boxes[0].start,
-					stop: segmentstop(segment.boxes),
+					//start: segment.boxes[0].start,
+					//stop: segmentstop(segment.boxes),
+					x1: r.scale(segment.boxes[0].start),
+					x2: r.scale(segmentstop(segment.boxes)),
+					ridx2: i,
 					segments: [segment]
 				})
 			}
@@ -459,7 +467,6 @@ function parse_one_segment(line, r, ridx) {
 		forward: !(flag & 0x10),
 		ridx,
 		x2: r.x + r.scale(segmentstop(boxes)) // x stop position, for drawing connect line
-		//tlen,
 	}
 	return segment
 }
