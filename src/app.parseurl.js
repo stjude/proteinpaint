@@ -131,6 +131,31 @@ arg
 			}
 		}
 		let tklst = []
+		if (urlp.has('bamfile')) {
+			const lst = urlp.get('bamfile').split(',')
+			for (let i = 0; i < lst.length; i += 2) {
+				if (lst[i] && lst[i + 1]) {
+					tklst.push({
+						type: client.tkt.bam,
+						name: lst[i],
+						file: lst[i + 1]
+					})
+				}
+			}
+		}
+		if (urlp.has('bamurl')) {
+			const lst = urlp.get('bamurl').split(',')
+			for (let i = 0; i < lst.length; i += 2) {
+				if (lst[i] && lst[i + 1]) {
+					tklst.push({
+						type: client.tkt.bam,
+						name: lst[i],
+						url: lst[i + 1]
+					})
+				}
+			}
+		}
+
 		if (urlp.has('bedjfile')) {
 			const lst = urlp.get('bedjfile').split(',')
 			for (let i = 0; i < lst.length; i += 2) {
