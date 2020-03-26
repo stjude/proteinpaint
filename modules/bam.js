@@ -9,11 +9,11 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
-* error rendering, N junction overlaps with another read in stacking
-* toggle between single read and paired read mode, if paired, join by dashed lines
+* show color legend
 * no region size restriction
   render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
   then show an alert row on top
+* error rendering, N junction overlaps with another read in stacking
 
 ************* data structure
 template {}
@@ -41,7 +41,7 @@ get_q
 	get_refseq
 do_query
 	query_region
-	parse_all_reads
+	parse_all_reads(q)
 		parse_one_segment
 			check_mismatch
 			segmentstop
@@ -50,6 +50,8 @@ do_query
 	plot_template
 		plot_segment
 */
+
+// match box color
 const fcolor = 'rgb(120,120,120)'
 const fcolor_lowq = 'rgb(230,230,230)'
 const qual2fcolor = interpolateRgb(fcolor_lowq, fcolor)
@@ -61,6 +63,10 @@ const qual2mismatchbg = interpolateRgb(mismatchbg_lowq, mismatchbg)
 const softclipbg = 'rgb(72,136,191)'
 const softclipbg_lowq = 'rgb(173,217,255)'
 const qual2softclipbg = interpolateRgb(softclipbg_lowq, softclipbg)
+// insertion, text color gradient to correlate with the quality
+const insertion_highq = '#47FFFC' //'#00FFFB'
+const insertion_lowq = '#B2D7D7' //'#009290'
+const qual2insertion = interpolateRgb(insertion_lowq, insertion_highq)
 
 const deletion_linecolor = 'red'
 
@@ -98,7 +104,7 @@ async function get_q(genome, req) {
 	const q = {
 		file: _file, // may change if is url
 		collapse_density: false,
-		query: req.query
+		asPaired: req.query.asPaired
 	}
 	if (isurl) {
 		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
@@ -119,6 +125,7 @@ async function get_q(genome, req) {
 	} else {
 		// info not provided, first time loading
 		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
+		q.getcolorscale = true // upon init, get this for showing in legend
 	}
 	if (!req.query.regions) throw '.regions[] missing'
 	q.regions = JSON.parse(req.query.regions)
@@ -141,7 +148,7 @@ async function do_query(q) {
 		await query_region(r, q)
 	}
 
-	const templates = parse_all_reads(q.regions)
+	const templates = parse_all_reads(q)
 	console.log(q.regions.reduce((i, j) => i + j.lines.length, 0), 'reads', templates.length, 'templates')
 
 	const stacks = do_stack(q, templates)
@@ -161,6 +168,9 @@ async function do_query(q) {
 		width: canvaswidth,
 		height: canvasheight,
 		nochr: q.nochr
+	}
+	if (q.getcolorscale) {
+		result.colorscale = getcolorscale()
 	}
 	return result
 }
@@ -217,14 +227,33 @@ function query_region(r, q) {
 	})
 }
 
-function parse_all_reads(regions) {
+function parse_all_reads(q) {
 	// parse reads from all regions
-	// a template with segments possibly from multiple regions
+	// returns an array of templates, no matter if paired or not
+	if (!q.asPaired) {
+		// pretends single reads as templates
+		const lst = []
+		// to account for reads spanning between multiple regions, may use qname2read = new Map()
+		for (let i = 0; i < q.regions.length; i++) {
+			const r = q.regions[i]
+			for (const line of r.lines) {
+				const segment = parse_one_segment(line, r, i)
+				if (!segment) continue
+				lst.push({
+					start: segment.boxes[0].start,
+					stop: segmentstop(segment.boxes),
+					segments: [segment]
+				})
+			}
+		}
+		return lst
+	}
+	// paired segments are joined together; a template with segments possibly from multiple regions
 	const qname2template = new Map()
 	// key: qname
 	// value: template, a list of segments
-	for (let i = 0; i < regions.length; i++) {
-		const r = regions[i]
+	for (let i = 0; i < q.regions.length; i++) {
+		const r = q.regions[i]
 		for (const line of r.lines) {
 			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
@@ -495,9 +524,7 @@ function plot_segment(ctx, segment, y, q) {
 
 	segment.boxes.forEach(b => {
 		const x = r.x + r.scale(b.start)
-		if (b.opr == 'P') {
-			return
-		}
+		if (b.opr == 'P') return // do not handle
 		if (b.opr == 'I') return // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
 			ctx.strokeStyle = b.opr == 'D' ? deletion_linecolor : fcolor
@@ -527,7 +554,7 @@ function plot_segment(ctx, segment, y, q) {
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg : mismatchbg
-				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			return
 		}
@@ -542,7 +569,7 @@ function plot_segment(ctx, segment, y, q) {
 			} else {
 				// not showing qual, one box
 				ctx.fillStyle = fcolor
-				ctx.fillRect(x, y, b.len * r.ntwidth, q.stackheight)
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			/*
 			if(r.to_printnt) {
@@ -558,22 +585,30 @@ function plot_segment(ctx, segment, y, q) {
 	})
 
 	// second pass to draw insertions
-	segment.boxes
-		.filter(i => i.opr == 'I')
-		.forEach(b => {
+	const insertions = segment.boxes.filter(i => i.opr == 'I')
+	if (insertions.length) {
+		ctx.font = q.stackheight - 2 + 'pt Arial'
+		insertions.forEach(b => {
 			const pxwidth = b.s.length * r.ntwidth
 			if (pxwidth <= 1) {
 				// too narrow, don't show
 				return
 			}
 			const x = r.x + r.scale(b.start - 1)
-			ctx.fillStyle = 'white'
-			ctx.beginPath()
-			ctx.arc(x, y + q.stackheight / 2, q.stackheight / 2, 0, 2 * Math.PI)
-			ctx.closePath()
-			ctx.stroke()
-			// to show letter
+			/* fill a text to indicate the insertion
+			if single basepair, use the nt; else, use # of nt
+			if b.qual is available, set text color based on it
+			*/
+			if (b.qual) {
+				ctx.fillStyle = qual2insertion(b.qual.reduce((i, j) => i + j, 0) / b.qual.length / maxqual)
+			} else {
+				ctx.fillStyle = insertion_highq
+			}
+			const text = b.s.length == 1 ? b.s : b.s.length
+			//ctx.strokeText( text, x, y+q.stackheight/2 )
+			ctx.fillText(text, x, y + q.stackheight / 2)
 		})
+	}
 }
 
 /*
@@ -606,3 +641,31 @@ puzzling case of HWI-ST988:130:D1TFEACXX:4:1201:10672:53382 from SJBALL021856_D1
   y: 28
 }
 */
+
+function getcolorscale() {
+	const re = {}
+	const barwidth = 150,
+		barheight = 20,
+		fontsize = 12,
+		leftpad = 10,
+		rightpad = 10,
+		ticksize = 4
+
+	function getgradientcanvas(lowq, highq) {
+		const canvas = createCanvas(leftpad + barwidth + rightpad, fontsize + ticksize + barheight)
+		const ctx = canvas.getContext('2d')
+		const gradient = ctx.createLinearGradient(0, 0, barwidth, 0)
+		gradient.addColorStop(0, lowq)
+		gradient.addColorStop(1, highq)
+		ctx.fillStyle = gradient
+		ctx.fillRect(leftpad, fontsize + ticksize, leftpad + barwidth, fontsize + ticksize + barheight)
+
+		ctx.fillStyle = 'black'
+		ctx.strokeStyle = 'black'
+		ctx.beginPath()
+		ctx.moveTo(leftpad, fontsize)
+		ctx.lineTo(leftpad, fontsize + ticksize)
+
+		return canvas.toDataURL()
+	}
+}
