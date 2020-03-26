@@ -30,6 +30,7 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		use_bins_less: opts.use_bins_less,
+		showMenu: opts.showMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
 		debug: true,
 		callback: function(termsetting) {
@@ -54,15 +55,13 @@ tape('\n', test => {
 	test.end()
 })
 
-tape.skip('menu', test => {})
-
-tape.skip('disable_ReplaceRemove', async test => {
+tape('editMenu', async test => {
 	const opts = getOpts({
-		disable_ReplaceRemove: true,
+		showMenu: true,
 		tsData: {
 			term: {
 				id: 'dummy',
-				name: 'disable_ReplaceRemove',
+				name: 'show_edit_menu',
 				type: 'categorical',
 				values: {
 					cat1: { label: 'Cat 1' }
@@ -78,37 +77,38 @@ tape.skip('disable_ReplaceRemove', async test => {
 	pilldiv.click()
 	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
-	test.equal(
-		tipd.node().childNodes[1].childNodes.length,
-		0,
-		'the second row of tip does not contain replace/remove buttons'
-	)
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
 
-	// delete the flag and click pill again to see if showing replace/remove buttons in tip
+	// delete the flag and click pill again to see if hiding menu for replace/remove buttons in tip
 	// if pill.opts is frozen in future, just create a new pill
-	delete opts.pill.Inner.opts.disable_ReplaceRemove
+	delete opts.pill.Inner.opts.showMenu
 	pilldiv.click()
-	test.equal(
-		tipd.node().childNodes[1].childNodes.length,
-		2,
-		'the second row of tip now contains replace/remove buttons after deleting opts.disable_ReplaceRemove'
-	)
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, 'should hide edit menu')
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })
 
-tape.skip('use_bins_less', async test => {
+tape('use_bins_less', async test => {
 	const opts = getOpts({
 		use_bins_less: true,
 		tsData: {
 			term: {
-				id: 'dummy',
-				name: 'use_bins_less',
+				id: 'agedx',
+				name: 'Age at Cancer Diagnosis',
+				unit: 'Years',
 				type: 'float',
 				bins: {
-					less: { bin_size: 10, first_bin: { start: 0 } },
-					default: { bin_size: 1, first_bin: { start: 0 } }
+					less: {
+						bin_size: 10,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					},
+					default: {
+						bin_size: 1,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					}
 				}
 			}
 		}
@@ -121,7 +121,7 @@ tape.skip('use_bins_less', async test => {
 	await sleep(300)
 
 	const tip = opts.pill.Inner.dom.tip.d.node()
-	const bin_size_input = tip.querySelectorAll('input')[0]
+	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
@@ -129,7 +129,7 @@ tape.skip('use_bins_less', async test => {
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
 	await sleep(300)
-	const bin_size_input2 = tip.querySelectorAll('input')[0]
+	const bin_size_input2 = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 	test.equal(bin_size_input2.value, '1', 'has term.bins.default.bin_size as value')
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
