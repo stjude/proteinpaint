@@ -9,7 +9,7 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
-* show color legend
+* server pass read region data to client, click on tk img to fetch full info of that read
 * no region size restriction
   render no more than 5k reads; while collecting, if exceeds 5k, terminate spawn;
   then show an alert row on top
@@ -52,23 +52,26 @@ do_query
 */
 
 // match box color
-const fcolor = 'rgb(120,120,120)'
-const fcolor_lowq = 'rgb(230,230,230)'
-const qual2fcolor = interpolateRgb(fcolor_lowq, fcolor)
+const match_hq = 'rgb(120,120,120)'
+const match_lq = 'rgb(230,230,230)'
+const qual2fcolor = interpolateRgb(match_lq, match_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
-const mismatchbg = 'rgb(223,92,97)'
-const mismatchbg_lowq = 'rgb(255,184,187)'
-const qual2mismatchbg = interpolateRgb(mismatchbg_lowq, mismatchbg)
+const mismatchbg_hq = '#df5c61'
+const mismatchbg_lq = '#ffdbdd'
+const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 // softclip: soft blue for background only, strong blue for printing nt
-const softclipbg = 'rgb(72,136,191)'
-const softclipbg_lowq = 'rgb(173,217,255)'
-const qual2softclipbg = interpolateRgb(softclipbg_lowq, softclipbg)
+const softclipbg_hq = '#4888bf'
+const softclipbg_lq = '#c9e6ff'
+const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
 // insertion, text color gradient to correlate with the quality
-const insertion_highq = '#47FFFC' //'#00FFFB'
-const insertion_lowq = '#B2D7D7' //'#009290'
-const qual2insertion = interpolateRgb(insertion_lowq, insertion_highq)
+const insertion_hq = '#47FFFC' //'#00FFFB'
+const insertion_lq = '#B2D7D7' //'#009290'
+const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 
 const deletion_linecolor = 'red'
+
+// minimum px width to display a mismatch
+const mismatch_minpx = 1
 
 const maxqual = 40
 
@@ -133,7 +136,7 @@ async function get_q(genome, req) {
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
 		// based on resolution, decide if to do following
-		if (r.ntwidth >= 0.5) {
+		if (r.ntwidth >= 0.9) {
 			r.to_checkmismatch = true
 			r.referenceseq = await get_refseq(genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
 		}
@@ -503,7 +506,7 @@ function plot_template(ctx, template, q) {
 			const prevseg = template.segments[i - 1]
 			if (prevseg.x2 < currentx) {
 				const y = Math.floor(template.y + q.stackheight / 2) + 0.5
-				ctx.strokeStyle = fcolor
+				ctx.strokeStyle = match_hq
 				ctx.setLineDash([5, 3]) // dash for read pairs
 				ctx.beginPath()
 				ctx.moveTo(prevseg.x2, y)
@@ -527,7 +530,7 @@ function plot_segment(ctx, segment, y, q) {
 		if (b.opr == 'P') return // do not handle
 		if (b.opr == 'I') return // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
-			ctx.strokeStyle = b.opr == 'D' ? deletion_linecolor : fcolor
+			ctx.strokeStyle = b.opr == 'D' ? deletion_linecolor : match_hq
 			ctx.setLineDash([]) // use solid lines
 			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
 			ctx.beginPath()
@@ -553,7 +556,7 @@ function plot_segment(ctx, segment, y, q) {
 				}
 			} else {
 				// not using quality or there ain't such data
-				ctx.fillStyle = b.opr == 'S' ? softclipbg : mismatchbg
+				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			return
@@ -568,7 +571,7 @@ function plot_segment(ctx, segment, y, q) {
 				})
 			} else {
 				// not showing qual, one box
-				ctx.fillStyle = fcolor
+				ctx.fillStyle = match_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			/*
@@ -590,7 +593,7 @@ function plot_segment(ctx, segment, y, q) {
 		ctx.font = q.stackheight - 2 + 'pt Arial'
 		insertions.forEach(b => {
 			const pxwidth = b.s.length * r.ntwidth
-			if (pxwidth <= 1) {
+			if (pxwidth <= mismatch_minpx) {
 				// too narrow, don't show
 				return
 			}
@@ -602,10 +605,9 @@ function plot_segment(ctx, segment, y, q) {
 			if (b.qual) {
 				ctx.fillStyle = qual2insertion(b.qual.reduce((i, j) => i + j, 0) / b.qual.length / maxqual)
 			} else {
-				ctx.fillStyle = insertion_highq
+				ctx.fillStyle = insertion_hq
 			}
 			const text = b.s.length == 1 ? b.s : b.s.length
-			//ctx.strokeText( text, x, y+q.stackheight/2 )
 			ctx.fillText(text, x, y + q.stackheight / 2)
 		})
 	}
@@ -643,29 +645,89 @@ puzzling case of HWI-ST988:130:D1TFEACXX:4:1201:10672:53382 from SJBALL021856_D1
 */
 
 function getcolorscale() {
-	const re = {}
-	const barwidth = 150,
+	/*
+           base quality
+           40  30  20  10  0
+           |   |   |   |   |
+Match      BBBBBBBBBBBBBBBBB
+Mismatch   BBBBBBBBBBBBBBBBB
+Softclip   BBBBBBBBBBBBBBBBB
+Insertion  BBBBBBBBBBBBBBBBB
+*/
+	const barwidth = 160,
 		barheight = 20,
+		barspace = 1,
 		fontsize = 12,
-		leftpad = 10,
+		labyspace = 5,
+		leftpad = 100,
 		rightpad = 10,
 		ticksize = 4
 
-	function getgradientcanvas(lowq, highq) {
-		const canvas = createCanvas(leftpad + barwidth + rightpad, fontsize + ticksize + barheight)
-		const ctx = canvas.getContext('2d')
-		const gradient = ctx.createLinearGradient(0, 0, barwidth, 0)
-		gradient.addColorStop(0, lowq)
-		gradient.addColorStop(1, highq)
+	const canvas = createCanvas(
+		leftpad + barwidth + rightpad,
+		fontsize * 2 + labyspace + ticksize + (barheight + barspace) * 4
+	)
+	const ctx = canvas.getContext('2d')
+
+	ctx.fillStyle = 'black'
+	ctx.font = fontsize + 'pt Arial'
+	ctx.textAlign = 'center'
+	ctx.fillText('Base quality', leftpad + barwidth / 2, fontsize)
+
+	let y = fontsize * 2 + labyspace
+
+	ctx.strokeStyle = 'black'
+	ctx.beginPath()
+	ctx.moveTo(leftpad, y)
+	ctx.lineTo(leftpad, y + ticksize)
+	ctx.moveTo(leftpad + barwidth / 4, y)
+	ctx.lineTo(leftpad + barwidth / 4, y + ticksize)
+	ctx.moveTo(leftpad + barwidth / 2, y)
+	ctx.lineTo(leftpad + barwidth / 2, y + ticksize)
+	ctx.moveTo(leftpad + (barwidth * 3) / 4, y)
+	ctx.lineTo(leftpad + (barwidth * 3) / 4, y + ticksize)
+	ctx.moveTo(leftpad + barwidth, y)
+	ctx.lineTo(leftpad + barwidth, y + ticksize)
+	ctx.closePath()
+	ctx.stroke()
+
+	ctx.fillText(40, leftpad, y)
+	ctx.fillText(30, leftpad + barwidth / 4, y)
+	ctx.fillText(20, leftpad + barwidth / 2, y)
+	ctx.fillText(10, leftpad + (barwidth * 3) / 4, y)
+	ctx.fillText(0, leftpad + barwidth, y)
+
+	ctx.textAlign = 'left'
+	ctx.textBaseline = 'middle'
+
+	y += ticksize
+
+	ctx.fillText('Match', 0, y + barheight / 2)
+	fillgradient(match_lq, match_hq, y)
+	y += barheight + barspace
+
+	ctx.fillStyle = 'black'
+	ctx.fillText('Mismatch', 0, y + barheight / 2)
+	fillgradient(mismatchbg_lq, mismatchbg_hq, y)
+	y += barheight + barspace
+
+	ctx.fillStyle = 'black'
+	ctx.fillText('Softclip', 0, y + barheight / 2)
+	fillgradient(softclipbg_lq, softclipbg_hq, y)
+	y += barheight + barspace
+
+	ctx.fillStyle = 'black'
+	ctx.fillText('Insertion', 0, y + barheight / 2)
+	fillgradient(insertion_lq, insertion_hq, y)
+
+	function fillgradient(lowq, highq, y) {
+		const x = leftpad
+		const gradient = ctx.createLinearGradient(x, y, x + barwidth, y)
+		gradient.addColorStop(0, highq)
+		gradient.addColorStop(1, lowq)
 		ctx.fillStyle = gradient
-		ctx.fillRect(leftpad, fontsize + ticksize, leftpad + barwidth, fontsize + ticksize + barheight)
-
-		ctx.fillStyle = 'black'
-		ctx.strokeStyle = 'black'
-		ctx.beginPath()
-		ctx.moveTo(leftpad, fontsize)
-		ctx.lineTo(leftpad, fontsize + ticksize)
-
-		return canvas.toDataURL()
+		ctx.fillRect(x, y, barwidth, barheight)
 	}
+
+	return canvas.toDataURL()
 }

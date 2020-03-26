@@ -60,6 +60,10 @@ export async function loadTk(tk, block) {
 		// reset max
 
 		tk.data = await getData(tk, block)
+		if (tk.data.colorscale) {
+			// available from 1st query, cache
+			tk.colorscale = tk.data.colorscale
+		}
 
 		renderTk(tk, block)
 
@@ -141,17 +145,33 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{ label: 'single', value: 'single', checked: !tk.asPaired },
-				{ label: 'paired, joined by dashed line', value: 'paired', checked: tk.asPaired }
+				{ label: 'paired', value: 'paired', checked: tk.asPaired }
 			],
-			style: { display: 'inline-block' },
+			styles: { display: 'inline-block' },
 			callback: () => {
 				tk.asPaired = !tk.asPaired
 				loadTk(tk, block)
 			}
 		})
-		d.append('div')
-			.text('Split reads are joined by solid lines.')
-			.style('opacity', 0.5)
-			.style('font-size', '.7em')
 	}
+
+	d
+		.append('div')
+		.style('font-size', '.8em')
+		.style('width', '300px').html(`
+	<ul style="padding-left:15px">
+	  <li><b>Matches</b> are rendered as gray boxes aligned to the reference.</li>
+	  <li><b>Mismatches</b> will be checked when 1 bp is wider than 1 pixel, and are rendered as red boxes aligned to the reference.</li>
+	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
+	  <li><b>Base qualities</b> are rendered when 1 bp is wider than 2 pixels. See color scale below. When base quality is not used or is unavailable, full colors are used.</li>
+	  <li><b>Sequences</b> from mismatch and softclip will be printed when 1 bp is wider than 7 pixels.</li>
+	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that's in use.</li>
+	  <li><b>Deletions</b> are gaps joined by red horizontal lines.</li>
+	  <li><b>Split reads</b> and splice junctions are indicated by solid gray lines.</li>
+	  <li><b>Read pairs</b> are joined by dashed gray lines.</li>
+	</ul>`)
+	d.append('div')
+		.style('margin-top', '10px')
+		.append('img')
+		.attr('src', tk.colorscale)
 }
