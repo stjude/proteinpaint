@@ -2,6 +2,7 @@ import { event as d3event } from 'd3-selection'
 import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
+import { make_radios } from './dom'
 
 /*
 
@@ -81,6 +82,7 @@ async function getData(tk, block) {
 		'stackspace=' + tk.stackspace,
 		'ntspace=' + tk.ntspace
 	]
+	if (tk.asPaired) lst.push('asPaired=1')
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
@@ -113,6 +115,7 @@ function makeTk(tk, block) {
 	if (!tk.stackheight) tk.stackheight = 13 // make it dependent on range size
 	if (!tk.stackspace) tk.stackspace = 1
 	if (!tk.ntspace) tk.ntspace = 5 // reads in the same stack are spaced by this # of nt apart
+	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 
@@ -128,107 +131,27 @@ function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 	const d = tk.tkconfigtip.d.append('div')
 
-	d.append('div')
-		.text('RNA-seq coverage is shown at all covered bases.')
-		.style('font-size', '.8em')
-		.style('opacity', 0.5)
 	{
-		const row = d.append('div').style('margin', '5px 0px')
-		row.append('span').html('Bar height&nbsp;')
+		const row = d.append('div')
 		row
-			.append('input')
-			.attr('type', 'numeric')
-			.property('value', tk.rna.coveragebarh)
-			.style('width', '80px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
-				if (v <= 20) return
-				if (v == tk.rna.coveragebarh) return
-				tk.rna.coveragebarh = v
+			.append('span')
+			.html('Show reads as:&nbsp;')
+			.style('opacity', 0.5)
+		make_radios({
+			holder: row,
+			options: [
+				{ label: 'single', value: 'single', checked: !tk.asPaired },
+				{ label: 'paired, joined by dashed line', value: 'paired', checked: tk.asPaired }
+			],
+			style: { display: 'inline-block' },
+			callback: () => {
+				tk.asPaired = !tk.asPaired
 				loadTk(tk, block)
-			})
+			}
+		})
+		d.append('div')
+			.text('Split reads are joined by solid lines.')
+			.style('opacity', 0.5)
+			.style('font-size', '.7em')
 	}
-	{
-		const row = d.append('div').style('margin', '5px 0px')
-		const id = Math.random()
-		row
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('id', id)
-			.property('checked', tk.rna.coverageauto)
-			.on('change', () => {
-				tk.rna.coverageauto = d3event.target.checked
-				fixed.style('display', tk.rna.coverageauto ? 'none' : 'inline')
-				loadTk(tk, block)
-			})
-		row
-			.append('label')
-			.html('&nbsp;automatic scale')
-			.attr('for', id)
-		const fixed = row
-			.append('div')
-			.style('display', tk.rna.coverageauto ? 'none' : 'inline')
-			.style('margin-left', '20px')
-		fixed.append('span').html('Fixed max&nbsp')
-		fixed
-			.append('input')
-			.attr('value', 'numeric')
-			.property('value', tk.rna.coveragemax)
-			.style('width', '50px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
-				if (v <= 0) return
-				if (v == tk.rna.coveragemax) return
-				tk.rna.coveragemax = v
-				loadTk(tk, block)
-			})
-	}
-
-	// dna bar h
-	d.append('div')
-		.text('SNPs are only shown for those heterozygous in DNA.')
-		.style('font-size', '.8em')
-		.style('opacity', 0.5)
-		.style('margin-top', '25px')
-	{
-		const row = d.append('div').style('margin', '5px 0px')
-		row.append('span').html('Bar height&nbsp;')
-		row
-			.append('input')
-			.attr('type', 'numeric')
-			.property('value', tk.dna.coveragebarh)
-			.style('width', '80px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
-				if (v <= 20) return
-				if (v == tk.dna.coveragebarh) return
-				tk.dna.coveragebarh = v
-				loadTk(tk, block)
-			})
-	}
-	{
-		const row = d.append('div').style('margin', '5px 0px 25px 0px')
-		row.append('span').html('Allele color&nbsp;&nbsp;Ref:&nbsp;')
-		row
-			.append('input')
-			.attr('type', 'color')
-			.property('value', tk.dna.refcolor)
-			.on('change', () => {
-				tk.dna.refcolor = d3event.target.value
-				loadTk(tk, block)
-			})
-		row.append('span').html('&nbsp;Alt:&nbsp;')
-		row
-			.append('input')
-			.attr('type', 'color')
-			.property('value', tk.dna.altcolor)
-			.on('change', () => {
-				tk.dna.altcolor = d3event.target.value
-				loadTk(tk, block)
-			})
-	}
-	configPanel_rnabam(tk, block, loadTk)
 }
