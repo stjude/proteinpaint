@@ -85,6 +85,9 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
+// maximum number of reads to load
+const maxreadcount = 10000
+
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
 
