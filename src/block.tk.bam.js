@@ -6,6 +6,10 @@ import { make_radios } from './dom'
 
 /*
 
+important: tk.uninitialized will be deleted by getData at the first launch
+to tell backend to provide color scale
+
+tk can predefine if bam file has chr or not
 */
 
 const labyspace = 5
@@ -79,12 +83,11 @@ export async function loadTk(tk, block) {
 }
 
 async function getData(tk, block) {
-	const lst = [
-		'genome=' + block.genome.name,
-		'regions=' + JSON.stringify(tk.regions),
-		'stackheight=' + tk.stackheight,
-		'stackspace=' + tk.stackspace
-	]
+	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions)]
+	if (tk.uninitialized) {
+		lst.push('getcolorscale=1')
+		delete tk.uninitialized
+	}
 	if (tk.asPaired) lst.push('asPaired=1')
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
 	if (tk.file) lst.push('file=' + tk.file)
@@ -106,6 +109,14 @@ function renderTk(tk, block) {
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
+	tk.label_count
+		.text(
+			(tk.data.count.r ? tk.data.count.r + ' reads' : '') +
+				(tk.data.count.t ? ', ' + tk.data.count.t + ' templates' : '')
+		)
+		.each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+		})
 	block.setllabel()
 
 	tk.height_main = tk.height = tk.data.height
@@ -113,13 +124,12 @@ function renderTk(tk, block) {
 }
 
 function makeTk(tk, block) {
-	delete tk.uninitialized
 	tk.img = tk.glider.append('image')
-	if (!tk.stackheight) tk.stackheight = 13 // make it dependent on range size
-	if (!tk.stackspace) tk.stackspace = 1
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
+	let laby = block.labelfontsize
+	tk.label_count = block.maketklefthandle(tk, laby)
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
