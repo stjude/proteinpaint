@@ -179,6 +179,7 @@ function parseconfig(str) {
 
 		for (let i = 1; i < l.length; i++) {
 			const field = l[i].trim()
+			if (field == '') continue
 			const [key, value] = field.split('=')
 			if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 			if (!term.values) term.values = {}
@@ -253,7 +254,7 @@ function step2_parsematrix(file, key2terms) {
 		rl.on('close', () => {
 			console.error('parsed ' + file)
 			if (header_notermmatch.size) {
-				console.error('header not matching with termID: ' + [...header_notermmatch].join(', '))
+				console.error('matrix header not defined in phenotree: ' + [...header_notermmatch].join(', '))
 			}
 			resolve()
 		})

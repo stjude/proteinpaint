@@ -4,10 +4,8 @@ node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/f
 mv termdb.updated termdb
 
 node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
-node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix.ccss > annotation.matrix.ccss
 node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree raw/outcomes_2017.txt > annotation.outcome
 node ~/proteinpaint/utils/sjlife2/precompute.ctcae.js termdb annotation.outcome ~/proteinpaint/dataset/sjlife2.hg38.js > chronicevents.precomputed
-node script/subcohort.js > annotation.subcohort
 
 
 #node ~/proteinpaint/utils/sjlife2/phewas.precompute.url.js
