@@ -188,7 +188,8 @@ function parseconfig(str) {
 	}
 
 	if (term.type == 'categorical') {
-		term.groupsetting = { disabled: true }
+		term.groupsetting = { inuse: false }
+		// later if a term has two or less categories, will disable group setting
 	}
 
 	return term
@@ -288,6 +289,12 @@ function step3_finalizeterms(key2terms) {
 				}
 				delete term._values_foundinmatrix
 				delete term._values_newinmatrix
+			}
+
+			// count how many categories, if <=2, disable group setting
+			if (Object.keys(term.values).length <= 2) {
+				delete term.groupsetting.inuse
+				term.groupsetting.disabled = true
 			}
 			continue
 		}
