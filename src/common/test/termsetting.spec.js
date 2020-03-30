@@ -260,8 +260,6 @@ tape('Numerical term', async test => {
 	const tip = opts.pill.Inner.dom.tip
 
 	// test numeric bin menu
-	// test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-	// test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	await sleep(800)
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
@@ -368,8 +366,15 @@ tape('Numerical term', async test => {
 		'Should reset the bins by "Reset" button'
 	)
 
-	tip.hide()
+	//trigger and test last_bin change
+	const custom_radio = tip.d
+		.node()
+		.querySelectorAll('div')[0]
+		.querySelectorAll('input')[6]
 
+	d3s.select(custom_radio).property('checked', true)
+	custom_radio.dispatchEvent(new Event('change'))
+	tip.hide()
 	test.end()
 })
 
