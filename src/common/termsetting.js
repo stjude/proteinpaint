@@ -860,6 +860,7 @@ function setInteractivity(self) {
 		}
 
 		//div for 'fix_bins' and 'custom_bins'
+		const rand_id = Math.floor(Math.random() * 1000 + 1)
 		const bins_div = div.append('div').style('padding', '5px')
 
 		const fixed_radio_div = bins_div.append('div').style('padding', '10px')
@@ -867,7 +868,7 @@ function setInteractivity(self) {
 		const fixed_radio_btn = fixed_radio_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'fixed_num_bins')
+			.attr('id', 'fixed_num_bins' + rand_id)
 			.attr('name', 'bins_type')
 			.attr('value', 'fix')
 			.property('checked', 'true')
@@ -877,7 +878,7 @@ function setInteractivity(self) {
 
 		fixed_radio_div
 			.append('label')
-			.attr('for', 'fixed_num_bins')
+			.attr('for', 'fixed_num_bins' + rand_id)
 			.style('padding-left', '10px')
 			.html('Use regular-sized bins')
 
@@ -888,7 +889,7 @@ function setInteractivity(self) {
 		custom_radio_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'custom_num_bins')
+			.attr('id', 'custom_num_bins' + rand_id)
 			.attr('name', 'bins_type')
 			.attr('value', 'custom')
 			.on('change', () => {
@@ -897,7 +898,7 @@ function setInteractivity(self) {
 
 		custom_radio_div
 			.append('label')
-			.attr('for', 'custom_num_bins')
+			.attr('for', 'custom_num_bins' + rand_id)
 			.style('padding-left', '10px')
 			.html('Use custom bin set')
 
