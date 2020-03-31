@@ -375,6 +375,8 @@ function setInteractivity(self) {
 			})
 	}
 
+	/******************* Functions for Categorical terms *******************/
+
 	self.showGrpOpts = async function(div) {
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 		const predefined_group_name =
@@ -776,6 +778,8 @@ function setInteractivity(self) {
 			})
 	}
 
+	/******************* Functions for Numerical terms *******************/
+
 	self.showNumOpts = async function(div) {
 		self.num_obj = {}
 
@@ -863,7 +867,7 @@ function setInteractivity(self) {
 		const fixed_radio_btn = fixed_radio_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'fix')
+			.attr('id', 'fixed_num_bins')
 			.attr('name', 'bins_type')
 			.attr('value', 'fix')
 			.property('checked', 'true')
@@ -873,9 +877,9 @@ function setInteractivity(self) {
 
 		fixed_radio_div
 			.append('label')
-			.attr('for', 'fix')
+			.attr('for', 'fixed_num_bins')
 			.style('padding-left', '10px')
-			.html('Use regular-sized bins</br>')
+			.html('Use regular-sized bins')
 
 		const fixed_bins_div = bins_div.append('div')
 
@@ -884,7 +888,7 @@ function setInteractivity(self) {
 		custom_radio_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'custom')
+			.attr('id', 'custom_num_bins')
 			.attr('name', 'bins_type')
 			.attr('value', 'custom')
 			.on('change', () => {
@@ -893,7 +897,7 @@ function setInteractivity(self) {
 
 		custom_radio_div
 			.append('label')
-			.attr('for', 'custom')
+			.attr('for', 'custom_num_bins')
 			.style('padding-left', '10px')
 			.html('Use custom bin set')
 
@@ -1016,7 +1020,7 @@ function setInteractivity(self) {
 			.style('display', 'none')
 	}
 
-	/******************* Functions for to Fixed size bins *******************/
+	/******************* Functions for Numerical Fixed size bins *******************/
 
 	self.addBrushes = function() {
 		const brushes = self.num_obj.brushes
@@ -1431,7 +1435,7 @@ function setInteractivity(self) {
 		const auto_radio_btn = last_bin_select_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'auto')
+			.attr('id', 'auto_last_bin')
 			.attr('name', 'last_bin_opt')
 			.attr('value', 'auto')
 			.property('checked', 'true')
@@ -1447,7 +1451,7 @@ function setInteractivity(self) {
 
 		last_bin_select_div
 			.append('label')
-			.attr('for', 'auto')
+			.attr('for', 'auto_last_bin')
 			.style('padding-left', '10px')
 			.style('padding-right', '10px')
 			.html('Auto<br>')
@@ -1455,9 +1459,9 @@ function setInteractivity(self) {
 		const custom_radio_btn = last_bin_select_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'custom')
+			.attr('id', 'custom_last_bin')
 			.attr('name', 'last_bin_opt')
-			.attr('value', 'custom')
+			.attr('value', 'custom_last')
 			.style('margin-top', '10px')
 			.on('change', () => {
 				self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
@@ -1465,7 +1469,7 @@ function setInteractivity(self) {
 
 		last_bin_select_div
 			.append('label')
-			.attr('for', 'custom')
+			.attr('for', 'custom_last_bin')
 			.style('padding-left', '10px')
 			.html('Custom Bin')
 
@@ -1634,7 +1638,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	/******************* Functions for to Custom bins *******************/
+	/******************* Functions for Numerical Custom bins *******************/
 
 	self.addCustomBinLines = function() {
 		const plot_size = self.num_obj.plot_size
@@ -1650,8 +1654,8 @@ function setInteractivity(self) {
 
 		if (custom_bins.length == 0) {
 			const mean_value = (maxvalue - minvalue) / 2
-			const first_bin = { startunbounded: true, stop: Math.round(mean_value), stopinclusive: true }
-			const last_bin = { start: Math.round(mean_value), stopunbounded: true, startinclusive: false }
+			const first_bin = { startunbounded: true, stop: Math.round(mean_value), stopinclusive: true, name: 'First bin' }
+			const last_bin = { start: Math.round(mean_value), stopunbounded: true, startinclusive: false, name: 'Last bin' }
 			custom_bins.push(first_bin)
 			custom_bins.push(last_bin)
 			self.num_obj.custom_bins_q.lst = custom_bins
@@ -1663,17 +1667,24 @@ function setInteractivity(self) {
 
 		self.num_obj.custombins_g.selectAll('line').remove()
 
+		const drag = d3drag()
+			.on('start', dragstarted)
+			.on('drag', dragged)
+			.on('end', dragended)
+
 		const lines = self.num_obj.custombins_g
 			.selectAll('line')
 			.data(line_x)
 			.enter()
 			.append('line')
+			.attr('class', 'custom_line')
 			.style('stroke', '#cc0000')
 			.style('stroke-width', 1)
 			.attr('x1', d => xscale(d))
 			.attr('y1', 0)
 			.attr('x2', d => xscale(d))
 			.attr('y2', plot_size.height)
+			.call(drag)
 			.on('mouseover', (d, i) => {
 				select(self.num_obj.custombins_g.node().querySelectorAll('line')[i]).style('stroke-width', 3)
 			})
@@ -1681,35 +1692,24 @@ function setInteractivity(self) {
 				select(self.num_obj.custombins_g.node().querySelectorAll('line')[i]).style('stroke-width', 1)
 			})
 
-		const drag = d3drag()
-			.on('start', dragstarted)
-			.on('drag', dragged)
-			.on('end', dragended)
-
-		self.num_obj.custombins_g.call(drag)
-		// move lines_g with brush move
-		// self.num_obj.custombins_g.attr(
-		// 	'transform',
-		// 	`translate(${self.num_obj.plot_size.xpad - xscale(first_bin.stop - first_bin_orig.stop)}, ${self.num_obj.plot_size.ypad})`
-		// )
-		let drag_start,
-			drag_pad = 0
-
 		function dragstarted() {
-			drag_start = event.x
+			select(this).style('cursor', 'pointer')
 		}
 
 		function dragged() {
-			self.num_obj.custombins_g.attr(
-				'transform',
-				`translate(
-						${self.num_obj.plot_size.xpad + event.x - drag_start + drag_pad},
-						${self.num_obj.plot_size.ypad})`
-			)
+			const x = event.x
+
+			const line = select(this)
+			line
+				.attr('x1', x)
+				.attr('y1', 0)
+				.attr('x2', x)
+				.attr('y2', plot_size.height)
 		}
 
-		function dragended() {
-			drag_pad = drag_pad + event.x - drag_start
+		function dragended(d, i) {
+			select(this).style('cursor', 'default')
+			custom_bins[i].stop = xscale(event.x)
 		}
 	}
 
@@ -1723,7 +1723,7 @@ function setInteractivity(self) {
 
 		custom_bins_table.note_tr
 			.append('td')
-			.attr('colspan', 2)
+			.attr('colspan', 3)
 			.style('font-size', '.6em')
 			.style('margin-left', '1px')
 			.style('color', '#858585')
@@ -1740,6 +1740,26 @@ function setInteractivity(self) {
 
 			const equation_div = bin_detail_td.append('div').html(bin_start + x + bin_stop)
 
+			const bin_name_div = bin_detail_td.append('div')
+
+			bin_name_div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('font-size', '.9em')
+				.style('margin-left', '1px')
+				.style('width', '100px')
+				.style('color', '#858585')
+				.html('Bin Name')
+
+			bin_name_div
+				.append('input')
+				.attr('size', 12)
+				.style('margin', '2px 5px')
+				.style('display', 'inline-block')
+				.style('font-size', '.8em')
+				.style('width', '80px')
+				.attr('value', custom_bins[i].name)
+
 			if (i != custom_bins.length - 1) {
 				const breakpoint_div = bin_detail_td.append('div')
 
@@ -1748,6 +1768,7 @@ function setInteractivity(self) {
 					.style('display', 'inline-block')
 					.style('font-size', '.9em')
 					.style('margin-left', '1px')
+					.style('width', '100px')
 					.style('color', '#858585')
 					.html('Break Point')
 
@@ -1760,6 +1781,19 @@ function setInteractivity(self) {
 					.style('width', '80px')
 					.attr('value', custom_bins[i].stop)
 			}
+
+			const delete_btn_td = bin_tr.append('td')
+
+			delete_btn_td
+				.append('div')
+				.attr('class', 'delete_btn sja_filter_tag_btn')
+				.style('display', custom_bins.length > 2 ? 'inline-block' : 'none')
+				.style('border-radius', '13px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Delete')
 		}
 	}
 
