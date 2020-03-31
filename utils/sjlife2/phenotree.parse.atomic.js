@@ -43,14 +43,14 @@ const path = require('path')
 // lines with this as L2 are CHC and not dealt with here
 const L2_CHC = 'Graded Adverse Events'
 const bins = {
-	_min: 0,
-	_max: 0, // temporary values
+	_min: null,
+	_max: null, // temporary values
 	default: {
 		type: 'regular',
 		bin_size: 5,
 		stopinclusive: true,
 		first_bin: {
-			start: 0,
+			startunbounded: true,
 			stop: 5,
 			stopinclusive: true
 		}
@@ -184,6 +184,7 @@ function parseconfig(str) {
 			if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 			if (!term.values) term.values = {}
 			term.values[key] = { label: value }
+			if (term.type == 'integer' || term.type == 'float') term.values[key].uncomputable = true
 		}
 	}
 
@@ -248,8 +249,13 @@ function step2_parsematrix(file, key2terms) {
 					}
 				}
 				const value = Number(str)
-				term.bins._min = Math.min(value, term.bins._min)
-				term.bins._max = Math.max(value, term.bins._max)
+				if (term.bins._min == null) {
+					term.bins._min = value
+					term.bins._max = value
+				} else {
+					term.bins._min = Math.min(value, term.bins._min)
+					term.bins._max = Math.max(value, term.bins._max)
+				}
 			}
 		})
 		rl.on('close', () => {
@@ -327,8 +333,7 @@ function step3_finalizeterms(key2terms) {
 		} else {
 			term.bins.default.bin_size = Math.ceil((term.bins._max - term.bins._min) / 5)
 		}
-		term.bins.default.first_bin.start = term.bins._min
-		term.bins.default.first_bin.stop = term.bins.default.bin_size
+		term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 		delete term.bins._min
 		delete term.bins._max
 	}
