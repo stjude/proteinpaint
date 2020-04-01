@@ -864,6 +864,12 @@ function setInteractivity(self) {
 		const bins_div = div.append('div').style('padding', '5px')
 
 		const fixed_radio_div = bins_div.append('div').style('padding', '10px')
+		const fixed_bins_div = bins_div.append('div')
+		const custom_radio_div = bins_div.append('div').style('padding', '10px')
+		const custom_bins_div = bins_div.append('div').style('display', 'none')
+		// reset row with 'reset to default' button if any changes detected
+		self.num_obj.edit_btns_div = bins_div.append('div')
+		self.makeRangeButtons()
 
 		const fixed_radio_btn = fixed_radio_div
 			.append('input')
@@ -881,10 +887,6 @@ function setInteractivity(self) {
 			.attr('for', 'fixed_num_bins' + rand_id)
 			.style('padding-left', '10px')
 			.html('Use regular-sized bins')
-
-		const fixed_bins_div = bins_div.append('div')
-
-		const custom_radio_div = bins_div.append('div').style('padding', '10px')
 
 		custom_radio_div
 			.append('input')
@@ -914,8 +916,6 @@ function setInteractivity(self) {
 
 		self.addFixedBinsTable()
 		self.num_obj.brushes.forEach(brush => brush.init())
-
-		const custom_bins_div = bins_div.append('div').style('display', 'none')
 
 		// custom bins table with inputs
 		self.num_obj.custom_bins_table = custom_bins_div
@@ -1104,10 +1104,7 @@ function setInteractivity(self) {
 				// 	.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
 
 				// //update 'apply' and 'reset' buttons based on brush change
-				self.num_obj.fixed_bins_table.reset_btn.style(
-					'display',
-					similarRanges && !self.bins_customized() ? 'none' : 'inline-block'
-				)
+				self.num_obj.reset_btn.style('display', similarRanges && !self.bins_customized() ? 'none' : 'inline-block')
 
 				// // hide start and stop text and relation symbols if brush moved
 				// brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
@@ -1193,15 +1190,10 @@ function setInteractivity(self) {
 		//Last Bin edit row
 		fixed_bins_table.last_bin_tr = fixed_bins_table.append('tr')
 
-		//TODO: 'reset to default' - can be click menu option or remove if unnecessary
-		// reset row with 'reset to default' button if any changes detected
-		self.num_obj.fixed_bins_table.edit_btns_tr = self.num_obj.fixed_bins_table.append('tr')
-
 		self.bins_size_edit()
 		self.bins_boundries_edit()
 		self.first_bin_edit()
 		self.last_bin_edit()
-		self.makeRangeButtons()
 	}
 
 	// function to edit bin_size options
@@ -1216,7 +1208,7 @@ function setInteractivity(self) {
 		const bin_size_td = self.num_obj.fixed_bins_table.bin_size_tr.append('td')
 		const note_td = self.num_obj.fixed_bins_table.bin_size_tr.append('td')
 		const custom_bins_q = self.num_obj.custom_bins_q
-		const edit_btns_tr = self.num_obj.fixed_bins_table.edit_btns_tr
+		const edit_btns_div = self.num_obj.edit_btns_div
 
 		const bin_size_input = bin_size_td
 			.append('input')
@@ -1249,7 +1241,7 @@ function setInteractivity(self) {
 			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
 			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
 			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
-			edit_btns_tr.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
+			edit_btns_div.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
 			self.addBinSizeLines()
 		}
 	}
@@ -1258,7 +1250,7 @@ function setInteractivity(self) {
 		self.num_obj.fixed_bins_table.bin_bountry_tr.selectAll('*').remove()
 		const custom_bins_q = self.num_obj.custom_bins_q
 		const default_bins_q = self.num_obj.default_bins_q
-		const edit_btns_tr = self.num_obj.fixed_bins_table.edit_btns_tr
+		const edit_btns_div = self.num_obj.edit_btns_div
 
 		self.num_obj.fixed_bins_table.bin_bountry_tr
 			.append('td')
@@ -1297,7 +1289,7 @@ function setInteractivity(self) {
 			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
 			custom_bins_q.stopinclusive = include_select.node().value == 'stopinclusive'
 			if (!custom_bins_q.stopinclusive) custom_bins_q.startinclusive = include_select.node().value == 'startinclusive'
-			edit_btns_tr.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
+			edit_btns_div.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
 
 			self.addBinSizeLines()
 		}
@@ -1334,7 +1326,6 @@ function setInteractivity(self) {
 				if (!client.keyupEnter()) return
 				brush.input.property('disabled', true)
 				try {
-					if (brush.input.node().value < minvalue) throw 'entered value is lower than minimum value'
 					self.update_first_bin(brush)
 				} catch (e) {
 					window.alert(e)
@@ -1521,9 +1512,9 @@ function setInteractivity(self) {
 			similarRanges = JSON.stringify(brush.range) == JSON.stringify(brush.orig)
 		}
 
-		const buttons_td = self.num_obj.fixed_bins_table.edit_btns_tr.append('td').attr('colspan', 2)
+		const buttons_div = self.num_obj.edit_btns_div
 		//'Apply' button
-		self.num_obj.fixed_bins_table.apply_btn = buttons_td
+		self.num_obj.apply_btn = buttons_div
 			.append('div')
 			.attr('class', 'sja_filter_tag_btn apply_btn')
 			// .style('display', similarRanges || !self.bins_customized() ? 'none' : 'inline-block')
@@ -1539,7 +1530,7 @@ function setInteractivity(self) {
 			})
 
 		//'Reset' button
-		self.num_obj.fixed_bins_table.reset_btn = buttons_td
+		self.num_obj.reset_btn = buttons_div
 			.append('div')
 			.attr('class', 'sja_filter_tag_btn reset_btn')
 			.style('display', similarRanges || !self.bins_customized() ? 'none' : 'inline-block')
@@ -1568,7 +1559,7 @@ function setInteractivity(self) {
 				self.last_bin_edit()
 				if (!self.num_obj.default_bins_q.last_bin && self.num_obj.brushes.length > 1) self.num_obj.brushes.pop()
 				if (self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
-				self.num_obj.fixed_bins_table.reset_btn.style('display', 'none')
+				self.num_obj.reset_btn.style('display', 'none')
 			})
 
 		async function apply() {
@@ -1654,7 +1645,7 @@ function setInteractivity(self) {
 		// const binLinesStop = last_bin ? last_bin.start : maxvalue
 
 		if (custom_bins.length == 0) {
-			const mean_value = (maxvalue - minvalue) / 2
+			const mean_value = (maxvalue + minvalue) / 2
 			const first_bin = { startunbounded: true, stop: Math.round(mean_value), stopinclusive: true, name: 'First bin' }
 			const last_bin = { start: Math.round(mean_value), stopunbounded: true, startinclusive: false, name: 'Last bin' }
 			custom_bins.push(first_bin)
