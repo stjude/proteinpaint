@@ -9,13 +9,25 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
+* when rows are thick, provide on-screen coordinate/width/readname to client for clicking
+* when rows are thick and ntwidth big and in paired mode
+  if reads from a pair overlaps, allow template to occupy multiple rows
 * highlight reads with mate in a different chr: BBBBBBBB->chr3, in paired mode
 * server pass read region data to client, click on tk img to fetch full info of that read
 * what to do when cigar is *
 * error rendering, N junction overlaps with another read in stacking
 
-************* data structure
+*********************** data structure
+q {}
+  .stackheight
+  .stackspace
+  .stacks[]
+  .messagerows[ {} ]
+	.h int
+	.t str
+
 template {}
+  .y // first is stack idx, then replaced to be actual screen y
   .x1, x2
   .ridx2 // region idx of the stop position
   .segments[]
@@ -25,7 +37,8 @@ segment {}
   .boxes[]
   .forward
   .ridx
-  .x2  // screen px
+  .x1, x2  // screen px
+  .y // will be set if to render overlapping read pairs; always stack idx unlike template
 
 box {}
   .opr
@@ -36,16 +49,18 @@ box {}
   .qual[]
 
 
-*********** function cascade
+*********************** function cascade
 get_q
 do_query
 	query_region
 	get_templates
 		parse_one_segment
-	do_stack
+	stack_templates
 	poststack_adjustq
 		get_refseq
 	finalize_templates
+		iftohighlightoverlapreads
+		getrowheight_template_overlapread
 		check_mismatch
 	plot_template
 		plot_segment
@@ -71,6 +86,7 @@ const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 
 const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
+const overlapreadhlcolor = 'blue'
 
 // minimum px width to display an insertion
 const insertion_minpx = 1
@@ -86,8 +102,8 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-// maximum number of reads to load
-const maxreadcount = 10000
+const maxreadcount = 10000 // maximum number of reads to load
+const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
@@ -161,14 +177,13 @@ async function do_query(q) {
 
 	const templates = get_templates(q)
 
-	const numofstacks = do_stack(q, templates)
-	await poststack_adjustq(q, numofstacks)
+	stack_templates(q, templates)
+	await poststack_adjustq(q)
 
 	finalize_templates(templates, q)
 
 	const canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-	const canvasheight = q.messagerows.reduce((i, j) => i + j.h, 0) + numofstacks * (q.stackheight + q.stackspace)
-	const canvas = createCanvas(canvaswidth, canvasheight)
+	const canvas = createCanvas(canvaswidth, q.canvasheight)
 	const ctx = canvas.getContext('2d')
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
@@ -189,7 +204,7 @@ async function do_query(q) {
 	if (q.asPaired) result.count.t = templates.length
 	result.src = canvas.toDataURL()
 	result.width = canvaswidth
-	result.height = canvasheight
+	result.height = q.canvasheight
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
 }
@@ -438,6 +453,7 @@ may skip insertion if on screen width shorter than minimum width
 		boxes,
 		forward: !(flag & 0x10),
 		ridx,
+		x1: r.x + r.scale(boxes[0].start),
 		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
 		seq,
 		qual
@@ -445,16 +461,17 @@ may skip insertion if on screen width shorter than minimum width
 	return segment
 }
 
-async function poststack_adjustq(q, numofstacks) {
+async function poststack_adjustq(q) {
 	/*
 call after stacking
 control canvas height based on number of reads and stacks
 set rendering parameters in q{}
 based on stack height, to know if to render base quality and print letters
 return number of stacks for setting canvas height
-TODO what if there are super high number of stacks
+
+super high number of stacks will result in fractional row height and blurry rendering, no way to fix it now
 */
-	const [a, b] = getstacksizebystacks(numofstacks)
+	const [a, b] = getstacksizebystacks(q.stacks.length)
 	q.stackheight = a
 	q.stackspace = b
 	for (const r of q.regions) {
@@ -469,7 +486,9 @@ TODO what if there are super high number of stacks
 }
 
 function getstacksizebystacks(numofstacks) {
-	let a = 1500 / numofstacks // max track height: 1500 pixels
+	/* with hardcoded cutoffs
+	 */
+	let a = maxcanvasheight / numofstacks
 	if (a > 10) return [Math.min(15, Math.floor(a)), 1]
 	if (a > 7) return [Math.floor(a), 1]
 	if (a > 3) return [Math.ceil(a), 0]
@@ -478,27 +497,28 @@ function getstacksizebystacks(numofstacks) {
 	return [a, 0]
 }
 
-function do_stack(q, templates) {
+function stack_templates(q, templates) {
 	// stack by on screen x1 x2 position of each template, only set stack idx to each template
 	// actual y position will be set later after stackheight is determined
+	// adds q.stacks[]
+	// stacking code not reusable for the special spacing calculation
 	templates.sort((i, j) => i.x1 - j.x1)
-	const stacks = [] // each value is screen pixel pos of each stack
+	q.stacks = [] // each value is screen pixel pos of each stack
 	for (const template of templates) {
 		let stackidx = null
-		for (let i = 0; i < stacks.length; i++) {
-			if (stacks[i] + Math.max(readspace_px, readspace_bp * q.regions[template.ridx2].ntwidth) < template.x1) {
+		for (let i = 0; i < q.stacks.length; i++) {
+			if (q.stacks[i] + Math.max(readspace_px, readspace_bp * q.regions[template.ridx2].ntwidth) < template.x1) {
 				stackidx = i
-				stacks[i] = template.x2
+				q.stacks[i] = template.x2
 				break
 			}
 		}
 		if (stackidx == null) {
-			stackidx = stacks.length
-			stacks[stackidx] = template.x2
+			stackidx = q.stacks.length
+			q.stacks[stackidx] = template.x2
 		}
 		template.y = stackidx
 	}
-	return stacks.length
 }
 
 async function get_refseq(g, coord) {
@@ -510,16 +530,42 @@ async function get_refseq(g, coord) {
 
 function finalize_templates(templates, q) {
 	/*
-for each box, may do below:
-  add sequence
-  add quality
-  check mismatch
+for each template:
+
+for each box:
+  the box alreay has raw strings for .seq and .qual
+  may do below:
+	add sequence
+	add quality
+	check mismatch
+
+at the end, set q.canvasheight
 */
 
-	const mrh = q.messagerows.reduce((i, j) => i + j.h, 0)
+	const stackrowheight = []
+	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
+	q.highlightoverlapreads = iftohighlightoverlapreads(templates, q)
+	if (q.highlightoverlapreads) {
+		// expand row height for stacks with overlapping read pairs
+		for (const template of templates) {
+			if (template.segments.length <= 1) continue
+			stackrowheight[template.y] = Math.max(
+				stackrowheight[template.y],
+				getrowheight_template_overlapread(template, q.stackheight)
+			)
+		}
+	}
+
+	let y = q.messagerows.reduce((i, j) => i + j.h, 0) + q.stackspace
+	const stacky = [] // yoff for each stack
+	stackrowheight.forEach(h => {
+		stacky.push(y)
+		y += h + q.stackspace
+	})
 
 	for (const template of templates) {
-		template.y = mrh + template.y * (q.stackheight + q.stackspace)
+		template.y = stacky[template.y]
+
 		for (const segment of template.segments) {
 			const r = q.regions[segment.ridx]
 			let quallst // set to [] if to use quality
@@ -559,6 +605,44 @@ for each box, may do below:
 			delete segment.qual
 		}
 	}
+	q.canvasheight = stacky[stacky.length - 1]
+}
+
+function iftohighlightoverlapreads(templates, q) {
+	if (!q.asPaired) return false
+	if (q.stackspace == 0) return false
+	return true
+}
+
+function getrowheight_template_overlapread(template, stackheight) {
+	// if to show overlapped read pairs, detect if this template has overlap, if so, double the row height
+	if (template.segments.length == 2) {
+		const [a, b] = template.segments
+		if (a.x2 > b.x1) {
+			a.y = 0
+			b.y = 1
+			return stackheight * 2
+		}
+		return stackheight
+	}
+	// more than 2 segments, do a mini stack to
+	const stacks = []
+	for (const b of template.segments) {
+		let stackidx = null
+		for (let i = 0; i < stacks.length; i++) {
+			if (stacks[i] < b.x1) {
+				stackidx = i
+				stacks[i] = b.x2
+				break
+			}
+		}
+		if (stackidx == null) {
+			stackidx = stacks.length
+			stacks[stackidx] = b.x2
+		}
+		b.y = stackidx
+	}
+	return stackheight * stacks.length
 }
 
 function segmentstop(boxes) {
@@ -590,21 +674,36 @@ function plot_template(ctx, template, q) {
 	// segments: a list of segments consisting this template, maybe at different regions
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
-		plot_segment(ctx, seg, template.y, q)
-		if (i > 0) {
-			// make it optional
-			// this segment is not the first of the list
-			const currentr = q.regions[seg.ridx]
-			const currentx = currentr.x + currentr.scale(seg.boxes[0].start)
-			const prevseg = template.segments[i - 1]
-			if (prevseg.x2 < currentx) {
-				const y = Math.floor(template.y + q.stackheight / 2) + 0.5
-				ctx.strokeStyle = q.stackheight <= 2 ? split_linecolorfaint : match_hq
-				ctx.setLineDash([5, 3]) // dash for read pairs
+		if (i == 0) {
+			// is the first segment, same rendering method no matter in single or paired mode
+			plot_segment(ctx, seg, template.y, q)
+			continue
+		}
+		// after the first segment, this only occurs in paired mode
+		const prevseg = template.segments[i - 1]
+		if (prevseg.x2 < seg.x1) {
+			// two segments are apart; render this segment the same way, draw dashed line connecting with last
+			plot_segment(ctx, seg, template.y, q)
+			const y = Math.floor(template.y + q.stackheight / 2) + 0.5
+			ctx.strokeStyle = q.stackheight <= 2 ? split_linecolorfaint : match_hq
+			ctx.setLineDash([5, 3]) // dash for read pairs
+			ctx.beginPath()
+			ctx.moveTo(prevseg.x2, y)
+			ctx.lineTo(seg.x1, y)
+			ctx.stroke()
+		} else {
+			// overlaps with the previous segment
+			if (q.highlightoverlapreads) {
+				plot_segment(ctx, seg, template.y + q.stackheight, q)
+				const y = Math.floor(template.y + q.stackheight) + 0.5
+				ctx.strokeStyle = overlapreadhlcolor
+				ctx.setLineDash([])
 				ctx.beginPath()
-				ctx.moveTo(prevseg.x2, y)
-				ctx.lineTo(currentx, y)
+				ctx.moveTo(seg.x1, y)
+				ctx.lineTo(prevseg.x2, y)
 				ctx.stroke()
+			} else {
+				plot_segment(ctx, seg, template.y, q)
 			}
 		}
 	}
@@ -712,37 +811,6 @@ if b.qual is available, set text color based on it
 		}
 	}
 }
-
-/*
-puzzling case of HWI-ST988:130:D1TFEACXX:4:1201:10672:53382 from SJBALL021856_D1
-{
-  start: 5072626,
-  stop: 5078394,
-  segments: [
-    {
-      qname: 'HWI-ST988:130:D1TFEACXX:4:2306:16068:71448',
-      boxes: [Array],
-      forward: false,
-      ridx: 0,
-      x2: 850,
-      cigarstr: '9M1I2M5679N89M',
-      segstart: 5072615,
-      segstop: 5078394
-    },
-    {
-      qname: 'HWI-ST988:130:D1TFEACXX:4:2306:16068:71448',
-      boxes: [Array],
-      forward: true,
-      ridx: 0,
-      x2: 723,
-      cigarstr: '53S48M',
-      segstart: 5078303,
-      segstop: 5078351
-    }
-  ],
-  y: 28
-}
-*/
 
 function getcolorscale() {
 	/*
