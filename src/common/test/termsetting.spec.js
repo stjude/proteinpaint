@@ -336,7 +336,7 @@ tape('Numerical term', async test => {
 	)
 
 	// test 'apply' button
-	const apply_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.apply_btn')._groups[0][0]
+	const apply_btn = tip.d.selectAll('.apply_btn')._groups[0][0]
 	apply_btn.click()
 	pilldiv.click()
 	await sleep(500)
@@ -351,7 +351,7 @@ tape('Numerical term', async test => {
 	)
 
 	// test 'reset' button
-	const reset_btn = d3s.select(tip.d.selectAll('tr')._groups[0][4]).selectAll('.reset_btn')._groups[0][0]
+	const reset_btn = tip.d.selectAll('.reset_btn')._groups[0][0]
 	reset_btn.click()
 	apply_btn.click()
 	pilldiv.click()
