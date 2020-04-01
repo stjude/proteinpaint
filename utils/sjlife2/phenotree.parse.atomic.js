@@ -322,6 +322,8 @@ function step3_finalizeterms(key2terms) {
 		console.error('RANGE - ' + termID + ': ' + term.bins._min + ' ' + term.bins._max)
 		// find bin size
 		const range = term.bins._max - term.bins._min
+		term.bins.default.bin_size = Math.ceil(range / 5)
+		/*
 		if (range > 10000) {
 			term.bins.default.bin_size = 4000
 		} else if (range > 4000) {
@@ -333,6 +335,7 @@ function step3_finalizeterms(key2terms) {
 		} else {
 			term.bins.default.bin_size = Math.ceil((term.bins._max - term.bins._min) / 5)
 		}
+		*/
 		term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 		delete term.bins._min
 		delete term.bins._max
