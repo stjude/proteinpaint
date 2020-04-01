@@ -63,9 +63,10 @@ module.exports = (q, res, ds) => {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 
+	const ticks = maxvalue - minvalue
 	// kernal density replaced with histogram
 	// const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
-	const density = get_histogram(xscale.ticks(40))(values)
+	const density = get_histogram(xscale.ticks(ticks))(values)
 	let densitymax = 0
 	for (const d of density) {
 		densitymax = Math.max(densitymax, d[1])

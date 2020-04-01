@@ -1,5 +1,5 @@
 if (process.argv.length != 4) {
-	console.log('<phenotree> <matrices/ folder> output termjson to stdout')
+	console.log('<phenotree> <matrix> output termjson to stdout')
 	process.exit()
 }
 /*
@@ -35,23 +35,22 @@ CHC is dealt in validate.ctcae.js
 */
 
 const file_phenotree = process.argv[2]
-const dir_matrix = process.argv[3]
+const file_matrix = process.argv[3]
 const fs = require('fs')
 const readline = require('readline')
-const glob = require('glob')
 const path = require('path')
 
 // lines with this as L2 are CHC and not dealt with here
 const L2_CHC = 'Graded Adverse Events'
 const bins = {
-	_min: 0,
-	_max: 0, // temporary values
+	_min: null,
+	_max: null, // temporary values
 	default: {
 		type: 'regular',
 		bin_size: 5,
 		stopinclusive: true,
 		first_bin: {
-			start: 0,
+			startunbounded: true,
 			stop: 5,
 			stopinclusive: true
 		}
@@ -65,9 +64,8 @@ const bins = {
 	// value: term json obj
 
 	// step 2
-	for (const file of glob.sync(path.join(dir_matrix, '*'))) {
-		await step2_parsematrix(file, key2terms)
-	}
+	//for (const file of glob.sync(path.join(dir_matrix, '*'))) { }
+	await step2_parsematrix(file_matrix, key2terms)
 
 	// step 3
 	step3_finalizeterms(key2terms)
@@ -101,8 +99,13 @@ function step1_parsephenotree() {
 
 		const L2 = t2.trim()
 		if (L2 == L2_CHC) {
-			skip_CHC++
-			continue
+			if (!key0) {
+				// key not provided, this line is a chc term, not parsed here
+				skip_CHC++
+				continue
+			} else {
+				// the key should be ctcae_graded and is a categorical, to be parsed here
+			}
 		}
 		// rest of lines are expected to be atomic term
 
@@ -176,15 +179,18 @@ function parseconfig(str) {
 
 		for (let i = 1; i < l.length; i++) {
 			const field = l[i].trim()
+			if (field == '') continue
 			const [key, value] = field.split('=')
 			if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 			if (!term.values) term.values = {}
 			term.values[key] = { label: value }
+			if (term.type == 'integer' || term.type == 'float') term.values[key].uncomputable = true
 		}
 	}
 
 	if (term.type == 'categorical') {
-		term.groupsetting = { disabled: true }
+		term.groupsetting = { inuse: false }
+		// later if a term has two or less categories, will disable group setting
 	}
 
 	return term
@@ -202,10 +208,17 @@ function step2_parsematrix(file, key2terms) {
 				headerlst = l
 				return
 			}
-			for (let i = 0; i < l.length; i++) {
+
+			// do not parse first 1-4 columns, starting from 5th column
+			for (let i = 4; i < l.length; i++) {
 				const headerfield = headerlst[i]
 				if (!headerfield) throw 'headerfield missing: ' + i
 				const str = l[i]
+				if (str == '') {
+					// empty
+					continue
+				}
+
 				const term = key2terms[headerfield]
 				if (!term) {
 					header_notermmatch.add(headerfield)
@@ -236,14 +249,19 @@ function step2_parsematrix(file, key2terms) {
 					}
 				}
 				const value = Number(str)
-				term.bins._min = Math.min(value, term.bins._min)
-				term.bins._max = Math.max(value, term.bins._max)
+				if (term.bins._min == null) {
+					term.bins._min = value
+					term.bins._max = value
+				} else {
+					term.bins._min = Math.min(value, term.bins._min)
+					term.bins._max = Math.max(value, term.bins._max)
+				}
 			}
 		})
 		rl.on('close', () => {
 			console.error('parsed ' + file)
 			if (header_notermmatch.size) {
-				console.error('header not matching with termID: ' + [...header_notermmatch].join(', '))
+				console.error('matrix header not defined in phenotree: ' + [...header_notermmatch].join(', '))
 			}
 			resolve()
 		})
@@ -271,12 +289,18 @@ function step3_finalizeterms(key2terms) {
 				}
 				if (term._values_newinmatrix.size) {
 					for (const k of term._values_newinmatrix) {
-						console.error('ERR - ' + termID + ': undeclared categories from matrix: ' + k)
+						console.error('ERR - ' + termID + ': categories undeclared in phenotree: ' + k)
 						term.values[k] = { label: k }
 					}
 				}
 				delete term._values_foundinmatrix
 				delete term._values_newinmatrix
+			}
+
+			// count how many categories, if <=2, disable group setting
+			if (Object.keys(term.values).length <= 2) {
+				delete term.groupsetting.inuse
+				term.groupsetting.disabled = true
 			}
 			continue
 		}
@@ -309,8 +333,7 @@ function step3_finalizeterms(key2terms) {
 		} else {
 			term.bins.default.bin_size = Math.ceil((term.bins._max - term.bins._min) / 5)
 		}
-		term.bins.default.first_bin.start = term.bins._min
-		term.bins.default.first_bin.stop = term.bins.default.bin_size
+		term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 		delete term.bins._min
 		delete term.bins._max
 	}

@@ -39,13 +39,17 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search')
+		return action.type.startsWith('search') || action.type.startsWith('cohort')
 	}
 
 	getState(appState) {
 		return {
 			genome: appState.genome,
-			dslabel: appState.dslabel
+			dslabel: appState.dslabel,
+			cohortStr: appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+				? ''
+				: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.join(',')
+
 		}
 	}
 
@@ -55,7 +59,12 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const lst = ['genome=' + this.state.genome, 'dslabel=' + this.state.dslabel, 'findterm=' + encodeURIComponent(str)]
+		const lst = [
+			'genome=' + this.state.genome, 
+			'dslabel=' + this.state.dslabel, 
+			'findterm=' + encodeURIComponent(str),
+			'cohortStr=' + this.state.cohortStr
+		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {

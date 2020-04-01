@@ -37,7 +37,6 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.nav = opts.nav
 		this.dom = {
 			holder: opts.holder,
 			controlsTip: new Menu({ padding: '0px' }),
@@ -786,12 +785,16 @@ function setInteractivity(self) {
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
-		self.dom.controlsTip.hide()
 		select(elem).style('background-color', MENU_OPTION_HIGHLIGHT_COLOR)
 		self.dom.holder.selectAll('.sja_filter_add_transformer').style('display', 'none')
 		const blankPill = self.dom.filterContainer.select('.sja_filter_blank_pill').node()
-		if (blankPill) self.dom.treeTip.clear().showunder(blankPill)
-		else self.dom.treeTip.clear().showunderoffset(elem.lastChild)
+		if (blankPill) {
+			self.dom.controlsTip.hide()
+			self.dom.treeTip.clear().showunder(blankPill)
+		}
+		else {
+			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
+		}
 		const filter = self.activeData.filter
 
 		appInit(null, {

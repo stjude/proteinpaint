@@ -115,7 +115,8 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 function trigger_findterm(q, res, termdb) {
 	// TODO also search categories
-	const terms = termdb.q.findTermByName(q.findterm, 10).map(copy_term)
+	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
+	const terms = termdb.q.findTermByName(q.findterm, 10, q.cohortStr).map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)

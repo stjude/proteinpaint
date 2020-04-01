@@ -8,8 +8,8 @@ const Partjson = require('partjson')
   server response as needed
 */
 
-if (process.argv.length != 5) {
-	console.log('<termdb> <annotation.outcome> <dataset.js>, output to "precomputed.json" and stdout for loading to db')
+if (process.argv.length != 4) {
+	console.log('<termdb> <annotation.outcome>, output to stdout for loading to db')
 	process.exit()
 }
 
@@ -17,16 +17,21 @@ const termdbfile = process.argv[2]
 // input file with lines of term_id \t name \t parent_id \t {termjson}
 const outcomesfile = process.argv[3]
 // input file with lines of sample,term,grade,age_graded,yearstoevent
-const datasetjsfile = process.argv[4]
-// input dataset js file, for accessing termdb configs
 
-const uncomputableGrades = new Set()
+const uncomputableGrades = new Set([9])
+/*
+note that this has been removed from dataset.js file
+for the moment hardcode uncomputable grade to be 9
 {
 	const ds = require(datasetjsfile)
 	if (ds.cohort.termdb.patient_condition.uncomputable_grades) {
 		for (const k in ds.cohort.termdb.patient_condition.uncomputable_grades) uncomputableGrades.add(Number(k))
 	}
 }
+*/
+
+const missingfromtermdb = new Set()
+// term ids from annotation.outcome but missing from termdb
 
 try {
 	const terms = load_terms(termdbfile)
@@ -53,9 +58,13 @@ try {
 		const pj = getPj(terms, annotations)
 		generate_tsv(pj.tree.bySample)
 	}
+
+	if (missingfromtermdb.size) {
+		console.error('CHC terms missing from db: ' + [...missingfromtermdb])
+	}
 } catch (e) {
-	console.log(e.message || e)
-	if (e.stack) console.log(e.stack)
+	console.error(e.message || e)
+	if (e.stack) console.error(e.stack)
 }
 
 function load_terms(termdbfile) {
@@ -73,7 +82,7 @@ function load_terms(termdbfile) {
 
 	for (const id in terms) {
 		const term = terms[id]
-		if (term.iscondition && term.isleaf) {
+		if (term.type == 'condition') {
 			term.conditionlineage = get_term_lineage([id], id, child2parent)
 		}
 	}
@@ -104,6 +113,14 @@ function load_patientcondition(outcomesfile, terms) {
 		const sample = l[0]
 		const term_id = l[1]
 		const term = terms[term_id]
+		if (!term) {
+			missingfromtermdb.add(term_id)
+			continue
+		}
+		if (!term.conditionlineage) {
+			console.error('missing lineage: ' + term.id)
+			continue
+		}
 		annotations.push({
 			sample,
 			term_id,

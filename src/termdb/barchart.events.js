@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu, newpane, get_one_genome } from '../client'
-import { filterJoin, getFilterItemByTag } from '../common/filter'
+import { filterJoin, getFilterItemByTag, getNormalRoot } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -348,12 +348,7 @@ function wrapTvs(tvs) {
 
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
-	for (const t of tvslst) lst.push(t)
-	if (self.termfilter && self.termfilter.filter) {
-		for (const t of self.termfilter.filter.lst) {
-			lst.push(JSON.parse(JSON.stringify(t.type.startsWith('tvs') ? t : wrapTvs(t))))
-		}
-	}
+	for (const t of tvslst) lst.push(wrapTvs(t))
 
 	import('../block').then(async _ => {
 		const obj = {
@@ -361,6 +356,19 @@ function menuoption_select_to_gp(self, tvslst) {
 			dslabel: self.state.dslabel
 		}
 		const pane = newpane({ x: 100, y: 100 })
+		const filterRoot = getNormalRoot(self.state.termfilter.filter)
+		const filterUiRoot = getFilterItemByTag(filterRoot, filterUiRoot)
+		if (filterUiRoot && filterUiRoot != filterRoot) delete filterUiRoot.tag
+		filterRoot.tag = 'filterUiRoot'
+		if (lst.length) {
+			filterRoot.join = 'and'
+			filterRoot.lst.push(...lst)
+		}
+		const cohortFilter = getFilterItemByTag(filterRoot, 'cohortFilter')
+		if (cohortFilter) {
+			cohortFilter.renderAs = 'htmlSelect'
+			cohortFilter.selectOptionsFrom = 'selectCohort'
+		}
 		new _.Block({
 			hostURL: localStorage.getItem('hostURL'),
 			holder: pane.body,
@@ -378,7 +386,7 @@ function menuoption_select_to_gp(self, tvslst) {
 						numerical_axis: {
 							AFtest: {
 								groups: [
-									{ is_termdb: true, filter: JSON.parse(JSON.stringify(self.state.termfilter.filter)) },
+									{ is_termdb: true, filter:  filterRoot},
 									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
 								]
 							}

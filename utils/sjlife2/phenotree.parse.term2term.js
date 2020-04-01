@@ -44,18 +44,18 @@ outputs these files
 * ancestry  - load to "ancestry" table
 */
 
+const level2_ctcaegraded = 'Graded Adverse Events'
+
 const abort = m => {
 	console.error('ERROR: ' + m)
 	process.exit()
 }
 
-if (process.argv.length < 3)
-	abort('<phenotree txt file> <keep/: folder of predefined term json files> outputs to: termdb, ancestry')
+if (process.argv.length < 3) abort('<phenotree txt file> <keep/termjson> outputs to: termdb, ancestry')
 const infile_phenotree = process.argv[2]
-const keep_dir = process.argv[3] // optional
+const keep_file = process.argv[3] // optional
 
 const fs = require('fs')
-const glob = require('glob')
 const path = require('path')
 
 /////////////////// helpers
@@ -263,11 +263,15 @@ for (let i = 1; i < lines.length; i++) {
 
 	const l = line.split('\t')
 
+	// names of each level, may be empty; if id is provided, levelX will be term name, otherwise will be term ID
 	let level1 = str2level(l[0]),
 		level2 = str2level(l[1]),
 		level3 = str2level(l[2]),
 		level4 = str2level(l[3]),
 		level5 = str2level(l[4])
+
+	// if a level is non empty, will record its id, for use with its sub-levels
+	let id1, id2, id3, id4, id5
 
 	let leaflevel = 5 // which level is leaf: 1,2,3,4,5
 
@@ -311,142 +315,136 @@ for (let i = 1; i < lines.length; i++) {
 	const tempid = l[5] ? str2level(l[5]) : null
 
 	if (level1) {
-		let id
 		if (leaflevel == 1) {
 			if (tempid) {
-				id = tempid
-				name2id.set(level1, id)
+				id1 = tempid
+				name2id.set(level1, id1)
 			} else {
-				id = level1
+				id1 = level1
 			}
 		} else {
 			// not a leaf, so tempid doesn't apply to it, has to recall id
-			id = name2id.get(level1) || level1
+			id1 = name2id.get(level1) || level1
 		}
 
-		map1.set(id, level1)
+		map1.set(id1, level1)
 
-		if (!t2t.has(id)) {
-			t2t.set(id, new Set())
+		if (!t2t.has(id1)) {
+			t2t.set(id1, new Set())
 		}
-		allterms_byorder.add(id)
+		allterms_byorder.add(id1)
 	}
 
 	if (level2) {
-		let id
 		if (leaflevel == 2) {
 			if (tempid) {
-				id = tempid
-				name2id.set(level2, id)
+				id2 = tempid
+				name2id.set(level2, id2)
 			} else {
-				id = level2
+				id2 = level2
 			}
 		} else {
 			// recall id
-			id = name2id.get(level2) || level2
+			id2 = name2id.get(level2) || level2
 		}
 
-		map2.set(id, level2)
+		map2.set(id2, level2)
 
 		// child of level1
-		t2t.get(name2id.get(level1) || level1).add(id)
+		t2t.get(id1).add(id2)
 
-		if (!t2t.has(id)) {
-			t2t.set(id, new Set())
+		if (!t2t.has(id2)) {
+			t2t.set(id2, new Set())
 		}
-		if (!c2p.has(id)) c2p.set(id, new Map())
-		c2p.get(id).set(level1, 0)
-		c2immediatep.set(id, level1)
-		allterms_byorder.add(id)
+		if (!c2p.has(id2)) c2p.set(id2, new Map())
+		c2p.get(id2).set(id1, 0)
+		c2immediatep.set(id2, id1)
+		allterms_byorder.add(id2)
 	}
 
 	if (level3) {
-		let id
 		if (leaflevel == 3) {
 			if (tempid) {
-				id = tempid
-				name2id.set(level3, id)
+				id3 = tempid
+				name2id.set(level3, id3)
 			} else {
-				id = level3
+				id3 = level3
 			}
 		} else {
-			id = name2id.get(level3) || level3
+			id3 = name2id.get(level3) || level3
 		}
 
-		map3.set(id, level3)
+		map3.set(id3, level3)
 
 		// child of level2
-		t2t.get(name2id.get(level2) || level2).add(id)
+		t2t.get(id2).add(id3)
 
-		if (!t2t.has(id)) {
-			t2t.set(id, new Set())
+		if (!t2t.has(id3)) {
+			t2t.set(id3, new Set())
 		}
-		if (!c2p.has(id)) c2p.set(id, new Map())
-		c2p.get(id).set(level1, 0)
-		c2p.get(id).set(level2, 1)
-		c2immediatep.set(id, level2)
+		if (!c2p.has(id3)) c2p.set(id3, new Map())
+		c2p.get(id3).set(id1, 0)
+		c2p.get(id3).set(id2, 1)
+		c2immediatep.set(id3, id2)
 
-		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		allterms_byorder.add(id3)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id3)
 	}
 
 	if (level4) {
-		let id
 		if (leaflevel == 4) {
 			if (tempid) {
-				id = tempid
-				name2id.set(level4, id)
+				id4 = tempid
+				name2id.set(level4, id4)
 			} else {
-				id = level4
+				id4 = level4
 			}
 		} else {
-			id = name2id.get(level4) || level4
+			id4 = name2id.get(level4) || level4
 		}
 
-		map4.set(id, level4)
+		map4.set(id4, level4)
 
 		// child of level3
-		t2t.get(name2id.get(level3) || level3).add(id)
+		t2t.get(id3).add(id4)
 
-		if (!t2t.has(id)) {
-			t2t.set(id, new Set())
-		}
-		if (!c2p.has(id)) c2p.set(id, new Map())
-		c2p.get(id).set(level1, 0)
-		c2p.get(id).set(level2, 1)
-		c2p.get(id).set(level3, 2)
-		c2immediatep.set(id, level3)
+		if (!t2t.has(id4)) t2t.set(id4, new Set())
 
-		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		if (!c2p.has(id4)) c2p.set(id4, new Map())
+		c2p.get(id4).set(id1, 0)
+		c2p.get(id4).set(id2, 1)
+		c2p.get(id4).set(id3, 2)
+		c2immediatep.set(id4, id3)
+
+		allterms_byorder.add(id4)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id4)
 	}
 
 	if (level5) {
-		let id
 		if (leaflevel == 5) {
 			if (tempid) {
-				id = tempid
-				name2id.set(level5, id)
+				id5 = tempid
+				name2id.set(level5, id5)
 			} else {
-				id = level5
+				id5 = level5
 			}
 		} else {
-			id = name2id.get(level5) || level5
+			id5 = name2id.get(level5) || level5
 		}
 
-		map5.set(id, level5)
+		map5.set(id5, level5)
 
 		// child of level4
-		t2t.get(name2id.get(level4) || level4).add(id)
-		if (!c2p.has(id)) c2p.set(id, new Map())
-		c2p.get(id).set(level1, 0)
-		c2p.get(id).set(level2, 1)
-		c2p.get(id).set(level3, 2)
-		c2p.get(id).set(level4, 3)
-		c2immediatep.set(id, level4)
+		t2t.get(id4).add(id5)
+		if (!c2p.has(id5)) c2p.set(id5, new Map())
+		c2p.get(id5).set(id1, 0)
+		c2p.get(id5).set(id2, 1)
+		c2p.get(id5).set(id3, 2)
+		c2p.get(id5).set(id4, 3)
+		c2immediatep.set(id5, id4)
 
-		allterms_byorder.add(id)
-		if (level2 == 'CTCAE Graded Events') patientcondition_terms.add(id)
+		allterms_byorder.add(id5)
+		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id5)
 	}
 }
 
@@ -484,17 +482,14 @@ for (const n of map4.keys()) {
 
 const keep_termjson = new Map()
 
-if (keep_dir) {
-	/* keep/ directory is given
-	each file is one single object, of key:value pairs
+if (keep_file) {
+	/* keep file is one single object, of key:value pairs
 	key: term id
 	value: term json definition
 	*/
-	for (const f of glob.sync(path.join(keep_dir, '*'))) {
-		const j = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
-		for (const id in j) {
-			keep_termjson.set(id, j[id])
-		}
+	const j = JSON.parse(fs.readFileSync(keep_file, { encoding: 'utf8' }))
+	for (const id in j) {
+		keep_termjson.set(id, j[id])
 	}
 }
 

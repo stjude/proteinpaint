@@ -5,9 +5,10 @@ if (process.argv.length != 4) {
 
 /*
 load outcome terms from phenotree:
-level 2: organ system
-level 3: grouped condition
-level 4: individual condition
+first branch: Graded Adverse Events
+second branch: organ system
+third branch: grouped condition
+forth branch: individual condition
 
 use that to validate terms in "outcomes" file and find any mismatch
 
@@ -21,6 +22,7 @@ output minimied outcome data with following fields:
 
 const phenotreefile = process.argv[2]
 const outcomefile = process.argv[3]
+const L2_CHC = 'Graded Adverse Events' // terms under this are condition terms
 
 const fs = require('fs')
 const readline = require('readline')
@@ -40,7 +42,7 @@ for (let i = 1; i < lines.length; i++) {
 	const l = lines[i].split('\t')
 
 	const w1 = l[1] == '-' ? null : l[1].trim()
-	if (w1 != 'CTCAE Graded Events') continue
+	if (w1 != L2_CHC) continue
 	const w2 = l[2] == '-' ? null : l[2].trim()
 	const w3 = l[3] == '-' ? null : l[3].trim()
 	const w4 = l[4] == '-' ? null : l[4].trim()

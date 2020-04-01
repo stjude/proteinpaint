@@ -891,3 +891,67 @@ tape('single chart, genotype overlay', function(test) {
 		test.end()
 	}
 })
+
+
+tape('idarubicin_5', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Anthracyclines', 'idarubicin_5'],
+				visiblePlotIds: ['idarubicin_5'],
+				plots: {
+					idarubicin_5: {
+						term: { id: 'idarubicin_5', term: termjson['idarubicin_5'] },
+						term2: 'genotype',
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type:'tvslst',
+					join:'and',
+					in:true,
+					lst:[
+						{type:'tvs',tag:'cohortFilter',
+							tvs:{
+								term:{id:'subcohort',type:'categorical'},
+								values:[
+									{key:'SJLIFE',label:'SJLIFE'},
+									//{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{
+							type:'tvslst',
+							tag:'filterUiRoot',
+							join:'',
+							in:true, 
+							lst:[]
+						}
+					]
+				}
+			},
+			nav: {
+				show_tabs: true,
+			},
+			activeCohort:-1
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testBarCount
+			}
+		}
+	})
+
+	function testBarCount(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 bar')
+		test.end()
+	}
+})
+
+

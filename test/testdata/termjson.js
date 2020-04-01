@@ -145,5 +145,31 @@ exports.termjson = {
 		id: 'sex',
 		name: 'Sex',
 		type: 'categorical'
-	}
+	},
+	"idarubicin_5":{
+		"name":"Idarubicin (IV)",
+		"unit": "mg/m²",
+		"type":"float",
+		"bins":{
+			"default":{
+				"type":"regular",
+				"bin_size":10,
+				"stopinclusive":true,
+				"first_bin":{
+					"startunbounded":true,
+					"stop":10,
+					"stopinclusive":true
+				},
+				"last_bin":{
+					"stopunbounded":true,
+					"start":40
+				}
+			}
+		},
+		"values":{
+			"0": { "label":"Not exposed", "uncomputable":true },
+			"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+			"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+		}
+	},
 }

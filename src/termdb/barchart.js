@@ -274,7 +274,7 @@ class TdbBarchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
-		if (s.exclude.cols.length) {
+		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
 				.filter(collabel => s.cols.includes(collabel)) // && (!t1.term.values || collabel in t1.term.values))
