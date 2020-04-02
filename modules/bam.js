@@ -9,19 +9,23 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
-* when rows are thick, provide on-screen coordinate/width/readname to client for clicking
-* when rows are thick and ntwidth big and in paired mode
+- when rows are thick and ntwidth big and in paired mode
   if reads from a pair overlaps, allow template to occupy multiple rows
-* highlight reads with mate in a different chr: BBBBBBBB->chr3, in paired mode
-* server pass read region data to client, click on tk img to fetch full info of that read
-* what to do when cigar is *
-* error rendering, N junction overlaps with another read in stacking
+- when rows are thick, provide on-screen coordinate/width/readname to client for clicking
+- selecting a vertical range from densely packed reads to show alignment in full letters
+  via text file cache?
+- highlight reads with mate in a different chr: BBBBBBBB->chr3, in paired mode
+- server pass read region data to client, click on tk img to fetch full info of that read
+- what to do when cigar is *
+- error rendering, N junction overlaps with another read in stacking
 
 *********************** data structure
 q {}
+  .asPaired
   .stackheight
   .stackspace
   .stacks[]
+  .highlightoverlapreads
   .messagerows[ {} ]
 	.h int
 	.t str
@@ -38,7 +42,7 @@ segment {}
   .forward
   .ridx
   .x1, x2  // screen px
-  .y // will be set if to render overlapping read pairs; always stack idx unlike template
+  .shiftdownrow
 
 box {}
   .opr
@@ -59,8 +63,9 @@ do_query
 	poststack_adjustq
 		get_refseq
 	finalize_templates
-		iftohighlightoverlapreads
-		getrowheight_template_overlapread
+		get_stacky
+			iftohighlightoverlapreads
+			getrowheight_template_overlapread
 		check_mismatch
 	plot_template
 		plot_segment
@@ -457,6 +462,7 @@ may skip insertion if on screen width shorter than minimum width
 		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
 		seq,
 		qual
+		//cigarstr
 	}
 	return segment
 }
@@ -542,26 +548,7 @@ for each box:
 at the end, set q.canvasheight
 */
 
-	const stackrowheight = []
-	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
-	q.highlightoverlapreads = iftohighlightoverlapreads(templates, q)
-	if (q.highlightoverlapreads) {
-		// expand row height for stacks with overlapping read pairs
-		for (const template of templates) {
-			if (template.segments.length <= 1) continue
-			stackrowheight[template.y] = Math.max(
-				stackrowheight[template.y],
-				getrowheight_template_overlapread(template, q.stackheight)
-			)
-		}
-	}
-
-	let y = q.messagerows.reduce((i, j) => i + j.h, 0) + q.stackspace
-	const stacky = [] // yoff for each stack
-	stackrowheight.forEach(h => {
-		stacky.push(y)
-		y += h + q.stackspace
-	})
+	const stacky = get_stacky(templates, q)
 
 	for (const template of templates) {
 		template.y = stacky[template.y]
@@ -608,8 +595,35 @@ at the end, set q.canvasheight
 	q.canvasheight = stacky[stacky.length - 1]
 }
 
+function get_stacky(templates, q) {
+	// get y off for each stack, may account for fat rows created by overlapping read pairs
+	const stackrowheight = []
+	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
+	q.highlightoverlapreads = iftohighlightoverlapreads(templates, q)
+	if (q.highlightoverlapreads) {
+		// expand row height for stacks with overlapping read pairs
+		for (const template of templates) {
+			if (template.segments.length <= 1) continue
+			stackrowheight[template.y] = Math.max(
+				stackrowheight[template.y],
+				getrowheight_template_overlapread(template, q.stackheight)
+			)
+		}
+	}
+	const stacky = []
+	let y = q.messagerows.reduce((i, j) => i + j.h, 0) + q.stackspace
+	stackrowheight.forEach(h => {
+		stacky.push(y)
+		y += h + q.stackspace
+	})
+	return stacky
+}
+
 function iftohighlightoverlapreads(templates, q) {
 	if (!q.asPaired) return false
+	for (const r of q.regions) {
+		if (r.ntwidth <= 0.2) return false
+	}
 	if (q.stackspace == 0) return false
 	return true
 }
@@ -619,13 +633,13 @@ function getrowheight_template_overlapread(template, stackheight) {
 	if (template.segments.length == 2) {
 		const [a, b] = template.segments
 		if (a.x2 > b.x1) {
-			a.y = 0
-			b.y = 1
+			b.shiftdownrow = 1 // shift down by 1 row
 			return stackheight * 2
 		}
 		return stackheight
 	}
-	// more than 2 segments, do a mini stack to
+	// more than 2 segments, do a mini stack to, may not happen??
+	console.log(template.segments.length, 'segments')
 	const stacks = []
 	for (const b of template.segments) {
 		let stackidx = null
@@ -640,7 +654,7 @@ function getrowheight_template_overlapread(template, stackheight) {
 			stackidx = stacks.length
 			stacks[stackidx] = b.x2
 		}
-		b.y = stackidx
+		b.shiftdownrow = stackidx
 	}
 	return stackheight * stacks.length
 }
@@ -681,7 +695,7 @@ function plot_template(ctx, template, q) {
 		}
 		// after the first segment, this only occurs in paired mode
 		const prevseg = template.segments[i - 1]
-		if (prevseg.x2 < seg.x1) {
+		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, q)
 			const y = Math.floor(template.y + q.stackheight / 2) + 0.5
@@ -691,6 +705,24 @@ function plot_template(ctx, template, q) {
 			ctx.moveTo(prevseg.x2, y)
 			ctx.lineTo(seg.x1, y)
 			ctx.stroke()
+
+			if (q.highlightoverlapreads) {
+				// detect if two segments are next to each other, by coord but not x1/2
+				// as at zoom out level, pixel position is imprecise
+				const prevlastbox = prevseg.boxes.reduce((i, j) => {
+					if (i.start + i.len > j.start + j.len) return i
+					return j
+				})
+				if (prevlastbox.start + prevlastbox.len == seg.boxes[0].start) {
+					ctx.strokeStyle = overlapreadhlcolor
+					ctx.setLineDash([])
+					ctx.beginPath()
+					const x = Math.floor(seg.x1) + 0.5
+					ctx.moveTo(x, template.y)
+					ctx.lineTo(x, template.y + q.stackheight)
+					ctx.stroke()
+				}
+			}
 		} else {
 			// overlaps with the previous segment
 			if (q.highlightoverlapreads) {
@@ -799,14 +831,15 @@ if b.qual is available, set text color based on it
 			if (!insertions.length) continue
 			ctx.font = Math.max(10, q.stackheight - 2) + 'pt Arial'
 			insertions.forEach(b => {
-				const x = r.x + r.scale(b.start - 1)
+				const x = r.x + r.scale(b.start)
 				if (b.qual) {
 					ctx.fillStyle = qual2insertion(b.qual.reduce((i, j) => i + j, 0) / b.qual.length / maxqual)
 				} else {
 					ctx.fillStyle = insertion_hq
 				}
 				const text = b.s.length == 1 ? b.s : b.s.length
-				ctx.fillText(text, x, template.y + q.stackheight / 2)
+				// text y position to observe if the read is in an overlapping pair and shifted down
+				ctx.fillText(text, x, template.y + q.stackheight * (segment.on2ndrow || 0) + q.stackheight / 2)
 			})
 		}
 	}
