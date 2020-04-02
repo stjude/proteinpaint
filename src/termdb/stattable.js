@@ -21,7 +21,7 @@ class TdbStatTable {
 		return {
 			isVisible:
 				config.settings.currViews.includes('barchart') &&
-				config.term.term.type == 'float' &&
+				(config.term.term.type == 'float' || config.term.term.type == 'integer') &&
 				!config.term.term.noStatTable,
 			config: {
 				term: config.term,
@@ -31,7 +31,9 @@ class TdbStatTable {
 					common: config.settings.common,
 					barchart: config.settings.barchart
 				}
-			}
+			},
+			filter: appState.termfilter.filter,
+			activeCohort: appState.activeCohort
 		}
 	}
 

@@ -266,7 +266,7 @@ function setRenderers(self) {
 		// trim long term name with '...' at end and hover to see full term_name
 		if ((d.type == 'float' || d.type == 'integer') && d.name.length > 25) {
 			term_name = '<label title="' + d.name + '">' + d.name.substring(0, 24) + '...' + '</label>'
-		} else if (d.type == 'condition' && d.name.length > 20) {
+		} else if ((d.type == 'condition' || d.type == 'categorical') && d.name.length > 20) {
 			term_name = '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
 		}
 		return term_name
@@ -516,7 +516,11 @@ function setInteractivity(self) {
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('border-radius', '13px')
-			.html('Divide <b>' + self.term.name + '</b> to groups')
+			.html(
+				'Divide <b>' +
+					(self.term.name.length > 25 ? self.term.name.substring(0, 24) + '...' : self.term.name) +
+					'</b> to groups'
+			)
 			.on('click', () => {
 				self.regroupMenu()
 			})
@@ -828,7 +832,56 @@ function setInteractivity(self) {
 			}
 			self.num_obj.density_data = await client.dofetch2(density_q)
 			if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
-			else {
+			else if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
+				self.num_obj.no_density_data = true
+				self.num_obj.ranges = []
+				if (self.num_obj.custom_bins_q.first_bin) {
+					self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
+					self.num_obj.ranges[0].bin = 'first'
+				}
+				if (self.num_obj.custom_bins_q.last_bin) {
+					self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
+					self.num_obj.ranges[1].bin = 'last'
+				}
+				self.num_obj.brushes = []
+				const brushes = self.num_obj.brushes
+
+				for (const [i, r] of self.num_obj.ranges.entries()) {
+					const _b = brushes.find(b => b.orig === r)
+					let brush
+					if (!_b) {
+						brush = { orig: r, range: JSON.parse(JSON.stringify(r)) }
+						brushes.push(brush)
+					} else {
+						brush = _b
+					}
+
+					const custom_bins_q = self.num_obj.custom_bins_q
+					const maxvalue = self.num_obj.density_data.maxvalue
+					const minvalue = self.num_obj.density_data.minvalue
+
+					const custom_bins = custom_bins_q.lst || []
+
+					if (custom_bins.length == 0) {
+						const mean_value = (maxvalue + minvalue) / 2
+						const first_bin = {
+							startunbounded: true,
+							stop: Math.round(mean_value),
+							stopinclusive: true,
+							name: 'First bin'
+						}
+						const last_bin = {
+							start: Math.round(mean_value),
+							stopunbounded: true,
+							startinclusive: false,
+							name: 'Last bin'
+						}
+						custom_bins.push(first_bin)
+						custom_bins.push(last_bin)
+						self.num_obj.custom_bins_q.lst = custom_bins
+					}
+				}
+			} else {
 				// svg for range plot
 				self.num_obj.svg = div.append('svg')
 
@@ -915,7 +968,10 @@ function setInteractivity(self) {
 			.style('border-left', '1px solid #eee')
 
 		self.addFixedBinsTable()
-		self.num_obj.brushes.forEach(brush => brush.init())
+		if (!self.num_obj.no_density_data)
+			self.num_obj.brushes.forEach(brush => {
+				if (brush.range.stop > self.num_obj.density_data.minvalue) brush.init()
+			})
 
 		// custom bins table with inputs
 		self.num_obj.custom_bins_table = custom_bins_div
@@ -933,15 +989,19 @@ function setInteractivity(self) {
 			if (fixed_radio_btn.node().checked) {
 				fixed_bins_div.style('display', 'block')
 				custom_bins_div.style('display', 'none')
-				self.num_obj.svg.selectAll('.brush_g').style('display', 'block')
-				self.num_obj.svg.selectAll('.binsize_g').style('display', 'block')
-				self.num_obj.svg.selectAll('.custombins_g').style('display', 'none')
+				if (!self.num_obj.no_density_data) {
+					self.num_obj.svg.selectAll('.brush_g').style('display', 'block')
+					self.num_obj.svg.selectAll('.binsize_g').style('display', 'block')
+					self.num_obj.svg.selectAll('.custombins_g').style('display', 'none')
+				}
 			} else {
 				fixed_bins_div.style('display', 'none')
 				custom_bins_div.style('display', 'block')
-				self.num_obj.svg.selectAll('.brush_g').style('display', 'none')
-				self.num_obj.svg.selectAll('.binsize_g').style('display', 'none')
-				self.num_obj.svg.selectAll('.custombins_g').style('display', 'block')
+				if (!self.num_obj.no_density_data) {
+					self.num_obj.svg.selectAll('.brush_g').style('display', 'none')
+					self.num_obj.svg.selectAll('.binsize_g').style('display', 'none')
+					self.num_obj.svg.selectAll('.custombins_g').style('display', 'block')
+				}
 			}
 		}
 	}
@@ -1232,6 +1292,7 @@ function setInteractivity(self) {
 			.style('font-size', '.6em')
 			.style('margin-left', '1px')
 			.style('color', '#858585')
+			.style('display', self.num_obj.no_density_data ? 'none' : 'block')
 			.text('Red lines indicate bins automatically generated based on this value.')
 
 		function apply() {
@@ -1242,6 +1303,7 @@ function setInteractivity(self) {
 			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
 			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
 			edit_btns_div.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
+			self.num_obj.reset_btn.style('display', similarRanges && !self.bins_customized() ? 'none' : 'inline-block')
 			self.addBinSizeLines()
 		}
 	}
@@ -1342,6 +1404,7 @@ function setInteractivity(self) {
 			.style('font-size', '.6em')
 			.style('margin-left', '1px')
 			.style('color', '#858585')
+			.style('display', self.num_obj.no_density_data ? 'none' : 'block')
 			.html('<b>Left</b>-side gray box indicates the first bin. <br> Drag to change its size.')
 	}
 
@@ -1390,6 +1453,7 @@ function setInteractivity(self) {
 			.style('margin-left', '1px')
 			.style('padding-top', '30px')
 			.style('color', '#858585')
+			.style('display', self.num_obj.no_density_data ? 'none' : 'block')
 			.html('<b>Right</b>-side gray box indicates the last bin. <br> Drag to change its size.')
 
 		brush.input = last_bin_edit_div
@@ -1543,7 +1607,7 @@ function setInteractivity(self) {
 			.on('click', async () => {
 				for (const brush of self.num_obj.brushes) {
 					brush.range = JSON.parse(JSON.stringify(brush.orig))
-					brush.init()
+					if (brush.range.stop > minvalue) brush.init()
 				}
 				self.q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
 				self.num_obj.custom_bins_q = JSON.parse(JSON.stringify(self.num_obj.default_bins_q))
@@ -1719,7 +1783,9 @@ function setInteractivity(self) {
 			.style('font-size', '.6em')
 			.style('margin-left', '1px')
 			.style('color', '#858585')
-			.text('Click on the graph to add bin boundaries; move a boundary line to adjust bin sizes.')
+			.html(
+				'<b>Work In Progress</b></br>Click on the graph to add bin boundaries; move a boundary line to adjust bin sizes.'
+			)
 
 		for (let i = 0; i < custom_bins.length; i++) {
 			const bin_tr = custom_bins_table.append('tr')
