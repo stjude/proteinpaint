@@ -1124,17 +1124,30 @@ function setInteractivity(self) {
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
-		let brush_drag_start
+		let brush_drag_start, cursor_style
 
 		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('start', function() {
+				cursor_style = event.sourceEvent && event.sourceEvent.target && select(event.sourceEvent.target).attr('cursor')
+				if (self.num_obj.custom_bins_q.type == 'regular') {
+					brush.elem.selectAll('.selection').attr('pointer-events', 'none')
+					if (cursor_style == 'default') return
+				}
+
 				brush_drag_start = event.selection[1]
-				brush.elem.selectAll('.selection').attr('cursor', 'default')
+				brush.elem.selectAll('.selection').attr('cursor', 'default').attr('pointer-events', '')
 				if (brush.orig.bin == 'first') brush.elem.selectAll('.handle--w').attr('pointer-events', 'none')
 				else if (brush.orig.bin == 'last') brush.elem.selectAll('.handle--e').attr('pointer-events', 'none')
 			})
 			.on('brush', function() {
+				if (self.num_obj.custom_bins_q.type == 'regular') {
+					brush.elem.selectAll('.selection').attr('pointer-events', 'none')
+					if (cursor_style == 'default') return
+				} else {
+					brush.elem.selectAll('.selection').attr('pointer-events', '')
+				}
+
 				const s = event.selection
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
