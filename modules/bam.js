@@ -25,7 +25,8 @@ q {}
   .stackheight
   .stackspace
   .stacks[]
-  .highlightoverlapreads
+  .overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
+  .overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
   .messagerows[ {} ]
 	.h int
 	.t str
@@ -64,7 +65,7 @@ do_query
 		get_refseq
 	finalize_templates
 		get_stacky
-			iftohighlightoverlapreads
+			overlapRP_setflag
 			getrowheight_template_overlapread
 		check_mismatch
 	plot_template
@@ -93,8 +94,9 @@ const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
 
-// minimum px width to display an insertion
-const insertion_minpx = 1
+const insertion_minpx = 1 // minimum px width to display an insertion
+const minntwidth_toqual = 1 // minimum nt px width to show base quality
+const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
 
 const maxqual = 40
 
@@ -487,7 +489,7 @@ super high number of stacks will result in fractional row height and blurry rend
 			r.referenceseq = await get_refseq(q.genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
 		}
 		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
-		r.to_qual = r.ntwidth >= 1
+		r.to_qual = r.ntwidth >= minntwidth_toqual
 	}
 }
 
@@ -599,8 +601,8 @@ function get_stacky(templates, q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
 	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
-	q.highlightoverlapreads = iftohighlightoverlapreads(templates, q)
-	if (q.highlightoverlapreads) {
+	overlapRP_setflag(templates, q)
+	if (q.overlapRP_multirows) {
 		// expand row height for stacks with overlapping read pairs
 		for (const template of templates) {
 			if (template.segments.length <= 1) continue
@@ -619,13 +621,13 @@ function get_stacky(templates, q) {
 	return stacky
 }
 
-function iftohighlightoverlapreads(templates, q) {
-	if (!q.asPaired) return false
+function overlapRP_setflag(templates, q) {
+	if (!q.asPaired) return
 	for (const r of q.regions) {
-		if (r.ntwidth <= 0.2) return false
+		if (r.ntwidth <= minntwidth_overlapRPmultirows) return
 	}
-	if (q.stackspace == 0) return false
-	return true
+	q.overlapRP_multirows = true
+	q.overlapRP_hlline = q.stackspace > 0
 }
 
 function getrowheight_template_overlapread(template, stackheight) {
@@ -706,7 +708,8 @@ function plot_template(ctx, template, q) {
 			ctx.lineTo(seg.x1, y)
 			ctx.stroke()
 
-			if (q.highlightoverlapreads) {
+			if (q.overlapRP_hlline) {
+				// highlight line is showing, this is at zoom in level
 				// detect if two segments are next to each other, by coord but not x1/2
 				// as at zoom out level, pixel position is imprecise
 				const prevlastbox = prevseg.boxes.reduce((i, j) => {
@@ -725,15 +728,17 @@ function plot_template(ctx, template, q) {
 			}
 		} else {
 			// overlaps with the previous segment
-			if (q.highlightoverlapreads) {
+			if (q.overlapRP_multirows) {
 				plot_segment(ctx, seg, template.y + q.stackheight, q)
-				const y = Math.floor(template.y + q.stackheight) + 0.5
-				ctx.strokeStyle = overlapreadhlcolor
-				ctx.setLineDash([])
-				ctx.beginPath()
-				ctx.moveTo(seg.x1, y)
-				ctx.lineTo(prevseg.x2, y)
-				ctx.stroke()
+				if (q.overlapRP_hlline) {
+					const y = Math.floor(template.y + q.stackheight) + 0.5
+					ctx.strokeStyle = overlapreadhlcolor
+					ctx.setLineDash([])
+					ctx.beginPath()
+					ctx.moveTo(seg.x1, y)
+					ctx.lineTo(prevseg.x2, y)
+					ctx.stroke()
+				}
 			} else {
 				plot_segment(ctx, seg, template.y, q)
 			}
