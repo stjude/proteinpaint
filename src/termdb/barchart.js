@@ -311,7 +311,7 @@ class TdbBarchart {
 				})
 			}
 		}
-		if (s.rows && s.rows.length > 1 && !s.hidelegend && t2 && this.term2toColor) {
+		if (s.rows /*&& s.rows.length > 1*/ && !s.hidelegend && t2 && this.term2toColor) {
 			const value_by_label =
 				t2.term.type != 'condition' || !t2.term.q
 					? ''
