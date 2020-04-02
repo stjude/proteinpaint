@@ -1632,7 +1632,7 @@ function setInteractivity(self) {
 				self.addBinSizeLines()
 				self.bins_boundries_edit()
 				self.first_bin_edit()
-				self.update_first_bin(self.num_obj.brushes[0])
+				if (self.num_obj.brushes[0].range.stop > minvalue) self.update_first_bin(self.num_obj.brushes[0])
 				self.last_bin_edit()
 				if (!self.num_obj.default_bins_q.last_bin && self.num_obj.brushes.length > 1) self.num_obj.brushes.pop()
 				if (self.num_obj.brushes[1]) self.update_last_bin(self.num_obj.brushes[1])
