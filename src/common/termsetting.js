@@ -1135,8 +1135,11 @@ function setInteractivity(self) {
 					if (cursor_style == 'default') return
 				}
 
-				brush_drag_start = event.selection[1]
-				brush.elem.selectAll('.selection').attr('cursor', 'default').attr('pointer-events', '')
+				// brush_drag_start = event.selection[1]
+				brush.elem
+					.selectAll('.selection')
+					.attr('cursor', 'default')
+					.attr('pointer-events', '')
 				if (brush.orig.bin == 'first') brush.elem.selectAll('.handle--w').attr('pointer-events', 'none')
 				else if (brush.orig.bin == 'last') brush.elem.selectAll('.handle--e').attr('pointer-events', 'none')
 			})
@@ -1188,7 +1191,8 @@ function setInteractivity(self) {
 				// make brush green if changed
 				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
 				//move lines_g with brush move
-				self.num_obj.binsize_g.attr('transform', `translate(${xpad + s[1] - brush_drag_start}, ${ypad})`)
+				// self.num_obj.binsize_g.attr('transform', `translate(${s[1] + xpad - brush_drag_start + brush_drag_stop}, ${ypad})`)
+				self.num_obj.binsize_g.attr('transform', `translate(${s[1] - xscale(a_range.stop) + xpad}, ${ypad})`)
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
