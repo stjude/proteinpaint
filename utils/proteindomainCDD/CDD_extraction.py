@@ -1,20 +1,23 @@
 #!/usr/bin/python
 
-"""CDD_extraction.py: Extract the CDD information for any species from NCBI refseq protein database and fromat the CDD file to be used for proteinpaint"""
+"""CDD_extraction.py: Extract the CDD information for any species from NCBI refseq protein database and fromat the CDD file to be used for proteinpaint
+		      The protein database from NCBI for CDD info extraction can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/refseq/release/
+		      One example of protein annotation file from NCBI: "vertebrate_mammalian.12.protein.gpff.gz"
+"""
 
 __author__    =  "Jian  Wang"
-__copyrith__ = "Copyright 2017, St.Jude" 
+__copyrigth__ = "Copyright 2017, St.Jude" 
 
 
 import re,os,gzip,sys
 from optparse import OptionParser
-
+import json
 
 parser = OptionParser()
 
 parser.add_option("-p","--path", dest = "PATH", help="The path to refseq protein database downloaded from NCBI", metavar = "Protein_Path")
 parser.add_option("-s", "--species", dest="SPECIES", help="Latin name of organism you are working on\
-							   There should be a '_' between Latin name, like Homo_sapiens", metavar = "Name_latin",default="Homo sapiens")
+							   There should be a '_' between Latin name, like Homo_sapiens", metavar = "Name_latin",default="Homo_sapiens")
 
 (options,args) = parser.parse_args()
 
@@ -622,12 +625,47 @@ for fs in FS:
 		FDIC[nfs[0]] = '\t'.join(nfs[1:])
 FS.close()
 
+#protein domain from manually curated in Computational Biology Department from St. JUDE
+if os.path.isfile('protein_manuallyCurated.json'):
+	modifh = open('protein_manuallyCurated.json')
+else:
+	print('Missed manually curated protein domain file "protein_manuallyCurated.json"',file=sys.stderr)
+	sys.exit(1)
+MODIDATA = {}
+for line in modifh:
+	L = line.strip().split('\t')
+	if L[0] in MODIDATA:
+		MODIDATA[L[0]].append(L[1])
+	else:
+		MODIDATA[L[0]] = [L[1]]
+modifh.close()
+
+
+#ISO list selected for the final proteindomain.json file
+if os.path.isfile('ISOLIST'):
+	ISOLIST = {x.strip() for x in open('ISOLIST')}
+else:
+	CKISO = input('You want the all isoforms from NCBI into your final CDD proteindomain json file? y for yes!\n')
+	if CKISO == 'y':
+		ISOLIST = False
+	else:
+		print('Please provide your prefered isoform accession ID file with one id each row...',file=sys.stderr)
+		sys.exit(1)
+		
+
 
 #OUTPUT formated data
 
 MISSOUT = open("Missed"+"_"+options.SPECIES,'w')
 FINAL_OUT = open(options.SPECIES+"_CDD.Json",'w')
 for cdd in FDIC:
+	if ISOLIST and cdd not in ISOLIST: #select prefered isoform
+		continue 
+	if cdd in MODIDATA: #output manually curated protein domain
+		for m in MODIDATA[cdd]:
+			FINAL_OUT.write('\t'.join([cdd,m])+'\n')
+	if cdd == 'NM_006206':
+		continue
 	A_CON = FDIC[cdd].split('\t')
 	for i in A_CON:
 		indiv_cdd = i.split('@')
