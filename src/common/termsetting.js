@@ -1135,7 +1135,9 @@ function setInteractivity(self) {
 					if (cursor_style == 'default') return
 				}
 
-				// brush_drag_start = event.selection[1]
+				const orig_val = self.num_obj.brushes[0].orig.stop
+				const range_val = self.num_obj.brushes[0].range.stop
+				brush_drag_start = orig_val == range_val ? Number(orig_val) : Number(range_val)
 				brush.elem
 					.selectAll('.selection')
 					.attr('cursor', 'default')
@@ -1152,6 +1154,7 @@ function setInteractivity(self) {
 				}
 
 				const s = event.selection
+				const start_s = range.bin == 'first' ? s[1] : xscale(brush_drag_start)
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
@@ -1192,7 +1195,7 @@ function setInteractivity(self) {
 				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
 				//move lines_g with brush move
 				// self.num_obj.binsize_g.attr('transform', `translate(${s[1] + xpad - brush_drag_start + brush_drag_stop}, ${ypad})`)
-				self.num_obj.binsize_g.attr('transform', `translate(${s[1] - xscale(a_range.stop) + xpad}, ${ypad})`)
+				self.num_obj.binsize_g.attr('transform', `translate(${start_s - xscale(brush_drag_start) + xpad}, ${ypad})`)
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
@@ -1203,8 +1206,6 @@ function setInteractivity(self) {
 		const brush_stop = range.stopunbounded ? maxvalue : range.stop
 		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
 
-		if (range.startunbounded) delete range.start
-		if (range.stopunbounded) delete range.stop
 		brush.elem
 			.selectAll('.selection')
 			.style(
@@ -1553,6 +1554,7 @@ function setInteractivity(self) {
 			auto_radio_btn.node().checked = true
 		} else if (JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)) {
 			custom_radio_btn.node().checked = true
+			brush.input.node().value = custom_bins_q.last_bin.start
 		}
 
 		self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
