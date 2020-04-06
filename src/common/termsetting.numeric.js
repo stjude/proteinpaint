@@ -11,7 +11,9 @@ self: a termsetting instance
 
 exports.setNumericMethods = function setNumericMethods(self) {
 	self.term_name_gen = function(d) {
-		return d.name.length <= 25 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 24) + '...' + '</label>'
+		return d.name.length <= 25
+			? d.name
+			: '<label title="' + d.name + '">' + d.name.substring(0, 24) + '...' + '</label>'
 	}
 
 	self.get_status_msg = () => ''
@@ -736,11 +738,12 @@ exports.setNumericMethods = function setNumericMethods(self) {
 		// 			})
 		// 		}
 		// 	})
+		const rand_id = Math.floor(Math.random() * 1000 + 1)
 
 		const auto_radio_btn = last_bin_select_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'auto_last_bin')
+			.attr('id', 'auto_last_bin' + rand_id)
 			.attr('name', 'last_bin_opt')
 			.attr('value', 'auto')
 			.property('checked', 'true')
@@ -756,7 +759,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 
 		last_bin_select_div
 			.append('label')
-			.attr('for', 'auto_last_bin')
+			.attr('for', 'auto_last_bin' + rand_id)
 			.style('padding-left', '10px')
 			.style('padding-right', '10px')
 			.html('Auto<br>')
@@ -764,7 +767,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 		const custom_radio_btn = last_bin_select_div
 			.append('input')
 			.attr('type', 'radio')
-			.attr('id', 'custom_last_bin')
+			.attr('id', 'custom_last_bin' + rand_id)
 			.attr('name', 'last_bin_opt')
 			.attr('value', 'custom_last')
 			.style('margin-top', '10px')
@@ -774,7 +777,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 
 		last_bin_select_div
 			.append('label')
-			.attr('for', 'custom_last_bin')
+			.attr('for', 'custom_last_bin' + rand_id)
 			.style('padding-left', '10px')
 			.html('Custom Bin')
 
