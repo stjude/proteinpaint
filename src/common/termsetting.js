@@ -4,7 +4,8 @@ import { appInit } from '../termdb/app'
 import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
 import { setNumericMethods } from './termsetting.numeric'
-import { setNonNumericMethods } from './termsetting.nonnumeric'
+import { setCategoricalMethods } from './termsetting.categorical'
+import { setConditionalMethods } from './termsetting.conditional'
 
 /*
 
@@ -134,8 +135,8 @@ function setRenderers(self) {
 		self.setRenderersByTermType = {
 			integer: setNumericMethods,
 			float: setNumericMethods,
-			categorical: setNonNumericMethods,
-			condition: setNonNumericMethods
+			categorical: setCategoricalMethods,
+			condition: setConditionalMethods
 		}
 	}
 
@@ -274,13 +275,13 @@ function setInteractivity(self) {
 	self.showMenu = () => {
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 		if (self.opts.showFullMenu) {
-			self.showEditMenu(self.dom.tip.d)
+			self.showEditReplaceRemoveMenu(self.dom.tip.d)
 		} else {
-			self.showMenuForType(self.dom.tip.d)
+			self.showEditMenu(self.dom.tip.d)
 		}
 	}
 
-	self.showEditMenu = async function(div) {
+	self.showEditReplaceRemoveMenu = async function(div) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
@@ -293,7 +294,7 @@ function setInteractivity(self) {
 			.text('edit')
 			.on('click', () => {
 				self.dom.tip.clear()
-				self.showMenuForType(self.dom.tip.d)
+				self.showEditMenu(self.dom.tip.d)
 			})
 		div
 			.append('div')

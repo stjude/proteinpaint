@@ -1,6 +1,4 @@
-import * as rx from '../common/rx.core'
 import * as client from '../client'
-import { appInit } from '../termdb/app'
 import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
 
@@ -18,7 +16,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 
 	self.get_status_msg = () => ''
 
-	self.showMenuForType = async function(div) {
+	self.showEditMenu = async function(div) {
 		self.num_obj = {}
 
 		if (self.q && Object.keys(self.q).length !== 0) {

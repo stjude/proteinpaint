@@ -1,17 +1,13 @@
-import * as rx from '../common/rx.core'
 import * as client from '../client'
-import { appInit } from '../termdb/app'
-import { select, event } from 'd3-selection'
 
 /*
 Arguments
 self: a termsetting instance
 */
 
-exports.setNonNumericMethods = function setNonNumericMethods(self) {
-	self.showMenuForType = () => {
-		if (self.term.type == 'categorical') self.showGrpOpts(self.dom.tip.d)
-		else self.showConditionOpts(self.dom.tip.d)
+exports.setCategoricalMethods = function setCategoricalMethods(self) {
+	self.showEditMenu = function(div) {
+		self.showGrpOpts(div)
 	}
 
 	self.term_name_gen = function(d) {
