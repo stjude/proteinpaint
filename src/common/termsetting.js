@@ -76,7 +76,7 @@ class TermSetting {
 				this.disable_terms = data.disable_terms
 				this.filter = data.filter
 				// reset methods by term type
-				this.setRenderersByTermType[this.term.type](this)
+				if (this.term) this.setMethodsByTermType[this.term.type](this)
 				this.updateUI()
 			},
 			showTree: this.showTree
@@ -132,7 +132,7 @@ function setRenderers(self) {
 			.style('background-color', '#4888BF')
 			.text('+')
 
-		self.setRenderersByTermType = {
+		self.setMethodsByTermType = {
 			integer: setNumericMethods,
 			float: setNumericMethods,
 			categorical: setCategoricalMethods,
