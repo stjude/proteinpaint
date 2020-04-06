@@ -9,6 +9,15 @@ self: a termsetting instance
 */
 
 exports.setNonNumericMethods = function setNonNumericMethods(self) {
+	self.showMenuForType = () => {
+		if (self.term.type == 'categorical') self.showGrpOpts(self.dom.tip.d)
+		else self.showConditionOpts(self.dom.tip.d)
+	}
+
+	self.term_name_gen = function(d) {
+		return d.name.length <= 20 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+	}
+
 	self.get_status_msg = function() {
 		// get message text for the right half pill; may return null
 		if (self.q.groupsetting && self.q.groupsetting.inuse) {

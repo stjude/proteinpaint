@@ -16,12 +16,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 
 	self.get_status_msg = () => ''
 
-	self.showMenu = () => {
-		self.dom.tip.clear().showunder(self.dom.holder.node())
-		self.showNumOpts(self.dom.tip.d)
-	}
-
-	self.showNumOpts = async function(div) {
+	self.showMenuForType = async function(div) {
 		self.num_obj = {}
 
 		if (self.q && Object.keys(self.q).length !== 0) {
