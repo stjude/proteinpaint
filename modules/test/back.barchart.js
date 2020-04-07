@@ -76,7 +76,8 @@ const templateBar = JSON.stringify({
 						data: [
 							{
 								dataId: '@key',
-								total: '+1'
+								total: '+1',
+								//samples: ['$sample']
 							},
 							'&idVal.dataId[]'
 						]
@@ -292,8 +293,8 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 			get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0)
 		} else if (term.type == 'condition') {
 			// tdb.patient_condition
-			if (!tdb.patient_condition) throw 'missing termdb patient_condition'
-			if (!tdb.patient_condition.events_key) throw 'missing termdb patient_condition.events_key'
+			//if (!tdb.patient_condition) throw 'missing termdb patient_condition'
+			//if (!tdb.patient_condition.events_key) throw 'missing termdb patient_condition.events_key'
 			inReq.orderedLabels = term.grades ? term.grades : [0, 1, 2, 3, 4, 5, 9] // hardcoded default order
 			set_condition_fxn(termid, term.values, tdb, inReq, i)
 		} else {
@@ -364,6 +365,7 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 
 	inReq.joinFxns[termid] = row => {
 		const v = row[termid]
+		if (!isNumeric(v)) return; if (row.sample=='SJL5117302') console.log(367, termid, row[termid])
 		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
 			return term.values[v].label
 		}
@@ -388,7 +390,7 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 	inReq.numValFxns[termid] = row => {
 		const v = row[termid]
 		if (!term.values || !('' + v in term.values) || !term.values[v].uncomputable) {
-			return v
+			if (isNumeric(v)) return v
 		}
 	}
 }
@@ -586,4 +588,8 @@ function boxplot_getvalue(lst) {
 	}
 	const out = lst.filter(i => i.value < p25 - iqr || i.value > p75 + iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
+}
+
+function isNumeric(n) {
+	return !isNaN(parseFloat(n)) && isFinite(n)
 }

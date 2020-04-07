@@ -232,6 +232,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			break
 		}
 	}
+	delete bc.numDecimals
+	delete bc.binLabelFormatter
 	return bins
 }
 

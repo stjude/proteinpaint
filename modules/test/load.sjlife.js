@@ -91,7 +91,7 @@ function load_annotations(ds, db, term_id) {
 			ds.cohort.annorows.push(anno[row.sample])
 		}
 		const term = termjson.map.get(row.term_id)
-		anno[row.sample][row.term_id] = term && (term.isinteger || term.isfloat) ? Number(row.value) : row.value
+		anno[row.sample][row.term_id] = term && (term.type == 'integer' || term.type == 'float') ? Number(row.value) : row.value
 	}
 }
 
