@@ -356,7 +356,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
-		let brush_drag_start, cursor_style
+		let brush_drag_start, cursor_style, custom_bins_q
 
 		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
@@ -367,7 +367,11 @@ exports.setNumericMethods = function setNumericMethods(self) {
 					if (cursor_style == 'default') return
 				}
 
-				// brush_drag_start = event.selection[1]
+				const orig_val = self.num_obj.brushes[0].orig.stop
+				const range_val = self.num_obj.brushes[0].range.stop
+				brush_drag_start = orig_val == range_val ? Number(orig_val) : Number(range_val)
+				custom_bins_q = self.num_obj.custom_bins_q
+
 				brush.elem
 					.selectAll('.selection')
 					.attr('cursor', 'default')
@@ -384,6 +388,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 				}
 
 				const s = event.selection
+				const start_s = range.bin == 'first' ? s[1] : xscale(brush_drag_start)
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
@@ -423,12 +428,20 @@ exports.setNumericMethods = function setNumericMethods(self) {
 				// make brush green if changed
 				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
 				//move lines_g with brush move
-				// self.num_obj.binsize_g.attr('transform', `translate(${s[1] + xpad - brush_drag_start + brush_drag_stop}, ${ypad})`)
-				self.num_obj.binsize_g.attr('transform', `translate(${s[1] - xscale(a_range.stop) + xpad}, ${ypad})`)
+				self.num_obj.binsize_g.attr('transform', `translate(${start_s - xscale(brush_drag_start) + xpad}, ${ypad})`)
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
 				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
+				if (brush.orig.bin == 'first') {
+					self.num_obj.brushes[0].range.stop = range.stop
+				}
+				// if (brush.orig.bin == 'first') {
+				// 	custom_bins_q.first_bin.stop = range.stop
+				// }else{
+				// 	custom_bins_q.last_bin.start = range.start
+				// }
+				// custom_bins_q.bin_size = self.num_obj.fixed_bins_table.bin_size_tr.selectAll('input')
 			})
 
 		const brush_start = range.startunbounded ? minvalue : range.start
@@ -480,6 +493,8 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			.attr('y1', 0)
 			.attr('x2', d => xscale(d))
 			.attr('y2', plot_size.height)
+
+		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
 	}
 
 	self.addFixedBinsTable = function() {
@@ -786,6 +801,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			auto_radio_btn.node().checked = true
 		} else if (JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)) {
 			custom_radio_btn.node().checked = true
+			brush.input.node().value = custom_bins_q.last_bin.start
 		}
 
 		self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)
