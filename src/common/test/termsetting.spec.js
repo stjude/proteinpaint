@@ -30,7 +30,7 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		use_bins_less: opts.use_bins_less,
-		showMenu: opts.showMenu,
+		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
 		debug: true,
 		callback: function(termsetting) {
@@ -57,7 +57,7 @@ tape('\n', test => {
 
 tape('editMenu', async test => {
 	const opts = getOpts({
-		showMenu: true,
+		showFullMenu: true,
 		tsData: {
 			term: {
 				id: 'dummy',
@@ -81,7 +81,7 @@ tape('editMenu', async test => {
 
 	// delete the flag and click pill again to see if hiding menu for replace/remove buttons in tip
 	// if pill.opts is frozen in future, just create a new pill
-	delete opts.pill.Inner.opts.showMenu
+	delete opts.pill.Inner.opts.showFullMenu
 	pilldiv.click()
 	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, 'should hide edit menu')
 
