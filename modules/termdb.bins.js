@@ -1,5 +1,4 @@
 const d3format = require('d3-format')
-const binLabelFormatter = d3format.format('.3r')
 
 function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -138,6 +137,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const summary = summaryfxn(percentiles)
 	if (!summary || typeof summary !== 'object') throw 'invalid returned value by summaryfxn'
 	bc.results = { summary }
+	const decimals = (""+bc.bin_size).split(".")[1]
+	bc.numDecimals = decimals && decimals.length || 0
+	bc.binLabelFormatter = d3format.format('.'+ bc.numDecimals +'r')
 
 	const orderedLabels = []
 	const min = bc.first_bin.startunbounded
@@ -245,12 +247,12 @@ function get_bin_label(bin, binconfig) {
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
 		const oper = bin.stopinclusive ? '\u2264' : '<'
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 		return oper + v1
 	}
 	if (bin.stopunbounded) {
 		const oper = bin.startinclusive ? '\u2265' : '>'
-		const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
+		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
 		return oper + v0
 	}
 
@@ -261,7 +263,7 @@ function get_bin_label(bin, binconfig) {
 		// bin size is integer, make nicer label
 		if (bc.bin_size == 1) {
 			// bin size is 1; use just start value as label, not a range
-			return '' + bin.start //binLabelFormatter(start)
+			return '' + bin.start //bc.binLabelFormatter(start)
 		}
 		if (Number.isInteger(bin.start) || Number.isInteger(bin.stop)) {
 			// else if ('label_offset' in binconfig) {
@@ -283,20 +285,26 @@ function get_bin_label(bin, binconfig) {
 				? binconfig.results.summary['p' + binconfig.last_bin.stop_percentile]
 				: binconfig.results.summary.max
 			const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
-			return v0 == v1 ? v0.toString() : v0 + ' to ' + v1
+			if (v0 == v1) return v0.toString()
+			for(let i=0; i<10; i++) {
+				//const v0f = v0.toFixed(bc.numDecimals + i)
+				const v1f = v1.toFixed(bc.numDecimals + i)
+				if (+v1f > v0) return v0 + ' to ' + v1f
+			} console.log(293, v0, v1)
+			return v0 + ' to ' + v1
 		}
 		const oper0 = '' //bc.startinclusive ? "" : ">"
 		const oper1 = '' //bc.stopinclusive ? "" : "<"
-		const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 		return oper0 + v0 + ' to ' + oper1 + v1
 	}
 
 	// bin size not integer
 	const oper0 = bc.startinclusive ? '' : '>'
 	const oper1 = bc.stopinclusive ? '' : '<'
-	const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
-	const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+	const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+	const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 	return oper0 + v0 + ' to ' + oper1 + v1
 }
 
