@@ -216,6 +216,9 @@ function makeTk(tk, block) {
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+
+					getReadInfo(tk, block, t, block.pxoff2region(mx))
+
 					return
 				}
 			}
@@ -289,4 +292,33 @@ function configPanel(tk, block) {
 		.style('margin-top', '10px')
 		.append('img')
 		.attr('src', tk.colorscale)
+}
+
+async function getReadInfo(tk, block, box, tmp) {
+	/*
+get info for a read/template
+if is single mode, will be single read and with first/last info
+if is pair mode, is the template
+*/
+	const [ridx, pos] = tmp
+	const lst = [
+		'getread=1',
+		'qname=' + box.qname,
+		'genome=' + block.genome.name,
+		'chr=' + block.rglst[ridx].chr,
+		'pos=' + pos
+	]
+	if (tk.nochr) lst.push('nochr=1')
+	if (tk.file) lst.push('file=' + tk.file)
+	if (tk.url) lst.push('url=' + tk.url)
+	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+	if (tk.asPaired) {
+		lst.push('ispair=1')
+	} else {
+		if (box.isfirst) lst.push('isfirst=1')
+		else if (box.islast) lst.push('islast=1')
+	}
+	const data = await client.dofetch2('tkbam?' + lst.join('&'))
+	if (data.error) throw data.error
+	console.log(data)
 }

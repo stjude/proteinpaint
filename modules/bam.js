@@ -133,6 +133,10 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
+			if (req.query.getread) {
+				res.send(await route_getread(genome, req.query))
+				return
+			}
 			const q = await get_q(genome, req)
 			const result = await do_query(q)
 			res.send(result)
@@ -988,4 +992,8 @@ Insertion  BBBBBBBBBBBBBBBBB
 	}
 
 	return canvas.toDataURL()
+}
+
+async function route_getread(genome, query) {
+	return {}
 }
