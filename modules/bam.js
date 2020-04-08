@@ -21,6 +21,11 @@ TODO
 
 *********************** data structure
 q {}
+  .regions[]
+    .to_checkmismatch bool
+	.referenceseq     str
+	.to_print    bool
+	.to_qual     bool
   .asPaired
   .stackheight
   .stackspace
@@ -30,20 +35,22 @@ q {}
   .messagerows[ {} ]
 	.h int
 	.t str
+  .returntemplatebox[]
 
 template {}
   .y // first is stack idx, then replaced to be actual screen y
-  .x1, x2
+  .x1, x2  // screen px, only for stacking not rendering
   .ridx2 // region idx of the stop position
   .segments[]
+  .height // screen px, only set when to check overlap read pair, will double row height
 
 segment {}
   .qname
   .boxes[]
   .forward
   .ridx
-  .x1, x2  // screen px
-  .shiftdownrow
+  .x1, x2  // screen px, used for rendering
+  .shiftdownrow // idx of mini stack
 
 box {}
   .opr
@@ -62,12 +69,14 @@ do_query
 		parse_one_segment
 	stack_templates
 	poststack_adjustq
+		getstacksizebystacks
 		get_refseq
 	finalize_templates
 		get_stacky
 			overlapRP_setflag
 			getrowheight_template_overlapread
 		check_mismatch
+	plot_messagerows
 	plot_template
 		plot_segment
 	plot_insertions
@@ -169,10 +178,12 @@ async function do_query(q) {
 		await query_region(r, q)
 	}
 
+	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
+
 	const result = {
 		nochr: q.nochr,
 		count: {
-			r: q.regions.reduce((i, j) => i + j.lines.length, 0)
+			r: q.totalnumreads
 		}
 	}
 	if (result.count.r == 0) {
@@ -187,22 +198,16 @@ async function do_query(q) {
 	stack_templates(q, templates)
 	await poststack_adjustq(q)
 
-	finalize_templates(templates, q)
+	finalize_templates(templates, q) // set q.canvasheight
 
 	const canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	const canvas = createCanvas(canvaswidth, q.canvasheight)
 	const ctx = canvas.getContext('2d')
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
-	let y = 0
-	for (const row of q.messagerows) {
-		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
-		//ctx.fillStyle = '#f1f1f1'
-		//ctx.fillRect(0,y,canvaswidth,row.h)
-		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, canvaswidth / 2, y + row.h / 2)
-		y += row.h
-	}
+
+	plot_messagerows(ctx, q, canvaswidth)
+
 	for (const template of templates) {
 		plot_template(ctx, template, q)
 	}
@@ -212,6 +217,7 @@ async function do_query(q) {
 	result.src = canvas.toDataURL()
 	result.width = canvaswidth
 	result.height = q.canvasheight
+	result.templatebox = q.returntemplatebox
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
 }
@@ -260,8 +266,8 @@ function get_templates(q) {
 				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
 				lst.push({
-					x1: r.scale(segment.boxes[0].start),
-					x2: r.scale(segmentstop(segment.boxes)),
+					x1: segment.x1,
+					x2: segment.x2,
 					ridx2: i, // r idx of stop
 					segments: [segment]
 				})
@@ -282,12 +288,12 @@ function get_templates(q) {
 			if (temp) {
 				// add this segment to existing template
 				temp.segments.push(segment)
-				temp.x2 = Math.max(temp.x2, r.scale(segmentstop(segment.boxes)))
+				temp.x2 = Math.max(temp.x2, segment.x2)
 				temp.ridx2 = i
 			} else {
 				qname2template.set(segment.qname, {
-					x1: r.scale(segment.boxes[0].start),
-					x2: r.scale(segmentstop(segment.boxes)),
+					x1: segment.x1,
+					x2: segment.x2,
 					ridx2: i,
 					segments: [segment]
 				})
@@ -491,6 +497,9 @@ super high number of stacks will result in fractional row height and blurry rend
 		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
 		r.to_qual = r.ntwidth >= minntwidth_toqual
 	}
+	if (q.stackheight >= 5 && q.totalnumreads < 3000) {
+		q.returntemplatebox = []
+	}
 }
 
 function getstacksizebystacks(numofstacks) {
@@ -594,7 +603,26 @@ at the end, set q.canvasheight
 			delete segment.qual
 		}
 	}
-	q.canvasheight = stacky[stacky.length - 1]
+
+	if (stacky.length == 0) {
+		// no reads, must use sum of message row height as canvas height
+		q.canvasheight = q.messagerows.reduce((i, j) => i + j.h, 0)
+	} else {
+		// has reads, and nessage row heights are already counted in y position of each stack
+		q.canvasheight = stacky[stacky.length - 1]
+	}
+}
+
+function plot_messagerows(ctx, q, canvaswidth) {
+	let y = 0
+	for (const row of q.messagerows) {
+		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
+		//ctx.fillStyle = '#f1f1f1'
+		//ctx.fillRect(0,y,canvaswidth,row.h)
+		ctx.fillStyle = 'black'
+		ctx.fillText(row.t, canvaswidth / 2, y + row.h / 2)
+		y += row.h
+	}
 }
 
 function get_stacky(templates, q) {
@@ -606,10 +634,8 @@ function get_stacky(templates, q) {
 		// expand row height for stacks with overlapping read pairs
 		for (const template of templates) {
 			if (template.segments.length <= 1) continue
-			stackrowheight[template.y] = Math.max(
-				stackrowheight[template.y],
-				getrowheight_template_overlapread(template, q.stackheight)
-			)
+			template.height = getrowheight_template_overlapread(template, q.stackheight)
+			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
 		}
 	}
 	const stacky = []
@@ -641,7 +667,7 @@ function getrowheight_template_overlapread(template, stackheight) {
 		return stackheight
 	}
 	// more than 2 segments, do a mini stack to, may not happen??
-	console.log(template.segments.length, 'segments')
+	console.log('more than 2 segments', template.segments.length)
 	const stacks = []
 	for (const b of template.segments) {
 		let stackidx = null
@@ -687,7 +713,17 @@ function check_mismatch(lst, r, box) {
 }
 
 function plot_template(ctx, template, q) {
-	// segments: a list of segments consisting this template, maybe at different regions
+	if (q.returntemplatebox) {
+		// one box per template
+		q.returntemplatebox.push({
+			names: template.segments.map(i => i.qname),
+			// TODO each segment return [name,first_in_template] to identify on client
+			x1: template.x1,
+			x2: template.x2,
+			y1: template.y,
+			y2: template.y + (template.height || q.stackheight)
+		})
+	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
 		if (i == 0) {

@@ -1,4 +1,4 @@
-import { event as d3event } from 'd3-selection'
+import { event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
@@ -100,6 +100,7 @@ async function getData(tk, block) {
 }
 
 function renderTk(tk, block) {
+	update_boxes(tk, block)
 	tk.img
 		.attr('xlink:href', tk.data.src)
 		.attr('width', tk.data.width)
@@ -123,8 +124,79 @@ function renderTk(tk, block) {
 	tk.height_main += tk.toppad + tk.bottompad
 }
 
+function update_boxes(tk, block) {
+	tk.box_move.attr('width', 0)
+	if (!tk.data.templatebox) {
+		tk.box_stay.attr('width', 0)
+		return
+	}
+	if (!tk.clickedtemplatenames) {
+		tk.box_stay.attr('width', 0)
+		return
+	}
+	for (const t of tk.data.templatebox) {
+		if (t.names.join('') == tk.clickedtemplatenames) {
+			const bx1 = Math.max(0, t.x1)
+			const bx2 = Math.min(block.width, t.x2)
+			tk.box_stay
+				.attr('width', bx2 - bx1)
+				.attr('height', t.y2 - t.y1)
+				.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+			return
+		}
+	}
+}
+
 function makeTk(tk, block) {
-	tk.img = tk.glider.append('image')
+	tk.img = tk.glider
+		.append('image')
+		.on('mousemove', () => {
+			if (!tk.data.templatebox) return
+			const [mx, my] = d3mouse(tk.img.node())
+			for (const t of tk.data.templatebox) {
+				const bx1 = Math.max(0, t.x1)
+				const bx2 = Math.min(block.width, t.x2)
+				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
+					tk.box_move
+						.attr('width', bx2 - bx1)
+						.attr('height', t.y2 - t.y1)
+						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+					return
+				}
+			}
+		})
+		.on('click', () => {
+			if (!tk.data.templatebox) return
+			const [mx, my] = d3mouse(tk.img.node())
+			for (const t of tk.data.templatebox) {
+				const bx1 = Math.max(0, t.x1)
+				const bx2 = Math.min(block.width, t.x2)
+				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
+					if (tk.clickedtemplatenames && tk.clickedtemplatenames == t.names.join('')) {
+						// same box already highlighted, cancel
+						delete tk.clickedtemplatenames
+						tk.box_stay.attr('width', 0)
+					} else {
+						tk.clickedtemplatenames = t.names.join('')
+						tk.box_stay
+							.attr('width', bx2 - bx1)
+							.attr('height', t.y2 - t.y1)
+							.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+					}
+					return
+				}
+			}
+		})
+
+	tk.box_move = tk.glider
+		.append('rect')
+		.attr('stroke', 'black')
+		.attr('fill', 'none')
+	tk.box_stay = tk.glider
+		.append('rect')
+		.attr('stroke', 'yellow')
+		.attr('fill', 'none')
+
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
@@ -138,6 +210,8 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 }
+
+function showboxattemplate(tk, block, ismovebox) {}
 
 function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
@@ -158,6 +232,7 @@ function configPanel(tk, block) {
 			styles: { display: 'inline-block' },
 			callback: () => {
 				tk.asPaired = !tk.asPaired
+				delete tk.clickedtemplatenames
 				loadTk(tk, block)
 			}
 		})
