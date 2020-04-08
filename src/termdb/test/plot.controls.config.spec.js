@@ -84,7 +84,7 @@ tape('overlay input', function(test) {
 				expandedTermIds: [
 					'root',
 					'Clinically-assessed Variables',
-					'CTCAE Graded Events',
+					'ctcae_graded',
 					'Cardiovascular System',
 					'Arrhythmias'
 				],
@@ -412,7 +412,7 @@ tape('Term1 condition, categorical', function(test) {
 				expandedTermIds: [
 					'root',
 					'Clinically-assessed Variables',
-					'CTCAE Graded Events',
+					'ctcae_graded',
 					'Cardiovascular System',
 					'Arrhythmias'
 				],

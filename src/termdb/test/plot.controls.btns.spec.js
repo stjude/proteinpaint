@@ -70,7 +70,7 @@ tape('info btn', function(test) {
 				expandedTermIds: [
 					'root',
 					'Clinically-assessed Variables',
-					'CTCAE Graded Events',
+					'ctcae_graded',
 					'Cardiovascular System',
 					'Arrhythmias',
 					'Cardiac dysrhythmia'

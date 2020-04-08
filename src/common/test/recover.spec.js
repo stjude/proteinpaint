@@ -69,7 +69,7 @@ tape('history processing', function(test) {
 	function triggerExpand2(tree) {
 		tree.Inner.app.dispatch({
 			type: 'app_refresh',
-			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events'] } }
+			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'ctcae_graded'] } }
 		})
 	}
 
@@ -126,7 +126,7 @@ tape('rendered buttons', function(test) {
 	function dispatchFake1(recover) {
 		recover.Inner.app.dispatch({
 			type: 'app_refresh',
-			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events'] } }
+			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'ctcae_graded'] } }
 		})
 	}
 
