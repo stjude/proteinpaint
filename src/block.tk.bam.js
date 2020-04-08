@@ -10,6 +10,14 @@ important: tk.uninitialized will be deleted by getData at the first launch
 to tell backend to provide color scale
 
 tk can predefine if bam file has chr or not
+
+tk {}
+.box_move
+.box_stay
+.clickedtemplate
+	.qname
+	.isfirst
+	.islast
 */
 
 const labyspace = 5
@@ -125,26 +133,36 @@ function renderTk(tk, block) {
 }
 
 function update_boxes(tk, block) {
+	// update move/stay boxes after getting new data
 	tk.box_move.attr('width', 0)
+	update_box_stay(tk, block)
+}
+
+function update_box_stay(tk, block) {
+	// just the stay box
 	if (!tk.data.templatebox) {
 		tk.box_stay.attr('width', 0)
 		return
 	}
-	if (!tk.clickedtemplatenames) {
+	if (!tk.clickedtemplate) {
 		tk.box_stay.attr('width', 0)
 		return
 	}
 	for (const t of tk.data.templatebox) {
-		if (t.names.join('') == tk.clickedtemplatenames) {
-			const bx1 = Math.max(0, t.x1)
-			const bx2 = Math.min(block.width, t.x2)
-			tk.box_stay
-				.attr('width', bx2 - bx1)
-				.attr('height', t.y2 - t.y1)
-				.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
-			return
+		if (t.qname == tk.clickedtemplate.qname) {
+			if (tk.asPaired || (t.isfirst && tk.clickedtemplate.isfirst) || (t.islast && tk.clickedtemplate.islast)) {
+				const bx1 = Math.max(0, t.x1)
+				const bx2 = Math.min(block.width, t.x2)
+				tk.box_stay
+					.attr('width', bx2 - bx1)
+					.attr('height', t.y2 - t.y1)
+					.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+				return
+			}
 		}
 	}
+	// clicked template not found
+	tk.box_stay.attr('width', 0)
 }
 
 function makeTk(tk, block) {
@@ -172,17 +190,32 @@ function makeTk(tk, block) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
 				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
-					if (tk.clickedtemplatenames && tk.clickedtemplatenames == t.names.join('')) {
-						// same box already highlighted, cancel
-						delete tk.clickedtemplatenames
-						tk.box_stay.attr('width', 0)
-					} else {
-						tk.clickedtemplatenames = t.names.join('')
-						tk.box_stay
-							.attr('width', bx2 - bx1)
-							.attr('height', t.y2 - t.y1)
-							.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+					if (tk.clickedtemplate && tk.clickedtemplate.qname == t.qname) {
+						// same template
+						if (tk.asPaired || (t.isfirst && tk.clickedtemplate.isfirst) || (t.islast && tk.clickedtemplate.islast)) {
+							// paired mode
+							// or single mode and correct read
+							// box under cursor is highlighted, cancel
+							delete tk.clickedtemplate
+							tk.box_stay.attr('width', 0)
+							return
+						}
 					}
+					// a different template or different read from the same template
+					// overwrite
+					tk.clickedtemplate = {
+						qname: t.qname
+					}
+					if (tk.asPaired) {
+						tk.clickedtemplate.isfirst = true
+					} else {
+						if (t.isfirst) tk.clickedtemplate.isfirst = true
+						if (t.islast) tk.clickedtemplate.islast = true
+					}
+					tk.box_stay
+						.attr('width', bx2 - bx1)
+						.attr('height', t.y2 - t.y1)
+						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 					return
 				}
 			}
@@ -194,7 +227,7 @@ function makeTk(tk, block) {
 		.attr('fill', 'none')
 	tk.box_stay = tk.glider
 		.append('rect')
-		.attr('stroke', 'yellow')
+		.attr('stroke', 'magenta')
 		.attr('fill', 'none')
 
 	tk.asPaired = false
@@ -232,7 +265,6 @@ function configPanel(tk, block) {
 			styles: { display: 'inline-block' },
 			callback: () => {
 				tk.asPaired = !tk.asPaired
-				delete tk.clickedtemplatenames
 				loadTk(tk, block)
 			}
 		})

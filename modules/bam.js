@@ -21,44 +21,46 @@ TODO
 
 *********************** data structure
 q {}
-  .regions[]
-    .to_checkmismatch bool
+.regions[]
+	.to_checkmismatch bool
 	.referenceseq     str
 	.to_print    bool
 	.to_qual     bool
-  .asPaired
-  .stackheight
-  .stackspace
-  .stacks[]
-  .overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
-  .overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
-  .messagerows[ {} ]
+.asPaired
+.stackheight
+.stackspace
+.stacks[]
+.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
+.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
+.messagerows[ {} ]
 	.h int
 	.t str
-  .returntemplatebox[]
+.returntemplatebox[]
 
 template {}
-  .y // first is stack idx, then replaced to be actual screen y
-  .x1, x2  // screen px, only for stacking not rendering
-  .ridx2 // region idx of the stop position
-  .segments[]
-  .height // screen px, only set when to check overlap read pair, will double row height
+.y // initially stack idx, then replaced to be actual screen y
+.x1, x2  // screen px, only for stacking not rendering
+.ridx2 // region idx of the stop position
+.segments[]
+.height // screen px, only set when to check overlap read pair, will double row height
 
 segment {}
-  .qname
-  .boxes[]
-  .forward
-  .ridx
-  .x1, x2  // screen px, used for rendering
-  .shiftdownrow // idx of mini stack
+.qname
+.boxes[]
+.forward
+.ridx
+.x1, x2  // screen px, used for rendering
+.shiftdownrow // idx of mini stack
+.isfirst
+.islast
 
 box {}
-  .opr
-  .start // absolute bp
-  .len   // #bp
-  .cidx  // start position in sequence/qual string
-  .s (read sequence)
-  .qual[]
+.opr
+.start // absolute bp
+.len   // #bp
+.cidx  // start position in sequence/qual string
+.s (read sequence)
+.qual[]
 
 
 *********************** function cascade
@@ -327,6 +329,10 @@ may skip insertion if on screen width shorter than minimum width
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
+	if (flag & 0x4) {
+		//console.log('unmapped')
+		return
+	}
 	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
 		// invalid
 		return
@@ -471,6 +477,11 @@ may skip insertion if on screen width shorter than minimum width
 		seq,
 		qual
 		//cigarstr
+	}
+	if (flag & 0x40) {
+		segment.isfirst = true
+	} else if (flag & 0x80) {
+		segment.islast = true
 	}
 	return segment
 }
@@ -715,14 +726,19 @@ function check_mismatch(lst, r, box) {
 function plot_template(ctx, template, q) {
 	if (q.returntemplatebox) {
 		// one box per template
-		q.returntemplatebox.push({
-			names: template.segments.map(i => i.qname),
-			// TODO each segment return [name,first_in_template] to identify on client
+		const box = {
+			qname: template.segments[0].qname,
 			x1: template.x1,
 			x2: template.x2,
 			y1: template.y,
 			y2: template.y + (template.height || q.stackheight)
-		})
+		}
+		if (!q.asPaired) {
+			// single reads are in multiple "templates", tell if its first/last to identify
+			if (template.segments[0].isfirst) box.isfirst = true
+			if (template.segments[0].islast) box.islast = true
+		}
+		q.returntemplatebox.push(box)
 	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
