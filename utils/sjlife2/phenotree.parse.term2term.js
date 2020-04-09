@@ -268,12 +268,13 @@ for (let i = 1; i < lines.length; i++) {
 		level2 = str2level(l[1]),
 		level3 = str2level(l[2]),
 		level4 = str2level(l[3]),
-		level5 = str2level(l[4])
+		level5 = str2level(l[4] || '-') // level 5 is missing from certain terms e.g. ccss ctcae events
 
 	// if a level is non empty, will record its id, for use with its sub-levels
 	let id1, id2, id3, id4, id5
 
 	let leaflevel = 5 // which level is leaf: 1,2,3,4,5
+	let level2isctcae // if level 2 is ctcae
 
 	/* trim leaf
 	if a leaf level is identical as its direct parent, trim this leaf
@@ -360,6 +361,14 @@ for (let i = 1; i < lines.length; i++) {
 		c2p.get(id2).set(id1, 0)
 		c2immediatep.set(id2, id1)
 		allterms_byorder.add(id2)
+
+		/*
+		phenotree file now contains ctcae data from both sjlife and ccss
+		where the level2 all use same name but with different case to differentiate
+		so must do case insensitive match here
+		the flag will be used by later terms
+		*/
+		level2isctcae = level2.toLowerCase() == level2_ctcaegraded.toLowerCase()
 	}
 
 	if (level3) {
@@ -388,7 +397,7 @@ for (let i = 1; i < lines.length; i++) {
 		c2immediatep.set(id3, id2)
 
 		allterms_byorder.add(id3)
-		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id3)
+		if (level2isctcae) patientcondition_terms.add(id3)
 	}
 
 	if (level4) {
@@ -417,7 +426,7 @@ for (let i = 1; i < lines.length; i++) {
 		c2immediatep.set(id4, id3)
 
 		allterms_byorder.add(id4)
-		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id4)
+		if (level2isctcae) patientcondition_terms.add(id4)
 	}
 
 	if (level5) {
@@ -444,7 +453,7 @@ for (let i = 1; i < lines.length; i++) {
 		c2immediatep.set(id5, id4)
 
 		allterms_byorder.add(id5)
-		if (level2 == level2_ctcaegraded) patientcondition_terms.add(id5)
+		if (level2isctcae) patientcondition_terms.add(id5)
 	}
 }
 

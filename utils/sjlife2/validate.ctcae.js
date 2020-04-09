@@ -8,11 +8,13 @@ load outcome terms from phenotree:
 first branch: Graded Adverse Events
 second branch: organ system
 third branch: grouped condition
-forth branch: individual condition
+forth branch: individual condition, maybe missing
+
+a phenotree file that is solely of chc terms
 
 use that to validate terms in "outcomes" file and find any mismatch
 
-output minimied outcome data with following fields:
+output minimized outcome data with following fields:
 1. patient
 2. graded condition
 3. grade
@@ -22,7 +24,7 @@ output minimied outcome data with following fields:
 
 const phenotreefile = process.argv[2]
 const outcomefile = process.argv[3]
-const L2_CHC = 'Graded Adverse Events' // terms under this are condition terms
+//const L2_CHC = 'Graded Adverse Events' // the phenotree is a subset with only chc terms
 
 const fs = require('fs')
 const readline = require('readline')
@@ -42,10 +44,9 @@ for (let i = 1; i < lines.length; i++) {
 	const l = lines[i].split('\t')
 
 	const w1 = l[1] == '-' ? null : l[1].trim()
-	if (w1 != L2_CHC) continue
 	const w2 = l[2] == '-' ? null : l[2].trim()
 	const w3 = l[3] == '-' ? null : l[3].trim()
-	const w4 = l[4] == '-' ? null : l[4].trim()
+	const w4 = (l[4] || '-') == '-' ? null : l[4].trim()
 
 	if (w1) L1words.set(w1, new Map())
 	if (w2) L2words.set(w2, new Map())
@@ -69,9 +70,26 @@ v: {}
    v: [ {grade,age}, {} ]
 */
 
+let sampleidx = 0,
+	rootidx = 1,
+	firstidx = 2,
+	secondidx = 3,
+	thirdidx = 4,
+	fourthidx,
+	ageidx,
+	yearidx,
+	gradeidx
+
 rl.on('line', line => {
 	if (first) {
 		first = false
+		const l = line.split('\t')
+		fourthidx = l.indexOf('fourth') // missing in ccss
+		ageidx = l.indexOf('agegraded')
+		if (ageidx == -1) throw 'agegraded missing from header'
+		yearidx = l.indexOf('yearstoevent') // missing in ccss
+		gradeidx = l.indexOf('grade')
+		if (gradeidx == -1) throw 'grade missing from header'
 		return
 	}
 	/*
@@ -86,23 +104,51 @@ rl.on('line', line => {
 	9	agegraded	49.783561644
 	10	yearstoevent	34.78630137
 	11	grade	0
+
+	1	sjlid	SJL5332610
+	2	root	Clinically-assessed Variables
+	3	first	Graded Adverse Events
+	4	second	Auditory System
+	5	third	Hearing loss
+	6	fourth
+	7	agegraded	12.684931507
+	8	yearstoevent	10.884931507
+	9	grade	1
+
+	1	ccssid	1262412
+	2	root	Self-reported Behavior and Outcome Variables
+	3	first	Graded Adverse Events
+	4	second	Auditory system
+	5	third	Loss of Hearing
+	6	agegraded
+	7	grade	0
 	*/
 
 	const l = line.split('\t')
-	const w1 = l[5 - 1].replace(/"/g, '')
-	const w2 = l[6 - 1].replace(/"/g, '')
-	const w3 = l[7 - 1].replace(/"/g, '')
-	const w4 = l[8 - 1].replace(/"/g, '')
+	const w1 = l[firstidx].replace(/"/g, '')
+	const w2 = l[secondidx].replace(/"/g, '')
+	const w3 = l[thirdidx].replace(/"/g, '')
+	const w4 = fourthidx == -1 ? '' : l[fourthidx].replace(/"/g, '')
 
 	const patient = l[0]
 	const condition = w4 ? w4 : w3 ? w3 : w2
 	if (!condition) console.error('unknown condition')
-	const age = Number(l[9 - 1])
-	if (Number.isNaN(age)) console.error('invalid age', l[9 - 1])
-	const yearstoevent = Number(l[10 - 1])
-	if (Number.isNaN(yearstoevent)) console.error('invalid yearstoevent')
-	const grade = Number(l[11 - 1])
-	if (!Number.isInteger(grade)) console.error('grade is not integer', l[11 - 1])
+	let age = ''
+	// age could be missing
+	{
+		const tmp = l[ageidx]
+		if (tmp) {
+			age = Number(tmp)
+			if (Number.isNaN(age)) console.error('invalid age', l[7 - 1])
+		}
+	}
+	let yearstoevent = ''
+	if (yearidx != -1) {
+		yearstoevent = Number(l[yearidx])
+		if (Number.isNaN(yearstoevent)) console.error('invalid yearstoevent')
+	}
+	const grade = Number(l[gradeidx])
+	if (!Number.isInteger(grade)) console.error('grade is not integer', l[9 - 1])
 
 	// count grade for each condition
 	if (w1) {
@@ -163,9 +209,6 @@ rl.on('close', () => {
 			numberofevents += o[k].length
 			o2[k] = { conditionevents: o[k] }
 		}
-
-		// do not log this
-		//console.log(patient+'\t'+JSON.stringify(o2))
 	}
 	console.error(patient2condition.size + ' patients, ' + conditions.size + ' conditions, ' + numberofevents + ' events')
 
@@ -194,7 +237,7 @@ rl.on('close', () => {
 		}
 	}
 
-	get_summary({ term: 'Cardiovascular System', bar_by_children: 1, value_by_most_recent: 1 }, patient2condition)
+	//get_summary({ term: 'Cardiovascular System', bar_by_children: 1, value_by_most_recent: 1 }, patient2condition)
 })
 
 function get_summary(q, patient2condition) {
