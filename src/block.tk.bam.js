@@ -166,8 +166,12 @@ function update_box_stay(tk, block) {
 }
 
 function makeTk(tk, block) {
+	let mousedownx // not to trigger clicking after press and drag on a read
 	tk.img = tk.glider
 		.append('image')
+		.on('mousedown', () => {
+			mousedownx = d3event.clientX
+		})
 		.on('mousemove', () => {
 			if (!tk.data.templatebox) return
 			const [mx, my] = d3mouse(tk.img.node())
@@ -184,6 +188,7 @@ function makeTk(tk, block) {
 			}
 		})
 		.on('click', () => {
+			if (mousedownx != d3event.clientX) return
 			if (!tk.data.templatebox) return
 			const [mx, my] = d3mouse(tk.img.node())
 			for (const t of tk.data.templatebox) {
@@ -306,17 +311,19 @@ if is pair mode, is the template
 		'qname=' + box.qname,
 		'genome=' + block.genome.name,
 		'chr=' + block.rglst[ridx].chr,
-		'pos=' + pos
+		'pos=' + pos,
+		'viewstart=' + block.rglst[ridx].start,
+		'viewstop=' + block.rglst[ridx].stop
 	]
 	if (tk.nochr) lst.push('nochr=1')
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 	if (tk.asPaired) {
-		lst.push('ispair=1')
+		lst.push('getpair=1')
 	} else {
-		if (box.isfirst) lst.push('isfirst=1')
-		else if (box.islast) lst.push('islast=1')
+		if (box.isfirst) lst.push('getfirst=1')
+		else if (box.islast) lst.push('getlast=1')
 	}
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	if (data.error) throw data.error

@@ -134,12 +134,11 @@ module.exports = genomes => {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			if (req.query.getread) {
-				res.send(await route_getread(genome, req.query))
+				res.send(await route_getread(genome, req))
 				return
 			}
 			const q = await get_q(genome, req)
-			const result = await do_query(q)
-			res.send(result)
+			res.send(await do_query(q))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -479,8 +478,9 @@ may skip insertion if on screen width shorter than minimum width
 		x1: r.x + r.scale(boxes[0].start),
 		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
 		seq,
-		qual
-		//cigarstr
+		qual,
+		cigarstr,
+		flag
 	}
 	if (flag & 0x40) {
 		segment.isfirst = true
@@ -581,15 +581,7 @@ at the end, set q.canvasheight
 
 		for (const segment of template.segments) {
 			const r = q.regions[segment.ridx]
-			let quallst // set to [] if to use quality
-			if (r.to_qual && segment.qual != '*') {
-				quallst = []
-				// convert bp quality
-				for (let i = 0; i < segment.qual.length; i++) {
-					const v = segment.qual[i].charCodeAt(0) - 33
-					quallst.push(v)
-				}
-			}
+			const quallst = r.to_qual ? qual2int(segment.qual) : null
 			const mismatches = []
 			for (const b of segment.boxes) {
 				if (b.cidx == undefined) {
@@ -626,6 +618,16 @@ at the end, set q.canvasheight
 		// has reads, and nessage row heights are already counted in y position of each stack
 		q.canvasheight = stacky[stacky.length - 1]
 	}
+}
+
+function qual2int(s) {
+	if (s == '*') return null
+	const lst = []
+	for (let i = 0; i < s.length; i++) {
+		const v = s[i].charCodeAt(0) - 33
+		lst.push(v)
+	}
+	return lst
 }
 
 function plot_messagerows(ctx, q, canvaswidth) {
@@ -994,6 +996,141 @@ Insertion  BBBBBBBBBBBBBBBBB
 	return canvas.toDataURL()
 }
 
-async function route_getread(genome, query) {
-	return {}
+////////////////////// get one read/template
+
+async function route_getread(genome, req) {
+	// cannot use the point position under cursor to query, as if clicking on softclip
+	if (!req.query.chr) throw '.chr missing'
+	if (!req.query.qname) throw '.qname missing'
+	//if(!req.query.pos) throw '.pos missing'
+	if (!req.query.viewstart) throw '.viewstart missing'
+	if (!req.query.viewstop) throw '.viewstart missing'
+	const r = {
+		start: Number(req.query.viewstart),
+		stop: Number(req.query.viewstop),
+		scale: () => {}, // dummy
+		ntwidth: 10 // good to show all insertions
+	}
+	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
+	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
+	//r.referenceseq = await get_refseq(genome, req.query.chr + ':' + (r.start + 1) + '-' + r.stop)
+	const seglst = await query_oneread(req, r)
+	if (!seglst) throw 'read not found'
+	const lst = []
+	for (const s of seglst) {
+		lst.push(await convertread(s, genome, req.query))
+	}
+	return { lst }
+}
+
+async function query_oneread(req, r) {
+	const [e, _file, isurl] = app.fileurl(req)
+	if (e) throw e
+	let dir
+	if (isurl) {
+		dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
+	}
+	//const pos = Number(req.query.pos)
+	//if (!Number.isInteger(pos)) throw '.pos not integer'
+	let firstseg, lastseg
+	return new Promise((resolve, reject) => {
+		const ps = spawn(
+			samtools,
+			[
+				'view',
+				_file,
+				(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
+			],
+			{ cwd: dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
+		rl.on('line', line => {
+			const s = parse_one_segment(line, r)
+			if (!s) return
+			if (s.qname != req.query.qname) return
+			if (req.query.getfirst) {
+				if (s.isfirst) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.getlast) {
+				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else {
+				// get both
+				if (s.isfirst) firstseg = s
+				else if (s.islast) lastseg = s
+				if (firstseg && lastseg) {
+					ps.kill()
+					resolve([firstseg, lastseg])
+					return
+				}
+			}
+		})
+		rl.on('close', () => {
+			resolve()
+		})
+	})
+}
+async function convertread(seg, genome, query) {
+	// convert a read to html
+	const b = seg.boxes[seg.boxes.length - 1]
+	const refstart = seg.boxes[0].start
+	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + (b.start + b.len))
+	const quallst = qual2int(seg.qual)
+	const reflst = []
+	const querylst = []
+	for (const b of seg.boxes) {
+		if (b.opr == 'I') {
+			for (let i = b.cidx; i < b.cidx + b.len; i++) {
+				reflst.push('<span>-</span>')
+				querylst.push('<span style="background:' + qual2fcolor(quallst[i]) + '">' + seg.seq[i] + '</span>')
+			}
+			continue
+		}
+		if (b.opr == 'D' || b.opr == 'N') {
+			if (b.len >= 20) {
+			} else {
+				for (let i = 0; i < b.len; i++) {
+					reflst.push('<span>' + refseq[b.start - refstart + i] + '</span>')
+					querylst.push('<span>-</span>')
+				}
+			}
+			continue
+		}
+		if (b.opr == 'S' || b.opr == 'X') {
+			for (let i = 0; i < b.len; i++) {
+				reflst.push('<span>' + refseq[b.start - refstart + i] + '</span>')
+				querylst.push(
+					'<span style="background:' + qual2softclipbg(quallst[b.cidx + i]) + '">' + seg.seq[b.cidx + i] + '</span>'
+				)
+			}
+			continue
+		}
+		if (b.opr == 'M' || b.opr == '=') {
+			for (let i = 0; i < b.len; i++) {
+				const nt0 = refseq[b.start - refstart + i]
+				const nt1 = seg.seq[b.cidx + i]
+				reflst.push('<span>' + nt0 + '</span>')
+				querylst.push(
+					'<span style="background:' +
+						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2fcolor : qual2mismatchbg)(quallst[b.cidx + i]) +
+						'">' +
+						seg.seq[b.cidx + i] +
+						'</span>'
+				)
+			}
+			continue
+		}
+	}
+	const re = {
+		reflst,
+		querylst,
+		cigar: seg.cigarstr
+	}
+	return re
 }
