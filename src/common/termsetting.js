@@ -3,7 +3,7 @@ import * as client from '../client'
 import { appInit } from '../termdb/app'
 import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
-import { setNumericMethods } from './termsetting.numeric'
+import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
 
