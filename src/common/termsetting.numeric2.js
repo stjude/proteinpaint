@@ -45,7 +45,7 @@ export async function setNumericMethods(self) {
 		self.dom.bins_div = div.append('div').style('padding', '5px')
 
 		setqDefaults(self)
-		//setDensityPlot(self)
+		setDensityPlot(self)
 		renderBoundaryInclusionInput(self)
 		renderTypeInputs(self)
 		if (self.q.type == 'regular') renderFixedBinsInputs(self)
@@ -102,6 +102,7 @@ export async function setNumericMethods(self) {
 			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 		} console.log(103, self.q)
 
+		self.dom.tip.hide()
 		self.opts.callback({
 			term: self.term,
 			q: self.q
@@ -140,7 +141,9 @@ function setqDefaults(self) {
 	if (!(self.term.id in self.numqByTermIdType) /*|| self.numqByTermIdType[self.term.id].filterStr != filterStr*/) {
 		self.numqByTermIdType[self.term.id] = {
 			//filterStr,
-			regular: self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default,
+			regular: self.q && self.q.type == 'regular'
+				? self.q
+				: self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default,
 			custom: self.q && self.q.type == 'custom'
 				? self.q
 				: {

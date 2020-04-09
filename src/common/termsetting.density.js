@@ -9,8 +9,9 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
+		const div = self.dom.bins_div
 		self.num_obj.svg = div.append('svg')
-		self.makeDensityPlot()
+		makeDensityPlot(self)
 
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
@@ -20,30 +21,30 @@ export async function setDensityPlot(self) {
 			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
 		self.num_obj.ranges = []
-		if (self.num_obj.custom_bins_q.first_bin) {
-			self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
+		if (self.q.first_bin) {
+			self.num_obj.ranges.push(self.q.first_bin)
 			self.num_obj.ranges[0].bin = 'first'
 		}
-		if (self.num_obj.custom_bins_q.last_bin) {
-			self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
+		if (self.q.last_bin) {
+			self.num_obj.ranges.push(self.q.last_bin)
 			self.num_obj.ranges[1].bin = 'last'
 		}
 		self.num_obj.brushes = []
-		self.addBrushes()
-		self.addBinSizeLines()
-		self.addCustomBinLines()
+		//self.addBrushes()
+		//self.addBinSizeLines()
+		//self.addCustomBinLines()
 	}		
 }
 
 function handleNoDensity(self) {
 	self.num_obj.no_density_data = true
 	self.num_obj.ranges = []
-	if (self.num_obj.custom_bins_q.first_bin) {
-		self.num_obj.ranges.push(self.num_obj.custom_bins_q.first_bin)
+	if (self.q.first_bin) {
+		self.num_obj.ranges.push(self.q.first_bin)
 		self.num_obj.ranges[0].bin = 'first'
 	}
-	if (self.num_obj.custom_bins_q.last_bin) {
-		self.num_obj.ranges.push(self.num_obj.custom_bins_q.last_bin)
+	if (self.q.last_bin) {
+		self.num_obj.ranges.push(self.q.last_bin)
 		self.num_obj.ranges[1].bin = 'last'
 	}
 	self.num_obj.brushes = []
