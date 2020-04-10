@@ -258,7 +258,8 @@ function renderBinSizeInput(self, tr) {
 		.style('color', '#cc0000')
 		.style('margin-left', '15px')
 		.style('width', '100px')
-		.on('keyup', () => {
+		.on('change', function() {
+			self.q.bin_size = +this.value
 			setDensityPlot(self)
 		})
 	
@@ -347,7 +348,7 @@ function renderLastBinInputs(self, tr) {
 		.append('input')
 		.attr('type', 'radio')
 		.attr('name', 'last_bin_opt_' + id)
-		.attr('value', 'auto')
+		.attr('value', 'fixed')
 		.style('margin-right', '3px')
 		.property('checked', !isAuto)
 		.on('change', function() {
@@ -357,9 +358,12 @@ function renderLastBinInputs(self, tr) {
 			}
 			else {
 				if (!self.q.last_bin) self.q.last_bin = {}
-				const value = self.dom.last_start_input.property('value')
-				self.q.last_bin.start = value !== '' ?  +value : self.num_obj.density_data.maxvalue - self.q.bin_size
-				console.log(332, value, self.q.last_bin.start)
+				if (self.dom.last_start_input.property('value') === '') {
+					if (!('start' in self.q.last_bin)) self.q.last_bin.start = self.num_obj.density_data.maxvalue
+					self.dom.last_start_input.property('value', self.q.last_bin.start)
+				}
+				const value = +self.dom.last_start_input.property('value')
+				self.q.last_bin.start = value
 				edit_div.style('display', 'inline-block')
 			}
 			setDensityPlot(self)

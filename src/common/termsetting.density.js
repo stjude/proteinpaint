@@ -195,11 +195,19 @@ function renderBinLines(self, data) {
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
 		.attr('cursor', d => d.isDraggable ? 'ew-resize' : '')
+		.on('mouseover', function() {
+			select(this).style('stroke-width', 3)
+		})
+		.on('mouseout', function(d) {
+			select(this).style('stroke-width', 1)
+		})
 		.each(function(d,i){
 			if (d.isDraggable) {
 				select(this).call( d3drag().on('drag', dragged))
 			}
 		})
+
+	const middleLines = self.num_obj.binsize_g.selectAll('line').filter((d,i)=>!d.isDraggable)
 
 	function dragged(d) {
 		const line = select(this)
@@ -212,8 +220,20 @@ function renderBinLines(self, data) {
 
 		const value = o.xscale.invert(d.draggedX).toFixed(3)
 		if (self.q.type == 'regular') {
-			if (d.index === 0) self.dom.first_stop_input.property('value', value)
-			else self.dom.last_start_input.property('value', value)
+			if (d.index === 0) {
+				self.dom.first_stop_input.property('value', value)
+				middleLines.each(function(d,i){
+					d.draggedX = d.scaledX + event.x
+					select(this)
+						.attr('x1', d.draggedX)
+						.attr('y1', 0)
+						.attr('x2', d.draggedX)
+						.attr('y2', o.plot_size.height)
+				})
+			}
+			else {
+				self.dom.last_start_input.property('value', value)
+			}
 		} else {
 			self.q.lst[d.index + 1].start = value
 			self.dom.customBinBoundaryInput.property('value',self.q.lst.slice(1).map(d=>d.start).join('\n'))
