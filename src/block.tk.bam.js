@@ -305,6 +305,14 @@ get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
 */
+	if (!tk.readpane) {
+		tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
+	}
+	client.appear(tk.readpane.pane)
+	tk.readpane.header.text('Read info')
+	tk.readpane.body.selectAll('*').remove()
+	const wait = tk.readpane.body.append('div').text('Loading...')
+
 	const [ridx, pos] = tmp
 	const lst = [
 		'getread=1',
@@ -326,6 +334,11 @@ if is pair mode, is the template
 		else if (box.islast) lst.push('getlast=1')
 	}
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
-	if (data.error) throw data.error
-	console.log(data)
+	wait.remove()
+	if (data.error) {
+		client.sayerror(tk.readpane.body, data.error)
+		return
+	}
+
+	tk.readpane.body.append('div').html(data.html)
 }

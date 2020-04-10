@@ -24,11 +24,12 @@ q {}
 .regions[]
 	.to_checkmismatch bool
 	.referenceseq     str
-	.to_print    bool
+	.to_printnt  bool
 	.to_qual     bool
 .asPaired
 .stackheight
 .stackspace
+.stacksegspacing
 .stacks[]
 .overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 .overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
@@ -40,7 +41,7 @@ q {}
 template {}
 .y // initially stack idx, then replaced to be actual screen y
 .x1, x2  // screen px, only for stacking not rendering
-.ridx2 // region idx of the stop position
+.ridx2 // not-in-use region idx of the stop position
 .segments[]
 .height // screen px, only set when to check overlap read pair, will double row height
 
@@ -100,10 +101,13 @@ const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
 const insertion_hq = '#47FFFC' //'#00FFFB'
 const insertion_lq = '#B2D7D7' //'#009290'
 const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
+const insertion_maxfontsize = 12
+const insertion_minfontsize = 7
 
 const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
+const ctxcolor = '#ffcc00' // inter chr
 
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
@@ -171,10 +175,17 @@ async function get_q(genome, req) {
 	}
 	if (!req.query.regions) throw '.regions[] missing'
 	q.regions = JSON.parse(req.query.regions)
+
+	let maxntwidth = 0
 	for (const r of q.regions) {
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
+		maxntwidth = Math.max(maxntwidth, r.ntwidth)
 	}
+
+	// max ntwidth determines segment spacing in a stack, across all regions
+	q.stacksegspacing = Math.max(readspace_px, readspace_bp * maxntwidth)
+
 	return q
 }
 
@@ -273,8 +284,8 @@ function get_templates(q) {
 				lst.push({
 					x1: segment.x1,
 					x2: segment.x2,
-					ridx2: i, // r idx of stop
 					segments: [segment]
+					//ridx2: i, // r idx of stop
 				})
 			}
 		}
@@ -294,13 +305,13 @@ function get_templates(q) {
 				// add this segment to existing template
 				temp.segments.push(segment)
 				temp.x2 = Math.max(temp.x2, segment.x2)
-				temp.ridx2 = i
+				//temp.ridx2 = i
 			} else {
 				qname2template.set(segment.qname, {
 					x1: segment.x1,
 					x2: segment.x2,
-					ridx2: i,
 					segments: [segment]
+					//ridx2: i,
 				})
 			}
 		}
@@ -308,7 +319,7 @@ function get_templates(q) {
 	return [...qname2template.values()]
 }
 
-function parse_one_segment(line, r, ridx) {
+function parse_one_segment(line, r, ridx, keepallboxes) {
 	/*
 do not do:
   parse seq
@@ -320,7 +331,11 @@ only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
 */
-	const l = line.split('\t')
+	const l = line.trim().split('\t')
+	if (l.length < 11) {
+		// truncated line possible if the reading process is killed
+		return
+	}
 	const qname = l[0],
 		flag = l[2 - 1],
 		segstart_1based = Number.parseInt(l[4 - 1]),
@@ -343,11 +358,6 @@ may skip insertion if on screen width shorter than minimum width
 	const segstart = segstart_1based - 1
 
 	if (cigarstr == '*') {
-		return
-	}
-
-	if (tlen == 0) {
-		// invalid
 		return
 	}
 
@@ -377,7 +387,7 @@ may skip insertion if on screen width shorter than minimum width
 		}
 		prev = i + 1
 		if (cigar == '=' || cigar == 'M') {
-			if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
 				// visible
 				boxes.push({
 					opr: cigar,
@@ -391,7 +401,7 @@ may skip insertion if on screen width shorter than minimum width
 			continue
 		}
 		if (cigar == 'I') {
-			if (pos > r.start && pos < r.stop) {
+			if (keepallboxes || (pos > r.start && pos < r.stop)) {
 				if (len * r.ntwidth >= insertion_minpx) {
 					boxes.push({
 						opr: 'I',
@@ -419,7 +429,7 @@ may skip insertion if on screen width shorter than minimum width
 			continue
 		}
 		if (cigar == 'X') {
-			if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
 				const b = {
 					opr: cigar,
 					start: pos,
@@ -442,7 +452,7 @@ may skip insertion if on screen width shorter than minimum width
 				// this is the first box, will not consume ref
 				// shift softclip start to left, so its end will be pos, will not increment pos
 				b.start -= len
-				if (Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+				if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
 					boxes.push(b)
 				}
 			} else {
@@ -453,7 +463,7 @@ may skip insertion if on screen width shorter than minimum width
 			continue
 		}
 		if (cigar == 'P') {
-			if (pos > r.start && pos < r.stop) {
+			if (keepallboxes || (pos > r.start && pos < r.stop)) {
 				const b = {
 					opr: 'P',
 					start: pos,
@@ -480,12 +490,17 @@ may skip insertion if on screen width shorter than minimum width
 		seq,
 		qual,
 		cigarstr,
+		tlen,
 		flag
 	}
 	if (flag & 0x40) {
 		segment.isfirst = true
 	} else if (flag & 0x80) {
 		segment.islast = true
+	}
+	if (rnext != '=' && rnext != r.chr) {
+		segment.rnext = rnext
+		segment.pnext = pnext
 	}
 	return segment
 }
@@ -539,7 +554,7 @@ function stack_templates(q, templates) {
 	for (const template of templates) {
 		let stackidx = null
 		for (let i = 0; i < q.stacks.length; i++) {
-			if (q.stacks[i] + Math.max(readspace_px, readspace_bp * q.regions[template.ridx2].ntwidth) < template.x1) {
+			if (q.stacks[i] + q.stacksegspacing < template.x1) {
 				stackidx = i
 				q.stacks[i] = template.x2
 				break
@@ -879,6 +894,25 @@ function plot_segment(ctx, segment, y, q) {
 		}
 		throw 'unknown opr at rendering: ' + b.opr
 	})
+	if (segment.rnext) {
+		ctx.setLineDash([])
+		ctx.strokeStyle = ctxcolor
+		ctx.strokeRect(segment.x1, y, segment.x2 - segment.x1, q.stackheight)
+		if (!r.to_qual) {
+			// no quality, may print name
+			if (segment.x2 - segment.x1 >= 20 && q.stackheight >= 7) {
+				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, q.stackheight - 4)) + 'pt Arial'
+				console.log(q.stackheight)
+				ctx.fillStyle = ctxcolor
+				ctx.fillText(
+					(q.nochr ? 'chr' : '') + segment.rnext,
+					(segment.x1 + segment.x2) / 2,
+					y + q.stackheight / 2,
+					segment.x2 - segment.x1
+				)
+			}
+		}
+	}
 }
 
 function plot_insertions(ctx, templates, q) {
@@ -892,7 +926,7 @@ if b.qual is available, set text color based on it
 			const r = q.regions[segment.ridx]
 			const insertions = segment.boxes.filter(i => i.opr == 'I')
 			if (!insertions.length) continue
-			ctx.font = Math.max(10, q.stackheight - 2) + 'pt Arial'
+			ctx.font = Math.max(insertion_maxfontsize, q.stackheight - 2) + 'pt Arial'
 			insertions.forEach(b => {
 				const x = r.x + r.scale(b.start)
 				if (b.qual) {
@@ -1006,6 +1040,7 @@ async function route_getread(genome, req) {
 	if (!req.query.viewstart) throw '.viewstart missing'
 	if (!req.query.viewstop) throw '.viewstart missing'
 	const r = {
+		chr: req.query.chr,
 		start: Number(req.query.viewstart),
 		stop: Number(req.query.viewstop),
 		scale: () => {}, // dummy
@@ -1020,7 +1055,7 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
-	return { lst }
+	return { html: lst.join('') }
 }
 
 async function query_oneread(req, r) {
@@ -1045,7 +1080,7 @@ async function query_oneread(req, r) {
 		)
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment(line, r)
+			const s = parse_one_segment(line, r, null, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {
@@ -1072,65 +1107,119 @@ async function query_oneread(req, r) {
 			}
 		})
 		rl.on('close', () => {
-			resolve()
+			// finished reading and still not resolved
+			// means it is in paired mode but read is single
+			const lst = []
+			if (firstseg) lst.push(firstseg)
+			if (lastseg) lst.push(lastseg)
+			resolve(lst.length ? lst : null)
 		})
 	})
 }
 async function convertread(seg, genome, query) {
 	// convert a read to html
+	const refstart = seg.boxes[0].start // 0 based
 	const b = seg.boxes[seg.boxes.length - 1]
-	const refstart = seg.boxes[0].start
-	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + (b.start + b.len))
+	const refstop = b.start + b.len
+	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + refstop)
 	const quallst = qual2int(seg.qual)
-	const reflst = []
-	const querylst = []
+	const reflst = ['<td>Reference</td>']
+	const querylst = ['<td style="color:black;text-align:left">Read</td>']
 	for (const b of seg.boxes) {
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {
-				reflst.push('<span>-</span>')
-				querylst.push('<span style="background:' + qual2fcolor(quallst[i]) + '">' + seg.seq[i] + '</span>')
+				reflst.push('<td>-</td>')
+				querylst.push(
+					'<td style="color:' +
+						insertion_hq +
+						';background:' +
+						qual2fcolor(quallst[i] / maxqual) +
+						'">' +
+						seg.seq[i] +
+						'</td>'
+				)
 			}
 			continue
 		}
 		if (b.opr == 'D' || b.opr == 'N') {
 			if (b.len >= 20) {
+				reflst.push('<td style="font-size:.8em;opacity:.5">' + b.len + ' bp</td>')
+				querylst.push('<td style="color:black">-----------</td>')
 			} else {
 				for (let i = 0; i < b.len; i++) {
-					reflst.push('<span>' + refseq[b.start - refstart + i] + '</span>')
-					querylst.push('<span>-</span>')
+					reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
+					querylst.push('<td style="color:black">-</td>')
 				}
 			}
 			continue
 		}
-		if (b.opr == 'S' || b.opr == 'X') {
+		if (b.opr == 'S') {
 			for (let i = 0; i < b.len; i++) {
-				reflst.push('<span>' + refseq[b.start - refstart + i] + '</span>')
+				reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
 				querylst.push(
-					'<span style="background:' + qual2softclipbg(quallst[b.cidx + i]) + '">' + seg.seq[b.cidx + i] + '</span>'
+					'<td style="background:' +
+						qual2softclipbg(quallst[b.cidx + i] / maxqual) +
+						'">' +
+						seg.seq[b.cidx + i] +
+						'</td>'
 				)
 			}
 			continue
 		}
-		if (b.opr == 'M' || b.opr == '=') {
+		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X') {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
-				reflst.push('<span>' + nt0 + '</span>')
+				reflst.push('<td>' + nt0 + '</td>')
 				querylst.push(
-					'<span style="background:' +
-						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2fcolor : qual2mismatchbg)(quallst[b.cidx + i]) +
+					'<td style="background:' +
+						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2fcolor : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
 						'">' +
 						seg.seq[b.cidx + i] +
-						'</span>'
+						'</td>'
 				)
 			}
 			continue
 		}
 	}
-	const re = {
-		reflst,
-		querylst,
-		cigar: seg.cigarstr
-	}
-	return re
+	const lst = []
+	if (seg.rnext)
+		lst.push(
+			'<li>Next segment on <span style="background:' +
+				ctxcolor +
+				'">' +
+				(query.nochr ? 'chr' : '') +
+				seg.rnext +
+				', ' +
+				seg.pnext +
+				'</span></li>'
+		)
+	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
+	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
+	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
+	if (seg.flag & 0x8) lst.push('<li>Next segment in the template unmapped</li>')
+	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
+	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
+	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
+	if (seg.flag & 0x80) lst.push('<li>This is the last segment in the template</li>')
+	if (seg.flag & 0x100) lst.push('<li>Secondary alignment</li>')
+	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
+	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
+	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
+	return `
+<div style='margin:20px'>
+	<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+	  <tr style="opacity:.6">${reflst.join('')}</tr>
+	  <tr style="color:white">${querylst.join('')}</tr>
+	</table>
+  <div style='margin-top:10px'>
+    <span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
+    <span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
+    <span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
+    <span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
+    <span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+    <span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
+  </div>
+  <ul style='padding-left:15px'>${lst.join('')}</ul>
+</div>`
 }
