@@ -79,35 +79,47 @@ export async function setNumericMethods(self) {
 			delete self.q.bin_size
 			delete self.q.first_bin
 			delete self.q.last_bin
-
-			const bins = [...self.dom.customBintbody.node().querySelectorAll('tr')]
-			let prevBin
-			self.q.lst = bins.map((row,i) => {
-				const bin = {
-					startinclusive,
-					stopinclusive,
-				}
-
-				if (i === 0) {
-					bin.startunbounded = true
-				} else {
-					prevBin.stop = +row.firstChild.firstChild.value
-					bin.start = prevBin.stop
-				}
-
-				prevBin = bin
-				return bin
-			})
-			prevBin.stopunbounded = true
+			self.q.lst = self.processCustomBinInputs()
 			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
-		} console.log(103, self.q)
+		} console.log(84, self.q)
 
 		self.dom.tip.hide()
 		self.opts.callback({
 			term: self.term,
 			q: self.q
 		})
-	} 
+	}
+
+	self.processCustomBinInputs = ()=>{
+		const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+		let prevBin
+		const data = self.dom.customBinBoundaryInput.property('value')
+			.split('\n')
+			.filter(d => d!='')
+			.map((d, i) => {
+				const bin = {
+					start: +d,
+					startinclusive: self.q.lst[0].startinclusive,
+					stopinclusive: self.q.lst[0].stopinclusive,
+					label: inputDivs[i].querySelector('input').value
+				}
+				if (prevBin) prevBin.stop = bin.start
+				prevBin = bin
+				return bin
+			})
+		
+		prevBin.stopunbounded = true
+		
+		data.unshift({
+			startunbounded: true,
+			stop: data[0].start,
+			startinclusive: data[0].startinclusive,
+			stopinclusive: data[0].stopinclusive,
+			label: inputDivs[0].querySelector('input').value
+		})
+
+		return data
+	}
 }
 
 async function getDensityPlotData(self) {
@@ -389,10 +401,23 @@ function renderCustomBinInputs(self) {
 	const thead = self.dom.bins_table.append('thead').append('tr')
 	thead.append('th').html('Bin Boundary')
 	thead.append('th').html('Bin Label')
-	const removeth = thead.append('th').html('Remove')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
-	appendBoundaryTr(self, self.q.lst[0])
+	const tr = self.dom.customBintbody.append('tr')
+	self.dom.customBinBoundaryInput = tr.append('td')
+		.append('textarea')
+		.style('height', '100px')
+		.style('width', '50px')
+		.text(self.q.lst.slice(1).map(d=>d.start).join('\n'))
+		.on('change', () => {
+			const data = self.processCustomBinInputs()
+			renderBoundaryInputDivs(self, data)
+		})
 	
+	self.dom.customBinLabelTd = tr.append('td')
+	renderBoundaryInputDivs(self, self.q.lst)
+
+	//appendBoundaryTr(self, self.q.lst[0])
+	/*
 	self.dom.customBintbody.selectAll('.bin-boundary-input')
 		.data(self.q.lst.slice(1))
 		.enter().append('tr')
@@ -400,43 +425,24 @@ function renderCustomBinInputs(self) {
 		.each(function(d){
 			appendBoundaryTr(self, d, select(this))
 		})
-
-	removeth.style('display', self.dom.customBintbody.selectAll('tr').size() < 3 ? 'none' : '')
-
-	tablediv
-		.append('div')
-		.style('width', '100%')
-		.style('text-align', 'right')
-		.append('button')
-		.html('+Boundary')
-		.style('margin', '5px')
-		.on('click', ()=>{
-			appendBoundaryTr(self, '', self.dom.customBintbody.append('tr'))
-			const numRows = self.dom.customBintbody.selectAll('tr').size()
-			self.dom.bins_table.selectAll('tr').selectAll('td:nth-child(3), th:nth-child(3)').style('display', numRows < 3 ? 'none' : '')
-		})
+	*/
 }
 
-function appendBoundaryTr(self, d, _tr) {
-	const tr = !_tr ? self.dom.customBintbody.append('tr') : _tr
-	if (!_tr) tr.append('td')
-	else tr.append('td').append('input').attr('type', 'number').property('value', d.start).style('margin-top', '-20px')
-
-	tr.append('td').append('input').attr('type', 'text').property('value', d.label)
-		
-	if (_tr) {
-		tr.append('td')
-			.style('display', self.dom.customBintbody.selectAll('tr').size() < 3 ? 'none' : 'table-cell')
-			.style('text-align', 'center')
-			.append('button')
-			.style('margin-top', '-20px')
-			.html('x')
-			.on("click", ()=>{
-				tr.remove()
-				const numRows = self.dom.customBintbody.selectAll('tr').size()
-				self.dom.bins_table.selectAll('tr').selectAll('td:nth-child(3), th:nth-child(3)').style('display', numRows < 3 ? 'none' : '')
-			})
-	}
+function renderBoundaryInputDivs(self, data) {
+	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
+	inputDivs.exit().remove()
+	inputDivs.each(function(d,i) {
+		select(this).select('span').html('Bin '+ (i+1) +'&nbsp;')
+		select(this).select('input').html(d.label)
+	})
+	inputDivs.enter()
+		.append('div')
+		.each(function(d,i) {
+			select(this).append('span').html('Bin '+ (i+1) +'&nbsp;')
+			select(this).append('input')
+				.attr('type', 'text')
+				.attr('value', d.label)
+		})
 }
 
 function renderButtons(self) {

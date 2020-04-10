@@ -30,9 +30,9 @@ export async function setDensityPlot(self) {
 			self.num_obj.ranges[1].bin = 'last'
 		}
 		self.num_obj.brushes = []
-		//self.addBrushes()
-		//self.addBinSizeLines()
-		//self.addCustomBinLines()
+		//addBrushes(self)
+		//addBinSizeLines(self)
+		//addCustomBinLines(self)
 	}		
 }
 
