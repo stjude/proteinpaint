@@ -9,7 +9,7 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.dom.bins_div; console.log(12, div.select('svg').size())
+		const div = self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
 		makeDensityPlot(self)
@@ -88,7 +88,7 @@ function handleNoDensity(self) {
 	}
 }
 
-function makeDensityPlot(self) { console.log(91, 'makeDensityPlot')
+function makeDensityPlot(self) {
 	const svg = self.num_obj.svg
 	const data = self.num_obj.density_data
 
@@ -203,7 +203,7 @@ function renderBinLines(self, data) {
 		})
 		.each(function(d,i){
 			if (d.isDraggable) {
-				select(this).call( d3drag().on('drag', dragged))
+				select(this).call( d3drag().on('drag', dragged).on('end', dragend))
 			}
 		})
 
@@ -219,7 +219,9 @@ function renderBinLines(self, data) {
 			.attr('y2', o.plot_size.height)
 
 		const value = o.xscale.invert(d.draggedX).toFixed(3)
+
 		if (self.q.type == 'regular') {
+			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
 				middleLines.each(function(d,i){
@@ -230,13 +232,33 @@ function renderBinLines(self, data) {
 						.attr('x2', d.draggedX)
 						.attr('y2', o.plot_size.height)
 				})
+				self.q.first_bin.stop = value
 			}
 			else {
 				self.dom.last_start_input.property('value', value)
+				self.q.last_bin.start = value
 			}
 		} else {
 			self.q.lst[d.index + 1].start = value
+			self.q.lst[d.index].stop = value
 			self.dom.customBinBoundaryInput.property('value',self.q.lst.slice(1).map(d=>d.start).join('\n'))
+		}
+	}
+
+	function dragend(d) {
+		d.scaledX = d.draggedX 
+		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
+		if (self.q.type == 'regular') {
+			if (d.index === 0) self.q.first_bin.stop = d.x
+			else self.q.last_bin.start = d.x
+
+			middleLines.each(function(d,i){
+				d.scaledX = d.draggedX
+				d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
+			})
+		} else {
+			self.q.lst[d.index + 1].start = d.x
+			self.q.lst[d.index].stop = d.x
 		}
 	}
 }

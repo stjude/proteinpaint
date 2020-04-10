@@ -286,8 +286,13 @@ function renderFirstBinInput(self, tr) {
 		.property('value', 'stop' in self.q.first_bin ? self.q.first_bin.stop : '')
 		.style('width', '100px')
 		.style('margin-left', '15px')
+		.on('change', async () => {
+			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
+			setDensityPlot(self)
+		})
 		.on('keyup', async () => {
 			if (!client.keyupEnter()) return
+			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
 			setDensityPlot(self)
 		})
 
@@ -378,8 +383,12 @@ function renderLastBinInputs(self, tr) {
 		.style('width', '100px')
 		.style('margin-left', '15px')
 		.on('keyup', async () => {
-			//if (this.checked) self.q.last_bin.start = 
-			//else delete self.q.last_bin.start
+			self.q.last_bin.start = +self.dom.last_start_input.property('value')
+			setDensityPlot(self)
+		})
+		.on('change', async () => {
+			self.q.last_bin.start = +self.dom.last_start_input.property('value')
+			setDensityPlot(self)
 		})
 
 	// note div
