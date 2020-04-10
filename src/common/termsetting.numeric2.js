@@ -259,7 +259,7 @@ function renderBinSizeInput(self, tr) {
 		.style('margin-left', '15px')
 		.style('width', '100px')
 		.on('keyup', () => {
-			
+			setDensityPlot(self)
 		})
 	
 	tr.append('td')
@@ -287,18 +287,8 @@ function renderFirstBinInput(self, tr) {
 		.style('margin-left', '15px')
 		.on('keyup', async () => {
 			if (!client.keyupEnter()) return
-			//brush.input.property('disabled', true)
-			try {
-				//update_first_bin(self, brush)
-			} catch (e) {
-				window.alert(e)
-			}
-			//brush.input.property('disabled', false)
+			setDensityPlot(self)
 		})
-
-	//if (isFinite(self.q.first_bin.stop)) {
-		//brush.input.attr('value', parseFloat(self.q.first_bin.stop))
-	//}
 
 	tr.append('td')
 		.append('div')
@@ -338,9 +328,12 @@ function renderLastBinInputs(self, tr) {
 			}
 			else {
 				if (!self.q.last_bin) self.q.last_bin = {}
-				self.q.last_bin.start = edit_input.property('value')
+				const value = self.dom.last_start_input.property('value')
+				self.q.last_bin.start = value !== '' ?  +value : self.num_obj.density_data.maxvalue - self.q.bin_size
+				console.log(332, value, self.q.last_bin.start)
 				edit_div.style('display', 'inline-block')
 			}
+			setDensityPlot(self)
 		})
 
 	label0.append('span').html('Automatic<br>')
@@ -364,9 +357,12 @@ function renderLastBinInputs(self, tr) {
 			}
 			else {
 				if (!self.q.last_bin) self.q.last_bin = {}
-				self.q.last_bin.start = self.dom.last_start_input.property('value')
+				const value = self.dom.last_start_input.property('value')
+				self.q.last_bin.start = value !== '' ?  +value : self.num_obj.density_data.maxvalue - self.q.bin_size
+				console.log(332, value, self.q.last_bin.start)
 				edit_div.style('display', 'inline-block')
 			}
+			setDensityPlot(self)
 		})
 
 	label1.append('span').html('Fixed')
@@ -416,17 +412,6 @@ function renderCustomBinInputs(self) {
 	
 	self.dom.customBinLabelTd = tr.append('td')
 	renderBoundaryInputDivs(self, self.q.lst)
-
-	//appendBoundaryTr(self, self.q.lst[0])
-	/*
-	self.dom.customBintbody.selectAll('.bin-boundary-input')
-		.data(self.q.lst.slice(1))
-		.enter().append('tr')
-		.attr('class', 'bin-boundary-input')
-		.each(function(d){
-			appendBoundaryTr(self, d, select(this))
-		})
-	*/
 }
 
 function renderBoundaryInputDivs(self, data) {

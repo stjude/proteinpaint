@@ -9,8 +9,9 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.dom.bins_div
-		self.num_obj.svg = div.append('svg')
+		const div = self.dom.bins_div; console.log(12, div.select('svg').size())
+		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
+		self.num_obj.svg.selectAll('*').remove()
 		makeDensityPlot(self)
 
 		const maxvalue = self.num_obj.density_data.maxvalue
@@ -87,7 +88,7 @@ function handleNoDensity(self) {
 	}
 }
 
-function makeDensityPlot(self) {
+function makeDensityPlot(self) { console.log(91, 'makeDensityPlot')
 	const svg = self.num_obj.svg
 	const data = self.num_obj.density_data
 
@@ -176,6 +177,10 @@ function renderBinLines(self, data) {
 		lines.push( ... data.lst.slice(1).map((d,index)=>{return {x: d.start, index, scaledX: Math.round(o.xscale(d.start))}}))
 	}
 
+	lines.forEach((d,i)=>{
+		d.isDraggable = self.q.type == 'custom' || i===0 || (self.q.last_bin && i === lines.length - 1)
+	})
+
 	self.num_obj.binsize_g.selectAll('line').remove()
 
 	self.num_obj.binsize_g
@@ -183,17 +188,17 @@ function renderBinLines(self, data) {
 		.data(lines)
 		.enter()
 		.append('line')
-		.style('stroke', '#cc0000')
+		.style('stroke', d => d.isDraggable ? '#cc0000' : '#555')
 		.style('stroke-width', 1)
 		.attr('x1', d => d.scaledX)
 		.attr('y1', 0)
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
-		.attr('cursor', function(d,i){
-			return self.q.type == 'custom' || i===0 || i === lines.length - 1 ? 'ew-resize' : ''
-		})
+		.attr('cursor', d => d.isDraggable ? 'ew-resize' : '')
 		.each(function(d,i){
-			if (self.q.type == 'custom' || i===0 || i === lines.length - 1) select(this).call( d3drag().on('drag', dragged))
+			if (d.isDraggable) {
+				select(this).call( d3drag().on('drag', dragged))
+			}
 		})
 
 	function dragged(d) {
