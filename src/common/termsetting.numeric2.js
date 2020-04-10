@@ -406,11 +406,12 @@ function renderCustomBinInputs(self) {
 	self.dom.customBinBoundaryInput = tr.append('td')
 		.append('textarea')
 		.style('height', '100px')
-		.style('width', '50px')
+		.style('width', '100px')
 		.text(self.q.lst.slice(1).map(d=>d.start).join('\n'))
 		.on('change', () => {
-			const data = self.processCustomBinInputs()
-			renderBoundaryInputDivs(self, data)
+			self.q.lst = self.processCustomBinInputs()
+			renderBoundaryInputDivs(self, self.q.lst)
+			self.renderBinLines(self, self.q)
 		})
 	
 	self.dom.customBinLabelTd = tr.append('td')
