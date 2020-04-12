@@ -7,7 +7,7 @@ drop index if exists terms_n;
 drop table if exists terms;
 create table terms (
   id character varying(100) not null,
-  name character varying(100) not null collate nocase,
+  name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null
 );
@@ -99,8 +99,8 @@ create table chronicevents (
   sample character varying(50) not null,
   term_id character varying(100) not null,
   grade integer not null,
-  age_graded real,
-  years_to_event real
+  age_graded real not null,
+  years_to_event real not null
 );
 
 .import annotation.outcome chronicevents

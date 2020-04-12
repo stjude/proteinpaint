@@ -258,6 +258,10 @@ const lines = fs
 
 for (let i = 1; i < lines.length; i++) {
 	const line = lines[i]
+	if (!line.trim()) {
+		// blank new lines are now introduced by the sjlife/ccss phenotree merging step
+		continue
+	}
 
 	if (line.startsWith('\t')) abort('line ' + (i + 1) + ' starts with tab')
 
