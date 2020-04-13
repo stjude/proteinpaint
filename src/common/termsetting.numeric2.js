@@ -71,7 +71,6 @@ export async function setNumericMethods(self) {
 				self.q.last_bin.start = +self.dom.last_start_input.property('value')
 				self.q.last_bin.stopunbounded = true
 			}
-
 			self.numqByTermIdType[self.term.id].regular = JSON.parse(JSON.stringify(self.q))
 		} else {
 			delete self.q.startinclusive
@@ -149,10 +148,8 @@ async function getDensityPlotData(self) {
 }
 
 function setqDefaults(self) {
-	//const filterStr = JSON.stringify(self.term.q)
-	if (!(self.term.id in self.numqByTermIdType) /*|| self.numqByTermIdType[self.term.id].filterStr != filterStr*/) {
+	if (!(self.term.id in self.numqByTermIdType)) {
 		self.numqByTermIdType[self.term.id] = {
-			//filterStr,
 			regular: self.q && self.q.type == 'regular'
 				? self.q
 				: self.opts.use_bins_less && self.term.bins.less ? self.term.bins.less : self.term.bins.default,
@@ -172,6 +169,9 @@ function setqDefaults(self) {
 		if (!self.numqByTermIdType[self.term.id].regular.type) {
 			self.numqByTermIdType[self.term.id].regular.type = 'regular'
 		}
+	} else if (self.term.q) {
+		if (!self.term.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
+		self.numqByTermIdType[self.term.id][self.q.type] = self.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
@@ -418,6 +418,12 @@ function renderCustomBinInputs(self) {
 		.style('width', '100px')
 		.text(self.q.lst.slice(1).map(d=>d.start).join('\n'))
 		.on('change', () => {
+			self.q.lst = self.processCustomBinInputs()
+			renderBoundaryInputDivs(self, self.q.lst)
+			self.renderBinLines(self, self.q)
+		})
+		.on('keyup', async () => {
+			if (!client.keyupEnter()) return
 			self.q.lst = self.processCustomBinInputs()
 			renderBoundaryInputDivs(self, self.q.lst)
 			self.renderBinLines(self, self.q)

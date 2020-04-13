@@ -341,7 +341,16 @@ tape('Numerical term: fixed bins', async test => {
 	pilldiv.click()
 
 	await sleep(300)
-	test.pass()
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
+	test.equal(
+		lines.length,
+		8,
+		'should have 8 lines'
+	)
+	// first line should be draggable
+	// other lines should not be draggable if there is no q.last_bin
+
 })
 
 tape.only('Numerical term: custom bins', async test => {
@@ -402,7 +411,13 @@ tape.only('Numerical term: custom bins', async test => {
 	pilldiv.click()
 
 	await sleep(300)
-	test.pass()
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
+	test.equal(
+		lines.length,
+		2,
+		'should have 2 lines'
+	)
 })
 
 tape('Conditional term', async test => {
