@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select, mouse } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, transform } from 'd3'
 
 export async function setDensityPlot(self) {
@@ -195,15 +195,16 @@ function renderBinLines(self, data) {
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
 		.attr('cursor', d => d.isDraggable ? 'ew-resize' : '')
-		.on('mouseover', function() {
-			select(this).style('stroke-width', 3)
+		.on('mouseover', function(d) {
+			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
 		.on('mouseout', function(d) {
 			select(this).style('stroke-width', 1)
 		})
 		.each(function(d,i){
 			if (d.isDraggable) {
-				select(this).call( d3drag().on('drag', dragged).on('end', dragend))
+				const dragger = d3drag().on('drag', dragged).on('end', dragend)
+				select(this).call(dragger)
 			}
 		})
 
@@ -211,21 +212,23 @@ function renderBinLines(self, data) {
 
 	function dragged(d) {
 		const line = select(this)
-		d.draggedX = d.scaledX + event.x
+		d.draggedX = mouse(this)[0]
+		const diff = d.draggedX - d.scaledX
 		line
 			.attr('x1', d.draggedX)
 			.attr('y1', 0)
 			.attr('x2', d.draggedX)
 			.attr('y2', o.plot_size.height)
 
-		const value = o.xscale.invert(d.draggedX).toFixed(3)
+		const inverted = +o.xscale.invert(d.draggedX)
+		const value = self.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
 
 		if (self.q.type == 'regular') {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
 				middleLines.each(function(d,i){
-					d.draggedX = d.scaledX + event.x
+					d.draggedX = d.scaledX + diff
 					select(this)
 						.attr('x1', d.draggedX)
 						.attr('y1', 0)

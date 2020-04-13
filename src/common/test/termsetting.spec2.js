@@ -350,10 +350,58 @@ tape('Numerical term: fixed bins', async test => {
 	)
 	// first line should be draggable
 	// other lines should not be draggable if there is no q.last_bin
-
 })
 
-tape.only('Numerical term: custom bins', async test => {
+tape('Numerical term: diagnosis year', async test => {
+	test.timeoutAfter(3000)
+	test.plan(1)
+
+	const opts = getOpts({
+		tsData: {
+			term: {
+				id: 'yeardx',
+				name: 'Diagnosis year',
+				unit: 'year',
+				type: 'integer',
+				bins: {
+					default: {
+						bin_size: 5,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 1970, stopinclusive: true }
+					}
+				},
+				isleaf: true
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	
+	// create enter event to use for inputs of bin edit menu
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+
+	await sleep(300)
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
+	test.equal(
+		lines.length,
+		9,
+		'should have 9 lines'
+	)
+	// first line should be draggable
+	// other lines should not be draggable if there is no q.last_bin
+})
+
+
+
+tape('Numerical term: custom bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(1)
 

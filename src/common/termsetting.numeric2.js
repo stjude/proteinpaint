@@ -80,7 +80,7 @@ export async function setNumericMethods(self) {
 			delete self.q.last_bin
 			self.q.lst = self.processCustomBinInputs()
 			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
-		} console.log(84, self.q)
+		}
 
 		self.dom.tip.hide()
 		self.opts.callback({
@@ -343,7 +343,7 @@ function renderLastBinInputs(self, tr) {
 				if (!self.q.last_bin) self.q.last_bin = {}
 				const value = self.dom.last_start_input.property('value')
 				self.q.last_bin.start = value !== '' ?  +value : self.num_obj.density_data.maxvalue - self.q.bin_size
-				console.log(332, value, self.q.last_bin.start)
+				//console.log(332, value, self.q.last_bin.start)
 				edit_div.style('display', 'inline-block')
 			}
 			setDensityPlot(self)
