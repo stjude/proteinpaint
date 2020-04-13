@@ -9,14 +9,10 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
 TODO
-- when rows are thick and ntwidth big and in paired mode
-  if reads from a pair overlaps, allow template to occupy multiple rows
-- when rows are thick, provide on-screen coordinate/width/readname to client for clicking
+- print ctx chr name next to read when to_qual
 - selecting a vertical range from densely packed reads to show alignment in full letters
   via text file cache?
-- highlight reads with mate in a different chr: BBBBBBBB->chr3, in paired mode
-- server pass read region data to client, click on tk img to fetch full info of that read
-- what to do when cigar is *
+- count number of reads/templates skipped for only having N in view range and show as message row
 - error rendering, N junction overlaps with another read in stacking
 
 *********************** data structure
@@ -85,10 +81,14 @@ do_query
 	plot_insertions
 */
 
-// match box color
+// match box color, for single read and normal read pairs
 const match_hq = 'rgb(120,120,120)'
 const match_lq = 'rgb(230,230,230)'
-const qual2fcolor = interpolateRgb(match_lq, match_hq)
+const qual2match = interpolateRgb(match_lq, match_hq)
+// match box color, for ctx read pairs
+const ctxpair_hq = '#d48b37'
+const ctxpair_lq = '#dbc6ad'
+const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
 const mismatchbg_hq = '#df5c61'
 const mismatchbg_lq = '#ffdbdd'
@@ -107,7 +107,6 @@ const insertion_minfontsize = 7
 const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
-const ctxcolor = '#ffcc00' // inter chr
 
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
@@ -875,13 +874,13 @@ function plot_segment(ctx, segment, y, q) {
 			if (r.to_qual) {
 				let xoff = x
 				b.qual.forEach(v => {
-					ctx.fillStyle = qual2fcolor(v / maxqual)
+					ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, q.stackheight)
 					xoff += r.ntwidth
 				})
 			} else {
 				// not showing qual, one box
-				ctx.fillStyle = match_hq
+				ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			if (r.to_printnt) {
@@ -894,16 +893,13 @@ function plot_segment(ctx, segment, y, q) {
 		}
 		throw 'unknown opr at rendering: ' + b.opr
 	})
+
 	if (segment.rnext) {
-		ctx.setLineDash([])
-		ctx.strokeStyle = ctxcolor
-		ctx.strokeRect(segment.x1, y, segment.x2 - segment.x1, q.stackheight)
 		if (!r.to_qual) {
-			// no quality, may print name
+			// no quality and just a solid box, may print name
 			if (segment.x2 - segment.x1 >= 20 && q.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, q.stackheight - 4)) + 'pt Arial'
-				console.log(q.stackheight)
-				ctx.fillStyle = ctxcolor
+				ctx.fillStyle = 'white'
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
@@ -1133,7 +1129,7 @@ async function convertread(seg, genome, query) {
 					'<td style="color:' +
 						insertion_hq +
 						';background:' +
-						qual2fcolor(quallst[i] / maxqual) +
+						qual2match(quallst[i] / maxqual) +
 						'">' +
 						seg.seq[i] +
 						'</td>'
@@ -1173,7 +1169,7 @@ async function convertread(seg, genome, query) {
 				reflst.push('<td>' + nt0 + '</td>')
 				querylst.push(
 					'<td style="background:' +
-						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2fcolor : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
+						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
 						'">' +
 						seg.seq[b.cidx + i] +
 						'</td>'
@@ -1186,7 +1182,7 @@ async function convertread(seg, genome, query) {
 	if (seg.rnext)
 		lst.push(
 			'<li>Next segment on <span style="background:' +
-				ctxcolor +
+				ctxpair_hq +
 				'">' +
 				(query.nochr ? 'chr' : '') +
 				seg.rnext +
