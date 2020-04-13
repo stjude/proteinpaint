@@ -1,7 +1,7 @@
 import * as client from '../client'
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-
+import { get_bin_label } from '../../modules/termdb.bins'
 
 /*
 Arguments
@@ -35,7 +35,7 @@ export async function setNumericMethods(self) {
 			ypad: 20
 		}
 		try {
-			self.num_obj.density_data = await getDensityPlotData(self); console.log(38, self.num_obj.density_data)
+			self.num_obj.density_data = await getDensityPlotData(self)
 		} catch (err) {
 			console.log(err)
 		}
@@ -100,22 +100,29 @@ export async function setNumericMethods(self) {
 					start: +d,
 					startinclusive: self.q.lst[0].startinclusive,
 					stopinclusive: self.q.lst[0].stopinclusive,
-					label: inputDivs[i].querySelector('input').value
 				}
-				if (prevBin) prevBin.stop = bin.start
+				if (prevBin) {
+					delete prevBin.stopunbounded
+					prevBin.stop = bin.start	
+					const label = inputDivs[i].querySelector('input').value
+					prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+				}
+				//const label = inputDivs[i+1] ? inputDivs[i+1].querySelector('input').value : ''; console.log(100, i,label)
 				prevBin = bin
 				return bin
 			})
 		
 		prevBin.stopunbounded = true
+		prevBin.label = get_bin_label(prevBin, self.q)
 		
 		data.unshift({
 			startunbounded: true,
 			stop: data[0].start,
 			startinclusive: data[0].startinclusive,
-			stopinclusive: data[0].stopinclusive,
-			label: inputDivs[0].querySelector('input').value
+			stopinclusive: data[0].stopinclusive
+			// label: inputDivs[0].querySelector('input').value
 		})
+		data[0].label = get_bin_label(data[0], self.q)
 
 		return data
 	}
@@ -423,7 +430,8 @@ function renderCustomBinInputs(self) {
 			self.renderBinLines(self, self.q)
 		})
 		.on('keyup', async () => {
-			if (!client.keyupEnter()) return
+			// enter or backspace/delete
+			if (!client.keyupEnter() && event.key != 8) return
 			self.q.lst = self.processCustomBinInputs()
 			renderBoundaryInputDivs(self, self.q.lst)
 			self.renderBinLines(self, self.q)
@@ -434,19 +442,18 @@ function renderCustomBinInputs(self) {
 }
 
 function renderBoundaryInputDivs(self, data) {
+	self.dom.customBinLabelTd.selectAll('div').remove('*')
 	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
-	inputDivs.exit().remove()
-	inputDivs.each(function(d,i) {
-		select(this).select('span').html('Bin '+ (i+1) +'&nbsp;')
-		select(this).select('input').html(d.label)
-	})
 	inputDivs.enter()
 		.append('div')
 		.each(function(d,i) {
 			select(this).append('span').html('Bin '+ (i+1) +'&nbsp;')
 			select(this).append('input')
 				.attr('type', 'text')
-				.attr('value', d.label)
+				.attr('value', d.label) // d => !d.label || d.label == get_bin_label(d, self.q) ? "" : d.label)
+				.on('change', function(d,i){
+					self.q.lst[i].label = this.value
+				})
 		})
 }
 
