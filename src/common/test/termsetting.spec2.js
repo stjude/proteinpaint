@@ -250,7 +250,7 @@ tape('Numerical term: range boundaries', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-	
+
 	// create enter event to use for inputs of bin edit menu
 	const enter_event = new KeyboardEvent('keyup', {
 		code: 'Enter',
@@ -263,18 +263,20 @@ tape('Numerical term: range boundaries', async test => {
 
 	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
+	test.equal(tip.d.node().querySelectorAll('select').length, 1, 'Should have a select dropdown')
 	test.equal(
-		tip.d.node().querySelectorAll('select').length,
-		1,
-		'Should have a select dropdown'
+		tip.d
+			.node()
+			.querySelector('select')
+			.previousSibling.innerHTML.toLowerCase(),
+		'boundary inclusion',
+		'Should label the select dropdown as Boundary Inclusion'
 	)
 	test.equal(
-		tip.d.node().querySelector('select').previousSibling.innerHTML.toLowerCase(),
-		'boundaries',
-		'Should label the select dropdown as boundaries'
-	)
-	test.equal(
-		tip.d.node().querySelector('select').querySelectorAll('option').length,
+		tip.d
+			.node()
+			.querySelector('select')
+			.querySelectorAll('option').length,
 		2,
 		'Should have 2 select options'
 	)
@@ -285,24 +287,16 @@ tape('Numerical term: range boundaries', async test => {
 	select1.value = option1.value
 	select1.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q1 = opts.pill.Inner.q
-	test.equal(
-		!q1.stopinclusive && q1.startinclusive,
-		true,
-		'should set the range boundary to start inclusive'
-	)
+	const q1 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
 
 	const select0 = tip.d.node().querySelector('select')
 	const option0 = select0.querySelectorAll('option')[0]
 	select0.value = option0.value
 	select0.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q0 = opts.pill.Inner.q
-	test.equal(
-		q0.stopinclusive && !q0.startinclusive,
-		true,
-		'should set the range boundary to stop inclusive'
-	)
+	const q0 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
 })
 
 tape('Numerical term: fixed bins', async test => {
@@ -329,7 +323,7 @@ tape('Numerical term: fixed bins', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-	
+
 	// create enter event to use for inputs of bin edit menu
 	const enter_event = new KeyboardEvent('keyup', {
 		code: 'Enter',
@@ -342,64 +336,14 @@ tape('Numerical term: fixed bins', async test => {
 
 	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(
-		lines.length,
-		8,
-		'should have 8 lines'
-	)
+	const lines = tip.d
+		.select('.binsize_g')
+		.node()
+		.querySelectorAll('line')
+	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
 	// other lines should not be draggable if there is no q.last_bin
 })
-
-tape('Numerical term: diagnosis year', async test => {
-	test.timeoutAfter(3000)
-	test.plan(1)
-
-	const opts = getOpts({
-		tsData: {
-			term: {
-				id: 'yeardx',
-				name: 'Diagnosis year',
-				unit: 'year',
-				type: 'integer',
-				bins: {
-					default: {
-						bin_size: 5,
-						stopinclusive: true,
-						first_bin: { startunbounded: true, stop: 1970, stopinclusive: true }
-					}
-				},
-				isleaf: true
-			}
-		}
-	})
-
-	await opts.pill.main(opts.tsData)
-	
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-
-	await sleep(300)
-	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(
-		lines.length,
-		9,
-		'should have 9 lines'
-	)
-	// first line should be draggable
-	// other lines should not be draggable if there is no q.last_bin
-})
-
-
 
 tape('Numerical term: custom bins', async test => {
 	test.timeoutAfter(3000)
@@ -423,31 +367,35 @@ tape('Numerical term: custom bins', async test => {
 			},
 			q: {
 				type: 'custom',
-				lst: [{
-					startunbounded: true,
-					startinclusive: false,
-					stopinclusive: true,
-					stop: 5,
-					label: '<=5 years old'
-				}, {
-					startinclusive: false,
-					stopinclusive: true,
-					start: 5,
-					stop: 12,
-					label: '5 to 12 years old'
-				}, {
-					stopunbounded: true,
-					startinclusive: false,
-					stopinclusive: true,
-					start: 12,
-					label: '> 12 years old'
-				}]
+				lst: [
+					{
+						startunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						stop: 5,
+						label: '<=5 years old'
+					},
+					{
+						startinclusive: false,
+						stopinclusive: true,
+						start: 5,
+						stop: 12,
+						label: '5 to 12 years old'
+					},
+					{
+						stopunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						start: 12,
+						label: '> 12 years old'
+					}
+				]
 			}
 		}
 	})
 
 	await opts.pill.main(opts.tsData)
-	
+
 	// create enter event to use for inputs of bin edit menu
 	const enter_event = new KeyboardEvent('keyup', {
 		code: 'Enter',
@@ -460,12 +408,11 @@ tape('Numerical term: custom bins', async test => {
 
 	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(
-		lines.length,
-		2,
-		'should have 2 lines'
-	)
+	const lines = tip.d
+		.select('.binsize_g')
+		.node()
+		.querySelectorAll('line')
+	test.equal(lines.length, 2, 'should have 2 lines')
 })
 
 tape('Conditional term', async test => {
