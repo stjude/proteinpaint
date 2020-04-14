@@ -497,7 +497,7 @@ may skip insertion if on screen width shorter than minimum width
 	} else if (flag & 0x80) {
 		segment.islast = true
 	}
-	if (rnext != '=' && rnext != r.chr) {
+	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
 		segment.rnext = rnext
 		segment.pnext = pnext
 	}
