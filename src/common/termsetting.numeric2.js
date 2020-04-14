@@ -392,10 +392,12 @@ function renderLastBinInputs(self, tr) {
 				edit_div.style('display', 'none')
 			} else {
 				if (!self.q.last_bin) self.q.last_bin = {}
-				if (self.dom.last_start_input.property('value') === '') {
-					if (!('start' in self.q.last_bin)) self.q.last_bin.start = self.num_obj.density_data.maxvalue
-					self.dom.last_start_input.property('value', self.q.last_bin.start)
+				if (!('start' in self.q.last_bin)) {
+					// default to setting the last bin start to max value,
+					// so that it will be dragged to the left by default
+					self.q.last_bin.start = self.num_obj.density_data.maxvalue
 				}
+				self.dom.last_start_input.property('value', self.q.last_bin.start)
 				const value = +self.dom.last_start_input.property('value')
 				self.q.last_bin.start = value
 				edit_div.style('display', 'inline-block')
@@ -412,6 +414,7 @@ function renderLastBinInputs(self, tr) {
 	self.dom.last_start_input = edit_div
 		.append('input')
 		.attr('type', 'number')
+		.property('value', self.q.last_bin ? self.q.last_bin.start : '')
 		.style('width', '100px')
 		.style('margin-left', '15px')
 		.on('keyup', async () => {
