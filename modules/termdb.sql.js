@@ -863,6 +863,15 @@ thus less things to worry about...
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
+	let hastable_parent2childenorder = false
+	{
+		// check if this optional table exists, if so, will be used later
+		const s = cn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='parent2childrenorder'")
+		if (s.all().length) {
+			hastable_parent2childenorder = true
+		}
+	}
+
 	{
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
@@ -943,11 +952,26 @@ thus less things to worry about...
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr.split(',')) : getStatement(cohortStr).all()
-			const re = tmp.map(i => {
+			let re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
+			if (hastable_parent2childenorder) {
+				const order = cn.prepare('select childrenorder from parent2childrenorder where term_id is null').all()
+				if (order && order[0]) {
+					const idorder = JSON.parse(order[0].childrenorder)
+					const newlst = []
+					for (const i of idorder) {
+						const t = re.find(j => j.id == i)
+						if (t) newlst.push(t)
+					}
+					for (const t of re) {
+						if (!idorder.find(j => j == t.id)) newlst.push(t)
+					}
+					re = newlst
+				}
+			}
 			cache.set(cacheId, re)
 			return re
 		}
@@ -1007,7 +1031,6 @@ thus less things to worry about...
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const values = cohortStr ? [...cohortStr.split(','), id] : id
-			console.log(1016, values)
 			const tmp = getStatement(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
@@ -1016,6 +1039,21 @@ thus less things to worry about...
 					j.id = i.id
 					return j
 				})
+				if (hastable_parent2childenorder) {
+					const order = cn.prepare('select childrenorder from parent2childrenorder where term_id=?').all(id)
+					if (order && order[0]) {
+						const idorder = JSON.parse(order[0].childrenorder)
+						const newlst = []
+						for (const i of idorder) {
+							const t = re.find(j => j.id == i)
+							if (t) newlst.push(t)
+						}
+						for (const t of re) {
+							if (!idorder.find(j => j == t.id)) newlst.push(t)
+						}
+						re = newlst
+					}
+				}
 			}
 			cache.set(cacheId, re)
 			return re
@@ -1024,16 +1062,20 @@ thus less things to worry about...
 	{
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
-		const s =  {
+		const s = {
 			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
 		}
-		q.findTermByName = (n, limit, cohortStr='') => {
+		q.findTermByName = (n, limit, cohortStr = '') => {
 			const cohortKeys = cohortStr.split(',')
 			if (!(cohortStr in s)) {
-				s[cohortStr] = cn.prepare(`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${cohortKeys.map(()=>'?').join(',')}) WHERE t.name LIKE ?`)
+				s[cohortStr] = cn.prepare(
+					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${cohortKeys
+						.map(() => '?')
+						.join(',')}) WHERE t.name LIKE ?`
+				)
 			}
 			const vals = []
-			if (cohortKeys[0]!=='') vals.push(...cohortKeys)
+			if (cohortKeys[0] !== '') vals.push(...cohortKeys)
 			vals.push('%' + n + '%')
 			const tmp = s[cohortStr].all(vals)
 			if (tmp) {
