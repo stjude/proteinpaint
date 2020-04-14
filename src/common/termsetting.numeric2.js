@@ -529,6 +529,7 @@ function renderButtons(self) {
 		.style('margin', '5px')
 		.html('Reset')
 		.on('click', () => {
+			delete self.q
 			delete self.numqByTermIdType[self.term.id]
 			self.showEditMenu(self.dom.num_holder)
 		})

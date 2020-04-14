@@ -126,6 +126,8 @@ tape('use_bins_less', async test => {
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
 	delete opts.pill.Inner.opts.use_bins_less
+	delete opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	delete opts.pill.Inner.q
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
 	await sleep(300)
@@ -433,9 +435,11 @@ tape('Numerical term: fixed bins', async test => {
 	)
 
 	// test 'reset' button
-	const reset_btn = tip.d.selectAll('button')._groups[0][0]
+	const reset_btn = tip.d.selectAll('button')._groups[0][1]
 	reset_btn.click()
+	await sleep(100)
 	apply_btn.click()
+	await sleep(100)
 	pilldiv.click()
 	await sleep(500)
 
