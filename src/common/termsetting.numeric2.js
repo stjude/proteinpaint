@@ -1,6 +1,7 @@
 import * as client from '../client'
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
+import { get_bin_label } from '../../modules/termdb.bins'
 
 /*
 Arguments
@@ -35,7 +36,7 @@ export async function setNumericMethods(self) {
 		}
 		try {
 			self.num_obj.density_data = await getDensityPlotData(self)
-			console.log(38, self.num_obj.density_data)
+			//console.log(38, self.num_obj.density_data)
 		} catch (err) {
 			console.log(err)
 		}
@@ -81,7 +82,6 @@ export async function setNumericMethods(self) {
 			self.q.lst = self.processCustomBinInputs()
 			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 		}
-		console.log(84, self.q)
 
 		self.dom.tip.hide()
 		self.opts.callback({
@@ -97,6 +97,8 @@ export async function setNumericMethods(self) {
 			.property('value')
 			.split('\n')
 			.filter(d => d != '')
+			.map(d => +d)
+			.sort((a,b) => a < b ? -1 : 1)
 			.map((d, i) => {
 				const bin = {
 					start: +d,
@@ -174,10 +176,19 @@ function setqDefaults(self) {
 									stopinclusive: true,
 									stop:
 										self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
-											? self.num_obj.density_data.maxvalue +
+											? self.num_obj.density_data.minvalue +
 											  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
 											: self.num_obj.density_data.maxvalue
-								}
+								},
+								{
+									stopunbounded: true,
+									stopinclusive: true,
+									start:
+										self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
+											? self.num_obj.density_data.minvalue +
+											  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
+											: self.num_obj.density_data.maxvalue
+								},
 							]
 					  }
 		}

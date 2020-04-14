@@ -168,7 +168,8 @@ function renderBinLines(self, data) {
 	const o = self.num_obj
 	const lines = []
 	if (data.type == 'regular') {
-		const binLinesStop = data.last_bin ? data.last_bin.start : o.density_data.maxvalue
+		// assume that boundary lines will be hidden if x > last_bin.start
+		const binLinesStop = o.density_data.maxvalue
 		let index = 0
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {
 			lines.push({x: i, index, scaledX: Math.round(o.xscale(i))})
@@ -187,6 +188,8 @@ function renderBinLines(self, data) {
 
 	self.num_obj.binsize_g.selectAll('line').remove()
 
+	const lastScaledX = lines[lines.length - 1].scaledX
+
 	self.num_obj.binsize_g
 		.selectAll('line')
 		.data(lines)
@@ -198,7 +201,8 @@ function renderBinLines(self, data) {
 		.attr('y1', 0)
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
-		.attr('cursor', d => d.isDraggable ? 'ew-resize' : '')
+		.style('cursor', d => d.isDraggable ? 'ew-resize' : '')
+		.style('display', d => !d.isDraggable && d.scaledX >= lastScaledX ? 'none' : '')
 		.on('mouseover', function(d) {
 			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
