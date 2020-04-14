@@ -71,7 +71,7 @@ tape('term search, default behavior', function(test) {
 	let searchResultBtns
 	function testFirstSearch(search) {
 		searchResultBtns = search.Inner.dom.resultDiv.select('table').selectAll('.sja_menuoption')
-		test.equal(searchResultBtns.size(), 3, 'search result should show 3 buttons')
+		test.equal(searchResultBtns.size(), 4, 'search result should show 4 buttons')
 	}
 
 	let clickedTerm_firstSearch

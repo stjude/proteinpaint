@@ -232,6 +232,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			break
 		}
 	}
+	delete bc.numDecimals
+	delete bc.binLabelFormatter
 	return bins
 }
 
@@ -242,6 +244,9 @@ function get_bin_label(bin, binconfig) {
   Generate a numeric bin label given a bin configuration
 */
 	const bc = binconfig
+	const first_bin = bc.first_bin ? bc.first_bin : bc.lst[0]
+	if (!('numDecimals' in bc)) bc.numDecimals = ("" + first_bin.stop).split('.').length - 1
+	if (typeof bc.binLabelFormatter !== 'function') bc.binLabelFormatter = d3format.format('.'+ bc.numDecimals +'r')
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
@@ -290,7 +295,7 @@ function get_bin_label(bin, binconfig) {
 				//const v0f = v0.toFixed(bc.numDecimals + i)
 				const v1f = v1.toFixed(bc.numDecimals + i)
 				if (+v1f > v0) return v0 + ' to ' + v1f
-			} console.log(293, v0, v1)
+			}
 			return v0 + ' to ' + v1
 		}
 		const oper0 = '' //bc.startinclusive ? "" : ">"
@@ -301,8 +306,8 @@ function get_bin_label(bin, binconfig) {
 	}
 
 	// bin size not integer
-	const oper0 = bc.startinclusive ? '' : '>'
-	const oper1 = bc.stopinclusive ? '' : '<'
+	const oper0 = bc.startinclusive ? '≥' : '>'
+	const oper1 = bc.stopinclusive ? '≤' : '<'
 	const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
 	const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 	return oper0 + v0 + ' to ' + oper1 + v1

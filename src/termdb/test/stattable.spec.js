@@ -140,7 +140,7 @@ tape('term.type == "float" dependent display', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Clinically-assessed Variables', 'CTCAE Graded Events', 'Cardiovascular System'],
+				expandedTermIds: ['root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System'],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {

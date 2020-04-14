@@ -156,7 +156,7 @@ tape('tvs : Categorical', async test => {
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll('.value_checkbox').size(), 24, 'Should have checkbox for each value')
 	test.equal(
 		tipd
 			.selectAll('.value_checkbox')

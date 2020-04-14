@@ -367,7 +367,10 @@ exports.setNumericMethods = function setNumericMethods(self) {
 					if (cursor_style == 'default') return
 				}
 
-				// brush_drag_start = event.selection[1]
+				const orig_val = self.num_obj.brushes[0].orig.stop
+				const range_val = self.num_obj.brushes[0].range.stop
+				brush_drag_start = orig_val == range_val ? Number(orig_val) : Number(range_val)
+
 				brush.elem
 					.selectAll('.selection')
 					.attr('cursor', 'default')
@@ -384,6 +387,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 				}
 
 				const s = event.selection
+				const start_s = range.bin == 'first' ? s[1] : xscale(brush_drag_start)
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
@@ -393,9 +397,6 @@ exports.setNumericMethods = function setNumericMethods(self) {
 				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
 
 				// update inputs from brush move
-				// select(brush.start_input._groups[0][0]).style('color', a_range.start == range.start ? '#000' : '#23cba7')
-				// brush.start_input._groups[0][0].value = range.start == minvalue.toFixed(1) ? '' : range.start
-
 				if (brush.orig.bin == 'first') {
 					select(brush.input._groups[0][0]).style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 					brush.input._groups[0][0].value = range.stop
@@ -404,31 +405,20 @@ exports.setNumericMethods = function setNumericMethods(self) {
 					brush.input._groups[0][0].value = range.start
 				}
 
-				// brush.start_select
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// 	.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
-				// brush.stop_select
-				// 	.style('display', similarRanges ? 'none' : 'inline-block')
-				// 	.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
-
 				// //update 'apply' and 'reset' buttons based on brush change
 				self.num_obj.reset_btn.style('display', similarRanges && !self.bins_customized() ? 'none' : 'inline-block')
-
-				// // hide start and stop text and relation symbols if brush moved
-				// brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.stop_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.start_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
-				// brush.stop_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
 
 				// make brush green if changed
 				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
 				//move lines_g with brush move
-				// self.num_obj.binsize_g.attr('transform', `translate(${s[1] + xpad - brush_drag_start + brush_drag_stop}, ${ypad})`)
-				self.num_obj.binsize_g.attr('transform', `translate(${s[1] - xscale(a_range.stop) + xpad}, ${ypad})`)
+				self.num_obj.binsize_g.attr('transform', `translate(${start_s - xscale(brush_drag_start) + xpad}, ${ypad})`)
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
 				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
+				if (brush.orig.bin == 'first') {
+					self.num_obj.brushes[0].range.stop = range.stop
+				}
 			})
 
 		const brush_start = range.startunbounded ? minvalue : range.start
@@ -480,6 +470,8 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			.attr('y1', 0)
 			.attr('x2', d => xscale(d))
 			.attr('y2', plot_size.height)
+
+		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
 	}
 
 	self.addFixedBinsTable = function() {
@@ -550,7 +542,12 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			const minvalue = self.num_obj.density_data.minvalue
 			const similarRanges = JSON.stringify(first_bin_range) == JSON.stringify(first_bin_orig)
 			if (first_bin_range.start == minvalue.toFixed(1)) delete first_bin_range.start
-			if (bin_size_input.node().value) custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
+			if (bin_size_input.node().value && parseFloat(bin_size_input.node().value) != 0)
+				custom_bins_q.bin_size = parseFloat(bin_size_input.node().value)
+			else if (parseFloat(bin_size_input.node().value) == 0) {
+				window.alert('Bin size can not be 0')
+				return
+			}
 			edit_btns_div.style('display', !similarRanges || self.bins_customized() ? 'table-row' : 'none')
 			self.num_obj.reset_btn.style('display', similarRanges && !self.bins_customized() ? 'none' : 'inline-block')
 			self.addBinSizeLines()
@@ -662,9 +659,14 @@ exports.setNumericMethods = function setNumericMethods(self) {
 		const plot_size = self.num_obj.plot_size
 		new_range.stop = parseFloat(brush.input.node().value)
 		self.num_obj.brushes[0].range = new_range
-		brush.elem
-			.call(brush.d3brush)
-			.call(brush.d3brush.move, [self.num_obj.density_data.minvalue, new_range.stop].map(self.num_obj.xscale))
+		if (self.num_obj.density_data.minvalue == new_range.stop)
+			brush.elem
+				.call(brush.d3brush)
+				.call(brush.d3brush.move, [self.num_obj.density_data.minvalue, new_range.stop + 0.01].map(self.num_obj.xscale))
+		else
+			brush.elem
+				.call(brush.d3brush)
+				.call(brush.d3brush.move, [self.num_obj.density_data.minvalue, new_range.stop].map(self.num_obj.xscale))
 		self.num_obj.binsize_g.attr('transform', `translate(${plot_size.xpad}, ${plot_size.ypad})`)
 		self.addBinSizeLines()
 	}
@@ -722,20 +724,6 @@ exports.setNumericMethods = function setNumericMethods(self) {
 				brush.input.property('disabled', false)
 			})
 
-		// if last bin is not defined, it will be auto, can be edited from dropdown
-		// const last_bin_select = last_bin_select_div
-		// 	.append('select')
-		// 	.style('margin-left', '15px')
-		// 	.style('margin-bottom', '7px')
-		// 	.on('change', () => {
-		// 		self.apply_last_bin_change(last_bin_edit_div, last_bin_select)
-		// 		if (last_bin_select.node().value == 'auto') {
-		// 			self.opts.callback({
-		// 				term: self.term,
-		// 				q: self.q
-		// 			})
-		// 		}
-		// 	})
 		const rand_id = Math.floor(Math.random() * 1000 + 1)
 
 		const auto_radio_btn = last_bin_select_div
@@ -786,6 +774,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			auto_radio_btn.node().checked = true
 		} else if (JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)) {
 			custom_radio_btn.node().checked = true
+			brush.input.node().value = custom_bins_q.last_bin.start
 		}
 
 		self.apply_last_bin_change(last_bin_edit_div, auto_radio_btn)

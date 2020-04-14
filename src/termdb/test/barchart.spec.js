@@ -298,7 +298,7 @@ tape('series visibility - numeric', function(test) {
 	function triggerMenuClickToHide(plot) {
 		plot.Inner.components.barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
-			.filter(d => d.seriesId == 'Not exposed')
+			.filter(d => d.seriesId == 'exposed, dose unknown')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
@@ -314,7 +314,7 @@ tape('series visibility - numeric', function(test) {
 			plot.Inner.components.barchart.Inner.dom.legendDiv
 				.selectAll('.legend-row')
 				.filter(function() {
-					return this.innerHTML.includes('Not exposed')
+					return this.innerHTML.includes('exposed, dose unknown')
 				})
 				.size(),
 			1,
@@ -333,7 +333,7 @@ tape('series visibility - condition', function(test) {
 				expandedTermIds: [
 					'root',
 					'Clinically-assessed Variables',
-					'CTCAE Graded Events',
+					'ctcae_graded',
 					'Cardiovascular System',
 					'Arrhythmias'
 				],
@@ -376,49 +376,21 @@ tape('single barchart, filtered', function(test) {
 				filter: {
 					type: 'tvslst',
 					in: 1,
-					join: 'or',
+					join: 'and',
 					lst: [
 						{
-							type: 'tvslst',
-							in: 1,
-							join: 'and',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
-										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
-									}
-								},
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'sex', name: 'Sex', type: 'categorical' },
-										values: [{ key: 'Male', label: 'Male' }]
-									}
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+								values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+							}
 						},
 						{
-							type: 'tvslst',
-							in: 1,
-							join: 'and',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'agedx', name: 'Age of Diagnosis', type: 'float' },
-										ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
-									}
-								},
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', type: 'categorical' },
-										values: [{ key: '1', label: '1-yes' }]
-									}
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: { id: 'sex', name: 'Sex', type: 'categorical' },
+								values: [{ key: '1', label: 'Male' }]
+							}
 						}
 					]
 				}
@@ -447,10 +419,10 @@ tape('single barchart, filtered', function(test) {
 
 	function runTests(plot) {
 		plot.on('postRender.test', null)
-		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 2, 'should show two bar series')
+		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
 		test.equal(
 			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
-			'Male',
+			'1',
 			'should show one bar series that matches filter value'
 		)
 		test.end()
@@ -458,7 +430,7 @@ tape('single barchart, filtered', function(test) {
 })
 
 tape('click non-group bar to add filter', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(8000)
 
 	const termfilter = { filter: [] }
 	runpp({
@@ -503,8 +475,8 @@ tape('click non-group bar to add filter', function(test) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
 			.run(triggerBarClick, { wait: 500 })
-			.use(triggerMenuClick, { wait: 400 })
-			.to(testTermValues, { wait: 100 })
+			.use(triggerMenuClick, { wait: 300 })
+			.to(testTermValues, { wait: 1000 })
 			.done(test)
 	}
 
@@ -524,7 +496,7 @@ tape('click non-group bar to add filter', function(test) {
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
-			.click() //dispatchEvent(new Event('click', { bubbles: true }))
+			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
 	function testTermValues(plot) {
@@ -758,7 +730,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 				expandedTermIds: [
 					'root',
 					'Clinically-assessed Variables',
-					'CTCAE Graded Events',
+					'ctcae_graded',
 					'Cardiovascular System',
 					'Arrhythmias'
 				],

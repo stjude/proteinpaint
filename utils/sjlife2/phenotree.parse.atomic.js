@@ -165,13 +165,17 @@ function parseconfig(str) {
 			term.type = 'float'
 			term.bins = JSON.parse(JSON.stringify(bins))
 		} else {
-			// must be categorical and key=value
-			const [key, value] = f1.split('=')
-			if (!value) throw 'first field is not integer/float, and not k=v: ' + f1
+			// must be categorical, f1 is either key=value or 'string'
 			term.type = 'categorical'
 			term.values = {}
-			term.values[key] = { label: value }
 			term._values_newinmatrix = new Set() // only for categorical but not numeric
+			if (f1 == 'string') {
+				// ignore
+			} else {
+				const [key, value] = f1.split('=')
+				if (!value) throw 'first field is not integer/float/string, and not k=v: ' + f1
+				term.values[key] = { label: value }
+			}
 		}
 
 		// for all above cases, will have these two

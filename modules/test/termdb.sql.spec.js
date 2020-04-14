@@ -44,7 +44,7 @@ tape('filters applied to categorical term', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Male' }]
+							values: [{ key: '1', label: '1' }]
 						}
 					}
 				]
@@ -93,12 +93,18 @@ tape('filters applied to categorical term', function(test) {
 								type: 'float',
 								// must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
 								values: {
-									'0': { label: 'Not exposed', uncomputable: true },
 									'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 									'-9999': { label: 'Unknown treatment record', uncomputable: true }
 								}
 							},
-							ranges: [{ startunbounded: true, stop: 1000, stopinclusive: true }] // range includes special values and should be excluded
+							ranges: [{ 
+								startunbounded: true, 
+								stop: 1000, 
+								stopinclusive: true,
+								label:"≤1000",
+								name:"≤1000"
+							}], // range includes special values and should be excluded
+							isnot: false
 						}
 					}
 				]
@@ -125,12 +131,11 @@ tape('filters applied to categorical term', function(test) {
 								type: 'float',
 								values: {
 									// as above
-									'0': { label: 'Not exposed', uncomputable: true },
 									'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 									'-9999': { label: 'Unknown treatment record', uncomputable: true }
 								}
 							},
-							ranges: [{ value: '0' }, { start: 100, stop: 1000 }]
+							ranges: [{ value: 0 }, { start: 100, stop: 1000 }]
 						}
 					}
 				]
@@ -152,7 +157,7 @@ tape('filters applied to categorical term', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'hrtavg', name: 'Heart', type: 'float' }, // heart radiation
-							ranges: [{ value: '0' }] // not radiated
+							ranges: [{ value: 0 }] // not radiated
 						}
 					}
 				]
@@ -175,7 +180,7 @@ tape('filters applied to categorical term', function(test) {
 						tvs: {
 							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
-							values: [{ key: 3, label: '3' }],
+							values: [{ key: '3', label: '3' }],
 							value_by_max_grade: true
 						}
 					}
@@ -318,7 +323,7 @@ tape('filters applied to categorical term', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Female' }]
+							values: [{ key: '2', label: 'Female' }]
 						}
 					},
 					{
@@ -405,7 +410,7 @@ tape('categorical term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Female' }]
+							values: [{ key: '1', label: 'Male' }]
 						}
 					},
 					{
@@ -459,7 +464,7 @@ tape('numerical term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'sex', type: 'categorical' },
-							values: [{ key: 'Female', label: 'Female' }]
+							values: [{ key: '2', label: 'Female' }]
 						}
 					}
 				]
@@ -493,7 +498,20 @@ tape('numerical term1', function(test) {
 		test,
 		{
 			term1: 'agedx',
-			term1_q: termjson['agedx'].bins.less,
+			term1_q: {
+				type: 'regular',
+				bin_size: 5,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: 5,
+					stopinclusive: true
+				},
+				last_bin: {
+					start: 15,
+					stopunbounded: true
+				}
+			},
 			term2: 'Asthma',
 			term2_q: { value_by_max_grade: 1, bar_by_grade: 1 }
 		},
@@ -527,7 +545,7 @@ tape('numerical term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Female' }]
+							values: [{ key: '1', label: 'Male' }]
 						}
 					},
 					{
@@ -583,6 +601,7 @@ tape('numerical term1', function(test) {
 tape('leaf condition term1', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(11)
+	
 	compareResponseData(
 		test,
 		{
@@ -606,7 +625,7 @@ tape('leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Male' }]
+							values: [{ key: '1', label: 'Male' }]
 						}
 					}
 				]
@@ -704,7 +723,7 @@ tape('leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Female' }]
+							values: [{ key: '1', label: 'Female' }]
 						}
 					},
 					{
@@ -762,7 +781,7 @@ tape('non-leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Male' }]
+							values: [{ key: '1', label: 'Male' }]
 						}
 					}
 				]
@@ -803,7 +822,7 @@ tape('non-leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Male' }]
+							values: [{ key: '1', label: 'Male' }]
 						}
 					}
 				]
@@ -892,7 +911,7 @@ tape('non-leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: 'Male', label: 'Female' }]
+							values: [{ key: '1', label: 'Female' }]
 						}
 					},
 					{
