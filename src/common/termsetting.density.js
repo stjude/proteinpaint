@@ -1,5 +1,5 @@
 import { select, mouse } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, transform } from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, transform, format } from 'd3'
 
 export async function setDensityPlot(self) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
@@ -111,6 +111,7 @@ function makeDensityPlot(self) {
 		.range([xpad, width - xpad])
 
 	const x_axis = axisBottom().scale(xscale)
+	if (self.term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
 
 	// y-scale
 	const yscale = scaleLinear()
@@ -167,11 +168,15 @@ function renderBinLines(self, data) {
 	const o = self.num_obj
 	const lines = []
 	if (data.type == 'regular') {
-		const binLinesStop = data.last_bin ? data.last_bin.start : o.density_data.maxvalue
+		// assume that boundary lines will be hidden if x > last_bin.start
+		const binLinesStop = o.density_data.maxvalue
 		let index = 0
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {
 			lines.push({x: i, index, scaledX: Math.round(o.xscale(i))})
 			index++
+		}
+		if (data.last_bin && lines[index - 1] && data.last_bin.start !== lines[index - 1].x) {
+			lines.push({x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start))})
 		}
 	} else {
 		lines.push( ... data.lst.slice(1).map((d,index)=>{return {x: d.start, index, scaledX: Math.round(o.xscale(d.start))}}))
@@ -182,6 +187,8 @@ function renderBinLines(self, data) {
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
+
+	const lastScaledX = lines[lines.length - 1].scaledX
 
 	self.num_obj.binsize_g
 		.selectAll('line')
@@ -194,7 +201,8 @@ function renderBinLines(self, data) {
 		.attr('y1', 0)
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
-		.attr('cursor', d => d.isDraggable ? 'ew-resize' : '')
+		.style('cursor', d => d.isDraggable ? 'ew-resize' : '')
+		.style('display', d => !d.isDraggable && d.scaledX >= lastScaledX ? 'none' : '')
 		.on('mouseover', function(d) {
 			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
@@ -240,6 +248,7 @@ function renderBinLines(self, data) {
 			else {
 				self.dom.last_start_input.property('value', value)
 				self.q.last_bin.start = value
+				middleLines.style('display', c => c.scaledX >= d.draggedX ? 'none' : '')
 			}
 		} else {
 			self.q.lst[d.index + 1].start = value
@@ -252,13 +261,16 @@ function renderBinLines(self, data) {
 		d.scaledX = d.draggedX 
 		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
 		if (self.q.type == 'regular') {
-			if (d.index === 0) self.q.first_bin.stop = d.x
-			else self.q.last_bin.start = d.x
-
-			middleLines.each(function(d,i){
-				d.scaledX = d.draggedX
-				d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
-			})
+			if (d.index === 0) {
+				self.q.first_bin.stop = d.x
+				middleLines.each(function(d,i){
+					d.scaledX = d.draggedX
+					d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
+				})
+			}
+			else {
+				self.q.last_bin.start = d.x
+			}
 		} else {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x

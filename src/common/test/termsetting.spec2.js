@@ -301,7 +301,7 @@ tape('Numerical term: range boundaries', async test => {
 
 tape('Numerical term: fixed bins', async test => {
 	test.timeoutAfter(3000)
-	test.plan(1)
+	test.plan(9)
 
 	const opts = getOpts({
 		tsData: {
@@ -343,6 +343,110 @@ tape('Numerical term: fixed bins', async test => {
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
 	// other lines should not be draggable if there is no q.last_bin
+
+	// test numeric bin menu
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+		'Bin Size',
+		'Should have section for "bin size" edit'
+	)
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+		'First Bin Stop',
+		'Should have section for "First bin" edit'
+	)
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+		'Last Bin Start',
+		'Should have section for "Last bin" edit'
+	)
+
+	//trigger and test bin_size change
+	const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
+	bin_size_input.value = 5
+
+	//trigger 'change' to update bins
+	bin_size_input.dispatchEvent(new Event('change'))
+
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
+		'5',
+		'Should change "bin size" from input'
+	)
+
+	//trigger and test first_bin_change
+	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0]
+	first_bin_input.value = 7
+
+	//trigger 'change' to update bins
+	first_bin_input.dispatchEvent(new Event('change'))
+
+	test.equal(
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0].value,
+		'7',
+		'Should change "first bin" from input'
+	)
+
+	//trigger and test last_bin change
+	const last_bin_custom_radio = tip.d
+		.node()
+		.querySelectorAll('tr')[2]
+		.querySelectorAll('div')[0]
+		.querySelectorAll('input')[1]
+	d3s.select(last_bin_custom_radio).property('checked', true)
+	last_bin_custom_radio.dispatchEvent(new Event('change'))
+
+	const last_bin_input = tip.d
+		.node()
+		.querySelectorAll('tr')[2]
+		.querySelectorAll('div')[1]
+		.querySelectorAll('input')[0]
+
+	last_bin_input.value = 20
+
+	//trigger 'change' to update bins
+	last_bin_input.dispatchEvent(new Event('change'))
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelectorAll('tr')[2]
+			.querySelectorAll('div')[1]
+			.querySelectorAll('input')[0].value,
+		'20',
+		'Should change "last bin" from input'
+	)
+
+	// test 'apply' button
+	const apply_btn = tip.d.selectAll('button')._groups[0][0]
+	apply_btn.click()
+	pilldiv.click()
+	await sleep(500)
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelectorAll('tr')[0]
+			.querySelectorAll('input')[0].value,
+		'5',
+		'Should apply the change by "Apply" button'
+	)
+
+	// test 'reset' button
+	const reset_btn = tip.d.selectAll('button')._groups[0][0]
+	reset_btn.click()
+	apply_btn.click()
+	pilldiv.click()
+	await sleep(500)
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelectorAll('tr')[0]
+			.querySelectorAll('input')[0].value,
+		'3',
+		'Should reset the bins by "Reset" button'
+	)
 })
 
 tape('Numerical term: custom bins', async test => {
