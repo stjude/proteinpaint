@@ -158,6 +158,12 @@ async function getDensityPlotData(self) {
 
 function setqDefaults(self) {
 	if (!(self.term.id in self.numqByTermIdType)) {
+		const defaultCustomBoundary = 
+			self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
+				? self.num_obj.density_data.minvalue +
+				  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
+				: self.num_obj.density_data.maxvalue
+
 		self.numqByTermIdType[self.term.id] = {
 			regular:
 				self.q && self.q.type == 'regular'
@@ -174,21 +180,13 @@ function setqDefaults(self) {
 								{
 									startunbounded: true,
 									stopinclusive: true,
-									stop:
-										self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
-											? self.num_obj.density_data.minvalue +
-											  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
-											: self.num_obj.density_data.maxvalue
+									stop: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
 								},
 								{
 									stopunbounded: true,
 									stopinclusive: true,
-									start:
-										self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
-											? self.num_obj.density_data.minvalue +
-											  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
-											: self.num_obj.density_data.maxvalue
-								},
+									start: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
+								}
 							]
 					  }
 		}

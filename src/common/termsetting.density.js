@@ -169,13 +169,16 @@ function renderBinLines(self, data) {
 	const lines = []
 	if (data.type == 'regular') {
 		// assume that boundary lines will be hidden if x > last_bin.start
-		const binLinesStop = o.density_data.maxvalue
+		// offset max value by first_bin.stop in case the first boundary is dragged
+		// to the left, will reveal additional non-draggable boundaries from the right
+		const binLinesStop = o.density_data.maxvalue + data.first_bin.stop
 		let index = 0
+		// 
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {
 			lines.push({x: i, index, scaledX: Math.round(o.xscale(i))})
 			index++
 		}
-		if (data.last_bin && lines[index - 1] && data.last_bin.start !== lines[index - 1].x) {
+		if (data.last_bin) {
 			lines.push({x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start))})
 		}
 	} else {
@@ -183,12 +186,13 @@ function renderBinLines(self, data) {
 	}
 
 	lines.forEach((d,i)=>{
-		d.isDraggable = self.q.type == 'custom' || i===0 || (self.q.last_bin && i === lines.length - 1)
+		d.isDraggable = self.q.type == 'custom' || i===0 || (self.q.last_bin && self.q.last_bin.start === d.x)
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
 
-	const lastScaledX = lines[lines.length - 1].scaledX
+	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue))
+	let lastScaledX = Math.min(scaledMaxX, lines.slice().reverse().find(d=>d.scaledX < scaledMaxX).scaledX)
 
 	self.num_obj.binsize_g
 		.selectAll('line')
@@ -202,7 +206,7 @@ function renderBinLines(self, data) {
 		.attr('x2', d => d.scaledX)
 		.attr('y2', o.plot_size.height)
 		.style('cursor', d => d.isDraggable ? 'ew-resize' : '')
-		.style('display', d => !d.isDraggable && d.scaledX >= lastScaledX ? 'none' : '')
+		.style('display', d => !d.isDraggable && d.scaledX > lastScaledX ? 'none' : '')
 		.on('mouseover', function(d) {
 			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
@@ -235,13 +239,15 @@ function renderBinLines(self, data) {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
-				middleLines.each(function(d,i){
-					d.draggedX = d.scaledX + diff
+				const maxX = self.q.last_bin ? lastScaledX : scaledMaxX
+				middleLines.each(function(c,i){
+					c.draggedX = c.scaledX + diff
 					select(this)
-						.attr('x1', d.draggedX)
+						.attr('x1', c.draggedX)
 						.attr('y1', 0)
-						.attr('x2', d.draggedX)
+						.attr('x2', c.draggedX)
 						.attr('y2', o.plot_size.height)
+						.style('display', c => c.draggedX >= maxX ? 'none' : '')
 				})
 				self.q.first_bin.stop = value
 			}
@@ -271,6 +277,7 @@ function renderBinLines(self, data) {
 			else {
 				self.q.last_bin.start = d.x
 			}
+			lastScaledX = lines.slice().reverse().find(d=>d.scaledX < scaledMaxX).scaledX
 		} else {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
