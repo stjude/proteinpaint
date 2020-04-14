@@ -221,7 +221,7 @@ async function do_query(q) {
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
-	plot_messagerows(ctx, q, canvaswidth)
+	result.messagerowheights = plot_messagerows(ctx, q, canvaswidth)
 
 	for (const template of templates) {
 		plot_template(ctx, template, q)
@@ -654,6 +654,7 @@ function plot_messagerows(ctx, q, canvaswidth) {
 		ctx.fillText(row.t, canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
+	return y
 }
 
 function get_stacky(templates, q) {

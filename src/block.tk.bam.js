@@ -72,6 +72,7 @@ export async function loadTk(tk, block) {
 		// reset max
 
 		tk.data = await getData(tk, block)
+		console.log(tk.data.messagerowheights)
 		if (tk.data.colorscale) {
 			// available from 1st query, cache
 			tk.colorscale = tk.data.colorscale
