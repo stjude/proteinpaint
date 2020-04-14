@@ -10,7 +10,14 @@ second branch: organ system
 third branch: grouped condition
 forth branch: individual condition, maybe missing
 
-a phenotree file that is solely of chc terms
+to be run three times:
+1. sjlife ctcae
+2. ccss ctcae
+3. sjlife+ccss secondary neoplasm
+
+age, yeartoevent, grade are all required
+
+the phenotree file is solely chc terms
 
 use that to validate terms in "outcomes" file and find any mismatch
 
@@ -70,7 +77,8 @@ v: {}
    v: [ {grade,age}, {} ]
 */
 
-let sampleidx = 0,
+let sjlididx,
+	ccssididx,
 	rootidx = 1,
 	firstidx = 2,
 	secondidx = 3,
@@ -84,27 +92,28 @@ rl.on('line', line => {
 	if (first) {
 		first = false
 		const l = line.split('\t')
+		sjlididx = l.indexOf('sjlid')
+		ccssididx = l.indexOf('ccssid')
+		if (sjlididx == -1 && ccssididx == -1) throw 'both sjlid and ccssid are missing'
+		rootidx = l.indexOf('root')
+		if (rootidx == -1) throw 'root missing'
+		firstidx = l.indexOf('first')
+		if (firstidx == -1) throw 'first missing'
+		secondidx = l.indexOf('second')
+		if (secondidx == -1) throw 'second missing'
+		thirdidx = l.indexOf('third')
+		if (thirdidx == -1) throw 'third missing'
 		fourthidx = l.indexOf('fourth') // missing in ccss
 		ageidx = l.indexOf('agegraded')
 		if (ageidx == -1) throw 'agegraded missing from header'
-		yearidx = l.indexOf('yearstoevent') // missing in ccss
+		yearidx = l.indexOf('yearstoevent')
+		if (yearidx == -1) throw 'yearstoevent missing'
 		gradeidx = l.indexOf('grade')
 		if (gradeidx == -1) throw 'grade missing from header'
 		return
 	}
 	/*
-	1	sjlid	SJL1758307
-	2	wgs_sequenced	1
-	3	ctcae_graded	1
-	4	root	Clinically-assessed Variables
-	5	first	CTCAE Graded Events
-	6	second	Cardiovascular System
-	7	third	Arrhythmias
-	8	fourth	Cardiac dysrhythmia
-	9	agegraded	49.783561644
-	10	yearstoevent	34.78630137
-	11	grade	0
-
+	sjlife ctcae file:
 	1	sjlid	SJL5332610
 	2	root	Clinically-assessed Variables
 	3	first	Graded Adverse Events
@@ -115,6 +124,7 @@ rl.on('line', line => {
 	8	yearstoevent	10.884931507
 	9	grade	1
 
+	ccss ctcae file:
 	1	ccssid	1262412
 	2	root	Self-reported Behavior and Outcome Variables
 	3	first	Graded Adverse Events
@@ -122,33 +132,44 @@ rl.on('line', line => {
 	5	third	Loss of Hearing
 	6	agegraded
 	7	grade	0
+
+	secondary neoplasm file:
+	1	sjlid	SJL0253301
+	2	ccssid
+	3	root	Clinically-assessed Variables
+	4	first	Graded Adverse Events
+	5	second	Secondary Neoplasms
+	6	third	Non Melanoma Skin Cancer
+	7	fourth	Basal cell carcinoma
+	8	agegraded	45.621917808
+	9	yearstoevent	40.605479452
+	10	grade	2
+
 	*/
 
 	const l = line.split('\t')
+	let patient
+	if (sjlididx == -1 || ccssididx == -1) {
+		// just one id, always first column
+		patient = l[0]
+	} else {
+		// use whichever id available
+		patient = l[sjlididx] || l[ccssididx]
+	}
 	const w1 = l[firstidx].replace(/"/g, '')
 	const w2 = l[secondidx].replace(/"/g, '')
 	const w3 = l[thirdidx].replace(/"/g, '')
 	const w4 = fourthidx == -1 ? '' : l[fourthidx].replace(/"/g, '')
 
-	const patient = l[0]
 	const condition = w4 ? w4 : w3 ? w3 : w2
 	if (!condition) console.error('unknown condition')
-	let age = ''
-	// age could be missing
-	{
-		const tmp = l[ageidx]
-		if (tmp) {
-			age = Number(tmp)
-			if (Number.isNaN(age)) console.error('invalid age', l[7 - 1])
-		}
-	}
-	let yearstoevent = ''
-	if (yearidx != -1) {
-		yearstoevent = Number(l[yearidx])
-		if (Number.isNaN(yearstoevent)) console.error('invalid yearstoevent')
-	}
+
+	const age = Number(l[ageidx])
+	if (Number.isNaN(age)) console.error('invalid age', l[ageidx])
+	const yearstoevent = Number(l[yearidx])
+	if (Number.isNaN(yearstoevent)) console.error('invalid yearstoevent', l[yearidx])
 	const grade = Number(l[gradeidx])
-	if (!Number.isInteger(grade)) console.error('grade is not integer', l[9 - 1])
+	if (!Number.isInteger(grade)) console.error('grade is not integer', l[gradeidx])
 
 	// count grade for each condition
 	if (w1) {
