@@ -117,7 +117,7 @@ export async function setNumericMethods(self) {
 			})
 
 		prevBin.stopunbounded = true
-		const label = inputDivs[data.length].querySelector('input').value
+		const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
 		prevBin.label = label ? label : get_bin_label(prevBin, self.q)
 
 		data.unshift({
@@ -204,10 +204,11 @@ function setqDefaults(self) {
 	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
 	if (!self.q.numDecimals)
 		self.q.numDecimals = Math.max(('' + dd.minvalue).split('.').length - 1, ('' + dd.maxvalue).split('.').length - 1)
-	if (self.q.lst)
+	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
 		})
+	}
 	//*** validate self.q ***//
 }
 
@@ -293,18 +294,31 @@ function renderBinSizeInput(self, tr) {
 		.style('margin', '5px')
 		.html('Bin Size')
 
+	const dd = self.num_obj.density_data
+	const origBinSize = self.q.bin_size
+
 	self.dom.bin_size_input = tr
 		.append('td')
 		.append('input')
 		.attr('type', 'number')
 		.attr('value', self.q.bin_size)
-		.style('color', '#cc0000')
 		.style('margin-left', '15px')
 		.style('width', '100px')
-		.on('change', function() {
-			self.q.bin_size = +this.value
-			setDensityPlot(self)
+		.style('color', d => (self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
+		.on('change', handleChange)
+		.on('keyup', function() {
+			if (!client.keyupEnter()) return
+			handleChange.call(this)
 		})
+
+	function handleChange() {
+		self.q.bin_size = +this.value
+		select(this).style(
+			'color',
+			self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : +this.value != origBinSize ? 'green' : ''
+		)
+		setDensityPlot(self)
+	}
 
 	tr.append('td')
 		.append('div')
@@ -312,7 +326,7 @@ function renderBinSizeInput(self, tr) {
 		.style('margin-left', '1px')
 		.style('color', '#858585')
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.text('Red lines indicate bins automatically generated based on this value.')
+		.text('Green text indicates an edited value, red indicates size larger than the current term value range')
 }
 
 function renderFirstBinInput(self, tr) {
@@ -329,14 +343,11 @@ function renderFirstBinInput(self, tr) {
 		.property('value', 'stop' in self.q.first_bin ? self.q.first_bin.stop : '')
 		.style('width', '100px')
 		.style('margin-left', '15px')
-		.on('change', async () => {
-			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
-			setDensityPlot(self)
-		})
-		.on('keyup', async () => {
+		.style('color', self.q.first_bin && self.q.first_bin.stop < self.num_obj.density_data.minvalue ? 'red' : '')
+		.on('change', handleChange)
+		.on('keyup', function() {
 			if (!client.keyupEnter()) return
-			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
-			setDensityPlot(self)
+			handleChange.call(this)
 		})
 
 	tr.append('td')
@@ -345,7 +356,25 @@ function renderFirstBinInput(self, tr) {
 		.style('margin-left', '1px')
 		.style('color', '#858585')
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.html('<b>Left</b>-side gray box indicates the first bin. <br> Drag to change its size.')
+		.html('<b>Left most</b>red line indicates the first bin stop. <br> Drag that line to edit this value.')
+
+	function handleChange() {
+		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
+		self.dom.first_stop_input.restyle()
+		self.renderBinLines(self, self.q)
+	}
+
+	const origFirstStop = self.q.first_bin.stop
+	self.dom.first_stop_input.restyle = () => {
+		self.dom.first_stop_input.style(
+			'color',
+			self.q.first_bin.stop < self.num_obj.density_data.minvalue
+				? 'red'
+				: self.q.first_bin.stop != origFirstStop
+				? 'green'
+				: ''
+		)
+	}
 }
 
 function renderLastBinInputs(self, tr) {
@@ -372,19 +401,12 @@ function renderLastBinInputs(self, tr) {
 		.attr('name', 'last_bin_opt_' + id)
 		.attr('value', 'auto')
 		.style('margin-right', '3px')
+		.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
 		.property('checked', isAuto)
-		.on('change', function() {
-			if (this.checked) {
-				delete self.q.last_bin
-				edit_div.style('display', 'none')
-			} else {
-				if (!self.q.last_bin) self.q.last_bin = {}
-				const value = self.dom.last_start_input.property('value')
-				self.q.last_bin.start = value !== '' ? +value : self.num_obj.density_data.maxvalue - self.q.bin_size
-				console.log(332, value, self.q.last_bin.start)
-				edit_div.style('display', 'inline-block')
-			}
-			setDensityPlot(self)
+		.on('change', handleChange)
+		.on('keyup', function() {
+			if (!client.keyupEnter()) return
+			handleChange.call(this)
 		})
 
 	label0.append('span').html('Automatic<br>')
@@ -426,19 +448,17 @@ function renderLastBinInputs(self, tr) {
 		.append('td')
 		.append('div')
 		.style('display', isAuto ? 'none' : 'inline-block')
+
 	self.dom.last_start_input = edit_div
 		.append('input')
 		.attr('type', 'number')
 		.property('value', self.q.last_bin ? self.q.last_bin.start : '')
 		.style('width', '100px')
 		.style('margin-left', '15px')
-		.on('keyup', async () => {
-			self.q.last_bin.start = +self.dom.last_start_input.property('value')
-			setDensityPlot(self)
-		})
-		.on('change', async () => {
-			self.q.last_bin.start = +self.dom.last_start_input.property('value')
-			setDensityPlot(self)
+		.on('change', handleChange)
+		.on('keyup', function() {
+			if (!client.keyupEnter()) return
+			handleChange.call(this)
 		})
 
 	// note div
@@ -450,7 +470,25 @@ function renderLastBinInputs(self, tr) {
 		.style('padding-top', '30px')
 		.style('color', '#858585')
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.html('<b>Right</b>-side gray box indicates the last bin. <br> Drag to change its size.')
+		.html('<b>Right</b>most red line indicates the last bin start. <br> Drag that line to edit this value.')
+
+	function handleChange() {
+		self.q.last_bin.start = +self.dom.last_start_input.property('value')
+		self.dom.last_start_input.restyle()
+		self.renderBinLines(self, self.q)
+	}
+
+	const origLastStart = self.q.last_bin ? self.q.last_bin.start : null
+	self.dom.last_start_input.restyle = () => {
+		self.dom.last_start_input.style(
+			'color',
+			self.q.last_bin.start > self.num_obj.density_data.maxvalue
+				? 'red'
+				: self.q.last_bin.start != origLastStart
+				? 'green'
+				: ''
+		)
+	}
 }
 
 /******************* Functions for Numerical Custom size bins *******************/
@@ -477,18 +515,18 @@ function renderCustomBinInputs(self) {
 				.map(d => d.start)
 				.join('\n')
 		)
-		.on('change', () => {
-			self.q.lst = self.processCustomBinInputs()
-			renderBoundaryInputDivs(self, self.q.lst)
-			self.renderBinLines(self, self.q)
-		})
+		.on('change', handleChange)
 		.on('keyup', async () => {
 			// enter or backspace/delete
 			if (!client.keyupEnter() && event.key != 8) return
-			self.q.lst = self.processCustomBinInputs()
-			renderBoundaryInputDivs(self, self.q.lst)
-			self.renderBinLines(self, self.q)
+			handleChange.call(this)
 		})
+
+	function handleChange() {
+		self.q.lst = self.processCustomBinInputs()
+		renderBoundaryInputDivs(self, self.q.lst)
+		self.renderBinLines(self, self.q)
+	}
 
 	self.dom.customBinLabelTd = tr.append('td')
 	renderBoundaryInputDivs(self, self.q.lst)

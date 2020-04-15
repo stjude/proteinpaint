@@ -167,7 +167,10 @@ function makeDensityPlot(self) {
 
 function renderBinLines(self, data) {
 	const o = self.num_obj
+	const scaledMinX = Math.round(o.xscale(o.density_data.minvalue))
+	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue))
 	const lines = []
+
 	if (data.type == 'regular') {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
@@ -179,7 +182,12 @@ function renderBinLines(self, data) {
 			lines.push({ x: i, index, scaledX: Math.round(o.xscale(i)) })
 			index++
 		}
-		if (data.last_bin) {
+		const lastVisibleLine = lines
+			.slice()
+			.reverse()
+			.find(d => d.scaledX <= scaledMaxX)
+
+		if (data.last_bin && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
 	} else {
@@ -196,8 +204,6 @@ function renderBinLines(self, data) {
 
 	self.num_obj.binsize_g.selectAll('line').remove()
 
-	const scaledMinX = Math.round(o.xscale(o.density_data.minvalue))
-	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue))
 	let lastScaledX = Math.min(
 		scaledMaxX,
 		lines
@@ -256,6 +262,7 @@ function renderBinLines(self, data) {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
+				self.dom.first_stop_input.restyle()
 				const maxX = self.q.last_bin ? lastScaledX : scaledMaxX
 				middleLines.each(function(c, i) {
 					c.draggedX = c.scaledX + diff
@@ -269,6 +276,7 @@ function renderBinLines(self, data) {
 				self.q.first_bin.stop = value
 			} else {
 				self.dom.last_start_input.property('value', value)
+				self.dom.last_start_input.restyle()
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}

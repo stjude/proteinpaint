@@ -536,9 +536,9 @@ tape('Numerical term: integer custom bins', async test => {
 				type: 'integer',
 				bins: {
 					default: {
-						bin_size: 3,
+						bin_size: 300,
 						stopinclusive: true,
-						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+						first_bin: { startunbounded: true, stop: 1990, stopinclusive: true }
 					}
 				},
 				isleaf: true
