@@ -1,5 +1,6 @@
 import { select, mouse } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, transform, format } from 'd3'
+import { get_bin_label } from '../../modules/termdb.bins'
 
 export async function setDensityPlot(self) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
@@ -273,7 +274,9 @@ function renderBinLines(self, data) {
 			}
 		} else {
 			self.q.lst[d.index + 1].start = value
+			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
+			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
 			self.dom.customBinBoundaryInput.property(
 				'value',
 				self.q.lst
@@ -282,6 +285,7 @@ function renderBinLines(self, data) {
 					.map(d => d.start)
 					.join('\n')
 			)
+			self.dom.customBinLabelInput.property('value', d => d.label)
 		}
 	}
 

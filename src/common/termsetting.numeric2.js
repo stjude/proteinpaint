@@ -98,16 +98,16 @@ export async function setNumericMethods(self) {
 			.split('\n')
 			.filter(d => d != '')
 			.map(d => +d)
-			.sort((a,b) => a < b ? -1 : 1)
+			.sort((a, b) => (a < b ? -1 : 1))
 			.map((d, i) => {
 				const bin = {
 					start: +d,
 					startinclusive: self.q.lst[0].startinclusive,
-					stopinclusive: self.q.lst[0].stopinclusive,
+					stopinclusive: self.q.lst[0].stopinclusive
 				}
 				if (prevBin) {
 					delete prevBin.stopunbounded
-					prevBin.stop = bin.start	
+					prevBin.stop = bin.start
 					const label = inputDivs[i].querySelector('input').value
 					prevBin.label = label ? label : get_bin_label(prevBin, self.q)
 				}
@@ -117,15 +117,17 @@ export async function setNumericMethods(self) {
 			})
 
 		prevBin.stopunbounded = true
+		const label = inputDivs[data.length].querySelector('input').value
+		prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+
 		data.unshift({
 			startunbounded: true,
 			stop: data[0].start,
 			startinclusive: data[0].startinclusive,
-			stopinclusive: data[0].stopinclusive
-			// label: inputDivs[0].querySelector('input').value
+			stopinclusive: data[0].stopinclusive,
+			label: inputDivs[0].querySelector('input').value
 		})
-		data[0].label = get_bin_label(data[0], self.q)
-
+		if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
 		return data
 	}
 }
@@ -157,12 +159,10 @@ async function getDensityPlotData(self) {
 }
 
 function setqDefaults(self) {
+	const dd = self.num_obj.density_data
 	if (!(self.term.id in self.numqByTermIdType)) {
-		const defaultCustomBoundary = 
-			self.num_obj.density_data.maxvalue != self.num_obj.density_data.minvalue
-				? self.num_obj.density_data.minvalue +
-				  (self.num_obj.density_data.maxvalue - self.num_obj.density_data.minvalue) / 2
-				: self.num_obj.density_data.maxvalue
+		const defaultCustomBoundary =
+			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 
 		self.numqByTermIdType[self.term.id] = {
 			regular:
@@ -202,6 +202,12 @@ function setqDefaults(self) {
 	if (!self.q) self.q = {}
 	if (!self.q.type) self.q.type = 'regular'
 	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
+	if (!self.q.numDecimals)
+		self.q.numDecimals = Math.max(('' + dd.minvalue).split('.').length - 1, ('' + dd.maxvalue).split('.').length - 1)
+	if (self.q.lst)
+		self.q.lst.forEach(bin => {
+			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+		})
 	//*** validate self.q ***//
 }
 
@@ -511,10 +517,12 @@ function renderBoundaryInputDivs(self, data) {
 				.append('input')
 				.attr('type', 'text')
 				.attr('value', d.label) // d => !d.label || d.label == get_bin_label(d, self.q) ? "" : d.label)
-				.on('change', function(d,i){
+				.on('change', function(d, i) {
 					self.q.lst[i].label = this.value
 				})
 		})
+
+	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
 }
 
 function renderButtons(self) {

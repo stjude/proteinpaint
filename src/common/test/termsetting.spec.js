@@ -453,7 +453,7 @@ tape('Numerical term: fixed bins', async test => {
 	)
 })
 
-tape('Numerical term: custom bins', async test => {
+tape('Numerical term: float custom bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(1)
 
@@ -521,6 +521,98 @@ tape('Numerical term: custom bins', async test => {
 		.node()
 		.querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
+})
+
+tape('Numerical term: integer custom bins', async test => {
+	test.timeoutAfter(3000)
+	test.plan(3)
+
+	const opts = getOpts({
+		tsData: {
+			term: {
+				id: 'yeardx',
+				name: 'Year of Cancer Diagnosis',
+				unit: 'year',
+				type: 'integer',
+				bins: {
+					default: {
+						bin_size: 3,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					}
+				},
+				isleaf: true
+			},
+			q: {
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						stop: 1970,
+						label: '<=1970'
+					},
+					{
+						startinclusive: false,
+						stopinclusive: true,
+						start: 1970,
+						stop: 1990,
+						label: '1970 to 1990'
+					},
+					{
+						stopunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						start: 1990
+						//label: '>1990'
+					}
+				]
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	// create enter event to use for inputs of bin edit menu
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+
+	await sleep(300)
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d
+		.select('.binsize_g')
+		.node()
+		.querySelectorAll('line')
+	test.equal(lines.length, 2, 'should have 2 lines')
+	const tickTexts = tip.d
+		.select('svg')
+		.selectAll('.tick')
+		.selectAll('text')
+	test.equal(
+		tickTexts
+			.filter(function() {
+				return this.innerHTML.includes('.')
+			})
+			.size(),
+		0,
+		'should not have dots in the x-axis tick labels'
+	)
+	test.equal(
+		tickTexts
+			.filter(function() {
+				return this.innerHTML.includes(',')
+			})
+			.size(),
+		0,
+		'should not have commas in the x-axis tick labels'
+	)
 })
 
 tape('Conditional term', async test => {
