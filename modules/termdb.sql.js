@@ -937,7 +937,7 @@ thus less things to worry about...
 			JOINCLAUSE 
 			WHERE parent_id is null
 			GROUP BY id
-			ORDER BY child_order`
+			ORDER BY child_order ASC`
 		)
 		const cache = new Map()
 		q.getRootTerms = (cohortStr = '') => {
@@ -1002,7 +1002,7 @@ thus less things to worry about...
 			JOINCLAUSE 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
 			GROUP BY id
-			ORDER BY child_order`)
+			ORDER BY child_order ASC`)
 
 		const cache = new Map()
 		q.getTermChildren = (id, cohortStr = '') => {
