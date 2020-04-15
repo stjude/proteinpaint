@@ -242,13 +242,20 @@ function renderBinLines(self, data) {
 
 	const middleLines = self.num_obj.binsize_g.selectAll('line').filter((d, i) => !d.isDraggable)
 
-	function dragged(d) {
-		const line = select(this)
+	function dragged(b) {
 		const draggedX = mouse(this)[0]
 		if (draggedX <= scaledMinX || draggedX >= scaledMaxX) return
+		const line =
+			self.q.type == 'regular'
+				? select(this)
+				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
+				? select(this.previousSibling)
+				: b.index < lines.length - 1 && draggedX >= lines[b.index + 1].scaledX
+				? select(this.nextSibling)
+				: select(this)
+		const d = line.datum()
 
 		d.draggedX = draggedX
-		const diff = d.draggedX - d.scaledX
 		line
 			.attr('x1', d.draggedX)
 			.attr('y1', 0)
@@ -264,6 +271,7 @@ function renderBinLines(self, data) {
 				self.dom.first_stop_input.property('value', value)
 				self.dom.first_stop_input.restyle()
 				const maxX = self.q.last_bin ? lastScaledX : scaledMaxX
+				const diff = d.draggedX - d.scaledX
 				middleLines.each(function(c, i) {
 					c.draggedX = c.scaledX + diff
 					select(this)
@@ -289,19 +297,23 @@ function renderBinLines(self, data) {
 				'value',
 				self.q.lst
 					.slice(1)
-					.sort(sortByStart)
 					.map(d => d.start)
 					.join('\n')
 			)
-			self.dom.customBinLabelInput.property('value', d => d.label)
+			self.dom.customBinLabelInput.property('value', c => c.label)
 		}
 	}
 
-	function sortByStart(a, b) {
-		return a.start < b.start ? -1 : 1
-	}
+	function dragend(b) {
+		const draggedX = mouse(this)[0]
+		const line =
+			b.index > 0 && draggedX <= lines[b.index - 1].scaledX
+				? select(this.previousSibling)
+				: b.index < lines.length - 1 && draggedX >= lines[b.index + 1].scaledX
+				? select(this.nextSibling)
+				: select(this)
+		const d = line.datum()
 
-	function dragend(d) {
 		d.scaledX = d.draggedX
 		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
 		if (self.q.type == 'regular') {
