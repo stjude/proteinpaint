@@ -126,6 +126,8 @@ tape('use_bins_less', async test => {
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
 	delete opts.pill.Inner.opts.use_bins_less
+	delete opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	delete opts.pill.Inner.q
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
 	await sleep(300)
@@ -135,7 +137,7 @@ tape('use_bins_less', async test => {
 	test.end()
 })
 
-tape('Caterogical term', async test => {
+tape('Categorical term', async test => {
 	const opts = getOpts({
 		tsData: {
 			term: {
@@ -226,7 +228,10 @@ tape('Caterogical term', async test => {
 	test.end()
 })
 
-tape('Numerical term', async test => {
+tape('Numerical term: range boundaries', async test => {
+	test.timeoutAfter(3000)
+	test.plan(5)
+
 	const opts = getOpts({
 		tsData: {
 			term: {
@@ -257,22 +262,103 @@ tape('Numerical term', async test => {
 
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
+
+	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
+	test.equal(tip.d.node().querySelectorAll('select').length, 1, 'Should have a select dropdown')
+	test.equal(
+		tip.d
+			.node()
+			.querySelector('select')
+			.previousSibling.innerHTML.toLowerCase(),
+		'boundary inclusion',
+		'Should label the select dropdown as Boundary Inclusion'
+	)
+	test.equal(
+		tip.d
+			.node()
+			.querySelector('select')
+			.querySelectorAll('option').length,
+		2,
+		'Should have 2 select options'
+	)
+
+	await sleep(50)
+	const select1 = tip.d.node().querySelector('select')
+	const option1 = select1.querySelectorAll('option')[1]
+	select1.value = option1.value
+	select1.dispatchEvent(new Event('change'))
+	await sleep(50)
+	const q1 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
+
+	const select0 = tip.d.node().querySelector('select')
+	const option0 = select0.querySelectorAll('option')[0]
+	select0.value = option0.value
+	select0.dispatchEvent(new Event('change'))
+	await sleep(50)
+	const q0 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
+})
+
+tape('Numerical term: fixed bins', async test => {
+	test.timeoutAfter(3000)
+	test.plan(9)
+
+	const opts = getOpts({
+		tsData: {
+			term: {
+				id: 'agedx',
+				name: 'Age at Cancer Diagnosis',
+				unit: 'Years',
+				type: 'float',
+				bins: {
+					default: {
+						bin_size: 3,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					}
+				},
+				isleaf: true
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	// create enter event to use for inputs of bin edit menu
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+
+	await sleep(300)
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d
+		.select('.binsize_g')
+		.node()
+		.querySelectorAll('line')
+	test.equal(lines.length, 8, 'should have 8 lines')
+	// first line should be draggable
+	// other lines should not be draggable if there is no q.last_bin
 
 	// test numeric bin menu
-	await sleep(800)
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
 		'Bin Size',
 		'Should have section for "bin size" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
 		'First Bin Stop',
 		'Should have section for "First bin" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][3]).selectAll('td')._groups[0][0].innerText,
+		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
 		'Last Bin Start',
 		'Should have section for "Last bin" edit'
 	)
@@ -281,9 +367,8 @@ tape('Numerical term', async test => {
 	const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
 	bin_size_input.value = 5
 
-	//press 'Enter' to update bins
-	bin_size_input.addEventListener('keyup', () => {})
-	bin_size_input.dispatchEvent(enter_event)
+	//trigger 'change' to update bins
+	bin_size_input.dispatchEvent(new Event('change'))
 
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
@@ -292,14 +377,14 @@ tape('Numerical term', async test => {
 	)
 
 	//trigger and test first_bin_change
-	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0]
+	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0]
 	first_bin_input.value = 7
 
-	//press 'Enter' to update bins
-	first_bin_input.addEventListener('keyup', () => {})
-	first_bin_input.dispatchEvent(enter_event)
+	//trigger 'change' to update bins
+	first_bin_input.dispatchEvent(new Event('change'))
+
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('input')._groups[0][0].value,
+		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0].value,
 		'7',
 		'Should change "first bin" from input'
 	)
@@ -307,7 +392,7 @@ tape('Numerical term', async test => {
 	//trigger and test last_bin change
 	const last_bin_custom_radio = tip.d
 		.node()
-		.querySelectorAll('tr')[3]
+		.querySelectorAll('tr')[2]
 		.querySelectorAll('div')[0]
 		.querySelectorAll('input')[1]
 	d3s.select(last_bin_custom_radio).property('checked', true)
@@ -315,20 +400,19 @@ tape('Numerical term', async test => {
 
 	const last_bin_input = tip.d
 		.node()
-		.querySelectorAll('tr')[3]
+		.querySelectorAll('tr')[2]
 		.querySelectorAll('div')[1]
 		.querySelectorAll('input')[0]
 
 	last_bin_input.value = 20
 
-	//press 'Enter' to update bins
-	last_bin_input.addEventListener('keyup', () => {})
-	last_bin_input.dispatchEvent(enter_event)
+	//trigger 'change' to update bins
+	last_bin_input.dispatchEvent(new Event('change'))
 
 	test.equal(
 		tip.d
 			.node()
-			.querySelectorAll('tr')[3]
+			.querySelectorAll('tr')[2]
 			.querySelectorAll('div')[1]
 			.querySelectorAll('input')[0].value,
 		'20',
@@ -336,7 +420,7 @@ tape('Numerical term', async test => {
 	)
 
 	// test 'apply' button
-	const apply_btn = tip.d.selectAll('.apply_btn')._groups[0][0]
+	const apply_btn = tip.d.selectAll('button')._groups[0][0]
 	apply_btn.click()
 	pilldiv.click()
 	await sleep(500)
@@ -351,9 +435,11 @@ tape('Numerical term', async test => {
 	)
 
 	// test 'reset' button
-	const reset_btn = tip.d.selectAll('.reset_btn')._groups[0][0]
+	const reset_btn = tip.d.selectAll('button')._groups[0][1]
 	reset_btn.click()
+	await sleep(100)
 	apply_btn.click()
+	await sleep(100)
 	pilldiv.click()
 	await sleep(500)
 
@@ -365,17 +451,76 @@ tape('Numerical term', async test => {
 		'3',
 		'Should reset the bins by "Reset" button'
 	)
+})
 
-	//trigger and test last_bin change
-	const custom_radio = tip.d
+tape('Numerical term: custom bins', async test => {
+	test.timeoutAfter(3000)
+	test.plan(1)
+
+	const opts = getOpts({
+		tsData: {
+			term: {
+				id: 'agedx',
+				name: 'Age at Cancer Diagnosis',
+				unit: 'Years',
+				type: 'float',
+				bins: {
+					default: {
+						bin_size: 3,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					}
+				},
+				isleaf: true
+			},
+			q: {
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						stop: 5,
+						label: '<=5 years old'
+					},
+					{
+						startinclusive: false,
+						stopinclusive: true,
+						start: 5,
+						stop: 12,
+						label: '5 to 12 years old'
+					},
+					{
+						stopunbounded: true,
+						startinclusive: false,
+						stopinclusive: true,
+						start: 12,
+						label: '> 12 years old'
+					}
+				]
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	// create enter event to use for inputs of bin edit menu
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
+	})
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+
+	await sleep(300)
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d
+		.select('.binsize_g')
 		.node()
-		.querySelectorAll('div')[0]
-		.querySelectorAll('input')[6]
-
-	d3s.select(custom_radio).property('checked', true)
-	custom_radio.dispatchEvent(new Event('change'))
-	tip.hide()
-	test.end()
+		.querySelectorAll('line')
+	test.equal(lines.length, 2, 'should have 2 lines')
 })
 
 tape('Conditional term', async test => {
