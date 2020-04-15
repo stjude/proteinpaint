@@ -9,14 +9,15 @@ create table terms (
   id character varying(100) not null,
   name character varying(100) not null,
   parent_id character varying(100),
-  jsondata json not null
+  jsondata json not null,
+  child_order integer not null
 );
 
 .import termdb terms
 
 -- only do this if cohort selection is enabled
 -- using * for parent id of subcohort makes it hidden from the tree (but still searchable by name)
-INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}');
+INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}', 0);
 
 update terms set parent_id=null where parent_id='';
 create index terms_id on terms(id);
@@ -130,13 +131,3 @@ CREATE INDEX p_value_for on precomputed(value_for);
 -- imported filename must match the 
 -- dataset/sjlife2.hg38.js:cohort.termdb.precomputed_file value
 .import chronicevents.precomputed precomputed
-
-
-DROP TABLE IF EXISTS parent2childrenorder;
-CREATE TABLE parent2childrenorder(
-  term_id TEXT,
-  childrenorder json not null -- array of term id!!
-);
-.import parent2childrenorder parent2childrenorder
-UPDATE parent2childrenorder SET term_id=null WHERE term_id='';
-CREATE INDEX i_parent2childrenorder on parent2childrenorder(term_id);

@@ -33,7 +33,8 @@ for (const line of fs
 		id,
 		name: l[1],
 		parentid: l[2],
-		json: JSON.parse(l[3])
+		json: JSON.parse(l[3]),
+		child_order: l[4]
 	})
 }
 
@@ -94,7 +95,7 @@ for (const k in rawgrading.chcs) {
 {
 	const lines = []
 	for (const d of ID2term.values()) {
-		lines.push(d.id + '\t' + d.name + '\t' + d.parentid + '\t' + JSON.stringify(d.json))
+		lines.push(d.id + '\t' + d.name + '\t' + d.parentid + '\t' + JSON.stringify(d.json) + '\t' + d.child_order)
 	}
 	fs.writeFileSync(path.join(dir, 'termdb.updated'), lines.join('\n') + '\n')
 }
