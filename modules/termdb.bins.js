@@ -137,9 +137,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const summary = summaryfxn(percentiles)
 	if (!summary || typeof summary !== 'object') throw 'invalid returned value by summaryfxn'
 	bc.results = { summary }
-	const decimals = (""+bc.bin_size).split(".")[1]
-	bc.numDecimals = decimals && decimals.length || 0
-	bc.binLabelFormatter = d3format.format('.'+ bc.numDecimals +'r')
+	const decimals = ('' + bc.bin_size).split('.')[1]
+	bc.numDecimals = (decimals && decimals.length) || 0
+	bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'r')
 
 	const orderedLabels = []
 	const min = bc.first_bin.startunbounded
@@ -198,7 +198,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
 		currBin.label = get_bin_label(currBin, bc)
 		bins.push(currBin)
-		if (currBin.stopunbounded || currBin.stop >= max) break;
+		if (currBin.stopunbounded || currBin.stop >= max) break
 
 		const upper = currBin.stop + bc.bin_size
 		const previousStop = currBin.stop
@@ -245,8 +245,8 @@ function get_bin_label(bin, binconfig) {
 */
 	const bc = binconfig
 	const first_bin = bc.first_bin ? bc.first_bin : bc.lst[0]
-	if (!('numDecimals' in bc)) bc.numDecimals = ("" + first_bin.stop).split('.').length - 1
-	if (typeof bc.binLabelFormatter !== 'function') bc.binLabelFormatter = d3format.format('.'+ bc.numDecimals +'r')
+	if (!('numDecimals' in bc)) bc.numDecimals = ('' + first_bin.stop).split('.').length - 1
+	if (typeof bc.binLabelFormatter !== 'function') bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'f')
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
@@ -291,7 +291,7 @@ function get_bin_label(bin, binconfig) {
 				: binconfig.results.summary.max
 			const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
 			if (v0 == v1) return v0.toString()
-			for(let i=0; i<10; i++) {
+			for (let i = 0; i < 10; i++) {
 				//const v0f = v0.toFixed(bc.numDecimals + i)
 				const v1f = v1.toFixed(bc.numDecimals + i)
 				if (+v1f > v0) return v0 + ' to ' + v1f
