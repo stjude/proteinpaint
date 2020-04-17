@@ -21,6 +21,8 @@ tk {}
 */
 
 const labyspace = 5
+const buttonrowheight = 20
+const stackpagesize = 60
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -72,7 +74,6 @@ export async function loadTk(tk, block) {
 		// reset max
 
 		tk.data = await getData(tk, block)
-		console.log(tk.data.messagerowheights)
 		if (tk.data.colorscale) {
 			// available from 1st query, cache
 			tk.colorscale = tk.data.colorscale
@@ -83,7 +84,9 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		tk.img.attr('width', 0).attr('height', 0)
+		tk.dom.img_fullstack.attr('width', 0).attr('height', 0)
+		tk.dom.img_partstack.attr('width', 0).attr('height', 0)
+		tk.dom.img_cover.attr('width', 0).attr('height', 0)
 		tk.height_main = tk.height = 100
 		block.tkcloakoff(tk, { error: e.message || e })
 	}
@@ -91,8 +94,8 @@ export async function loadTk(tk, block) {
 	block.block_setheight()
 }
 
-async function getData(tk, block) {
-	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions)]
+async function getData(tk, block, additional = []) {
+	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), ...additional]
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized
@@ -110,10 +113,26 @@ async function getData(tk, block) {
 
 function renderTk(tk, block) {
 	update_boxes(tk, block)
-	tk.img
-		.attr('xlink:href', tk.data.src)
-		.attr('width', tk.data.width)
-		.attr('height', tk.data.height)
+
+	if (tk.partstack) {
+		tk.dom.buttonrow.transition().attr('transform', 'scale(1)')
+		tk.dom.imgg.transition().attr('transform', 'translate(0,' + buttonrowheight + ')')
+		tk.dom.img_fullstack.attr('width', 0)
+		tk.dom.img_partstack
+			.attr('xlink:href', tk.data.src)
+			.attr('width', tk.data.width)
+			.attr('height', tk.data.height)
+	} else {
+		tk.dom.buttonrow.transition().attr('transform', 'scale(0)')
+		tk.dom.imgg.transition().attr('transform', 'translate(0,0)')
+		tk.dom.img_fullstack
+			.attr('xlink:href', tk.data.src)
+			.attr('width', tk.data.width)
+			.attr('height', tk.data.height)
+		tk.dom.img_partstack.attr('width', 0)
+	}
+	tk.dom.img_cover.attr('width', tk.data.width).attr('height', tk.data.height)
+
 	tk.nochr = tk.data.nochr
 
 	tk.tklabel.each(function() {
@@ -129,7 +148,7 @@ function renderTk(tk, block) {
 		})
 	block.setllabel()
 
-	tk.height_main = tk.height = tk.data.height
+	tk.height_main = tk.height = (tk.partstack ? buttonrowheight : 0) + tk.data.height
 	tk.height_main += tk.toppad + tk.bottompad
 }
 
@@ -167,15 +186,84 @@ function update_box_stay(tk, block) {
 }
 
 function makeTk(tk, block) {
+	tk.dom = {
+		buttonrow: tk.glider.append('g').attr('transform', 'scale(0)'),
+		imgg: tk.glider.append('g')
+	}
+	tk.dom.buttonrow
+		.append('text')
+		.attr('y', 15)
+		.text('Full stack')
+		.attr('class', 'sja_clbtext')
+		.on('click', async () => {
+			delete tk.partstack
+			block.tkcloakon(tk)
+			tk.data = await getData(tk, block)
+			renderTk(tk, block)
+			block.tkcloakoff(tk, {})
+			block.block_setheight()
+		})
+	tk.dom.buttonrow
+		.append('text')
+		.attr('x', 120)
+		.attr('y', 15)
+		.text('<< previous')
+		.attr('class', 'sja_clbtext')
+		.on('click', async () => {
+			tk.partstack = {
+				start: Math.max(0, tk.partstack.start - stackpagesize),
+				stop: tk.partstack.start
+			}
+			block.tkcloakon(tk)
+			tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+			renderTk(tk, block)
+			block.tkcloakoff(tk, {})
+			block.block_setheight()
+		})
+	tk.dom.buttonrow
+		.append('text')
+		.attr('x', 240)
+		.attr('y', 15)
+		.text('forward >>')
+		.attr('class', 'sja_clbtext')
+		.on('click', async () => {
+			tk.partstack = {
+				start: tk.partstack.stop,
+				stop: tk.partstack.stop + stackpagesize
+			}
+			block.tkcloakon(tk)
+			tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+			renderTk(tk, block)
+			block.tkcloakoff(tk, {})
+			block.block_setheight()
+		})
+	tk.dom.img_fullstack = tk.dom.imgg.append('image')
+	tk.dom.img_partstack = tk.dom.imgg.append('image')
+	// put flyers behind cover
+	tk.box_move = tk.dom.imgg
+		.append('rect')
+		.attr('stroke', 'black')
+		.attr('fill', 'none')
+	tk.box_stay = tk.dom.imgg
+		.append('rect')
+		.attr('stroke', 'magenta')
+		.attr('fill', 'none')
+
 	let mousedownx // not to trigger clicking after press and drag on a read
-	tk.img = tk.glider
-		.append('image')
+	tk.dom.img_cover = tk.dom.imgg
+		.append('rect')
+		.attr('fill', 'white')
+		.attr('fill-opacity', 0)
 		.on('mousedown', () => {
 			mousedownx = d3event.clientX
 		})
 		.on('mousemove', () => {
+			if (tk.data.allowpartstack) {
+				// to show horizontal line
+				return
+			}
 			if (!tk.data.templatebox) return
-			const [mx, my] = d3mouse(tk.img.node())
+			const [mx, my] = d3mouse(tk.dom.img_cover.node())
 			for (const t of tk.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
@@ -190,8 +278,12 @@ function makeTk(tk, block) {
 		})
 		.on('click', () => {
 			if (mousedownx != d3event.clientX) return
+			const [mx, my] = d3mouse(tk.dom.img_cover.node())
+			if (tk.data.allowpartstack) {
+				do_partstack(tk, block, my - tk.data.messagerowheights)
+				return
+			}
 			if (!tk.data.templatebox) return
-			const [mx, my] = d3mouse(tk.img.node())
 			for (const t of tk.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
@@ -230,15 +322,6 @@ function makeTk(tk, block) {
 			}
 		})
 
-	tk.box_move = tk.glider
-		.append('rect')
-		.attr('stroke', 'black')
-		.attr('fill', 'none')
-	tk.box_stay = tk.glider
-		.append('rect')
-		.attr('stroke', 'magenta')
-		.attr('fill', 'none')
-
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
@@ -251,9 +334,10 @@ function makeTk(tk, block) {
 		.on('click', () => {
 			configPanel(tk, block)
 		})
-}
 
-function showboxattemplate(tk, block, ismovebox) {}
+	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
+	tk.readpane.pane.style('display', 'none')
+}
 
 function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
@@ -306,9 +390,6 @@ get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
 */
-	if (!tk.readpane) {
-		tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
-	}
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
@@ -342,4 +423,19 @@ if is pair mode, is the template
 	}
 
 	tk.readpane.body.append('div').html(data.html)
+}
+
+async function do_partstack(tk, block, y) {
+	// tk.data is still old, full stack
+	const clickstackidx = Math.floor(y / tk.data.stackheight)
+	tk.stackcount = tk.data.stackcount // should only be for full stack number
+	tk.partstack = {
+		start: Math.max(0, clickstackidx - stackpagesize / 2),
+		stop: Math.min(tk.data.stackcount, clickstackidx + stackpagesize / 2)
+	}
+	block.tkcloakon(tk)
+	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+	renderTk(tk, block)
+	block.tkcloakoff(tk, {})
+	block.block_setheight()
 }
