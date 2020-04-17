@@ -27,6 +27,7 @@ q {}
 .stackspace
 .stacksegspacing
 .stacks[]
+.templates[]
 .overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 .overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
 .messagerows[ {} ]
@@ -67,6 +68,7 @@ do_query
 	get_templates
 		parse_one_segment
 	stack_templates
+		may_trimstacks
 	poststack_adjustq
 		getstacksizebystacks
 		get_refseq
@@ -166,6 +168,13 @@ async function get_q(genome, req) {
 		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
 	}
 
+	if (req.query.stackstart) {
+		q.partstack = {
+			start: Number(req.query.stackstart),
+			stop: Number(req.query.stackstop)
+		}
+	}
+
 	if (req.query.nochr) {
 		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
 	} else {
@@ -208,12 +217,12 @@ async function do_query(q) {
 		})
 	}
 
-	const templates = get_templates(q)
+	get_templates(q) // q.templates
 
-	stack_templates(q, templates)
+	stack_templates(q)
 	await poststack_adjustq(q)
 
-	finalize_templates(templates, q) // set q.canvasheight
+	finalize_templates(q) // set q.canvasheight
 
 	const canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	const canvas = createCanvas(canvaswidth, q.canvasheight)
@@ -221,18 +230,21 @@ async function do_query(q) {
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
-	plot_messagerows(ctx, q, canvaswidth)
+	result.messagerowheights = plot_messagerows(ctx, q, canvaswidth)
 
-	for (const template of templates) {
+	for (const template of q.templates) {
 		plot_template(ctx, template, q)
 	}
-	plot_insertions(ctx, templates, q)
+	plot_insertions(ctx, q)
 
-	if (q.asPaired) result.count.t = templates.length
+	if (q.asPaired) result.count.t = q.templates.length
 	result.src = canvas.toDataURL()
 	result.width = canvaswidth
 	result.height = q.canvasheight
-	result.templatebox = q.returntemplatebox
+	result.stackheight = q.stackheight
+	result.stackcount = q.stacks.length
+	if (q.returntemplatebox) result.templatebox = q.returntemplatebox
+	if (q.allowpartstack) result.allowpartstack = q.allowpartstack
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
 }
@@ -288,7 +300,8 @@ function get_templates(q) {
 				})
 			}
 		}
-		return lst
+		q.templates = lst
+		return
 	}
 	// paired segments are joined together; a template with segments possibly from multiple regions
 	const qname2template = new Map()
@@ -315,7 +328,8 @@ function get_templates(q) {
 			}
 		}
 	}
-	return [...qname2template.values()]
+	q.templates = [...qname2template.values()]
+	return
 }
 
 function parse_one_segment(line, r, ridx, keepallboxes) {
@@ -526,8 +540,15 @@ super high number of stacks will result in fractional row height and blurry rend
 		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
 		r.to_qual = r.ntwidth >= minntwidth_toqual
 	}
-	if (q.stackheight >= 5 && q.totalnumreads < 3000) {
-		q.returntemplatebox = []
+	if (q.stacks.length) {
+		// has reads/templates for rendering, support below
+		if (q.stackheight >= 7 && q.totalnumreads < 3000) {
+			q.returntemplatebox = []
+		} else {
+			if (!q.partstack) {
+				q.allowpartstack = true // to inform client
+			}
+		}
 	}
 }
 
@@ -543,14 +564,14 @@ function getstacksizebystacks(numofstacks) {
 	return [a, 0]
 }
 
-function stack_templates(q, templates) {
+function stack_templates(q) {
 	// stack by on screen x1 x2 position of each template, only set stack idx to each template
 	// actual y position will be set later after stackheight is determined
 	// adds q.stacks[]
 	// stacking code not reusable for the special spacing calculation
-	templates.sort((i, j) => i.x1 - j.x1)
+	q.templates.sort((i, j) => i.x1 - j.x1)
 	q.stacks = [] // each value is screen pixel pos of each stack
-	for (const template of templates) {
+	for (const template of q.templates) {
 		let stackidx = null
 		for (let i = 0; i < q.stacks.length; i++) {
 			if (q.stacks[i] + q.stacksegspacing < template.x1) {
@@ -565,6 +586,20 @@ function stack_templates(q, templates) {
 		}
 		template.y = stackidx
 	}
+	may_trimstacks(q)
+}
+
+function may_trimstacks(q) {
+	if (!q.partstack) return
+	// should be a positive integer
+	const lst = q.templates.filter(i => i.y >= q.partstack.start && i.y <= q.partstack.stop)
+	lst.forEach(i => (i.y -= q.partstack.start))
+	q.templates = lst
+	q.stacks = []
+	for (let i = q.partstack.start; i <= q.partstack.stop; i++) {
+		q.stacks.push(0)
+	}
+	q.returntemplatebox = [] // always set this
 }
 
 async function get_refseq(g, coord) {
@@ -574,7 +609,7 @@ async function get_refseq(g, coord) {
 	return l.join('').toUpperCase()
 }
 
-function finalize_templates(templates, q) {
+function finalize_templates(q) {
 	/*
 for each template:
 
@@ -588,9 +623,9 @@ for each box:
 at the end, set q.canvasheight
 */
 
-	const stacky = get_stacky(templates, q)
+	const stacky = get_stacky(q)
 
-	for (const template of templates) {
+	for (const template of q.templates) {
 		template.y = stacky[template.y]
 
 		for (const segment of template.segments) {
@@ -654,16 +689,17 @@ function plot_messagerows(ctx, q, canvaswidth) {
 		ctx.fillText(row.t, canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
+	return y
 }
 
-function get_stacky(templates, q) {
+function get_stacky(q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
 	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
-	overlapRP_setflag(templates, q)
+	overlapRP_setflag(q)
 	if (q.overlapRP_multirows) {
 		// expand row height for stacks with overlapping read pairs
-		for (const template of templates) {
+		for (const template of q.templates) {
 			if (template.segments.length <= 1) continue
 			template.height = getrowheight_template_overlapread(template, q.stackheight)
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
@@ -678,7 +714,7 @@ function get_stacky(templates, q) {
 	return stacky
 }
 
-function overlapRP_setflag(templates, q) {
+function overlapRP_setflag(q) {
 	if (!q.asPaired) return
 	for (const r of q.regions) {
 		if (r.ntwidth <= minntwidth_overlapRPmultirows) return
@@ -911,13 +947,13 @@ function plot_segment(ctx, segment, y, q) {
 	}
 }
 
-function plot_insertions(ctx, templates, q) {
+function plot_insertions(ctx, q) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
 if b.qual is available, set text color based on it
 */
-	for (const template of templates) {
+	for (const template of q.templates) {
 		for (const segment of template.segments) {
 			const r = q.regions[segment.ridx]
 			const insertions = segment.boxes.filter(i => i.opr == 'I')
@@ -1139,8 +1175,8 @@ async function convertread(seg, genome, query) {
 		}
 		if (b.opr == 'D' || b.opr == 'N') {
 			if (b.len >= 20) {
-				reflst.push('<td style="font-size:.8em;opacity:.5">' + b.len + ' bp</td>')
-				querylst.push('<td style="color:black">-----------</td>')
+				reflst.push('<td style="font-size:.8em;opacity:.5;white-space:nowrap">' + b.len + ' bp</td>')
+				querylst.push('<td style="color:black;white-space:nowrap">-----------</td>')
 			} else {
 				for (let i = 0; i < b.len; i++) {
 					reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
