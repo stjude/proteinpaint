@@ -542,7 +542,7 @@ super high number of stacks will result in fractional row height and blurry rend
 	}
 	if (q.stacks.length) {
 		// has reads/templates for rendering, support below
-		if (q.stackheight >= 5 && q.totalnumreads < 3000) {
+		if (q.stackheight >= 7 && q.totalnumreads < 3000) {
 			q.returntemplatebox = []
 		} else {
 			if (!q.partstack) {
@@ -696,7 +696,7 @@ function get_stacky(q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
 	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
-	overlapRP_setflag(q.templates, q)
+	overlapRP_setflag(q)
 	if (q.overlapRP_multirows) {
 		// expand row height for stacks with overlapping read pairs
 		for (const template of q.templates) {
