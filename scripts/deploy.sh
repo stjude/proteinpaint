@@ -35,13 +35,12 @@ else
 	DEPLOYER=$3
 fi
 
-
 ########################
 # PROCESS COMMIT INFO
 ########################
 
 # convert $REV to standard numeric notation
-if [[ $REV=="HEAD" ]]; then
+if [[ $REV == "HEAD" ]]; then
 	if [[ -d .git ]]; then
 		REV=$(git rev-parse --short HEAD)
 	fi
@@ -51,7 +50,6 @@ if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
 	echo "Unable to convert the HEAD revision into a Git commit hash."
 	exit 1
 fi
-
 
 #####################
 # CONTEXTUAL CONFIG
@@ -82,7 +80,7 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	URL="//pp-test.stjude.org/pp"
 	SUBDOMAIN=pp-test
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" || "$ENV" == "jump-prod" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
@@ -109,6 +107,8 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	#
 	if [[ "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
 		TEMPHOST=pp-irp
+	elif [[ "$ENV" == "jump-prod" ]]; then
+		TEMPHOST=svldtemp01
 	fi
 else
 	echo "Environment='$ENV' is not supported"
@@ -135,6 +135,7 @@ if [[ "$ENV" != "scp-prod" ]]; then
 	# npm update
 
 	# create webpack bundle
+	echo "Packing bundle ..."
 	if [[ "$ENV" == "ppdev" ]]; then
 		# option to simply reuse and deploy live bundled code.
 		# This is slightly better than deploy.ppr.sh in that 
@@ -145,13 +146,13 @@ if [[ "$ENV" != "scp-prod" ]]; then
 		cp ../public/bin/* public/builds/$SUBDOMAIN
 		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
 	else 
-		webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
 	fi
 
 	# no-babel-polyfill version for use in sjcloud, 
 	# to avoid conflict with external code
 	if [[ "$ENV" == "public-prod" ]]; then
-		webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
+		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
 	fi
 
 	# create dirs to put extracted files
@@ -192,16 +193,25 @@ fi
 # DEPLOY
 ##########
 
-if [[ "$ENV" == "vpn-prod" ]]; then
-	TEMPHOST=pp-irp
+if [[ "$ENV" == "jump-prod" ]]; then
+	echo "scp'ing $APP-$REV.tgz tar ball to jump box at $TEMPHOST ..."
+	scp $APP-$REV.tgz gnomeuser@$TEMPHOST:~
+	echo "deploying from jump box to $REMOTEHOST"
+	ssh -t gnomeuser@$TEMPHOST "
+	# uncomment when there is git in jump box
+	# git pull
+	ssh -t $DEPLOYER@$REMOTEHOST './deploy.sh scp-prod $REV'
+"
+	exit 1
+elif [[ "$ENV" == "vpn-prod" ]]; then
 	scp $APP-$REV.tgz $DEPLOYER@$TEMPHOST:~
 	echo "Deployed to $TEMPHOST. Whitelisted IP address required to access $REMOTEHOST."
 	exit 1
 elif [[ "$ENV" == "scp-prod" ]]; then
-	scp $DEPLOYER@$TEMPHOST:~/$APP-$REV.tgz .
-	ssh -t $DEPLOYER@$TEMPHOST "
-		rm ~/$APP-$REV.tgz
-	"
+	if [[ ! -f $APP-$REV.tgz ]]; then
+		scp $DEPLOYER@$TEMPHOST:~/$APP-$REV.tgz .
+	fi
+	ssh -t $DEPLOYER@$TEMPHOST "rm ~/$APP-$REV.tgz"
 fi
 
 scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
