@@ -165,7 +165,7 @@ async function get_q(genome, req) {
 		messagerows: []
 	}
 	if (isurl) {
-		q.dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
+		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
 	}
 
 	if (req.query.stackstart) {
@@ -1095,7 +1095,7 @@ async function query_oneread(req, r) {
 	if (e) throw e
 	let dir
 	if (isurl) {
-		dir = await cache_index_promise(req.query.indexURL || _file + '.bai')
+		dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
 	}
 	//const pos = Number(req.query.pos)
 	//if (!Number.isInteger(pos)) throw '.pos not integer'
