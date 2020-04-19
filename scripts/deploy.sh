@@ -39,16 +39,18 @@ fi
 # PROCESS COMMIT INFO
 ########################
 
-# convert $REV to standard numeric notation
-if [[ $REV == "HEAD" ]]; then
-	if [[ -d .git ]]; then
-		REV=$(git rev-parse --short HEAD)
+if [[ "$ENV" != "scp-prod" ]]; then 
+	# convert $REV to standard numeric notation
+	if [[ $REV == "HEAD" ]]; then
+		if [[ -d .git ]]; then
+			REV=$(git rev-parse --short HEAD)
+		fi
 	fi
-fi
 
-if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
-	echo "Unable to convert the HEAD revision into a Git commit hash."
-	exit 1
+	if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
+		echo "Unable to convert the HEAD revision into a Git commit hash."
+		exit 1
+	fi
 fi
 
 #####################
@@ -57,7 +59,7 @@ fi
 
 APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
-GIT_REMOTE=http://cmpb-devops.stjude.org/gitlab/viz/proteinpaint.git
+GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 
 if [[ "$ENV" == "internal-stage" || "$ENV" == "pp-int-test" || "$ENV" == "pp-irt" ]]; then
 	DEPLOYER=genomeuser
@@ -196,11 +198,13 @@ fi
 if [[ "$ENV" == "jump-prod" ]]; then
 	echo "scp'ing $APP-$REV.tgz tar ball to jump box at $TEMPHOST ..."
 	scp $APP-$REV.tgz gnomeuser@$TEMPHOST:~
+	scp ./scripts/deploy.sh gnomeuser@$TEMPHOST:~
 	echo "deploying from jump box to $REMOTEHOST"
 	ssh -t gnomeuser@$TEMPHOST "
+	cd ~
 	# uncomment when there is git in jump box
 	# git pull
-	ssh -t $DEPLOYER@$REMOTEHOST './deploy.sh scp-prod $REV'
+	./deploy.sh scp-prod $REV
 "
 	exit 1
 elif [[ "$ENV" == "vpn-prod" ]]; then
@@ -210,8 +214,8 @@ elif [[ "$ENV" == "vpn-prod" ]]; then
 elif [[ "$ENV" == "scp-prod" ]]; then
 	if [[ ! -f $APP-$REV.tgz ]]; then
 		scp $DEPLOYER@$TEMPHOST:~/$APP-$REV.tgz .
+		ssh -t $DEPLOYER@$TEMPHOST "rm ~/$APP-$REV.tgz"
 	fi
-	ssh -t $DEPLOYER@$TEMPHOST "rm ~/$APP-$REV.tgz"
 fi
 
 scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
