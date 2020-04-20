@@ -92,8 +92,8 @@ const ctxpair_hq = '#d48b37'
 const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
-const mismatchbg_hq = '#df5c61'
-const mismatchbg_lq = '#ffdbdd'
+const mismatchbg_hq = '#ff0000'
+const mismatchbg_lq = '#dbb2b2' //'#ffdbdd'
 const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 // softclip: soft blue for background only, strong blue for printing nt
 const softclipbg_hq = '#4888bf'
