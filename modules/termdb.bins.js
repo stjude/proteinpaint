@@ -172,7 +172,14 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			: isNumeric(bc.last_bin.stop)
 			? bc.last_bin.stop
 			: null
-	}
+	} /*else if (bc.lst) {
+		const last_bin = bc.lst[bc.lst.length - 1]
+		last_start = last_bin.start
+		last_stop = 'stop' in last_bin && !last_bin.stopunbounded
+			? last_bin.stop
+			: summary.max
+		max = last_stop
+	}*/
 	const numericMax = isNumeric(max)
 	const numericLastStart = isNumeric(last_start)
 	const numericLastStop = isNumeric(last_stop)

@@ -82,8 +82,8 @@ tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
 	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
+			termfilter,
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],
@@ -434,7 +434,6 @@ tape('click non-group bar to add filter', function(test) {
 
 	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
 			nav: {
 				activeCohort: 0
@@ -586,7 +585,6 @@ tape('click custom categorical group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
@@ -723,7 +721,6 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
@@ -864,14 +861,20 @@ tape('single chart, genotype overlay', function(test) {
 	}
 })
 
-
 tape('idarubicin_5', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Anthracyclines', 'idarubicin_5'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Anthracyclines',
+					'idarubicin_5'
+				],
 				visiblePlotIds: ['idarubicin_5'],
 				plots: {
 					idarubicin_5: {
@@ -883,33 +886,44 @@ tape('idarubicin_5', function(test) {
 			},
 			termfilter: {
 				filter: {
-					type:'tvslst',
-					join:'and',
-					in:true,
-					lst:[
-						{type:'tvs',tag:'cohortFilter',
-							tvs:{
-								term:{id:'subcohort',type:'categorical'},
-								values:[
-									{key:'SJLIFE',label:'SJLIFE'},
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical' },
+								values: [
+									{ key: 'SJLIFE', label: 'SJLIFE' }
 									//{key:'CCSS',label:'CCSS'},
 								]
 							}
 						},
 						{
-							type:'tvslst',
-							tag:'filterUiRoot',
-							join:'',
-							in:true, 
-							lst:[]
+							type: 'tvslst',
+							tag: 'filterUiRoot',
+							join: '',
+							in: true,
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: termjson['idarubicin_5'],
+										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }]
+										//isnot: true
+									}
+								}
+							]
 						}
 					]
 				}
 			},
 			nav: {
-				show_tabs: true,
+				show_tabs: true
 			},
-			activeCohort:-1
+			activeCohort: -1
 		},
 		plot: {
 			callbacks: {
@@ -921,9 +935,7 @@ tape('idarubicin_5', function(test) {
 	function testBarCount(plot) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 bar')
+		test.equal(numBars, 4, 'should have 4 bars')
 		test.end()
 	}
 })
-
-
