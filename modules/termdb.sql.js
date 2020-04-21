@@ -1110,19 +1110,9 @@ thus less things to worry about...
 			'': cn.prepare(template.replace('JOINCLAUSE', ''))
 		}
 		return function getStatement(cohortStr) {
-			// do not split, instead force value into a single-item array
-			const cohort = [cohortStr] //cohortStr.split(',').filter(d => d != '')
-			const questionmarks = cohort.map(() => '?').join(',')
+			const questionmarks = cohortStr ? '?' : ''
 			if (!(questionmarks in s_cohort)) {
-				const statement = template.replace(
-					'JOINCLAUSE',
-					// get intersection where a term is annotated in ALL of the cohortValues
-					cohort.map((d, i) => `JOIN subcohort_terms s${i} ON s${i}.term_id = t.id AND s${i}.cohort=?`).join('\n')
-					/*
-				// get union where a term is annotated in ANY of the cohortValues
-				`JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${questionmarks})`
-				*/
-				)
+				const statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
 				s_cohort[questionmarks] = cn.prepare(statement)
 			}
 			return s_cohort[questionmarks]
