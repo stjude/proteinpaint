@@ -861,7 +861,7 @@ tape('single chart, genotype overlay', function(test) {
 	}
 })
 
-tape('idarubicin_5', function(test) {
+tape('numeric exclude range', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -911,8 +911,8 @@ tape('idarubicin_5', function(test) {
 									type: 'tvs',
 									tvs: {
 										term: termjson['idarubicin_5'],
-										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }]
-										//isnot: true
+										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }],
+										isnot: true
 									}
 								}
 							]
@@ -935,7 +935,75 @@ tape('idarubicin_5', function(test) {
 	function testBarCount(plot) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 4, 'should have 4 bars')
+		test.equal(numBars, 1, 'should have 1 bar')
 		test.end()
+	}
+})
+
+tape('numeric filter - only special value', function(test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: { id: 'aaclassic_5' },
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: termjson['aaclassic_5'],
+								ranges: [{ value: -8888, label: 'test' }]
+							}
+						}
+					]
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runNumericValueTests
+			}
+		}
+	})
+
+	function runNumericValueTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testNoBar, { wait: 300 })
+			.use(triggerHiddenLegendClick, { wait: 300 })
+			.to(testHasBar, { wait: 300 })
+			.done(test)
+	}
+
+	function testNoBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 0, 'should have 0 bar')
+	}
+
+	function triggerHiddenLegendClick(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.node()
+			.querySelector('.legend-row')
+			.click()
+	}
+
+	function testHasBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 bar')
 	}
 })

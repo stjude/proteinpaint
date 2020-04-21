@@ -130,30 +130,11 @@ so here need to allow both string and number as range.value
 		if ('value' in range) {
 			// special category
 			// where value for ? can be number or string, doesn't matter
-			rangeclauses.push('value = ?')
+			const negator = tvs.isnot ? '!' : ''
+			rangeclauses.push(`value ${negator}= ?`)
 			values.push('' + range.value)
-		} else if (!tvs.isnot) {
-			// actual range
-			hasactualrange = true
-			const lst = []
-			if (!range.startunbounded) {
-				if (range.startinclusive) {
-					lst.push(cast + ' >= ?')
-				} else {
-					lst.push(cast + ' > ? ')
-				}
-				values.push(range.start)
-			}
-			if (!range.stopunbounded) {
-				if (range.stopinclusive) {
-					lst.push(cast + ' <= ?')
-				} else {
-					lst.push(cast + ' < ? ')
-				}
-				values.push(range.stop)
-			}
-			rangeclauses.push('(' + lst.join(' AND ') + ')')
 		} else {
+			// actual range
 			hasactualrange = true
 			const lst = []
 			if (!range.startunbounded) {
