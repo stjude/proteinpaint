@@ -218,6 +218,7 @@ function renderBoundaryInclusionInput(self) {
 	self.dom.boundaryInclusionDiv
 		.append('span')
 		.style('padding', '5px')
+		.style('color', 'rgb(136, 136, 136)')
 		.html('Boundary Inclusion')
 
 	const x = '<span style="font-family:Times;font-style:italic">x</span>'
@@ -259,7 +260,9 @@ function renderTypeInputs(self) {
 			self.q.type = this.checked ? 'regular' : 'custom'
 			self.showEditMenu(self.dom.num_holder)
 		})
-	l1.append('span').html('Use same bin size')
+	l1.append('span')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Use same bin size')
 
 	const l2 = div.append('label')
 	l2.append('input')
@@ -273,7 +276,9 @@ function renderTypeInputs(self) {
 			self.q.type = this.checked ? 'custom' : 'regular'
 			self.showEditMenu(self.dom.num_holder)
 		})
-	l2.append('span').html('Use varying bin sizes')
+	l2.append('span')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Use varying bin sizes')
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/
@@ -292,6 +297,7 @@ function renderFixedBinsInputs(self) {
 function renderBinSizeInput(self, tr) {
 	tr.append('td')
 		.style('margin', '5px')
+		.style('color', 'rgb(136, 136, 136)')
 		.html('Bin Size')
 
 	const dd = self.num_obj.density_data
@@ -334,6 +340,7 @@ function renderFirstBinInput(self, tr) {
 	if (!self.q.first_bin) self.q.first_bin = {}
 	tr.append('td')
 		.style('margin', '5px')
+		.style('color', 'rgb(136, 136, 136)')
 		.html('First Bin Stop')
 
 	self.dom.first_stop_input = tr
@@ -383,6 +390,7 @@ function renderLastBinInputs(self, tr) {
 
 	tr.append('td')
 		.style('margin', '5px')
+		.style('color', 'rgb(136, 136, 136)')
 		.html('Last Bin Start')
 
 	const td1 = tr
@@ -409,7 +417,10 @@ function renderLastBinInputs(self, tr) {
 			handleChange.call(this)
 		})
 
-	label0.append('span').html('Automatic<br>')
+	label0
+		.append('span')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Automatic<br>')
 
 	const label1 = radio_div
 		.append('label')
@@ -442,7 +453,10 @@ function renderLastBinInputs(self, tr) {
 			setDensityPlot(self)
 		})
 
-	label1.append('span').html('Fixed')
+	label1
+		.append('span')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Fixed')
 
 	const edit_div = tr
 		.append('td')
@@ -500,8 +514,14 @@ function renderCustomBinInputs(self) {
 		.style('padding', '5px')
 	self.dom.bins_table = tablediv.append('table')
 	const thead = self.dom.bins_table.append('thead').append('tr')
-	thead.append('th').html('Bin Boundary')
-	thead.append('th').html('Bin Label')
+	thead
+		.append('th')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Bin Boundary')
+	thead
+		.append('th')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Bin Label')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 	self.dom.customBinBoundaryInput = tr
@@ -550,6 +570,7 @@ function renderBoundaryInputDivs(self, data) {
 		.each(function(d, i) {
 			select(this)
 				.append('span')
+				.style('color', 'rgb(136, 136, 136)')
 				.html('Bin ' + (i + 1) + '&nbsp;')
 			select(this)
 				.append('input')
