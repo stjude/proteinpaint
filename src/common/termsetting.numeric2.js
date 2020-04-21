@@ -55,15 +55,12 @@ export async function setNumericMethods(self) {
 	}
 
 	self.applyEdits = function() {
-		const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
-		const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-
 		if (self.q.type == 'regular') {
 			self.q.first_bin.startunbounded = true
 			self.q.bin_size = +self.dom.bin_size_input.property('value')
 			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
-			self.q.startinclusive = startinclusive
-			self.q.stopinclusive = stopinclusive
+			self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+			self.q.stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 
 			if (self.dom.last_radio_auto.property('checked')) {
 				delete self.q.last_bin
@@ -91,6 +88,8 @@ export async function setNumericMethods(self) {
 	}
 
 	self.processCustomBinInputs = () => {
+		const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+		const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 		const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
 		let prevBin
 		const data = self.dom.customBinBoundaryInput
@@ -102,8 +101,8 @@ export async function setNumericMethods(self) {
 			.map((d, i) => {
 				const bin = {
 					start: +d,
-					startinclusive: self.q.lst[0].startinclusive,
-					stopinclusive: self.q.lst[0].stopinclusive
+					startinclusive,
+					stopinclusive
 				}
 				if (prevBin) {
 					delete prevBin.stopunbounded
@@ -111,7 +110,6 @@ export async function setNumericMethods(self) {
 					const label = inputDivs[i].querySelector('input').value
 					prevBin.label = label ? label : get_bin_label(prevBin, self.q)
 				}
-				//const label = inputDivs[i+1] ? inputDivs[i+1].querySelector('input').value : ''; console.log(100, i,label)
 				prevBin = bin
 				return bin
 			})
@@ -123,8 +121,8 @@ export async function setNumericMethods(self) {
 		data.unshift({
 			startunbounded: true,
 			stop: data[0].start,
-			startinclusive: data[0].startinclusive,
-			stopinclusive: data[0].stopinclusive,
+			startinclusive,
+			stopinclusive,
 			label: inputDivs[0].querySelector('input').value
 		})
 		if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
@@ -543,6 +541,7 @@ function renderCustomBinInputs(self) {
 		})
 
 	function handleChange() {
+		self.dom.customBinLabelTd.selectAll('input').property('value', '')
 		self.q.lst = self.processCustomBinInputs()
 		renderBoundaryInputDivs(self, self.q.lst)
 		self.renderBinLines(self, self.q)
@@ -562,7 +561,7 @@ function renderBoundaryInputDivs(self, data) {
 			.html('Bin ' + (i + 1) + '&nbsp;')
 		select(this)
 			.select('input')
-			.html(d.label)
+			.property('value', d.label)
 	})
 	inputDivs
 		.enter()
@@ -575,7 +574,7 @@ function renderBoundaryInputDivs(self, data) {
 			select(this)
 				.append('input')
 				.attr('type', 'text')
-				.attr('value', d.label) // d => !d.label || d.label == get_bin_label(d, self.q) ? "" : d.label)
+				.property('value', d.label)
 				.on('change', function(d, i) {
 					self.q.lst[i].label = this.value
 				})
