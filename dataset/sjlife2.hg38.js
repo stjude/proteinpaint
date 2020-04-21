@@ -55,7 +55,7 @@ const cohorthtmltable = `<table>
   <tr>
 	<td>Methods for ascertainment of outcomes</td>
 	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
-	<td>Self-report, pathology reports, NDI</td>
+	<td>Self-report, pathology reports (secondary neoplasm), NDI</td>
   </tr>
 </tbody>
 </table>`
