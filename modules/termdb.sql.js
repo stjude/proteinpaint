@@ -1008,7 +1008,8 @@ thus less things to worry about...
 		q.getTermChildren = (id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const values = cohortStr ? [...cohortStr.split(','), id] : id
+			//const values = cohortStr ? [...cohortStr.split(','), id] : id
+			const values = cohortStr ? [cohortStr, id] : id
 			const tmp = getStatement(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
