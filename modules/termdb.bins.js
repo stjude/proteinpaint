@@ -306,8 +306,8 @@ function get_bin_label(bin, binconfig) {
 	}
 
 	// bin size not integer
-	const oper0 = bc.startinclusive ? '≥' : '>'
-	const oper1 = bc.stopinclusive ? '≤' : '<'
+	const oper0 = bc.startinclusive || bin.startinclusive ? '≥' : '>'
+	const oper1 = bc.stopinclusive || bin.stopinclusive ? '≤' : '<'
 	const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
 	const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 	return oper0 + v0 + ' to ' + oper1 + v1

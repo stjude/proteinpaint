@@ -8,6 +8,7 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { to_svg } from '../client'
+import { set_hiddenvalues } from '../common/termsetting'
 
 const colors = {
 	c10: scaleOrdinal(schemeCategory10),
@@ -129,7 +130,7 @@ class TdbBarchart {
 
 	initExclude() {
 		const term = this.config.term
-		this.settings.exclude.cols = Object.keys(term.q.hiddenValues)
+		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
 			.filter(id => term.q.hiddenValues[id])
 			.map(id => (term.term.values && id in term.term.values ? term.term.values[id].label : id))
 
