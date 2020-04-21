@@ -4,8 +4,6 @@
 -- only required if cohort selection is enabled on the dataset
 ---------------------------------------------
 
-
-
 DROP TABLE IF EXISTS subcohort_terms;
 DROP INDEX IF EXISTS subcohort_terms_cohort;
 DROP INDEX IF EXISTS subcohort_terms_termid;
@@ -15,13 +13,21 @@ CREATE TABLE subcohort_terms (
  count INT
 );
 
-WITH ancestors AS (
-  SELECT term_id, term_id AS ancestor_id
-  FROM ancestry
+WITH 
+ancestors AS (
+  SELECT term_id, term_id AS tid
+  FROM ancestry a
+  JOIN terms t ON t.id = a.term_id
   UNION ALL
-  SELECT term_id, ancestor_id
-  FROM ancestry
-  GROUP BY term_id, ancestor_id
+  SELECT term_id, ancestor_id as tid
+  FROM ancestry a
+  JOIN terms t ON t.id = a.term_id
+  GROUP BY term_id, tid
+  UNION ALL
+  SELECT a.term_id as term_id, '$ROOT$' AS tid
+  FROM ancestry a
+  JOIN terms t ON a.ancestor_id = t.id AND t.parent_id IS NULL
+  GROUP BY term_id, tid
 ),
 cohort AS (
   SELECT value AS subcohort, sample
@@ -29,39 +35,44 @@ cohort AS (
   WHERE term_id = 'subcohort'
   GROUP BY subcohort, sample
 ),
-nonconditions AS (
-  SELECT subcohort, ancestor_id, COUNT(DISTINCT(a.sample))
-  FROM annotations a
-  JOIN ancestors l ON l.term_id = a.term_id
-  JOIN cohort c ON c.sample = a.sample
-  GROUP BY subcohort, ancestor_id
+parentterms AS (
+  SELECT distinct(ancestor_id)
+  FROM ancestry
 ),
-conditions AS (
-  SELECT subcohort, ancestor_id, COUNT(DISTINCT(a.sample)) 
-  FROM precomputed a
-  JOIN ancestors l ON l.term_id = a.term_id
-  JOIN cohort c ON c.sample = a.sample
-  GROUP BY subcohort, ancestor_id
+rawannos AS (
+  SELECT term_id, sample
+  FROM annotations
+  group by term_id, sample
+  UNION ALL
+  SELECT term_id, sample
+  FROM precomputed
+  WHERE term_id NOT IN parentterms
+  group by term_id, sample
 ),
-rootcounts AS (
-  SELECT subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample)) 
-  FROM cohort
-  GROUP BY subcohort
-  UNION ALL
-  SELECT 'SJLIFE,CCSS' as subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample))
-  FROM cohort
-  UNION ALL
-  SELECT 'CCSS,SJLIFE' as subcohort, '$ROOT$' as ancestor_id, count(DISTINCT(sample))
-  FROM cohort
+sharedterms AS (
+  SELECT distinct(term_id)
+  FROM rawannos a
+  JOIN cohort c ON c.sample = a.sample
+  WHERE subcohort = 'SJLIFE' AND term_id NOT IN parentterms
+  INTERSECT
+  SELECT distinct(term_id)
+  FROM rawannos a
+  JOIN cohort c ON c.sample = a.sample
+  WHERE subcohort = 'CCSS' AND term_id NOT IN parentterms
 ),
 combined AS (
-  SELECT * FROM nonconditions
+  SELECT subcohort, tid, count(distinct(a.sample))
+  FROM rawannos a
+  JOIN ancestors p ON p.term_id = a.term_id
+  JOIN cohort c ON c.sample = a.sample
+  GROUP BY subcohort, tid
   UNION ALL
-  SELECT * FROM conditions
-  UNION ALL
-  SELECT * FROM rootcounts
+  SELECT 'SJLIFE,CCSS', tid, count(distinct(a.sample))
+  FROM rawannos a
+  JOIN ancestors p ON a.term_id IN sharedterms AND p.term_id = a.term_id
+  JOIN cohort c ON c.sample = a.sample
+  GROUP BY tid
 )
--- select * from combined; /*** to test in command line ***/
 INSERT INTO subcohort_terms SELECT * FROM combined; /*** to materialize ***/
 
 CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);

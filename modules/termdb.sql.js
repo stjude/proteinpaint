@@ -943,7 +943,7 @@ thus less things to worry about...
 		q.getRootTerms = (cohortStr = '') => {
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr.split(',')) : getStatement(cohortStr).all()
+			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr) : getStatement(cohortStr).all()
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
@@ -1110,7 +1110,8 @@ thus less things to worry about...
 			'': cn.prepare(template.replace('JOINCLAUSE', ''))
 		}
 		return function getStatement(cohortStr) {
-			const cohort = cohortStr.split(',').filter(d => d != '')
+			// do not split, instead force value into a single-item array
+			const cohort = [cohortStr] //cohortStr.split(',').filter(d => d != '')
 			const questionmarks = cohort.map(() => '?').join(',')
 			if (!(questionmarks in s_cohort)) {
 				const statement = template.replace(
