@@ -130,30 +130,32 @@ so here need to allow both string and number as range.value
 		if ('value' in range) {
 			// special category
 			// where value for ? can be number or string, doesn't matter
-			rangeclauses.push('value = ?')
+			const negator = tvs.isnot ? '!' : ''
+			rangeclauses.push(`value ${negator}= ?`)
 			values.push('' + range.value)
-			continue
-		}
-		// actual range
-		hasactualrange = true
-		const lst = []
-		if (!range.startunbounded) {
-			if (range.startinclusive) {
-				lst.push(cast + ' >= ?')
-			} else {
-				lst.push(cast + ' > ? ')
+		} else {
+			// actual range
+			hasactualrange = true
+			const lst = []
+			if (!range.startunbounded) {
+				if (range.startinclusive) {
+					lst.push(cast + ' >= ?')
+				} else {
+					lst.push(cast + ' > ? ')
+				}
+				values.push(range.start)
 			}
-			values.push(range.start)
-		}
-		if (!range.stopunbounded) {
-			if (range.stopinclusive) {
-				lst.push(cast + ' <= ?')
-			} else {
-				lst.push(cast + ' < ? ')
+			if (!range.stopunbounded) {
+				if (range.stopinclusive) {
+					lst.push(cast + ' <= ?')
+				} else {
+					lst.push(cast + ' < ? ')
+				}
+				values.push(range.stop)
 			}
-			values.push(range.stop)
+			const negator = tvs.isnot ? 'NOT ' : ''
+			rangeclauses.push(negator + '(' + lst.join(' AND ') + ')')
 		}
-		rangeclauses.push('(' + lst.join(' AND ') + ')')
 	}
 
 	let excludevalues
@@ -166,16 +168,7 @@ so here need to allow both string and number as range.value
 	}
 
 	const combinedClauses = rangeclauses.join(' OR ')
-	const subclause = !tvs.isnot
-		? `( ${combinedClauses} )`
-		: `sample NOT IN ( 
-				SELECT sample
-				FROM annotations
-				WHERE term_id = ?
-				AND ( ${combinedClauses} )
-			)`
-
-	if (tvs.isnot) values.push(tvs.term.id)
+	const subclause = `( ${combinedClauses} )`
 
 	return {
 		CTEs: [

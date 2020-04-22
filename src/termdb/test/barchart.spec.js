@@ -82,8 +82,8 @@ tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
 	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
+			termfilter,
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],
@@ -434,7 +434,6 @@ tape('click non-group bar to add filter', function(test) {
 
 	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
 			nav: {
 				activeCohort: 0
@@ -586,7 +585,6 @@ tape('click custom categorical group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
@@ -723,7 +721,6 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
@@ -864,14 +861,20 @@ tape('single chart, genotype overlay', function(test) {
 	}
 })
 
-
-tape('idarubicin_5', function(test) {
+tape('numeric exclude range', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Anthracyclines', 'idarubicin_5'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Anthracyclines',
+					'idarubicin_5'
+				],
 				visiblePlotIds: ['idarubicin_5'],
 				plots: {
 					idarubicin_5: {
@@ -883,33 +886,44 @@ tape('idarubicin_5', function(test) {
 			},
 			termfilter: {
 				filter: {
-					type:'tvslst',
-					join:'and',
-					in:true,
-					lst:[
-						{type:'tvs',tag:'cohortFilter',
-							tvs:{
-								term:{id:'subcohort',type:'categorical'},
-								values:[
-									{key:'SJLIFE',label:'SJLIFE'},
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical' },
+								values: [
+									{ key: 'SJLIFE', label: 'SJLIFE' }
 									//{key:'CCSS',label:'CCSS'},
 								]
 							}
 						},
 						{
-							type:'tvslst',
-							tag:'filterUiRoot',
-							join:'',
-							in:true, 
-							lst:[]
+							type: 'tvslst',
+							tag: 'filterUiRoot',
+							join: '',
+							in: true,
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: termjson['idarubicin_5'],
+										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }],
+										isnot: true
+									}
+								}
+							]
 						}
 					]
 				}
 			},
 			nav: {
-				show_tabs: true,
+				show_tabs: true
 			},
-			activeCohort:-1
+			activeCohort: -1
 		},
 		plot: {
 			callbacks: {
@@ -926,4 +940,70 @@ tape('idarubicin_5', function(test) {
 	}
 })
 
+tape('numeric filter - only special value', function(test) {
+	test.timeoutAfter(5000)
 
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: { id: 'aaclassic_5' },
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: termjson['aaclassic_5'],
+								ranges: [{ value: -8888, label: 'test' }]
+							}
+						}
+					]
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runNumericValueTests
+			}
+		}
+	})
+
+	function runNumericValueTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testNoBar, { wait: 300 })
+			.use(triggerHiddenLegendClick, { wait: 300 })
+			.to(testHasBar, { wait: 300 })
+			.done(test)
+	}
+
+	function testNoBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 0, 'should have 0 bar')
+	}
+
+	function triggerHiddenLegendClick(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.node()
+			.querySelector('.legend-row')
+			.click()
+	}
+
+	function testHasBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 bar')
+	}
+})

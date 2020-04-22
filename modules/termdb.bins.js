@@ -172,12 +172,20 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			: isNumeric(bc.last_bin.stop)
 			? bc.last_bin.stop
 			: null
+	} else if (bc.lst) {
+		const last_bin = bc.lst[bc.lst.length - 1]
+		last_start = last_bin.start
+		last_stop = 'stop' in last_bin && !last_bin.stopunbounded ? last_bin.stop : summary.max
+		max = last_stop
+	} else {
+		last_start = summary.max
+		last_stop = summary.max
 	}
 	const numericMax = isNumeric(max)
 	const numericLastStart = isNumeric(last_start)
 	const numericLastStop = isNumeric(last_stop)
 
-	if (!numericMax && !numericLastStart) throw 'unable to compute the last bin start or stop'
+	if (!numericMax && !numericLastStart) return [] //throw 'unable to compute the last bin start or stop'
 
 	const bins = []
 	let currBin = {
