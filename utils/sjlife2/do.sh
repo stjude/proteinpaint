@@ -16,6 +16,8 @@ node ~/proteinpaint/utils/sjlife2/precompute.ctcae.js termdb annotation.outcome 
 #node ~/proteinpaint/utils/sjlife2/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 
  sqlite3 db < load.sql
+
+ node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
  sqlite3 db < load.subcohortTerms.sql
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
