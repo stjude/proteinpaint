@@ -1068,6 +1068,7 @@ async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
+	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
 	if (!req.query.viewstart) throw '.viewstart missing'
 	if (!req.query.viewstop) throw '.viewstart missing'
