@@ -20,21 +20,8 @@ const matrixfile = process.argv[3]
 // input file with lines sample,term, ...
 const outcomesfile = process.argv[4]
 // input file with lines of sample, ...
-
-const uncomputableGrades = new Set([9])
-/*
-note that this has been removed from dataset.js file
-for the moment hardcode uncomputable grade to be 9
-{
-	const ds = require(datasetjsfile)
-	if (ds.cohort.termdb.patient_condition.uncomputable_grades) {
-		for (const k in ds.cohort.termdb.patient_condition.uncomputable_grades) uncomputableGrades.add(Number(k))
-	}
-}
-*/
-
 const missingfromtermdb = new Set()
-// term ids from annotation.outcome but missing from termdb
+// term ids from annotation.* but missing from termdb
 
 main()
 
@@ -53,14 +40,15 @@ async function main() {
 		}
 		const pj = getPj(
 			terms,
-			annotations /*.filter(d=>d.sample.slice(-2)=="19").slice(0,10000)*/,
+			annotations, //.filter(d=>d.sample.slice(-2)=="19").slice(0,10000),
 			cohortBySample,
 			cohortByTermId
 		)
+		console.error('partjson', pj.times, 'milliseconds')
 		generate_tsv(pj.tree.byCohort)
 
 		if (missingfromtermdb.size) {
-			console.error(missingfromtermdb.size + ' CHC terms missing from db: ' + [...missingfromtermdb])
+			console.error(missingfromtermdb.size + ' terms missing from termdb: ' + [...missingfromtermdb])
 		}
 	} catch (e) {
 		console.error(e.message || e)
@@ -108,14 +96,14 @@ function load_file(annotations, file, terms, cohortBySample) {
 		const rl = readline.createInterface({ input: fs.createReadStream(file) })
 		rl.on('line', line => {
 			const [sample, term_id, value] = line.split('\t')
-			const term = term_id in terms ? terms[term_id] : { id: term_id }
+			if (term_id == 'subcohort') {
+				cohortBySample[sample] = value
+				return
+			}
+
+			const term = term_id in terms ? terms[term_id] : null
 			if (!term) {
 				missingfromtermdb.add(term_id)
-			} else if (!term.conditionlineage) {
-				if (term_id == 'subcohort') {
-					cohortBySample[sample] = value
-				}
-				//console.error('missing lineage: ' + term.id)
 			} else {
 				annotations.push({
 					sample,
@@ -144,11 +132,9 @@ function getPj(terms, data, cohortBySample, cohortByTermId) {
 		},
 		'=': {
 			cohort(row) {
-				if (row.term_id in cohortByTermId && cohortByTermId[row.term_id].size > 1) {
-					return [cohortBySample[row.sample], 'SJLIFE,CCSS']
-				} else {
-					return [cohortBySample[row.sample]]
-				}
+				return cohortByTermId[row.term_id].size > 1
+					? [cohortBySample[row.sample], 'SJLIFE,CCSS']
+					: [cohortBySample[row.sample]]
 			}
 		}
 	})
@@ -163,9 +149,7 @@ function generate_tsv(byCohort) {
 			console.log([cohort, term_id, byCohort[cohort].byTerm[term_id].length].join('\t'))
 			numRows++
 		}
-	}
-	//write_file(precomputed_file, csv)
-	//console.log('Saved precomputed csv to '+ precomputed_file +":")
+	} 
 	console.error('number of rows=' + numRows) //, ", rows="+ numRows)
 }
 
