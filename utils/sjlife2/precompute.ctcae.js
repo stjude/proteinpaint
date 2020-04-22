@@ -83,7 +83,8 @@ function load_terms(termdbfile) {
 	for (const id in terms) {
 		const term = terms[id]
 		if (term.type == 'condition') {
-			term.conditionlineage = get_term_lineage([id], id, child2parent)
+			// remove the top-most terms, [..., CTCAE, root]
+			term.conditionlineage = get_term_lineage([id], id, child2parent).slice(0, -2)
 		}
 	}
 	return terms
@@ -126,8 +127,7 @@ function load_patientcondition(outcomesfile, terms) {
 			term_id,
 			grade,
 			age: Number(l[3]),
-			// remove the top-most terms, [..., CTCAE, root]
-			lineage: term.conditionlineage.slice(0, -2)
+			lineage: term.conditionlineage
 		})
 	}
 	return annotations
