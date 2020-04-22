@@ -35,30 +35,31 @@ cohort AS (
   WHERE term_id = 'subcohort'
   GROUP BY subcohort, sample
 ),
-parentterms AS (
-  SELECT distinct(ancestor_id)
+leafterms AS (
+  SELECT distinct(term_id)
   FROM ancestry
 ),
 rawannos AS (
   SELECT term_id, sample
   FROM annotations
+  WHERE term_id IN leafterms
   group by term_id, sample
   UNION ALL
   SELECT term_id, sample
   FROM precomputed
-  WHERE term_id NOT IN parentterms
+  WHERE term_id IN leafterms
   group by term_id, sample
 ),
 sharedterms AS (
   SELECT distinct(term_id)
   FROM rawannos a
   JOIN cohort c ON c.sample = a.sample
-  WHERE subcohort = 'SJLIFE' AND term_id NOT IN parentterms
+  WHERE subcohort = 'SJLIFE'
   INTERSECT
   SELECT distinct(term_id)
   FROM rawannos a
   JOIN cohort c ON c.sample = a.sample
-  WHERE subcohort = 'CCSS' AND term_id NOT IN parentterms
+  WHERE subcohort = 'CCSS'
 ),
 combined AS (
   SELECT subcohort, tid, count(distinct(a.sample))
