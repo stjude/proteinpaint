@@ -12,12 +12,18 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk {}
-.box_move
-.box_stay
+.dom{}
+	.box_move
+	.box_stay
+	.img_fullstack
+	.img_partstack
 .clickedtemplate
 	.qname
 	.isfirst
 	.islast
+.partstack{}
+	.start
+	.stop
 */
 
 const labyspace = 5
@@ -85,7 +91,8 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		tk.dom.img.attr('width', 0).attr('height', 0)
+		tk.dom.img_fullstack.attr('width', 0).attr('height', 0)
+		tk.dom.img_partstack.attr('width', 0).attr('height', 0)
 		tk.dom.img_cover.attr('width', 0).attr('height', 0)
 		tk.height_main = tk.height = 100
 		block.tkcloakoff(tk, { error: e.message || e })
@@ -120,18 +127,20 @@ function renderTk(tk, block) {
 			.transition()
 			.attr('transform', 'translate(0,' + (buttonrowheight + tk.data.height) + ') scale(1)')
 		tk.dom.imgg.transition().attr('transform', 'translate(0,' + buttonrowheight + ')')
-		tk.dom.img
+		tk.dom.img_partstack
 			.attr('xlink:href', tk.data.src)
 			.attr('width', tk.data.width)
 			.attr('height', tk.data.height)
+		tk.dom.img_fullstack.attr('width', 0).attr('height', 0)
 	} else {
 		tk.dom.buttonrowtop.transition().attr('transform', 'scale(0)')
 		tk.dom.buttonrowbottom.transition().attr('transform', 'translate(0,' + tk.data.height + ') scale(0)')
 		tk.dom.imgg.transition().attr('transform', 'translate(0,0)')
-		tk.dom.img
+		tk.dom.img_fullstack
 			.attr('xlink:href', tk.data.src)
 			.attr('width', tk.data.width)
 			.attr('height', tk.data.height)
+		tk.dom.img_partstack.attr('width', 0).attr('height', 0)
 	}
 	tk.dom.img_cover.attr('width', tk.data.width).attr('height', tk.data.height)
 
@@ -156,18 +165,18 @@ function renderTk(tk, block) {
 
 function update_boxes(tk, block) {
 	// update move/stay boxes after getting new data
-	tk.box_move.attr('width', 0)
+	tk.dom.box_move.attr('width', 0)
 	update_box_stay(tk, block)
 }
 
 function update_box_stay(tk, block) {
 	// just the stay box
 	if (!tk.data.templatebox) {
-		tk.box_stay.attr('width', 0)
+		tk.dom.box_stay.attr('width', 0)
 		return
 	}
 	if (!tk.clickedtemplate) {
-		tk.box_stay.attr('width', 0)
+		tk.dom.box_stay.attr('width', 0)
 		return
 	}
 	for (const t of tk.data.templatebox) {
@@ -175,7 +184,7 @@ function update_box_stay(tk, block) {
 			if (tk.asPaired || (t.isfirst && tk.clickedtemplate.isfirst) || (t.islast && tk.clickedtemplate.islast)) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
-				tk.box_stay
+				tk.dom.box_stay
 					.attr('width', bx2 - bx1)
 					.attr('height', t.y2 - t.y1)
 					.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -184,7 +193,7 @@ function update_box_stay(tk, block) {
 		}
 	}
 	// clicked template not found
-	tk.box_stay.attr('width', 0)
+	tk.dom.box_stay.attr('width', 0)
 }
 
 function makeTk(tk, block) {
@@ -200,10 +209,8 @@ function makeTk(tk, block) {
 		.attr('class', 'sja_clbtext2')
 		.on('click', async () => {
 			delete tk.partstack
-			block.tkcloakon(tk)
-			tk.data = await getData(tk, block)
+			tk.data = tk.__prevdata
 			renderTk(tk, block)
-			block.tkcloakoff(tk, {})
 			block.block_setheight()
 		})
 
@@ -281,13 +288,15 @@ function makeTk(tk, block) {
 			scroll_partstack(tk, block, 1)
 		})
 
-	tk.dom.img = tk.dom.imgg.append('image')
+	tk.dom.img_fullstack = tk.dom.imgg.append('image')
+	tk.dom.img_partstack = tk.dom.imgg.append('image')
+
 	// put flyers behind cover
-	tk.box_move = tk.dom.imgg
+	tk.dom.box_move = tk.dom.imgg
 		.append('rect')
 		.attr('stroke', 'black')
 		.attr('fill', 'none')
-	tk.box_stay = tk.dom.imgg
+	tk.dom.box_stay = tk.dom.imgg
 		.append('rect')
 		.attr('stroke', 'magenta')
 		.attr('fill', 'none')
@@ -311,7 +320,7 @@ function makeTk(tk, block) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
 				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
-					tk.box_move
+					tk.dom.box_move
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -338,7 +347,7 @@ function makeTk(tk, block) {
 							// or single mode and correct read
 							// box under cursor is highlighted, cancel
 							delete tk.clickedtemplate
-							tk.box_stay.attr('width', 0)
+							tk.dom.box_stay.attr('width', 0)
 							return
 						}
 					}
@@ -353,7 +362,7 @@ function makeTk(tk, block) {
 						if (t.isfirst) tk.clickedtemplate.isfirst = true
 						if (t.islast) tk.clickedtemplate.islast = true
 					}
-					tk.box_stay
+					tk.dom.box_stay
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -477,6 +486,7 @@ async function do_partstack(tk, block, y) {
 		stop: Math.min(tk.data.stackcount, clickstackidx + stackpagesize / 2)
 	}
 	block.tkcloakon(tk)
+	tk.__prevdata = tk.data
 	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
 	renderTk(tk, block)
 	block.tkcloakoff(tk, {})
