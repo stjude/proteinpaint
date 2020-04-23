@@ -30,21 +30,22 @@ async function main() {
 		const terms = load_terms(termdbfile)
 		// uncomment filter for faster testing
 		const annotations = []
-		const cohortBySample = {}
+		const cohortBySample = new Map()
 		await load_file(annotations, matrixfile, terms, cohortBySample)
 		await load_file(annotations, outcomesfile, terms, cohortBySample)
-		const cohortByTermId = {}
+		const cohortByTermId = new Map()
 		for (const row of annotations) {
-			if (!(row.term_id in cohortByTermId)) cohortByTermId[row.term_id] = new Set()
-			cohortByTermId[row.term_id].add(cohortBySample[row.sample])
+			if (!cohortByTermId.has(row.term_id)) cohortByTermId.set(row.term_id, new Set())
+			cohortByTermId.get(row.term_id).add(cohortBySample.get(row.sample))
 		}
+		console.warn('computing sample counts ...')
 		const pj = getPj(
 			terms,
 			annotations, //.filter(d=>d.sample.slice(-2)=="19").slice(0,10000),
 			cohortBySample,
 			cohortByTermId
 		)
-		console.error('partjson', pj.times, 'milliseconds')
+		console.warn('partjson', pj.times, 'milliseconds')
 		generate_tsv(pj.tree.byCohort)
 
 		if (missingfromtermdb.size) {
@@ -57,7 +58,7 @@ async function main() {
 }
 
 function load_terms(termdbfile) {
-	console.error('parsing ' + termdbfile + '...')
+	console.warn('parsing ' + termdbfile + '...')
 	const file = fs.readFileSync(termdbfile, { encoding: 'utf8' }) // throws upon invalid file name
 	const terms = {}
 	const child2parent = Object.create(null)
@@ -91,13 +92,13 @@ function get_term_lineage(lineage, termid, child2parent) {
 }
 
 function load_file(annotations, file, terms, cohortBySample) {
-	console.error('parsing ' + file + '...')
+	console.warn('parsing ' + file + '...')
 	return new Promise((resolve, reject) => {
 		const rl = readline.createInterface({ input: fs.createReadStream(file) })
 		rl.on('line', line => {
 			const [sample, term_id, value] = line.split('\t')
 			if (term_id == 'subcohort') {
-				cohortBySample[sample] = value
+				cohortBySample.set(sample, value)
 				return
 			}
 
@@ -125,16 +126,16 @@ function getPj(terms, data, cohortBySample, cohortByTermId) {
 			byCohort: {
 				'=cohort(]': {
 					byTerm: {
-						'$lineage[]': ['$sample']
+						'$lineage[]': ['$sample', 'set']
 					}
 				}
 			}
 		},
 		'=': {
 			cohort(row) {
-				return cohortByTermId[row.term_id].size > 1
-					? [cohortBySample[row.sample], 'SJLIFE,CCSS']
-					: [cohortBySample[row.sample]]
+				return cohortByTermId.get(row.term_id).size > 1
+					? [cohortBySample.get(row.sample), 'SJLIFE,CCSS']
+					: [cohortBySample.get(row.sample)]
 			}
 		}
 	})
@@ -146,11 +147,11 @@ function generate_tsv(byCohort) {
 	let numRows = 0
 	for (const cohort in byCohort) {
 		for (const term_id in byCohort[cohort].byTerm) {
-			console.log([cohort, term_id, byCohort[cohort].byTerm[term_id].length].join('\t'))
+			console.log([cohort, term_id, byCohort[cohort].byTerm[term_id].size].join('\t'))
 			numRows++
 		}
-	} 
-	console.error('number of rows=' + numRows) //, ", rows="+ numRows)
+	}
+	console.warn('number of rows=' + numRows) //, ", rows="+ numRows)
 }
 
 function write_file(file, text) {
