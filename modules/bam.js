@@ -92,8 +92,8 @@ const ctxpair_hq = '#d48b37'
 const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
-const mismatchbg_hq = '#ff0000'
-const mismatchbg_lq = '#dbb2b2' //'#ffdbdd'
+const mismatchbg_hq = '#d13232'
+const mismatchbg_lq = '#ffdbdd'
 const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 // softclip: soft blue for background only, strong blue for printing nt
 const softclipbg_hq = '#4888bf'
@@ -1068,6 +1068,7 @@ async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
+	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
 	if (!req.query.viewstart) throw '.viewstart missing'
 	if (!req.query.viewstop) throw '.viewstart missing'

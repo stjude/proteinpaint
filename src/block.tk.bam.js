@@ -1,4 +1,4 @@
-import { event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
@@ -12,16 +12,32 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk {}
-.box_move
-.box_stay
-.clickedtemplate
+.data{}
+	.templatebox[] // optional
+.data_fullstack{}
+	.messagerowheights
+	.stackcount
+	.stackheight
+	.allowpartstack
+.dom{}
+	.box_move
+	.box_stay
+	.img_fullstack
+	.img_partstack
+	.vslider{}
+		.boxy
+.clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
 	.islast
+.partstack{}
+	.start
+	.stop
+
+enter_partstack()
 */
 
 const labyspace = 5
-const buttonrowheight = 20
 const stackpagesize = 60
 
 export async function loadTk(tk, block) {
@@ -73,6 +89,7 @@ export async function loadTk(tk, block) {
 	try {
 		// loadTk is called by pan/zoom, and will always cancel partstack
 		delete tk.partstack
+		delete tk.dom.vslider.boxy
 
 		tk.data = await getData(tk, block)
 		if (tk.data.colorscale) {
@@ -85,7 +102,8 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		tk.dom.img.attr('width', 0).attr('height', 0)
+		tk.dom.img_fullstack.attr('width', 0).attr('height', 0)
+		tk.dom.img_partstack.attr('width', 0).attr('height', 0)
 		tk.dom.img_cover.attr('width', 0).attr('height', 0)
 		tk.height_main = tk.height = 100
 		block.tkcloakoff(tk, { error: e.message || e })
@@ -112,26 +130,40 @@ async function getData(tk, block, additional = []) {
 }
 
 function renderTk(tk, block) {
+	/* this function is called to render both full or part stack
+it manages the switch between img_fullstack and img_partstack
+*/
 	update_boxes(tk, block)
 
 	if (tk.partstack) {
-		tk.dom.buttonrowtop.transition().attr('transform', 'scale(1)')
-		tk.dom.buttonrowbottom
+		// in part stack
+		tk.dom.img_partstack
+			.attr('xlink:href', tk.data.src)
+			.attr('width', tk.data.width)
+			.attr('height', tk.data.height)
+		tk.dom.img_fullstack.attr('width', 0).attr('height', 0)
+
+		tk.config_handle.transition().attr('x', 40)
+		tk.dom.vslider.g.transition().attr('transform', 'translate(0,' + tk.data.messagerowheights + ') scale(1)')
+		tk.dom.vslider.bar.transition().attr('height', tk.data.height)
+		tk.dom.vslider.boxy = (tk.data.height * tk.partstack.start) / tk.data_fullstack.stackcount
+		tk.dom.vslider.boxh = (tk.data.height * (tk.partstack.stop - tk.partstack.start)) / tk.data_fullstack.stackcount
+		tk.dom.vslider.box.transition().attr('height', tk.dom.vslider.boxh)
+		tk.dom.vslider.boxbotline
 			.transition()
-			.attr('transform', 'translate(0,' + (buttonrowheight + tk.data.height) + ') scale(1)')
-		tk.dom.imgg.transition().attr('transform', 'translate(0,' + buttonrowheight + ')')
-		tk.dom.img
-			.attr('xlink:href', tk.data.src)
-			.attr('width', tk.data.width)
-			.attr('height', tk.data.height)
+			.attr('y1', tk.dom.vslider.boxh)
+			.attr('y2', tk.dom.vslider.boxh)
+		tk.dom.vslider.boxg.transition().attr('transform', 'translate(0,' + tk.dom.vslider.boxy + ')')
 	} else {
-		tk.dom.buttonrowtop.transition().attr('transform', 'scale(0)')
-		tk.dom.buttonrowbottom.transition().attr('transform', 'translate(0,' + tk.data.height + ') scale(0)')
-		tk.dom.imgg.transition().attr('transform', 'translate(0,0)')
-		tk.dom.img
+		// in full stack
+		tk.dom.img_fullstack
 			.attr('xlink:href', tk.data.src)
 			.attr('width', tk.data.width)
 			.attr('height', tk.data.height)
+		tk.dom.img_partstack.attr('width', 0).attr('height', 0)
+
+		tk.config_handle.transition().attr('x', 0)
+		tk.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	tk.dom.img_cover.attr('width', tk.data.width).attr('height', tk.data.height)
 
@@ -150,24 +182,24 @@ function renderTk(tk, block) {
 		})
 	block.setllabel()
 
-	tk.height_main = tk.height = (tk.partstack ? buttonrowheight * 2 : 0) + tk.data.height
+	tk.height_main = tk.height = tk.data.height
 	tk.height_main += tk.toppad + tk.bottompad
 }
 
 function update_boxes(tk, block) {
 	// update move/stay boxes after getting new data
-	tk.box_move.attr('width', 0)
+	tk.dom.box_move.attr('width', 0)
 	update_box_stay(tk, block)
 }
 
 function update_box_stay(tk, block) {
 	// just the stay box
 	if (!tk.data.templatebox) {
-		tk.box_stay.attr('width', 0)
+		tk.dom.box_stay.attr('width', 0)
 		return
 	}
 	if (!tk.clickedtemplate) {
-		tk.box_stay.attr('width', 0)
+		tk.dom.box_stay.attr('width', 0)
 		return
 	}
 	for (const t of tk.data.templatebox) {
@@ -175,7 +207,7 @@ function update_box_stay(tk, block) {
 			if (tk.asPaired || (t.isfirst && tk.clickedtemplate.isfirst) || (t.islast && tk.clickedtemplate.islast)) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
-				tk.box_stay
+				tk.dom.box_stay
 					.attr('width', bx2 - bx1)
 					.attr('height', t.y2 - t.y1)
 					.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -184,110 +216,24 @@ function update_box_stay(tk, block) {
 		}
 	}
 	// clicked template not found
-	tk.box_stay.attr('width', 0)
+	tk.dom.box_stay.attr('width', 0)
 }
 
 function makeTk(tk, block) {
 	tk.dom = {
-		buttonrowtop: tk.glider.append('g').attr('transform', 'scale(0)'),
-		buttonrowbottom: tk.glider.append('g').attr('transform', 'scale(0)'),
-		imgg: tk.glider.append('g')
+		imgg: tk.glider.append('g'),
+		vslider: {}
 	}
-	tk.dom.buttonrowtop
-		.append('text')
-		.attr('y', 15)
-		.text('Full stack')
-		.attr('class', 'sja_clbtext2')
-		.on('click', async () => {
-			delete tk.partstack
-			block.tkcloakon(tk)
-			tk.data = await getData(tk, block)
-			renderTk(tk, block)
-			block.tkcloakoff(tk, {})
-			block.block_setheight()
-		})
 
-	tk.dom.scrolltop4 = tk.dom.buttonrowtop
-		.append('text')
-		.attr('x', 180)
-		.attr('y', 15)
-		.text('Scroll up ' + stackpagesize + ' reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, stackpagesize, true)
-		})
-	tk.dom.scrolltop3 = tk.dom.buttonrowtop
-		.append('text')
-		.attr('x', 340)
-		.attr('y', 15)
-		.text(stackpagesize / 2 + ' reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, stackpagesize / 2, true)
-		})
-	tk.dom.scrolltop2 = tk.dom.buttonrowtop
-		.append('text')
-		.attr('x', 440)
-		.attr('y', 15)
-		.text('5 reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, 5, true)
-		})
-	tk.dom.scrolltop1 = tk.dom.buttonrowtop
-		.append('text')
-		.attr('x', 540)
-		.attr('y', 15)
-		.text('1 read')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, 1, true)
-		})
+	tk.dom.img_fullstack = tk.dom.imgg.append('image')
+	tk.dom.img_partstack = tk.dom.imgg.append('image')
 
-	tk.dom.scrollbottom4 = tk.dom.buttonrowbottom
-		.append('text')
-		.attr('x', 140)
-		.attr('y', 15)
-		.text('Scroll down ' + stackpagesize + ' reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, stackpagesize)
-		})
-	tk.dom.scrollbottom3 = tk.dom.buttonrowbottom
-		.append('text')
-		.attr('x', 340)
-		.attr('y', 15)
-		.text(stackpagesize / 2 + ' reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, stackpagesize / 2)
-		})
-	tk.dom.scrollbottom2 = tk.dom.buttonrowbottom
-		.append('text')
-		.attr('x', 440)
-		.attr('y', 15)
-		.text('5 reads')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, 5)
-		})
-	tk.dom.scrollbottom1 = tk.dom.buttonrowbottom
-		.append('text')
-		.attr('x', 540)
-		.attr('y', 15)
-		.text('1 read')
-		.attr('class', 'sja_clbtext2')
-		.on('click', () => {
-			scroll_partstack(tk, block, 1)
-		})
-
-	tk.dom.img = tk.dom.imgg.append('image')
 	// put flyers behind cover
-	tk.box_move = tk.dom.imgg
+	tk.dom.box_move = tk.dom.imgg
 		.append('rect')
 		.attr('stroke', 'black')
 		.attr('fill', 'none')
-	tk.box_stay = tk.dom.imgg
+	tk.dom.box_stay = tk.dom.imgg
 		.append('rect')
 		.attr('stroke', 'magenta')
 		.attr('fill', 'none')
@@ -311,7 +257,7 @@ function makeTk(tk, block) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
 				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
-					tk.box_move
+					tk.dom.box_move
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -323,7 +269,7 @@ function makeTk(tk, block) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(tk.dom.img_cover.node())
 			if (tk.data.allowpartstack) {
-				do_partstack(tk, block, my - tk.data.messagerowheights)
+				enter_partstack(tk, block, my - tk.data.messagerowheights)
 				return
 			}
 			if (!tk.data.templatebox) return
@@ -338,7 +284,7 @@ function makeTk(tk, block) {
 							// or single mode and correct read
 							// box under cursor is highlighted, cancel
 							delete tk.clickedtemplate
-							tk.box_stay.attr('width', 0)
+							tk.dom.box_stay.attr('width', 0)
 							return
 						}
 					}
@@ -353,7 +299,7 @@ function makeTk(tk, block) {
 						if (t.isfirst) tk.clickedtemplate.isfirst = true
 						if (t.islast) tk.clickedtemplate.islast = true
 					}
-					tk.box_stay
+					tk.dom.box_stay
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
@@ -370,6 +316,133 @@ function makeTk(tk, block) {
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 	let laby = block.labelfontsize
 	tk.label_count = block.maketklefthandle(tk, laby)
+
+	tk.dom.vslider.g = tk.gright.append('g')
+	tk.dom.vslider.bar = tk.dom.vslider.g
+		.append('rect')
+		.attr('fill', '#eee')
+		.attr('x', 10)
+		.attr('width', 20)
+		.on('mouseover', () => tk.dom.vslider.bar.attr('fill', '#fae8e8'))
+		.on('mouseout', () => tk.dom.vslider.bar.attr('fill', '#eee'))
+		.on('click', () => {
+			delete tk.dom.vslider.boxy
+			delete tk.partstack
+			tk.data = tk.data_fullstack
+			renderTk(tk, block)
+			block.block_setheight()
+		})
+	tk.dom.vslider.boxg = tk.dom.vslider.g.append('g')
+	tk.dom.vslider.box = tk.dom.vslider.boxg
+		.append('rect')
+		.attr('fill', '#c7edc5')
+		.attr('width', 40)
+		.on('mousedown', () => {
+			d3event.preventDefault()
+			tk.dom.vslider.box.attr('fill', '#9ed19b')
+			const y0 = d3event.clientY
+			let deltay = 0
+			const b = d3select(document.body)
+			b.on('mousemove', () => {
+				const y1 = d3event.clientY
+				const d = y1 - y0
+				if (d < 0) {
+					if (tk.dom.vslider.boxy + deltay <= 0) return
+				} else {
+					if (tk.dom.vslider.boxy + deltay >= tk.data.height - tk.dom.vslider.boxh) return
+				}
+				deltay = d
+				tk.dom.vslider.boxg.attr('transform', 'translate(0,' + (tk.dom.vslider.boxy + deltay) + ')')
+			})
+			b.on('mouseup', async () => {
+				tk.dom.vslider.box.attr('fill', '#c7edc5')
+				b.on('mousemove', null).on('mouseup', null)
+				if (deltay == 0) return
+				tk.dom.vslider.boxy += deltay
+				const delta = Math.ceil((tk.data_fullstack.stackcount * deltay) / tk.data.height)
+				tk.partstack.start += delta
+				tk.partstack.stop += delta
+				block.tkcloakon(tk)
+				tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+				renderTk(tk, block)
+				block.tkcloakoff(tk, {})
+				block.block_setheight()
+			})
+		})
+
+	tk.dom.vslider.boxtopline = tk.dom.vslider.boxg
+		.append('line')
+		.attr('stroke', '#9ed19b')
+		.attr('stroke-width', 3)
+		.attr('x2', 40)
+		.on('mouseover', () => tk.dom.vslider.boxtopline.attr('stroke', '#36a32f'))
+		.on('mouseout', () => tk.dom.vslider.boxtopline.attr('stroke', '#9ed19b'))
+		.on('mousedown', () => {
+			d3event.preventDefault()
+			const y0 = d3event.clientY
+			let deltay = 0
+			const b = d3select(document.body)
+			b.on('mousemove', () => {
+				const y1 = d3event.clientY
+				const d = y1 - y0
+				if (d < 0) {
+					if (tk.dom.vslider.boxy + deltay <= 0) return
+				} else {
+					if (tk.dom.vslider.boxh - deltay <= (stackpagesize * tk.data.height) / tk.data_fullstack.stackcount) return
+				}
+				deltay = d
+				tk.dom.vslider.boxg.attr('transform', 'translate(0,' + (tk.dom.vslider.boxy + deltay) + ')')
+				tk.dom.vslider.box.attr('height', tk.dom.vslider.boxh - deltay)
+				tk.dom.vslider.boxbotline.attr('y1', tk.dom.vslider.boxh - deltay).attr('y2', tk.dom.vslider.boxh - deltay)
+			})
+			b.on('mouseup', async () => {
+				b.on('mousemove', null).on('mouseup', null)
+				if (deltay == 0) return
+				tk.dom.vslider.boxy += deltay
+				tk.partstack.start += Math.ceil((tk.data_fullstack.stackcount * deltay) / tk.data.height)
+				block.tkcloakon(tk)
+				tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+				renderTk(tk, block)
+				block.tkcloakoff(tk, {})
+				block.block_setheight()
+			})
+		})
+	tk.dom.vslider.boxbotline = tk.dom.vslider.boxg
+		.append('line')
+		.attr('stroke', '#9ed19b')
+		.attr('stroke-width', 3)
+		.attr('x2', 40)
+		.on('mouseover', () => tk.dom.vslider.boxbotline.attr('stroke', '#36a32f'))
+		.on('mouseout', () => tk.dom.vslider.boxbotline.attr('stroke', '#9ed19b'))
+		.on('mousedown', () => {
+			d3event.preventDefault()
+			const y0 = d3event.clientY
+			let deltay = 0
+			const b = d3select(document.body)
+			b.on('mousemove', () => {
+				const y1 = d3event.clientY
+				const d = y1 - y0
+				if (d < 0) {
+					if (tk.dom.vslider.boxh + d <= (stackpagesize * tk.data.height) / tk.data_fullstack.stackcount) return
+				} else {
+					if (tk.dom.vslider.boxy + deltay >= tk.data.height - tk.dom.vslider.boxh) return
+				}
+				deltay = d
+				tk.dom.vslider.box.attr('height', tk.dom.vslider.boxh + deltay)
+				tk.dom.vslider.boxbotline.attr('y1', tk.dom.vslider.boxh + deltay).attr('y2', tk.dom.vslider.boxh + deltay)
+			})
+			b.on('mouseup', async () => {
+				b.on('mousemove', null).on('mouseup', null)
+				if (deltay == 0) return
+				tk.dom.vslider.boxh += deltay
+				tk.partstack.stop += Math.ceil((tk.data_fullstack.stackcount * deltay) / tk.data.height)
+				block.tkcloakon(tk)
+				tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
+				renderTk(tk, block)
+				block.tkcloakoff(tk, {})
+				block.block_setheight()
+			})
+		})
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
@@ -441,7 +514,7 @@ if is pair mode, is the template
 	const [ridx, pos] = tmp
 	const lst = [
 		'getread=1',
-		'qname=' + box.qname,
+		'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
 		'genome=' + block.genome.name,
 		'chr=' + block.rglst[ridx].chr,
 		'pos=' + pos,
@@ -468,59 +541,13 @@ if is pair mode, is the template
 	tk.readpane.body.append('div').html(data.html)
 }
 
-async function do_partstack(tk, block, y) {
-	// tk.data is still old, full stack
-	const clickstackidx = Math.floor(y / tk.data.stackheight)
-	tk.stackcount = tk.data.stackcount // should only be for full stack number
+async function enter_partstack(tk, block, y) {
+	// enter part stack mode from full stack mode
+	tk.data_fullstack = tk.data
+	const clickstackidx = (tk.partstack ? tk.partstack.start : 0) + Math.floor(y / tk.data.stackheight)
 	tk.partstack = {
 		start: Math.max(0, clickstackidx - stackpagesize / 2),
-		stop: Math.min(tk.data.stackcount, clickstackidx + stackpagesize / 2)
-	}
-	block.tkcloakon(tk)
-	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
-	renderTk(tk, block)
-	block.tkcloakoff(tk, {})
-	block.block_setheight()
-}
-
-async function scroll_partstack(tk, block, length, scrollup) {
-	if (scrollup) {
-		if (tk.partstack.start <= 0) return
-		const scrollable = Math.min(tk.partstack.start, length)
-		tk.partstack = {
-			start: tk.partstack.start - scrollable,
-			stop: tk.partstack.stop - scrollable
-		}
-	} else {
-		if (tk.partstack.stop >= tk.stackcount) return
-		const scrollable = Math.min(length, tk.stackcount - tk.partstack.stop)
-		tk.partstack = {
-			start: tk.partstack.start + scrollable,
-			stop: tk.partstack.stop + scrollable
-		}
-	}
-
-	if (tk.partstack.start <= 0) {
-		tk.dom.scrolltop4.text('At the top')
-		tk.dom.scrolltop3.attr('transform', 'scale(0)')
-		tk.dom.scrolltop2.attr('transform', 'scale(0)')
-		tk.dom.scrolltop1.attr('transform', 'scale(0)')
-	} else {
-		tk.dom.scrolltop4.text('Scroll up ' + stackpagesize + ' reads')
-		tk.dom.scrolltop3.attr('transform', 'scale(1)')
-		tk.dom.scrolltop2.attr('transform', 'scale(1)')
-		tk.dom.scrolltop1.attr('transform', 'scale(1)')
-	}
-	if (tk.partstack.stop >= tk.stackcount) {
-		tk.dom.scrollbottom4.text('At the bottom')
-		tk.dom.scrollbottom3.attr('transform', 'scale(0)')
-		tk.dom.scrollbottom2.attr('transform', 'scale(0)')
-		tk.dom.scrollbottom1.attr('transform', 'scale(0)')
-	} else {
-		tk.dom.scrollbottom4.text('Scroll down ' + stackpagesize + ' reads')
-		tk.dom.scrollbottom3.attr('transform', 'scale(1)')
-		tk.dom.scrollbottom2.attr('transform', 'scale(1)')
-		tk.dom.scrollbottom1.attr('transform', 'scale(1)')
+		stop: Math.min(tk.data_fullstack.stackcount, clickstackidx + stackpagesize / 2)
 	}
 	block.tkcloakon(tk)
 	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
