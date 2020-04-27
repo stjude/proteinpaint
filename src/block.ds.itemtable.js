@@ -2859,5 +2859,4 @@ function may_addformat_singlesample(lst, m, tk) {
 			})
 		}
 	}
-	console.log(lst)
 }
