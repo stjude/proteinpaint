@@ -2749,6 +2749,8 @@ function singleSample2table(m, tk, holder) {
 	}
 	if (s.allele2readcount && s.allele2readcount[m.alt] != undefined) {
 		lst.push({ k: 'alt reads', v: s.allele2readcount[m.alt] })
+	} else {
+		may_addformat_singlesample(lst, m, tk)
 	}
 	if (s.sampleobj) {
 		if (tk.ds.cohort && tk.ds.cohort.annotation && tk.ds.cohort.key4annotation) {
@@ -2788,4 +2790,74 @@ function singleSample2table(m, tk, holder) {
 		}
 	}
 	client.make_table_2col(holder, lst)
+}
+
+function may_addformat_singlesample(lst, m, tk) {
+	// quick fix: may add format
+	let vcfobj
+	if (m.vcfid && tk.ds && tk.ds.id2vcf) vcfobj = tk.ds.id2vcf[m.vcfid]
+	if (!vcfobj) return
+	if (!vcfobj.format) return
+	const s = m.sampledata[0]
+	for (const formatfield in vcfobj.format) {
+		const formatdesc = vcfobj.format[formatfield]
+		if (!(formatfield in s)) continue
+		/* following are duplicated from block.mds.svcnv.clickitem.js, lines 1629
+		 */
+		// if the FORMAT has per-allele value, like AD in vcf 4.2+
+		let isperallelevalue = formatdesc.Number == 'R' || formatdesc.Number == 'A'
+		if (!isperallelevalue) {
+			if (formatfield == 'AD') {
+				// vcf 4.1 has AD as '.'
+				isperallelevalue = true
+			}
+		}
+
+		if (isperallelevalue) {
+			// per allele value
+
+			const alleles = []
+			const values = []
+			let altvalue
+
+			// add alt first
+			for (const ale in s[formatfield]) {
+				if (ale == m.ref) continue
+				alleles.push(ale)
+				altvalue = s[formatfield][ale]
+				values.push(altvalue)
+			}
+
+			// add ref after alt
+			const refvalue = s[formatfield][m.ref]
+			if (refvalue != undefined) {
+				alleles.push(m.ref)
+				values.push(refvalue)
+			}
+
+			let barsvg
+			if (refvalue + altvalue > 0) {
+				barsvg = client.fillbar(null, { f: altvalue / (altvalue + refvalue) })
+			}
+
+			lst.push({
+				k: formatfield,
+				v:
+					(barsvg ? barsvg + ' ' : '') +
+					'<span style="font-size:.8em;opacity:.5">' +
+					alleles.join(' / ') +
+					'</span> ' +
+					values.join(' / ') +
+					(formatdesc.Description
+						? ' <span style="font-size:.7em;opacity:.5">' + formatdesc.Description + '</span>'
+						: '')
+			})
+		} else {
+			lst.push({
+				k: formatfield,
+				v: s[formatfield]
+			})
+		}
+	}
+	console.log(lst)
 }
