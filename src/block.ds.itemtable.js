@@ -1042,21 +1042,48 @@ function may_info2table(m, holder, tk) {
 		const icfg = tk.info2table[infokey]
 		const rawvaluelst = m.info[infokey]
 		if (!rawvaluelst) continue
-		if (rawvaluelst.length == 1) {
-			// single
-			const table = []
-			const lst = rawvaluelst[0].split(icfg.col_separator)
-			for (let i = 0; i < icfg.fields.length; i++) {
-				if (icfg.fields[i].hide) continue
-				table.push({
-					k: icfg.fields[i].name,
-					v: info2table_value(icfg, lst, i)
-				})
+
+		if (icfg.separate_tables) {
+			const tables = JSON.parse(JSON.stringify(icfg.separate_tables))
+			tables.forEach(i => (i.rows = []))
+			for (const row of rawvaluelst) {
+				const lst = row.split(icfg.col_separator)
+				const field2value = new Map()
+				for (let i = 0; i < icfg.fields.length; i++) {
+					field2value.set(icfg.fields[i].name, lst[i])
+				}
+				for (const t of tables) {
+					if (t.groupers.reduce((i, j) => (field2value.get(j.field) == j.value ? i : false), true)) {
+						t.rows.push(field2value)
+					}
+				}
 			}
-			client.make_table_2col(holder, table)
+			for (const t of tables) {
+				if (t.rows.length == 0) continue
+				holder.append('h3').html(t.headhtml)
+				const table = holder
+					.append('table')
+					.style('border-spacing', '2px')
+					.style('border-collapse', 'separate')
+					.style('font-size', '90%')
+				const tr = table.append('tr')
+				for (const field of icfg.fields) {
+					if (field.hide) continue
+					tr.append('td').text(field.name)
+				}
+				for (const row of t.rows) {
+					const tr = table.append('tr').attr('class', 'sja_tr')
+					const lst = icfg.fields.map(i => row.get(i.name))
+					for (let i = 0; i < icfg.fields.length; i++) {
+						if (icfg.fields[i].hide) continue
+						const td = tr.append('td')
+						td.html(info2table_value(icfg, lst, i))
+					}
+				}
+			}
 			continue
 		}
-		// multiple
+
 		const table = holder
 			.append('table')
 			.style('border-spacing', '2px')
@@ -1105,6 +1132,9 @@ function info2table_value(icfg, lst, i) {
 				.join(', ')
 		}
 		return '<a href=' + field.appendUrl + value + ' target=_blank>' + value + '</a>'
+	}
+	if (field.insert2url) {
+		return '<a href=' + field.insert2url.left + value + field.insert2url.right + ' target=_blank>' + value + '</a>'
 	}
 	if (field.ampersand2br) return value.replace(/&/g, '<br>')
 	if (field.urlMatchLst) {

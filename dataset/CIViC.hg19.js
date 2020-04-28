@@ -46,7 +46,7 @@ module.exports = {
 				{ name: 'CIViC Variant ID', appendUrl: 'https://civicdb.org/links/variant/' },
 				{ name: 'CIViC Variant Aliases', ampersand2br: true },
 				{ name: 'CIViC HGVS', eval: true, ampersand2br: true },
-				{ name: 'Allele Registry ID' },
+				{ name: 'Allele Registry ID', insert2url: { left: 'https://reg.genome.network/allele/', right: '.html' } },
 				{ name: 'ClinVar IDs', separator: '&', appendUrl: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' },
 				{ name: 'CIViC Variant Evidence Score' }
 			]
@@ -55,6 +55,38 @@ module.exports = {
 	info2table: {
 		civic_csq: {
 			col_separator: '|',
+			separate_tables: [
+				{
+					headhtml: 'Accepted evidence',
+					groupers: [
+						{ field: 'CIViC Entity Type', value: 'evidence' },
+						{ field: 'CIViC Entity Status', value: 'accepted' }
+					]
+				},
+				{
+					headhtml:
+						'Submitted evidence <span style="font-size:.7em">CAUTION: not yet been accepted as accurate or complete!</span>',
+					groupers: [
+						{ field: 'CIViC Entity Type', value: 'evidence' },
+						{ field: 'CIViC Entity Status', value: 'submitted' }
+					]
+				},
+				{
+					headhtml: 'Accepted assertion',
+					groupers: [
+						{ field: 'CIViC Entity Type', value: 'assertion' },
+						{ field: 'CIViC Entity Status', value: 'accepted' }
+					]
+				},
+				{
+					headhtml:
+						'Submitted assertion <span style="font-size:.7em">CAUTION: not yet been accepted as accurate or complete!</span>',
+					groupers: [
+						{ field: 'CIViC Entity Type', value: 'assertion' },
+						{ field: 'CIViC Entity Status', value: 'submitted' }
+					]
+				}
+			],
 			fields: [
 				// each field is a column
 				{ hide: true, name: 'Allele' },
@@ -72,7 +104,7 @@ module.exports = {
 				{ hide: true, name: 'Allele Registry ID' },
 				{ hide: true, name: 'ClinVar IDs' },
 				{ hide: true, name: 'CIViC Variant Evidence Score' },
-				{ name: 'CIViC Entity Type' },
+				{ hide: true, name: 'CIViC Entity Type' },
 				{ name: 'CIViC Entity ID' },
 				{ name: 'CIViC Entity URL', isurl: true },
 				{
@@ -87,7 +119,7 @@ module.exports = {
 					}
 				},
 				{ name: 'CIViC Entity Variant Origin' },
-				{ name: 'CIViC Entity Status' }
+				{ hide: true, name: 'CIViC Entity Status' }
 			]
 		}
 	}
