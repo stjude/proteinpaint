@@ -4536,6 +4536,44 @@ if fromgenetk is provided, will skip this track
 		return new Block(arg)
 	}
 
+	showTrackByFile(files) {
+		if (!Array.isArray(files)) {
+			this.error('showTrackByFile() argument must be array')
+			return
+		}
+		const type2files = new Map()
+		for (const f of files) {
+			if (!f.type) {
+				this.error('.type missing from a file')
+				return
+			}
+			if (!f.file) {
+				this.error('.file missing from a file')
+				return
+			}
+			if (!type2files.has(f.type)) type2files.set(f.type, new Set())
+			type2files.get(f.type).add(f.file)
+		}
+		const toremove = this.tklst.filter(t => type2files.has(t.type) && !type2files.get(t.type).has(t.file))
+		const toadd = []
+		for (const [type, files] of type2files) {
+			for (const file of files) {
+				const gt = this.genome.tracks.find(t => t.type == type && t.file == file)
+				if (gt && !this.tklst.find(t => t.type == type && t.file == file)) {
+					// in genome.tracks but not tklst, to show
+					toadd.push(gt)
+				}
+			}
+		}
+		for (const f of toremove) {
+			this.tk_remove(this.tklst.findIndex(t => t.type == f.type && t.file == f.file))
+		}
+		for (const f of toadd) {
+			const t = this.block_addtk_template(f)
+			this.tk_load(t)
+		}
+	}
+
 	/*********** end of class:Block  ************/
 }
 
