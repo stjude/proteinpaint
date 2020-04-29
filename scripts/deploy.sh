@@ -110,7 +110,7 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	if [[ "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
 		TEMPHOST=pp-irp
 	elif [[ "$ENV" == "jump-prod" ]]; then
-		TEMPHOST=svldtemp01
+		TEMPHOST=svldtemp01.stjude.org
 	fi
 else
 	echo "Environment='$ENV' is not supported"
