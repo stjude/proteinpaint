@@ -1328,8 +1328,9 @@ should guard against file content error e.g. two tabs separating columns
 
 			if (items.length == 0) {
 				// will draw, but no data
-				const canvas = createCanvas(width, stackheight)
+				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
 				const ctx = canvas.getContext('2d')
+				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 				ctx.font = stackheight + 'px Arial'
 				ctx.fillStyle = '#aaa'
 				ctx.textAlign = 'center'
@@ -1346,8 +1347,9 @@ should guard against file content error e.g. two tabs separating columns
 				// __onerow__
 				// may render strand
 				const notmanyitem = items.length < 200
-				const canvas = createCanvas(width, stackheight)
+				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
 				const ctx = canvas.getContext('2d')
+				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 				const mapisoform = items.length <= 200 ? [] : null
 				for (const item of items) {
 					const fillcolor =
@@ -1430,6 +1432,7 @@ should guard against file content error e.g. two tabs separating columns
 			const namepad = 10 // box no struct: [pad---name---pad]
 			const canvas = createCanvas(10, 10) // for measuring text only
 			let ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			const packfull = items.length < 200
 			const mapisoform = items.length < 200 ? [] : null
@@ -1568,10 +1571,11 @@ should guard against file content error e.g. two tabs separating columns
 
 			// render
 
-			canvas.width = width
+			canvas.width = width * req.query.devicePixelRatio
 			const finalheight = (stackheight + stackspace) * maxstack - stackspace
-			canvas.height = finalheight
+			canvas.height = finalheight * req.query.devicePixelRatio
 			ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			ctx.textBaseline = 'middle'
 			ctx.lineWidth = 1

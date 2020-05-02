@@ -3000,7 +3000,8 @@ seekrange(chr,start,stop) {
 			url: tk.url,
 			indexURL: tk.indexURL,
 			translatecoding: tk.translatecoding,
-			categories: tk.categories
+			categories: tk.categories,
+			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
 		if (tk.onerow) {
 			par.onerow = true
