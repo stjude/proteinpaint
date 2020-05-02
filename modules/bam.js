@@ -8,13 +8,6 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
-TODO
-- print ctx chr name next to read when to_qual
-- selecting a vertical range from densely packed reads to show alignment in full letters
-  via text file cache?
-- count number of reads/templates skipped for only having N in view range and show as message row
-- error rendering, N junction overlaps with another read in stacking
-
 *********************** data structure
 q {}
 .regions[]
@@ -27,6 +20,8 @@ q {}
 .stackspace
 .stacksegspacing
 .stacks[]
+.canvaswidth
+.canvasheight
 .templates[]
 .overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 .overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
@@ -224,13 +219,13 @@ async function do_query(q) {
 
 	finalize_templates(q) // set q.canvasheight
 
-	const canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-	const canvas = createCanvas(canvaswidth, q.canvasheight)
+	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
+	const canvas = createCanvas(q.canvaswidth, q.canvasheight)
 	const ctx = canvas.getContext('2d')
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
-	result.messagerowheights = plot_messagerows(ctx, q, canvaswidth)
+	result.messagerowheights = plot_messagerows(ctx, q)
 
 	for (const template of q.templates) {
 		plot_template(ctx, template, q)
@@ -239,7 +234,7 @@ async function do_query(q) {
 
 	if (q.asPaired) result.count.t = q.templates.length
 	result.src = canvas.toDataURL()
-	result.width = canvaswidth
+	result.width = q.canvaswidth
 	result.height = q.canvasheight
 	result.stackheight = q.stackheight
 	result.stackcount = q.stacks.length
@@ -679,14 +674,12 @@ function qual2int(s) {
 	return lst
 }
 
-function plot_messagerows(ctx, q, canvaswidth) {
+function plot_messagerows(ctx, q) {
 	let y = 0
 	for (const row of q.messagerows) {
 		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
-		//ctx.fillStyle = '#f1f1f1'
-		//ctx.fillRect(0,y,canvaswidth,row.h)
 		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, canvaswidth / 2, y + row.h / 2)
+		ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
 	return y
@@ -880,6 +873,22 @@ function plot_segment(ctx, segment, y, q) {
 			ctx.moveTo(x, y2)
 			ctx.lineTo(x + b.len * r.ntwidth, y2)
 			ctx.stroke()
+			if (q.stackheight > 7) {
+				// b boundaries may be out of range
+				const x1 = Math.max(0, x)
+				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
+				if (x2 - x1 >= 50) {
+					const fontsize = Math.max(7, q.stackheight - 2)
+					ctx.font = fontsize + 'pt Arial'
+					const tw = ctx.measureText(b.len + ' bp').width
+					if (tw < x2 - x1 - 20) {
+						ctx.fillStyle = 'white'
+						ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, q.stackheight)
+						ctx.fillStyle = match_hq
+						ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + q.stackheight / 2)
+					}
+				}
+			}
 			return
 		}
 
