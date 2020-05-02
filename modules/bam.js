@@ -157,7 +157,8 @@ async function get_q(genome, req) {
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
 		numofreads: 0,
-		messagerows: []
+		messagerows: [],
+		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
 	if (isurl) {
 		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
@@ -220,8 +221,11 @@ async function do_query(q) {
 	finalize_templates(q) // set q.canvasheight
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-	const canvas = createCanvas(q.canvaswidth, q.canvasheight)
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
