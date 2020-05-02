@@ -3265,7 +3265,8 @@ if fromgenetk is provided, will skip this track
 			pcolor: tk.pcolor,
 			pcolor2: tk.pcolor2,
 			ncolor: tk.ncolor,
-			ncolor2: tk.ncolor2
+			ncolor2: tk.ncolor2,
+			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
 		if (tk.normalize && !tk.normalize.disable) {
 			a.dividefactor = tk.normalize.dividefactor

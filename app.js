@@ -798,8 +798,14 @@ if file/url ends with .gz, it is bedgraph
 			for (const r of req.query.rglst) {
 				if (r.values) nodata = false
 			}
-			const canvas = createCanvas(req.query.width, req.query.barheight)
+			const canvas = createCanvas(
+				req.query.width * req.query.devicePixelRatio,
+				req.query.barheight * req.query.devicePixelRatio
+			)
 			const ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) {
+				ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+			}
 			if (nodata) {
 				// bigwig hard-coded stuff
 				ctx.font = '14px Arial'
