@@ -101,18 +101,17 @@ function tkarg(tk, block) {
 		rglst: block.tkarg_rglst(),
 		regionspace: block.regionspace,
 		width: block.width,
-
 		coveragemax: tk.coveragemax,
 		gtotalcutoff: tk.gtotalcutoff,
 		gmafrestrict: tk.gmafrestrict,
-
 		file: tk.file,
 		url: tk.url,
 		indexURL: tk.indexURL,
 		vafheight: tk.vafheight,
 		coverageheight: tk.coverageheight,
 		rowspace: tk.rowspace,
-		dotsize: tk.dotsize
+		dotsize: tk.dotsize,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 	}
 	return a
 }

@@ -968,8 +968,14 @@ function handle_tkaicheck(req, res) {
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict
 
-	const canvas = createCanvas(req.query.width, vafheight * 3 + rowspace * 4 + coverageheight * 2)
+	const canvas = createCanvas(
+		req.query.width * req.query.devicePixelRatio,
+		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
+	)
 	const ctx = canvas.getContext('2d')
+	if (req.query.devicePixelRatio > 1) {
+		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+	}
 
 	// vaf track background
 	ctx.fillStyle = '#f1f1f1'
