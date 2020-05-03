@@ -6000,8 +6000,14 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 		}
 	}
 
-	const canvas = createCanvas(q.width, q.rnabarheight + q.barypad + q.dnabarheight)
+	const canvas = createCanvas(
+		q.width * q.devicePixelRatio,
+		(q.rnabarheight + q.barypad + q.dnabarheight) * q.devicePixelRatio
+	)
 	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 
 	let isbp = false,
 		binbpsize,
