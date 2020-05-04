@@ -39,6 +39,7 @@ template {}
 
 segment {}
 .qname
+.seq
 .boxes[]
 .forward
 .ridx
@@ -214,6 +215,7 @@ async function do_query(q) {
 	}
 
 	get_templates(q) // q.templates
+	//const filename = writefile_reads(q)
 
 	stack_templates(q)
 	await poststack_adjustq(q)
@@ -246,6 +248,17 @@ async function do_query(q) {
 	if (q.allowpartstack) result.allowpartstack = q.allowpartstack
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
+}
+
+async function writefile_reads(q) {
+	// unfinished
+	const lines = []
+	for (const t of q.templates) {
+		for (const s of t.segments) {
+			lines.push('>' + s.qname + '\n' + s.seq)
+		}
+	}
+	const file = await utils.write_tmpfile(lines.join('\n'))
 }
 
 function query_region(r, q) {
@@ -882,7 +895,7 @@ function plot_segment(ctx, segment, y, q) {
 				const x1 = Math.max(0, x)
 				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
-					const fontsize = Math.max(7, q.stackheight - 2)
+					const fontsize = Math.min(11, Math.max(7, q.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
@@ -900,6 +913,9 @@ function plot_segment(ctx, segment, y, q) {
 			// box with maybe letters
 			if (r.to_qual && b.qual) {
 				// to show quality and indeed there is quality
+				if (r.to_printnt) {
+					ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
+				}
 				let xoff = x
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
@@ -933,6 +949,7 @@ function plot_segment(ctx, segment, y, q) {
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
 			if (r.to_printnt) {
+				ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				for (let i = 0; i < b.s.length; i++) {
 					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
