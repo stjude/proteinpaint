@@ -6159,6 +6159,7 @@ q {}
 			}
 
 			const { canvas, ctx, binpxw } = plotter
+			ctx.lineWidth = Math.max(3, binpxw) // temp fix to make snp bar thicker
 
 			// done piling up, plot all snps in view range
 			let dnamax = 0
