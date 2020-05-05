@@ -6208,13 +6208,15 @@ q {}
 					ctx.stroke()
 					ctx.closePath()
 				} else {
-					// not het
+					/*
+					// not het, do not plot for now, should make it optional on UI
 					ctx.strokeStyle = '#ccc'
 					ctx.beginPath()
 					ctx.moveTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad)
 					ctx.lineTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad + h)
 					ctx.stroke()
 					ctx.closePath()
+					*/
 				}
 				delete m.__x
 			}
