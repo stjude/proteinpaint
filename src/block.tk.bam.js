@@ -546,9 +546,24 @@ async function enter_partstack(tk, block, y) {
 	// enter part stack mode from full stack mode
 	tk.data_fullstack = tk.data
 	const clickstackidx = (tk.partstack ? tk.partstack.start : 0) + Math.floor(y / tk.data.stackheight)
-	tk.partstack = {
-		start: Math.max(0, clickstackidx - stackpagesize / 2),
-		stop: Math.min(tk.data_fullstack.stackcount, clickstackidx + stackpagesize / 2)
+	// set start/stop of tk.partstack, ensure stop-start=stackpagesize
+	if (clickstackidx < stackpagesize / 2) {
+		// clicked too close to top
+		tk.partstack = {
+			start: 0,
+			stop: stackpagesize
+		}
+	} else if (clickstackidx > tk.data_fullstack.stackcount - stackpagesize / 2) {
+		// clicked too close to bottom
+		tk.partstack = {
+			start: tk.data_fullstack.stackcount - stackpagesize,
+			stop: tk.data_fullstack.stackcount
+		}
+	} else {
+		tk.partstack = {
+			start: clickstackidx - stackpagesize / 2,
+			stop: clickstackidx + stackpagesize / 2
+		}
 	}
 	block.tkcloakon(tk)
 	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])

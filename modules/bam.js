@@ -110,6 +110,11 @@ const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
 const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
 
+const minstackheight2strandarrow = 7
+const minstackheight2printbplenDN = 7
+const maxfontsize2printbplenDN = 10
+const minfontsize2printbplenDN = 7
+
 const maxqual = 40
 
 // tricky: on retina screen the individual nt boxes appear to have slight gaps in between
@@ -869,14 +874,10 @@ function plot_segment(ctx, segment, y, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
-	if (r.to_printnt) {
-		ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
-	}
-
-	segment.boxes.forEach(b => {
+	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
-		if (b.opr == 'P') return // do not handle
-		if (b.opr == 'I') return // do it next round
+		if (b.opr == 'P') continue // do not handle
+		if (b.opr == 'I') continue // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
 			// a line
 			if (b.opr == 'D') {
@@ -890,12 +891,12 @@ function plot_segment(ctx, segment, y, q) {
 			ctx.moveTo(x, y2)
 			ctx.lineTo(x + b.len * r.ntwidth, y2)
 			ctx.stroke()
-			if (q.stackheight > 7) {
+			if (q.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
 				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
-					const fontsize = Math.min(11, Math.max(7, q.stackheight - 2))
+					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, q.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
@@ -906,7 +907,7 @@ function plot_segment(ctx, segment, y, q) {
 					}
 				}
 			}
-			return
+			continue
 		}
 
 		if (b.opr == 'X' || b.opr == 'S') {
@@ -932,7 +933,7 @@ function plot_segment(ctx, segment, y, q) {
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
 			}
-			return
+			continue
 		}
 		if (b.opr == 'M' || b.opr == '=') {
 			// box
@@ -955,10 +956,52 @@ function plot_segment(ctx, segment, y, q) {
 					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
 				}
 			}
-			return
+			continue
 		}
 		throw 'unknown opr at rendering: ' + b.opr
-	})
+	}
+
+	if (q.stackheight >= minstackheight2strandarrow) {
+		if (segment.forward) {
+			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
+			if (x <= q.canvaswidth + q.stackheight / 2) {
+				ctx.fillStyle = 'white'
+				ctx.beginPath()
+				ctx.moveTo(x - q.stackheight / 2, y)
+				ctx.lineTo(x, y)
+				ctx.lineTo(x, y + q.stackheight / 2)
+				ctx.lineTo(x - q.stackheight / 2, y)
+				ctx.closePath()
+				ctx.fill()
+				ctx.beginPath()
+				ctx.moveTo(x - q.stackheight / 2, y + q.stackheight)
+				ctx.lineTo(x, y + q.stackheight)
+				ctx.lineTo(x, y + q.stackheight / 2)
+				ctx.lineTo(x - q.stackheight / 2, y + q.stackheight)
+				ctx.closePath()
+				ctx.fill()
+			}
+		} else {
+			const x = segment.x1
+			if (x >= 0) {
+				ctx.fillStyle = 'white'
+				ctx.beginPath()
+				ctx.moveTo(x + q.stackheight / 2, y)
+				ctx.lineTo(x, y)
+				ctx.lineTo(x, y + q.stackheight / 2)
+				ctx.lineTo(x + q.stackheight / 2, y)
+				ctx.closePath()
+				ctx.fill()
+				ctx.beginPath()
+				ctx.moveTo(x + q.stackheight / 2, y + q.stackheight)
+				ctx.lineTo(x, y + q.stackheight)
+				ctx.lineTo(x, y + q.stackheight / 2)
+				ctx.lineTo(x + q.stackheight / 2, y + q.stackheight)
+				ctx.closePath()
+				ctx.fill()
+			}
+		}
+	}
 
 	if (segment.rnext) {
 		if (!r.to_qual) {
