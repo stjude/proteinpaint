@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2, sayerror } from '../client'
+import { dofetch2, sayerror, Menu } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
@@ -39,22 +39,32 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search')
+		return action.type.startsWith('search') || action.type.startsWith('cohort')
 	}
 
 	getState(appState) {
 		return {
 			genome: appState.genome,
-			dslabel: appState.dslabel
+			dslabel: appState.dslabel,
+			cohortStr: appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+				? ''
+				: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.join(',')
+
 		}
 	}
 
 	async doSearch(str) {
 		if (!str) {
 			this.clear()
+			this.bus.emit('postSearch', [])
 			return
 		}
-		const lst = ['genome=' + this.state.genome, 'dslabel=' + this.state.dslabel, 'findterm=' + encodeURIComponent(str)]
+		const lst = [
+			'genome=' + this.state.genome, 
+			'dslabel=' + this.state.dslabel, 
+			'findterm=' + encodeURIComponent(str),
+			'cohortStr=' + this.state.cohortStr
+		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
@@ -63,7 +73,7 @@ class TermSearch {
 			// found terms
 			this.showTerms(data)
 		}
-		this.bus.emit('postSearch')
+		this.bus.emit('postSearch', data)
 	}
 }
 
@@ -72,16 +82,19 @@ export const searchInit = rx.getInitFxn(TermSearch)
 function setRenderers(self) {
 	self.initUI = () => {
 		self.dom.input = self.dom.holder
+			.style('text-align', 'center')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search')
-			.style('width', '120px')
+			.style('width', '180px')
 			.style('display', 'block')
+			.style('font-size', '24px')
 			.on('input', debounce(self.onInput, 300))
-		self.dom.resultDiv = self.dom.holder
-			.append('div')
-			.style('border-left', 'solid 1px rgb(133,182,225)')
+
+		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
+		self.dom.resultDiv
+			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 	}

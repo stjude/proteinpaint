@@ -138,6 +138,20 @@
 				} else {
 					window.alert("You chose a VCF.GZ file (" + filename + ") but no associated index file (.tbi or .csi)");
 				}
+
+			} else if(path.endsWith('.bam')) {
+				var indexfile = pathToURL[path+'.bai']
+				if(indexfile) {
+					tracks.push({
+						name:filename.replace(/\.bam$/,''),
+						url:pathToURL[path],
+						indexURL: indexfile,
+						type:'bam'
+					})
+				} else {
+					window.alert('You chose a .bam file ('+filename+') but no associated .bai index file')
+				}
+
 			} else if(path.endsWith('.bedj.gz')) {
 				var indexfile = pathToURL[path+'.csi'] || pathToURL[path+'.tbi']
 				if(indexfile) {
@@ -254,7 +268,7 @@
 			nobox:true,
 			noheader:true,
 			tracks:tracks,
-			nativetracks:['refgene','RepeatMasker']
+			nativetracks:['refgene']
 		};
 
 		runproteinpaint(proteinpaintConfig)

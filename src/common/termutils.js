@@ -29,20 +29,11 @@ exports.getterm = async function(termid, dslabel = null, genome = null) {
 }
 
 
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
+
 // shared in client, server, and tape test
 exports.graphable = function(term) {
 	if (!term) throw 'graphable: term is missing'
-	// terms with a valid type supports graph
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition || term.isgenotype
-}
-
-// get a term type value for quick matching flow,
-// such as menuFiller = fillers[getTermType(term)]
-exports.getTermType = function(term) {
-	return term.iscategorical ? 'categorical'
-		: term.iscondition ? 'condition'
-		: term.isinteger ? 'integer'
-		: term.isfloat ? 'float'
-		: term.isgenotype ? 'genotype'
-		: 'UNSUPPORTED_TERM_TYPE'
+	// term.isgenotype??
+	return graphableTypes.has(term.type)
 }

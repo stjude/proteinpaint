@@ -45,14 +45,14 @@ function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEs: [] list of individual CTE string
 			// .values: []
 			// .CTEname: str
-		} else if (item.tvs.term.iscategorical) {
+		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i)
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
-		} else if (item.tvs.term.isinteger || item.tvs.term.isfloat) {
+		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
 			f = get_numerical(item.tvs, CTEname_i, ds)
-		} else if (item.tvs.term.iscondition) {
+		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i)
 		} else {
 			throw 'unknown term type'
@@ -119,9 +119,9 @@ so here need to allow both string and number as range.value
 */
 	if (!tvs.ranges) throw '.ranges{} missing'
 	const values = [tvs.term.id]
-	// get term object, in case isinteger flag is missing from tvs.term
+	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-	const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
+	const cast = 'CAST(value AS ' + (term.type == 'integer' ? 'INT' : 'REAL') + ')'
 
 	const rangeclauses = []
 	let hasactualrange = false // if true, will exclude special categories
@@ -130,30 +130,32 @@ so here need to allow both string and number as range.value
 		if ('value' in range) {
 			// special category
 			// where value for ? can be number or string, doesn't matter
-			rangeclauses.push('value = ?')
+			const negator = tvs.isnot ? '!' : ''
+			rangeclauses.push(`value ${negator}= ?`)
 			values.push('' + range.value)
-			continue
-		}
-		// actual range
-		hasactualrange = true
-		const lst = []
-		if (!range.startunbounded) {
-			if (range.startinclusive) {
-				lst.push(cast + ' >= ?')
-			} else {
-				lst.push(cast + ' > ? ')
+		} else {
+			// actual range
+			hasactualrange = true
+			const lst = []
+			if (!range.startunbounded) {
+				if (range.startinclusive) {
+					lst.push(cast + ' >= ?')
+				} else {
+					lst.push(cast + ' > ? ')
+				}
+				values.push(range.start)
 			}
-			values.push(range.start)
-		}
-		if (!range.stopunbounded) {
-			if (range.stopinclusive) {
-				lst.push(cast + ' <= ?')
-			} else {
-				lst.push(cast + ' < ? ')
+			if (!range.stopunbounded) {
+				if (range.stopinclusive) {
+					lst.push(cast + ' <= ?')
+				} else {
+					lst.push(cast + ' < ? ')
+				}
+				values.push(range.stop)
 			}
-			values.push(range.stop)
+			const negator = tvs.isnot ? 'NOT ' : ''
+			rangeclauses.push(negator + '(' + lst.join(' AND ') + ')')
 		}
-		rangeclauses.push('(' + lst.join(' AND ') + ')')
 	}
 
 	let excludevalues
@@ -166,16 +168,7 @@ so here need to allow both string and number as range.value
 	}
 
 	const combinedClauses = rangeclauses.join(' OR ')
-	const subclause = !tvs.isnot
-		? `( ${combinedClauses} )`
-		: `sample NOT IN ( 
-				SELECT sample
-				FROM annotations
-				WHERE term_id = ?
-				AND ( ${combinedClauses} )
-			)`
-
-	if (tvs.isnot) values.push(tvs.term.id)
+	const subclause = `( ${combinedClauses} )`
 
 	return {
 		CTEs: [

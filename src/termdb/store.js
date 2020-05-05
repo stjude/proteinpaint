@@ -4,17 +4,25 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
+import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
+	nav: {
+		show_tabs: false,
+		activeTab: 0
+	},
+	// will be ignored if there is no dataset termdb.selectCohort
+	// or value will be set to match a filter node that has been tagged
+	// as 'cohortfilter' in state.termfilter.filter
+	activeCohort: 0,
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
 		plots: {}
 	},
 	termfilter: {
-		terms: [],
 		filter: {
 			type: 'tvslst',
 			in: true,
@@ -61,7 +69,6 @@ class TdbStore {
 	}
 
 	async rehydrate() {
-		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
 		// maybe no need to provide term filter at this query
 		for (const plotId in this.state.tree.plots) {
 			const savedPlot = this.state.tree.plots[plotId]
@@ -77,6 +84,63 @@ class TdbStore {
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
+
+		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+		if (!filterUiRoot) {
+			this.state.termfilter.filter.tag = 'filterUiRoot'
+			filterUiRoot = this.state.termfilter.filter
+		}
+
+		this.state.termdbConfig = await this.getTermdbConfig()
+		if (this.state.termdbConfig.selectCohort) {
+			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+			if (!cohortFilter) {
+				// support legacy state.termfilter and test scripts that
+				// that does not specify a cohort when required;
+				// will use state.activeCohort if not -1
+				cohortFilter = {
+					tag: 'cohortFilter',
+					type: 'tvs',
+					tvs: {
+						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
+						values:
+							this.state.activeCohort == -1
+								? []
+								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
+										return { key, label: key }
+								  })
+					}
+				}
+				this.state.termfilter.filter = {
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [cohortFilter, filterUiRoot]
+				}
+			} else {
+				const sorter = (a, b) => (a < b ? -1 : 1)
+				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
+				const i = this.state.termdbConfig.selectCohort.values.findIndex(
+					v => keysStr == JSON.stringify(v.keys.sort(sorter))
+				)
+				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
+					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+				}
+				this.state.activeCohort = i
+			}
+		} else {
+			this.state.activeCohort = -1
+			if (this.state.activeTab === 0) this.state.activeTab = 1
+		}
+	}
+
+	async getTermdbConfig() {
+		const data = await dofetch2(
+			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
+		)
+		// note: in case of error such as missing dataset, supply empty object
+		return data.termdbConfig || {}
 	}
 
 	fromJson(str) {
@@ -109,6 +173,18 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+	},
+	tab_set(action) {
+		this.state.nav.activeTab = action.activeTab
+	},
+	cohort_set(action) {
+		this.state.activeCohort = action.activeCohort
+		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
+		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+		if (!cohortFilter) throw `No item tagged with 'cohortFilter'`
+		cohortFilter.tvs.values = cohort.keys.map(key => {
+			return { key, label: key }
+		})
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return
@@ -145,88 +221,21 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	filter_add(action) {
-		const filterType = 'terms'
-		const filters = this.state.termfilter[filterType]
-		if ('termId' in action) {
-			/*
-				having one termId assumes dispatching one added tvs at a time, 
-				whereas a bar with overlay will require adding two tvs at the same time;
-
-				should always use a tvslst instead, so may need to repeat this
-				match for existing term filter
-			*/
-			const filter = filters.find(d => d.id == action.termId)
-			if (filter) {
-				const valueData =
-					filter.term.iscategorical || filter.term.iscondition
-						? filter.values
-						: filter.term.isfloat || filter.term.isinteger
-						? filter.ranges
-						: filter.grade_and_child
-				// may need to add check if value is already present
-				if (!valueData.includes(action.value)) valueData.push(action.value)
-			}
-		} else if (action.tvslst) {
-			filters.push(action.tvslst)
-		} else {
-			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
-			filters.push([action.term])
-		}
-	},
-
-	filter_grade_update(action) {
-		const t = this.state.termfilter.terms.find(d => d.id == action.termId)
-		if (!t) return
-		t.bar_by_grade = action.updated_term.bar_by_grade
-		t.bar_by_children = action.updated_term.bar_by_children
-		t.value_by_max_grade = action.updated_term.value_by_max_grade
-		t.value_by_most_recent = action.updated_term.value_by_most_recent
-		t.value_by_computable_grade = action.updated_term.value_by_computable_grade
-	},
-
-	filter_remove(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		this.state.termfilter.terms.splice(i, 1)
-	},
-
-	filter_negate(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.isnot = term.isnot ? false : true
-	},
-
-	filter_value_add(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical ? term.values.push(action.value) : term.ranges.push(action.value)
-	},
-
-	filter_value_change(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical || term.term.iscondition
-			? (term.values[action.valueId] = action.value)
-			: (term.ranges[action.valueId] = action.value)
-	},
-
-	filter_value_remove(action) {
-		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
-		if (i == -1) return
-		const term = this.state.termfilter.terms[i]
-		const values = term.term.iscategorical || term.term.iscondition ? term.values : term.ranges
-		values.splice(action.valueId, 1)
-		if (values.length == 0) {
-			this.state.termfilter.terms.splice(i, 1)
-		}
-	},
-
 	filter_replace(action) {
-		this.state.termfilter.filter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
+		if (!action.filter.tag) {
+			this.state.termfilter.filter = replacementFilter
+		} else {
+			const filter = getFilterItemByTag(this.state.termfilter.filter, action.filter.tag)
+			if (!filter) throw `cannot replace missing filter with tag '${action.filter.tag}'`
+			const parent = findParent(this.state.termfilter.filter, filter.$id)
+			if (parent == filter) {
+				this.state.termfilter.filter = replacementFilter
+			} else {
+				const i = parent.lst.indexOf(filter)
+				parent.lst[i] = replacementFilter
+			}
+		}
 	}
 }
 
@@ -250,7 +259,7 @@ function validatePlot(p) {
 		} catch (e) {
 			throw 'plot.term2 error: ' + e
 		}
-		if (p.term.term.iscondition && p.term.id == p.term2.id) {
+		if (p.term.term.type == 'condition' && p.term.id == p.term2.id) {
 			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
 			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
 				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
@@ -281,23 +290,31 @@ function validatePlotTerm(t) {
 
 	if (!t.q) throw '.q{} missing'
 	// term-type specific validation of q
-	if (t.term.isinteger || t.term.isfloat) {
-		// t.q is binning scheme, it is validated on server
-	} else if (t.term.iscategorical) {
-		if (t.q.groupsetting && !t.q.groupsetting.disabled) {
-			// groupsetting allowed on this term
-			if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
-			// groupsetting is validated on server
-		}
-		// term may not have .values{} when groupsetting is disabled
-	} else if (t.term.iscondition) {
-		if (!t.term.values) throw '.values{} missing'
-		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
-		if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
-			throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
-	} else if (t.term.isgenotype) {
-		// don't do anything for now
-	} else {
-		throw 'unknown term type'
+	switch (t.term.type) {
+		case 'integer':
+		case 'float':
+			// t.q is binning scheme, it is validated on server
+			break
+		case 'categorical':
+			if (t.q.groupsetting && !t.q.groupsetting.disabled) {
+				// groupsetting allowed on this term
+				if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
+				// groupsetting is validated on server
+			}
+			// term may not have .values{} when groupsetting is disabled
+			break
+		case 'condition':
+			if (!t.term.values) throw '.values{} missing'
+			if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
+			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
+				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
+			break
+		default:
+			if (t.term.isgenotype) {
+				// don't do anything for now
+				console.log('to add in type:"genotype"')
+				break
+			}
+			throw 'unknown term type'
 	}
 }

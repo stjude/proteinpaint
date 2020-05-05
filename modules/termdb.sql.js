@@ -40,6 +40,36 @@ return an array of sample names passing through the filter
 	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
 	return re.map(i => i.sample)
 }
+export function get_cohortsamplecount(q, ds) {
+	/*
+must have q.cohortValues string
+return an array of sample names for the given cohort
+*/
+	if (!q.cohortValues) throw `missing q.cohortValues`
+	const cohortKey = ds.cohort.termdb.selectCohort.term.id
+	const statement = `SELECT cohort as ${cohortKey}, count as samplecount
+		FROM subcohort_terms
+		WHERE cohort=? and term_id='$ROOT$'`
+	// may cache statement
+	return ds.cohort.db.connection.prepare(statement).all(q.cohortValues)
+}
+export function get_samplecount(q, ds) {
+	/*
+must have q.filter[]
+return a sample count of sample names passing through the filter
+ */
+	q.filter = JSON.parse(decodeURIComponent(q.filter))
+	if (!q.filter || !q.filter.lst.length) {
+		throw `missing q.filter`
+	} else {
+		const filter = getFilterCTEs(q.filter, ds)
+		const statement = `WITH ${filter.filters}
+			SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
+			FROM ${filter.CTEname}`
+		// may cache statement
+		return ds.cohort.db.connection.prepare(statement).all(filter.values)
+	}
+}
 export function get_summary_numericcategories(q) {
 	/*
 	q{}
@@ -48,7 +78,7 @@ export function get_summary_numericcategories(q) {
 	.filter
 	*/
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.term_id)
-	if (!term.isinteger && !term.isfloat) throw 'term is not numeric'
+	if (term.type != 'integer' && term.type != 'float') throw 'term is not numeric'
 	if (!term.values) {
 		// term does not have special categories
 		return []
@@ -348,7 +378,7 @@ function getlabeler(q, i, result) {
 	// -- consider keeping key1 terminology consistent later?
 	const tkey = i != 1 || q.term0_id || q.term2_id ? key : 'key'
 	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : 'label'
-	if (term.isinteger || term.isfloat) {
+	if (term.type == 'integer' || term.type == 'float') {
 		const CTE = result['CTE' + i]
 		const range = 'range' + (i != 1 || q.term0_id || q.term2_id ? i : '')
 		return row => {
@@ -377,10 +407,10 @@ function getlabeler(q, i, result) {
 
 function get_label4key(key, term, q, ds) {
 	// get label for a key based on term type and setting
-	if (term.iscategorical) {
+	if (term.type == 'categorical') {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
-	if (term.iscondition) {
+	if (term.type == 'condition') {
 		if (!term.values) throw 'missing term.values for condition term'
 		if (q.bar_by_grade) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
@@ -392,7 +422,7 @@ function get_label4key(key, term, q, ds) {
 	if (term.values) {
 		return key in term.values ? term.values[key].label : key
 	}
-	if (term.isinteger || term.isfloat) throw 'should not work for numeric term'
+	if (term.type == 'integer' || term.type == 'float') throw 'should not work for numeric term'
 	throw 'unknown term type'
 }
 
@@ -415,10 +445,10 @@ returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
-	if (term.iscategorical) {
+	if (term.type == 'categorical') {
 		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
-	if (term.isfloat || term.isinteger) {
+	if (term.type == 'float' || term.type == 'integer') {
 		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
 		return {
 			sql: `${bins.sql},
@@ -431,7 +461,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 			bins: bins.bins
 		}
 	}
-	if (term.iscondition) {
+	if (term.type == 'condition') {
 		return makesql_oneterm_condition(tablename, term, q, values)
 	}
 	throw 'unknown term type'
@@ -623,8 +653,8 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 		${bin_sample_table} AS (
 			SELECT
 				sample,
-				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS v,
-				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value,
+				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS v,
+				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value,
 				b.name AS bname,
 				b.binorder AS binorder
 			FROM
@@ -679,7 +709,10 @@ at a numeric barchart
 */
 	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
-	if ((term.isinteger || term.isfloat) && !filter.lst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
+	if (
+		(term.type == 'integer' || term.type == 'float') &&
+		!filter.lst.find(tv => tv.term.id == term.id && 'ranges' in tv)
+	) {
 		filter.lst.push({
 			type: 'tvs',
 			tvs: {
@@ -696,7 +729,7 @@ at a numeric barchart
 	}
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	const string = `${filter ? 'WITH ' + filter.filters + ' ' : ''}
-		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+		SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 		FROM annotations
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
@@ -773,7 +806,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	const sql = `WITH
 		${filter ? filter.filters + ', ' : ''} 
 		vals AS (
-			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+			SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 			FROM annotations
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
@@ -898,16 +931,26 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
-		let cache = null
-		q.getRootTerms = () => {
-			if (cache) return cache
-			cache = s.all().map(i => {
+		const getStatement = initCohortJoinFxn(
+			`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE parent_id is null
+			GROUP BY id
+			ORDER BY child_order ASC`
+		)
+		const cache = new Map()
+		q.getRootTerms = (cohortStr = '') => {
+			const cacheId = cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr) : getStatement(cohortStr).all()
+			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
-			return cache
+			cache.set(cacheId, re)
+			return re
 		}
 	}
 	{
@@ -948,12 +991,26 @@ thus less things to worry about...
 			}
 		}
 	}
+
+	/*
+		template: STR
+		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
+	*/
 	{
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
+			FROM terms t
+			JOINCLAUSE 
+			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
+			GROUP BY id
+			ORDER BY child_order ASC`)
+
 		const cache = new Map()
-		q.getTermChildren = id => {
-			if (cache.has(id)) return cache.get(id)
-			const tmp = s.all(id)
+		q.getTermChildren = (id, cohortStr = '') => {
+			const cacheId = id + ';;' + cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			//const values = cohortStr ? [...cohortStr.split(','), id] : id
+			const values = cohortStr ? [cohortStr, id] : id
+			const tmp = getStatement(cohortStr).all(values)
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
@@ -962,15 +1019,29 @@ thus less things to worry about...
 					return j
 				})
 			}
-			cache.set(id, re)
+			cache.set(cacheId, re)
 			return re
 		}
 	}
 	{
 		// may not cache result of this one as query string may be indefinite
-		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
-		q.findTermByName = (n, limit) => {
-			const tmp = s.all('%' + n + '%')
+		// instead, will cache prepared statement by cohort
+		const s = {
+			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+		}
+		q.findTermByName = (n, limit, cohortStr = '') => {
+			const cohortKeys = cohortStr.split(',')
+			if (!(cohortStr in s)) {
+				s[cohortStr] = cn.prepare(
+					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${cohortKeys
+						.map(() => '?')
+						.join(',')}) WHERE t.name LIKE ?`
+				)
+			}
+			const vals = []
+			if (cohortKeys[0] !== '') vals.push(...cohortKeys)
+			vals.push('%' + n + '%')
+			const tmp = s[cohortStr].all(vals)
 			if (tmp) {
 				const lst = []
 				for (const i of tmp) {
@@ -1031,6 +1102,21 @@ thus less things to worry about...
 				return j
 			}
 			return undefined
+		}
+	}
+
+	function initCohortJoinFxn(template) {
+		// will hold prepared statements, with object key = one or more comma-separated '?'
+		const s_cohort = {
+			'': cn.prepare(template.replace('JOINCLAUSE', ''))
+		}
+		return function getStatement(cohortStr) {
+			const questionmarks = cohortStr ? '?' : ''
+			if (!(questionmarks in s_cohort)) {
+				const statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
+				s_cohort[questionmarks] = cn.prepare(statement)
+			}
+			return s_cohort[questionmarks]
 		}
 	}
 }

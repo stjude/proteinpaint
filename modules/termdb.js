@@ -13,11 +13,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 handle_request_closure
 copy_term
 ********************** INTERNAL
-trigger_rootterm
-trigger_getcategories
-trigger_children
-trigger_findterm
-trigger_treeto
+trigger_*
 */
 
 export function handle_request_closure(genomes) {
@@ -39,17 +35,14 @@ export function handle_request_closure(genomes) {
 			if (!tdb) throw 'no termdb for this dataset'
 
 			// process triggers
-
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.default_rootterm) return trigger_rootterm(res, tdb)
+			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
 			if (q.get_children) return trigger_children(q, res, tdb)
 			if (q.findterm) return trigger_findterm(q, res, tdb)
-			if (q.treeto) return trigger_treeto(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
-			if (q.testplot) return trigger_testplot(q, res, tdb, ds) // this is required for running test cases!!
 			if (q.phewas) {
 				if (q.precompute) return await phewas.do_precompute(q, res, ds)
 				if (q.update) return await phewas.update_image(q, res)
@@ -57,6 +50,9 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds) // also does precompute
 			}
 			if (q.density) return await density_plot(q, res, ds)
+			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
+			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
+			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -66,6 +62,15 @@ export function handle_request_closure(genomes) {
 	}
 }
 
+function trigger_gettermdbconfig(res, tdb) {
+	res.send({
+		termdbConfig: {
+			// add attributes here to reveal to client
+			selectCohort: tdb.selectCohort // optional
+		}
+	})
+}
+
 function trigger_gettermbyid(q, res, tdb) {
 	const t = tdb.q.termjsonByOneid(q.gettermbyid)
 	res.send({
@@ -73,42 +78,17 @@ function trigger_gettermbyid(q, res, tdb) {
 	})
 }
 
-function trigger_testplot(q, res, tdb, ds) {
-	// XXX still being used??
-	q.ds = ds
-	const startTime = +new Date()
-	const lst = termdbsql.get_summary(q)
-	const result = { lst }
-	const t1 = tdb.q.termjsonByOneid(q.term1_id)
-	if (t1.isinteger || t1.isfloat) {
-		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds)
-	}
-	if (q.term2_id) {
-		const t2 = tdb.q.termjsonByOneid(q.term2_id)
-		if (t2.isinteger || t2.isfloat) {
-			result.summary_term2 = {}
-			for (const item of result.lst) {
-				if (!(item.key1 in result.summary_term2)) {
-					const t1q = {
-						term: t1,
-						values: t1.iscategorical || t1.iscondition ? [{ key: item.key1, label: item.label }] : null,
-						ranges: t1.isinteger || t1.isfloat ? [item.range1] : null
-					}
-					if (q.term1_q) {
-						Object.assign(t1q, q.term1_q)
-					}
-					const filter = (q.filter ? q.filter : []).concat(t1q)
-					result.summary_term2[item.key1] = termdbsql.get_numericsummary(q, t2, ds)
-				}
-			}
-		}
-	}
-	result.time = +new Date() - startTime
-	res.send(result)
+function trigger_getcohortsamplecount(q, res, ds) {
+	res.send(termdbsql.get_cohortsamplecount(q, ds))
 }
 
-function trigger_rootterm(res, tdb) {
-	res.send({ lst: tdb.q.getRootTerms() })
+function trigger_getsamplecount(q, res, ds) {
+	res.send(termdbsql.get_samplecount(q, ds))
+}
+
+function trigger_rootterm(q, res, tdb) {
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getRootTerms(cohortValues) })
 }
 
 function trigger_children(q, res, tdb) {
@@ -116,7 +96,8 @@ function trigger_children(q, res, tdb) {
 may apply ssid: a premade sample set
 */
 	if (!q.tid) throw 'no parent term id'
-	res.send({ lst: tdb.q.getTermChildren(q.tid).map(copy_term) })
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	res.send({ lst: tdb.q.getTermChildren(q.tid, cohortValues).map(copy_term) })
 }
 
 export function copy_term(t) {
@@ -134,35 +115,13 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 function trigger_findterm(q, res, termdb) {
 	// TODO also search categories
-	const terms = termdb.q.findTermByName(q.findterm, 10).map(copy_term)
+	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
+	const terms = termdb.q.findTermByName(q.findterm, 10, q.cohortStr).map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 	})
 	res.send({ lst: terms })
-}
-
-function trigger_treeto(q, res, termdb) {
-	const term = termdb.q.termjsonByOneid(q.treeto)
-	if (!term) throw 'unknown term id'
-	const levels = [
-		{
-			focusid: q.treeto
-		}
-	]
-	let thisid = q.treeto
-	while (termdb.q.termHasParent(thisid)) {
-		const parentid = termdb.q.getTermParentId(thisid)
-		levels[0].terms = termdb.q.getTermChildren(parentid).map(copy_term)
-		const ele = {
-			// new element for the lst
-			focusid: parentid
-		}
-		levels.unshift(ele)
-		thisid = parentid
-	}
-	levels[0].terms = termdb.q.getRootTerms()
-	res.send({ levels })
 }
 
 function trigger_getcategories(q, res, tdb, ds) {
@@ -172,18 +131,27 @@ function trigger_getcategories(q, res, tdb, ds) {
 	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
-		term1_id: q.tid,
-		term1_q: q.term1_q
-			? q.term1_q
-			: term.isinteger || term.isfloat
-			? term.bins.default
-			: {
-					bar_by_grade: q.bar_by_grade,
-					bar_by_children: q.bar_by_children,
-					value_by_max_grade: q.value_by_max_grade,
-					value_by_most_recent: q.value_by_most_recent,
-					value_by_computable_grade: q.value_by_computable_grade
-			  }
+		term1_id: q.tid
+	}
+	switch (term.type) {
+		case 'categorical':
+			arg.term1_q = q.term1_q
+			break
+		case 'integer':
+		case 'float':
+			arg.term1_q = term.bins.default
+			break
+		case 'condition':
+			arg.term1_q = {
+				bar_by_grade: q.bar_by_grade,
+				bar_by_children: q.bar_by_children,
+				value_by_max_grade: q.value_by_max_grade,
+				value_by_most_recent: q.value_by_most_recent,
+				value_by_computable_grade: q.value_by_computable_grade
+			}
+			break
+		default:
+			throw 'unknown term type'
 	}
 	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
 	const lst = termdbsql.get_summary(arg)
@@ -205,14 +173,15 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 function trigger_scatter(q, res, tdb, ds) {
 	q.ds = ds
 	if (q.tvslst) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (q.filter) q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const startTime = +new Date()
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (!t1) throw `Invalid term1_id="${q.term1_id}"`
-	if (!t1.isfloat) throw `term must be a float data type for scatter data`
+	if (t1.type != 'float' && t1.type != 'integer') throw `term is not integer/float for scatter data`
 
 	const t2 = tdb.q.termjsonByOneid(q.term2_id)
 	if (!t2) throw `Invalid term1_id="${q.term2_id}"`
-	if (!t2.isfloat) throw `term2 must be a float data type for scatter data`
+	if (t2.type != 'float' && t2.type != 'integer') throw `term2 is not integer/float for scatter data`
 
 	const rows = termdbsql.get_rows_by_two_keys(q, t1, t2)
 	const result = {

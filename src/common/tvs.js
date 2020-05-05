@@ -1,6 +1,6 @@
 import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
-import * as d3s from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX } from 'd3'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
@@ -132,22 +132,18 @@ function setRenderers(self) {
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		const term_option_div = holder.append('div')
-		term_option_div
-			.append('div')
-			.style('margin', '5px 2px')
-			.style('text-align', 'center')
 
 		const term = self.tvs.term
-		const optsFxn = term.iscategorical
-			? self.fillCatMenu
-			: term.isfloat || term.isinteger
-			? self.fillNumMenu
-			: term.iscondition
-			? self.fillConditionMenu
-			: null
+		const optsFxn =
+			term.type == 'categorical'
+				? self.fillCatMenu
+				: term.type == 'float' || term.type == 'integer'
+				? self.fillNumMenu
+				: term.type == 'condition'
+				? self.fillConditionMenu
+				: null
 
-		optsFxn(term_option_div, self.tvs)
+		optsFxn(holder, self.tvs)
 	}
 
 	self.fillCatMenu = async function(div, tvs) {
@@ -191,40 +187,29 @@ function setRenderers(self) {
 		const num_parent_div = div.append('div')
 		self.num_obj = {}
 
-		let num_div = div,
-			unanno_div
+		self.num_obj.num_heading = num_parent_div
+			.append('div')
+			.style('display', tvs.term.values ? 'block' : 'none')
+			.style('font-size', '.9em')
+			.style('color', '#888')
+			.html('Numerical Ranges')
 
-		if (tvs.term.values) {
-			num_parent_div
-				.append('div')
-				.style('font-size', '.9em')
-				.style('color', '#888')
-				.html('Numerical Ranges')
+		self.num_obj.num_div = num_parent_div
+			.append('div')
+			.attr('class', 'num_div')
+			.style('padding', '5px')
+			.style('color', '#000')
+			.style('border-style', 'solid')
+			.style('border-width', '2px')
+			.style('border-color', '#eee')
 
-			num_div = num_parent_div
-				.append('div')
-				.attr('class', 'num_div')
-				.style('padding', '5px')
-				.style('color', '#000')
-				.style('border-style', 'solid')
-				.style('border-width', '2px')
-				.style('border-color', '#eee')
+		// svg
+		self.num_obj.svg = self.num_obj.num_div.append('svg')
 
-			// other categories div	(only appear if unannotated categories present)
-			unanno_div = div
-				.append('div')
-				.attr('class', 'unannotated_div')
-				.style('margin-top', '10px')
-				.style('font-size', '.9em')
-				.style('color', '#888')
-				.html('Other Categories')
-				.append('div')
-				.style('padding', '5px')
-				.style('color', '#000')
-				.style('border-style', 'solid')
-				.style('border-width', '2px')
-				.style('border-color', '#eee')
-		}
+		self.num_obj.range_table = self.num_obj.num_div
+			.append('table')
+			.style('table-layout', 'fixed')
+			.style('border-collapse', 'collapse')
 
 		const ranges = []
 
@@ -263,35 +248,30 @@ function setRenderers(self) {
 		)
 		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-		self.makeDensityPlot(num_div, self.num_obj.density_data)
+		self.makeDensityPlot(self.num_obj.density_data)
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
 
-		self.num_obj.xscale = d3s
-			.scaleLinear()
+		self.num_obj.xscale = scaleLinear()
 			.domain([minvalue, maxvalue])
 			.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width - self.num_obj.plot_size.xpad])
 
 		self.num_obj.ranges = ranges
-		self.num_obj.temp_ranges = JSON.parse(JSON.stringify(ranges))
-		self.num_obj.num_div = num_div
+		self.num_obj.brushes = []
 		self.addBrushes()
 		self.addRangeTable()
-		await self.showCheckList_numeric(tvs, unanno_div)
+		self.num_obj.brushes.forEach(brush => brush.init())
+		await self.showCheckList_numeric(tvs, div)
 	}
 
-	self.makeDensityPlot = function(div, data) {
+	self.makeDensityPlot = function(data) {
 		const width = 500,
 			height = 100,
 			xpad = 10,
 			ypad = 20,
 			xaxis_height = 20
 
-		// svg
-		const svg = div
-			.append('svg')
-			.attr('width', width + xpad * 2)
-			.attr('height', height + ypad * 2 + xaxis_height)
+		const svg = self.num_obj.svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 
 		//density data, add first and last values to array
 		const density_data = data.density
@@ -299,31 +279,28 @@ function setRenderers(self) {
 		density_data.push([data.maxvalue, 0])
 
 		// x-axis
-		const xscale = d3s
-			.scaleLinear()
+		const xscale = scaleLinear()
 			.domain([data.minvalue, data.maxvalue])
 			.range([xpad, width - xpad])
 
-		const x_axis = d3s.axisBottom().scale(xscale)
+		const x_axis = axisBottom().scale(xscale)
 
 		// y-scale
-		const yscale = d3s
-			.scaleLinear()
+		const yscale = scaleLinear()
 			.domain([0, data.densitymax])
 			.range([height + ypad, ypad])
 
 		const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
 
 		// SVG line generator
-		const line = d3s
-			.line()
+		const line = d3line()
 			.x(function(d) {
 				return xscale(d[0])
 			})
 			.y(function(d) {
 				return yscale(d[1])
 			})
-			.curve(d3s.curveMonotoneX)
+			.curve(curveMonotoneX)
 
 		// plot the data as a line
 		g.append('path')
@@ -341,67 +318,62 @@ function setRenderers(self) {
 			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 			.attr('font-size', '13px')
 			.text(self.tvs.term.unit)
+
+		self.num_obj.brush_g = svg
+			.append('g')
+			.attr('class', 'brush_g')
+			.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
 	}
 
 	self.addBrushes = function() {
-		const num_div = self.num_obj.num_div
-		const svg = num_div.select('svg')
-		const ranges = self.num_obj.ranges
-		const temp_ranges = self.num_obj.temp_ranges
+		// const ranges = self.num_obj.ranges
+		const brushes = self.num_obj.brushes
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
 
-		for (const [i, r] of ranges.entries()) {
+		for (const [i, r] of self.num_obj.ranges.entries()) {
+			const _b = brushes.find(b => b.orig === r)
+			let brush
+			if (!_b) {
+				brush = { orig: r, range: JSON.parse(JSON.stringify(r)) }
+				brushes.push(brush)
+			} else {
+				brush = _b
+			}
+
 			// strict equality to not have false positive with start=0
 			if (r.start === '') {
-				temp_ranges[i].start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
+				brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
 			}
 			if (r.stop === '') {
-				temp_ranges[i].stop = Math.floor(maxvalue)
+				brush.range.stop = Math.floor(maxvalue)
 			}
 		}
 
-		//brush
-		const g = svg.selectAll('.brush_g').size()
-			? svg.select('.brush_g')
-			: svg
-					.append('g')
-					.attr('class', 'brush_g')
-					.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
-		const brushes = g.selectAll('.range_brush').data(temp_ranges, d => (d.start ? d.start : d.stop))
+		const range_brushes = self.num_obj.brush_g.selectAll('.range_brush').data(brushes, d => brushes.indexOf(d))
 
-		brushes.exit().remove()
+		range_brushes.exit().remove()
 
 		// add update to brush if required
-		brushes.each(function(d, i) {
-			const brush_g = select(this)
-			brush_g.selectAll('.overlay').style('pointer-events', 'all')
+		range_brushes.each(function(d, i) {
+			select(this)
+				.selectAll('.overlay')
+				.style('pointer-events', 'all')
 		})
 
-		brushes
+		range_brushes
 			.enter()
 			.append('g')
 			.attr('class', 'range_brush')
-			.each(enter_brush)
-
-		function enter_brush(d, i) {
-			const brush_g = select(this)
-			const range = JSON.parse(JSON.stringify(d))
-			self.applyBrush(range, i, brush_g)
-		}
+			.each(self.applyBrush)
 	}
 
 	self.addRangeTable = function() {
 		const num_div = self.num_obj.num_div
 		const ranges = self.num_obj.ranges
-		const range_table = num_div.selectAll('table').size()
-			? num_div.select('table')
-			: num_div
-					.append('table')
-					.style('table-layout', 'fixed')
-					.style('border-collapse', 'collapse')
+		const brushes = self.num_obj.brushes
 
-		const range_divs = range_table.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+		const range_divs = self.num_obj.range_table.selectAll('.range_div').data(brushes) //, d => brushes.indexOf(d))
 
 		range_divs.exit().each(function() {
 			select(this)
@@ -414,10 +386,8 @@ function setRenderers(self) {
 
 		range_divs.each(function(d) {
 			const div = select(this)
-			const range = JSON.parse(JSON.stringify(d))
-
-			div.select('.start_text').html(range.start)
-			div.select('.stop_text').html(range.stop)
+			d.start_text.html(d.range.start)
+			d.stop_text.html(d.range.stop)
 		})
 
 		range_divs
@@ -445,11 +415,13 @@ function setRenderers(self) {
 					.text('Add a Range')
 					.on('click', () => {
 						//Add new blank range temporary, save after entering values
-						const range_temp = { start: '', stop: '' }
-						self.num_obj.ranges.push(range_temp)
-						self.num_obj.temp_ranges.push({ start: 0, stop: 0 })
+						const new_range = { start: '', stop: '', index: self.tvs.ranges.length }
+						self.num_obj.ranges.push(new_range)
+						const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
+						brushes.push(brush)
 						self.addBrushes()
 						self.addRangeTable()
+						brush.init()
 					})
 
 		add_range_btn.style(
@@ -460,114 +432,96 @@ function setRenderers(self) {
 		)
 	}
 
-	self.applyBrush = function(range, i, brush_g) {
+	self.applyBrush = function(brush) {
+		if (!brush.elem) brush.elem = select(this)
+		const range = brush.range
 		const plot_size = self.num_obj.plot_size
-		const ranges = self.num_obj.ranges
 		const xscale = self.num_obj.xscale
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
-		const num_div = self.num_obj.num_div
 
-		self.brush = d3s
-			.brushX()
+		brush.d3brush = brushX()
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('brush', function() {
 				const s = event.selection
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
-				const a_range = JSON.parse(JSON.stringify(self.num_obj.ranges[i]))
+				const a_range = JSON.parse(JSON.stringify(brush.orig))
 				if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
-				if (range.stopunbounded) a_range.stop = Number(minvalue.toFixed(1))
-				if (num_div.selectAll('.start_input').size()) {
-					// update inputs from brush move
-					select(num_div.node().querySelectorAll('.start_input')[i])
-						.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-						.attr('value', range.start == minvalue.toFixed(1) ? '' : range.start)
-						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
-					select(num_div.node().querySelectorAll('.stop_input')[i])
-						.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-						.attr('value', range.stop == maxvalue.toFixed(1) ? '' : range.stop)
-						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
-					select(num_div.node().querySelectorAll('.start_select')[i])
-						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
-						.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
-					select(num_div.node().querySelectorAll('.stop_select')[i])
-						.style('display', JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block')
-						.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
+				if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
+				const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
+				// update inputs from brush move
+				brush.start_input
+					.style('color', a_range.start == range.start ? '#000' : '#23cba7')
+					.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.start_input.node().value = range.start == minvalue.toFixed(1) ? '' : range.start
 
-					//update 'edit', 'apply' and 'reset' buttons based on brush change
-					select(num_div.node().querySelectorAll('.edit_btn')[i]).style(
-						'display',
-						JSON.stringify(range) != JSON.stringify(a_range) || (a_range.start == '' || a_range.stop == '')
-							? 'none'
-							: 'inline-block'
-					)
-					select(num_div.node().querySelectorAll('.apply_btn')[i]).style(
-						'display',
-						JSON.stringify(range) == JSON.stringify(a_range) ? 'none' : 'inline-block'
-					)
-					select(num_div.node().querySelectorAll('.reset_btn')[i]).style(
-						'display',
-						JSON.stringify(range) == JSON.stringify(a_range) || (a_range.start == '' || a_range.stop == '')
-							? 'none'
-							: 'inline-block'
-					)
+				brush.stop_input
+					.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
+					.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.stop_input.node().value = range.stop == maxvalue.toFixed(1) ? '' : range.stop
 
-					// hide start and stop text and relation symbols if brush moved
-					select(num_div.node().querySelectorAll('.start_text')[i]).style(
-						'display',
-						JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
-					)
-					select(num_div.node().querySelectorAll('.stop_text')[i]).style(
-						'display',
-						JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
-					)
-					select(num_div.node().querySelectorAll('.start_relation_text')[i]).style(
-						'display',
-						JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
-					)
-					select(num_div.node().querySelectorAll('.stop_relation_text')[i]).style(
-						'display',
-						JSON.stringify(range) != JSON.stringify(a_range) ? 'none' : 'inline-block'
-					)
+				brush.start_select
+					.style('display', similarRanges ? 'none' : 'inline-block')
+					.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
+				brush.stop_select
+					.style('display', similarRanges ? 'none' : 'inline-block')
+					.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
 
-					// make brush green if changed
-					brush_g
-						.selectAll('.selection')
-						.style('fill', JSON.stringify(range) != JSON.stringify(a_range) ? '#23cba7' : '#777777')
-				}
+				//update 'edit', 'apply' and 'reset' buttons based on brush change
+				brush.edit_btn.style(
+					'display',
+					!similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
+				)
+				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
+				brush.reset_btn.style(
+					'display',
+					similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
+				)
+
+				// hide start and stop text and relation symbols if brush moved
+				brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				brush.stop_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				brush.start_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
+				brush.stop_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
+
+				// make brush green if changed
+				brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
 			})
 			.on('end', function() {
 				//diable pointer-event for multiple brushes
-				brush_g.selectAll('.overlay').style('pointer-events', 'none')
+				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 			})
+
 		const brush_start = range.startunbounded ? minvalue : range.start
 		const brush_stop = range.stopunbounded ? maxvalue : range.stop
-		brush_g.call(self.brush).call(self.brush.move, [brush_start, brush_stop].map(xscale))
+		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+
 		if (range.startunbounded) delete range.start
 		if (range.stopunbounded) delete range.stop
-		brush_g
+		brush.elem
 			.selectAll('.selection')
 			.style(
 				'fill',
-				(ranges[i].start == '' && ranges[i].stop == '') || JSON.stringify(range) != JSON.stringify(ranges[i])
+				(brush.orig.start == '' && brush.orig.stop == '') || JSON.stringify(range) != JSON.stringify(brush.orig)
 					? '#23cba7'
 					: '#777777'
 			)
 	}
 
-	self.enterRange = async function(d, i) {
-		const range_tr = select(this)
-		const range = JSON.parse(JSON.stringify(d))
-		const brush_range = self.num_obj.temp_ranges[i]
+	self.enterRange = async function(brush, i) {
+		if (!brush.range_tr) brush.range_tr = select(this)
+		const range_tr = brush.range_tr
+		const range = brush.range
+		const orig_range = brush.orig
 		const minvalue = self.num_obj.density_data.minvalue
 		const maxvalue = self.num_obj.density_data.maxvalue
-		const svg = self.num_obj.num_div.select('svg')
+		const svg = self.num_obj.svg
+		const xscale = self.num_obj.xscale
 
-		const title_td = range_tr.append('td')
-
-		title_td
+		range_tr
+			.append('td')
 			.append('td')
 			.style('display', 'inline-block')
 			.style('margin-left', '10px')
@@ -575,17 +529,17 @@ function setRenderers(self) {
 			.style('font-size', '.9em')
 			.text('Range ' + (i + 1) + ': ')
 
-		const equation_td = range_tr.append('td').style('width', '150px')
+		brush.equation_td = range_tr.append('td').style('width', '150px')
 
-		const start_text = equation_td
+		brush.start_text = brush.equation_td
 			.append('div')
 			.attr('class', 'start_text')
 			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
 			.style('text-align', 'center')
-			.html(range.stopunbounded ? '>= ' + range.start : range.start)
+			.html(range.start)
 
-		const start_input = equation_td
+		brush.start_input = brush.equation_td
 			.append('input')
 			.attr('class', 'start_input')
 			.attr('type', 'number')
@@ -595,54 +549,69 @@ function setRenderers(self) {
 			.attr('value', range.start)
 			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				start_input.property('disabled', true)
+				brush.start_input.property('disabled', true)
 				try {
-					if (start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
+					if (brush.start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
 					update_input()
 				} catch (e) {
 					window.alert(e)
 				}
-				start_input.property('disabled', false)
+				brush.start_input.property('disabled', false)
 			})
 
 		// select realation for start value
-		const start_select = equation_td
+		brush.start_select = brush.equation_td
 			.append('select')
 			.attr('class', 'start_select')
 			.style('display', 'none')
 			.style('margin-left', '10px')
 			.on('change', () => {
 				// make changes based on start select
-				const new_range = JSON.parse(JSON.stringify(brush_range))
-				if (start_select.node().selectedIndex == 2) {
-					new_range.startunbounded = true
-					new_range.start = minvalue.toFixed(1)
-					start_input.property('disabled', true)
-				} else {
-					delete new_range.startunbounded
-					new_range.start = start_input.node().value || minvalue.toFixed(1)
-					new_range.stop = stop_input.node().value || maxvalue.toFixed(1)
-					start_input.property('disabled', false)
+				const new_range = JSON.parse(JSON.stringify(brush.range))
+				const value = brush.start_select.property('value')
 
-					if (start_select.node().selectedIndex == 0) new_range.startinclusive = true
-					else if (start_select.node().selectedIndex == 1) delete new_range.startinclusive
+				if (value == 'startunbounded') {
+					range.startunbounded = true
+					new_range.start = minvalue.toFixed(1)
+					brush.start_input.property('disabled', true)
+				} else {
+					delete range.startunbounded
+					new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
+					new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
+					brush.start_input.property('disabled', false)
+					range.startinclusive = value == 'startinclusive'
 				}
-				if (stop_input.node().value != maxvalue.toFixed(1)) {
-					new_range.stop = stop_input.node().value
-					delete new_range.stopunbounded
+				if (brush.stop_input.node().value != maxvalue.toFixed(1)) {
+					new_range.stop = brush.stop_input.node().value
+					delete range.stopunbounded
 				}
-				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(new_range, i, brush_g)
+				brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 			})
 
-		start_select.append('option').html('&le;')
-		start_select.append('option').html('&lt;')
-		start_select.append('option').html('&#8734;')
-
-		start_select.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+		brush.start_select
+			.selectAll('option')
+			.data([
+				{
+					label: '&le;',
+					value: 'startinclusive'
+				},
+				{
+					label: '&lt;',
+					value: 'startexclusive'
+				},
+				{
+					label: '&#8734;',
+					value: 'startunbounded'
+				}
+			])
+			.enter()
+			.append('option')
+			.attr('value', d => d.value)
+			.property('selected', d => range[d.value] || (d.value == 'startexclusive' && !range.startinclusive))
+			.html(d => d.label)
 
 		// 'x' and relation symbols
-		equation_td
+		brush.start_relation_text = brush.equation_td
 			.append('div')
 			.attr('class', 'start_relation_text')
 			.style('display', 'inline-block')
@@ -651,14 +620,14 @@ function setRenderers(self) {
 			.html(range.startunbounded ? ' ' : range.startinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
 
 		const x = '<span style="font-family:Times;font-style:italic;">x</span>'
-		equation_td
+		brush.equation_td
 			.append('div')
 			.style('display', 'inline-block')
 			.style('margin-left', '5px')
 			.style('text-align', 'center')
 			.html(x)
 
-		equation_td
+		brush.stop_relation_text = brush.equation_td
 			.append('div')
 			.attr('class', 'stop_relation_text')
 			.style('display', 'inline-block')
@@ -667,42 +636,56 @@ function setRenderers(self) {
 			.html(range.stopunbounded ? ' ' : range.stopinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
 
 		// select realation for stop value
-		const stop_select = equation_td
+		brush.stop_select = brush.equation_td
 			.append('select')
 			.attr('class', 'stop_select')
 			.style('display', 'none')
 			.style('margin-left', '10px')
 			.on('change', () => {
 				// make changes based on stop select
-				const new_range = JSON.parse(JSON.stringify(brush_range))
-				if (stop_select.node().selectedIndex == 2) {
-					new_range.stopunbounded = true
+				const new_range = JSON.parse(JSON.stringify(brush.range))
+				const value = brush.stop_select.property('value')
+				if (value == 'stopunbounded') {
+					range.stopunbounded = true
 					new_range.stop = maxvalue.toFixed(1)
-					stop_input.property('disabled', true)
+					brush.stop_input.property('disabled', true)
 				} else {
-					delete new_range.stopunbounded
-					new_range.start = start_input.node().value || minvalue.toFixed(1)
-					new_range.stop = stop_input.node().value || maxvalue.toFixed(1)
-					stop_input.property('disabled', false)
-
-					if (stop_select.node().selectedIndex == 0) new_range.stopinclusive = true
-					else if (stop_select.node().selectedIndex == 1) delete new_range.stopinclusive
+					delete range.stopunbounded
+					new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
+					new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
+					brush.stop_input.property('disabled', false)
+					range.stopinclusive = value == 'stopinclusive'
 				}
 				if (start_input.node().value != minvalue.toFixed(1)) {
 					new_range.start = start_input.node().value
-					delete new_range.startunbounded
+					delete range.startunbounded
 				}
-				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(new_range, i, brush_g)
+				brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 			})
 
-		stop_select.append('option').html('&le;')
-		stop_select.append('option').html('&lt;')
-		stop_select.append('option').html('&#8734;')
+		brush.stop_select
+			.selectAll('option')
+			.data([
+				{
+					label: '&le;',
+					value: 'stopinclusive'
+				},
+				{
+					label: '&lt;',
+					value: 'stopexclusive'
+				},
+				{
+					label: '&#8734;',
+					value: 'stopunbounded'
+				}
+			])
+			.enter()
+			.append('option')
+			.attr('value', d => d.value)
+			.property('selected', d => range[d.value] || (d.value == 'stopexclusive' && !range.stopinclusive))
+			.html(d => d.label)
 
-		stop_select.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
-
-		const stop_text = equation_td
+		brush.stop_text = brush.equation_td
 			.append('div')
 			.attr('class', 'stop_text')
 			.style('display', 'inline-block')
@@ -711,7 +694,7 @@ function setRenderers(self) {
 			.style('text-align', 'center')
 			.html(range.stop)
 
-		const stop_input = equation_td
+		brush.stop_input = brush.equation_td
 			.append('input')
 			.attr('class', 'stop_input')
 			.attr('type', 'number')
@@ -721,26 +704,21 @@ function setRenderers(self) {
 			.attr('value', range.stop)
 			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				stop_input.property('disabled', true)
+				brush.stop_input.property('disabled', true)
 				try {
-					if (stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
+					if (brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
 					update_input()
 				} catch (e) {
 					window.alert(e)
 				}
-				stop_input.property('disabled', false)
+				brush.stop_input.property('disabled', false)
 			})
-		const buttons_td = range_tr.append('td')
 
-		self.makeRangeButtons(equation_td, buttons_td, range, brush_range, i)
+		self.makeRangeButtons(brush)
 
 		// note for empty range
-		if (range.start == '' && range.stop == '') {
-			start_text.html('_____')
-			stop_text.html('_____')
-
-			self.num_obj.num_div
-				.select('table')
+		if (orig_range.start == '' && orig_range.stop == '') {
+			self.num_obj.range_table
 				.append('tr')
 				.attr('class', 'note_tr')
 				.append('td')
@@ -754,27 +732,27 @@ function setRenderers(self) {
 		}
 
 		function update_input() {
-			const new_range = JSON.parse(JSON.stringify(brush_range))
-			new_range.start = Number(start_input.node().value)
-			new_range.stop = Number(stop_input.node().value)
+			const new_range = JSON.parse(JSON.stringify(brush.range))
+			new_range.start = Number(brush.start_input.node().value)
+			new_range.stop = Number(brush.stop_input.node().value)
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
-			const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-			self.applyBrush(new_range, i, brush_g)
+			// brush.range = new_range
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 		}
 	}
 
-	self.makeRangeButtons = function(equation_td, buttons_td, range, brush_range, i) {
+	self.makeRangeButtons = function(brush) {
+		const buttons_td = brush.range_tr.append('td')
+		const range = brush.range
+		const orig_range = brush.orig
+		const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
+
 		//'edit' button
-		const edit_btn = buttons_td
+		brush.edit_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_menuoption edit_btn')
-			.style(
-				'display',
-				JSON.stringify(range) == JSON.stringify(brush_range) || (range.start == '' && range.stop == '')
-					? 'inline-block'
-					: 'none'
-			)
+			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'inline-block' : 'none')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -784,27 +762,22 @@ function setRenderers(self) {
 			.style('text-transform', 'uppercase')
 			.text('edit')
 			.on('click', async () => {
-				equation_td.selectAll('.start_text').style('display', 'none')
-				equation_td.selectAll('.stop_text').style('display', 'none')
-				equation_td.selectAll('.start_relation_text').style('display', 'none')
-				equation_td.selectAll('.stop_relation_text').style('display', 'none')
-				equation_td.selectAll('.start_input').style('display', 'inline-block')
-				equation_td.selectAll('.stop_input').style('display', 'inline-block')
-				equation_td.selectAll('.start_select').style('display', 'inline-block')
-				equation_td.selectAll('.stop_select').style('display', 'inline-block')
-				edit_btn.style('display', 'none')
+				brush.start_text.style('display', 'none')
+				brush.stop_text.style('display', 'none')
+				brush.start_relation_text.style('display', 'none')
+				brush.stop_relation_text.style('display', 'none')
+				brush.start_input.style('display', 'inline-block')
+				brush.stop_input.style('display', 'inline-block')
+				brush.start_select.style('display', 'inline-block')
+				brush.stop_select.style('display', 'inline-block')
+				brush.edit_btn.style('display', 'none')
 			})
 
 		//'Apply' button
-		buttons_td
+		brush.apply_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn apply_btn')
-			.style(
-				'display',
-				JSON.stringify(range) == JSON.stringify(brush_range) || (range.start == '' && range.stop == '')
-					? 'none'
-					: 'inline-block'
-			)
+			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -819,15 +792,10 @@ function setRenderers(self) {
 			})
 
 		//'Reset' button
-		buttons_td
+		brush.reset_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn reset_btn')
-			.style(
-				'display',
-				JSON.stringify(range) == JSON.stringify(brush_range) || (range.start == '' && range.stop == '')
-					? 'none'
-					: 'inline-block'
-			)
+			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -838,9 +806,8 @@ function setRenderers(self) {
 			.text('reset')
 			.on('click', async () => {
 				self.dom.tip.hide()
-				const svg = self.num_obj.num_div.select('svg')
-				const brush_g = select(svg.node().querySelectorAll('.range_brush')[i])
-				self.applyBrush(JSON.parse(JSON.stringify(self.tvs.ranges[range.index])), i, brush_g)
+				brush.range = JSON.parse(JSON.stringify(brush.orig))
+				brush.init()
 			})
 
 		//'Delete' button
@@ -849,7 +816,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style(
 				'display',
-				self.tvs.ranges.length == 1 && (range.start != '' && range.stop != '') ? 'none' : 'inline-block'
+				self.tvs.ranges.length == 1 && (orig_range.start != '' && orig_range.stop != '') ? 'none' : 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
@@ -862,12 +829,12 @@ function setRenderers(self) {
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				new_tvs.ranges.splice(range.index, 1)
-				const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
+				// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
 				// callback only if range have non-empty start and end
-				if (deleted_range.start != '' && deleted_range.stop != '') self.opts.callback(new_tvs)
+				if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
 				else {
 					self.num_obj.ranges.pop()
-					self.num_obj.temp_ranges.pop()
+					self.num_obj.brushes.pop()
 					self.num_obj.num_div.select('.note_tr').remove()
 					self.addBrushes()
 					self.addRangeTable()
@@ -876,25 +843,25 @@ function setRenderers(self) {
 
 		async function apply() {
 			try {
-				const start = Number(equation_td.selectAll('.start_input').node().value)
-				const stop = Number(equation_td.selectAll('.stop_input').node().value)
-				if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
+				const start = Number(brush.start_input.node().value)
+				const stop = Number(brush.stop_input.node().value)
+				if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
 
-				if (start == self.num_obj.density_data.minvalue) {
+				if (start == '') {
 					range.startunbounded = true
 					delete range.start
 				} else {
 					delete range.startunbounded
 					range.start = start
-					range.startinclusive = equation_td.selectAll('.start_select').node().selectedIndex == 0
+					range.startinclusive = brush.start_select.property('value') === 'startinclusive'
 				}
-				if (stop == self.num_obj.density_data.maxvalue) {
+				if (stop == '') {
 					range.stopunbounded = true
 					delete range.stop
 				} else {
 					delete range.stopunbounded
 					range.stop = stop
-					range.stopinclusive = equation_td.selectAll('.stop_select').node().selectedIndex == 0
+					range.stopinclusive = brush.stop_select.property('value') === 'stopinclusive'
 				}
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				delete new_tvs.groupset_label
@@ -930,6 +897,22 @@ function setRenderers(self) {
 				} else if (new_range.start >= range.start && new_range.stop <= range.stop) {
 					//new_range is covered by existing range
 					merged_flag = true
+				} else if (new_range.startunbounded) {
+					if (new_range.stop > range.stop) {
+						// if new_range is startunbounded and covering existing range
+						range.stop = new_range.stop
+					}
+					delete range.start
+					range.startunbounded = true
+					merged_flag = true
+				} else if (new_range.stopunbounded) {
+					if (new_range.start < range.start) {
+						// if new_range is stopunbounded and covering existing range
+						range.start = new_range.start
+					}
+					delete range.stop
+					range.stopunbounded = true
+					merged_flag = true
 				}
 			}
 		}
@@ -946,7 +929,7 @@ function setRenderers(self) {
 		return ranges
 	}
 
-	self.showCheckList_numeric = async (tvs, unanno_div) => {
+	self.showCheckList_numeric = async (tvs, div) => {
 		if (!tvs.term.values) {
 			// no special categories available for this term
 			return
@@ -963,18 +946,34 @@ function setRenderers(self) {
 			return b.samplecount - a.samplecount
 		})
 
+		// other categories div	(only appear if unannotated categories present)
+		const unanno_div = div
+			.append('div')
+			.attr('class', 'unannotated_div')
+			.style('margin-top', '10px')
+			.style('font-size', '.9em')
+			.style('color', '#888')
+			.html('Other Categories')
+			.append('div')
+			.style('padding', '5px')
+			.style('color', '#000')
+			.style('border-style', 'solid')
+			.style('border-width', '2px')
+			.style('border-color', '#eee')
+
+		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
+
 		// 'Apply' button
-		unanno_div
+		const apply_btn = unanno_div
 			.append('div')
 			.style('text-align', 'center')
 			.append('div')
 			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', 'none')
 			.style('border-radius', '13px')
 			// .style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
-			// .style('font-size', '.9em')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
@@ -1002,7 +1001,21 @@ function setRenderers(self) {
 				}
 			})
 
-		const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
+		const checkboxes = values_table.querySelectorAll('.value_checkbox')
+		// checked values when tip lauch
+		const orig_vals = [...checkboxes].filter(elem => elem.checked).map(elem => elem.value)
+
+		for (const [i, checkbox] of checkboxes.entries()) {
+			select(checkbox).on('change', () => {
+				//changed values after tip launch
+				const changed_vals = [...values_table.querySelectorAll('.value_checkbox')]
+					.filter(elem => elem.checked)
+					.map(elem => elem.value)
+				const similarVals = JSON.stringify(orig_vals) === JSON.stringify(changed_vals)
+				//show apply button if values changed
+				apply_btn.style('display', similarVals ? 'none' : 'inline-block')
+			})
+		}
 	}
 
 	self.fillConditionMenu = async function(div, tvs) {
@@ -1112,7 +1125,7 @@ function setRenderers(self) {
 				const checked_vals = [...self.values_table.querySelectorAll('.value_checkbox')]
 					.filter(elem => elem.checked)
 					.map(elem => elem.value)
-				const new_vals = data.lst.filter(v => checked_vals.includes(v.key))
+				const new_vals = data.lst.filter(v => checked_vals.includes(v.key.toString()))
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
@@ -1180,7 +1193,7 @@ function setRenderers(self) {
 
 	self.get_value_text = function(tvs) {
 		// tvs is {term, values/ranges, ... }, a tvs object
-		if (tvs.term.iscategorical) {
+		if (tvs.term.type == 'categorical') {
 			if (tvs.values.length == 1) {
 				// single
 				const v = tvs.values[0]
@@ -1194,7 +1207,7 @@ function setRenderers(self) {
 			if (tvs.groupset_label) return tvs.groupset_label
 			return tvs.values.length + ' groups'
 		}
-		if (tvs.term.isfloat || tvs.term.isinteger) {
+		if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
 			if (tvs.ranges.length == 1) {
 				const v = tvs.ranges[0]
 				if ('value' in v) {
@@ -1211,7 +1224,7 @@ function setRenderers(self) {
 			// multiple
 			return tvs.ranges.length + ' intervals'
 		}
-		if (tvs.term.iscondition) {
+		if (tvs.term.type == 'condition') {
 			if (tvs.bar_by_grade || tvs.bar_by_children) {
 				if (tvs.values.length == 1) {
 					// single
@@ -1255,7 +1268,10 @@ function setRenderers(self) {
 			.style('vertical-align', 'middle')
 			.style('bottom', '3px')
 			.on('change', () => {
-				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
+				values_table
+					.selectAll('.value_checkbox')
+					.property('checked', all_checkbox.node().checked)
+					.dispatch('change')
 			})
 
 		all_checkbox_label
@@ -1303,15 +1319,12 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (tvs.term.iscategorical && tvs.values.find(a => a.key === d.key)) {
-						return true
-					} else if (
-						(tvs.term.isfloat || tvs.term.isinteger) &&
-						tvs.ranges.find(a => String(a.value) == d.value.toString())
-					) {
-						return true
-					} else if (tvs.term.iscondition && tvs.values.find(a => String(a.key) === String(d.key))) {
-						return true
+					if (tvs.term.type == 'categorical') {
+						return tvs.values.find(a => a.key === d.key)
+					} else if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
+						return tvs.ranges.find(a => String(a.value) == d.value.toString())
+					} else if (tvs.term.type == 'condition') {
+						return tvs.values.find(a => String(a.key) === String(d.key))
 					}
 				})
 
@@ -1328,7 +1341,9 @@ function setRenderers(self) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
 		const select_remove_pos =
-			tvs.term.isinteger || tvs.term.isfloat ? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length : j
+			tvs.term.type == 'float' || tvs.term.type == 'integer'
+				? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
+				: j
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
@@ -1400,9 +1415,9 @@ function setRenderers(self) {
 		let term_name = d.term.name
 
 		// trim long term name with '...' at end and hover to see full term_name
-		if ((d.term.isfloat || d.term.isinteger) && d.term.name.length > 25) {
+		if ((d.term.type == 'float' || d.term.type == 'integer') && d.term.name.length > 25) {
 			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 24) + '...' + '</label>'
-		} else if (d.term.iscondition && d.term.name.length > 20) {
+		} else if (d.term.type == 'condition' && d.term.name.length > 20) {
 			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 18) + '...' + '</label>'
 		}
 		return term_name
@@ -1442,11 +1457,7 @@ function setInteractivity(self) {
 			holder: self.dom.tip.d,
 			state: {
 				genome: self.genome,
-				dslabel: self.dslabel,
-				termfilter: {
-					show_top_ui: false
-					// 	terms: terms
-				}
+				dslabel: self.dslabel
 			},
 			modifiers: {
 				//modifier to replace filter by clicking term btn

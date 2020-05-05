@@ -34,13 +34,13 @@ class TdbFilter {
 
 	main() {
 		const f = this.state && this.state.termfilter
-		if (!f || !f.show_top_ui) {
+		if (!f || !this.state.nav.show_tabs) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
 		if (!this.filterApi) this.initFilter()
-		this.filterApi.main(f.filter)
+		this.filterApi.main(f.filter, { activeCohort: this.state.activeCohort })
 	}
 
 	initFilter() {
@@ -48,13 +48,15 @@ class TdbFilter {
 		this.filterApi = filterInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
-			getVisibleRoot: this.opts.getVisibleRoot,
+			newBtn: this.opts.newBtn,
+			emptyLabel: this.opts.emptyLabel,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter
+					filter: filter
 				})
 			}
 		})
@@ -68,17 +70,21 @@ class TdbFilter {
 			.style('margin', '10px')
 			.style('margin-top', '5px')
 			.style('display', 'table')
-			.style('border', 'solid 1px #ddd')
+			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
 
-		div
-			.append('span')
-			.text('Filter')
-			.style('padding', '0 10px')
+		if (this.opts.hideLabel) {
+			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
+		} else {
+			div
+				.append('span')
+				.text('Filter')
+				.style('padding', '0 10px')
 
-		this.dom.filterDiv = div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '5px 10px')
+			this.dom.filterDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '5px 10px')
+		}
 	}
 }
 

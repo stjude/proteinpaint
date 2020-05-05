@@ -1,0 +1,30 @@
+NM_000215	{"name":"Pseudokinase","description":"Pseudokinase (repeat 1) domain of the Protein Tyrosine Kinases","start":521,"stop":781}
+NM_000215	{"name":"Tyrosine kinase","description":"Catalytic (repeat 2) domain of the Protein Tyrosine Kinases","start":822,"stop":1111}
+NM_000546	{"name":"NLS","description":"Nuclear localization signal","start":305,"stop":306,"pmid":"10551826"}
+NM_000546	{"name":"NLS","description":"Nuclear localization signal","start":319,"stop":321,"pmid":"10551826"}
+NM_001293798	{"name":"CTD","description":"C-terminal domain","start":372,"stop":424,"pmid":"17668377"}
+NM_001293798	{"name":"Homeobox 1","description":"Homeobox 1","start":17,"stop":78,"pmid":"17668377"}
+NM_001293798	{"name":"Homeobox 2","description":"Homeobox 2","start":91,"stop":153,"pmid":"17668377"}
+NM_001306068	{"name":"CTD","description":"C-terminal domain","start":372,"stop":424,"pmid":"17668377"}
+NM_001306068	{"name":"Homeobox 1","description":"Homeobox 1","start":17,"stop":78,"pmid":"17668377"}
+NM_001306068	{"name":"Homeobox 2","description":"Homeobox 2","start":91,"stop":153,"pmid":"17668377"}
+NM_002227	{"name":"Pseudokinase","description":"Pseudokinase (repeat 1) domain of the Protein Tyrosine Kinases","start":581,"stop":855}
+NM_002227	{"name":"Tyrosine kinase","description":"Catalytic (repeat 2) domain of the Protein Tyrosine Kinases","start":875,"stop":1153}
+NM_003470	{"name":"HUBL-1","description":"Ubl (Ubiquitin-like) domain 1","start":565,"stop":660,"pmid":"21981925"}
+NM_003470	{"name":"HUBL-2","description":"Ubl (Ubiquitin-like) domain 2","start":680,"stop":770,"pmid":"21981925"}
+NM_003470	{"name":"HUBL-3","description":"Ubl (Ubiquitin-like) domain 3","start":795,"stop":881,"pmid":"21981925"}
+NM_003470	{"name":"HUBL-4","description":"Ubl (Ubiquitin-like) domain 4, together with HUBL-5 promotes ubiquitin-binding and greatly increases deubiquitination activity","start":895,"stop":976,"pmid":"21981925"}
+NM_003470	{"name":"HUBL-5","description":"Ubl (Ubiquitin-like) domain 5, together with HUBL-4 promotes ubiquitin-binding and greatly increases deubiquitination activity","start":990,"stop":1083,"pmid":"21981925"}
+NM_006180	{"name":"Pkinase_Tyr","description":"Protein tyrosine kinase","start":554,"stop":823,"Pfam":"pfam07714","CDD":"285015"}
+NM_032427	{"name":"Acidic","description":"Acidic domain","start":1124,"stop":1153,"url":"http://atlasgeneticsoncology.org/Genes/MAML2ID472.html"}
+NM_032427	{"name":"Acidic","description":"Acidic domain","start":263,"stop":360,"url":"http://atlasgeneticsoncology.org/Genes/MAML2ID472.html"}
+NM_032427	{"name":"Basic","description":"Basic domain, binds to the ankyrin repeat domain of Notch receptors","start":29,"stop":92,"url":"http://atlasgeneticsoncology.org/Genes/MAML2ID472.html"}
+NM_053056	{"name":"Leucine-rich motif","description":"Motif LLXXXL is leucine-rich and transactivating","start":254,"stop":259,"pmid":"9832502"}
+NM_006206	{"name":"Ig-like C2-type 1","start":24,"stop":113,"color":"yellow","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
+NM_006206	{"name":"Ig-like C2-type 2","start":117,"stop":201,"color":"#e8e6a4","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
+NM_006206	{"name":"Ig-like C2-type 3","start":202,"stop":306,"color":"#ffd553","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
+NM_006206	{"name":"Ig-like C2-type 4","start":319,"stop":410,"color":"#ffb06d","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
+NM_006206	{"name":"Ig-like C2-type 5","start":414,"stop":517,"color":"#e9c198","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
+NM_006206	{"name":"Transmembrane domain","start":529,"stop":549,"color":"#59915B","url":"http://www.uniprot.org/uniprot/P16234#family_and_doma"}
+NM_006206	{"name":"Juxtamembrane domain","start":550,"stop":593,"color":"#A3825B","url":"http://clincancerres.aacrjournals.org/content/19/24/6935#F1"}
+NM_006206	{"name":"Protein kinase","start":593,"stop":954,"color":"#90C3D4","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}

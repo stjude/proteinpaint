@@ -1,9 +1,9 @@
-import {event as d3event} from 'd3-selection'
-import {bplen} from './common'
+import { event as d3event } from 'd3-selection'
+import { bplen } from './common'
 import * as client from './client'
-import {rgb as d3rgb} from 'd3-color'
-import {axisBottom} from 'd3-axis'
-import {scaleLinear} from 'd3-scale'
+import { rgb as d3rgb } from 'd3-color'
+import { axisBottom } from 'd3-axis'
+import { scaleLinear } from 'd3-scale'
 
 /*
 single-sample hic
@@ -35,8 +35,6 @@ textdata_editUI
 
 */
 
-
-
 const defaultnmeth = 'NONE' // default normalization method, only for juicebox hic
 
 const minimumbinnum_bp = 200 // minimum bin number at bp resolution
@@ -44,87 +42,86 @@ const minimumbinnum_frag = 200 // minimum bin number at frag resolution
 
 const labyspace = 5
 const insidedomaincolor = '102,102,102'
-const docurl_text = 'https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq'
-
+const docurl_text =
+	'https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq'
 
 let hicstraw // loaded on the fly, will result in bundle duplication
 
-
-export function loadTk( tk, block ) {
-
+export function loadTk(tk, block) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
 	Promise.resolve()
-	.then(()=>{
-		return import( './hic.straw').then(p=>{ hicstraw = p})
-	})
+		.then(() => {
+			return import('./hic.straw').then(p => {
+				hicstraw = p
+			})
+		})
 
-	.then(()=>{
+		.then(() => {
+			if (!tk.uninitialized) return
+			// initialize the track
+			delete tk.uninitialized
 
-		if(!tk.uninitialized) return
-		// initialize the track
-		delete tk.uninitialized
+			makeTk(tk, block) // also parse raw text data if any
+			if (tk.textdata || tk.bedfile || tk.bedurl) return
 
-		makeTk(tk, block) // also parse raw text data if any
-		if(tk.textdata || tk.bedfile || tk.bedurl) return
-
-		/*
+			/*
 		first time querying a hic file
 		hic file is always custom, need to stat the file
 		*/
 
-		return fetch( new Request(block.hostURL+'/hicstat',{
-			method:'POST',
-			body:JSON.stringify({file:tk.file, jwt:block.jwt})
-		}))
-		.then(data=>{return data.json()})
-		.then(data=>{
-			if(data.error) throw(data.error)
-			const err = hicstraw.hicparsestat( tk.hic, data.out )
-			if(err) throw(err)
+			return fetch(
+				new Request(block.hostURL + '/hicstat', {
+					method: 'POST',
+					body: JSON.stringify({ file: tk.file, jwt: block.jwt })
+				})
+			)
+				.then(data => {
+					return data.json()
+				})
+				.then(data => {
+					if (data.error) throw data.error
+					const err = hicstraw.hicparsestat(tk.hic, data.out)
+					if (err) throw err
+				})
 		})
-	})
 
-	.then(()=>{
-		return setResolution(tk, block)
-	})
+		.then(() => {
+			return setResolution(tk, block)
+		})
 
-	.then(()=>{
-		return mayLoadDomainoverlay(tk, block)
-	})
+		.then(() => {
+			return mayLoadDomainoverlay(tk, block)
+		})
 
-	.then( ()=>{
-		
-		if(tk.textdata) return textdata_load(tk,block)
+		.then(() => {
+			if (tk.textdata) return textdata_load(tk, block)
 
-		if(tk.bedfile || tk.bedurl) return bedfile_load(tk, block)
+			if (tk.bedfile || tk.bedurl) return bedfile_load(tk, block)
 
-		return loadStrawdata( tk, block)
-	})
-	.then(()=>{
-		if(tk.data.length==0) {
-			tk.height_main=100
-			tk.colorscale.g.attr('transform','scale(0)')
-			tk.img.attr('width',0)
-			throw(tk.name+': no data in view range')
-		}
-		drawCanvas(tk, block)
-	})
-	.catch(err=>{
-		if(err.stack) {
-			console.log(err.stack)
-		}
-		return typeof(err)=='string' ? err : err.message
-	})
-	.then( errmsg =>{
-		block.tkcloakoff(tk, {error:errmsg})
-		block.block_setheight()
-	})
+			return loadStrawdata(tk, block)
+		})
+		.then(() => {
+			if (tk.data.length == 0) {
+				tk.height_main = 100
+				tk.colorscale.g.attr('transform', 'scale(0)')
+				tk.img.attr('width', 0)
+				throw tk.name + ': no data in view range'
+			}
+			drawCanvas(tk, block)
+		})
+		.catch(err => {
+			if (err.stack) {
+				console.log(err.stack)
+			}
+			return typeof err == 'string' ? err : err.message
+		})
+		.then(errmsg => {
+			block.tkcloakoff(tk, { error: errmsg })
+			block.block_setheight()
+		})
 }
-
-
-
 
 function setResolution(tk, block) {
 	/*
@@ -135,37 +132,36 @@ function setResolution(tk, block) {
 	// list of regions to load data from, including bb.rglst[], and bb.subpanels[]
 	const regions = []
 
-	let x=0
+	let x = 0
 
-	for(let i=block.startidx; i<=block.stopidx; i++) {
+	for (let i = block.startidx; i <= block.stopidx; i++) {
 		const r = block.rglst[i]
 		regions.push({
 			chr: r.chr,
 			start: r.start,
 			stop: r.stop,
 			width: r.width,
-			x: x+ (i==0?0:1)*block.regionspace
+			x: x + (i == 0 ? 0 : 1) * block.regionspace
 		})
-		x += block.regionspace+r.width
+		x += block.regionspace + r.width
 	}
 
-	for(const r of block.subpanels) {
+	for (const r of block.subpanels) {
 		regions.push({
 			chr: r.chr,
 			start: r.start,
 			stop: r.stop,
 			width: r.width,
-			x: x+r.leftpad
+			x: x + r.leftpad
 		})
-		x += r.leftpad+r.width
+		x += r.leftpad + r.width
 	}
 
 	tk.regions = regions
 
-	if(tk.textdata || tk.bedfile || tk.bedurl) {
+	if (tk.textdata || tk.bedfile || tk.bedurl) {
 		return
 	}
-
 
 	/*
 	following is only for hic straw file
@@ -173,10 +169,10 @@ function setResolution(tk, block) {
 	the same resolution will be shared across all regions
 	find biggest region by bp span, use it's pixel width to determine resolution
 	*/
-	const maxbpwidth = Math.max( ...regions.map(i => i.stop-i.start) )
+	const maxbpwidth = Math.max(...regions.map(i => i.stop - i.start))
 	let resolution_bp = null
-	for(const res of tk.hic.bpresolution) {
-		if( maxbpwidth / res > minimumbinnum_bp ) {
+	for (const res of tk.hic.bpresolution) {
+		if (maxbpwidth / res > minimumbinnum_bp) {
 			// this bp resolution is good
 			resolution_bp = res
 			break
@@ -184,234 +180,227 @@ function setResolution(tk, block) {
 	}
 
 	return Promise.resolve()
-	.then(()=>{
+		.then(() => {
+			if (resolution_bp) {
+				return
+			}
+			if (!tk.hic.enzymefile) {
+				// no enzyme fragment data, allowed, use finest bp resolution
+				resolution_bp = tk.hic.bpresolution[tk.hic.bpresolution.length - 1]
+				return
+			}
 
-		if(resolution_bp) {
-			return
-		}
-		if(!tk.hic.enzymefile) {
-			// no enzyme fragment data, allowed, use finest bp resolution
-			resolution_bp = tk.hic.bpresolution[ tk.hic.bpresolution.length-1 ]
-			return
-		}
-
-		/*
+			/*
 		bp resolution not applicable, will use frag resolution
 		retrieve fragments in each regions, then use the fragment index to determine the resolution (# of fragments)
 		*/
 
+			const tasks = []
 
-		const tasks = []
+			// fetch fragments for each region
+			for (const r of regions) {
+				tasks.push(
+					fetch(
+						new Request(block.hostURL + '/bedjdata', {
+							method: 'POST',
+							body: JSON.stringify({
+								jwt: block.jwt,
+								file: tk.hic.enzymefile,
+								isbed: true,
+								rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
+							})
+						})
+					)
+						.then(data => {
+							return data.json()
+						})
+						.then(data => {
+							if (data.error) throw data.error
+							if (!data.items) throw '.items[] missing at mapping coord to fragment index'
 
-		// fetch fragments for each region
-		for( const r of regions ) {
-			tasks.push( fetch( new Request( block.hostURL+'/bedjdata', {
-				method:'POST',
-				body: JSON.stringify({
-					jwt: block.jwt,
-					file: tk.hic.enzymefile,
-					isbed: true,
-					rglst:[ {chr:r.chr, start:r.start, stop:r.stop } ]
-				})
-			}))
-			.then(data=>{return data.json()})
-			.then(data=>{
-				if(data.error) throw(data.error)
-				if(!data.items) throw('.items[] missing at mapping coord to fragment index')
+							const [err, map, start, stop] = hicstraw.hicparsefragdata(data.items)
+							if (err) throw err
+							r.frag = {
+								id2coord: map,
+								startidx: start,
+								stopidx: stop
+							}
+							return
+						})
+				)
+			}
 
-				const [err, map, start, stop] = hicstraw.hicparsefragdata( data.items )
-				if(err) throw(err)
-				r.frag = {
-					id2coord: map,
-					startidx: start,
-					stopidx: stop
+			return Promise.all(tasks)
+		})
+		.then(() => {
+			let resolution_frag
+			if (!resolution_bp) {
+				const maxfragspan = Math.max(...regions.map(i => i.frag.stopidx - i.frag.startidx))
+				for (const v of tk.hic.fragresolution) {
+					if (maxfragspan / v > minimumbinnum_frag) {
+						resolution_frag = v
+						break
+					}
 				}
-				return
-			})
-			)
-		}
-
-		return Promise.all( tasks )
-	})
-	.then( ()=>{
-		let resolution_frag
-		if(!resolution_bp) {
-			const maxfragspan = Math.max( ...regions.map( i=> i.frag.stopidx-i.frag.startidx ) )
-			for(const v of tk.hic.fragresolution) {
-				if(maxfragspan/v > minimumbinnum_frag) {
-					resolution_frag = v
-					break
+				if (!resolution_frag) {
+					resolution_frag = tk.hic.fragresolution[tk.hic.fragresolution.length - 1]
 				}
 			}
-			if(!resolution_frag) {
-				resolution_frag = tk.hic.fragresolution[ tk.hic.fragresolution.length-1 ]
+			tk.resolution_bp = resolution_bp
+			tk.resolution_frag = resolution_frag
+			if (resolution_bp) {
+				tk.label_resolution.text('Resolution: ' + bplen(resolution_bp))
+			} else {
+				tk.label_resolution.text('Resolution: ' + resolution_frag + ' fragment' + (resolution_frag > 1 ? 's' : ''))
 			}
-		}
-		tk.resolution_bp = resolution_bp
-		tk.resolution_frag = resolution_frag
-		if(resolution_bp) {
-			tk.label_resolution.text('Resolution: '+bplen(resolution_bp))
-		} else {
-			tk.label_resolution.text('Resolution: '+resolution_frag+' fragment'+(resolution_frag>1?'s':''))
-		}
-		return
-	})
+			return
+		})
 }
-
-
-
 
 function mayLoadDomainoverlay(tk, block) {
 	// must already have tk.regions[]
 
-	if(!tk.domainoverlay || !tk.domainoverlay.inuse) return
+	if (!tk.domainoverlay || !tk.domainoverlay.inuse) return
 
-	return Promise.resolve()
-	.then(()=>{
-
+	return Promise.resolve().then(() => {
 		// fetch domains for each region
-		const tasks=[]
-		for(const r of tk.regions) {
+		const tasks = []
+		for (const r of tk.regions) {
 			tasks.push(
-				fetch( new Request( block.hostURL+'/bedjdata', {
-					method:'POST',
-					body: JSON.stringify({
-						jwt:block.jwt,
-						file: tk.domainoverlay.file,
-						url: tk.domainoverlay.url,
-						isbed: true,
-						rglst:[ {chr:r.chr, start:r.start, stop:r.stop } ]
+				fetch(
+					new Request(block.hostURL + '/bedjdata', {
+						method: 'POST',
+						body: JSON.stringify({
+							jwt: block.jwt,
+							file: tk.domainoverlay.file,
+							url: tk.domainoverlay.url,
+							isbed: true,
+							rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
+						})
 					})
-				}))
-				.then(data=>{return data.json()})
-				.then(data=>{
-					if(data.error) throw(data.error)
-					if(!data.items || data.items.length==0) return
-					r.domainlst = data.items
-					// each item is a domain, may support inter-chr domains by parsing json
-				})
+				)
+					.then(data => {
+						return data.json()
+					})
+					.then(data => {
+						if (data.error) throw data.error
+						if (!data.items || data.items.length == 0) return
+						r.domainlst = data.items
+						// each item is a domain, may support inter-chr domains by parsing json
+					})
 			)
 		}
 		return Promise.all(tasks)
 	})
 }
 
-
-
-
-
 function textdata_load(tk, block) {
 	/*
 	at the end, set tk.data[]
 	*/
-	tk.data=[]
-	for(const i of tk.textdata.lst) {
-
-		const point = coordpair2plotpoint( i.chr1, i.start1, i.stop1, i.chr2, i.start2, i.stop2, block)
-		if(point) {
-			point.push( i.value )
+	tk.data = []
+	for (const i of tk.textdata.lst) {
+		const point = coordpair2plotpoint(i.chr1, i.start1, i.stop1, i.chr2, i.start2, i.stop2, block)
+		if (point) {
+			point.push(i.value)
 			tk.data.push(point)
 		}
 	}
 }
 
-
-
-
-function coordpair2plotpoint(chr1,start1,stop1, chr2,start2,stop2, block) {
+function coordpair2plotpoint(chr1, start1, stop1, chr2, start2, stop2, block) {
 	let left1 = map_point(chr1, start1, block)
 	let left2 = map_point(chr1, stop1, block)
-	if(left1==-1 && left2==-1) return
+	if (left1 == -1 && left2 == -1) return
 
-	if(left1==-1) left1=left2
-	else if(left2==-1) left2=left1
+	if (left1 == -1) left1 = left2
+	else if (left2 == -1) left2 = left1
 
 	let right1 = map_point(chr2, start2, block)
 	let right2 = map_point(chr2, stop2, block)
-	if(right1==-1 && right2==-1) return
+	if (right1 == -1 && right2 == -1) return
 
-	if(right1==-1) right1=right2
-	else if(right2==-1) right2=right1
+	if (right1 == -1) right1 = right2
+	else if (right2 == -1) right2 = right1
 
-	if(left1 < right1) return [ left1, left2, right1, right2  ]
+	if (left1 < right1) return [left1, left2, right1, right2]
 	return [right1, right2, left1, left2]
 }
 
-
-function map_point(chr,pos,block) {
-	const lst = block.seekcoord( chr, pos )
-	for(const r of lst) {
-		if(r.ridx!=undefined) {
-			if(r.x>0 && r.x<block.width) return r.x
-		} else if(r.subpanelidx!=undefined){
+function map_point(chr, pos, block) {
+	const lst = block.seekcoord(chr, pos)
+	for (const r of lst) {
+		if (r.ridx != undefined) {
+			if (r.x > 0 && r.x < block.width) return r.x
+		} else if (r.subpanelidx != undefined) {
 			return r.x
 		}
 	}
 	return -1
 }
 
-
-
-
-
-function bedfile_load(tk,block) {
+function bedfile_load(tk, block) {
 	/*
 	at end, set tk.data[]
 	*/
 	const arg = {
-		isbed:1,
+		isbed: 1,
 		file: tk.bedfile,
 		url: tk.bedurl,
 		indexURL: tk.bedindexURL,
-		rglst: tk.regions.map( i=> {return {chr:i.chr, start:i.start, stop:i.stop}} )
+		rglst: tk.regions.map(i => {
+			return { chr: i.chr, start: i.start, stop: i.stop }
+		})
 	}
-	return fetch( new Request(block.hostURL+'/bedjdata',{
-		method:'POST',
-		body:JSON.stringify(arg)
-	}))
-	.then(data=>{return data.json()})
-	.then(data=>{
-		if(data.error) throw(data.error)
-		tk.data=[]
-		if(!data.items) {
-			return
-		}
-		// remove duplicating lines
-		const usedlines = new Set()
-		/*
+	return fetch(
+		new Request(block.hostURL + '/bedjdata', {
+			method: 'POST',
+			body: JSON.stringify(arg)
+		})
+	)
+		.then(data => {
+			return data.json()
+		})
+		.then(data => {
+			if (data.error) throw data.error
+			tk.data = []
+			if (!data.items) {
+				return
+			}
+			// remove duplicating lines
+			const usedlines = new Set()
+			/*
 		used lines from the bed file
 		for each uniq interaction, it would have a duplicating line
 		e.g. {chr1, start1, stop1, rest:{chr2,start2,stop2} }
 		will have duplicating line of "chr2 start2 stop2 chr1 start1 stop1", and this line should be skipped
 		*/
 
-		for(const i of data.items) {
+			for (const i of data.items) {
+				const skipline = i.chr + ' ' + i.start + ' ' + i.stop + ' ' + i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2]
+				if (usedlines.has(skipline)) continue
 
-			const skipline = i.chr+' '+i.start+' '+i.stop+' '+i.rest[0]+' '+i.rest[1]+' '+i.rest[2]
-			if(usedlines.has(skipline)) continue
+				const thisline = i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2] + ' ' + i.chr + ' ' + i.start + ' ' + i.stop
+				usedlines.add(thisline)
 
-			const thisline = i.rest[0]+' '+i.rest[1]+' '+i.rest[2]+' '+i.chr+' '+i.start+' '+i.stop
-			usedlines.add(thisline)
+				const chr2 = i.rest[0]
+				const start2 = Number.parseInt(i.rest[1])
+				const stop2 = Number.parseInt(i.rest[2])
+				if (Number.isNaN(start2)) throw 'invalid start2 position: ' + i.rest[1]
+				if (Number.isNaN(stop2)) throw 'invalid stop2 position: ' + i.rest[2]
 
-			const chr2 = i.rest[0]
-			const start2 = Number.parseInt(i.rest[1])
-			const stop2 = Number.parseInt(i.rest[2])
-			if(Number.isNaN(start2)) throw('invalid start2 position: '+i.rest[1])
-			if(Number.isNaN(stop2)) throw('invalid stop2 position: '+i.rest[2])
-
-			const value = Number.parseFloat(i.rest[3])
-			if(Number.isNaN(value)) throw('invalid value: '+i.rest[3])
-			const point = coordpair2plotpoint( i.chr, i.start, i.stop, chr2, start2, stop2, block)
-			if(point) {
-				point.push( value )
-				tk.data.push( point )
+				const value = Number.parseFloat(i.rest[3])
+				if (Number.isNaN(value)) throw 'invalid value: ' + i.rest[3]
+				const point = coordpair2plotpoint(i.chr, i.start, i.stop, chr2, start2, stop2, block)
+				if (point) {
+					point.push(value)
+					tk.data.push(point)
+				}
 			}
-		}
-	})
+		})
 }
 
-
-function loadStrawdata( tk, block) {
+function loadStrawdata(tk, block) {
 	/*
 	at the end, set tk.data[]
 	*/
@@ -420,109 +409,109 @@ function loadStrawdata( tk, block) {
 	const resolution_frag = tk.resolution_frag
 
 	// coord string for querying to use for each region
-	for(const r of tk.regions) {
-		r._str = (tk.hic.nochr ? r.chr.replace('chr','') : r.chr)
-			+ ':'
-			+( resolution_bp ? r.start+ ':'+r.stop : r.frag.startidx+':'+r.frag.stopidx )
+	for (const r of tk.regions) {
+		r._str =
+			(tk.hic.nochr ? r.chr.replace('chr', '') : r.chr) +
+			':' +
+			(resolution_bp ? r.start + ':' + r.stop : r.frag.startidx + ':' + r.frag.stopidx)
 	}
 
 	const tasks = []
 
 	// 1: load data within each region
 
-	for(const [i,r] of tk.regions.entries()) {
+	for (const [i, r] of tk.regions.entries()) {
 		const par = {
-			jwt:block.jwt,
+			jwt: block.jwt,
 			file: tk.file,
 			pos1: r._str,
 			pos2: r._str,
 			nmeth: tk.normalizationmethod,
 			mincutoff: tk.mincutoff
 		}
-		if(resolution_bp) {
+		if (resolution_bp) {
 			par.resolution = resolution_bp
 		} else {
 			par.resolution = resolution_frag
 			par.isfrag = true
 		}
 		tasks.push(
-			fetch( new Request(block.hostURL+'/hicdata',{
-				method:'POST',
-				body:JSON.stringify(par)
-			}))
-			.then(data=>{return data.json()})
-			.then(data=>{
-				if(data.error) throw(data.error)
-				if(!data.items || data.items.length==0) {
-					// a region have no data
-					return null
-				}
-				return {
-					items:data.items,
-					regionidx: i
-				}
-			})
+			fetch(
+				new Request(block.hostURL + '/hicdata', {
+					method: 'POST',
+					body: JSON.stringify(par)
+				})
+			)
+				.then(data => {
+					return data.json()
+				})
+				.then(data => {
+					if (data.error) throw data.error
+					if (!data.items || data.items.length == 0) {
+						// a region have no data
+						return null
+					}
+					return {
+						items: data.items,
+						regionidx: i
+					}
+				})
 		)
 	}
 
 	// 2: load data from each pair of regions
 
-	for(let i=0; i<tk.regions.length-1; i++) {
-
-		for(let j=i+1; j<tk.regions.length; j++) {
-			
+	for (let i = 0; i < tk.regions.length - 1; i++) {
+		for (let j = i + 1; j < tk.regions.length; j++) {
 			const par = {
-				jwt:block.jwt,
+				jwt: block.jwt,
 				file: tk.file,
 				pos1: tk.regions[i]._str,
 				pos2: tk.regions[j]._str,
 				nmeth: tk.normalizationmethod,
 				mincutoff: tk.mincutoff
 			}
-			if(resolution_bp) {
+			if (resolution_bp) {
 				par.resolution = resolution_bp
 			} else {
 				par.resolution = resolution_frag
 				par.isfrag = true
 			}
-			tasks.push( fetch( new Request(block.hostURL+'/hicdata',{
-				method:'POST',
-				body:JSON.stringify(par)
-				}))
-				.then(data=>{return data.json()})
-				.then(data=>{
-					if(data.error) throw({message:data.error})
-					if(!data.items || data.items.length==0) {
-						return null
-					}
-					return {
-						items: data.items,
-						leftregionidx: i,
-						rightregionidx: j
-					}
-				})
+			tasks.push(
+				fetch(
+					new Request(block.hostURL + '/hicdata', {
+						method: 'POST',
+						body: JSON.stringify(par)
+					})
+				)
+					.then(data => {
+						return data.json()
+					})
+					.then(data => {
+						if (data.error) throw { message: data.error }
+						if (!data.items || data.items.length == 0) {
+							return null
+						}
+						return {
+							items: data.items,
+							leftregionidx: i,
+							rightregionidx: j
+						}
+					})
 			)
 		}
 	}
 
-	return Promise.all(tasks)
-		.then(data=>{
-			return parseStrawData( data, resolution_bp, resolution_frag, tk, block )
-		})
+	return Promise.all(tasks).then(data => {
+		return parseStrawData(data, resolution_bp, resolution_frag, tk, block)
+	})
 }
 
-
-
-
-
-
-function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
-
+function parseStrawData(datalst, resolution_bp, resolution_frag, tk, block) {
 	tk.data = []
 
-	for(const data of datalst) {
-
-		if(!data) {
+	for (const data of datalst) {
+		if (!data) {
 			// no data over a particular region or pair
 			continue
 		}
@@ -535,25 +524,23 @@ function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 		// using the same logic in hic.straw.js, inherently related to how straw generates data
 		let firstisleft = false
 
-		if(data.regionidx!=undefined) {
+		if (data.regionidx != undefined) {
 			// single region
-			r_left = r_right = tk.regions[ data.regionidx ]
-			fs_left = fs_right = r_left.width / (r_left.stop-r_left.start)
+			r_left = r_right = tk.regions[data.regionidx]
+			fs_left = fs_right = r_left.width / (r_left.stop - r_left.start)
 			firstisleft = true // doesn't matter
 		} else {
 			// pair of regions
-			r_left = tk.regions[ data.leftregionidx ]
-			fs_left = r_left.width / (r_left.stop-r_left.start)
-			r_right = tk.regions[ data.rightregionidx ]
-			fs_right = r_right.width / (r_right.stop-r_right.start)
+			r_left = tk.regions[data.leftregionidx]
+			fs_left = r_left.width / (r_left.stop - r_left.start)
+			r_right = tk.regions[data.rightregionidx]
+			fs_right = r_right.width / (r_right.stop - r_right.start)
 
-			firstisleft = block.genome.chrlookup[r_left.chr.toUpperCase()].len > block.genome.chrlookup[r_right.chr.toUpperCase()].len
+			firstisleft =
+				block.genome.chrlookup[r_left.chr.toUpperCase()].len > block.genome.chrlookup[r_right.chr.toUpperCase()].len
 		}
 
-
-
-		for(const [n1,n2,v] of data.items) {
-
+		for (const [n1, n2, v] of data.items) {
 			/*
 			n1: coord of one point
 			n2: coord of the other point
@@ -565,49 +552,45 @@ function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 				span1, // bp span
 				span2
 
-			if(resolution_frag) {
-
+			if (resolution_frag) {
 				// fragment resolution
 
 				// the beginning of fragment index
 				const idx_left = firstisleft ? n1 : n2
 				const idx_right = firstisleft ? n2 : n1
 
-				let a = r_left.frag.id2coord.get( idx_left )
-				if(!a) {
-					a=r_right.frag.id2coord.get(idx_left)
-					if(!a) return 'unknown frag id in region '+data.leftregionidx+': '+idx_left
+				let a = r_left.frag.id2coord.get(idx_left)
+				if (!a) {
+					a = r_right.frag.id2coord.get(idx_left)
+					if (!a) return 'unknown frag id in region ' + data.leftregionidx + ': ' + idx_left
 				}
 				coord1 = a[0]
-				span1 = a[1]-a[0]
+				span1 = a[1] - a[0]
 
 				// the end of fragment id of a, may be out of range!
-				if( r_left.frag.id2coord.has( idx_left + resolution_frag ) ) {
-					const x = r_left.frag.id2coord.get( idx_left+resolution_frag )
-					span1 = x[1]-coord1
+				if (r_left.frag.id2coord.has(idx_left + resolution_frag)) {
+					const x = r_left.frag.id2coord.get(idx_left + resolution_frag)
+					span1 = x[1] - coord1
 				}
 
-				let b = r_right.frag.id2coord.get( idx_right )
-				if(!b) {
-					b=r_left.frag.id2coord.get(idx_right)
-					if(!b) return 'unknown frag id in region '+data.rightregionidx+': '+idx_right
+				let b = r_right.frag.id2coord.get(idx_right)
+				if (!b) {
+					b = r_left.frag.id2coord.get(idx_right)
+					if (!b) return 'unknown frag id in region ' + data.rightregionidx + ': ' + idx_right
 				}
 				coord2 = b[0]
-				span2 = b[1]-b[0]
+				span2 = b[1] - b[0]
 
 				// the end of fragment id of b
-				if( r_right.frag.id2coord.has( idx_right + resolution_frag ) ) {
-					const x = r_right.frag.id2coord.get( idx_right+resolution_frag )
-					span2 = x[1]-coord2
+				if (r_right.frag.id2coord.has(idx_right + resolution_frag)) {
+					const x = r_right.frag.id2coord.get(idx_right + resolution_frag)
+					span2 = x[1] - coord2
 				}
-
 			} else {
-
 				// bp resolution
 				coord1 = firstisleft ? n1 : n2
 				coord2 = firstisleft ? n2 : n1
 				span1 = span2 = resolution_bp
-
 			}
 
 			/*
@@ -624,11 +607,11 @@ function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 
 			// if the contact is inside a domain
 			let insidedomain = false
-			if( tk.domainoverlay && tk.domainoverlay.inuse ) {
-				if(data.regionidx!=undefined) {
+			if (tk.domainoverlay && tk.domainoverlay.inuse) {
+				if (data.regionidx != undefined) {
 					// single region
-					if(r_left.domainlst) {
-						if( r_left.domainlst.find( i=> i.start<=coord1 && i.stop>=coord2 ) ) {
+					if (r_left.domainlst) {
+						if (r_left.domainlst.find(i => i.start <= coord1 && i.stop >= coord2)) {
 							insidedomain = true
 						}
 					}
@@ -638,37 +621,42 @@ function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 				}
 			}
 
-
 			// on-screen x start/stop of left/right bins
 			// x positions remain constant by screezing or shifting side
 
-			if(data.leftregionidx!=undefined && r_left.chr==r_right.chr) {
-
+			if (data.leftregionidx != undefined && r_left.chr == r_right.chr) {
 				// a pair of regions both from same chr
 				// in case the pair overlaps, contact points will need to be duplicated to appear symmetrical
-				if((coord1>r_left.start-span1 && coord1<r_left.stop) && (coord2>r_right.start-span2 && coord2<r_right.stop)) {
-					const left1 = r_left.x + fs_left * (coord1-r_left.start)
+				if (
+					coord1 > r_left.start - span1 &&
+					coord1 < r_left.stop &&
+					(coord2 > r_right.start - span2 && coord2 < r_right.stop)
+				) {
+					const left1 = r_left.x + fs_left * (coord1 - r_left.start)
 					const left2 = left1 + fs_left * span1
-					const right1 = r_right.x + fs_right * (coord2-r_right.start)
+					const right1 = r_right.x + fs_right * (coord2 - r_right.start)
 					const right2 = right1 + fs_right * span2
-					tk.data.push([ left1, left2, right1, right2, v, insidedomain ])
+					tk.data.push([left1, left2, right1, right2, v, insidedomain])
 				}
 
-				if((coord2>r_left.start-span2 && coord2<r_left.stop) && (coord1>r_right.start && coord1<r_right.stop)) {
-					const left1 = r_left.x + fs_left * (coord2-r_left.start)
+				if (
+					coord2 > r_left.start - span2 &&
+					coord2 < r_left.stop &&
+					(coord1 > r_right.start && coord1 < r_right.stop)
+				) {
+					const left1 = r_left.x + fs_left * (coord2 - r_left.start)
 					const left2 = left1 + fs_left * span2
-					const right1 = r_right.x + fs_right * (coord1-r_right.start)
+					const right1 = r_right.x + fs_right * (coord1 - r_right.start)
 					const right2 = right1 + fs_right * span1
-					tk.data.push([ left1, left2, right1, right2, v, insidedomain ])
+					tk.data.push([left1, left2, right1, right2, v, insidedomain])
 				}
 			} else {
-
 				// single region
-				const left1 = r_left.x + fs_left * (coord1-r_left.start)
+				const left1 = r_left.x + fs_left * (coord1 - r_left.start)
 				const left2 = left1 + fs_left * span1
-				const right1 = r_right.x + fs_right * (coord2-r_right.start)
+				const right1 = r_right.x + fs_right * (coord2 - r_right.start)
 				const right2 = right1 + fs_right * span2
-				tk.data.push([ left1, left2, right1, right2, v, insidedomain ])
+				tk.data.push([left1, left2, right1, right2, v, insidedomain])
 			}
 		}
 	}
@@ -678,68 +666,63 @@ function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 	return
 }
 
-
-
-
-
-
 function drawCanvas(tk, block) {
 	/* call when:
 		finish loading data
 		changing max value, min cutoff, color
 	*/
 
-	if(tk.data.length==0) return
+	if (tk.data.length == 0) return
 
 	let rgbstring
 	{
 		const t = d3rgb(tk.color)
-		rgbstring = t.r+','+t.g+','+t.b
+		rgbstring = t.r + ',' + t.g + ',' + t.b
 	}
 
 	const canvas = tk.hiddencanvas.node()
 
-	const canvaswidth = block.width + block.subpanels.reduce( (i,j)=> i + j.leftpad + j.width, 0 )
+	const canvaswidth = block.width + block.subpanels.reduce((i, j) => i + j.leftpad + j.width, 0)
 
 	// dynamic height
-	let canvasheight=0
-	if(tk.mode_hm) {
+	let canvasheight = 0
+	if (tk.mode_hm) {
 		/*
 		at tiny region the span from data may be huge, limit it
 		*/
-		canvasheight = Math.min(
-			canvaswidth,
-			tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
-			)
-	} else if(tk.mode_arc) {
-		for(const i of tk.data) {
-			const arcxspan = (i[2]+i[3])/2 - (i[0]+i[1])/2
-			const h = (arcxspan/2) / Math.tan( (Math.PI - tk.arcangle/2) / 2 )
-			canvasheight = Math.max( canvasheight, h )
+		canvasheight = Math.min(canvaswidth, tk.data.reduce((i, j) => Math.max(i, (j[3] - j[0]) / 2), 0))
+	} else if (tk.mode_arc) {
+		for (const i of tk.data) {
+			const arcxspan = (i[2] + i[3]) / 2 - (i[0] + i[1]) / 2
+			const h = arcxspan / 2 / Math.tan((Math.PI - tk.arcangle / 2) / 2)
+			canvasheight = Math.max(canvasheight, h)
 		}
 	}
 
 	canvas.width = canvaswidth
 	canvas.height = canvasheight
 
-	const ctx = canvas.getContext('2d')
+	let ctx = canvas.getContext('2d')
+	if (window.devicePixelRatio > 1) {
+		canvas.width = canvaswidth * window.devicePixelRatio
+		canvas.height = canvasheight * window.devicePixelRatio
+		ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+	}
 
 	// the max value for saturated color, color scale
 	let maxv
 
-
 	// new method of using percentile
 	{
-		const values = tk.data.map(i=>i[4])
-		values.sort( (i,j)=>i-j )
-		maxv = values[ Math.floor( values.length * tk.percentile_max / 100 ) ]
+		const values = tk.data.map(i => i[4])
+		values.sort((i, j) => i - j)
+		maxv = values[Math.floor((values.length * tk.percentile_max) / 100)]
 	}
 
 	resize_label(tk, block)
 
-	for(const [left1,left2, right1,right2, value, insidedomain] of tk.data) {
-
-		if(value < tk.mincutoff) {
+	for (const [left1, left2, right1, right2, value, insidedomain] of tk.data) {
+		if (value < tk.mincutoff) {
 			continue
 		}
 
@@ -747,146 +730,124 @@ function drawCanvas(tk, block) {
 		// color of the diamond
 
 		let color
-		if(insidedomain) {
-		/*
+		if (insidedomain) {
+			/*
 			const r = 200+Math.floor( 50* (maxv-value) / maxv)
 			color = 'rgb('+r+','+r+','+r+')'
 			*/
-			color = 'rgba(' + insidedomaincolor +','+(value/maxv).toFixed(2)+')'
+			color = 'rgba(' + insidedomaincolor + ',' + (value / maxv).toFixed(2) + ')'
 		} else {
-		/*
+			/*
 			const r = Math.floor( 255* (maxv-value) / maxv)
 			color = 'rgb(255,'+r+','+r+')'
 			*/
-			color = 'rgba(' + rgbstring + ',' + (value/maxv).toFixed(2) + ')'
+			color = 'rgba(' + rgbstring + ',' + (value / maxv).toFixed(2) + ')'
 		}
 
-
-		if(tk.mode_hm) {
+		if (tk.mode_hm) {
 			ctx.fillStyle = color
 			ctx.beginPath()
 
-			let x1,y1, // top
-				x2,y2, // left
-				x3,y3, // bottom
-				x4,y4  // top
-			if(tk.pyramidup) {
-				x1 = (left1+right2)/2
-				y1 = canvas.height - (right2-left1)/2
-				x2 = (left1+right1)/2
-				y2 = canvas.height - (right1-left1)/2
-				x3 = (left2+right1)/2
-				y3 = canvas.height - (right1-left2)/2
-				x4 = (left2+right2)/2
-				y4 = canvas.height - (right2-left2)/2
+			let x1,
+				y1, // top
+				x2,
+				y2, // left
+				x3,
+				y3, // bottom
+				x4,
+				y4 // top
+			if (tk.pyramidup) {
+				x1 = (left1 + right2) / 2
+				y1 = canvasheight - (right2 - left1) / 2
+				x2 = (left1 + right1) / 2
+				y2 = canvasheight - (right1 - left1) / 2
+				x3 = (left2 + right1) / 2
+				y3 = canvasheight - (right1 - left2) / 2
+				x4 = (left2 + right2) / 2
+				y4 = canvasheight - (right2 - left2) / 2
 			} else {
-				x1 = (left2+right1)/2
-				y1 = (right1-left2)/2
-				x2 = (left1+right1)/2
-				y2 = (right1-left1)/2
-				x3 = (left1+right2)/2
-				y3 = (right2-left1)/2
-				x4 = (left2+right2)/2
-				y4 = (right2-left2)/2
+				x1 = (left2 + right1) / 2
+				y1 = (right1 - left2) / 2
+				x2 = (left1 + right1) / 2
+				y2 = (right1 - left1) / 2
+				x3 = (left1 + right2) / 2
+				y3 = (right2 - left1) / 2
+				x4 = (left2 + right2) / 2
+				y4 = (right2 - left2) / 2
 			}
 
-			ctx.moveTo(x1,y1)
-			ctx.lineTo(x2,y2)
-			ctx.lineTo(x3,y3)
-			ctx.lineTo(x4,y4)
+			ctx.moveTo(x1, y1)
+			ctx.lineTo(x2, y2)
+			ctx.lineTo(x3, y3)
+			ctx.lineTo(x4, y4)
 
 			ctx.closePath()
 			ctx.fill()
-
-		} else if(tk.mode_arc) {
-			const arcxspan = (right1+right2)/2 - (left1+left2)/2
-			const centerx = (left1+left2)/2 + arcxspan/2
-			const radius = (arcxspan/2) / Math.sin( tk.arcangle/2 )
-			let centery,
-				startangle,
-				endangle
-			if(tk.pyramidup) {
-				centery = canvasheight + radius * Math.cos( tk.arcangle/2 )
-				startangle = Math.PI + (Math.PI-tk.arcangle)/2
+		} else if (tk.mode_arc) {
+			const arcxspan = (right1 + right2) / 2 - (left1 + left2) / 2
+			const centerx = (left1 + left2) / 2 + arcxspan / 2
+			const radius = arcxspan / 2 / Math.sin(tk.arcangle / 2)
+			let centery, startangle, endangle
+			if (tk.pyramidup) {
+				centery = canvasheight + radius * Math.cos(tk.arcangle / 2)
+				startangle = Math.PI + (Math.PI - tk.arcangle) / 2
 				endangle = startangle + tk.arcangle
 			} else {
-				centery = -radius * Math.cos(tk.arcangle/2)
-				startangle = (Math.PI-tk.arcangle)/2
-				endangle = startangle+tk.arcangle
+				centery = -radius * Math.cos(tk.arcangle / 2)
+				startangle = (Math.PI - tk.arcangle) / 2
+				endangle = startangle + tk.arcangle
 			}
 			ctx.strokeStyle = color
 			ctx.beginPath()
-			ctx.arc(
-				centerx,
-				centery,
-				radius,
-				startangle,
-				endangle
-			)
+			ctx.arc(centerx, centery, radius, startangle, endangle)
 			ctx.stroke()
 		}
 	}
 
 	tk.img
-		.attr('width',canvaswidth)
-		.attr('height',canvasheight)
+		.attr('width', canvaswidth)
+		.attr('height', canvasheight)
 		.attr('xlink:href', canvas.toDataURL())
 
 	// update colorscale
-	tk.colorscale.g.attr('transform','scale(1) '+tk.colorscale.positionstr)
+	tk.colorscale.g.attr('transform', 'scale(1) ' + tk.colorscale.positionstr)
 	tk.colorscale.scale.domain([0, maxv])
-	if(tk.mincutoff!=undefined && tk.mincutoff!=0) {
-		const x = Math.min( tk.colorscale.barwidth, tk.colorscale.scale( tk.mincutoff ) )
+	if (tk.mincutoff != undefined && tk.mincutoff != 0) {
+		const x = Math.min(tk.colorscale.barwidth, tk.colorscale.scale(tk.mincutoff))
 		tk.colorscale.tick_mincutoff
 			.attr('x1', x)
 			.attr('x2', x)
-			.attr('stroke','black')
-		tk.colorscale.label_mincutoff
-			.attr('x', x)
-			.text(tk.mincutoff)
+			.attr('stroke', 'black')
+		tk.colorscale.label_mincutoff.attr('x', x).text(tk.mincutoff)
 	} else {
-		tk.colorscale.tick_mincutoff
-			.attr('stroke','none')
+		tk.colorscale.tick_mincutoff.attr('stroke', 'none')
 		tk.colorscale.label_mincutoff.text('')
 	}
 	client.axisstyle({
-		axis:tk.colorscale.axisg.call(
+		axis: tk.colorscale.axisg.call(
 			axisBottom()
-				.scale( tk.colorscale.scale )
+				.scale(tk.colorscale.scale)
 				.tickValues([0, maxv])
 		),
-		showline:1,
-		color:'black'
+		showline: 1,
+		color: 'black'
 	})
 
-	tk.height_main = tk.toppad + Math.max( tk.left_labelheight, canvasheight) + tk.bottompad
+	tk.height_main = tk.toppad + Math.max(tk.left_labelheight, canvasheight) + tk.bottompad
 }
-
-
-
-
 
 function resize_label(tk, block) {
 	tk.leftLabelMaxwidth = tk.colorscale.barwidth
-	tk.tklabel
-		.each(function(){
-			tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width)
+	tk.tklabel.each(function() {
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+	})
+	if (tk.label_resolution) {
+		tk.label_resolution.each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
-	if(tk.label_resolution) {
-		tk.label_resolution
-			.each(function(){
-				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-			})
 	}
 	block.setllabel()
 }
-
-
-
-
-
-
-
 
 function makeTk(tk, block) {
 	/*
@@ -894,36 +855,34 @@ function makeTk(tk, block) {
 	also parse text data
 	*/
 
-	if(tk.textdata) {
-		if(!tk.textdata.raw) throw('.raw missing from textdata')
-		const err = textdata_parseraw( tk, block )
-		if(err) throw('Error with text data: '+err)
+	if (tk.textdata) {
+		if (!tk.textdata.raw) throw '.raw missing from textdata'
+		const err = textdata_parseraw(tk, block)
+		if (err) throw 'Error with text data: ' + err
 	}
 
-
-	if(tk.mode_hm==undefined) tk.mode_hm = true
-	if(tk.mode_arc==undefined) tk.mode_arc = false
-	if(tk.mode_hm && tk.mode_arc) {
-		tk.mode_arc=false
-	} else if(!tk.mode_hm && !tk.mode_arc) {
-		tk.mode_hm=true
+	if (tk.mode_hm == undefined) tk.mode_hm = true
+	if (tk.mode_arc == undefined) tk.mode_arc = false
+	if (tk.mode_hm && tk.mode_arc) {
+		tk.mode_arc = false
+	} else if (!tk.mode_hm && !tk.mode_arc) {
+		tk.mode_hm = true
 	}
 
+	if (!tk.color) tk.color = '#ff0000'
 
-	if(!tk.color) tk.color = '#ff0000'
+	tk.arcangle = Math.PI / 2 // make configurable
 
-	tk.arcangle = Math.PI/2 // make configurable
-
-	if(tk.pyramidup==undefined) tk.pyramidup=true
+	if (tk.pyramidup == undefined) tk.pyramidup = true
 
 	tk.hic.genome = block.genome
-	if(tk.hic.enzyme) {
-		if(block.genome.hicenzymefragment) {
-			const e = block.genome.hicenzymefragment.find( i=> i.enzyme.toUpperCase()==tk.hic.enzyme.toUpperCase() )
-			if(e) {
+	if (tk.hic.enzyme) {
+		if (block.genome.hicenzymefragment) {
+			const e = block.genome.hicenzymefragment.find(i => i.enzyme.toUpperCase() == tk.hic.enzyme.toUpperCase())
+			if (e) {
 				tk.hic.enzymefile = e.file
 			} else {
-				block.error('unknown Hi-C enzyme: '+tk.hic.enzyme)
+				block.error('unknown Hi-C enzyme: ' + tk.hic.enzyme)
 				delete tk.hic.enzyme
 			}
 		} else {
@@ -932,15 +891,14 @@ function makeTk(tk, block) {
 		}
 	}
 
-
-	if(!tk.percentile_max) {
+	if (!tk.percentile_max) {
 		tk.percentile_max = 90
 	}
 
-	if(tk.mincutoff==undefined) {
-		tk.mincutoff=0
+	if (tk.mincutoff == undefined) {
+		tk.mincutoff = 0
 	}
-	if(!tk.normalizationmethod) {
+	if (!tk.normalizationmethod) {
 		tk.normalizationmethod = defaultnmeth
 	}
 
@@ -948,20 +906,19 @@ function makeTk(tk, block) {
 
 	let laby = labyspace + block.labelfontsize
 
-	if(tk.file || tk.url) {
+	if (tk.file || tk.url) {
 		// straw file
-		tk.label_resolution = block.maketklefthandle(tk, laby)
-			.attr('class',null)
+		tk.label_resolution = block.maketklefthandle(tk, laby).attr('class', null)
 		laby += labyspace + block.labelfontsize
 	}
 
 	tk.colorscale = {}
 	{
 		tk.colorscale.barwidth = 100
-		laby+=labyspace
+		laby += labyspace
 		const barheight = 14
 
-		tk.colorscale.positionstr = 'translate('+(block.tkleftlabel_xshift - tk.colorscale.barwidth)+', '+laby+')'
+		tk.colorscale.positionstr = 'translate(' + (block.tkleftlabel_xshift - tk.colorscale.barwidth) + ', ' + laby + ')'
 
 		const g = tk.gleft.append('g').attr('transform', tk.colorscale.positionstr)
 
@@ -969,32 +926,38 @@ function makeTk(tk, block) {
 
 		const defs = g.append('defs')
 		const id = Math.random().toString()
-		const gradient = defs.append('linearGradient').attr('id',id)
-		gradient.append('stop').attr('offset',0).attr('stop-color','white')
-		tk.colorscale.gradientstop = gradient.append('stop').attr('offset',1)
+		const gradient = defs.append('linearGradient').attr('id', id)
+		gradient
+			.append('stop')
+			.attr('offset', 0)
+			.attr('stop-color', 'white')
+		tk.colorscale.gradientstop = gradient.append('stop').attr('offset', 1)
 
 		updatetkcolor_client(tk)
 
 		const space = 1 // y space between bar and axis
 
-		tk.colorscale.bar = g.append('rect')
-			.attr('height',barheight)
+		tk.colorscale.bar = g
+			.append('rect')
+			.attr('height', barheight)
 			.attr('width', tk.colorscale.barwidth)
-			.attr('fill','url(#'+id+')')
-		tk.colorscale.axisg = g.append('g').attr('transform','translate(0,'+(barheight+space)+')')
+			.attr('fill', 'url(#' + id + ')')
+		tk.colorscale.axisg = g.append('g').attr('transform', 'translate(0,' + (barheight + space) + ')')
 		tk.colorscale.scale = scaleLinear().range([0, tk.colorscale.barwidth])
 
 		// min cutoff indicator
-		tk.colorscale.tick_mincutoff = g.append('line')
-			.attr('y1',barheight+space-3)
-			.attr('y2',barheight+space)
-		tk.colorscale.label_mincutoff = g.append('text')
-			.attr('text-anchor','middle')
-			.attr('font-family',client.font)
+		tk.colorscale.tick_mincutoff = g
+			.append('line')
+			.attr('y1', barheight + space - 3)
+			.attr('y2', barheight + space)
+		tk.colorscale.label_mincutoff = g
+			.append('text')
+			.attr('text-anchor', 'middle')
+			.attr('font-family', client.font)
 			.attr('font-size', 12)
-			.attr('y',barheight+space-4)
+			.attr('y', barheight + space - 4)
 
-		laby += barheight+10+block.labelfontsize
+		laby += barheight + 10 + block.labelfontsize
 	}
 
 	laby += 10
@@ -1004,72 +967,63 @@ function makeTk(tk, block) {
 	tk.img = tk.glider.append('image')
 
 	// sneak canvas, render graph then copy to tk.img for showing
-	tk.hiddencanvas = block.holder.append('canvas')
-		.style('display','none')
+	tk.hiddencanvas = block.holder.append('canvas').style('display', 'none')
 
-	tk.config_handle = block.maketkconfighandle(tk)
-		.on('click',()=>{
-			configPanel(tk,block)
-		})
+	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
+		configPanel(tk, block)
+	})
 }
-
-
-
 
 function updatetkcolor_client(tk) {
 	// call after updating color, only on client
 	tk.colorscale.gradientstop.attr('stop-color', tk.color)
 }
 
+function configPanel(tk, block) {
+	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 
-
-
-function configPanel(tk,block) {
-	tk.tkconfigtip.clear()
-		.showunder( tk.config_handle.node() )
-
-	if(tk.textdata) {
-		tk.tkconfigtip.d.append('div')
-			.attr('class','sja_menuoption')
-			.style('margin-bottom','10px')
+	if (tk.textdata) {
+		tk.tkconfigtip.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('margin-bottom', '10px')
 			.text('Edit interaction data')
-			.on('click',()=>{
-				textdata_editUI(tk,block)
+			.on('click', () => {
+				textdata_editUI(tk, block)
 			})
 	}
 
 	{
 		// color
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
-		row.append('span')
-			.text('Change color')
-		row.append('input')
-			.style('margin-left','5px')
-			.attr('type','color')
-			.property('value',tk.color)
-			.on('change',()=>{
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		row.append('span').text('Change color')
+		row
+			.append('input')
+			.style('margin-left', '5px')
+			.attr('type', 'color')
+			.property('value', tk.color)
+			.on('change', () => {
 				tk.color = d3event.target.value
 				updatetkcolor_client(tk)
-				drawCanvas(tk,block)
+				drawCanvas(tk, block)
 			})
 	}
 
 	{
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
-		row.append('input')
-			.attr('type','number')
-			.style('width','40px')
-			.property('value',tk.percentile_max)
-			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		row
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '40px')
+			.property('value', tk.percentile_max)
+			.on('keyup', () => {
+				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
 				const v = Number.parseFloat(d3event.target.value)
-				if(Number.isNaN(v) || v<=0 || v>=100) {
+				if (Number.isNaN(v) || v <= 0 || v >= 100) {
 					alert('Please enter a value between 0 and 100')
 					return
 				}
-				tk.percentile_max= v
+				tk.percentile_max = v
 				drawCanvas(tk, block)
 			})
 		row.append('span').html('&nbsp;percentile for color scale max')
@@ -1077,16 +1031,16 @@ function configPanel(tk,block) {
 
 	// min cutoff
 	{
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
-		row.append('input')
-			.attr('type','number')
-			.style('width','50px')
-			.property('value',tk.mincutoff)
-			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		row
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '50px')
+			.property('value', tk.mincutoff)
+			.on('keyup', () => {
+				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
 				const v = Number.parseFloat(d3event.target.value)
-				if(Number.isNaN(v)) {
+				if (Number.isNaN(v)) {
 					alert('Please enter a valid number')
 					return
 				}
@@ -1094,104 +1048,104 @@ function configPanel(tk,block) {
 				loadTk(tk, block)
 			})
 		row.append('span').html('&nbsp;for minimum cutoff value')
-		row.append('div')
-			.style('font-size','.8em')
-			.style('opacity',.5)
+		row
+			.append('div')
+			.style('font-size', '.8em')
+			.style('opacity', 0.5)
 			.html('Interactions with scores &le; cutoff will not be shown.')
 	}
 
-	if(tk.file || tk.url) {
+	if (tk.file || tk.url) {
 		// hic straw normalization method
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
 		row.append('span').html('Normalization&nbsp;')
-		const s = row.append('select')
-			.on('change',()=>{
-				const ss=s.node()
-				tk.normalizationmethod = ss.options[ ss.selectedIndex ].innerHTML
-				loadTk(tk,block)
-			})
+		const s = row.append('select').on('change', () => {
+			const ss = s.node()
+			tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
+			loadTk(tk, block)
+		})
 		s.append('option').text(defaultnmeth)
 		s.append('option').text('VC')
 		s.append('option').text('VC_SQRT')
 		s.append('option').text('KR')
-		for(const o of s.node().options) {
-			if(o.innerHTML==tk.normalizationmethod) {
-				o.selected=true
+		for (const o of s.node().options) {
+			if (o.innerHTML == tk.normalizationmethod) {
+				o.selected = true
 				break
 			}
 		}
 	}
 
 	// domain overlay
-	if(tk.domainoverlay) {
+	if (tk.domainoverlay) {
 		// equipped with domain overlay data
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
-		row.append('span')
-			.html('Overlay with '+tk.domainoverlay.name+' domains&nbsp;')
-		row.append('button')
-			.text( tk.domainoverlay.inuse ? 'No' : 'Yes' )
-			.on('click',()=>{
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		row.append('span').html('Overlay with ' + tk.domainoverlay.name + ' domains&nbsp;')
+		row
+			.append('button')
+			.text(tk.domainoverlay.inuse ? 'No' : 'Yes')
+			.on('click', () => {
 				tk.tkconfigtip.hide()
 				tk.domainoverlay.inuse = !tk.domainoverlay.inuse
 				loadTk(tk, block)
 			})
 	}
 
-
 	// arc/hm
 	{
-		const row=tk.tkconfigtip.d
-			.append('div')
-			.style('margin-bottom','10px')
-		const id=Math.random().toString()
-		row.append('input')
-			.attr('name',id)
-			.attr('id', id+'1')
-			.attr('type','radio')
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		const id = Math.random().toString()
+		row
+			.append('input')
+			.attr('name', id)
+			.attr('id', id + '1')
+			.attr('type', 'radio')
 			.property('checked', tk.mode_hm)
-			.on('change',()=>{
-				if(d3event.target.checked) {
-					tk.mode_hm=true
-					tk.mode_arc=false
+			.on('change', () => {
+				if (d3event.target.checked) {
+					tk.mode_hm = true
+					tk.mode_arc = false
 				} else {
-					tk.mode_hm=false
-					tk.mode_arc=true
+					tk.mode_hm = false
+					tk.mode_arc = true
 				}
-				drawCanvas(tk,block)
+				drawCanvas(tk, block)
 				block.block_setheight()
 				//tk.tkconfigtip.hide()
 			})
-		row.append('label')
-			.attr('for',id+'1')
-			.attr('class','sja_clbtext')
+		row
+			.append('label')
+			.attr('for', id + '1')
+			.attr('class', 'sja_clbtext')
 			.html('&nbsp;Heatmap')
-		row.append('input')
-			.style('margin-left','10px')
-			.attr('name',id)
-			.attr('id', id+'2')
-			.attr('type','radio')
+		row
+			.append('input')
+			.style('margin-left', '10px')
+			.attr('name', id)
+			.attr('id', id + '2')
+			.attr('type', 'radio')
 			.property('checked', tk.mode_arc)
-			.on('change',()=>{
-				if(d3event.target.checked) {
-					tk.mode_hm=false
-					tk.mode_arc=true
+			.on('change', () => {
+				if (d3event.target.checked) {
+					tk.mode_hm = false
+					tk.mode_arc = true
 				} else {
-					tk.mode_hm=true
-					tk.mode_arc=false
+					tk.mode_hm = true
+					tk.mode_arc = false
 				}
-				drawCanvas(tk,block)
+				drawCanvas(tk, block)
 				block.block_setheight()
 				//tk.tkconfigtip.hide()
 			})
-		row.append('label')
-			.attr('for',id+'2')
-			.attr('class','sja_clbtext')
+		row
+			.append('label')
+			.attr('for', id + '2')
+			.attr('class', 'sja_clbtext')
 			.html('&nbsp;Arc')
-		row.append('span')
-			.style('margin-left','10px')
-			.style('opacity',.5)
+		row
+			.append('span')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
 			.text('for showing interactions.')
 	}
 
@@ -1199,10 +1153,10 @@ function configPanel(tk,block) {
 	{
 		const row = tk.tkconfigtip.d
 			.append('div')
-			.style('margin','20px 0px 10px 0px')
+			.style('margin', '20px 0px 10px 0px')
 			.append('button')
-			.text('Point '+(tk.pyramidup ? 'down' : 'up'))
-			.on('click',()=>{
+			.text('Point ' + (tk.pyramidup ? 'down' : 'up'))
+			.on('click', () => {
 				tk.pyramidup = !tk.pyramidup
 				drawCanvas(tk, block)
 				tk.tkconfigtip.hide()
@@ -1210,53 +1164,51 @@ function configPanel(tk,block) {
 	}
 }
 
-
-
-
-function textdata_editUI(tk,block) {
-	tk.tkconfigtip.d.transition().style('left', (Number.parseInt(tk.tkconfigtip.d.style('left'))-500)+'px' )
+function textdata_editUI(tk, block) {
+	tk.tkconfigtip.d.transition().style('left', Number.parseInt(tk.tkconfigtip.d.style('left')) - 500 + 'px')
 	tk.tkconfigtip.clear()
 	const d = tk.tkconfigtip.d.append('div')
 
-	const ta = d.append('textarea')
-		.attr('cols',50)
-		.attr('rows',10)
+	const ta = d
+		.append('textarea')
+		.attr('cols', 50)
+		.attr('rows', 10)
 	ta.property('value', tk.textdata.raw)
 
-	const row2 = d.append('div')
-		.style('margin-top','10px')
+	const row2 = d.append('div').style('margin-top', '10px')
 
-	row2.append('button')
+	row2
+		.append('button')
 		.text('Update')
-		.on('click',()=>{
+		.on('click', () => {
 			const text = ta.property('value')
-			if(!text) {
+			if (!text) {
 				window.alert('Enter text interaction data')
 				return
 			}
 			tk.textdata.raw = text
-			const err = textdata_parseraw( tk, block )
-			if(err) {
+			const err = textdata_parseraw(tk, block)
+			if (err) {
 				window.alert(err)
 				return
 			}
-			loadTk(tk,block)
+			loadTk(tk, block)
 			tk.tkconfigtip.hide()
 		})
-	
-	row2.append('span')
-		.style('margin-left','5px')
-		.html('<a href='+docurl_text+' target=_blank>Text data format</a>')
 
-	row2.append('button')
-		.style('margin-left','30px')
+	row2
+		.append('span')
+		.style('margin-left', '5px')
+		.html('<a href=' + docurl_text + ' target=_blank>Text data format</a>')
+
+	row2
+		.append('button')
+		.style('margin-left', '30px')
 		.text('Cancel')
-		.on('click',()=>tk.tkconfigtip.hide())
+		.on('click', () => tk.tkconfigtip.hide())
 }
 
-
-
-function textdata_parseraw(tk,block) {
+function textdata_parseraw(tk, block) {
 	/*
 	chr1
 	start1
@@ -1267,35 +1219,35 @@ function textdata_parseraw(tk,block) {
 	xx
 	value
 	*/
-	tk.textdata.lst=[]
+	tk.textdata.lst = []
 	const lines = tk.textdata.raw.trim().split(/\r?\n/)
-	for(let i=0; i<lines.length; i++) {
+	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i].trim()
-		if(!line) continue
+		if (!line) continue
 		const l = line.split(/[\t\s]+/)
-		const chr1=l[0]
-		if(!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line '+(i+1)
+		const chr1 = l[0]
+		if (!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line ' + (i + 1)
 		const start1 = Number.parseInt(l[1])
-		if(Number.isNaN(start1)) return 'invalid startA at line '+(i+1)
+		if (Number.isNaN(start1)) return 'invalid startA at line ' + (i + 1)
 		const stop1 = Number.parseInt(l[2])
-		if(Number.isNaN(stop1)) return 'invalid stopA name at line '+(i+1)
-		const chr2=l[3]
-		if(!block.genome.chrlookup[chr2.toUpperCase()]) return 'wrong chrB name at line '+(i+1)
+		if (Number.isNaN(stop1)) return 'invalid stopA name at line ' + (i + 1)
+		const chr2 = l[3]
+		if (!block.genome.chrlookup[chr2.toUpperCase()]) return 'wrong chrB name at line ' + (i + 1)
 		const start2 = Number.parseInt(l[4])
-		if(Number.isNaN(start2)) return 'invalid startB at line '+(i+1)
+		if (Number.isNaN(start2)) return 'invalid startB at line ' + (i + 1)
 		const stop2 = Number.parseInt(l[5])
-		if(Number.isNaN(stop2)) return 'invalid stopB at line '+(i+1)
+		if (Number.isNaN(stop2)) return 'invalid stopB at line ' + (i + 1)
 		const value = Number.parseFloat(l[7])
-		if(Number.isNaN(value)) return 'invalid value (8th column) at line '+(i+1)
+		if (Number.isNaN(value)) return 'invalid value (8th column) at line ' + (i + 1)
 		tk.textdata.lst.push({
-			chr1:chr1,
-			start1:start1,
-			stop1:stop1,
-			chr2:chr2,
-			start2:start2,
-			stop2:stop2,
-			value:value
+			chr1: chr1,
+			start1: start1,
+			stop1: stop1,
+			chr2: chr2,
+			start2: start2,
+			stop2: stop2,
+			value: value
 		})
 	}
-	if(tk.textdata.lst.length==0) return 'No data points from text input'
+	if (tk.textdata.lst.length == 0) return 'No data points from text input'
 }

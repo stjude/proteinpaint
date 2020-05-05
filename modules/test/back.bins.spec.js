@@ -1,6 +1,10 @@
 const tape = require('tape')
 const b = require('../../modules/termdb.bins')
 
+/*************************
+ reusable helper functions
+**************************/
+
 const get_summary = (() => {
 	const values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 	const n = values.length / 100
@@ -19,83 +23,99 @@ const get_summary = (() => {
 	}
 })()
 
+function tryBin(test, arg, testMssg, expectedErrMssg) {
+	try {
+		b.compute_bins(arg, get_summary)
+		test.fail(testMssg)
+	} catch (e) {
+		test.equal(e, expectedErrMssg, testMssg)
+	}
+}
+
+/**************
+ test sections
+***************/
 tape('\n', function(test) {
 	test.pass('-***- termdb.bins specs -***-')
 	test.end()
 })
 
-tape('compute_bins() error handling', function(test) {
-	const mssg0a = 'should throw on empty config'
-	try {
-		b.compute_bins()
-		test.fail(mssg0a)
-	} catch (e) {
-		test.equal(e, 'bin schema must be an object', mssg0a)
-	}
+tape('compute_bins() error handling, type=regular', function(test) {
+	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
 
-	const mssg1a = 'should throw on missing bin_size'
-	try {
-		b.compute_bins({}, get_summary)
-		test.fail(mssg1a)
-	} catch (e) {
-		test.equal(e, 'non-numeric bin_size', mssg1a)
-	}
+	tryBin(test, {}, 'should throw on missing bin_size', 'non-numeric bin_size')
 
-	const mssg1b = 'should throw on non-numeric bin_size'
-	try {
-		b.compute_bins({ bin_size: 'abc' }, get_summary)
-		test.fail(mssg1b)
-	} catch (e) {
-		test.equal(e, 'non-numeric bin_size', mssg1b)
-	}
+	tryBin(test, { bin_size: 'abc' }, 'should throw on non-numeric bin_size', 'non-numeric bin_size')
 
-	const mssg1c = 'should throw on bin_size <= 0'
-	try {
-		b.compute_bins({ bin_size: 0 }, get_summary)
-		test.fail(mssg1c)
-	} catch (e) {
-		test.equal(e, 'bin_size must be greater than 0', mssg1c)
-	}
+	tryBin(test, { bin_size: 0 }, 'should throw on bin_size <= 0', 'bin_size must be greater than 0')
 
-	const mssg2a = 'should throw on missing first_bin'
-	try {
-		b.compute_bins({ bin_size: 5 }, get_summary)
-		test.fail(mssg2)
-	} catch (e) {
-		test.equal(e, 'first_bin{} missing', mssg2a)
-	}
+	tryBin(test, { bin_size: 5 }, 'should throw on missing first_bin', 'first_bin{} missing')
 
-	const mssg2b = 'should throw on a non-object first_bin'
-	try {
-		b.compute_bins({ bin_size: 5, first_bin: 'abc' }, get_summary)
-		test.fail(mssg2b)
-	} catch (e) {
-		test.equal(e, 'first_bin{} is not an object', mssg2b)
-	}
+	tryBin(
+		test,
+		{ bin_size: 5, first_bin: 'abc' },
+		'should throw on a non-object first_bin',
+		'first_bin{} is not an object'
+	)
 
-	const mssg2bi = 'should throw on an empty first_bin object'
-	try {
-		b.compute_bins({ bin_size: 5, first_bin: {} }, get_summary)
-		test.fail(mssg2bi)
-	} catch (e) {
-		test.equal(e, 'first_bin is an empty object', mssg2bi)
-	}
+	tryBin(
+		test,
+		{ bin_size: 5, first_bin: {} },
+		'should throw on an empty first_bin object',
+		'first_bin is an empty object'
+	)
 
-	const mssg2c = 'should throw if missing first_bin.startunbounded + stop, or start_percentile, or start'
-	try {
-		b.compute_bins({ bin_size: 5, first_bin: { startunbounded: 1 } }, get_summary)
-		test.fail(mssg2c)
-	} catch (e) {
-		test.equal(e, 'first_bin.stop should be a number when startunbounded and stop_percentile is not set', mssg2c)
-	}
-	/*
-  const mssg3 = "should throw if missing last_bin.stopunbounded + start, or stop_percentile, or stop"
-  try {
-    b.compute_bins({bin_size: 5, first_bin: {start:2}, last_bin: {}}, get_summary)
-    test.fail(mssg3)
-  } catch(e) {
-    test.equal(e, 'must set last_bin.stopunbounded + start, or stop_percentile, or stop', mssg3)
-  }*/
+	tryBin(
+		test,
+		{ bin_size: 5, first_bin: { startunbounded: 1 } },
+		'should throw if missing first_bin.startunbounded + stop, or start_percentile, or start',
+		'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
+	)
+
+	test.end()
+})
+
+tape('compute_bins() error handling, type=custom', function(test) {
+	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
+
+	tryBin(test, { type: 'custom' }, 'should throw on missing lst', 'binconfig.lst must be an array')
+
+	tryBin(test, { type: 'custom', lst: [] }, 'should throw on empty lst', 'binconfig.lst must have entries')
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{}] },
+		'should throw on missing *inclusive keys',
+		'custom bin.startinclusive and/or bin.stopinclusive must be defined'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1 }] },
+		'should throw on a custom first bin missing both .startunbounded and .start',
+		'the first bin must define either startunbounded or start'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, start: 'abc' }] },
+		'should throw on non-numeric start for a bounded first bin',
+		'bin.start must be numeric for a bounded first bin'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3 }] },
+		'should throw on a custom last bin missing both .stopunbounded and .stop',
+		'the last bin must define either stopunbounded or stop'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 'abc' }] },
+		'should throw on non-numeric stop for a bounded last bin',
+		'bin.stop must be numeric for a bounded last bin'
+	)
 
 	test.end()
 })
@@ -382,4 +402,24 @@ tape('compute_bins() percentile', function(test) {
 
 tape.skip('get_term_bins() ', function(test) {
 	// to-do
+})
+
+tape('compute_bins() custom', function(test) {
+	const binconfig = {
+		type: 'custom',
+		lst: [
+			{
+				startunbounded: true,
+				stopinclusive: true,
+				stop: 10
+			},
+			{
+				start: 20,
+				startinclusive: true,
+				stopunbounded: true
+			}
+		]
+	}
+	test.deepEqual(b.compute_bins(binconfig), binconfig.lst, 'should simply copy binconfig.lst')
+	test.end()
 })

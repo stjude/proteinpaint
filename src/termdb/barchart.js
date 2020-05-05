@@ -8,6 +8,7 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { to_svg } from '../client'
+import { set_hiddenvalues } from '../common/termsetting'
 
 const colors = {
 	c10: scaleOrdinal(schemeCategory10),
@@ -48,9 +49,8 @@ class TdbBarchart {
 			// will use this as callback to bar click
 			// and will not set up bar click menu
 		} else if (!this.opts.bar_click_opts) {
-			this.opts.bar_click_opts = ['hide_bar', 'add_to_gp']
-			const filter = this.app.getState().termfilter
-			if (filter && filter.show_top_ui) this.opts.bar_click_opts.push('add_filter')
+			this.opts.bar_click_opts = ['hide_bar', 'select_to_gp']
+			if (this.app.getState().nav.show_tabs) this.opts.bar_click_opts.push('add_filter')
 		}
 	}
 
@@ -61,6 +61,9 @@ class TdbBarchart {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('barchart'),
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
@@ -71,7 +74,8 @@ class TdbBarchart {
 					barchart: config.settings.barchart
 				}
 			},
-			ssid: appState.ssid
+			ssid: appState.ssid,
+			bar_click_menu: appState.bar_click_menu || {}
 		}
 	}
 
@@ -126,7 +130,7 @@ class TdbBarchart {
 
 	initExclude() {
 		const term = this.config.term
-		this.settings.exclude.cols = Object.keys(term.q.hiddenValues)
+		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
 			.filter(id => term.q.hiddenValues[id])
 			.map(id => (term.term.values && id in term.term.values ? term.term.values[id].label : id))
 
@@ -206,7 +210,7 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = t2 && t2.term.iscondition ? '' : `, n=${series.visibleTotal}`
+				const ntotal = t2 && t2.term.type == 'condition' ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -271,15 +275,14 @@ class TdbBarchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
-		if (s.exclude.cols.length) {
-			const b = t1.term.graph && t1.term.graph.barchart ? t1.term.graph.barchart : null
+		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
 				.filter(collabel => s.cols.includes(collabel)) // && (!t1.term.values || collabel in t1.term.values))
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
-						t2 && t2.term.iscondition
+						t2 && t2.term.type == 'condition'
 							? 0
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
@@ -309,10 +312,9 @@ class TdbBarchart {
 				})
 			}
 		}
-		if (s.rows && s.rows.length > 1 && !s.hidelegend && t2 && this.term2toColor) {
-			const b = t2.term.graph && t2.term.graph.barchart ? t2.term.graph.barchart : null
+		if (s.rows /*&& s.rows.length > 1*/ && !s.hidelegend && t2 && this.term2toColor) {
 			const value_by_label =
-				!t2.term.iscondition || !t2.term.q
+				t2.term.type != 'condition' || !t2.term.q
 					? ''
 					: t2.term.q.value_by_max_grade
 					? 'max. grade'

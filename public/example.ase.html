@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div style="color:#6087A8;padding:18px;font-size:1.5em;font-family:Times New Roman">
+On-the-fly ASE analysis reveals TERT monoallelic expression and promoter mutation in adult cutaneous melanoma (SKCM)
+</div>
+
+<div style="background:#6087A8;padding:8px;color:white;font-family:Times New Roman">
+	<span style="font-size:2em;font-weight:bold">a</span> On-the-fly ASE analysis and visualization applied to a set of SKCM tumors, using tumor DNA variants and RNA-seq BAM files.
+</div>
+<div id=aaa style="margin:10px"></div>
+
+
+
+<div style="background:#6087A8;padding:8px;color:white;font-family:Times New Roman">
+	<span style="font-size:2em;font-weight:bold">e</span> Detailed visualization of DNA variants and RNA expression at TERT from “sample12”.
+</div>
+<div id=b style="margin:10px"></div>
+
+<script>
+
+
+
+
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	block:1,
+	noheader:1,
+	position:'chr5:1252462-1297568',
+	genome:'hg38',
+	nativetracks:'refgene',
+	tracks:[
+
+
+
+		{
+			type:'mdssvcnv',
+			name:'TCGA SKCM TERT ASE',
+			checkvcf:{
+				file:'hg38/tcga-gdc/SKCM/tert.ase/vcf.gz',
+			},
+			checkrnabam:{
+				hetsnp_minbaf:0.2,
+				hetsnp_maxbaf:0.8,
+				samples:{
+					sample1: {
+						file: "hg38/tcga-gdc/SKCM/tert.ase/sample1.bam",
+						totalreads: 172048689,
+						pairedend: true
+					},
+					sample2: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample2.bam',
+						totalreads: 151710239,
+						pairedend: true
+					},
+					sample3: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample3.bam',
+						totalreads: 167864903,
+						pairedend: true
+					},
+					sample4: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample4.bam',
+						totalreads: 153196442,
+						pairedend: true
+					},
+					sample12:{
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample12.bam',
+						totalreads: 155650314,
+						pairedend: true
+					},
+					sample5: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample5.bam',
+						totalreads: 144649042,
+						pairedend: true
+					},
+					sample6: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample6.bam',
+						totalreads: 170516947,
+						pairedend: true
+					},
+					sample7: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample7.bam',
+						totalreads: 167971047,
+						pairedend: true
+					},
+					sample8: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample8.bam',
+						totalreads: 137990338,
+						pairedend: true
+					},
+					sample9: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample9.bam',
+						totalreads: 150401722,
+						pairedend: true
+					},
+					sample10: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample10.bam',
+						totalreads: 131681552,
+						pairedend: true
+					},
+					sample11: {
+						file: 'hg38/tcga-gdc/SKCM/tert.ase/sample11.bam',
+						totalreads: 150240544,
+						pairedend: true
+					},
+				},
+			}
+		},
+	]
+})
+
+
+
+
+runproteinpaint({
+	holder:document.getElementById('b'),
+	parseurl:true,
+	nobox:1,
+	block:1,
+	noheader:1,
+	position:'chr5:1252462-1297568',
+	genome:'hg38',
+	nativetracks:'refgene',
+	tracks:[
+
+
+
+		{
+			type:'ase',
+			name:'TCGA SKCM TERT ASE',
+			vcffile:'hg38/tcga-gdc/SKCM/tert.ase/vcf.gz',
+			hetsnp_minbaf:0.1,
+			hetsnp_maxbaf:0.8,
+			samplename:'sample12',
+			rnabamfile: 'hg38/tcga-gdc/SKCM/tert.ase/sample12.bam',
+			rnabamtotalreads: 155650314,
+			checkrnabam:{
+				hetsnp_minbaf:.2,
+				hetsnp_maxbaf:.8
+			}
+		}
+	]
+})
+
+</script>
+
+</body>
+</html>

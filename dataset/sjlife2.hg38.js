@@ -1,5 +1,244 @@
+const cohorthtmltable = `<table>
+<thead>
+  <tr>
+    <td>Features</td>
+	<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>
+	<td>Childhood Cancer Survivor Study (CCSS)</td>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>Survivors on Portal</td>
+	<td>4402</td>
+	<td>2936</td>
+  </tr>
+  <tr>
+	<td>Years of cancer diagnosis</td>
+	<td>1962-2012</td>
+	<td>1987-1999 ("Expanded Cohort")</td>
+  </tr>
+  <tr>
+	<td>Inclusion criteria</td>
+	<td>Survived &ge; 5 years from diagnosis</td>
+	<td>Survived &ge; 5 years from diagnosis</td>
+  </tr>
+  <tr>
+	<td>Age at cancer diagnosis</td>
+	<td><25 years</td>
+	<td><21 years</td>
+  </tr>
+  <tr>
+	<td>Cancer diagnosis</td>
+	<td>All diagnoses</td>
+	<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>
+  </tr>
+  <tr>
+	<td>Study design</td>
+	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
+	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
+  </tr>
+  <tr>
+	<td>Methods of contact</td>
+	<td>Clinic visits and surveys</td>
+	<td>Surveys</td>
+  </tr>
+  <tr>
+	<td>Source of sequenced germline DNA</td>
+	<td>Blood</td>
+	<td>Saliva or blood</td>
+  </tr>
+  <tr>
+	<td>Therapeutic exposures</td>
+	<td>Chemotherapy, radiation, surgery</td>
+	<td>Chemotherapy, radiation, surgery</td>
+  </tr>
+  <tr>
+	<td>Methods for ascertainment of outcomes</td>
+	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
+	<td>Self-report, pathology reports (secondary neoplasm), NDI</td>
+  </tr>
+</tbody>
+</table>`
+
+// the vcf file
+const info_fields = [
+	{
+		key: 'QC',
+		label: 'Good/Bad List',
+		isfilter: true,
+		isactivefilter: true,
+		iscategorical: true,
+		values: [
+			{ key: 'SuperGood', label: 'SuperGood' },
+			{ key: 'Good', label: 'Good' },
+			{ key: 'Ambiguous', label: 'Ambiguous' },
+			{ key: 'Bad', label: 'Bad', ishidden: true }
+		]
+	},
+	{
+		key: 'AF',
+		label: 'SJLIFE allele frequency',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_AF',
+		label: 'SJLIFE control allele frequency',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_CEU_AF',
+		label: 'SJLIFE control allele frequency, Caucasian',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_YRI_AF',
+		label: 'SJLIFE control allele frequency, African American',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'SJcontrol_CR',
+		label: 'SJLIFE control call rate',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'CR',
+		label: 'SJLIFE call rate',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'gnomAD_CR',
+		label: 'gnmoAD call rate',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'gnomAD_AF',
+		label: 'gnomAD allele frequency',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_afr',
+		label: 'gnomAD allele frequency, African-American',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_eas',
+		label: 'gnomAD allele frequency, East Asian',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'gnomAD_AF_nfe',
+		label: 'gnomAD allele frequency, non-Finnish European',
+		isfilter: true,
+		isfloat: 1,
+		missing_value: 0,
+		range: {
+			start: 0.1,
+			startinclusive: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'PG',
+		label: 'Committee classification',
+		iscategorical: true,
+		isfilter: true,
+		values: [{ key: 'P', label: 'Pathogenic' }, { key: 'LP', label: 'Likely pathogenic' }]
+	},
+	{
+		key: 'BadBLAT',
+		label: 'Paralog',
+		isfilter: true,
+		isactivefilter: true,
+		isflag: true,
+		remove_yes: true
+	},
+	{
+		key: 'Polymer_region',
+		label: 'Polymer region',
+		isflag: true,
+		isfilter: true,
+		isactivefilter: true,
+		remove_yes: true
+	}
+]
+
 module.exports = {
 	isMds: true,
+
+	sample2bam: {
+		// this is just a quick fix
+		SJL5088613: 'files/hg38/sjlife/wgs-bam/SJST041646_G1.bam'
+	},
 
 	cohort: {
 		db: {
@@ -14,27 +253,21 @@ module.exports = {
 		},
 
 		termdb: {
-			patient_condition: {
-				// solely for the "iscondition" terms
-				events_key: 'conditionevents',
-				grade_key: 'grade',
-				grade_labels: [
-					// computable grades
-					{ grade: 0, label: '0: No condition' },
-					{ grade: 1, label: '1: Mild' },
-					{ grade: 2, label: '2: Moderate' },
-					{ grade: 3, label: '3: Severe' },
-					{ grade: 4, label: '4: Life-threatening' },
-					{ grade: 5, label: '5: Death' }
-				],
-				uncomputable_grades: {
-					9: 'Unknown status'
+			//// this attribute is optional
+			phewas: {
+				samplefilter4termtype: {
+					condition: {
+						filter: {
+							type: 'tvslst',
+							join: '',
+							in: true,
+							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
+						}
+					}
 				},
 				comparison_groups: [
 					/* only for condition terms
-					for the moment this is only for phewas precompute
-					later it may work for barchart too
-					*/
+					 */
 					{
 						group1label: 'Grades 1-5',
 						group1grades: new Set([1, 2, 3, 4, 5]),
@@ -58,16 +291,47 @@ module.exports = {
 						copycontrolfrom1stgroup: true
 					}
 					// to add later 1+2 vs 3+4+5
-				],
-				age_key: 'age',
-				yearstoevent_key: 'yearstoevent'
+				]
 			},
-			phewas: {
-				samplefilter4termtype: {
-					condition: {
-						tvslst: [{ term: { id: 'ctcae_graded', iscategorical: true }, values: [{ key: '1' }] }]
+
+			//// this attribute is optional
+			selectCohort: {
+				// wrap term.id into a term json object so as to use it in tvs;
+				// the term is not required to exist in termdb
+				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
+				term: {
+					id: 'subcohort',
+					type: 'categorical'
+				},
+				showMessageWhenNotSelected:
+					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				values: [
+					// <ul><li> for items, with a radio button for each.
+					{
+						keys: ['SJLIFE'],
+						label: 'St. Jude Lifetime Cohort (SJLIFE)',
+						shortLabel: 'SJLIFE',
+						isdefault: true,
+						cssSelector: 'tbody > tr > td:nth-child(2)'
+					},
+					{
+						keys: ['CCSS'],
+						label: 'Childhood Cancer Survivor Study (CCSS)',
+						shortLabel: 'CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(3)'
+					},
+					{
+						keys: ['SJLIFE', 'CCSS'],
+						label: 'Combined SJLIFE+CCSS',
+						shortLabel: 'SJLIFE+CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
+						// show note under label in smaller text size
+						note:
+							'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
 					}
-				}
+				],
+				highlightCohortBy: 'cssSelector',
+				htmlinfo: cohorthtmltable
 			}
 		}
 	},
@@ -75,176 +339,7 @@ module.exports = {
 	track: {
 		name: 'SJLife germline SNV',
 
-		info_fields: [
-			{
-				key: 'QC',
-				label: 'Good/Bad List',
-				isfilter: true,
-				isactivefilter: true,
-				iscategorical: true,
-				values: [
-					{ key: 'SuperGood', label: 'SuperGood' },
-					{ key: 'Good', label: 'Good' },
-					{ key: 'Ambiguous', label: 'Ambiguous' },
-					{ key: 'Bad', label: 'Bad', ishidden: true }
-				]
-			},
-			{
-				key: 'AF',
-				label: 'SJLIFE allele frequency',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_AF',
-				label: 'SJLIFE control allele frequency',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_CEU_AF',
-				label: 'SJLIFE control allele frequency, Caucasian',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_YRI_AF',
-				label: 'SJLIFE control allele frequency, African American',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'SJcontrol_CR',
-				label: 'SJLIFE control call rate',
-				isfilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'CR',
-				label: 'SJLIFE call rate',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'gnomAD_CR',
-				label: 'gnmoAD call rate',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				range: {
-					start: 0.95,
-					startinclusive: true,
-					stopunbounded: true
-				}
-			},
-			{
-				key: 'gnomAD_AF',
-				label: 'gnomAD allele frequency',
-				isfilter: true,
-				isactivefilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_afr',
-				label: 'gnomAD allele frequency, African-American',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_eas',
-				label: 'gnomAD allele frequency, East Asian',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'gnomAD_AF_nfe',
-				label: 'gnomAD allele frequency, non-Finnish European',
-				isfilter: true,
-				isfloat: 1,
-				missing_value: 0,
-				range: {
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			},
-			{
-				key: 'PG',
-				label: 'Committee classification',
-				iscategorical: true,
-				isfilter: true,
-				values: [{ key: 'P', label: 'Pathogenic' }, { key: 'LP', label: 'Likely pathogenic' }]
-			},
-			{
-				key: 'BadBLAT',
-				label: 'Paralog',
-				isfilter: true,
-				isactivefilter: true,
-				isflag: true,
-				remove_yes: true
-			},
-			{
-				key: 'Polymer_region',
-				label: 'Polymer region',
-				isflag: true,
-				isfilter: true,
-				isactivefilter: true,
-				remove_yes: true
-			}
-		],
+		info_fields,
 
 		populations: [
 			{
@@ -337,12 +432,22 @@ module.exports = {
 							filter: {
 								type: 'tvslst',
 								in: true,
-								join: '',
+								join: 'and',
 								lst: [
 									{
 										type: 'tvs',
+										tag: 'cohortFilter',
+										renderAs: 'htmlSelect',
+										selectOptionsFrom: 'selectCohort',
 										tvs: {
-											term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+											term: { id: 'subcohort', type: 'categorical' },
+											values: [{ key: 'SJLIFE', label: 'SJLIFE' }]
+										}
+									},
+									{
+										type: 'tvs',
+										tvs: {
+											term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 											values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 										}
 									}
@@ -356,21 +461,6 @@ module.exports = {
 							allowto_adjust_race: true,
 							adjust_race: true
 						}
-						/*
-						{
-							is_termdb:true,
-							terms:[
-								{
-									term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-									values:[
-										{key:'Neuroblastoma',label:'Neuroblastoma'}
-									]
-								}
-							]
-						},
-						{ is_infofield:true, key:'gnomAD_AF' },
-						{ is_infofield:true, key:'gnomAD_AF_afr' },
-						*/
 					],
 					allowed_infofields: [
 						{ key: 'AF' },
@@ -389,7 +479,8 @@ module.exports = {
 					termfilter: {
 						id: 'genetic_race',
 						name: 'Genetically defined race',
-						iscategorical: true,
+						type: 'categorical',
+						// need to provide type/name/values besides id; in p4 with state rehydration, just need to provide term id
 						values: [{ key: 'European Ancestry' }, { key: 'African Ancestry' }, { key: 'Asian Ancestry' }],
 						inuse: true,
 						value_index: 0
@@ -436,7 +527,8 @@ module.exports = {
 						term: {
 							name: 'wgs',
 							id: 'wgs_curated',
-							iscategorical: true,
+							type: 'categorical',
+							// need to provide type/name/values besides id; in p4 with state rehydration, just need to provide term id
 							values: { '0': { label: 'No' }, '1': { label: 'Yes' } }
 						},
 						values: [{ key: '1', label: 'Yes' }]

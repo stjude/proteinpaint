@@ -1,0 +1,43 @@
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+<div id=a style="margin:20px"></div>
+<script>
+runproteinpaint({
+	holder:document.getElementById('a'),
+	parseurl:true,
+	block:true,
+	nobox:1,
+	noheader:1,
+	genome:'hg19',
+	nativetracks:'RefGene',
+        position:"chr14:24549316-24584223",
+	tracks:[
+                {
+                    "type":"profilegenevalue",
+                    "genevaluetrack":{
+                        "file":"retina/hg19/fpkm.gz"
+                    },
+                    "genevaluetype":"FPKM",
+                    "legendimg":{
+                        "file":"retina/hg19/HMM.png",
+                        "width":400,
+                        "height":400
+                    },
+                    "name":"Human retina chromHMM",
+				    "genevaluematchname":"sampleID",
+                    "tracks":[
+                    {"type":"bedj","file":"retina/hg19/FW13_14.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 13-14","sampleID":"FW13_14"},
+                    {"type":"bedj","file":"retina/hg19/FW15_16.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 15-16","sampleID":"FW15_16"},
+                    {"type":"bedj","file":"retina/hg19/FW18_20.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 18-20","sampleID":"FW18_20"},
+                    {"type":"bedj","file":"retina/hg19/FW23_24.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 23-24","sampleID":"FW23_24"},
+                    {"type":"bedj","file":"retina/hg19/RB_D.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB-patient","sampleID":"RB_D"},
+                    {"type":"bedj","file":"retina/hg19/RB_X.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB-xenograft","sampleID":"RB_X"}
+                    ]
+                }
+	]
+})
+</script>
+</body>
+</html>

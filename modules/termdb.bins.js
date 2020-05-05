@@ -1,69 +1,109 @@
 const d3format = require('d3-format')
-const binLabelFormatter = d3format.format('.3r')
 
 function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
 
 	const bc = binconfig
 	if (!bc || typeof bc !== 'object') throw 'bin schema must be an object'
+	// assign default type
+	if (!('type' in bc)) bc.type = 'regular'
 
-	// required custom_bin parameter
-	if (!Number.isFinite(bc.bin_size)) throw 'non-numeric bin_size'
-	if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
+	if (bc.type == 'custom') {
+		if (!Array.isArray(bc.lst)) throw 'binconfig.lst must be an array'
+		if (!bc.lst.length) throw 'binconfig.lst must have entries'
+		const first_bin = bc.lst[0]
+		const last_bin = bc.lst[bc.lst.length - 1]
 
-	if (!bc.startinclusive && !bc.stopinclusive) {
-		bc.startinclusive = 1
-		bc.stopinclusive = 0
-	}
-
-	if (!bc.first_bin) throw 'first_bin{} missing'
-	if (typeof bc.first_bin != 'object') throw 'first_bin{} is not an object'
-	if (!Object.keys(bc.first_bin).length) throw 'first_bin is an empty object'
-
-	{
-		const b = bc.first_bin
-		if (b.startunbounded) {
-			// requires stop_percentile, or stop
-			if (b.stop_percentile) {
-				if (!Number.isInteger(b.stop_percentile)) throw 'first_bin.stop_percentile should be integer'
-				if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'first_bin.stop_percentile out of bound (0-100)'
-			} else {
-				if (!Number.isFinite(b.stop))
-					throw 'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
+		for (const bin of bc.lst) {
+			if (!('startinclusive' in bin) && !('stopinclusive' in bin)) {
+				throw 'custom bin.startinclusive and/or bin.stopinclusive must be defined'
 			}
-		} else {
-			if (b.start_percentile) {
-				if (!Number.isInteger(b.start_percentile)) throw 'first_bin.start_percentile should be integer'
-				if (b.start_percentile <= 0 || b.start_percentile >= 100)
-					throw 'first_bin.start_percentile out of bound (0-100)'
-			} else {
-				if (!Number.isFinite(b.start))
-					throw 'first_bin.start not a number when neither startunbounded or start_percentile'
-			}
-			// stop is not required
-		}
-	}
 
-	const b = bc.last_bin
-	if (b) {
-		if (b.stopunbounded) {
-			// requires start_percentile or start
-			if (b.start_percentile) {
-				if (!Number.isInteger(b.start_percentile)) throw 'last_bin.start_percentile should be integer'
-				if (b.start_percentile <= 0 || b.start_percentile >= 100) throw 'last_bin.start_percentile out of bound (0-100)'
+			if (bin == first_bin) {
+				if (!('startunbounded' in bin) && !('start' in bin)) {
+					throw `the first bin must define either startunbounded or start`
+				}
+				if (!bin.startunbounded) {
+					if (!isNumeric(bin.start)) throw 'bin.start must be numeric for a bounded first bin'
+				}
 			} else {
-				if (!Number.isFinite(b.start))
-					throw 'last_bin.start not a number when is stopunbounded and start_percentile is not set'
+				if (!isNumeric(bin.start)) throw 'bin.start must be numeric for a non-first bin'
 			}
-		} else {
-			// requires stop
-			if (b.stop_percentile) {
-				if (!Number.isInteger(b.stop_percentile)) throw 'last_bin.stop_percentile should be integer'
-				if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'last_bin.stop_percentile out of bound (0-100)'
+
+			if (bin == last_bin) {
+				if (!('stopunbounded' in bin) && !('stop' in bin)) {
+					throw `the last bin must define either stopunbounded or stop`
+				}
+				if (!bin.stopunbounded) {
+					if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a bounded last bin'
+				}
 			} else {
-				if (!Number.isFinite(b.stop)) throw 'last_bin.stop not a number when neither startunbounded or stop_percentile'
+				if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
 		}
+	} else if (bc.type == 'regular') {
+		// required custom_bin parameter
+		if (!Number.isFinite(bc.bin_size)) throw 'non-numeric bin_size'
+		if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
+
+		if (!bc.startinclusive && !bc.stopinclusive) {
+			bc.startinclusive = 1
+			bc.stopinclusive = 0
+		}
+
+		if (!bc.first_bin) throw 'first_bin{} missing'
+		if (typeof bc.first_bin != 'object') throw 'first_bin{} is not an object'
+		if (!Object.keys(bc.first_bin).length) throw 'first_bin is an empty object'
+
+		{
+			const b = bc.first_bin
+			if (b.startunbounded) {
+				// requires stop_percentile, or stop
+				if (b.stop_percentile) {
+					if (!Number.isInteger(b.stop_percentile)) throw 'first_bin.stop_percentile should be integer'
+					if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'first_bin.stop_percentile out of bound (0-100)'
+				} else {
+					if (!Number.isFinite(b.stop))
+						throw 'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
+				}
+			} else {
+				if (b.start_percentile) {
+					if (!Number.isInteger(b.start_percentile)) throw 'first_bin.start_percentile should be integer'
+					if (b.start_percentile <= 0 || b.start_percentile >= 100)
+						throw 'first_bin.start_percentile out of bound (0-100)'
+				} else {
+					if (!Number.isFinite(b.start))
+						throw 'first_bin.start not a number when neither startunbounded or start_percentile'
+				}
+				// stop is not required
+			}
+		}
+
+		if (bc.last_bin) {
+			const b = bc.last_bin
+			if (b.stopunbounded) {
+				// requires start_percentile or start
+				if (b.start_percentile) {
+					if (!Number.isInteger(b.start_percentile)) throw 'last_bin.start_percentile should be integer'
+					if (b.start_percentile <= 0 || b.start_percentile >= 100)
+						throw 'last_bin.start_percentile out of bound (0-100)'
+				} else {
+					if (!Number.isFinite(b.start))
+						throw 'last_bin.start not a number when is stopunbounded and start_percentile is not set'
+				}
+			} else {
+				// requires stop
+				if (b.stop_percentile) {
+					if (!Number.isInteger(b.stop_percentile)) throw 'last_bin.stop_percentile should be integer'
+					if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'last_bin.stop_percentile out of bound (0-100)'
+				} else {
+					if (!Number.isFinite(b.stop))
+						throw 'last_bin.stop not a number when neither startunbounded or stop_percentile'
+				}
+			}
+		}
+	} else {
+		throw `invalid binconfig.type="${bc.type}"`
 	}
 }
 
@@ -91,12 +131,15 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 */
 	const bc = binconfig
 	validate_bins(bc)
-
+	if (bc.type == 'custom') return JSON.parse(JSON.stringify(bc.lst))
 	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js get_bins()'
 	const percentiles = target_percentiles(bc)
 	const summary = summaryfxn(percentiles)
 	if (!summary || typeof summary !== 'object') throw 'invalid returned value by summaryfxn'
 	bc.results = { summary }
+	const decimals = ('' + bc.bin_size).split('.')[1]
+	bc.numDecimals = (decimals && decimals.length) || 0
+	bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'r')
 
 	const orderedLabels = []
 	const min = bc.first_bin.startunbounded
@@ -129,12 +172,20 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			: isNumeric(bc.last_bin.stop)
 			? bc.last_bin.stop
 			: null
+	} else if (bc.lst) {
+		const last_bin = bc.lst[bc.lst.length - 1]
+		last_start = last_bin.start
+		last_stop = 'stop' in last_bin && !last_bin.stopunbounded ? last_bin.stop : summary.max
+		max = last_stop
+	} else {
+		last_start = summary.max
+		last_stop = summary.max
 	}
 	const numericMax = isNumeric(max)
 	const numericLastStart = isNumeric(last_start)
 	const numericLastStop = isNumeric(last_stop)
 
-	if (!numericMax && !numericLastStart) throw 'unable to compute the last bin start or stop'
+	if (!numericMax && !numericLastStart) return [] //throw 'unable to compute the last bin start or stop'
 
 	const bins = []
 	let currBin = {
@@ -152,7 +203,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	if (!isNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
 	const maxNumBins = 50 // harcoded limit for now to not stress sqlite
 
-	while ((numericMax && currBin.stop <= max) || currBin.stopunbounded) {
+	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
 		currBin.label = get_bin_label(currBin, bc)
 		bins.push(currBin)
 		if (currBin.stopunbounded || currBin.stop >= max) break
@@ -189,6 +240,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			break
 		}
 	}
+	delete bc.numDecimals
+	delete bc.binLabelFormatter
 	return bins
 }
 
@@ -199,17 +252,20 @@ function get_bin_label(bin, binconfig) {
   Generate a numeric bin label given a bin configuration
 */
 	const bc = binconfig
+	const first_bin = bc.first_bin ? bc.first_bin : bc.lst[0]
+	if (!('numDecimals' in bc)) bc.numDecimals = ('' + first_bin.stop).split('.').length - 1
+	if (typeof bc.binLabelFormatter !== 'function') bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'f')
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
 		const oper = bin.stopinclusive ? '\u2264' : '<'
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 		return oper + v1
 	}
 	if (bin.stopunbounded) {
 		const oper = bin.startinclusive ? '\u2265' : '>'
-		const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
+		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
 		return oper + v0
 	}
 
@@ -220,7 +276,7 @@ function get_bin_label(bin, binconfig) {
 		// bin size is integer, make nicer label
 		if (bc.bin_size == 1) {
 			// bin size is 1; use just start value as label, not a range
-			return '' + bin.start //binLabelFormatter(start)
+			return '' + bin.start //bc.binLabelFormatter(start)
 		}
 		if (Number.isInteger(bin.start) || Number.isInteger(bin.stop)) {
 			// else if ('label_offset' in binconfig) {
@@ -242,20 +298,26 @@ function get_bin_label(bin, binconfig) {
 				? binconfig.results.summary['p' + binconfig.last_bin.stop_percentile]
 				: binconfig.results.summary.max
 			const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
-			return v0 == v1 ? v0.toString() : v0 + ' to ' + v1
+			if (v0 == v1) return v0.toString()
+			for (let i = 0; i < 10; i++) {
+				//const v0f = v0.toFixed(bc.numDecimals + i)
+				const v1f = v1.toFixed(bc.numDecimals + i)
+				if (+v1f > v0) return v0 + ' to ' + v1f
+			}
+			return v0 + ' to ' + v1
 		}
 		const oper0 = '' //bc.startinclusive ? "" : ">"
 		const oper1 = '' //bc.stopinclusive ? "" : "<"
-		const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 		return oper0 + v0 + ' to ' + oper1 + v1
 	}
 
 	// bin size not integer
-	const oper0 = bc.startinclusive ? '' : '>'
-	const oper1 = bc.stopinclusive ? '' : '<'
-	const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
-	const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+	const oper0 = bc.startinclusive || bin.startinclusive ? '≥' : '>'
+	const oper1 = bc.stopinclusive || bin.stopinclusive ? '≤' : '<'
+	const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+	const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
 	return oper0 + v0 + ' to ' + oper1 + v1
 }
 

@@ -87,6 +87,7 @@ class TdbPlot {
 			return action.id == this.id
 		}
 		if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -98,6 +99,7 @@ class TdbPlot {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid
@@ -300,7 +302,20 @@ function tvslst_to_parameter(tv) {
 			iscategorical: tv.term.iscategorical,
 			isfloat: tv.term.isfloat,
 			isinteger: tv.term.isinteger,
-			iscondition: tv.term.iscondition
+			iscondition: tv.term.iscondition,
+			type:
+				// to-do: delete this code block when all term.is* has been removed from code
+				tv.term.type
+					? tv.term.type
+					: tv.term.iscategorical
+					? 'categorical'
+					: tv.term.isfloat
+					? 'float'
+					: tv.term.isinteger
+					? 'integer'
+					: tv.term.iscondition
+					? 'condition'
+					: ''
 		},
 		// must return original values[{key,label}] to keep the validator function happy on both client/server
 		values: tv.values,

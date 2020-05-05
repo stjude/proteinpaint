@@ -9,27 +9,29 @@
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
-<div id=aaa style="margin:10px"></div>
+<div id=a style="margin:30px"></div>
+<div id=b style="margin:30px"></div>
+<div id=c style="margin:30px"></div>
 
 <script>
 
 runproteinpaint({
-	holder:document.getElementById('aaa'),
+	holder:document.getElementById('a'),
 	noheader:1,
 	nobox:true,
 	termdb:{
+		dev:true,
 		state:{
 			dslabel:'SJLife',
 			genome:'hg38',
-			termfilter:{
-				show_top_ui:true,
-				filter:{
+			termfilter: {
+				afilter:{
 					type:'tvslst',
 					join:'',
 					in:true,
 					lst:[
 						{type:'tvs',tvs: {
-							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true,
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
 								"values":{
         					        "0": { "label":"Not exposed", "uncomputable":true },
                 					"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
@@ -44,41 +46,123 @@ runproteinpaint({
 					]
 				}
 			},
-			tree:{
-				expandedTermIds:['root','Outcomes','CTCAE Graded Events','Cardiovascular System'],
-				visiblePlotIds:['Arrhythmias'],
-				plots:{
-					'Arrhythmias':{
-						term:{ q:{
-							//bar_by_children:true,
-							bar_by_grade:true,
-							value_by_max_grade:true,
-							groupsetting:{
-								inuse:true,
-								predefined_groupset_idx:0
+			nav: {
+				show_tabs: true,
+			},
+			activeCohort:-1
+		}
+	}
+})
+
+
+
+runproteinpaint({
+	holder:document.getElementById('b'),
+	noheader:1,
+	nobox:true,
+	termdb:{
+		dev:true,
+		state:{
+			dslabel:'SJLife',
+			genome:'hg38',
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'and',
+					in:true,
+					lst:[
+						{type:'tvs',tag:'cohortFilter',
+							tvs:{
+								term:{id:'subcohort',type:'categorical'},
+								values:[
+									//{key:'SJLIFE',label:'SJLIFE'},
+									{key:'CCSS',label:'CCSS'},
+								]
 							}
-							/*
-							"groupsetting":{
-								inuse:true,
-								customset:{ is_subcondition:true, groups:[
-								{name:'Group1',
-									values:[{key:'Sinus bradycardia'},{key:'Sinus tachycardia'}]
-								},
-								{name:'Group2',
-									values:[{key:'Conduction abnormalities'},{key:'Cardiac dysrhythmia'},{key:'Prolonged QT interval'},{key:'Atrioventricular heart block'} ]
+						},
+						{type:'tvslst',tag:'filterUiRoot',join:'',in:true,
+							lst:[
+								{
+									type:'tvs',
+									tvs: {
+										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+											"values":{
+												"0": { "label":"Not exposed", "uncomputable":true },
+												"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+												"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+											}
+										},
+										ranges: [
+											{ value: '0', label: "Not exposed"},
+											{startunbounded:true,stop:2000,stopinclusive:true}
+										]
+									}
 								}
-								]}
-							}
-							*/
-						}},
-						//term2:{ id:'sex' }
-					}
+							]
+						}
+					]
 				}
-			}
-		},
-		/*recover: {
-			maxHistoryLen: 5
-		}*/
+			},
+			nav: {
+				show_tabs: true,
+			},
+			activeCohort:-1
+		}
+	}
+})
+
+runproteinpaint({
+	holder:document.getElementById('c'),
+	noheader:1,
+	nobox:true,
+	termdb:{
+		dev:true,
+		state:{
+			dslabel:'NoCohortSJLife',
+			genome:'hg38',
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'and',
+					in:true,
+					lst:[
+						{type:'tvs',tag:'cohortFilter',
+							tvs:{
+								term:{id:'subcohort',type:'categorical'},
+								values:[
+									//{key:'SJLIFE',label:'SJLIFE'},
+									{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{type:'tvslst',tag:'filterUiRoot',join:'',in:true,
+							lst:[
+								{
+									type:'tvs',
+									tvs: {
+										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+											"values":{
+												"0": { "label":"Not exposed", "uncomputable":true },
+												"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+												"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+											}
+										},
+										ranges: [
+											{ value: '0', label: "Not exposed"},
+											{startunbounded:true,stop:2000,stopinclusive:true}
+										]
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			nav: {
+				show_tabs: true,
+			},
+			activeCohort:-1
+		}
 	}
 })
 </script>

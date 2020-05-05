@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
-import { Menu } from '../client'
-import { filterJoin } from '../common/filter'
+import { Menu, newpane, get_one_genome } from '../client'
+import { filterJoin, getFilterItemByTag, getNormalRoot } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -31,8 +31,8 @@ export default function getHandlers(self) {
 		chart: {
 			title(chart) {
 				if (!self.config.term0) return chart.chartId
-				return self.config.term0.values && chart.chartId in self.config.term0.values
-					? self.config.term0.values[chart.chartId].label
+				return self.config.term0.term.values && chart.chartId in self.config.term0.term.values
+					? self.config.term0.term.values[chart.chartId].label
 					: chart.chartId
 			}
 		},
@@ -68,7 +68,7 @@ export default function getHandlers(self) {
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
-				if (!t1.iscondition && (!t2 || !t2.iscondition)) {
+				if (!t1.type == 'condition' && (!t2 || !t2.type == 'condition')) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
@@ -157,11 +157,11 @@ export default function getHandlers(self) {
 					return s.unit == 'pct' ? '% of patients' : '# of patients'
 				} else {
 					const term = self.config.term
-					return term.iscondition && self.config.term.q.value_by_max_grade
+					return term.type == 'condition' && self.config.term.q.value_by_max_grade
 						? 'Maximum grade'
-						: term.iscondition && self.config.term.q.value_by_most_recent
+						: term.type == 'condition' && self.config.term.q.value_by_most_recent
 						? 'Most recent grade'
-						: term.iscategorical || !term.unit
+						: term.type == 'categorical' || !term.unit
 						? ''
 						: term.unit //term.name[0].toUpperCase() + term.name.slice(1)
 				}
@@ -172,11 +172,11 @@ export default function getHandlers(self) {
 				if (s.orientation == 'vertical') {
 					const term = self.config.term
 					const q1 = term.q
-					return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
+					return term.type == 'condition' && q1.bar_by_grade && q1.value_by_max_grade
 						? 'Maximum grade'
-						: term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
+						: term.type == 'condition' && q1.bar_by_grade && q1.value_by_most_recent
 						? 'Most recent grades'
-						: term.iscategorical || !term.unit
+						: term.type == 'categorical' || !term.unit
 						? ''
 						: term.unit // term.name[0].toUpperCase() + term.name.slice(1)
 				} else {
@@ -273,13 +273,13 @@ function handle_click(self) {
 		})
 	}
 
-	// TODO: add to cart and gp
-	// if (self.opts.bar_click_opts.includes('select_to_gp')) {
-	// 	options.push({
-	// 		label: 'Select to GenomePaint',
-	// 		callback: menuoption_select_to_gp
-	// 	})
-	// }
+	if (self.opts.bar_click_opts.includes('select_to_gp')) {
+		options.push({
+			label: 'Select to GenomePaint',
+			callback: menuoption_select_to_gp
+		})
+	}
+	// TODO: add to cart
 	//
 	// if (self.opts.bar_click_opts.includes('add_to_cart')) {
 	// 	options.push({
@@ -319,21 +319,24 @@ function menuoption_add_filter(self, tvslst) {
   	*/
 	if (!tvslst) return
 
-	if (!self.state.termfilter || !self.state.termfilter.show_top_ui) {
+	if (!self.state.termfilter || !self.state.nav.show_tabs) {
 		// do not display ui, and do not collect callbacks
 		return
 	}
+	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+	const filter = filterJoin([
+		filterUiRoot,
+		{
+			type: 'tvslst',
+			in: true,
+			join: tvslst.length > 1 ? 'and' : '',
+			lst: [...tvslst.map(wrapTvs)]
+		}
+	])
+	filter.tag = 'filterUiRoot'
 	self.app.dispatch({
-		type: 'filter_replace', 
-		filter: filterJoin([
-			self.state.termfilter.filter, 
-			{
-				type: 'tvslst',
-				in: true,
-				join: tvslst.length > 1 ? 'and' : '',
-				lst: [...tvslst.map(wrapTvs)]
-			}
-		])
+		type: 'filter_replace',
+		filter
 	})
 }
 
@@ -345,39 +348,54 @@ function wrapTvs(tvs) {
 
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
-	for (const t of tvslst) lst.push(t)
-	if (self.termfilter && self.termfilter.filter) {
-		for (const t of self.termfilter.terms) {
-			lst.push(JSON.parse(JSON.stringify(t)))
-		}
-	}
+	for (const t of tvslst) lst.push(wrapTvs(t))
 
-	// const pane = newpane({ x: 100, y: 100 })
-	// import('./block').then(_ => {
-	// 	new _.Block({
-	// 		hostURL: localStorage.getItem('hostURL'),
-	// 		holder: pane.body,
-	// 		genome: obj.genome,
-	// 		nobox: true,
-	// 		chr: obj.genome.defaultcoord.chr,
-	// 		start: obj.genome.defaultcoord.start,
-	// 		stop: obj.genome.defaultcoord.stop,
-	// 		nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
-	// 		tklst: [
-	// 			{
-	// 				type: tkt.mds2,
-	// 				dslabel: obj.dslabel,
-	// 				vcf: {
-	// 					numerical_axis: {
-	// 						AFtest: {
-	// 							groups: [{ is_termdb: true, terms: lst }, obj.bar_click_menu.select_to_gp.group_compare_against]
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		]
-	// 	})
-	// })
+	import('../block').then(async _ => {
+		const obj = {
+			genome: await get_one_genome(self.state.genome),
+			dslabel: self.state.dslabel
+		}
+		const pane = newpane({ x: 100, y: 100 })
+		const filterRoot = getNormalRoot(self.state.termfilter.filter)
+		const filterUiRoot = getFilterItemByTag(filterRoot, filterUiRoot)
+		if (filterUiRoot && filterUiRoot != filterRoot) delete filterUiRoot.tag
+		filterRoot.tag = 'filterUiRoot'
+		if (lst.length) {
+			filterRoot.join = 'and'
+			filterRoot.lst.push(...lst)
+		}
+		const cohortFilter = getFilterItemByTag(filterRoot, 'cohortFilter')
+		if (cohortFilter) {
+			cohortFilter.renderAs = 'htmlSelect'
+			cohortFilter.selectOptionsFrom = 'selectCohort'
+		}
+		new _.Block({
+			hostURL: localStorage.getItem('hostURL'),
+			holder: pane.body,
+			genome: obj.genome,
+			nobox: true,
+			chr: obj.genome.defaultcoord.chr,
+			start: obj.genome.defaultcoord.start,
+			stop: obj.genome.defaultcoord.stop,
+			nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
+			tklst: [
+				{
+					type: 'mds2',
+					dslabel: obj.dslabel,
+					vcf: {
+						numerical_axis: {
+							AFtest: {
+								groups: [
+									{ is_termdb: true, filter:  filterRoot},
+									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
+								]
+							}
+						}
+					}
+				}
+			]
+		})
+	})
 }
 
 function menuoption_select_group_add_to_cart(self, tvslst) {
@@ -423,19 +441,20 @@ function getTermValues(d, self) {
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (q.groupsetting && q.groupsetting.inuse) {
-			const groupset = 'predefined_groupset_idx' in q.groupsetting
-				? term.term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
-				: q.groupsetting.customset
+			const groupset =
+				'predefined_groupset_idx' in q.groupsetting
+					? term.term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+					: q.groupsetting.customset
 			const group = groupset.groups.find(g => g.name === key)
 			const tvs = { term: term.term, values: group.values, groupset_label: group.name }
-			if (term.term.iscondition) {
+			if (term.term.type == 'condition') {
 				tvs.bar_by_children = term.q.bar_by_children
 				tvs.bar_by_grade = term.q.bar_by_grade
 				tvs.value_by_most_recent = term.q.value_by_most_recent
 				tvs.value_by_max_grade = term.q.value_by_max_grade
 			}
 			termValues.push(tvs)
-		} else if (term.term.iscondition) {
+		} else if (term.term.type == 'condition') {
 			if (!t2 || t1.id != t2.id) {
 				termValues.push(
 					Object.assign(

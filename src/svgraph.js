@@ -116,7 +116,7 @@ export default function(arg) {
 			if (e.stack) console.log(e.stack)
 		})
 
-	function validate() {
+	async function validate() {
 		// validate break point annotation with gm
 		/* if no strand, fill with the strand in gm
 		must do this in svgraph, after loading isoform info
@@ -212,43 +212,72 @@ export default function(arg) {
 			loadlst.push(n)
 		}
 		waitdiv.style('margin', '5px').text('Loading protein domains ...')
+		const datalst = await getPdomains(loadlst)
 
-		fetch(
-			new Request(hostURL + '/pdomain', {
-				method: 'POST',
-				body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
-			})
-		)
-			.then(data => {
-				return data.json()
-			})
-			.then(data => {
-				if (data.error) throw { message: 'Error getting protein domain: ' + data.error }
-				for (const i of data.lst) {
-					const colorscale = scaleOrdinal().range(client.domaincolorlst)
-					for (const d of i.pdomains) {
-						if (!d.color) {
-							d.color = colorscale(d.name + d.description)
-						}
-					}
-					const n = i.name.toUpperCase()
-					if (genome.isoformcache.has(n)) {
-						for (const ii of genome.isoformcache.get(n)) {
-							ii.pdomains = i.pdomains
-							ii.domain_hidden = {}
-						}
-					}
+		for (const i of datalst) {
+			const colorscale = scaleOrdinal().range(client.domaincolorlst)
+			for (const d of i.pdomains) {
+				if (!d.color) {
+					d.color = colorscale(d.name + d.description)
 				}
-				new draw()
-			})
-			.catch(e => {
-				err(e.message)
-				if (e.stack) console.log(e.stack)
-			})
-			.then(() => {
-				waitdiv.remove()
-			})
+			}
+			const n = i.name.toUpperCase()
+			if (genome.isoformcache.has(n)) {
+				for (const ii of genome.isoformcache.get(n)) {
+					ii.pdomains = i.pdomains
+					ii.domain_hidden = {}
+				}
+			}
+		}
+		new draw()
+
+		// fetch(
+		// 	new Request(hostURL + '/pdomain', {
+		// 		method: 'POST',
+		// 		body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
+		// 	})
+		// )
+		// 	.then(data => {
+		// 		return data.json()
+		// 	})
+		// 	.then(data => {
+		// 		if (data.error) throw { message: 'Error getting protein domain: ' + data.error }
+		// 		for (const i of data.lst) {
+		// 			const colorscale = scaleOrdinal().range(client.domaincolorlst)
+		// 			for (const d of i.pdomains) {
+		// 				if (!d.color) {
+		// 					d.color = colorscale(d.name + d.description)
+		// 				}
+		// 			}
+		// 			const n = i.name.toUpperCase()
+		// 			if (genome.isoformcache.has(n)) {
+		// 				for (const ii of genome.isoformcache.get(n)) {
+		// 					ii.pdomains = i.pdomains
+		// 					ii.domain_hidden = {}
+		// 				}
+		// 			}
+		// 		}
+		// 		new draw()
+		// 	})
+		// 	.catch(e => {
+		// 		err(e.message)
+		// 		if (e.stack) console.log(e.stack)
+		// 	})
+		// 	.then(() => {
+		// 		waitdiv.remove()
+		// 	})
 	}
+
+	async function getPdomains(loadlst) {
+		const data = await client.dofetch2('pdomain', {
+			method: 'POST',
+			body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
+		})
+		if (data.error) throw data.error
+		else waitdiv.remove()
+		return data.lst
+	}
+
 	function draw() {
 		// scaffolds
 		/*

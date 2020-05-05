@@ -12,6 +12,7 @@ import blockinit from './block.init'
 import * as Legend from './block.legend'
 
 // track types
+import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
 import { pgvfromtemplate, pgvmaketk, pgvload } from './block.tk.pgv.adaptor'
 import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction'
 import { bampilefromtemplate, bampilemaketk, bampileload } from './block.tk.bampile'
@@ -368,6 +369,7 @@ export class Block {
 						// old ds, do not show mds here
 						continue
 					}
+					if (this.genome.datasets[n].noHandleOnClient) continue
 					this.old_dshandle_new(n)
 				}
 			}
@@ -1715,7 +1717,8 @@ reverseorient() {
 		this.coord.inputtipshow()
 		this.coord.inputtip.d
 			.append('div')
-			.html(msg)
+			// must not do .html(), msg is user-provided
+			.text(msg)
 			.style('border', 'solid 1px red')
 			.style('padding', '10px 20px')
 	}
@@ -2230,6 +2233,13 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.bam:
+				const e12 = bamfromtemplate(tk, template)
+				if (e12) {
+					this.error(e12)
+					return
+				}
+				break
 			case client.tkt.usegm:
 				gmtkfromtemplate(tk)
 				break
@@ -2418,6 +2428,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.pgv:
 				pgvmaketk(tk, this)
+				break
+			case client.tkt.bam:
+				bammaketk(tk, this)
 				break
 			case client.tkt.usegm:
 				gmtkmaketk(tk, this)
@@ -2754,6 +2767,9 @@ seekrange(chr,start,stop) {
 			case client.tkt.pgv:
 				pgvload(tk, this)
 				break
+			case client.tkt.bam:
+				bamload(tk, this)
+				break
 			case client.tkt.ds:
 				const hd = this.ds2handle[tk.name]
 				if (hd) {
@@ -2984,7 +3000,8 @@ seekrange(chr,start,stop) {
 			url: tk.url,
 			indexURL: tk.indexURL,
 			translatecoding: tk.translatecoding,
-			categories: tk.categories
+			categories: tk.categories,
+			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
 		if (tk.onerow) {
 			par.onerow = true
@@ -3248,7 +3265,8 @@ if fromgenetk is provided, will skip this track
 			pcolor: tk.pcolor,
 			pcolor2: tk.pcolor2,
 			ncolor: tk.ncolor,
-			ncolor2: tk.ncolor2
+			ncolor2: tk.ncolor2,
+			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
 		if (tk.normalize && !tk.normalize.disable) {
 			a.dividefactor = tk.normalize.dividefactor
@@ -4520,6 +4538,44 @@ if fromgenetk is provided, will skip this track
 		return new Block(arg)
 	}
 
+	showTrackByFile(files) {
+		if (!Array.isArray(files)) {
+			this.error('showTrackByFile() argument must be array')
+			return
+		}
+		const type2files = new Map()
+		for (const f of files) {
+			if (!f.type) {
+				this.error('.type missing from a file')
+				return
+			}
+			if (!f.file) {
+				this.error('.file missing from a file')
+				return
+			}
+			if (!type2files.has(f.type)) type2files.set(f.type, new Set())
+			type2files.get(f.type).add(f.file)
+		}
+		const toremove = this.tklst.filter(t => type2files.has(t.type) && !type2files.get(t.type).has(t.file))
+		const toadd = []
+		for (const [type, files] of type2files) {
+			for (const file of files) {
+				const gt = this.genome.tracks.find(t => t.type == type && t.file == file)
+				if (gt && !this.tklst.find(t => t.type == type && t.file == file)) {
+					// in genome.tracks but not tklst, to show
+					toadd.push(gt)
+				}
+			}
+		}
+		for (const f of toremove) {
+			this.tk_remove(this.tklst.findIndex(t => t.type == f.type && t.file == f.file))
+		}
+		for (const f of toadd) {
+			const t = this.block_addtk_template(f)
+			this.tk_load(t)
+		}
+	}
+
 	/*********** end of class:Block  ************/
 }
 
@@ -4702,7 +4758,7 @@ function maygetdna(block, tip) {
 	}
 	const totallen = regions.reduce((i, j) => i + j.stop - j.start, 0)
 	if (totallen > dnalenlimit) {
-		tip.d.append('div').text('Please zoom in under ' + client.bplen(dnalenlimit) + ' to get DNA sequence.')
+		tip.d.append('div').text('Please zoom in under ' + common.bplen(dnalenlimit) + ' to get DNA sequence.')
 		return
 	}
 	const wait = tip.d.append('div').text('Loading DNA sequence ...')

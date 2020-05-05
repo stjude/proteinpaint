@@ -7,12 +7,18 @@ drop index if exists terms_n;
 drop table if exists terms;
 create table terms (
   id character varying(100) not null,
-  name character varying(100) not null collate nocase,
+  name character varying(100) not null,
   parent_id character varying(100),
-  jsondata json not null
+  jsondata json not null,
+  child_order integer not null
 );
 
 .import termdb terms
+
+-- only do this if cohort selection is enabled
+-- using * for parent id of subcohort makes it hidden from the tree (but still searchable by name)
+INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}', 0);
+
 update terms set parent_id=null where parent_id='';
 create index terms_id on terms(id);
 create index terms_p on terms(parent_id);
@@ -95,8 +101,8 @@ create table chronicevents (
   sample character varying(50) not null,
   term_id character varying(100) not null,
   grade integer not null,
-  age_graded real,
-  years_to_event real
+  age_graded real not null,
+  years_to_event real not null
 );
 
 .import annotation.outcome chronicevents

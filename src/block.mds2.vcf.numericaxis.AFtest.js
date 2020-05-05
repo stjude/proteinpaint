@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as dom from './dom'
-import { filterInit, filterJoin } from './common/filter'
+import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 import { appInit } from './termdb/app'
 
@@ -448,17 +448,18 @@ function get_hidden_filters(tk) {
 function combine_groupfilter_with_hidden(f, tk) {
 	/*
 f:{}
-  the visible filter from a group of AFtest, to be put as the first of array
-  and this logic is hardcoded in opts.getVisibleRoot() 
+  the visible filter from a group of AFtest, to be tagged as 'filterUiRoot' 
 
 tk:
   may provide additional hidden filters
 */
+	const fcopy = JSON.parse(JSON.stringify(f))
+	fcopy.tag = 'filterUiRoot'
 	const combined = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
-		lst: [f]
+		lst: [fcopy]
 	}
 	const hiddenlst = get_hidden_filters(tk)
 	if (hiddenlst.length) {
@@ -474,7 +475,7 @@ function show_group_termdb(group, tk, block) {
 			genome: block.genome.name,
 			dslabel: tk.dslabel,
 			emptyLabel: 'Entire cohort',
-			getVisibleRoot: root => root.lst[0],
+			termdbConfig: block.genome.datasets[tk.dslabel].termdb,
 			callback: async f => {
 				group.filter = f
 				await tk.load()
@@ -626,6 +627,8 @@ export function AFtest_groupname(tk, gi) {
 		return i ? i.label : g.key
 	}
 	if (g.is_termdb) {
+		return 'Group ' + (gi + 1) // quick fix not having to figure out a non-cohort tvs from g.filter
+		/*
 		const otherg = tk.vcf.numerical_axis.AFtest.groups[gi == 0 ? 1 : 0]
 		if (otherg.is_termdb) {
 			// both termdb
@@ -635,6 +638,7 @@ export function AFtest_groupname(tk, gi) {
 		const term1name = g.terms[0].term.name
 		if (term1name.length <= 20) return term1name
 		return term1name.substr(0, 17) + '...'
+		*/
 	}
 	throw 'unknown AFtest group type'
 }

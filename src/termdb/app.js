@@ -1,8 +1,8 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
+import { navInit } from './nav'
 import { treeInit } from './tree'
 import { storeInit } from './store'
-import { filterInit } from './filter3'
 import { recoverInit } from '../common/recover'
 import { sayerror, Menu } from '../client'
 
@@ -18,9 +18,6 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 
 class TdbApp {
 	constructor(coordApp, opts) {
-		// moving to component.getState() breaks previous assumptions with app.subState[component.type].get();
-		// this issue DOES NOT affect uncoordinated, standalone use of the termdb app
-		// such as in the blue pill - shoul still be okay
 		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
 		this.opts = this.initOpts(opts)
@@ -31,42 +28,36 @@ class TdbApp {
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
-			topbar: opts.holder
-				.append('div')
-				.style('position', 'sticky')
-				.style('top', '12px')
-				.style('right', '20px')
-				.style('margin', '5px')
-				.style('text-align', 'right'),
-
+			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div')
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
-
-		// catch initialization error
-		try {
-			if (!coordApp) this.store = storeInit(this.api)
-			this.components = {}
-
-			this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover)
-			this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
-			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
-		} catch (e) {
-			this.printError(e)
+		if (this.opts.dev) {
+			window.tt = this
 		}
 
-		this.eventTypes = ['postInit', 'postRender']
-
-		if (this.store) {
-			// trigger the initial render after initialization, store state is ready
-			this.store
-				.copyState({ rehydrate: true })
-				.then(state => {
-					this.state = state
-				})
-				.then(() => this.api.dispatch())
-				.catch(e => this.printError(e))
+		if (!coordApp) {
+			// catch initialization error
+			try {
+				this.store = storeInit(this.api)
+				this.store
+					.copyState({ rehydrate: true })
+					.then(state => {
+						this.state = state
+						this.setComponents()
+					})
+					.then(() => this.api.dispatch())
+					.catch(e => this.printError(e))
+			} catch (e) {
+				this.printError(e)
+			}
+		} else {
+			try {
+				this.setComponents()
+			} catch (e) {
+				this.printError(e)
+			}
 		}
 	}
 	/*
@@ -81,7 +72,20 @@ class TdbApp {
 	initOpts(o) {
 		if (!o.fetchOpts) o.fetchOpts = {}
 		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
+		if (!('app' in o)) o.app = {}
 		return o
+	}
+
+	setComponents() {
+		this.components = {
+			nav: navInit(
+				this.app,
+				{ holder: this.dom.topbar, show_tabs: this.opts.state && this.opts.state.nav && this.opts.state.nav.show_tabs },
+				this.opts.nav
+			),
+			recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
+			tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
+		}
 	}
 
 	printError(e) {

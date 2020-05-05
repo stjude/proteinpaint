@@ -28,7 +28,7 @@ module.exports = (q, res, ds) => {
 	if (!q.termid) throw 'termid missing'
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw 'invalid termid'
-	if (!term.isfloat && !term.isinteger) throw 'not numerical term'
+	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
 
 	const rows = termdbsql.get_rows_by_one_key({
 		ds,
@@ -63,7 +63,11 @@ module.exports = (q, res, ds) => {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 
-	const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
+	const default_ticks_n = 40
+	const ticks_n = maxvalue - minvalue < default_ticks_n ? maxvalue - minvalue : default_ticks_n
+	// kernal density replaced with histogram
+	// const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
+	const density = get_histogram(xscale.ticks(ticks_n))(values)
 	let densitymax = 0
 	for (const d of density) {
 		densitymax = Math.max(densitymax, d[1])
@@ -94,5 +98,22 @@ function kernelDensityEstimator(kernel, X) {
 function kernelEpanechnikov(k) {
 	return function(v) {
 		return Math.abs((v /= k)) <= 1 ? (0.75 * (1 - v * v)) / k : 0
+	}
+}
+
+function get_histogram(ticks) {
+	return values => {
+		// array of {value}
+		const bins = []
+		for (let i = 0; i < ticks.length; i++) bins.push([ticks[i], 0])
+		for (const v of values) {
+			for (let i = 1; i < ticks.length; i++) {
+				if (v <= ticks[i]) {
+					bins[i - 1][1]++
+					break
+				}
+			}
+		}
+		return bins
 	}
 }

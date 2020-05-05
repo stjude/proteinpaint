@@ -19,7 +19,10 @@ class TdbStatTable {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('barchart') && config.term.term.isfloat,
+			isVisible:
+				config.settings.currViews.includes('barchart') &&
+				(config.term.term.type == 'float' || config.term.term.type == 'integer') &&
+				!config.term.term.noStatTable,
 			config: {
 				term: config.term,
 				term0: config.term0,
@@ -28,7 +31,9 @@ class TdbStatTable {
 					common: config.settings.common,
 					barchart: config.settings.barchart
 				}
-			}
+			},
+			filter: appState.termfilter.filter,
+			activeCohort: appState.activeCohort
 		}
 	}
 
@@ -63,7 +68,7 @@ function setRenderers(self) {
 
 		let rows =
 			'<tr><td>Mean (SD)</td><td>' + data.boxplot.mean.toFixed(2) + ' (' + data.boxplot.sd.toFixed(2) + ') </td></tr>'
-		if (data.boxplot.p50) {
+		if ('p50' in data.boxplot) {
 			rows +=
 				'<tr><td>Median (IQR)</td><td>' +
 				data.boxplot.p50.toFixed(2) +

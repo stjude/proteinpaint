@@ -25,7 +25,7 @@ public/static/*.pdf
 /utils/vcf2genesamplematrix/bin.smat.js
 /utils/findspliceevent/bin2.js
 /utils/findspliceevent/bin.js
-/utils/countbamallele.phased/bin.js
+/utils/countbamallele.phased/bin*
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 

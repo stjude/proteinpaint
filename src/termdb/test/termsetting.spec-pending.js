@@ -10,8 +10,7 @@ const d3s = require('d3-selection')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		genome: 'hg38'
 	},
 	debug: 1,
 	fetchOpts: {
@@ -23,15 +22,15 @@ const runpp = helpers.getRunPp('termdb', {
  test sections
 ***************/
 tape('\n', function(test) {
-	test.pass('-***- termsetting (config panel in plot) -***-')
+	test.pass('-***- termdb/termsetting (plotControls) -***-')
 	test.end()
 })
 
-tape('caterogical term overlay', function(test) {
+tape('categorical term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -161,7 +160,7 @@ tape('caterogical term overlay', function(test) {
 	}
 })
 
-tape('Numerical term overlay', function(test) {
+tape.skip('Numerical term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
@@ -240,7 +239,7 @@ tape('Numerical term overlay', function(test) {
 
 	function testGrpMenu(plotControls) {
 		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
-		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replace the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 		test.equal(
 			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,

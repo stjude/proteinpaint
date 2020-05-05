@@ -9,8 +9,7 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38',
-		termfilter: { show_top_ui: false }
+		genome: 'hg38'
 	},
 	debug: 1,
 	fetchOpts: {
@@ -23,7 +22,7 @@ function testByTermId(id, runTests) {
 		id == 'diaggrp'
 			? ['root', 'Cancer-related Variables', 'Diagnosis']
 			: 'aaclassic_5'
-			? ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents']
+			? ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents']
 			: null
 
 	if (!expandedTermIds) throw `unmatched id -> expandedTermIds in plot.controls.config test`
@@ -82,7 +81,13 @@ tape('overlay input', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'ctcae_graded',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -150,7 +155,7 @@ tape('overlay input', function(test) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay') return
 			test.true(
-				this.parentNode.lastChild.innerHTML.toLowerCase().includes('sub-conditions'),
+				this.parentNode.lastChild.innerHTML.toLowerCase().includes('sub-condition'),
 				'should overlay subconditions'
 			)
 		})
@@ -334,7 +339,7 @@ tape('Term1 bins', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -404,7 +409,13 @@ tape('Term1 condition, categorical', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'ctcae_graded',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -436,7 +447,7 @@ tape('Term1 condition, categorical', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {

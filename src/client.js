@@ -8,6 +8,9 @@ import { scaleLinear } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 import { transition } from 'd3-transition'
+import { stratinput } from './tree'
+import { stratify } from 'd3-hierarchy'
+import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import * as common from './common'
 
 export const font = 'Arial'
@@ -46,6 +49,201 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
+export async function get_one_genome(name) {
+	const data = await dofetch2('genomes', { method: 'POST', body: JSON.stringify({ genome: name }) })
+	if (!data.genomes) throw 'error'
+	const g = data.genomes[name]
+	if (!g) throw 'unknown genome: ' + name
+	initgenome(g)
+	return g
+}
+
+export function initgenome(g) {
+	g.tkset = []
+	g.isoformcache = new Map()
+	// k: upper isoform
+	// v: [gm]
+	g.junctionframecache = new Map()
+	/*
+	k: junction chr-start-stop
+	v: Map
+	   k: isoform
+	   v: true/false for in-frame
+	*/
+	g.isoformmatch = (n2, chr, pos) => {
+		if (!n2) return null
+		const n = n2.toUpperCase()
+		if (!g.isoformcache.has(n)) return null
+		const lst = g.isoformcache.get(n)
+		if (lst.length == 1) return lst[0]
+		// multiple available
+		if (!chr) {
+			console.log('no chr provided for matching with ' + n)
+			return lst[0]
+		}
+		let gm = null
+		for (const m of lst) {
+			if (m.chr.toUpperCase() == chr.toUpperCase() && m.start <= pos && m.stop >= pos) {
+				gm = m
+			}
+		}
+		if (gm) return gm
+		for (const m of lst) {
+			if (m.chr.toUpperCase() == chr.toUpperCase()) return m
+		}
+		return null
+	}
+	g.chrlookup = {}
+	for (const nn in g.majorchr) {
+		g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.majorchr[nn], major: true }
+	}
+	if (g.minorchr) {
+		for (const nn in g.minorchr) {
+			g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.minorchr[nn] }
+		}
+	}
+
+	if (!g.tracks) {
+		g.tracks = []
+	}
+
+	for (const t of g.tracks) {
+		/*
+		essential for telling if genome.tracks[] item is same as block.tklst[]
+		*/
+		t.tkid = Math.random().toString()
+	}
+	// validate ds info
+	for (const dsname in g.datasets) {
+		const ds = g.datasets[dsname]
+
+		if (ds.isMds) {
+			// nothing to validate for the moment
+		} else {
+			const e = validate_oldds(ds)
+			if (e) {
+				return '(old) official dataset error: ' + e
+			}
+		}
+	}
+	return null
+}
+
+function validate_oldds(ds) {
+	// old official ds
+	if (ds.geneexpression) {
+		if (ds.geneexpression.maf) {
+			try {
+				ds.geneexpression.maf.get = eval('(' + ds.geneexpression.maf.get + ')')
+			} catch (e) {
+				return 'invalid Javascript for get() of expression.maf of ' + ds.label
+			}
+		}
+	}
+	if (ds.cohort) {
+		if (ds.cohort.raw && ds.cohort.tosampleannotation) {
+			/*
+			tosampleannotation triggers converting ds.cohort.raw to ds.cohort.annotation
+			*/
+			if (!ds.cohort.key4annotation) {
+				return 'cohort.tosampleannotation in use by .key4annotation missing of ' + ds.label
+			}
+			if (!ds.cohort.annotation) {
+				ds.cohort.annotation = {}
+			}
+			let nosample = 0
+			for (const a of ds.cohort.raw) {
+				const sample = a[ds.cohort.tosampleannotation.samplekey]
+				if (sample) {
+					const b = {}
+					for (const k in a) {
+						b[k] = a[k]
+					}
+					ds.cohort.annotation[sample] = b
+				} else {
+					nosample++
+				}
+			}
+			if (nosample) return nosample + ' rows has no sample name from sample annotation of ' + ds.label
+			delete ds.cohort.tosampleannotation
+		}
+		if (ds.cohort.levels) {
+			if (ds.cohort.raw) {
+				// to stratify
+				// cosmic has only level but no cohort info, buried in snvindel
+				const nodes = stratinput(ds.cohort.raw, ds.cohort.levels)
+				ds.cohort.root = stratify()(nodes)
+				ds.cohort.root.sum(i => i.value)
+			}
+		}
+		if (ds.cohort.raw) {
+			delete ds.cohort.raw
+		}
+		ds.cohort.suncolor = scaleOrdinal(schemeCategory20)
+	}
+	if (ds.snvindel_attributes) {
+		for (const at of ds.snvindel_attributes) {
+			if (at.get) {
+				try {
+					at.get = eval('(' + at.get + ')')
+				} catch (e) {
+					return 'invalid Javascript for getter of ' + JSON.stringify(at)
+				}
+			} else if (at.lst) {
+				for (const at2 of at.lst) {
+					if (at2.get) {
+						try {
+							at2.get = eval('(' + at2.get + ')')
+						} catch (e) {
+							return 'invalid Javascript for getter of ' + JSON.stringify(at2)
+						}
+					}
+				}
+			}
+		}
+	}
+	if (ds.stratify) {
+		if (!Array.isArray(ds.stratify)) {
+			return 'stratify is not an array in ' + ds.label
+		}
+		for (const strat of ds.stratify) {
+			if (!strat.label) {
+				return 'stratify method lacks label in ' + ds.label
+			}
+			if (strat.bycohort) {
+				if (!ds.cohort) {
+					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
+				}
+			} else {
+				if (!strat.attr1) {
+					return 'stratify method ' + strat.label + ' not using cohort but no attr1 in ' + ds.label
+				}
+				if (!strat.attr1.label) {
+					return '.attr1.label missing in ' + strat.label + ' in ' + ds.label
+				}
+				if (!strat.attr1.k) {
+					return '.attr1.k missing in ' + strat.label + ' in ' + ds.label
+				}
+			}
+		}
+	}
+
+	if (ds.url4variant) {
+		// quick fix for clinvar
+		for (const u of ds.url4variant) {
+			u.makelabel = eval('(' + u.makelabel + ')')
+			u.makeurl = eval('(' + u.makeurl + ')')
+		}
+	}
+
+	// no checking vcfinfofilter
+	// no population freq filter
+}
+
+/*
+	path: URL
+		
+*/
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -190,58 +388,6 @@ export function may_get_locationsearch() {
 		h.set(key, l[1] || 1)
 	}
 	return h
-}
-
-export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null) {
-	/*
-	Event bus pattern inspired by vue-bus and d3-dispatch
-  
-  eventTypes              array of allowed string event type[.name]
-
-  callbacks{}
-  .$eventType[.name]:     callback function or [functions]
-
-  defaultArg              the default argument to supply to 
-                          dispatcher.call() below
-*/
-	const events = {}
-	const chain = []
-	const bus = {
-		on(eventType, callback, opts = {}) {
-			const [type, name] = eventType.split('.')
-			if (!eventTypes.includes(type)) {
-				throw `Unknown event type '${type}' (client.get_event_bus)`
-			} else if (!callback) {
-				delete events[eventType]
-			} else if (typeof callback == 'function') {
-				events[eventType] = opts.timeout ? arg => setTimeout(() => callback(arg), opts.timeout) : callback
-			} else if (Array.isArray(callback)) {
-				const wrapperFxn = arg => {
-					for (const fxn of callback) fxn(arg)
-				}
-				events[eventType] = opts.timeout ? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) : wrapperFxn
-			} else {
-				throw `invalid callback for eventType=${eventType}`
-			}
-			return bus
-		},
-		emit(eventType, arg = null) {
-			setTimeout(() => {
-				for (const type in events) {
-					if (type == eventType || type.startsWith(eventType + '.')) {
-						events[type](arg ? arg : defaultArg)
-					}
-				}
-			}, 0)
-			return bus
-		}
-	}
-	if (callbacks) {
-		for (const eventType in callbacks) {
-			bus.on(eventType, callbacks[eventType])
-		}
-	}
-	return bus
 }
 
 export function appear(d, display) {

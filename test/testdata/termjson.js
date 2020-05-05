@@ -2,7 +2,7 @@ exports.termjson = {
 	diaggrp: {
 		id: 'diaggrp',
 		name: 'Diagnosis Group',
-		iscategorical: true,
+		type: 'categorical',
 		isleaf: true,
 		graph: {
 			barchart: {
@@ -43,7 +43,7 @@ exports.termjson = {
 		id: 'agedx',
 		name: 'Age at Cancer Diagnosis',
 		unit: 'Years',
-		isfloat: true,
+		type: 'float',
 		bins: {
 			default: {
 				bin_size: 3,
@@ -73,7 +73,7 @@ exports.termjson = {
 	Arrhythmias: {
 		id: 'Arrhythmias',
 		name: 'Arrhythmias',
-		iscondition: true,
+		type: 'condition',
 		graph: {
 			barchart: {
 				bar_choices: [
@@ -118,7 +118,7 @@ exports.termjson = {
 		id: 'aaclassic_5',
 		name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 		unit: 'mg/m²',
-		isfloat: true,
+		type: 'float',
 		bins: {
 			default: {
 				bin_size: 1000,
@@ -144,6 +144,33 @@ exports.termjson = {
 	sex: {
 		id: 'sex',
 		name: 'Sex',
-		iscategorical: true
+		type: 'categorical'
+	},
+	idarubicin_5: {
+		id: 'idarubicin_5',
+		name: 'Idarubicin (IV)',
+		unit: 'mg/m²',
+		type: 'float',
+		bins: {
+			default: {
+				type: 'regular',
+				bin_size: 10,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: 10,
+					stopinclusive: true
+				},
+				last_bin: {
+					stopunbounded: true,
+					start: 40
+				}
+			}
+		},
+		values: {
+			'0': { label: 'Not exposed', uncomputable: true },
+			'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
+			'-9999': { label: 'Unknown treatment record', uncomputable: true }
+		}
 	}
 }

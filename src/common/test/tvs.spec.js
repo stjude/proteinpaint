@@ -63,7 +63,7 @@ tape('tvs (common): buttons', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}
@@ -134,7 +134,7 @@ tape('tvs : Categorical', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
 						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 					}
 				}
@@ -156,7 +156,7 @@ tape('tvs : Categorical', async test => {
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll('.value_checkbox').size(), 24, 'Should have checkbox for each value')
 	test.equal(
 		tipd
 			.selectAll('.value_checkbox')
@@ -205,7 +205,7 @@ tape('tvs : Numerical', async test => {
 							id: 'aaclassic_5',
 							name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
 							unit: 'mg/m²',
-							isfloat: true,
+							type: 'float',
 							values: {
 								'0': { label: 'Not exposed', uncomputable: true },
 								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
@@ -217,6 +217,12 @@ tape('tvs : Numerical', async test => {
 				}
 			]
 		}
+	})
+
+	const enter_event = new KeyboardEvent('keyup', {
+		code: 'Enter',
+		key: 'Enter',
+		keyCode: 13
 	})
 
 	await opts.filter.main(opts.filterData)
@@ -250,6 +256,7 @@ tape('tvs : Numerical', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
+
 	await sleep(700)
 	const tipd = opts.filter.Inner.dom.treeBody
 
@@ -259,7 +266,7 @@ tape('tvs : Numerical', async test => {
 	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
 
 	//trigeer and check range edit
-	const brush = opts.filter.Inner.pills['1'].Inner.brush
+	const brush = opts.filter.Inner.pills['1'].Inner.num_obj.brushes[0].d3brush
 	d3s.select(tipd.node().querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511, 30.9465])
 	test.equal(
 		tipd
@@ -318,10 +325,124 @@ tape('tvs : Numerical', async test => {
 		'should change value btn text after selecting unannotated value'
 	)
 
+	// //trigger and check adding new range
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
+
+	tipd
+		.node()
+		.querySelectorAll('.add_range_btn')[0]
+		.click()
+
+	await sleep(1000)
+
+	test.equal(
+		tipd.node().querySelectorAll('.add_range_btn')[0].style.display,
+		'none',
+		'Should hide button to add new range'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.apply_btn')
+			.size(),
+		2,
+		'Should have button to apply new range'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.delete_btn')
+			.size(),
+		2,
+		'Should have buttons to delete the ranges'
+	)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.note_tr')
+			.size(),
+		1,
+		'Should have note to select new range'
+	)
+
+	//delete new range without applying new range
+	tipd
+		.node()
+		.querySelectorAll('.delete_btn')[1]
+		.click()
+
+	await sleep(800)
+
+	test.equal(
+		tipd
+			.selectAll('table')
+			.selectAll('.note_tr')
+			.size(),
+		0,
+		'Should hide note to select new range'
+	)
+
+	test.equal(
+		tipd.node().querySelectorAll('.add_range_btn')[0].style.display,
+		'inline-block',
+		'Should unhide button to add new range'
+	)
+
+	//test merging ranges by adding new range
+	tipd
+		.node()
+		.querySelectorAll('.value_checkbox')[0]
+		.click()
+
+	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	await sleep(800)
+
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(700)
+
+	tipd
+		.node()
+		.querySelectorAll('.add_range_btn')[0]
+		.click()
+	await sleep(1000)
+
+	tipd.node().querySelectorAll('.start_select')[1].selectedIndex = 2
+	tipd
+		.node()
+		.querySelectorAll('.start_select')[1]
+		.dispatchEvent(new Event('change'))
+
+	const stop_input = tipd.node().querySelectorAll('.stop_input')[1]
+	stop_input.value = 5000
+	//press 'Enter' to update bins
+	stop_input.addEventListener('keyup', () => {})
+	stop_input.dispatchEvent(enter_event)
+
+	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	await sleep(800)
+
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('≤ 5000'),
+		'should merge ranges into 1 range'
+	)
+
 	test.end()
 })
 
 tape('tvs : Conditional', async test => {
+	test.timeoutAfter(8000)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -331,7 +452,7 @@ tape('tvs : Conditional', async test => {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+						term: { id: 'Arrhythmias', name: 'Arrhythmias', type: 'condition' },
 						values: [{ key: 0, label: '0: No condition' }],
 						bar_by_grade: 1,
 						value_by_max_grade: 1
@@ -374,7 +495,7 @@ tape('tvs : Conditional', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(700)
+	await sleep(1000)
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
@@ -442,8 +563,7 @@ tape('tvs : Conditional', async test => {
 		.querySelectorAll('select')[0]
 		.dispatchEvent(new Event('change'))
 
-	await sleep(500)
-
+	await sleep(800)
 	tipd
 		.node()
 		.querySelectorAll('.value_checkbox')[1]

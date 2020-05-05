@@ -31,6 +31,9 @@ will include tk.vcf.plot_mafcov.overlay_term
 		block,
 		overlay_term: tk.vcf.plot_mafcov.overlay_term // optional
 	}
+	if (tk.mds && tk.mds.sample2bam) {
+		obj.d.tempbbdiv = holder.append('div')
+	}
 
 	const legenddiv = holder
 		.append('div') // termdb handle and category color
@@ -128,7 +131,7 @@ function show_legend(obj, categories) {
 	let cats = categories
 
 	// for numerical term sort the categories, and attach unannotated at the end of cats[]
-	if (obj.overlay_term.isinteger || obj.overlay_term.isfloat) {
+	if (obj.overlay_term.type == 'integer' || obj.overlay_term.type == 'float') {
 		let unannoated_cats = []
 		for (const [i, cat] of categories.entries()) {
 			if (isNaN(cat.label.split(' ')[0])) {
@@ -221,6 +224,30 @@ function clientside_plot(obj, plotgroups) {
 								d2.crosshair2.attr('transform', 'scale(1)')
 							})
 					}
+				}
+			}
+
+			///////// XXX quick fix, should be deleted later
+			if (obj.tk && obj.tk.mds && obj.tk.mds.sample2bam) {
+				arg.click = d => {
+					if (!d.sampleobj) return
+					const file = obj.tk.mds.sample2bam[d.sampleobj.name]
+					if (!file) return
+					obj.d.tempbbdiv.selectAll('*').remove()
+					import('./block').then(_ => {
+						new _.Block({
+							hostURL: localStorage.getItem('hostURL'),
+							holder: obj.d.tempbbdiv,
+							genome: obj.block.genome,
+							nobox: true,
+							chr: obj.m.chr,
+							start: obj.m.pos - 30,
+							stop: obj.m.pos + 30,
+							nativetracks: [obj.block.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
+							tklst: [{ type: 'bam', name: d.sampleobj.name, file }],
+							hlregions: [{ chr: obj.m.chr, start: obj.m.pos, stop: obj.m.pos }]
+						})
+					})
 				}
 			}
 

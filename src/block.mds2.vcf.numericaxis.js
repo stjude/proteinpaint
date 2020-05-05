@@ -1067,8 +1067,7 @@ export function may_get_param_AFtest_termfilter(tk) {
 	if (!tk.vcf || !tk.vcf.numerical_axis) return
 	const af = tk.vcf.numerical_axis.AFtest
 	if (!af || !af.termfilter || !af.termfilter.inuse) return
-	if (!af.termfilter.iscategorical)
-		throw 'AFtest.termfilter is hardcoded to be categorical but iscategorical is not true'
+	if (af.termfilter.type != 'categorical') throw 'AFtest.termfilter.type is not categorical (hardcoded)'
 	if (!af.termfilter.values) throw 'termfilter.values missing'
 	// in nm, termfilter is not tvs
 	// in parameter, termfilter is tvs
@@ -1078,7 +1077,7 @@ export function may_get_param_AFtest_termfilter(tk) {
 		term: {
 			id: af.termfilter.id,
 			name: af.termfilter.name,
-			iscategorical: true // hardcoded
+			type: 'categorical' // hardcoded
 		},
 		values: [{ key: v.key, label: v.label || v.key }]
 	}

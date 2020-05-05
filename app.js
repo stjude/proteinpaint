@@ -50,6 +50,7 @@ const express = require('express'),
 	termdb = require('./modules/termdb'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
+	bam_request_closure = require('./modules/bam'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
@@ -91,7 +92,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	next()
 })
 
@@ -137,6 +138,7 @@ app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get('/tkbam', bam_request_closure(genomes))
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -185,7 +187,6 @@ app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
 // obsolete
-app.get('/tpbam', handle_tpbam)
 app.get('/tpvafs1', handle_tpvafs1)
 
 const port = serverconfig.port || 3000
@@ -199,104 +200,12 @@ const infoFilter_unannotated = 'Unannotated'
 
 function handle_genomes(req, res) {
 	const hash = {}
-	for (const genomename in genomes) {
-		const g = genomes[genomename]
-		const g2 = {
-			species: g.species,
-			name: genomename,
-			hasSNP: g.snp ? true : false,
-			hasClinvarVCF: g.clinvarVCF ? true : false,
-			fimo_motif: g.fimo_motif ? true : false,
-			geneset: g.geneset,
-			defaultcoord: g.defaultcoord,
-			isdefault: g.isdefault,
-			majorchr: g.majorchr,
-			majorchrorder: g.majorchrorder,
-			minorchr: g.minorchr,
-			tracks: g.tracks,
-			hicenzymefragment: g.hicenzymefragment,
-			datasets: {}
+	if (req.query && req.query.genome) {
+		hash[req.query.genome] = clientcopy_genome(req.query.genome)
+	} else {
+		for (const genomename in genomes) {
+			hash[genomename] = clientcopy_genome(genomename)
 		}
-		for (const dsname in g.datasets) {
-			const ds = g.datasets[dsname]
-
-			if (ds.isMds) {
-				const _ds = mds_clientcopy(ds)
-				if (_ds) {
-					g2.datasets[ds.label] = _ds
-				}
-				continue
-			}
-
-			// old official ds
-			const ds2 = {
-				isofficial: true,
-				sampleselectable: ds.sampleselectable,
-				label: ds.label,
-				dsinfo: ds.dsinfo,
-				stratify: ds.stratify,
-				cohort: ds.cohort,
-				vcfinfofilter: ds.vcfinfofilter,
-				url4variant: ds.url4variant,
-				vcfcohorttrack: ds.vcfcohorttrack, // new
-				itemlabelname: ds.itemlabelname
-			}
-
-			if (ds.snvindel_attributes) {
-				ds2.snvindel_attributes = []
-				for (const at of ds.snvindel_attributes) {
-					const rep = {}
-					for (const k in at) {
-						if (k == 'lst') {
-							rep.lst = []
-							for (const e of at.lst) {
-								const rep2 = {}
-								for (const k2 in e) rep2[k2] = e[k2]
-								rep.lst.push(rep2)
-							}
-						} else {
-							rep[k] = at[k]
-						}
-					}
-					ds2.snvindel_attributes.push(rep)
-				}
-			}
-			if (ds.snvindel_legend) {
-				ds2.snvindel_legend = ds.snvindel_legend
-			}
-			const vcfinfo = {}
-			let hasvcf = false
-			for (const q of ds.queries) {
-				if (q.vcf) {
-					hasvcf = true
-					vcfinfo[q.vcf.vcfid] = q.vcf
-				}
-			}
-			if (hasvcf) {
-				ds2.id2vcf = vcfinfo
-			}
-			g2.datasets[dsname] = ds2
-		}
-
-		if (g.hicdomain) {
-			g2.hicdomain = { groups: {} }
-			for (const s1 in g.hicdomain.groups) {
-				const tt = g.hicdomain.groups[s1]
-				g2.hicdomain.groups[s1] = {
-					name: tt.name,
-					reference: tt.reference,
-					sets: {}
-				}
-				for (const s2 in tt.sets) {
-					g2.hicdomain.groups[s1].sets[s2] = {
-						name: tt.sets[s2].name,
-						longname: tt.sets[s2].longname
-					}
-				}
-			}
-		}
-
-		hash[genomename] = g2
 	}
 	const date1 = fs.statSync('server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
@@ -308,6 +217,107 @@ function handle_genomes(req, res) {
 		base_zindex: serverconfig.base_zindex,
 		lastdate: lastdate.toDateString()
 	})
+}
+function clientcopy_genome(genomename) {
+	const g = genomes[genomename]
+	const g2 = {
+		species: g.species,
+		name: genomename,
+		hasSNP: g.snp ? true : false,
+		hasClinvarVCF: g.clinvarVCF ? true : false,
+		fimo_motif: g.fimo_motif ? true : false,
+		geneset: g.geneset,
+		defaultcoord: g.defaultcoord,
+		isdefault: g.isdefault,
+		majorchr: g.majorchr,
+		majorchrorder: g.majorchrorder,
+		minorchr: g.minorchr,
+		tracks: g.tracks,
+		hicenzymefragment: g.hicenzymefragment,
+		datasets: {}
+	}
+	for (const dsname in g.datasets) {
+		const ds = g.datasets[dsname]
+
+		if (ds.isMds) {
+			const _ds = mds_clientcopy(ds)
+			if (_ds) {
+				g2.datasets[ds.label] = _ds
+			}
+			continue
+		}
+
+		// old official ds
+		const ds2 = {
+			isofficial: true,
+			noHandleOnClient: ds.noHandleOnClient,
+			sampleselectable: ds.sampleselectable,
+			label: ds.label,
+			dsinfo: ds.dsinfo,
+			stratify: ds.stratify,
+			cohort: ds.cohort,
+			vcfinfofilter: ds.vcfinfofilter,
+			info2table: ds.info2table,
+			info2singletable: ds.info2singletable,
+			url4variant: ds.url4variant,
+			vcfcohorttrack: ds.vcfcohorttrack, // new
+			itemlabelname: ds.itemlabelname
+		}
+
+		if (ds.snvindel_attributes) {
+			ds2.snvindel_attributes = []
+			for (const at of ds.snvindel_attributes) {
+				const rep = {}
+				for (const k in at) {
+					if (k == 'lst') {
+						rep.lst = []
+						for (const e of at.lst) {
+							const rep2 = {}
+							for (const k2 in e) rep2[k2] = e[k2]
+							rep.lst.push(rep2)
+						}
+					} else {
+						rep[k] = at[k]
+					}
+				}
+				ds2.snvindel_attributes.push(rep)
+			}
+		}
+		if (ds.snvindel_legend) {
+			ds2.snvindel_legend = ds.snvindel_legend
+		}
+		const vcfinfo = {}
+		let hasvcf = false
+		for (const q of ds.queries) {
+			if (q.vcf) {
+				hasvcf = true
+				vcfinfo[q.vcf.vcfid] = q.vcf
+			}
+		}
+		if (hasvcf) {
+			ds2.id2vcf = vcfinfo
+		}
+		g2.datasets[dsname] = ds2
+	}
+
+	if (g.hicdomain) {
+		g2.hicdomain = { groups: {} }
+		for (const s1 in g.hicdomain.groups) {
+			const tt = g.hicdomain.groups[s1]
+			g2.hicdomain.groups[s1] = {
+				name: tt.name,
+				reference: tt.reference,
+				sets: {}
+			}
+			for (const s2 in tt.sets) {
+				g2.hicdomain.groups[s1].sets[s2] = {
+					name: tt.sets[s2].name,
+					longname: tt.sets[s2].longname
+				}
+			}
+		}
+	}
+	return g2
 }
 
 function mds_clientcopy(ds) {
@@ -324,7 +334,8 @@ function mds_clientcopy(ds) {
 		alleleAttribute: ds.alleleAttribute,
 		// these are quick fixes and should be deleted later
 		hide_genotypedownload: ds.hide_genotypedownload,
-		hide_phewas: ds.hide_phewas
+		hide_phewas: ds.hide_phewas,
+		sample2bam: ds.sample2bam
 	}
 
 	if (ds.queries) {
@@ -352,7 +363,9 @@ function mds_clientcopy(ds) {
 	if (ds.cohort) {
 		if (ds.cohort.termdb) {
 			// let client know the existance, do not reveal details unless needed
-			ds2.termdb = 1
+			ds2.termdb = {
+				selectCohort: ds.cohort.termdb.selectCohort
+			}
 		}
 
 		if (ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
@@ -785,8 +798,14 @@ if file/url ends with .gz, it is bedgraph
 			for (const r of req.query.rglst) {
 				if (r.values) nodata = false
 			}
-			const canvas = createCanvas(req.query.width, req.query.barheight)
+			const canvas = createCanvas(
+				req.query.width * req.query.devicePixelRatio,
+				req.query.barheight * req.query.devicePixelRatio
+			)
 			const ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) {
+				ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+			}
 			if (nodata) {
 				// bigwig hard-coded stuff
 				ctx.font = '14px Arial'
@@ -949,8 +968,14 @@ function handle_tkaicheck(req, res) {
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict
 
-	const canvas = createCanvas(req.query.width, vafheight * 3 + rowspace * 4 + coverageheight * 2)
+	const canvas = createCanvas(
+		req.query.width * req.query.devicePixelRatio,
+		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
+	)
 	const ctx = canvas.getContext('2d')
+	if (req.query.devicePixelRatio > 1) {
+		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+	}
 
 	// vaf track background
 	ctx.fillStyle = '#f1f1f1'
@@ -1315,8 +1340,9 @@ should guard against file content error e.g. two tabs separating columns
 
 			if (items.length == 0) {
 				// will draw, but no data
-				const canvas = createCanvas(width, stackheight)
+				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
 				const ctx = canvas.getContext('2d')
+				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 				ctx.font = stackheight + 'px Arial'
 				ctx.fillStyle = '#aaa'
 				ctx.textAlign = 'center'
@@ -1333,8 +1359,9 @@ should guard against file content error e.g. two tabs separating columns
 				// __onerow__
 				// may render strand
 				const notmanyitem = items.length < 200
-				const canvas = createCanvas(width, stackheight)
+				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
 				const ctx = canvas.getContext('2d')
+				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 				const mapisoform = items.length <= 200 ? [] : null
 				for (const item of items) {
 					const fillcolor =
@@ -1417,6 +1444,7 @@ should guard against file content error e.g. two tabs separating columns
 			const namepad = 10 // box no struct: [pad---name---pad]
 			const canvas = createCanvas(10, 10) // for measuring text only
 			let ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			const packfull = items.length < 200
 			const mapisoform = items.length < 200 ? [] : null
@@ -1555,10 +1583,11 @@ should guard against file content error e.g. two tabs separating columns
 
 			// render
 
-			canvas.width = width
+			canvas.width = width * req.query.devicePixelRatio
 			const finalheight = (stackheight + stackspace) * maxstack - stackspace
-			canvas.height = finalheight
+			canvas.height = finalheight * req.query.devicePixelRatio
 			ctx = canvas.getContext('2d')
+			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			ctx.textBaseline = 'middle'
 			ctx.lineWidth = 1
@@ -5971,8 +6000,14 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 		}
 	}
 
-	const canvas = createCanvas(q.width, q.rnabarheight + q.barypad + q.dnabarheight)
+	const canvas = createCanvas(
+		q.width * q.devicePixelRatio,
+		(q.rnabarheight + q.barypad + q.dnabarheight) * q.devicePixelRatio
+	)
 	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 
 	let isbp = false,
 		binbpsize,
@@ -6173,13 +6208,15 @@ q {}
 					ctx.stroke()
 					ctx.closePath()
 				} else {
-					// not het
+					/*
+					// not het, do not plot for now, should make it optional on UI
 					ctx.strokeStyle = '#ccc'
 					ctx.beginPath()
 					ctx.moveTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad)
 					ctx.lineTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad + h)
 					ctx.stroke()
 					ctx.closePath()
+					*/
 				}
 				delete m.__x
 			}
@@ -6490,6 +6527,7 @@ function bam_ifnochr(file, genome, dir) {
 		})
 	})
 }
+exports.bam_ifnochr = bam_ifnochr
 
 function get_rank_from_sortedarray(v, lst) {
 	// [ { value: v } ]
@@ -9067,6 +9105,7 @@ async function handle_mdssurvivalplot(req, res) {
 		}
 
 		await handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets)
+		await handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets)
 
 		for (const s of samplesets) {
 			handle_mdssurvivalplot_plot(s)
@@ -9121,6 +9160,24 @@ async function handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets) {
 		// is a not mutated set
 		const pvalue = await handle_mdssurvivalplot_pvalue([s, nomut_set])
 		s.pvalue = pvalue
+	}
+}
+async function handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets) {
+	if (!q.samplerule.set) return // possible when using "mutated_sets"
+	if (!q.samplerule.set.geneexpression) return // hardcoded for gene exp
+	if (!q.samplerule.set.byquartile) return // hardcoded for quartile
+	if (samplesets.length != 4) return // should throw
+	if (q.samplerule.set.against1st) {
+		for (let i = 1; i < 4; i++) {
+			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[0], samplesets[i]])
+		}
+		return
+	}
+	if (q.samplerule.set.against4th) {
+		for (let i = 0; i < 3; i++) {
+			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[i], samplesets[3]])
+		}
+		return
 	}
 }
 
@@ -9552,7 +9609,8 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q
 	return [
 		{
 			name: st.gene + ' ' + genenumquery.datatype + ' from 1st quartile (n=' + i1 + ', value<' + v1 + ')',
-			lst: samplewithvalue.slice(0, i1)
+			lst: samplewithvalue.slice(0, i1),
+			isfirstquartile: true
 		},
 		{
 			name:
@@ -9592,7 +9650,8 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q
 				', value>=' +
 				v3 +
 				')',
-			lst: samplewithvalue.slice(i3, samplewithvalue.length)
+			lst: samplewithvalue.slice(i3, samplewithvalue.length),
+			isfourthquartile: true
 		}
 	]
 }
@@ -10973,254 +11032,6 @@ function handle_translategm(req, res) {
 /****************************************************************************************************/
 
 /* __tp__ */
-
-function handle_tpbam(req, res) {
-	var [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	var start = parseInt(req.query.start),
-		stop = parseInt(req.query.stop),
-		barheight = parseInt(req.query.barheight),
-		width = parseInt(req.query.width),
-		stackheight = parseInt(req.query.stackheight)
-	if (isNaN(start)) return res.send({ error: 'invalid start' })
-	if (isNaN(stop)) return res.send({ error: 'invalid stop' })
-	if (isNaN(barheight)) return res.send({ error: 'invalid barheight' })
-	if (isNaN(width)) return res.send({ error: 'invalid width' })
-	if (isNaN(stackheight)) return res.send({ error: 'invalid stackheight' })
-	var nochr = false
-	if (req.query.nochr) {
-		nochr = true
-	}
-	log(req)
-	if (isurl) {
-		if (!serverconfig.cachedir) return res.send({ error: 'cachedir not specified in serverconfig' })
-		var tmp = file.split('//')
-		if (tmp.length != 2) return res.send({ error: 'irregular URL: ' + file })
-		var dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-		var loader = new load(dir)
-		fs.stat(dir, function(err, stat) {
-			if (err) {
-				switch (err.code) {
-					case 'ENOENT':
-						exec('mkdir -p ' + dir, function(err) {
-							if (err) {
-								res.send({ error: 'cannot create dir for caching' })
-								return
-							}
-							loader.load()
-						})
-						return
-					case 'EACCES':
-						return res.send({ error: 'permission denied when stating cache dir' })
-					default:
-						return res.send({ error: 'unknown error code when stating: ' + err.code })
-				}
-			}
-			loader.load()
-		})
-	} else {
-		var loader = new load()
-		loader.load()
-	}
-	function load(dir) {
-		this.name = req.query.name
-		this.start = start
-		this.stop = stop
-		this.chr = req.query.chr
-		this.nochr = nochr
-		this.width = width
-		this.barheight = barheight
-		this.stackheight = stackheight
-		this.fcolor = req.query.fcolor
-		this.rcolor = req.query.rcolor
-		this.mmcolor = req.query.mmcolor
-		this.load = () => {
-			var ps = spawn(
-				samtools,
-				['view', file, (this.nochr ? this.chr.replace('chr', '') : this.chr) + ':' + this.start + '-' + this.stop],
-				{ cwd: dir }
-			)
-			var out = [],
-				out2 = []
-			ps.stdout.on('data', data => {
-				// TODO detect amount of data, terminate if too big
-				out.push(data)
-			})
-			ps.stderr.on('data', data => {
-				out2.push(data)
-			})
-			ps.on('close', code => {
-				if (out2.length > 0) {
-					//res.send({error:out2.join('')})
-					//return
-				}
-				var lines = out
-					.join('')
-					.trim()
-					.split('\n')
-				var ntwidth = this.width / (this.stop - this.start)
-				var readsf = [],
-					readsr = []
-				lines.forEach(line => {
-					var l = line.split('\t')
-					var pos = parseInt(l[3]) - 1
-					var stop = start
-					var boxes = []
-					var flag = l[1],
-						seq = l[9],
-						cigarstr = l[5]
-					var prev = 0
-					var cum = 0
-					for (var i = 0; i < cigarstr.length; i++) {
-						if (cigarstr[i].match(/[0-9]/)) continue
-						var cigar = cigarstr[i]
-						if (cigar == 'H') {
-							// ignore
-							continue
-						}
-						var len = parseInt(cigarstr.substring(prev, i))
-						var s = ''
-						if (cigar == 'N') {
-							// no seq
-						} else if (cigar == 'P' || cigar == 'D') {
-							// padding or del, no sequence in read
-							for (var j = 0; j < len; j++) {
-								s += '*'
-							}
-						} else {
-							s = seq.substr(cum, len)
-							cum += len
-						}
-						prev = i + 1
-						switch (cigar) {
-							case '=':
-							case 'M':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									// visible
-									boxes.push({
-										opr: 'M',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'I':
-								if (pos > this.start && pos < this.stop) {
-									boxes.push({
-										opr: 'I',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								break
-							case 'D':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: 'D',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'N':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: 'N',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'X':
-							case 'S':
-								if (Math.max(pos, this.start) < Math.min(pos + len - 1, this.stop)) {
-									boxes.push({
-										opr: cigar,
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								pos += len
-								break
-							case 'P':
-								if (pos > this.start && pos < this.stop) {
-									boxes.push({
-										opr: 'P',
-										start: pos,
-										len: len,
-										s: s
-									})
-								}
-								break
-							default:
-								console.log('unknown cigar: ' + cigar)
-						}
-					}
-					if (boxes.length == 0) return
-					var read = {
-						name: l[0],
-						forward: !(flag & 0x10),
-						boxes: boxes
-					}
-					if (read.forward) readsf.push(read)
-					else readsr.push(read)
-				})
-				var reads = readsf.concat(readsr)
-				//reads.sort((i,j)=>{ return i.boxes[0].start-j.boxes[0].start})
-				var canvas = createCanvas(this.width, reads.length * this.stackheight)
-				var ctx = canvas.getContext('2d')
-				var fontsize = this.stackheight
-				ctx.font = fontsize + 'px arial'
-				ctx.textBaseline = 'middle'
-				var scale = p => Math.ceil((this.width * (p - 0.5 - this.start)) / (this.stop - this.start))
-				reads.forEach((read, i) => {
-					var y = i * this.stackheight
-					var xstop = 0
-					read.boxes.forEach(b => {
-						var x = scale(b.start)
-						switch (b.opr) {
-							case 'P':
-							case 'I':
-								// ignore
-								return
-							case 'N':
-								ctx.strokeStyle = read.forward ? this.fcolor : this.rcolor
-								var y2 = Math.floor(y + this.stackheight / 2) + 0.5
-								ctx.beginPath()
-								ctx.moveTo(x, y2)
-								ctx.lineTo(x + b.len * ntwidth, y2)
-								ctx.stroke()
-								xstop = x + b.len * ntwidth
-								return
-							case 'X':
-								ctx.fillStyle = 'white'
-								ctx.fillText(b.s, x, y + fontsize / 2)
-								return
-							default:
-								ctx.fillStyle = read.forward ? this.fcolor : this.rcolor
-								ctx.fillRect(x, y, b.len * ntwidth, this.stackheight)
-								xstop = x + b.len * ntwidth
-						}
-					})
-					ctx.fillStyle = read.forward ? this.fcolor : this.rcolor
-					ctx.fillText(read.name, xstop, y + fontsize / 2)
-				})
-				res.send({
-					src: canvas.toDataURL(),
-					height: reads.length * this.stackheight
-				})
-			})
-		}
-	}
-}
 
 function handle_tpvafs1(req, res) {
 	var [e, file, isurl] = fileurl(req)

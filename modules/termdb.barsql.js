@@ -162,9 +162,9 @@ function getPj(q, data, tdb, ds) {
 			bins,
 			q: d.q,
 			orderedLabels:
-				d.term.iscondition && d.term.grades
+				d.term.type == 'condition' && d.term.grades
 					? d.term.grades.map(grade => d.term.values[grade].label)
-					: d.term.iscondition
+					: d.term.type == 'condition'
 					? [0, 1, 2, 3, 4, 5, 9].map(grade => d.term.values[grade].label) // hardcoded default order
 					: bins.map(bin => (bin.name ? bin.name : bin.label))
 		})
@@ -184,10 +184,10 @@ function getPj(q, data, tdb, ds) {
 						if (!genotype) return
 						row[d.key] = genotype
 						row[d.val] = genotype
-					} else if (d.term.iscondition) {
+					} else if (d.term.type == 'condition') {
 						row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
 						row[d.val] = row[d.key]
-					} else if (d.term.isfloat || d.term.isinteger) {
+					} else if (d.term.type == 'float' || d.term.type == 'integer') {
 						// only computable values are included for boxplot
 						if (d.isComputableVal(row[d.val])) row[d.nval] = row[d.val]
 					}
@@ -221,7 +221,7 @@ function getPj(q, data, tdb, ds) {
 				values.sort((i, j) => i - j)
 				const stat = app.boxplot_getvalue(
 					values.map(v => {
-						return { value: v }
+						return { value: +v }
 					})
 				)
 				stat.mean = context.self.sum / values.length
@@ -294,7 +294,7 @@ function getTermDetails(q, tdb, index) {
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
 	const term = termid && !q['term' + index + '_is_genotype'] ? tdb.q.termjsonByOneid(termid) : {}
-	const termIsNumeric = term.isinteger || term.isfloat
+	const termIsNumeric = term.type == 'integer' || term.type == 'float'
 	const unannotatedValues = term.values
 		? Object.keys(term.values)
 				.filter(key => term.values[key].uncomputable)

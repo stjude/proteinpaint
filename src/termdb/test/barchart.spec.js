@@ -2,6 +2,7 @@
 const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
+const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
 
 /*************************
  reusable helper functions
@@ -11,7 +12,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		termfilter: { show_top_ui: true }
+		nav: { show_tabs: true }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -28,7 +29,7 @@ tape('\n', function(test) {
 })
 
 tape('single barchart, categorical bars', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
@@ -79,10 +80,10 @@ tape('single barchart, categorical bars', function(test) {
 
 tape('single chart, with overlay', function(test) {
 	test.timeoutAfter(4000)
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
+			termfilter,
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],
@@ -147,6 +148,7 @@ tape('single chart, with overlay', function(test) {
 })
 
 tape('multiple charts', function(test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			tree: {
@@ -185,15 +187,14 @@ tape('multiple charts', function(test) {
 	}
 })
 
-tape('series visibility', function(test) {
+tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(7)
 
 	const hiddenValues = { Male: 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -222,12 +223,17 @@ tape('series visibility', function(test) {
 			Object.keys(hiddenValues).length,
 			'should have the correct number of hidden bars by q.hiddenValues'
 		)
+		test.end()
 	}
+})
+
+tape('series visibility - numeric', function(test) {
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -292,7 +298,7 @@ tape('series visibility', function(test) {
 	function triggerMenuClickToHide(plot) {
 		plot.Inner.components.barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
-			.filter(d => d.seriesId == 'Not exposed')
+			.filter(d => d.seriesId == 'exposed, dose unknown')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
@@ -308,19 +314,29 @@ tape('series visibility', function(test) {
 			plot.Inner.components.barchart.Inner.dom.legendDiv
 				.selectAll('.legend-row')
 				.filter(function() {
-					return this.innerHTML.includes('Not exposed')
+					return this.innerHTML.includes('exposed, dose unknown')
 				})
 				.size(),
 			1,
 			'should hide a special numeric value by menu click'
 		)
 	}
+})
+
+tape('series visibility - condition', function(test) {
+	test.timeoutAfter(5000)
 
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'ctcae_graded',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -347,68 +363,40 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		test.end()
 	}
 })
 
 tape('single barchart, filtered', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
 			termfilter: {
-				show_top_ui: true,
 				filter: {
 					type: 'tvslst',
 					in: 1,
-					join: 'or',
+					join: 'and',
 					lst: [
 						{
-							type: 'tvslst',
-							in: 1,
-							join: 'and',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-										values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
-									}
-								},
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'sex', name: 'Sex', iscategorical: true },
-										values: [{ key: 'Male', label: 'Male' }]
-									}
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+								values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+							}
 						},
 						{
-							type: 'tvslst',
-							in: 1,
-							join: 'and',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'agedx', name: 'Age of Diagnosis', isfloat: true },
-										ranges: [{ start: 1, stop: 5, label: '1-5 years old' }]
-									}
-								},
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'wgs_sequenced', name: 'wgs_sequenced', iscategorical: true },
-										values: [{ key: '1', label: '1-yes' }]
-									}
-								}
-							]
+							type: 'tvs',
+							tvs: {
+								term: { id: 'sex', name: 'Sex', type: 'categorical' },
+								values: [{ key: '1', label: 'Male' }]
+							}
 						}
 					]
 				}
 			},
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
 				visiblePlotIds: ['sex'],
 				plots: {
 					sex: {
@@ -431,10 +419,10 @@ tape('single barchart, filtered', function(test) {
 
 	function runTests(plot) {
 		plot.on('postRender.test', null)
-		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 2, 'should show two bar series')
+		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
 		test.equal(
 			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
-			'Male',
+			'1',
 			'should show one bar series that matches filter value'
 		)
 		test.end()
@@ -442,15 +430,17 @@ tape('single barchart, filtered', function(test) {
 })
 
 tape('click non-group bar to add filter', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(8000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	runpp({
-		termfilter,
 		state: {
+			nav: {
+				activeCohort: 0
+			},
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Demographics/health behaviors', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -484,18 +474,19 @@ tape('click non-group bar to add filter', function(test) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
 			.run(triggerBarClick, { wait: 500 })
-			.use(triggerMenuClick, { wait: 400 })
-			.to(testTermValues, { wait: 100 })
+			.use(triggerMenuClick, { wait: 300 })
+			.to(testTermValues, { wait: 1000 })
 			.done(test)
 	}
 
-	let clickedData
+	let clickedData, currData
 	function triggerBarClick(plot) {
 		const elem = barDiv
 			.node()
 			.querySelector('.bars-cell')
 			.querySelector('rect')
 		clickedData = elem.__data__
+		currData = plot.Inner.currData
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -504,20 +495,20 @@ tape('click non-group bar to add filter', function(test) {
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
-			.click() //dispatchEvent(new Event('click', { bubbles: true }))
+			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
-		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			2,
 			'should create two tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -534,7 +525,7 @@ tape('click non-group bar to add filter', function(test) {
 			config.term2.term.values &&
 			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		test.deepEqual(
-			termfilter.filter.lst[1],
+			filter.lst[1],
 			{
 				type: 'tvs',
 				tvs: Object.assign(
@@ -561,7 +552,7 @@ tape('click non-group bar to add filter', function(test) {
 tape('click custom categorical group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A versus B',
 		groups: [
@@ -594,7 +585,6 @@ tape('click custom categorical group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
@@ -661,13 +651,14 @@ tape('click custom categorical group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -684,7 +675,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 tape('click custom subcondition group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
-	const termfilter = { show_top_ui: true, filter: [] }
+	const termfilter = { filter: [] }
 	const customset = {
 		name: 'A vs. B vs. C',
 		groups: [
@@ -730,11 +721,16 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		]
 	}
 	runpp({
-		termfilter,
 		state: {
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				expandedTermIds: [
+					'root',
+					'Clinically-assessed Variables',
+					'ctcae_graded',
+					'Cardiovascular System',
+					'Arrhythmias'
+				],
 				visiblePlotIds: ['Arrhythmias'],
 				plots: {
 					Arrhythmias: {
@@ -799,13 +795,14 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		const config = plot.Inner.state.config
 		const currData = plot.Inner.currData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
+		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
-			termfilter.filter && termfilter.filter.lst.length,
+			filter && filter.lst.length,
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
 		test.deepEqual(
-			termfilter.filter.lst[0],
+			filter.lst[0],
 			{
 				type: 'tvs',
 				tvs: {
@@ -861,5 +858,152 @@ tape('single chart, genotype overlay', function(test) {
 		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
 		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
 		test.end()
+	}
+})
+
+tape('numeric exclude range', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Anthracyclines',
+					'idarubicin_5'
+				],
+				visiblePlotIds: ['idarubicin_5'],
+				plots: {
+					idarubicin_5: {
+						term: { id: 'idarubicin_5', term: termjson['idarubicin_5'] },
+						term2: 'genotype',
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical' },
+								values: [
+									{ key: 'SJLIFE', label: 'SJLIFE' }
+									//{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{
+							type: 'tvslst',
+							tag: 'filterUiRoot',
+							join: '',
+							in: true,
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: termjson['idarubicin_5'],
+										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }],
+										isnot: true
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			nav: {
+				show_tabs: true
+			},
+			activeCohort: -1
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testBarCount
+			}
+		}
+	})
+
+	function testBarCount(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 bar')
+		test.end()
+	}
+})
+
+tape('numeric filter - only special value', function(test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: { id: 'aaclassic_5' },
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: termjson['aaclassic_5'],
+								ranges: [{ value: -8888, label: 'test' }]
+							}
+						}
+					]
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runNumericValueTests
+			}
+		}
+	})
+
+	function runNumericValueTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testNoBar, { wait: 300 })
+			.use(triggerHiddenLegendClick, { wait: 300 })
+			.to(testHasBar, { wait: 300 })
+			.done(test)
+	}
+
+	function testNoBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 0, 'should have 0 bar')
+	}
+
+	function triggerHiddenLegendClick(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.node()
+			.querySelector('.legend-row')
+			.click()
+	}
+
+	function testHasBar(plot) {
+		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 bar')
 	}
 })

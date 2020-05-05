@@ -1,8 +1,9 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
 
 /*
-for configuring term1; just a thin wrapper of blue pill UI 
+for configuring term1; wraps termsetting
 
 execution flow:
 
@@ -33,12 +34,15 @@ class Term1ui {
 		this.dom = { tr: o.holder }
 	}
 	getState(appState) {
-		return {
+		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			termfilter: appState.termfilter,
 			plot: appState.tree.plots[this.id]
 		}
+		if (appState.termfilter && appState.termfilter.filter) {
+			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		return state
 	}
 	main() {
 		this.render()
@@ -46,7 +50,6 @@ class Term1ui {
 	setPill() {
 		// can only call after getting this.state
 		this.pill = termsettingInit({
-			disable_ReplaceRemove: true, // to disable Replace/Remove buttons
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
@@ -103,21 +106,26 @@ function setRenderers(self) {
 			return
 		}
 
-		if (plot.term.term.iscategorical) {
-			self.dom.td1.text('Group categories')
-			// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
-		} else if (plot.term.term.iscondition) {
-			self.dom.td1.text('Customize')
-		} else if (plot.term.term.isinteger || plot.term.term.isfloat) {
-			self.dom.td1.text('Customize bins')
-		} else {
-			throw 'unknown term type'
+		switch (plot.term.term.type) {
+			case 'categorical':
+				self.dom.td1.text('Group categories')
+				// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
+				break
+			case 'condition':
+				self.dom.td1.text('Customize')
+				break
+			case 'integer':
+			case 'float':
+				self.dom.td1.text('Customize bins')
+				break
+			default:
+				throw 'unknown term type'
 		}
 		if (!self.pill) self.setPill()
 		self.pill.main({
 			term: plot.term.term,
 			q: plot.term.q,
-			termfilter: this.state.termfilter
+			filter: this.state.filter
 			// no need for disable_terms as pill won't show tree
 		})
 	}
