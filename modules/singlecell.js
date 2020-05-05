@@ -224,7 +224,8 @@ may attach coloring scheme to result{} for returning to client
 				// if(!color) return
 
 				// add color for cells without expression to retain cluster shape
-				if (!color) {
+				// if color_min is black, then it will be converted to 00000, and will reassing, so check for type rahter than !color
+				if (typeof color == 'undefined') {
 					if (q.getpcd.gene_expression.color_no_exp) {
 						const c = d3color.color(q.getpcd.gene_expression.color_no_exp)
 						color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
