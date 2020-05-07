@@ -191,7 +191,7 @@ export class Block {
 				return
 			}
 			const _chr = this.genome.chrlookup[arg.chr.toUpperCase()]
-			const minspan = 200
+			const minspan = Math.ceil(this.width / ntpxwidth) //200
 			if (arg.stop - arg.start < minspan) {
 				const h = Math.ceil(minspan / 2)
 				const m = Math.floor((arg.start + arg.stop) / 2)
