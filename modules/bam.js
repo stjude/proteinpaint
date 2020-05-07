@@ -8,13 +8,39 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
-*********************** data structure
-q {}
-.regions[]
+*********************** new q{}
+.asPaired
+.regions[ r ]
+	.scale()
 	.to_checkmismatch bool
 	.referenceseq     str
 	.to_printnt  bool
 	.to_qual     bool
+	.lines[]
+.readcounter    read counter during loading, to detect when is above limit
+.groups[ {} ]   multi-groups sharing the same set of regions, each with a set of reads
+	.partstack{}  user triggered action
+	.regions[]
+		.lines[]
+	.templates[]
+	.stacks[]
+	.returntemplatebox[]
+	.stackheight
+	.stackspace
+	.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
+	.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
+	.canvasheight
+
+*********************** OLD q{} runtime
+.regions[]
+	.chr/start/stop
+	.scale()
+	.ntwidth
+	.to_checkmismatch bool
+	.referenceseq     str
+	.to_printnt  bool
+	.to_qual     bool
+	.lines[]
 .asPaired
 .stackheight
 .stackspace
@@ -33,7 +59,6 @@ q {}
 template {}
 .y // initially stack idx, then replaced to be actual screen y
 .x1, x2  // screen px, only for stacking not rendering
-.ridx2 // not-in-use region idx of the stop position
 .segments[]
 .height // screen px, only set when to check overlap read pair, will double row height
 
@@ -61,6 +86,7 @@ box {}
 get_q
 do_query
 	query_region
+	may_get_referenceseq
 	get_templates
 		parse_one_segment
 	stack_templates
@@ -159,10 +185,9 @@ async function get_q(genome, req) {
 	const q = {
 		genome,
 		file: _file, // may change if is url
-		//collapse_density: false,
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
-		numofreads: 0,
+		_numofreads: 0,
 		messagerows: [],
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
@@ -203,6 +228,9 @@ async function do_query(q) {
 	for (const r of q.regions) {
 		await query_region(r, q)
 	}
+	delete q.readcounter // read counter no longer needed after loading
+
+	await may_get_referenceseq(q)
 
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
 
@@ -210,7 +238,8 @@ async function do_query(q) {
 		nochr: q.nochr,
 		count: {
 			r: q.totalnumreads
-		}
+		},
+		groups: []
 	}
 	if (result.count.r == 0) {
 		q.messagerows.push({
@@ -219,40 +248,81 @@ async function do_query(q) {
 		})
 	}
 
-	get_templates(q) // q.templates
-	//const filename = writefile_reads(q)
-
-	stack_templates(q)
-	await poststack_adjustq(q)
-
-	finalize_templates(q) // set q.canvasheight
-
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.canvasheight * q.devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	if (q.devicePixelRatio > 1) {
-		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+
+	const groups = await divide_reads_togroups(q)
+	for (const group of groups) {
+		// attach temp attributes directly to "group", rendering result push to results.groups[]
+		group.templates = get_templates(group, q)
+
+		stack_templates(group, q) // add .stacks[], .returntemplatebox[]
+		await poststack_adjustq(group, q)
+
+		finalize_templates(group, q) // set .canvasheight
+
+		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
+		const ctx = canvas.getContext('2d')
+		if (q.devicePixelRatio > 1) {
+			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+		}
+		ctx.textAlign = 'center'
+		ctx.textBaseline = 'middle'
+
+		// result obj of this group
+		const gr = {
+			width: q.canvaswidth,
+			height: group.canvasheight,
+			stackheight: group.stackheight,
+			stackcount: group.stacks.length,
+			allowpartstack: group.allowpartstack,
+			templatebox: group.returntemplatebox,
+			messagerowheights: plot_messagerows(ctx, group),
+			count: {
+				r: group.regions.reduce((i, j) => i + j.lines.length, 0)
+			}
+		}
+
+		for (const template of group.templates) {
+			plot_template(ctx, template, group, q)
+		}
+		plot_insertions(ctx, group, q)
+
+		if (q.asPaired) gr.count.t = group.templates.length
+		gr.src = canvas.toDataURL()
+		result.groups.push(gr)
 	}
-	ctx.textAlign = 'center'
-	ctx.textBaseline = 'middle'
-
-	result.messagerowheights = plot_messagerows(ctx, q)
-
-	for (const template of q.templates) {
-		plot_template(ctx, template, q)
-	}
-	plot_insertions(ctx, q)
-
-	if (q.asPaired) result.count.t = q.templates.length
-	result.src = canvas.toDataURL()
-	result.width = q.canvaswidth
-	result.height = q.canvasheight
-	result.stackheight = q.stackheight
-	result.stackcount = q.stacks.length
-	if (q.returntemplatebox) result.templatebox = q.returntemplatebox
-	if (q.allowpartstack) result.allowpartstack = q.allowpartstack
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
+}
+
+async function may_get_referenceseq(q) {
+	// requires ntwidth
+	for (const r of q.regions) {
+		if (r.lines.length > 0 && r.ntwidth >= 0.9) {
+			r.to_checkmismatch = true
+			r.referenceseq = await get_refseq(q.genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
+		}
+	}
+}
+
+async function divide_reads_togroups(q) {
+	/* loaded reads for all regions under q.regions
+	divide to groups if to match with variant
+	plot each group into a separate canvas
+	*/
+
+	if (q.variant) {
+		const filename = writefile_reads(q)
+		// TODO
+	}
+
+	// no variant, return single group
+	return [
+		{
+			regions: q.regions,
+			messagerows: []
+		}
+	]
 }
 
 async function writefile_reads(q) {
@@ -282,8 +352,8 @@ function query_region(r, q) {
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			r.lines.push(line)
-			q.numofreads++
-			if (q.numofreads == maxreadcount) {
+			q.readcounter++
+			if (q.readcounter >= maxreadcount) {
 				ps.kill()
 				q.messagerows.push({
 					h: 13,
@@ -297,15 +367,15 @@ function query_region(r, q) {
 	})
 }
 
-function get_templates(q) {
+function get_templates(group, q) {
 	// parse reads from all regions
 	// returns an array of templates, no matter if paired or not
 	if (!q.asPaired) {
 		// pretends single reads as templates
 		const lst = []
 		// to account for reads spanning between multiple regions, may use qname2read = new Map()
-		for (let i = 0; i < q.regions.length; i++) {
-			const r = q.regions[i]
+		for (let i = 0; i < group.regions.length; i++) {
+			const r = group.regions[i]
 			for (const line of r.lines) {
 				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
@@ -313,19 +383,17 @@ function get_templates(q) {
 					x1: segment.x1,
 					x2: segment.x2,
 					segments: [segment]
-					//ridx2: i, // r idx of stop
 				})
 			}
 		}
-		q.templates = lst
-		return
+		return lst
 	}
 	// paired segments are joined together; a template with segments possibly from multiple regions
 	const qname2template = new Map()
 	// key: qname
 	// value: template, a list of segments
-	for (let i = 0; i < q.regions.length; i++) {
-		const r = q.regions[i]
+	for (let i = 0; i < group.regions.length; i++) {
+		const r = group.regions[i]
 		for (const line of r.lines) {
 			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
@@ -334,19 +402,16 @@ function get_templates(q) {
 				// add this segment to existing template
 				temp.segments.push(segment)
 				temp.x2 = Math.max(temp.x2, segment.x2)
-				//temp.ridx2 = i
 			} else {
 				qname2template.set(segment.qname, {
 					x1: segment.x1,
 					x2: segment.x2,
 					segments: [segment]
-					//ridx2: i,
 				})
 			}
 		}
 	}
-	q.templates = [...qname2template.values()]
-	return
+	return [...qname2template.values()]
 }
 
 function parse_one_segment(line, r, ridx, keepallboxes) {
@@ -535,7 +600,7 @@ may skip insertion if on screen width shorter than minimum width
 	return segment
 }
 
-async function poststack_adjustq(q) {
+async function poststack_adjustq(group, q) {
 	/*
 call after stacking
 control canvas height based on number of reads and stacks
@@ -545,25 +610,20 @@ return number of stacks for setting canvas height
 
 super high number of stacks will result in fractional row height and blurry rendering, no way to fix it now
 */
-	const [a, b] = getstacksizebystacks(q.stacks.length)
-	q.stackheight = a
-	q.stackspace = b
-	for (const r of q.regions) {
-		// based on resolution, decide if to do following
-		if (r.ntwidth >= 0.9) {
-			r.to_checkmismatch = true
-			r.referenceseq = await get_refseq(q.genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
-		}
-		r.to_printnt = q.stackheight > 7 && r.ntwidth >= 7
+	const [a, b] = getstacksizebystacks(group.stacks.length)
+	group.stackheight = a
+	group.stackspace = b
+	for (const r of group.regions) {
+		r.to_printnt = group.stackheight > 7 && r.ntwidth >= 7
 		r.to_qual = r.ntwidth >= minntwidth_toqual
 	}
-	if (q.stacks.length) {
+	if (group.stacks.length) {
 		// has reads/templates for rendering, support below
-		if (q.stackheight >= 7 && q.totalnumreads < 3000) {
-			q.returntemplatebox = []
+		if (group.stackheight >= 7 && q.totalnumreads < 3000) {
+			group.returntemplatebox = []
 		} else {
-			if (!q.partstack) {
-				q.allowpartstack = true // to inform client
+			if (!group.partstack) {
+				group.allowpartstack = true // to inform client
 			}
 		}
 	}
@@ -577,46 +637,45 @@ function getstacksizebystacks(numofstacks) {
 	if (a > 7) return [Math.floor(a), 1]
 	if (a > 3) return [Math.ceil(a), 0]
 	if (a > 1) return [Math.floor(a), 0]
-	console.log('small stack', a)
 	return [a, 0]
 }
 
-function stack_templates(q) {
+function stack_templates(group, q) {
 	// stack by on screen x1 x2 position of each template, only set stack idx to each template
 	// actual y position will be set later after stackheight is determined
 	// adds q.stacks[]
 	// stacking code not reusable for the special spacing calculation
-	q.templates.sort((i, j) => i.x1 - j.x1)
-	q.stacks = [] // each value is screen pixel pos of each stack
-	for (const template of q.templates) {
+	group.templates.sort((i, j) => i.x1 - j.x1)
+	group.stacks = [] // each value is screen pixel pos of each stack
+	for (const template of group.templates) {
 		let stackidx = null
-		for (let i = 0; i < q.stacks.length; i++) {
-			if (q.stacks[i] + q.stacksegspacing < template.x1) {
+		for (let i = 0; i < group.stacks.length; i++) {
+			if (group.stacks[i] + q.stacksegspacing < template.x1) {
 				stackidx = i
-				q.stacks[i] = template.x2
+				group.stacks[i] = template.x2
 				break
 			}
 		}
 		if (stackidx == null) {
-			stackidx = q.stacks.length
-			q.stacks[stackidx] = template.x2
+			stackidx = group.stacks.length
+			group.stacks[stackidx] = template.x2
 		}
 		template.y = stackidx
 	}
-	may_trimstacks(q)
+	may_trimstacks(group, q)
 }
 
-function may_trimstacks(q) {
-	if (!q.partstack) return
+function may_trimstacks(group, q) {
+	if (!group.partstack) return
 	// should be a positive integer
-	const lst = q.templates.filter(i => i.y >= q.partstack.start && i.y <= q.partstack.stop)
-	lst.forEach(i => (i.y -= q.partstack.start))
-	q.templates = lst
-	q.stacks = []
-	for (let i = q.partstack.start; i <= q.partstack.stop; i++) {
-		q.stacks.push(0)
+	const lst = group.templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop)
+	lst.forEach(i => (i.y -= group.partstack.start))
+	group.templates = lst
+	group.stacks = []
+	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
+		group.stacks.push(0)
 	}
-	q.returntemplatebox = [] // always set this
+	group.returntemplatebox = [] // always set this
 }
 
 async function get_refseq(g, coord) {
@@ -626,27 +685,25 @@ async function get_refseq(g, coord) {
 	return l.join('').toUpperCase()
 }
 
-function finalize_templates(q) {
+function finalize_templates(group, q) {
 	/*
 for each template:
-
-for each box:
-  the box alreay has raw strings for .seq and .qual
-  may do below:
-	add sequence
-	add quality
-	check mismatch
-
+	for each box:
+	  the box alreay has raw strings for .seq and .qual
+	  may do below:
+		add sequence
+		add quality
+		check mismatch
 at the end, set q.canvasheight
 */
 
-	const stacky = get_stacky(q)
+	const stacky = get_stacky(group, q)
 
-	for (const template of q.templates) {
+	for (const template of group.templates) {
 		template.y = stacky[template.y]
 
 		for (const segment of template.segments) {
-			const r = q.regions[segment.ridx]
+			const r = group.regions[segment.ridx]
 			const quallst = r.to_qual ? qual2int(segment.qual) : null
 			const mismatches = []
 			for (const b of segment.boxes) {
@@ -679,10 +736,10 @@ at the end, set q.canvasheight
 
 	if (stacky.length == 0) {
 		// no reads, must use sum of message row height as canvas height
-		q.canvasheight = q.messagerows.reduce((i, j) => i + j.h, 0)
+		group.canvasheight = group.messagerows.reduce((i, j) => i + j.h, 0)
 	} else {
 		// has reads, and nessage row heights are already counted in y position of each stack
-		q.canvasheight = stacky[stacky.length - 1]
+		group.canvasheight = stacky[stacky.length - 1]
 	}
 }
 
@@ -696,46 +753,46 @@ function qual2int(s) {
 	return lst
 }
 
-function plot_messagerows(ctx, q) {
+function plot_messagerows(ctx, group) {
 	let y = 0
-	for (const row of q.messagerows) {
+	for (const row of group.messagerows) {
 		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
 		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
+		ctx.fillText(row.t, group.canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
 	return y
 }
 
-function get_stacky(q) {
+function get_stacky(group, q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
-	for (let i = 0; i < q.stacks.length; i++) stackrowheight.push(q.stackheight)
-	overlapRP_setflag(q)
-	if (q.overlapRP_multirows) {
+	for (let i = 0; i < group.stacks.length; i++) stackrowheight.push(group.stackheight)
+	overlapRP_setflag(group, q)
+	if (group.overlapRP_multirows) {
 		// expand row height for stacks with overlapping read pairs
-		for (const template of q.templates) {
+		for (const template of group.templates) {
 			if (template.segments.length <= 1) continue
-			template.height = getrowheight_template_overlapread(template, q.stackheight)
+			template.height = getrowheight_template_overlapread(template, group.stackheight)
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
 		}
 	}
 	const stacky = []
-	let y = q.messagerows.reduce((i, j) => i + j.h, 0) + q.stackspace
+	let y = group.messagerows.reduce((i, j) => i + j.h, 0) + group.stackspace
 	stackrowheight.forEach(h => {
 		stacky.push(y)
-		y += h + q.stackspace
+		y += h + group.stackspace
 	})
 	return stacky
 }
 
-function overlapRP_setflag(q) {
+function overlapRP_setflag(group, q) {
 	if (!q.asPaired) return
-	for (const r of q.regions) {
+	for (const r of group.regions) {
 		if (r.ntwidth <= minntwidth_overlapRPmultirows) return
 	}
-	q.overlapRP_multirows = true
-	q.overlapRP_hlline = q.stackspace > 0
+	group.overlapRP_multirows = true
+	group.overlapRP_hlline = group.stackspace > 0
 }
 
 function getrowheight_template_overlapread(template, stackheight) {
@@ -794,44 +851,44 @@ function check_mismatch(lst, r, box) {
 	}
 }
 
-function plot_template(ctx, template, q) {
-	if (q.returntemplatebox) {
+function plot_template(ctx, template, group, q) {
+	if (group.returntemplatebox) {
 		// one box per template
 		const box = {
 			qname: template.segments[0].qname,
 			x1: template.x1,
 			x2: template.x2,
 			y1: template.y,
-			y2: template.y + (template.height || q.stackheight)
+			y2: template.y + (template.height || group.stackheight)
 		}
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
 			if (template.segments[0].isfirst) box.isfirst = true
 			if (template.segments[0].islast) box.islast = true
 		}
-		q.returntemplatebox.push(box)
+		group.returntemplatebox.push(box)
 	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
 		if (i == 0) {
 			// is the first segment, same rendering method no matter in single or paired mode
-			plot_segment(ctx, seg, template.y, q)
+			plot_segment(ctx, seg, template.y, group, q)
 			continue
 		}
 		// after the first segment, this only occurs in paired mode
 		const prevseg = template.segments[i - 1]
 		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
-			plot_segment(ctx, seg, template.y, q)
-			const y = Math.floor(template.y + q.stackheight / 2) + 0.5
-			ctx.strokeStyle = q.stackheight <= 2 ? split_linecolorfaint : match_hq
+			plot_segment(ctx, seg, template.y, group, q)
+			const y = Math.floor(template.y + group.stackheight / 2) + 0.5
+			ctx.strokeStyle = group.stackheight <= 2 ? split_linecolorfaint : match_hq
 			ctx.setLineDash([5, 3]) // dash for read pairs
 			ctx.beginPath()
 			ctx.moveTo(prevseg.x2, y)
 			ctx.lineTo(seg.x1, y)
 			ctx.stroke()
 
-			if (q.overlapRP_hlline) {
+			if (group.overlapRP_hlline) {
 				// highlight line is showing, this is at zoom in level
 				// detect if two segments are next to each other, by coord but not x1/2
 				// as at zoom out level, pixel position is imprecise
@@ -845,16 +902,16 @@ function plot_template(ctx, template, q) {
 					ctx.beginPath()
 					const x = Math.floor(seg.x1) + 0.5
 					ctx.moveTo(x, template.y)
-					ctx.lineTo(x, template.y + q.stackheight)
+					ctx.lineTo(x, template.y + group.stackheight)
 					ctx.stroke()
 				}
 			}
 		} else {
 			// overlaps with the previous segment
-			if (q.overlapRP_multirows) {
-				plot_segment(ctx, seg, template.y + q.stackheight, q)
-				if (q.overlapRP_hlline) {
-					const y = Math.floor(template.y + q.stackheight) + 0.5
+			if (group.overlapRP_multirows) {
+				plot_segment(ctx, seg, template.y + group.stackheight, group, q)
+				if (group.overlapRP_hlline) {
+					const y = Math.floor(template.y + group.stackheight) + 0.5
 					ctx.strokeStyle = overlapreadhlcolor
 					ctx.setLineDash([])
 					ctx.beginPath()
@@ -863,14 +920,14 @@ function plot_template(ctx, template, q) {
 					ctx.stroke()
 				}
 			} else {
-				plot_segment(ctx, seg, template.y, q)
+				plot_segment(ctx, seg, template.y, group, q)
 			}
 		}
 	}
 }
 
-function plot_segment(ctx, segment, y, q) {
-	const r = q.regions[segment.ridx] // this region where the segment falls into
+function plot_segment(ctx, segment, y, group, q) {
+	const r = group.regions[segment.ridx] // this region where the segment falls into
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
@@ -883,27 +940,27 @@ function plot_segment(ctx, segment, y, q) {
 			if (b.opr == 'D') {
 				ctx.strokeStyle = deletion_linecolor
 			} else {
-				ctx.strokeStyle = q.stackheight <= 2 ? split_linecolorfaint : match_hq
+				ctx.strokeStyle = group.stackheight <= 2 ? split_linecolorfaint : match_hq
 			}
 			ctx.setLineDash([]) // use solid lines
-			const y2 = Math.floor(y + q.stackheight / 2) + 0.5
+			const y2 = Math.floor(y + group.stackheight / 2) + 0.5
 			ctx.beginPath()
 			ctx.moveTo(x, y2)
 			ctx.lineTo(x + b.len * r.ntwidth, y2)
 			ctx.stroke()
-			if (q.stackheight > minstackheight2printbplenDN) {
+			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
 				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
-					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, q.stackheight - 2))
+					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
 						ctx.fillStyle = 'white'
-						ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, q.stackheight)
+						ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
 						ctx.fillStyle = match_hq
-						ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + q.stackheight / 2)
+						ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
 					}
 				}
 			}
@@ -915,23 +972,23 @@ function plot_segment(ctx, segment, y, q) {
 			if (r.to_qual && b.qual) {
 				// to show quality and indeed there is quality
 				if (r.to_printnt) {
-					ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
+					ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
 				}
 				let xoff = x
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, q.stackheight)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + q.stackheight / 2)
+						ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 					}
 					xoff += r.ntwidth
 				}
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 			}
 			continue
 		}
@@ -941,19 +998,19 @@ function plot_segment(ctx, segment, y, q) {
 				let xoff = x
 				b.qual.forEach(v => {
 					ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, q.stackheight)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					xoff += r.ntwidth
 				})
 			} else {
 				// not showing qual, one box
 				ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, q.stackheight)
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 			}
 			if (r.to_printnt) {
-				ctx.font = Math.min(r.ntwidth, q.stackheight - 2) + 'pt Arial'
+				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				for (let i = 0; i < b.s.length; i++) {
-					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + q.stackheight / 2)
+					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
 				}
 			}
 			continue
@@ -961,23 +1018,23 @@ function plot_segment(ctx, segment, y, q) {
 		throw 'unknown opr at rendering: ' + b.opr
 	}
 
-	if (q.stackheight >= minstackheight2strandarrow) {
+	if (group.stackheight >= minstackheight2strandarrow) {
 		if (segment.forward) {
 			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= q.canvaswidth + q.stackheight / 2) {
+			if (x <= q.canvaswidth + group.stackheight / 2) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
-				ctx.moveTo(x - q.stackheight / 2, y)
+				ctx.moveTo(x - group.stackheight / 2, y)
 				ctx.lineTo(x, y)
-				ctx.lineTo(x, y + q.stackheight / 2)
-				ctx.lineTo(x - q.stackheight / 2, y)
+				ctx.lineTo(x, y + group.stackheight / 2)
+				ctx.lineTo(x - group.stackheight / 2, y)
 				ctx.closePath()
 				ctx.fill()
 				ctx.beginPath()
-				ctx.moveTo(x - q.stackheight / 2, y + q.stackheight)
-				ctx.lineTo(x, y + q.stackheight)
-				ctx.lineTo(x, y + q.stackheight / 2)
-				ctx.lineTo(x - q.stackheight / 2, y + q.stackheight)
+				ctx.moveTo(x - group.stackheight / 2, y + group.stackheight)
+				ctx.lineTo(x, y + group.stackheight)
+				ctx.lineTo(x, y + group.stackheight / 2)
+				ctx.lineTo(x - group.stackheight / 2, y + group.stackheight)
 				ctx.closePath()
 				ctx.fill()
 			}
@@ -986,17 +1043,17 @@ function plot_segment(ctx, segment, y, q) {
 			if (x >= 0) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
-				ctx.moveTo(x + q.stackheight / 2, y)
+				ctx.moveTo(x + group.stackheight / 2, y)
 				ctx.lineTo(x, y)
-				ctx.lineTo(x, y + q.stackheight / 2)
-				ctx.lineTo(x + q.stackheight / 2, y)
+				ctx.lineTo(x, y + group.stackheight / 2)
+				ctx.lineTo(x + group.stackheight / 2, y)
 				ctx.closePath()
 				ctx.fill()
 				ctx.beginPath()
-				ctx.moveTo(x + q.stackheight / 2, y + q.stackheight)
-				ctx.lineTo(x, y + q.stackheight)
-				ctx.lineTo(x, y + q.stackheight / 2)
-				ctx.lineTo(x + q.stackheight / 2, y + q.stackheight)
+				ctx.moveTo(x + group.stackheight / 2, y + group.stackheight)
+				ctx.lineTo(x, y + group.stackheight)
+				ctx.lineTo(x, y + group.stackheight / 2)
+				ctx.lineTo(x + group.stackheight / 2, y + group.stackheight)
 				ctx.closePath()
 				ctx.fill()
 			}
@@ -1006,13 +1063,13 @@ function plot_segment(ctx, segment, y, q) {
 	if (segment.rnext) {
 		if (!r.to_qual) {
 			// no quality and just a solid box, may print name
-			if (segment.x2 - segment.x1 >= 20 && q.stackheight >= 7) {
-				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, q.stackheight - 4)) + 'pt Arial'
+			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
+				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
-					y + q.stackheight / 2,
+					y + group.stackheight / 2,
 					segment.x2 - segment.x1
 				)
 			}
@@ -1020,18 +1077,18 @@ function plot_segment(ctx, segment, y, q) {
 	}
 }
 
-function plot_insertions(ctx, q) {
+function plot_insertions(ctx, group, q) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
 if b.qual is available, set text color based on it
 */
-	for (const template of q.templates) {
+	for (const template of group.templates) {
 		for (const segment of template.segments) {
-			const r = q.regions[segment.ridx]
+			const r = group.regions[segment.ridx]
 			const insertions = segment.boxes.filter(i => i.opr == 'I')
 			if (!insertions.length) continue
-			ctx.font = Math.max(insertion_maxfontsize, q.stackheight - 2) + 'pt Arial'
+			ctx.font = Math.max(insertion_maxfontsize, group.stackheight - 2) + 'pt Arial'
 			insertions.forEach(b => {
 				const x = r.x + r.scale(b.start)
 				if (b.qual) {
@@ -1041,7 +1098,7 @@ if b.qual is available, set text color based on it
 				}
 				const text = b.s.length == 1 ? b.s : b.s.length
 				// text y position to observe if the read is in an overlapping pair and shifted down
-				ctx.fillText(text, x, template.y + q.stackheight * (segment.on2ndrow || 0) + q.stackheight / 2)
+				ctx.fillText(text, x, template.y + group.stackheight * (segment.on2ndrow || 0) + group.stackheight / 2)
 			})
 		}
 	}
