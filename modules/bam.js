@@ -195,7 +195,7 @@ async function get_q(genome, req) {
 	}
 
 	if (req.query.stackstart) {
-		// to be passed to the read group being modified
+		// to be assigned to the read group being modified
 		q.partstack = {
 			start: Number(req.query.stackstart),
 			stop: Number(req.query.stackstop)
@@ -244,30 +244,22 @@ async function do_query(q) {
 		},
 		groups: []
 	}
-	if (result.count.r == 0) {
-		q.messagerows.push({
-			h: 30,
-			t: 'No reads in view range.'
-		})
-	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
 	const groups = await divide_reads_togroups(templates, q)
+	if (result.count.r == 0) {
+		groups[0].messagerows.push({
+			h: 30,
+			t: 'No reads in view range.'
+		})
+	}
 	for (const group of groups) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 		stack_templates(group, q) // add .stacks[], .returntemplatebox[]
-		await poststack_adjustq(group, q)
+		await poststack_adjustq(group, q) // add .allowpartstack
 		finalize_templates(group, q) // set .canvasheight
-
-		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
-		const ctx = canvas.getContext('2d')
-		if (q.devicePixelRatio > 1) {
-			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-		}
-		ctx.textAlign = 'center'
-		ctx.textBaseline = 'middle'
 
 		// result obj of this group
 		const gr = {
@@ -277,8 +269,18 @@ async function do_query(q) {
 			stackcount: group.stacks.length,
 			allowpartstack: group.allowpartstack,
 			templatebox: group.returntemplatebox,
-			messagerowheights: plot_messagerows(ctx, group)
+			count: { r: group.templates.reduce((i, j) => i + j.segments.length, 0) }
 		}
+
+		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
+		const ctx = canvas.getContext('2d')
+		if (q.devicePixelRatio > 1) {
+			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+		}
+		ctx.textAlign = 'center'
+		ctx.textBaseline = 'middle'
+
+		gr.messagerowheights = plot_messagerows(ctx, group, q)
 
 		for (const template of group.templates) {
 			plot_template(ctx, template, group, q)
@@ -341,7 +343,8 @@ async function divide_reads_togroups(templates, q) {
 		{
 			regions: duplicateRegions(q.regions),
 			templates,
-			messagerows: []
+			messagerows: [],
+			partstack: q.partstack
 		}
 	]
 }
@@ -765,12 +768,12 @@ function qual2int(s) {
 	return lst
 }
 
-function plot_messagerows(ctx, group) {
+function plot_messagerows(ctx, group, q) {
 	let y = 0
 	for (const row of group.messagerows) {
 		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
 		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, group.canvaswidth / 2, y + row.h / 2)
+		ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
 	return y

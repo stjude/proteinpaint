@@ -23,10 +23,10 @@ group {}
 	.allowpartstack
 .dom{}
 	.imgg
-	.box_move
-	.box_stay
 	.img_fullstack
 	.img_partstack
+	.box_move
+	.box_stay
 	.vslider{}
 		.g
 		.boxy
@@ -162,23 +162,26 @@ or update existing groups (pan or zoom), in which groupidx will be provided
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
-	/*
+	let countr = 0,
+		countt = 0
+	for (const g of tk.groups) {
+		countr += g.data.count.r
+		if (tk.asPaired) {
+			countt += g.data.count.t
+		}
+	}
 	tk.label_count
-		.text(
-			(tk.data.count.r ? tk.data.count.r + ' reads' : '') +
-				(tk.data.count.t ? ', ' + tk.data.count.t + ' templates' : '')
-		)
+		.text((countr ? countr + ' reads' : '') + (countt ? ', ' + countt + ' templates' : ''))
 		.each(function() {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
-		*/
 	block.setllabel()
 }
 
 function matchGroup(tk, gd) {
 	// TODO match by something from gb
 	const g = tk.groups[0]
-	g.data = gb
+	g.data = gd
 	return g
 }
 
@@ -187,7 +190,10 @@ function setTkHeight(tk) {
 	let h = 0
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
-		g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ')')
+		if (g.partstack) {
+			// slider visible
+			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ')')
+		}
 		h += g.data.height
 	}
 	tk.height_main = tk.height = h
@@ -195,41 +201,20 @@ function setTkHeight(tk) {
 }
 
 function updateExistingGroups(data, tk, block) {
-	// only update groups returned from server, in data.groups; and need to match client-side group obj
+	// to update all existing groups and reset each group to fullstack
 	for (const gd of data.groups) {
 		const group = matchGroup(tk, gd)
 
 		update_boxes(group, tk, block)
 
-		if (group.partstack) {
-			// in part stack
-			group.dom.img_partstack
-				.attr('xlink:href', group.data.src)
-				.attr('width', group.data.width)
-				.attr('height', group.data.height)
-			group.dom.img_fullstack.attr('width', 0).attr('height', 0)
-			//tk.config_handle.transition().attr('x', 40)
-			group.dom.vslider.g.transition().attr('transform', 'translate(0,' + group.data.messagerowheights + ') scale(1)')
-			group.dom.vslider.bar.transition().attr('height', group.data.height)
-			group.dom.vslider.boxy = (group.data.height * group.partstack.start) / group.data_fullstack.stackcount
-			group.dom.vslider.boxh =
-				(group.data.height * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
-			group.dom.vslider.box.transition().attr('height', group.dom.vslider.boxh)
-			group.dom.vslider.boxbotline
-				.transition()
-				.attr('y1', group.dom.vslider.boxh)
-				.attr('y2', group.dom.vslider.boxh)
-			group.dom.vslider.boxg.transition().attr('transform', 'translate(0,' + group.dom.vslider.boxy + ')')
-		} else {
-			// in full stack
-			group.dom.img_fullstack
-				.attr('xlink:href', group.data.src)
-				.attr('width', group.data.width)
-				.attr('height', group.data.height)
-			group.dom.img_partstack.attr('width', 0).attr('height', 0)
-			//tk.config_handle.transition().attr('x', 0)
-			group.dom.vslider.g.transition().attr('transform', 'scale(0)')
-		}
+		// in full stack
+		group.dom.img_fullstack
+			.attr('xlink:href', group.data.src)
+			.attr('width', group.data.width)
+			.attr('height', group.data.height)
+		group.dom.img_partstack.attr('width', 0).attr('height', 0)
+		//tk.config_handle.transition().attr('x', 0)
+		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 		group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
 	}
 }
@@ -277,6 +262,7 @@ function makeTk(tk, block) {
 
 	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
+	// <g> of each group is added dynamically to glider
 	tk.dom = {
 		vsliderg: tk.gright.append('g')
 	}
@@ -351,7 +337,7 @@ function makeGroup(gd, tk, block) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
-				enter_partstack(group, tk, block, my - group.messagerowheights)
+				enter_partstack(group, tk, block, my - group.data.messagerowheights)
 				return
 			}
 			if (!group.data.templatebox) return
@@ -390,7 +376,7 @@ function makeGroup(gd, tk, block) {
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 
-					getReadInfo(group, tk, block, t, block.pxoff2region(mx))
+					getReadInfo(tk, block, t, block.pxoff2region(mx))
 					return
 				}
 			}
@@ -443,10 +429,11 @@ function makeGroup(gd, tk, block) {
 				group.partstack.stop += delta
 				block.tkcloakon(tk)
 				// tell server which group to update
-				group.data = await getData(tk, block, [
+				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
 					'stackstop=' + group.partstack.stop
 				])
+				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				setTkHeight(tk)
 				block.tkcloakoff(tk, {})
@@ -489,10 +476,11 @@ function makeGroup(gd, tk, block) {
 				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
 				block.tkcloakon(tk)
 				// tell server which group to update
-				group.data = await getData(tk, block, [
+				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
 					'stackstop=' + group.partstack.stop
 				])
+				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				block.tkcloakoff(tk, {})
 				setTkHeight(tk)
@@ -532,10 +520,11 @@ function makeGroup(gd, tk, block) {
 				group.dom.vslider.boxh += deltay
 				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
 				block.tkcloakon(tk)
-				group.data = await getData(tk, block, [
+				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
 					'stackstop=' + group.partstack.stop
 				])
+				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				setTkHeight(tk)
 				block.tkcloakoff(tk, {})
@@ -631,32 +620,67 @@ if is pair mode, is the template
 	tk.readpane.body.append('div').html(data.html)
 }
 
-async function enter_partstack(tk, block, y) {
+async function enter_partstack(group, tk, block, y) {
 	// enter part stack mode from full stack mode
-	tk.data_fullstack = tk.data
-	const clickstackidx = (tk.partstack ? tk.partstack.start : 0) + Math.floor(y / tk.data.stackheight)
+	group.data_fullstack = group.data
+	const clickstackidx = (group.partstack ? group.partstack.start : 0) + Math.floor(y / group.data.stackheight)
 	// set start/stop of tk.partstack, ensure stop-start=stackpagesize
 	if (clickstackidx < stackpagesize / 2) {
 		// clicked too close to top
-		tk.partstack = {
+		group.partstack = {
 			start: 0,
 			stop: stackpagesize
 		}
-	} else if (clickstackidx > tk.data_fullstack.stackcount - stackpagesize / 2) {
+	} else if (clickstackidx > group.data_fullstack.stackcount - stackpagesize / 2) {
 		// clicked too close to bottom
-		tk.partstack = {
-			start: tk.data_fullstack.stackcount - stackpagesize,
-			stop: tk.data_fullstack.stackcount
+		group.partstack = {
+			start: group.data_fullstack.stackcount - stackpagesize,
+			stop: group.data_fullstack.stackcount
 		}
 	} else {
-		tk.partstack = {
+		group.partstack = {
 			start: clickstackidx - stackpagesize / 2,
 			stop: clickstackidx + stackpagesize / 2
 		}
 	}
 	block.tkcloakon(tk)
-	tk.data = await getData(tk, block, ['stackstart=' + tk.partstack.start, 'stackstop=' + tk.partstack.stop])
-	renderTk(tk, block)
+	const _d = await getData(tk, block, ['stackstart=' + group.partstack.start, 'stackstop=' + group.partstack.stop])
+	group.data = _d.groups[0]
+	renderGroup(group, tk, block)
+
+	setTkHeight(tk)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
+}
+
+function renderGroup(group, tk, block) {
+	update_boxes(group, tk, block)
+	if (group.partstack) {
+		group.dom.img_partstack
+			.attr('xlink:href', group.data.src)
+			.attr('width', group.data.width)
+			.attr('height', group.data.height)
+		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
+		//tk.config_handle.transition().attr('x', 40)
+		group.dom.vslider.g.transition().attr('transform', 'translate(0,' + group.data.messagerowheights + ') scale(1)')
+		group.dom.vslider.bar.transition().attr('height', group.data.height)
+		group.dom.vslider.boxy = (group.data.height * group.partstack.start) / group.data_fullstack.stackcount
+		group.dom.vslider.boxh =
+			(group.data.height * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
+		group.dom.vslider.box.transition().attr('height', group.dom.vslider.boxh)
+		group.dom.vslider.boxbotline
+			.transition()
+			.attr('y1', group.dom.vslider.boxh)
+			.attr('y2', group.dom.vslider.boxh)
+		group.dom.vslider.boxg.transition().attr('transform', 'translate(0,' + group.dom.vslider.boxy + ')')
+	} else {
+		group.dom.img_fullstack
+			.attr('xlink:href', group.data.src)
+			.attr('width', group.data.width)
+			.attr('height', group.data.height)
+		group.dom.img_partstack.attr('width', 0).attr('height', 0)
+		//tk.config_handle.transition().attr('x', 0)
+		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
+	}
+	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
 }
