@@ -418,6 +418,12 @@ function makeGroup(gd, tk, block) {
 				}
 				deltay = d
 				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
+				group.dom.img_partstack.attr(
+					'y',
+					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / group.data.height)
+				)
+				group.dom.box_move.attr('width', 0)
+				group.dom.box_stay.attr('width', 0)
 			})
 			b.on('mouseup', async () => {
 				group.dom.vslider.box.attr('fill', '#c7edc5')
@@ -660,6 +666,7 @@ function renderGroup(group, tk, block) {
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
+			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
 		//tk.config_handle.transition().attr('x', 40)
 		group.dom.vslider.g.transition().attr('transform', 'translate(0,' + group.data.messagerowheights + ') scale(1)')
