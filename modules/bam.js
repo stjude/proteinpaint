@@ -8,20 +8,35 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 
 /*
+1. reads are parsed into template/segments
+2. mismatch checked if sufficient zoom in
+3. divide reads to groups
+	1. if by snv, will require mismatches
+	2. if by k-mer or blast, require read sequence
+4. stack and render each read group
+
+when client zooms into one read group, server needs to know which group it is and only generate that group
+
 *********************** new q{}
+.genome
+.devicePixelRatio
 .asPaired
+.stacksegspacing
+.canvaswidth
 .regions[ r ]
+	.chr/start/stop
 	.scale()
-	.to_checkmismatch bool
 	.referenceseq     str
 	.to_printnt  bool
 	.to_qual     bool
 	.lines[]
-.readcounter    read counter during loading, to detect when is above limit
 .groups[ {} ]   multi-groups sharing the same set of regions, each with a set of reads
 	.partstack{}  user triggered action
 	.regions[]
-		.lines[]
+		.x, .scale, .ntwidth // copied from q.regions
+		.to_printnt // group-specific
+		.to_qual
+		
 	.templates[]
 	.stacks[]
 	.returntemplatebox[]
@@ -30,32 +45,12 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 	.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 	.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
 	.canvasheight
-
-*********************** OLD q{} runtime
-.regions[]
-	.chr/start/stop
-	.scale()
-	.ntwidth
-	.to_checkmismatch bool
-	.referenceseq     str
-	.to_printnt  bool
-	.to_qual     bool
-	.lines[]
-.asPaired
-.stackheight
-.stackspace
-.stacksegspacing
-.stacks[]
-.canvaswidth
-.canvasheight
-.templates[]
-.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
-.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
+	.messagerows[ {} ]
 .messagerows[ {} ]
 	.h int
 	.t str
-.returntemplatebox[]
 
+*********************** template - segment - box
 template {}
 .y // initially stack idx, then replaced to be actual screen y
 .x1, x2  // screen px, only for stacking not rendering
@@ -86,23 +81,26 @@ box {}
 get_q
 do_query
 	query_region
-	may_get_referenceseq
 	get_templates
 		parse_one_segment
-	stack_templates
-		may_trimstacks
-	poststack_adjustq
-		getstacksizebystacks
-		get_refseq
-	finalize_templates
-		get_stacky
-			overlapRP_setflag
-			getrowheight_template_overlapread
+	may_checkrefseq4mismatch
 		check_mismatch
-	plot_messagerows
-	plot_template
-		plot_segment
-	plot_insertions
+	divide_reads_togroups
+		duplicateRegions
+	(for each group...)
+		stack_templates
+			may_trimstacks
+		poststack_adjustq
+			getstacksizebystacks
+			get_refseq
+		finalize_templates
+			get_stacky
+				overlapRP_setflag
+				getrowheight_template_overlapread
+		plot_messagerows
+		plot_template
+			plot_segment
+		plot_insertions
 */
 
 // match box color, for single read and normal read pairs
@@ -135,6 +133,7 @@ const overlapreadhlcolor = 'blue'
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
 const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
+const minntwidth_findmismatch = 0.9 // mismatch
 
 const minstackheight2strandarrow = 7
 const minstackheight2printbplenDN = 7
@@ -187,7 +186,7 @@ async function get_q(genome, req) {
 		file: _file, // may change if is url
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
-		_numofreads: 0,
+		_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 		messagerows: [],
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
@@ -196,6 +195,7 @@ async function get_q(genome, req) {
 	}
 
 	if (req.query.stackstart) {
+		// to be passed to the read group being modified
 		q.partstack = {
 			start: Number(req.query.stackstart),
 			stop: Number(req.query.stackstop)
@@ -226,13 +226,16 @@ async function get_q(genome, req) {
 
 async function do_query(q) {
 	for (const r of q.regions) {
-		await query_region(r, q)
+		await query_region(r, q) // add r.lines[]
 	}
-	delete q.readcounter // read counter no longer needed after loading
-
-	await may_get_referenceseq(q)
-
+	delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
+
+	// parse reads and cigar
+	const templates = get_templates(q)
+	// if zoomed in, will check reference for mismatch, so that templates can be divided by snv
+	// read quality is not parsed yet
+	await may_checkrefseq4mismatch(templates, q)
 
 	const result = {
 		nochr: q.nochr,
@@ -250,14 +253,12 @@ async function do_query(q) {
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	const groups = await divide_reads_togroups(q)
+	const groups = await divide_reads_togroups(templates, q)
 	for (const group of groups) {
+		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
-		group.templates = get_templates(group, q)
-
 		stack_templates(group, q) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q)
-
 		finalize_templates(group, q) // set .canvasheight
 
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
@@ -276,10 +277,7 @@ async function do_query(q) {
 			stackcount: group.stacks.length,
 			allowpartstack: group.allowpartstack,
 			templatebox: group.returntemplatebox,
-			messagerowheights: plot_messagerows(ctx, group),
-			count: {
-				r: group.regions.reduce((i, j) => i + j.lines.length, 0)
-			}
+			messagerowheights: plot_messagerows(ctx, group)
 		}
 
 		for (const template of group.templates) {
@@ -295,45 +293,68 @@ async function do_query(q) {
 	return result
 }
 
-async function may_get_referenceseq(q) {
+async function may_checkrefseq4mismatch(templates, q) {
 	// requires ntwidth
+	// read quality is not parsed yet, so need to set cidx for mismatch box so its quality can be added later
 	for (const r of q.regions) {
-		if (r.lines.length > 0 && r.ntwidth >= 0.9) {
+		if (r.lines.length > 0 && r.ntwidth >= minntwidth_findmismatch) {
 			r.to_checkmismatch = true
 			r.referenceseq = await get_refseq(q.genome, r.chr + ':' + (r.start + 1) + '-' + r.stop)
 		}
 	}
+	for (const t of templates) {
+		for (const segment of t.segments) {
+			const r = q.regions[segment.ridx]
+			if (!r.to_checkmismatch) continue
+			const mismatches = []
+			for (const b of segment.boxes) {
+				if (b.cidx == undefined) {
+					continue
+				}
+				if (b.opr == 'M') {
+					b.s = segment.seq.substr(b.cidx, b.len)
+					check_mismatch(mismatches, r, b)
+				}
+			}
+			if (mismatches.length) segment.boxes.push(...mismatches)
+		}
+	}
+	// attr no longer needed
+	for (const r of q.regions) {
+		delete r.to_checkmismatch
+		delete r.referenceseq
+	}
 }
 
-async function divide_reads_togroups(q) {
+async function divide_reads_togroups(templates, q) {
 	/* loaded reads for all regions under q.regions
 	divide to groups if to match with variant
 	plot each group into a separate canvas
 	*/
 
 	if (q.variant) {
-		const filename = writefile_reads(q)
 		// TODO
 	}
 
 	// no variant, return single group
 	return [
 		{
-			regions: q.regions,
+			regions: duplicateRegions(q.regions),
+			templates,
 			messagerows: []
 		}
 	]
 }
-
-async function writefile_reads(q) {
-	// unfinished
-	const lines = []
-	for (const t of q.templates) {
-		for (const s of t.segments) {
-			lines.push('>' + s.qname + '\n' + s.seq)
+function duplicateRegions(regions) {
+	// each read group needs to keep its own list of regions
+	// to keep track of group-specific rendering parameters
+	return regions.map(i => {
+		return {
+			x: i.x,
+			scale: i.scale,
+			ntwidth: i.ntwidth
 		}
-	}
-	const file = await utils.write_tmpfile(lines.join('\n'))
+	})
 }
 
 function query_region(r, q) {
@@ -352,8 +373,8 @@ function query_region(r, q) {
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			r.lines.push(line)
-			q.readcounter++
-			if (q.readcounter >= maxreadcount) {
+			q._numofreads++
+			if (q._numofreads >= maxreadcount) {
 				ps.kill()
 				q.messagerows.push({
 					h: 13,
@@ -367,15 +388,15 @@ function query_region(r, q) {
 	})
 }
 
-function get_templates(group, q) {
+function get_templates(q) {
 	// parse reads from all regions
 	// returns an array of templates, no matter if paired or not
 	if (!q.asPaired) {
 		// pretends single reads as templates
 		const lst = []
 		// to account for reads spanning between multiple regions, may use qname2read = new Map()
-		for (let i = 0; i < group.regions.length; i++) {
-			const r = group.regions[i]
+		for (let i = 0; i < q.regions.length; i++) {
+			const r = q.regions[i]
 			for (const line of r.lines) {
 				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
@@ -392,8 +413,8 @@ function get_templates(group, q) {
 	const qname2template = new Map()
 	// key: qname
 	// value: template, a list of segments
-	for (let i = 0; i < group.regions.length; i++) {
-		const r = group.regions[i]
+	for (let i = 0; i < q.regions.length; i++) {
+		const r = q.regions[i]
 		for (const line of r.lines) {
 			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
@@ -693,7 +714,6 @@ for each template:
 	  may do below:
 		add sequence
 		add quality
-		check mismatch
 at the end, set q.canvasheight
 */
 
@@ -705,7 +725,6 @@ at the end, set q.canvasheight
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
 			const quallst = r.to_qual ? qual2int(segment.qual) : null
-			const mismatches = []
 			for (const b of segment.boxes) {
 				if (b.cidx == undefined) {
 					continue
@@ -713,12 +732,7 @@ at the end, set q.canvasheight
 				if (quallst) {
 					b.qual = quallst.slice(b.cidx, b.cidx + b.len)
 				}
-				if (b.opr == 'M') {
-					if (r.to_checkmismatch) {
-						b.s = segment.seq.substr(b.cidx, b.len)
-						check_mismatch(mismatches, r, b)
-					}
-				} else if (b.opr == 'I') {
+				if (b.opr == 'I') {
 					// insertion has been decided to be visible so always get seq
 					b.s = segment.seq.substr(b.cidx, b.len)
 				} else if (b.opr == 'X' || b.opr == 'S') {
@@ -728,12 +742,10 @@ at the end, set q.canvasheight
 				}
 				delete b.cidx
 			}
-			if (mismatches.length) segment.boxes.push(...mismatches)
 			delete segment.seq
 			delete segment.qual
 		}
 	}
-
 	if (stacky.length == 0) {
 		// no reads, must use sum of message row height as canvas height
 		group.canvasheight = group.messagerows.reduce((i, j) => i + j.h, 0)
@@ -843,9 +855,9 @@ function check_mismatch(lst, r, box) {
 				opr: 'X', // mismatch
 				start: box.start + i,
 				len: 1,
-				s: readnt
+				s: readnt,
+				cidx: box.cidx + i
 			}
-			if (box.qual) b.qual = [box.qual[i]]
 			lst.push(b)
 		}
 	}
@@ -1211,7 +1223,6 @@ async function route_getread(genome, req) {
 	}
 	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
 	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
-	//r.referenceseq = await get_refseq(genome, req.query.chr + ':' + (r.start + 1) + '-' + r.stop)
 	const seglst = await query_oneread(req, r)
 	if (!seglst) throw 'read not found'
 	const lst = []
