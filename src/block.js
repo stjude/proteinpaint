@@ -1571,30 +1571,67 @@ reverseorient() {
 		this.pannedpx = undefined
 		this.resized = false
 
-		const pos = coord.string2pos(s, this.genome)
-		if (pos) {
-			this.rglst = [
-				{
-					chr: pos.chr,
-					bstart: 0,
-					bstop: pos.chrlen,
-					start: Math.max(0, pos.start - 1),
-					stop: pos.stop - 1,
-					reverse: this.showreverse
+		if (typeof s == 'string') {
+			const pos = coord.string2pos(s, this.genome)
+			if (pos) {
+				this.rglst = [
+					{
+						chr: pos.chr,
+						bstart: 0,
+						bstop: pos.chrlen,
+						start: Math.max(0, pos.start - 1),
+						stop: pos.stop - 1,
+						reverse: this.showreverse
+					}
+				]
+
+				if (pos.actualposition && pos.actualposition.len <= 40) {
+					this.addhlregion(
+						pos.chr,
+						pos.actualposition.position - 1,
+						pos.actualposition.position - 1 + pos.actualposition.len - 1
+					)
 				}
-			]
 
-			if (pos.actualposition && pos.actualposition.len <= 40) {
-				this.addhlregion(
-					pos.chr,
-					pos.actualposition.position - 1,
-					pos.actualposition.position - 1 + pos.actualposition.len - 1
-				)
+				this.startidx = this.stopidx = 0
+				this.block_coord_updated()
+				return
 			}
-
-			this.startidx = this.stopidx = 0
-			this.block_coord_updated()
-			return
+		} else if (typeof s == 'object' && s.chr && Number.isInteger(s.start)) {
+			// quick fix to avoid calling string2pos and zoom out to 400bp
+			const _chr = this.genome.chrlookup[s.chr.toUpperCase()]
+			if (_chr) {
+				let start = s.start,
+					stop = Number.isInteger(s.stop) ? s.stop : s.start
+				const actualstart = start,
+					actualstop = stop
+				const minspan = Math.ceil(this.width / ntpxwidth) //200
+				if (stop - start < minspan) {
+					const h = Math.ceil(minspan / 2)
+					const m = Math.floor((start + stop) / 2)
+					start = m - h
+					stop = m + h
+				}
+				this.rglst = [
+					{
+						chr: _chr.name,
+						bstart: 0,
+						bstop: _chr.len,
+						start: start - 1,
+						stop: stop - 1,
+						reverse: this.showreverse
+					}
+				]
+				this.startidx = this.stopidx = 0
+				if (actualstop - actualstart < 40) {
+					this.addhlregion(s.chr, actualstart - 1, actualstop - 1)
+				}
+				this.block_coord_updated()
+				return
+			} else {
+				this.error('Invalid chr: ' + s.chr)
+				return
+			}
 		}
 		// try
 		this.block_jump_gene(s)

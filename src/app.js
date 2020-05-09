@@ -1022,7 +1022,14 @@ async function launchblock(arg,holder) {
 		// show box
 		blockinitarg.dogtag= arg.dogtag || arg.genome
 	}
-	if(arg.position) {
+
+	if(arg.chr && Number.isInteger(arg.start)) {
+		// quick fix!!
+		// as string2pos() will force minimum 400bp span, use {chr,start,stop} to avoid changing it
+		blockinitarg.chr=arg.chr
+		blockinitarg.start=arg.start
+		blockinitarg.stop= Number.isInteger(arg.stop) ? arg.stop : arg.start+1
+	} else if(arg.position) {
 		const pos=string2pos(arg.position, genomeobj)
 		if(pos) {
 			blockinitarg.chr=pos.chr
