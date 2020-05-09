@@ -128,6 +128,9 @@ export async function loadTk(tk, block) {
 
 async function getData(tk, block, additional = []) {
 	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), ...additional]
+	if (tk.variant) {
+		lst.push('variant=' + tk.variant.chr + '.' + tk.variant.pos + '.' + tk.variant.ref + '.' + tk.variant.alt)
+	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized

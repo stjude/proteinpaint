@@ -23,6 +23,10 @@ when client zooms into one read group, server needs to know which group it is an
 .asPaired
 .stacksegspacing
 .canvaswidth
+.variant{}
+	.chr/pos/ref/alt
+.sv{}
+	.chrA/posA/chrB/posB
 .regions[ r ]
 	.chr/start/stop
 	.scale()
@@ -31,6 +35,7 @@ when client zooms into one read group, server needs to know which group it is an
 	.to_qual     bool
 	.lines[]
 .groups[ {} ]   multi-groups sharing the same set of regions, each with a set of reads
+	.type
 	.partstack{}  user triggered action
 	.regions[]
 		.x, .scale, .ntwidth // copied from q.regions
@@ -80,12 +85,14 @@ box {}
 *********************** function cascade
 get_q
 do_query
-	query_region
+	query_reads
+		query_region
 	get_templates
 		parse_one_segment
 	may_checkrefseq4mismatch
 		check_mismatch
 	divide_reads_togroups
+		may_match_snv
 		duplicateRegions
 	(for each group...)
 		stack_templates
@@ -154,6 +161,8 @@ const readspace_bp = 5
 const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
+const bases = new Set(['A', 'T', 'C', 'G'])
+
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
 
@@ -190,6 +199,28 @@ async function get_q(genome, req) {
 		messagerows: [],
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
+	if (req.query.variant) {
+		const t = req.query.variant.split('.')
+		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
+		q.variant = {
+			chr: t[0],
+			pos: Number(t[1]),
+			ref: t[2].toUpperCase(),
+			alt: t[3].toUpperCase()
+		}
+		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
+	} else if (req.query.sv) {
+		const t = req.query.sv.split('.')
+		if (t.length != 4) throw 'invalid sv, not chrA.posA.chrB.posB'
+		q.sv = {
+			chrA: t[0],
+			posA: Number(t[1]),
+			chrB: t[2],
+			posB: Number(t[3])
+		}
+		if (Number.isNaN(q.sv.posA)) throw 'sv.posA not integer'
+		if (Number.isNaN(q.sv.posB)) throw 'sv.posB not integer'
+	}
 	if (isurl) {
 		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
 	}
@@ -213,6 +244,9 @@ async function get_q(genome, req) {
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
+		if (!r.chr) throw '.chr missing from a region'
+		if (!Number.isInteger(r.start)) throw '.start not integer of a region'
+		if (!Number.isInteger(r.stop)) throw '.stop not integer of a region'
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
 		maxntwidth = Math.max(maxntwidth, r.ntwidth)
@@ -225,9 +259,7 @@ async function get_q(genome, req) {
 }
 
 async function do_query(q) {
-	for (const r of q.regions) {
-		await query_region(r, q) // add r.lines[]
-	}
+	await query_reads(q)
 	delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
 
@@ -263,6 +295,7 @@ async function do_query(q) {
 
 		// result obj of this group
 		const gr = {
+			type: group.type,
 			width: q.canvaswidth,
 			height: group.canvasheight,
 			stackheight: group.stackheight,
@@ -293,6 +326,63 @@ async function do_query(q) {
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	return result
+}
+
+async function query_reads(q) {
+	/*
+	if variant, query just the region at the variant position
+	then, assign the reads to q.regions[0]
+	assume just one region
+
+	if sv, query at the two breakends, and assign reads to two regions one for each breakend
+	assume two regions
+
+	otherwise, query for every region in q.regions
+	*/
+	if (q.variant) {
+		const r = {
+			chr: q.variant.chr,
+			start: q.variant.pos,
+			stop: q.variant.pos
+		}
+		await query_region(r, q)
+		q.regions[0].lines = r.lines
+		return
+	}
+	if (q.sv) {
+		return
+	}
+	for (const r of q.regions) {
+		await query_region(r, q) // add r.lines[]
+	}
+}
+
+function query_region(r, q) {
+	// for each region, query its data
+	// if too many reads, collapse to coverage
+	r.lines = []
+	return new Promise((resolve, reject) => {
+		const ps = spawn(
+			samtools,
+			['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
+		rl.on('line', line => {
+			r.lines.push(line)
+			q._numofreads++
+			if (q._numofreads >= maxreadcount) {
+				ps.kill()
+				q.messagerows.push({
+					h: 13,
+					t: 'Too many reads in view range. Try zooming into a smaller region.'
+				})
+			}
+		})
+		rl.on('close', () => {
+			resolve()
+		})
+	})
 }
 
 async function may_checkrefseq4mismatch(templates, q) {
@@ -333,14 +423,31 @@ async function divide_reads_togroups(templates, q) {
 	divide to groups if to match with variant
 	plot each group into a separate canvas
 	*/
-
-	if (q.variant) {
-		// TODO
+	if (templates.length == 0) {
+		// no reads at all, return empty group
+		return [
+			{
+				type: 'all',
+				regions: duplicateRegions(q.regions),
+				templates,
+				messagerows: [],
+				partstack: q.partstack
+			}
+		]
 	}
 
+	if (q.variant) {
+		const lst = may_match_snv(templates, q)
+		if (lst) return lst
+		// not snv
+	}
+	if (q.sv) {
+		// TODO
+	}
 	// no variant, return single group
 	return [
 		{
+			type: 'all',
 			regions: duplicateRegions(q.regions),
 			templates,
 			messagerows: [],
@@ -360,35 +467,77 @@ function duplicateRegions(regions) {
 	})
 }
 
-function query_region(r, q) {
-	// for each region, query its data
-	// if too many reads, collapse to coverage
-	if (!r.chr) throw '.chr missing'
-	if (!Number.isInteger(r.start)) throw '.start not integer'
-	if (!Number.isInteger(r.stop)) throw '.stop not integer'
-	r.lines = []
-	return new Promise((resolve, reject) => {
-		const ps = spawn(
-			samtools,
-			['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-			{ cwd: q.dir }
-		)
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			r.lines.push(line)
-			q._numofreads++
-			if (q._numofreads >= maxreadcount) {
-				ps.kill()
-				q.messagerows.push({
-					h: 13,
-					t: 'Too many reads in view range. Try zooming into a smaller region.'
-				})
+function may_match_snv(templates, q) {
+	const refallele = q.variant.ref.toUpperCase()
+	const altallele = q.variant.alt.toUpperCase()
+	if (!bases.has(refallele) || !bases.has(altallele)) return
+	let support_ref = [],
+		support_alt = [],
+		support_no = []
+	for (const t of templates) {
+		let used = false
+		for (const s of t.segments) {
+			for (const b of s.boxes) {
+				if (b.opr == 'X' && b.start == q.variant.pos) {
+					// mismatch on this pos
+					if (b.s == altallele) {
+						support_alt.push(t)
+						used = true
+						break
+					}
+					// is not alt
+					support_no.push(t)
+					used = true
+					break
+				}
 			}
+			if (used) break
+		}
+		if (!used) {
+			support_ref.push(t)
+		}
+	}
+	const groups = []
+	if (support_alt.length) {
+		groups.push({
+			type: 'support_alt',
+			regions: duplicateRegions(q.regions),
+			templates: support_alt,
+			messagerows: [
+				{
+					h: 15,
+					t: support_alt.length + ' reads supporting mutant allele'
+				}
+			]
 		})
-		rl.on('close', () => {
-			resolve()
+	}
+	if (support_ref.length) {
+		groups.push({
+			type: 'support_ref',
+			regions: duplicateRegions(q.regions),
+			templates: support_ref,
+			messagerows: [
+				{
+					h: 15,
+					t: support_ref.length + ' reads supporting reference allele'
+				}
+			]
 		})
-	})
+	}
+	if (support_no.length) {
+		groups.push({
+			type: 'support_no',
+			regions: duplicateRegions(q.regions),
+			templates: support_no,
+			messagerows: [
+				{
+					h: 15,
+					t: support_no.length + ' reads not supporting either reference or mutant alleles'
+				}
+			]
+		})
+	}
+	return groups
 }
 
 function get_templates(q) {
