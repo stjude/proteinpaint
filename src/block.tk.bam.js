@@ -150,7 +150,10 @@ async function getData(tk, block, additional = []) {
 function renderTk(data, tk, block) {
 	/*
 server can either generate groups anew (1. upon init 2. change blast parameter),
-or update existing groups (pan or zoom), in which groupidx will be provided
+or update existing groups, in which groupidx will be provided
+1. pan or zoom
+2. update indel match parameter
+3. change/cancel variant
 */
 	tk.nochr = data.nochr
 	if (!tk.groups) {
@@ -181,13 +184,6 @@ or update existing groups (pan or zoom), in which groupidx will be provided
 	block.setllabel()
 }
 
-function matchGroup(tk, gd) {
-	// TODO match by something from gb
-	const g = tk.groups[0]
-	g.data = gd
-	return g
-}
-
 function setTkHeight(tk) {
 	// call after any group is updated
 	let h = 0
@@ -206,7 +202,9 @@ function setTkHeight(tk) {
 function updateExistingGroups(data, tk, block) {
 	// to update all existing groups and reset each group to fullstack
 	for (const gd of data.groups) {
-		const group = matchGroup(tk, gd)
+		const group = tk.groups.find(g => g.data.type == gd.type)
+		if (!group) throw 'unknown group type: ' + gd.type
+		group.data = gd
 
 		update_boxes(group, tk, block)
 
@@ -319,7 +317,7 @@ function makeGroup(gd, tk, block) {
 		})
 		.on('mousemove', () => {
 			if (group.data.allowpartstack) {
-				// to show horizontal line
+				// TODO expand dom.box_move with full width and height to cover minimum expandable reads
 				return
 			}
 			if (!group.data.templatebox) return
@@ -437,10 +435,10 @@ function makeGroup(gd, tk, block) {
 				group.partstack.start += delta
 				group.partstack.stop += delta
 				block.tkcloakon(tk)
-				// tell server which group to update
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop
+					'stackstop=' + group.partstack.stop,
+					'grouptype=' + group.data.type
 				])
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -484,10 +482,10 @@ function makeGroup(gd, tk, block) {
 				group.dom.vslider.boxy += deltay
 				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
 				block.tkcloakon(tk)
-				// tell server which group to update
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop
+					'stackstop=' + group.partstack.stop,
+					'grouptype=' + group.data.type
 				])
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -531,7 +529,8 @@ function makeGroup(gd, tk, block) {
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop
+					'stackstop=' + group.partstack.stop,
+					'grouptype=' + group.data.type
 				])
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -602,7 +601,7 @@ if is pair mode, is the template
 	const [ridx, pos] = tmp
 	const lst = [
 		'getread=1',
-		'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
+		'qname=' + 22642192, //encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
 		'genome=' + block.genome.name,
 		'chr=' + block.rglst[ridx].chr,
 		'pos=' + pos,
@@ -630,7 +629,9 @@ if is pair mode, is the template
 }
 
 async function enter_partstack(group, tk, block, y) {
-	// enter part stack mode from full stack mode
+	/* for a group, enter part stack mode from full stack mode
+	will only update data and rendering of this group, but not other groups
+	*/
 	group.data_fullstack = group.data
 	const clickstackidx = (group.partstack ? group.partstack.start : 0) + Math.floor(y / group.data.stackheight)
 	// set start/stop of tk.partstack, ensure stop-start=stackpagesize
@@ -653,7 +654,11 @@ async function enter_partstack(group, tk, block, y) {
 		}
 	}
 	block.tkcloakon(tk)
-	const _d = await getData(tk, block, ['stackstart=' + group.partstack.start, 'stackstop=' + group.partstack.stop])
+	const _d = await getData(tk, block, [
+		'stackstart=' + group.partstack.start,
+		'stackstop=' + group.partstack.stop,
+		'grouptype=' + group.data.type
+	])
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 

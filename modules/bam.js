@@ -10,14 +10,27 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 /*
 1. reads are parsed into template/segments
 2. mismatch checked if sufficient zoom in
-3. divide reads to groups
-	1. if by snv, will require mismatches
-	2. if by k-mer or blast, require read sequence
-4. stack and render each read group
+3. divide reads to groups:
+   upon first query, will produce all possible groups based on variant type
+   - snv/indel yields up to 3 groups
+     1. if by snv, will require mismatches
+     2. if by complex variant, require read sequence to do k-mer or blast
+   - sv yields up to 2 groups
+     method to be developed
+   - default just 1 group with all the reads
+   each group is assigned a hardcoded "type" string
+   server returns all groups with non-0 templates
+   client may zoom into one dense group, in which the group type will be indicated in server request
+   so server should only generate group matching that type
+4. stack, trim, and render each read group.
+   currently code from here is agnostic to type of group
+   but possible to implement type-specific method
+
 
 when client zooms into one read group, server needs to know which group it is and only generate that group
 
 *********************** new q{}
+.grouptype, .partstack{}
 .genome
 .devicePixelRatio
 .asPaired
@@ -93,7 +106,10 @@ do_query
 		check_mismatch
 	divide_reads_togroups
 		may_match_snv
-		duplicateRegions
+			make_type2group
+				duplicateRegions
+		match_complexvariant
+		match_sv
 	(for each group...)
 		stack_templates
 			may_trimstacks
@@ -162,6 +178,12 @@ const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
+// group types
+const type_all = 'all'
+const type_supportref = 'support_ref'
+const type_supportalt = 'support_alt'
+const type_supportno = 'support_no'
+const type_supportsv = 'support_sv'
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
@@ -199,6 +221,9 @@ async function get_q(genome, req) {
 		messagerows: [],
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
+	if (isurl) {
+		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
+	}
 	if (req.query.variant) {
 		const t = req.query.variant.split('.')
 		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
@@ -221,16 +246,18 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.sv.posA)) throw 'sv.posA not integer'
 		if (Number.isNaN(q.sv.posB)) throw 'sv.posB not integer'
 	}
-	if (isurl) {
-		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
-	}
 
 	if (req.query.stackstart) {
 		// to be assigned to the read group being modified
+		if (!req.query.stackstop) throw '.stackstop missing'
 		q.partstack = {
 			start: Number(req.query.stackstart),
 			stop: Number(req.query.stackstop)
 		}
+		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
+		if (Number.isNaN(q.partstack.stop)) throw '.stackstop not integer'
+		if (!req.query.grouptype) throw '.grouptype required for partstack'
+		q.grouptype = req.query.grouptype
 	}
 
 	if (req.query.nochr) {
@@ -279,14 +306,14 @@ async function do_query(q) {
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	const groups = await divide_reads_togroups(templates, q)
+	q.groups = await divide_reads_togroups(templates, q)
 	if (result.count.r == 0) {
-		groups[0].messagerows.push({
+		q.groups[0].messagerows.push({
 			h: 30,
 			t: 'No reads in view range.'
 		})
 	}
-	for (const group of groups) {
+	for (const group of q.groups) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 		stack_templates(group, q) // add .stacks[], .returntemplatebox[]
@@ -427,7 +454,7 @@ async function divide_reads_togroups(templates, q) {
 		// no reads at all, return empty group
 		return [
 			{
-				type: 'all',
+				type: type_all,
 				regions: duplicateRegions(q.regions),
 				templates,
 				messagerows: [],
@@ -437,17 +464,19 @@ async function divide_reads_togroups(templates, q) {
 	}
 
 	if (q.variant) {
+		// if snv, simple match; otherwise complex match
 		const lst = may_match_snv(templates, q)
 		if (lst) return lst
-		// not snv
+		return match_complexvariant(templates, q)
 	}
 	if (q.sv) {
-		// TODO
+		return match_sv(templates, q)
 	}
+
 	// no variant, return single group
 	return [
 		{
-			type: 'all',
+			type: type_all,
 			regions: duplicateRegions(q.regions),
 			templates,
 			messagerows: [],
@@ -471,9 +500,7 @@ function may_match_snv(templates, q) {
 	const refallele = q.variant.ref.toUpperCase()
 	const altallele = q.variant.alt.toUpperCase()
 	if (!bases.has(refallele) || !bases.has(altallele)) return
-	let support_ref = [],
-		support_alt = [],
-		support_no = []
+	const type2group = make_type2group(q)
 	for (const t of templates) {
 		let used = false
 		for (const s of t.segments) {
@@ -481,12 +508,10 @@ function may_match_snv(templates, q) {
 				if (b.opr == 'X' && b.start == q.variant.pos) {
 					// mismatch on this pos
 					if (b.s == altallele) {
-						support_alt.push(t)
-						used = true
-						break
+						if (type2group[type_supportalt]) type2group[type_supportalt].templates.push(t)
+					} else {
+						if (type2group[type_supportno]) type2group[type_supportno].templates.push(t)
 					}
-					// is not alt
-					support_no.push(t)
 					used = true
 					break
 				}
@@ -494,50 +519,70 @@ function may_match_snv(templates, q) {
 			if (used) break
 		}
 		if (!used) {
-			support_ref.push(t)
+			if (type2group[type_supportref]) type2group[type_supportref].templates.push(t)
 		}
 	}
 	const groups = []
-	if (support_alt.length) {
-		groups.push({
-			type: 'support_alt',
-			regions: duplicateRegions(q.regions),
-			templates: support_alt,
-			messagerows: [
-				{
-					h: 15,
-					t: support_alt.length + ' reads supporting mutant allele'
-				}
-			]
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		g.messagerows.push({
+			h: 15,
+			t:
+				g.templates.length +
+				' reads supporting ' +
+				(k == type_supportref
+					? 'reference allele'
+					: k == type_supportalt
+					? 'mutant allele'
+					: 'neither reference or mutant alleles')
 		})
-	}
-	if (support_ref.length) {
-		groups.push({
-			type: 'support_ref',
-			regions: duplicateRegions(q.regions),
-			templates: support_ref,
-			messagerows: [
-				{
-					h: 15,
-					t: support_ref.length + ' reads supporting reference allele'
-				}
-			]
-		})
-	}
-	if (support_no.length) {
-		groups.push({
-			type: 'support_no',
-			regions: duplicateRegions(q.regions),
-			templates: support_no,
-			messagerows: [
-				{
-					h: 15,
-					t: support_no.length + ' reads not supporting either reference or mutant alleles'
-				}
-			]
-		})
+		groups.push(g)
 	}
 	return groups
+}
+
+function match_complexvariant(tempaltes, q) {
+	// TODO
+}
+
+function match_sv(templates, q) {
+	// TODO templates may not be all in one array?
+}
+
+function make_type2group(q) {
+	// different type setting for variant and sv
+	const type2group = {}
+	if (q.variant) {
+		if (q.grouptype) {
+			// only return data for one group
+			type2group[q.grouptype] = { partstack: q.partstack }
+		} else {
+			// resulting groups array will follow the order: 1) alt; 2) ref; 3) no
+			type2group[type_supportalt] = {}
+			type2group[type_supportref] = {}
+			type2group[type_supportno] = {}
+		}
+	} else if (q.sv) {
+		if (q.grouptype) {
+			// only return data for one group
+			type2group[q.grouptype] = { partstack: q.partstack }
+		} else {
+			type2group[type_supportsv] = {}
+			type2group[type_supportref] = {}
+		}
+	} else {
+		throw 'q.variant or q.sv missing'
+	}
+	for (const k in type2group) {
+		// fill each group
+		const g = type2group[k]
+		g.type = k
+		g.templates = []
+		g.regions = duplicateRegions(q.regions)
+		g.messagerows = []
+	}
+	return type2group
 }
 
 function get_templates(q) {
@@ -783,7 +828,7 @@ return number of stacks for setting canvas height
 
 super high number of stacks will result in fractional row height and blurry rendering, no way to fix it now
 */
-	const [a, b] = getstacksizebystacks(group.stacks.length)
+	const [a, b] = getstacksizebystacks(group.stacks.length, q)
 	group.stackheight = a
 	group.stackspace = b
 	for (const r of group.regions) {
@@ -802,10 +847,11 @@ super high number of stacks will result in fractional row height and blurry rend
 	}
 }
 
-function getstacksizebystacks(numofstacks) {
+function getstacksizebystacks(numofstacks, q) {
 	/* with hardcoded cutoffs
+	with 1 or more groups, reduce the max canvas height by half
 	 */
-	let a = maxcanvasheight / numofstacks
+	let a = (q.groups.length > 1 ? maxcanvasheight / 2 : maxcanvasheight) / numofstacks
 	if (a > 10) return [Math.min(15, Math.floor(a)), 1]
 	if (a > 7) return [Math.floor(a), 1]
 	if (a > 3) return [Math.ceil(a), 0]
@@ -868,12 +914,9 @@ for each template:
 		add quality
 at the end, set q.canvasheight
 */
-
 	const stacky = get_stacky(group, q)
-
 	for (const template of group.templates) {
 		template.y = stacky[template.y]
-
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
 			const quallst = r.to_qual ? qual2int(segment.qual) : null
@@ -897,13 +940,6 @@ at the end, set q.canvasheight
 			delete segment.seq
 			delete segment.qual
 		}
-	}
-	if (stacky.length == 0) {
-		// no reads, must use sum of message row height as canvas height
-		group.canvasheight = group.messagerows.reduce((i, j) => i + j.h, 0)
-	} else {
-		// has reads, and nessage row heights are already counted in y position of each stack
-		group.canvasheight = stacky[stacky.length - 1]
 	}
 }
 
@@ -943,10 +979,11 @@ function get_stacky(group, q) {
 	}
 	const stacky = []
 	let y = group.messagerows.reduce((i, j) => i + j.h, 0) + group.stackspace
-	stackrowheight.forEach(h => {
+	for (const h of stackrowheight) {
 		stacky.push(y)
 		y += h + group.stackspace
-	})
+	}
+	group.canvasheight = y
 	return stacky
 }
 
