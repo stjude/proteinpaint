@@ -122,6 +122,9 @@ or selected a gene for overlaying
 		arg.getpcd.category_index = cat.columnidx
 		if (cat.autocolor) {
 			arg.getpcd.category_autocolor = true
+		} else if (cat.values) {
+			arg.getpcd.category_customcolor = true
+			arg.getpcd.cat_colors = cat.values
 		} else {
 			throw 'unknow coloring scheme for category ' + cat.name
 		}
@@ -701,43 +704,42 @@ function make_menu(obj) {
 					}
 				})
 			})
-	}
 
-	// menu option for multi-gene heatmap
+		// menu option for multi-gene heatmap
+		obj.menu.d
+			.append('div')
+			.text('Multi-Gene Heatmap')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				heatmap_menu(obj)
+			})
 
-	obj.menu.d
-		.append('div')
-		.text('Multi-Gene Heatmap')
-		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			heatmap_menu(obj)
-		})
-
-	if (obj.gene_expression.genes) {
-		if (obj.gene_expression.genes.length > 1) {
-			obj.menu.d
-				.append('div')
-				.style('padding', '5px 10px')
-				.text('Previously Selected')
-		}
-
-		obj.gene_expression.genes.forEach((gene, i) => {
-			if (i != obj.use_gene_index) {
-				// add option
+		if (obj.gene_expression.genes) {
+			if (obj.gene_expression.genes.length > 1) {
 				obj.menu.d
 					.append('div')
-					.text('Gene : ' + gene.gene)
-					.attr('class', 'sja_menuoption')
-					.on('click', async () => {
-						obj.menu.hide()
-
-						obj.use_category_index = null
-						obj.use_gene_index = i
-
-						pcd_pipeline(obj)
-					})
+					.style('padding', '5px 10px')
+					.text('Previously Selected')
 			}
-		})
+
+			obj.gene_expression.genes.forEach((gene, i) => {
+				if (i != obj.use_gene_index) {
+					// add option
+					obj.menu.d
+						.append('div')
+						.text('Gene : ' + gene.gene)
+						.attr('class', 'sja_menuoption')
+						.on('click', async () => {
+							obj.menu.hide()
+
+							obj.use_category_index = null
+							obj.use_gene_index = i
+
+							pcd_pipeline(obj)
+						})
+				}
+			})
+		}
 	}
 }
 

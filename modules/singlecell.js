@@ -108,6 +108,10 @@ may attach coloring scheme to result{} for returning to client
 		collect_category2color = {}
 		collect_category_count = {}
 		// k: category, v: color
+	} else if (q.getpcd.category_customcolor) {
+		categorical_color_function = getCustomCatColor(q.getpcd.cat_colors)
+		collect_category2color = {}
+		collect_category_count = {}
 	} else if (q.getpcd.gene_expression) {
 		const ge = q.getpcd.gene_expression
 		if (!ge.file) throw 'gene_expression.file missing'
@@ -250,6 +254,14 @@ may attach coloring scheme to result{} for returning to client
 			resolve(lines)
 		})
 	})
+}
+
+function getCustomCatColor(catColors) {
+	return cat => {
+		for (const c of catColors) {
+			if (c.value == cat) return c.color
+		}
+	}
 }
 
 function componentToHex(c) {
