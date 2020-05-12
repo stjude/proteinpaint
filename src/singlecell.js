@@ -12,7 +12,7 @@ export async function init(arg, holder) {
 		validate_obj(obj)
 
 		obj.genome = arg.genome
-		obj.holder = holder
+		obj.holder = holder.style('position', 'relative')
 
 		init_view(obj)
 		init_controlpanel(obj)
@@ -93,8 +93,14 @@ to load a new pcd file
 call this when using a new category,
 or selected a gene for overlaying
 */
-
-	const wait = obj.holder.append('div').text('Loading data...')
+	const wait = obj.holder
+		.append('div')
+		.style('position', 'absolute')
+		.style('top', 0)
+		.style('left', 0)
+		.style('padding', '10px')
+		.style('font-size', '1.5rem')
+		.text('Loading data...')
 
 	const arg = {
 		genome: obj.genome.name,
