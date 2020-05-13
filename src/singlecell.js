@@ -664,6 +664,14 @@ function make_menu(obj) {
 						obj.use_category_index = i
 						pcd_pipeline(obj)
 					})
+					.append('span')
+					.attr('font-family', client.font)
+					.style('display', category.values_count ? 'inline-block' : 'none')
+					.style('font-size', '.8em')
+					.style('float', 'right')
+					.style('color', '#777')
+					.style('padding', '3px 5px')
+					.html(category.values_count ? '&nbsp;n=' + category.values_count : '')
 			}
 		})
 	}
