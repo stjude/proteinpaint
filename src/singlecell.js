@@ -123,6 +123,7 @@ or selected a gene for overlaying
 		if (cat.autocolor) {
 			// if categories are autocolored and not defined in config
 			arg.getpcd.category_autocolor = true
+			if (cat.values_count) arg.getpcd.values_count = cat.values_count
 		} else if (cat.values) {
 			//if colors are defined in config
 			arg.getpcd.category_customcolor = true

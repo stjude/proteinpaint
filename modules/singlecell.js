@@ -104,7 +104,9 @@ may attach coloring scheme to result{} for returning to client
 
 	if (q.getpcd.category_autocolor) {
 		// using a category with automatic color
-		categorical_color_function = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+		const auto_color_scale =
+			q.getpcd.values_count && q.getpcd.values_count <= 10 ? d3scale.schemeCategory10 : d3scale.schemeCategory20
+		categorical_color_function = d3scale.scaleOrdinal(auto_color_scale)
 		collect_category2color = {}
 		collect_category_count = {}
 		// k: category, v: color
