@@ -109,7 +109,8 @@ may attach coloring scheme to result{} for returning to client
 		collect_category_count = {}
 		// k: category, v: color
 	} else if (q.getpcd.category_customcolor) {
-		categorical_color_function = getCustomCatColor(q.getpcd.cat_colors)
+		const auto_color_fn = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+		categorical_color_function = getCustomCatColor(q.getpcd.cat_colors, auto_color_fn)
 		collect_category2color = {}
 		collect_category_count = {}
 	} else if (q.getpcd.gene_expression) {
@@ -256,11 +257,17 @@ may attach coloring scheme to result{} for returning to client
 	})
 }
 
-function getCustomCatColor(catColors) {
+function getCustomCatColor(catColors, auto_color) {
 	return cat => {
+		let color_defined = false
 		for (const c of catColors) {
-			if (c.value == cat) return c.color
+			if (c.value == cat) {
+				color_defined = true
+				return c.color
+			}
 		}
+		//if color is not defined in config file, assingn auto color from d3 color
+		if (!color_defined) return auto_color(cat)
 	}
 }
 

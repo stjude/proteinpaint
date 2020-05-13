@@ -121,11 +121,14 @@ or selected a gene for overlaying
 		if (!cat) throw 'category array index out of bound'
 		arg.getpcd.category_index = cat.columnidx
 		if (cat.autocolor) {
+			// if categories are autocolored and not defined in config
 			arg.getpcd.category_autocolor = true
 		} else if (cat.values) {
+			//if colors are defined in config
 			arg.getpcd.category_customcolor = true
 			arg.getpcd.cat_colors = cat.values
 		} else {
+			if (!cat.autocolor && !cat.values) throw 'categories.values[] are not defined'
 			throw 'unknow coloring scheme for category ' + cat.name
 		}
 		if (cat.hidden_types) {
