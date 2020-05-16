@@ -438,6 +438,7 @@ function addLoadParameter(par, tk) {
 	}
 
 	// cnv
+	if (tk.sampleset) par.sampleset = tk.sampleset
 	if (tk.valueCutoff) par.valueCutoff = tk.valueCutoff
 	if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
 	if (tk.showonlycnvwithsv) par.showonlycnvwithsv = 1
@@ -2974,6 +2975,8 @@ function apply_customization_oninit(tk, block) {
 
 		// for now, simply turn the mds track into single-sample mode
 		tk.singlesample = c.singlesample
+	} else if (c.sampleset) {
+		tk.sampleset = c.sampleset
 	}
 
 	// rest are multi-sample
@@ -3067,6 +3070,8 @@ function configPanel(tk, block) {
 
 	may_allow_samplesearch(tk, block)
 
+	makeoption_sampleset(tk, block)
+
 	may_allow_showhidelabel_multi(tk, block)
 
 	may_allow_togglewaterfall_single(tk, block)
@@ -3076,6 +3081,53 @@ function configPanel(tk, block) {
 	configPanel_rnabam(tk, block, loadTk)
 
 	tk.tkconfigtip.showunder(tk.config_handle.node())
+}
+
+function makeoption_sampleset(tk, block) {
+	const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '25px')
+	if (tk.sampleset) {
+		row
+			.append('span')
+			.style('opacity', 0.5)
+			.style('padding-right', '10px')
+			.text('Using ' + tk.sampleset.length + ' samples')
+		row
+			.append('button')
+			.text('delete')
+			.on('click', () => {
+				tk.tkconfigtip.hide()
+				delete tk.sampleset
+				loadTk(tk, block)
+			})
+		return
+	}
+	// allow to enter sampleset
+	row
+		.append('button')
+		.text('Use a sample list')
+		.on('click', () => {
+			tk.tkconfigtip.clear()
+			const d = tk.tkconfigtip.d.append('div')
+			const ta = d
+				.append('textarea')
+				.attr('placeholder', 'Enter sample names, one per line')
+				.style('width', '200px')
+				.style('height', '100px')
+			d.append('button')
+				.text('Submit')
+				.style('display', 'block')
+				.on('click', () => {
+					const lst = ta
+						.property('value')
+						.trim()
+						.split('\n')
+					if (lst.length > 0) {
+						tk.sampleset = lst
+						tk.tkconfigtip.hide()
+						loadTk(tk, block)
+					}
+				})
+		})
 }
 
 function may_allow_togglewaterfall_single(tk, block) {

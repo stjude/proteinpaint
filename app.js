@@ -3956,6 +3956,11 @@ async function handle_mdssvcnv(req, res) {
 		}
 	}
 
+	let filter_sampleset
+	if (req.query.sampleset) {
+		filter_sampleset = new Set(req.query.sampleset)
+	}
+
 	// TODO terms from locusAttribute
 
 	/*
@@ -3976,7 +3981,15 @@ async function handle_mdssvcnv(req, res) {
 	}
 
 	// query svcnv
-	const data_cnv = await handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr)
+	const data_cnv = await handle_mdssvcnv_cnv(
+		ds,
+		dsquery,
+		req,
+		hiddendt,
+		hiddensampleattr,
+		hiddenmattr,
+		filter_sampleset
+	)
 
 	// expression query
 	const [expressionrangelimit, gene2sample2obj] = await handle_mdssvcnv_expression(ds, dsquery, req, data_cnv)
@@ -3993,7 +4006,8 @@ async function handle_mdssvcnv(req, res) {
 		filteralleleattr,
 		hiddendt,
 		hiddenmattr,
-		hiddensampleattr
+		hiddensampleattr,
+		filter_sampleset
 	)
 
 	// group samples by svcnv, calculate expression rank
@@ -4026,7 +4040,7 @@ async function handle_mdssvcnv(req, res) {
 		return
 	}
 
-	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item)
+	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
 
 	const result = {
 		samplegroups: samplegroups,
@@ -4391,7 +4405,7 @@ async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 	return allsnps
 }
 
-function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item) {
+function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset) {
 	// multi sample
 
 	mdssvcnv_do_copyneutralloh(sample2item)
@@ -4399,13 +4413,15 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 	// group sample by available attributes
 	const samplegroups = []
 
-	if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
+	if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr && !filter_sampleset) {
 		/**** group samples by predefined annotation attributes
 		only for official ds
 
 		when vcf data is present, must include them samples in the grouping too, but not the variants
 
 		expression samples don't participate in grouping
+
+		if using filter_sampleset, will not divide to groups and keep all in one group
 		*/
 
 		const key2group = new Map()
@@ -4621,7 +4637,8 @@ async function handle_mdssvcnv_vcf(
 	filteralleleattr,
 	hiddendt,
 	hiddenmattr,
-	hiddensampleattr
+	hiddensampleattr,
+	filter_sampleset
 ) {
 	let vcfquery
 	if (dsquery.iscustom) {
@@ -4819,6 +4836,13 @@ async function handle_mdssvcnv_vcf(
 										}
 										// alter
 										m.sampledata = [thissampleobj]
+									} else if (filter_sampleset) {
+										const lst = m.sampledata.filter(s => filter_sampleset.has(s.sampleobj.name))
+										if (lst.length) {
+											m.sampledata = lst
+										} else {
+											continue
+										}
 									}
 
 									if (hiddenmattr) {
@@ -5251,7 +5275,7 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 		})
 }
 
-function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr) {
+function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr, filter_sampleset) {
 	if (!dsquery.file && !dsquery.url) {
 		// svcnv file is optional now
 		return []
@@ -5348,6 +5372,8 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 					if (j.sample != req.query.singlesample) {
 						return
 					}
+				} else if (filter_sampleset) {
+					if (!filter_sampleset.has(j.sample)) return
 				} else if (j.sample && ds.cohort && ds.cohort.annotation) {
 					// not single-sample
 					// only for official ds
