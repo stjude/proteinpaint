@@ -55,7 +55,8 @@ const express = require('express'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
-	utils = require('./modules/utils')
+	utils = require('./modules/utils'),
+	draw_partition = require('./modules/partitionmatrix').draw_partition
 
 /*
 valuable globals
@@ -348,6 +349,9 @@ function mds_clientcopy(ds) {
 
 	if (ds.singlesamplemutationjson) {
 		ds2.singlesamplemutationjson = 1
+	}
+	if (ds.assayAvailability) {
+		ds2.assayAvailability = 1
 	}
 
 	if (ds.cohort && ds.cohort.sampleAttribute) {
@@ -3910,6 +3914,7 @@ async function handle_mdssvcnv(req, res) {
 	if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
+	if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery)
 
 	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
@@ -4059,6 +4064,53 @@ async function handle_mdssvcnv(req, res) {
 	handle_mdssvcnv_end(ds, result)
 
 	res.send(result)
+}
+
+const assayterms = [
+	{ id: 'haswgs', name: 'WGS', type: 'categorical', values: { yes: { label: 'yes' } } },
+	{ id: 'hascgi', name: 'CGI', type: 'categorical', values: { yes: { label: 'yes' } } },
+	{ id: 'haswes', name: 'WES', type: 'categorical', values: { yes: { label: 'yes' } } },
+	{ id: 'hassnp6', name: 'SNP6 array', type: 'categorical', values: { yes: { label: 'yes' } } },
+	{ id: 'hascaptureseq', name: 'Capture-seq', type: 'categorical', values: { yes: { label: 'yes' } } },
+	{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes' } } }
+]
+
+async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
+	try {
+		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
+		const sample2assay = new Map()
+		// k: sample
+		// v: Map( assay => 'yes')
+		for (const n in ds.cohort.annotation) {
+			if (req.query.key) {
+				// only keep samples matching with key/value
+				const s = ds.cohort.annotation[n]
+				if (s[req.query.key] != req.query.value) continue
+			}
+			sample2assay.set(n, new Map())
+		}
+		for (const [sample, k2v] of sample2assay) {
+			const a = ds.assayAvailability.samples.get(sample)
+			if (!a) continue
+			for (const t of assayterms) {
+				if (a[t.id]) {
+					k2v.set(t.id, 'yes')
+				}
+			}
+		}
+		for (const sample of sample2assay.keys()) {
+			if (sample2assay.get(sample).size == 0) sample2assay.delete(sample)
+		}
+		const data = {}
+		data.totalsample = sample2assay.size
+		data.terms = draw_partition({
+			sample2term: sample2assay,
+			terms: assayterms
+		})
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
 }
 
 async function handle_mdssvcnv_rnabam(region, genome, dsquery, result) {
@@ -11957,6 +12009,19 @@ function mds_init(ds, genome, _servconfig) {
 	*/
 
 	mds2_init.server_updateAttr(ds, _servconfig)
+
+	if (ds.assayAvailability) {
+		if (!ds.assayAvailability.file) return '.assayAvailability.file missing'
+		ds.assayAvailability.samples = new Map()
+		for (const line of fs
+			.readFileSync(path.join(serverconfig.tpmasterdir, ds.assayAvailability.file), { encoding: 'utf8' })
+			.trim()
+			.split('\n')) {
+			const [sample, t] = line.split('\t')
+			ds.assayAvailability.samples.set(sample, JSON.parse(t))
+		}
+		console.log(ds.assayAvailability.samples.size + ' samples with assay availability (' + ds.label + ')')
+	}
 
 	if (ds.sampleAssayTrack) {
 		if (!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'

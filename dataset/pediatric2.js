@@ -37,6 +37,10 @@ module.exports = {
 		file: 'hg19/Pediatric/mutationpersample/table'
 	},
 
+	assayAvailability: {
+		file: 'hg19/Pediatric/assayAvailability/sample.by.assay'
+	},
+
 	/*
 	cohort and sample annotation
 	*/
