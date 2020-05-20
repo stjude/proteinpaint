@@ -38,7 +38,20 @@ module.exports = {
 	},
 
 	assayAvailability: {
-		file: 'hg19/Pediatric/assayAvailability/sample.by.assay'
+		file: 'hg19/Pediatric/assayAvailability/sample.by.assay',
+		assays: [
+			{ id: 'haswgs', name: 'WGS', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hascgi', name: 'CGI', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'haswes', name: 'WES', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hassnp6', name: 'SNP6 array', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{
+				id: 'hascaptureseq',
+				name: 'Capture-seq',
+				type: 'categorical',
+				values: { yes: { label: 'yes', color: '#858585' } }
+			},
+			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
+		]
 	},
 
 	/*

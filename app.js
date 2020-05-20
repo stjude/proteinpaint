@@ -4066,15 +4066,6 @@ async function handle_mdssvcnv(req, res) {
 	res.send(result)
 }
 
-const assayterms = [
-	{ id: 'haswgs', name: 'WGS', type: 'categorical', values: { yes: { label: 'yes' } } },
-	{ id: 'hascgi', name: 'CGI', type: 'categorical', values: { yes: { label: 'yes' } } },
-	{ id: 'haswes', name: 'WES', type: 'categorical', values: { yes: { label: 'yes' } } },
-	{ id: 'hassnp6', name: 'SNP6 array', type: 'categorical', values: { yes: { label: 'yes' } } },
-	{ id: 'hascaptureseq', name: 'Capture-seq', type: 'categorical', values: { yes: { label: 'yes' } } },
-	{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes' } } }
-]
-
 async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 	try {
 		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
@@ -4092,7 +4083,7 @@ async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 		for (const [sample, k2v] of sample2assay) {
 			const a = ds.assayAvailability.samples.get(sample)
 			if (!a) continue
-			for (const t of assayterms) {
+			for (const t of ds.assayAvailability.assays) {
 				if (a[t.id]) {
 					k2v.set(t.id, 'yes')
 				}
@@ -4105,7 +4096,10 @@ async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 		data.totalsample = sample2assay.size
 		data.terms = draw_partition({
 			sample2term: sample2assay,
-			terms: assayterms
+			terms: ds.assayAvailability.assays,
+			config: {
+				termidorder: req.query.termidorder // optional
+			}
 		})
 		res.send(data)
 	} catch (e) {
@@ -12012,6 +12006,8 @@ function mds_init(ds, genome, _servconfig) {
 
 	if (ds.assayAvailability) {
 		if (!ds.assayAvailability.file) return '.assayAvailability.file missing'
+		if (!ds.assayAvailability.assays) return '.assayAvailability.assays[] missing'
+		Object.freeze(ds.assayAvailability.assays)
 		ds.assayAvailability.samples = new Map()
 		for (const line of fs
 			.readFileSync(path.join(serverconfig.tpmasterdir, ds.assayAvailability.file), { encoding: 'utf8' })

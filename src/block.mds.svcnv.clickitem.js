@@ -1,4 +1,4 @@
-import { event as d3event } from 'd3-selection'
+import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
@@ -3129,62 +3129,210 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 				return
 			}
 			wait.remove()
-			plot_partition(
+			plot_partition({
 				data,
 				par,
-				tk.tip2.d
+				svg: tk.tip2.d
 					.append('div')
 					.style('margin', '10px')
-					.append('svg')
-			)
+					.append('svg'),
+				boxtip: tk.tktip,
+				headlabel: samplegroup.name
+			})
+			tk.tip2.d
+				.append('div')
+				.style('font-size', '.7em')
+				.style('margin', '10px')
+				.text('Drag and move a sequencing type label up/down to change order.')
 		})
 }
 
-function plot_partition(data, par, svg) {
+function plot_partition(opts) {
+	console.log(opts.data.terms)
 	// quick fix
-	// TODO click a term to move to top
-	svg.selectAll('*').remove()
-	const termwidth = 200
-	const sf = termwidth / data.totalsample
-	const vpad = 5,
+	const rows = [] // for moving rows
+	opts.svg.selectAll('*').remove()
+	const termwidth = Math.min(200, opts.data.totalsample * 10)
+	const sf = termwidth / opts.data.totalsample
+	const toppad = 20, // leave enough space for header in graphg
+		bottompad = 5,
 		hpad = 5
-	const rowheight = 15
+	const rowheight = 25
+	const fontsize = 16
 	const rowspace = 1
-	const labxspace = 3
-	const labelg = svg.append('g')
-	const graphg = svg.append('g')
+	const labxspace = 10
+	const graphg = opts.svg.append('g')
+
+	// header
+	graphg
+		.append('rect')
+		.attr('width', termwidth)
+		.attr('height', opts.data.terms.length * (rowheight + rowspace) - rowspace)
+		.attr('stroke', '#858585')
+		.attr('fill', 'none')
+	graphg
+		.append('text')
+		.attr('text-anchor', 'middle')
+		.attr('font-size', fontsize - 2)
+		.attr('x', termwidth / 2)
+		.attr('y', -5)
+		.text((opts.headlabel ? opts.headlabel + ', ' : '') + 'n=' + opts.data.totalsample)
+
 	let maxlabelw = 0
 	let y = 0
-	for (const term of data.terms) {
-		labelg
+	for (const term of opts.data.terms) {
+		const rowg = graphg.append('g').attr('transform', 'translate(0,' + y + ')')
+		// tick
+		rowg
+			.append('line')
+			.attr('stroke', '#858585')
+			.attr('x1', -6)
+			.attr('y1', rowheight / 2)
+			.attr('y2', rowheight / 2)
+		const thisrow = {
+			id: term.id,
+			y,
+			rowg
+		}
+		rows.push(thisrow)
+		thisrow.svglabel = rowg
 			.append('text')
-			.text(term.name + ' (' + term.samplecount + ')')
-			.attr('font-size', rowheight - 2)
-			.attr('y', y + rowheight / 2)
+			.text(term.name + ', n=' + term.samplecount)
+			.attr('font-size', fontsize)
+			.attr('x', -labxspace)
+			.attr('y', rowheight / 2)
 			.attr('dominant-baseline', 'middle')
 			.attr('text-anchor', 'end')
 			.each(function() {
 				maxlabelw = Math.max(maxlabelw, this.getBBox().width)
 			})
+			.on('mousedown', () => {
+				d3event.preventDefault()
+				thisrow.moving = true
+				const b = d3select(document.body)
+				let my0 = d3event.clientY
+				let deltay
+				let nochange = true
+				b.on('mousemove', () => {
+					const my = d3event.clientY
+					deltay = my - my0
+					const rowidx = rows.findIndex(i => i.id == thisrow.id)
+					if (deltay < 0) {
+						if (rowidx > 0 && -deltay >= rowheight - 2) {
+							rows.splice(rowidx, 1)
+							rows.splice(rowidx - 1, 0, thisrow)
+							reorderRows()
+							deltay = 0
+							my0 = my
+							nochange = false
+						}
+					} else {
+						if (rowidx < rows.length - 1 && deltay >= rowheight - 2) {
+							rows.splice(rowidx, 1)
+							rows.splice(rowidx + 1, 0, thisrow)
+							reorderRows()
+							deltay = 0
+							my0 = my
+							nochange = false
+						}
+					}
+					rowg.attr('transform', 'translate(0,' + (thisrow.y + deltay) + ')')
+				})
+				b.on('mouseup', async () => {
+					b.on('mousemove', null).on('mouseup', null)
+					delete thisrow.moving
+					reorderRows()
+					if (nochange) return
+					thisrow.svglabel.text('Loading...')
+					opts.par.termidorder = rows.map(i => i.id)
+					opts.data = await client.dofetch('mdssvcnv', opts.par)
+					plot_partition(opts)
+				})
+			})
+
 		let x = 0
 		for (const b of term.blocks) {
-			const w = b.samplecount * sf
-			if (b.value) {
-				graphg
-					.append('rect')
-					.attr('fill', '#858585')
-					.attr('x', x)
-					.attr('y', y)
-					.attr('width', Math.max(1, w))
-					.attr('height', rowheight)
+			if (0) {
+				// width to scale
+				const w = b.samplecount * sf
+				if (b.value) {
+					// this block is for samples annotated to this term
+					const box = rowg
+						.append('rect')
+						.attr('fill', b.color)
+						.attr('x', x)
+						.attr('width', Math.max(1, w))
+						.attr('height', rowheight)
+					let numwidth
+					const text = rowg
+						.append('text')
+						.text(b.samplecount)
+						.attr('font-size', fontsize - 2)
+						.each(function() {
+							numwidth = this.getBBox().width
+						})
+					if (numwidth < w) {
+						text
+							.attr('fill', 'white')
+							.attr('x', x + w / 2)
+							.attr('y', rowheight / 2)
+							.attr('dominant-baseline', 'middle')
+							.attr('text-anchor', 'middle')
+					} else {
+						// not enough width to print width
+						text.remove()
+						box
+							.on('mouseover', () => {
+								box.attr('fill', 'black')
+								opts.boxtip
+									.clear()
+									.showunder(d3event.target)
+									.d.append('div')
+									.html(b.samplecount + ' <span style="font-size:.7em">' + term.name + '</span>')
+							})
+							.on('mouseout', () => {
+								box.attr('fill', b.color)
+								opts.boxtip.hide()
+							})
+					}
+				}
+				x += w
+			} else {
+				// symbolic, print count
+				const w = b.symbolwidth * 10
+				const x = b.x * 10
+				if (!b.isgap) {
+					const box = rowg
+						.append('rect')
+						.attr('fill', b.color)
+						.attr('x', x)
+						.attr('width', w)
+						.attr('height', rowheight)
+					rowg
+						.append('text')
+						.text(b.samplecount)
+						.attr('font-size', fontsize - 2)
+						.attr('fill', 'white')
+						.attr('x', x + w / 2)
+						.attr('y', rowheight / 2)
+						.attr('dominant-baseline', 'middle')
+						.attr('text-anchor', 'middle')
+				}
 			}
-			x += w
 		}
 		y += rowheight + rowspace
 	}
-	svg
+	graphg.attr('transform', 'translate(' + (hpad + maxlabelw + labxspace) + ',' + toppad + ')')
+	opts.svg
 		.attr('width', hpad * 2 + maxlabelw + labxspace + termwidth)
-		.attr('height', vpad * 2 + (rowheight + rowspace) * data.terms.length)
-	labelg.attr('transform', 'translate(' + (hpad + maxlabelw) + ',' + vpad + ')')
-	graphg.attr('transform', 'translate(' + (hpad + maxlabelw + labxspace) + ',' + vpad + ')')
+		.attr('height', toppad + (rowheight + rowspace) * opts.data.terms.length + bottompad)
+
+	function reorderRows() {
+		let y = 0
+		for (const t of rows) {
+			if (!t.moving) t.rowg.transition().attr('transform', 'translate(0,' + y + ')')
+			t.y = y
+			y += rowheight + rowspace
+		}
+	}
 }
