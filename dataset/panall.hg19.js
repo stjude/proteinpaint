@@ -38,7 +38,6 @@ module.exports={
 			{file:'hg19/pan-all/sampletable/samples.ball.normal'},
 			{file:'hg19/pan-all/sampletable/normalCell.sample'},
 			{file:'hg19/pan-all/sampletable/outcome.ball'},
-			{file:'hg19/pan-all/sampletable/samples_2020_5_13'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -52,7 +51,7 @@ module.exports={
 			}
 		},
 		sampleAttribute:{
-            attributes:{
+            		attributes:{
 				fusion:{label:'Fusion'},
 				'2nd subtype':{label:'2nd subtype',filter:1},
 				PAX5_mut:{label:'PAX5_mut'},
@@ -142,8 +141,8 @@ module.exports={
 					isinteger:1,
 					clientnoshow:1
 				}
-            },
-        },
+            		},
+        	},
 
 		scatterplot:{
 			x:{
@@ -250,10 +249,10 @@ module.exports={
 
 			//showfullmode:true,
 
-			name:'ALL mutation',
+			name:'BALL mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/pan-all/snp6cnv.ball/PanALL_CnvSvTable_GenomePaint_2020-5-13.svcnv.gz',
+			file:'hg19/pan-all/snp6cnv.ball/cnv.gz',
 
 			no_loh:1,
 
@@ -283,7 +282,7 @@ module.exports={
 
 		snvindel:{
 			hideforthemoment:1,
-			name:'ALL SNV/indel',
+			name:'BALL SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
 			viewrangeupperlimit:3000000,
@@ -298,7 +297,7 @@ module.exports={
 
 
 		genefpkm:{
-			name:'ALL RNA-seq gene log2(FPKM) values',
+			name:'BALL RNA-seq gene log2(FPKM) values',
 			isgenenumeric:true,
 			file:'hg19/pan-all/rlog.ball/rlog.gz',
 			datatype:'log2(FPKM)',
@@ -312,15 +311,15 @@ module.exports={
 			
 			boxplotbysamplegroup:{
 				attributes: [
-                   {k:'primary subtype',label:'Subtype'},
-               	]
+                   			{k:'primary subtype',label:'Subtype'},
+               			]
 			},
 		},
 
 
 
 		junction: {
-			name:'ALL tumor RNA splice junction',
+			name:'BALL tumor RNA splice junction',
 			istrack:true,
 			type:common.tkt.mdsjunction,
 			viewrangeupperlimit:500000,
