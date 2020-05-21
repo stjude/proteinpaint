@@ -250,7 +250,7 @@ module.exports={
 
 			//showfullmode:true,
 
-			name:'BALL mutation',
+			name:'ALL mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/pan-all/snp6cnv.ball/PanALL_CnvSvTable_GenomePaint_2020-5-13.svcnv.gz',
@@ -283,7 +283,7 @@ module.exports={
 
 		snvindel:{
 			hideforthemoment:1,
-			name:'BALL SNV/indel',
+			name:'ALL SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
 			viewrangeupperlimit:3000000,
@@ -298,7 +298,7 @@ module.exports={
 
 
 		genefpkm:{
-			name:'BALL RNA-seq gene log2(FPKM) values',
+			name:'ALL RNA-seq gene log2(FPKM) values',
 			isgenenumeric:true,
 			file:'hg19/pan-all/rlog.ball/rlog.gz',
 			datatype:'log2(FPKM)',
@@ -320,7 +320,7 @@ module.exports={
 
 
 		junction: {
-			name:'BALL tumor RNA splice junction',
+			name:'ALL tumor RNA splice junction',
 			istrack:true,
 			type:common.tkt.mdsjunction,
 			viewrangeupperlimit:500000,
