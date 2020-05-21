@@ -3148,12 +3148,8 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 }
 
 function plot_partition(opts) {
-	console.log(opts.data.terms)
 	// quick fix
 	const rows = [] // for moving rows
-	opts.svg.selectAll('*').remove()
-	const termwidth = Math.min(200, opts.data.totalsample * 10)
-	const sf = termwidth / opts.data.totalsample
 	const toppad = 20, // leave enough space for header in graphg
 		bottompad = 5,
 		hpad = 5
@@ -3161,6 +3157,21 @@ function plot_partition(opts) {
 	const fontsize = 16
 	const rowspace = 1
 	const labxspace = 10
+
+	/*
+	const termwidth = Math.min(200, opts.data.totalsample * 10)
+	const sf = termwidth / opts.data.totalsample
+	*/
+
+	const symbolpxwidth = 15
+	let maxsymbolcount = 0
+	for (const t of opts.data.terms) {
+		const b = t.blocks[t.blocks.length - 1]
+		maxsymbolcount = Math.max(maxsymbolcount, b.x + b.symbolwidth)
+	}
+	const termwidth = symbolpxwidth * maxsymbolcount
+
+	opts.svg.selectAll('*').remove()
 	const graphg = opts.svg.append('g')
 
 	// header
@@ -3170,13 +3181,19 @@ function plot_partition(opts) {
 		.attr('height', opts.data.terms.length * (rowheight + rowspace) - rowspace)
 		.attr('stroke', '#858585')
 		.attr('fill', 'none')
-	graphg
-		.append('text')
-		.attr('text-anchor', 'middle')
-		.attr('font-size', fontsize - 2)
-		.attr('x', termwidth / 2)
-		.attr('y', -5)
-		.text((opts.headlabel ? opts.headlabel + ', ' : '') + 'n=' + opts.data.totalsample)
+	{
+		let headlabw
+		const text = graphg
+			.append('text')
+			.attr('text-anchor', 'middle')
+			.attr('font-size', fontsize - 2)
+			.attr('y', -5)
+			.text((opts.headlabel ? opts.headlabel + ', ' : '') + 'n=' + opts.data.totalsample)
+			.each(function() {
+				headlabw = this.getBBox().width
+			})
+		text.attr('x', termwidth / 2 - (headlabw > termwidth ? (headlabw - termwidth) / 2 : 0))
+	}
 
 	let maxlabelw = 0
 	let y = 0
@@ -3299,8 +3316,8 @@ function plot_partition(opts) {
 				x += w
 			} else {
 				// symbolic, print count
-				const w = b.symbolwidth * 10
-				const x = b.x * 10
+				const w = b.symbolwidth * symbolpxwidth
+				const x = b.x * symbolpxwidth
 				if (!b.isgap) {
 					const box = rowg
 						.append('rect')
