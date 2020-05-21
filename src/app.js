@@ -1084,7 +1084,7 @@ async function launchblock(arg,holder) {
 		if(h.has('hlregion')) {
 			const lst = []
 			for(const tmp of h.get('hlregion').split(',')) {
-				const pos = string2pos( tmp, genomeobj )
+				const pos = string2pos( tmp, genomeobj, true )
 				if(pos) {
 					lst.push(pos)
 				}
