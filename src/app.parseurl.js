@@ -1,6 +1,7 @@
 import blockinit from './block.init'
 import * as client from './client'
 import { loadstudycohort } from './tp.init'
+import { string2pos } from './coord'
 
 export default function(arg) {
 	/*
@@ -130,6 +131,15 @@ arg
 				}
 			}
 		}
+		if (urlp.has('hlregion')) {
+			const lst = []
+			for (const t of urlp.get('hlregion').split(',')) {
+				const pos = string2pos(t, genomeobj, true)
+				if (pos) lst.push(pos)
+			}
+			if (lst.length) par.hlregions = lst
+		}
+
 		let tklst = []
 		if (urlp.has('bamfile')) {
 			const lst = urlp.get('bamfile').split(',')
