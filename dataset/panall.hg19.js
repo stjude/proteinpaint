@@ -267,6 +267,7 @@ module.exports={
 
 			groupsamplebyattr:{
 				attrlst:[
+					{k:'diagnosis_short',label:'Cancer'}
                                 	{k:'primary subtype',label:'Subtype'},
 				],
 				attrnamespacer:', ',
