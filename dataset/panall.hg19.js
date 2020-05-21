@@ -38,6 +38,7 @@ module.exports={
 			{file:'hg19/pan-all/sampletable/samples.ball.normal'},
 			{file:'hg19/pan-all/sampletable/normalCell.sample'},
 			{file:'hg19/pan-all/sampletable/outcome.ball'},
+			{file:'hg19/pan-all/sampletable/samples_2020_5_13'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -252,7 +253,7 @@ module.exports={
 			name:'BALL mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/pan-all/snp6cnv.ball/cnv.gz',
+			file:'hg19/pan-all/snp6cnv.ball/PanALL_CnvSvTable_GenomePaint_2020-5-13.svcnv.gz',
 
 			no_loh:1,
 
