@@ -130,13 +130,33 @@ module.exports={
 				],
 				attrnamespacer:', ',
 			},
-			//expressionrank_querykey:'genefpkm',
+			expressionrank_querykey:'genefpkm',
 			//vcf_querykey:'snvindel',
 			//multihidelabel_vcf:true,
 			multihidelabel_fusion:false,
-			//multihidelabel_sv:true,
+			multihidelabel_sv:true,
 			
 		},
+		genefpkm:{
+			name:'ALL RNA-seq gene log2(FPKM) values',
+			isgenenumeric:true,
+			file:'hg19/pan-all/rlog.ball/rlog.gz',
+			datatype:'log2(FPKM)',
+			no_ase: true,
+			
+			// for boxplots & circles, and the standalone expression track
+			itemcolor:'green',
+
+			// for expression rank checking when coupled to svcnv
+			viewrangeupperlimit:5000000,
+			
+			boxplotbysamplegroup:{
+				attributes: [
+					{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
+					{k:'Fusion',label:'Subtype',full:'Fusion'},
+				]
+			}
+		}
 
 	}
 }
