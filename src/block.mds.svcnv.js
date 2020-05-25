@@ -72,8 +72,6 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 custom vcf handling:
 	multi-sample
 	single-sample
-
-TODO dense germline variants?
 */
 
 const labyspace = 5
@@ -1302,7 +1300,7 @@ function render_multi_cnvloh(tk, block) {
 
 			// if to draw sample name
 
-			if ((tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
+			if (!tk.sampleset && (tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
 				// show sample name when is custom track, or no group name in native track, and tall enough
 				sample.svglabel = tk.cnvleftg
 					.append('text')
