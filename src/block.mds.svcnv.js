@@ -3090,10 +3090,16 @@ function makeoption_sampleset(tk, block) {
 			.append('span')
 			.style('opacity', 0.5)
 			.style('padding-right', '10px')
-			.text('Using ' + tk.sampleset.length + ' samples')
+			.text('Restricted to ' + tk.sampleset.reduce((i, j) => i + j.samples.length, 0) + ' samples')
 		row
 			.append('button')
-			.text('delete')
+			.text('Edit')
+			.on('click', () => {
+				showinput_sampleset(tk, block)
+			})
+		row
+			.append('button')
+			.text('Remove')
 			.on('click', () => {
 				tk.tkconfigtip.hide()
 				delete tk.sampleset
@@ -3106,27 +3112,53 @@ function makeoption_sampleset(tk, block) {
 		.append('button')
 		.text('Use a sample list')
 		.on('click', () => {
-			tk.tkconfigtip.clear()
-			const d = tk.tkconfigtip.d.append('div')
-			const ta = d
-				.append('textarea')
-				.attr('placeholder', 'Enter sample names, one per line')
-				.style('width', '200px')
-				.style('height', '100px')
-			d.append('button')
-				.text('Submit')
-				.style('display', 'block')
-				.on('click', () => {
-					const lst = ta
-						.property('value')
-						.trim()
-						.split('\n')
-					if (lst.length > 0) {
-						tk.sampleset = lst
-						tk.tkconfigtip.hide()
-						loadTk(tk, block)
-					}
-				})
+			showinput_sampleset(tk, block)
+		})
+}
+
+function showinput_sampleset(tk, block) {
+	// for editing existing set or create new
+	tk.tkconfigtip.clear()
+	const d = tk.tkconfigtip.d.append('div')
+	const ta = d.append('textarea')
+	if (tk.sampleset) {
+		const lst = []
+		for (const l of tk.sampleset) {
+			for (const s of l.samples) {
+				lst.push(s + ' ' + l.name)
+			}
+		}
+		ta.property('value', lst.join('\n'))
+			.style('width', '250px')
+			.style('height', '200px')
+	} else {
+		ta.attr('placeholder', 'One sample per row. Each row has sample and group names joined by space.')
+			.style('width', '200px')
+			.style('height', '100px')
+	}
+	d.append('button')
+		.text('Submit')
+		.style('display', 'block')
+		.on('click', () => {
+			const lst = ta
+				.property('value')
+				.trim()
+				.split('\n')
+			if (lst.length == 0) return
+			const g2l = new Map()
+			for (const line of lst) {
+				const [sample, group] = line.split(' ')
+				if (!sample || !group) continue
+				if (!g2l.has(group)) g2l.set(group, [])
+				g2l.get(group).push(sample)
+			}
+			if (g2l.size == 0) return
+			tk.sampleset = []
+			for (const [name, samples] of g2l) {
+				tk.sampleset.push({ name, samples })
+			}
+			tk.tkconfigtip.hide()
+			loadTk(tk, block)
 		})
 }
 

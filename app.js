@@ -3926,6 +3926,10 @@ async function handle_mdssvcnv(req, res) {
 		}
 	}
 
+	/*******
+	TODO rewrite: helper func return {} attached with all possible filters
+	***/
+
 	// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
 	let hiddendt
 	if (req.query.hiddendt) {
@@ -3963,7 +3967,16 @@ async function handle_mdssvcnv(req, res) {
 
 	let filter_sampleset
 	if (req.query.sampleset) {
-		filter_sampleset = new Set(req.query.sampleset)
+		filter_sampleset = {
+			set: new Set(),
+			sample2group: new Map()
+		}
+		for (const i of req.query.sampleset) {
+			for (const s of i.samples) {
+				filter_sampleset.set.add(s)
+				filter_sampleset.sample2group.set(s, i.name)
+			}
+		}
 	}
 
 	// TODO terms from locusAttribute
@@ -4459,15 +4472,52 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 	// group sample by available attributes
 	const samplegroups = []
 
-	if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr && !filter_sampleset) {
+	if (filter_sampleset) {
+		// custom sample set
+
+		const key2group = new Map()
+		// key: group name, v: list of samples from that group
+
+		for (const [n, items] of sample2item) {
+			const groupname = filter_sampleset.sample2group.get(n)
+			if (!key2group.has(groupname)) key2group.set(groupname, [])
+			key2group.get(groupname).push({
+				samplename: n, // hardcoded
+				items: items
+			})
+		}
+
+		if (data_vcf) {
+			// has vcf data and not custom track
+			for (const m of data_vcf) {
+				if (m.dt == common.dtsnvindel) {
+					for (const s of m.sampledata) {
+						let notfound = true
+						const groupname = filter_sampleset.sample2group.get(s.sampleobj.name)
+						if (!key2group.has(groupname)) key2group.set(groupname, [])
+						if (!key2group.get(groupname).find(i => i.samplename == s.sampleobj.name)) {
+							key2group.get(groupname).push({
+								samplename: s.sampleobj.name,
+								items: []
+							})
+						}
+					}
+					continue
+				}
+
+				console.log('unknown dt when grouping samples from vcf: ' + m.dt)
+			}
+		}
+		for (const [name, samples] of key2group) {
+			samplegroups.push({ name, samples })
+		}
+	} else if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
 		/**** group samples by predefined annotation attributes
 		only for official ds
 
 		when vcf data is present, must include them samples in the grouping too, but not the variants
 
 		expression samples don't participate in grouping
-
-		if using filter_sampleset, will not divide to groups and keep all in one group
 		*/
 
 		const key2group = new Map()
@@ -4883,7 +4933,7 @@ async function handle_mdssvcnv_vcf(
 										// alter
 										m.sampledata = [thissampleobj]
 									} else if (filter_sampleset) {
-										const lst = m.sampledata.filter(s => filter_sampleset.has(s.sampleobj.name))
+										const lst = m.sampledata.filter(s => filter_sampleset.set.has(s.sampleobj.name))
 										if (lst.length) {
 											m.sampledata = lst
 										} else {
@@ -5419,7 +5469,7 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 						return
 					}
 				} else if (filter_sampleset) {
-					if (!filter_sampleset.has(j.sample)) return
+					if (!filter_sampleset.set.has(j.sample)) return
 				} else if (j.sample && ds.cohort && ds.cohort.annotation) {
 					// not single-sample
 					// only for official ds
