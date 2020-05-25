@@ -11,7 +11,12 @@ import {
 	multi_sample_addhighlight,
 	multi_sample_removehighlight
 } from './block.mds.svcnv'
-import { createbutton_addfeature, createnewmatrix_withafeature } from './block.mds.svcnv.samplematrix'
+import {
+	createbutton_addfeature,
+	createnewmatrix_withafeature,
+	customkey_svcnv,
+	customkey_vcf
+} from './block.mds.svcnv.samplematrix'
 import { getsjcharts } from './getsjcharts'
 import { debounce } from 'debounce'
 
@@ -192,6 +197,8 @@ export function click_samplegroup_showmenu(samplegroup, tk, block) {
 	this group must already has been shown
 	*/
 
+	if (tk.sampleset) return sampleset_showgrpmenu(samplegroup, tk, block)
+
 	if (tk.iscustom) return
 
 	if (!samplegroup.attributes) {
@@ -294,6 +301,32 @@ export function click_samplegroup_showmenu(samplegroup, tk, block) {
 	may_createbutton_assayAvailability(tk, block, tk.tip2.d, samplegroup)
 }
 
+function sampleset_showgrpmenu(grp, tk, block) {
+	// display menu for a group of sampleset
+	// for both official and custom tracks
+	tk.tip2.d
+		.append('div')
+		.style('margin', '4px 10px')
+		.style('font-size', '.7em')
+		.text(grp.name)
+	tk.tip2.d
+		.append('div')
+		.attr('class', 'sja_menuoption')
+		.text('Table view')
+		.on('click', () => {
+			tk.tip2.hide()
+			click_samplegroup_showtable(grp, tk, block)
+		})
+	tk.tip2.d
+		.append('div')
+		.attr('class', 'sja_menuoption')
+		.text('Matrix view')
+		.on('click', () => {
+			tk.tip2.hide()
+			matrix_view(tk, block, grp)
+		})
+}
+
 function matrix_view(tk, block, samplegroup) {
 	/*
 	in group-less track (custom or official lacking config)
@@ -353,43 +386,56 @@ function matrix_view(tk, block, samplegroup) {
 		feature.label = r.chr + ':' + r.start + '-' + r.stop
 	}
 
+	const smat_arg = { tk, block, feature }
+
+	feature.querykeylst = []
+
 	if (tk.iscustom) {
-		console.error('solve it here')
-	} else {
-		feature.querykeylst = [tk.querykey]
-		if (tk.checkvcf) {
-			feature.querykeylst.push(tk.checkvcf.querykey)
-		}
+		if (tk.file || tk.url) feature.querykeylst.push(customkey_svcnv)
+		if (tk.checkvcf) feature.querykeylst.push(customkey_vcf)
+	} else if (tk.querykey) {
+		feature.querykeylst.push(tk.querykey)
+		if (tk.checkvcf) feature.querykeylst.push(tk.checkvcf.querykey)
 	}
 
-	// attribute that defines this group of samples
-	const attr = samplegroup.attributes[samplegroup.attributes.length - 1]
-
-	for (const m of tk.samplematrices) {
-		if (m.limitsamplebyeitherannotation) {
-			// hardcoded to use first attr
-			const a = m.limitsamplebyeitherannotation[0]
-			if (a && a.key == attr.k && a.value == attr.kvalue) {
-				// found the smat of this sample group
+	if (tk.sampleset) {
+		// the group is from sampleset
+		for (const m of tk.samplematrices) {
+			if (m.limitbysamplesetgroup && m.limitbysamplesetgroup.name == samplegroup.name) {
 				client.appear(m._pane.pane)
 				m.addnewfeature_update(feature)
 				return
 			}
 		}
-	}
-
-	// create new smat
-	createnewmatrix_withafeature({
-		tk: tk,
-		block: block,
-		feature: feature,
-		limitsamplebyeitherannotation: [
+		smat_arg.limitbysamplesetgroup = {
+			name: samplegroup.name,
+			samples: JSON.parse(JSON.stringify(tk.sampleset.find(i => i.name == samplegroup.name).samples))
+		}
+	} else if (samplegroup.attributes) {
+		// attribute that defines this group of samples
+		const attr = samplegroup.attributes[samplegroup.attributes.length - 1]
+		for (const m of tk.samplematrices) {
+			if (m.limitsamplebyeitherannotation) {
+				// hardcoded to use first attr
+				const a = m.limitsamplebyeitherannotation[0]
+				if (a && a.key == attr.k && a.value == attr.kvalue) {
+					// found the smat of this sample group
+					client.appear(m._pane.pane)
+					m.addnewfeature_update(feature)
+					return
+				}
+			}
+		}
+		smat_arg.limitsamplebyeitherannotation = [
 			{
 				key: attr.k,
 				value: attr.kvalue
 			}
 		]
-	})
+	}
+
+	// create new smat
+	createnewmatrix_withafeature(smat_arg)
 }
 
 function samplegroup_getdriverattribute(g, tk) {
@@ -434,18 +480,21 @@ export function tooltip_samplegroup(g, tk) {
 		d.append('div').text(g.name)
 	}
 
-	const p = tk.tktip.d
+	const html = [g.samples.length + ' sample' + (g.samples.length > 1 ? 's' : '')]
+	if (g.sampletotalnum)
+		html.push(g.sampletotalnum + ' samples total, ' + Math.ceil((100 * g.samples.length) / g.sampletotalnum) + '%')
+	if (tk.sampleset) {
+		// full list of samples registered in tk.sampleset
+		const s = tk.sampleset.find(i => i.name == g.name)
+		if (s) {
+			html.push(s.samples.length + ' samples total, ' + Math.ceil((100 * g.samples.length) / s.samples.length) + '%')
+		}
+	}
+	tk.tktip.d
 		.append('div')
 		.style('margin-top', '10px')
 		.style('color', '#858585')
-	p.html(
-		g.samples.length +
-			' sample' +
-			(g.samples.length > 1 ? 's' : '') +
-			(g.sampletotalnum
-				? '<br>' + g.sampletotalnum + ' samples total, ' + Math.ceil((100 * g.samples.length) / g.sampletotalnum) + '%'
-				: '')
-	)
+		.html(html.join('<br>'))
 
 	tk.tktip.show(d3event.clientX, d3event.clientY)
 }

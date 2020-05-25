@@ -46,8 +46,10 @@ multi_sample_addhighlight
 multi_sample_removehighlight
 
 
-three modes:
-	1 & 2: driven by svcnv file, sv-cnv-vcf-fpkm ranking
+modes:
+
+	driven by svcnv file, sv-cnv-vcf-fpkm ranking
+
 		multi-sample:
 			one row per sample
 			two forms:
@@ -56,14 +58,19 @@ three modes:
 					cnv shown densily
 				full
 					cnv & sv shown together at sample-level
+
+		sampleset:
+			custom set of samples, in groups
+
 		single-sample:
 			show cnv & sv data from a single sample
 			indicated by tk.singlesample {name:"samplename"}
 			spawn from sample group, mode won't mutate
 			fpkm ranking shown as independent track
-	3: ase mode, driven by vcf file and supplemented by rna bam files
-	   always multi-sample
-	   always cohort
+
+	ase mode, driven by vcf file and supplemented by rna bam files
+		always multi-sample
+		always cohort
 
 
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
@@ -3118,7 +3125,9 @@ function showinput_sampleset(tk, block) {
 	// for editing existing set or create new
 	tk.tkconfigtip.clear()
 	const d = tk.tkconfigtip.d.append('div')
-	const ta = d.append('textarea')
+	const ta = d
+		.append('textarea')
+		.attr('placeholder', 'One sample per row. Each row has sample and group names joined by space.')
 	if (tk.sampleset) {
 		const lst = []
 		for (const l of tk.sampleset) {
@@ -3130,9 +3139,7 @@ function showinput_sampleset(tk, block) {
 			.style('width', '250px')
 			.style('height', '200px')
 	} else {
-		ta.attr('placeholder', 'One sample per row. Each row has sample and group names joined by space.')
-			.style('width', '200px')
-			.style('height', '100px')
+		ta.style('width', '200px').style('height', '100px')
 	}
 	d.append('button')
 		.text('Submit')

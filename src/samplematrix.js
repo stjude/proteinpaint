@@ -171,6 +171,9 @@ export class Samplematrix {
 					}
 					this.showlegend_limitsample()
 				}
+				if (this.limitbysamplesetgroup) {
+					if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
+				}
 
 				if (!this.rowspace) this.rowspace = 1
 				if (!this.colspace) this.colspace = 1
@@ -560,13 +563,20 @@ export class Samplematrix {
 			limitsamplebyeitherannotation: this.limitsamplebyeitherannotation,
 			features: (featureset || this.features).map(feature2arg)
 		}
+		if (this.limitbysamplesetgroup) {
+			arg.sampleset = this.limitbysamplesetgroup.samples
+		}
 
 		if (this.iscustom) {
 			arg.iscustom = 1
 			arg.querykey2tracks = {}
 			// only provide tracks from current feature set, so the bulky vcf object won't be sent when only the cnv feature is updated
 			for (const f of arg.features) {
-				arg.querykey2tracks[f.querykey] = this.querykey2tracks[f.querykey]
+				if (f.querykey) {
+					arg.querykey2tracks[f.querykey] = this.querykey2tracks[f.querykey]
+				} else if (f.querykeylst) {
+					for (const k of f.querykeylst) arg.querykey2tracks[k] = this.querykey2tracks[k]
+				}
 			}
 		} else {
 			arg.dslabel = this.mds.label

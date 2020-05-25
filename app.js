@@ -10056,7 +10056,9 @@ function handle_samplematrix(req, res) {
 		*/
 			let usesampleset
 
-			if (req.query.limitsamplebyeitherannotation) {
+			if (req.query.sampleset) {
+				usesampleset = new Set(req.query.sampleset)
+			} else if (req.query.limitsamplebyeitherannotation) {
 				// must be official ds
 				if (!ds.cohort) throw 'limitsamplebyeitherannotation but no cohort in ds'
 				if (!ds.cohort.annotation) throw 'limitsamplebyeitherannotation but no cohort.annotation in ds'
