@@ -50,7 +50,8 @@ module.exports = {
 				type: 'categorical',
 				values: { yes: { label: 'yes', color: '#858585' } }
 			},
-			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
+			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hashic', name: 'Hi-C', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
 		]
 	},
 

@@ -1246,6 +1246,15 @@ function render_multi_cnvloh(tk, block) {
 			// the group's got a name, show name and border lines
 			const color = tk.legend_samplegroup ? tk.legend_samplegroup.color(samplegroup.name) : '#0A7FA6'
 
+			const glabellst = [samplegroup.name + ' (' + samplegroup.samples.length]
+			if (samplegroup.sampletotalnum)
+				glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%')
+			if (tk.sampleset) {
+				const s = tk.sampleset.find(i => i.name == samplegroup.name)
+				if (s) glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / s.samples.length) + '%')
+			}
+			glabellst.push(')')
+
 			tk.cnvleftg
 				.append('text')
 				.attr('font-size', grouplabelfontsize)
@@ -1255,15 +1264,7 @@ function render_multi_cnvloh(tk, block) {
 				.attr('dominant-baseline', 'central')
 				.attr('fill', color)
 				.attr('x', block.tkleftlabel_xshift)
-				.text(
-					samplegroup.name +
-						' (' +
-						samplegroup.samples.length +
-						(samplegroup.sampletotalnum
-							? ', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%'
-							: '') +
-						')'
-				)
+				.text(glabellst.join(''))
 				.each(function() {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
