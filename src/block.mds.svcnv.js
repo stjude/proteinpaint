@@ -46,8 +46,10 @@ multi_sample_addhighlight
 multi_sample_removehighlight
 
 
-three modes:
-	1 & 2: driven by svcnv file, sv-cnv-vcf-fpkm ranking
+modes:
+
+	driven by svcnv file, sv-cnv-vcf-fpkm ranking
+
 		multi-sample:
 			one row per sample
 			two forms:
@@ -56,14 +58,19 @@ three modes:
 					cnv shown densily
 				full
 					cnv & sv shown together at sample-level
+
+		sampleset:
+			custom set of samples, in groups
+
 		single-sample:
 			show cnv & sv data from a single sample
 			indicated by tk.singlesample {name:"samplename"}
 			spawn from sample group, mode won't mutate
 			fpkm ranking shown as independent track
-	3: ase mode, driven by vcf file and supplemented by rna bam files
-	   always multi-sample
-	   always cohort
+
+	ase mode, driven by vcf file and supplemented by rna bam files
+		always multi-sample
+		always cohort
 
 
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
@@ -72,8 +79,6 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 custom vcf handling:
 	multi-sample
 	single-sample
-
-TODO dense germline variants?
 */
 
 const labyspace = 5
@@ -1241,6 +1246,15 @@ function render_multi_cnvloh(tk, block) {
 			// the group's got a name, show name and border lines
 			const color = tk.legend_samplegroup ? tk.legend_samplegroup.color(samplegroup.name) : '#0A7FA6'
 
+			const glabellst = [samplegroup.name + ' (' + samplegroup.samples.length]
+			if (samplegroup.sampletotalnum)
+				glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%')
+			if (tk.sampleset) {
+				const s = tk.sampleset.find(i => i.name == samplegroup.name)
+				if (s) glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / s.samples.length) + '%')
+			}
+			glabellst.push(')')
+
 			tk.cnvleftg
 				.append('text')
 				.attr('font-size', grouplabelfontsize)
@@ -1250,15 +1264,7 @@ function render_multi_cnvloh(tk, block) {
 				.attr('dominant-baseline', 'central')
 				.attr('fill', color)
 				.attr('x', block.tkleftlabel_xshift)
-				.text(
-					samplegroup.name +
-						' (' +
-						samplegroup.samples.length +
-						(samplegroup.sampletotalnum
-							? ', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%'
-							: '') +
-						')'
-				)
+				.text(glabellst.join(''))
 				.each(function() {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
@@ -1302,7 +1308,7 @@ function render_multi_cnvloh(tk, block) {
 
 			// if to draw sample name
 
-			if ((tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
+			if (!tk.sampleset && (tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
 				// show sample name when is custom track, or no group name in native track, and tall enough
 				sample.svglabel = tk.cnvleftg
 					.append('text')
@@ -3090,10 +3096,16 @@ function makeoption_sampleset(tk, block) {
 			.append('span')
 			.style('opacity', 0.5)
 			.style('padding-right', '10px')
-			.text('Using ' + tk.sampleset.length + ' samples')
+			.text('Restricted to ' + tk.sampleset.reduce((i, j) => i + j.samples.length, 0) + ' samples')
 		row
 			.append('button')
-			.text('delete')
+			.text('Edit')
+			.on('click', () => {
+				showinput_sampleset(tk, block)
+			})
+		row
+			.append('button')
+			.text('Remove')
 			.on('click', () => {
 				tk.tkconfigtip.hide()
 				delete tk.sampleset
@@ -3106,27 +3118,53 @@ function makeoption_sampleset(tk, block) {
 		.append('button')
 		.text('Use a sample list')
 		.on('click', () => {
-			tk.tkconfigtip.clear()
-			const d = tk.tkconfigtip.d.append('div')
-			const ta = d
-				.append('textarea')
-				.attr('placeholder', 'Enter sample names, one per line')
-				.style('width', '200px')
-				.style('height', '100px')
-			d.append('button')
-				.text('Submit')
-				.style('display', 'block')
-				.on('click', () => {
-					const lst = ta
-						.property('value')
-						.trim()
-						.split('\n')
-					if (lst.length > 0) {
-						tk.sampleset = lst
-						tk.tkconfigtip.hide()
-						loadTk(tk, block)
-					}
-				})
+			showinput_sampleset(tk, block)
+		})
+}
+
+function showinput_sampleset(tk, block) {
+	// for editing existing set or create new
+	tk.tkconfigtip.clear()
+	const d = tk.tkconfigtip.d.append('div')
+	const ta = d
+		.append('textarea')
+		.attr('placeholder', 'One sample per row. Each row has sample and group names joined by space.')
+	if (tk.sampleset) {
+		const lst = []
+		for (const l of tk.sampleset) {
+			for (const s of l.samples) {
+				lst.push(s + ' ' + l.name)
+			}
+		}
+		ta.property('value', lst.join('\n'))
+			.style('width', '250px')
+			.style('height', '200px')
+	} else {
+		ta.style('width', '200px').style('height', '100px')
+	}
+	d.append('button')
+		.text('Submit')
+		.style('display', 'block')
+		.on('click', () => {
+			const lst = ta
+				.property('value')
+				.trim()
+				.split('\n')
+			if (lst.length == 0) return
+			const g2l = new Map()
+			for (const line of lst) {
+				const [sample, group] = line.split(' ')
+				if (!sample || !group) continue
+				if (!g2l.has(group)) g2l.set(group, [])
+				g2l.get(group).push(sample)
+			}
+			if (g2l.size == 0) return
+			tk.sampleset = []
+			for (const [name, samples] of g2l) {
+				tk.sampleset.push({ name, samples })
+			}
+			tk.tkconfigtip.hide()
+			loadTk(tk, block)
 		})
 }
 
