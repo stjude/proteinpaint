@@ -2196,7 +2196,7 @@ export function draw_colorscale_loh(tk) {
 	})
 }
 
-export function focus_singlesample(p) {
+export async function focus_singlesample(p) {
 	/*
 	multi-sample
 	native or custom
@@ -2225,6 +2225,8 @@ export function focus_singlesample(p) {
 		holder = pane.body
 	}
 
+	const assaytkbuttondiv = holder.append('div')
+
 	// for launching block
 	const arg = {
 		style: {
@@ -2235,7 +2237,7 @@ export function focus_singlesample(p) {
 		//hide_mdsHandleHolder:1,
 
 		tklst: [],
-		holder: holder,
+		holder,
 		subpanels: []
 	}
 
@@ -2399,58 +2401,72 @@ export function focus_singlesample(p) {
 		}
 	}
 
-	Promise.resolve()
-		.then(() => {
-			if (tk.iscustom) {
-				// custom track, no serverside config
-				return
-			}
+	let assaytklst
 
-			// get sample-level track from serverside dataset config
-			const par = {
-				jwt: block.jwt,
+	if (!tk.iscustom) {
+		// official track
+		// get sample-level track from serverside dataset config
+		const data = await client.dofetch2('mdssvcnv', {
+			method: 'POST',
+			body: JSON.stringify({
 				genome: block.genome.name,
 				dslabel: tk.mds.label,
 				querykey: tk.querykey,
 				gettrack4singlesample: sample.samplename
+			})
+		})
+		if (data.error) throw data.error
+		if (data.tracks) {
+			assaytklst = data.tracks
+			for (const t of data.tracks) {
+				arg.tklst.push(t)
 			}
+		}
+	}
+	const bb = block.newblock(arg)
 
-			return fetch(
-				new Request(block.hostURL + '/mdssvcnv', {
-					method: 'POST',
-					body: JSON.stringify(par)
-				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw { message: data.error }
-					if (data.tracks) {
-						for (const t of data.tracks) {
-							arg.tklst.push(t)
-						}
+	if (m) {
+		if (m.dt == common.dtcnv || m.dt == common.dtloh) {
+			bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
+		}
+	}
+	if (assaytklst) {
+		// display buttons for toggling each assay track
+		assaytkbuttondiv
+			.style('display', 'inline-block')
+			.style('margin', '10px 10px 20px 10px')
+			.append('div')
+			.style('margin-bottom', '3px')
+			.text('Show/hide available assay tracks for ' + sample.samplename)
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+		const d = assaytkbuttondiv
+			.append('div')
+			.style('border', 'solid 1px #ccc')
+			.style('border-radius', '7px')
+		for (const t of assaytklst) {
+			const label = d
+				.append('div')
+				.style('display', 'inline-block')
+				.style('white-space', 'nowrap')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+				.append('label')
+			label
+				.append('input')
+				.attr('type', 'checkbox')
+				.style('margin-right', '3px')
+				.property('checked', !t.hidden)
+				.on('change', () => {
+					if (d3event.target.checked) {
+						bb.turnOnTrack(t)
+					} else {
+						bb.turnOffTrack(t)
 					}
 				})
-		})
-		.catch(err => {
-			client.sayerror(holder, err.message)
-			if (err.stack) console.log(err.stack)
-		})
-		.then(() => {
-			const bb = block.newblock(arg)
-
-			if (block.debugmode) {
-				window.bbb = bb
-			}
-
-			if (m) {
-				if (m.dt == common.dtcnv || m.dt == common.dtloh) {
-					bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
-				}
-			}
-			// done launching single-sample view from multi-sample
-		})
+			label.append('span').text(t.name)
+		}
+	}
 }
 
 export function rnabamtk_copyparam(from, to, copysample) {
