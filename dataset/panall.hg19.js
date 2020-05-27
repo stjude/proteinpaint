@@ -299,7 +299,7 @@ module.exports={
 		genefpkm:{
 			name:'BALL RNA-seq gene log2(FPKM) values',
 			isgenenumeric:true,
-			file:'hg19/pan-all/rlog.ball/rlog.gz',
+			file:'hg19/pan-all/fpkm.ball/fpkm.gz',
 			datatype:'log2(FPKM)',
 			no_ase: true,
 
