@@ -2417,9 +2417,10 @@ export async function focus_singlesample(p) {
 		})
 		if (data.error) throw data.error
 		if (data.tracks) {
+			// important: must duplicate as block init will erase the .hidden tag
 			assaytklst = data.tracks
 			for (const t of data.tracks) {
-				arg.tklst.push(t)
+				arg.tklst.push(JSON.parse(JSON.stringify(t)))
 			}
 		}
 	}

@@ -4591,6 +4591,7 @@ if fromgenetk is provided, will skip this track
 			}
 		}
 		for (const f of toadd) {
+			delete f.hidden
 			const t = this.block_addtk_template(f)
 			this.tk_load(t)
 		}
