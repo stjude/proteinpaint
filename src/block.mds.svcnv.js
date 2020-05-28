@@ -2434,7 +2434,7 @@ export async function focus_singlesample(p) {
 		// display buttons for toggling each assay track
 		assaytkbuttondiv
 			.style('display', 'inline-block')
-			.style('margin', '10px 10px 20px 10px')
+			.style('margin', '0px 10px 20px 10px')
 			.append('div')
 			.style('margin-bottom', '3px')
 			.text('Show/hide available assay tracks for ' + sample.samplename)
