@@ -4575,6 +4575,35 @@ if fromgenetk is provided, will skip this track
 		return new Block(arg)
 	}
 
+	turnOnTrack(arg) {
+		const lst = Array.isArray(arg) ? arg : [arg]
+		const toadd = []
+		for (const t of lst) {
+			if (this.tklst.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))) {
+				// already shown
+				continue
+			}
+			const f = this.genome.tracks.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			if (f) {
+				toadd.push(f)
+			} else {
+				toadd.push(t)
+			}
+		}
+		for (const f of toadd) {
+			delete f.hidden
+			const t = this.block_addtk_template(f)
+			this.tk_load(t)
+		}
+	}
+	turnOffTrack(arg) {
+		const lst = Array.isArray(arg) ? arg : [arg]
+		for (const t of lst) {
+			const idx = this.tklst.findIndex(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			if (idx != -1) this.tk_remove(idx)
+		}
+	}
+
 	showTrackByFile(files) {
 		if (!Array.isArray(files)) {
 			this.error('showTrackByFile() argument must be array')

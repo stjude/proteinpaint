@@ -1,5 +1,3 @@
-const common = require('../src/common')
-
 const valuePerSample = {
 	key: 'percentage',
 	label: 'Percentage',
@@ -384,7 +382,7 @@ module.exports = {
 		svcnv: {
 			name: 'Pediatric tumor mutation',
 			istrack: true,
-			type: common.tkt.mdssvcnv,
+			type: 'mdssvcnv',
 			file: 'hg19/Pediatric/pediatric.svcnv.hg19.gz',
 
 			// cnv
@@ -425,7 +423,7 @@ module.exports = {
 			hideforthemoment: 1,
 			name: 'Pediatric tumor SNV/indel',
 			istrack: true,
-			type: common.tkt.mdsvcf,
+			type: 'mdsvcf',
 			viewrangeupperlimit: 2000000,
 			tracks: [
 				{
@@ -481,7 +479,7 @@ module.exports = {
 		junction: {
 			name: 'Pediatric tumor RNA splice junction',
 			istrack: true,
-			type: common.tkt.mdsjunction,
+			type: 'mdsjunction',
 			//viewrangeupperlimit:500000,
 			readcountCutoff: 5,
 			file: 'hg19/Pediatric/pcgp.target.junction.hg19.gz',

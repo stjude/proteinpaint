@@ -1691,6 +1691,34 @@ sort samples by f.issampleattribute
 				// not general track yet -- still need the svcnv track as trunk
 				let svcnvtk
 				if (this.iscustom) {
+					svcnvtk = {
+						iscustom: true,
+						type: common.tkt.mdssvcnv,
+						singlesample: {
+							name: sample.name
+						}
+					}
+					for (const k in this.querykey2tracks) {
+						const t = this.querykey2tracks[k]
+						if (t.type == common.tkt.mdssvcnv) {
+							svcnvtk.name = t.name || 'Custom tk'
+							svcnvtk.file = t.file
+							svcnvtk.url = t.url
+							svcnvtk.indexURL = t.indexURL
+						} else if (t.type == common.tkt.mdsvcf) {
+							svcnvtk.checkvcf = {
+								file: t.file,
+								url: t.url,
+								indexURL: t.indexURL
+							}
+						} else if (t.type == common.tkt.mdsexpression) {
+							svcnvtk.checkexpressionrank = {
+								file: t.file,
+								url: t.url,
+								indexURL: t.indexURL
+							}
+						}
+					}
 				} else {
 					if (!this.mds) throw 'not custom but .mds{} missing'
 					for (const querykey in this.mds.queries) {

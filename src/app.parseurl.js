@@ -140,242 +140,6 @@ arg
 			if (lst.length) par.hlregions = lst
 		}
 
-		let tklst = []
-		if (urlp.has('bamfile')) {
-			const lst = urlp.get('bamfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bam,
-						name: lst[i],
-						file: lst[i + 1]
-					})
-				}
-			}
-		}
-		if (urlp.has('bamurl')) {
-			const lst = urlp.get('bamurl').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bam,
-						name: lst[i],
-						url: lst[i + 1]
-					})
-				}
-			}
-		}
-
-		if (urlp.has('bedjfile')) {
-			const lst = urlp.get('bedjfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bedj,
-						name: lst[i],
-						file: lst[i + 1]
-					})
-				}
-			}
-		}
-		if (urlp.has('bedjurl')) {
-			const lst = urlp.get('bedjurl').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bedj,
-						name: lst[i],
-						url: lst[i + 1]
-					})
-				}
-			}
-		}
-		if (urlp.has('bigwigfile')) {
-			const lst = urlp.get('bigwigfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bigwig,
-						name: lst[i],
-						file: lst[i + 1],
-						scale: { auto: 1 }
-					})
-				}
-			}
-		}
-		if (urlp.has('bigwigurl')) {
-			const lst = urlp.get('bigwigurl').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.bigwig,
-						name: lst[i],
-						url: lst[i + 1],
-						scale: { auto: 1 }
-					})
-				}
-			}
-		}
-
-		if (urlp.has('junctionfile')) {
-			// legacy
-			const lst = urlp.get('junctionfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.junction,
-						name: lst[i],
-						tracks: [
-							{
-								file: lst[i + 1]
-							}
-						]
-					})
-				}
-			}
-		}
-		if (urlp.has('junctionurl')) {
-			const lst = urlp.get('junctionurl').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: client.tkt.junction,
-						name: lst[i],
-						tracks: [
-							{
-								url: lst[i + 1]
-							}
-						]
-					})
-				}
-			}
-		}
-		if (urlp.has('vcffile')) {
-			const lst = urlp.get('vcffile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: 'vcf',
-						name: lst[i],
-						file: lst[i + 1]
-					})
-				}
-			}
-		}
-
-		if (urlp.has('vcfurl')) {
-			const lst = urlp.get('vcfurl').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: 'vcf',
-						name: lst[i],
-						url: lst[i + 1]
-					})
-				}
-			}
-		}
-
-		if (urlp.has('aicheckfile')) {
-			const lst = urlp.get('aicheckfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: 'aicheck',
-						name: lst[i],
-						file: lst[i + 1]
-					})
-				}
-			}
-		}
-
-		if (urlp.has('bampilefile')) {
-			const lst = urlp.get('bampilefile').split(',')
-			let links = null
-			if (urlp.has('bampilelink')) {
-				links = urlp
-					.get('bampilelink')
-					.split(',')
-					.map(decodeURIComponent)
-			}
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					const tk = {
-						type: client.tkt.bampile,
-						name: lst[i],
-						file: lst[i + 1]
-					}
-					if (links && links[i / 2]) {
-						tk.link = links[i / 2]
-					}
-					tklst.push(tk)
-				}
-			}
-		}
-		if (urlp.has('svcnvfpkmurl')) {
-			const lst = urlp.get('svcnvfpkmurl').split(',')
-			// defines a single track, all members using url
-			const name = lst[0]
-			const type2url = {}
-			for (let i = 1; i < lst.length; i += 2) {
-				type2url[lst[i]] = lst[i + 1]
-			}
-			if (type2url.svcnv || type2url.vcf) {
-				const tk = {
-					type: client.tkt.mdssvcnv,
-					name: name
-				}
-				if (type2url.svcnv) {
-					tk.url = type2url.svcnv
-				}
-				if (type2url.vcf) {
-					tk.checkvcf = {
-						url: type2url.vcf,
-						indexURL: type2url.vcfindex
-					}
-				}
-				if (type2url.fpkm) {
-					tk.checkexpressionrank = {
-						datatype: 'FPKM',
-						url: type2url.fpkm,
-						indexURL: type2url.fpkmindex
-					}
-				}
-				tklst.push(tk)
-			}
-		}
-
-		if (urlp.has('svcnvfpkmfile')) {
-			const lst = urlp.get('svcnvfpkmfile').split(',')
-			// defines a single track, all members using file
-			const name = lst[0]
-			const type2file = {}
-			for (let i = 1; i < lst.length; i += 2) {
-				type2file[lst[i]] = lst[i + 1]
-			}
-			if (type2file.svcnv || type2file.vcf) {
-				const tk = {
-					type: client.tkt.mdssvcnv,
-					name: name
-				}
-				if (type2file.svcnv) {
-					tk.file = type2file.svcnv
-				}
-				if (type2file.vcf) {
-					tk.checkvcf = {
-						file: type2file.vcf
-					}
-				}
-				if (type2file.fpkm) {
-					tk.checkexpressionrank = {
-						datatype: 'FPKM',
-						file: type2file.fpkm
-					}
-				}
-				tklst.push(tk)
-			}
-		}
-
 		if (urlp.has('mds')) {
 			const tmp = urlp.get('mds').split(',')
 			if (tmp[0] && tmp[1]) {
@@ -383,26 +147,9 @@ arg
 			}
 		}
 
-		if (urlp.has('mdsjunctionfile')) {
-			const lst = urlp.get('mdsjunctionfile').split(',')
-			for (let i = 0; i < lst.length; i += 2) {
-				if (lst[i] && lst[i + 1]) {
-					tklst.push({
-						type: 'mdsjunction',
-						name: lst[i],
-						file: lst[i + 1]
-					})
-				}
-			}
-		}
+		par.tklst = get_tklst(urlp)
 
-		for (const t of tklst) {
-			t.iscustom = true
-		}
-
-		par.tklst = tklst
-
-		client.first_genetrack_tolist(arg.genomes[genomename], tklst)
+		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 		if (position) {
 			par.chr = position.chr
 			par.start = position.start
@@ -450,6 +197,7 @@ arg
 			hostURL: arg.hostURL,
 			query: str,
 			genome: arg.genomes[genomename],
+			tklst: get_tklst(urlp),
 			holder: arg.holder,
 			dataset: ds,
 			hlaachange: hlaa,
@@ -457,7 +205,6 @@ arg
 			samplecart: arg.samplecart,
 			debugmode: arg.debugmode
 		})
-		// TODO dataset
 		return
 	}
 
@@ -475,4 +222,252 @@ arg
 			)
 		}
 	}
+}
+
+function get_tklst(urlp) {
+	const tklst = []
+	if (urlp.has('bamfile')) {
+		const lst = urlp.get('bamfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bam,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('bamurl')) {
+		const lst = urlp.get('bamurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bam,
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('bedjfile')) {
+		const lst = urlp.get('bedjfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bedj,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('bedjurl')) {
+		const lst = urlp.get('bedjurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bedj,
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('bigwigfile')) {
+		const lst = urlp.get('bigwigfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bigwig,
+					name: lst[i],
+					file: lst[i + 1],
+					scale: { auto: 1 }
+				})
+			}
+		}
+	}
+	if (urlp.has('bigwigurl')) {
+		const lst = urlp.get('bigwigurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.bigwig,
+					name: lst[i],
+					url: lst[i + 1],
+					scale: { auto: 1 }
+				})
+			}
+		}
+	}
+	if (urlp.has('junctionfile')) {
+		// legacy
+		const lst = urlp.get('junctionfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [
+						{
+							file: lst[i + 1]
+						}
+					]
+				})
+			}
+		}
+	}
+	if (urlp.has('junctionurl')) {
+		const lst = urlp.get('junctionurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [
+						{
+							url: lst[i + 1]
+						}
+					]
+				})
+			}
+		}
+	}
+	if (urlp.has('vcffile')) {
+		const lst = urlp.get('vcffile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'vcf',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('vcfurl')) {
+		const lst = urlp.get('vcfurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'vcf',
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('aicheckfile')) {
+		const lst = urlp.get('aicheckfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'aicheck',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('bampilefile')) {
+		const lst = urlp.get('bampilefile').split(',')
+		let links = null
+		if (urlp.has('bampilelink')) {
+			links = urlp
+				.get('bampilelink')
+				.split(',')
+				.map(decodeURIComponent)
+		}
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				const tk = {
+					type: client.tkt.bampile,
+					name: lst[i],
+					file: lst[i + 1]
+				}
+				if (links && links[i / 2]) {
+					tk.link = links[i / 2]
+				}
+				tklst.push(tk)
+			}
+		}
+	}
+	if (urlp.has('svcnvfpkmurl')) {
+		const lst = urlp.get('svcnvfpkmurl').split(',')
+		// defines a single track, all members using url
+		const name = lst[0]
+		const type2url = {}
+		for (let i = 1; i < lst.length; i += 2) {
+			type2url[lst[i]] = lst[i + 1]
+		}
+		if (type2url.svcnv || type2url.vcf) {
+			const tk = {
+				type: client.tkt.mdssvcnv,
+				name: name
+			}
+			if (type2url.svcnv) {
+				tk.url = type2url.svcnv
+			}
+			if (type2url.vcf) {
+				tk.checkvcf = {
+					url: type2url.vcf,
+					indexURL: type2url.vcfindex
+				}
+			}
+			if (type2url.fpkm) {
+				tk.checkexpressionrank = {
+					datatype: 'FPKM',
+					url: type2url.fpkm,
+					indexURL: type2url.fpkmindex
+				}
+			}
+			tklst.push(tk)
+		}
+	}
+	if (urlp.has('svcnvfpkmfile')) {
+		const lst = urlp.get('svcnvfpkmfile').split(',')
+		// defines a single track, all members using file
+		const name = lst[0]
+		const type2file = {}
+		for (let i = 1; i < lst.length; i += 2) {
+			type2file[lst[i]] = lst[i + 1]
+		}
+		if (type2file.svcnv || type2file.vcf) {
+			const tk = {
+				type: client.tkt.mdssvcnv,
+				name: name
+			}
+			if (type2file.svcnv) {
+				tk.file = type2file.svcnv
+			}
+			if (type2file.vcf) {
+				tk.checkvcf = {
+					file: type2file.vcf
+				}
+			}
+			if (type2file.fpkm) {
+				tk.checkexpressionrank = {
+					datatype: 'FPKM',
+					file: type2file.fpkm
+				}
+			}
+			tklst.push(tk)
+		}
+	}
+	if (urlp.has('mdsjunctionfile')) {
+		const lst = urlp.get('mdsjunctionfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'mdsjunction',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	for (const t of tklst) {
+		t.iscustom = true
+	}
+	return tklst
 }
