@@ -94,10 +94,26 @@ module.exports = {
 				attrnamespacer: ', '
 			},
 			expressionrank_querykey: 'genefpkm',
-			//vcf_querykey:'snvindel',
-			//multihidelabel_vcf:true,
+			vcf_querykey:'snvindel',
+			multihidelabel_vcf:true,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true
+		},
+		snvindel: {
+			hideforthemoment: 1,
+			name: 'ALL SNVindels',
+			istrack: true,
+			type: 'mdsvcf',
+			viewrangeupperlimit: 2000000,
+			tracks:[
+				{
+					file: 'hg19/panall2/PanAll.hg19.vcf.gz',
+					type: 'vcf'
+				}
+			],
+			singlesamples: {
+				tablefile: 'hg19/panall2/split.vcf/table'
+			}
 		},
 		genefpkm: {
 			name: 'ALL RNA-seq gene log2(FPKM) values',
