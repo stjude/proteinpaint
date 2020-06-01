@@ -231,7 +231,8 @@ module.exports = {
 				attributes: [
 					//{k:'group',label:'Subtype'},
 					{ k: 'ETP status', label: 'ETP status' }
-				]
+				],
+				additionals: [{ label: 'Group name', attributes: [{ k: 'group' }] }]
 			}
 		}
 	}

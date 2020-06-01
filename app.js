@@ -464,9 +464,20 @@ function mds_clientcopy(ds) {
 
 				if (q.expressionrank_querykey) {
 					// for checking expression rank
+					const e = ds.queries[q.expressionrank_querykey]
 					clientquery.checkexpressionrank = {
 						querykey: q.expressionrank_querykey,
-						datatype: ds.queries[q.expressionrank_querykey].datatype
+						datatype: e.datatype
+					}
+					if (e.boxplotbysamplegroup && e.boxplotbysamplegroup.additionals) {
+						// quick fix!!
+						// array element 0 is boxplotbysamplegroup.attributes
+						// rest of array, one ele for each of .additionals
+						const lst = []
+						if (e.boxplotbysamplegroup.attributes)
+							lst.push(e.boxplotbysamplegroup.attributes.map(i => i.label).join(', '))
+						for (const i of e.boxplotbysamplegroup.additionals) lst.push(i.label)
+						clientquery.checkexpressionrank.boxplotgroupers = lst
 					}
 				}
 				if (q.vcf_querykey) {
@@ -7506,6 +7517,15 @@ or, export all samples from a group
 							return
 						}
 
+						// quick fix!!!
+						let attributes // which attributes to use
+						if (req.query.index_boxplotgroupers == undefined || req.query.index_boxplotgroupers == 0) {
+							attributes = dsquery.boxplotbysamplegroup.attributes
+						} else {
+							// using one of additional
+							attributes = dsquery.boxplotbysamplegroup.additionals[req.query.index_boxplotgroupers - 1].attributes
+						}
+
 						// same grouping procedure as svcnv
 
 						const sanno = ds.cohort.annotation[j.sample]
@@ -7514,15 +7534,15 @@ or, export all samples from a group
 							return
 						}
 
-						const headname = sanno[dsquery.boxplotbysamplegroup.attributes[0].k]
+						const headname = sanno[attributes[0].k]
 						if (headname == undefined) {
 							nogroupvalues.push({ sample: j.sample, value: j.value }) // hardcoded key
 							return
 						}
 
 						const names = []
-						for (let i = 1; i < dsquery.boxplotbysamplegroup.attributes.length; i++) {
-							const v = sanno[dsquery.boxplotbysamplegroup.attributes[i].k]
+						for (let i = 1; i < attributes.length; i++) {
+							const v = sanno[attributes[i].k]
 							if (v == undefined) {
 								break
 							}
@@ -7538,7 +7558,7 @@ or, export all samples from a group
 								samples: [],
 								attributes: []
 							}
-							for (const a of dsquery.boxplotbysamplegroup.attributes) {
+							for (const a of attributes) {
 								const v = sanno[a.k]
 								if (v == undefined) break
 								const a2 = { k: a.k, kvalue: v }

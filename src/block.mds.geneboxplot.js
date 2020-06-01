@@ -82,6 +82,8 @@ export function init(p) {
 
 	plot.buttonrow = buttonrow
 
+	mayaddgrouperselect(plot)
+
 	// below button row, show/hide boxes
 	const configdiv = plot.holder
 		.append('div')
@@ -544,7 +546,8 @@ function loadplot(plot) {
 		chr: plot.chr,
 		start: plot.start,
 		stop: plot.stop,
-		svcnv: plot.svcnv
+		svcnv: plot.svcnv,
+		index_boxplotgroupers: plot.index_boxplotgroupers
 	}
 	if (plot.dslabel) {
 		arg.dslabel = plot.dslabel
@@ -1339,3 +1342,19 @@ function tooltip_pp(d, holder, pp) {
 }
 
 /********** init2 ends *************/
+
+function mayaddgrouperselect(plot) {
+	/*
+quick fix!!
+
+generate a <select> with options based on plot.boxplotgroupers
+*/
+	if (!plot.boxplotgroupers) return
+	const select = plot.buttonrow.append('select').on('change', () => {
+		plot.index_boxplotgroupers = d3event.target.selectedIndex
+		loadplot(plot)
+	})
+	for (const [idx, name] of plot.boxplotgroupers.entries()) {
+		select.append('option').text(name)
+	}
+}
