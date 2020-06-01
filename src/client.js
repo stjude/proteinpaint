@@ -421,6 +421,7 @@ export class Menu {
 
 		this.d = body
 			.append('div')
+			.attr('class', 'sja_menu_div')
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')
