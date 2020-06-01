@@ -791,8 +791,7 @@ function setInteractivity(self) {
 		if (blankPill) {
 			self.dom.controlsTip.hide()
 			self.dom.treeTip.clear().showunder(blankPill)
-		}
-		else {
+		} else {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
@@ -986,6 +985,19 @@ function setInteractivity(self) {
  Utilities
 *************************/
 
+// find the first filter item that has a matching term.id
+function findItemByTermId(item, id) {
+	if (item.type === 'tvs' && item.tvs.term.id === id) return item
+	if (item.type !== 'tvslst') return
+	for (const subitem of item.lst) {
+		const matchingItem = findItemByTermId(subitem, id)
+		if (matchingItem) return matchingItem
+	}
+}
+exports.findItemByTermId = findItemByTermId
+
+// find filter item by the sequential $id
+// assigned at the time of adding a filter entry
 function findItem(item, $id) {
 	if (item.$id === $id) return item
 	if (item.type !== 'tvslst') return

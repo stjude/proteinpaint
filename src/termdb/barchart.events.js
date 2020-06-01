@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu, newpane, get_one_genome } from '../client'
-import { filterJoin, getFilterItemByTag, getNormalRoot } from '../common/filter'
+import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -267,10 +267,13 @@ function handle_click(self) {
 	}
 
 	if (self.opts.bar_click_opts.includes('add_filter') && (!term2 || !term2.isgenotype)) {
-		options.push({
-			label: 'Add as filter',
-			callback: menuoption_add_filter
-		})
+		const item = findItemByTermId(self.state.termfilter.filter, self.config.term.term.id)
+		if (!item) {
+			options.push({
+				label: 'Add as filter',
+				callback: menuoption_add_filter
+			})
+		}
 	}
 
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
@@ -386,7 +389,7 @@ function menuoption_select_to_gp(self, tvslst) {
 						numerical_axis: {
 							AFtest: {
 								groups: [
-									{ is_termdb: true, filter:  filterRoot},
+									{ is_termdb: true, filter: filterRoot },
 									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
 								]
 							}
