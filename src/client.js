@@ -46,7 +46,7 @@ export const domaincolorlst = [
 // simultaneous reporting for the same issue
 const fetchTimers = {}
 const fetchReported = {}
-const maxAcceptableFetchResponseTime = 15000
+const maxAcceptableFetchResponseTime = 0 // disable with 0, or default to 15000
 const maxNumReportsPerSession = 2
 
 export async function get_one_genome(name) {
