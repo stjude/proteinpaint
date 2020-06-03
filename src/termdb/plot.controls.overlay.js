@@ -87,6 +87,13 @@ class Overlay {
 			filter: this.state.filter,
 			disable_terms: [plot.term.id]
 		}
+		{
+			// if cohort selection is enabled
+			const s = this.app.getState()
+			if (s.activeCohort != undefined) {
+				a.activeCohort = s.activeCohort
+			}
+		}
 		if (plot.term2) {
 			a.term = plot.term2.term
 			a.q = plot.term2.q
