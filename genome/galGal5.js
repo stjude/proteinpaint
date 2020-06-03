@@ -1,59 +1,48 @@
-module.exports={
-	species:'chicken',
-	genomefile:'genomes/galGal5.gz',
-	genedb:{
-		dbfile:'anno/genes.galGal5.db',
+module.exports = {
+	species: 'chicken',
+	genomefile: 'genomes/galGal5.gz',
+	genedb: {
+		dbfile: 'anno/genes.galGal5.db'
 	},
 
-	tracks:[
+	tracks: [
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/ensGene.galGal5.gz',
-			type:'bedj',
-			name:'Ensembl genes',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/refGene.galGal5.gz',
+			type: 'bedj',
+			name: 'RefSeq genes',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/xenoRefGene.galGal5.gz',
-			type:'bedj',
-			name:'Other RefSeq genes',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
-		},
-		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.galGal5.gz",
-			"onerow":true,
-			"categories":{
-				"SINE":{"color":"#ED8C8E","label":"SINE"},
-				"LINE":{"color":"#EDCB8C","label":"LINE"},
-				"LTR":{"color":"#E38CED","label":"LTR"},
-				"DNA":{"color":"#8C8EED","label": "DNA transposon"},
-				"simple":{"color":"#8EB88C","label":"Simple repeats"},
-				"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},
-				"satellite":{"color":"#B59A84","label":"Satellite"},
-				"RNA":{"color":"#9DE0E0","label":"RNA repeat"},
-				"other":{"color":"#9BADC2","label":"Other"},
-				"unknown":{"color":"#858585","label":"Unknown"}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.galGal5.gz',
+			onerow: true,
+			categories: {
+				SINE: { color: '#ED8C8E', label: 'SINE' },
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
 			}
 		}
 	],
-	defaultcoord:{
-		chr:'chr1',
-		start:22866928,
-		stop:22893584
+	defaultcoord: {
+		chr: 'chr2',
+		start: 32602175,
+		stop: 32780708
 	},
-	majorchr:`
+	majorchr: `
 chr1	196202544
 chr2	149560735
 chr3	111302122
@@ -84,7 +73,7 @@ chr28	4974273
 chr22	4729743
 chr25	2906300
 chr33	1648031`,
-	minorchr:`
+	minorchr: `
 chr33_NT_463451v1_random	1265006
 chrLGE64	897576
 chr16	652338
