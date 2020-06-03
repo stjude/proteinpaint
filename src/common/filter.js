@@ -433,7 +433,9 @@ function setRenderers(self) {
 
 		self.addJoinLabel(this, filter, item)
 		if (item.renderAs == 'htmlSelect') {
-			const values = item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.values
+			// selectOptionsFrom is either == 'values' (just item.values) or 'selectCohort' (taken from dataset js)
+			const values =
+				item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.tvs.values
 			const selectElem = holder.append('select')
 			selectElem
 				.selectAll('option')

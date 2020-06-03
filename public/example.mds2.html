@@ -38,7 +38,7 @@ runproteinpaint({
 								filter:{
 									type:'tvslst',join:'and',in:true,
 									lst:[
-										{"type":"tvs","tag":"cohortFilter","renderAs":"htmlSelect","selectOptionsFrom":"selectCohort","tvs":{"term":{"id":"subcohort","type":"categorical"},"values":[{"key":"CCSS","label":"CCSS"}]}},
+										{"type":"tvs","tag":"cohortFilter","renderAs":"htmlSelect","selectOptionsFrom":"values","tvs":{"term":{"id":"subcohort","type":"categorical"},"values":[{"key":"CCSS","label":"CCSS"}]}},
 										{type:'tvs',tvs: {
 											term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
 											values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
