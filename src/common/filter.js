@@ -433,9 +433,9 @@ function setRenderers(self) {
 
 		self.addJoinLabel(this, filter, item)
 		if (item.renderAs == 'htmlSelect') {
-			// selectOptionsFrom is either == 'values' (just item.values) or 'selectCohort' (taken from dataset js)
 			const values =
-				item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.tvs.values
+				item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.tvs.term.values
+			const defaultKey = JSON.stringify(item.tvs.values.map(o => o.key).sort())
 			const selectElem = holder.append('select')
 			selectElem
 				.selectAll('option')
@@ -443,6 +443,9 @@ function setRenderers(self) {
 				.enter()
 				.append('option')
 				.property('value', (d, i) => i)
+				.property('selected', (d, i) => {
+					return d.keys ? defaultKey === JSON.stringify(d.keys.sort()) : defaultKey === defaultKey
+				})
 				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 
 			selectElem.on('change', function() {
