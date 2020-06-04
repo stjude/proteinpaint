@@ -322,7 +322,7 @@ function menuoption_add_filter(self, tvslst) {
   	*/
 	if (!tvslst) return
 
-	if (!self.state.termfilter || !self.state.nav.show_tabs) {
+	if (!self.state.termfilter || self.state.nav.header_mode !== 'with_tabs') {
 		// do not display ui, and do not collect callbacks
 		return
 	}

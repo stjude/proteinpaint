@@ -722,7 +722,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false
+					header_mode: 'search_only'
 				},
 				termfilter: {
 					filter: self.rawFilter
@@ -808,7 +808,7 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false
+					header_mode: 'search_only'
 				},
 				termfilter: {
 					filter: self.rawFilter,

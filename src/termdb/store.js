@@ -10,7 +10,7 @@ import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/
 
 const defaultState = {
 	nav: {
-		show_tabs: false,
+		header_mode: 'search_only',
 		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort

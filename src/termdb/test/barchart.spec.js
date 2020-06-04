@@ -12,7 +12,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		nav: { show_tabs: true }
+		nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -921,7 +921,7 @@ tape('numeric exclude range', function(test) {
 				}
 			},
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			},
 			activeCohort: -1
 		},

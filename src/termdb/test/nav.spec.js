@@ -10,7 +10,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		nav: { show_tabs: true }
+		nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1,
 	fetchOpts: {
@@ -49,7 +49,7 @@ tape('\n', function(test) {
 tape('default hidden tabs, no filter', function(test) {
 	runpp({
 		state: {
-			nav: { show_tabs: false }
+			nav: { header_mode: 'search_only' }
 		},
 		nav: {
 			callbacks: {
@@ -74,7 +74,7 @@ tape('empty cohort, then selected', function(test) {
 		state: {
 			activeCohort: -1,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
@@ -224,7 +224,7 @@ tape('filter subheader', async function(test) {
 		state: {
 			activeCohort: 0,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
@@ -286,7 +286,7 @@ tape('no termd.selectCohort', function(test) {
 			dslabel: 'NoCohortSJLife',
 			activeCohort: -1,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
