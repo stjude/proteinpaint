@@ -37,6 +37,7 @@ class Term1ui {
 		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.activeCohort,
 			plot: appState.tree.plots[this.id]
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
@@ -52,6 +53,7 @@ class Term1ui {
 		this.pill = termsettingInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			activeCohort: this.state.activeCohort,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,
 			callback: data => {
@@ -125,6 +127,7 @@ function setRenderers(self) {
 		self.pill.main({
 			term: plot.term.term,
 			q: plot.term.q,
+			activeCohort: this.state.activeCohort,
 			filter: this.state.filter
 			// no need for disable_terms as pill won't show tree
 		})

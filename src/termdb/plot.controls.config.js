@@ -62,6 +62,7 @@ class TdbConfigUiInit {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id]
 		}

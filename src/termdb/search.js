@@ -49,7 +49,10 @@ class TermSearch {
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
-					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.join(',')
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
+							.slice()
+							.sort()
+							.join(',')
 		}
 	}
 

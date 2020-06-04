@@ -97,6 +97,8 @@ tape('empty cohort, then selected', function(test) {
 			.to(testTabFold, 100)
 			.use(triggerTabUnfold)
 			.to(testTabUnfold, 100)
+			.use(triggerCohortSwitch)
+			.to(testPostCohortSwitch, 100)
 			.done(test)
 	}
 
@@ -193,6 +195,25 @@ tape('empty cohort, then selected', function(test) {
 			tds.filter((d, i) => i === 0).style('background-color'),
 			'transparent',
 			'should highlight the active tab'
+		)
+	}
+
+	function triggerCohortSwitch(nav) {
+		nav.Inner.dom.cohortOpts
+			.selectAll('input')
+			.filter((d, i) => d.keys.length > 1)
+			.node()
+			.click()
+	}
+
+	function testPostCohortSwitch(nav) {
+		test.equal(
+			nav.Inner.activeCohortName,
+			nav.Inner.activeCohortName
+				.split(',')
+				.sort()
+				.join(','),
+			'should normalize the cohort name by sorting keys and concatenating using a comma'
 		)
 	}
 })
