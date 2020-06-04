@@ -28,6 +28,7 @@ class TdbNav {
 		this.searching = false
 		this.hideSubheader = false
 		this.samplecounts = {}
+		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 		this.initUI()
 
 		this.components = {
@@ -155,7 +156,7 @@ function setRenderers(self) {
 				.style('width', '300px')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
-			sessionDiv: header.append('div'),
+			sessionDiv: header.append('div').style('display', 'inline-block'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'none')
@@ -163,6 +164,32 @@ function setRenderers(self) {
 				.style('border-bottom', '1px solid #000'),
 			tip: new Menu({ padding: '5px' })
 		}
+
+		const appState = self.app.getState()
+		console.log(appState.activeCohort)
+		if (!self.opts.show_tabs && self.cohortFilter && appState.activeCohort !== -1) {
+			// not part of filter div
+			self.dom.cohortStandaloneDiv = header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin', '10px')
+				.style('vertical-align', 'top')
+
+			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
+			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function() {
+				return self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
+			})
+
+			self.dom.cohortSelect
+				.selectAll('option')
+				.data(appState.termdbConfig.selectCohort.values)
+				.enter()
+				.append('option')
+				.attr('value', (d, i) => i)
+				.property('selected', (d, i) => i === appState.activeCohort)
+				.html(d => d.shortLabel)
+		}
+
 		self.dom.subheader = Object.freeze({
 			search: self.dom.subheaderDiv.append('div'),
 			cohort: self.dom.subheaderDiv.append('div'),
