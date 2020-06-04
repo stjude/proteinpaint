@@ -60,7 +60,8 @@ tape('default behavior', function(test) {
 
 	let termbtn1, childdiv1
 	function expandTerm1(tree) {
-		termbtn1 = tree.Inner.dom.treeDiv.node().querySelectorAll('.termbtn')[0]
+		const btns = tree.Inner.dom.treeDiv.node().querySelectorAll('.termbtn')
+		termbtn1 = [...btns].find(elem => elem.__data__.name.startsWith('Cancer-related'))
 		childdiv1 = termbtn1.parentNode.querySelectorAll('.termchilddiv')[0]
 		// click the button of the first term
 		termbtn1.click()
@@ -175,7 +176,8 @@ tape('click_term', test => {
 	}
 	let childdiv_term1
 	function expandTerm1(tree) {
-		const term1 = tree.Inner.dom.treeDiv.node().querySelector('.termdiv')
+		const divs = tree.Inner.dom.treeDiv.node().querySelectorAll('.termdiv')
+		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Cancer-related'))
 		term1.querySelector('.termbtn').click()
 		childdiv_term1 = term1.querySelector('.termchilddiv')
 	}

@@ -187,7 +187,13 @@ class TdbTree {
 			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
 		]
 		if (this.state.toSelectCohort) {
-			lst.push('cohortValues=' + this.state.cohortValuelst.join(','))
+			lst.push(
+				'cohortValues=' +
+					this.state.cohortValuelst
+						.slice()
+						.sort()
+						.join(',')
+			)
 		}
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error

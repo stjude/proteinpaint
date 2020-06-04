@@ -295,7 +295,12 @@ function setRenderers(self) {
 			return
 		}
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
-		self.cohortNames = selectCohort.values.map(d => d.keys.join(','))
+		self.cohortNames = selectCohort.values.map(d =>
+			d.keys
+				.slice()
+				.sort()
+				.join(',')
+		)
 
 		self.dom.cohortPrompt = self.dom.subheader.cohort
 			.append('div')
