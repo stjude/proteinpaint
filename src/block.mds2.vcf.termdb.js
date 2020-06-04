@@ -452,6 +452,9 @@ official track only
 		state: {
 			dslabel: tk.mds.label,
 			genome: block.genome.name,
+			nav: {
+				header_mode: 'with_cohortHtmlSelect'
+			},
 			ssid: {
 				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
 				pos: m.pos,
