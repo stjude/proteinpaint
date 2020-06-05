@@ -44,6 +44,7 @@ function getOpts(_opts = {}) {
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		nav: { activeCohort: 0 },
+		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback
 	})
@@ -1032,6 +1033,98 @@ tape('hidden filters', async test => {
 	)
 	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	test.end()
+})
+
+tape('renderAs: htmlSelect', async test => {
+	test.timeoutAfter(1000)
+	const termdbConfig = {
+		selectCohort: {
+			// wrap term.id into a term json object so as to use it in tvs;
+			// the term is not required to exist in termdb
+			// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
+			term: {
+				id: 'subcohort',
+				type: 'categorical'
+			},
+			values: [
+				{
+					keys: ['SJLIFE'],
+					label: 'St. Jude Lifetime Cohort (SJLIFE)',
+					shortLabel: 'SJLIFE',
+					isdefault: true,
+					cssSelector: 'tbody > tr > td:nth-child(2)'
+				},
+				{
+					keys: ['CCSS'],
+					label: 'Childhood Cancer Survivor Study (CCSS)',
+					shortLabel: 'CCSS',
+					cssSelector: 'tbody > tr > td:nth-child(3)'
+				},
+				{
+					keys: ['SJLIFE', 'CCSS'],
+					label: 'Combined SJLIFE+CCSS',
+					shortLabel: 'SJLIFE+CCSS',
+					cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
+					// show note under label in smaller text size
+					note:
+						'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
+				}
+			]
+		}
+	}
+	const opts = getOpts({
+		termdbConfig,
+		filterData: {
+			type: 'tvslst',
+			tag: 'filterUiRoot',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tag: 'cohortFilter',
+					renderAs: 'htmlSelect',
+					selectOptionsFrom: 'selectCohort',
+					tvs: {
+						term: termdbConfig.selectCohort.term,
+						values: [
+							{
+								key: 'SJLIFE',
+								label: 'SJLIFE'
+							}
+						]
+					}
+				}
+			]
+		},
+		callback(filter) {
+			opts.filterData.lst[1] = filter
+			opts.filter.main(opts.filterData)
+		}
+	})
+
+	const rootAndOr = opts.filter.Inner.dom.holder.selectAll('.sja_filter_add_transformer')
+
+	await opts.filter.main(opts.filterData)
+	test.equal(opts.filter.Inner.dom.holder.selectAll('select').size(), 1, 'should have an HTML select element')
+	const orBtn = rootAndOr.filter(d => d === 'or').node()
+	test.equal(orBtn && orBtn.style.display, 'none', 'should hide the OR button to add root filter items')
+	const andBtn = rootAndOr.filter(d => d === 'and').node()
+	test.notEqual(andBtn && andBtn.style.display, 'none', 'should show the AND button to add root filter items')
+
+	opts.filterData.join = 'and'
+	opts.filterData.lst.push(diaggrp())
+	await opts.filter.main(opts.filterData)
+	test.equal(
+		rootAndOr
+			.filter(function() {
+				return this.style.display === 'none'
+			})
+			.size(),
+		2,
+		'should not offer an AND or OR button to subnest the root filter'
+	)
 	test.end()
 })
 

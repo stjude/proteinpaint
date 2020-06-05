@@ -530,8 +530,8 @@ function setRenderers(self) {
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter.lst[0] && self.filter.lst[0].renderAs == 'htmlSelect') {
-			// assume that select dropdown filters are always joined via intersection with other filters
+		if (self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
 			return self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
