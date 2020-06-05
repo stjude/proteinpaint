@@ -694,6 +694,7 @@ function setInteractivity(self) {
 		//}
 	}
 
+	// menu to add a new term
 	self.displayTreeNew = function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
@@ -726,8 +727,12 @@ function setInteractivity(self) {
 				},
 				termfilter: {
 					filter: self.rawFilter
-				},
-				disable_terms: [self.activeData.item.$id]
+				}
+			},
+			tree: {
+				disable_terms: self.activeData.filter.lst
+					.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+					.map(d => d.tvs.term.id)
 			},
 			barchart: {
 				bar_click_override: tvslst => {
@@ -787,6 +792,7 @@ function setInteractivity(self) {
 		})
 	}
 
+	// menu to replace a term or add a a filter.lst
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
@@ -811,9 +817,11 @@ function setInteractivity(self) {
 					header_mode: 'search_only'
 				},
 				termfilter: {
-					filter: self.rawFilter,
-					disable_terms: [self.activeData.item.$id]
+					filter: self.rawFilter
 				}
+			},
+			tree: {
+				disable_terms: [self.activeData.item.tvs.term.id]
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
