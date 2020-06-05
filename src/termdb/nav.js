@@ -91,7 +91,11 @@ class TdbNav {
 		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
 		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
 		if (!this.dom.cohortTable) this.initCohort()
-		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
+		if (this.cohortNames) {
+			this.activeCohortName = this.cohortNames[this.activeCohort]
+			if (this.activeCohort !== -1)
+				this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
+		}
 		this.filterJSON = JSON.stringify(this.state.filter)
 		//this.hideSubheader = false
 
@@ -260,7 +264,7 @@ function setRenderers(self) {
 						return d.key == 'top'
 							? this.innerHTML
 							: d.key == 'mid'
-							? self.activeCohortName
+							? self.activeCohortLabel
 							: 'n=' + self.samplecounts[self.activeCohortName]
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
