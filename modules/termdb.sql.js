@@ -1030,16 +1030,13 @@ thus less things to worry about...
 			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
 		}
 		q.findTermByName = (n, limit, cohortStr = '') => {
-			const cohortKeys = cohortStr.split(',')
 			if (!(cohortStr in s)) {
 				s[cohortStr] = cn.prepare(
-					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort IN (${cohortKeys
-						.map(() => '?')
-						.join(',')}) WHERE t.name LIKE ?`
+					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? WHERE t.name LIKE ?`
 				)
 			}
 			const vals = []
-			if (cohortKeys[0] !== '') vals.push(...cohortKeys)
+			if (cohortStr !== '') vals.push(cohortStr)
 			vals.push('%' + n + '%')
 			const tmp = s[cohortStr].all(vals)
 			if (tmp) {
