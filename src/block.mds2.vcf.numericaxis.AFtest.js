@@ -284,7 +284,10 @@ groupindex:
 					holder: div,
 					state: {
 						genome: block.genome.name,
-						dslabel: tk.mds.label
+						dslabel: tk.mds.label,
+						nav: {
+							header_mode: 'with_cohortHtmlSelect'
+						}
 					},
 					barchart: {
 						bar_click_override: tvslst => {
