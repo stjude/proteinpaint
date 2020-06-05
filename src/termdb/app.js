@@ -82,7 +82,7 @@ class TdbApp {
 				this.app,
 				{
 					holder: this.dom.topbar,
-					header_mode: this.opts.state && this.opts.state.nav && this.opts.state.nav.header_mode
+					header_mode: this.state && this.state.nav && this.state.nav.header_mode
 				},
 				this.opts.nav
 			),

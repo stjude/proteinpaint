@@ -131,7 +131,12 @@ class TdbStore {
 			}
 		} else {
 			this.state.activeCohort = -1
+			// since the cohort tab will be hidden, default to making the filter tab active
 			if (this.state.activeTab === 0) this.state.activeTab = 1
+			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
+				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
+				this.state.nav.header_mode = 'search_only'
+			}
 		}
 	}
 
