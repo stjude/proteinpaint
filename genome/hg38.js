@@ -1,86 +1,106 @@
-module.exports={
-	species:'human',
-	genomefile:'genomes/hg38.gz',
-	genedb:{
-		dbfile:'anno/genes.hg38.db',
-		hasalias:true
+module.exports = {
+	species: 'human',
+	genomefile: 'genomes/hg38.gz',
+	genedb: {
+		dbfile: 'anno/genes.hg38.db',
+		hasalias: true
 	},
-	proteindomain:{
-		dbfile:'anno/db/proteindomain.db',
-		statement:'select data from domain where isoform=? collate nocase'
+	proteindomain: {
+		dbfile: 'anno/db/proteindomain.db',
+		statement: 'select data from domain where isoform=? collate nocase'
 	},
-	snp:{
-		dbfile:'anno/db/snp146.hg38.db',
-		statement_getbyname:'select * from snp146 where name=?',
-		statement_getbycoord:'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
+	snp: {
+		dbfile: 'anno/db/snp146.hg38.db',
+		statement_getbyname: 'select * from snp146 where name=?',
+		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
 	},
-	fimo_motif:{
+	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv',
+		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
 	},
-	clinvarVCF:{
-		file:'hg38/clinvar.hg38.vcf.gz',
-		infokey:'CLNSIG',
-		categories:{
-			'Uncertain_significance':{color:'#aaa',label:'Uncertain significance',textcolor:'white'},
-			'not_provided': {color:'#ccc',label:'Not provided'},
-			'_not_provided':{color:'#ccc',label:'Not provided'},
-			'Benign':{color:'#43ac6a',label:'Benign',textcolor:'white'},
-			'Benign/Likely_benign':{color:'#43ac6a',label:'Benign/Likely benign',textcolor:'white'},
-			'Likely_benign':{color:'#5bc0de',label:'Likely benign',textcolor:'white'},
-			'Likely_pathogenic':{color:'#e99002',label:'Likely pathogenic',textcolor:'white'},
-			'Pathogenic':{color:'#f04124',label:'Pathogenic',textcolor:'white'},
-			'Pathogenic/Likely_pathogenic':{color:'#f04124',label:'Pathogenic/Likely pathogenic',textcolor:'white'},
-			'drug_response':{color:'gold',label:'Drug response',textcolor:'white'},
-			'_drug_response':{color:'gold',label:'Drug response',textcolor:'white'},
-			'Conflicting_interpretations_of_pathogenicity':{color:'#90C3D4',label:'Conflicting interpretations of pathogenicity'},
-			'other':{color:'#ccc',label:'Other'},
-			'_other':{color:'#ccc',label:'Other'},
-			'not_provided':{color:'#ccc',label:'Not provided'},
-			'_not_provided':{color:'#ccc',label:'Not provided'},
-			'risk_factor':{color:'#ccc',label:'Risk factor'},
-			'_risk_factor':{color:'#ccc',label:'Risk factor'},
-			'association':{color:'#ccc',label:'Association'},
-			'_association':{color:'#ccc',label:'Association'},
-			'Affects':{color:'#ccc',label:'Affects'},
-			'_Affects':{color:'#ccc',label:'Affects'},
-			'protective':{color:'#ccc',label:'Protective'},
-			'_protective':{color:'#ccc',label:'Protective'},
+	clinvarVCF: {
+		file: 'hg38/clinvar.hg38.vcf.gz',
+		infokey: 'CLNSIG',
+		categories: {
+			Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white' },
+			not_provided: { color: '#ccc', label: 'Not provided' },
+			_not_provided: { color: '#ccc', label: 'Not provided' },
+			Benign: { color: '#43ac6a', label: 'Benign', textcolor: 'white' },
+			'Benign/Likely_benign': { color: '#43ac6a', label: 'Benign/Likely benign', textcolor: 'white' },
+			Likely_benign: { color: '#5bc0de', label: 'Likely benign', textcolor: 'white' },
+			Likely_pathogenic: { color: '#e99002', label: 'Likely pathogenic', textcolor: 'white' },
+			Pathogenic: { color: '#f04124', label: 'Pathogenic', textcolor: 'white' },
+			'Pathogenic/Likely_pathogenic': { color: '#f04124', label: 'Pathogenic/Likely pathogenic', textcolor: 'white' },
+			drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
+			_drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
+			Conflicting_interpretations_of_pathogenicity: {
+				color: '#90C3D4',
+				label: 'Conflicting interpretations of pathogenicity'
+			},
+			other: { color: '#ccc', label: 'Other' },
+			_other: { color: '#ccc', label: 'Other' },
+			not_provided: { color: '#ccc', label: 'Not provided' },
+			_not_provided: { color: '#ccc', label: 'Not provided' },
+			risk_factor: { color: '#ccc', label: 'Risk factor' },
+			_risk_factor: { color: '#ccc', label: 'Risk factor' },
+			association: { color: '#ccc', label: 'Association' },
+			_association: { color: '#ccc', label: 'Association' },
+			Affects: { color: '#ccc', label: 'Affects' },
+			_Affects: { color: '#ccc', label: 'Affects' },
+			protective: { color: '#ccc', label: 'Protective' },
+			_protective: { color: '#ccc', label: 'Protective' }
 		}
 	},
-	tracks:[
+	tracks: [
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/refGene.hg38.gz',
-			type:'bedj',
-			name:'RefGene',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/refGene.hg38.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			__isgene:true,
-			translatecoding:true,
-			categories:{"coding":{"color":"#004D99","label":"Coding gene"},"nonCoding":{"color":"#009933","label":"Noncoding gene"},"problem":{"color":"#FF3300","label":"Problem"},"pseudo":{"color":"#FF00CC","label":"Pseudogene"}},
-			file:'anno/gencode.v28.hg38.gz',
-			type:'bedj',
-			name:'GENCODE v28',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
+			__isgene: true,
+			translatecoding: true,
+			categories: {
+				coding: { color: '#004D99', label: 'Coding gene' },
+				nonCoding: { color: '#009933', label: 'Noncoding gene' },
+				problem: { color: '#FF3300', label: 'Problem' },
+				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
+			},
+			file: 'anno/gencode.v34.hg38.gz',
+			type: 'bedj',
+			name: 'GENCODE v34',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4
 		},
 		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.hg38.gz","onerow":true, "categories":
-			{"SINE":{"color":"#ED8C8E","label":"SINE"},"LINE":{"color":"#EDCB8C","label":"LINE"},"LTR":{"color":"#E38CED","label":"LTR"},"DNA":{"color":"#8C8EED","label":"DNA transposon"},"simple":{"color":"#8EB88C","label":"Simple repeats"},"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},"satellite":{"color":"#B59A84","label":"Satellite"},"RNA":{"color":"#9DE0E0","label":"RNA repeat"},"other":{"color":"#9BADC2","label":"Other"},"unknown":{"color":"#858585","label":"Unknown"}}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.hg38.gz',
+			onerow: true,
+			categories: {
+				SINE: { color: '#ED8C8E', label: 'SINE' },
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
+			}
 		}
 	],
-	defaultcoord:{chr:'chr17',start:7666657,stop:7688274},
-	majorchr:`chr1	248956422
+	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
+	majorchr: `chr1	248956422
 chr2	242193529
 chr3	198295559
 chr4	190214555
@@ -105,7 +125,7 @@ chr22	50818468
 chrX	156040895
 chrY	57227415
 chrM	16569`,
-	minorchr:`chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
+	minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
 	chr6_GL000250v2_alt	4672374 chr6_GL000255v2_alt	4606388 chr6_GL000252v2_alt	4604811 chr17_KI270857v1_alt	2877074 chr16_KI270853v1_alt	2659700
 	chr16_KI270728v1_random	1872759 chr17_GL000258v2_alt	1821992 chr5_GL339449v2_alt	1612928 chr14_KI270847v1_alt	1511111 chr17_KI270908v1_alt	1423190
 	chr14_KI270846v1_alt	1351393 chr5_KI270897v1_alt	1144418 chr7_KI270803v1_alt	1111570 chr19_GL949749v2_alt	1091841 chr19_KI270938v1_alt	1066800
@@ -446,6 +466,5 @@ chrM	16569`,
 	chrUn_KI270385v1	990
 	chrUn_KI270423v1	981
 	chrUn_KI270392v1	971
-	chrUn_KI270394v1	970`,
-
+	chrUn_KI270394v1	970`
 }
