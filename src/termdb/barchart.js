@@ -75,7 +75,10 @@ class TdbBarchart {
 				}
 			},
 			ssid: appState.ssid,
-			bar_click_menu: appState.bar_click_menu || {}
+			bar_click_menu: appState.bar_click_menu || {},
+			// optional
+			activeCohort: appState.activeCohort,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
