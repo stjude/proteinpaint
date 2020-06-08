@@ -124,7 +124,7 @@ tape('tvs (common): buttons', async test => {
 	test.end()
 })
 
-tape('tvs : Categorical', async test => {
+tape('tvs: Categorical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -191,7 +191,7 @@ tape('tvs : Categorical', async test => {
 	test.end()
 })
 
-tape('tvs : Numerical', async test => {
+tape('tvs: Numerical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -440,7 +440,7 @@ tape('tvs : Numerical', async test => {
 	test.end()
 })
 
-tape('tvs : Conditional', async test => {
+tape('tvs: Conditional', async test => {
 	test.timeoutAfter(8000)
 
 	const opts = getOpts({
@@ -584,5 +584,77 @@ tape('tvs : Conditional', async test => {
 		'should change pill value to subcondtion'
 	)
 
+	test.end()
+})
+
+tape('tvs: Cohort + Numerical', async test => {
+	const filterData = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tag: 'cohortFilter',
+				renderAs: 'htmlSelect',
+				tvs: {
+					term: {
+						id: 'subcohort',
+						name: 'subcohort',
+						type: 'categorical',
+						values: {
+							SJLIFE: { key: 'SJLIFE' },
+							CCSS: { key: 'CCSS' },
+							'SJLIFE,CCSS': { keys: ['SJLIFE', 'CCSS'], shortLabel: 'SJLIFE+CCSS' }
+						}
+					},
+					values: [{ key: 'SJLIFE' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'yeardx',
+						name: 'Year of Diagnosis',
+						unit: 'year',
+						type: 'float',
+						values: {}
+					},
+					ranges: [{ stopinclusive: true, start: 1980, stop: 1985 }]
+				}
+			}
+		]
+	}
+	const opts = getOpts({ filterData })
+	await opts.filter.main(opts.filterData, { activeCohort: 0 })
+	await sleep(200)
+
+	// trigger fill-in of pill.num_obj.density_data
+	const pill = opts.holder.select('.tvs_pill').node()
+	pill.click()
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(200)
+	// remember the density data for comparison later
+	const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
+
+	opts.filter.Inner.opts.activeCohort = 2
+	const selectElem = opts.filter.Inner.dom.holder.select('select')
+	selectElem
+		.property('value', 2)
+		.on('change')
+		.call(selectElem.node())
+	await sleep(200)
+	// trigger fill-in of pill.num_obj.density_data
+	pill.click()
+	editOpt.node().click()
+	await sleep(200)
+
+	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
+	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
 	test.end()
 })

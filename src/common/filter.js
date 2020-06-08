@@ -433,34 +433,31 @@ function setRenderers(self) {
 
 		self.addJoinLabel(this, filter, item)
 		if (item.renderAs == 'htmlSelect') {
-			const values =
-				item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.tvs.term.values
-			const defaultKey = JSON.stringify(item.tvs.values.map(o => o.key).sort())
-			const selectElem = holder.append('select')
-			selectElem
-				.selectAll('option')
-				.data(values)
-				.enter()
-				.append('option')
-				.property('value', (d, i) => i)
-				.property('selected', (d, i) => {
-					return d.keys ? defaultKey === JSON.stringify(d.keys.sort()) : defaultKey === defaultKey
-				})
-				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
-
-			selectElem.on('change', function() {
+			const values = getValuesForHtmlSelect(self, item)
+			const selectElem = holder.append('select').on('change', function() {
 				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 				const filterCopy = findItem(filterUiRoot, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
 				const index = +this.value
 				const itemCopy = JSON.parse(JSON.stringify(item))
-				itemCopy.tvs.values = values[index].keys.map(key => {
+				const keys = 'keys' in values[index] ? values[index].keys : [values[index].key]
+				itemCopy.tvs.values = keys.map(key => {
 					return { key, label: key }
 				})
 				filterCopy.lst[i] = itemCopy
 				self.refresh(filterUiRoot)
 			})
+
+			const defaultVal = getDefaultValueForHtmlSelect(self, item)
+			selectElem
+				.selectAll('option')
+				.data(values)
+				.enter()
+				.append('option')
+				.property('value', (d, i) => i)
+				.property('selected', (d, i) => i == defaultVal)
+				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 		} else {
 			const pill = TVSInit({
 				genome: self.genome,
@@ -491,6 +488,10 @@ function setRenderers(self) {
 
 		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
+		} else if (item.renderAs === 'htmlSelect') {
+			select(this)
+				.select('select')
+				.property('value', '' + getDefaultValueForHtmlSelect(self, item))
 		} else {
 			if (!self.pills[item.$id]) return
 			self.pills[item.$id].main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
@@ -730,9 +731,12 @@ function setInteractivity(self) {
 				}
 			},
 			tree: {
-				disable_terms: self.activeData.filter.lst
-					.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-					.map(d => d.tvs.term.id)
+				disable_terms:
+					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
+						? self.activeData.filter.lst
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.map(d => d.tvs.term.id)
+						: []
 			},
 			barchart: {
 				bar_click_override: tvslst => {
@@ -792,7 +796,7 @@ function setInteractivity(self) {
 		})
 	}
 
-	// menu to replace a term or add a a filter.lst
+	// menu to replace a term or add to a filter.lst
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
@@ -1185,3 +1189,18 @@ function filterJoin(lst) {
 }
 
 exports.filterJoin = filterJoin
+
+function getValuesForHtmlSelect(self, item) {
+	return item.selectOptionsFrom == 'selectCohort'
+		? self.opts.termdbConfig.selectCohort.values
+		: Array.isArray(item.tvs.term.values)
+		? item.tvs.term.values
+		: Object.values(item.tvs.term.values)
+}
+
+function getDefaultValueForHtmlSelect(self, item) {
+	const values = getValuesForHtmlSelect(self, item)
+	const defaultKey = JSON.stringify(item.tvs.values.map(o => o.key).sort())
+	const i = values.findIndex(d => (d.keys ? defaultKey === JSON.stringify(d.keys.sort()) : d.key === defaultKey))
+	return i
+}
