@@ -424,8 +424,8 @@ function getTermValues(d, self) {
 	/*
     d: clicked bar data
   */
+	const termValues = getTermValues_initlist_mayAddCohortTVS(self)
 
-	const termValues = []
 	const t1 = self.config.term
 	const t1ValKey =
 		t1.term.values && Object.keys(t1.term.values).filter(key => t1.term.values[key].label === d.seriesId)[0]
@@ -511,4 +511,44 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues
+}
+
+function getTermValues_initlist_mayAddCohortTVS(self) {
+	/*
+initiate an array to catch selected TVS
+if conditions met, may add a TVS to represent selected cohort
+*/
+	const s = self.state
+	if (
+		s.nav &&
+		s.nav.header_mode == 'with_cohortHtmlSelect' &&
+		s.activeCohort >= 0 &&
+		s.termdbConfig &&
+		s.termdbConfig.selectCohort
+	) {
+		const v = s.termdbConfig.selectCohort.values[s.activeCohort]
+		if (v) {
+			let values
+			if (v.keys.length == 1) {
+				values = [{ key: v.keys[0], label: v.shortLabel }]
+			} else {
+				values = v.keys.map(i => {
+					return { key: i }
+				})
+			}
+			return [
+				{
+					type: 'tvs',
+					tag: 'cohortFilter',
+					renderAs: 'htmlSelect',
+					selectOptionsFrom: 'selectCohort',
+					tvs: {
+						term: JSON.parse(JSON.stringify(s.termdbConfig.selectCohort.term)),
+						values
+					}
+				}
+			]
+		}
+	}
+	return []
 }
