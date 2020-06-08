@@ -293,15 +293,26 @@ groupindex:
 						bar_click_override: tvslst => {
 							tip.hide()
 							if (tvslst.length == 0) return // should not happen
+							const cohortFilter = tvslst.find(d => d.tag === 'cohortFilter')
+							if (cohortFilter) {
+								cohortFilter.renderAs = 'htmlSelect'
+								cohortFilter.selectOptionsFrom = 'selectCohort'
+							}
+
 							if (tvslst.length == 1) {
-								group.filter = { type: 'tvslst', join: '', in: true, lst: [{ type: 'tvs', tvs: tvslst[0] }] }
+								group.filter = {
+									type: 'tvslst',
+									join: '',
+									in: true,
+									lst: tvslst[0].type ? tvslst : [{ type: 'tvs', tvs: tvslst[0] }]
+								}
 							} else {
 								group.filter = {
 									type: 'tvslst',
 									join: 'and',
 									in: true,
 									lst: tvslst.map(i => {
-										return { type: 'tvs', tvs: i }
+										return i.type ? i : { type: 'tvs', tvs: i }
 									})
 								}
 							}

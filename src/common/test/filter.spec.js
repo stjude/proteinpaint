@@ -43,7 +43,7 @@ function getOpts(_opts = {}) {
 		holder: holder.append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
-		nav: { activeCohort: 0 },
+		nav: opts.nav,
 		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback

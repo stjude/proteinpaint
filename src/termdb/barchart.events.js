@@ -344,7 +344,7 @@ function menuoption_add_filter(self, tvslst) {
 }
 
 function wrapTvs(tvs) {
-	return { type: 'tvs', tvs }
+	return tvs.type === 'tvs' ? tvs : { type: 'tvs', tvs }
 }
 
 /* 			TODO: add to cart and gp          */
@@ -424,7 +424,13 @@ function getTermValues(d, self) {
 	/*
     d: clicked bar data
   */
-	const termValues = getTermValues_initlist_mayAddCohortTVS(self)
+	const termValues = []
+	if (self.state.nav.header_mode == 'with_cohortHtmlSelect') {
+		// pass the cohort filter information back to calling app
+		// do not set the renderAs in here since that is decided by the calling app
+		const cohortFilter = getFilterItemByTag(self.state.termfilter.filter, 'cohortFilter')
+		if (cohortFilter) termValues.push(JSON.parse(JSON.stringify(cohortFilter)))
+	}
 
 	const t1 = self.config.term
 	const t1ValKey =
@@ -511,44 +517,4 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues
-}
-
-function getTermValues_initlist_mayAddCohortTVS(self) {
-	/*
-initiate an array to catch selected TVS
-if conditions met, may add a TVS to represent selected cohort
-*/
-	const s = self.state
-	if (
-		s.nav &&
-		s.nav.header_mode == 'with_cohortHtmlSelect' &&
-		s.activeCohort >= 0 &&
-		s.termdbConfig &&
-		s.termdbConfig.selectCohort
-	) {
-		const v = s.termdbConfig.selectCohort.values[s.activeCohort]
-		if (v) {
-			let values
-			if (v.keys.length == 1) {
-				values = [{ key: v.keys[0], label: v.shortLabel }]
-			} else {
-				values = v.keys.map(i => {
-					return { key: i }
-				})
-			}
-			return [
-				{
-					type: 'tvs',
-					tag: 'cohortFilter',
-					renderAs: 'htmlSelect',
-					selectOptionsFrom: 'selectCohort',
-					tvs: {
-						term: JSON.parse(JSON.stringify(s.termdbConfig.selectCohort.term)),
-						values
-					}
-				}
-			]
-		}
-	}
-	return []
 }

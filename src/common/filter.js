@@ -810,7 +810,6 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
-
 		appInit(null, {
 			holder: self.dom.treeBody,
 			state: {
@@ -834,9 +833,7 @@ function setInteractivity(self) {
 					  !filter.lst.length ||
 					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 					? self.appendTerm
-					: 1 //self.activeData.item.type == 'tvs'
-					? self.subnestFilter
-					: self.editFilter
+					: self.subnestFilter
 			}
 		})
 	}
@@ -993,8 +990,9 @@ function setInteractivity(self) {
 	}
 
 	self.wrapInputTvs = function(tvs) {
-		tvs.isnot = self.dom.isNotInput.property('checked')
-		return { type: 'tvs', tvs }
+		const item = tvs.tvs ? tvs : { type: 'tvs', tvs }
+		item.tvs.isnot = self.dom.isNotInput.property('checked')
+		return item
 	}
 }
 
