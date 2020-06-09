@@ -420,6 +420,7 @@ function mds_clientcopy(ds) {
 		if (q.istrack) {
 			clientquery.istrack = true
 			clientquery.type = q.type
+			clientquery.isfull = q.isfull
 			// track attributes, some are common, many are track type-specific
 			if (q.nochr != undefined) {
 				clientquery.nochr = q.nochr
