@@ -76,6 +76,7 @@ module.exports = {
 			name: 'ALL mutation',
 			istrack: true,
 			type: 'mdssvcnv',
+			isfull: true,
 			file: 'hg19/panall2/PanALL_CnvSvTable_GenomePaint_2020-5-13.svcnv.gz',
 
 			// cnv
