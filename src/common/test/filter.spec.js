@@ -1099,7 +1099,7 @@ tape('renderAs: htmlSelect', async test => {
 			]
 		},
 		callback(filter) {
-			opts.filterData.lst[1] = filter
+			opts.filterData = filter
 			opts.filter.main(opts.filterData)
 		}
 	})
@@ -1114,7 +1114,7 @@ tape('renderAs: htmlSelect', async test => {
 	test.notEqual(andBtn && andBtn.style.display, 'none', 'should show the AND button to add root filter items')
 
 	opts.filterData.join = 'and'
-	opts.filterData.lst.push(diaggrp())
+	opts.filterData.lst.push(agedx())
 	await opts.filter.main(opts.filterData)
 	test.equal(
 		rootAndOr

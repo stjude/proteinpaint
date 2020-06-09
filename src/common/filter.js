@@ -172,7 +172,16 @@ class Filter {
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
-		return getNormalRoot(rootCopy)
+		const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
+		if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
+			return getNormalRoot({
+				type: 'tvslst',
+				join: 'and',
+				lst: [cohortFilter, parentCopy]
+			})
+		} else {
+			return getNormalRoot(parentCopy)
+		}
 	}
 }
 
@@ -796,7 +805,7 @@ function setInteractivity(self) {
 		})
 	}
 
-	// menu to replace a term or add to a filter.lst
+	// menu to replace a term or add a subnested filter
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
@@ -810,6 +819,7 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
+
 		appInit(null, {
 			holder: self.dom.treeBody,
 			state: {
