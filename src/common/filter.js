@@ -167,7 +167,7 @@ class Filter {
 		return item.$id
 	}
 	getFilterExcludingPill($id) {
-		const rootCopy = JSON.parse(JSON.stringify(this.filter))
+		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
 		const parentCopy = findParent(rootCopy, $id)
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
