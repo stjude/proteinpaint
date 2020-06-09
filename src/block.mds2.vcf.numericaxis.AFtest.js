@@ -277,6 +277,18 @@ groupindex:
 	const tabs = []
 
 	if (tk.mds && tk.mds.termdb) {
+		const cohortFilter = getFilterItemByTag(group.filter, 'cohortFilter')
+		const defaultCohort = cohortFilter
+			? cohortFilter.tvs.values
+					.map(d => d.key)
+					.sort()
+					.join(',')
+			: 0
+		const activeCohort =
+			cohortFilter && tk.mds.termdb.selectCohort
+				? tk.mds.termdb.selectCohort.values.findIndex(v => v.keys.sort().join(',') === defaultCohort)
+				: undefined
+
 		tabs.push({
 			label: 'Clinical info',
 			callback: async div => {
@@ -285,6 +297,7 @@ groupindex:
 					state: {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
+						activeCohort,
 						nav: {
 							header_mode: 'with_cohortHtmlSelect'
 						}
