@@ -1459,6 +1459,9 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel
 			},
+			tree: {
+				disable_terms: [self.term.id]
+			},
 			modifiers: {
 				//modifier to replace filter by clicking term btn
 				//TODO: add tvs as new filter from '+' button

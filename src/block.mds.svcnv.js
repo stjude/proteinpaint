@@ -2736,11 +2736,18 @@ for both multi- and single-sample
 		}
 
 		tk.nocnvlohsv = true
+		tk.isdense = true
+		tk.isfull = false
 		if (tk.mds.queries) {
 			for (const k in tk.mds.queries) {
-				if (tk.mds.queries[k].type == common.tkt.mdssvcnv) {
+				const t = tk.mds.queries[k]
+				if (t.type == common.tkt.mdssvcnv) {
 					// mds has a svcnv track
 					delete tk.nocnvlohsv
+					if (t.isfull) {
+						tk.isfull = true
+						tk.isdense = false
+					}
 				}
 			}
 		}

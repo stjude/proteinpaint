@@ -80,8 +80,10 @@ window.runproteinpaint=(arg)=>{
 		return
 	}
 	// parse embedding arguments
-	const holder= arg.holder ? d3select(arg.holder) : d3select(document.body)
-	holder.style('font','1em Arial, sans-serif')
+	const holder= d3select(arg.holder ? arg.holder : document.body).append('div')
+	holder
+		.attr('class', 'sja_root_holder')
+		.style('font','1em Arial, sans-serif')
 		.style('color','black')
 
 	if(arg.host) {

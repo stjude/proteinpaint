@@ -167,7 +167,7 @@ class Filter {
 		return item.$id
 	}
 	getFilterExcludingPill($id) {
-		const rootCopy = JSON.parse(JSON.stringify(this.filter))
+		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
 		const parentCopy = findParent(rootCopy, $id)
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
@@ -433,29 +433,31 @@ function setRenderers(self) {
 
 		self.addJoinLabel(this, filter, item)
 		if (item.renderAs == 'htmlSelect') {
-			const values = item.selectOptionsFrom == 'selectCohort' ? self.opts.termdbConfig.selectCohort.values : item.values
-			const selectElem = holder.append('select')
-			selectElem
-				.selectAll('option')
-				.data(values)
-				.enter()
-				.append('option')
-				.property('value', (d, i) => i)
-				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
-
-			selectElem.on('change', function() {
+			const values = getValuesForHtmlSelect(self, item)
+			const selectElem = holder.append('select').on('change', function() {
 				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 				const filterCopy = findItem(filterUiRoot, filter.$id)
 				const i = filter.lst.indexOf(item)
 				if (i == -1) return
 				const index = +this.value
 				const itemCopy = JSON.parse(JSON.stringify(item))
-				itemCopy.tvs.values = values[index].keys.map(key => {
+				const keys = 'keys' in values[index] ? values[index].keys : [values[index].key]
+				itemCopy.tvs.values = keys.map(key => {
 					return { key, label: key }
 				})
 				filterCopy.lst[i] = itemCopy
 				self.refresh(filterUiRoot)
 			})
+
+			const defaultVal = getDefaultValueForHtmlSelect(self, item)
+			selectElem
+				.selectAll('option')
+				.data(values)
+				.enter()
+				.append('option')
+				.property('value', (d, i) => i)
+				.property('selected', (d, i) => i == defaultVal)
+				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 		} else {
 			const pill = TVSInit({
 				genome: self.genome,
@@ -486,6 +488,10 @@ function setRenderers(self) {
 
 		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
+		} else if (item.renderAs === 'htmlSelect') {
+			select(this)
+				.select('select')
+				.property('value', '' + getDefaultValueForHtmlSelect(self, item))
 		} else {
 			if (!self.pills[item.$id]) return
 			self.pills[item.$id].main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
@@ -525,8 +531,8 @@ function setRenderers(self) {
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter.lst[0] && self.filter.lst[0].renderAs == 'htmlSelect') {
-			// assume that select dropdown filters are always joined via intersection with other filters
+		if (self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
 			return self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
@@ -689,6 +695,7 @@ function setInteractivity(self) {
 		//}
 	}
 
+	// menu to add a new term
 	self.displayTreeNew = function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
@@ -717,12 +724,19 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false
+					header_mode: 'search_only'
 				},
 				termfilter: {
 					filter: self.rawFilter
-				},
-				disable_terms: [self.activeData.item.$id]
+				}
+			},
+			tree: {
+				disable_terms:
+					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
+						? self.activeData.filter.lst
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.map(d => d.tvs.term.id)
+						: []
 			},
 			barchart: {
 				bar_click_override: tvslst => {
@@ -782,6 +796,7 @@ function setInteractivity(self) {
 		})
 	}
 
+	// menu to replace a term or add to a filter.lst
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
@@ -791,12 +806,10 @@ function setInteractivity(self) {
 		if (blankPill) {
 			self.dom.controlsTip.hide()
 			self.dom.treeTip.clear().showunder(blankPill)
-		}
-		else {
+		} else {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
-
 		appInit(null, {
 			holder: self.dom.treeBody,
 			state: {
@@ -804,12 +817,14 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
 				nav: {
-					show_tabs: false
+					header_mode: 'search_only'
 				},
 				termfilter: {
-					filter: self.rawFilter,
-					disable_terms: [self.activeData.item.$id]
+					filter: self.rawFilter
 				}
+			},
+			tree: {
+				disable_terms: [self.activeData.item.tvs.term.id]
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
@@ -818,9 +833,7 @@ function setInteractivity(self) {
 					  !filter.lst.length ||
 					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 					? self.appendTerm
-					: 1 //self.activeData.item.type == 'tvs'
-					? self.subnestFilter
-					: self.editFilter
+					: self.subnestFilter
 			}
 		})
 	}
@@ -977,8 +990,9 @@ function setInteractivity(self) {
 	}
 
 	self.wrapInputTvs = function(tvs) {
-		tvs.isnot = self.dom.isNotInput.property('checked')
-		return { type: 'tvs', tvs }
+		const item = tvs.tvs ? tvs : { type: 'tvs', tvs }
+		item.tvs.isnot = self.dom.isNotInput.property('checked')
+		return item
 	}
 }
 
@@ -986,6 +1000,19 @@ function setInteractivity(self) {
  Utilities
 *************************/
 
+// find the first filter item that has a matching term.id
+function findItemByTermId(item, id) {
+	if (item.type === 'tvs' && item.tvs.term.id === id) return item
+	if (item.type !== 'tvslst') return
+	for (const subitem of item.lst) {
+		const matchingItem = findItemByTermId(subitem, id)
+		if (matchingItem) return matchingItem
+	}
+}
+exports.findItemByTermId = findItemByTermId
+
+// find filter item by the sequential $id
+// assigned at the time of adding a filter entry
 function findItem(item, $id) {
 	if (item.$id === $id) return item
 	if (item.type !== 'tvslst') return
@@ -1160,3 +1187,18 @@ function filterJoin(lst) {
 }
 
 exports.filterJoin = filterJoin
+
+function getValuesForHtmlSelect(self, item) {
+	return item.selectOptionsFrom == 'selectCohort'
+		? self.opts.termdbConfig.selectCohort.values
+		: Array.isArray(item.tvs.term.values)
+		? item.tvs.term.values
+		: Object.values(item.tvs.term.values)
+}
+
+function getDefaultValueForHtmlSelect(self, item) {
+	const values = getValuesForHtmlSelect(self, item)
+	const defaultKey = JSON.stringify(item.tvs.values.map(o => o.key).sort())
+	const i = values.findIndex(d => (d.keys ? defaultKey === JSON.stringify(d.keys.sort()) : d.key === defaultKey))
+	return i
+}

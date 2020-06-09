@@ -64,7 +64,7 @@ tape('\n', function(test) {
 
 tape('overlay input', function(test) {
 	test.timeoutAfter(5000)
-	test.plan(4)
+	test.plan(5)
 	testByTermId('diaggrp', checkDisplayInAnyView)
 
 	function checkDisplayInAnyView(plotControls) {
@@ -152,6 +152,11 @@ tape('overlay input', function(test) {
 	}
 
 	function checkGradeOverlayOption(plotControls) {
+		test.true(
+			'activeCohort' in plotControls.Inner.components.config.Inner.components.overlay.Inner.state,
+			'should have state.activeCohort'
+		)
+
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay') return
 			test.true(
@@ -252,7 +257,7 @@ tape('scale input', function(test) {
 
 tape('divide by input', function(test) {
 	test.timeoutAfter(7000)
-	test.plan(4)
+	test.plan(5)
 	testByTermId('aaclassic_5', runTests)
 
 	function runTests(plotControls) {
@@ -273,6 +278,10 @@ tape('divide by input', function(test) {
 	}
 
 	function checkDisplayInBarchartView(plotControls) {
+		test.true(
+			'activeCohort' in plotControls.Inner.components.config.Inner.components.divideBy.Inner.state,
+			'should have state.activeCohort'
+		)
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
 			test.notEqual(this.parentNode.style.display, 'none', 'should be visible in barchart view')
@@ -334,7 +343,7 @@ tape('divide by input', function(test) {
 
 tape('Term1 bins', function(test) {
 	test.timeoutAfter(3000)
-	test.plan(2)
+	test.plan(3)
 
 	runpp({
 		state: {
@@ -362,6 +371,10 @@ tape('Term1 bins', function(test) {
 	})
 
 	function checkDisplayWithNumericTerm(plotControls) {
+		test.true(
+			'activeCohort' in plotControls.Inner.components.config.Inner.components.term1.Inner.state,
+			'should have state.activeCohort'
+		)
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Customize bins') return
 			test.notEqual(this.parentNode.style.display, 'none', 'should be visible with numeric term')

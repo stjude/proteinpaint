@@ -86,6 +86,7 @@ create table annotations (
 
 .import annotation.matrix annotations
 .import annotation.admix annotations
+.import annotation.admix.ccss annotations
 
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);

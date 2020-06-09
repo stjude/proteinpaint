@@ -1,59 +1,48 @@
-module.exports={
-	species:'zebrafish',
-	genomefile:'genomes/danRer10.gz',
-	genedb:{
-		dbfile:'anno/genes.danRer10.db',
+module.exports = {
+	species: 'zebrafish',
+	genomefile: 'genomes/danRer10.gz',
+	genedb: {
+		dbfile: 'anno/genes.danRer10.db'
 	},
 
-	tracks:[
+	tracks: [
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/ensGene.danRer10.gz',
-			type:'bedj',
-			name:'Ensembl genes',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/ncbiRefSeq.danRer10.gz',
+			type: 'bedj',
+			name: 'NCBI RefSeq genes',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/xenoRefGene.danRer10.gz',
-			type:'bedj',
-			name:'Other RefSeq genes',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
-		},
-		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.danRer10.gz",
-			"onerow":true,
-			"categories":{
-				"SINE":{"color":"#ED8C8E","label":"SINE"},
-				"LINE":{"color":"#EDCB8C","label":"LINE"},
-				"LTR":{"color":"#E38CED","label":"LTR"},
-				"DNA":{"color":"#8C8EED","label": "DNA transposon"},
-				"simple":{"color":"#8EB88C","label":"Simple repeats"},
-				"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},
-				"satellite":{"color":"#B59A84","label":"Satellite"},
-				"RNA":{"color":"#9DE0E0","label":"RNA repeat"},
-				"other":{"color":"#9BADC2","label":"Other"},
-				"unknown":{"color":"#858585","label":"Unknown"}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.danRer10.gz',
+			onerow: true,
+			categories: {
+				SINE: { color: '#ED8C8E', label: 'SINE' },
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
 			}
 		}
 	],
-	defaultcoord:{
-		chr:'chr23',
-		start:3460451,
-		stop:3466651
+	defaultcoord: {
+		chr: 'chr19',
+		start: 20085434,
+		stop: 20334085
 	},
-	majorchr:`
+	majorchr: `
 chr4	76625712
 chr7	74082188
 chr5	71715914
@@ -79,7 +68,7 @@ chr11	45107271
 chr24	42251103
 chr22	39226288
 chr25	36898761`,
-	minorchr:`
+	minorchr: `
 chrUn_KN149696v1	368637
 chrUn_KN149690v1	343018
 chrUn_KN150474v1	312116

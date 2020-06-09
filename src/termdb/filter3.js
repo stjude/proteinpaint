@@ -34,7 +34,7 @@ class TdbFilter {
 
 	main() {
 		const f = this.state && this.state.termfilter
-		if (!f || !this.state.nav.show_tabs) {
+		if (!f || this.state.nav.header_mode !== 'with_tabs') {
 			this.dom.holder.style('display', 'none')
 			return
 		}

@@ -46,7 +46,7 @@ export const domaincolorlst = [
 // simultaneous reporting for the same issue
 const fetchTimers = {}
 const fetchReported = {}
-const maxAcceptableFetchResponseTime = 15000
+const maxAcceptableFetchResponseTime = 15000 // disable with 0, or default to 15000 milliseconds
 const maxNumReportsPerSession = 2
 
 export async function get_one_genome(name) {
@@ -362,8 +362,8 @@ function trackfetch(url, arg) {
 		fetchTimers[url] = setTimeout(() => {
 			// do not send multiple reports for the same page
 			fetchReported[url] = 1
-			// will need to create an issue-tracker route
-			fetch('https://pecan.stjude.org/api/issue-tracker', {
+
+			const opts = {
 				method: 'POST',
 				headers: {
 					'content-type': 'application/json'
@@ -374,7 +374,9 @@ function trackfetch(url, arg) {
 					arg, // request body
 					page: window.location.href
 				})
-			})
+			}
+
+			fetch('https://pecan.stjude.cloud/api/issue-tracker', opts)
 		}, maxAcceptableFetchResponseTime)
 	}
 }
@@ -421,6 +423,7 @@ export class Menu {
 
 		this.d = body
 			.append('div')
+			.attr('class', 'sja_menu_div')
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')

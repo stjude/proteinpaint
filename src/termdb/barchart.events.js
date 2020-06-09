@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu, newpane, get_one_genome } from '../client'
-import { filterJoin, getFilterItemByTag, getNormalRoot } from '../common/filter'
+import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -267,10 +267,13 @@ function handle_click(self) {
 	}
 
 	if (self.opts.bar_click_opts.includes('add_filter') && (!term2 || !term2.isgenotype)) {
-		options.push({
-			label: 'Add as filter',
-			callback: menuoption_add_filter
-		})
+		const item = findItemByTermId(self.state.termfilter.filter, self.config.term.term.id)
+		if (!item) {
+			options.push({
+				label: 'Add as filter',
+				callback: menuoption_add_filter
+			})
+		}
 	}
 
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
@@ -319,7 +322,7 @@ function menuoption_add_filter(self, tvslst) {
   	*/
 	if (!tvslst) return
 
-	if (!self.state.termfilter || !self.state.nav.show_tabs) {
+	if (!self.state.termfilter || self.state.nav.header_mode !== 'with_tabs') {
 		// do not display ui, and do not collect callbacks
 		return
 	}
@@ -341,7 +344,7 @@ function menuoption_add_filter(self, tvslst) {
 }
 
 function wrapTvs(tvs) {
-	return { type: 'tvs', tvs }
+	return tvs.type === 'tvs' ? tvs : { type: 'tvs', tvs }
 }
 
 /* 			TODO: add to cart and gp          */
@@ -386,7 +389,7 @@ function menuoption_select_to_gp(self, tvslst) {
 						numerical_axis: {
 							AFtest: {
 								groups: [
-									{ is_termdb: true, filter:  filterRoot},
+									{ is_termdb: true, filter: filterRoot },
 									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
 								]
 							}
@@ -421,8 +424,14 @@ function getTermValues(d, self) {
 	/*
     d: clicked bar data
   */
-
 	const termValues = []
+	if (self.state.nav.header_mode == 'with_cohortHtmlSelect') {
+		// pass the cohort filter information back to calling app
+		// do not set the renderAs in here since that is decided by the calling app
+		const cohortFilter = getFilterItemByTag(self.state.termfilter.filter, 'cohortFilter')
+		if (cohortFilter) termValues.push(JSON.parse(JSON.stringify(cohortFilter)))
+	}
+
 	const t1 = self.config.term
 	const t1ValKey =
 		t1.term.values && Object.keys(t1.term.values).filter(key => t1.term.values[key].label === d.seriesId)[0]

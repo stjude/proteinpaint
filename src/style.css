@@ -15,11 +15,23 @@ table {
 /*
 	override the thicker button border
 	that results when a button's 
-	border-radius: 0
+	border-radius: 0 which seems to override
+	all associated styles of 
+	-webkit-appearance: button;
 */
-button {
+.sja_root_holder button,
+.sja_menu_div button,
+.sja_pane button {
 	border-width: 1px;
 	border-style: solid;
+	border-radius: 3px;
+	box-shadow: inset 0 0 0 99999px rgba(255,255,255,0.3);
+}
+
+.sja_root_holder button:hover,
+.sja_menu_div button:hover,
+.sja_pane button:hover {
+	box-shadow: none;
 }
 
 .sja_errorbar {

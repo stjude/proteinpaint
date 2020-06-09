@@ -187,7 +187,13 @@ class TdbTree {
 			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
 		]
 		if (this.state.toSelectCohort) {
-			lst.push('cohortValues=' + this.state.cohortValuelst.join(','))
+			lst.push(
+				'cohortValues=' +
+					this.state.cohortValuelst
+						.slice()
+						.sort()
+						.join(',')
+			)
 		}
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
@@ -346,6 +352,8 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = function(term) {
+		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
+
 		const div = select(this)
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
@@ -358,8 +366,9 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('padding', '4px 9px')
 				.style('font-family', 'courier')
+				.style('opacity', termIsDisabled ? 0.4 : 1)
 				.text('+')
-				.on('click', self.toggleTerm)
+				.on('click', termIsDisabled ? null : self.toggleTerm)
 		}
 
 		const labeldiv = div
@@ -367,11 +376,14 @@ function setRenderers(self) {
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
+			.style('opacity', termIsDisabled ? 0.4 : 1)
+			.style('cursor', 'pointer')
 			.text(term.name)
+			.on('click', termIsDisabled ? null : term.isleaf ? self.clickViewButton : self.toggleTerm)
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
-				if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+				if (termIsDisabled) {
 					labeldiv
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 						.style('padding', '5px 8px')
@@ -394,13 +406,14 @@ function setRenderers(self) {
 				// no modifier, show view button and graph div
 				div
 					.append('div')
-					.attr('class', 'sja_menuoption ' + cls_termview)
+					.attr('class', termIsDisabled ? '' : 'sja_menuoption ' + cls_termview)
 					.style('display', 'inline-block')
 					.style('border-radius', '5px')
 					.style('margin-left', '20px')
 					.style('font-size', '0.8em')
+					.style('opacity', termIsDisabled ? 0.4 : 1)
 					.text('VIEW')
-					.on('click', self.clickViewButton)
+					.on('click', termIsDisabled ? null : self.clickViewButton)
 
 				div.append('div').attr('class', cls_termgraphdiv)
 			}

@@ -234,7 +234,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 				}
 			},
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		app: {

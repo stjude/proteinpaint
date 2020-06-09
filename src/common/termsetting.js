@@ -54,6 +54,7 @@ class TermSetting {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
+		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
 
@@ -75,6 +76,7 @@ class TermSetting {
 				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
 				this.disable_terms = data.disable_terms
 				this.filter = data.filter
+				if ('activeCohort' in data) this.activeCohort = data.activeCohort
 				// reset methods by term type
 				if (this.term) this.setMethodsByTermType[this.term.type](this)
 				this.updateUI()
@@ -251,7 +253,8 @@ function setInteractivity(self) {
 			holder: self.dom.tip.d,
 			state: {
 				genome: self.genome,
-				dslabel: self.dslabel
+				dslabel: self.dslabel,
+				activeCohort: 'activeCohort' in self ? self.activeCohort : -1
 			},
 			tree: {
 				click_term: term => {

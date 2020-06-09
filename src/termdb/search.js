@@ -46,10 +46,13 @@ class TermSearch {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			cohortStr: appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
-				? ''
-				: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.join(',')
-
+			cohortStr:
+				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+					? ''
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
+							.slice()
+							.sort()
+							.join(',')
 		}
 	}
 
@@ -60,8 +63,8 @@ class TermSearch {
 			return
 		}
 		const lst = [
-			'genome=' + this.state.genome, 
-			'dslabel=' + this.state.dslabel, 
+			'genome=' + this.state.genome,
+			'dslabel=' + this.state.dslabel,
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + this.state.cohortStr
 		]
@@ -89,7 +92,6 @@ function setRenderers(self) {
 			.attr('placeholder', 'Search')
 			.style('width', '180px')
 			.style('display', 'block')
-			.style('font-size', '24px')
 			.on('input', debounce(self.onInput, 300))
 
 		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')

@@ -3746,6 +3746,9 @@ if fromgenetk is provided, will skip this track
 								usegm: gm1,
 								allgm: this.allgm,
 
+								// can't believe this is missing for all the time....
+								tklst: this.tklst.filter(i => i.type != client.tkt.usegm),
+
 								gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
 
 								allowpopup: this.allowpopup,
