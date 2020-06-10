@@ -3,18 +3,15 @@ import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 
-export default function(arg) {
-	/*
-arg
-	.jwt
-	.genomes{}
-	.hostURL
-	.variantPageCall_snv
-	.samplecart
-	.holder
-	.debugmode
+/*
+********************** EXPORTED
+parse()
+url2map()
+get_tklst()
+
 */
 
+export function url2map() {
 	const urlp = new Map()
 	for (const s of decodeURIComponent(location.search.substr(1)).split('&')) {
 		const l = s.split('=')
@@ -29,6 +26,21 @@ arg
 			sessionStorage.setItem('urlp_' + key, l[1])
 		}
 	}
+	return urlp
+}
+
+export function parse(arg) {
+	/*
+arg
+	.jwt
+	.genomes{}
+	.hostURL
+	.variantPageCall_snv
+	.samplecart
+	.holder
+	.debugmode
+*/
+	const urlp = url2map()
 
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
@@ -224,7 +236,7 @@ arg
 	}
 }
 
-function get_tklst(urlp) {
+export function get_tklst(urlp) {
 	const tklst = []
 	if (urlp.has('bamfile')) {
 		const lst = urlp.get('bamfile').split(',')
