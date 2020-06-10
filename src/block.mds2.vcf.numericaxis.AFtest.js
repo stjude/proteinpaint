@@ -311,23 +311,11 @@ groupindex:
 								cohortFilter.renderAs = 'htmlSelect'
 								cohortFilter.selectOptionsFrom = 'selectCohort'
 							}
-
-							if (tvslst.length == 1) {
-								group.filter = {
-									type: 'tvslst',
-									join: '',
-									in: true,
-									lst: tvslst[0].type ? tvslst : [{ type: 'tvs', tvs: tvslst[0] }]
-								}
-							} else {
-								group.filter = {
-									type: 'tvslst',
-									join: 'and',
-									in: true,
-									lst: tvslst.map(i => {
-										return i.type ? i : { type: 'tvs', tvs: i }
-									})
-								}
+							group.filter = {
+								type: 'tvslst',
+								join: tvslst.length == 1 ? '' : 'and',
+								in: true,
+								lst: tvslst
 							}
 							delete group.key
 							delete group.is_infofield

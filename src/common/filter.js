@@ -753,7 +753,7 @@ function setInteractivity(self) {
 
 					if (!filterUiRoot.lst.length) {
 						if (tvslst.length > 1) filterUiRoot.join = 'and'
-						filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
+						filterUiRoot.lst.push(...tvslst)
 						self.refresh(filterUiRoot)
 					} else if (d != 'or' && d != 'and') {
 						throw 'unhandled new term(s): invalid appender join value'
@@ -762,13 +762,13 @@ function setInteractivity(self) {
 
 						if (filterUiRoot.join == d) {
 							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-								filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
+								filterUiRoot.lst.push(...tvslst)
 							} else {
 								filterUiRoot.push({
 									type: 'tvslst',
 									in: true,
 									join: 'and',
-									lst: tvslst.map(self.wrapInputTvs)
+									lst: tvslst
 								})
 							}
 							self.refresh(filterUiRoot)
@@ -779,7 +779,7 @@ function setInteractivity(self) {
 								type: 'tvslst',
 								in: true,
 								join: d,
-								lst: [filterUiRoot, ...tvslst.map(self.wrapInputTvs)]
+								lst: [filterUiRoot, ...tvslst]
 							})
 						} else {
 							delete filterUiRoot.tag
@@ -794,7 +794,7 @@ function setInteractivity(self) {
 										type: 'tvslst',
 										in: true,
 										join: 'and',
-										lst: tvslst.map(self.wrapInputTvs)
+										lst: tvslst
 									}
 								]
 							})
@@ -887,14 +887,14 @@ function setInteractivity(self) {
 		const filterCopy = findItem(filterUiRoot, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.splice(i, 1, ...tvslst)
 		} else {
 			filterCopy.lst[i] = {
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapInputTvs)
+				lst: tvslst
 			}
 		}
 		self.refresh(filterUiRoot)
@@ -906,14 +906,14 @@ function setInteractivity(self) {
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = findItem(filterUiRoot, filter.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.push(...tvslst)
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapInputTvs)
+				lst: tvslst
 			})
 		}
 		self.refresh(filterUiRoot)
@@ -930,7 +930,7 @@ function setInteractivity(self) {
 			in: !self.dom.isNotInput.property('checked'),
 			type: 'tvslst',
 			join: filter.join == 'or' ? 'and' : 'or',
-			lst: [item, ...tvslst.map(self.wrapInputTvs)]
+			lst: [item, ...tvslst]
 		}
 		self.refresh(filterUiRoot)
 	}
@@ -947,10 +947,10 @@ function setInteractivity(self) {
 				type: 'tvslst',
 				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
-				lst: [filterCopy, ...tvslst.map(self.wrapInputTvs)]
+				lst: [filterCopy, ...tvslst]
 			})
 		} else {
-			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.push(...tvslst)
 			self.refresh(filterUiRoot)
 		}
 	}
@@ -997,12 +997,6 @@ function setInteractivity(self) {
 		} else {
 			self.refresh(filterUiRoot)
 		}
-	}
-
-	self.wrapInputTvs = function(tvs) {
-		const item = tvs.tvs ? tvs : { type: 'tvs', tvs }
-		item.tvs.isnot = self.dom.isNotInput.property('checked')
-		return item
 	}
 }
 

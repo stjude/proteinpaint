@@ -305,7 +305,9 @@ function setRenderers(self) {
 		}
 		self.dom.subheaderDiv.style(
 			'border-bottom',
-			self.state.nav.show_tabs && visibleSubheaders.length && (self.activeCohort != -1 || !selectCohort)
+			self.state.nav.header_mode == 'with_tabs' &&
+				visibleSubheaders.length &&
+				(self.activeCohort != -1 || !selectCohort)
 				? '1px solid #000'
 				: ''
 		)

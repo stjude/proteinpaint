@@ -514,5 +514,5 @@ function getTermValues(d, self) {
 			}
 		}
 	}
-	return termValues
+	return termValues.map(f => wrapTvs(f))
 }
