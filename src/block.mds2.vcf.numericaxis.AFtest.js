@@ -277,18 +277,17 @@ groupindex:
 	const tabs = []
 
 	if (tk.mds && tk.mds.termdb) {
-		const cohortFilter = getFilterItemByTag(group.filter, 'cohortFilter')
-		const defaultCohort = cohortFilter
-			? cohortFilter.tvs.values
+		let activeCohort
+		if (group.filter) {
+			const cohortFilter = getFilterItemByTag(group.filter, 'cohortFilter')
+			if (cohortFilter && tk.mds.termdb.selectCohort) {
+				const defaultCohort = cohortFilter.tvs.values
 					.map(d => d.key)
 					.sort()
 					.join(',')
-			: 0
-		const activeCohort =
-			cohortFilter && tk.mds.termdb.selectCohort
-				? tk.mds.termdb.selectCohort.values.findIndex(v => v.keys.sort().join(',') === defaultCohort)
-				: undefined
-
+				activeCohort = tk.mds.termdb.selectCohort.values.findIndex(v => v.keys.sort().join(',') === defaultCohort)
+			}
+		}
 		tabs.push({
 			label: 'Clinical info',
 			callback: async div => {
