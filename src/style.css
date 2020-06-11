@@ -12,20 +12,27 @@ table {
 }
 */
 
-/*
-	override the thicker button border
-	that results when a button's 
-	border-radius: 0 which seems to override
-	all associated styles of 
-	-webkit-appearance: button;
-*/
+/* use default browser styles within pp-controlled divs */
+.sja_root_holder,
+.sja_menu_div,
+.sja_pane {
+  all: initial; /* block inheritance for all properties */
+}
+
+/* may reactivate these if the "all: initial" above is not sufficient
 .sja_root_holder table,
 .sja_menu_div table,
 .sja_pane table {
 	border-collapse: separate; 
 	border-spacing: 2px; 
 }
-
+/*
+	override the thicker button border
+	that results when a button's 
+	border-radius: 0 which seems to override
+	all associated styles of 
+	-webkit-appearance: button;
+*/ /*
 .sja_root_holder button,
 .sja_menu_div button,
 .sja_pane button {
@@ -46,7 +53,7 @@ table {
 .sja_pane label {
 	margin-bottom: 0;
 }
-
+*/
 .sja_errorbar {
 	position:relative;
 	padding:5px 50px 5px 10px;
