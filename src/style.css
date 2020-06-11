@@ -19,6 +19,13 @@ table {
 	all associated styles of 
 	-webkit-appearance: button;
 */
+.sja_root_holder table,
+.sja_menu_div table,
+.sja_pane table {
+	border-collapse: separate; 
+	border-spacing: 2px; 
+}
+
 .sja_root_holder button,
 .sja_menu_div button,
 .sja_pane button {
@@ -32,6 +39,12 @@ table {
 .sja_menu_div button:hover,
 .sja_pane button:hover {
 	box-shadow: none;
+}
+
+.sja_root_holder label,
+.sja_menu_div label,
+.sja_pane label {
+	margin-bottom: 0;
 }
 
 .sja_errorbar {
@@ -146,7 +159,7 @@ table {
 	color:#CC0000;
 }
 
-.sja_clbtext {cursor:default; color:black; fill:black; border-bottom:solid 1px transparent; }
+.sja_clbtext {cursor:default; color:black; fill:black; border-bottom:solid 1px transparent;}
 .sja_clbtext:hover { color:#631318;fill:#631318;border-color:black; }
 .sja_clbtext:active { color:#CC0000; border-color:#cc0000; fill:#cc0000;}
 
