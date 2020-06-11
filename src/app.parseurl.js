@@ -86,6 +86,46 @@ arg
 		return
 	}
 
+	if (urlp.has('mavbfile')) {
+		if (!urlp.has('genome')) return '"genome" is required for "mavb"'
+		const genomename = urlp.get('genome')
+		const genome = arg.genomes[genomename]
+		if (!genome) return 'invalid genome: ' + genomename
+		import('./mavb').then(p => {
+			p.mavbparseinput(
+				{
+					genome,
+					hostURL: arg.hostURL,
+					file: urlp.get('mavbfile')
+				},
+				() => {},
+				arg.holder,
+				arg.jwt
+			)
+		})
+		return
+	}
+
+	if (urlp.has('mavburl')) {
+		if (!urlp.has('genome')) return '"genome" is required for "mavb"'
+		const genomename = urlp.get('genome')
+		const genome = arg.genomes[genomename]
+		if (!genome) return 'invalid genome: ' + genomename
+		import('./mavb').then(p => {
+			p.mavbparseinput(
+				{
+					genome,
+					hostURL: arg.hostURL,
+					url: urlp.get('mavburl')
+				},
+				() => {},
+				arg.holder,
+				arg.jwt
+			)
+		})
+		return
+	}
+
 	if (urlp.has('block')) {
 		if (!urlp.has('genome')) {
 			return 'missing genome for block'
