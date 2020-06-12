@@ -679,9 +679,13 @@ add:
 	for (const d of mavb.data) {
 		minlogfc = Math.min(minlogfc, d.logfoldchange)
 		maxlogfc = Math.max(maxlogfc, d.logfoldchange)
-		const v = -Math.log(d.pvalue, 10)
-		minlogpv = Math.min(minlogpv, v)
-		maxlogpv = Math.max(maxlogpv, v)
+		if (d.pvalue == 0) {
+			continue
+		} else {
+			const v = -Math.log(d.pvalue, 10)
+			minlogpv = Math.min(minlogpv, v)
+			maxlogpv = Math.max(maxlogpv, v)
+		}
 	}
 
 	let yaxisw,
@@ -771,7 +775,9 @@ add:
 		xscale.range([0, width])
 		yscale.range([height, 0])
 		dotg.attr('transform', d => {
-			return 'translate(' + xscale(d.logfoldchange) + ',' + yscale(-Math.log(d.pvalue, 10)) + ')'
+			return (
+				'translate(' + xscale(d.logfoldchange) + ',' + yscale(d.pvalue == 0 ? maxlogpv : -Math.log(d.pvalue, 10)) + ')'
+			)
 		})
 		circle.attr('r', d => {
 			return d.vo_radius
