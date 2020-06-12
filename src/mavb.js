@@ -251,7 +251,6 @@ function parseRaw(mavb, lines) {
 				// ignore lines with invalid p value e.g. NA
 				errpvalue++
 				continue
-				//return 'Line '+(i+1)+': invalid value for P value'
 			}
 			m.pvalue = v
 		}
@@ -261,7 +260,6 @@ function parseRaw(mavb, lines) {
 			if (Number.isNaN(v)) {
 				errpvalueadj++
 				continue
-				//return 'Line '+(i+1)+': invalid value for adjusted P value'
 			}
 			m.pvalueadj = v
 		}
@@ -813,7 +811,9 @@ add:
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
 				for (const d of mavb.data) {
-					const v = -Math.log(useun ? d.pvalue : d.pvalueadj, 10)
+					const pv = useun ? d.pvalue : d.pvalueadj
+					if (pv == 0) continue
+					const v = -Math.log(pv, 10)
 					minlogpv = Math.min(minlogpv, v)
 					maxlogpv = Math.max(maxlogpv, v)
 				}
@@ -824,9 +824,8 @@ add:
 					showline: true
 				})
 				dotg.attr('transform', d => {
-					return (
-						'translate(' + xscale(d.logfoldchange) + ',' + yscale(-Math.log(useun ? d.pvalue : d.pvalueadj, 10)) + ')'
-					)
+					const pv = useun ? d.pvalue : d.pvalueadj
+					return 'translate(' + xscale(d.logfoldchange) + ',' + yscale(pv == 0 ? maxlogpv : -Math.log(pv, 10)) + ')'
 				})
 				ylab.text(useun ? '-log(P value)' : '-log(adjusted P value)')
 			})
