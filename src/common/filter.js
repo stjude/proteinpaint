@@ -566,6 +566,9 @@ function setInteractivity(self) {
 		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
 		menuRows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
 		menuRows
+			.filter(d => /*d.action == 'negate' ||*/ d.action == 'remove')
+			.style('display', filter.lst.find(d => d.tag == 'cohortFilter') ? 'none' : 'table-row')
+		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
