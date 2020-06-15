@@ -698,13 +698,13 @@ function setInteractivity(self) {
 		// in case of potentially root filter subnesting, may have to
 		// revert the visibility of root filter group parentheses
 		// that subnest existing pill + blank pill
-		//if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
-		self.dom.filterContainer
-			.selectAll(
-				':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
-			)
-			.style('display', 'none')
-		//}
+		if (self.filter.in && self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'none')
+		}
 	}
 
 	// menu to add a new term
