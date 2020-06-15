@@ -39,9 +39,9 @@ value: term json obj
 to override automatically generated contents in termjson file
 
 
-outputs these files
-* termdb    - load to "terms" table
-* ancestry  - load to "ancestry" table
+outputs these files:
+1. termdb    - load to "terms" table
+2. ancestry  - load to "ancestry" table
 */
 
 const level2_ctcaegraded = 'Graded Adverse Events'
