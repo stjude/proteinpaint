@@ -243,9 +243,9 @@ function parseRaw(mavb, lines) {
 		}
 
 		if (!m.pvalue) {
-			return '(line ' + (i + 1) + ') missing P value'
-		}
-		{
+			errpvalue++
+			continue
+		} else {
 			const v = Number.parseFloat(m.pvalue)
 			if (Number.isNaN(v)) {
 				// ignore lines with invalid p value e.g. NA
