@@ -190,9 +190,13 @@ app.post('/bamnochr', handle_bamnochr)
 // obsolete
 app.get('/tpvafs1', handle_tpvafs1)
 
-const port = serverconfig.port || 3000
-app.listen(port)
-console.log('STANDBY AT PORT ' + port)
+{
+	const port = serverconfig.port || 3000
+	const server = app.listen(port)
+	console.log('STANDBY AT PORT ' + port)
+	// only uncomment below so phewas precompute won't timeout
+	//server.setTimeout(500000)
+}
 
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render

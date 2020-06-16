@@ -195,15 +195,25 @@ use get_rows()
 			if (t) parentname = t.name
 		}
 
+		let filter
+		if (ds.track && ds.track.sample_termfilter) {
+			filter = ds.track.sample_termfilter
+		}
+
 		//////////// prep query for this term
 		const qlst = []
 		switch (term.type) {
 			case 'categorical':
-				qlst.push({ ds, term1_id: term.id })
+				qlst.push({
+					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
+					ds,
+					term1_id: term.id
+				})
 				break
 			case 'float':
 			case 'integer':
 				qlst.push({
+					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
 					ds,
 					term1_id: term.id,
 					term1_q: term.bins.default
@@ -214,6 +224,7 @@ use get_rows()
 				// should only use grades as bars to go along with termdb.comparison_groups
 				// no need to test on subconditions
 				qlst.push({
+					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
 					ds,
 					term1_id: term.id,
 					term1_q: { bar_by_grade: true, value_by_max_grade: true }
