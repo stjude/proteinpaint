@@ -249,14 +249,14 @@ use get_rows()
 			*/
 
 			if (term.type == 'categorical' || term.type == 'integer' || term.type == 'float') {
-				categories.push(...helper_rows2categories(re.lst, term))
+				categories.push(...helper_rows2categories(re.lst, term, ds))
 			} else if (term.type == 'condition') {
 				if (ds.cohort.termdb.phewas.comparison_groups) {
 					// predefined comparison groups
-					categories.push(...helper_conditiongroups2categories(re.lst))
+					categories.push(...helper_conditiongroups2categories(re.lst, ds))
 				} else {
 					// no predefined group, treat like regular category
-					categories.push(...helper_rows2categories(re.lst, term))
+					categories.push(...helper_rows2categories(re.lst, term, ds))
 				}
 
 				if (condition_samplelst) {
@@ -315,12 +315,42 @@ use get_rows()
 
 	const filename = await utils.write_tmpfile(rows.join('\n'))
 	res.send({ filename })
+}
 
-	///////////// helper
+///////////// precompute helper
+function helper_rows2categories(rows, term, ds) {
+	// simply use .key1 as category, to summarize into list of samples by categories
+	const key2cat = new Map()
+	for (const row of rows) {
+		if (ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
+			if (!ds.track.vcf.sample2arrayidx.has(row.sample)) {
+				// not a sample in vcf
+				continue
+			}
+		}
+		const category = row.key1
+		if (!key2cat.has(category)) {
+			let label = category
+			if (term.values) label = term.values[category] ? term.values[category].label : category
+			key2cat.set(category, {
+				group1label: label,
+				group2label: 'All others',
+				group1lst: []
+			})
+		}
+		key2cat.get(category).group1lst.push(row.sample)
+	}
+	return [...key2cat.values()]
+}
+function helper_conditiongroups2categories(rows, ds) {
+	/* with predefined comparison groups in ds
+	 */
+	const categories = []
+	for (const groupdef of ds.cohort.termdb.phewas.comparison_groups) {
+		// divide samples from rows into two groups based on group definition
 
-	function helper_rows2categories(rows, term) {
-		// simply use .key1 as category, to summarize into list of samples by categories
-		const key2cat = new Map()
+		const group1lst = []
+		const group2lst = []
 		for (const row of rows) {
 			if (ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
 				if (!ds.track.vcf.sample2arrayidx.has(row.sample)) {
@@ -328,66 +358,35 @@ use get_rows()
 					continue
 				}
 			}
-			const category = row.key1
-			if (!key2cat.has(category)) {
-				let label = category
-				if (term.values) label = term.values[category] ? term.values[category].label : category
-				key2cat.set(category, {
-					group1label: label,
-					group2label: 'All others',
-					group1lst: []
-				})
-			}
-			key2cat.get(category).group1lst.push(row.sample)
-		}
-		return [...key2cat.values()]
-	}
-	function helper_conditiongroups2categories(rows) {
-		/* with predefined comparison groups in ds
-		 */
-		const categories = []
-		for (const groupdef of ds.cohort.termdb.phewas.comparison_groups) {
-			// divide samples from rows into two groups based on group definition
 
-			const group1lst = []
-			const group2lst = []
-			for (const row of rows) {
-				if (ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
-					if (!ds.track.vcf.sample2arrayidx.has(row.sample)) {
-						// not a sample in vcf
-						continue
-					}
-				}
-
-				const grade = Number(row.key1) // should be safe to assume key1 is grade
-				// group1grades is required
-				if (groupdef.group1grades.has(grade)) {
-					group1lst.push(row.sample)
-					continue
-				}
-				// group2grades
-				if (groupdef.group2grades && groupdef.group2grades.has(grade)) {
-					group2lst.push(row.sample)
-				}
-			}
-
-			if (group1lst.length == 0) {
-				// nothing in group1, skip
-				console.log('Empty group1: ' + groupdef.group1label)
+			const grade = Number(row.key1) // should be safe to assume key1 is grade
+			// group1grades is required
+			if (groupdef.group1grades.has(grade)) {
+				group1lst.push(row.sample)
 				continue
 			}
-
-			categories.push({
-				group1label: groupdef.group1label,
-				group2label: groupdef.group2label,
-				group1lst,
-				group2lst: group2lst.length ? group2lst : undefined,
-				// must pass over this flag!
-				copycontrolfrom1stgroup: groupdef.copycontrolfrom1stgroup
-			})
+			// group2grades
+			if (groupdef.group2grades && groupdef.group2grades.has(grade)) {
+				group2lst.push(row.sample)
+			}
 		}
-		return categories
+
+		if (group1lst.length == 0) {
+			// nothing in group1, skip
+			console.log('Empty group1: ' + groupdef.group1label)
+			continue
+		}
+
+		categories.push({
+			group1label: groupdef.group1label,
+			group2label: groupdef.group2label,
+			group1lst,
+			group2lst: group2lst.length ? group2lst : undefined,
+			// must pass over this flag!
+			copycontrolfrom1stgroup: groupdef.copycontrolfrom1stgroup
+		})
 	}
+	return categories
 }
 
 export async function update_image(q, res) {
