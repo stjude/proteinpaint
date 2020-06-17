@@ -183,6 +183,11 @@ use get_rows()
 	// text rows to be loaded to db table
 	const rows = []
 
+	let filter
+	if (ds.track && ds.track.sample_termfilter) {
+		filter = ds.track.sample_termfilter
+	}
+
 	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if (!term.type) {
 			// requires a valid term type
@@ -193,11 +198,6 @@ use get_rows()
 		{
 			const t = ds.cohort.termdb.q.getTermParent(term.id)
 			if (t) parentname = t.name
-		}
-
-		let filter
-		if (ds.track && ds.track.sample_termfilter) {
-			filter = ds.track.sample_termfilter
 		}
 
 		//////////// prep query for this term
