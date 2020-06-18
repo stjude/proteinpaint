@@ -456,7 +456,7 @@ module.exports = {
 		],
 
 		vcf: {
-			file: 'files/hg38/sjlife/vcf/SJLIFE.vcf.gz',
+			file: 'files/hg38/sjlife/vcf/vcf.gz',
 			viewrangeupperlimit: 1000000,
 			numerical_axis: {
 				in_use: true, // to use numerical axis by default
