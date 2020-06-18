@@ -116,6 +116,9 @@ create index c_grade on chronicevents(grade);
 
 
 DROP TABLE IF EXISTS precomputed;
+drop index if exists p_sample;
+drop index if exists p_termid;
+drop index if exists p_value_for;
 CREATE TABLE precomputed(
   sample TEXT,
   term_id TEXT,
