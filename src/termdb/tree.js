@@ -366,9 +366,9 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('padding', '4px 9px')
 				.style('font-family', 'courier')
-				.style('opacity', termIsDisabled ? 0.4 : 1)
 				.text('+')
-				.on('click', termIsDisabled ? null : self.toggleTerm)
+				// always allow show/hide children even this term is already in use
+				.on('click', self.toggleTerm)
 		}
 
 		const labeldiv = div
@@ -377,9 +377,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : 1)
-			.style('cursor', 'pointer')
 			.text(term.name)
-			.on('click', termIsDisabled ? null : term.isleaf ? self.clickViewButton : self.toggleTerm)
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
