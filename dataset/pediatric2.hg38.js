@@ -155,8 +155,7 @@ module.exports = {
 					key: 'diagnosis_short'
 				}
 			]
-		}		
-		
+		}
 	},
 
 	mutationAttribute: {
@@ -208,85 +207,6 @@ module.exports = {
 			}
 		}
 	},
-
-	aaaannotationsampleset2matrix: {
-		key: 'diagnosis_short',
-		commonfeatureattributes: {
-			querykeylst: ['svcnv', 'snvindel'],
-			cnv: {
-				valuecutoff: 0.2,
-				focalsizelimit: 2000000
-			},
-			loh: {
-				valuecutoff: 0.1,
-				focalsizelimit: 2000000
-			},
-			snvindel: {
-				excludeclasses: {
-					E: 1,
-					Intron: 1,
-					X: 1,
-					noncoding: 1
-				}
-			}
-		},
-		groups: {
-			BALL: {
-				groups: [
-					{
-						name: 'Ph-like',
-						matrixconfig: {
-							header: '<h3>Targetable kinase-activating lesions in Ph-like acute lymphoblastic leukemia</h3>',
-							hidelegend_features: 1,
-							features: [
-								{ ismutation: 1, label: 'ABL1', position: 'chr9:133710642-133763062' },
-								{ ismutation: 1, label: 'ABL2', position: 'chr1:179068461-179198819' },
-								{ ismutation: 1, label: 'CSF1R', position: 'chr5:149432853-149492935' },
-								{ ismutation: 1, label: 'PDGFRB', position: 'chr5:149493399-149535435' },
-								{ ismutation: 1, label: 'JAK2', position: 'chr9:4985032-5128183' },
-								{ ismutation: 1, label: 'CRLF2', position: 'chrX:1314677-1346711' },
-								{ ismutation: 1, label: 'IL7R', position: 'chr5:35856861-35879734' },
-								{ ismutation: 1, label: 'FLT3', position: 'chr13:28577410-28674729' },
-								{ ismutation: 1, label: 'SH2B3', position: 'chr12:111843751-111889427' },
-								{ ismutation: 1, label: 'JAK1', position: 'chr1:65298905-65533429' },
-								{ ismutation: 1, label: 'JAK3', position: 'chr19:17935588-17958880' },
-								{ ismutation: 1, label: 'TYK2', position: 'chr19:10461203-10491352' },
-								{ ismutation: 1, label: 'TSLP', position: 'chr5:110405759-110413722' },
-								{ ismutation: 1, label: 'IL2RB', position: 'chr22:37521874-37546170' },
-								{ ismutation: 1, label: 'NTRK3', position: 'chr15:88402981-88799999' },
-								{ ismutation: 1, label: 'DGKH', position: 'chr13:42614171-42830716' },
-								{ ismutation: 1, label: 'PTK2B', position: 'chr8:27168998-27316908' },
-								{ ismutation: 1, label: 'DYRK1A', position: 'chr21:38738091-38889753' },
-								{ ismutation: 1, label: 'KRAS', position: 'chr12:25357722-25403870' },
-								{ ismutation: 1, label: 'NRAS', position: 'chr1:115247084-115259515' },
-								{ ismutation: 1, label: 'PTPN11', position: 'chr12:112856154-112947717' },
-								{ ismutation: 1, label: 'NF1', position: 'chr17:29421944-29709134' },
-								{ ismutation: 1, label: 'BRAF', position: 'chr7:140419126-140624564' },
-								{ ismutation: 1, label: 'IKZF1', position: 'chr7:50343678-50472799' },
-								{ ismutation: 1, label: 'PAX5', position: 'chr9:36833271-37034476' },
-								{ ismutation: 1, label: 'EBF1', position: 'chr5:158122922-158526770' }
-							],
-							//limitsamplebyeitherannotation:[ {key:'diagnosis_subtype_short',value:'PH-LIKE'} ],
-							limitsamplebyeitherannotation: [{ key: 'diagnosis_short', value: 'BALL' }]
-						}
-					}
-				]
-			}
-		}
-	},
-
-	/************* not ready to migrate to general track yet
-	key2generalTracks:{
-		pedmut: {
-			label:'Pediatric cancer mutation',
-			querykeys: [
-				{key:'svcnv'},
-				{key:'snvindel'},
-				{key:'genefpkm'}
-			]
-		}
-	},
-	*/
 
 	queries: {
 		svcnv: {
@@ -340,10 +260,7 @@ module.exports = {
 					file: 'hg38/Pediatric/pediatric.hg38.vcf.gz',
 					type: 'vcf'
 				}
-			],
-			singlesamples: {
-				tablefile: 'hg19/Pediatric/split.vcf/table'
-			}
+			]
 		},
 
 		genefpkm: {
@@ -386,6 +303,5 @@ module.exports = {
 				color: '#FF8875'
 			}
 		}
-		
 	}
 }
