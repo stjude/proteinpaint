@@ -12,6 +12,25 @@ table {
 }
 */
 
+/***************************************
+	tag-based styles
+
+  prevent embedder styles from overriding
+  the styles within pp-controlled divs
+****************************************/
+
+/* use default browser styles within pp-controlled divs */
+.sja_root_holder,
+.sja_menu_div,
+.sja_pane {
+  all: initial; /* block inheritance for all properties */
+}
+.sja_root_holder table,
+.sja_menu_div table,
+.sja_pane table {
+	border-collapse: separate; 
+	border-spacing: 2px; 
+}
 /*
 	override the thicker button border
 	that results when a button's 
@@ -27,12 +46,27 @@ table {
 	border-radius: 3px;
 	box-shadow: inset 0 0 0 99999px rgba(255,255,255,0.3);
 }
-
 .sja_root_holder button:hover,
 .sja_menu_div button:hover,
 .sja_pane button:hover {
 	box-shadow: none;
 }
+.sja_root_holder label,
+.sja_menu_div label,
+.sja_pane label {
+	margin-bottom: 0;
+}
+.sja_root_holder a,
+.sja_menu_div a,
+.sja_pane a {
+	color: rgb(0, 0, 238);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/*************************
+ 	class-specific styles
+*************************/
 
 .sja_errorbar {
 	position:relative;
@@ -146,7 +180,7 @@ table {
 	color:#CC0000;
 }
 
-.sja_clbtext {cursor:default; color:black; fill:black; border-bottom:solid 1px transparent; }
+.sja_clbtext {cursor:default; color:black; fill:black; border-bottom:solid 1px transparent;}
 .sja_clbtext:hover { color:#631318;fill:#631318;border-color:black; }
 .sja_clbtext:active { color:#CC0000; border-color:#cc0000; fill:#cc0000;}
 

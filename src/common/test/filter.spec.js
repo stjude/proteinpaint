@@ -781,6 +781,17 @@ tape('group Negate interaction', async test => {
 	)
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display === 'none'
+			})
+			.size(),
+		0,
+		'should show parentheses for non-nested filters'
+	)
 	test.end()
 })
 
@@ -1099,7 +1110,7 @@ tape('renderAs: htmlSelect', async test => {
 			]
 		},
 		callback(filter) {
-			opts.filterData.lst[1] = filter
+			opts.filterData = filter
 			opts.filter.main(opts.filterData)
 		}
 	})
@@ -1114,7 +1125,7 @@ tape('renderAs: htmlSelect', async test => {
 	test.notEqual(andBtn && andBtn.style.display, 'none', 'should show the AND button to add root filter items')
 
 	opts.filterData.join = 'and'
-	opts.filterData.lst.push(diaggrp())
+	opts.filterData.lst.push(agedx())
 	await opts.filter.main(opts.filterData)
 	test.equal(
 		rootAndOr
@@ -1125,6 +1136,15 @@ tape('renderAs: htmlSelect', async test => {
 		2,
 		'should not offer an AND or OR button to subnest the root filter'
 	)
+
+	const joinLabel = opts.filter.Inner.dom.holder.select('.sja_filter_join_label')
+	joinLabel.node().click()
+	const tipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = tipd.selectAll('tr')
+	const removeOpt = menuRows.filter(d => d.action == 'remove').node()
+	test.equal(removeOpt && removeOpt.style.display, 'none', 'should hide the Remove option')
+	opts.filter.Inner.dom.controlsTip.hide()
+
 	test.end()
 })
 
@@ -1221,6 +1241,7 @@ tape('getNormalRoot()', async test => {
 				join: 'and',
 				lst: [
 					{
+						tag: 'filterUiRoot',
 						type: 'tvslst',
 						in: true,
 						join: '',
@@ -1251,6 +1272,7 @@ tape('getNormalRoot()', async test => {
 
 	const twoEntryLst = [gettvs('abc', 123), gettvs('xyz', '999')]
 	const userConfiguredFilters = {
+		tag: 'filterUiRoot',
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -1339,6 +1361,7 @@ tape('getNormalRoot()', async test => {
 				lst: [
 					{
 						type: 'tvslst',
+						tag: 'filterUiRoot',
 						in: true,
 						join: '',
 						lst: []

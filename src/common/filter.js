@@ -172,7 +172,16 @@ class Filter {
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
-		return getNormalRoot(rootCopy)
+		const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
+		if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
+			return getNormalRoot({
+				type: 'tvslst',
+				join: 'and',
+				lst: [cohortFilter, parentCopy]
+			})
+		} else {
+			return getNormalRoot(parentCopy)
+		}
 	}
 }
 
@@ -557,6 +566,9 @@ function setInteractivity(self) {
 		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
 		menuRows.filter(d => d.action == 'edit' || d.action == 'replace').style('display', grpAction ? 'none' : 'table-row')
 		menuRows
+			.filter(d => /*d.action == 'negate' ||*/ d.action == 'remove')
+			.style('display', cls.includes('_join_') && filter.lst.find(d => d.tag == 'cohortFilter') ? 'none' : 'table-row')
+		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
@@ -686,13 +698,13 @@ function setInteractivity(self) {
 		// in case of potentially root filter subnesting, may have to
 		// revert the visibility of root filter group parentheses
 		// that subnest existing pill + blank pill
-		//if (self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
-		self.dom.filterContainer
-			.selectAll(
-				':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
-			)
-			.style('display', 'none')
-		//}
+		if (self.filter.in && self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+			self.dom.filterContainer
+				.selectAll(
+					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
+				)
+				.style('display', 'none')
+		}
 	}
 
 	// menu to add a new term
@@ -744,7 +756,7 @@ function setInteractivity(self) {
 
 					if (!filterUiRoot.lst.length) {
 						if (tvslst.length > 1) filterUiRoot.join = 'and'
-						filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
+						filterUiRoot.lst.push(...tvslst)
 						self.refresh(filterUiRoot)
 					} else if (d != 'or' && d != 'and') {
 						throw 'unhandled new term(s): invalid appender join value'
@@ -753,13 +765,13 @@ function setInteractivity(self) {
 
 						if (filterUiRoot.join == d) {
 							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-								filterUiRoot.lst.push(...tvslst.map(self.wrapInputTvs))
+								filterUiRoot.lst.push(...tvslst)
 							} else {
 								filterUiRoot.push({
 									type: 'tvslst',
 									in: true,
 									join: 'and',
-									lst: tvslst.map(self.wrapInputTvs)
+									lst: tvslst
 								})
 							}
 							self.refresh(filterUiRoot)
@@ -770,7 +782,7 @@ function setInteractivity(self) {
 								type: 'tvslst',
 								in: true,
 								join: d,
-								lst: [filterUiRoot, ...tvslst.map(self.wrapInputTvs)]
+								lst: [filterUiRoot, ...tvslst]
 							})
 						} else {
 							delete filterUiRoot.tag
@@ -785,7 +797,7 @@ function setInteractivity(self) {
 										type: 'tvslst',
 										in: true,
 										join: 'and',
-										lst: tvslst.map(self.wrapInputTvs)
+										lst: tvslst
 									}
 								]
 							})
@@ -796,7 +808,7 @@ function setInteractivity(self) {
 		})
 	}
 
-	// menu to replace a term or add to a filter.lst
+	// menu to replace a term or add a subnested filter
 	// elem: the clicked menu row option
 	// d: elem.__data__
 	self.displayTreeMenu = function(elem, d) {
@@ -810,6 +822,7 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
+
 		appInit(null, {
 			holder: self.dom.treeBody,
 			state: {
@@ -877,14 +890,14 @@ function setInteractivity(self) {
 		const filterCopy = findItem(filterUiRoot, filter.$id)
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.splice(i, 1, ...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.splice(i, 1, ...tvslst)
 		} else {
 			filterCopy.lst[i] = {
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapInputTvs)
+				lst: tvslst
 			}
 		}
 		self.refresh(filterUiRoot)
@@ -896,14 +909,14 @@ function setInteractivity(self) {
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = findItem(filterUiRoot, filter.$id)
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
-			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.push(...tvslst)
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
 				in: !self.dom.isNotInput.property('checked'),
 				type: 'tvslst',
 				join: 'and',
-				lst: tvslst.map(self.wrapInputTvs)
+				lst: tvslst
 			})
 		}
 		self.refresh(filterUiRoot)
@@ -920,7 +933,7 @@ function setInteractivity(self) {
 			in: !self.dom.isNotInput.property('checked'),
 			type: 'tvslst',
 			join: filter.join == 'or' ? 'and' : 'or',
-			lst: [item, ...tvslst.map(self.wrapInputTvs)]
+			lst: [item, ...tvslst]
 		}
 		self.refresh(filterUiRoot)
 	}
@@ -937,10 +950,10 @@ function setInteractivity(self) {
 				type: 'tvslst',
 				in: !self.dom.isNotInput.property('checked'),
 				join: filter.join == 'or' ? 'and' : 'or',
-				lst: [filterCopy, ...tvslst.map(self.wrapInputTvs)]
+				lst: [filterCopy, ...tvslst]
 			})
 		} else {
-			filterCopy.lst.push(...tvslst.map(self.wrapInputTvs))
+			filterCopy.lst.push(...tvslst)
 			self.refresh(filterUiRoot)
 		}
 	}
@@ -987,12 +1000,6 @@ function setInteractivity(self) {
 		} else {
 			self.refresh(filterUiRoot)
 		}
-	}
-
-	self.wrapInputTvs = function(tvs) {
-		const item = tvs.tvs ? tvs : { type: 'tvs', tvs }
-		item.tvs.isnot = self.dom.isNotInput.property('checked')
-		return item
 	}
 }
 

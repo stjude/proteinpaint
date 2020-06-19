@@ -190,9 +190,13 @@ app.post('/bamnochr', handle_bamnochr)
 // obsolete
 app.get('/tpvafs1', handle_tpvafs1)
 
-const port = serverconfig.port || 3000
-app.listen(port)
-console.log('STANDBY AT PORT ' + port)
+{
+	const port = serverconfig.port || 3000
+	const server = app.listen(port)
+	console.log('STANDBY AT PORT ' + port)
+	// only uncomment below so phewas precompute won't timeout
+	//server.setTimeout(500000)
+}
 
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
@@ -5339,7 +5343,13 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 					})
 					rl.on('line', line => {
 						const l = line.split('\t')
-						const j = JSON.parse(l[3])
+						let j
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							// invalid json
+							return
+						}
 						if (!j.gene) return
 						if (!j.sample) return
 						if (!Number.isFinite(j.value)) return
@@ -5411,7 +5421,13 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 				const start0 = Number.parseInt(l[1])
 				const stop0 = Number.parseInt(l[2])
 
-				const j = JSON.parse(l[3])
+				let j
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					// invalid json, todo: report error
+					return
+				}
 
 				if (j.dt == undefined) {
 					// todo: report bad lines

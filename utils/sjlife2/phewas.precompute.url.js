@@ -11,4 +11,5 @@ async function main() {
 	const data = await res.json()
 	if (!data.filename) throw 'filename missing'
 	fs.renameSync(path.join(serverconfig.cachedir, data.filename), 'category2vcfsample')
+	console.log('new file "category2vcfsample" has been created under current dir')
 }
