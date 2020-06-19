@@ -1102,6 +1102,30 @@ thus less things to worry about...
 		}
 	}
 
+	if (ds.cohort.termdb.selectCohort && ds.cohort.termdb.phewas) {
+		// this is optional
+		if (!ds.cohort.termdb.phewas.subcohort2totalsamples)
+			throw 'ds.cohort.termdb.phewas.subcohort2totalsamples missing when cohort selection is enabled'
+
+		// this function will be run on either on-the-fly phewas, or precompute
+		// when it's run first time, it will cache the sample arrays for each subcohort, as well as term type with special requirement
+		// so the samples are ready to use later for phewas
+		q.init_phewasSubcohort2totalsamples = () => {
+			for (const key in ds.cohort.termdb.phewas.subcohort2totalsamples) {
+				const config = ds.cohort.termdb.phewas.subcohort2totalsamples[key]
+
+				if (!config.all.samples) config.all.samples = get_samples(config.all.filter, ds)
+
+				if (config.termtype) {
+					for (const type in config.termtype) {
+						if (!config.termtype[type].samples)
+							config.termtype[type].samples = get_samples(config.termtype[type].filter, ds)
+					}
+				}
+			}
+		}
+	}
+
 	function initCohortJoinFxn(template) {
 		// will hold prepared statements, with object key = one or more comma-separated '?'
 		const s_cohort = {
