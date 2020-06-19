@@ -308,16 +308,94 @@ module.exports = {
 		termdb: {
 			//// this attribute is optional
 			phewas: {
+				/*
+				this is good for dataset without cohort selection
 				samplefilter4termtype: {
 					condition: {
 						filter: {
 							type: 'tvslst',
-							join: '',
+							join: 'or',
 							in: true,
-							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
+							lst: [
+								{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+							]
 						}
 					}
 				},
+				*/
+
+				subcohort2totalsamples: {
+					SJLIFE: {
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'SJLIFE' }] } }
+								]
+							}
+						},
+						termtype: {
+							condition: {
+								filter: {
+									type: 'tvslst',
+									join: '',
+									in: true,
+									lst: [
+										// this is based on the fact that ctcae_graded is only about sjlife samples, so no need to AND another tvs
+										{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+									]
+								}
+							}
+						}
+					},
+					CCSS: {
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'CCSS' }] } }
+								]
+							}
+						}
+					},
+					'CCSS,SJLIFE': {
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: { id: 'subcohort', type: 'categorical' },
+											values: [{ key: 'SJLIFE' }, { key: 'CCSS' }]
+										}
+									}
+								]
+							}
+						},
+						termtype: {
+							condition: {
+								filter: {
+									type: 'tvslst',
+									join: 'or',
+									in: true,
+									lst: [
+										// must include samples either is ctcae-graded, or is ccss
+										{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'CCSS' }] } },
+										{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+									]
+								}
+							}
+						}
+					}
+				},
+
 				comparison_groups: [
 					/* only for condition terms
 					 */
