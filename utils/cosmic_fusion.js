@@ -1,27 +1,23 @@
-if(process.argv.length!=5) {
-	console.log('<CosmicFusionExport.tsv> <hg19/hg38> <support data dir> output to text file named "cosmicfusion"')
+if(process.argv.length!=4) {
+	console.log(process.argv.length)
+	console.log('<CosmicFusionExport.tsv> <hg19/hg38> output to ./cosmicfusion')
 	process.exit()
 }
 
 
-const fs=require('fs')
-const path=require('path')
-
 const rawfile=process.argv[2]
 const genomename=process.argv[3]
-const indir = process.argv[4]
-
 
 const builds={
 	hg19:{
-		refgene: path.join(indir, 'hg19/refGene.hg19'),
-		ensgene: path.join(indir, 'hg19/gencode.v24.hg19'),
-		ref2ens: path.join(indir, 'hg19/wgEncodeGencodeRefSeqV24lift37.txt')
+		refgene:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg19/refGene.hg19',
+		ensgene:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg19/gencode.v34.hg19',
+		ref2ens:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg19/wgEncodeGencodeRefSeqV34lift37.txt'
 	},
 	hg38:{
-		refgene: path.join(indir, 'hg38/refGene.hg38'),
-		ensgene: path.join(indir, 'hg38/gencode.v23.hg38'),
-		ref2ens: path.join(indir, 'hg38/wgEncodeGencodeRefSeqV23.txt')
+		refgene:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg38/refGene.hg38',
+		ensgene:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg38/gencode.v34.hg38',
+		ref2ens:'/research/rgs01/resgen/legacy/gb_customTracks/tp/jwang/tools/cosmic_update/dataset/hg38/wgEncodeGencodeRefSeqV34.txt'
 	}
 }
 
@@ -34,6 +30,7 @@ if(!genome) {
 
 
 
+const fs=require('fs')
 
 
 
@@ -70,9 +67,6 @@ for(const line of fs.readFileSync(genome.ref2ens,'utf8').trim().split('\n')) {
 		refseqmap[l[0].split('.')[0]]=l[1].split('.')[0]
 	}
 }
-
-
-
 
 
 var lines=fs.readFileSync(rawfile,'utf8').trim().split('\n')
@@ -122,8 +116,11 @@ for(var i=1; i<lines.length; i++) {
 		}
 	}
 	lst.push(fus.substring(prev))
-	if(lst.length<=1) err(`pairlst length<=1: ${fus}`)
-
+	//if(lst.length<=1) err(`pairlst length<=1: ${fus}`)
+	if (lst.length<=1){
+		console.log(`pairlst length<=1: ${fus}`)
+		continue
+	}
 
 	//console.log(lst.join(' '), ' === ', fus)
 
@@ -245,7 +242,10 @@ function parsenode(string,isA) {
 	// SS18{ENST00000415083}:r.1_1286
 	var lst=string.split(':')
 	if(lst.length!=2) return ['node wrong string: '+string]
-	var namematch=lst[0].match(/(\w+){([A-Z0-9_\.]+)}/)
+	var namematch = lst[0].match(/(\w+)\.\d+\((.*)\)/)
+	var gid = namematch[1]
+	namematch[1] = namematch[2]
+	namematch[2] = gid
 	if(!namematch) return ['node name not match: '+lst[0]]
 	var isoform=namematch[2]
 	var gm=null
