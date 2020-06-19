@@ -9,6 +9,7 @@ main()
 async function main() {
 	const res = await fetch('http://localhost:3001/termdb?genome=hg38&dslabel=SJLife&precompute=1&phewas=1')
 	const data = await res.json()
+	if (data.error) throw data.error
 	if (!data.filename) throw 'filename missing'
 	fs.renameSync(path.join(serverconfig.cachedir, data.filename), 'category2vcfsample')
 	console.log('new file "category2vcfsample" has been created under current dir')
