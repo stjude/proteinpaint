@@ -4,7 +4,18 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.rn6.db'
 	},
-	tracks: [
+    tracks: [
+		{
+			__isgene: true, // only for initialization
+			translatecoding: true, // instructs to translate coding:[]
+			file: 'anno/ncbiRefSeq.rn6.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
+		},
 		{
 			type: 'bedj',
 			name: 'RepeatMasker',
@@ -26,9 +37,9 @@ module.exports = {
 		}
 	],
 	defaultcoord: {
-		chr: 'chr12',
-		start: 57795963,
-		stop: 57815592,
+		chr: 'chr6',
+		start: 77607000,
+		stop: 77625000,
 		gene: 'Pax9'
 	},
 
