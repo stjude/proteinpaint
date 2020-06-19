@@ -691,6 +691,7 @@ tape('pill Remove interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const removeOpt = menuRows.filter(d => d.action == 'remove')
+	test.notEqual(removeOpt.style('display'), 'none', `should have a visible pill remove menu option`)
 	removeOpt.node().click()
 	await sleep(30)
 	test.equal(opts.filter.Inner.filter.lst.length, 0, `should remove the corresponding filter.lst[] entry when clicked`)
@@ -812,6 +813,7 @@ tape('group Remove interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const removeOpt = menuRows.filter(d => d.action == 'remove')
+	test.notEqual(removeOpt.style('display'), 'none', `should have a visible group remove menu option`)
 	removeOpt.node().click()
 	await sleep(30)
 	test.equal(opts.filter.Inner.filter.lst.length, 0, `should remove the tvslst corresponding to the clicked group`)
