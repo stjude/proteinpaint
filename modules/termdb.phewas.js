@@ -15,10 +15,11 @@ do_precompute
 get_numsample_pergenotype
 get_maxlogp
 plot_canvas
+
 #for precompute
-	get_samplefilter4termtype
-	helper_rows2categories
-	helper_conditiongroups2categories
+get_samplefilter4termtype
+helper_rows2categories
+helper_conditiongroups2categories
 */
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -171,22 +172,190 @@ use get_rows()
 - categorical: no config
 - numerical: use default binning scheme
 - condition: hardcoded scheme
+
+will automatically restrict to only those samples in the vcf file
 */
 	if (!serverconfig.debugmode) throw 'precomputing is not allowed: not a dev server'
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if (!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
+	if (ds.cohort.termdb.selectCohort) {
+		precompute_withCohortSelection(q, res, ds)
+	} else {
+		await precompute_noCohortSelection(q, res, ds)
+	}
+}
+
+function precompute_withCohortSelection(q, res, ds) {
+	ds.cohort.termdb.q.init_phewasSubcohort2totalsamples()
+
+	const term2cohort = get_term2cohort(ds)
+
+	const filename = Math.random().toString()
+	const fwrite = fs.createWriteStream(path.join(serverconfig.cachedir, filename))
+	const emptyterms = []
+
+	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
+		if (!term.type) continue
+
+		let parentname = ''
+		{
+			const t = ds.cohort.termdb.q.getTermParent(term.id)
+			if (t) parentname = t.name
+		}
+
+		const querylst = getquerylst4term(term, ds, term2cohort)
+		if (!querylst) {
+			// a term with no cohort assignemnt, could be no samples annotated to it
+			emptyterms.push(term.id)
+			continue
+		}
+
+		for (const q of querylst) {
+			///// run query for this term
+
+			const re = termdbsql.get_rows(q)
+
+			let categories
+			/* a category {}
+				  .group1label
+				  .group2label
+				  .group1lst[]
+				  .group2lst[]
+			   list of control samples (group2lst) is optional
+			   may only be used for condition terms since they may have type-specific filter
+			*/
+
+			if (term.type == 'categorical' || term.type == 'integer' || term.type == 'float') {
+				categories = helper_rows2categories(re.lst, term, ds)
+			} else if (term.type == 'condition') {
+				if (ds.cohort.termdb.phewas.comparison_groups) {
+					// predefined comparison groups
+					categories = helper_conditiongroups2categories(re.lst, ds)
+				} else {
+					// no predefined group, treat like categorical
+					categories = helper_rows2categories(re.lst, term, ds)
+				}
+			} else {
+				throw 'unknown term type'
+			}
+
+			if (
+				ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype &&
+				ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype[term.type]
+			) {
+				// there are filters for this type of term restricting samples of a control set
+				// must create list of control samplesfor each category
+				const restrictsamples = ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype[term.type].samples
+
+				for (const c of categories) {
+					if (c.group2lst) {
+						// already has control, filter it
+						c.group2lst = c.group2lst.filter(s => restrictsamples.indexOf(s) != -1)
+					} else {
+						// no control yet
+						if (c.copycontrolfrom1stgroup) {
+							// use the control from the first group/category!!
+							c.group2lst = []
+							for (const s of categories[0].group2lst) {
+								c.group2lst.push(s)
+							}
+						} else {
+							// generate control from the filtered sample lst
+							const set = new Set(c.group1lst)
+							c.group2lst = restrictsamples.filter(s => !set.has(s))
+						}
+					}
+				}
+			}
+
+			// log
+			for (const c of categories) {
+				console.log(
+					c.group1lst.length +
+						(c.group2lst ? '/' + c.group2lst.length : '') +
+						'\t' +
+						c.group1label +
+						'\t' +
+						term.name +
+						'\t' +
+						q.cohortname
+				)
+			}
+			/* columns
+			1. group name
+			2: term id
+			3: parent name
+			4: term setting
+			5: list of categories
+			*/
+			fwrite.write(
+				q.cohortname +
+					'\t' +
+					group_name +
+					'\t' +
+					term.id +
+					'\t' +
+					parentname +
+					'\t' +
+					(q.term1_q ? JSON.stringify(q.term1_q) : '{}') +
+					'\t' +
+					JSON.stringify(categories) +
+					'\n'
+			)
+		}
+	}
+
+	fwrite.end(() => {
+		res.send({ filename })
+		if (emptyterms.length) {
+			console.log(emptyterms.length + ' empty terms:')
+			console.log(emptyterms.join('\n'))
+		}
+	})
+}
+
+function get_term2cohort(ds) {
+	const t2s = new Map()
+	const s = ds.cohort.db.connection.prepare('SELECT * FROM subcohort_terms')
+	for (const { term_id, cohort } of s.all()) {
+		if (!t2s.has(term_id)) t2s.set(term_id, new Set())
+		t2s.get(term_id).add(cohort)
+	}
+	return t2s
+}
+
+function get_samplefilter4subcohorts(ds) {
+	/*
+need to get total samples for each subcohort, optionally based on term type
+*/
+	if (!ds.cohort.termdb.phewas.subcohort2totalsamples_queryfilter)
+		throw 'ds.cohort.termdb.phewas.subcohort2totalsamples_queryfilter{} missing'
+	const cohort2samples = new Map()
+	for (const cohortkey in ds.cohort.termdb.phewas.subcohort2totalsamples_queryfilter) {
+		cohort2samples.set(cohortkey, {})
+		const config = ds.cohort.termdb.phewas.subcohort2totalsamples_queryfilter[cohortkey]
+		if (!config.all) throw 'config.all{} filter missing'
+		cohort2samples.get(cohortkey).all = termdbsql.get_samples(config.all, ds)
+		if (config.termtype) {
+			cohort2samples.get(cohortkey).termtype = {}
+			for (const type in config.termtype) {
+				cohort2samples.get(cohortkey).termtype[type] = termdbsql.get_samples(config.termtype[type], ds)
+			}
+		}
+	}
+	return cohort2samples
+}
+
+async function precompute_noCohortSelection(q, res, ds) {
+	/* need to test if it really work for a datasset without cohort selection
+	 */
 
 	//////////// optional sample filter by term type
 	const [condition_samplelst] = get_samplefilter4termtype(ds)
 
 	// text rows to be loaded to db table
 	const rows = []
-
-	let filter
-	if (ds.track && ds.track.sample_termfilter) {
-		filter = ds.track.sample_termfilter
-	}
 
 	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if (!term.type) {
@@ -200,42 +369,11 @@ use get_rows()
 			if (t) parentname = t.name
 		}
 
-		//////////// prep query for this term
-		const qlst = []
-		switch (term.type) {
-			case 'categorical':
-				qlst.push({
-					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
-					ds,
-					term1_id: term.id
-				})
-				break
-			case 'float':
-			case 'integer':
-				qlst.push({
-					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
-					ds,
-					term1_id: term.id,
-					term1_q: term.bins.default
-				})
-				break
-			case 'condition':
-				// for both leaf and non-leaf
-				// should only use grades as bars to go along with termdb.comparison_groups
-				// no need to test on subconditions
-				qlst.push({
-					filter: filter ? JSON.parse(JSON.stringify(filter)) : null,
-					ds,
-					term1_id: term.id,
-					term1_q: { bar_by_grade: true, value_by_max_grade: true }
-				})
-				break
-			default:
-				throw 'unknown term type'
-		}
+		const querylst = getquerylst4term(term, ds)
 
-		for (const q of qlst) {
-			//////////// run query for this term
+		for (const q of querylst) {
+			///// run query for this term
+
 			const re = termdbsql.get_rows(q)
 
 			const categories = []
@@ -315,6 +453,103 @@ use get_rows()
 
 	const filename = await utils.write_tmpfile(rows.join('\n'))
 	res.send({ filename })
+}
+
+function getquerylst4term(term, ds, term2cohort) {
+	/* prep queries for this term
+queries as is accepted by get_rows(), to pull out list of samples for each category based on that query
+one term may generate multiple queries, e.g. cohort selection, or special config
+*/
+	const qlst = []
+	if (ds.cohort.termdb.selectCohort) {
+		if (!term2cohort.has(term.id)) {
+			// possible empty term
+			return
+		}
+
+		// has cohort selection
+		// for each cohort choice, to generate a query
+		for (const cohortchoice of ds.cohort.termdb.selectCohort.values) {
+			const cohortname = cohortchoice.keys.sort().join(',')
+
+			if (!term2cohort.get(term.id).has(cohortname)) {
+				// this term is not associated with this cohort
+				continue
+			}
+
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: ds.cohort.termdb.selectCohort.term,
+							values: cohortchoice.keys.map(i => {
+								return { key: i }
+							})
+						}
+					}
+				]
+			}
+			if (term.type == 'categorical') {
+				qlst.push({
+					cohortname,
+					filter: JSON.parse(JSON.stringify(filter)),
+					ds,
+					term1_id: term.id
+				})
+			} else if (term.type == 'float' || term.type == 'integer') {
+				qlst.push({
+					cohortname,
+					filter: JSON.parse(JSON.stringify(filter)),
+					ds,
+					term1_id: term.id,
+					term1_q: term.bins.default
+				})
+			} else if (term.type == 'condition') {
+				// for both leaf and non-leaf
+				// should only use grades as bars to go along with termdb.comparison_groups
+				// no need to test on subconditions
+				qlst.push({
+					cohortname,
+					filter: JSON.parse(JSON.stringify(filter)),
+					ds,
+					term1_id: term.id,
+					term1_q: { bar_by_grade: true, value_by_max_grade: true }
+				})
+			} else {
+				throw 'unknown term type'
+			}
+		}
+	} else {
+		// no cohort selection
+		if (term.type == 'categorical') {
+			qlst.push({
+				ds,
+				term1_id: term.id
+			})
+		} else if (term.type == 'float' || term.type == 'integer') {
+			qlst.push({
+				ds,
+				term1_id: term.id,
+				term1_q: term.bins.default
+			})
+		} else if (term.type == 'condition') {
+			// for both leaf and non-leaf
+			// should only use grades as bars to go along with termdb.comparison_groups
+			// no need to test on subconditions
+			qlst.push({
+				ds,
+				term1_id: term.id,
+				term1_q: { bar_by_grade: true, value_by_max_grade: true }
+			})
+		} else {
+			throw 'unknown term type'
+		}
+	}
+	return qlst
 }
 
 ///////////// precompute helper
