@@ -63,6 +63,7 @@ CREATE INDEX termhtmldef_id on termhtmldef(id);
 
 drop table if exists category2vcfsample;
 create table category2vcfsample (
+  subcohort character not null,
   group_name character not null,
   term_id character varying(100) not null,
   parent_name character varying(200) null,
