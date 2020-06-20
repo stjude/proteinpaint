@@ -45,7 +45,8 @@ export async function trigger(q, res, ds) {
 	// optional filter on samples
 	let samplefilterset
 	if (q.filter) {
-		samplefilterset = new Set(termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds))
+		q.filter = JSON.parse(decodeURIComponent(q.filter))
+		samplefilterset = new Set(termdbsql.get_samples(q.filter, ds))
 	}
 
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid(q.ssid, samplefilterset)
@@ -59,7 +60,44 @@ export async function trigger(q, res, ds) {
 	const href0 = genotype2sample.has(utils.genotype_types.href) ? genotype2sample.get(utils.genotype_types.href).size : 0
 	const halt0 = genotype2sample.has(utils.genotype_types.halt) ? genotype2sample.get(utils.genotype_types.halt).size : 0
 
-	const tests = []
+	const tests = get_phewas_tests(q.filter, ds, sample2gt, het0, href0, halt0)
+
+	result.testcount = tests.length
+
+	///////// fisher
+	{
+		const lines = []
+		for (let i = 0; i < tests.length; i++) {
+			lines.push(i + '\t' + tests[i].table.join('\t'))
+		}
+		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
+		await utils.write_file(tmpfile, lines.join('\n'))
+		const pfile = await utils.run_fishertest2x3(tmpfile)
+		const text = await utils.read_file(pfile)
+		let i = 0
+		for (const line of text.trim().split('\n')) {
+			tests[i++].pvalue = Number(line.split('\t')[7])
+		}
+		fs.unlink(tmpfile, () => {})
+		fs.unlink(pfile, () => {})
+	}
+
+	result.maxlogp = get_maxlogp(tests)
+
+	const groups = group_categories(tests)
+	result.tmpfile = await write_resultfile(groups)
+	plot_canvas(groups, result, q)
+
+	{
+		// collect hover-dots above cutoff
+		const cutoff = 0.05
+		result.hoverdots = tests.filter(i => i.pvalue <= cutoff)
+	}
+
+	res.send(result)
+}
+
+function get_phewas_tests(filter, ds, sample2gt, het0, href0, halt0) {
 	/* list of test objects, one for each category
 	.term: {id,name}
 	.category: name of the category
@@ -69,7 +107,34 @@ export async function trigger(q, res, ds) {
 	.table: [ contigency table ]
 	*/
 
+	const tests = []
+
+	let checksubcohort
+	if (ds.cohort.termdb.selectCohort) {
+		// cohort selection enabled
+		if (filter) {
+			// it is really expected that filter is provided with the tag:cohortFilter tvs
+			// which is used to generate checksubcohort and restrict test terms
+			const tvs = filter.lst.find(i => i.tag == 'cohortFilter')
+			if (tvs) {
+				checksubcohort = tvs.tvs.values
+					.map(i => i.key)
+					.sort()
+					.join(',')
+			} else {
+				// in what case will no cohort filter be given
+			}
+		} else {
+			// in what case will no filter be given
+		}
+	}
+
 	for (const cacherow of ds.cohort.termdb.q.getcategory2vcfsample()) {
+		if (checksubcohort) {
+			// in this case, cacherow.subcohort is expected to exist
+			if (cacherow.subcohort != checksubcohort) continue
+		}
+
 		/************** each cached row is one term
 		.group_name
 		.term_id
@@ -108,7 +173,7 @@ export async function trigger(q, res, ds) {
 				parent_name: cacherow.parent_name,
 				group1label: category.group1label,
 				group2label: category.group2label,
-				q: q.term1_q,
+				//q: q.term1_q,
 				table: [
 					href1,
 					href2,
@@ -126,40 +191,7 @@ export async function trigger(q, res, ds) {
 			})
 		}
 	}
-
-	result.testcount = tests.length
-
-	///////// fisher
-	{
-		const lines = []
-		for (let i = 0; i < tests.length; i++) {
-			lines.push(i + '\t' + tests[i].table.join('\t'))
-		}
-		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
-		await utils.write_file(tmpfile, lines.join('\n'))
-		const pfile = await utils.run_fishertest2x3(tmpfile)
-		const text = await utils.read_file(pfile)
-		let i = 0
-		for (const line of text.trim().split('\n')) {
-			tests[i++].pvalue = Number(line.split('\t')[7])
-		}
-		fs.unlink(tmpfile, () => {})
-		fs.unlink(pfile, () => {})
-	}
-
-	result.maxlogp = get_maxlogp(tests)
-
-	const groups = group_categories(tests)
-	result.tmpfile = await write_resultfile(groups)
-	plot_canvas(groups, result, q)
-
-	{
-		// collect hover-dots above cutoff
-		const cutoff = 0.05
-		result.hoverdots = tests.filter(i => i.pvalue <= cutoff)
-	}
-
-	res.send(result)
+	return tests
 }
 
 export async function do_precompute(q, res, ds) {
@@ -187,7 +219,8 @@ will automatically restrict to only those samples in the vcf file
 }
 
 function precompute_withCohortSelection(q, res, ds) {
-	ds.cohort.termdb.q.init_phewasSubcohort2totalsamples()
+	const subcohortTermtype2samples = may_subcohortTermtype2samples(ds)
+	// same structure as ds.cohort.termdb.phewas.precompute_subcohort2totalsamples
 
 	const term2cohort = get_term2cohort(ds)
 
@@ -197,6 +230,11 @@ function precompute_withCohortSelection(q, res, ds) {
 
 	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if (!term.type) continue
+		if (!term2cohort.has(term.id)) {
+			// a term with no cohort assignemnt, could be no samples annotated to it
+			emptyterms.push(term.id)
+			continue
+		}
 
 		let parentname = ''
 		{
@@ -204,12 +242,8 @@ function precompute_withCohortSelection(q, res, ds) {
 			if (t) parentname = t.name
 		}
 
+		// generates list of queries
 		const querylst = getquerylst4term(term, ds, term2cohort)
-		if (!querylst) {
-			// a term with no cohort assignemnt, could be no samples annotated to it
-			emptyterms.push(term.id)
-			continue
-		}
 
 		for (const q of querylst) {
 			///// run query for this term
@@ -241,12 +275,14 @@ function precompute_withCohortSelection(q, res, ds) {
 			}
 
 			if (
-				ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype &&
-				ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype[term.type]
+				subcohortTermtype2samples &&
+				subcohortTermtype2samples[q.cohortname] &&
+				subcohortTermtype2samples[q.cohortname].termtype &&
+				subcohortTermtype2samples[q.cohortname].termtype[term.type]
 			) {
 				// there are filters for this type of term restricting samples of a control set
 				// must create list of control samplesfor each category
-				const restrictsamples = ds.cohort.termdb.phewas.subcohort2totalsamples[q.cohortname].termtype[term.type].samples
+				const restrictsamples = subcohortTermtype2samples[q.cohortname].termtype[term.type].samples
 
 				for (const c of categories) {
 					if (c.group2lst) {
@@ -306,13 +342,27 @@ function precompute_withCohortSelection(q, res, ds) {
 		}
 	}
 
+	if (emptyterms.length) {
+		console.log(emptyterms.length + ' empty terms:')
+		console.log(emptyterms.join('\n'))
+	}
+
 	fwrite.end(() => {
 		res.send({ filename })
-		if (emptyterms.length) {
-			console.log(emptyterms.length + ' empty terms:')
-			console.log(emptyterms.join('\n'))
-		}
 	})
+}
+
+function may_subcohortTermtype2samples(ds) {
+	if (!ds.cohort.termdb.phewas.precompute_subcohort2totalsamples) return
+	for (const key in ds.cohort.termdb.phewas.precompute_subcohort2totalsamples) {
+		const config = ds.cohort.termdb.phewas.precompute_subcohort2totalsamples[key]
+		if (config.termtype) {
+			for (const type in config.termtype) {
+				config.termtype[type].samples = termdbsql.get_samples(config.termtype[type].filter, ds)
+			}
+		}
+	}
+	return ds.cohort.termdb.phewas.precompute_subcohort2totalsamples
 }
 
 function get_term2cohort(ds) {
@@ -462,11 +512,6 @@ one term may generate multiple queries, e.g. cohort selection, or special config
 */
 	const qlst = []
 	if (ds.cohort.termdb.selectCohort) {
-		if (!term2cohort.has(term.id)) {
-			// possible empty term
-			return
-		}
-
 		// has cohort selection
 		// for each cohort choice, to generate a query
 		for (const cohortchoice of ds.cohort.termdb.selectCohort.values) {
@@ -794,7 +839,9 @@ function get_numsample_pergenotype(sample2gt, samples) {
 	for (const sample of samples) {
 		const genotype = sample2gt.get(sample)
 		if (!genotype) {
-			// no genotype, may happen when there's no sequencing coverage at this variant for this sample
+			// no genotype
+			// may happen when there's no sequencing coverage at this variant for this sample
+			// or this sample is excluded by filtering
 			continue
 		}
 		gt2count.set(genotype, 1 + (gt2count.get(genotype) || 0))
