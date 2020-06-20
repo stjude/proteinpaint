@@ -309,7 +309,7 @@ module.exports = {
 			//// this attribute is optional
 			phewas: {
 				/*
-				this is good for dataset without cohort selection
+				this should be used for dataset without cohort selection
 				samplefilter4termtype: {
 					condition: {
 						filter: {
@@ -324,8 +324,14 @@ module.exports = {
 				},
 				*/
 
-				subcohort2totalsamples: {
+				/*
+				when cohort selection is enabled, this is optional
+				need this as not all sjlife samples are ctcae-graded, need to only use those graded ones in phewas
+				this is only used in phewas precompute
+				*/
+				precompute_subcohort2totalsamples: {
 					SJLIFE: {
+						/*
 						all: {
 							filter: {
 								type: 'tvslst',
@@ -336,6 +342,7 @@ module.exports = {
 								]
 							}
 						},
+						*/
 						termtype: {
 							condition: {
 								filter: {
@@ -350,6 +357,7 @@ module.exports = {
 							}
 						}
 					},
+					/* no need to specify ccss as all its samples are supposed to be included	
 					CCSS: {
 						all: {
 							filter: {
@@ -362,7 +370,9 @@ module.exports = {
 							}
 						}
 					},
+					*/
 					'CCSS,SJLIFE': {
+						/*
 						all: {
 							filter: {
 								type: 'tvslst',
@@ -379,6 +389,7 @@ module.exports = {
 								]
 							}
 						},
+						*/
 						termtype: {
 							condition: {
 								filter: {
