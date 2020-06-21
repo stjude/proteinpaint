@@ -55,6 +55,16 @@ class Filter {
 		setRenderers(this)
 		this.initUI()
 
+		// default empty filter, in case this.api.main() is not called
+		// in app-less initialization
+		this.filter = {
+			type: 'tvslst',
+			tag: 'filterUiRoot',
+			join: 'and',
+			in: true,
+			lst: []
+		}
+
 		this.api = {
 			main: async (rawFilter, opts = {}) => {
 				/*
@@ -196,7 +206,7 @@ let filterIndex = 0
 function setRenderers(self) {
 	self.initUI = function() {
 		if (self.opts.newBtn) {
-			self.dom.newBtn = self.opts.newBtn.on('click.filter', self.displayTreeNew)
+			self.opts.newBtn.on('click.filter', self.displayTreeNew)
 		} else {
 			self.dom.newBtn = self.dom.holder
 				.append('div')
@@ -540,11 +550,11 @@ function setRenderers(self) {
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+		if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
-			return self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
+			return self.filter && self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
 		}
 	}
 }

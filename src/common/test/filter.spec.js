@@ -58,9 +58,10 @@ function sleep(ms) {
 
 async function addDemographicSexFilter(opts, btn) {
 	btn.click()
-	await sleep(200)
-	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[2]
+	await sleep(300)
+	const termdiv1 = [...opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')].find(
+		elem => elem.__data__.id === 'Demographic Variables'
+	)
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
@@ -396,7 +397,7 @@ tape('+NEW button interaction', async test => {
 		.node()
 		.querySelector('.sja_new_filter_btn')
 		.click()
-	await sleep(50)
+	await sleep(150)
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.node().style.display,
 		'none',
