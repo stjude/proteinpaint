@@ -68,18 +68,10 @@ official track only
 			tip: tk.legend.tip,
 			mds: tk.mds,
 			genome: block.genome,
-			termfilter: {},
+			termfilter: {
+				filter: may_addfilter4phewas(tk)
+			},
 			dom: {}
-		}
-
-		// may add in termfilter
-		if (tk.vcf && tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.inuse_AFtest) {
-			// using AFtest, find the first termdb group and use
-			const af = tk.vcf.numerical_axis.AFtest
-			const tdbgrp = af.groups.find(i => i.is_termdb)
-			if (tdbgrp) {
-				obj.termfilter.filter = tdbgrp.filterApi.getNormalRoot()
-			}
 		}
 
 		make_phewas_ui(obj, div, tk)
@@ -89,6 +81,43 @@ official track only
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
+	}
+}
+
+function may_addfilter4phewas(tk) {
+	/* to init phewas,
+may add a filter to restrict samples
+*/
+	if (tk.vcf && tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.inuse_AFtest) {
+		// using AFtest, find the first termdb group and use
+		const af = tk.vcf.numerical_axis.AFtest
+		const tdbgrp = af.groups.find(i => i.is_termdb)
+		if (tdbgrp) {
+			return tdbgrp.filterApi.getNormalRoot()
+		}
+	}
+	// no filter is added, see if cohort selection is in use
+	if (tk.mds && tk.mds.termdb && tk.mds.termdb.selectCohort) {
+		const s = tk.mds.termdb.selectCohort
+		return {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [
+				{
+					type: 'tvs',
+					tag: 'cohortFilter',
+					renderAs: 'htmlSelect',
+					selectOptionsFrom: 'selectCohort',
+					tvs: {
+						term: JSON.parse(JSON.stringify(s.term)),
+						values: s.values[0].keys.map(i => {
+							return { key: i }
+						})
+					}
+				}
+			]
+		}
 	}
 }
 
