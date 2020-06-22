@@ -164,7 +164,7 @@ class Filter {
 		filterUiRoot.tag = 'filterUiRoot'
 		const rawParent = findParent(rootCopy, this.filter.$id)
 		if (!rawParent || this.rawFilter.$id === this.filter.$id) {
-			this.api.main(rootCopy)
+			this.api.main(filterUiRoot)
 			this.opts.callback(filterUiRoot)
 		} else {
 			const i = rawParent.lst.findIndex(f => f.$id == this.filter.$id)
