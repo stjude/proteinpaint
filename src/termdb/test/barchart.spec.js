@@ -190,7 +190,7 @@ tape('multiple charts', function(test) {
 tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
 
-	const hiddenValues = { Male: 1 }
+	const hiddenValues = { 1: 1 }
 	runpp({
 		state: {
 			tree: {
@@ -218,10 +218,15 @@ tape('series visibility - q.hiddenValues', function(test) {
 
 	function testHiddenValues(plot) {
 		const bar = plot.Inner.components.barchart.Inner
-		test.equal(
-			bar.settings.exclude.cols.length,
-			Object.keys(hiddenValues).length,
+		test.deepEqual(
+			bar.settings.exclude.cols.sort(),
+			Object.keys(hiddenValues).sort(),
 			'should have the correct number of hidden bars by q.hiddenValues'
+		)
+		test.equal(
+			plot.Inner.dom.viz.selectAll('.bars-cell').size(),
+			bar.settings.cols.length - bar.settings.exclude.cols.length,
+			'should render the correct number of visible bars'
 		)
 		test.end()
 	}
