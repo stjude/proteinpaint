@@ -9,8 +9,8 @@ const cohorthtmltable = `<table>
 <tbody>
   <tr>
     <td>Survivors on Portal</td>
-	<td>4402</td>
-	<td>2936</td>
+	<td>4528</td>
+	<td>2641</td>
   </tr>
   <tr>
 	<td>Years of cancer diagnosis</td>
