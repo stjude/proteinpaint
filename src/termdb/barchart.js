@@ -137,7 +137,7 @@ class TdbBarchart {
 		const getHiddenId = id =>
 			term.term.type == 'categorical'
 				? id
-				: term.term.type == 'condition'
+				: this.settings.cols && this.settings.cols.includes(term.term.id)
 				? id
 				: term.term.values && id in term.term.values && 'label' in term.term.values[id]
 				? term.term.values[id].label
