@@ -516,6 +516,9 @@ function show_group_termdb(group, tk, block) {
 						termfilter: {
 							filter: group.filterApi.getNormalRoot()
 						}
+					},
+					barchart: {
+						bar_click_opts: []
 					}
 				})
 			})

@@ -488,12 +488,14 @@ official track only
 				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
 				pos: m.pos,
 				mutation_name: m.mname,
-				ssid: ssid,
-				groups: groups
+				ssid,
+				groups
 			}
 		},
 		holder: plotdiv,
-		default_rootterm: {}
+		barchart: {
+			bar_click_opts: []
+		}
 	}
 	if (tk.sample_termfilter) {
 		// just use a single filter, no race grp restriction
