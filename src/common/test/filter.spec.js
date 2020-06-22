@@ -995,7 +995,8 @@ tape('hidden filters', async test => {
 		},
 		callback(filter) {
 			opts.filterData.lst[1] = filter
-			opts.filter.main(opts.filterData)
+			/*** filter.api.main() is already called in filter.refresh() before this callback ***/
+			//opts.filter.main(opts.filterData)
 		}
 	})
 
@@ -1117,7 +1118,8 @@ tape('renderAs: htmlSelect', async test => {
 		},
 		callback(filter) {
 			opts.filterData = filter
-			opts.filter.main(opts.filterData)
+			/*** filter.api.main() is already called in filter.refresh() before this callback ***/
+			//opts.filter.main(opts.filterData)
 		}
 	})
 

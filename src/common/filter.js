@@ -847,7 +847,15 @@ function setInteractivity(self) {
 				}
 			},
 			tree: {
-				disable_terms: [self.activeData.item.tvs.term.id]
+				disable_terms:
+					self.activeData &&
+					self.activeData.filter &&
+					self.activeData.filter.lst &&
+					self.activeData.filter.join == 'and'
+						? self.activeData.filter.lst
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.map(d => d.tvs.term.id)
+						: [self.activeData.item.tvs.term.id]
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
