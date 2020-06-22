@@ -184,7 +184,7 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.term_name_gen) // TODO trim long string
+			.html(self.term_name_gen)
 
 		self.updatePill.call(this)
 	}

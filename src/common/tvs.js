@@ -1412,15 +1412,15 @@ function setRenderers(self) {
 	}
 
 	self.term_name_gen = function(d) {
-		let term_name = d.term.name
-
+		const len = d.term.name.length
 		// trim long term name with '...' at end and hover to see full term_name
-		if ((d.term.type == 'float' || d.term.type == 'integer') && d.term.name.length > 25) {
-			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 24) + '...' + '</label>'
-		} else if (d.term.type == 'condition' && d.term.name.length > 20) {
-			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 18) + '...' + '</label>'
+		if ((d.term.type == 'float' || d.term.type == 'integer') && len > 25) {
+			return '<label title="' + d.term.name + '">' + d.term.name.substring(0, 24) + '...' + '</label>'
+		} else if (len > 20) {
+			return '<label title="' + d.term.name + '">' + d.term.name.substring(0, 18) + '...' + '</label>'
+		} else {
+			return d.term.name
 		}
-		return term_name
 	}
 
 	self.numeric_val_text = function(range) {
