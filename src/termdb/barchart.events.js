@@ -349,7 +349,11 @@ function wrapTvs(tvs) {
 
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
-	for (const t of tvslst) lst.push(wrapTvs(t))
+	for (const t of tvslst) {
+		const f = wrapTvs(t)
+		const item = findItemByTermId(self.state.termfilter.filter, t.tvs.term.id)
+		if (!item) lst.push(wrapTvs(t))
+	}
 
 	import('../block').then(async _ => {
 		const obj = {
