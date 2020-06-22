@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2, sayerror, Menu } from '../client'
+import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
@@ -52,7 +52,8 @@ class TermSearch {
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
 							.slice()
 							.sort()
-							.join(',')
+							.join(','),
+			expandedTermIds: appState.tree.expandedTermIds
 		}
 	}
 
@@ -144,12 +145,15 @@ function setRenderers(self) {
 					.style('margin', '1px 0px')
 					.on('click', () => {
 						self.opts.click_term(term)
+						self.clear()
+						self.dom.input.property('value', '')
 					})
 			}
 		} else {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
+				self.dom.input.property('value', '')
 				const expandedTermIds = [root_ID]
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)

@@ -123,6 +123,7 @@ tape('click_term', test => {
 			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearch, { wait: 200 })
 			.to(testSearchResult, { wait: 100 })
+			.run(testClearedResults, { wait: 100 })
 			.done(test)
 	}
 	function triggerSearch(search) {
@@ -137,5 +138,10 @@ tape('click_term', test => {
 	}
 	function modifier_callback(term) {
 		test.ok(graphable(term), 'modifier callback called with a graphable term')
+	}
+	function testClearedResults(search) {
+		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		test.equal(buttons.length, 0, 'should clear search results after a term is clicked')
+		test.equal(search.Inner.dom.input.property('value'), '', 'should clear input text field after a term is clicked')
 	}
 })

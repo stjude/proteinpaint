@@ -45,7 +45,9 @@ class TdbNav {
 						callbacks: {
 							'postSearch.nav': data => {
 								if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-								else this.dom.tip.showunder(this.dom.searchDiv.node())
+								else if (this.opts.header_mode === 'with_tabs') {
+									this.dom.tip.showunder(this.dom.searchDiv.node())
+								}
 							}
 						}
 					},
@@ -72,7 +74,8 @@ class TdbNav {
 			nav: appState.nav,
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter
+			filter: appState.termfilter.filter,
+			expandedTermIds: appState.tree.expandedTermIds
 		}
 	}
 	reactsTo(action) {
@@ -85,6 +88,7 @@ class TdbNav {
 	}
 	async main() {
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
+		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
 		this.activeCohort = this.state.activeCohort
