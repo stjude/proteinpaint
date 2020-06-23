@@ -1,5 +1,6 @@
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix > keep/termjson 2>diagnostic_messages.txt
 sh ~/proteinpaint/utils/sjlife2/phenotree.makeentiretree.sh
+node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.tree keep/termjson
 node ~/proteinpaint/utils/sjlife2/subcohort.validateancestry.js ancestry
 node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/files/hg38/sjlife/clinical/
