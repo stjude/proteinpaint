@@ -426,7 +426,7 @@ function setRenderers(self) {
 
 		add_range_btn.style(
 			'display',
-			ranges.length && ranges[ranges.length - 1].start == '' && ranges[ranges.length - 1].stop == ''
+			ranges.length && ranges[ranges.length - 1].start === '' && ranges[ranges.length - 1].stop === ''
 				? 'none'
 				: 'inline-block'
 		)
@@ -472,12 +472,12 @@ function setRenderers(self) {
 				//update 'edit', 'apply' and 'reset' buttons based on brush change
 				brush.edit_btn.style(
 					'display',
-					!similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
+					!similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
 				)
 				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
 				brush.reset_btn.style(
 					'display',
-					similarRanges || (a_range.start == '' || a_range.stop == '') ? 'none' : 'inline-block'
+					similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
 				)
 
 				// hide start and stop text and relation symbols if brush moved
@@ -504,7 +504,7 @@ function setRenderers(self) {
 			.selectAll('.selection')
 			.style(
 				'fill',
-				(brush.orig.start == '' && brush.orig.stop == '') || JSON.stringify(range) != JSON.stringify(brush.orig)
+				(brush.orig.start === '' && brush.orig.stop === '') || JSON.stringify(range) != JSON.stringify(brush.orig)
 					? '#23cba7'
 					: '#777777'
 			)
@@ -656,8 +656,8 @@ function setRenderers(self) {
 					brush.stop_input.property('disabled', false)
 					range.stopinclusive = value == 'stopinclusive'
 				}
-				if (start_input.node().value != minvalue.toFixed(1)) {
-					new_range.start = start_input.node().value
+				if (brush.start_input.node().value != minvalue.toFixed(1)) {
+					new_range.start = brush.start_input.node().value
 					delete range.startunbounded
 				}
 				brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
@@ -717,7 +717,7 @@ function setRenderers(self) {
 		self.makeRangeButtons(brush)
 
 		// note for empty range
-		if (orig_range.start == '' && orig_range.stop == '') {
+		if (orig_range.start === '' && orig_range.stop === '') {
 			self.num_obj.range_table
 				.append('tr')
 				.attr('class', 'note_tr')
@@ -752,7 +752,7 @@ function setRenderers(self) {
 		brush.edit_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_menuoption edit_btn')
-			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'inline-block' : 'none')
+			.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'inline-block' : 'none')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -777,7 +777,7 @@ function setRenderers(self) {
 		brush.apply_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn apply_btn')
-			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -795,7 +795,7 @@ function setRenderers(self) {
 		brush.reset_btn = buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn reset_btn')
-			.style('display', similarRanges || (range.start == '' && range.stop == '') ? 'none' : 'inline-block')
+			.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -847,7 +847,7 @@ function setRenderers(self) {
 				const stop = Number(brush.stop_input.node().value)
 				if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
 
-				if (start == '') {
+				if (brush.start_input.node().value === '') {
 					range.startunbounded = true
 					delete range.start
 				} else {
@@ -855,7 +855,7 @@ function setRenderers(self) {
 					range.start = start
 					range.startinclusive = brush.start_select.property('value') === 'startinclusive'
 				}
-				if (stop == '') {
+				if (brush.stop_input.node().value === '') {
 					range.stopunbounded = true
 					delete range.stop
 				} else {
