@@ -192,6 +192,8 @@ tape('tvs: Categorical', async test => {
 })
 
 tape('tvs: Numerical', async test => {
+	test.timeoutAfter(20000)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -437,6 +439,65 @@ tape('tvs: Numerical', async test => {
 		'should merge ranges into 1 range'
 	)
 
+	// test changing the <= option for start boundary
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(300)
+	const tr = tipd
+		.node()
+		.querySelector('table')
+		.querySelector('.range_div')
+	tr.querySelector('.edit_btn').click()
+	tr.querySelector('.start_input').value = 0
+	tr.querySelector('.start_input').dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: '0',
+			key: '0',
+			keyCode: 0
+		})
+	)
+	await sleep(100)
+	tr.querySelector('.stop_select').value = 'stopunbounded'
+	d3s.select(tr.querySelector('.stop_select')).on('change')()
+	await sleep(100)
+	tr.querySelector('.stop_select').dispatchEvent(enter_event)
+	tr.querySelector('.apply_btn').click()
+	await sleep(300)
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('&gt; 0'),
+		'should show a greater than pill value'
+	)
+
+	//const menuRows1 = controlTipd.selectAll('tr')
+	//const editOpt1 = menuRows.filter(d => d.action == 'edit')
+	pill.click()
+	await sleep(30)
+	editOpt.node().click()
+	await sleep(500)
+	const tr1 = tipd
+		.node()
+		.querySelector('table')
+		.querySelector('.range_div')
+	tr1.querySelector('.edit_btn').click()
+	await sleep(10)
+	tr1.querySelector('.start_select').value = 'startinclusive'
+	d3s.select(tr1.querySelector('.start_select')).on('change')()
+	await sleep(100)
+	tr1.querySelector('.start_select').dispatchEvent(enter_event)
+	tr1.querySelector('.apply_btn').click()
+	await sleep(300)
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('≥ 0'),
+		'should show a >= 0 in the pill value'
+	)
+
 	test.end()
 })
 
@@ -495,7 +556,7 @@ tape('tvs: Conditional', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(1000)
+	await sleep(1200)
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')

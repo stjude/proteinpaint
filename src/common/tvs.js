@@ -444,6 +444,7 @@ function setRenderers(self) {
 			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('brush', function() {
 				const s = event.selection
+				if (!s) return // not an event triggered by brush dragging
 				//update temp_ranges
 				range.start = Number(xscale.invert(s[0]).toFixed(1))
 				range.stop = Number(xscale.invert(s[1]).toFixed(1))
