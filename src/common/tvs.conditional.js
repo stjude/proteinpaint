@@ -1,59 +1,20 @@
 import { dofetch2 } from '../client'
 
-export function getConditionalMethodsSetter(self) {
+export function getConditionMethods(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
 
-	return function setMethods() {
-		// will swap out similarly named methods for non-numeric term types
-		// the functions declared below are reused, instead of recreated
-		// each time the method swapping occurs
-		self.term_name_gen = term_name_gen
-		self.get_pill_label = get_pill_label
-		self.getSelectRemovePos = getSelectRemovePos
-		self.fillMenu = fillMenu
+	// hoisted functions can be returned out of code sequence
+	return {
+		term_name_gen,
+		get_pill_label,
+		getSelectRemovePos,
+		fillMenu
 	}
 
-	function term_name_gen(d) {
-		const name = d.term.name
-		return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
-	}
-
-	function get_pill_label(tvs) {
-		return {
-			txt: get_value_text(tvs),
-			grade_type: tvs.bar_by_children
-				? ''
-				: tvs.value_by_max_grade
-				? '[Max Grade]'
-				: tvs.value_by_most_recent
-				? '[Most Recent Grade]'
-				: tvs.value_by_computable_grade
-				? '[Any Grade]'
-				: ''
-		}
-	}
-
-	function get_value_text(tvs) {
-		if (tvs.bar_by_grade || tvs.bar_by_children) {
-			if (tvs.values.length == 1) {
-				// single
-				return tvs.values[0].label
-			}
-			// multiple
-			if (tvs.groupset_label) return tvs.groupset_label
-			return tvs.values.length + (tvs.bar_by_grade ? ' Grades' : 'Subconditions')
-		}
-		if (tvs.grade_and_child) {
-			//TODO
-			console.error(term)
-			return 'todo'
-		}
-		throw 'unknown tvs setting for a condition term'
-	}
-
-	function getSelectRemovePos(j) {
-		return j
-	}
+	/************************************
+	 Functions that require access to 
+	 the TVS instance are closured here
+	*************************************/
 
 	async function fillMenu(div, tvs) {
 		// grade/subcondtion select
@@ -191,4 +152,55 @@ export function getConditionalMethodsSetter(self) {
 			window.alert(e.message || e)
 		}
 	}
+}
+
+/*****************************************
+ Functions that do not require access 
+ to the TVS instance are declared below.
+
+ This will help minimize the unnecessary 
+ recreation of functions that are not 
+ specific to a TVS instance.
+******************************************/
+
+function term_name_gen(d) {
+	const name = d.term.name
+	return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
+}
+
+function get_pill_label(tvs) {
+	return {
+		txt: get_value_text(tvs),
+		grade_type: tvs.bar_by_children
+			? ''
+			: tvs.value_by_max_grade
+			? '[Max Grade]'
+			: tvs.value_by_most_recent
+			? '[Most Recent Grade]'
+			: tvs.value_by_computable_grade
+			? '[Any Grade]'
+			: ''
+	}
+}
+
+function get_value_text(tvs) {
+	if (tvs.bar_by_grade || tvs.bar_by_children) {
+		if (tvs.values.length == 1) {
+			// single
+			return tvs.values[0].label
+		}
+		// multiple
+		if (tvs.groupset_label) return tvs.groupset_label
+		return tvs.values.length + (tvs.bar_by_grade ? ' Grades' : 'Subconditions')
+	}
+	if (tvs.grade_and_child) {
+		//TODO
+		console.error(term)
+		return 'todo'
+	}
+	throw 'unknown tvs setting for a condition term'
+}
+
+function getSelectRemovePos(j) {
+	return j
 }

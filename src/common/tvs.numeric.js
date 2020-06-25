@@ -2,67 +2,21 @@ import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX } from 'd3'
 import * as client from '../client'
 
-export function getNumericMethodsSetter(self) {
+export function getNumericMethods(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
 
-	return function setMethods() {
-		// will swap out similarly named methods for non-numeric term types;
-		// the functions declared below are reused, instead of recreated
-		// each time the method swapping occurs
-		self.term_name_gen = term_name_gen
-		self.get_pill_label = get_pill_label
-		self.getSelectRemovePos = getSelectRemovePos
-		self.fillMenu = fillMenu
+	// hoisted functions can be returned out of code sequence
+	return {
+		term_name_gen,
+		get_pill_label,
+		getSelectRemovePos,
+		fillMenu
 	}
 
-	function term_name_gen(d) {
-		const name = d.term.name
-		return name.length < 26 ? name : '<label title="' + name + '">' + name.substring(0, 24) + '...' + '</label>'
-	}
-
-	function get_pill_label(tvs) {
-		if (tvs.ranges.length == 1) {
-			const v = tvs.ranges[0]
-			if ('value' in v) {
-				// category
-				if (v.label) return { txt: v.label }
-				if (tvs.term.values && tvs.term.values[v.value] && tvs.term.values[v.value].label)
-					return { txt: tvs.term.values[v.value].label }
-				console.error(`key "${v.value}" not found in values{} of ${tvs.term.name}`)
-				return { txt: v.value }
-			}
-			// numeric range
-			return { txt: format_val_text(v) }
-		}
-		// multiple
-		return { txt: tvs.ranges.length + ' intervals' }
-	}
-
-	function format_val_text(range) {
-		let range_txt
-		const x = '<span style="font-family:Times;font-style:italic;font-size:0.9em;">x</span>'
-		if (range.startunbounded) {
-			range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
-		} else if (range.stopunbounded) {
-			range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
-		} else {
-			range_txt =
-				range.start +
-				' ' +
-				(range.startinclusive ? '&le;' : '&lt;') +
-				' ' +
-				x +
-				' ' +
-				(range.stopinclusive ? '&le;' : '&lt;') +
-				' ' +
-				range.stop
-		}
-		return range_txt
-	}
-
-	function getSelectRemovePos(j, tvs) {
-		return j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
-	}
+	/************************************
+	 Functions that require access to 
+	 the TVS instance are closured here
+	*************************************/
 
 	async function fillMenu(div, tvs) {
 		//numerical range div
@@ -915,4 +869,62 @@ export function getNumericMethodsSetter(self) {
 			})
 		}
 	}
+}
+
+/*****************************************
+ Functions that do not require access 
+ to the TVS instance are declared below.
+
+ This will help minimize the unnecessary 
+ recreation of functions that are not 
+ specific to a TVS instance.
+******************************************/
+
+function term_name_gen(d) {
+	const name = d.term.name
+	return name.length < 26 ? name : '<label title="' + name + '">' + name.substring(0, 24) + '...' + '</label>'
+}
+
+function get_pill_label(tvs) {
+	if (tvs.ranges.length == 1) {
+		const v = tvs.ranges[0]
+		if ('value' in v) {
+			// category
+			if (v.label) return { txt: v.label }
+			if (tvs.term.values && tvs.term.values[v.value] && tvs.term.values[v.value].label)
+				return { txt: tvs.term.values[v.value].label }
+			console.error(`key "${v.value}" not found in values{} of ${tvs.term.name}`)
+			return { txt: v.value }
+		}
+		// numeric range
+		return { txt: format_val_text(v) }
+	}
+	// multiple
+	return { txt: tvs.ranges.length + ' intervals' }
+}
+
+function format_val_text(range) {
+	let range_txt
+	const x = '<span style="font-family:Times;font-style:italic;font-size:0.9em;">x</span>'
+	if (range.startunbounded) {
+		range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
+	} else if (range.stopunbounded) {
+		range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
+	} else {
+		range_txt =
+			range.start +
+			' ' +
+			(range.startinclusive ? '&le;' : '&lt;') +
+			' ' +
+			x +
+			' ' +
+			(range.stopinclusive ? '&le;' : '&lt;') +
+			' ' +
+			range.stop
+	}
+	return range_txt
+}
+
+function getSelectRemovePos(j, tvs) {
+	return j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
 }

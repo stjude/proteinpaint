@@ -3,9 +3,9 @@ import * as dom from '../dom'
 import { select } from 'd3-selection'
 import { appInit } from '../termdb/app'
 import * as client from '../client'
-import { getCategoricalMethodsSetter } from './tvs.categorical'
-import { getConditionalMethodsSetter } from './tvs.conditional'
-import { getNumericMethodsSetter } from './tvs.numeric'
+import { getCategoricalMethods } from './tvs.categorical'
+import { getConditionMethods } from './tvs.conditional'
+import { getNumericMethods } from './tvs.numeric'
 
 class TVS {
 	constructor(opts) {
@@ -19,19 +19,18 @@ class TVS {
 		setRenderers(this)
 		this.categoryData = {}
 
-		this.methodSettersByTermType = {
-			categorical: getCategoricalMethodsSetter(this),
-			integer: getNumericMethodsSetter(this),
-			float: getNumericMethodsSetter(this),
-			condition: getConditionalMethodsSetter(this)
+		this.methodsByTermType = {
+			categorical: getCategoricalMethods(this),
+			integer: getNumericMethods(this),
+			float: getNumericMethods(this),
+			condition: getConditionMethods(this)
 		}
 
 		this.api = {
 			main: async (data = {}) => {
 				this.tvs = data.tvs
 				this.filter = data.filter
-				if (!(this.tvs.term.type in this.methodSettersByTermType)) throw `invalid tvs.term.type='${this.tvs.term.type}'`
-				this.methodSettersByTermType[this.tvs.term.type]()
+				if (!(this.tvs.term.type in this.methodsByTermType)) throw `invalid tvs.term.type='${this.tvs.term.type}'`
 				this.updateUI()
 
 				// when there are filters to be removed, must account for the delayed
@@ -89,7 +88,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('padding', '6px 6px 3px 6px')
-			.html(self.term_name_gen)
+			.html(self.methodsByTermType[self.tvs.term.type].term_name_gen)
 			.style('text-transform', 'uppercase')
 
 		// // negate button
@@ -109,7 +108,7 @@ function setRenderers(self) {
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
 		const term = self.tvs.term
-		self.fillMenu(holder, self.tvs)
+		self.methodsByTermType[self.tvs.term.type].fillMenu(holder, self.tvs)
 	}
 
 	self.removeTerm = tvs => {
@@ -127,7 +126,7 @@ function setRenderers(self) {
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(tvs.isnot ? 'NOT' : 'IS')
 
-		const label = self.get_pill_label(tvs)
+		const label = self.methodsByTermType[self.tvs.term.type].get_pill_label(tvs)
 		if (!('grade_type' in label)) label.grade_type = ''
 
 		const value_btns = one_term_div.selectAll('.value_btn').data(label ? [label] : [], d => d.txt + d.grade_type)
@@ -252,7 +251,7 @@ function setRenderers(self) {
 	self.removeValueBtn = function(d, j) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
-		const select_remove_pos = self.getSelectRemovePos(j, tvs)
+		const select_remove_pos = self.methodsByTermType[self.tvs.term.type].getSelectRemovePos(j, tvs)
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
