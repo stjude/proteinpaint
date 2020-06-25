@@ -119,29 +119,18 @@ function setRenderers(self) {
 
 	self.updatePill = async function() {
 		const one_term_div = select(this)
-		const term = one_term_div.datum()
+		const tvs = one_term_div.datum()
 
 		// negate button
 		one_term_div
 			.select('.negate_btn')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
-			.html(term.isnot ? 'NOT' : 'IS')
+			.html(tvs.isnot ? 'NOT' : 'IS')
 
-		const value_text = self.get_value_text(term)
+		const label = self.get_pill_label(tvs)
+		if (!('grade_type' in label)) label.grade_type = ''
 
-		const grade_type = term.bar_by_children
-			? ''
-			: term.value_by_max_grade
-			? '[Max Grade]'
-			: term.value_by_most_recent
-			? '[Most Recent Grade]'
-			: term.value_by_computable_grade
-			? '[Any Grade]'
-			: ''
-
-		const value_btns = one_term_div
-			.selectAll('.value_btn')
-			.data(value_text ? [{ txt: value_text, grade_type }] : [], d => d.txt + d.grade_type)
+		const value_btns = one_term_div.selectAll('.value_btn').data(label ? [label] : [], d => d.txt + d.grade_type)
 
 		value_btns.exit().each(self.removeValueBtn)
 
@@ -263,10 +252,7 @@ function setRenderers(self) {
 	self.removeValueBtn = function(d, j) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
-		const select_remove_pos =
-			tvs.term.type == 'float' || tvs.term.type == 'integer'
-				? j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
-				: j
+		const select_remove_pos = self.getSelectRemovePos(j, tvs)
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()

@@ -8,7 +8,8 @@ export function getCategoricalMethodsSetter(self) {
 		// the functions declared below are reused, instead of recreated
 		// each time the method swapping occurs
 		self.term_name_gen = term_name_gen
-		self.get_value_text = get_value_text
+		self.get_pill_label = get_pill_label
+		self.getSelectRemovePos = getSelectRemovePos
 		self.fillMenu = fillMenu
 	}
 
@@ -17,18 +18,23 @@ export function getCategoricalMethodsSetter(self) {
 		return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
 	}
 
-	function get_value_text(tvs) {
+	function get_pill_label(tvs) {
 		if (tvs.values.length == 1) {
 			// single
 			const v = tvs.values[0]
-			if (v.label) return v.label
-			if (tvs.term.values && tvs.term.values[v.key] && tvs.term.values[v.key].label) return tvs.term.values[v.key].label
+			if (v.label) return { txt: v.label }
+			if (tvs.term.values && tvs.term.values[v.key] && tvs.term.values[v.key].label)
+				return { txt: tvs.term.values[v.key].label }
 			console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
-			return v.key
+			return { txt: v.key }
 		}
 		// multiple
-		if (tvs.groupset_label) return tvs.groupset_label
-		return tvs.values.length + ' groups'
+		if (tvs.groupset_label) return { txt: tvs.groupset_label }
+		return { txt: tvs.values.length + ' groups' }
+	}
+
+	function getSelectRemovePos(j) {
+		return j
 	}
 
 	async function fillMenu(div, tvs) {

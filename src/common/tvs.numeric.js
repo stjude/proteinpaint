@@ -10,7 +10,8 @@ export function getNumericMethodsSetter(self) {
 		// the functions declared below are reused, instead of recreated
 		// each time the method swapping occurs
 		self.term_name_gen = term_name_gen
-		self.get_value_text = get_value_text
+		self.get_pill_label = get_pill_label
+		self.getSelectRemovePos = getSelectRemovePos
 		self.fillMenu = fillMenu
 	}
 
@@ -19,22 +20,22 @@ export function getNumericMethodsSetter(self) {
 		return name.length < 26 ? name : '<label title="' + name + '">' + name.substring(0, 24) + '...' + '</label>'
 	}
 
-	function get_value_text(tvs) {
+	function get_pill_label(tvs) {
 		if (tvs.ranges.length == 1) {
 			const v = tvs.ranges[0]
 			if ('value' in v) {
 				// category
-				if (v.label) return v.label
+				if (v.label) return { txt: v.label }
 				if (tvs.term.values && tvs.term.values[v.value] && tvs.term.values[v.value].label)
-					return tvs.term.values[v.value].label
+					return { txt: tvs.term.values[v.value].label }
 				console.error(`key "${v.value}" not found in values{} of ${tvs.term.name}`)
-				return v.value
+				return { txt: v.value }
 			}
 			// numeric range
-			return format_val_text(v)
+			return { txt: format_val_text(v) }
 		}
 		// multiple
-		return tvs.ranges.length + ' intervals'
+		return { txt: tvs.ranges.length + ' intervals' }
 	}
 
 	function format_val_text(range) {
@@ -57,6 +58,10 @@ export function getNumericMethodsSetter(self) {
 				range.stop
 		}
 		return range_txt
+	}
+
+	function getSelectRemovePos(j, tvs) {
+		return j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
 	}
 
 	async function fillMenu(div, tvs) {

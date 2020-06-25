@@ -8,13 +8,29 @@ export function getConditionalMethodsSetter(self) {
 		// the functions declared below are reused, instead of recreated
 		// each time the method swapping occurs
 		self.term_name_gen = term_name_gen
-		self.get_value_text = get_value_text
+		self.get_pill_label = get_pill_label
+		self.getSelectRemovePos = getSelectRemovePos
 		self.fillMenu = fillMenu
 	}
 
 	function term_name_gen(d) {
 		const name = d.term.name
 		return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
+	}
+
+	function get_pill_label(tvs) {
+		return {
+			txt: get_value_text(tvs),
+			grade_type: tvs.bar_by_children
+				? ''
+				: tvs.value_by_max_grade
+				? '[Max Grade]'
+				: tvs.value_by_most_recent
+				? '[Most Recent Grade]'
+				: tvs.value_by_computable_grade
+				? '[Any Grade]'
+				: ''
+		}
 	}
 
 	function get_value_text(tvs) {
@@ -33,6 +49,10 @@ export function getConditionalMethodsSetter(self) {
 			return 'todo'
 		}
 		throw 'unknown tvs setting for a condition term'
+	}
+
+	function getSelectRemovePos(j) {
+		return j
 	}
 
 	async function fillMenu(div, tvs) {
