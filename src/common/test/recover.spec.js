@@ -144,7 +144,7 @@ tape('rendered buttons', function(test) {
 })
 
 tape('stored state recovery', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(2500)
 	const projName = 'test-aaa'
 	window.localStorage.removeItem(projName)
 
@@ -178,7 +178,6 @@ tape('stored state recovery', function(test) {
 		initialAppState = tree.Inner.app.getState()
 		const recover = tree.Inner.app.Inner.components.recover.Inner
 		recover.dom.projectInput.property('value', projName)
-		recover.pro
 		recover.dom.localSaveBtn.node().click() //saveState.call(recover.dom.projectInput.node())
 
 		setTimeout(() => {

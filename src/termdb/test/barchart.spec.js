@@ -303,7 +303,7 @@ tape('series visibility - numeric', function(test) {
 	function triggerMenuClickToHide(plot) {
 		plot.Inner.components.barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
-			.filter(d => d.seriesId == 'exposed, dose unknown')
+			.filter(d => d.seriesId == 'not treated')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
