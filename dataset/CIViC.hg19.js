@@ -1,10 +1,10 @@
 module.exports = {
 	color: '#545454',
 	dsinfo: [
-		{ k: 'Source', v: '<a href=https://civicdb.org>CIViC</a>' },
+		{ k: 'Source', v: '<a href=https://civicdb.org target=_blank>CIViC</a>' },
 		{ k: 'Data type', v: 'SNV/Indel' },
 		{ k: 'Gene annotation', v: 'VEP version 99' },
-		{ k: 'Download date', v: 'March 2020' }
+		{ k: 'Download date', v: 'Nightly' }
 	],
 	genome: 'hg19',
 	queries: [
