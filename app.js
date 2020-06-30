@@ -11865,40 +11865,15 @@ function pp_init() {
 				continue
 			}
 
-			/*
-		old official dataset
-		*/
+			/* old official dataset */
 
 			if (ds.dbfile) {
-				/*
-			this dataset has a db
-			*/
+				/* this dataset has a db */
 				try {
 					ds.newconn = utils.connect_db(ds.dbfile)
 				} catch (e) {
 					return 'cannot connect to db: ' + ds.dbfile
 				}
-				/*
-			const file=path.join(serverconfig.tpmasterdir,ds.dbfile)
-			ds.__dbopener = new Promise((resolve,reject)=>{
-				ds.db=new sqlite3.Database(file, sqlite3.OPEN_READONLY, err=>{
-					if(err) {
-						reject(err)
-					} else {
-						resolve()
-					}
-				})
-			})
-
-			ds.__dbopener.then(()=>{
-				console.log('Db opened: '+file)
-				delete ds.dbfile
-			})
-			.catch(err=>{
-				console.error('sqlite3: failed to open db at '+file+': '+err)
-				process.exit()
-			})
-			*/
 			}
 
 			if (ds.snvindel_attributes) {
@@ -11993,74 +11968,9 @@ function pp_init() {
 			if (!ds.queries) return 'queries missing from dataset ' + ds.label + ', ' + genomename
 			if (!Array.isArray(ds.queries)) return ds.label + '.queries is not array'
 			for (const q of ds.queries) {
-				if (!q.name) return 'for identification, please supply name for a query in ' + ds.label
-
-				if (q.dsblocktracklst) {
-					/*
-				one or more block track available from this query
-				quick-fix for cohort junction, replace-by-mds
-				*/
-					if (!Array.isArray(q.dsblocktracklst)) return 'dsblocktracklst not an array in ' + ds.label
-					for (const tk of q.dsblocktracklst) {
-						if (!tk.type) return 'missing type for a blocktrack of ' + ds.label
-						if (!tk.file && !tk.url) return 'neither file or url given for a blocktrack of ' + ds.label
-					}
-					continue
-				}
-
-				if (q.vcffile) {
-					// single vcf
-					const meta = child_process
-						.execSync(tabix + ' -H ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-						.trim()
-					if (meta == '') return 'no meta lines in VCF file ' + q.vcffile + ' of query ' + q.name
-					const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
-					if (errs) return 'error parsing VCF meta lines of ' + q.vcffile + ': ' + errs.join('; ')
-					q.vcf = {
-						vcfid: Math.random().toString(),
-						info: info,
-						format: format,
-						samples: samples
-					}
-					if (q.hlinfo) {
-						q.vcf.hlinfo = q.hlinfo
-						delete q.hlinfo
-					}
-					if (q.infopipejoin) {
-						q.vcf.infopipejoin = q.infopipejoin
-						delete q.infopipejoin
-					}
-					const tmp = child_process
-						.execSync(tabix + ' -l ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-						.trim()
-					if (tmp == '') return 'tabix -l found no chromosomes/contigs in ' + q.vcffile + ' of query ' + q.name
-					q.vcf.nochr = common.contigNameNoChr(g, tmp.split('\n'))
-					let infoc = 0
-					if (info) {
-						for (const n in info) infoc++
-					}
-					console.log(
-						'Parsed vcf meta from ' +
-							q.vcffile +
-							': ' +
-							infoc +
-							' INFO, ' +
-							samples.length +
-							' sample, ' +
-							(q.vcf.nochr ? 'no "chr"' : 'has "chr"')
-					)
-				} else {
-					// must be db-querying
-					if (!q.makequery) return ds.label + ': makequery missing for ' + q.name
-					if (q.isgeneexpression) {
-						if (!q.config) return 'config object missing for gene expression query of ' + q.name
-						if (q.config.maf) {
-							q.config.maf.get = q.config.maf.get.toString()
-						}
-					}
-				}
+				const err = legacyds_init_one_query(q, ds, g)
+				if (err) return 'Error parsing a query in "' + ds.label + '": ' + err
 			}
-			// end of ds.queries[]
 
 			if (ds.vcfinfofilter) {
 				const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
@@ -12079,6 +11989,87 @@ function pp_init() {
 
 		delete g.rawdslst
 	}
+}
+
+function legacyds_init_one_query(q, ds, genome) {
+	/* parse a query from legacy ds.queries[]
+	 */
+	if (!q.name) return '.name missing'
+
+	if (q.dsblocktracklst) {
+		/*
+		not sure if still in use!
+
+		one or more block track available from this query
+		quick-fix for cohort junction, replace-by-mds
+		*/
+		if (!Array.isArray(q.dsblocktracklst)) return 'dsblocktracklst not an array in ' + ds.label
+		for (const tk of q.dsblocktracklst) {
+			if (!tk.type) return 'missing type for a blocktrack of ' + ds.label
+			if (!tk.file && !tk.url) return 'neither file or url given for a blocktrack of ' + ds.label
+		}
+		return
+	}
+
+	if (q.vcffile) {
+		// single vcf
+		const meta = child_process
+			.execSync(tabix + ' -H ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
+			.trim()
+		if (meta == '') return 'no meta lines in VCF file ' + q.vcffile + ' of query ' + q.name
+		const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
+		if (errs) return 'error parsing VCF meta lines of ' + q.vcffile + ': ' + errs.join('; ')
+		q.vcf = {
+			vcfid: Math.random().toString(),
+			info: info,
+			format: format,
+			samples: samples
+		}
+		if (q.hlinfo) {
+			q.vcf.hlinfo = q.hlinfo
+			delete q.hlinfo
+		}
+		if (q.infopipejoin) {
+			q.vcf.infopipejoin = q.infopipejoin
+			delete q.infopipejoin
+		}
+		const tmp = child_process
+			.execSync(tabix + ' -l ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
+			.trim()
+		if (tmp == '') return 'tabix -l found no chromosomes/contigs in ' + q.vcffile + ' of query ' + q.name
+		q.vcf.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
+		let infoc = 0
+		if (info) {
+			for (const n in info) infoc++
+		}
+		console.log(
+			'Parsed vcf meta from ' +
+				q.vcffile +
+				': ' +
+				infoc +
+				' INFO, ' +
+				samples.length +
+				' sample, ' +
+				(q.vcf.nochr ? 'no "chr"' : 'has "chr"')
+		)
+		return
+	}
+
+	if (q.makequery) {
+		if (q.isgeneexpression) {
+			if (!q.config) return 'config object missing for gene expression query of ' + q.name
+			if (q.config.maf) {
+				q.config.maf.get = q.config.maf.get.toString()
+			}
+		}
+		return
+	}
+
+	if (q.gdcGraphql) {
+		console.log('to validate gdc graphql')
+	}
+
+	return 'do not know how to parse query: ' + q.name
 }
 
 /////////////////// __MDS
