@@ -76,222 +76,207 @@ export const minbpwidth = 4
 const modefold = 0
 const modeshow = 1
 
-export function dstkload(tk, block) {
+export async function dstkload(tk, block) {
 	/*
-	tk obj is always provided
-	handles:
-	* server-hosted ds (sqlite/vcf mix)
-	* single vcf
-	* sum_view vcf
+	three sources of data
+	1. vcf file, server query
+	2. client in-memory data
+	3. server ds.queries[]
 	*/
-	if (!tk) {
-		block.error('no tk')
-		return
-	}
-	if (!tk.ds) {
-		block.error('no ds')
-		return
-	}
 
-	if (!block.gmmode || block.gmmode == client.gmmode.genomic) {
-		// for dstk, only apply limit in genomic mode
-		if (block.viewrangeabovelimit(tk.viewrangeupperlimit)) {
-			tk.mlst = []
-			tk.viewrangeupperlimit_above = true
-			dstkrender(tk, block)
+	try {
+		if (!tk) throw 'no tk'
+		if (!tk.ds) throw 'no ds'
+
+		if (!block.gmmode || block.gmmode == client.gmmode.genomic) {
+			// for dstk, only apply limit in genomic mode
+			if (block.viewrangeabovelimit(tk.viewrangeupperlimit)) {
+				tk.mlst = []
+				tk.viewrangeupperlimit_above = true
+				dstkrender(tk, block)
+				return
+			}
+		}
+		delete tk.viewrangeupperlimit_above
+
+		if (tk.isvcf) {
+			/* is one or a set of vcf tracks
+			in this case won't require tk.ds (should be undefined)
+			vcf-only, no mixture with db tk
+			*/
+			block.tkcloakon(tk)
+			vcftk.loadvcftk(block, tk)
 			return
 		}
-	}
-	delete tk.viewrangeupperlimit_above
 
-	if (tk.isvcf) {
-		/*
-		is one or a set of vcf tracks
-		in this case won't require tk.ds (should be undefined)
+		if (block.ds2handle[tk.ds.label]) {
+			tk.__handlesays = block.ds2handle[tk.ds.label].handlesays // quick fix
+		}
 
-		vcf-only, no mixture with db tk
-		*/
+		if (tk.ds.bulkdata || tk.ds.mlst) {
+			return await dstkload_fromclientdata(tk, block)
+		}
 
-		block.tkcloakon(tk)
-		vcftk.loadvcftk(block, tk)
-		return
+		// will query the server-side ds.queries[]
+		await dstkload_fromdsquery(tk, block)
+		tk.ds.busy = false
+		block.tkcloakoff(tk, {})
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		tk.ds.busy = false
+		block.tkcloakoff(tk, { error: '' })
 	}
-	let handlesays
-	if (block.ds2handle[tk.ds.label]) {
-		handlesays = block.ds2handle[tk.ds.label].handlesays
-	} else {
-		// no handle for client-added vcf tracks
-	}
-	if (tk.ds.bulkdata || tk.ds.mlst) {
-		// custom ds with data stored on client
-		if (block.usegm) {
-			if (handlesays) {
-				handlesays.style('background-color', '#ddd').style('color', 'black')
-			}
-			let mlst = []
-			if (tk.ds.bulkdata) {
-				const lst2 = tk.ds.bulkdata[block.usegm.name.toUpperCase()]
-				if (lst2) {
-					mlst = [...lst2]
-				}
-			}
-			if (tk.ds.mlst) {
-				for (const m of tk.ds.mlst) {
-					if (m.gene.toUpperCase() == block.usegm.name.toUpperCase()) {
-						mlst.push(m)
-					}
-				}
-			}
-			if (mlst.length) {
-				const isoformmatch = []
-				for (const m of mlst) {
-					if (m.isoform && m.isoform == block.usegm.isoform) {
-						isoformmatch.push(m)
-					}
-				}
-				if (isoformmatch.length) {
-					load2tk([{ lst: isoformmatch }], block, tk)
-				} else {
-					block.error('No data from ' + tk.ds.label + ' for ' + block.usegm.isoform)
-				}
-			} else {
-				block.error('No data from ' + tk.ds.label + ' for ' + block.usegm.name)
-			}
-			if (tk.ds.dbexpression && (!tk.eplst || tk.eplst.length == 0)) {
-				// custom expression set
-				const par = {
-					jwt: block.jwt,
-					db: tk.ds.dbexpression.dbfile,
-					tablename: tk.ds.dbexpression.tablename,
-					keyname: tk.ds.dbexpression.keyname,
-					key: block.usegm.name
-				}
-				fetch(
-					new Request(block.hostURL + '/dbdata', {
-						method: 'POST',
-						body: JSON.stringify(par)
-					})
-				)
-					.then(data => {
-						return data.json()
-					})
-					.then(data => {
-						if (data.error) throw { message: data.error }
-						if (!tk.eplst) {
-							tk.eplst = []
-						}
-						if (tk.ds.dbexpression.tidy) {
-							tk.ds.dbexpression.tidy(data.rows)
-						}
-						const eparg = {
-							data: data.rows,
-							expp: tk.ds.dbexpression.config,
-							block: block,
-							genome: block.genome,
-							genename: block.usegm.name,
-							dsname: tk.ds.label
-						}
-						import('./ep').then(p => {
-							tk.eplst.push(new p.default(eparg))
-						})
-					})
-					.catch(err => {
-						window.alert(err.message)
-						if (err.stack) console.log(err.stack)
-					})
-			}
-		} else {
-			// genomic view
-			const mlst = []
-			const chrset = new Map()
-			for (const r of block.rglst) {
-				if (!chrset.has(r.chr)) {
-					chrset.set(r.chr, [])
-				}
-				chrset.get(r.chr).push(r)
-			}
-			const allmlst = []
-			if (tk.ds.bulkdata) {
-				for (const k in tk.ds.bulkdata) {
-					allmlst.push(...tk.ds.bulkdata[k])
-				}
-			}
-			if (tk.ds.mlst) {
-				allmlst.push(...tk.ds.mlst)
-			}
-			for (const m of allmlst) {
-				switch (m.dt) {
-					case common.dtsnvindel:
-					case common.dtitd:
-					case common.dtdel:
-					case common.dtnloss:
-					case common.dtcloss:
-						if (!m.pos) {
-							break
-						}
-						if (!m.chr && !chrset.has(m.chr)) {
-							break
-						}
-						for (const r of chrset.get(m.chr)) {
-							if (m.pos >= r.start && m.pos < r.stop) {
-								mlst.push(m)
-								break
-							}
-						}
-						break
-					case common.dtsv:
-					case common.dtfusionrna:
-						if (!m.pairlst) {
-							break
-						}
-						let hit = false
-						for (const pair of m.pairlst) {
-							// a
-							if (pair.a.chr && chrset.has(pair.a.chr)) {
-								const pos = pair.a.position || pair.a.pos
-								if (pos) {
-									for (const r of chrset.get(pair.a.chr)) {
-										if (pos >= r.start && pos < r.stop) {
-											hit = true
-											break
-										}
-									}
-								}
-							}
-							// b
-							if (pair.b.chr && chrset.has(pair.b.chr)) {
-								const pos = pair.b.position || pair.b.pos
-								if (pos) {
-									for (const r of chrset.get(pair.b.chr)) {
-										if (pos >= r.start && pos < r.stop) {
-											hit = true
-											break
-										}
-									}
-								}
-							}
-						}
-						if (hit) {
-							mlst.push(m)
-						}
-						break
-					// end of switch
-				}
-			}
-			if (mlst.length) {
-				load2tk([{ lst: mlst }], block, tk)
+}
+
+async function dstkload_fromclientdata(tk, block) {
+	// custom ds with data stored on client
+	if (block.usegm) {
+		if (tk.__handlesays) {
+			tk.__handlesays.style('background-color', '#ddd').style('color', 'black')
+		}
+		let mlst = []
+		if (tk.ds.bulkdata) {
+			const lst2 = tk.ds.bulkdata[block.usegm.name.toUpperCase()]
+			if (lst2) {
+				mlst = [...lst2]
 			}
 		}
-		return
+		if (tk.ds.mlst) {
+			for (const m of tk.ds.mlst) {
+				if (m.gene.toUpperCase() == block.usegm.name.toUpperCase()) {
+					mlst.push(m)
+				}
+			}
+		}
+		if (mlst.length) {
+			const isoformmatch = []
+			for (const m of mlst) {
+				if (m.isoform && m.isoform == block.usegm.isoform) {
+					isoformmatch.push(m)
+				}
+			}
+			if (isoformmatch.length) {
+				load2tk([{ lst: isoformmatch }], block, tk)
+			} else {
+				throw 'No data from ' + tk.ds.label + ' for ' + block.usegm.isoform
+			}
+		} else {
+			throw 'No data from ' + tk.ds.label + ' for ' + block.usegm.name
+		}
+		if (tk.ds.dbexpression && (!tk.eplst || tk.eplst.length == 0)) {
+			// custom expression set
+			const par = {
+				jwt: block.jwt,
+				db: tk.ds.dbexpression.dbfile,
+				tablename: tk.ds.dbexpression.tablename,
+				keyname: tk.ds.dbexpression.keyname,
+				key: block.usegm.name
+			}
+			const data = await client.dofetch2('dbdata', { method: 'POST', body: JSON.stringify(par) })
+			if (data.error) throw data.error
+			if (!tk.eplst) tk.eplst = []
+			if (tk.ds.dbexpression.tidy) tk.ds.dbexpression.tidy(data.rows)
+			const eparg = {
+				data: data.rows,
+				expp: tk.ds.dbexpression.config,
+				block,
+				genome: block.genome,
+				genename: block.usegm.name,
+				dsname: tk.ds.label
+			}
+			const p = await import('./ep')
+			tk.eplst.push(new p.default(eparg))
+		}
+	} else {
+		// genomic view
+		const mlst = []
+		const chrset = new Map()
+		for (const r of block.rglst) {
+			if (!chrset.has(r.chr)) {
+				chrset.set(r.chr, [])
+			}
+			chrset.get(r.chr).push(r)
+		}
+		const allmlst = []
+		if (tk.ds.bulkdata) {
+			for (const k in tk.ds.bulkdata) {
+				allmlst.push(...tk.ds.bulkdata[k])
+			}
+		}
+		if (tk.ds.mlst) {
+			allmlst.push(...tk.ds.mlst)
+		}
+		for (const m of allmlst) {
+			switch (m.dt) {
+				case common.dtsnvindel:
+				case common.dtitd:
+				case common.dtdel:
+				case common.dtnloss:
+				case common.dtcloss:
+					if (!m.pos) {
+						break
+					}
+					if (!m.chr && !chrset.has(m.chr)) {
+						break
+					}
+					for (const r of chrset.get(m.chr)) {
+						if (m.pos >= r.start && m.pos < r.stop) {
+							mlst.push(m)
+							break
+						}
+					}
+					break
+				case common.dtsv:
+				case common.dtfusionrna:
+					if (!m.pairlst) {
+						break
+					}
+					let hit = false
+					for (const pair of m.pairlst) {
+						// a
+						if (pair.a.chr && chrset.has(pair.a.chr)) {
+							const pos = pair.a.position || pair.a.pos
+							if (pos) {
+								for (const r of chrset.get(pair.a.chr)) {
+									if (pos >= r.start && pos < r.stop) {
+										hit = true
+										break
+									}
+								}
+							}
+						}
+						// b
+						if (pair.b.chr && chrset.has(pair.b.chr)) {
+							const pos = pair.b.position || pair.b.pos
+							if (pos) {
+								for (const r of chrset.get(pair.b.chr)) {
+									if (pos >= r.start && pos < r.stop) {
+										hit = true
+										break
+									}
+								}
+							}
+						}
+					}
+					if (hit) {
+						mlst.push(m)
+					}
+					break
+				// end of switch
+			}
+		}
+		if (mlst.length) {
+			load2tk([{ lst: mlst }], block, tk)
+		}
 	}
-	if (handlesays) {
-		handlesays.text('Loading...')
-	}
+}
+
+async function dstkload_fromdsquery(tk, block) {
+	if (tk.__handlesays) tk.__handlesays.text('Loading...')
 	tk.ds.busy = true
 	block.tkcloakon(tk)
 
 	const par = {
-		jwt: block.jwt,
 		genome: block.genome.name,
 		dsname: tk.ds.label,
 		range: block.tkarg_maygm(tk)[0] // FIXME no support for rglst!
@@ -312,34 +297,15 @@ export function dstkload(tk, block) {
 	// ?? how to define regulatory regions associated with a gene (retrieve and show it by default)
 	// ?? how to retrieve data over regulatory region from a db
 
-	fetch(
-		new Request(block.hostURL + '/dsdata', {
-			method: 'POST',
-			body: JSON.stringify(par)
-		})
-	)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			if (handlesays) {
-				handlesays
-					.text(tk.ds.label)
-					.style('background-color', '#ddd')
-					.style('color', 'black')
-			}
-			if (data.error) return data.error
-			load2tk(data.data, block, tk)
-			return
-		})
-		.catch(err => {
-			if (err.stack) console.log(err.stack)
-			return err.message
-		})
-		.then(errmsg => {
-			tk.ds.busy = false
-			block.tkcloakoff(tk, { error: errmsg })
-		})
+	const data = await client.dofetch2('dsdata', { method: 'POST', body: JSON.stringify(par) })
+	if (tk.__handlesays) {
+		tk.__handlesays
+			.text(tk.ds.label)
+			.style('background-color', '#ddd')
+			.style('color', 'black')
+	}
+	if (data.error) throw data.error
+	load2tk(data.data, block, tk)
 }
 
 export function load2tk(datalst, block, tk) {
