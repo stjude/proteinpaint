@@ -124,7 +124,9 @@ export async function dstkload(tk, block) {
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		tk.ds.busy = false
-		block.tkcloakoff(tk, { error: '' })
+		block.tkcloakoff(tk, { error: e.message || e })
+		block.setllabel(tk)
+		block.block_setheight()
 	}
 }
 
