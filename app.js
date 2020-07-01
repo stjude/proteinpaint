@@ -25,6 +25,7 @@ const express = require('express'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
 	path = require('path'),
+	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -2559,7 +2560,7 @@ function handle_clinvarVCF(req, res) {
 	}
 }
 
-function handle_dsdata(req, res) {
+async function handle_dsdata(req, res) {
 	/*
 	poor mechanism, only for old-style official dataset
 
@@ -2567,116 +2568,195 @@ function handle_dsdata(req, res) {
 	*/
 
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!genomes[req.query.genome]) return res.send({ error: 'invalid genome' })
-	if (!req.query.dsname) return res.send({ error: '.dsname missing' })
-	const ds = genomes[req.query.genome].datasets[req.query.dsname]
-	if (!ds) return res.send({ error: 'invalid dsname' })
-	const data = []
-	const tasks = []
+	try {
+		if (!genomes[req.query.genome]) throw 'invalid genome'
+		if (!req.query.dsname) throw '.dsname missing'
+		const ds = genomes[req.query.genome].datasets[req.query.dsname]
+		if (!ds) throw 'invalid dsname'
+		const data = []
 
-	for (const query of ds.queries) {
-		if (req.query.expressiononly && !query.isgeneexpression) {
-			/*
-			expression data only
-			TODO mds should know exactly which data type to query, or which vending button to use
-			*/
-			continue
+		for (const query of ds.queries) {
+			if (req.query.expressiononly && !query.isgeneexpression) {
+				/*
+				expression data only
+				TODO mds should know exactly which data type to query, or which vending button to use
+				*/
+				continue
+			}
+			if (req.query.noexpression && query.isgeneexpression) {
+				// skip expression data
+				continue
+			}
+
+			if (query.dsblocktracklst) {
+				/*
+				do not load any tracks here yet
+				TODO should allow loading some/all, when epaint is not there
+				*/
+				continue
+			}
+
+			if (query.vcffile) {
+				const d = await handle_dsdata_vcf(query, req)
+				data.push(d)
+				continue
+			}
+
+			if (query.makequery) {
+				const d = handle_dsdata_makequery(ds, query, req)
+				data.push(d)
+				continue
+			}
+
+			if (query.gdcgraphql_snvindel) {
+				const d = await handle_dsdata_gdcgraphql_snvindel(query, req)
+				data.push(d)
+				continue
+			}
+			throw 'unknow type from one of ds.queries[]'
 		}
-		if (req.query.noexpression && query.isgeneexpression) {
-			// skip expression data
-			continue
+
+		res.send({ data })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
+	}
+}
+
+async function handle_dsdata_gdcgraphql_snvindel(query, req) {
+	try {
+		const body = {
+			query: query.gdcgraphql_snvindel.query,
+			variables: query.gdcgraphql_snvindel.variables
 		}
+		body.variables.filter.content[0].content.value[0] = req.query.range.chr
+		body.variables.filter.content[1].content.value[0] = req.query.range.start
+		body.variables.filter.content[2].content.value[0] = req.query.range.stop
 
-		if (query.dsblocktracklst) {
-			/*
-			do not load any tracks here yet
-			TODO should allow loading some/all, when epaint is not there
-			*/
-			continue
+		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify(body)
+		})
+		const data = JSON.parse(response.body)
+		const lst = [] // parse snv/indels into this list
+		for (const edge of data.data.explore.ssms.hits.edges) {
+			const ssm = edge.node
+			const m = {
+				dt: common.dtsnvindel,
+				chr: req.query.range.chr,
+				pos: ssm.start_position - 1,
+				ref: ssm.reference_allele,
+				alt: ssm.tumor_allele,
+				isoform: req.query.isoform
+			}
+			handle_dsdata_gdcgraphql_snvindel_addclass(m, ssm, req)
+			lst.push(m)
 		}
+		return { lst }
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw 'GDC error: bad request'
+	}
+}
 
-		if (query.vcffile) {
-			tasks.push(next => {
-				const par = [
-					path.join(serverconfig.tpmasterdir, query.vcffile),
-					(query.vcf.nochr ? req.query.range.chr.replace('chr', '') : req.query.range.chr) +
-						':' +
-						req.query.range.start +
-						'-' +
-						req.query.range.stop
-				]
-				const ps = spawn(tabix, par)
-				const out = [],
-					out2 = []
-				ps.stdout.on('data', i => out.push(i))
-				ps.stderr.on('data', i => out2.push(i))
-				ps.on('close', code => {
-					const e = out2.join('').trim()
-					if (e != '') {
-						next('error querying vcf file')
-						return
-					}
-					const tmp = out.join('').trim()
-					data.push({
-						lines: tmp == '' ? [] : tmp.split('\n'),
-						vcfid: query.vcf.vcfid
-					})
-					next(null)
-				})
-			})
-		} else {
-			// query from ds.newconn
-			tasks.push(next => {
-				const sqlstr = query.makequery(req.query)
-				if (!sqlstr) {
-					// when not using gm, will not query tables such as expression
-					next(null)
-					return
-				}
-				const rows = ds.newconn.prepare(sqlstr).all()
-				let lst
-				if (query.tidy) {
-					lst = rows.map(i => query.tidy(i))
-				} else {
-					lst = rows
-				}
-				const result = {}
-				if (query.isgeneexpression) {
-					result.lst = lst
-					result.isgeneexpression = true
-					result.config = query.config
-
-					/*
-						loading of junction track as a dependent of epaint
-						attach junction track info in this result, for making the junction button in epaint
-						await user to click that button
-
-						replace-by-mds
-
-						*/
-
-					for (const q2 of ds.queries) {
-						if (!q2.dsblocktracklst) continue
-						for (const tk of q2.dsblocktracklst) {
-							if (tk.type == common.tkt.junction) {
-								result.config.dsjunctiontk = tk
-							}
-						}
-					}
-				} else {
-					result.lst = lst
-				}
-				data.push(result)
-				next(null)
-			})
+function handle_dsdata_gdcgraphql_snvindel_addclass(m, ssm, req) {
+	if (ssm.consequence) {
+		const ts = ssm.consequence.hits.edges.find(
+			i => i.node && i.node.transcript && i.node.transcript.transcript_id == req.query.isoform
+		)
+		if (ts && ts.node.transcript.consequence_type) {
+			const [dt, mclass, rank] = common.vepinfo(ts.node.transcript.consequence_type)
+			m.class = mclass
+			m.mname = ts.node.transcript.aa_change // may be null!
 		}
 	}
-	async.series(tasks, err => {
-		if (err) {
-			res.send({ error: err })
-			return
+
+	if (!m.mname) {
+		m.mname = m.ref + '>' + m.alt
+	}
+
+	if (!m.class) {
+		if (common.basecolor[m.ref] && common.basecolor[m.alt]) {
+			m.class = common.mclasssnv
+		} else {
+			if (m.ref == '-') {
+				m.class = common.mclassinsertion
+			} else if (m.alt == '-') {
+				m.class = common.mclassdeletion
+			} else {
+				m.class = common.mclassmnv
+			}
 		}
-		res.send({ data: data })
+	}
+}
+
+function handle_dsdata_makequery(ds, query, req) {
+	// query from ds.newconn
+	const sqlstr = query.makequery(req.query)
+	if (!sqlstr) {
+		// when not using gm, will not query tables such as expression
+		return
+	}
+	const rows = ds.newconn.prepare(sqlstr).all()
+	let lst
+	if (query.tidy) {
+		lst = rows.map(i => query.tidy(i))
+	} else {
+		lst = rows
+	}
+	const result = {}
+	if (query.isgeneexpression) {
+		result.lst = lst
+		result.isgeneexpression = true
+		result.config = query.config
+
+		/*
+			loading of junction track as a dependent of epaint
+			attach junction track info in this result, for making the junction button in epaint
+			await user to click that button
+
+			replace-by-mds
+
+			*/
+
+		for (const q2 of ds.queries) {
+			if (!q2.dsblocktracklst) continue
+			for (const tk of q2.dsblocktracklst) {
+				if (tk.type == common.tkt.junction) {
+					result.config.dsjunctiontk = tk
+				}
+			}
+		}
+	} else {
+		result.lst = lst
+	}
+	return result
+}
+
+function handle_dsdata_vcf(query, req) {
+	const par = [
+		path.join(serverconfig.tpmasterdir, query.vcffile),
+		(query.vcf.nochr ? req.query.range.chr.replace('chr', '') : req.query.range.chr) +
+			':' +
+			req.query.range.start +
+			'-' +
+			req.query.range.stop
+	]
+	return new Promise((resolve, reject) => {
+		const ps = spawn(tabix, par)
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e != '') reject('error querying vcf file')
+			const tmp = out.join('').trim()
+			resolve({
+				lines: tmp == '' ? [] : tmp.split('\n'),
+				vcfid: query.vcf.vcfid
+			})
+		})
 	})
 }
 
@@ -12065,8 +12145,11 @@ function legacyds_init_one_query(q, ds, genome) {
 		return
 	}
 
-	if (q.gdcGraphql) {
-		console.log('to validate gdc graphql')
+	if (q.gdcgraphql_snvindel) {
+		if (!q.gdcgraphql_snvindel.query) return '.query missing from gdcgraphql_snvindel'
+		if (!q.gdcgraphql_snvindel.variables) return '.variables missing from gdcgraphql_snvindel'
+		// more validations
+		return
 	}
 
 	return 'do not know how to parse query: ' + q.name
