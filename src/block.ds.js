@@ -3255,6 +3255,11 @@ export function mlst_pretreat(tk, block, originhidden) {
 		if (m.origin && originhidden.has(m.origin)) {
 			continue
 		}
+		if (block.gmmode == common.gmmode.protein && block.usegm.codingstart && block.usegm.codingstop) {
+			// in protein view, exclude those out of cds, e.g. utr ones
+			// this may be risky as those p53 utr SVs are no longer visible
+			if (m.pos < block.usegm.codingstart || m.pos > block.usegm.codingstop) continue
+		}
 		if (tk.vcfinfofilter) {
 			let hidden = false
 			for (const mcset of tk.vcfinfofilter.lst) {
