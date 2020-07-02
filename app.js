@@ -2629,17 +2629,30 @@ async function handle_dsdata_gdcgraphql_snvindel(query, req) {
 			query: query.gdcgraphql_snvindel.query,
 			variables: query.gdcgraphql_snvindel.variables
 		}
-		body.variables.filter.content[0].content.value[0] = req.query.range.chr
-		body.variables.filter.content[1].content.value[0] = req.query.range.start
-		body.variables.filter.content[2].content.value[0] = req.query.range.stop
+		body.variables.filter.content[0].content.value = [req.query.range.chr]
+		body.variables.filter.content[1].content.value = [req.query.range.start]
+		body.variables.filter.content[2].content.value = [req.query.range.stop]
 
 		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify(body)
 		})
-		const data = JSON.parse(response.body)
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON returned by GDC'
+		}
+		if (
+			!re.data ||
+			!re.data.explore ||
+			!re.data.explore.ssms ||
+			!re.data.explore.ssms.hits ||
+			!re.data.explore.ssms.hits.edges
+		)
+			throw 'returned structure is not .data.explore.ssms.hits.edges'
 		const lst = [] // parse snv/indels into this list
-		for (const edge of data.data.explore.ssms.hits.edges) {
+		for (const edge of re.data.explore.ssms.hits.edges) {
 			const ssm = edge.node
 			const m = {
 				dt: common.dtsnvindel,
@@ -2647,19 +2660,28 @@ async function handle_dsdata_gdcgraphql_snvindel(query, req) {
 				pos: ssm.start_position - 1,
 				ref: ssm.reference_allele,
 				alt: ssm.tumor_allele,
-				isoform: req.query.isoform
+				isoform: req.query.isoform,
+				info: {}
 			}
-			handle_dsdata_gdcgraphql_snvindel_addclass(m, ssm, req)
+			gdcgraphql_snvindel_addclass(m, ssm, req)
+			gdcgraphql_snvindel_addoccrrence(m, ssm, query)
 			lst.push(m)
 		}
 		return { lst }
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		throw 'GDC error: bad request'
+		throw e.message || e
 	}
 }
 
-function handle_dsdata_gdcgraphql_snvindel_addclass(m, ssm, req) {
+function gdcgraphql_snvindel_addoccrrence(m, ssm, query) {
+	if (!query.gdcgraphql_snvindel.occurrence_key) return
+	if (ssm.occurrence && ssm.occurrence.hits && ssm.occurrence.hits.total) {
+		m.info[query.gdcgraphql_snvindel.occurrence_key] = ssm.occurrence.hits.total
+	}
+}
+
+function gdcgraphql_snvindel_addclass(m, ssm, req) {
 	if (ssm.consequence) {
 		const ts = ssm.consequence.hits.edges.find(
 			i => i.node && i.node.transcript && i.node.transcript.transcript_id == req.query.isoform
@@ -12148,7 +12170,9 @@ function legacyds_init_one_query(q, ds, genome) {
 	if (q.gdcgraphql_snvindel) {
 		if (!q.gdcgraphql_snvindel.query) return '.query missing from gdcgraphql_snvindel'
 		if (!q.gdcgraphql_snvindel.variables) return '.variables missing from gdcgraphql_snvindel'
-		// more validations
+		if (!q.gdcgraphql_snvindel.variables.filter) return '.variables.filter{} missing from gdcgraphql_snvindel'
+		if (!q.gdcgraphql_snvindel.variables.filter.content)
+			return '.variables.filter.content{} missing from gdcgraphql_snvindel'
 		return
 	}
 

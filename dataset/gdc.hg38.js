@@ -1,3 +1,8 @@
+/*
+the "filter" name is hardcoded and used in app.js
+
+*/
+
 const query = `query GdcSsmByGene($filter: FiltersArgument) {
   explore {
     ssms {
@@ -45,12 +50,15 @@ const variables = {
 	filter: {
 		op: 'and',
 		content: [
-			{ op: 'in', content: { field: 'chromosome', value: [] } },
-			{ op: '>=', content: { field: 'start_position', value: [] } },
-			{ op: '<=', content: { field: 'end_position', value: [] } }
+			// value is to be added during query
+			{ op: 'in', content: { field: 'chromosome' } },
+			{ op: '>=', content: { field: 'start_position' } },
+			{ op: '<=', content: { field: 'end_position' } }
 		]
 	}
 }
+
+const occurrence_key = 'total' // for the numeric axis showing occurrence
 
 module.exports = {
 	color: '#545454',
@@ -60,10 +68,30 @@ module.exports = {
 		{ k: 'Query method', v: 'GDC GraphQL API' }
 	],
 	genome: 'hg38',
+	vcfinfofilter: {
+		setidx4numeric: 0,
+		lst: [
+			{
+				name: 'Occurrence',
+				locusinfo: { key: occurrence_key },
+				numericfilter: [
+					{ side: '>', value: 1 },
+					{ side: '>', value: 5 },
+					{ side: '>', value: 10 },
+					{ side: '>', value: 20 },
+					{ side: '>', value: 100 }
+				]
+			}
+		]
+	},
 	queries: [
 		{
 			name: 'gdc',
-			gdcgraphql_snvindel: { query, variables }
+			gdcgraphql_snvindel: {
+				query,
+				variables,
+				occurrence_key
+			}
 		}
 	]
 }
