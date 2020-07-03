@@ -60,6 +60,62 @@ const variables = {
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
+const vcfinfofilter = {
+	//setidx4numeric: 0,
+	setidx4occurrence: 0, // an info key to define #tumors of each mutation
+	lst: [
+		{
+			name: 'Occurrence',
+			locusinfo: { key: occurrence_key },
+			numericfilter: [
+				{ side: '>', value: 1 },
+				{ side: '>', value: 5 },
+				{ side: '>', value: 10 },
+				{ side: '>', value: 20 },
+				{ side: '>', value: 100 }
+			]
+		}
+	]
+}
+
+const snvindel_attributes = [
+	{
+		label: 'Mutation',
+		get: m => m.mname || ''
+	},
+	{
+		label: 'Genome pos.',
+		hide: true,
+		get: m => {
+			if (m.chr && m.pos) return m.chr + ':' + (m.pos + 1)
+			return null
+		}
+	},
+	{
+		label: 'Allele',
+		lst: [
+			{
+				get: function(m) {
+					return m.ref || ''
+				},
+				label: 'Ref',
+				valuecenter: true
+			},
+			{
+				get: function(m) {
+					return m.alt || ''
+				},
+				label: 'Alt',
+				valuecenter: true
+			}
+		]
+	},
+	{
+		label: 'Occurrence',
+		get: m => m.info.total
+	}
+]
+
 module.exports = {
 	color: '#545454',
 	dsinfo: [
@@ -68,22 +124,8 @@ module.exports = {
 		{ k: 'Query method', v: 'GDC GraphQL API' }
 	],
 	genome: 'hg38',
-	vcfinfofilter: {
-		setidx4numeric: 0,
-		lst: [
-			{
-				name: 'Occurrence',
-				locusinfo: { key: occurrence_key },
-				numericfilter: [
-					{ side: '>', value: 1 },
-					{ side: '>', value: 5 },
-					{ side: '>', value: 10 },
-					{ side: '>', value: 20 },
-					{ side: '>', value: 100 }
-				]
-			}
-		]
-	},
+	vcfinfofilter,
+	snvindel_attributes,
 	queries: [
 		{
 			name: 'gdc',

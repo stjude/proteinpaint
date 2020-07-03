@@ -42,6 +42,7 @@ done_tknodata
 
 ********************** INTERNAL
 
+renderskewertk
 skewer_make()
 
 showlegend_populationfrequencyfilter
@@ -519,7 +520,7 @@ function renderskewertk(tk, block, originhidden) {
 					pos: mlst[0].pos,
 					mlst: mlst,
 					x: x,
-					groups: mlst2disc(mlst)
+					groups: mlst2disc(mlst, tk)
 				})
 			}
 		} else {
@@ -582,7 +583,7 @@ function renderskewertk(tk, block, originhidden) {
 							pos: m.pos,
 							mlst: mlst,
 							x: mlst[0].__x,
-							groups: mlst2disc(mlst)
+							groups: mlst2disc(mlst, tk)
 						})
 					}
 				}
@@ -606,7 +607,7 @@ function renderskewertk(tk, block, originhidden) {
 					pos: mlst[0].pos,
 					mlst: mlst,
 					x: xsum / mlst.length,
-					groups: mlst2disc(mlst)
+					groups: mlst2disc(mlst, tk)
 				})
 			}
 		}
@@ -631,6 +632,9 @@ function renderskewertk(tk, block, originhidden) {
 			}
 		}
 		tk.data = datagroup
+		for (const d of tk.data) {
+			d.occurrence = d.groups.reduce((i, j) => i + j.occurrence, 0)
+		}
 		skewer_make(tk, block)
 		tk.height_main = tk.toppad + tk.maxskewerheight + tk.stem1 + tk.stem2 + tk.stem3 + tk.bottompad
 	}
@@ -715,7 +719,17 @@ function renderskewertk(tk, block, originhidden) {
 	}
 }
 
-function mlst2disc(mlst) {
+function group2occurrence(g, tk) {
+	if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4occurrence != undefined) {
+		const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4occurrence]
+		const [err, vlst] = getter_mcset_key(mcset, g.mlst[0])
+		if (err || vlst == undefined) return 1
+		return vlst[0]
+	}
+	return g.mlst.length
+}
+
+function mlst2disc(mlst, tk) {
 	const k2g = new Map()
 	for (const m of mlst) {
 		switch (m.dt) {
@@ -857,9 +871,10 @@ function mlst2disc(mlst) {
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count
+		g.occurrence = group2occurrence(g, tk)
 	}
 	groups.sort((a, b) => {
-		return b.mlst.length - a.mlst.length
+		return b.occurrence - a.occurrence
 	})
 	return groups
 }
@@ -990,7 +1005,7 @@ custom mclass from vcfinfofilter
 	let mdc = 0
 	for (const d of tk.data) {
 		for (const g of d.groups) {
-			mdc = Math.max(mdc, g.mlst.length)
+			mdc = Math.max(mdc, g.occurrence)
 		}
 	}
 	let mrd = 0 // max disc radius
@@ -1026,11 +1041,11 @@ custom mclass from vcfinfofilter
 			d.slabelrotate = false
 			d.slabelwidth = 0
 			for (const r of d.groups) {
-				if (r.mlst.length == 1) {
+				if (r.occurrence == 1) {
 					r.radius = dotwidth / 2
 				} else {
-					const digc = r.mlst.length.toString().length
-					r.radius = Math.max(Math.sqrt(sf_discradius(r.mlst.length) / Math.PI), digc * 5)
+					const digc = r.occurrence.toString().length
+					r.radius = Math.max(Math.sqrt(sf_discradius(r.occurrence) / Math.PI), digc * 5)
 				}
 				d.maxradius = Math.max(d.maxradius, r.radius)
 				globalmaxradius = Math.max(globalmaxradius, r.radius)
@@ -1090,9 +1105,9 @@ custom mclass from vcfinfofilter
 		)
 	// number in disc
 	const textslc = discg
-		.filter(d => d.mlst.length > 1)
+		.filter(d => d.occurrence > 1)
 		.append('text')
-		.text(d => d.mlst.length)
+		.text(d => d.occurrence)
 		.attr('font-family', client.font)
 		.attr('class', 'sja_aa_discnum')
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
@@ -1100,7 +1115,7 @@ custom mclass from vcfinfofilter
 		.attr('text-anchor', 'middle')
 		.each(d => {
 			const s = d.radius * 1.5
-			d.discnumfontsize = Math.min(s / (d.mlst.length.toString().length * client.textlensf), s)
+			d.discnumfontsize = Math.min(s / (d.occurrence.toString().length * client.textlensf), s)
 		})
 		.attr('font-size', d => d.discnumfontsize)
 		.attr('y', d => d.discnumfontsize * middlealignshift)
@@ -1210,7 +1225,7 @@ custom mclass from vcfinfofilter
 				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block, svgraph: true })
 				return
 			}
-			if (d.mlst.length > 1 && tk.ds && tk.ds.cohort) {
+			if (d.occurrence > 1 && tk.ds && tk.ds.cohort) {
 				// may show sunburst
 				let showsunburst = false
 				if (tk.ds.cohort.annotation) {
@@ -1234,7 +1249,7 @@ custom mclass from vcfinfofilter
 					return
 				}
 			}
-			if (d.mlst.length == 1) {
+			if (d.occurrence == 1) {
 				// table for single
 				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block })
 				return
@@ -1256,7 +1271,7 @@ custom mclass from vcfinfofilter
 		.outerRadius(d => d.radius + d.rimwidth)
 		.startAngle(0)
 		.endAngle(d => {
-			d.rim1_startangle = (Math.PI * 2 * d.rim1count) / d.mlst.length
+			d.rim1_startangle = (Math.PI * 2 * d.rim1count) / d.occurrence
 			return d.rim1_startangle
 		})
 	discg
@@ -1269,7 +1284,7 @@ custom mclass from vcfinfofilter
 		.innerRadius(d => d.radius + 0.5)
 		.outerRadius(d => d.radius + 0.5 + d.rimwidth)
 		.startAngle(d => d.rim1_startangle)
-		.endAngle(d => d.rim1_startangle + (Math.PI * 2 * d.rim2count) / d.mlst.length)
+		.endAngle(d => d.rim1_startangle + (Math.PI * 2 * d.rim2count) / d.occurrence)
 	discg
 		.filter(d => d.rim2count > 0)
 		.append('path')
@@ -1302,7 +1317,7 @@ custom mclass from vcfinfofilter
 	let maxm = 0
 	for (const d of tk.data) {
 		for (const g of d.groups) {
-			maxm = Math.max(maxm, g.mlst.length)
+			maxm = Math.max(maxm, g.occurrence)
 		}
 	}
 	tk.stem3 = Math.max(stackbarmaxheight + 2, hbaseline + dotwidth * Math.min(5, maxm))
@@ -1328,7 +1343,7 @@ custom mclass from vcfinfofilter
 				cumh += g.pica_fontsize + 1
 				tk.pica.g
 					.append('text')
-					.text(g.mlst[0].mname + (g.mlst.length > 1 ? ' x' + g.mlst.length : ''))
+					.text(g.mlst[0].mname + (g.occurrence > 1 ? ' x' + g.occurrence : ''))
 					.attr('font-size', g.pica_fontsize)
 					.each(function() {
 						boxw = Math.max(boxw, this.getBBox().width)
@@ -1368,9 +1383,9 @@ custom mclass from vcfinfofilter
 			tk.pica.x = d.x - hpad - firstlabw / 2
 			tk.pica.y = d.y + (abp ? -1 : 1) * (d.maxradius * 2 + tiph + 2)
 			tk.pica.g.attr('transform', 'translate(' + tk.pica.x + ',' + tk.pica.y + ')')
-			_g.filter(g => g.mlst.length > 1)
+			_g.filter(g => g.occurrence > 1)
 				.append('text')
-				.text(g => 'x' + g.mlst.length)
+				.text(g => 'x' + g.occurrence)
 				.attr('x', g => g.pica_mlabelwidth + 5)
 				.attr('font-size', g => g.pica_fontsize)
 				.attr('dominant-baseline', abp ? 'hanging' : 'auto')
@@ -1410,13 +1425,13 @@ custom mclass from vcfinfofilter
 	// get max mcount for skewers
 	let mm = 0
 	for (const d of tk.data) {
-		mm = Math.max(mm, d.mlst.length)
+		mm = Math.max(mm, d.occurrence)
 	}
 	const sf_foldyoff = scaleLinear()
 		.domain([1, mm])
 		.range([hbaseline, tk.stem3 - globalmaxradius])
 	tk.skewer.attr('transform', d => {
-		d.foldyoffset = sf_foldyoff(d.mlst.length)
+		d.foldyoffset = sf_foldyoff(d.occurrence)
 		d.y = skewer_sety(d, tk)
 		return 'translate(' + d.x + ',' + d.y + ')'
 	})
@@ -1467,7 +1482,7 @@ custom mclass from vcfinfofilter
 						label2 = Math.ceil(d.grp.mlst[0].rnadellength / 3) + ' aa, '
 						break
 				}
-				if (d.grp.mlst.length == 1) {
+				if (d.grp.occurrence == 1) {
 					const m = d.grp.mlst[0]
 					if (m.sample) {
 						label2 += m.sample
@@ -1477,7 +1492,7 @@ custom mclass from vcfinfofilter
 						label2 += '1 sample'
 					}
 				} else {
-					label2 += d.grp.mlst.length + ' samples'
+					label2 += d.grp.occurrence + ' samples'
 				}
 				const fontsize1 = 14,
 					fontsize2 = 10,
@@ -1568,7 +1583,7 @@ custom mclass from vcfinfofilter
 		.attr('height', tk.stem1)
 		.attr('fill', d => color4disc(d.groups[0].mlst[0]))
 		.attr('width', d => {
-			d.ssk_width = Math.max(d.mlst.length.toString().length * 8 + 6, 2 * (d.maxradius + d.maxrimwidth))
+			d.ssk_width = Math.max(d.occurrence.toString().length * 8 + 6, 2 * (d.maxradius + d.maxrimwidth))
 			return d.ssk_width
 		})
 		.attr('x', d => -d.ssk_width / 2)
@@ -1580,9 +1595,9 @@ custom mclass from vcfinfofilter
 		.attr('font-weight', 'bold')
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'central')
-		.text(d => d.mlst.length)
+		.text(d => d.occurrence)
 		.each(d => {
-			d.ssk_fontsize = Math.min(tk.stem1, d.ssk_width / (d.mlst.length.toString().length * client.textlensf))
+			d.ssk_fontsize = Math.min(tk.stem1, d.ssk_width / (d.occurrence.toString().length * client.textlensf))
 		})
 		.attr('font-size', d => d.ssk_fontsize)
 	// ssk - kick
@@ -1624,7 +1639,7 @@ custom mclass from vcfinfofilter
 			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', function(d) {
-			if (d.mlst.length > 1 && tk.ds && tk.ds.cohort) {
+			if (d.occurrence > 1 && tk.ds && tk.ds.cohort) {
 				// may show sunburst
 				let showsunburst = false
 				if (tk.ds.cohort.annotation) {
@@ -1782,7 +1797,7 @@ export function settle_glyph(tk, block) {
 	} else {
 		// rank skewers by ...
 		allinview.sort((a, b) => {
-			if (b.mlst.length == a.mlst.length) {
+			if (b.occurrence == a.occurrence) {
 				if (b.groups.length == a.groups.length) {
 					//return Math.abs(a.aapos*2-aarangestart-aarangestop)-Math.abs(b.aaposition*2-aarangestart-aarangestop);
 					return Math.abs(a.x0 * 2 - x1 - x2) - Math.abs(b.x0 * 2 - x1 - x2)
@@ -1790,7 +1805,7 @@ export function settle_glyph(tk, block) {
 					return b.groups.length - a.groups.length
 				}
 			}
-			return b.mlst.length - a.mlst.length
+			return b.occurrence - a.occurrence
 		})
 		// collect top items to expand
 		let width = 0
