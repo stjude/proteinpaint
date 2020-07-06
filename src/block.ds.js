@@ -1233,30 +1233,7 @@ custom mclass from vcfinfofilter
 				})
 				return
 			}
-			if (d.occurrence > 1 && tk.ds && tk.ds.cohort) {
-				// may show sunburst
-				let showsunburst = false
-				if (tk.ds.cohort.annotation) {
-					if (tk.ds.cohort.variantsunburst) {
-						showsunburst = true
-					}
-				} else {
-					// no annotation, should be old-style official ds
-					// FIXME update to new ds
-					// or all update to mds altogether
-					showsunburst = true
-				}
-				if (showsunburst) {
-					sun1(tk, block, {
-						cx: d.aa.x,
-						cy: skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1),
-						mlst: d.mlst,
-						label: d.mlst[0].mname,
-						cohort: tk.ds.cohort
-					})
-					return
-				}
-			}
+			if (may_sun1(d, d.aa.x, skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1), tk, block)) return
 			if (d.occurrence == 1) {
 				// table for single
 				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block })
@@ -1647,29 +1624,7 @@ custom mclass from vcfinfofilter
 			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', function(d) {
-			if (d.occurrence > 1 && tk.ds && tk.ds.cohort) {
-				// may show sunburst
-				let showsunburst = false
-				if (tk.ds.cohort.annotation) {
-					if (tk.ds.cohort.variantsunburst) {
-						showsunburst = true
-					}
-				} else {
-					// no annotation, should be old-style official ds
-					// FIXME update to new ds
-					showsunburst = true
-				}
-				if (showsunburst) {
-					sun1(tk, block, {
-						cx: d.x,
-						cy: d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2,
-						mlst: d.mlst,
-						label: d.mlst[0].mname,
-						cohort: tk.ds.cohort
-					})
-					return
-				}
-			}
+			if (may_sun1(d, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block)) return
 			const p = d3event.target.getBoundingClientRect()
 			itemtable({
 				mlst: d.mlst,
@@ -3648,4 +3603,32 @@ export function done_tknodata(tk, block) {
 		hlaachange_addnewtrack(tk, block)
 		delete tk.hlaachange
 	}
+}
+
+function may_sun1(d, cx, cy, tk, block) {
+	// sun1 with legacy ds
+	if (d.occurrence <= 1 || !tk.ds || !tk.ds.cohort) return false
+	// may show sunburst
+	let showsunburst = false
+	if (tk.ds.cohort.annotation) {
+		if (tk.ds.cohort.variantsunburst) {
+			showsunburst = true
+		}
+	} else {
+		// no annotation, should be old-style official ds
+		// FIXME update to new ds
+		// or all update to mds altogether
+		showsunburst = true
+	}
+	if (showsunburst) {
+		sun1(tk, block, {
+			cx,
+			cy,
+			mlst: d.mlst,
+			label: d.mlst[0].mname,
+			cohort: tk.ds.cohort
+		})
+		return true
+	}
+	return false
 }
