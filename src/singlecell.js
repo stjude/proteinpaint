@@ -120,6 +120,7 @@ or selected a gene for overlaying
 		const cat = obj.cells.categories[obj.use_category_index]
 		if (!cat) throw 'category array index out of bound'
 		arg.getpcd.category_index = cat.columnidx
+
 		if (cat.autocolor) {
 			// if categories are autocolored and not defined in config
 			arg.getpcd.category_autocolor = true
@@ -127,7 +128,7 @@ or selected a gene for overlaying
 		} else if (cat.values) {
 			//if colors are defined in config
 			arg.getpcd.category_customcolor = true
-			arg.getpcd.cat_colors = cat.values
+			arg.getpcd.cat_values = cat.values
 		} else {
 			if (!cat.autocolor && !cat.values) throw 'categories.values[] are not defined'
 			throw 'unknow coloring scheme for category ' + cat.name
@@ -137,6 +138,18 @@ or selected a gene for overlaying
 		}
 		if (obj.background_color) {
 			arg.background_color = obj.background_color
+		}
+		//set flags for ordering legend
+		if (!cat.customorder) {
+			// if categories are autoordered and not defined in config
+			arg.getpcd.category_autoorder = true
+		} else if (cat.customorder && cat.values) {
+			//if order are defined in config
+			arg.getpcd.category_customorder = true
+			arg.getpcd.cat_values = cat.values
+		} else {
+			if (cat.customorder && !cat.values) throw 'categories.values[] are not defined'
+			throw 'unknow ordering scheme for category ' + cat.name
 		}
 		// update menu_button here
 		obj.menu_button.html(cat.name + '&nbsp;&nbsp;&#9660;')
