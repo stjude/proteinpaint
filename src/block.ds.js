@@ -1233,12 +1233,12 @@ custom mclass from vcfinfofilter
 				})
 				return
 			}
-			if (may_sun1(d, d.aa.x, skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1), tk, block)) return
 			if (d.occurrence == 1) {
 				// table for single
 				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block })
 				return
 			}
+			if (may_sunburst(d.mlst, d.aa.x, skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1), tk, block)) return
 			// many items to table
 			itemtable({
 				mlst: d.mlst,
@@ -1624,7 +1624,9 @@ custom mclass from vcfinfofilter
 			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', function(d) {
-			if (may_sun1(d, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block)) return
+			if (d.occurrence > 1) {
+				if (may_sunburst(d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block)) return
+			}
 			const p = d3event.target.getBoundingClientRect()
 			itemtable({
 				mlst: d.mlst,
@@ -3605,30 +3607,55 @@ export function done_tknodata(tk, block) {
 	}
 }
 
-function may_sun1(d, cx, cy, tk, block) {
-	// sun1 with legacy ds
-	if (d.occurrence <= 1 || !tk.ds || !tk.ds.cohort) return false
-	// may show sunburst
-	let showsunburst = false
-	if (tk.ds.cohort.annotation) {
-		if (tk.ds.cohort.variantsunburst) {
-			showsunburst = true
+async function may_sunburst(mlst, cx, cy, tk, block) {
+	/*
+may show sunburst chart using several possible methods
+
+todo: as the central place for making sunburst
+dynamic import sun1 as well
+*/
+	if (tk.ds) {
+		// legacy ds
+		// give priority to the relatively new method of ds.variant2tumors
+		if (tk.ds.variant2tumors) {
+			const par = ['genome=' + block.genome.name, 'legacydsname=' + tk.ds.label]
+			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
+				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
+			} else {
+				throw 'unknown variantkey'
+			}
+			const data = await client.dofetch2('variant2tumors?' + par.join('&'))
+			if (data.error) {
+				block.error(data.error)
+				return true
+			}
+			console.log(data)
+			return true
 		}
-	} else {
-		// no annotation, should be old-style official ds
-		// FIXME update to new ds
-		// or all update to mds altogether
-		showsunburst = true
+		if (tk.ds.cohort) {
+			// legacy cohort config on legacy ds
+			let showsunburst = false
+			if (tk.ds.cohort.annotation) {
+				if (tk.ds.cohort.variantsunburst) {
+					showsunburst = true
+				}
+			} else {
+				// no annotation, should be old-style official ds
+				// FIXME update to new ds
+				// or all update to mds altogether
+				showsunburst = true
+			}
+			if (showsunburst) {
+				sun1(tk, block, {
+					cx,
+					cy,
+					mlst: mlst,
+					label: mlst[0].mname,
+					cohort: tk.ds.cohort
+				})
+				return true
+			}
+		}
 	}
-	if (showsunburst) {
-		sun1(tk, block, {
-			cx,
-			cy,
-			mlst: d.mlst,
-			label: d.mlst[0].mname,
-			cohort: tk.ds.cohort
-		})
-		return true
-	}
-	return false
+	return
 }

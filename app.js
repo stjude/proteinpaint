@@ -57,7 +57,8 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	utils = require('./modules/utils'),
-	draw_partition = require('./modules/partitionmatrix').draw_partition
+	draw_partition = require('./modules/partitionmatrix').draw_partition,
+	variant2tumors_closure = require('./modules/variant2tumors')
 
 /*
 valuable globals
@@ -141,6 +142,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/variant2tumors', variant2tumors_closure(genomes))
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -293,7 +295,9 @@ function clientcopy_genome(genomename) {
 			ds2.snvindel_legend = ds.snvindel_legend
 		}
 		if (ds.variant2tumors) {
-			ds2.variant2tumors = true
+			ds2.variant2tumors = {
+				variantkey: ds.variant2tumors.variantkey
+			}
 		}
 		const vcfinfo = {}
 		let hasvcf = false
@@ -2628,17 +2632,15 @@ async function handle_dsdata(req, res) {
 
 async function handle_dsdata_gdcgraphql_snvindel(query, req) {
 	try {
-		const body = {
-			query: query.gdcgraphql_snvindel.query,
-			variables: query.gdcgraphql_snvindel.variables
+		{
+			const c = query.gdcgraphql_snvindel.variables.filter.content
+			c[0].content.value = [req.query.range.chr]
+			c[1].content.value = [req.query.range.start]
+			c[2].content.value = [req.query.range.stop]
 		}
-		body.variables.filter.content[0].content.value = [req.query.range.chr]
-		body.variables.filter.content[1].content.value = [req.query.range.start]
-		body.variables.filter.content[2].content.value = [req.query.range.stop]
-
 		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(body)
+			body: JSON.stringify(query.gdcgraphql_snvindel)
 		})
 		let re
 		try {
@@ -11974,9 +11976,16 @@ function pp_init() {
 			/* old official dataset */
 
 			if (ds.variant2tumors) {
+				if (!ds.variant2tumors.variantkey) return '.variantkey missing from variant2tumors'
+				if (!ds.variant2tumors.levels) return '.levels[] missing from variant2tumors'
+				if (!Array.isArray(ds.variant2tumors.levels)) return 'variant2tumors.levels[] is not array'
+				// validate levels when final
+				if (['ssm_id'].indexOf(ds.variant2tumors.variantkey) == -1) return 'invalid value of variantkey'
 				if (ds.variant2tumors.gdcgraphql) {
 					if (!ds.variant2tumors.gdcgraphql.query) return '.query missing from variant2tumors.gdcgraphql'
 					if (!ds.variant2tumors.gdcgraphql.variables) return '.variables missing from variant2tumors.gdcgraphql'
+				} else {
+					// methods to query a different data source
 				}
 			}
 

@@ -67,6 +67,19 @@ same name attribute will be exposed to client (ds.variant2tumors: true)
 and hiding the implementation details on server
 */
 const variant2tumors = {
+	// required, tells client to return ssm_id for identifying variants
+	variantkey: 'ssm_id',
+	// required
+	levels: [
+		{
+			name: 'project',
+			keys: ['project', 'project_id']
+		},
+		{
+			name: 'disease',
+			keys: ['disease_type']
+		}
+	],
 	gdcgraphql: {
 		query: `query OneSsm($filter: FiltersArgument) {
 		explore {
@@ -84,6 +97,7 @@ const variant2tumors = {
 												}
 												disease_type
 												primary_site
+												# case_id
 											}
 										}
 									}
