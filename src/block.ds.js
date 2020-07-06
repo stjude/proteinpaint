@@ -1222,7 +1222,15 @@ custom mclass from vcfinfofilter
 			const p = d3event.target.getBoundingClientRect()
 			if (d.dt == common.dtfusionrna || d.dt == common.dtsv) {
 				// svgraph
-				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block, svgraph: true })
+				itemtable({
+					mlst: d.mlst,
+					pane: true,
+					x: p.left - 10,
+					y: p.top - 10,
+					tk,
+					block,
+					svgraph: true
+				})
 				return
 			}
 			if (d.occurrence > 1 && tk.ds && tk.ds.cohort) {

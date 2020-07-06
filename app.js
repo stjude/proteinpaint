@@ -292,6 +292,9 @@ function clientcopy_genome(genomename) {
 		if (ds.snvindel_legend) {
 			ds2.snvindel_legend = ds.snvindel_legend
 		}
+		if (ds.variant2tumors) {
+			ds2.variant2tumors = true
+		}
 		const vcfinfo = {}
 		let hasvcf = false
 		for (const q of ds.queries) {
@@ -2655,6 +2658,7 @@ async function handle_dsdata_gdcgraphql_snvindel(query, req) {
 		for (const edge of re.data.explore.ssms.hits.edges) {
 			const ssm = edge.node
 			const m = {
+				ssm_id: ssm.ssm_id,
 				dt: common.dtsnvindel,
 				chr: req.query.range.chr,
 				pos: ssm.start_position - 1,
@@ -11968,6 +11972,13 @@ function pp_init() {
 			}
 
 			/* old official dataset */
+
+			if (ds.variant2tumors) {
+				if (ds.variant2tumors.gdcgraphql) {
+					if (!ds.variant2tumors.gdcgraphql.query) return '.query missing from variant2tumors.gdcgraphql'
+					if (!ds.variant2tumors.gdcgraphql.variables) return '.variables missing from variant2tumors.gdcgraphql'
+				}
+			}
 
 			if (ds.dbfile) {
 				/* this dataset has a db */

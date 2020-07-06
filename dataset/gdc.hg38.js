@@ -1,60 +1,108 @@
 /*
+query list of variants by genomic range (of a gene/transcript)
+does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
-
 */
+const range2variants = {
+	query: `query GdcSsmByGene($filter: FiltersArgument) {
+	explore {
+		ssms {
+			hits(first: 10000, filters: $filter) {
+				total
+				edges {
+					node {
+						ssm_id
+						chromosome
+						start_position
+						end_position
+						genomic_dna_change
+						reference_allele
+						tumor_allele
+						occurrence {
+							hits {
+								total
+							}
+						}
+						consequence{
+							hits{
+								total
+								edges{
+									node{
+										transcript{
+											transcript_id
+											aa_change
+											consequence_type
+											gene{
+												symbol
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}`,
+	variables: {
+		filter: {
+			op: 'and',
+			content: [
+				// value is to be added during query
+				{ op: 'in', content: { field: 'chromosome' } },
+				{ op: '>=', content: { field: 'start_position' } },
+				{ op: '<=', content: { field: 'end_position' } }
+			]
+		}
+	}
+}
 
-const query = `query GdcSsmByGene($filter: FiltersArgument) {
-  explore {
-    ssms {
-      hits(first: 10000, filters: $filter) {
-        total
-        edges {
-          node {
-            ssm_id
-            chromosome
-            start_position
-            end_position
-            genomic_dna_change
-			reference_allele
-            tumor_allele
-            occurrence {
-              hits {
-                total
-              }
-            }
-			consequence{
-              hits{
-                total
-                edges{
-                  node{
-                    transcript{
-                      transcript_id
-					  aa_change
-					  consequence_type
-					  gene{
-					  	symbol
-					  }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`
-
-const variables = {
-	filter: {
-		op: 'and',
-		content: [
-			// value is to be added during query
-			{ op: 'in', content: { field: 'chromosome' } },
-			{ op: '>=', content: { field: 'start_position' } },
-			{ op: '<=', content: { field: 'end_position' } }
-		]
+/*
+query a specific variant
+with info about all tumors harbording this variant
+variant2tumors intends to be a generic mechanism for fetching tumors harbording a variant
+same name attribute will be exposed to client (ds.variant2tumors: true)
+and hiding the implementation details on server
+*/
+const variant2tumors = {
+	gdcgraphql: {
+		query: `query OneSsm($filter: FiltersArgument) {
+		explore {
+			ssms {
+				hits(first: 1, filters: $filter) {
+					edges {
+						node {
+							occurrence {
+								hits {
+									edges {
+										node {
+											case {
+												project {
+													project_id
+												}
+												disease_type
+												primary_site
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}`,
+		variables: {
+			filter: {
+				op: 'in',
+				content: {
+					field: 'ssm_id'
+				}
+			}
+		}
 	}
 }
 
@@ -78,6 +126,7 @@ const vcfinfofilter = {
 	]
 }
 
+// attributes to show for list of variants
 const snvindel_attributes = [
 	{
 		label: 'Mutation',
@@ -126,12 +175,13 @@ module.exports = {
 	genome: 'hg38',
 	vcfinfofilter,
 	snvindel_attributes,
+	variant2tumors,
 	queries: [
 		{
 			name: 'gdc',
 			gdcgraphql_snvindel: {
-				query,
-				variables,
+				query: range2variants.query,
+				variables: range2variants.variables,
 				occurrence_key
 			}
 		}
