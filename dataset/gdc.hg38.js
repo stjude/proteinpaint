@@ -72,11 +72,11 @@ const variant2tumors = {
 	// required
 	levels: [
 		{
-			name: 'project',
+			k: 'project', // attribute for stratinput
 			keys: ['project', 'project_id']
 		},
 		{
-			name: 'disease',
+			k: 'disease',
 			keys: ['disease_type']
 		}
 	],
@@ -84,7 +84,7 @@ const variant2tumors = {
 		query: `query OneSsm($filter: FiltersArgument) {
 		explore {
 			ssms {
-				hits(first: 1, filters: $filter) {
+				hits(first: 10000, filters: $filter) {
 					edges {
 						node {
 							occurrence {

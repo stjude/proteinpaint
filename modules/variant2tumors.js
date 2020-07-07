@@ -1,5 +1,6 @@
 const app = require('../app')
 const got = require('got')
+const { stratinput } = require('../src/tree')
 
 /*
  */
@@ -33,7 +34,9 @@ async function query_legacyds(q, genome) {
 	if (!ds.variant2tumors) throw 'variant2tumors is not enabled on this dataset'
 	if (ds.variant2tumors.gdcgraphql) {
 		if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
+
 		ds.variant2tumors.gdcgraphql.variables.filter.content.value = q.ssm_id_lst.split(',')
+
 		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify(ds.variant2tumors.gdcgraphql)
@@ -54,8 +57,7 @@ async function query_legacyds(q, genome) {
 			throw 'data structure not data.explore.ssms.hits.edges[]'
 		if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
 
-		// may switch to client-specified levels
-		let levels = ds.variant2tumors.levels
+		const levels = JSON.parse(q.levels)
 
 		const samples = []
 		for (const ssm of re.data.explore.ssms.hits.edges) {
@@ -70,11 +72,14 @@ async function query_legacyds(q, genome) {
 					for (const key of level.keys) {
 						c = c[key]
 					}
-					s[level.name] = c
+					s[level.k] = c
 				}
 				samples.push(s)
 			}
 		}
-		console.log(samples)
+		const nodes = stratinput(samples, levels)
+		for (const i of nodes) delete i.lst
+		return { nodes }
 	}
+	throw 'unknown querying method with legacy ds'
 }

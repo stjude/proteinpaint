@@ -296,7 +296,8 @@ function clientcopy_genome(genomename) {
 		}
 		if (ds.variant2tumors) {
 			ds2.variant2tumors = {
-				variantkey: ds.variant2tumors.variantkey
+				variantkey: ds.variant2tumors.variantkey,
+				levels: ds.variant2tumors.levels
 			}
 		}
 		const vcfinfo = {}

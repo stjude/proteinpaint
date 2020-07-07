@@ -1238,7 +1238,17 @@ custom mclass from vcfinfofilter
 				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block })
 				return
 			}
-			if (may_sunburst(d.mlst, d.aa.x, skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1), tk, block)) return
+			if (
+				may_sunburst(
+					d.occurrence,
+					d.mlst,
+					d.aa.x,
+					skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1),
+					tk,
+					block
+				)
+			)
+				return
 			// many items to table
 			itemtable({
 				mlst: d.mlst,
@@ -1625,7 +1635,8 @@ custom mclass from vcfinfofilter
 		})
 		.on('click', function(d) {
 			if (d.occurrence > 1) {
-				if (may_sunburst(d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block)) return
+				if (may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
+					return
 			}
 			const p = d3event.target.getBoundingClientRect()
 			itemtable({
@@ -3607,7 +3618,7 @@ export function done_tknodata(tk, block) {
 	}
 }
 
-async function may_sunburst(mlst, cx, cy, tk, block) {
+async function may_sunburst(occurrence, mlst, cx, cy, tk, block) {
 	/*
 may show sunburst chart using several possible methods
 
@@ -3618,18 +3629,39 @@ dynamic import sun1 as well
 		// legacy ds
 		// give priority to the relatively new method of ds.variant2tumors
 		if (tk.ds.variant2tumors) {
-			const par = ['genome=' + block.genome.name, 'legacydsname=' + tk.ds.label]
+			const par = [
+				'genome=' + block.genome.name,
+				'legacydsname=' + tk.ds.label,
+				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels)
+			]
 			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
 				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
 			} else {
 				throw 'unknown variantkey'
 			}
+
+			tk.glider.style('cursor', 'wait')
 			const data = await client.dofetch2('variant2tumors?' + par.join('&'))
+			tk.glider.style('cursor', 'auto')
+
 			if (data.error) {
 				block.error(data.error)
 				return true
 			}
-			console.log(data)
+			const _ = await import('./block.sunburst')
+			_.default({
+				occurrence,
+				tk,
+				block,
+				g: tk.glider.append('g'),
+				pica: tk.pica,
+				cx0: cx,
+				cy0: cy,
+				nodes: data.nodes,
+				chartlabel: mlst[0].mname,
+				levels: tk.ds.variant2tumors.levels
+				//callback:
+			})
 			return true
 		}
 		if (tk.ds.cohort) {

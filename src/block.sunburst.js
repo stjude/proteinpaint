@@ -2,180 +2,40 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
-import { itemtable } from './block.ds.itemtable'
-import { stratinput } from './tree'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import * as client from './client'
 
-export default function(tk, block, arg) {
+export default function(opts) {
 	/*
-arg:
-	.cx
-	.cy
-		circle center x/y
-		offset in tk.glider
-	.mlst
-		from tk.mlst[]
-	.label
-	.cohort
-		.root
-			if available, the cohort has all its samples stratified by levels[], and ready to present percentage in given sub set
-		.levels[]
-		.key2color - hardcoded colors
-		.suncolor
-
-	.noclickring
-	.m2detail
-*/
-
-	if (!arg.cohort) {
-		console.error('arg.cohort missing')
-		return
-	}
-	if (!arg.cohort.levels) {
-		console.error('arg.cohort.levels missing')
-		return
-	}
-
-	if (!arg.cohort.key2color && !arg.cohort.suncolor) {
-		// auto color maker
-		arg.cohort.suncolor = scaleOrdinal(schemeCategory10)
-	}
-
-	let itemlst
-
-	if (!arg.cohort.annotation) {
-		itemlst = arg.mlst
-		// itemlst must not be empty
-	} else {
-		if (!arg.cohort.key4annotation) {
-			console.error('arg.cohort.key4annotation missing')
-			return
-		}
-		/*
-	mlst:
-		for official ds with maf-db:
-			one m is a variant in a sample
-		for multi-sample vcf:
-			m.sampledata has per-sample info
-	will normalize such and put to itemlst, each contains necessary annotation that match .cohort.levels and can be used to make sunburst
+	may drop tk and block
 	*/
 
-		itemlst = []
+	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel } = opts
 
-		if (arg.mlst[0].sampledata) {
-			// multi-sample vcf
-			for (const m of arg.mlst) {
-				if (!m.sampledata) {
-					// error
-					continue
-				}
-				for (const s of m.sampledata) {
-					const k4a = s.sampleobj[arg.cohort.key4annotation]
-					if (!k4a) {
-						// this sample dont map to a proper key for cohort.annotation
-						continue
-					}
-					const sanno = arg.cohort.annotation[k4a]
-					if (!sanno) {
-						// not annotated
-						continue
-					}
-					const s2 = {
-						k4a: k4a
-					}
-					for (const l of arg.cohort.levels) {
-						s2[l.k] = sanno[l.k]
-						if (l.full) {
-							s2[l.full] = sanno[l.full]
-						}
-					}
-					itemlst.push(s2)
-				}
-			}
-		} else {
-			// each m is one variant per sample
-			for (const m of arg.mlst) {
-				const k4a = m[arg.cohort.key4annotation]
-				if (!k4a) {
-					continue
-				}
-				const sanno = arg.cohort.annotation[k4a]
-				if (!sanno) {
-					continue
-				}
-				const s2 = {
-					k4a: k4a
-				}
-				for (const l of arg.cohort.levels) {
-					s2[l.k] = sanno[l.k]
-					if (l.full) {
-						s2[l.full] = sanno[l.full]
-					}
-				}
-				itemlst.push(s2)
-			}
-		}
+	g.attr('transform', 'translate(' + cx0 + ',' + cy0 + ')')
 
-		if (itemlst.length == 0) {
-			/*
-		since itemlst is recalculated, it maybe empty
-		terminate
-		*/
-			if (arg.m2detail) {
-				itemtable({
-					mlst: [arg.m2detail],
-					pane: true,
-					x: arg.cx,
-					y: arg.cy,
-					tk: tk,
-					block: block
-				})
-			} else {
-				itemtable({
-					mlst: arg.mlst,
-					pane: true,
-					x: arg.cx,
-					y: arg.cy,
-					tk: tk,
-					block: block
-				})
-			}
-			return
-		}
-	}
+	const suncolor = scaleOrdinal(schemeCategory10)
 
-	let cx = arg.cx,
-		cy = arg.cy,
+	let cx = cx0,
+		cy = cy0,
 		dur1 = 500,
 		dur2 = 250
-	const g = tk.glider.append('g').attr('transform', 'translate(' + cx + ',' + cy + ')')
-	const pica = tk.pica
+
 	const eye = g.append('g')
 	const ring = g.append('g')
-	const sun = {
-		g: g,
-		eye: eye,
-		ring: ring,
-		pica: pica,
-		busy: false
-	}
+	const sun = { g, eye, ring, pica, busy: false }
 
-	let radius = Math.log(itemlst.length) * 24
-	if (radius > tk.height * 0.42) {
-		radius = tk.height * 0.42
-	} else if (radius < tk.height * 0.2) {
-		radius = tk.height * 0.2
-	}
+	const radius = Math.max(tk.height * 0.2, Math.min(tk.height * 0.42, Math.log(occurrence) * 24))
 	// radius is set, shift g if it get outside
+
 	let newcx = cx,
 		newcy = cy
-	if (cx - radius < 0) {
+	if (cx < radius) {
 		newcx = radius
 	} else if (cx + radius > block.width) {
 		newcx = block.width - radius
 	}
-	if (cy - radius < 0) {
+	if (cy < radius) {
 		newcy = radius
 	} else if (cy + radius > tk.height) {
 		newcy = tk.height - radius
@@ -188,12 +48,11 @@ arg:
 		cy = newcy
 	}
 	// hierarchy
-	const dat = stratinput(itemlst, arg.cohort.levels)
-	const root = stratify()(dat)
-	console.log(root)
+	const root = stratify()(nodes)
 	root.sum(i => i.value)
 	root.sort((a, b) => b.value - a.value)
 	partition().size([1, Math.pow(radius, 2)])(root)
+
 	// blocker
 	eye
 		.append('circle')
@@ -241,19 +100,8 @@ arg:
 				}
 			}
 
-			// what color
-			let c
-			if (arg.cohort.key2color) {
-				c = arg.cohort.key2color[key]
-				if (!c) {
-					console.log(key)
-					c = '#858585'
-				}
-			} else {
-				c = arg.cohort.suncolor(key)
-			}
+			const c = suncolor(key)
 			d._color = c
-
 			return c
 		})
 		.on('mouseover', d => {
@@ -266,7 +114,7 @@ arg:
 					.darker(0.5)
 					.toString()
 			)
-			slicemouseover(d, pica, arg, cx, cy, tk, block)
+			slicemouseover(d, pica, cx, cy, tk, block)
 		})
 		.on('mouseout', d => {
 			pica.g.selectAll('*').remove()
@@ -334,10 +182,10 @@ arg:
 				.on('end', () => {
 					// shutter done, add things
 					eye.fore = eye.append('g')
-					const fontsize1 = Math.min(eyeheight / (arg.label.length * client.textlensf), emptyspace * 0.6)
+					const fontsize1 = Math.min(eyeheight / (chartlabel.length * client.textlensf), emptyspace * 0.6)
 					eye.fore
 						.append('text')
-						.text(arg.label)
+						.text(chartlabel)
 						.attr('text-anchor', 'middle')
 						.attr('dominant-baseline', 'central')
 						.attr('fill', '#858585')
@@ -347,13 +195,13 @@ arg:
 					const fontsize = Math.min(
 						18,
 						Math.min(
-							(emptyspace * 0.7) / (itemlst.length.toString().length * client.textlensf),
+							(emptyspace * 0.7) / (occurrence.toString().length * client.textlensf),
 							(emptyspace - fontsize1 / 2) * 0.7
 						)
 					)
 					eye.fore
 						.append('text')
-						.text(itemlst.length)
+						.text(occurrence)
 						.attr('text-anchor', 'middle')
 						.attr('fill', '#858585')
 						.attr('y', -fontsize1 / 2 - 2)
@@ -402,7 +250,7 @@ arg:
 						.attr('fill', '#d9d9d9')
 					const listbutt_text = sun.listbutt
 						.append('text')
-						.text(arg.m2detail ? 'Show' : 'List')
+						.text('List')
 						.attr('y', (emptyspace - fontsize1 / 2) / 2)
 						.attr('dominant-baseline', 'central')
 						.attr('text-anchor', 'middle')
@@ -491,9 +339,7 @@ function remove(sun) {
 	sun.pica.g.selectAll('*').remove()
 }
 
-function slicemouseover(d, pica, arg, cx, cy, tk, block) {
-	const cht = arg.cohort
-
+function slicemouseover(d, pica, cx, cy, tk, block) {
 	const fontsize = 13
 	const barheight = 10
 	const ypad = 1
@@ -509,7 +355,7 @@ function slicemouseover(d, pica, arg, cx, cy, tk, block) {
 		const alltkh = Number.parseFloat(block.svg.attr('height'))
 
 		// need to get pica height by # of rows
-		const picaheight = fontsize + ypad + fontsize + (cht && cht.root ? ypad + barheight + 5 : 0)
+		const picaheight = fontsize + ypad + fontsize
 
 		if (yoff >= alltkh - 30) {
 			// not enough space in block at angle PI, shift
@@ -531,38 +377,37 @@ function slicemouseover(d, pica, arg, cx, cy, tk, block) {
 	let bar = null,
 		cohortsize = 0
 
-	if (cht && cht.root) {
-		bar = pica.g.append('g')
-		bar
-			.append('rect')
-			.attr('width', barwidth + 4)
-			.attr('height', barheight + 4)
-			.attr('fill', 'white')
-			.attr('shape-rendering', 'crispEdges')
-		bar
-			.append('rect')
-			.attr('x', 2)
-			.attr('y', 2)
-			.attr('width', barwidth)
-			.attr('height', barheight)
-			.attr('fill', cht.fbarbg || '#ededed')
-			.attr('shape-rendering', 'crispEdges')
-		cht.root.each(i => {
-			if (i.id == d.id) {
-				cohortsize = i.value
+	/*
+	if(cht && cht.root) {
+		bar=pica.g.append('g')
+		bar.append('rect')
+			.attr('width',barwidth+4)
+			.attr('height',barheight+4)
+			.attr('fill','white')
+			.attr('shape-rendering','crispEdges')
+		bar.append('rect')
+			.attr('x',2)
+			.attr('y',2)
+			.attr('width',barwidth)
+			.attr('height',barheight)
+			.attr('fill',cht.fbarbg || '#ededed')
+			.attr('shape-rendering','crispEdges')
+		cht.root.each(i=>{
+			if(i.id==d.id) {
+				cohortsize=i.value
 			}
 		})
-		if (cohortsize > 0) {
-			bar
-				.append('rect')
-				.attr('x', 2)
-				.attr('y', 2)
-				.attr('width', (barwidth * d.value) / cohortsize)
-				.attr('height', barheight)
-				.attr('fill', cht.fbarfg || '#858585')
-				.attr('shape-rendering', 'crispEdges')
+		if(cohortsize>0) {
+			bar.append('rect')
+			.attr('x',2)
+			.attr('y',2)
+			.attr('width',barwidth*d.value/cohortsize)
+			.attr('height',barheight)
+			.attr('fill',cht.fbarfg || '#858585')
+			.attr('shape-rendering','crispEdges')
 		}
 	}
+	*/
 	const text0 = pica.g
 		.append('text')
 		.attr('stroke', 'white')
