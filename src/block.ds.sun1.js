@@ -190,7 +190,6 @@ arg:
 	// hierarchy
 	const dat = stratinput(itemlst, arg.cohort.levels)
 	const root = stratify()(dat)
-	console.log(root)
 	root.sum(i => i.value)
 	root.sort((a, b) => b.value - a.value)
 	partition().size([1, Math.pow(radius, 2)])(root)

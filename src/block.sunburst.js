@@ -5,12 +5,16 @@ import { rgb as d3rgb } from 'd3-color'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import * as client from './client'
 
-export default function(opts) {
-	/*
-	may drop tk and block
-	*/
+/*
+should drop tk and block
+should cover legacy ds sun1 so as to retire sun1 code
 
-	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel } = opts
+optionally, caller should provide click callbacks on both ring and list button
+
+*/
+
+export default function(opts) {
+	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel, click_ring, click_listbutton } = opts
 
 	g.attr('transform', 'translate(' + cx0 + ',' + cy0 + ')')
 
@@ -88,6 +92,7 @@ export default function(opts) {
 				// is root
 				return 'white'
 			}
+			// which key to use for assigning color for this wedge
 			let key
 			if (d.children) {
 				key = d.id
@@ -99,7 +104,6 @@ export default function(opts) {
 					key = d.parent.id
 				}
 			}
-
 			const c = suncolor(key)
 			d._color = c
 			return c
@@ -123,39 +127,9 @@ export default function(opts) {
 		})
 
 		.on('click', d => {
-			// clicking on slice
-			if (arg.noclickring) {
-				// no clicking rings
-				return
-			}
-			if (!d.parent) {
-				// root not clickable
-				return
-			}
-			if (arg.cohort.annotation) {
-				// external annotation
-				if (d.data.lst.length == 1) {
-					// single sample
-					showsinglesample(
-						d.data.lst[0].k4a,
-						arg.cohort.annotation[d.data.lst[0].k4a],
-						d3event.clientX,
-						d3event.clientY
-					)
-					return
-				}
-				showmanysample(d.data.lst, arg.cohort, d3event.clientX, d3event.clientY)
-				return
-			}
-			// old style official ds
-			itemtable({
-				mlst: d.data.lst,
-				x: d3event.clientX,
-				y: d3event.clientY,
-				tk: tk,
-				block: block,
-				pane: true
-			})
+			if (!click_ring) return
+			// TODO
+			click_ring(d)
 		})
 
 	const eyeheight = emptyspace * 2
@@ -272,33 +246,12 @@ export default function(opts) {
 							listbutt_text.attr('fill', '#858585')
 						})
 						.on('click', () => {
-							if (arg.m2detail) {
+							if (!click_listbutton) {
 								remove(sun)
-								itemtable({
-									mlst: [arg.m2detail],
-									pane: true,
-									x: d3event.clientX - radius,
-									y: d3event.clientY - radius * 2,
-									tk: tk,
-									block: block
-								})
 								return
 							}
-
-							const p = d3event.target.getBoundingClientRect()
-							remove(sun)
-							setTimeout(
-								() =>
-									itemtable({
-										mlst: arg.mlst,
-										x: p.left,
-										y: p.top,
-										tk: tk,
-										block: block,
-										pane: true
-									}),
-								500
-							)
+							// TODO
+							click_listbutton(sun)
 						})
 				})
 		})
@@ -484,50 +437,6 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 		text.attr('text-anchor', 'end').attr('y', (bar ? -3 - barheight - ypad : 0) - fontsize - ypad)
 		if (bar) {
 			bar.attr('transform', 'translate(-' + barwidth + ',-' + barheight + ')')
-		}
-	}
-}
-
-function showsinglesample(samplename, anno, x, y) {
-	const lst = []
-	for (const k in anno) {
-		lst.push({ k: k, v: anno[k] })
-	}
-	const pane = client.newpane({ x: x, y: y })
-	pane.header.text(samplename)
-	client.make_table_2col(pane.body, lst)
-}
-
-function showmanysample(samples, cohort, x, y) {
-	// each sample has k4a
-	const attrset = new Set()
-	for (const s of samples) {
-		const a = cohort.annotation[s.k4a]
-		for (const k in a) {
-			attrset.add(k)
-		}
-	}
-	const pane = client.newpane({ x: x, y: y })
-	pane.header.text(samples.length + ' ' + cohort.key4annotation + 's')
-	const table = pane.body.append('table')
-
-	const headers = [...attrset]
-	{
-		// header
-		const tr = table.append('tr')
-		for (const h of headers) {
-			tr.append('td')
-				.text(h)
-				.style('color', '#858585')
-				.style('font-size', '.7em')
-		}
-	}
-
-	for (const s of samples) {
-		const tr = table.append('tr').attr('class', 'sja_tr')
-		const anno = cohort.annotation[s.k4a]
-		for (const h of headers) {
-			tr.append('td').text(anno[h] == undefined ? '' : anno[h])
 		}
 	}
 }
