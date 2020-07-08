@@ -2923,19 +2923,22 @@ function handle_hicstat(req, res) {
 		if (isurl) {
 			// do not stat
 			resolve()
+		} else {
+			// is file, find
+			fs.stat(file, (err, stat) => {
+				if (err) {
+					if (err.code == 'ENOENT') reject({ message: 'file not found' })
+					if (err.code == 'EACCES') reject({ message: 'no access to the file' })
+				}
+				resolve()
+			})
 		}
-
-		// is file, find
-		fs.stat(file, (err, stat) => {
-			if (err) {
-				if (err.code == 'ENOENT') reject({ message: 'file not found' })
-				if (err.code == 'EACCES') reject({ message: 'no access to the file' })
-			}
-			resolve()
-		})
 	})
 		.then(() => {
-			exec(hicstat + ' ' + file, (err, stdout, stderr) => {
+			// quote the file or url to prevent arbitrary code execution,
+			// in combination to fileurl() checking that there are no
+			// illegal characters in the filename or url
+			exec(hicstat + ' "' + file + '"', (err, stdout, stderr) => {
 				if (err) {
 					res.send({ error: err })
 					return
@@ -11574,7 +11577,9 @@ function parse_variantgene(line, header) {
 }
 
 function illegalpath(s) {
-	if (s[0] == '/') return true
+	if (s[0] == '/') return true // must not be relative to mount root
+	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
+	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
 	if (s.indexOf('..') != -1) return true
 	return false
 }
@@ -11589,6 +11594,11 @@ function fileurl(req) {
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
 		file = req.query.url
+		// avoid whitespace in case the url is supplied as an argument
+		// to an exec script and thus execute arbitrary space-separated
+		// commands within the url
+		if (file.includes(' ')) return ['url must not contain whitespace']
+		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
