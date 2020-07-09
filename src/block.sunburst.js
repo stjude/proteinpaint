@@ -16,6 +16,8 @@ optionally, caller should provide click callbacks on both ring and list button
 export default function(opts) {
 	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel, click_ring, click_listbutton } = opts
 
+	// TODO do not use click_listbutton, always show info table
+
 	g.attr('transform', 'translate(' + cx0 + ',' + cy0 + ')')
 
 	const suncolor = scaleOrdinal(schemeCategory10)
@@ -224,7 +226,7 @@ export default function(opts) {
 						.attr('fill', '#d9d9d9')
 					const listbutt_text = sun.listbutt
 						.append('text')
-						.text('List')
+						.text('Info')
 						.attr('y', (emptyspace - fontsize1 / 2) / 2)
 						.attr('dominant-baseline', 'central')
 						.attr('text-anchor', 'middle')
@@ -327,40 +329,36 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 
 	const barwidth = 60
 
-	let bar = null,
-		cohortsize = 0
+	// cohortsize is optional; when it's present, bar will be rendered
+	let bar = null
+	const cohortsize = d.data.cohortsize
 
-	/*
-	if(cht && cht.root) {
-		bar=pica.g.append('g')
-		bar.append('rect')
-			.attr('width',barwidth+4)
-			.attr('height',barheight+4)
-			.attr('fill','white')
-			.attr('shape-rendering','crispEdges')
-		bar.append('rect')
-			.attr('x',2)
-			.attr('y',2)
-			.attr('width',barwidth)
-			.attr('height',barheight)
-			.attr('fill',cht.fbarbg || '#ededed')
-			.attr('shape-rendering','crispEdges')
-		cht.root.each(i=>{
-			if(i.id==d.id) {
-				cohortsize=i.value
-			}
-		})
-		if(cohortsize>0) {
-			bar.append('rect')
-			.attr('x',2)
-			.attr('y',2)
-			.attr('width',barwidth*d.value/cohortsize)
-			.attr('height',barheight)
-			.attr('fill',cht.fbarfg || '#858585')
-			.attr('shape-rendering','crispEdges')
-		}
+	if (Number.isFinite(cohortsize)) {
+		bar = pica.g.append('g')
+		bar
+			.append('rect')
+			.attr('width', barwidth + 4)
+			.attr('height', barheight + 4)
+			.attr('fill', 'white')
+			.attr('shape-rendering', 'crispEdges')
+		bar
+			.append('rect')
+			.attr('x', 2)
+			.attr('y', 2)
+			.attr('width', barwidth)
+			.attr('height', barheight)
+			.attr('fill', '#ECE5FF')
+			.attr('shape-rendering', 'crispEdges')
+		bar
+			.append('rect')
+			.attr('x', 2)
+			.attr('y', 2)
+			.attr('width', (barwidth * d.value) / cohortsize)
+			.attr('height', barheight)
+			.attr('fill', '#9F80FF')
+			.attr('shape-rendering', 'crispEdges')
 	}
-	*/
+
 	const text0 = pica.g
 		.append('text')
 		.attr('stroke', 'white')

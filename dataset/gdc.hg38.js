@@ -1,10 +1,12 @@
+////////////////////////// list of query strings
+
 /*
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
 */
-const range2variants = {
-	query: `query GdcSsmByGene($filter: FiltersArgument) {
+const query_range2variants = `
+query GdcSsmByGene($filter: FiltersArgument) {
 	explore {
 		ssms {
 			hits(first: 10000, filters: $filter) {
@@ -45,19 +47,7 @@ const range2variants = {
 			}
 		}
 	}
-}`,
-	variables: {
-		filter: {
-			op: 'and',
-			content: [
-				// value is to be added during query
-				{ op: 'in', content: { field: 'chromosome' } },
-				{ op: '>=', content: { field: 'start_position' } },
-				{ op: '<=', content: { field: 'end_position' } }
-			]
-		}
-	}
-}
+}`
 
 /*
 query a specific variant
@@ -66,39 +56,24 @@ variant2tumors intends to be a generic mechanism for fetching tumors harbording 
 same name attribute will be exposed to client (ds.variant2tumors: true)
 and hiding the implementation details on server
 */
-const variant2tumors = {
-	// required, tells client to return ssm_id for identifying variants
-	variantkey: 'ssm_id',
-	// required
-	levels: [
-		{
-			k: 'project', // attribute for stratinput
-			keys: ['project', 'project_id']
-		},
-		{
-			k: 'disease',
-			keys: ['disease_type']
-		}
-	],
-	gdcgraphql: {
-		query: `query OneSsm($filter: FiltersArgument) {
-		explore {
-			ssms {
-				hits(first: 10000, filters: $filter) {
-					edges {
-						node {
-							occurrence {
-								hits {
-									edges {
-										node {
-											case {
-												project {
-													project_id
-												}
-												disease_type
-												primary_site
-												# case_id
+const query_variant2tumors = `
+query OneSsm($filter: FiltersArgument) {
+	explore {
+		ssms {
+			hits(first: 10000, filters: $filter) {
+				edges {
+					node {
+						occurrence {
+							hits {
+								edges {
+									node {
+										case {
+											project {
+												project_id
 											}
+											disease_type
+											primary_site
+											# case_id
 										}
 									}
 								}
@@ -108,17 +83,36 @@ const variant2tumors = {
 				}
 			}
 		}
-	}`,
-		variables: {
-			filter: {
-				op: 'in',
-				content: {
-					field: 'ssm_id'
+	}
+}`
+
+/*
+one time query: will only run once and result is cached on serverside
+to retrieve total number of tumors per project
+the number will be displayed in both sunburst and singleton variant panel
+must associate the "project" with project_id in sunburst
+
+for now this is only triggered in variant2tumors query
+*/
+const query_projectsize = `
+query projectSize( $ssmTested: FiltersArgument) {
+	viewer {
+		explore {
+			cases {
+				total: aggregations(filters: $ssmTested) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
 				}
 			}
 		}
 	}
-}
+}`
+
+//////////////// end of query strings ///////////////
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
@@ -189,13 +183,61 @@ module.exports = {
 	genome: 'hg38',
 	vcfinfofilter,
 	snvindel_attributes,
-	variant2tumors,
+
+	onetimequery_projectsize: {
+		gdcgraphql: {
+			query: query_projectsize,
+			variables: {
+				ssmTested: {
+					op: 'and',
+					content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+				}
+			}
+		}
+	},
+
+	variant2tumors: {
+		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
+		// required
+		levels: [
+			{
+				k: 'project', // attribute for stratinput
+				keys: ['project', 'project_id']
+			},
+			{
+				k: 'disease',
+				keys: ['disease_type']
+			}
+		],
+		// the actual query method is using gdc api
+		gdcgraphql: {
+			query: query_variant2tumors,
+			variables: {
+				filter: {
+					op: 'in',
+					content: {
+						field: 'ssm_id'
+					}
+				}
+			}
+		}
+	},
+
 	queries: [
 		{
 			name: 'gdc',
 			gdcgraphql_snvindel: {
-				query: range2variants.query,
-				variables: range2variants.variables,
+				query: query_range2variants,
+				variables: {
+					filter: {
+						op: 'and',
+						content: [
+							{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
+							{ op: '>=', content: { field: 'start_position' } },
+							{ op: '<=', content: { field: 'end_position' } }
+						]
+					}
+				},
 				occurrence_key
 			}
 		}

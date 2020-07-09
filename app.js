@@ -11986,6 +11986,17 @@ function pp_init() {
 
 			/* old official dataset */
 
+			if (ds.onetimequery_projectsize) {
+				if (ds.onetimequery_projectsize.gdcgraphql) {
+					if (!ds.onetimequery_projectsize.gdcgraphql.query)
+						return '.query missing from ds.onetimequery_projectsize.gdcgraphql'
+					if (!ds.onetimequery_projectsize.gdcgraphql.variables)
+						return '.variables missing from ds.onetimequery_projectsize.gdcgraphql'
+				} else {
+					return 'unknown query method of onetimequery_projectsize'
+				}
+			}
+
 			if (ds.variant2tumors) {
 				if (!ds.variant2tumors.variantkey) return '.variantkey missing from variant2tumors'
 				if (!ds.variant2tumors.levels) return '.levels[] missing from variant2tumors'
@@ -11996,7 +12007,7 @@ function pp_init() {
 					if (!ds.variant2tumors.gdcgraphql.query) return '.query missing from variant2tumors.gdcgraphql'
 					if (!ds.variant2tumors.gdcgraphql.variables) return '.variables missing from variant2tumors.gdcgraphql'
 				} else {
-					// methods to query a different data source
+					return 'unknown query method of variant2tumors'
 				}
 			}
 

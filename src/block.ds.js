@@ -3631,7 +3631,7 @@ dynamic import sun1 as well
 		if (tk.ds.variant2tumors) {
 			const par = [
 				'genome=' + block.genome.name,
-				'legacydsname=' + tk.ds.label,
+				'dsname=' + tk.ds.label,
 				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels)
 			]
 			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
