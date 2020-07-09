@@ -6,7 +6,9 @@ const fs = require('fs'),
 	vcf = require('../src/vcf'),
 	bettersqlite = require('better-sqlite3')
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+// when unit testing, __non_webpack_require might not be available
+// since a spec might be directly requiring an unpacked or unbundled module
+const serverconfig = typeof __non_webpack_require__ == 'function' && __non_webpack_require__('./serverconfig.json')
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 
@@ -255,4 +257,23 @@ function run_fdr_2(infile, outfile) {
 		sp.on('close', () => resolve())
 		sp.on('error', () => reject(e))
 	})
+}
+
+exports.stripJsScript = function stripJsScript(text) {
+	return text.replace(/\<script|\bon[\w]+\b[^\w=]*\=/gi, ' _')
+	/*
+		Explanation:
+		\<script    find script tag
+		
+		|           OR
+		
+		\b          start of word
+			on        starts with "on"
+			[\w]+     followed by one or more word-allowed characters [a-zA-Z_]
+		\b          end of word
+		[^\w=]*     preceding word followed by zero or more non-word characters like spaces, tabs
+		\=          followed by the 'equal' character
+
+		/gi         globally, case insensitive
+	*/
 }

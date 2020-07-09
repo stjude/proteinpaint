@@ -3534,7 +3534,7 @@ function handle_urltextfile(req, res) {
 		}
 		switch (response.statusCode) {
 			case 200:
-				res.send({ text: body })
+				res.send({ text: utils.stripJsScript(body) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })
