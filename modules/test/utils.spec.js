@@ -12,11 +12,11 @@ tape('stripJsScript', test => {
 	test.equal(utils.stripJsScript('on'), 'on', "should not change the exact 'on' word")
 	// allow 'on=', in case it ever matches an actual data value
 	test.equal(utils.stripJsScript('on='), 'on=', "should not change the exact 'on' word immediately followed by '='")
-	// allow 'on=', in case it ever matches an actual data value
+	// allow 'on* [a-zA-Z] ='
 	test.equal(
-		utils.stripJsScript('on test='),
-		'on test=',
-		"should not change the exact 'on' word when not followed by '='"
+		utils.stripJsScript('onco test='),
+		'onco test=',
+		"should not change the exact 'onco' word when followed by intervening characters before ending with '='"
 	)
 	// allow 'pon1=' as a gene symbol with additional nomenclature symbols
 	test.equal(utils.stripJsScript('pon1='), 'pon1=', "should not change the exact word 'pon1='")
