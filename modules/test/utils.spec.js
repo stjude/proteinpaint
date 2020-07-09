@@ -26,6 +26,13 @@ tape('stripJsScript', test => {
 		'TONSL\ttonSL-AS1',
 		'should not change words with the gene symbol TONSL'
 	)
+	// allow a very long on* word up to 41 characters
+	const longword = 'onchangeeventonclickselectinputmouseoverx='
+	test.equal(
+		utils.stripJsScript(`t ${longword}`),
+		`t ${longword}`,
+		`should allow a very long word that starts with 'on' (tested length=${longword.length - 1})`
+	)
 
 	/*** FORBIDDEN ***/
 	// remove script tag

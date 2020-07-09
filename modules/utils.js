@@ -260,20 +260,20 @@ function run_fdr_2(infile, outfile) {
 }
 
 exports.stripJsScript = function stripJsScript(text) {
-	return text.replace(/\<script|\bon[\w]+\b[^\w=]*\=/gi, ' _')
+	return text.replace(/\<script|\bon[\w]{1,38}\b[\ \t\n]*\=/gi, ' _')
 	/*
-		Explanation:
-		\<script    find script tag
-		
-		|           OR
-		
-		\b          start of word
-			on        starts with "on"
-			[\w]+     followed by one or more word-allowed characters [a-zA-Z_]
-		\b          end of word
-		[^\w=]*     preceding word followed by zero or more non-word characters like spaces, tabs
-		\=          followed by the 'equal' character
+    Explanation:
+    \<script           find script tag
 
-		/gi         globally, case insensitive
+    |                  OR
+		
+    \b                 start of word
+      on               starts with "on"
+      [\w]{1,40}       followed by 1 or more word-allowed characters [a-zA-Z_], up to 40 max length
+    \b                 end of word
+    [\ \t\n]*          preceding word followed by zero or more space, tabs, or newlines
+    \=                 followed by the 'equal' character
+
+    /gi                globally, case insensitive
 	*/
 }
