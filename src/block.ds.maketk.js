@@ -51,6 +51,24 @@ export default function dsmaketk(tk, block) {
 
 	*/
 
+	if (tk.ds.variant2tumors) {
+		tk.ds.variant2tumors.get = async mlst => {
+			// hardcode to getsummary and using fixed levels
+			const par = [
+				'genome=' + block.genome.name,
+				'dsname=' + tk.ds.label,
+				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels),
+				'getsummary=1'
+			]
+			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
+				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
+			} else {
+				throw 'unknown variantkey'
+			}
+			return await client.dofetch2('variant2tumors?' + par.join('&'), {}, { serverData: block.cache })
+		}
+	}
+
 	tk.labyspace = 5 // must kept with tk: will be used by ds.numericmode
 
 	tk.leftaxis = tk.gleft.append('g')

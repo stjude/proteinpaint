@@ -3631,22 +3631,9 @@ dynamic import sun1 as well
 		// legacy ds
 		// give priority to the relatively new method of ds.variant2tumors
 		if (tk.ds.variant2tumors) {
-			const par = [
-				'genome=' + block.genome.name,
-				'dsname=' + tk.ds.label,
-				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels),
-				'getsummary=1'
-			]
-			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
-				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
-			} else {
-				throw 'unknown variantkey'
-			}
-
 			tk.glider.style('cursor', 'wait')
-			const data = await client.dofetch2('variant2tumors?' + par.join('&'))
+			const data = await tk.ds.variant2tumors.get(mlst)
 			tk.glider.style('cursor', 'auto')
-
 			if (data.error) {
 				block.error(data.error)
 				return true
@@ -3662,8 +3649,10 @@ dynamic import sun1 as well
 				cy0: cy,
 				nodes: data.nodes,
 				chartlabel: mlst[0].mname,
-				levels: tk.ds.variant2tumors.levels
-				//callback:
+				levels: tk.ds.variant2tumors.levels,
+				click_listbutton: (x, y) => {
+					itemtable({ x, y, mlst, tk, block, pane: true })
+				}
 			})
 			return true
 		}

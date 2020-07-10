@@ -50,11 +50,13 @@ query GdcSsmByGene($filter: FiltersArgument) {
 }`
 
 /*
-query a specific variant
-with info about all tumors harbording this variant
+using one or multiple variants, get info about all tumors harbording them
 variant2tumors intends to be a generic mechanism for fetching tumors harbording a variant
 same name attribute will be exposed to client (ds.variant2tumors: true)
 and hiding the implementation details on server
+
+on client, get() is added to tk.ds.variant2tumors to make GET request for list of variants
+this happens for sunburst and itemtable
 */
 const query_variant2tumors = `
 query OneSsm($filter: FiltersArgument) {

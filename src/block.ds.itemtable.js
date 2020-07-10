@@ -1172,11 +1172,13 @@ function mayephl_butt(ep, holder, mlst) {
 		}
 	}
 	if (notfound) {
+		return
+		/*
 		holder
 			.append('button')
 			.text(ep.p.sampletype + ' not in ' + ep.p.name)
 			.attr('disabled', 1)
-		return
+			*/
 	}
 	let hl = false
 	holder

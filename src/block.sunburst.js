@@ -6,12 +6,15 @@ import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import * as client from './client'
 
 /*
-should drop tk and block
-should cover legacy ds sun1 so as to retire sun1 code
+to be p4-ready:
+- drop tk and block
+- cover legacy ds sun1 so as to retire sun1 code
 
-optionally, caller should provide click callbacks on both ring and list button
 
 */
+
+const dur1 = 500 // needs annotation
+const dur2 = 250
 
 export default function(opts) {
 	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel, click_ring, click_listbutton } = opts
@@ -23,9 +26,7 @@ export default function(opts) {
 	const suncolor = scaleOrdinal(schemeCategory10)
 
 	let cx = cx0,
-		cy = cy0,
-		dur1 = 500,
-		dur2 = 250
+		cy = cy0
 
 	const eye = g.append('g')
 	const ring = g.append('g')
@@ -248,12 +249,11 @@ export default function(opts) {
 							listbutt_text.attr('fill', '#858585')
 						})
 						.on('click', () => {
-							if (!click_listbutton) {
-								remove(sun)
-								return
-							}
-							// TODO
-							click_listbutton(sun)
+							remove(sun)
+							if (!click_listbutton) return
+							const x = d3event.clientX - radius,
+								y = d3event.clientY - radius
+							setTimeout(() => click_listbutton(x, y), dur1)
 						})
 				})
 		})

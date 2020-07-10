@@ -67,6 +67,9 @@ const rulergrabzindex = 1000
 
 export class Block {
 	constructor(arg) {
+		// temp fix, to use in dofetch2( {serverData} )
+		this.cache = {}
+
 		if (arg.debugmode) {
 			window.bb = this
 			this.debugmode = true
