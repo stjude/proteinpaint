@@ -3,7 +3,14 @@ const got = require('got')
 const { stratinput } = require('../src/tree')
 
 /*
- */
+from one or more variants, get list of samples harbording any of the variants
+
+always require a ds found at genome.datasets{}
+ds type agnostic (legacy/mds/mds2)
+only requires ds.variant2tumors{}
+
+client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
+*/
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
@@ -32,14 +39,51 @@ module.exports = genomes => {
 }
 
 async function getResult(q, ds, genome) {
-	if (ds.variant2tumors.gdcgraphql) {
-		return await getResult_gdcgraphql(q, ds, genome)
+	// this function is independent of query method
+	let levels, samples
+	if (q.levels) {
+		// client provided levels, could be customized when there are optional levels
+		levels = JSON.parse(q.levels)
 	}
-	throw 'unknown query method for variant2tumors'
+
+	if (ds.variant2tumors.gdcgraphql) {
+		samples = await getResult_gdcgraphql(q, levels, ds, genome)
+	} else {
+		throw 'unknown query method for variant2tumors'
+	}
+
+	if (q.getsamples) {
+		return { samples }
+	}
+
+	if (q.getsummary) {
+		// here "levels" is required
+		const nodes = stratinput(samples, levels)
+		for (const node of nodes) {
+			delete node.lst
+			if (ds.onetimequery_projectsize) {
+				/********
+				CAUTION
+				must ensure that node.name is the key
+				add "cohortsize" to node
+				*/
+				if (ds.onetimequery_projectsize.results.has(node.name)) {
+					node.cohortsize = ds.onetimequery_projectsize.results.get(node.name)
+				}
+			}
+		}
+		return { nodes }
+	}
+	throw 'unknown report format'
 }
 
-async function getResult_gdcgraphql(q, ds, genome) {
+async function getResult_gdcgraphql(q, levels, ds, genome) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
+	if (!levels) {
+		// when querying list of samples, allow client not to provide levels
+		// will return full list of attributes
+		levels = ds.variant2tumors.levels
+	}
 
 	ds.variant2tumors.gdcgraphql.variables.filter.content.value = q.ssm_id_lst.split(',')
 
@@ -63,8 +107,6 @@ async function getResult_gdcgraphql(q, ds, genome) {
 		throw 'data structure not data.explore.ssms.hits.edges[]'
 	if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
 
-	const levels = JSON.parse(q.levels)
-
 	const samples = []
 	for (const ssm of re.data.explore.ssms.hits.edges) {
 		if (!ssm.node || !ssm.node.occurrence || !ssm.node.occurrence.hits || !ssm.node.occurrence.hits.edges)
@@ -83,21 +125,7 @@ async function getResult_gdcgraphql(q, ds, genome) {
 			samples.push(s)
 		}
 	}
-	const nodes = stratinput(samples, levels)
-	for (const node of nodes) {
-		delete node.lst
-		if (ds.onetimequery_projectsize) {
-			/********
-			CAUTION
-			must ensure that node.name is the key
-			add "cohortsize" to node
-			*/
-			if (ds.onetimequery_projectsize.results.has(node.name)) {
-				node.cohortsize = ds.onetimequery_projectsize.results.get(node.name)
-			}
-		}
-	}
-	return { nodes }
+	return samples
 }
 
 async function may_onetimequery_projectsize(ds) {

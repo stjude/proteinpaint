@@ -44,6 +44,7 @@ done_tknodata
 
 renderskewertk
 skewer_make()
+may_sunburst
 
 showlegend_populationfrequencyfilter
 showlegend_vcfinfofilter
@@ -54,6 +55,7 @@ legendmenu_sampleattribute
 
 dsqueryresult_geneexpression()
 dsqueryresult_snvindelfusionitd()
+
 
 */
 
@@ -3632,7 +3634,8 @@ dynamic import sun1 as well
 			const par = [
 				'genome=' + block.genome.name,
 				'dsname=' + tk.ds.label,
-				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels)
+				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels),
+				'getsummary=1'
 			]
 			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
 				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
