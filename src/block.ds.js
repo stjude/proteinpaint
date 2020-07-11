@@ -5,10 +5,10 @@ import { itemtable } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
 import * as common from './common'
-import sun1 from './block.ds.sun1'
 import { duplicate as svduplicate } from './bulk.sv'
 import * as vcftk from './block.ds.vcf'
 import { rendernumerictk } from './block.ds.numericmode'
+import may_sunburst from './block.sunburst'
 
 /*
 a dstk can be vcf, server-hosted ds (sqlite and/or 1 or more vcf)
@@ -3618,69 +3618,4 @@ export function done_tknodata(tk, block) {
 		hlaachange_addnewtrack(tk, block)
 		delete tk.hlaachange
 	}
-}
-
-async function may_sunburst(occurrence, mlst, cx, cy, tk, block) {
-	/*
-may show sunburst chart using several possible methods
-
-todo: as the central place for making sunburst
-dynamic import sun1 as well
-*/
-	if (tk.ds) {
-		// legacy ds
-		// give priority to the relatively new method of ds.variant2tumors
-		if (tk.ds.variant2tumors) {
-			tk.glider.style('cursor', 'wait')
-			const data = await tk.ds.variant2tumors.get(mlst)
-			tk.glider.style('cursor', 'auto')
-			if (data.error) {
-				block.error(data.error)
-				return true
-			}
-			const _ = await import('./block.sunburst')
-			_.default({
-				occurrence,
-				boxyoff: tk.yoff,
-				boxheight: tk.height,
-				boxwidth: block.width,
-				svgheight: Number.parseFloat(block.svg.attr('height')),
-				g: tk.glider.append('g'),
-				pica: tk.pica,
-				cx,
-				cy,
-				nodes: data.nodes,
-				chartlabel: mlst[0].mname,
-				click_listbutton: (x, y) => {
-					itemtable({ x, y, mlst, tk, block, pane: true })
-				}
-			})
-			return true
-		}
-		if (tk.ds.cohort) {
-			// legacy cohort config on legacy ds
-			let showsunburst = false
-			if (tk.ds.cohort.annotation) {
-				if (tk.ds.cohort.variantsunburst) {
-					showsunburst = true
-				}
-			} else {
-				// no annotation, should be old-style official ds
-				// FIXME update to new ds
-				// or all update to mds altogether
-				showsunburst = true
-			}
-			if (showsunburst) {
-				sun1(tk, block, {
-					cx,
-					cy,
-					mlst: mlst,
-					label: mlst[0].mname,
-					cohort: tk.ds.cohort
-				})
-				return true
-			}
-		}
-	}
-	return
 }
