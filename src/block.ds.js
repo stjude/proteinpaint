@@ -3641,15 +3641,16 @@ dynamic import sun1 as well
 			const _ = await import('./block.sunburst')
 			_.default({
 				occurrence,
-				tk,
-				block,
+				boxyoff: tk.yoff,
+				boxheight: tk.height,
+				boxwidth: block.width,
+				svgheight: Number.parseFloat(block.svg.attr('height')),
 				g: tk.glider.append('g'),
 				pica: tk.pica,
-				cx0: cx,
-				cy0: cy,
+				cx,
+				cy,
 				nodes: data.nodes,
 				chartlabel: mlst[0].mname,
-				levels: tk.ds.variant2tumors.levels,
 				click_listbutton: (x, y) => {
 					itemtable({ x, y, mlst, tk, block, pane: true })
 				}

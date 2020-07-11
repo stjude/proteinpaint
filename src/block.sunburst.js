@@ -3,13 +3,13 @@ import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import * as client from './client'
+import { textlensf } from './client'
 
 /*
-to be p4-ready:
-- drop tk and block
-- cover legacy ds sun1 so as to retire sun1 code
+may be p4-ready
 
+todo:
+- custom color scheme
 
 */
 
@@ -17,43 +17,49 @@ const dur1 = 500 // needs annotation
 const dur2 = 250
 
 export default function(opts) {
-	const { occurrence, tk, block, g, pica, cx0, cy0, nodes, levels, chartlabel, click_ring, click_listbutton } = opts
+	const {
+		occurrence,
+		boxyoff,
+		boxheight,
+		boxwidth,
+		svgheight,
+		g,
+		pica,
+		cx,
+		cy,
+		nodes,
+		chartlabel,
+		click_ring,
+		click_listbutton
+	} = opts
 
 	// TODO do not use click_listbutton, always show info table
 
-	g.attr('transform', 'translate(' + cx0 + ',' + cy0 + ')')
+	g.attr('transform', 'translate(' + cx + ',' + cy + ')')
 
 	const suncolor = scaleOrdinal(schemeCategory10)
 
-	let cx = cx0,
-		cy = cy0
-
 	const eye = g.append('g')
 	const ring = g.append('g')
-	const sun = { g, eye, ring, pica, busy: false }
+	const sun = { g, eye, ring, pica, busy: false, boxyoff, svgheight, cx, cy }
 
-	const radius = Math.max(tk.height * 0.2, Math.min(tk.height * 0.42, Math.log(occurrence) * 24))
+	const radius = Math.max(boxheight * 0.2, Math.min(boxheight * 0.42, Math.log(occurrence) * 24))
 	// radius is set, shift g if it get outside
 
-	let newcx = cx,
-		newcy = cy
 	if (cx < radius) {
-		newcx = radius
-	} else if (cx + radius > block.width) {
-		newcx = block.width - radius
+		sun.cx = radius
+	} else if (cx + radius > boxwidth) {
+		sun.cx = boxwidth - radius
 	}
 	if (cy < radius) {
-		newcy = radius
-	} else if (cy + radius > tk.height) {
-		newcy = tk.height - radius
+		sun.cy = radius
+	} else if (cy + radius > boxheight) {
+		sun.cy = boxheight - radius
 	}
-	if (newcx != cx || newcy != cy) {
-		g.transition()
-			.delay(dur1 + dur2)
-			.attr('transform', 'translate(' + newcx + ',' + newcy + ')')
-		cx = newcx
-		cy = newcy
-	}
+	g.transition()
+		.delay(dur1 + dur2)
+		.attr('transform', 'translate(' + sun.cx + ',' + sun.cy + ')')
+
 	// hierarchy
 	const root = stratify()(nodes)
 	root.sum(i => i.value)
@@ -121,7 +127,7 @@ export default function(opts) {
 					.darker(0.5)
 					.toString()
 			)
-			slicemouseover(d, pica, cx, cy, tk, block)
+			slicemouseover(d, sun)
 		})
 		.on('mouseout', d => {
 			pica.g.selectAll('*').remove()
@@ -159,7 +165,7 @@ export default function(opts) {
 				.on('end', () => {
 					// shutter done, add things
 					eye.fore = eye.append('g')
-					const fontsize1 = Math.min(eyeheight / (chartlabel.length * client.textlensf), emptyspace * 0.6)
+					const fontsize1 = Math.min(eyeheight / (chartlabel.length * textlensf), emptyspace * 0.6)
 					eye.fore
 						.append('text')
 						.text(chartlabel)
@@ -172,7 +178,7 @@ export default function(opts) {
 					const fontsize = Math.min(
 						18,
 						Math.min(
-							(emptyspace * 0.7) / (occurrence.toString().length * client.textlensf),
+							(emptyspace * 0.7) / (occurrence.toString().length * textlensf),
 							(emptyspace - fontsize1 / 2) * 0.7
 						)
 					)
@@ -199,17 +205,17 @@ export default function(opts) {
 						.on('mousedown', () => {
 							d3event.preventDefault()
 							d3event.stopPropagation()
-							let cx0 = cx,
-								cy0 = cy,
-								mx = d3event.clientX,
+							const mx = d3event.clientX,
 								my = d3event.clientY,
 								body = d3select(document.body)
+							let cx0 = sun.cx,
+								cy0 = sun.cy
 							body
 								.on('mousemove', () => {
 									sun.busy = true // must set here but not mousedown
-									cx = cx0 + d3event.clientX - mx
-									cy = cy0 + d3event.clientY - my
-									g.attr('transform', 'translate(' + cx + ',' + cy + ')')
+									sun.cx = cx0 + d3event.clientX - mx
+									sun.cy = cy0 + d3event.clientY - my
+									g.attr('transform', 'translate(' + sun.cx + ',' + sun.cy + ')')
 								})
 								.on('mouseup', () => {
 									setTimeout(() => (sun.busy = false), 10)
@@ -294,7 +300,7 @@ function remove(sun) {
 	sun.pica.g.selectAll('*').remove()
 }
 
-function slicemouseover(d, pica, cx, cy, tk, block) {
+function slicemouseover(d, sun) {
 	const fontsize = 13
 	const barheight = 10
 	const ypad = 1
@@ -305,15 +311,14 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 	*/
 	if (toangle >= 0.375 && toangle <= 0.625) {
 		// around PI, see if need to shift to >PI or <PI
-		// get low point yoff given angle PI and d.outradius and placement in tk
-		const yoff = tk.yoff + cy + d.outradius
-		const alltkh = Number.parseFloat(block.svg.attr('height'))
+		// get low point yoff given angle PI and d.outradius and placement in box
+		const yoff = sun.boxyoff + sun.cy + d.outradius
 
 		// need to get pica height by # of rows
 		const picaheight = fontsize + ypad + fontsize
 
-		if (yoff >= alltkh - 30) {
-			// not enough space in block at angle PI, shift
+		if (yoff >= sun.svgheight - 30) {
+			// not enough space in svg at angle PI, shift
 			if (toangle <= 0.5) {
 				toangle = Math.max(0.25, d.x0)
 			} else {
@@ -322,10 +327,10 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 		}
 	}
 
-	pica.g.selectAll('*').remove()
-	const x = cx + (d.outradius + 5) * Math.sin(Math.PI * 2 * toangle)
-	const y = cy - (d.outradius + 5) * Math.cos(Math.PI * 2 * toangle)
-	pica.g.attr('transform', 'translate(' + x + ',' + y + ')')
+	sun.pica.g.selectAll('*').remove()
+	const x = sun.cx + (d.outradius + 5) * Math.sin(Math.PI * 2 * toangle)
+	const y = sun.cy - (d.outradius + 5) * Math.cos(Math.PI * 2 * toangle)
+	sun.pica.g.attr('transform', 'translate(' + x + ',' + y + ')')
 
 	const barwidth = 60
 
@@ -334,7 +339,7 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 	const cohortsize = d.data.cohortsize
 
 	if (Number.isFinite(cohortsize)) {
-		bar = pica.g.append('g')
+		bar = sun.pica.g.append('g')
 		bar
 			.append('rect')
 			.attr('width', barwidth + 4)
@@ -359,13 +364,13 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 			.attr('shape-rendering', 'crispEdges')
 	}
 
-	const text0 = pica.g
+	const text0 = sun.pica.g
 		.append('text')
 		.attr('stroke', 'white')
 		.attr('stroke-width', 3)
 		.attr('font-size', fontsize)
 		.attr('font-family', 'Arial')
-	const text = pica.g
+	const text = sun.pica.g
 		.append('text')
 		.attr('fill', 'black')
 		.attr('fill-opacity', 1)
@@ -375,13 +380,13 @@ function slicemouseover(d, pica, cx, cy, tk, block) {
 	const textt = d.data.name + ', ' + d.value + ' sample' + (d.value > 1 ? 's' : '')
 	text0.text(d.data.name)
 	text.text(d.data.name)
-	const text20 = pica.g
+	const text20 = sun.pica.g
 		.append('text')
 		.attr('stroke', 'white')
 		.attr('stroke-width', 3)
 		.attr('font-size', fontsize)
 		.attr('font-family', 'Arial')
-	const text2 = pica.g
+	const text2 = sun.pica.g
 		.append('text')
 		.attr('fill', 'black')
 		.attr('fill-opacity', 1)
