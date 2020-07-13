@@ -8,6 +8,7 @@ import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
 import * as common from './common'
+import may_sunburst from './block.sunburst'
 import {
 	mlst_pretreat,
 	tkdata_update_x,
@@ -1265,6 +1266,19 @@ function m_click(m, p, tk, block) {
 	if (may_customcohortvcf(m, tk, block)) {
 		// disabled, to restore later with support of custom cohort vcf file
 		return
+	}
+	if (m.occurrence > 1) {
+		if (
+			may_sunburst(
+				m.occurrence,
+				[m],
+				m.aa.x + m.xoff,
+				tk.numericmode.toplabelheight + tk.numericmode.axisheight - m._y,
+				tk,
+				block
+			)
+		)
+			return
 	}
 
 	itemtable({

@@ -414,14 +414,13 @@ export function load2tk(datalst, block, tk) {
 }
 
 export function dstkrender(tk, block) {
+	/*
+tk.mlst[] is set
+*/
+
 	block.tkcloakoff(tk, {})
 
-	/* not in use
-	if(tk.isvcfbarplot) {
-		vcftk.renderbarplot(tk,block)
-		return
-	}
-	*/
+	mlst_set_occurrence(tk)
 
 	if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4numeric != undefined) {
 		if (!tk.numericmode) {
@@ -467,6 +466,33 @@ export function dstkrender(tk, block) {
 	{
 		const err = showlegend_sampleattribute(tk, block)
 		if (err) console.log('showlegend_sampleattribute: ' + err)
+	}
+}
+
+function mlst_set_occurrence(tk) {
+	/*
+handle multiple ways of assigning occurrence
+
+.occurrence now applies to all legacy ds track, applications:
+- skewer graph to decide dot size
+- sunburst
+*/
+	if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4occurrence != undefined) {
+		const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4occurrence]
+		if (!mcset) throw 'mcset not found by setidx4occurrence'
+		for (const m of tk.mlst) {
+			const [err, vlst] = getter_mcset_key(mcset, m)
+			if (err || vlst == undefined) {
+				m.occurrence = 1
+			} else {
+				m.occurrence = vlst[0]
+			}
+		}
+	} else {
+		// occurrence may not apply to the data at all, but still assigning it
+		for (const m of tk.mlst) {
+			m.occurrence = 1
+		}
 	}
 }
 
@@ -872,7 +898,7 @@ function mlst2disc(mlst, tk) {
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count
-		g.occurrence = group2occurrence(g, tk)
+		g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0) //group2occurrence(g, tk)
 	}
 	groups.sort((a, b) => {
 		return b.occurrence - a.occurrence

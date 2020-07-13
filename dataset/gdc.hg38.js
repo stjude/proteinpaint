@@ -118,9 +118,11 @@ query projectSize( $ssmTested: FiltersArgument) {
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
+/* this now applies not only to vcf track but also legacy ds
+ */
 const vcfinfofilter = {
 	//setidx4numeric: 0,
-	setidx4occurrence: 0, // an info key to define #tumors of each mutation
+	setidx4occurrence: 0, // to set .occurrence on each variant
 	lst: [
 		{
 			name: 'Occurrence',
