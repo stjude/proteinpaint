@@ -1662,11 +1662,12 @@ custom mclass from vcfinfofilter
 			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', async d => {
+			// must not check d3event after await as it will be voided
+			const p = d3event.target.getBoundingClientRect()
 			if (d.occurrence > 1) {
 				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
 					return
 			}
-			const p = d3event.target.getBoundingClientRect()
 			itemtable({
 				mlst: d.mlst,
 				pane: true,

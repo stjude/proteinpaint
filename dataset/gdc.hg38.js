@@ -146,7 +146,6 @@ const snvindel_attributes = [
 	},
 	{
 		label: 'Genome pos.',
-		hide: true,
 		get: m => {
 			if (m.chr && m.pos) return m.chr + ':' + (m.pos + 1)
 			return null

@@ -6,9 +6,6 @@ import * as path from 'path'
 
 /*
 
-no sunburst here
-
-
 ********************** EXPORTED
 
 itemtable()

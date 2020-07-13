@@ -1,4 +1,5 @@
 import sun1 from './block.ds.sun1'
+import { itemtable } from './block.ds.itemtable'
 
 /*
 may show sunburst chart using several possible data sources
