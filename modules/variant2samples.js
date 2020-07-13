@@ -7,7 +7,7 @@ from one or more variants, get list of samples harbording any of the variants
 
 always require a ds found at genome.datasets{}
 ds type agnostic (legacy/mds/mds2)
-only requires ds.variant2tumors{}
+only requires ds.variant2samples{}
 
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 */
@@ -25,7 +25,7 @@ module.exports = genomes => {
 			if (!req.query.dsname) throw '.dsname missing'
 			const ds = genome.datasets[req.query.dsname]
 			if (!ds) throw 'invalid dsname: ' + req.query.dsname
-			if (!ds.variant2tumors) throw 'variant2tumors is not enabled on this dataset'
+			if (!ds.variant2samples) throw 'variant2samples is not enabled on this dataset'
 
 			// for now, one time project size query is triggered here
 			await may_onetimequery_projectsize(ds)
@@ -46,10 +46,10 @@ async function getResult(q, ds, genome) {
 		levels = JSON.parse(q.levels)
 	}
 
-	if (ds.variant2tumors.gdcgraphql) {
+	if (ds.variant2samples.gdcgraphql) {
 		samples = await getResult_gdcgraphql(q, levels, ds, genome)
 	} else {
-		throw 'unknown query method for variant2tumors'
+		throw 'unknown query method for variant2samples'
 	}
 
 	if (q.getsamples) {
@@ -82,14 +82,14 @@ async function getResult_gdcgraphql(q, levels, ds, genome) {
 	if (!levels) {
 		// when querying list of samples, allow client not to provide levels
 		// will return full list of attributes
-		levels = ds.variant2tumors.levels
+		levels = ds.variant2samples.levels
 	}
 
-	ds.variant2tumors.gdcgraphql.variables.filter.content.value = q.ssm_id_lst.split(',')
+	ds.variant2samples.gdcgraphql.variables.filter.content.value = q.ssm_id_lst.split(',')
 
 	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(ds.variant2tumors.gdcgraphql)
+		body: JSON.stringify(ds.variant2samples.gdcgraphql)
 	})
 	let re
 	try {

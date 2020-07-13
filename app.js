@@ -58,7 +58,7 @@ const express = require('express'),
 	fimo = require('./modules/fimo'),
 	utils = require('./modules/utils'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	variant2tumors_closure = require('./modules/variant2tumors')
+	variant2samples_closure = require('./modules/variant2samples')
 
 /*
 valuable globals
@@ -142,7 +142,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
-app.get('/variant2tumors', variant2tumors_closure(genomes))
+app.get('/variant2samples', variant2samples_closure(genomes))
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -294,10 +294,10 @@ function clientcopy_genome(genomename) {
 		if (ds.snvindel_legend) {
 			ds2.snvindel_legend = ds.snvindel_legend
 		}
-		if (ds.variant2tumors) {
-			ds2.variant2tumors = {
-				variantkey: ds.variant2tumors.variantkey,
-				levels: ds.variant2tumors.levels
+		if (ds.variant2samples) {
+			ds2.variant2samples = {
+				variantkey: ds.variant2samples.variantkey,
+				levels: ds.variant2samples.levels
 			}
 		}
 		const vcfinfo = {}
@@ -11997,17 +11997,17 @@ function pp_init() {
 				}
 			}
 
-			if (ds.variant2tumors) {
-				if (!ds.variant2tumors.variantkey) return '.variantkey missing from variant2tumors'
-				if (!ds.variant2tumors.levels) return '.levels[] missing from variant2tumors'
-				if (!Array.isArray(ds.variant2tumors.levels)) return 'variant2tumors.levels[] is not array'
+			if (ds.variant2samples) {
+				if (!ds.variant2samples.variantkey) return '.variantkey missing from variant2samples'
+				if (!ds.variant2samples.levels) return '.levels[] missing from variant2samples'
+				if (!Array.isArray(ds.variant2samples.levels)) return 'variant2samples.levels[] is not array'
 				// validate levels when final
-				if (['ssm_id'].indexOf(ds.variant2tumors.variantkey) == -1) return 'invalid value of variantkey'
-				if (ds.variant2tumors.gdcgraphql) {
-					if (!ds.variant2tumors.gdcgraphql.query) return '.query missing from variant2tumors.gdcgraphql'
-					if (!ds.variant2tumors.gdcgraphql.variables) return '.variables missing from variant2tumors.gdcgraphql'
+				if (['ssm_id'].indexOf(ds.variant2samples.variantkey) == -1) return 'invalid value of variantkey'
+				if (ds.variant2samples.gdcgraphql) {
+					if (!ds.variant2samples.gdcgraphql.query) return '.query missing from variant2samples.gdcgraphql'
+					if (!ds.variant2samples.gdcgraphql.variables) return '.variables missing from variant2samples.gdcgraphql'
 				} else {
-					return 'unknown query method of variant2tumors'
+					return 'unknown query method of variant2samples'
 				}
 			}
 

@@ -51,14 +51,14 @@ query GdcSsmByGene($filter: FiltersArgument) {
 
 /*
 using one or multiple variants, get info about all tumors harbording them
-variant2tumors intends to be a generic mechanism for fetching tumors harbording a variant
-same name attribute will be exposed to client (ds.variant2tumors: true)
+variant2samples intends to be a generic mechanism for fetching tumors harbording a variant
+same name attribute will be exposed to client (ds.variant2samples: true)
 and hiding the implementation details on server
 
-on client, get() is added to tk.ds.variant2tumors to make GET request for list of variants
+on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
 this happens for sunburst and itemtable
 */
-const query_variant2tumors = `
+const query_variant2samples = `
 query OneSsm($filter: FiltersArgument) {
 	explore {
 		ssms {
@@ -94,7 +94,7 @@ to retrieve total number of tumors per project
 the number will be displayed in both sunburst and singleton variant panel
 must associate the "project" with project_id in sunburst
 
-for now this is only triggered in variant2tumors query
+for now this is only triggered in variant2samples query
 */
 const query_projectsize = `
 query projectSize( $ssmTested: FiltersArgument) {
@@ -199,22 +199,24 @@ module.exports = {
 		}
 	},
 
-	variant2tumors: {
+	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// required
 		levels: [
 			{
 				k: 'project', // attribute for stratinput
+				label: 'Project',
 				keys: ['project', 'project_id']
 			},
 			{
 				k: 'disease',
+				label: 'Disease',
 				keys: ['disease_type']
 			}
 		],
 		// the actual query method is using gdc api
 		gdcgraphql: {
-			query: query_variant2tumors,
+			query: query_variant2samples,
 			variables: {
 				filter: {
 					op: 'in',

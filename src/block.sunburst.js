@@ -12,10 +12,10 @@ sunburst.js to replace sun1
 export default async function(occurrence, mlst, cx, cy, tk, block) {
 	if (tk.ds) {
 		// legacy ds
-		// give priority to the relatively new method of ds.variant2tumors
-		if (tk.ds.variant2tumors) {
+		// give priority to the relatively new method of ds.variant2samples
+		if (tk.ds.variant2samples) {
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.ds.variant2tumors.get(mlst)
+			const data = await tk.ds.variant2samples.get(mlst)
 			tk.glider.style('cursor', 'auto')
 			if (data.error) {
 				block.error(data.error)

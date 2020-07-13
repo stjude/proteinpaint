@@ -51,21 +51,26 @@ export default function dsmaketk(tk, block) {
 
 	*/
 
-	if (tk.ds.variant2tumors) {
-		tk.ds.variant2tumors.get = async mlst => {
+	if (tk.ds.variant2samples) {
+		tk.ds.variant2samples.get = async mlst => {
+			/*
+			TODO support alternative methods
+			where all data are hosted on client
+			*/
+
 			// hardcode to getsummary and using fixed levels
 			const par = [
 				'genome=' + block.genome.name,
 				'dsname=' + tk.ds.label,
-				'levels=' + JSON.stringify(tk.ds.variant2tumors.levels),
+				'levels=' + JSON.stringify(tk.ds.variant2samples.levels),
 				'getsummary=1'
 			]
-			if (tk.ds.variant2tumors.variantkey == 'ssm_id') {
+			if (tk.ds.variant2samples.variantkey == 'ssm_id') {
 				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
 			} else {
 				throw 'unknown variantkey'
 			}
-			return await client.dofetch2('variant2tumors?' + par.join('&'), {}, { serverData: block.cache })
+			return await client.dofetch2('variant2samples?' + par.join('&'), {}, { serverData: block.cache })
 		}
 	}
 

@@ -51,61 +51,12 @@ export function itemtable(arg) {
 	.holder
 	*/
 
-	const mlst = arg.mlst
-	const block = arg.block
-	const tk = arg.tk
+	const { mlst, tk, block } = arg
 	if (!mlst || mlst.length == 0) return
 	let holder
 	if (arg.pane) {
 		const pane = client.newpane({ x: arg.x, y: arg.y })
-		if (mlst.length == 1) {
-			const m = mlst[0]
-			const c = common.mclass[m.class]
-			switch (m.dt) {
-				case common.dtsnvindel:
-					pane.header.html(
-						'<span style="font-weight:bold;color:' +
-							c.color +
-							'">' +
-							(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
-							'</span> <span style="font-size:80%">' +
-							c.label +
-							'</span>'
-					)
-					break
-				case common.dtsv:
-				case common.dtfusionrna:
-					const names = []
-					for (let i = 0; i < m.pairlst.length; i++) {
-						if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
-						names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
-					}
-					pane.header.html(names.join(' - ') + '&nbsp;&nbsp;<span style="font-size:80%">' + c.label + '</span>')
-					break
-				case common.dtnloss:
-				case common.dtcloss:
-				case common.dtitd:
-				case common.dtdel:
-				case common.dtcnv:
-					pane.header.html('<span style="font-size:80%">' + c.label + '</span>')
-					break
-				default:
-					pane.header.text('unknown dt ' + m.dt)
-			}
-		} else {
-			const set = new Set()
-			for (const m of mlst) {
-				set.add(m.dt)
-			}
-			if (set.size == 1) {
-				let dt
-				for (dt of set.values()) {
-				}
-				pane.header.text(mlst.length + ' ' + common.dt2label[dt])
-			} else {
-				pane.header.text(mlst.length + ' mutations')
-			}
-		}
+		pane.header.html(mlst2headerhtml(mlst))
 		holder = pane.body
 	} else {
 		holder = arg.holder
@@ -156,56 +107,53 @@ export function itemtable(arg) {
 				div.append('p').text('unknown dt: ' + dt)
 		}
 	}
-	if (block.samplecart && tk.ds && tk.ds.sampleselectable) {
-		/* select sample API applicable to this track
-		will make one single button for selecting sample, independent of how many datatypes
-		*/
-		const sampleset = new Set()
-		for (const m of mlst) {
-			if (m.sample) {
-				// FIXME hardcoded attribute
-				sampleset.add(m.sample)
-			}
-		}
-		if (sampleset.size > 0) {
-			// note for selection, try to use mname
-			const nameset = new Set()
-			for (const m of mlst) {
-				const classlab = common.mclass[m.class].label
-				let thisnote
-				if (m.dt == common.dtfusionrna || m.dt == common.dtsv) {
-					if (m.mname) {
-						if (m.useNterm) {
-							thisnote = (block.usegm ? block.usegm.name + '-' : '') + m.mname + ' ' + classlab
-						} else {
-							thisnote = m.mname + (block.usegm ? '-' + block.usegm.name : '') + ' ' + classlab
-						}
-					} else {
-						thisnote = (block.usegm ? block.usegm.name : '') + ' ' + classlab
-					}
-				} else {
-					thisnote = (m.mname ? m.mname + ' ' : '') + classlab + (block.usegm ? ' in ' + block.usegm.name : '')
-				}
-				nameset.add(thisnote)
-			}
-			let note
-			if (nameset.size == 1) {
-				note = 'having ' + [...nameset][0]
-			} else {
-				note = 'having mutations' + (block.usegm ? ' in ' + block.usegm.name : '')
-			}
 
-			block.samplecart.setBtns({
-				samplelst: [...sampleset],
-				id: nameset.size ? [...nameset][0] : block.usegm ? block.usegm.name : '',
-				basket: 'Gene Mutation',
-				container: holder
-					.append('div')
-					.style('margin-left', '10px')
-					.append('div')
-			})
+	handle_samplecart(mlst, holder, tk, block)
+}
+
+function mlst2headerhtml(mlst) {
+	if (mlst.length == 1) {
+		const m = mlst[0]
+		const c = common.mclass[m.class]
+		if (m.dt == common.dtsnvindel) {
+			return (
+				'<span style="font-weight:bold;color:' +
+				c.color +
+				'">' +
+				(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
+				'</span> <span style="font-size:80%">' +
+				c.label +
+				'</span>'
+			)
 		}
+		if (m.dt == common.dtsv || m.dt == common.dtfusionrna) {
+			const names = []
+			for (let i = 0; i < m.pairlst.length; i++) {
+				if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
+				names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
+			}
+			return names.join(' - ') + '&nbsp;&nbsp;<span style="font-size:80%">' + c.label + '</span>'
+		}
+		if (
+			m.dt == common.dtnloss ||
+			m.dt == common.dtcloss ||
+			m.dt == common.dtitd ||
+			m.dt == common.dtdel ||
+			m.dt == common.dtcnv
+		) {
+			return '<span style="font-size:80%">' + c.label + '</span>'
+		}
+		return 'unknown dt ' + m.dt
 	}
+	const set = new Set()
+	for (const m of mlst) {
+		set.add(m.dt)
+	}
+	if (set.size == 1) {
+		const dt = [...set][0]
+		return mlst.length + ' ' + common.dt2label[dt]
+	}
+	return mlst.length + ' mutations'
 }
 
 function table_snvindel(mlst, holder, tk, block) {
@@ -2888,4 +2836,58 @@ function may_addformat_singlesample(lst, m, tk) {
 			})
 		}
 	}
+}
+
+function handle_samplecart(mlst, holder, tk, block) {
+	if (!block.samplecart || !tk.ds || !tk.ds.sampleselectable) return
+	/* select sample API applicable to this track
+	will make one single button for selecting sample, independent of how many datatypes
+	*/
+	const sampleset = new Set()
+	for (const m of mlst) {
+		if (m.sample) {
+			// FIXME hardcoded attribute
+			sampleset.add(m.sample)
+		}
+	}
+	if (sampleset.size == 0) {
+		// no samples
+		return
+	}
+	// note for selection, try to use mname
+	const nameset = new Set()
+	for (const m of mlst) {
+		const classlab = common.mclass[m.class].label
+		let thisnote
+		if (m.dt == common.dtfusionrna || m.dt == common.dtsv) {
+			if (m.mname) {
+				if (m.useNterm) {
+					thisnote = (block.usegm ? block.usegm.name + '-' : '') + m.mname + ' ' + classlab
+				} else {
+					thisnote = m.mname + (block.usegm ? '-' + block.usegm.name : '') + ' ' + classlab
+				}
+			} else {
+				thisnote = (block.usegm ? block.usegm.name : '') + ' ' + classlab
+			}
+		} else {
+			thisnote = (m.mname ? m.mname + ' ' : '') + classlab + (block.usegm ? ' in ' + block.usegm.name : '')
+		}
+		nameset.add(thisnote)
+	}
+	let note
+	if (nameset.size == 1) {
+		note = 'having ' + [...nameset][0]
+	} else {
+		note = 'having mutations' + (block.usegm ? ' in ' + block.usegm.name : '')
+	}
+
+	block.samplecart.setBtns({
+		samplelst: [...sampleset],
+		id: nameset.size ? [...nameset][0] : block.usegm ? block.usegm.name : '',
+		basket: 'Gene Mutation',
+		container: holder
+			.append('div')
+			.style('margin-left', '10px')
+			.append('div')
+	})
 }
