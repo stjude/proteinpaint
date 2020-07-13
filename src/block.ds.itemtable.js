@@ -3,6 +3,7 @@ import * as client from './client'
 import * as common from './common'
 import * as vcf from './vcf'
 import * as path from 'path'
+import { stratify } from 'd3-hierarchy'
 
 /*
 
@@ -65,8 +66,12 @@ export function itemtable(arg) {
 		console.error('no holder provided for showing table')
 		return
 	}
-	// mlst can be a mixture of dt
-	// show separate table for each datatype
+
+	/*
+	mlst can be a mixture of dt
+	show separate table for each datatype
+	following incrementally adds components to the mlst panel
+	*/
 	const dt2mlst = new Map()
 	for (const m of mlst) {
 		if (!dt2mlst.has(m.dt)) {
@@ -74,6 +79,12 @@ export function itemtable(arg) {
 		}
 		dt2mlst.get(m.dt).push(m)
 	}
+
+	// a very quick fix
+	// in any type of variant, only set this when mlst is just one variant with occurrence=1
+	// so that variant2samples can append rows to it
+	delete tk.__singlevariant_table
+
 	for (const [dt, lst] of dt2mlst) {
 		const div = holder.append('div').style('margin', '10px')
 		if (dt2mlst.size > 1) {
@@ -108,6 +119,7 @@ export function itemtable(arg) {
 		}
 	}
 
+	handle_variant2samples(mlst, holder, tk, block)
 	handle_samplecart(mlst, holder, tk, block)
 }
 
@@ -2890,4 +2902,50 @@ function handle_samplecart(mlst, holder, tk, block) {
 			.style('margin-left', '10px')
 			.append('div')
 	})
+}
+
+async function handle_variant2samples(mlst, holder, tk, block) {
+	if (!tk.ds || !tk.ds.variant2samples) return
+	// if custom data on client, and also has ds.variant2samples, may need to escape it
+
+	const div = holder.append('div').style('margin', '20px')
+	const wait = div.append('div').text('Loading...')
+	try {
+		const data = await tk.ds.variant2samples.get(mlst)
+		if (data.error) throw data.error
+		wait.remove()
+		const table = div.append('table')
+
+		const root = stratify()(data.nodes)
+		root.sum(i => i.value)
+		root.sort((a, b) => b.value - a.value)
+		root.eachBefore(node => {
+			if (!node.parent) return
+			// one tr per node
+			const tr = table.append('tr')
+			if (node.depth > 1) {
+				tr.style('font-size', '.8em')
+			}
+
+			// 1 - node name
+			const td1 = tr
+				.append('td')
+				.style('padding-left', (node.depth - 1) * 15 + 'px')
+				.text(node.data.name)
+			// may add level-specific link based on .variant2samples.levels
+
+			// 2 - frequency, always show but optional fill
+			const td2 = tr.append('td')
+			if (node.data.cohortsize) {
+				client.fillbar(td2, { f: node.value / node.data.cohortsize })
+			}
+
+			// 3 - count
+			const td3 = tr.append('td')
+			td3.text(node.value + (node.data.cohortsize ? '/' + node.data.cohortsize : ''))
+		})
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
 }
