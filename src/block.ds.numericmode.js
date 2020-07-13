@@ -8,7 +8,6 @@ import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
 import * as common from './common'
-import sun1 from './block.ds.sun1'
 import {
 	mlst_pretreat,
 	tkdata_update_x,
