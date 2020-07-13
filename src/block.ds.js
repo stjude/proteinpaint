@@ -44,7 +44,6 @@ done_tknodata
 
 renderskewertk
 skewer_make()
-may_sunburst
 
 showlegend_populationfrequencyfilter
 showlegend_vcfinfofilter

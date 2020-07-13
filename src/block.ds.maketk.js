@@ -9,7 +9,7 @@ import {
 } from './block.ds.itemtable'
 import * as client from './client'
 import * as common from './common'
-import sun1 from './block.ds.sun1'
+import may_sunburst from './block.sunburst'
 import { stratinput } from './tree'
 import { stratify } from 'd3-hierarchy'
 import * as blockds from './block.ds'
@@ -643,13 +643,7 @@ function label_mcount_fillpane(tk, block, handle, tip) {
 			.on('click', () => {
 				tip.hide()
 				const mlst = mlstfilter(tk, block)
-				sun1(tk, block, {
-					cx: 100,
-					cy: tk.height_main / 2,
-					mlst: mlst,
-					label: tk.ds.label,
-					cohort: tk.ds.cohort
-				})
+				may_sunburst(mlst.length, mlst, 100, tk.height_main / 2, tk, block)
 			})
 	}
 	// 4.
