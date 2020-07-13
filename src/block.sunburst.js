@@ -64,5 +64,5 @@ export default async function(occurrence, mlst, cx, cy, tk, block) {
 			}
 		}
 	}
-	return
+	return false
 }

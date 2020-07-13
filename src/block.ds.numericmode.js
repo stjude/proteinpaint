@@ -1087,9 +1087,6 @@ set:
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
 			m_click(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
-			if (block.debugmode) {
-				console.log(m)
-			}
 		})
 
 	if (tk.hlaachange) {
@@ -1248,7 +1245,7 @@ function m_mouseout(m, tk) {
 	tk.pica.g.selectAll('*').remove()
 }
 
-function m_click(m, p, tk, block) {
+async function m_click(m, p, tk, block) {
 	if (m.dt == common.dtfusionrna || m.dt == common.dtsv) {
 		// should not happen
 		itemtable({
@@ -1269,7 +1266,7 @@ function m_click(m, p, tk, block) {
 	}
 	if (m.occurrence > 1) {
 		if (
-			may_sunburst(
+			await may_sunburst(
 				m.occurrence,
 				[m],
 				m.aa.x + m.xoff,

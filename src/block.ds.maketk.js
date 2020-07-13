@@ -640,10 +640,10 @@ function label_mcount_fillpane(tk, block, handle, tip) {
 			.append('div')
 			.text('To sunburst')
 			.classed('sja_menuoption', true)
-			.on('click', () => {
+			.on('click', async () => {
 				tip.hide()
 				const mlst = mlstfilter(tk, block)
-				may_sunburst(mlst.length, mlst, 100, tk.height_main / 2, tk, block)
+				await may_sunburst(mlst.length, mlst, 100, tk.height_main / 2, tk, block)
 			})
 	}
 	// 4.

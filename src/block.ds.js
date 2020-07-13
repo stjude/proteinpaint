@@ -1245,7 +1245,7 @@ custom mclass from vcfinfofilter
 				epaint_may_hl(tk, d.mlst, false)
 			}
 		})
-		.on('click', d => {
+		.on('click', async d => {
 			const p = d3event.target.getBoundingClientRect()
 			if (d.dt == common.dtfusionrna || d.dt == common.dtsv) {
 				// svgraph
@@ -1266,7 +1266,7 @@ custom mclass from vcfinfofilter
 				return
 			}
 			if (
-				may_sunburst(
+				await may_sunburst(
 					d.occurrence,
 					d.mlst,
 					d.aa.x,
@@ -1274,16 +1274,17 @@ custom mclass from vcfinfofilter
 					tk,
 					block
 				)
-			)
+			) {
 				return
+			}
 			// many items to table
 			itemtable({
 				mlst: d.mlst,
 				pane: true,
 				x: p.left - 10,
 				y: p.top - 10,
-				tk: tk,
-				block: block
+				tk,
+				block
 			})
 		})
 
@@ -1660,9 +1661,9 @@ custom mclass from vcfinfofilter
 				.attr('fill-opacity', 0)
 			epaint_may_hl(tk, d.mlst, false)
 		})
-		.on('click', function(d) {
+		.on('click', async d => {
 			if (d.occurrence > 1) {
-				if (may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
+				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
 					return
 			}
 			const p = d3event.target.getBoundingClientRect()
