@@ -23,6 +23,18 @@ query GdcSsmByGene($filter: FiltersArgument) {
 						occurrence {
 							hits {
 								total
+								edges {
+									node {
+										case {
+											project {
+												project_id
+											}
+											disease_type
+											primary_site
+											# case_id
+										}
+									}
+								}
 							}
 						}
 						consequence{
@@ -176,6 +188,12 @@ const snvindel_attributes = [
 	}
 ]
 
+const stratify = [
+	{ label: 'project', gdcgraphql: 1, keys: ['project', 'project_id'] },
+	{ label: 'disease', gdcgraphql: 1, keys: ['disease_type'] },
+	{ label: 'site', gdcgraphql: 1, keys: ['primary_site'] }
+]
+
 module.exports = {
 	color: '#545454',
 	dsinfo: [
@@ -186,6 +204,7 @@ module.exports = {
 	genome: 'hg38',
 	vcfinfofilter,
 	snvindel_attributes,
+	stratify,
 
 	onetimequery_projectsize: {
 		gdcgraphql: {

@@ -393,11 +393,13 @@ export function load2tk(datalst, block, tk) {
 			continue
 		}
 		if (dat.lst) {
+			// variant dataset
 			dsqueryresult_snvindelfusionitd(dat.lst, tk, block)
-		} else {
-			block.error('unknown data/query type from ' + tk.ds.label)
-			return
+			may_print_stratifycountfromserver(dat, tk)
+			continue
 		}
+		block.error('unknown data/query type from ' + tk.ds.label)
+		return
 	}
 
 	Promise.all(eploaders).then(() => {
@@ -3496,7 +3498,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 		collectleftlabw.push(this.getBBox().width)
 	})
 
-	// ************* update stats label
+	// ************* update stats label TODO should be a standalone func
 	if (usemlst.length == 0) {
 		// hide label
 		tk.label_mcount.text('')
@@ -3514,8 +3516,9 @@ export function mlst_pretreat(tk, block, originhidden) {
 	if (tk.label_stratify) {
 		for (const strat of tk.label_stratify) {
 			// get number of ?? for each strat method
-			const set = new Set()
+			let itemcount
 			if (strat.bycohort) {
+				const set = new Set()
 				for (const m of usemlst) {
 					let key = ''
 					for (const level of tk.ds.cohort.levels) {
@@ -3526,7 +3529,11 @@ export function mlst_pretreat(tk, block, originhidden) {
 					}
 					set.add(key)
 				}
+				itemcount = set.size
+			} else if (strat.gdcgraphql) {
+				itemcount = strat.servercount || 0
 			} else {
+				const set = new Set()
 				for (const m of usemlst) {
 					let key = m[strat.attr1.k]
 					if (!key) continue
@@ -3544,11 +3551,12 @@ export function mlst_pretreat(tk, block, originhidden) {
 					}
 					set.add(key)
 				}
+				itemcount = set.size
 			}
-			if (set.size == 0) {
+			if (itemcount == 0) {
 				strat.svglabel.text('')
 			} else {
-				strat.svglabel.text(set.size + ' ' + strat.label + (set.size > 1 ? 's' : '')).each(function() {
+				strat.svglabel.text(itemcount + ' ' + strat.label + (itemcount > 1 ? 's' : '')).each(function() {
 					collectleftlabw.push(this.getBBox().width)
 				})
 			}
@@ -3644,5 +3652,20 @@ export function done_tknodata(tk, block) {
 	if (tk.hlaachange) {
 		hlaachange_addnewtrack(tk, block)
 		delete tk.hlaachange
+	}
+}
+
+function may_print_stratifycountfromserver(dat, tk) {
+	/*
+	dataset may be equipped to compute stratify category item count at server
+	*/
+	if (!dat.stratifycount) return
+	for (const [label, count] of dat.stratifycount) {
+		const strat = tk.label_stratify.find(i => i.label == label)
+		if (!strat) {
+			console.error('unknown strat label: ' + label)
+			continue
+		}
+		strat.servercount = count
 	}
 }

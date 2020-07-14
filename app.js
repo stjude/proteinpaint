@@ -2617,7 +2617,7 @@ async function handle_dsdata(req, res) {
 			}
 
 			if (query.gdcgraphql_snvindel) {
-				const d = await handle_dsdata_gdcgraphql_snvindel(query, req)
+				const d = await handle_dsdata_gdcgraphql_snvindel(ds, query, req)
 				data.push(d)
 				continue
 			}
@@ -2631,7 +2631,7 @@ async function handle_dsdata(req, res) {
 	}
 }
 
-async function handle_dsdata_gdcgraphql_snvindel(query, req) {
+async function handle_dsdata_gdcgraphql_snvindel(ds, query, req) {
 	try {
 		{
 			const c = query.gdcgraphql_snvindel.variables.filter.content
@@ -2674,7 +2674,11 @@ async function handle_dsdata_gdcgraphql_snvindel(query, req) {
 			gdcgraphql_snvindel_addoccrrence(m, ssm, query)
 			lst.push(m)
 		}
-		return { lst }
+		const data = { lst }
+		if (ds.stratify) {
+			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, re.data.explore.ssms.hits.edges)
+		}
+		return data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		throw e.message || e
@@ -2717,6 +2721,41 @@ function gdcgraphql_snvindel_addclass(m, ssm, req) {
 			}
 		}
 	}
+}
+
+function gdcgraphql_snvindel_stratifycount(ds, edges) {
+	/*
+variants returned from query should include occurrence
+from occurrence count the number of unique project/disease/site,
+hardcoded logic only for gdc!!!
+*/
+
+	const label2set = new Map()
+	// k: stratify label, v: Set() of items from this category
+	for (const s of ds.stratify) {
+		label2set.set(s.label, new Set())
+	}
+	for (const edge of edges) {
+		if (!edge.node.occurrence || !edge.node.occurrence.hits || !edge.node.occurrence.hits.edges)
+			throw 'edge.node.occurrence.hits.edges expected for an ssm'
+		for (const sample of edge.node.occurrence.hits.edges) {
+			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
+			for (const strat of ds.stratify) {
+				let stratvalue = sample.node.case
+				for (const key of strat.keys) {
+					stratvalue = stratvalue[key]
+				}
+				if (stratvalue) {
+					label2set.get(strat.label).add(stratvalue)
+				}
+			}
+		}
+	}
+	const labelcount = []
+	for (const [lab, s] of label2set) {
+		labelcount.push([lab, s.size])
+	}
+	return labelcount
 }
 
 function handle_dsdata_makequery(ds, query, req) {

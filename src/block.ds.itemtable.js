@@ -80,9 +80,10 @@ export function itemtable(arg) {
 		dt2mlst.get(m.dt).push(m)
 	}
 
-	// a very quick fix
-	// in any type of variant, only set this when mlst is just one variant with occurrence=1
-	// so that variant2samples can append rows to it
+	/**** a very quick fix!
+	in any type of variant, only set this when mlst is just one variant with occurrence=1
+	so that variant2samples can append rows to it
+	*/
 	delete tk.__singlevariant_table
 
 	for (const [dt, lst] of dt2mlst) {
@@ -2905,6 +2906,7 @@ function handle_samplecart(mlst, holder, tk, block) {
 }
 
 async function handle_variant2samples(mlst, holder, tk, block) {
+	if (mlst.length > 30) return // should disable this at the "To table" option
 	if (!tk.ds || !tk.ds.variant2samples) return
 	// if custom data on client, and also has ds.variant2samples, may need to escape it
 
