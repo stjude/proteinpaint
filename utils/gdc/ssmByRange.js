@@ -3,7 +3,7 @@ const got = require('got')
 const query = `query PROJECTS_EDGES($filters_2: FiltersArgument) {
   explore {
     ssms {
-      hits(first: 100, filters: $filters_2) {
+      hits(first: 100000, filters: $filters_2) {
         total
         edges {
           node {
@@ -58,14 +58,9 @@ const range = {
 	filters_2: {
 		op: 'and',
 		content: [
-			/*
-        {op:"in",content:{"field":"chromosome","value":["chr7"]}},
-        {op:">=",content:{"field":"start_position","value":["140719327"]}},
-        {op:"<=",content:{"field":"end_position","value":["140924764"]}}
-		*/
-			{ op: 'in', content: { field: 'chromosome', value: ['chr7'] } },
-			{ op: '>=', content: { field: 'start_position', value: ['140753234'] } },
-			{ op: '<=', content: { field: 'end_position', value: ['140753437'] } }
+			{ op: 'in', content: { field: 'chromosome', value: ['chr11'] } },
+			{ op: '>=', content: { field: 'start_position', value: [108222831] } },
+			{ op: '<=', content: { field: 'end_position', value: [108369099] } }
 		]
 	}
 }
