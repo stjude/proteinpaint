@@ -328,15 +328,17 @@ function init_controlpanel(obj) {
 		.style('padding-right', '2px')
 		.style('float', 'right')
 		.style('font-size', '.6em')
-		.text(' HIDE')
+		.classed('active', obj.menu_minimized ? true : false)
+		.text(obj.menu_minimized ? ' SHOW' : ' HIDE')
 		.on('click', () => {
 			obj.minimize_btn.classed('active', obj.minimize_btn.classed('active') ? false : true)
 			if (obj.minimize_btn.classed('active')) {
 				obj.minimize_btn.text(' SHOW')
+				obj.menu_output.style('display', 'none')
 			} else {
 				obj.minimize_btn.text(' HIDE')
+				obj.menu_output.style('display', 'block')
 			}
-			obj.menu_output.style('display', (obj.menu_output.display = obj.menu_output.display == 'none' ? 'block' : 'none'))
 		})
 		.on('mouseover', () => {
 			minimize_btn.style('text-decoration', 'underline')
@@ -364,7 +366,10 @@ function init_controlpanel(obj) {
 			config_btn.style('text-decoration', 'none')
 		}))
 
-	obj.menu_output = panel.append('div').style('margin-top', '10px')
+	obj.menu_output = panel
+		.append('div')
+		.style('margin-top', '10px')
+		.style('display', obj.menu_minimized ? 'none' : 'block')
 
 	obj.show_zoom = true //flag to show zoom div under legend div
 }
