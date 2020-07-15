@@ -95,15 +95,11 @@ export default function dsmaketk(tk, block) {
 	// assume that stratify directives are available at time of making tk
 	if (tk.ds.stratify) {
 		tk.label_stratify = []
-		for (const s0 of tk.ds.stratify) {
-			// make copy
-			const strat = {}
-			for (const k in s0) {
-				strat[k] = s0[k]
-			}
+		const thistip = new client.Menu()
+		for (const s of tk.ds.stratify) {
+			const strat = JSON.parse(JSON.stringify(s))
 			tk.label_stratify.push(strat)
 
-			const thistip = new client.Menu()
 			strat.svglabel = block.maketklefthandle(tk, laby).on('click', () => {
 				label_strat_fillpane(tk, block, strat, thistip)
 			})

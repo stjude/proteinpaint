@@ -2617,7 +2617,7 @@ async function handle_dsdata(req, res) {
 			}
 
 			if (query.gdcgraphql_snvindel) {
-				const d = await handle_dsdata_gdcgraphql_snvindel(ds, query, req)
+				const d = await handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req)
 				data.push(d)
 				continue
 			}
@@ -2631,47 +2631,53 @@ async function handle_dsdata(req, res) {
 	}
 }
 
-async function handle_dsdata_gdcgraphql_snvindel(ds, query, req) {
+async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req) {
+	// query variants by isoforms
 	try {
-		{
-			const c = query.gdcgraphql_snvindel.variables.filter.content
-			c[0].content.value = [req.query.range.chr]
-			c[1].content.value = [req.query.range.start]
-			c[2].content.value = [req.query.range.stop]
-		}
+		query.gdcgraphql_snvindel.byisoform.variables.filters.content.value = [req.query.isoform]
 		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(query.gdcgraphql_snvindel)
+			body: JSON.stringify({
+				query: query.gdcgraphql_snvindel.byisoform.query,
+				variables: query.gdcgraphql_snvindel.byisoform.variables
+			})
 		})
 		let re
 		try {
-			re = JSON.parse(response.body)
+			const tmp = JSON.parse(response.body)
+			if (
+				!tmp.data ||
+				!tmp.data.analysis ||
+				!tmp.data.analysis.protein_mutations ||
+				!tmp.data.analysis.protein_mutations.data
+			)
+				throw 'structure is not .data.analysis.protein_mutations.data'
+			re = JSON.parse(tmp.data.analysis.protein_mutations.data)
 		} catch (e) {
 			throw 'invalid JSON returned by GDC'
 		}
-		if (
-			!re.data ||
-			!re.data.explore ||
-			!re.data.explore.ssms ||
-			!re.data.explore.ssms.hits ||
-			!re.data.explore.ssms.hits.edges
-		)
-			throw 'returned structure is not .data.explore.ssms.hits.edges'
+		if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
+		if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
 		const lst = [] // parse snv/indels into this list
-		for (const edge of re.data.explore.ssms.hits.edges) {
-			const ssm = edge.node
+		for (const hit of re.hits) {
+			if (!hit._source) throw '._source{} missing from one of re.hits[]'
+			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
+			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
 			const m = {
-				ssm_id: ssm.ssm_id,
+				ssm_id: hit._source.ssm_id,
 				dt: common.dtsnvindel,
 				chr: req.query.range.chr,
-				pos: ssm.start_position - 1,
-				ref: ssm.reference_allele,
-				alt: ssm.tumor_allele,
+				pos: hit._source.start_position - 1,
+				ref: hit._source.reference_allele,
+				alt: hit._source.tumor_allele,
 				isoform: req.query.isoform,
 				info: {}
 			}
-			gdcgraphql_snvindel_addclass(m, ssm, req)
-			gdcgraphql_snvindel_addoccrrence(m, ssm, query)
+
+			// sneaky, implies that .occurrence_key is required here
+			m.info[query.gdcgraphql_snvindel.occurrence_key] = hit._score
+
+			gdcgraphql_snvindel_addclass(m, hit._source.consequence, req)
 			lst.push(m)
 		}
 		const data = { lst }
@@ -2685,22 +2691,21 @@ async function handle_dsdata_gdcgraphql_snvindel(ds, query, req) {
 	}
 }
 
-function gdcgraphql_snvindel_addoccrrence(m, ssm, query) {
-	if (!query.gdcgraphql_snvindel.occurrence_key) return
-	if (ssm.occurrence && ssm.occurrence.hits && ssm.occurrence.hits.total) {
-		m.info[query.gdcgraphql_snvindel.occurrence_key] = ssm.occurrence.hits.total
-	}
-}
-
-function gdcgraphql_snvindel_addclass(m, ssm, req) {
-	if (ssm.consequence) {
-		const ts = ssm.consequence.hits.edges.find(
-			i => i.node && i.node.transcript && i.node.transcript.transcript_id == req.query.isoform
-		)
-		if (ts && ts.node.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.node.transcript.consequence_type)
+function gdcgraphql_snvindel_addclass(m, consequence, req) {
+	if (consequence) {
+		// [ { transcript } ]
+		const ts = consequence.find(i => i.transcript.transcript_id == req.query.isoform)
+		if (ts && ts.transcript.consequence_type) {
+			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
 			m.class = mclass
-			m.mname = ts.node.transcript.aa_change // may be null!
+			m.mname = ts.transcript.aa_change // may be null!
+
+			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
+			if (ts.transcript.annotation) {
+				for (const k in ts.transcript.annotation) {
+					m.info[k] = ts.transcript.annotation[k]
+				}
+			}
 		}
 	}
 
@@ -2725,6 +2730,7 @@ function gdcgraphql_snvindel_addclass(m, ssm, req) {
 
 function gdcgraphql_snvindel_stratifycount(ds, edges) {
 	/*
+	to be updated
 variants returned from query should include occurrence
 from occurrence count the number of unique project/disease/site,
 hardcoded logic only for gdc!!!
@@ -12249,11 +12255,7 @@ function legacyds_init_one_query(q, ds, genome) {
 	}
 
 	if (q.gdcgraphql_snvindel) {
-		if (!q.gdcgraphql_snvindel.query) return '.query missing from gdcgraphql_snvindel'
-		if (!q.gdcgraphql_snvindel.variables) return '.variables missing from gdcgraphql_snvindel'
-		if (!q.gdcgraphql_snvindel.variables.filter) return '.variables.filter{} missing from gdcgraphql_snvindel'
-		if (!q.gdcgraphql_snvindel.variables.filter.content)
-			return '.variables.filter.content{} missing from gdcgraphql_snvindel'
+		// TODO validate when it's settled
 		return
 	}
 

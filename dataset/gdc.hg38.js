@@ -1,6 +1,34 @@
 ////////////////////////// list of query strings
 
 /*
+query list of variants by isoform
+*/
+const query_isoform2variants = `
+query Lolliplot_relayQuery(
+  $filters: FiltersArgument
+  $score: String
+) {
+  analysis {
+    protein_mutations {
+      data(first: 10000, score: $score, filters: $filters, fields: [
+	  	"ssm_id",
+		"start_position",
+		"reference_allele",
+		"tumor_allele",
+		"consequence.transcript.aa_change",
+		"consequence.transcript.consequence_type",
+		"consequence.transcript.transcript_id",
+		"consequence.transcript.annotation.vep_impact",
+		"consequence.transcript.annotation.polyphen_impact",
+		"consequence.transcript.annotation.polyphen_score",
+		"consequence.transcript.annotation.sift_impact",
+		"consequence.transcript.annotation.sift_score"
+		])
+    }
+  }
+}`
+
+/*
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
@@ -185,6 +213,26 @@ const snvindel_attributes = [
 	{
 		label: 'Occurrence',
 		get: m => m.info.total
+	},
+	{
+		label: 'Polyphen impact',
+		get: m => m.info.polyphen_impact
+	},
+	{
+		label: 'Polyphen score',
+		get: m => m.info.polyphen_score
+	},
+	{
+		label: 'SIFT impact',
+		get: m => m.info.sift_impact
+	},
+	{
+		label: 'SIFT score',
+		get: m => m.info.sift_score
+	},
+	{
+		label: 'VEP impact',
+		get: m => m.info.vep_impact
 	}
 ]
 
@@ -204,7 +252,7 @@ module.exports = {
 	genome: 'hg38',
 	vcfinfofilter,
 	snvindel_attributes,
-	stratify,
+	//stratify,
 
 	onetimequery_projectsize: {
 		gdcgraphql: {
@@ -251,15 +299,27 @@ module.exports = {
 		{
 			name: 'gdc',
 			gdcgraphql_snvindel: {
-				query: query_range2variants,
-				variables: {
-					filter: {
-						op: 'and',
-						content: [
-							{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
-							{ op: '>=', content: { field: 'start_position' } },
-							{ op: '<=', content: { field: 'end_position' } }
-						]
+				byrange: {
+					query: query_range2variants,
+					variables: {
+						filter: {
+							op: 'and',
+							content: [
+								{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
+								{ op: '>=', content: { field: 'start_position' } },
+								{ op: '<=', content: { field: 'end_position' } }
+							]
+						}
+					}
+				},
+				byisoform: {
+					query: query_isoform2variants,
+					variables: {
+						filters: {
+							op: '=',
+							content: { field: 'consequence.transcript.transcript_id' }
+						},
+						score: 'occurrence.case.project.project_id'
 					}
 				},
 				occurrence_key
