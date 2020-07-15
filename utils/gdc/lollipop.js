@@ -1,48 +1,28 @@
 const got = require('got')
 
+const isoform = process.argv[2] || 'ENST00000407796' // AKT1, with first as E17K with 53 cases
+
 const query = `query Lolliplot_relayQuery(
   $filters: FiltersArgument
-  $first: Int
   $score: String
 ) {
   analysis {
     protein_mutations {
-      data(first: $first, score: $score, filters: $filters, fields: [
-	  	#"ssm_id",
-		#"genomic_dna_change",
-		"consequence.transcript.aa_change",
-		#"consequence.transcript.aa_start",
-		"consequence.transcript.consequence_type",
-		#"consequence.transcript.is_canonical",
-		#"consequence.transcript.transcript_id",
-		#"consequence.transcript.annotation.vep_impact",
-		#"consequence.transcript.annotation.polyphen_impact",
-		#"consequence.transcript.annotation.polyphen_score",
-		#"consequence.transcript.annotation.sift_impact",
-		#"consequence.transcript.annotation.sift_score",
-		#"consequence.transcript.gene.gene_id",
-		#"consequence.transcript.gene.symbol",
-		#"occurrence"
+      data(first: 10000, score: $score,  filters: $filters, fields: [
+	  	"ssm_id"
+		"consequence.transcript.aa_change"
+		"consequence.transcript.consequence_type"
+		"consequence.transcript.transcript_id"
+		"occurrence.case.project.project_id"
+		"occurrence.case.primary_site"
+		"occurrence.case.disease_type"
 		])
     }
   }
 }`
 
 const variables = {
-	filters: {
-		op: 'and',
-		content: [
-			{
-				op: 'in',
-				content: {
-					field: 'ssms.consequence.transcript.consequence_type',
-					value: ['missense_variant', 'frameshift_variant', 'start_lost', 'stop_lost', 'stop_gained']
-				}
-			},
-			{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: ['ENST00000554581'] } }
-		]
-	},
-	first: 10000,
+	filters: { op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } },
 	score: 'occurrence.case.project.project_id'
 }
 
@@ -52,7 +32,12 @@ const variables = {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query, variables })
 		})
-		console.log(JSON.stringify(JSON.parse(response.body), null, 2))
+		//console.log(response.body)
+
+		const re = JSON.parse(JSON.parse(response.body).data.analysis.protein_mutations.data)
+		const hit0 = re.hits[0]
+		console.log(JSON.stringify(hit0, null, 2))
+		console.log(re.hits.length, 'hits')
 	} catch (error) {
 		console.log(error)
 	}

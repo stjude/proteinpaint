@@ -143,6 +143,7 @@ app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
+app.get('/dsvariantsummary', handle_dsvariantsummary)
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -2568,6 +2569,92 @@ function handle_clinvarVCF(req, res) {
 	}
 }
 
+async function handle_dsvariantsummary(req, res) {
+	log(req)
+	try {
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'invalid genome'
+		const ds = genome.datasets[req.query.dsname]
+		if (!ds) throw 'dataset not found'
+		if (!ds.stratify) throw 'stratify not supported on this dataset'
+		const strat = ds.stratify.find(i => i.label == req.query.stratify)
+		if (!strat) throw 'unknown stratify method'
+
+		const item2mclass = new Map()
+		// k: item name/key
+		// v: Map
+		//    k: mclass
+		//    v: number of cases
+		if (ds.queries) {
+			await handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass)
+		} else {
+			throw 'unknown query method'
+		}
+		const items = []
+		for (const [itemname, m2c] of item2mclass) {
+			const item = {
+				name: itemname,
+				count: 0,
+				m2c: []
+			}
+			for (const [mclass, count] of m2c) {
+				item.count += count
+				item.m2c.push([mclass, count])
+			}
+			item.m2c.sort((a, b) => b[1] - a[1])
+			if (ds.onetimequery_projectsize) {
+				if (ds.onetimequery_projectsize.results.has(itemname)) {
+					item.cohortsize = ds.onetimequery_projectsize.results.get(itemname)
+				}
+			}
+			items.push(item)
+		}
+		items.sort((a, b) => b.count - a.count)
+		res.send({ items })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass) {
+	for (const query of ds.queries) {
+		if (query.gdcgraphql_snvindel) {
+			// duplicate code with handle_dsdata_gdcgraphql_snvindel_isoform2variants
+			const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
+			for (const hit of hits) {
+				if (!hit._source) throw '._source{} missing from one of re.hits[]'
+				if (!hit._source.consequence) continue
+				const ts = hit._source.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
+				// get mclass of this variant
+				let mclass
+				if (ts && ts.transcript.consequence_type) {
+					const [dt, _mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
+					mclass = _mclass
+				}
+				if (!mclass) continue
+				// for each occurrence, add to counter
+				if (!hit._source.occurrence) continue
+				if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
+				for (const acase of hit._source.occurrence) {
+					if (!acase.case) throw '.case{} missing from a case'
+					let stratvalue = acase.case
+					for (const key of strat.keys) {
+						stratvalue = stratvalue[key]
+					}
+					if (stratvalue) {
+						// has a valid item for this strat category
+						if (!item2mclass.has(stratvalue)) item2mclass.set(stratvalue, new Map())
+						const c = item2mclass.get(stratvalue)
+						c.set(mclass, 1 + (c.get(mclass) || 0))
+					}
+				}
+			}
+		}
+	}
+	return item2mclass
+}
+
 async function handle_dsdata(req, res) {
 	/*
 	poor mechanism, only for old-style official dataset
@@ -2581,6 +2668,12 @@ async function handle_dsdata(req, res) {
 		if (!req.query.dsname) throw '.dsname missing'
 		const ds = genomes[req.query.genome].datasets[req.query.dsname]
 		if (!ds) throw 'invalid dsname'
+
+		/**** for now, process this query here
+		as the /dsdata query will always run before sunburst or stratify queries that rely on project total size
+		***/
+		await may_onetimequery_projectsize(ds)
+
 		const data = []
 
 		for (const query of ds.queries) {
@@ -2634,32 +2727,9 @@ async function handle_dsdata(req, res) {
 async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req) {
 	// query variants by isoforms
 	try {
-		query.gdcgraphql_snvindel.byisoform.variables.filters.content.value = [req.query.isoform]
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify({
-				query: query.gdcgraphql_snvindel.byisoform.query,
-				variables: query.gdcgraphql_snvindel.byisoform.variables
-			})
-		})
-		let re
-		try {
-			const tmp = JSON.parse(response.body)
-			if (
-				!tmp.data ||
-				!tmp.data.analysis ||
-				!tmp.data.analysis.protein_mutations ||
-				!tmp.data.analysis.protein_mutations.data
-			)
-				throw 'structure is not .data.analysis.protein_mutations.data'
-			re = JSON.parse(tmp.data.analysis.protein_mutations.data)
-		} catch (e) {
-			throw 'invalid JSON returned by GDC'
-		}
-		if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-		if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
+		const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
 		const lst = [] // parse snv/indels into this list
-		for (const hit of re.hits) {
+		for (const hit of hits) {
 			if (!hit._source) throw '._source{} missing from one of re.hits[]'
 			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
 			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
@@ -2677,12 +2747,12 @@ async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req
 			// sneaky, implies that .occurrence_key is required here
 			m.info[query.gdcgraphql_snvindel.occurrence_key] = hit._score
 
-			gdcgraphql_snvindel_addclass(m, hit._source.consequence, req)
+			gdcgraphql_snvindel_addclass(m, hit._source.consequence)
 			lst.push(m)
 		}
 		const data = { lst }
 		if (ds.stratify) {
-			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, re.data.explore.ssms.hits.edges)
+			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, hits)
 		}
 		return data
 	} catch (e) {
@@ -2691,10 +2761,40 @@ async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req
 	}
 }
 
-function gdcgraphql_snvindel_addclass(m, consequence, req) {
+async function gdcgraphql_snvindel_byisoform(query, isoform) {
+	// used in two placed
+	const variables = JSON.parse(JSON.stringify(query.gdcgraphql_snvindel.byisoform.variables))
+	variables.filters.content.value = [isoform]
+	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			query: query.gdcgraphql_snvindel.byisoform.query,
+			variables
+		})
+	})
+	let re
+	try {
+		const tmp = JSON.parse(response.body)
+		if (
+			!tmp.data ||
+			!tmp.data.analysis ||
+			!tmp.data.analysis.protein_mutations ||
+			!tmp.data.analysis.protein_mutations.data
+		)
+			throw 'structure is not .data.analysis.protein_mutations.data'
+		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
+	} catch (e) {
+		throw 'invalid JSON returned by GDC'
+	}
+	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
+	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
+	return re.hits
+}
+
+function gdcgraphql_snvindel_addclass(m, consequence) {
 	if (consequence) {
 		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == req.query.isoform)
+		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
 		if (ts && ts.transcript.consequence_type) {
 			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
 			m.class = mclass
@@ -2728,9 +2828,8 @@ function gdcgraphql_snvindel_addclass(m, consequence, req) {
 	}
 }
 
-function gdcgraphql_snvindel_stratifycount(ds, edges) {
+function gdcgraphql_snvindel_stratifycount(ds, hits) {
 	/*
-	to be updated
 variants returned from query should include occurrence
 from occurrence count the number of unique project/disease/site,
 hardcoded logic only for gdc!!!
@@ -2741,13 +2840,13 @@ hardcoded logic only for gdc!!!
 	for (const s of ds.stratify) {
 		label2set.set(s.label, new Set())
 	}
-	for (const edge of edges) {
-		if (!edge.node.occurrence || !edge.node.occurrence.hits || !edge.node.occurrence.hits.edges)
-			throw 'edge.node.occurrence.hits.edges expected for an ssm'
-		for (const sample of edge.node.occurrence.hits.edges) {
-			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
+	for (const hit of hits) {
+		if (!hit._source.occurrence) continue
+		if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
+		for (const acase of hit._source.occurrence) {
+			if (!acase.case) throw '.case{} missing from a case'
 			for (const strat of ds.stratify) {
-				let stratvalue = sample.node.case
+				let stratvalue = acase.case
 				for (const key of strat.keys) {
 					stratvalue = stratvalue[key]
 				}
@@ -2762,6 +2861,48 @@ hardcoded logic only for gdc!!!
 		labelcount.push([lab, s.size])
 	}
 	return labelcount
+}
+
+async function may_onetimequery_projectsize(ds) {
+	if (!ds.onetimequery_projectsize) return
+	if (ds.onetimequery_projectsize.results) {
+		// already got result
+		return
+	}
+	// do the one time query
+	if (ds.onetimequery_projectsize.gdcgraphql) {
+		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify(ds.onetimequery_projectsize.gdcgraphql)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from GDC for onetimequery_projectsize'
+		}
+		if (
+			!re.data ||
+			!re.data.viewer ||
+			!re.data.viewer.explore ||
+			!re.data.viewer.explore.cases ||
+			!re.data.viewer.explore.cases.total ||
+			!re.data.viewer.explore.cases.total.project__project_id ||
+			!re.data.viewer.explore.cases.total.project__project_id.buckets
+		)
+			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
+		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
+			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
+
+		ds.onetimequery_projectsize.results = new Map()
+		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
+			if (!t.key) throw 'key missing from one bucket'
+			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+			ds.onetimequery_projectsize.results.set(t.key, t.doc_count)
+		}
+		return
+	}
+	throw 'unknown query method for onetimequery_projectsize'
 }
 
 function handle_dsdata_makequery(ds, query, req) {

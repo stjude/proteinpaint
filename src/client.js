@@ -214,7 +214,7 @@ function validate_oldds(ds) {
 				if (!ds.cohort) {
 					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
 				}
-			} else if (strat.gdcgraphql) {
+			} else if (strat.byserver) {
 				// allowed
 			} else {
 				if (!strat.attr1) {

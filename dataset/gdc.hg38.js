@@ -5,27 +5,30 @@ query list of variants by isoform
 */
 const query_isoform2variants = `
 query Lolliplot_relayQuery(
-  $filters: FiltersArgument
-  $score: String
+	$filters: FiltersArgument
+	$score: String
 ) {
-  analysis {
-    protein_mutations {
-      data(first: 10000, score: $score, filters: $filters, fields: [
-	  	"ssm_id",
-		"start_position",
-		"reference_allele",
-		"tumor_allele",
-		"consequence.transcript.aa_change",
-		"consequence.transcript.consequence_type",
-		"consequence.transcript.transcript_id",
-		"consequence.transcript.annotation.vep_impact",
-		"consequence.transcript.annotation.polyphen_impact",
-		"consequence.transcript.annotation.polyphen_score",
-		"consequence.transcript.annotation.sift_impact",
-		"consequence.transcript.annotation.sift_score"
-		])
-    }
-  }
+	analysis {
+		protein_mutations {
+			data(first: 10000, score: $score, filters: $filters, fields: [
+				"ssm_id"
+				"start_position"
+				"reference_allele"
+				"tumor_allele"
+				"consequence.transcript.aa_change"
+				"consequence.transcript.consequence_type"
+				"consequence.transcript.transcript_id"
+				"consequence.transcript.annotation.vep_impact"
+				"consequence.transcript.annotation.polyphen_impact"
+				"consequence.transcript.annotation.polyphen_score"
+				"consequence.transcript.annotation.sift_impact"
+				"consequence.transcript.annotation.sift_score"
+				"occurrence.case.project.project_id"
+				"occurrence.case.primary_site"
+				"occurrence.case.disease_type"
+			])
+		}
+	}
 }`
 
 /*
@@ -237,9 +240,9 @@ const snvindel_attributes = [
 ]
 
 const stratify = [
-	{ label: 'project', gdcgraphql: 1, keys: ['project', 'project_id'] },
-	{ label: 'disease', gdcgraphql: 1, keys: ['disease_type'] },
-	{ label: 'site', gdcgraphql: 1, keys: ['primary_site'] }
+	{ label: 'project', byserver: 1, keys: ['project', 'project_id'] },
+	{ label: 'disease', byserver: 1, keys: ['disease_type'] },
+	{ label: 'site', byserver: 1, keys: ['primary_site'] }
 ]
 
 module.exports = {
@@ -252,7 +255,7 @@ module.exports = {
 	genome: 'hg38',
 	vcfinfofilter,
 	snvindel_attributes,
-	//stratify,
+	stratify,
 
 	onetimequery_projectsize: {
 		gdcgraphql: {
