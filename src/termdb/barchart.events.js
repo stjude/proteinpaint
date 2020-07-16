@@ -375,7 +375,7 @@ function menuoption_select_to_gp(self, tvslst) {
 			cohortFilter.selectOptionsFrom = 'selectCohort'
 		}
 		new _.Block({
-			hostURL: localStorage.getItem('hostURL'),
+			hostURL: sessionStorage.getItem('hostURL'),
 			holder: pane.body,
 			genome: obj.genome,
 			nobox: true,

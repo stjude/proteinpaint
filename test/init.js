@@ -4,4 +4,3 @@
 // configHost will be used as default as needed
 const serverconfig = require('../serverconfig')
 window.testHost = 'http://localhost:' + serverconfig.port
-window.localStorage.removeItem('hostURL')

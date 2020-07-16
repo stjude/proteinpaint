@@ -2,8 +2,6 @@ const tape = require('tape')
 const d3s = require('d3-selection')
 const { filterInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
 
-localStorage.setItem('hostURL', '')
-
 /*********
 the direct functional testing of the component, without the use of runpp()
 
