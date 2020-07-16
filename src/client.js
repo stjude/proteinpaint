@@ -263,13 +263,13 @@ export function dofetch(path, arg, opts = null) {
 		path = path.slice(1)
 	}
 
-	const jwt = localStorage.getItem('jwt')
+	const jwt = sessionStorage.getItem('jwt')
 	if (jwt) {
 		arg.jwt = jwt
 	}
 
 	let url = path
-	const host = localStorage.getItem('hostURL') || window.testHost || ''
+	const host = sessionStorage.getItem('hostURL') || window.testHost || ''
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -303,7 +303,7 @@ init {}
 		path = path.slice(1)
 	}
 
-	const jwt = localStorage.getItem('jwt')
+	const jwt = sessionStorage.getItem('jwt')
 	if (jwt) {
 		if (!init.headers) {
 			init.headers = {}
@@ -312,7 +312,7 @@ init {}
 	}
 
 	let url = path
-	const host = localStorage.getItem('hostURL') || window.testHost || ''
+	const host = sessionStorage.getItem('hostURL') || window.testHost || ''
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
@@ -359,7 +359,7 @@ function trackfetch(url, arg) {
 		!fetchTimers[url] &&
 		!fetchReported[url] &&
 		Object.keys(fetchReported).length <= maxNumReportsPerSession &&
-		(window.location.hostname == 'proteinpaint.stjude.org' || localStorage.hostURL == 'proteinpaint.stjude.org')
+		(window.location.hostname == 'proteinpaint.stjude.org' || sessionStorage.hostURL == 'proteinpaint.stjude.org')
 	) {
 		fetchTimers[url] = setTimeout(() => {
 			// do not send multiple reports for the same page

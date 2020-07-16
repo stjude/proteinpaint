@@ -92,9 +92,9 @@ window.runproteinpaint=(arg)=>{
 	}
 
 	// store fetch parameters
-	localStorage.setItem('hostURL', hostURL)
+	sessionStorage.setItem('hostURL', hostURL)
 	if(arg.jwt) {
-		localStorage.setItem('jwt',arg.jwt)
+		sessionStorage.setItem('jwt',arg.jwt)
 	}
 
 
