@@ -26,6 +26,7 @@ query Lolliplot_relayQuery(
 				"occurrence.case.project.project_id"
 				"occurrence.case.primary_site"
 				"occurrence.case.disease_type"
+				"occurrence.case.case_id"
 			])
 		}
 	}
@@ -118,7 +119,7 @@ query OneSsm($filter: FiltersArgument) {
 											}
 											disease_type
 											primary_site
-											# case_id
+											case_id
 										}
 									}
 								}

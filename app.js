@@ -2584,7 +2584,7 @@ async function handle_dsvariantsummary(req, res) {
 		// k: item name/key
 		// v: Map
 		//    k: mclass
-		//    v: number of cases
+		//    v: set of case id
 		if (ds.queries) {
 			await handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass)
 		} else {
@@ -2597,9 +2597,9 @@ async function handle_dsvariantsummary(req, res) {
 				count: 0,
 				m2c: []
 			}
-			for (const [mclass, count] of m2c) {
-				item.count += count
-				item.m2c.push([mclass, count])
+			for (const [mclass, s] of m2c) {
+				item.count += s.size
+				item.m2c.push([mclass, s.size])
 			}
 			item.m2c.sort((a, b) => b[1] - a[1])
 			if (ds.onetimequery_projectsize) {
@@ -2645,8 +2645,13 @@ async function handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass) {
 					if (stratvalue) {
 						// has a valid item for this strat category
 						if (!item2mclass.has(stratvalue)) item2mclass.set(stratvalue, new Map())
-						const c = item2mclass.get(stratvalue)
-						c.set(mclass, 1 + (c.get(mclass) || 0))
+						if (!item2mclass.get(stratvalue).has(mclass)) item2mclass.get(stratvalue).set(mclass, new Set())
+						item2mclass
+							.get(stratvalue)
+							.get(mclass)
+							.add(acase.case.case_id)
+						//const c = item2mclass.get(stratvalue)
+						//c.set(mclass, 1 + (c.get(mclass) || 0))
 					}
 				}
 			}

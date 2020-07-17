@@ -16,6 +16,7 @@ const query = `query Lolliplot_relayQuery(
 		"occurrence.case.project.project_id"
 		"occurrence.case.primary_site"
 		"occurrence.case.disease_type"
+		"occurrence.case.case_id"
 		])
     }
   }
