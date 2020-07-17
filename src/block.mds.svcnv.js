@@ -1308,8 +1308,8 @@ function render_multi_cnvloh(tk, block) {
 
 			// if to draw sample name
 
-			if (!tk.sampleset && (tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
-				// show sample name when is custom track, or no group name in native track, and tall enough
+			if (!samplegroup.name && sample.samplename && sample.height >= minlabfontsize) {
+				// show sample name there is no group name, and tall enough, no matter if custom/native/sampleset
 				sample.svglabel = tk.cnvleftg
 					.append('text')
 					.text(sample.samplename)
@@ -3152,7 +3152,7 @@ function showinput_sampleset(tk, block) {
 	const d = tk.tkconfigtip.d.append('div')
 	const ta = d
 		.append('textarea')
-		.attr('placeholder', 'One sample per row. Each row has sample and group names joined by space.')
+		.attr('placeholder', 'One sample per row. Each row has sample and optional group name, joined by space or tab.')
 	if (tk.sampleset) {
 		const lst = []
 		for (const l of tk.sampleset) {
@@ -3176,16 +3176,28 @@ function showinput_sampleset(tk, block) {
 				.split('\n')
 			if (lst.length == 0) return
 			const g2l = new Map()
+			const samplesnogrp = []
 			for (const line of lst) {
-				const [sample, group] = line.split(' ')
-				if (!sample || !group) continue
-				if (!g2l.has(group)) g2l.set(group, [])
-				g2l.get(group).push(sample)
+				const [sample, group] = line.split(/[\s\t]/)
+				if (!sample) continue
+				if (!group) {
+					samplesnogrp.push(sample)
+				} else {
+					if (!g2l.has(group)) g2l.set(group, [])
+					g2l.get(group).push(sample)
+				}
 			}
-			if (g2l.size == 0) return
 			tk.sampleset = []
 			for (const [name, samples] of g2l) {
 				tk.sampleset.push({ name, samples })
+			}
+			if (samplesnogrp.length) {
+				const g = { samples: samplesnogrp }
+				// has samples without group name, if there are others with group name, use default, otherwise use none
+				if (g2l.size) {
+					g.name = 'Unnamed group'
+				}
+				tk.sampleset.push(g)
 			}
 			tk.tkconfigtip.hide()
 			loadTk(tk, block)
