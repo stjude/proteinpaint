@@ -3114,6 +3114,7 @@ function configPanel(tk, block) {
 }
 
 function makeoption_sampleset(tk, block) {
+	if (tk.singlesample) return
 	const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '25px')
 	if (tk.sampleset) {
 		row

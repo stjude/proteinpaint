@@ -59,6 +59,7 @@ export async function may_allow_samplesearch(tk, block) {
 	may query server to see if is allowed
 	*/
 	if (tk.iscustom) return
+	if (tk.singlesample) return
 
 	const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
 	const input = row
