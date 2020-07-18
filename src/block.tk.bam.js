@@ -601,7 +601,7 @@ if is pair mode, is the template
 	const [ridx, pos] = tmp
 	const lst = [
 		'getread=1',
-		'qname=' + 22642192, //encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
+		'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
 		'genome=' + block.genome.name,
 		'chr=' + block.rglst[ridx].chr,
 		'pos=' + pos,
