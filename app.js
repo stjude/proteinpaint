@@ -52,7 +52,9 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
+	mds3_init = require('./modules/mds3.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
@@ -142,6 +144,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
 app.get('/dsvariantsummary', handle_dsvariantsummary)
 app.post('/bedjdata', handle_bedjdata)
@@ -247,6 +250,11 @@ function clientcopy_genome(genomename) {
 	}
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
+
+		if (ds.isMds3) {
+			g2.datasets[ds.label] = mds3_init.client_copy(ds)
+			continue
+		}
 
 		if (ds.isMds) {
 			const _ds = mds_clientcopy(ds)
@@ -12168,6 +12176,10 @@ function pp_init() {
 			ds.label = d.name
 			g.datasets[ds.label] = ds
 
+			if (ds.isMds3) {
+				mds3_init_wrap(ds, g, d)
+				continue
+			}
 			if (ds.isMds) {
 				/********* MDS ************/
 				const err = mds_init(ds, g, d)
@@ -12925,7 +12937,6 @@ function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		// 2nd generation track
 		mds2_init_wrap(ds, genome)
 	}
 
@@ -13009,6 +13020,18 @@ because mds_init is sync, so has to improvise to catch exception from mds2_init
 		await mds2_init.init(ds, genome)
 	} catch (e) {
 		console.log('ERROR init mds2 track: ' + e)
+		if (e.stack) console.log(e.stack)
+		process.exit()
+	}
+}
+async function mds3_init_wrap(ds, genome, _servconfig) {
+	/*
+because mds_init is sync, so has to improvise to catch exception from mds2_init
+*/
+	try {
+		await mds3_init.init(ds, genome, _servconfig)
+	} catch (e) {
+		console.log('ERROR init mds3 track: ' + e)
 		if (e.stack) console.log(e.stack)
 		process.exit()
 	}

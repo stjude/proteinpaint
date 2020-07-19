@@ -38,6 +38,7 @@ import {
 	mdsexpressionrankload
 } from './block.mds.expressionrank.adaptor'
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
+import { mds3_fromtemplate, mds3_maketk, mds3_load } from './block.mds3.adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
 
 // ds tk special case
@@ -2347,6 +2348,13 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.mds3:
+				const e13 = mds3_fromtemplate(tk, template)
+				if (e13) {
+					this.error(e13)
+					return
+				}
+				break
 			case client.tkt.bedgraphdot:
 				const e11 = bedgraphdot_fromtemplate(tk, template)
 				if (e11) {
@@ -2501,6 +2509,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mds2:
 				mds2_maketk(tk, this)
+				break
+			case client.tkt.mds3:
+				mds3_maketk(tk, this)
 				break
 			case client.tkt.bedgraphdot:
 				bedgraphdot_maketk(tk, this)
@@ -2862,6 +2873,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mds2:
 				mds2_load(tk, this)
+				break
+			case client.tkt.mds3:
+				mds3_load(tk, this)
 				break
 			case client.tkt.bedgraphdot:
 				bedgraphdot_load(tk, this)
@@ -3874,6 +3888,9 @@ if fromgenetk is provided, will skip this track
 						break
 					case client.tkt.mds2:
 						mds2_load(tk, this)
+						break
+					case client.tkt.mds3:
+						mds3_load(tk, this)
 						break
 					case client.tkt.bedgraphdot:
 						bedgraphdot_load(tk, this)
