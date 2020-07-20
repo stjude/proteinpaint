@@ -37,6 +37,10 @@ export function client_copy(ds) {
 		label: ds.label,
 		queries: copy_queries(ds)
 	}
+	if (ds.queries.snvindel) {
+		// include other skewer data types
+		ds2.has_skewer = true
+	}
 
 	return ds2
 }
@@ -49,6 +53,7 @@ function copy_queries(ds) {
 		}
 	}
 	// new query
+	return copy
 }
 
 function validate_sampleSummaries(ds) {

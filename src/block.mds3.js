@@ -27,7 +27,7 @@ export async function loadTk(tk, block) {
 	try {
 		if (tk.uninitialized) {
 			await makeTk(tk, block)
-			delete tk.uninitialized
+			// uninitialized flag will only be deleted after data loading as it needs to be accessed in get_parameter
 		}
 
 		tk.tklabel.each(function() {
@@ -37,9 +37,11 @@ export async function loadTk(tk, block) {
 		const par = get_parameter(tk, block)
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error
+		delete tk.uninitialized
 
 		tk.clear()
-		console.log(data)
+
+		tk.height_main = tk.toppad + tk.bottompad
 
 		tk.height_main += may_render_skewer(data, tk, block)
 		// add new subtrack type
@@ -67,10 +69,25 @@ function loadTk_finish_closure(tk, block) {
 export function get_parameter(tk, block) {
 	// to get data for current view range
 
-	const par = [
-		'genome=' + block.genome.name,
-		'forTrack=1' // instructs server to return data types associated with tracks
-	]
+	const par = ['genome=' + block.genome.name]
+	// instructs server to return data types associated with tracks
+	// including skewer or non-skewer
+	par.push('forTrack=1')
+
+	if (
+		tk.uninitialized ||
+		!block.usegm ||
+		block.gmmode == client.gmmode.genomic ||
+		block.gmmodepast == client.gmmode.genomic
+	) {
+		// need to load skewer data
+		par.push('skewer=1')
+	} else {
+		// in gmmode and not first time loading the track,
+		// do not request skewer data as all skewer data has already been loaded for current isoform
+		// still need to request other track data e.g. cnvpileup
+	}
+
 	if (tk.mds.label) {
 		// official
 		par.push('dslabel=' + tk.mds.label)

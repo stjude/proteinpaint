@@ -5,14 +5,12 @@ import { init as init_legend } from './block.mds3.legend'
 import { loadTk } from './block.mds3'
 
 /*
+common structure of tk.mds between official and custom
 
+tk.skewer{}
+	create if skewer data type is available for this mds
+	if not equipped then tk.skewer is undefined and should not show skewer track
 */
-
-function _load(tk, block) {
-	return () => {
-		return loadTk(tk, block)
-	}
-}
 
 export async function makeTk(tk, block) {
 	tk.load = _load(tk, block)
@@ -36,6 +34,12 @@ export async function makeTk(tk, block) {
 			await getvcfheader_customtk(tk.vcf, block.genome)
 		}
 		*/
+	}
+
+	if (tk.mds.has_skewer) {
+		tk.skewer = {
+			g: tk.glider.append('g')
+		}
 	}
 
 	tk.tklabel.text(tk.name)
@@ -72,4 +76,10 @@ so multiple instances of the same tk won't cross-react
 Note: must keep customizations of official tk through embedding api
 */
 	tk.name = tk.mds.name
+}
+
+function _load(tk, block) {
+	return () => {
+		return loadTk(tk, block)
+	}
 }

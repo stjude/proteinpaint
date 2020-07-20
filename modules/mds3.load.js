@@ -48,29 +48,29 @@ async function load_driver(q, ds, result) {
 	if (q.forTrack) {
 		// to load things for block track
 
-		result.skewer = [] // for skewer track
-
-		if (q.forTrack.types) {
-			// tentative, client instructs to load certain types
-		} else {
-			// no instruction from client, will load data types appropriate for skewer track
+		if (q.skewer) {
+			// get skewer data
+			result.skewer = [] // for skewer track
 			if (ds.queries.snvindel) {
 				result.skewer.push(...(await skewerdata_snvindel(q, ds)))
 			}
 			if (ds.queries.genecnv) {
 				result.skewer.push(...(await skewerdata_genecnv(q, ds)))
 			}
-		}
-		// done loading skewer data
-		console.log('skewerlength', result.skewer.length)
+			console.log('skewerlength', result.skewer.length)
 
-		if (ds.sampleSummaries) {
-			// only return sample summary, not actual samples for each variant
-			result.sampleSummaries = ds.sampleSummaries.get(result.skewer, q)
-			for (const i of result.skewer) {
-				delete i.samples
+			if (ds.sampleSummaries) {
+				// right now this is only summarized from skewer data
+				// only return sample summary, not actual samples for each variant
+				result.sampleSummaries = ds.sampleSummaries.get(result.skewer, q)
+				for (const i of result.skewer) {
+					delete i.samples
+				}
 			}
 		}
+
+		// other types of data e.g. cnvpileup
+
 		return
 	}
 	// other query type

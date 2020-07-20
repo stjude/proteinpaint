@@ -336,6 +336,7 @@ module.exports = {
 		/*
 		svfusion: {
 		},
+		cnvpileup:{},
 		genecnv: {
 			// gene-level cnv of gain/loss categories
 		},
