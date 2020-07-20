@@ -136,7 +136,7 @@ else
 
 	# no-babel-polyfill version for use in sjcloud, 
 	# to avoid conflict with external code
-	if [[ "$ENV" == "public-prod" ]]; then
+	if [[ "$SUBDOMAIN" == "proteinpaint" ]]; then
 		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
 	fi
 
@@ -155,7 +155,7 @@ else
 	mv genome $APP/
 	mv dataset $APP/
 
-	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ]]; then
+	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
 	elif [[ "$ENV" == "internal-stage" ]]; then
 		cp public/pp-int-test.html $APP/public/index.html
@@ -163,7 +163,7 @@ else
 		cp public/index.html $APP/public/index.html
 	fi
 
-	if [[ "$ENV" == "public-prod" ]]; then
+	if [[ "$ENV" == "public-prod" || "$SUBDOMAIN" == "proteinpaint" ]]; then
 		mv $APP/public/bin/no-babel-polyfill $APP/public/
 	fi
 
