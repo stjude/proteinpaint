@@ -90,7 +90,7 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	URL="//proteinpaint.stjude.org/"
 	SUBDOMAIN=proteinpaint
 
-	if [[ "$ENV" == "jump-prod" ]]; then
+	if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 		TEMPUSER=gnomeuser
 		TEMPHOST=svldtemp01.stjude.org
 	fi
@@ -134,12 +134,6 @@ else
 		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
 	fi
 
-	# no-babel-polyfill version for use in sjcloud, 
-	# to avoid conflict with external code
-	if [[ "$SUBDOMAIN" == "proteinpaint" ]]; then
-		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
-	fi
-
 	# create dirs to put extracted files
 	rm -rf $APP
 	mkdir $APP
@@ -161,10 +155,6 @@ else
 		cp public/pp-int-test.html $APP/public/index.html
 	else
 		cp public/index.html $APP/public/index.html
-	fi
-
-	if [[ "$ENV" == "public-prod" || "$SUBDOMAIN" == "proteinpaint" ]]; then
-		mv $APP/public/bin/no-babel-polyfill $APP/public/
 	fi
 
 	# tar inside the dir in order to not create

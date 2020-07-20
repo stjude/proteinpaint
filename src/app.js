@@ -1,4 +1,3 @@
-import 'babel-polyfill'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import * as client from './client'
 import {findgenemodel_bysymbol} from './gene'
