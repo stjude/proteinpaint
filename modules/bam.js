@@ -542,8 +542,9 @@ function may_match_snv(templates, q) {
 	return groups
 }
 
-function match_complexvariant(tempaltes, q) {
+function match_complexvariant(templates, q) {
 	// TODO
+	return []
 }
 
 function match_sv(templates, q) {

@@ -17,14 +17,21 @@ runproteinpaint({
 	parseurl:true,
 	nobox:1,
 	block:1,
-	chr:'chr4',start:55599321,
+	chr:'chr11',
+	start:119155745,
 	genome:'hg19',
 	nativetracks:'refgene',
 	tracks:[
 		{
 			type:'bam',
 			name:'test',
-			file:'hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam',
+			file:'hg19/TARGET/RNAbam/SJAML040632_D1.bam',
+			variant:{
+				chr:'chr11',
+				pos:119155745,
+				ref:'C',
+				alt:'CTGACCTGG'
+			}
 		},
 	],
 })
