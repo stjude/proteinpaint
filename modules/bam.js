@@ -467,7 +467,7 @@ async function divide_reads_togroups(templates, q) {
 		// if snv, simple match; otherwise complex match
 		const lst = may_match_snv(templates, q)
 		if (lst) return lst
-		return match_complexvariant(templates, q)
+		return await match_complexvariant(templates, q)
 	}
 	if (q.sv) {
 		return match_sv(templates, q)
@@ -542,8 +542,29 @@ function may_match_snv(templates, q) {
 	return groups
 }
 
-function match_complexvariant(templates, q) {
+async function match_complexvariant(templates, q) {
 	// TODO
+	// get flanking sequence, suppose that segments are of same length, use segment length
+	const segbplen = templates[0].segments[0].seq.length
+	// need to verify if the retrieved sequence is showing 1bp offset or not
+	const leftflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const rightflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + q.variant.pos + '-' + (q.variant.pos + segbplen)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	console.log(leftflankseq, rightflankseq)
+
 	return []
 }
 
