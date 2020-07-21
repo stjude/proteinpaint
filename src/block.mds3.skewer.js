@@ -14,8 +14,17 @@ loadTk
 ********************** INTERNAL
 
 tk.skewer{}
-	.data
+	.data[]
+		.chr, pos
+		.x
+		.occurrence
+		.mlst[]
+		.groups[]
+			.dt
+			.occurrence
+			.mlst[]
 	.selection
+	.stem1, stem2, stem3 // #pixel
 */
 
 // for skewer track
@@ -40,157 +49,14 @@ export function may_render_skewer(data, tk, block) {
 		// not equipped with skewer track
 		return 0
 	}
-
-	/*
-	makes:
-
-	tk.data
-	tk.skewer
-	tk.maxskewerheight
-	*/
+	tk.aboveprotein = true
 
 	// when to skip grouping
 	//if (block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined && tk.skewer)
 	if (data && data.skewer) {
 		// generate new skewer track with new data
 		tk.skewer.g.selectAll('*').remove()
-
-		const usemlst = mlst_pretreat(data, tk, block)
-		// m.__x added
-
-		const x2mlst = new Map()
-		for (const m of usemlst) {
-			if (!x2mlst.has(m.__x)) {
-				x2mlst.set(m.__x, [])
-			}
-			x2mlst.get(m.__x).push(m)
-		}
-		const datagroup = []
-		const topxbins = []
-		// by resolution
-		if (block.exonsf >= minbpwidth) {
-			// # pixel per nt is big enough
-			// group by each nt
-			for (const [x, mlst] of x2mlst) {
-				datagroup.push({
-					chr: mlst[0].chr,
-					pos: mlst[0].pos,
-					mlst: mlst,
-					x: x,
-					groups: mlst2disc(mlst, tk)
-				})
-			}
-		} else {
-			// # pixel per nt is too small
-			if (block.usegm && block.usegm.coding && block.gmmode != client.gmmode.genomic) {
-				// by aa
-				// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
-				const aa2mlst = new Map()
-				for (const [x, mlst] of x2mlst) {
-					if (mlst[0].chr != block.usegm.chr) {
-						continue
-					}
-					let aapos = undefined
-					for (const m of mlst) {
-						if (Number.isFinite(m.aapos)) aapos = m.aapos
-					}
-					if (aapos == undefined) {
-						aapos = coord.genomic2gm(mlst[0].pos, block.usegm).aapos
-					}
-					if (aapos == undefined) {
-						console.error('data item cannot map to aaposition')
-						console.log(mlst[0])
-						continue
-					}
-					x2mlst.delete(x)
-					if (!aa2mlst.has(aapos)) {
-						aa2mlst.set(aapos, [])
-					}
-					let notmet = true
-					for (const lst of aa2mlst.get(aapos)) {
-						if (Math.abs(lst[0].__x - mlst[0].__x) <= block.exonsf * 3) {
-							for (const m of mlst) {
-								lst.push(m)
-							}
-							notmet = false
-							break
-						}
-					}
-					if (notmet) {
-						aa2mlst.get(aapos).push(mlst)
-					}
-				}
-				const utr5len = block.usegm.utr5 ? block.usegm.utr5.reduce((i, j) => i + j[1] - j[0], 0) : 0
-				for (const llst of aa2mlst.values()) {
-					for (const mlst of llst) {
-						let m = null
-						for (const m2 of mlst) {
-							if (Number.isFinite(m2.rnapos)) m = m2
-						}
-						if (m == null) {
-							console.log('trying to map mlst to codon, but no rnapos found')
-							for (const m of mlst) {
-								console.log(m)
-							}
-							continue
-						}
-						datagroup.push({
-							chr: mlst[0].chr,
-							pos: m.pos,
-							mlst: mlst,
-							x: mlst[0].__x,
-							groups: mlst2disc(mlst, tk)
-						})
-					}
-				}
-			}
-			// leftover by px bin
-			const pxbin = []
-			const binpx = 2
-			for (const [x, mlst] of x2mlst) {
-				const i = Math.floor(x / binpx)
-				if (!pxbin[i]) {
-					pxbin[i] = []
-				}
-				pxbin[i] = [...pxbin[i], ...mlst]
-			}
-			for (const mlst of pxbin) {
-				if (!mlst) continue
-				const xsum = mlst.reduce((i, j) => i + j.__x, 0)
-				datagroup.push({
-					isbin: true,
-					chr: mlst[0].chr,
-					pos: mlst[0].pos,
-					mlst: mlst,
-					x: xsum / mlst.length,
-					groups: mlst2disc(mlst, tk)
-				})
-			}
-		}
-		datagroup.sort((a, b) => a.x - b.x)
-		if (tk.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == client.gmmode.genomic)) {
-			// inherit genomic mode and panned
-			const pastmode = {}
-			for (const g of tk.data) {
-				pastmode[g.chr + '.' + g.pos] = {
-					mode: g.showmode,
-					xoffset: g.xoffset,
-					slabelrotate: g.slabelrotate // no effect
-				}
-			}
-			for (const g of datagroup) {
-				const k = g.chr + '.' + g.pos
-				if (pastmode[k]) {
-					g.showmode = pastmode[k].mode
-					g.xoffset = pastmode[k].xoffset
-					g.slabelrotate = pastmode[k].slabelrotate
-				}
-			}
-		}
-		tk.data = datagroup
-		for (const d of tk.data) {
-			d.occurrence = d.groups.reduce((i, j) => i + j.occurrence, 0)
-		}
+		tk.skewer.data = make_skewer_data(data, tk, block)
 		skewer_make(tk, block)
 	} else {
 		// in gmmode, browser panned, no re-requesting data
@@ -199,18 +65,16 @@ export function may_render_skewer(data, tk, block) {
 
 		tkdata_update_x(tk, block)
 
-		tk.skewer.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
+		tk.skewer.selection.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
 		settle_glyph(tk, block)
 	}
 
-	if (!tk.data || tk.data.length == 0) {
-		done_tknodata(tk, block)
-		return
+	if (!tk.skewer.data || tk.skewer.data.length == 0) {
+		return done_tknodata(tk, block)
 	}
 
 	/*
 	variants loaded for this track
-
 	*/
 
 	if (tk.hlaachange || tk.hlvariants) {
@@ -222,7 +86,7 @@ export function may_render_skewer(data, tk, block) {
 
 		if (tk.hlaachange) {
 			// is map
-			for (const d of tk.data) {
+			for (const d of tk.skewer.data) {
 				let has = false
 				for (const g of d.groups) {
 					if (tk.hlaachange.has(g.mlst[0].mname)) {
@@ -254,7 +118,7 @@ export function may_render_skewer(data, tk, block) {
 				hlkeys[m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt] = 1
 			}
 
-			for (const d of tk.data) {
+			for (const d of tk.skewer.data) {
 				let has = false
 				for (const g of d.groups) {
 					if (has) {
@@ -282,7 +146,146 @@ export function may_render_skewer(data, tk, block) {
 		settle_glyph(tk, block)
 	}
 
-	return tk.maxskewerheight + tk.stem1 + tk.stem2 + tk.stem3
+	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+}
+
+function make_skewer_data(data, tk, block) {
+	const usemlst = mlst_pretreat(data, tk, block)
+	// m.__x added
+
+	const x2mlst = new Map()
+	for (const m of usemlst) {
+		if (!x2mlst.has(m.__x)) {
+			x2mlst.set(m.__x, [])
+		}
+		x2mlst.get(m.__x).push(m)
+	}
+	const datagroup = []
+	const topxbins = []
+	// by resolution
+	if (block.exonsf >= minbpwidth) {
+		// # pixel per nt is big enough
+		// group by each nt
+		for (const [x, mlst] of x2mlst) {
+			datagroup.push({
+				chr: mlst[0].chr,
+				pos: mlst[0].pos,
+				mlst: mlst,
+				x: x,
+				groups: mlst2disc(mlst, tk)
+			})
+		}
+	} else {
+		// # pixel per nt is too small
+		if (block.usegm && block.usegm.coding && block.gmmode != client.gmmode.genomic) {
+			// by aa
+			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
+			const aa2mlst = new Map()
+			for (const [x, mlst] of x2mlst) {
+				if (mlst[0].chr != block.usegm.chr) {
+					continue
+				}
+				let aapos = undefined
+				for (const m of mlst) {
+					if (Number.isFinite(m.aapos)) aapos = m.aapos
+				}
+				if (aapos == undefined) {
+					aapos = coord.genomic2gm(mlst[0].pos, block.usegm).aapos
+				}
+				if (aapos == undefined) {
+					console.error('data item cannot map to aaposition')
+					console.log(mlst[0])
+					continue
+				}
+				x2mlst.delete(x)
+				if (!aa2mlst.has(aapos)) {
+					aa2mlst.set(aapos, [])
+				}
+				let notmet = true
+				for (const lst of aa2mlst.get(aapos)) {
+					if (Math.abs(lst[0].__x - mlst[0].__x) <= block.exonsf * 3) {
+						for (const m of mlst) {
+							lst.push(m)
+						}
+						notmet = false
+						break
+					}
+				}
+				if (notmet) {
+					aa2mlst.get(aapos).push(mlst)
+				}
+			}
+			const utr5len = block.usegm.utr5 ? block.usegm.utr5.reduce((i, j) => i + j[1] - j[0], 0) : 0
+			for (const llst of aa2mlst.values()) {
+				for (const mlst of llst) {
+					let m = null
+					for (const m2 of mlst) {
+						if (Number.isFinite(m2.rnapos)) m = m2
+					}
+					if (m == null) {
+						console.log('trying to map mlst to codon, but no rnapos found')
+						for (const m of mlst) {
+							console.log(m)
+						}
+						continue
+					}
+					datagroup.push({
+						chr: mlst[0].chr,
+						pos: m.pos,
+						mlst: mlst,
+						x: mlst[0].__x,
+						groups: mlst2disc(mlst, tk)
+					})
+				}
+			}
+		}
+		// leftover by px bin
+		const pxbin = []
+		const binpx = 2
+		for (const [x, mlst] of x2mlst) {
+			const i = Math.floor(x / binpx)
+			if (!pxbin[i]) {
+				pxbin[i] = []
+			}
+			pxbin[i] = [...pxbin[i], ...mlst]
+		}
+		for (const mlst of pxbin) {
+			if (!mlst) continue
+			const xsum = mlst.reduce((i, j) => i + j.__x, 0)
+			datagroup.push({
+				isbin: true,
+				chr: mlst[0].chr,
+				pos: mlst[0].pos,
+				mlst: mlst,
+				x: xsum / mlst.length,
+				groups: mlst2disc(mlst, tk)
+			})
+		}
+	}
+	datagroup.sort((a, b) => a.x - b.x)
+	if (tk.skewer.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == client.gmmode.genomic)) {
+		// inherit genomic mode and panned
+		const pastmode = {}
+		for (const g of tk.skewer.data) {
+			pastmode[g.chr + '.' + g.pos] = {
+				mode: g.showmode,
+				xoffset: g.xoffset,
+				slabelrotate: g.slabelrotate // no effect
+			}
+		}
+		for (const g of datagroup) {
+			const k = g.chr + '.' + g.pos
+			if (pastmode[k]) {
+				g.showmode = pastmode[k].mode
+				g.xoffset = pastmode[k].xoffset
+				g.slabelrotate = pastmode[k].slabelrotate
+			}
+		}
+	}
+	for (const d of datagroup) {
+		d.occurrence = d.groups.reduce((i, j) => i + j.occurrence, 0)
+	}
+	return datagroup
 }
 
 function group2occurrence(g, tk) {
@@ -455,8 +458,6 @@ custom mclass from vcfinfofilter
 
 */
 
-	delete tk.skewer2
-
 	const color4disc = m => {
 		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
 			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
@@ -482,9 +483,9 @@ custom mclass from vcfinfofilter
 		return 'black'
 	}
 
-	// ITD/DEL stacked bars
-	const stackbars = []
-	for (const d of tk.data) {
+	const ss = tk.skewer
+
+	for (const d of ss.data) {
 		d.x0 = d.x
 		if (d.xoffset != undefined) {
 			d.x = d.x0 + d.xoffset
@@ -493,74 +494,6 @@ custom mclass from vcfinfofilter
 		// create stack bars
 		for (const g of d.groups) {
 			g.aa = d // disc reference group
-			let rnaspan = null
-			if (g.dt == common.dtitd) {
-				rnaspan = g.mlst[0].rnaduplength
-				for (const m of g.mlst) {
-					rnaspan = Math.max(rnaspan, m.rnaduplength)
-				}
-			} else if (g.dt == common.dtdel) {
-				rnaspan = g.mlst[0].rnadellength
-				for (const m of g.mlst) {
-					rnaspan = Math.max(rnaspan, m.rnadellength)
-				}
-			} else {
-				// no business
-				continue
-			}
-			// no isInteger, rna position can have .5
-			if (!Number.isFinite(rnaspan) || rnaspan < 0) {
-				// support if genomic pos is available
-				console.log('no rnaspan for stack bar from itd/del')
-				console.log(g.mlst)
-				continue
-			}
-			let pxspan = null
-			if (block.usegm) {
-				const rnapos = g.mlst[0].rnapos // rnapos should always be available!
-				const genomicpos = coord.rna2gmcoord(rnapos + rnaspan, block.usegm)
-				const hits = block.seekcoord(block.usegm.chr, genomicpos)
-				if (hits.length > 0) {
-					pxspan = hits[0].x - d.x
-				} else {
-					console.log(genomicpos + ' no hit on rglst')
-				}
-			}
-			if (!Number.isFinite(pxspan)) {
-				console.log('no pxspan for stack bar from itd/del')
-				console.log(g.mlst)
-				continue
-			}
-			g.stackbar = {
-				aa: d.mlst[0].aapos,
-				pxspan: pxspan,
-				height: 4, // fixed bar height
-				grp: g
-			}
-			d.hasstackbar = true
-			stackbars.push(g.stackbar)
-		}
-	}
-	let stackbarmaxheight = 0 // for setting stem3
-	// TODO stairs may replace stackbars
-	if (stackbars.length > 0) {
-		let ypad = 1
-		for (let i = 0; i < stackbars.length; i++) {
-			const si = stackbars[i]
-			const overlap = []
-			for (let j = 0; j < i; j++) {
-				const sj = stackbars[j]
-				if (Math.max(si.aa, sj.aa) < Math.min(si.pxspan + si.aa, sj.pxspan + sj.aa)) {
-					overlap.push(sj)
-				}
-			}
-			si.y = 2
-			for (const sj of overlap) {
-				if (Math.max(si.y, sj.y) < Math.min(si.y + si.height, sj.y + sj.height)) {
-					si.y = sj.y + sj.height + ypad
-				}
-			}
-			stackbarmaxheight = Math.max(stackbarmaxheight, si.y + si.height)
 		}
 	}
 
@@ -569,7 +502,7 @@ custom mclass from vcfinfofilter
 
 	// get max m count for discs, for scaling disc radius
 	let mdc = 0
-	for (const d of tk.data) {
+	for (const d of ss.data) {
 		for (const g of d.groups) {
 			mdc = Math.max(mdc, g.occurrence)
 		}
@@ -584,50 +517,54 @@ custom mclass from vcfinfofilter
 	const sf_discradius = scaleLinear()
 		.domain([1, mdc * 0.5, mdc * 0.6, mdc * 0.7, mdc * 0.8, mdc])
 		.range([w, w + (mrd - w) * 0.8, w + (mrd - w) * 0.85, w + (mrd - w) * 0.9, w + (mrd - w) * 0.95, mrd])
+
 	let globalmaxradius = dotwidth / 2
-	tk.maxskewerheight = 0
-	tk.skewer = tk.glider
+	ss.maxheight = 0
+	for (const d of ss.data) {
+		// determine dimension for this skewer, do not position or render yet
+		// compute radius for each group
+		if (d.showmode == undefined) {
+			d.showmode = modefold
+		} else {
+			// has already been set by past data from genomic panning
+		}
+		d.maxradius = 0
+		d.maxrimwidth = 0
+		d.width = 0
+		d.slabelrotate = false
+		d.slabelwidth = 0
+		for (const r of d.groups) {
+			if (r.occurrence == 1) {
+				r.radius = dotwidth / 2
+			} else {
+				const digc = r.occurrence.toString().length
+				r.radius = Math.max(Math.sqrt(sf_discradius(r.occurrence) / Math.PI), digc * 5)
+			}
+			d.maxradius = Math.max(d.maxradius, r.radius)
+			globalmaxradius = Math.max(globalmaxradius, r.radius)
+
+			r.rimwidth = r.rim1count + r.rim2count == 0 ? 0 : Math.max(2, r.radius / 6)
+			d.maxrimwidth = Math.max(d.maxrimwidth, r.rimwidth)
+		}
+		let totalheight = 0
+		for (const r of d.groups) {
+			r.yoffset = totalheight + r.radius + r.rimwidth // immutable, y shift at expand mode
+			totalheight += (r.radius + r.rimwidth) * 2
+		}
+		ss.maxheight = Math.max(ss.maxheight, totalheight)
+	}
+
+	ss.selection = ss.g
 		.selectAll()
-		.data(tk.data)
+		.data(ss.data)
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg')
 		.each(function(d) {
-			// determine dimension for this skewer, do not position or render yet
-			// compute radius for each group
 			d.skewer = this
-			if (d.showmode == undefined) {
-				d.showmode = modefold
-			} else {
-				// has already been set by past data from genomic panning
-			}
-			d.maxradius = 0
-			d.maxrimwidth = 0
-			d.width = 0
-			d.slabelrotate = false
-			d.slabelwidth = 0
-			for (const r of d.groups) {
-				if (r.occurrence == 1) {
-					r.radius = dotwidth / 2
-				} else {
-					const digc = r.occurrence.toString().length
-					r.radius = Math.max(Math.sqrt(sf_discradius(r.occurrence) / Math.PI), digc * 5)
-				}
-				d.maxradius = Math.max(d.maxradius, r.radius)
-				globalmaxradius = Math.max(globalmaxradius, r.radius)
-
-				r.rimwidth = r.rim1count + r.rim2count == 0 ? 0 : Math.max(2, r.radius / 6)
-				d.maxrimwidth = Math.max(d.maxrimwidth, r.rimwidth)
-			}
-			let totalheight = 0
-			for (const r of d.groups) {
-				r.yoffset = totalheight + r.radius + r.rimwidth // immutable, y shift at expand mode
-				totalheight += (r.radius + r.rimwidth) * 2
-			}
-			tk.maxskewerheight = Math.max(tk.maxskewerheight, totalheight)
 		})
 	// disc containers
-	const discg = tk.skewer
+	const discg = ss.selection
 		.selectAll()
 		.data(d => d.groups)
 		.enter()
@@ -642,13 +579,6 @@ custom mclass from vcfinfofilter
 		})
 	// actual disc
 	const discdot = discg.append('circle')
-	// hollow disc
-	discdot
-		.filter(d => d.dt == common.dtitd || d.dt == common.dtdel || d.dt == common.dtnloss || d.dt == common.dtcloss)
-		.attr('fill', 'white')
-		.attr('stroke-width', 2)
-		.attr('stroke', d => color4disc(d.mlst[0]))
-		.attr('r', d => d.radius - 2)
 	// full filled
 	discdot
 		.filter(d => d.dt == common.dtsnvindel || d.dt == common.dtsv || d.dt == common.dtfusionrna)
@@ -692,9 +622,6 @@ custom mclass from vcfinfofilter
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
 		.attr('fill', 'white')
-	textslc
-		.filter(d => d.dt == common.dtitd || d.dt == common.dtdel || d.dt == common.dtcloss || d.dt == common.dtnloss)
-		.attr('fill', d => color4disc(d.mlst[0]))
 	// right-side label
 	const textlab = discg
 		.append('text')
@@ -710,8 +637,8 @@ custom mclass from vcfinfofilter
 			if (d.aa.groups.length == 1) {
 				d.aa.slabelrotate = true
 				d.aa.slabelwidth = lw
-				// skewer has single disc, label may rotate up, thus should be considerred in maxskewerheight
-				tk.maxskewerheight = Math.max(tk.maxskewerheight, (d.radius + d.rimwidth) * 2 + 2 + lw)
+				// skewer has single disc, label may rotate up, thus should be considerred in skewer maxheight
+				ss.maxheight = Math.max(ss.maxheight, (d.radius + d.rimwidth) * 2 + 2 + lw)
 			}
 		})
 		.attr('fill', d => color4disc(d.mlst[0]))
@@ -727,28 +654,16 @@ custom mclass from vcfinfofilter
 		.on('click', d => {
 			fold_glyph([d.aa], tk)
 			unfold_update(tk, block)
-			if (block.debugmode) {
-				console.log(d.aa)
-			}
 		})
 
 	if (tk.hlaachange) {
 		// special effect for highlighted variants
 		//const big=1.3
 		textlab.filter(d => tk.hlaachange.has(d.mlst[0].mname)).classed('sja_pulse', true)
-		/*
-	.attr('font-weight',(d)=>{
-		return tk.hlaachange.has(d.mlst[0].mname) ? 'bold' : 'normal'
-	})
-	.attr('font-size',(d)=>{
-		return d._labfontsize*big
-	})
-	.attr('y',d=> d._labfontsize*big*middlealignshift)
-	*/
 	}
 
 	// skewer width
-	for (const d of tk.data) {
+	for (const d of ss.data) {
 		let leftw = 0,
 			rightw = 0
 		for (const g of d.groups) {
@@ -860,31 +775,31 @@ custom mclass from vcfinfofilter
 		// stem 1,2
 		let lapcount = 0
 		let lastx = 0
-		for (const d of tk.data) {
+		for (const d of ss.data) {
 			if (d.x - d.maxradius - d.maxrimwidth < lastx) {
 				lapcount++
 			}
 			lastx = Math.max(lastx, d.x + d.width - d.maxradius - d.maxrimwidth)
 		}
 		// stem1
-		tk.stem1 = lapcount == 0 ? 0 : dotwidth
+		ss.stem1 = lapcount == 0 ? 0 : dotwidth
 		// stem2
-		tk.stem2 = scaleLinear()
-			.domain([0, 1, tk.data.length])
+		ss.stem2 = scaleLinear()
+			.domain([0, 1, ss.data.length])
 			.range([0, dotwidth, dotwidth * 3])(lapcount)
 	}
 	// stem3
 	const hbaseline = dotwidth * 0.7
 	// to set stem3, get max group size
 	let maxm = 0
-	for (const d of tk.data) {
+	for (const d of ss.data) {
 		for (const g of d.groups) {
 			maxm = Math.max(maxm, g.occurrence)
 		}
 	}
-	tk.stem3 = Math.max(stackbarmaxheight + 2, hbaseline + dotwidth * Math.min(5, maxm))
+	ss.stem3 = Math.max(2, hbaseline + dotwidth * Math.min(5, maxm))
 	// invisible kicking skewer cover when folded
-	tk.skewer
+	ss.selection
 		.append('circle')
 		.attr('class', 'sja_aa_skkick')
 		.attr('fill', 'white')
@@ -986,163 +901,33 @@ custom mclass from vcfinfofilter
 	// set fold y offset
 	// get max mcount for skewers
 	let mm = 0
-	for (const d of tk.data) {
+	for (const d of ss.data) {
 		mm = Math.max(mm, d.occurrence)
 	}
 	const sf_foldyoff = scaleLinear()
 		.domain([1, mm])
-		.range([hbaseline, tk.stem3 - globalmaxradius])
-	tk.skewer.attr('transform', d => {
+		.range([hbaseline, ss.stem3 - globalmaxradius])
+	ss.selection.attr('transform', d => {
 		d.foldyoffset = sf_foldyoff(d.occurrence)
 		d.y = skewer_sety(d, tk)
 		return 'translate(' + d.x + ',' + d.y + ')'
 	})
-	if (stackbars.length > 0) {
-		// stack bars, make this before stem
-		tk.skewer
-			.filter(d => d.hasstackbar)
-			.selectAll()
-			.data(d => {
-				const bars = []
-				for (const g of d.groups) {
-					if (g.stackbar) {
-						bars.push(g.stackbar)
-					}
-				}
-				return bars
-			})
-			.enter()
-			.append('g')
-			.attr('class', 'sja_aa_stackbar_g')
-			.attr('transform', d => {
-				// initially all skewers are folded so only use stem1
-				return 'translate(0,' + (tk.aboveprotein ? 1 : -1) * (tk.stem1 - d.y) + ')'
-			})
-			.append('rect')
-			.attr('y', d => (tk.aboveprotein ? -d.height : 0))
-			.attr('class', 'sja_aa_stackbar_rect')
-			.attr('width', 0)
-			.attr('shape-rendering', 'crispEdges')
-			.attr('fill-opacity', 0.5)
-			.attr('stroke', 'none')
-			.attr('stroke-width', 1)
-			.attr('height', d => d.height)
-			.attr('fill', d => color4disc(d.grp.mlst[0]))
-			.on('mouseover', d => {
-				const color = color4disc(d.grp.mlst[0])
-				d3select(d3event.target).attr('stroke', color)
-				const pica = tk.pica
-				let label1 = 'wrong label'
-				let label2 = 'wrong label, '
-				switch (d.grp.mlst[0].dt) {
-					case common.dtitd:
-						label1 = common.mclass[d.grp.mlst[0].class].desc
-						label2 = Math.ceil(d.grp.mlst[0].rnaduplength / 3) + ' aa, '
-						break
-					case common.dtdel:
-						label1 = common.mclass[d.grp.mlst[0].class].label
-						label2 = Math.ceil(d.grp.mlst[0].rnadellength / 3) + ' aa, '
-						break
-				}
-				if (d.grp.occurrence == 1) {
-					const m = d.grp.mlst[0]
-					if (m.sample) {
-						label2 += m.sample
-					} else if (m.patient) {
-						label2 += m.patient
-					} else {
-						label2 += '1 sample'
-					}
-				} else {
-					label2 += d.grp.occurrence + ' samples'
-				}
-				const fontsize1 = 14,
-					fontsize2 = 10,
-					vpad = 2,
-					hpad = 4
-				let width = 0
-				pica.g
-					.append('text')
-					.text(label1)
-					.attr('font-size', fontsize1)
-					.attr('font-family', client.font)
-					.each(function() {
-						width = this.getBBox().width
-					})
-					.remove()
-				pica.g
-					.append('text')
-					.text(label2)
-					.attr('font-size', fontsize2)
-					.attr('font-family', client.font)
-					.each(function() {
-						width = Math.max(width, this.getBBox().width)
-					})
-					.remove()
-				const boxheight = vpad * 3 + fontsize1 + fontsize2
-				pica.x = d.grp.aa.x0 + 3
-				pica.y = tk.aboveprotein
-					? tk.height_main - tk.toppad - tk.bottompad - d.y - d.height - 3 - boxheight
-					: d.y + d.height + 3
-				pica.g.attr('transform', 'translate(' + pica.x + ',' + pica.y + ')')
-				pica.g
-					.append('rect')
-					.attr('width', width + hpad * 2)
-					.attr('height', boxheight)
-					.attr('stroke', color)
-					.attr('stroke-width', 1)
-					.attr('shape-rendering', 'crispEdges')
-					.attr('fill', 'white')
-					.attr('fill-opacity', 0.8)
-				pica.g
-					.append('text')
-					.text(label1)
-					.attr('x', hpad)
-					.attr('y', vpad + fontsize1 / 2)
-					.attr('dominant-baseline', 'middle')
-					.attr('font-size', fontsize1)
-					.attr('font-family', client.font)
-					.attr('fill', color)
-				pica.g
-					.append('text')
-					.text(label2)
-					.attr('x', hpad)
-					.attr('y', vpad * 2 + fontsize1 + fontsize2 / 2)
-					.attr('dominant-baseline', 'middle')
-					.attr('font-size', fontsize2)
-					.attr('font-family', client.font)
-					.attr('fill', '#858585')
-			})
-			.on('mouseout', d => {
-				d3select(d3event.target).attr('stroke', 'none')
-				tk.pica.g.selectAll('*').remove()
-			})
-			.on('click', d => {
-				itemtable({
-					mlst: d.grp.mlst,
-					pane: true,
-					x: d3event.clientX,
-					y: d3event.clientY,
-					tk: tk,
-					block: block
-				})
-			})
-	}
+	// no stackbars
 	// stem
-	tk.skewer
+	ss.selection
 		.append('path')
 		.attr('class', 'sja_aa_stem')
 		.attr('d', d => skewer_setstem(d, tk))
 		.attr('stroke', d => color4disc(d.groups[0].mlst[0]))
 		.attr('fill', 'none')
 	// ssk: only for skewers with >1 groups
-	const mgsk = tk.skewer.filter(d => d.groups.length > 1)
+	const mgsk = ss.selection.filter(d => d.groups.length > 1)
 	mgsk
 		.append('rect')
 		.attr('class', 'sja_aa_ssk_bg')
 		.attr('shape-rendering', 'crispEdges')
 		.attr('fill-opacity', 0)
-		.attr('height', tk.stem1)
+		.attr('height', ss.stem1)
 		.attr('fill', d => color4disc(d.groups[0].mlst[0]))
 		.attr('width', d => {
 			d.ssk_width = Math.max(d.occurrence.toString().length * 8 + 6, 2 * (d.maxradius + d.maxrimwidth))
@@ -1159,7 +944,7 @@ custom mclass from vcfinfofilter
 		.attr('dominant-baseline', 'central')
 		.text(d => d.occurrence)
 		.each(d => {
-			d.ssk_fontsize = Math.min(tk.stem1, d.ssk_width / (d.occurrence.toString().length * client.textlensf))
+			d.ssk_fontsize = Math.min(ss.stem1, d.ssk_width / (d.occurrence.toString().length * client.textlensf))
 		})
 		.attr('font-size', d => d.ssk_fontsize)
 	// ssk - kick
@@ -1169,7 +954,7 @@ custom mclass from vcfinfofilter
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke', 'none')
-		.attr('height', tk.stem1)
+		.attr('height', ss.stem1)
 		.attr('x', d => -d.ssk_width / 2)
 		.attr('width', d => d.ssk_width)
 		.on('mouseover', d => {
@@ -1204,7 +989,7 @@ custom mclass from vcfinfofilter
 			// must not check d3event after await as it will be voided
 			const p = d3event.target.getBoundingClientRect()
 			if (d.occurrence > 1) {
-				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
+				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * ss.stem1) / 2, tk, block))
 					return
 			}
 			itemtable({
@@ -1218,79 +1003,15 @@ custom mclass from vcfinfofilter
 		})
 }
 
-export function skewer_flip(tk) {
-	tk.aboveprotein = !tk.aboveprotein
-
-	if (tk.numericmode) {
-		// won't do
-		return
-	}
-
-	const abp = tk.aboveprotein
-	const dur = 1000
-
-	const skbars = tk.skewer.filter(d => d.hasstackbar)
-	skbars
-		.selectAll('.sja_aa_stackbar_g')
-		.transition()
-		.duration(dur)
-		.attr('transform', d => {
-			const k = d.grp.aa
-			return (
-				'translate(' +
-				(k.showmode == modefold ? 0 : k.x0 - k.x) +
-				',' +
-				(abp ? 1 : -1) * (k.showmode == modefold ? tk.stem1 - d.y : tk.stem1 + tk.stem2 + tk.stem3 - d.y) +
-				')'
-			)
-		})
-	skbars
-		.filter(d => d.showmode == modeshow)
-		.selectAll('.sja_aa_stackbar_rect')
-		.transition()
-		.duration(dur)
-		.attr('y', d => (abp ? -d.height : 0))
-	tk.skewer
-		.transition()
-		.duration(dur)
-		.attr('transform', d => {
-			d.y = skewer_sety(d, tk)
-			return 'translate(' + d.x + ',' + d.y + ')'
-		})
-	tk.skewer
-		.selectAll('.sja_aa_stem')
-		.transition()
-		.duration(dur)
-		.attr('d', d => skewer_setstem(d, tk))
-	tk.skewer
-		.selectAll('.sja_aa_discg')
-		.transition()
-		.duration(dur)
-		.attr('transform', d => {
-			d.y = (abp ? -1 : 1) * (d.aa.showmode == modefold ? d.aa.maxradius : d.yoffset)
-			return 'translate(0,' + d.y + ')'
-		})
-	tk.skewer.selectAll('.sja_aa_ssk_kick').attr('y', abp ? 0 : -tk.stem1)
-	tk.skewer.selectAll('.sja_aa_ssk_bg').attr('y', abp ? 0 : -tk.stem1)
-	tk.skewer.selectAll('.sja_aa_ssk_text').attr('y', ((abp ? 1 : -1) * tk.stem1) / 2)
-	tk.skewer.selectAll('.sja_aa_skkick').attr('cy', d => (abp ? -1 : 1) * d.maxradius)
-	tk.skewer
-		.filter(d => d.showmode == modeshow && d.groups.length == 1)
-		.selectAll('.sja_aa_disclabel')
-		.transition()
-		.duration(dur)
-		.attr('transform', d => 'scale(1) rotate(' + (d.aa.slabelrotate ? (abp ? '-' : '') + '90' : '0') + ')')
-}
-
 function skewer_sety(d, tk) {
 	if (tk.aboveprotein) {
 		if (d.showmode == modefold) {
-			return tk.maxskewerheight + tk.stem1 + tk.stem2 + tk.stem3 - d.foldyoffset
+			return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3 - d.foldyoffset
 		}
-		return tk.maxskewerheight
+		return tk.skewer.maxheight
 	}
 	if (d.showmode == modefold) return d.foldyoffset
-	return tk.stem1 + tk.stem2 + tk.stem3
+	return tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
 }
 
 function skewer_setstem(d, tk) {
@@ -1298,18 +1019,16 @@ function skewer_setstem(d, tk) {
 		if (d.showmode == modefold) {
 			return 'M0,0v0l0,0v' + d.foldyoffset
 		}
-		return 'M0,0v' + tk.stem1 + 'l' + (d.x0 - d.x) + ',' + tk.stem2 + 'v' + tk.stem3
+		return 'M0,0v' + tk.skewer.stem1 + 'l' + (d.x0 - d.x) + ',' + tk.skewer.stem2 + 'v' + tk.skewer.stem3
 	}
 	if (d.showmode == modefold) {
 		return 'M0,0v0l0,0v-' + d.foldyoffset
 	}
-	return 'M0,0v-' + tk.stem1 + 'l' + (d.x0 - d.x) + ',-' + tk.stem2 + 'v-' + tk.stem3
+	return 'M0,0v-' + tk.skewer.stem1 + 'l' + (d.x0 - d.x) + ',-' + tk.skewer.stem2 + 'v-' + tk.skewer.stem3
 }
 
 export function settle_glyph(tk, block) {
-	if (tk.data.length == 0) {
-		return
-	}
+	if (tk.skewer.data.length == 0) return
 	const x1 = 0
 	const x2 = block.width
 	// only settle those in view range
@@ -1317,7 +1036,7 @@ export function settle_glyph(tk, block) {
 	let sumwidth = 0
 	const allinview = []
 	const beyondviewitems = []
-	for (const d of tk.data) {
+	for (const d of tk.skewer.data) {
 		if (d.x0 < x1 || d.x0 > x2) {
 			delete d.xoffset
 			beyondviewitems.push(d)
@@ -1394,16 +1113,9 @@ function unfold_glyph(newlst, tk, block) {
 			d.y = skewer_sety(d, tk)
 		}
 	}
-	/*
-	tk.skewer
-		.filter(d=>expanded.has(d.x0))
-		.transition()
-		.duration(dur)
-		.attr('transform',d=> 'translate('+(d.x0+(d.xoffset==undefined ? 0 : d.xoffset))+','+d.y+')')
-		*/
 	if (hasfolded) {
 		// vertical extending
-		const set = tk.skewer.filter(d => folded.has(d.x0))
+		const set = tk.skewer.selection.filter(d => folded.has(d.x0))
 		set
 			.transition()
 			.duration(dur)
@@ -1419,11 +1131,6 @@ function unfold_glyph(newlst, tk, block) {
 		setTimeout(function() {
 			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)')
 		}, dur)
-		/*
-		set.selectAll('.sja_aa_qmg')
-			.transition().duration(dur)
-			.attr('transform','translate(0,'+(sk.maxskewerheight*(abp?-1:1))+') scale(1)')
-			*/
 		set
 			.selectAll('.sja_aa_discnum')
 			.transition()
@@ -1446,21 +1153,16 @@ function unfold_glyph(newlst, tk, block) {
 		set
 			.selectAll('.sja_aa_ssk_kick')
 			.attr('transform', 'scale(1)')
-			.attr('y', abp ? 0 : -tk.stem1)
+			.attr('y', abp ? 0 : -tk.skewer.stem1)
 		set
 			.selectAll('.sja_aa_ssk_bg')
 			.attr('transform', 'scale(1)')
-			.attr('y', abp ? 0 : -tk.stem1)
+			.attr('y', abp ? 0 : -tk.skewer.stem1)
 		set
 			.selectAll('.sja_aa_ssk_text')
 			.attr('transform', 'scale(1)')
-			.attr('y', ((abp ? 1 : -1) * tk.stem1) / 2)
+			.attr('y', ((abp ? 1 : -1) * tk.skewer.stem1) / 2)
 		set.selectAll('.sja_aa_skkick').attr('transform', 'scale(0)')
-		set
-			.filter(d => d.hasstackbar)
-			.selectAll('.sja_aa_stackbar_g')
-			// no transition, since the bar width is still 0
-			.attr('transform', d => 'translate(0,' + (abp ? 1 : -1) * (tk.stem1 + tk.stem2 + tk.stem3 - d.y) + ')')
 		let counter = 0
 		set
 			.selectAll('.sja_aa_stem')
@@ -1485,7 +1187,7 @@ function unfold_update(tk, block) {
 	const hash = new Set() // d.x0 as key
 	const x1 = 0
 	const x2 = block.width
-	for (const d of tk.data) {
+	for (const d of tk.skewer.data) {
 		if (d.x0 < x1 || d.x0 > x2) continue
 		if (d.showmode == modeshow) {
 			d.x = d.x0
@@ -1515,7 +1217,7 @@ function unfold_update(tk, block) {
 		d.width = (disc.radius + disc.rimwidth) * 2 + (d.slabelrotate ? 0 : 2 + d.slabelwidth)
 	}
 	// horizontal shifting
-	const set = tk.skewer.filter(d => hash.has(d.x0))
+	const set = tk.skewer.selection.filter(d => hash.has(d.x0))
 	set
 		.transition()
 		.duration(dur)
@@ -1533,26 +1235,6 @@ function unfold_update(tk, block) {
 		.attr('fill-opacity', 1)
 		.attr('transform', d => 'scale(1) rotate(' + (d.aa.slabelrotate ? (abp ? '-' : '') + '90' : '0') + ')')
 	tk.slabel_forcerotate = false
-	const skbars = set.filter(d => d.hasstackbar)
-	skbars
-		.selectAll('.sja_aa_stackbar_g')
-		.transition()
-		.duration(dur)
-		.attr(
-			'transform',
-			d =>
-				'translate(' + (d.grp.aa.x0 - d.grp.aa.x) + ',' + (abp ? 1 : -1) * (tk.stem1 + tk.stem2 + tk.stem3 - d.y) + ')'
-		)
-	skbars
-		.selectAll('.sja_aa_stackbar_rect')
-		.transition()
-		.duration(dur)
-		.attr('width', d => {
-			return d.pxspan
-		})
-		.attr('y', d => {
-			return abp ? -d.height : 0
-		})
 }
 
 function horiplace(items, tk, block) {
@@ -1658,7 +1340,7 @@ export function fold_glyph(lst, tk) {
 		d.showmode = modefold
 		d.y = skewer_sety(d, tk)
 	}
-	const set = tk.skewer.filter(d => hash.has(d.x0))
+	const set = tk.skewer.selection.filter(d => hash.has(d.x0))
 	set
 		.transition()
 		.duration(dur)
@@ -1674,11 +1356,6 @@ export function fold_glyph(lst, tk) {
 		.duration(dur)
 		.attr('transform', d => 'translate(0,' + (abp ? '-' : '') + d.aa.maxradius + ')')
 	set.selectAll('.sja_aa_disckick').attr('transform', 'scale(0)')
-	/*
-	set.selectAll('.sja_aa_qmg')
-		.transition().duration(dur)
-		.attr('transform','translate(0,0) scale(0)')
-		*/
 	set
 		.selectAll('.sja_aa_discnum')
 		.transition()
@@ -1705,17 +1382,6 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
 		.attr('transform', 'scale(1)')
-	const skbars = set.filter(d => d.hasstackbar)
-	skbars
-		.selectAll('.sja_aa_stackbar_g')
-		.transition()
-		.duration(dur)
-		.attr('transform', d => 'translate(0,' + (abp ? 1 : -1) * (tk.stem1 - d.y) + ')')
-	skbars
-		.selectAll('.sja_aa_stackbar_rect')
-		.transition()
-		.duration(dur)
-		.attr('width', 0)
 }
 
 export function epaint_may_hl(tk, mlst, hl) {
@@ -1728,293 +1394,176 @@ export function epaint_may_hl(tk, mlst, hl) {
 function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 	// legacy function, kept the same
 	for (const m of lst) {
-		switch (m.dt) {
-			case common.dtsnvindel:
-				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
-					m.rnapos = t.rnapos
-					m.aapos = t.aapos
-				}
-				tk.mlst.push(m)
-				break
-			case common.dtsv:
-			case common.dtfusionrna:
-				if (!m.pairlst) {
-					console.error('pairlst missing from sv/fusion')
-					break
-				}
-				if (block.usegm && m.dt == common.dtsv) {
-					/*
+		if (m.dt == common.dtsnvindel) {
+			if (block.usegm) {
+				const t = coord.genomic2gm(m.pos, block.usegm)
+				m.rnapos = t.rnapos
+				m.aapos = t.aapos
+			}
+			continue
+		}
+		if (m.dt == common.dtsv || m.dt == common.dtfusionrna) {
+			if (!m.pairlst) {
+				throw 'pairlst missing from sv/fusion'
+			}
+			// TODO following legacy code needs correction
+			if (block.usegm && m.dt == common.dtsv) {
+				/*
 				SV data correction to suit gene strand
 				do not look at strands
 				*/
-					if (m.pairlst.length == 1) {
-						// only works for single pair
-						const a = m.pairlst[0].a
-						const b = m.pairlst[0].b
-						if (a.chr != null && b.chr != null && a.chr == b.chr && a.position != null && b.position != null) {
-							// good to check
-							if (a.position < b.position) {
-								if (block.usegm.strand == '+') {
-									// no change
-									a.strand = '+'
-									b.strand = '+'
-								} else {
-									a.strand = '-'
-									b.strand = '-'
-									m.pairlst[0].a = b
-									m.pairlst[0].b = a
-								}
+				if (m.pairlst.length == 1) {
+					// only works for single pair
+					const a = m.pairlst[0].a
+					const b = m.pairlst[0].b
+					if (a.chr != null && b.chr != null && a.chr == b.chr && a.position != null && b.position != null) {
+						// good to check
+						if (a.position < b.position) {
+							if (block.usegm.strand == '+') {
+								// no change
+								a.strand = '+'
+								b.strand = '+'
+							} else {
+								a.strand = '-'
+								b.strand = '-'
+								m.pairlst[0].a = b
+								m.pairlst[0].b = a
 							}
 						}
 					}
 				}
-				// XXX current data format doesnt work for genomic range query!!!
-				if (block.usegm && block.gmmode != client.gmmode.genomic) {
-					m.isoform = block.usegm.isoform
-					// gmmode, single datum over current gene
-					let nohit = true
-					for (let i = 0; i < m.pairlst.length; i++) {
-						const pair = m.pairlst[i]
-						// try to match with both isoform and name, for IGH, without isoform, but the querying "gene" can be IGH
-						if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) {
-							m.useNterm = i == 0
-							m.chr = block.usegm.chr
-							m.strand = pair.a.strand
-							if (pair.a.position == undefined) {
-								if (pair.a.rnaposition == undefined) {
-									if (pair.a.codon == undefined) {
-										console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-										break
-									} else {
-										m.pos = coord.aa2gmcoord(pair.a.codon, block.usegm)
-										pair.a.position = m.pos
-									}
+			}
+			// XXX current data format doesnt work for genomic range query!!!
+			if (block.usegm && block.gmmode != client.gmmode.genomic) {
+				m.isoform = block.usegm.isoform
+				// gmmode, single datum over current gene
+				let nohit = true
+				for (let i = 0; i < m.pairlst.length; i++) {
+					const pair = m.pairlst[i]
+					// try to match with both isoform and name, for IGH, without isoform, but the querying "gene" can be IGH
+					if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) {
+						m.useNterm = i == 0
+						m.chr = block.usegm.chr
+						m.strand = pair.a.strand
+						if (pair.a.position == undefined) {
+							if (pair.a.rnaposition == undefined) {
+								if (pair.a.codon == undefined) {
+									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
+									break
 								} else {
-									m.pos = coord.rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
-									if (m.pos == null) {
-										console.error('failed to convert rnaposition to genomic position: ' + pair.a.rnaposition)
-										break
-									}
+									m.pos = coord.aa2gmcoord(pair.a.codon, block.usegm)
 									pair.a.position = m.pos
 								}
 							} else {
-								m.pos = pair.a.position
+								m.pos = coord.rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
+								if (m.pos == null) {
+									console.error('failed to convert rnaposition to genomic position: ' + pair.a.rnaposition)
+									break
+								}
+								pair.a.position = m.pos
 							}
-							const t = coord.genomic2gm(m.pos, block.usegm)
-							m.rnapos = t.rnapos
-							m.aapos = t.aapos
-							if (pair.a.codon) {
-								m.aapos = pair.a.codon
-							}
-							m.mname = pair.b.name
-							nohit = false
-							break
+						} else {
+							m.pos = pair.a.position
 						}
-						if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) {
-							m.useNterm = false // always
-							m.chr = block.usegm.chr
-							m.strand = pair.b.strand
-							if (pair.b.position == undefined) {
-								if (pair.b.rnaposition == undefined) {
-									if (pair.b.codon == undefined) {
-										console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-										break
-									} else {
-										m.pos = coord.aa2gmcoord(pair.b.codon, block.usegm)
-										pair.b.position = m.pos
-									}
+						const t = coord.genomic2gm(m.pos, block.usegm)
+						m.rnapos = t.rnapos
+						m.aapos = t.aapos
+						if (pair.a.codon) {
+							m.aapos = pair.a.codon
+						}
+						m.mname = pair.b.name
+						nohit = false
+						break
+					}
+					if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) {
+						m.useNterm = false // always
+						m.chr = block.usegm.chr
+						m.strand = pair.b.strand
+						if (pair.b.position == undefined) {
+							if (pair.b.rnaposition == undefined) {
+								if (pair.b.codon == undefined) {
+									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
+									break
 								} else {
-									m.pos = coord.rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
-									if (m.pos == null) {
-										console.error('failed to convert rnaposition to genomic')
-										break
-									}
+									m.pos = coord.aa2gmcoord(pair.b.codon, block.usegm)
 									pair.b.position = m.pos
 								}
 							} else {
-								m.pos = pair.b.position
+								m.pos = coord.rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
+								if (m.pos == null) {
+									console.error('failed to convert rnaposition to genomic')
+									break
+								}
+								pair.b.position = m.pos
 							}
-							const t = coord.genomic2gm(m.pos, block.usegm)
-							m.rnapos = t.rnapos
-							m.aapos = t.aapos
-							if (pair.b.codon) {
-								m.aapos = pair.b.codon
-							}
-							m.mname = pair.a.name
-							nohit = false
-							break
+						} else {
+							m.pos = pair.b.position
 						}
-					}
-					if (nohit) {
-						console.error('sv/fusion isoform no match to gm isoform: ' + block.usegm.isoform)
-					} else {
-						tk.mlst.push(m)
-					}
-				} else {
-					// genomic mode, one m for each breakend
-					for (const pair of m.pairlst) {
-						let ain = false,
-							bin = false
-						for (let i = block.startidx; i <= block.stopidx; i++) {
-							const r = block.rglst[i]
-							if (pair.a.chr == r.chr && pair.a.position >= r.start && pair.a.position <= r.stop) {
-								ain = true
-							}
-							if (pair.b.chr == r.chr && pair.b.position >= r.start && pair.b.position <= r.stop) {
-								bin = true
-							}
-						}
-						if (ain) {
-							const m2 = svduplicate(m)
-							const ma = pair.a
-							m2.chr = ma.chr
-							m2.strand = ma.strand
-							m2.useNterm = ma.strand == '+'
-							m2.pos = ma.pos || ma.position
-							m2.mname = pair.b.name || pair.b.chr
-							if (!Number.isFinite(m2.pos)) {
-								console.error('no genomic pos for breakend a')
-							} else if (!m2.chr) {
-								console.error('no chromosome for breakend a')
-							} else {
-								tk.mlst.push(m2)
-							}
-						}
-						if (bin) {
-							const m2 = svduplicate(m)
-							const mb = pair.b
-							m2.chr = mb.chr
-							m2.strand = mb.strand
-							m2.useNterm = mb.strand == '+'
-							m2.pos = mb.pos || mb.position
-							m2.mname = pair.a.name || pair.a.chr
-							if (!Number.isFinite(m2.pos)) {
-								console.error('no genomic pos for breakend b')
-							} else if (!m2.chr) {
-								console.error('no chromosome for breakend b')
-							} else {
-								tk.mlst.push(m2)
-							}
-						}
-					}
-				}
-				break
-			case common.dtitd:
-			case common.dtdel:
-				if (m.chrpos1 && m.chrpos2) {
-					// translate genomic pos1/pos2 to rna span
-					let t = coord.genomic2gm(m.chrpos1, block.usegm)
-					const rnapos1 = t.rnapos
-					t = coord.genomic2gm(m.chrpos2, block.usegm)
-					const rnapos2 = t.rnapos
-					if (rnapos1 < rnapos2) {
-						m.pos = m.chrpos1
-					} else {
-						m.pos = m.chrpos2
-					}
-					delete m.chrpos1
-					delete m.chrpos2
-					const rnaspan = Math.abs(rnapos1 - rnapos2)
-					if (m.dt == common.dtitd) {
-						m.rnaduplength = rnaspan
-					} else if (m.dt == common.dtdel) {
-						m.rnadellength = rnaspan
-					}
-				}
-				if (m.position) {
-					m.pos = m.position
-					delete m.position
-				}
-				if (!m.pos) {
-					if (m.dt == common.dtitd) {
-						// itd exported from cicero will have a{} b{}, where b is upstream of a
-						if (m.b) {
-							if (m.b.position) {
-								m.pos = m.b.position
-								m.chr = m.b.chr
-							}
-						}
-					}
-				}
-				if (!m.pos) {
-					if (m.rnaposition) {
-						if (block.usegm) {
-							m.pos = coord.rna2gmcoord(m.rnaposition - 1, block.usegm)
-							m.chr = block.usegm.chr
-							if (m.pos == null) {
-								console.error('failed to convert rnaposition to genomic position: ' + m.rnaposition)
-								break
-							}
-						}
-					} else if (m.aapos) {
-						// TODO
-					}
-				}
-				if (!m.pos) {
-					console.error('no genomic pos for itd')
-					break
-				}
-				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
-					if (m.rnaposition) {
-						m.rnapos = m.rnaposition
-					} else {
+						const t = coord.genomic2gm(m.pos, block.usegm)
 						m.rnapos = t.rnapos
-					}
-					m.aapos = t.aapos
-				}
-				if (m.dt == common.dtitd) {
-					if (!m.rnaduplength) {
-						console.error('itd has no rnaduplength')
-						m.rnaduplength = 1
-					}
-				} else {
-					if (!m.rnadellength) {
-						console.error('deletion has no rnadellength')
-						m.rnadellength = 1
-					}
-				}
-				tk.mlst.push(m)
-				break
-			case common.dtnloss:
-			case common.dtcloss:
-				if (m.position) {
-					m.pos = m.position
-					delete m.position
-				}
-				if (!m.pos) {
-					if (m.rnaposition) {
-						if (block.usegm) {
-							m.pos = coord.rna2gmcoord(m.rnaposition - 1, block.usegm)
-							m.chr = block.usegm.chr
-							if (m.pos == null) {
-								console.error('failed to convert rnaposition to genomic position: ' + m.rnaposition)
-								break
-							}
+						m.aapos = t.aapos
+						if (pair.b.codon) {
+							m.aapos = pair.b.codon
 						}
-					} else if (m.aapos) {
-						// TODO
+						m.mname = pair.a.name
+						nohit = false
+						break
 					}
 				}
-				if (!m.pos) {
-					console.error('no genomic pos for truncation')
-					break
+				if (nohit) {
+					console.error('sv/fusion isoform no match to gm isoform: ' + block.usegm.isoform)
 				}
-				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
-					if (m.rnaposition) {
-						m.rnapos = m.rnaposition
-					} else {
-						m.rnapos = t.rnapos
+			} else {
+				// genomic mode, one m for each breakend
+				for (const pair of m.pairlst) {
+					let ain = false,
+						bin = false
+					for (let i = block.startidx; i <= block.stopidx; i++) {
+						const r = block.rglst[i]
+						if (pair.a.chr == r.chr && pair.a.position >= r.start && pair.a.position <= r.stop) {
+							ain = true
+						}
+						if (pair.b.chr == r.chr && pair.b.position >= r.start && pair.b.position <= r.stop) {
+							bin = true
+						}
 					}
-					m.aapos = t.aapos
+					if (ain) {
+						const m2 = svduplicate(m)
+						const ma = pair.a
+						m2.chr = ma.chr
+						m2.strand = ma.strand
+						m2.useNterm = ma.strand == '+'
+						m2.pos = ma.pos || ma.position
+						m2.mname = pair.b.name || pair.b.chr
+						if (!Number.isFinite(m2.pos)) {
+							console.error('no genomic pos for breakend a')
+						} else if (!m2.chr) {
+							console.error('no chromosome for breakend a')
+						} else {
+							//tk.mlst.push(m2)
+						}
+					}
+					if (bin) {
+						const m2 = svduplicate(m)
+						const mb = pair.b
+						m2.chr = mb.chr
+						m2.strand = mb.strand
+						m2.useNterm = mb.strand == '+'
+						m2.pos = mb.pos || mb.position
+						m2.mname = pair.a.name || pair.a.chr
+						if (!Number.isFinite(m2.pos)) {
+							console.error('no genomic pos for breakend b')
+						} else if (!m2.chr) {
+							console.error('no chromosome for breakend b')
+						} else {
+							//tk.mlst.push(m2)
+						}
+					}
 				}
-				tk.mlst.push(m)
-				break
-			default:
-				console.error('unknown dt: ' + m.dt)
+			}
+			continue
 		}
+		throw 'unknown dt: ' + m.dt
 	}
 }
 
@@ -2808,7 +2357,7 @@ export function tkdata_update_x(tk, block) {
 	only update skewer x position
 	*/
 
-	for (const d of tk.data) {
+	for (const d of tk.skewer.data) {
 		if (d.isbin) {
 			let sumx = 0
 			for (const m of d.mlst) {
@@ -2876,6 +2425,7 @@ export function done_tknodata(tk, block) {
 		hlaachange_addnewtrack(tk, block)
 		delete tk.hlaachange
 	}
+	// TODO return height
 }
 
 function may_print_stratifycountfromserver(dat, tk) {

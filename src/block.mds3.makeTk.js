@@ -12,6 +12,8 @@ tk.skewer{}
 	if not equipped then tk.skewer is undefined and should not show skewer track
 */
 
+const labyspace = 5
+
 export async function makeTk(tk, block) {
 	tk.load = _load(tk, block)
 
@@ -42,7 +44,11 @@ export async function makeTk(tk, block) {
 		}
 	}
 
-	tk.tklabel.text(tk.name)
+	tk.tklabel.text(tk.mds.label)
+
+	let laby = labyspace + block.labelfontsize
+	tk.label_mcount = block.maketklefthandle(tk, laby)
+	laby += labyspace + block.labelfontsize
 
 	tk.clear = () => {
 		// where is it used

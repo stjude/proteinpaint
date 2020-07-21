@@ -34,6 +34,7 @@ export function client_copy(ds) {
 	to be stored at genome.datasets
 */
 	const ds2 = {
+		isMds3: true,
 		label: ds.label,
 		queries: copy_queries(ds)
 	}

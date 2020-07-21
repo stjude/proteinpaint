@@ -1877,13 +1877,13 @@ reverseorient() {
 			.on('click', () => {
 				this.pannedpx = undefined // important!
 				this.resized = false
-				let tk = null
-				for (const t of this.tklst) {
-					if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
-						tk = t
-						break
+				let tk = this.tklst.find(t => {
+					if (ds.isMds3) {
+						if (t.type == client.tkt.mds3 && t.mds.label == ds.label) return t
+					} else if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
+						return t
 					}
-				}
+				})
 				if (tk) {
 					if (tk.hidden) {
 						tk.hidden = false
@@ -1898,9 +1898,13 @@ reverseorient() {
 					return
 				}
 				if (ds.busy) return
-				tk = this.block_addtk_template({ type: client.tkt.ds, ds: ds })
-
-				blockds.dstkload(tk, this)
+				if (ds.isMds3) {
+					tk = this.block_addtk_template({ type: client.tkt.mds3, dslabel: ds.label })
+					this.tk_load(tk)
+				} else {
+					tk = this.block_addtk_template({ ds, type: client.tkt.ds })
+					blockds.dstkload(tk, this)
+				}
 			})
 			.on('mouseover', () => {
 				if (ds.iscustom) {
