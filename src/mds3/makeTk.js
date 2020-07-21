@@ -1,8 +1,8 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from './common'
-import * as client from './client'
-import { init as init_legend } from './block.mds3.legend'
-import { loadTk } from './block.mds3'
+import * as common from '../common'
+import * as client from '../client'
+import { init as init_legend } from './legend'
+import { loadTk } from './tk'
 
 /*
 common structure of tk.mds between official and custom

@@ -1,9 +1,7 @@
 import { event as d3event } from 'd3-selection'
-import * as client from './client'
-import { legend_newrow } from './block.legend'
-import * as common from './common'
-import { make_radios } from './dom'
-import { add_parameter } from './block.mds2'
+import * as client from '../client'
+import { legend_newrow } from '../block.legend'
+import * as common from '../common'
 
 /*
 ********************** EXPORTED

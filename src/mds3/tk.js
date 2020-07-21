@@ -1,11 +1,11 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from './common'
-import * as client from './client'
-import { makeTk } from './block.mds3.makeTk'
-import { update as update_legend } from './block.mds3.legend'
-import { may_render_skewer } from './block.mds3.skewer'
+import * as common from '../common'
+import * as client from '../client'
+import { makeTk } from './makeTk'
+import { update as update_legend } from './legend'
+import { may_render_skewer } from './skewer'
 
 /*
 ********************** EXPORTED

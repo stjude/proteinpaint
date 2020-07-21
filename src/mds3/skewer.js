@@ -2,11 +2,11 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { arc as d3arc } from 'd3-shape'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from './common'
-import * as coord from './coord'
-import * as client from './client'
-import { makeTk } from './block.mds3.makeTk'
-import { update as update_legend } from './block.mds3.legend'
+import * as common from '../common'
+import * as coord from '../coord'
+import * as client from '../client'
+import { makeTk } from './makeTk'
+import { update as update_legend } from './legend'
 
 /*
 ********************** EXPORTED

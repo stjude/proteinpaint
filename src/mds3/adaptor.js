@@ -7,7 +7,7 @@ export function mds3_maketk(tk, block) {
 }
 
 export function mds3_load(tk, block) {
-	import('./block.mds3').then(_ => {
+	import('./tk').then(_ => {
 		_.loadTk(tk, block)
 	})
 }
