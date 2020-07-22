@@ -43,12 +43,11 @@ launch_singlecell
 */
 
 
-
-
+const ppsrc=document.currentScript.src
 
 // global values
 let holder0,
-	hostURL='',
+	hostURL=ppsrc.includes('://') ? ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0] : '',
 	genomes,
 	variantPageCall_snv,
 	samplecart
