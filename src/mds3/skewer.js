@@ -45,6 +45,7 @@ const modefold = 0
 const modeshow = 1
 
 export function may_render_skewer(data, tk, block) {
+	// return skewer tk height
 	if (!tk.skewer) {
 		// not equipped with skewer track
 		return 0
@@ -288,16 +289,6 @@ function make_skewer_data(data, tk, block) {
 	return datagroup
 }
 
-function group2occurrence(g, tk) {
-	if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4occurrence != undefined) {
-		const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4occurrence]
-		const [err, vlst] = getter_mcset_key(mcset, g.mlst[0])
-		if (err || vlst == undefined) return 1
-		return vlst[0]
-	}
-	return g.mlst.length
-}
-
 function mlst2disc(mlst, tk) {
 	const k2g = new Map()
 	for (const m of mlst) {
@@ -440,7 +431,7 @@ function mlst2disc(mlst, tk) {
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count
-		g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0) //group2occurrence(g, tk)
+		g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0)
 	}
 	groups.sort((a, b) => {
 		return b.occurrence - a.occurrence
@@ -688,18 +679,16 @@ custom mclass from vcfinfofilter
 		.on('mouseover', d => {
 			if (tk.disc_mouseover) {
 				tk.disc_mouseover(d, d3event.target)
-			} else {
-				epaint_may_hl(tk, d.mlst, true)
 			}
 		})
 		.on('mouseout', d => {
 			if (tk.disc_mouseout) {
 				tk.disc_mouseout(d)
-			} else {
-				epaint_may_hl(tk, d.mlst, false)
 			}
 		})
 		.on('click', async d => {
+			click_variants(d, tk, block)
+			/*
 			const p = d3event.target.getBoundingClientRect()
 			if (d.dt == common.dtfusionrna || d.dt == common.dtsv) {
 				// svgraph
@@ -740,6 +729,7 @@ custom mclass from vcfinfofilter
 				tk,
 				block
 			})
+			*/
 		})
 
 	// disc rims
@@ -809,7 +799,6 @@ custom mclass from vcfinfofilter
 		.attr('cy', d => (tk.aboveprotein ? -1 : 1) * d.maxradius)
 		.attr('transform', d => 'scale(' + (d.showmode == modefold ? 1 : 0) + ')')
 		.on('mouseover', d => {
-			epaint_may_hl(tk, d.mlst, true)
 			const abp = tk.aboveprotein
 			let cumh = 0
 			let boxw = 0
@@ -892,7 +881,6 @@ custom mclass from vcfinfofilter
 		})
 		.on('mouseout', d => {
 			tk.pica.g.selectAll('*').remove()
-			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', d => {
 			tk.pica.g.selectAll('*').remove()
@@ -969,7 +957,6 @@ custom mclass from vcfinfofilter
 			p.select('.sja_aa_ssk_text')
 				.transition()
 				.attr('fill-opacity', 1)
-			epaint_may_hl(tk, d.mlst, true)
 		})
 		.on('mouseout', function(d) {
 			const p = d3select(d3event.target.parentNode)
@@ -983,7 +970,6 @@ custom mclass from vcfinfofilter
 			p.select('.sja_aa_ssk_text')
 				.transition()
 				.attr('fill-opacity', 0)
-			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', async d => {
 			// must not check d3event after await as it will be voided
@@ -1384,13 +1370,6 @@ export function fold_glyph(lst, tk) {
 		.attr('transform', 'scale(1)')
 }
 
-export function epaint_may_hl(tk, mlst, hl) {
-	if (!tk.eplst) return
-	for (const ep of tk.eplst) {
-		ep.may_hl(mlst, hl)
-	}
-}
-
 function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 	// legacy function, kept the same
 	for (const m of lst) {
@@ -1569,6 +1548,8 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 
 function hlaachange_addnewtrack(tk, block) {
 	/*
+	not in use
+
 	variants to be highlighted were not found in track
 	add a new ds track and show them
 	*/
@@ -1620,215 +1601,6 @@ function hlaachange_addnewtrack(tk, block) {
 		block.ownds[ds.label] = ds
 		const tk2 = block.block_addtk_template({ type: client.tkt.ds, ds: ds })
 		dstkload(tk2, block)
-	}
-}
-
-function showlegend_vcfinfofilter(tk, block) {
-	/*
-	custom mclass from vcf info
-	update legend for all sets
-	*/
-	if (!tk.vcfinfofilter) return
-
-	for (const mcset of tk.vcfinfofilter.lst) {
-		mcset.holder.selectAll('*').remove()
-
-		if (mcset.numericfilter) {
-			// numeric
-			// duplicative
-			for (const o of mcset.numericfilter) {
-				o.count = 0
-			}
-
-			for (const m of tk.mlst) {
-				const [err, vlst] = getter_mcset_key(mcset, m)
-				if (err) {
-					continue
-				}
-				if (!vlst) continue
-				const v = vlst[0]
-				if (!Number.isFinite(v)) continue
-
-				for (const o of mcset.numericfilter) {
-					if (o.side == '<') {
-						if (v < o.value) {
-							o.count++
-						}
-					} else {
-						if (v > o.value) {
-							o.count++
-						}
-					}
-				}
-			}
-
-			for (const o of mcset.numericfilter) {
-				// lower-than or greater-than cutoff
-
-				const cell = mcset.holder
-					.append('div')
-					.style('display', 'inline-block')
-					.style('padding', '10px')
-					.attr('class', 'sja_clb')
-					.on('click', () => {
-						// apply or cancel filter
-						if (mcset.numericCutoff == o.value && mcset.numericCutoffSide == o.side) {
-							// has been using this cutoff, to turn off filtering
-							delete mcset.numericCutoff
-						} else {
-							// was not using this cutoff, apply this
-							mcset.numericCutoff = o.value
-							mcset.numericCutoffSide = o.side
-						}
-						dstkrender(tk, block)
-					})
-
-				if (mcset.numericCutoff == o.value && mcset.numericCutoffSide == o.side) {
-					cell.style('border-bottom', 'solid 2px #ccc').style('background-color', '#f1f1f1')
-				}
-				if (o.count > 0) {
-					// dot
-					cell
-						.append('div')
-						.style('display', 'inline-block')
-						.attr('class', 'sja_mcdot')
-						.style('padding', '1px 5px')
-						.style('background-color', '#ccc')
-						.style('color', 'white')
-						.html(o.count > 1 ? o.count : '&nbsp;')
-						.style('margin-right', '5px')
-				}
-				// label
-				cell.append('span').text(o.side + o.value)
-			}
-			continue
-		}
-
-		if (!mcset.categories) {
-			/*
-			quick fix, a numeric filter can lack both .numerifilter[] and .categories
-			*/
-			continue
-		}
-
-		// categorical attribute
-
-		const key2count = new Map()
-
-		let novaluemcount = 0
-
-		for (const m of tk.mlst) {
-			const [err, vlst] = getter_mcset_key(mcset, m)
-
-			if (err) {
-				continue
-			}
-
-			if (vlst == undefined) {
-				novaluemcount++
-			} else {
-				for (const v of vlst) {
-					if (!key2count.has(v)) {
-						key2count.set(v, 0)
-					}
-					key2count.set(v, key2count.get(v) + 1)
-				}
-			}
-		}
-
-		const lst = [...key2count]
-		if (novaluemcount) {
-			lst.push([vcfnotannotated_label, novaluemcount])
-		}
-		lst.sort((i, j) => j[1] - i[1])
-
-		for (const [k, count] of lst) {
-			const v = mcset.categories[k] || { color: 'black', label: k }
-
-			const cell = mcset.holder
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '10px')
-				.attr('class', 'sja_clb')
-				.on('click', () => {
-					tk.vcfinfofilter.tip.showunder(cell.node())
-					legendmenu_vcfinfo(mcset, k, tk, block)
-				})
-			// dot
-			cell
-				.append('div')
-				.style('display', 'inline-block')
-				.attr('class', 'sja_mcdot')
-				.style('padding', '1px 5px')
-				.style('background-color', v.color)
-				.style('color', 'white')
-				.html(count > 1 ? count : '&nbsp;')
-				.style('margin-right', '5px')
-			// label
-			const lab = cell
-				.append('span')
-				.text(v.label)
-				.style('color', v.color)
-			if (mcset.categoryhidden[k]) {
-				lab.style('text-decoration', 'line-through')
-			}
-		}
-	}
-}
-
-function vcfinfofilter_mayupdateautocategory(tk, block) {
-	/*
-	categorical info filter may use auto color
-	call this after updating mlst[] -- will update the color for all categories
-	*/
-	if (!tk.vcfinfofilter) return
-
-	for (const mcset of tk.vcfinfofilter.lst) {
-		if (mcset.numericfilter) {
-			continue
-		}
-
-		if (!mcset.autocategory) {
-			continue
-		}
-
-		/* categorical attribute
-		only need to record categories used in mlst[]
-		then assign dynamic color
-		*/
-
-		const key2count = new Map()
-
-		for (const m of tk.mlst) {
-			const [err, vlst] = getter_mcset_key(mcset, m)
-
-			if (err) {
-				continue
-			}
-
-			if (vlst != undefined) {
-				for (const v of vlst) {
-					if (!key2count.has(v)) {
-						key2count.set(v, 0)
-					}
-					key2count.set(v, key2count.get(v) + 1)
-				}
-			}
-		}
-
-		const lst = [...key2count]
-		lst.sort((i, j) => j[1] - i[1])
-
-		const colorfunc = scaleOrdinal(schemeCategory20)
-
-		mcset.categories = {}
-
-		for (const [k, count] of lst) {
-			mcset.categories[k] = {
-				label: k,
-				color: colorfunc(k)
-			}
-		}
 	}
 }
 
@@ -1886,389 +1658,6 @@ export function getter_mcset_key(mcset, m) {
 	}
 
 	return ['no trigger']
-}
-
-function legendmenu_vcfinfo(mcset, key, tk, block) {
-	/*
-	tk legend shows the values from certain vcf info fields
-	values are clickable to make filtering on variants of the track
-	show tooltip menu for the annotation items
-
-	key is:
-	- a key of mcset.categories
-	- vcfnotannotated_label
-
-	*/
-	const tip = tk.vcfinfofilter.tip
-	tip.clear()
-
-	const thiskeyhidden = mcset.categoryhidden[key]
-
-	tip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.html('<div style="display:inline-block;width:25px">&#10003;</div> show alone')
-		.on('click', () => {
-			tip.hide()
-			mcset.categoryhidden = {}
-			for (const k in mcset.categories) {
-				if (k != key) {
-					mcset.categoryhidden[k] = 1
-				}
-			}
-			if (key != vcfnotannotated_label) {
-				mcset.categoryhidden[vcfnotannotated_label] = 1
-			}
-			dstkrender(tk, block)
-		})
-	if (thiskeyhidden) {
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&#10003;</div> show')
-			.on('click', () => {
-				tip.hide()
-				delete mcset.categoryhidden[key]
-				dstkrender(tk, block)
-			})
-	} else {
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&times;</div> hide')
-			.on('click', () => {
-				tip.hide()
-				mcset.categoryhidden[key] = 1
-				dstkrender(tk, block)
-			})
-	}
-
-	let hidenum = 0
-	for (const k in mcset.categoryhidden) {
-		hidenum++
-	}
-	if (hidenum > 1) {
-		// more than 1 class is hidden, make "show all"
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&#10003;</div> show all')
-			.on('click', () => {
-				tip.hide()
-				mcset.categoryhidden = {}
-				dstkrender(tk, block)
-			})
-	}
-}
-
-function getter_pfrequency(m, tk) {
-	/*
-	get population frequency
-	for multi-sample vcf
-	do not work for variant-only vcf
-	*/
-	if (!m.vcfid) return ['.vcfid missing']
-	if (!m.sampledata) return ['.sampledata missing']
-	const v = tk.ds.id2vcf[m.vcfid]
-	if (!v) return ['no vcf']
-	if (!v.samples || v.samples.length == 0) return ['vcf no samples']
-	/*
-	only count samples without .gtallref
-	*/
-	let count = 0
-	for (const s of m.sampledata) {
-		if (!s.gtallref) count++
-	}
-	return [null, count / v.samples.length]
-}
-
-function showlegend_populationfrequencyfilter(tk, block) {
-	/*
-	hardcoded frequency filter for multi-sample vcf
-	*/
-	if (!tk.populationfrequencyfilter) return
-
-	for (const o of tk.populationfrequencyfilter.lst) {
-		o.count = 0
-	}
-
-	for (const m of tk.mlst) {
-		const [err, f] = getter_pfrequency(m, tk)
-		if (err) {
-			continue
-		}
-		for (const o of tk.populationfrequencyfilter.lst) {
-			if (f < o.value) {
-				o.count++
-			}
-		}
-	}
-
-	tk.populationfrequencyfilter.holder.selectAll('*').remove()
-
-	for (const o of tk.populationfrequencyfilter.lst) {
-		const cell = tk.populationfrequencyfilter.holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '10px')
-			.attr('class', 'sja_clb')
-			.on('click', () => {
-				// apply or cancel filter
-				if (tk.populationfrequencyfilter.cutoff == o.value) {
-					delete tk.populationfrequencyfilter.cutoff
-				} else {
-					tk.populationfrequencyfilter.cutoff = o.value
-				}
-				dstkrender(tk, block)
-			})
-
-		if (tk.populationfrequencyfilter.cutoff == o.value) {
-			cell.style('border-bottom', 'solid 2px #ccc').style('background-color', '#f1f1f1')
-		}
-
-		// dot
-		cell
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'sja_mcdot')
-			.style('padding', '1px 5px')
-			.style('background-color', '#ccc')
-			.style('color', 'white')
-			.html(o.count > 1 ? o.count : '&nbsp;')
-			.style('margin-right', '5px')
-		// label
-		cell.append('span').text('< ' + o.value)
-	}
-}
-
-function showlegend_sampleattribute(tk, block) {
-	/*
-	 */
-	if (!tk.ds || !tk.ds.cohort || !tk.ds.cohort.sampleattribute) return
-	if (!tk.ds.cohort.annotation) return '.ds.cohort.annotation missing'
-	if (!tk.ds.cohort.key4annotation) return '.ds.cohort.key4annotation missing'
-
-	const smat = tk.ds.cohort.sampleattribute
-
-	if (!smat.lst) return '.lst missing'
-	if (!smat.holder) return '.holder missing'
-
-	smat.holder.selectAll('*').remove()
-
-	if (tk.mlst.length == 0) {
-		return
-	}
-	for (const attr of smat.lst) {
-		if (!attr.k) return '.k missing for an attribute'
-		if (!attr.hiddenvalues) attr.hiddenvalues = new Set()
-	}
-
-	const runtimelst = []
-	// collect keys with any valid samples
-
-	/*
-	FIXME 
-	shadow vcf, use slim matrix to map variant to sample list
-	*/
-	if (tk.mlst[0].sampledata) {
-		/*
-		multi-sample vcf
-		*/
-		for (const attr of smat.lst) {
-			let samplecount = 0
-			const value2count = new Map()
-			for (const m of tk.mlst) {
-				if (!m.sampledata) continue
-
-				for (const s0 of m.sampledata) {
-					const k4a = s0.sampleobj[tk.ds.cohort.key4annotation]
-					if (!k4a) continue
-
-					const o = tk.ds.cohort.annotation[k4a]
-					if (!o) continue
-
-					const value = o[attr.k]
-					if (value == undefined) continue
-
-					samplecount++
-
-					if (!value2count.has(value)) {
-						value2count.set(value, 0)
-					}
-					value2count.set(value, value2count.get(value) + 1)
-				}
-			}
-			if (samplecount == 0) {
-				// skip this key
-				continue
-			}
-			runtimelst.push({
-				samplecount: samplecount,
-				key: attr,
-				lst: [...value2count]
-					.sort((a, b) => b[1] - a[1])
-					.map(i => {
-						return { value: i[0], count: i[1] }
-					})
-			})
-		}
-	} else {
-		/*
-		each m is one case
-		retrieved from db
-		*/
-		for (const attr of smat.lst) {
-			let samplecount = 0
-			const value2count = new Map()
-			for (const m of tk.mlst) {
-				const k4a = m[tk.ds.cohort.key4annotation]
-				if (!k4a) continue
-
-				const o = tk.ds.cohort.annotation[k4a]
-				if (!o) continue
-
-				const value = o[attr.k]
-				if (value == undefined) continue
-
-				samplecount++
-
-				if (!value2count.has(value)) {
-					value2count.set(value, 0)
-				}
-				value2count.set(value, value2count.get(value) + 1)
-			}
-			if (samplecount == 0) {
-				// skip this key
-				continue
-			}
-			runtimelst.push({
-				samplecount: samplecount,
-				key: attr,
-				lst: [...value2count]
-					.sort((a, b) => b[1] - a[1])
-					.map(i => {
-						return { value: i[0], count: i[1] }
-					})
-			})
-		}
-	}
-
-	if (runtimelst.length == 0) {
-		// no keys are used to annotate current samples
-		// disable filtering
-		delete smat.runtimelst
-		return
-	}
-	// activate filtering
-	smat.runtimelst = runtimelst
-
-	const table = smat.holder.append('table').style('border-spacing', '5px')
-
-	for (const attr of runtimelst) {
-		/*
-		.samplecount
-		.key
-		.lst
-		*/
-
-		const tr = table.append('tr')
-
-		// label of key
-		tr.append('td')
-			.style('color', '#858585')
-			.style('text-align', 'right')
-			.text(attr.key.label || attr.key.k)
-
-		const td = tr.append('td')
-
-		// values of this key
-		for (const value of attr.lst) {
-			/*
-			.value
-			.count
-			*/
-			const cell = td
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '5px')
-				.attr('class', 'sja_clb')
-				.on('click', () => {
-					smat.tip.showunder(cell.node())
-					legendmenu_sampleattribute(value, attr, smat.tip, tk, block)
-				})
-			// dot
-			cell
-				.append('div')
-				.style('display', 'inline-block')
-				.attr('class', 'sja_mcdot')
-				.style('padding', '1px 3px')
-				.style('background-color', '#858585')
-				.style('color', 'white')
-				.html(value.count > 1 ? value.count : '&nbsp;')
-				.style('margin-right', '5px')
-			// label
-			const lab = cell.append('span').text(value.value)
-			if (attr.key.hiddenvalues.has(value.value)) {
-				lab.style('text-decoration', 'line-through')
-			}
-		}
-	}
-	return null
-}
-
-function legendmenu_sampleattribute(thisvalue, thisattr, tip, tk, block) {
-	/*
-	value
-	.hidden
-	*/
-	tip.clear()
-
-	tip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.html('<div style="display:inline-block;width:25px">&#10003;</div> show alone')
-		.on('click', () => {
-			tip.hide()
-			for (const value of thisattr.lst) {
-				thisattr.key.hiddenvalues.add(value.value)
-			}
-			thisattr.key.hiddenvalues.delete(thisvalue.value)
-			dstkrender(tk, block)
-		})
-	if (thisattr.key.hiddenvalues.has(thisvalue.value)) {
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&#10003;</div> show')
-			.on('click', () => {
-				tip.hide()
-				thisattr.key.hiddenvalues.delete(thisvalue.value)
-				dstkrender(tk, block)
-			})
-	} else {
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&times;</div> hide')
-			.on('click', () => {
-				tip.hide()
-				thisattr.key.hiddenvalues.add(thisvalue.value)
-				dstkrender(tk, block)
-			})
-	}
-
-	if (thisattr.key.hiddenvalues.size > 1) {
-		// more than 1 attribute is hidden, make "show all"
-		tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('<div style="display:inline-block;width:25px">&#10003;</div> show all')
-			.on('click', () => {
-				tip.hide()
-				thisattr.key.hiddenvalues.clear()
-				dstkrender(tk, block)
-			})
-	}
 }
 
 /*
@@ -2392,40 +1781,28 @@ export function done_tknodata(tk, block) {
 	set track height by # of controllers
 	in case of hlaachange, create new track and show
 	*/
-	tk.height_main = tk.toppad + block.labelfontsize + tk.bottompad
-	if (tk.label_mcount && tk.label_mcount.text().length > 0) {
-		tk.height_main += tk.labyspace + block.labelfontsize
-	}
-	if (tk.label_stratify) {
-		for (const strat of tk.label_stratify) {
-			if (strat.svglabel.text().length > 0) {
-				tk.height_main += tk.labyspace + block.labelfontsize
-			}
-		}
-	}
+	let height = 0 // cumulate
 
-	/*
-	remove previous message in case of panning in gmmode
-	*/
-	tk.glider.selectAll('*').remove()
-	tk.leftaxis.selectAll('*').remove()
+	//remove previous message in case of panning in gmmode
+	tk.skewer.g.selectAll('*').remove()
 
-	if (tk.viewrangeupperlimit_above) {
-		// went beyond range
-		block.tkerror(tk, tk.name + ': zoom in under ' + common.bplen(tk.viewrangeupperlimit) + ' to view data')
-	} else {
-		let context = 'view range'
-		if (block.usegm && block.gmmode != client.gmmode.genomic) {
-			context = block.usegm.name || block.usegm.isoform
-		}
-		block.tkerror(tk, tk.name + ': no mutation in ' + context)
+	let context = 'view range'
+	if (block.usegm && block.gmmode != client.gmmode.genomic) {
+		context = block.usegm.name || block.usegm.isoform
 	}
+	tk.skewer.g
+		.append('text')
+		.text(tk.mds.label + ': no mutation in ' + context)
+		.attr('y', 25)
+		.attr('x', block.width / 2)
+		.attr('text-anchor', 'middle')
+		.attr('dominant-baseline', 'center')
 
 	if (tk.hlaachange) {
 		hlaachange_addnewtrack(tk, block)
 		delete tk.hlaachange
 	}
-	// TODO return height
+	return 50
 }
 
 function may_print_stratifycountfromserver(dat, tk) {
@@ -2440,5 +1817,13 @@ function may_print_stratifycountfromserver(dat, tk) {
 			continue
 		}
 		strat.servercount = count
+	}
+}
+
+async function click_variants(d, tk, block) {
+	if (tk.mds.variant2samples) {
+		const data = await tk.mds.variant2samples.get(d.mlst)
+		console.log(data)
+		return
 	}
 }

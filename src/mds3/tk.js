@@ -80,8 +80,14 @@ export function get_parameter(tk, block) {
 		block.gmmode == client.gmmode.genomic ||
 		block.gmmodepast == client.gmmode.genomic
 	) {
-		// need to load skewer data
-		par.push('skewer=1')
+		if (tk.mds.has_skewer) {
+			// need to load skewer data
+			par.push('skewer=1')
+		}
+		if (tk.mds.has_samplesummary) {
+			// need to make sample summary
+			par.push('samplesummary=1')
+		}
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform

@@ -25,8 +25,9 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
-	validate_query_snvindel(ds)
+	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
+	validate_query_snvindel(ds)
 }
 
 export function client_copy(ds) {
@@ -39,11 +40,34 @@ export function client_copy(ds) {
 		queries: copy_queries(ds)
 	}
 	if (ds.queries.snvindel) {
-		// include other skewer data types
 		ds2.has_skewer = true
 	}
-
+	if (ds.sampleSummaries) {
+		ds2.has_samplesummary = true
+	}
+	if (ds.variant2samples) {
+		ds2.variant2samples = {
+			variantkey: ds.variant2samples.variantkey,
+			levels: ds.variant2samples.levels
+		}
+	}
 	return ds2
+}
+
+function validate_variant2samples(ds) {
+	const vs = ds.variant2samples
+	if (!vs) return
+	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
+	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
+	if (!vs.levels) throw '.levels[] missing from variant2samples'
+	if (!Array.isArray(vs.levels)) throw 'variant2samples.levels[] is not array'
+	// to validate levels
+	if (vs.gdcapi) {
+		if (!vs.gdcapi.query) throw '.query missing from variant2samples.gdcapi'
+		if (!vs.gdcapi.variables) throw '.variables missing from variant2samples.gdcapi'
+	} else {
+		throw 'unknown query method of variant2samples'
+	}
 }
 
 function copy_queries(ds) {
@@ -65,7 +89,7 @@ function validate_sampleSummaries(ds) {
 	for (const i of ss.lst) {
 		if (!i.label1) throw '.label1 from one of sampleSummaries.lst'
 	}
-	ss.get = (mlst, opts) => {
+	ss.makeholder = opts => {
 		const labels = new Map()
 		/*
 		k: label1 of .lst[]
@@ -87,6 +111,10 @@ function validate_sampleSummaries(ds) {
 		for (const i of ss.lst) {
 			labels.set(i.label1, new Map())
 		}
+		return labels
+	}
+	ss.summarize = (mlst, labels, opts) => {
+		// summarize mlst into an existing holder "labels"
 		for (const m of mlst) {
 			if (!m.samples) continue
 			for (const sample of m.samples) {
@@ -122,7 +150,9 @@ function validate_sampleSummaries(ds) {
 				}
 			}
 		}
-		const out = [] // return to client
+	}
+	ss.finalize = (labels, opts) => {
+		const out = []
 		for (const [label1, L1] of labels) {
 			const strat = {
 				label: label1,

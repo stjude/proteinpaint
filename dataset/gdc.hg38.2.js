@@ -32,6 +32,16 @@ query Lolliplot_relayQuery(
 		}
 	}
 }`
+const variables_isoform2variants = {
+	filters: {
+		op: '=',
+		content: {
+			field: 'consequence.transcript.transcript_id'
+			// value=[isoform] added here
+		}
+	},
+	score: 'occurrence.case.project.project_id'
+}
 
 /*
 query list of variants by genomic range (of a gene/transcript)
@@ -93,6 +103,16 @@ query GdcSsmByGene($filter: FiltersArgument) {
 		}
 	}
 }`
+const variables_range2variants = {
+	filter: {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
+			{ op: '>=', content: { field: 'start_position' } },
+			{ op: '<=', content: { field: 'end_position' } }
+		]
+	}
+}
 
 /*
 using one or multiple variants, get info about all tumors harbording them
@@ -132,6 +152,15 @@ query OneSsm($filter: FiltersArgument) {
 		}
 	}
 }`
+const variables_variant2samples = {
+	filter: {
+		op: 'in',
+		content: {
+			field: 'ssm_id'
+			// value=[ssm_id] added here
+		}
+	}
+}
 
 /*
 one time query: will only run once and result is cached on serverside
@@ -282,17 +311,9 @@ module.exports = {
 				keys: ['disease_type']
 			}
 		],
-		// the actual query method is using gdc api
-		gdcgraphql: {
+		gdcapi: {
 			query: query_variant2samples,
-			variables: {
-				filter: {
-					op: 'in',
-					content: {
-						field: 'ssm_id'
-					}
-				}
-			}
+			variables: variables_variant2samples
 		}
 	},
 
@@ -307,28 +328,13 @@ module.exports = {
 				// to convert to queries[]
 				gdcapi: {
 					query: query_range2variants,
-					variables: {
-						filter: {
-							op: 'and',
-							content: [
-								{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
-								{ op: '>=', content: { field: 'start_position' } },
-								{ op: '<=', content: { field: 'end_position' } }
-							]
-						}
-					}
+					variables: variables_range2variants
 				}
 			},
 			byisoform: {
 				gdcapi: {
 					query: query_isoform2variants,
-					variables: {
-						filters: {
-							op: '=',
-							content: { field: 'consequence.transcript.transcript_id' }
-						},
-						score: 'occurrence.case.project.project_id'
-					}
+					variables: variables_isoform2variants
 				}
 			},
 			occurrence_key
