@@ -85,6 +85,7 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 }
 
 const app = express()
+app.disable('x-powered-by')
 
 if (serverconfig.users) {
 	// { user1 : pass1, user2: pass2, ... }
