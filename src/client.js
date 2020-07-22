@@ -323,7 +323,33 @@ init {}
 	}
 
 	const dataName = url + ' | ' + init.method + ' | ' + init.body
-	if (opts.serverData) {
+	if (opts.sessionStorage) {
+		const str = window.sessionStorage.getItem(dataName)
+		if (str) {
+			try {
+				const data = JSON.parse(str)
+				return Promise.resolve(data)
+			} catch (e) {
+				throw 'invalid json data'
+			}
+		} else {
+			return fetch(url, init).then(data => {
+				if (fetchTimers[url]) {
+					clearTimeout(fetchTimers[url])
+				}
+				return data.text().then(str => {
+					try {
+						const data = JSON.parse(str)
+						// store as string to not share parsed response object
+						window.sessionStorage.setItem(dataName, str)
+						return data
+					} catch (e) {
+						throw 'invalid json data'
+					}
+				})
+			})
+		}
+	} else if (opts.serverData) {
 		if (!(dataName in opts.serverData)) {
 			trackfetch(url, init)
 			opts.serverData[dataName] = fetch(url, init).then(data => {
