@@ -1,6 +1,6 @@
 import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
-import { dofetch2, Menu } from '../client'
+import { Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'

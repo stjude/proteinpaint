@@ -392,6 +392,14 @@ opts {}
 			if (fetchTimers[url]) {
 				clearTimeout(fetchTimers[url])
 			}
+			if (opts.sessionStorage) {
+				try {
+					// store as string to not share parsed response object
+					data.text().then(str => window.sessionStorage.setItem(dataName, str))
+				} catch (e) {
+					console.warn('warning: unable to cache fetched data in sessionStorage: ' + e)
+				}
+			}
 			return data.json()
 		})
 	}

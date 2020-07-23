@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
-import { dofetch2, Menu } from '../client'
+import { dofetch3, Menu } from '../client'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
@@ -119,7 +119,7 @@ class TdbNav {
 			'getcohortsamplecount=' + this.activeCohortName,
 			'cohortValues=' + this.activeCohortName
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
@@ -137,7 +137,7 @@ class TdbNav {
 			'getsamplecount=' + this.activeCohortName,
 			'filter=' + encodeURIComponent(this.filterJSON)
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {

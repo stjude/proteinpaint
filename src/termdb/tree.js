@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 import { plotInit } from './plot'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
@@ -195,7 +195,7 @@ class TdbTree {
 						.join(',')
 			)
 		}
-		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
 			// do not throw exception; its children terms may have been filtered out
