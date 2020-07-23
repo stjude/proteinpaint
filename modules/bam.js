@@ -557,14 +557,19 @@ async function match_complexvariant(templates, q) {
 		.toUpperCase()
 	const rightflankseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr + ':' + (q.variant.pos + 2) + '-' + (q.variant.pos + segbplen + 2)
+		q.variant.chr +
+			':' +
+			(q.variant.pos + q.variant.ref.length + 1) +
+			'-' +
+			(q.variant.pos + segbplen + q.variant.ref.length + 1)
 	))
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
-	console.log(leftflankseq, rightflankseq)
-
+	console.log(q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt)
+	console.log('refSeq', leftflankseq + q.variant.ref + rightflankseq)
+	console.log('mutSeq', leftflankseq + q.variant.alt + rightflankseq)
 	return []
 }
 

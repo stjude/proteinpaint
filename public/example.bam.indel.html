@@ -10,6 +10,7 @@
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
 <div id=aaa style="margin:10px"></div>
+<div id=bbb style="margin:10px"></div>
 
 <script>
 runproteinpaint({
@@ -31,6 +32,30 @@ runproteinpaint({
 				pos:119155745, // 0-based
 				ref:'T',
 				alt:'TTGACCTGG'
+			}
+		},
+	],
+})
+
+
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	block:1,
+	position:'chr4:55589751-55589810',
+	genome:'hg19',
+	nativetracks:'refgene',
+	tracks:[
+		{
+			type:'bam',
+			name:'test',
+			file:'hg19/TARGET/DNA/bam-wes/SJAML040709_D1.bam',
+			variant:{
+				chr:'chr4',
+				pos:55589770, // 0-based
+				ref:'ACGA',
+				alt:'A'
 			}
 		},
 	],
