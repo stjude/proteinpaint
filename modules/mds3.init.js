@@ -28,6 +28,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
+	await init_onetimequery_projectsize(ds)
 }
 
 export function client_copy(ds) {
@@ -323,4 +324,43 @@ async function snvindel_byisoform_gdcapi_run(ds, opts) {
 	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
 	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
 	return re.hits
+}
+
+async function init_onetimequery_projectsize(ds) {
+	const op = ds.onetimequery_projectsize
+	if (!op) return
+	op.results = new Map()
+	if (op.gdcapi) {
+		if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
+		if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
+		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify(op.gdcapi)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from GDC for onetimequery_projectsize'
+		}
+		if (
+			!re.data ||
+			!re.data.viewer ||
+			!re.data.viewer.explore ||
+			!re.data.viewer.explore.cases ||
+			!re.data.viewer.explore.cases.total ||
+			!re.data.viewer.explore.cases.total.project__project_id ||
+			!re.data.viewer.explore.cases.total.project__project_id.buckets
+		)
+			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
+		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
+			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
+		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
+			if (!t.key) throw 'key missing from one bucket'
+			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+			op.results.set(t.key, t.doc_count)
+		}
+		return
+	}
+	throw 'unknown query method for onetimequery_projectsize'
 }

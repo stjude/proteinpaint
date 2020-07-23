@@ -78,7 +78,7 @@ function get_ds(tk, block) {
 				} else {
 					throw 'unknown variantkey for variant2samples'
 				}
-				return await client.dofetch2('mds3?' + par.join('&'))
+				return await client.dofetch2('mds3?' + par.join('&'), {}, { serverData: block.cache })
 			}
 		}
 		return

@@ -187,6 +187,12 @@ query projectSize( $ssmTested: FiltersArgument) {
 		}
 	}
 }`
+const variables_projectsize = {
+	ssmTested: {
+		op: 'and',
+		content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+	}
+}
 
 //////////////// end of query strings ///////////////
 
@@ -285,14 +291,9 @@ module.exports = {
 	snvindel_attributes,
 
 	onetimequery_projectsize: {
-		gdcgraphql: {
+		gdcapi: {
 			query: query_projectsize,
-			variables: {
-				ssmTested: {
-					op: 'and',
-					content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-				}
-			}
+			variables: variables_projectsize
 		}
 	},
 

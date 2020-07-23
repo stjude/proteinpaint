@@ -972,6 +972,8 @@ custom mclass from vcfinfofilter
 				.attr('fill-opacity', 0)
 		})
 		.on('click', async d => {
+			click_variants(d, tk, block)
+			/*
 			// must not check d3event after await as it will be voided
 			const p = d3event.target.getBoundingClientRect()
 			if (d.occurrence > 1) {
@@ -986,6 +988,7 @@ custom mclass from vcfinfofilter
 				tk: tk,
 				block: block
 			})
+			*/
 		})
 }
 
@@ -1821,9 +1824,51 @@ function may_print_stratifycountfromserver(dat, tk) {
 }
 
 async function click_variants(d, tk, block) {
-	if (tk.mds.variant2samples) {
-		const data = await tk.mds.variant2samples.get(d.mlst)
-		console.log(data)
-		return
+	try {
+		if (d.occurrence > 1 && tk.mds.variant2samples) {
+			// sunburst
+			tk.glider.style('cursor', 'wait')
+			const data = await tk.mds.variant2samples.get(d.mlst)
+			tk.glider.style('cursor', 'auto')
+			if (data.error) throw data.error
+			if (!data.data) throw '.data[] missing'
+			const arg = {
+				nodes: data.data,
+				occurrence: d.occurrence,
+				boxyoff: tk.yoff,
+				boxheight: tk.height,
+				boxwidth: block.width,
+				svgheight: Number.parseFloat(block.svg.attr('height')),
+				g: tk.skewer.g.append('g'),
+				pica: tk.pica,
+				chartlabel: d.mlst[0].mname + (d.mlst.length > 1 ? ' etc' : '')
+			}
+			if (d.aa) {
+				// a group of skewer.data[0].groups[]
+				arg.cx = d.aa.x
+				arg.cy = skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1)
+				arg.click_listbutton = (x, y) => {
+					may_itemtable(d.mlst, tk, block)
+				}
+			} else {
+				// one of skewer.data[]
+				arg.cx = d.x
+				arg.cy = d.y + ((tk.aboveprotein ? 1 : -1) * tk.skewer.stem1) / 2
+				// not to show list button in sunburst in case mlst has different data types
+			}
+			const _ = await import('../sunburst')
+			_.default(arg)
+			return
+		}
+		// no sunburst
+		await may_itemtable(d.mlst, tk, block)
+	} catch (e) {
+		block.error(e.message || e)
+		if (e.stack) console.log(e.stack)
 	}
+}
+
+async function may_itemtable(mlst, tk, block) {
+	// all mlst[] of same data type
+	console.log(mlst)
 }

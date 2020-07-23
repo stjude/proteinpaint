@@ -28,7 +28,7 @@ module.exports = async (q, ds) => {
 	}
 
 	if (q.getsamples) {
-		return { samples }
+		return samples
 	}
 
 	if (q.getsummary) {
@@ -47,7 +47,7 @@ module.exports = async (q, ds) => {
 				}
 			}
 		}
-		return { nodes }
+		return nodes
 	}
 	throw 'unknown report format'
 }

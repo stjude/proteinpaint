@@ -33,8 +33,6 @@ export default function(opts) {
 		click_listbutton
 	} = opts
 
-	// TODO do not use click_listbutton, always show info table
-
 	g.attr('transform', 'translate(' + cx + ',' + cy + ')')
 
 	const suncolor = scaleOrdinal(schemeCategory10)
@@ -223,44 +221,45 @@ export default function(opts) {
 								})
 						})
 
-					// button at bottom
-					sun.listbutt = eye.append('g').attr('transform', 'translate(0,' + fontsize1 / 2 + ')')
-					const listbutt_bg = sun.listbutt
-						.append('rect')
-						.attr('x', -eyeheight / 2)
-						.attr('width', eyeheight)
-						.attr('height', emptyspace - fontsize1 / 2)
-						.attr('fill', '#d9d9d9')
-					const listbutt_text = sun.listbutt
-						.append('text')
-						.text('Info')
-						.attr('y', (emptyspace - fontsize1 / 2) / 2)
-						.attr('dominant-baseline', 'central')
-						.attr('text-anchor', 'middle')
-						.attr('font-family', 'Arial')
-						.attr('fill', '#858585')
-						.attr('font-size', Math.min(18, fontsize))
-					sun.listbutt
-						.append('rect')
-						.attr('x', -eyeheight / 2)
-						.attr('width', eyeheight)
-						.attr('height', emptyspace - fontsize1 / 2)
-						.attr('fill-opacity', 0)
-						.on('mouseover', () => {
-							listbutt_bg.attr('fill', '#bababa')
-							listbutt_text.attr('fill', 'white')
-						})
-						.on('mouseout', () => {
-							listbutt_bg.attr('fill', '#d9d9d9')
-							listbutt_text.attr('fill', '#858585')
-						})
-						.on('click', () => {
-							remove(sun)
-							if (!click_listbutton) return
-							const x = d3event.clientX - radius,
-								y = d3event.clientY - radius
-							setTimeout(() => click_listbutton(x, y), dur1)
-						})
+					if (click_listbutton) {
+						// button at bottom
+						sun.listbutt = eye.append('g').attr('transform', 'translate(0,' + fontsize1 / 2 + ')')
+						const listbutt_bg = sun.listbutt
+							.append('rect')
+							.attr('x', -eyeheight / 2)
+							.attr('width', eyeheight)
+							.attr('height', emptyspace - fontsize1 / 2)
+							.attr('fill', '#d9d9d9')
+						const listbutt_text = sun.listbutt
+							.append('text')
+							.text('Info')
+							.attr('y', (emptyspace - fontsize1 / 2) / 2)
+							.attr('dominant-baseline', 'central')
+							.attr('text-anchor', 'middle')
+							.attr('font-family', 'Arial')
+							.attr('fill', '#858585')
+							.attr('font-size', Math.min(18, fontsize))
+						sun.listbutt
+							.append('rect')
+							.attr('x', -eyeheight / 2)
+							.attr('width', eyeheight)
+							.attr('height', emptyspace - fontsize1 / 2)
+							.attr('fill-opacity', 0)
+							.on('mouseover', () => {
+								listbutt_bg.attr('fill', '#bababa')
+								listbutt_text.attr('fill', 'white')
+							})
+							.on('mouseout', () => {
+								listbutt_bg.attr('fill', '#d9d9d9')
+								listbutt_text.attr('fill', '#858585')
+							})
+							.on('click', () => {
+								remove(sun)
+								const x = d3event.clientX - radius,
+									y = d3event.clientY - radius
+								setTimeout(() => click_listbutton(x, y), dur1)
+							})
+					}
 				})
 		})
 }
