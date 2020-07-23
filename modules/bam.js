@@ -557,7 +557,7 @@ async function match_complexvariant(templates, q) {
 		.toUpperCase()
 	const rightflankseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr + ':' + q.variant.pos + '-' + (q.variant.pos + segbplen)
+		q.variant.chr + ':' + (q.variant.pos + 2) + '-' + (q.variant.pos + segbplen + 2)
 	))
 		.split('\n')
 		.slice(1)
