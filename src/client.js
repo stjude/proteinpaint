@@ -295,21 +295,17 @@ const maxNumOfServerDataKeys = 20
 
 export function dofetch2(path, init = {}, opts = {}) {
 	/*
-path "" string URL path
+	path "" string URL path
 
-init {}
-	will be supplied as the second argument to
-	the native fetch api, so the method, headers, body
-	may be optionally supplied in the "init" argument
-	see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
+	init {}
+		will be supplied as the second argument to
+		the native fetch api, so the method, headers, body
+		may be optionally supplied in the "init" argument
+		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
 
-opts {}
-	.serverData{}              an object for caching fetch Promise
-	.sessionStorage BOOLEAN    whether to cache fetched data across page refresh/restore
-                             this option will trigger writes to sessionStorage; reads from
-                             sessionStorage will be performed even if this option is false
-                             and detect/reuse any matching cached data 
-*/
+	opts {}
+		.serverData{}              an object for caching fetch Promise 
+	*/
 	// path should be "path" but not "/path"
 	if (path[0] == '/') {
 		path = path.slice(1)
@@ -335,25 +331,8 @@ opts {}
 	}
 
 	const dataName = url + ' | ' + init.method + ' | ' + init.body
-	/*** TODO: 
-		Clear sessionStorage when the tracked server code version is updated or based
-		on a maximum lifetime like 60 seconds, 
-		since the browser will only clear sessionStorage when the window or tab is closed.
 
-		Otherwise, refreshing the page or restoring a browser tab may use stale server data.
-	***/
-
-	// use any cached data from sessionStorage,
-	// not dependent on opts.sessionStorage == true
-	const str = window.sessionStorage.getItem(dataName)
-	if (str) {
-		try {
-			const data = JSON.parse(str)
-			return Promise.resolve(data)
-		} catch (e) {
-			throw 'invalid json data'
-		}
-	} else if (opts.serverData) {
+	if (opts.serverData) {
 		if (!(dataName in opts.serverData)) {
 			trackfetch(url, init)
 			opts.serverData[dataName] = fetch(url, init).then(data => {
@@ -363,14 +342,6 @@ opts {}
 				// stringify to not share parsed response object
 				// to-do: support opt.freeze to enforce Object.freeze(data.json())
 				const prom = data.text()
-				if (opts.sessionStorage) {
-					try {
-						// store as string to not share parsed response object
-						prom.then(str => window.sessionStorage.setItem(dataName, str))
-					} catch (e) {
-						console.warn('warning: unable to cache fetched data in sessionStorage: ' + e)
-					}
-				}
 				return prom
 			})
 		}
@@ -382,7 +353,6 @@ opts {}
 		if (cachedServerDataKeys.length > maxNumOfServerDataKeys) {
 			const oldestDataname = cachedServerDataKeys.pop()
 			delete opts.serverData[oldestDataname]
-			window.sessionStorage.removeItem(dataName)
 		}
 
 		return opts.serverData[dataName].then(str => JSON.parse(str))
@@ -392,14 +362,6 @@ opts {}
 			if (fetchTimers[url]) {
 				clearTimeout(fetchTimers[url])
 			}
-			if (opts.sessionStorage) {
-				try {
-					// store as string to not share parsed response object
-					data.text().then(str => window.sessionStorage.setItem(dataName, str))
-				} catch (e) {
-					console.warn('warning: unable to cache fetched data in sessionStorage: ' + e)
-				}
-			}
 			return data.json()
 		})
 	}
@@ -408,12 +370,9 @@ opts {}
 const defaultServerDataCache = {}
 export function dofetch3(path, init = {}, opts = {}) {
 	/*
-		This is a convenience function that 
-		sets a default serverData object and enforces the use
-		of sessionStorage
+		This is a convenience function that sets a default serverData object
 	*/
 	opts.serverData = defaultServerDataCache
-	opts.sessionStorage = true
 	return dofetch2(path, init, opts)
 }
 
