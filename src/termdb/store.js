@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
@@ -141,7 +141,7 @@ class TdbStore {
 	}
 
 	async getTermdbConfig() {
-		const data = await dofetch2(
+		const data = await dofetch3(
 			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
 		)
 		// note: in case of error such as missing dataset, supply empty object

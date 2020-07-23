@@ -123,14 +123,8 @@ window.runproteinpaint=(arg)=>{
 	const response = serverData
 		// use serverData if provided
 		? client.dofetch('genomes', {}, {serverData})
-		// do as usual
-		: fetch( new Request(hostURL+'/genomes',{
-				method:'POST',
-				body:JSON.stringify({
-					jwt: arg.jwt
-				})
-			}))
-			.then(data=>{return data.json()})
+		// use the default serverData provided in dofetch3()
+		: client.dofetch3('genomes', {method:'POST'})
 
 	return response.then(data=>{
 		if(data.error) throw({message:'Cannot get genomes: '+data.error})
