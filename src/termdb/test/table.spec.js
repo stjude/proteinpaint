@@ -11,10 +11,7 @@ const runpp = helpers.getRunPp('termdb', {
 		dslabel: 'SJLife',
 		genome: 'hg38'
 	},
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 /**************
@@ -26,7 +23,7 @@ tape('\n', function(test) {
 })
 
 tape('default behavior', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(3000)
 
 	const termfilter = { terms: [] }
 	runpp({
@@ -59,7 +56,7 @@ tape('default behavior', function(test) {
 			.rideInit({ arg: plot, eventType: 'postRender.test' })
 			.run(testHiddenTable, { wait: 200 })
 			.use(triggerViewTable, { wait: 400 })
-			.to(testVisibleTable, { wait: 1000 })
+			.to(testVisibleTable, { wait: 1500 })
 			.done(test)
 	}
 

@@ -151,7 +151,7 @@ async function getDensityPlotData(self) {
 	if (typeof self.filter != 'undefined') {
 		density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(self.filter))
 	}
-	const density_data = await client.dofetch2(density_q)
+	const density_data = await client.dofetch3(density_q)
 	if (density_data.error) throw density_data.error
 	return density_data
 }

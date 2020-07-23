@@ -14,10 +14,7 @@ const runpp = helpers.getRunPp('termdb', {
 		dslabel: 'SJLife',
 		genome: 'hg38'
 	},
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 /**************

@@ -1,4 +1,4 @@
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 
 export function getCategoricalMethods(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
@@ -63,7 +63,7 @@ export function getCategoricalMethods(self) {
 		]
 
 		try {
-			const data = await dofetch2('/termdb?' + args.join('&'), {})
+			const data = await dofetch3('/termdb?' + args.join('&'))
 			if (data.error) throw data.error
 			return data
 		} catch (e) {

@@ -70,8 +70,6 @@ class TdbApp {
 	}*/
 
 	initOpts(o) {
-		if (!o.fetchOpts) o.fetchOpts = {}
-		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
 		if (!('app' in o)) o.app = {}
 		return o
 	}

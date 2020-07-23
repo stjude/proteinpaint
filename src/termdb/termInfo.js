@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 
 class TdbTermInfo {
 	constructor(app, opts) {
@@ -36,7 +36,7 @@ class TdbTermInfo {
 		const args = [
 			'genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&getterminfo=1&tid=' + this.state.term.id
 		]
-		const data = await dofetch2('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		this.render(data)
 	}

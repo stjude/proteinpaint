@@ -62,7 +62,7 @@ exports.setNumericMethods = function setNumericMethods(self) {
 			if (typeof self.filter != 'undefined') {
 				density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(self.filter))
 			}
-			self.num_obj.density_data = await client.dofetch2(density_q)
+			self.num_obj.density_data = await client.dofetch3(density_q)
 			if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 			else if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
 				self.num_obj.no_density_data = true

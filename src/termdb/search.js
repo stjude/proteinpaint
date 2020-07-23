@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2, sayerror } from '../client'
+import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
@@ -69,7 +69,7 @@ class TermSearch {
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + this.state.cohortStr
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'))
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()

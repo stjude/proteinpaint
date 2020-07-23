@@ -63,7 +63,7 @@ export function getNumericMethods(self) {
 			ypad: 20
 		}
 
-		self.num_obj.density_data = await client.dofetch2(
+		self.num_obj.density_data = await client.dofetch3(
 			'/termdb?density=1' +
 				'&genome=' +
 				self.opts.genome +
@@ -110,7 +110,7 @@ export function getNumericMethods(self) {
 			'filter=' + encodeURIComponent(JSON.stringify(self.filter))
 		]
 		// may add filter
-		const data = await client.dofetch2('termdb?' + args.join('&'))
+		const data = await client.dofetch3('termdb?' + args.join('&'))
 		if (data.error) throw data.error
 		return data.lst
 	}

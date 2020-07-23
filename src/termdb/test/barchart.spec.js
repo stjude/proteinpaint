@@ -14,10 +14,7 @@ const runpp = helpers.getRunPp('termdb', {
 		genome: 'hg38',
 		nav: { header_mode: 'with_tabs' }
 	},
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 /**************

@@ -11,9 +11,6 @@ const runpp = helpers.getRunPp('termdb', {
 		genome: 'hg38'
 	},
 	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	},
 	recover: {
 		maxHistoryLen: 8
 	}
