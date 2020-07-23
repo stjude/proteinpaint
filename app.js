@@ -99,6 +99,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+	res.setHeader('Expires', new Date(Date.now() + 30000).toUTCString())
 	next()
 })
 
