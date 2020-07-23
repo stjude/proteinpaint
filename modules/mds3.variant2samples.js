@@ -15,14 +15,10 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 module.exports = async (q, ds) => {
 	// this function is independent of query method
-	let levels, samples
-	if (q.levels) {
-		// client provided levels, could be customized when there are optional levels
-		levels = JSON.parse(q.levels)
-	}
+	let samples
 
 	if (ds.variant2samples.gdcapi) {
-		samples = await getResult_gdcapi(q, levels, ds)
+		samples = await getResult_gdcapi(q, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
 	}
@@ -32,8 +28,7 @@ module.exports = async (q, ds) => {
 	}
 
 	if (q.getsummary) {
-		// here "levels" is required
-		const nodes = stratinput(samples, levels)
+		const nodes = stratinput(samples, ds.variant2samples.attributes.filter(i => i.sunburst))
 		for (const node of nodes) {
 			delete node.lst
 			if (ds.onetimequery_projectsize) {
@@ -52,19 +47,21 @@ module.exports = async (q, ds) => {
 	throw 'unknown report format'
 }
 
-async function getResult_gdcapi(q, levels, ds) {
+async function getResult_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-	if (!levels) {
-		// when querying list of samples, allow client not to provide levels
-		// will return full list of attributes
-		levels = ds.variant2samples.levels
-	}
+	const attributes = q.getsummary
+		? ds.variant2samples.attributes.filter(i => i.sunburst)
+		: ds.variant2samples.attributes
 
-	ds.variant2samples.gdcapi.variables.filter.content.value = q.ssm_id_lst.split(',')
+	const query = {
+		variables: JSON.parse(JSON.stringify(ds.variant2samples.gdcapi.variables)),
+		query: q.getsummary ? ds.variant2samples.gdcapi.query_summary : ds.variant2samples.gdcapi.query_list
+	}
+	query.variables.filter.content.value = q.ssm_id_lst.split(',')
 
 	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(ds.variant2samples.gdcapi)
+		body: JSON.stringify(query)
 	})
 	let re
 	try {
@@ -90,12 +87,8 @@ async function getResult_gdcapi(q, levels, ds) {
 		for (const sample of ssm.node.occurrence.hits.edges) {
 			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
 			const s = {}
-			for (const level of levels) {
-				let c = sample.node.case
-				for (const key of level.keys) {
-					c = c[key]
-				}
-				s[level.k] = c
+			for (const attr of attributes) {
+				s[attr.k] = attr.get(sample.node.case)
 			}
 			samples.push(s)
 		}

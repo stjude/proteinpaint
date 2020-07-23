@@ -687,49 +687,7 @@ custom mclass from vcfinfofilter
 			}
 		})
 		.on('click', async d => {
-			click_variants(d, tk, block)
-			/*
-			const p = d3event.target.getBoundingClientRect()
-			if (d.dt == common.dtfusionrna || d.dt == common.dtsv) {
-				// svgraph
-				itemtable({
-					mlst: d.mlst,
-					pane: true,
-					x: p.left - 10,
-					y: p.top - 10,
-					tk,
-					block,
-					svgraph: true
-				})
-				return
-			}
-			if (d.occurrence == 1) {
-				// table for single
-				itemtable({ mlst: d.mlst, pane: true, x: p.left - 10, y: p.top - 10, tk: tk, block: block })
-				return
-			}
-			if (
-				await may_sunburst(
-					d.occurrence,
-					d.mlst,
-					d.aa.x,
-					skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1),
-					tk,
-					block
-				)
-			) {
-				return
-			}
-			// many items to table
-			itemtable({
-				mlst: d.mlst,
-				pane: true,
-				x: p.left - 10,
-				y: p.top - 10,
-				tk,
-				block
-			})
-			*/
+			click_variants(d, tk, block, d3event.target.getBoundingClientRect())
 		})
 
 	// disc rims
@@ -972,23 +930,7 @@ custom mclass from vcfinfofilter
 				.attr('fill-opacity', 0)
 		})
 		.on('click', async d => {
-			click_variants(d, tk, block)
-			/*
-			// must not check d3event after await as it will be voided
-			const p = d3event.target.getBoundingClientRect()
-			if (d.occurrence > 1) {
-				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * ss.stem1) / 2, tk, block))
-					return
-			}
-			itemtable({
-				mlst: d.mlst,
-				pane: true,
-				x: p.left - 10,
-				y: p.top - 10,
-				tk: tk,
-				block: block
-			})
-			*/
+			click_variants(d, tk, block, d3event.target.getBoundingClientRect())
 		})
 }
 
@@ -1823,12 +1765,20 @@ function may_print_stratifycountfromserver(dat, tk) {
 	}
 }
 
-async function click_variants(d, tk, block) {
+/*
+d: 
+	if d.aa{}, is a group of skewer.data[0].groups[], and is one or a few variants sharing the mname (kras Q61H) and of the same data type
+	else, is one of skewer.data[], variants may be of different data type
+	both case, use d.mlst[] for full list
+tk, block
+tippos: suggested itemtip position, if not sunburst
+*/
+async function click_variants(d, tk, block, tippos) {
 	try {
 		if (d.occurrence > 1 && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.mds.variant2samples.get(d.mlst)
+			const data = await tk.mds.variant2samples.get(d.mlst, 'getsummary')
 			tk.glider.style('cursor', 'auto')
 			if (data.error) throw data.error
 			if (!data.data) throw '.data[] missing'
@@ -1844,14 +1794,12 @@ async function click_variants(d, tk, block) {
 				chartlabel: d.mlst[0].mname + (d.mlst.length > 1 ? ' etc' : '')
 			}
 			if (d.aa) {
-				// a group of skewer.data[0].groups[]
 				arg.cx = d.aa.x
 				arg.cy = skewer_sety(d, tk) + d.yoffset * (tk.aboveprotein ? -1 : 1)
 				arg.click_listbutton = (x, y) => {
-					may_itemtable(d.mlst, tk, block)
+					may_itemtable(d.mlst, tk, block, tippos)
 				}
 			} else {
-				// one of skewer.data[]
 				arg.cx = d.x
 				arg.cy = d.y + ((tk.aboveprotein ? 1 : -1) * tk.skewer.stem1) / 2
 				// not to show list button in sunburst in case mlst has different data types
@@ -1861,14 +1809,116 @@ async function click_variants(d, tk, block) {
 			return
 		}
 		// no sunburst
-		await may_itemtable(d.mlst, tk, block)
+		await may_itemtable(d.mlst, tk, block, tippos)
 	} catch (e) {
 		block.error(e.message || e)
 		if (e.stack) console.log(e.stack)
 	}
 }
 
-async function may_itemtable(mlst, tk, block) {
+async function may_itemtable(mlst, tk, block, tippos) {
 	// all mlst[] of same data type
-	console.log(mlst)
+	tk.itemtip.clear().show(tippos.left - 10, tippos.top - 10)
+	if (mlst[0].dt == common.dtsnvindel) {
+		await itemtable_snvindel(mlst, tk, block)
+		return
+	}
+	if (mlst[0].dt == common.dtfusionrna || mlst[0].dt == common.dtsv) {
+		await itemtable_fusionsv(mlst, tk, block)
+		return
+	}
+	throw 'itemtable unknown dt'
+}
+
+async function itemtable_snvindel(mlst, tk, block) {
+	// rendering may be altered by tk.mds config
+	// may use separate scripts to code different table styles
+	if (mlst.length == 1) {
+		const m = mlst[0]
+		const table = tk.itemtip.d.append('table')
+		{
+			const [td1, td2] = row_headervalue(table)
+			td1.text('Mutation')
+			td2
+				.append('span')
+				.style('font-size', '1.1em')
+				.text(m.mname) // do not .html() to prevent injection
+			td2
+				.append('span')
+				.style('margin-left', '10px')
+				.style('color', common.mclass[m.class].color)
+				.style('font-weight', 'bold')
+				.style('font-size', '.8em')
+				.text(common.mclass[m.class].label.toUpperCase())
+			td2
+				.append('span')
+				.style('margin-left', '10px')
+				.text(m.chr + ':' + (m.pos + 1))
+			td2
+				.append('span')
+				.style('margin-left', '10px')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+				.text('REF')
+			td2
+				.append('span')
+				.style('margin-left', '5px')
+				.text(m.ref)
+			td2
+				.append('span')
+				.style('margin-left', '10px')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+				.text('ALT')
+			td2
+				.append('span')
+				.style('margin-left', '5px')
+				.text(m.alt)
+		}
+		{
+			const [td1, td2] = row_headervalue(table)
+			td1.text('Occurrence')
+			td2.text(m.occurrence)
+		}
+		// to move to helper function
+		// when occurrence>1, to show category breakdown for each attribute; for number, show chart
+		if (tk.mds.variant2samples) {
+			if (m.occurrence == 1) {
+				const [tdtemp1, tdtemp2, trtemp] = row_headervalue(table)
+				tdtemp1.text('Loading...')
+				const data = await tk.mds.variant2samples.get([m], 'getsamples')
+				if (data.error) {
+					tdtemp1.text(data.error)
+					return
+				}
+				if (!data.data || !data.data[0]) {
+					tdtemp1.text('result error')
+					return
+				}
+				trtemp.remove()
+				for (const attr of tk.mds.variant2samples.attributes) {
+					const [td1, td2] = row_headervalue(table)
+					td1.text(attr.k)
+					td2.text(data.data[0][attr.k])
+				}
+			}
+		}
+	} else {
+	}
+}
+
+async function itemtable_fusionsv(mlst, tk, block) {}
+
+// may move to client.js
+function row_headervalue(table) {
+	const tr = table.append('tr')
+	return [
+		tr
+			.append('td')
+			.style('color', '#bbb')
+			.style('border-bottom', 'solid 1px #ededed')
+			.style('padding', '5px 20px 5px 0px'),
+		tr.append('td').style('border-bottom', 'solid 1px #ededed'),
+		tr
+	]
 }

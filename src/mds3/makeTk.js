@@ -19,7 +19,7 @@ const labyspace = 5
 export async function makeTk(tk, block) {
 	tk.load = _load(tk, block)
 
-	tk.tip2 = new client.Menu({ padding: '0px' })
+	tk.itemtip = new client.Menu()
 
 	get_ds(tk, block)
 
@@ -60,25 +60,19 @@ function get_ds(tk, block) {
 
 		copy_official_configs(tk)
 		if (tk.mds.variant2samples && !tk.mds.variant2samples.get) {
-			tk.mds.variant2samples.get = async mlst => {
+			tk.mds.variant2samples.get = async (mlst, querytype) => {
 				/*
 				support alternative methods
 				where all data are hosted on client
 				*/
 				// hardcode to getsummary and using fixed levels
-				const par = [
-					'genome=' + block.genome.name,
-					'dslabel=' + tk.mds.label,
-					'variant2samples=1',
-					'levels=' + JSON.stringify(tk.mds.variant2samples.levels),
-					'getsummary=1'
-				]
+				const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', querytype + '=1']
 				if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 					par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
 				} else {
 					throw 'unknown variantkey for variant2samples'
 				}
-				return await client.dofetch2('mds3?' + par.join('&'), {}, { serverData: block.cache })
+				return await client.dofetch2('mds3?' + par.join('&'))
 			}
 		}
 		return

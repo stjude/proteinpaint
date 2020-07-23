@@ -123,7 +123,34 @@ and hiding the implementation details on server
 on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
 this happens for sunburst and itemtable
 */
-const query_variant2samples = `
+const query_variant2samples_summary = `
+query OneSsm($filter: FiltersArgument) {
+	explore {
+		ssms {
+			hits(first: 10000, filters: $filter) {
+				edges {
+					node {
+						occurrence {
+							hits {
+								edges {
+									node {
+										case {
+											project {
+												project_id
+											}
+											disease_type
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}`
+const query_variant2samples_list = `
 query OneSsm($filter: FiltersArgument) {
 	explore {
 		ssms {
@@ -141,6 +168,19 @@ query OneSsm($filter: FiltersArgument) {
 											disease_type
 											primary_site
 											case_id
+											available_variation_data
+											state
+											days_to_index
+											submitter_id
+											tissue_source_site {
+												name
+											}
+											demographic {
+												gender
+												year_of_birth
+												race
+												ethnicity
+											}
 										}
 									}
 								}
@@ -161,6 +201,68 @@ const variables_variant2samples = {
 		}
 	}
 }
+const ssmCaseAttr = [
+	{
+		sunburst: true, // set to true so it will be a level in summary
+		k: 'Project', // attribute for stratinput
+		get: m => {
+			// the getter will not be passed to client
+			if (m.project) return m.project.project_id
+			return null
+		}
+	},
+	{
+		sunburst: true,
+		k: 'Disease',
+		get: m => m.disease_type
+	},
+	{
+		k: 'Primary site',
+		get: m => m.primary_site
+	},
+	{
+		k: 'Available variation data',
+		get: m => m.available_variation_data
+	},
+	{ k: 'State', get: m => m.state },
+	{ k: 'Days to index', get: m => m.days_to_index },
+	{ k: 'Submitter', get: m => m.submitter_id },
+	{
+		k: 'Tissue source site',
+		get: m => {
+			if (m.tissue_source_site) return m.tissue_source_site.name
+			return null
+		}
+	},
+	{
+		k: 'Gender',
+		get: m => {
+			if (m.demographic) return m.demographic.gender
+			return null
+		}
+	},
+	{
+		k: 'Birth year',
+		get: m => {
+			if (m.demographic) return m.demographic.year_of_birth
+			return null
+		}
+	},
+	{
+		k: 'Race',
+		get: m => {
+			if (m.demographic) return m.demographic.race
+			return null
+		}
+	},
+	{
+		k: 'Ethnicity',
+		get: m => {
+			if (m.demographic) return m.demographic.ethnicity
+			return null
+		}
+	}
+]
 
 /*
 one time query: will only run once and result is cached on serverside
@@ -300,20 +402,10 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// required
-		levels: [
-			{
-				k: 'project', // attribute for stratinput
-				label: 'Project',
-				keys: ['project', 'project_id']
-			},
-			{
-				k: 'disease',
-				label: 'Disease',
-				keys: ['disease_type']
-			}
-		],
+		attributes: ssmCaseAttr,
 		gdcapi: {
-			query: query_variant2samples,
+			query_summary: query_variant2samples_summary,
+			query_list: query_variant2samples_list,
 			variables: variables_variant2samples
 		}
 	},
