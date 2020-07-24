@@ -6,6 +6,7 @@ const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
+const jStat = require('jStat').jStat
 
 /*
 1. reads are parsed into template/segments
@@ -467,7 +468,7 @@ async function divide_reads_togroups(templates, q) {
 		// if snv, simple match; otherwise complex match
 		const lst = may_match_snv(templates, q)
 		if (lst) return lst
-		return match_complexvariant(templates, q)
+		return await match_complexvariant(templates, q)
 	}
 	if (q.sv) {
 		return match_sv(templates, q)
@@ -542,8 +543,171 @@ function may_match_snv(templates, q) {
 	return groups
 }
 
-function match_complexvariant(tempaltes, q) {
+
+function build_kmers(sequence,kmer){
+
+    var num_iterations=sequence.length-kmer+1;
+    // console.log(sequence);
+
+    var kmers = [];
+    for (i=0;i<num_iterations;i++)
+        { 
+          var subseq=sequence.substr(i,kmer);
+          // console.log(i,kmer);
+          // console.log(subseq);
+          kmers.push(subseq);
+        }
+    return kmers;
+} 
+
+function jaccard_similarity(kmers1, kmers2) {
+
+    var set_kmers1=new Set(kmers1); 
+    var set_kmers2=new Set(kmers2);
+
+    var array1 = Array.from(set_kmers1);
+    var array2 = Array.from(set_kmers2);
+
+    var intersection=[];
+    for (i=0;i<array1.length;i++){
+	for (j=0;j<array2.length;j++){
+            if (array1[i]==array2[j]){
+		intersection.push(array1[i]);
+                break;
+	    }
+	}
+    }
+
+    var list_all_kmers=kmers1.concat(kmers2);
+    var set_all_kmers=new Set(list_all_kmers);
+    var all_kmers = Array.from(set_all_kmers); 
+    //console.log(all_kmers);
+
+    return intersection.length/all_kmers.length;
+}
+
+async function match_complexvariant(templates, q) {
 	// TODO
+	// get flanking sequence, suppose that segments are of same length, use segment length
+	const segbplen = templates[0].segments[0].seq.length
+	// need to verify if the retrieved sequence is showing 1bp offset or not
+	const leftflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const rightflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr +
+			':' +
+			(q.variant.pos + q.variant.ref.length + 1) +
+			'-' +
+			(q.variant.pos + segbplen + q.variant.ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	console.log(q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt)
+	console.log('refSeq', leftflankseq + q.variant.ref + rightflankseq)
+	console.log('mutSeq', leftflankseq + q.variant.alt + rightflankseq)
+        
+	const refallele = q.variant.ref.toUpperCase();
+        const altallele = q.variant.alt.toUpperCase();
+        refseq=leftflankseq+refallele+rightflankseq;
+        altseq=leftflankseq+altallele+rightflankseq;
+
+        console.log(refallele,altallele,refseq,altseq);
+        kmer_length=10; // length of kmer
+        percentile_cutoff=0.75; // Difference in jaccard similarity betwen reference and alternate allele 
+        ref_kmers=build_kmers(refseq,kmer_length);
+        alt_kmers=build_kmers(altseq,kmer_length);        
+
+        //console.log(ref_kmers);
+        //console.log(alt_kmers);
+    
+        ref_comparisons=[]
+        alt_comparisons=[]
+        refaltstatus=[] 
+        for (k=0;k<templates.length;k++){
+            read_seq=templates[k].segments[0].seq;
+            cigar_seq=templates[k].segments[0].cigarstr;
+            read_kmers=build_kmers(read_seq,kmer_length);
+	    ref_comparison=jaccard_similarity(read_kmers,ref_kmers);
+	    alt_comparison=jaccard_similarity(read_kmers,alt_kmers);
+            // console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length);
+            diff_score=alt_comparison-ref_comparison;
+            if (diff_score<0) {
+		// type2group[type_supportref].templates.push(t);
+                ref_comparisons.push(diff_score);
+		refaltstatus.push("ref");
+	    }
+            else {
+	    if (diff_score>=0) {	
+                // type2group[type_supportalt].templates.push(t);
+                alt_comparisons.push(diff_score);
+                refaltstatus.push("alt");
+	    }
+	    }
+        }
+	ref_cutoff=jStat.percentile(ref_comparisons, percentile_cutoff)
+        alt_cutoff=jStat.percentile(alt_comparisons, 1-percentile_cutoff)
+	console.log(alt_comparisons)
+	console.log("Reference cutoff:",ref_cutoff)
+	console.log("Alternate cutoff:",alt_cutoff)
+
+        j=0
+        k=0
+	const type2group = make_type2group(q)
+        for (i=0;i<refaltstatus.length;i++){
+    	   if (refaltstatus[i]=="ref"){
+	       if (ref_comparisons[j]<=ref_cutoff){
+                   // Label read as reference allele
+                   type2group[type_supportref].templates.push(templates[i])   
+	       }
+
+               else{
+                   // Label read as none
+                   type2group[type_supportno].templates.push(templates[i])
+	       }
+               j++;
+	   }
+
+    	   if (refaltstatus[i]=="alt"){
+	       if (alt_comparisons[k]>=alt_cutoff){
+                   // Label read as alternate allele
+                   type2group[type_supportalt].templates.push(templates[i])    
+	       }
+
+               else{
+                   // Label read as none
+                   type2group[type_supportno].templates.push(templates[i])
+	       }
+               k++;
+	   }    
+        }
+        
+	const groups = []
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		g.messagerows.push({
+			h: 15,
+			t:
+				g.templates.length +
+				' reads supporting ' +
+				(k == type_supportref
+					? 'reference allele'
+					: k == type_supportalt
+					? 'mutant allele'
+					: 'neither reference or mutant alleles')
+		})
+		groups.push(g)
+	}
+	return groups
 }
 
 function match_sv(templates, q) {
