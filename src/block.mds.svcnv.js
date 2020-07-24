@@ -2636,7 +2636,21 @@ function prep_samplegroups(tk, block) {
 			plotgroups = lst
 		}
 	}
-
+	if (tk.sampleset) {
+		// for each group, sort samples by the order given
+		for (let i = 0; i < tk.sampleset.length; i++) {
+			if (!plotgroups[i]) continue
+			const foundsamples = []
+			for (const name of tk.sampleset[i].samples) {
+				if (!plotgroups[i].samples) console.log(plotgroups[i])
+				const s = plotgroups[i].samples.find(j => j.samplename == name)
+				if (s) {
+					foundsamples.push(s)
+				}
+			}
+			plotgroups[i].samples = foundsamples
+		}
+	}
 	return [plotgroups, svlst4dense]
 }
 
