@@ -543,47 +543,43 @@ function may_match_snv(templates, q) {
 	return groups
 }
 
+function build_kmers(sequence, kmer) {
+	let num_iterations = sequence.length - kmer + 1
+	// console.log(sequence)
 
-function build_kmers(sequence,kmer){
-
-    var num_iterations=sequence.length-kmer+1;
-    // console.log(sequence);
-
-    var kmers = [];
-    for (i=0;i<num_iterations;i++)
-        { 
-          var subseq=sequence.substr(i,kmer);
-          // console.log(i,kmer);
-          // console.log(subseq);
-          kmers.push(subseq);
-        }
-    return kmers;
-} 
+	let kmers = []
+	for (let i = 0; i < num_iterations; i++) {
+		let subseq = sequence.substr(i, kmer)
+		// console.log(i,kmer)
+		// console.log(subseq)
+		kmers.push(subseq)
+	}
+	return kmers
+}
 
 function jaccard_similarity(kmers1, kmers2) {
+	let set_kmers1 = new Set(kmers1)
+	let set_kmers2 = new Set(kmers2)
 
-    var set_kmers1=new Set(kmers1); 
-    var set_kmers2=new Set(kmers2);
+	let array1 = Array.from(set_kmers1)
+	let array2 = Array.from(set_kmers2)
 
-    var array1 = Array.from(set_kmers1);
-    var array2 = Array.from(set_kmers2);
-
-    var intersection=[];
-    for (i=0;i<array1.length;i++){
-	for (j=0;j<array2.length;j++){
-            if (array1[i]==array2[j]){
-		intersection.push(array1[i]);
-                break;
-	    }
+	let intersection = []
+	for (let i = 0; i < array1.length; i++) {
+		for (let j = 0; j < array2.length; j++) {
+			if (array1[i] == array2[j]) {
+				intersection.push(array1[i])
+				break
+			}
+		}
 	}
-    }
 
-    var list_all_kmers=kmers1.concat(kmers2);
-    var set_all_kmers=new Set(list_all_kmers);
-    var all_kmers = Array.from(set_all_kmers); 
-    //console.log(all_kmers);
+	let list_all_kmers = kmers1.concat(kmers2)
+	let set_all_kmers = new Set(list_all_kmers)
+	let all_kmers = Array.from(set_all_kmers)
+	//console.log(all_kmers)
 
-    return intersection.length/all_kmers.length;
+	return intersection.length / all_kmers.length
 }
 
 async function match_complexvariant(templates, q) {
@@ -614,82 +610,76 @@ async function match_complexvariant(templates, q) {
 	console.log(q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt)
 	console.log('refSeq', leftflankseq + q.variant.ref + rightflankseq)
 	console.log('mutSeq', leftflankseq + q.variant.alt + rightflankseq)
-        
-	const refallele = q.variant.ref.toUpperCase();
-        const altallele = q.variant.alt.toUpperCase();
-        refseq=leftflankseq+refallele+rightflankseq;
-        altseq=leftflankseq+altallele+rightflankseq;
 
-        console.log(refallele,altallele,refseq,altseq);
-        kmer_length=10; // length of kmer
-        percentile_cutoff=0.75; // Difference in jaccard similarity betwen reference and alternate allele 
-        ref_kmers=build_kmers(refseq,kmer_length);
-        alt_kmers=build_kmers(altseq,kmer_length);        
+	const refallele = q.variant.ref.toUpperCase()
+	const altallele = q.variant.alt.toUpperCase()
 
-        //console.log(ref_kmers);
-        //console.log(alt_kmers);
-    
-        ref_comparisons=[]
-        alt_comparisons=[]
-        refaltstatus=[] 
-        for (k=0;k<templates.length;k++){
-            read_seq=templates[k].segments[0].seq;
-            cigar_seq=templates[k].segments[0].cigarstr;
-            read_kmers=build_kmers(read_seq,kmer_length);
-	    ref_comparison=jaccard_similarity(read_kmers,ref_kmers);
-	    alt_comparison=jaccard_similarity(read_kmers,alt_kmers);
-            // console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length);
-            diff_score=alt_comparison-ref_comparison;
-            if (diff_score<0) {
-		// type2group[type_supportref].templates.push(t);
-                ref_comparisons.push(diff_score);
-		refaltstatus.push("ref");
-	    }
-            else {
-	    if (diff_score>=0) {	
-                // type2group[type_supportalt].templates.push(t);
-                alt_comparisons.push(diff_score);
-                refaltstatus.push("alt");
-	    }
-	    }
-        }
-	ref_cutoff=jStat.percentile(ref_comparisons, percentile_cutoff)
-        alt_cutoff=jStat.percentile(alt_comparisons, 1-percentile_cutoff)
-	console.log(alt_comparisons)
-	console.log("Reference cutoff:",ref_cutoff)
-	console.log("Alternate cutoff:",alt_cutoff)
+	let refseq = leftflankseq + refallele + rightflankseq
+	let altseq = leftflankseq + altallele + rightflankseq
 
-        j=0
-        k=0
+	// console.log(refallele,altallele,refseq,altseq)
+	let kmer_length = 10 // length of kmer
+	let percentile_cutoff = 0.75 // Difference in jaccard similarity betwen reference and alternate allele
+	let ref_kmers = build_kmers(refseq, kmer_length)
+	let alt_kmers = build_kmers(altseq, kmer_length)
+
+	//console.log(ref_kmers)
+	//console.log(alt_kmers)
+
+	let ref_comparisons = []
+	let alt_comparisons = []
+	let refaltstatus = []
+	for (let k = 0; k < templates.length; k++) {
+		read_seq = templates[k].segments[0].seq
+		cigar_seq = templates[k].segments[0].cigarstr
+		read_kmers = build_kmers(read_seq, kmer_length)
+		ref_comparison = jaccard_similarity(read_kmers, ref_kmers)
+		alt_comparison = jaccard_similarity(read_kmers, alt_kmers)
+		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
+		diff_score = alt_comparison - ref_comparison
+		if (diff_score < 0) {
+			ref_comparisons.push(diff_score)
+			refaltstatus.push('ref')
+		} else {
+			if (diff_score >= 0) {
+				alt_comparisons.push(diff_score)
+				refaltstatus.push('alt')
+			}
+		}
+	}
+	ref_cutoff = jStat.percentile(ref_comparisons, percentile_cutoff)
+	alt_cutoff = jStat.percentile(alt_comparisons, 1 - percentile_cutoff)
+	// console.log(alt_comparisons)
+	console.log('Reference cutoff:', ref_cutoff)
+	console.log('Alternate cutoff:', alt_cutoff)
+
+	let j = 0
+	let k = 0
 	const type2group = make_type2group(q)
-        for (i=0;i<refaltstatus.length;i++){
-    	   if (refaltstatus[i]=="ref"){
-	       if (ref_comparisons[j]<=ref_cutoff){
-                   // Label read as reference allele
-                   type2group[type_supportref].templates.push(templates[i])   
-	       }
+	for (let i = 0; i < refaltstatus.length; i++) {
+		if (refaltstatus[i] == 'ref') {
+			if (ref_comparisons[j] <= ref_cutoff) {
+				// Label read as reference allele
+				type2group[type_supportref].templates.push(templates[i])
+			} else {
+				// Label read as none
+				type2group[type_supportno].templates.push(templates[i])
+			}
+			j++
+		}
 
-               else{
-                   // Label read as none
-                   type2group[type_supportno].templates.push(templates[i])
-	       }
-               j++;
-	   }
+		if (refaltstatus[i] == 'alt') {
+			if (alt_comparisons[k] >= alt_cutoff) {
+				// Label read as alternate allele
+				type2group[type_supportalt].templates.push(templates[i])
+			} else {
+				// Label read as none
+				type2group[type_supportno].templates.push(templates[i])
+			}
+			k++
+		}
+	}
 
-    	   if (refaltstatus[i]=="alt"){
-	       if (alt_comparisons[k]>=alt_cutoff){
-                   // Label read as alternate allele
-                   type2group[type_supportalt].templates.push(templates[i])    
-	       }
-
-               else{
-                   // Label read as none
-                   type2group[type_supportno].templates.push(templates[i])
-	       }
-               k++;
-	   }    
-        }
-        
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]
