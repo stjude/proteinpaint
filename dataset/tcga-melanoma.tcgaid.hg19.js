@@ -1,84 +1,80 @@
-const common=require('../src/common')
+const common = require('../src/common')
 
-const cohorthierarchy= [
-        {k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
-        {k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
-        {k:'diagnosis_subtype_short',label:'Subtype',full:'diagnosis_subtype_full'},
-        {k:'diagnosis_subgroup_short',label:'Subgroup',full:'diagnosis_subgroup_full'}
+const cohorthierarchy = [
+	{ k: 'diagnosis_group_short', label: 'Group', full: 'diagnosis_group_full' },
+	{ k: 'diagnosis_short', label: 'Cancer', full: 'diagnosis_full' },
+	{ k: 'diagnosis_subtype_short', label: 'Subtype', full: 'diagnosis_subtype_full' },
+	{ k: 'diagnosis_subgroup_short', label: 'Subgroup', full: 'diagnosis_subgroup_full' }
 ]
 
-const valuePerSample={
-        key:'percentage',
-        label:'Percentage',
-        cutoffValueLst:[
-                {side:'>',value:5,label:'>5%'},
-                {side:'>',value:10,label:'>10%'},
-                {side:'>',value:20,label:'>20%'},
-                {side:'>',value:30,label:'>30%'},
-                {side:'>',value:40,label:'>40%'}
-        ]
+const valuePerSample = {
+	key: 'percentage',
+	label: 'Percentage',
+	cutoffValueLst: [
+		{ side: '>', value: 5, label: '>5%' },
+		{ side: '>', value: 10, label: '>10%' },
+		{ side: '>', value: 20, label: '>20%' },
+		{ side: '>', value: 30, label: '>30%' },
+		{ side: '>', value: 40, label: '>40%' }
+	]
 }
-
 
 const samplenamekey = 'sample_name'
 
-module.exports={
-	genome:'hg19',
-	isMds:true,
+module.exports = {
+	genome: 'hg19',
+	isMds: true,
 
-	about:[
-	],
+	about: [],
 
-	sampleAssayTrack:{
-		file:'files/hg19/tcga/skcm/tracktable/__table'
+	sampleAssayTrack: {
+		file: 'files/hg19/tcga/skcm/tracktable/__table'
 	},
 
-	singlesamplemutationjson:{
-		file:'files/hg19/tcga/skcm/mutationpersample/table'
+	singlesamplemutationjson: {
+		file: 'files/hg19/tcga/skcm/mutationpersample/table'
 	},
 
-	 /*
+	/*
         cohort and sample annotation
      */
 
-     cohort:{
-     	files:[
-     		{file:'files/hg19/tcga/melanoma/sampletable/tcga.table'},
-     	],
-     	samplenamekey:samplenamekey,
-     	tohash:(item, ds)=>{
-            const samplename = item[samplenamekey]
-            if(!samplename) return console.error(samplenamekey+' missing from a line: '+JSON.stringify(item))
-            if(ds.cohort.annotation[ samplename ]) {
-                    // append info
-                    for(const k in item) {
-                            ds.cohort.annotation[samplename][ k ] = item[k]
-                    }
-            } else {
-                    // new sample
-                    ds.cohort.annotation[ samplename ] = item
-            }
-        },
-        hierarchies:{
-        	lst:[
-        		{
-        			name:'Cancer',
-        			levels:cohorthierarchy
-        		}
-        	]
-        },
-        sampleAttribute:{
-        	attributes:{
-        		diagnosis_group_short:{
-        			label:'Cancer group',
-        			filter:1,
-        			hidden:1
-        		},
-        		diagnosis_short:{
-        			label:'Cancer',
-        			filter:1
-        		}
-        	}
+	cohort: {
+		files: [{ file: 'files/hg19/tcga/melanoma/sampletable/tcga.table' }],
+		samplenamekey: samplenamekey,
+		tohash: (item, ds) => {
+			const samplename = item[samplenamekey]
+			if (!samplename) return console.error(samplenamekey + ' missing from a line: ' + JSON.stringify(item))
+			if (ds.cohort.annotation[samplename]) {
+				// append info
+				for (const k in item) {
+					ds.cohort.annotation[samplename][k] = item[k]
+				}
+			} else {
+				// new sample
+				ds.cohort.annotation[samplename] = item
+			}
+		},
+		hierarchies: {
+			lst: [
+				{
+					name: 'Cancer',
+					levels: cohorthierarchy
+				}
+			]
+		},
+		sampleAttribute: {
+			attributes: {
+				diagnosis_group_short: {
+					label: 'Cancer group',
+					filter: 1,
+					hidden: 1
+				},
+				diagnosis_short: {
+					label: 'Cancer',
+					filter: 1
+				}
+			}
 		},
 
 		mutation_signature: {
@@ -154,47 +150,47 @@ module.exports={
 				}
 			}
 		}
-     },
-     mutationAttribute:{
-     	attributes:{
-     		dna_assay:{
-     			label:'DNA assay',
-     			values:{
-     				wgs:{ name:'WGS', label:'Whole-genome sequencing' }
-     			},
-     			hidden:1,
-     			filter:1
-     		},
-     		vorigin:{
-     			label:'Variant origin',
-     			values:{
-     				somatic:{name:'Somatic'},
-     				germline:{name:'Germline'}
-     			},
-     			filter:1
-     		},
-		mutation_signature: {
+	},
+	mutationAttribute: {
+		attributes: {
+			dna_assay: {
+				label: 'DNA assay',
+				values: {
+					wgs: { name: 'WGS', label: 'Whole-genome sequencing' }
+				},
+				hidden: 1,
+				filter: 1
+			},
+			vorigin: {
+				label: 'Variant origin',
+				values: {
+					somatic: { name: 'Somatic' },
+					germline: { name: 'Germline' }
+				},
+				filter: 1
+			},
+			mutation_signature: {
 				label: 'Mutation signature'
 			}
-     	}
-     },
+		}
+	},
 
-     queries:{
-     	svcnv:{
-     		name:'TCGA Melanoma mutation',
-     		istrack:true,
-     		type:common.tkt.mdssvcnv,
-     		file:'files/hg19/tcga/skcm/Melanoma.svcnv.TCGAnames.gz',
+	queries: {
+		svcnv: {
+			name: 'TCGA Melanoma mutation',
+			istrack: true,
+			type: common.tkt.mdssvcnv,
+			file: 'files/hg19/tcga/skcm/Melanoma.svcnv.TCGAnames.gz',
 
-     		// cnv
-     		valueCutoff:0.4,
-     		bplengthUpperLimit:2000000, // limit cnv length to focal events
+			// cnv
+			valueCutoff: 0.2,
+			bplengthUpperLimit: 2000000, // limit cnv length to focal events
 
-     		// loh
-     		segmeanValueCutoff:0.1,
-     		lohLengthUpperLimit:2000000,
+			// loh
+			segmeanValueCutoff: 0.1,
+			lohLengthUpperLimit: 2000000,
 
-            /*
+			/*
      		groupsamplebyattr:{
      			attrlst:[
      				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
@@ -207,65 +203,64 @@ module.exports={
      			attrnamespacer:', ',
      		},
             */
-     		expressionrank_querykey:'genefpkm',
-     		vcf_querykey:'snvindel',
+			expressionrank_querykey: 'genefpkm',
+			vcf_querykey: 'snvindel',
 
-     		multihidelabel_vcf:true,
-     		multihidelabel_fusion:false,
-     		multihidelabel_sv:true,
+			multihidelabel_vcf: true,
+			multihidelabel_fusion: false,
+			multihidelabel_sv: true,
 
-     		legend_vorigin:{
-     			key:'vorigin',
-     			somatic:'somatic',
-     			germline:'germline'
-     		},
-     	},
+			legend_vorigin: {
+				key: 'vorigin',
+				somatic: 'somatic',
+				germline: 'germline'
+			}
+		},
 
-     	snvindel:{
-     		hideforthemoment:1,
-     		name:'TCGA Melanoma SNV/indel',
-     		istrack:true,
-     		type:common.tkt.mdsvcf,
-     		viewrangeupperlimit:2000000,
-     		tracks:[
-     			{
-     				file:'files/hg19/tcga/skcm/Melanoma.vep.mutsig.TCGAnames.vcf.gz',
-     				type:'vcf',
-     			}
-     		],
-     		singlesamples:{
-     			tablefile:'files/hg19/tcga/melanoma/split.vcf/table'
-     		}
-     	},
+		snvindel: {
+			hideforthemoment: 1,
+			name: 'TCGA Melanoma SNV/indel',
+			istrack: true,
+			type: common.tkt.mdsvcf,
+			viewrangeupperlimit: 2000000,
+			tracks: [
+				{
+					file: 'files/hg19/tcga/skcm/Melanoma.vep.mutsig.TCGAnames.vcf.gz',
+					type: 'vcf'
+				}
+			],
+			singlesamples: {
+				tablefile: 'files/hg19/tcga/melanoma/split.vcf/table'
+			}
+		},
 
-     	genefpkm:{
-     		hideforthemoment:1,
-     		name:'TCGA Melanoma RNA-seq gene FPKM',
-     		isgenenumeric:true,
-     		file:'files/hg19/tcga/skcm/Melanoma.fpkm.TCGAnames.gz',
-     		datatype:'FPKM',
+		genefpkm: {
+			hideforthemoment: 1,
+			name: 'TCGA Melanoma RNA-seq gene FPKM',
+			isgenenumeric: true,
+			file: 'files/hg19/tcga/skcm/Melanoma.fpkm.TCGAnames.gz',
+			datatype: 'FPKM',
 
-     		// for boxplots & circles, and the standalone expression track
-            itemcolor:'green',
+			// for boxplots & circles, and the standalone expression track
+			itemcolor: 'green',
 
-            // for expression rank checking when coupled to svcnv
-            viewrangeupperlimit:5000000,
+			// for expression rank checking when coupled to svcnv
+			viewrangeupperlimit: 5000000,
 
-            // yu's data & method for ase/outlier
-            ase:{
-            	qvalue:0.05,
-            	meandelta_monoallelic:0.3,
-            	asemarkernumber_biallelic:0,
-            	color_noinfo:'#858585',
-            	color_notsure:'#A8E0B5',
-            	color_biallelic:'#40859C',
-            	color_monoallelic:'#d95f02'
-            },
-            outlier:{
-            	pvalue:0.05,
-            	color:'#FF8875'
-            }
-     	}
-     }
+			// yu's data & method for ase/outlier
+			ase: {
+				qvalue: 0.05,
+				meandelta_monoallelic: 0.3,
+				asemarkernumber_biallelic: 0,
+				color_noinfo: '#858585',
+				color_notsure: '#A8E0B5',
+				color_biallelic: '#40859C',
+				color_monoallelic: '#d95f02'
+			},
+			outlier: {
+				pvalue: 0.05,
+				color: '#FF8875'
+			}
+		}
+	}
 }
-
