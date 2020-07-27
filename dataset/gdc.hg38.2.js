@@ -302,23 +302,6 @@ const occurrence_key = 'total' // for the numeric axis showing occurrence
 
 /* this now applies not only to vcf track but also legacy ds
  */
-const vcfinfofilter = {
-	//setidx4numeric: 0,
-	setidx4occurrence: 0, // to set .occurrence on each variant
-	lst: [
-		{
-			name: 'Occurrence',
-			locusinfo: { key: occurrence_key },
-			numericfilter: [
-				{ side: '>', value: 1 },
-				{ side: '>', value: 5 },
-				{ side: '>', value: 10 },
-				{ side: '>', value: 20 },
-				{ side: '>', value: 100 }
-			]
-		}
-	]
-}
 
 // attributes to show for list of variants
 const snvindel_attributes = [
@@ -389,7 +372,6 @@ module.exports = {
 	isMds3: true,
 	color: '#545454',
 	genome: 'hg38',
-	vcfinfofilter,
 	snvindel_attributes,
 
 	onetimequery_projectsize: {
@@ -410,9 +392,11 @@ module.exports = {
 		}
 	},
 
+	// this is meant for the leftside labels under tklabel
 	sampleSummaries: {
 		lst: sampleSummaries
 	},
+	// how to let gene-level gain/loss data shown as additional labels?
 
 	queries: {
 		snvindel: {

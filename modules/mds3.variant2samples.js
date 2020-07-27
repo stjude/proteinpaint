@@ -15,13 +15,8 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 module.exports = async (q, ds) => {
 	// this function is independent of query method
-	let samples
 
-	if (ds.variant2samples.gdcapi) {
-		samples = await getResult_gdcapi(q, ds)
-	} else {
-		throw 'unknown query method for variant2samples'
-	}
+	const samples = await get_samples(q, ds)
 
 	if (q.getsamples) {
 		return samples
@@ -47,7 +42,14 @@ module.exports = async (q, ds) => {
 	throw 'unknown report format'
 }
 
-async function getResult_gdcapi(q, ds) {
+async function get_samples(q, ds) {
+	if (ds.variant2samples.gdcapi) {
+		return await getSamples_gdcapi(q, ds)
+	}
+	throw 'unknown query method for variant2samples'
+}
+
+async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const attributes = q.getsummary
 		? ds.variant2samples.attributes.filter(i => i.sunburst)

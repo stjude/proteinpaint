@@ -43,6 +43,7 @@ export async function loadTk(tk, block) {
 
 		tk.height_main = tk.toppad + tk.bottompad
 
+		// render each possible track type. if indeed rendered, return sub track height
 		tk.height_main += may_render_skewer(data, tk, block)
 		// add new subtrack type
 

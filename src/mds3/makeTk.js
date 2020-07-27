@@ -22,9 +22,9 @@ export async function makeTk(tk, block) {
 	tk.itemtip = new client.Menu()
 
 	get_ds(tk, block)
-
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
+
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
 			g: tk.glider.append('g')
@@ -38,7 +38,7 @@ export async function makeTk(tk, block) {
 	laby += labyspace + block.labelfontsize
 
 	tk.clear = () => {
-		// where is it used
+		// called in loadTk
 	}
 
 	// TODO <g> for other file types
@@ -58,23 +58,7 @@ function get_ds(tk, block) {
 		tk.mds = block.genome.datasets[tk.dslabel]
 		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
 
-		copy_official_configs(tk)
-		if (tk.mds.variant2samples && !tk.mds.variant2samples.get) {
-			tk.mds.variant2samples.get = async (mlst, querytype) => {
-				/*
-				support alternative methods
-				where all data are hosted on client
-				*/
-				// hardcode to getsummary and using fixed levels
-				const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', querytype + '=1']
-				if (tk.mds.variant2samples.variantkey == 'ssm_id') {
-					par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
-				} else {
-					throw 'unknown variantkey for variant2samples'
-				}
-				return await client.dofetch2('mds3?' + par.join('&'))
-			}
-		}
+		mayaddGetter_variant2samples(tk, block)
 		return
 	}
 	// custom
@@ -89,6 +73,27 @@ function get_ds(tk, block) {
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 
+function mayaddGetter_variant2samples(tk, block) {
+	if (!tk.mds.variant2samples) return
+	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
+	tk.mds.variant2samples.get = async (mlst, querytype) => {
+		/*
+		support alternative methods
+		where all data are hosted on client
+		*/
+		// hardcode to getsummary and using fixed levels
+		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', querytype + '=1']
+		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+			// TODO detect too long string length that will result url-too-long error
+			// in such case, need alternative query method
+			par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
+		} else {
+			throw 'unknown variantkey for variant2samples'
+		}
+		return await client.dofetch2('mds3?' + par.join('&'))
+	}
+}
+
 function parse_client_config(tk) {
 	/* for both official and custom
 configurations and their location are not stable
@@ -96,18 +101,6 @@ configurations and their location are not stable
 }
 
 function configPanel(tk, block) {}
-
-function copy_official_configs(tk) {
-	/*
-for official tk only
-requires tk.mds{}
-make hard copy of attributes to tk
-so multiple instances of the same tk won't cross-react
-
-Note: must keep customizations of official tk through embedding api
-*/
-	tk.name = tk.mds.name
-}
 
 function _load(tk, block) {
 	return () => {
