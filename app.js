@@ -114,11 +114,15 @@ if (serverconfig.jwt) {
 	app.use((req, res, next) => {
 		let j = {}
 		if (req.body && req.method == 'POST') {
-			try {
-				j = JSON.parse(req.body)
-			} catch (err) {
-				res.send({ error: 'Invalid JSON for request body' })
-				return
+			if (typeof req.body == 'object') {
+				j = req.body
+			} else {
+				try {
+					j = JSON.parse(req.body)
+				} catch (err) {
+					res.send({ error: 'Invalid JSON for request body' })
+					return
+				}
 			}
 		}
 		const jwt = j.jwt
