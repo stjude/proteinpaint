@@ -47,6 +47,7 @@ const variables_isoform2variants = {
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
+TODO convert to text output
 */
 const query_range2variants = `
 query GdcSsmByGene($filter: FiltersArgument) {
@@ -122,8 +123,17 @@ and hiding the implementation details on server
 
 on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
 this happens for sunburst and itemtable
+
+query mode: samples/sunburst/summaries
+difference is how many sample attributes are included
+don't know a js method to alter the list of attributes in `case { }` part
+- samples
+  return entire list of attributes on the sample
+  use for returning list of samples, or summarizing all attributes
+- sunburst
+  only return subset of attributes selected for sunburst chart
 */
-const query_variant2samples_summary = `
+const query_variant2samples_sunburst = `
 query OneSsm($filter: FiltersArgument) {
 	explore {
 		ssms {
@@ -386,7 +396,7 @@ module.exports = {
 		// required
 		attributes: ssmCaseAttr,
 		gdcapi: {
-			query_summary: query_variant2samples_summary,
+			query_sunburst: query_variant2samples_sunburst,
 			query_list: query_variant2samples_list,
 			variables: variables_variant2samples
 		}

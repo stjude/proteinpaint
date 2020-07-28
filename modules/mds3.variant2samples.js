@@ -9,6 +9,18 @@ ds type agnostic (legacy/mds/mds2)
 only requires ds.variant2samples{}
 
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
+
+getsamples:
+- use all attributes
+- return samples as is
+
+getsunburst:
+- use only attributes labeled for sunburst
+- return stratified nodes
+
+getsummary:
+- use all attributes
+- return 
 */
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -22,7 +34,7 @@ module.exports = async (q, ds) => {
 		return samples
 	}
 
-	if (q.getsummary) {
+	if (q.getsunburst) {
 		const nodes = stratinput(samples, ds.variant2samples.attributes.filter(i => i.sunburst))
 		for (const node of nodes) {
 			delete node.lst
@@ -39,6 +51,9 @@ module.exports = async (q, ds) => {
 		}
 		return nodes
 	}
+
+	if (q.getsummary) {
+	}
 	throw 'unknown report format'
 }
 
@@ -51,13 +66,14 @@ async function get_samples(q, ds) {
 
 async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-	const attributes = q.getsummary
+
+	const attributes = q.getsunburst
 		? ds.variant2samples.attributes.filter(i => i.sunburst)
 		: ds.variant2samples.attributes
 
 	const query = {
 		variables: JSON.parse(JSON.stringify(ds.variant2samples.gdcapi.variables)),
-		query: q.getsummary ? ds.variant2samples.gdcapi.query_summary : ds.variant2samples.gdcapi.query_list
+		query: q.getsunburst ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list
 	}
 	query.variables.filter.content.value = q.ssm_id_lst.split(',')
 

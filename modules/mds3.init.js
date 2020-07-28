@@ -65,7 +65,7 @@ function validate_variant2samples(ds) {
 	// to validate levels
 	if (vs.gdcapi) {
 		if (!vs.gdcapi.query_list) throw '.query_list missing from variant2samples.gdcapi'
-		if (!vs.gdcapi.query_summary) throw '.query_summary missing from variant2samples.gdcapi'
+		if (!vs.gdcapi.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
 		if (!vs.gdcapi.variables) throw '.variables missing from variant2samples.gdcapi'
 	} else {
 		throw 'unknown query method of variant2samples'

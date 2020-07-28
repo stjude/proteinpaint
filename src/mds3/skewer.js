@@ -7,6 +7,7 @@ import * as coord from '../coord'
 import * as client from '../client'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
+import { itemtable, mlst2samplesummary } from './itemtable'
 
 /*
 ********************** EXPORTED
@@ -1778,7 +1779,7 @@ async function click_variants(d, tk, block, tippos) {
 		if (d.occurrence > 1 && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.mds.variant2samples.get(d.mlst, 'getsummary')
+			const data = await tk.mds.variant2samples.get(d.mlst, 'getsunburst')
 			tk.glider.style('cursor', 'auto')
 			if (data.error) throw data.error
 			if (!data.data) throw '.data[] missing'
@@ -1830,186 +1831,12 @@ async function variant_details(mlst, tk, block, tippos) {
 		// more than 1 data types, won't print detail table for each variant
 		if (tk.mds.variant2samples) {
 			// show sample summary
-			await mlst2sampledetails(mlst, tk, block, tk.itemtip.d)
+			await mlst2samplesummary(mlst, tk, block, tk.itemtip.d)
 		} else {
 			console.log('no variant2samples, do not know what to show')
 		}
 		return
 	}
-	// only one data type
-	if (mlst[0].dt == common.dtsnvindel) {
-		await itemtable_snvindel(mlst, tk, block)
-		return
-	}
-	if (mlst[0].dt == common.dtfusionrna || mlst[0].dt == common.dtsv) {
-		await itemtable_fusionsv(mlst, tk, block)
-		return
-	}
-	throw 'itemtable unknown dt'
-}
-
-async function itemtable_snvindel(mlst, tk, block) {
-	// rendering may be altered by tk.mds config
-	// may use separate scripts to code different table styles
-	if (mlst.length == 1) {
-		return await itemtable_snvindel_singlevariant(mlst[0], tk, block)
-	}
-	await itemtable_snvindel_multivariant(mlst, tk, block)
-}
-
-/* show a two-column table for a single variant
-if single occurrence, show details on the sample
-if multiple occurrence, show summary of samples at each attr
-append details to the same table
-*/
-async function itemtable_snvindel_singlevariant(m, tk, block) {
-	const table = tk.itemtip.d.append('table')
-	{
-		const [td1, td2] = row_headervalue(table)
-		td1.text('Mutation')
-		print_snvindel(m, td2)
-	}
-	{
-		const [td1, td2] = row_headervalue(table)
-		td1.text('Occurrence')
-		td2.text(m.occurrence)
-	}
-	// to move to helper function
-	// when occurrence>1, to show category breakdown for each attribute; for number, show chart
-	if (tk.mds.variant2samples) {
-		if (m.occurrence == 1) {
-			// appears in single sample
-			// with variant2samples query, get info about this sample and print
-			// TODO make reusable
-			const [tdtemp1, tdtemp2, trtemp] = row_headervalue(table)
-			tdtemp1.text('Loading...')
-			const data = await tk.mds.variant2samples.get([m], 'getsamples')
-			if (data.error) {
-				tdtemp1.text(data.error)
-				return
-			}
-			if (!data.data || !data.data[0]) {
-				tdtemp1.text('result error')
-				return
-			}
-			trtemp.remove()
-			for (const attr of tk.mds.variant2samples.attributes) {
-				const [td1, td2] = row_headervalue(table)
-				td1.text(attr.k)
-				td2.text(data.data[0][attr.k])
-			}
-		} else {
-			await mlst2sampledetails([m], tk, block, table)
-		}
-	}
-}
-
-/* multiple variants, each with occurrence
-one row for each variant
-click a button from a row to show the sample summary/detail table for that variant
-show a summary table across samples of all variants
-*/
-async function itemtable_snvindel_multivariant(mlst, tk, block) {
-	const columnnum = 2 // get number of columns, dependent on tk.mds setting
-	const table = tk.itemtip.d.append('table')
-	// header row
-	const tr = table.append('tr')
-	tr.append('td')
-		.text('Mutation')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('Occurrence')
-		.style('opacity', 0.5)
-	for (const m of mlst) {
-		const tr = table.append('tr')
-		print_snvindel(m, tr.append('td'))
-		tr.append('td')
-			.text(m.occurrence)
-			.on('click', async () => {
-				tr2.style('display', tr2.style('display') == 'none' ? 'table-row' : 'none')
-				if (!first) return
-				first = false
-				await mlst2sampledetails(
-					[m],
-					tk,
-					block,
-					tr2
-						.append('td')
-						.attr('colspan', columnnum)
-						.append('table')
-				)
-			})
-		// hidden row to show sample details of this variant
-		let first = true
-		const tr2 = table.append('tr').style('display', 'none')
-	}
-	if (tk.mds.variant2samples) {
-		await mlst2sampledetails(mlst, tk, block, tk.itemtip.d.append('table'))
-	}
-}
-
-function print_snvindel(m, d) {
-	d.append('span')
-		.style('font-size', '1.1em')
-		.text(m.mname) // do not .html() to prevent injection
-	d.append('span')
-		.style('margin-left', '10px')
-		.style('color', common.mclass[m.class].color)
-		.style('font-weight', 'bold')
-		.style('font-size', '.8em')
-		.text(common.mclass[m.class].label.toUpperCase())
-	d.append('span')
-		.style('margin-left', '10px')
-		.text(m.chr + ':' + (m.pos + 1))
-	d.append('span')
-		.style('margin-left', '10px')
-		.style('opacity', 0.5)
-		.style('font-size', '.7em')
-		.text('REF')
-	d.append('span')
-		.style('margin-left', '5px')
-		.text(m.ref)
-	d.append('span')
-		.style('margin-left', '10px')
-		.style('opacity', 0.5)
-		.style('font-size', '.7em')
-		.text('ALT')
-	d.append('span')
-		.style('margin-left', '5px')
-		.text(m.alt)
-}
-
-async function itemtable_fusionsv(mlst, tk, block) {
-	/*
-	table view, with svgraph for first ml
-	svgraph(mlst[0])
-
-	if(mlst.length==1) {
-		// 2-column table view
-	} else {
-		// one row per sv, click each row to show its svgraph
-	}
-	*/
-	if (tk.mds.variant2samples) {
-		// show sample summary
-		await mlst2sampledetails(mlst, tk, block, tk.itemtip.d.append('div').style('margin', '10px'))
-	}
-}
-
-async function mlst2sampledetails(mlst, tk, block, div) {
-	// using variant2samples
-}
-
-// may move to client.js
-function row_headervalue(table) {
-	const tr = table.append('tr')
-	return [
-		tr
-			.append('td')
-			.style('color', '#bbb')
-			.style('border-bottom', 'solid 1px #ededed')
-			.style('padding', '5px 20px 5px 0px'),
-		tr.append('td').style('border-bottom', 'solid 1px #ededed'),
-		tr
-	]
+	// mlst are of one data type
+	await itemtable(mlst, tk, block, tk.itemtip.d)
 }
