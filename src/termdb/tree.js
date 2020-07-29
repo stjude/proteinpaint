@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 import { plotInit } from './plot'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
@@ -187,9 +187,15 @@ class TdbTree {
 			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
 		]
 		if (this.state.toSelectCohort) {
-			lst.push('cohortValues=' + this.state.cohortValuelst.join(','))
+			lst.push(
+				'cohortValues=' +
+					this.state.cohortValuelst
+						.slice()
+						.sort()
+						.join(',')
+			)
 		}
-		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
 			// do not throw exception; its children terms may have been filtered out
@@ -346,6 +352,8 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = function(term) {
+		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
+
 		const div = select(this)
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
@@ -359,6 +367,7 @@ function setRenderers(self) {
 				.style('padding', '4px 9px')
 				.style('font-family', 'courier')
 				.text('+')
+				// always allow show/hide children even this term is already in use
 				.on('click', self.toggleTerm)
 		}
 
@@ -367,11 +376,12 @@ function setRenderers(self) {
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
+			.style('opacity', termIsDisabled ? 0.4 : 1)
 			.text(term.name)
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
-				if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+				if (termIsDisabled) {
 					labeldiv
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 						.style('padding', '5px 8px')
@@ -394,13 +404,14 @@ function setRenderers(self) {
 				// no modifier, show view button and graph div
 				div
 					.append('div')
-					.attr('class', 'sja_menuoption ' + cls_termview)
+					.attr('class', termIsDisabled ? '' : 'sja_menuoption ' + cls_termview)
 					.style('display', 'inline-block')
 					.style('border-radius', '5px')
 					.style('margin-left', '20px')
 					.style('font-size', '0.8em')
+					.style('opacity', termIsDisabled ? 0.4 : 1)
 					.text('VIEW')
-					.on('click', self.clickViewButton)
+					.on('click', termIsDisabled ? null : self.clickViewButton)
 
 				div.append('div').attr('class', cls_termgraphdiv)
 			}

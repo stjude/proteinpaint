@@ -1,4 +1,4 @@
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 
 /*
 to retrieve the termjson object of one term, using its id
@@ -22,12 +22,11 @@ exports.getterm = async function(termid, dslabel = null, genome = null) {
 	}
 	if (!dslabel) throw 'getterm: dslabel missing'
 	if (!genome) throw 'getterm: genome missing'
-	const data = await dofetch2(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`, {}, cache)
+	const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
 	if (data.error) throw 'getterm: ' + data.error
 	if (!data.term) throw 'no term found for ' + termid
 	return data.term
 }
-
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 

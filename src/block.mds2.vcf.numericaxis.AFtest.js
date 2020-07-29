@@ -277,6 +277,17 @@ groupindex:
 	const tabs = []
 
 	if (tk.mds && tk.mds.termdb) {
+		let activeCohort
+		if (group.filter) {
+			const cohortFilter = getFilterItemByTag(group.filter, 'cohortFilter')
+			if (cohortFilter && tk.mds.termdb.selectCohort) {
+				const defaultCohort = cohortFilter.tvs.values
+					.map(d => d.key)
+					.sort()
+					.join(',')
+				activeCohort = tk.mds.termdb.selectCohort.values.findIndex(v => v.keys.sort().join(',') === defaultCohort)
+			}
+		}
 		tabs.push({
 			label: 'Clinical info',
 			callback: async div => {
@@ -284,23 +295,26 @@ groupindex:
 					holder: div,
 					state: {
 						genome: block.genome.name,
-						dslabel: tk.mds.label
+						dslabel: tk.mds.label,
+						activeCohort,
+						nav: {
+							header_mode: 'with_cohortHtmlSelect'
+						}
 					},
 					barchart: {
 						bar_click_override: tvslst => {
 							tip.hide()
 							if (tvslst.length == 0) return // should not happen
-							if (tvslst.length == 1) {
-								group.filter = { type: 'tvslst', join: '', in: true, lst: [{ type: 'tvs', tvs: tvslst[0] }] }
-							} else {
-								group.filter = {
-									type: 'tvslst',
-									join: 'and',
-									in: true,
-									lst: tvslst.map(i => {
-										return { type: 'tvs', tvs: i }
-									})
-								}
+							const cohortFilter = tvslst.find(d => d.tag === 'cohortFilter')
+							if (cohortFilter) {
+								cohortFilter.renderAs = 'htmlSelect'
+								cohortFilter.selectOptionsFrom = 'selectCohort'
+							}
+							group.filter = {
+								type: 'tvslst',
+								join: tvslst.length == 1 ? '' : 'and',
+								in: true,
+								lst: tvslst
 							}
 							delete group.key
 							delete group.is_infofield
@@ -502,6 +516,9 @@ function show_group_termdb(group, tk, block) {
 						termfilter: {
 							filter: group.filterApi.getNormalRoot()
 						}
+					},
+					barchart: {
+						bar_click_opts: []
 					}
 				})
 			})

@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { dofetch2, Menu } from '../client'
+import { Menu } from '../client'
 import * as dom from '../dom'
 import { filterInit } from '../common/filter'
 import * as client from '../client'
@@ -34,7 +34,7 @@ class TdbFilter {
 
 	main() {
 		const f = this.state && this.state.termfilter
-		if (!f || !this.state.nav.show_tabs) {
+		if (!f || this.state.nav.header_mode !== 'with_tabs') {
 			this.dom.holder.style('display', 'none')
 			return
 		}

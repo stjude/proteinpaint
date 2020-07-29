@@ -82,34 +82,16 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	URL="//pp-test.stjude.org/pp"
 	SUBDOMAIN=pp-test
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" || "$ENV" == "jump-prod" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pp-test.stjude.org
 	URL="//proteinpaint.stjude.org/"
 	SUBDOMAIN=proteinpaint
-	#
-	# *** TO-DO ***: 
-	# Replace the following with a build server, preferably via git hooks + CI.
-	#
-	# The following approach removes the need to maintain another git repo
-	# on a prod-whitelisted machine. So builds are created locally in the
-	# dev machine, no need to worry about incompatible builds in another 
-	# remote machine.
-	# 
-	# vpn-prod (step 1): 
-	#	- put the built tar into a non-whitelisted temporary host
-	# 
-	# scp-prod (step 2): 
-	# 	- log on to prod-whitelisted machine/remote desktop
-	#	- scp built tar from the non-whitelisted temporary host
-	#	- scp built tar to prod host
-	#	- then complete the deployment via from there
-	#
-	if [[ "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
-		TEMPHOST=pp-irp
-	elif [[ "$ENV" == "jump-prod" ]]; then
+
+	if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+		TEMPUSER=gnomeuser
 		TEMPHOST=svldtemp01.stjude.org
 	fi
 else
@@ -117,13 +99,14 @@ else
 	exit 1
 fi
 
-
-
 #################################
 # EXTRACT AND BUILD FROM COMMIT
 #################################
 
-if [[ "$ENV" != "scp-prod" ]]; then 
+if [[ -d tmpbuild && -f tmpbuild/$APP-$REV.tgz ]]; then
+	echo "Reusing a previous matching build"
+	cd tmpbuild
+else 
 	rm -Rf tmpbuild
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild
@@ -151,12 +134,6 @@ if [[ "$ENV" != "scp-prod" ]]; then
 		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
 	fi
 
-	# no-babel-polyfill version for use in sjcloud, 
-	# to avoid conflict with external code
-	if [[ "$ENV" == "public-prod" ]]; then
-		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
-	fi
-
 	# create dirs to put extracted files
 	rm -rf $APP
 	mkdir $APP
@@ -172,16 +149,12 @@ if [[ "$ENV" != "scp-prod" ]]; then
 	mv genome $APP/
 	mv dataset $APP/
 
-	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ]]; then
+	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
 	elif [[ "$ENV" == "internal-stage" ]]; then
 		cp public/pp-int-test.html $APP/public/index.html
 	else
 		cp public/index.html $APP/public/index.html
-	fi
-
-	if [[ "$ENV" == "public-prod" ]]; then
-		mv $APP/public/bin/no-babel-polyfill $APP/public/
 	fi
 
 	# tar inside the dir in order to not create
@@ -195,32 +168,7 @@ fi
 # DEPLOY
 ##########
 
-if [[ "$ENV" == "jump-prod" ]]; then
-	echo "scp'ing $APP-$REV.tgz tar ball to jump box at $TEMPHOST ..."
-	scp $APP-$REV.tgz gnomeuser@$TEMPHOST:~
-	scp ./scripts/deploy.sh gnomeuser@$TEMPHOST:~
-	echo "deploying from jump box to $REMOTEHOST"
-	ssh -t gnomeuser@$TEMPHOST "
-	cd ~
-	# uncomment when there is git in jump box
-	# git pull
-	./deploy.sh scp-prod $REV
-"
-	exit 1
-elif [[ "$ENV" == "vpn-prod" ]]; then
-	scp $APP-$REV.tgz $DEPLOYER@$TEMPHOST:~
-	echo "Deployed to $TEMPHOST. Whitelisted IP address required to access $REMOTEHOST."
-	exit 1
-elif [[ "$ENV" == "scp-prod" ]]; then
-	if [[ ! -f $APP-$REV.tgz ]]; then
-		scp $DEPLOYER@$TEMPHOST:~/$APP-$REV.tgz .
-		ssh -t $DEPLOYER@$TEMPHOST "rm ~/$APP-$REV.tgz"
-	fi
-fi
-
-scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
-
-ssh -t $DEPLOYER@$REMOTEHOST "
+REMOTE_UPDATE="
 	rm -Rf $REMOTEDIR/$APP-new
 	mkdir $REMOTEDIR/$APP-new
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
@@ -244,13 +192,25 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	echo \"$ENV $REV $(date)\" >> $REMOTEDIR/$APP/public/rev.txt
 "
 
+if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+	echo "Transferring to jumpbox at $TEMPHOST."
+	scp $APP-$REV.tgz $TEMPUSER@$TEMPHOST:~
+
+	echo "Transferring build to $REMOTEHOST"
+	ssh -t $TEMPUSER@$TEMPHOST "
+		scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
+		ssh -t $DEPLOYER@$REMOTEHOST \"$REMOTE_UPDATE\"
+		rm $APP-$REV.tgz
+	"
+else 
+	echo "Transferring build to $REMOTEHOST"
+	scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
+	ssh -t $DEPLOYER@$REMOTEHOST "$REMOTE_UPDATE"
+fi
+
 #############
 # CLEANUP
 #############
 
-if [[ "$ENV" == "scp-prod" ]]; then
-	rm ./$APP-$REV.tgz
-else 
-	cd ..
-	rm -rf tmpbuild
-fi
+cd ..
+rm -rf tmpbuild

@@ -124,7 +124,7 @@ tape('tvs (common): buttons', async test => {
 	test.end()
 })
 
-tape('tvs : Categorical', async test => {
+tape('tvs: Categorical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -191,7 +191,9 @@ tape('tvs : Categorical', async test => {
 	test.end()
 })
 
-tape('tvs : Numerical', async test => {
+tape('tvs: Numerical', async test => {
+	test.timeoutAfter(20000)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -437,10 +439,69 @@ tape('tvs : Numerical', async test => {
 		'should merge ranges into 1 range'
 	)
 
+	// test changing the <= option for start boundary
+	pill.click()
+	await sleep(150)
+	editOpt.node().click()
+	await sleep(300)
+	const tr = tipd
+		.node()
+		.querySelector('table')
+		.querySelector('.range_div')
+	tr.querySelector('.edit_btn').click()
+	tr.querySelector('.start_input').value = 0
+	tr.querySelector('.start_input').dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: '0',
+			key: '0',
+			keyCode: 0
+		})
+	)
+	await sleep(100)
+	tr.querySelector('.stop_select').value = 'stopunbounded'
+	d3s.select(tr.querySelector('.stop_select')).on('change')()
+	await sleep(100)
+	tr.querySelector('.stop_select').dispatchEvent(enter_event)
+	tr.querySelector('.apply_btn').click()
+	await sleep(300)
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('&gt; 0'),
+		'should show a greater than pill value'
+	)
+
+	//const menuRows1 = controlTipd.selectAll('tr')
+	//const editOpt1 = menuRows.filter(d => d.action == 'edit')
+	pill.click()
+	await sleep(30)
+	editOpt.node().click()
+	await sleep(500)
+	const tr1 = tipd
+		.node()
+		.querySelector('table')
+		.querySelector('.range_div')
+	tr1.querySelector('.edit_btn').click()
+	await sleep(10)
+	tr1.querySelector('.start_select').value = 'startinclusive'
+	d3s.select(tr1.querySelector('.start_select')).on('change')()
+	await sleep(100)
+	tr1.querySelector('.start_select').dispatchEvent(enter_event)
+	tr1.querySelector('.apply_btn').click()
+	await sleep(300)
+	test.true(
+		opts.holder
+			.node()
+			.querySelectorAll('.value_btn')[0]
+			.innerHTML.includes('≥ 0'),
+		'should show a >= 0 in the pill value'
+	)
+
 	test.end()
 })
 
-tape('tvs : Conditional', async test => {
+tape('tvs: Conditional', async test => {
 	test.timeoutAfter(8000)
 
 	const opts = getOpts({
@@ -495,7 +556,7 @@ tape('tvs : Conditional', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(1000)
+	await sleep(1200)
 	const tipd = opts.filter.Inner.dom.treeBody
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
@@ -584,5 +645,77 @@ tape('tvs : Conditional', async test => {
 		'should change pill value to subcondtion'
 	)
 
+	test.end()
+})
+
+tape('tvs: Cohort + Numerical', async test => {
+	const filterData = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tag: 'cohortFilter',
+				renderAs: 'htmlSelect',
+				tvs: {
+					term: {
+						id: 'subcohort',
+						name: 'subcohort',
+						type: 'categorical',
+						values: {
+							SJLIFE: { key: 'SJLIFE' },
+							CCSS: { key: 'CCSS' },
+							'SJLIFE,CCSS': { keys: ['SJLIFE', 'CCSS'], shortLabel: 'SJLIFE+CCSS' }
+						}
+					},
+					values: [{ key: 'SJLIFE' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'yeardx',
+						name: 'Year of Diagnosis',
+						unit: 'year',
+						type: 'float',
+						values: {}
+					},
+					ranges: [{ stopinclusive: true, start: 1980, stop: 1985 }]
+				}
+			}
+		]
+	}
+	const opts = getOpts({ filterData })
+	await opts.filter.main(opts.filterData, { activeCohort: 0 })
+	await sleep(200)
+
+	// trigger fill-in of pill.num_obj.density_data
+	const pill = opts.holder.select('.tvs_pill').node()
+	pill.click()
+	await sleep(150)
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlTipd.selectAll('tr')
+	const editOpt = menuRows.filter(d => d.action == 'edit')
+	editOpt.node().click()
+	await sleep(200)
+	// remember the density data for comparison later
+	const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
+
+	opts.filter.Inner.opts.activeCohort = 2
+	const selectElem = opts.filter.Inner.dom.holder.select('select')
+	selectElem
+		.property('value', 2)
+		.on('change')
+		.call(selectElem.node())
+	await sleep(200)
+	// trigger fill-in of pill.num_obj.density_data
+	pill.click()
+	editOpt.node().click()
+	await sleep(200)
+
+	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
+	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
 	test.end()
 })

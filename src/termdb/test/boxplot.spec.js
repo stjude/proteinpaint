@@ -11,10 +11,7 @@ const runpp = helpers.getRunPp('termdb', {
 		dslabel: 'SJLife',
 		genome: 'hg38'
 	},
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 /**************
@@ -80,7 +77,7 @@ tape('unsupported overlay types', function(test) {
 })
 
 tape('supported numeric overlay', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			tree: {

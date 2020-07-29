@@ -1,5 +1,3 @@
-const common = require('../src/common')
-
 const valuePerSample = {
 	key: 'percentage',
 	label: 'Percentage',
@@ -35,6 +33,24 @@ module.exports = {
 
 	singlesamplemutationjson: {
 		file: 'hg19/Pediatric/mutationpersample/table'
+	},
+
+	assayAvailability: {
+		file: 'hg19/Pediatric/assayAvailability/sample.by.assay',
+		assays: [
+			{ id: 'haswgs', name: 'WGS', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hascgi', name: 'CGI', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'haswes', name: 'WES', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hassnp6', name: 'SNP6 array', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{
+				id: 'hascaptureseq',
+				name: 'Capture-seq',
+				type: 'categorical',
+				values: { yes: { label: 'yes', color: '#858585' } }
+			},
+			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hashic', name: 'Hi-C', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
+		]
 	},
 
 	/*
@@ -366,7 +382,7 @@ module.exports = {
 		svcnv: {
 			name: 'Pediatric tumor mutation',
 			istrack: true,
-			type: common.tkt.mdssvcnv,
+			type: 'mdssvcnv',
 			file: 'hg19/Pediatric/pediatric.svcnv.hg19.gz',
 
 			// cnv
@@ -407,7 +423,7 @@ module.exports = {
 			hideforthemoment: 1,
 			name: 'Pediatric tumor SNV/indel',
 			istrack: true,
-			type: common.tkt.mdsvcf,
+			type: 'mdsvcf',
 			viewrangeupperlimit: 2000000,
 			tracks: [
 				{
@@ -463,7 +479,7 @@ module.exports = {
 		junction: {
 			name: 'Pediatric tumor RNA splice junction',
 			istrack: true,
-			type: common.tkt.mdsjunction,
+			type: 'mdsjunction',
 			//viewrangeupperlimit:500000,
 			readcountCutoff: 5,
 			file: 'hg19/Pediatric/pcgp.target.junction.hg19.gz',

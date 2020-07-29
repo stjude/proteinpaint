@@ -236,7 +236,7 @@ function clientside_plot(obj, plotgroups) {
 					obj.d.tempbbdiv.selectAll('*').remove()
 					import('./block').then(_ => {
 						new _.Block({
-							hostURL: localStorage.getItem('hostURL'),
+							hostURL: sessionStorage.getItem('hostURL'),
 							holder: obj.d.tempbbdiv,
 							genome: obj.block.genome,
 							nobox: true,

@@ -12,7 +12,7 @@ export async function init(arg, holder) {
 		validate_obj(obj)
 
 		obj.genome = arg.genome
-		obj.holder = holder
+		obj.holder = holder.style('position', 'relative')
 
 		init_view(obj)
 		init_controlpanel(obj)
@@ -93,8 +93,14 @@ to load a new pcd file
 call this when using a new category,
 or selected a gene for overlaying
 */
-
-	const wait = obj.holder.append('div').text('Loading data...')
+	const wait = obj.holder
+		.append('div')
+		.style('position', 'absolute')
+		.style('top', 0)
+		.style('left', 0)
+		.style('padding', '10px')
+		.style('font-size', '1.5rem')
+		.text('Loading data...')
 
 	const arg = {
 		genome: obj.genome.name,
@@ -114,9 +120,17 @@ or selected a gene for overlaying
 		const cat = obj.cells.categories[obj.use_category_index]
 		if (!cat) throw 'category array index out of bound'
 		arg.getpcd.category_index = cat.columnidx
+
 		if (cat.autocolor) {
+			// if categories are autocolored and not defined in config
 			arg.getpcd.category_autocolor = true
+			if (cat.values_count) arg.getpcd.values_count = cat.values_count
+		} else if (cat.values) {
+			//if colors are defined in config
+			arg.getpcd.category_customcolor = true
+			arg.getpcd.cat_values = cat.values
 		} else {
+			if (!cat.autocolor && !cat.values) throw 'categories.values[] are not defined'
 			throw 'unknow coloring scheme for category ' + cat.name
 		}
 		if (cat.hidden_types) {
@@ -124,6 +138,18 @@ or selected a gene for overlaying
 		}
 		if (obj.background_color) {
 			arg.background_color = obj.background_color
+		}
+		//set flags for ordering legend
+		if (!cat.customorder) {
+			// if categories are autoordered and not defined in config
+			arg.getpcd.category_autoorder = true
+		} else if (cat.customorder && cat.values) {
+			//if order are defined in config
+			arg.getpcd.category_customorder = true
+			arg.getpcd.cat_values = cat.values
+		} else {
+			if (cat.customorder && !cat.values) throw 'categories.values[] are not defined'
+			throw 'unknow ordering scheme for category ' + cat.name
 		}
 		// update menu_button here
 		obj.menu_button.html(cat.name + '&nbsp;&nbsp;&#9660;')
@@ -302,15 +328,17 @@ function init_controlpanel(obj) {
 		.style('padding-right', '2px')
 		.style('float', 'right')
 		.style('font-size', '.6em')
-		.text(' HIDE')
+		.classed('active', obj.menu_minimized ? true : false)
+		.text(obj.menu_minimized ? ' SHOW' : ' HIDE')
 		.on('click', () => {
 			obj.minimize_btn.classed('active', obj.minimize_btn.classed('active') ? false : true)
 			if (obj.minimize_btn.classed('active')) {
 				obj.minimize_btn.text(' SHOW')
+				obj.menu_output.style('display', 'none')
 			} else {
 				obj.minimize_btn.text(' HIDE')
+				obj.menu_output.style('display', 'block')
 			}
-			obj.menu_output.style('display', (obj.menu_output.display = obj.menu_output.display == 'none' ? 'block' : 'none'))
 		})
 		.on('mouseover', () => {
 			minimize_btn.style('text-decoration', 'underline')
@@ -338,7 +366,10 @@ function init_controlpanel(obj) {
 			config_btn.style('text-decoration', 'none')
 		}))
 
-	obj.menu_output = panel.append('div').style('margin-top', '10px')
+	obj.menu_output = panel
+		.append('div')
+		.style('margin-top', '10px')
+		.style('display', obj.menu_minimized ? 'none' : 'block')
 
 	obj.show_zoom = true //flag to show zoom div under legend div
 }
@@ -651,6 +682,14 @@ function make_menu(obj) {
 						obj.use_category_index = i
 						pcd_pipeline(obj)
 					})
+					.append('span')
+					.attr('font-family', client.font)
+					.style('display', category.values_count ? 'inline-block' : 'none')
+					.style('font-size', '.8em')
+					.style('float', 'right')
+					.style('color', '#777')
+					.style('padding', '3px 5px')
+					.html(category.values_count ? '&nbsp;n=' + category.values_count : '')
 			}
 		})
 	}
@@ -695,43 +734,42 @@ function make_menu(obj) {
 					}
 				})
 			})
-	}
 
-	// menu option for multi-gene heatmap
+		// menu option for multi-gene heatmap
+		obj.menu.d
+			.append('div')
+			.text('Multi-Gene Heatmap')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				heatmap_menu(obj)
+			})
 
-	obj.menu.d
-		.append('div')
-		.text('Multi-Gene Heatmap')
-		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			heatmap_menu(obj)
-		})
-
-	if (obj.gene_expression.genes) {
-		if (obj.gene_expression.genes.length > 1) {
-			obj.menu.d
-				.append('div')
-				.style('padding', '5px 10px')
-				.text('Previously Selected')
-		}
-
-		obj.gene_expression.genes.forEach((gene, i) => {
-			if (i != obj.use_gene_index) {
-				// add option
+		if (obj.gene_expression.genes) {
+			if (obj.gene_expression.genes.length > 1) {
 				obj.menu.d
 					.append('div')
-					.text('Gene : ' + gene.gene)
-					.attr('class', 'sja_menuoption')
-					.on('click', async () => {
-						obj.menu.hide()
-
-						obj.use_category_index = null
-						obj.use_gene_index = i
-
-						pcd_pipeline(obj)
-					})
+					.style('padding', '5px 10px')
+					.text('Previously Selected')
 			}
-		})
+
+			obj.gene_expression.genes.forEach((gene, i) => {
+				if (i != obj.use_gene_index) {
+					// add option
+					obj.menu.d
+						.append('div')
+						.text('Gene : ' + gene.gene)
+						.attr('class', 'sja_menuoption')
+						.on('click', async () => {
+							obj.menu.hide()
+
+							obj.use_category_index = null
+							obj.use_gene_index = i
+
+							pcd_pipeline(obj)
+						})
+				}
+			})
+		}
 	}
 }
 

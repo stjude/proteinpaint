@@ -39,6 +39,7 @@ class Overlay {
 		this.pill = termsettingInit({
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
 			debug: this.opts.debug,
@@ -62,6 +63,7 @@ class Overlay {
 		const state = {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
+			activeCohort: appState.activeCohort,
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid
 		}
@@ -84,8 +86,16 @@ class Overlay {
 		// after updating this.state, call pill.main() to update info in pill
 		const plot = this.state.config
 		const a = {
+			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
 			disable_terms: [plot.term.id]
+		}
+		{
+			// if cohort selection is enabled
+			const s = this.app.getState()
+			if (s.activeCohort != undefined) {
+				a.activeCohort = s.activeCohort
+			}
 		}
 		if (plot.term2) {
 			a.term = plot.term2.term

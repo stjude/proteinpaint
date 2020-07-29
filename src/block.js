@@ -38,6 +38,7 @@ import {
 	mdsexpressionrankload
 } from './block.mds.expressionrank.adaptor'
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
+import { mds3_fromtemplate, mds3_maketk, mds3_load } from './mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
 
 // ds tk special case
@@ -67,6 +68,9 @@ const rulergrabzindex = 1000
 
 export class Block {
 	constructor(arg) {
+		// temp fix, to use in dofetch2( {serverData} )
+		this.cache = {}
+
 		if (arg.debugmode) {
 			window.bb = this
 			this.debugmode = true
@@ -1873,13 +1877,13 @@ reverseorient() {
 			.on('click', () => {
 				this.pannedpx = undefined // important!
 				this.resized = false
-				let tk = null
-				for (const t of this.tklst) {
-					if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
-						tk = t
-						break
+				let tk = this.tklst.find(t => {
+					if (ds.isMds3) {
+						if (t.type == client.tkt.mds3 && t.mds.label == ds.label) return t
+					} else if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
+						return t
 					}
-				}
+				})
 				if (tk) {
 					if (tk.hidden) {
 						tk.hidden = false
@@ -1894,9 +1898,13 @@ reverseorient() {
 					return
 				}
 				if (ds.busy) return
-				tk = this.block_addtk_template({ type: client.tkt.ds, ds: ds })
-
-				blockds.dstkload(tk, this)
+				if (ds.isMds3) {
+					tk = this.block_addtk_template({ type: client.tkt.mds3, dslabel: ds.label })
+					this.tk_load(tk)
+				} else {
+					tk = this.block_addtk_template({ ds, type: client.tkt.ds })
+					blockds.dstkload(tk, this)
+				}
 			})
 			.on('mouseover', () => {
 				if (ds.iscustom) {
@@ -2344,6 +2352,13 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.mds3:
+				const e13 = mds3_fromtemplate(tk, template)
+				if (e13) {
+					this.error(e13)
+					return
+				}
+				break
 			case client.tkt.bedgraphdot:
 				const e11 = bedgraphdot_fromtemplate(tk, template)
 				if (e11) {
@@ -2498,6 +2513,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mds2:
 				mds2_maketk(tk, this)
+				break
+			case client.tkt.mds3:
+				mds3_maketk(tk, this)
 				break
 			case client.tkt.bedgraphdot:
 				bedgraphdot_maketk(tk, this)
@@ -2859,6 +2877,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mds2:
 				mds2_load(tk, this)
+				break
+			case client.tkt.mds3:
+				mds3_load(tk, this)
 				break
 			case client.tkt.bedgraphdot:
 				bedgraphdot_load(tk, this)
@@ -3746,6 +3767,9 @@ if fromgenetk is provided, will skip this track
 								usegm: gm1,
 								allgm: this.allgm,
 
+								// can't believe this is missing for all the time....
+								tklst: this.tklst.filter(i => i.type != client.tkt.usegm),
+
 								gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
 
 								allowpopup: this.allowpopup,
@@ -3868,6 +3892,9 @@ if fromgenetk is provided, will skip this track
 						break
 					case client.tkt.mds2:
 						mds2_load(tk, this)
+						break
+					case client.tkt.mds3:
+						mds3_load(tk, this)
 						break
 					case client.tkt.bedgraphdot:
 						bedgraphdot_load(tk, this)
@@ -4573,6 +4600,35 @@ if fromgenetk is provided, will skip this track
 		arg.jwt = this.jwt
 		arg.nobox = true
 		return new Block(arg)
+	}
+
+	turnOnTrack(arg) {
+		const lst = Array.isArray(arg) ? arg : [arg]
+		const toadd = []
+		for (const t of lst) {
+			if (this.tklst.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))) {
+				// already shown
+				continue
+			}
+			const f = this.genome.tracks.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			if (f) {
+				toadd.push(f)
+			} else {
+				toadd.push(t)
+			}
+		}
+		for (const f of toadd) {
+			delete f.hidden
+			const t = this.block_addtk_template(f)
+			this.tk_load(t)
+		}
+	}
+	turnOffTrack(arg) {
+		const lst = Array.isArray(arg) ? arg : [arg]
+		for (const t of lst) {
+			const idx = this.tklst.findIndex(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			if (idx != -1) this.tk_remove(idx)
+		}
 	}
 
 	showTrackByFile(files) {

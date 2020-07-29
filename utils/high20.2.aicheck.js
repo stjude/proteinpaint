@@ -1,9 +1,13 @@
-if (process.argv.length != 3) {
-	console.log('<input high20 file> output to stdout')
+if (process.argv.length < 3) {
+	console.log(
+		'<input high20 file> <min TinN (total in germline, default 10)> <germline maf deviation, default 0.1 to keep SNVs within 0.4 to 0.6> output to stdout'
+	)
 	process.exit()
 }
 
 const infile = process.argv[2]
+const minTinN = process.argv[3] ? Number(process.argv[3]) : 10
+const mafdev = process.argv[4] ? Number(process.argv[4]) : 0.1
 
 const fs = require('fs')
 const readline = require('readline')
@@ -52,10 +56,10 @@ rl.on('line', line => {
 		const TinD = MinD + Number.parseInt(l[16 - 1])
 		const TinN = MinN + Number.parseInt(l[15 - 1])
 
-		if (TinN < 10) return
+		if (TinN < minTinN) return
 
 		const maf = MinN / TinN
-		if (maf < 0.4 || maf > 0.6) return
+		if (maf < 0.5 - mafdev || maf > 0.5 + mafdev) return
 
 		console.log(l[4 - 1] + '\t' + l[5 - 1] + '\t' + MinD + '\t' + TinD + '\t' + MinN + '\t' + TinN)
 	}

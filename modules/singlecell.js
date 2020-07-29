@@ -104,10 +104,17 @@ may attach coloring scheme to result{} for returning to client
 
 	if (q.getpcd.category_autocolor) {
 		// using a category with automatic color
-		categorical_color_function = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+		const auto_color_scale =
+			q.getpcd.values_count && q.getpcd.values_count <= 10 ? d3scale.schemeCategory10 : d3scale.schemeCategory20
+		categorical_color_function = d3scale.scaleOrdinal(auto_color_scale)
 		collect_category2color = {}
 		collect_category_count = {}
 		// k: category, v: color
+	} else if (q.getpcd.category_customcolor) {
+		const auto_color_fn = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+		categorical_color_function = getCustomCatColor(q.getpcd.cat_values, auto_color_fn)
+		collect_category2color = {}
+		collect_category_count = {}
 	} else if (q.getpcd.gene_expression) {
 		const ge = q.getpcd.gene_expression
 		if (!ge.file) throw 'gene_expression.file missing'
@@ -241,6 +248,10 @@ may attach coloring scheme to result{} for returning to client
 		})
 		rl.on('close', () => {
 			if (collect_category2color) {
+				// if legend order is defined in the config, add that to return to client
+				if (q.getpcd.category_customorder) {
+					collect_category2color = getCustomCatOrder(collect_category2color, q.getpcd.cat_values)
+				}
 				result.category2color = collect_category2color
 				result.categorycount = collect_category_count
 			}
@@ -250,6 +261,48 @@ may attach coloring scheme to result{} for returning to client
 			resolve(lines)
 		})
 	})
+}
+
+function getCustomCatColor(catValues, auto_color) {
+	return cat => {
+		let color_defined = false
+		for (const c of catValues) {
+			if (c.value == cat) {
+				color_defined = true
+				return c.color
+			}
+		}
+		//if color is not defined in config file, assingn auto color from d3 color
+		if (!color_defined) return auto_color(cat)
+	}
+}
+
+function getCustomCatOrder(category2color, catValues) {
+	let new_cat2col = {}
+	const cat_len = Object.keys(category2color).length
+
+	// Add values in new vat2col in order
+	for (var i = 1; i <= cat_len; i++) {
+		const found = catValues.find(v => {
+			if (v.order == i) return v.value
+		})
+		if (found) new_cat2col[found.value] = category2color[found.value]
+	}
+
+	// Add values which doesn't have order defined in config file
+	for (const v of catValues) {
+		if (!v.order) new_cat2col[v.value] = category2color[v.value]
+	}
+
+	// Add values which are not defined in config file
+	for (const key in category2color) {
+		// let found = false
+		const found = catValues.find(v => {
+			if (v.value == JSON.stringify(key)) return true
+		})
+		if (!found) new_cat2col[key] = category2color[key]
+	}
+	return new_cat2col
 }
 
 function componentToHex(c) {

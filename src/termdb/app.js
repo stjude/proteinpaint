@@ -70,8 +70,6 @@ class TdbApp {
 	}*/
 
 	initOpts(o) {
-		if (!o.fetchOpts) o.fetchOpts = {}
-		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
 		if (!('app' in o)) o.app = {}
 		return o
 	}
@@ -80,7 +78,10 @@ class TdbApp {
 		this.components = {
 			nav: navInit(
 				this.app,
-				{ holder: this.dom.topbar, show_tabs: this.opts.state && this.opts.state.nav && this.opts.state.nav.show_tabs },
+				{
+					holder: this.dom.topbar,
+					header_mode: this.state && this.state.nav && this.state.nav.header_mode
+				},
 				this.opts.nav
 			),
 			recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),

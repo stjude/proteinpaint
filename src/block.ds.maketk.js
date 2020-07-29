@@ -9,7 +9,7 @@ import {
 } from './block.ds.itemtable'
 import * as client from './client'
 import * as common from './common'
-import sun1 from './block.ds.sun1'
+import may_sunburst from './block.sunburst'
 import { stratinput } from './tree'
 import { stratify } from 'd3-hierarchy'
 import * as blockds from './block.ds'
@@ -30,6 +30,7 @@ dsmaketk()
 
 label_mcount_fillpane()
 label_strat_fillpane()
+label_strat_fillpane_server
 
 mlstfilter() 
 
@@ -50,6 +51,29 @@ export default function dsmaketk(tk, block) {
 	legend
 
 	*/
+
+	if (tk.ds.variant2samples) {
+		tk.ds.variant2samples.get = async mlst => {
+			/*
+			TODO support alternative methods
+			where all data are hosted on client
+			*/
+
+			// hardcode to getsummary and using fixed levels
+			const par = [
+				'genome=' + block.genome.name,
+				'dsname=' + tk.ds.label,
+				'levels=' + JSON.stringify(tk.ds.variant2samples.levels),
+				'getsummary=1'
+			]
+			if (tk.ds.variant2samples.variantkey == 'ssm_id') {
+				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
+			} else {
+				throw 'unknown variantkey'
+			}
+			return await client.dofetch2('variant2samples?' + par.join('&'), {}, { serverData: block.cache })
+		}
+	}
 
 	tk.labyspace = 5 // must kept with tk: will be used by ds.numericmode
 
@@ -72,15 +96,11 @@ export default function dsmaketk(tk, block) {
 	// assume that stratify directives are available at time of making tk
 	if (tk.ds.stratify) {
 		tk.label_stratify = []
-		for (const s0 of tk.ds.stratify) {
-			// make copy
-			const strat = {}
-			for (const k in s0) {
-				strat[k] = s0[k]
-			}
+		const thistip = new client.Menu()
+		for (const s of tk.ds.stratify) {
+			const strat = JSON.parse(JSON.stringify(s))
 			tk.label_stratify.push(strat)
 
-			const thistip = new client.Menu()
 			strat.svglabel = block.maketklefthandle(tk, laby).on('click', () => {
 				label_strat_fillpane(tk, block, strat, thistip)
 			})
@@ -622,16 +642,10 @@ function label_mcount_fillpane(tk, block, handle, tip) {
 			.append('div')
 			.text('To sunburst')
 			.classed('sja_menuoption', true)
-			.on('click', () => {
+			.on('click', async () => {
 				tip.hide()
 				const mlst = mlstfilter(tk, block)
-				sun1(tk, block, {
-					cx: 100,
-					cy: tk.height_main / 2,
-					mlst: mlst,
-					label: tk.ds.label,
-					cohort: tk.ds.cohort
-				})
+				await may_sunburst(mlst.length, mlst, 100, tk.height_main / 2, tk, block)
 			})
 	}
 	// 4.
@@ -666,6 +680,14 @@ function label_mcount_fillpane(tk, block, handle, tip) {
 
 function label_strat_fillpane(tk, block, strat, tip) {
 	tip.clear()
+
+	if (strat.byserver) {
+		// query server to compute stratification
+		label_strat_fillpane_server(tk, block, strat, tip)
+		return
+	}
+
+	// compute stratification on client
 
 	const mlst = mlstfilter(tk, block)
 
@@ -725,30 +747,11 @@ function label_strat_fillpane(tk, block, strat, tip) {
 			if (cohortsize == 0) {
 				td2.text('not found').style('font-size', '.7em')
 			} else {
-				const h = 10,
-					w = 40
-				const svg = td2
-					.append('svg')
-					.attr('width', w)
-					.attr('height', h)
-				svg
-					.append('rect')
-					.attr('width', w)
-					.attr('height', h)
-					.attr('fill', tk.ds.cohort.fbarbg)
-				svg
-					.append('rect')
-					.attr('width', (w * n.value) / cohortsize)
-					.attr('height', h)
-					.attr('fill', tk.ds.cohort.fbarfg)
-				svg
-					.append('rect')
-					.attr('width', w)
-					.attr('height', h)
-					.attr('fill', 'white')
-					.attr('fill-opacity', 0)
-					.append('title')
-					.text(Math.ceil((100 * n.value) / cohortsize) + '% (' + n.value + '/' + cohortsize + ')')
+				client.fillbar(
+					td2,
+					{ f: n.value / cohortsize, v1: n.value, v2: cohortsize },
+					{ fillbg: tk.ds.cohort.fbarbg, fill: tk.ds.cohort.fbarfg }
+				)
 			}
 		}
 		// td3
@@ -781,6 +784,59 @@ function label_strat_fillpane(tk, block, strat, tip) {
 		})
 	})
 	tip.showunder(strat.svglabel.node())
+}
+
+async function label_strat_fillpane_server(tk, block, strat, tip) {
+	tip.showunder(strat.svglabel.node())
+	const wait = tip.d.append('div').text('Loading...')
+	const par = [
+		'genome=' + block.genome.name,
+		'dsname=' + tk.ds.label,
+		'isoform=' + block.usegm.isoform,
+		'stratify=' + strat.label
+	]
+	try {
+		const data = await client.dofetch2('dsvariantsummary?' + par.join('&'), {}, { serverData: block.cache })
+		if (data.error) throw data.error
+		wait.remove()
+
+		const table = tip.d.append('table')
+		// 4 columns
+		const tr = table
+			.append('tr')
+			.style('font-size', '.9em')
+			.style('color', '#858585')
+		tr.append('td').text(strat.label.toUpperCase())
+		if (data.items[0].cohortsize != undefined) {
+			tr.append('td').text('%')
+		}
+		tr.append('td') // mcount total
+		tr.append('td').text('MUTATIONS')
+		for (const item of data.items) {
+			const tr = table.append('tr').attr('class', 'sja_clb')
+			tr.append('td').text(item.name)
+			if (item.cohortsize != undefined) {
+				client.fillbar(
+					tr.append('td'),
+					{ f: item.count / item.cohortsize, v1: item.count, v2: item.cohortsize },
+					{ fillbg: '#ECE5FF', fill: '#9F80FF' }
+				)
+			}
+			tr.append('td')
+				.text(item.count)
+				.style('font-size', '.7em')
+			const td = tr.append('td')
+			for (const [mclass, count] of item.m2c) {
+				td.append('span')
+					.html(count == 1 ? '&nbsp;' : count)
+					.style('background-color', common.mclass[mclass].color)
+					.attr('class', 'sja_mcdot')
+			}
+		}
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
 }
 
 function ctrlui_vcfinfofilter(tk, block) {

@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { Menu, dofetch2 } from '../client'
+import { Menu, dofetch3 } from '../client'
 import { event } from 'd3-selection'
 
 class ToySearch {
@@ -82,7 +82,7 @@ class ToySearch {
 				this.dom.tip.hide()
 				return
 			}
-			const data = await dofetch2(
+			const data = await dofetch3(
 				'termdb?genome=' + this.app.opts.genome + '&dslabel=' + this.app.opts.dslabel + '&findterm=' + value
 			)
 			// ready to show query result
