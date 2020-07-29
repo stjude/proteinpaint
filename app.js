@@ -146,7 +146,7 @@ if (serverconfig.jwt) {
 	})
 }
 
-app.post('/genomes', handle_genomes)
+app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)

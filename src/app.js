@@ -120,11 +120,8 @@ window.runproteinpaint=(arg)=>{
 		|| (arg.termdb && arg.termdb.serverData)
 		|| (arg.toy && arg.toy.serverData)
 	// load genomes
-	const response = serverData
-		// use serverData if provided
-		? client.dofetch('genomes', {}, {serverData})
-		// use the default serverData provided in dofetch3()
-		: client.dofetch3('genomes', {method:'POST'})
+
+	const response = client.dofetch2('genomes',{},{serverData})
 
 	return response.then(data=>{
 		if(data.error) throw({message:'Cannot get genomes: '+data.error})
