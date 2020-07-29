@@ -43,22 +43,37 @@ export async function mlst2samplesummary(mlst, tk, block, table) {
 	try {
 		if (mlst.length == 1 && mlst[0].occurrence == 1) {
 			// one single sample, print details
-			const data = await tk.mds.variant2samples.get(mlst, 'getsamples')
+			const data = await tk.mds.variant2samples.get(mlst, 'samples')
 			if (data.error) throw data.error
 			if (!data.data || !data.data[0]) throw 'result error'
 			trtemp.remove()
-			for (const attr of tk.mds.variant2samples.attributes) {
+			for (const term of tk.mds.variant2samples.terms) {
 				const [td1, td2] = row_headervalue(table)
-				td1.text(attr.k)
-				td2.text(data.data[0][attr.k])
+				td1.text(term.name)
+				td2.text(data.data[0][term.id])
 			}
 			return
 		}
 		// multiple samples
-		const data = await tk.mds.variant2samples.get(mlst, 'getsummaries')
+		const data = await tk.mds.variant2samples.get(mlst, 'summary')
 		if (data.error) throw data.error
-		if (!data.data || !data.data[0]) throw 'result error'
+		if (!data.data) throw 'result error'
 		trtemp.remove()
+		for (const entry of data.data) {
+			const [td1, td2] = row_headervalue(table)
+			td1.text(entry.name)
+			if (entry.numbycategory) {
+				const t2 = td2.append('table')
+				for (const [category, count] of entry.numbycategory) {
+					const tr = t2.append('tr')
+					tr.append('td')
+						.text(count)
+						.style('text-align', 'right')
+						.style('padding-right', '10px')
+					tr.append('td').text(category)
+				}
+			}
+		}
 	} catch (e) {
 		tdtemp1.text(e.message || e)
 		if (e.stack) console.log(e.stack)
@@ -114,33 +129,56 @@ async function table_snvindel_multivariant(mlst, tk, block, div) {
 	tr.append('td')
 		.text('Mutation')
 		.style('opacity', 0.5)
+		.style('padding-right', '10px')
 	tr.append('td')
 		.text('Occurrence')
 		.style('opacity', 0.5)
 	for (const m of mlst) {
 		const tr = table.append('tr')
-		print_snvindel(m, tr.append('td'))
-		tr.append('td')
-			.text(m.occurrence)
-			.on('click', async () => {
-				tr2.style('display', tr2.style('display') == 'none' ? 'table-row' : 'none')
-				if (!first) return
-				first = false
-				await mlst2samplesummary(
-					[m],
-					tk,
-					block,
-					tr2
-						.append('td')
-						.attr('colspan', columnnum)
-						.append('table')
-				)
-			})
-		// hidden row to show sample details of this variant
-		let first = true
-		const tr2 = table.append('tr').style('display', 'none')
+		print_snvindel(m, tr.append('td').style('padding-right', '10px'))
+		const td2 = tr.append('td')
+		if (tk.mds.variant2samples) {
+			let first = true
+			td2
+				.html(m.occurrence + '\t&#9660;')
+				.style('text-align', 'right')
+				.attr('class', 'sja_clbtext')
+				.on('click', async () => {
+					if (tr2.style('display') == 'none') {
+						tr2.style('display', 'table-row')
+						td2.html(m.occurrence + '\t&#9650;')
+					} else {
+						tr2.style('display', 'none')
+						td2.html(m.occurrence + '\t&#9660;')
+					}
+					if (!first) return
+					// load sample info
+					first = false
+					await mlst2samplesummary(
+						[m],
+						tk,
+						block,
+						tr2
+							.append('td')
+							.attr('colspan', columnnum)
+							.append('table')
+							.style('border', 'solid 1px #ccc')
+							.style('margin-left', '20px')
+					)
+				})
+			// hidden row to show sample details of this variant
+			const tr2 = table.append('tr').style('display', 'none')
+		} else {
+			td2.text(m.occurrence)
+		}
 	}
 	if (tk.mds.variant2samples) {
+		div
+			.append('div')
+			.text('Case summary of ' + mlst.length + ' variants')
+			.style('margin-top', '20px')
+			.style('opacity', 0.4)
+			.style('font-size', '1.2em')
 		await mlst2samplesummary(mlst, tk, block, div.append('table'))
 	}
 }

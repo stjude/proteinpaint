@@ -1779,7 +1779,7 @@ async function click_variants(d, tk, block, tippos) {
 		if (d.occurrence > 1 && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.mds.variant2samples.get(d.mlst, 'getsunburst')
+			const data = await tk.mds.variant2samples.get(d.mlst, 'sunburst')
 			tk.glider.style('cursor', 'auto')
 			if (data.error) throw data.error
 			if (!data.data) throw '.data[] missing'

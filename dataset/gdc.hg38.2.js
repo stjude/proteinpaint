@@ -180,11 +180,7 @@ query OneSsm($filter: FiltersArgument) {
 											case_id
 											available_variation_data
 											state
-											days_to_index
-											submitter_id
-											tissue_source_site {
-												name
-											}
+											# tissue_source_site { name }
 											demographic {
 												gender
 												year_of_birth
@@ -211,10 +207,15 @@ const variables_variant2samples = {
 		}
 	}
 }
+/* flat list of term objects, not hierarchical
+may make a central termdb (or in memory term list)
+and only include a list of term ids in variant2samples.terms[]
+*/
 const ssmCaseAttr = [
 	{
-		sunburst: true, // set to true so it will be a level in summary
-		k: 'Project', // attribute for stratinput
+		name: 'Project',
+		id: 'project',
+		type: 'categorical',
 		get: m => {
 			// the getter will not be passed to client
 			if (m.project) return m.project.project_id
@@ -222,51 +223,66 @@ const ssmCaseAttr = [
 		}
 	},
 	{
-		sunburst: true,
-		k: 'Disease',
+		name: 'Disease',
+		id: 'disease',
+		type: 'categorical',
 		get: m => m.disease_type
 	},
 	{
-		k: 'Primary site',
+		name: 'Primary site',
+		id: 'primary_site',
+		type: 'categorical',
 		get: m => m.primary_site
 	},
 	{
-		k: 'Available variation data',
+		name: 'Available variation data',
+		id: 'available_variation_data',
+		type: 'categorical',
 		get: m => m.available_variation_data
 	},
-	{ k: 'State', get: m => m.state },
-	{ k: 'Days to index', get: m => m.days_to_index },
-	{ k: 'Submitter', get: m => m.submitter_id },
+	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	/*
 	{
-		k: 'Tissue source site',
+		name: 'Tissue source site',
+		id: 'tissue_source_site',
+		type:'categorical',
 		get: m => {
 			if (m.tissue_source_site) return m.tissue_source_site.name
 			return null
 		}
 	},
+	*/
 	{
-		k: 'Gender',
+		name: 'Gender',
+		id: 'gender',
+		type: 'categorical',
 		get: m => {
 			if (m.demographic) return m.demographic.gender
 			return null
 		}
 	},
 	{
-		k: 'Birth year',
+		name: 'Birth year',
+		id: 'year_of_birth',
+		type: 'integer',
 		get: m => {
 			if (m.demographic) return m.demographic.year_of_birth
 			return null
 		}
 	},
 	{
-		k: 'Race',
+		name: 'Race',
+		id: 'race',
+		type: 'categorical',
 		get: m => {
 			if (m.demographic) return m.demographic.race
 			return null
 		}
 	},
 	{
-		k: 'Ethnicity',
+		name: 'Ethnicity',
+		id: 'ethnicity',
+		type: 'categorical',
 		get: m => {
 			if (m.demographic) return m.demographic.ethnicity
 			return null
@@ -371,6 +387,9 @@ const snvindel_attributes = [
 	}
 ]
 
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// XXX hardcoded to use .sample_id to dedup samples
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 const sampleSummaries = [
 	// for a group of samples that carry certain variants
 	// TODO project/disease hierarchy
@@ -394,7 +413,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// required
-		attributes: ssmCaseAttr,
+		terms: ssmCaseAttr,
+		sunburst_ids: ['project', 'disease'], // term id
 		gdcapi: {
 			query_sunburst: query_variant2samples_sunburst,
 			query_list: query_variant2samples_list,

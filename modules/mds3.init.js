@@ -49,7 +49,7 @@ export function client_copy(ds) {
 	if (ds.variant2samples) {
 		ds2.variant2samples = {
 			variantkey: ds.variant2samples.variantkey,
-			attributes: ds.variant2samples.attributes
+			terms: ds.variant2samples.terms
 		}
 	}
 	return ds2
@@ -60,9 +60,22 @@ function validate_variant2samples(ds) {
 	if (!vs) return
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (!vs.attributes) throw '.attributes[] missing from variant2samples'
-	if (!Array.isArray(vs.attributes)) throw 'variant2samples.attributes[] is not array'
-	// to validate levels
+	if (!vs.terms) throw '.terms[] missing from variant2samples'
+	if (!Array.isArray(vs.terms)) throw 'variant2samples.terms[] is not array'
+	if (vs.terms.length == 0) throw '.terms[] empty array from variant2samples'
+	for (const at of vs.terms) {
+		// each attr is a term, with a getter function
+		if (!at.name) throw '.name missing from an attribute term of variant2samples'
+		if (at.id == undefined) throw '.id missing from an attribute term of variant2samples' // allow id to be integer 0
+		if (typeof at.get != 'function') throw `.get() missing or not a function in attr "${at.id}" of variant2samples`
+	}
+	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
+	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
+	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
+	for (const id of vs.sunburst_ids) {
+		if (!vs.terms.find(i => i.id == id)) throw `sunburst id "${id}" not found in variant2samples.terms`
+	}
+	vs.sunburst_ids = new Set(vs.sunburst_ids)
 	if (vs.gdcapi) {
 		if (!vs.gdcapi.query_list) throw '.query_list missing from variant2samples.gdcapi'
 		if (!vs.gdcapi.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
