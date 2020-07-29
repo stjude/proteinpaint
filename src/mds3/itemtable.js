@@ -85,20 +85,35 @@ rendering may be altered by tk.mds config
 may use separate scripts to code different table styles
 */
 async function table_snvindel(mlst, tk, block, div) {
+	const varianttable = div.append('table')
 	if (mlst.length == 1) {
 		// single variant, use two-column table to show key:value pairs
-		// adding to the same 2-col table:
-		// if occurrence=1, sample attribute
-		// if multi-sample, summaries for each attribute
-		return await table_snvindel_onevariant(mlst[0], tk, block, div)
+		table_snvindel_onevariant(mlst[0], tk, block, varianttable)
+	} else {
+		// make a multi-column table for all variants, one row for each variant
+		table_snvindel_multivariant(mlst, tk, block, varianttable)
 	}
-	// make a multi-column table for all variants, one row for each variant
-	// make a separate table for sample detail/summary
-	await table_snvindel_multivariant(mlst, tk, block, div)
+	if (tk.mds.variant2samples) {
+		// to show sample info (occurrence=1) or summary (occurrence>1)
+		const heading = div
+			.append('div')
+			.style('margin-top', '20px')
+			.style('opacity', 0.4)
+			.style('font-size', '1.2em')
+		if (mlst.length == 1) {
+			if (mlst[0].occurrence == 1) {
+				heading.text('Information about this case')
+			} else {
+				heading.text('Summary of ' + mlst[0].occurrence + ' cases')
+			}
+		} else {
+			heading.text(`Summary of ${mlst.reduce((i, j) => i + j.occurrence, 0)} cases harboring ${mlst.length} variants`)
+		}
+		await mlst2samplesummary(mlst, tk, block, div.append('table'))
+	}
 }
 
-async function table_snvindel_onevariant(m, tk, block, div) {
-	const table = div.append('table')
+function table_snvindel_onevariant(m, tk, block, table) {
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Mutation')
@@ -109,11 +124,6 @@ async function table_snvindel_onevariant(m, tk, block, div) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	// to move to helper function
-	// when occurrence>1, to show category breakdown for each attribute; for number, show chart
-	if (tk.mds.variant2samples) {
-		await mlst2samplesummary([m], tk, block, table)
-	}
 }
 
 /* multiple variants, each with occurrence
@@ -121,7 +131,7 @@ one row for each variant
 click a button from a row to show the sample summary/detail table for that variant
 show a summary table across samples of all variants
 */
-async function table_snvindel_multivariant(mlst, tk, block, div) {
+function table_snvindel_multivariant(mlst, tk, block, div) {
 	const columnnum = 2 // get number of columns, dependent on tk.mds setting
 	const table = div.append('table')
 	// header row
@@ -171,15 +181,6 @@ async function table_snvindel_multivariant(mlst, tk, block, div) {
 		} else {
 			td2.text(m.occurrence)
 		}
-	}
-	if (tk.mds.variant2samples) {
-		div
-			.append('div')
-			.text('Case summary of ' + mlst.length + ' variants')
-			.style('margin-top', '20px')
-			.style('opacity', 0.4)
-			.style('font-size', '1.2em')
-		await mlst2samplesummary(mlst, tk, block, div.append('table'))
 	}
 }
 
