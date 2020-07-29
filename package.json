@@ -93,6 +93,7 @@
     "express-basic-auth": "^1.1.5",
     "image-size": "^0.5.5",
     "jsonwebtoken": "^7.4.3",
+    "jstat": "^1.9.3",
     "lazy": "^1.0.11",
     "loader-utils": "^0.2.17",
     "normalize.css": "^4.2.0",
