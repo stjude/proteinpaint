@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('bbb'),
+	genome:'hg19',
+	noheader:1,
+	nobox:1,
+	block:1,
+	position:'chr8:128688997-128888997',
+	nativetracks:'refgene',
+	width:300,
+	subpanels:[{chr:'chr4',start:174408608,stop:175268609,width:600,leftborder:'rgba(200,0,0,.1)'}],
+	datasetqueries:[ {
+		dataset:'Pediatric2',
+		querykey:'svcnv',
+		singlesample:{name:'SJNBL046418_C1-NB69'}
+	}],
+})
+</script>
+
+</body>
+</html>

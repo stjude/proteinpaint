@@ -65,7 +65,7 @@ function get_sample2cohort() {
 			}
 		})
 		rl.on('close', () => {
-			console.error('sample2subcohort loaded')
+			console.error('sample2cohort{} loaded')
 			resolve()
 		})
 	})
@@ -123,10 +123,7 @@ function print_result() {
 		if (cohort2samples.size > 1) {
 			// for now assume just two cohorts
 			const [k1, k2] = [...cohort2samples.keys()]
-			const newcohortkey = [...cohort2samples.keys()]
-				.sort()
-				.reverse()
-				.join(',')
+			const newcohortkey = [...cohort2samples.keys()].sort().join(',')
 			const unionsamples = new Set()
 			for (const s of cohort2samples.get(k1)) unionsamples.add(s)
 			for (const s of cohort2samples.get(k2)) unionsamples.add(s)

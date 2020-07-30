@@ -9,8 +9,8 @@ const cohorthtmltable = `<table>
 <tbody>
   <tr>
     <td>Survivors on Portal</td>
-	<td>4402</td>
-	<td>2936</td>
+	<td>4528</td>
+	<td>2641</td>
   </tr>
   <tr>
 	<td>Years of cancer diagnosis</td>
@@ -63,8 +63,21 @@ const cohorthtmltable = `<table>
 // the vcf file
 const info_fields = [
 	{
-		key: 'QC',
-		label: 'Good/Bad List',
+		key: 'QC_sjlife',
+		label: 'SJLIFE classification',
+		isfilter: true,
+		isactivefilter: true,
+		iscategorical: true,
+		values: [
+			{ key: 'SuperGood', label: 'SuperGood' },
+			{ key: 'Good', label: 'Good' },
+			{ key: 'Ambiguous', label: 'Ambiguous' },
+			{ key: 'Bad', label: 'Bad', ishidden: true }
+		]
+	},
+	{
+		key: 'QC_ccss',
+		label: 'CCSS classification',
 		isfilter: true,
 		isactivefilter: true,
 		iscategorical: true,
@@ -77,7 +90,29 @@ const info_fields = [
 	},
 	{
 		key: 'AF',
+		label: 'Allele frequency, SJLIFE+CCSS',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'AF_sjlife',
 		label: 'SJLIFE allele frequency',
+		isfilter: true,
+		isfloat: 1,
+		range: {
+			startunbounded: true,
+			stop: 1,
+			stopinclusive: true
+		}
+	},
+	{
+		key: 'AF_ccss',
+		label: 'CCSS allele frequency',
 		isfilter: true,
 		isfloat: 1,
 		range: {
@@ -132,7 +167,31 @@ const info_fields = [
 	},
 	{
 		key: 'CR',
+		label: 'Call rate, SJLIFE+CCSS',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'CR_sjlife',
 		label: 'SJLIFE call rate',
+		isfilter: true,
+		isactivefilter: true,
+		isfloat: 1,
+		range: {
+			start: 0.95,
+			startinclusive: true,
+			stopunbounded: true
+		}
+	},
+	{
+		key: 'CR_ccss',
+		label: 'CCSS call rate',
 		isfilter: true,
 		isactivefilter: true,
 		isfloat: 1,
@@ -235,36 +294,119 @@ const info_fields = [
 module.exports = {
 	isMds: true,
 
+	/* still only a quick fix
 	sample2bam: {
-		// this is just a quick fix
 		SJL5088613: 'files/hg38/sjlife/wgs-bam/SJST041646_G1.bam'
 	},
+	*/
 
 	cohort: {
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'
-			// may describe keywords about table and field names
-			/*
-			k:{
-				sample:'sample',
-				term_id:'term_id'
-			},
-			*/
 		},
 
 		termdb: {
 			//// this attribute is optional
 			phewas: {
+				/*
+				this should be used for dataset without cohort selection
 				samplefilter4termtype: {
 					condition: {
 						filter: {
 							type: 'tvslst',
-							join: '',
+							join: 'or',
 							in: true,
-							lst: [{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }]
+							lst: [
+								{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+							]
 						}
 					}
 				},
+				*/
+
+				/*
+				when cohort selection is enabled, this is optional
+				need this as not all sjlife samples are ctcae-graded, need to only use those graded ones in phewas
+				this is only used in phewas precompute
+				*/
+				precompute_subcohort2totalsamples: {
+					SJLIFE: {
+						/*
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'SJLIFE' }] } }
+								]
+							}
+						},
+						*/
+						termtype: {
+							condition: {
+								filter: {
+									type: 'tvslst',
+									join: '',
+									in: true,
+									lst: [
+										// this is based on the fact that ctcae_graded is only about sjlife samples, so no need to AND another tvs
+										{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+									]
+								}
+							}
+						}
+					},
+					/* no need to specify ccss as all its samples are supposed to be included	
+					CCSS: {
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'CCSS' }] } }
+								]
+							}
+						}
+					},
+					*/
+					'CCSS,SJLIFE': {
+						/*
+						all: {
+							filter: {
+								type: 'tvslst',
+								join: '',
+								in: true,
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: { id: 'subcohort', type: 'categorical' },
+											values: [{ key: 'SJLIFE' }, { key: 'CCSS' }]
+										}
+									}
+								]
+							}
+						},
+						*/
+						termtype: {
+							condition: {
+								filter: {
+									type: 'tvslst',
+									join: 'or',
+									in: true,
+									lst: [
+										// must include samples either is ctcae-graded, or is ccss
+										{ type: 'tvs', tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'CCSS' }] } },
+										{ type: 'tvs', tvs: { term: { id: 'ctcae_graded', type: 'categorical' }, values: [{ key: '1' }] } }
+									]
+								}
+							}
+						}
+					}
+				},
+
 				comparison_groups: [
 					/* only for condition terms
 					 */
@@ -337,7 +479,7 @@ module.exports = {
 	},
 
 	track: {
-		name: 'SJLife germline SNV',
+		name: 'Germline SNV',
 
 		info_fields,
 
@@ -358,7 +500,7 @@ module.exports = {
 						key: 'CEU', // header of file "cohort/admix"
 						infokey_AC: 'gnomAD_AC_nfe',
 						infokey_AN: 'gnomAD_AN_nfe',
-						termfilter_value: 'European Ancestry'
+						termfilter_value: 'European Ancestry' // comment on usage
 					},
 					{
 						key: 'YRI',
@@ -403,9 +545,13 @@ module.exports = {
 		],
 
 		vcf: {
-			file: 'files/hg38/sjlife/vcf/SJLIFE.vcf.gz',
+			file: 'files/hg38/sjlife/vcf/vcf.gz',
 			viewrangeupperlimit: 1000000,
 			numerical_axis: {
+				in_use: true, // to use numerical axis by default
+				//inuse_infokey:true,
+				inuse_AFtest: true,
+
 				axisheight: 150,
 				info_keys: [
 					{
@@ -413,15 +559,14 @@ module.exports = {
 						in_use: true
 						// TODO bind complex rendering such as boxplot to one of the info fields
 					},
+					{ key: 'AF_sjlife' },
+					{ key: 'AF_ccss' },
 					{ key: 'gnomAD_AF' },
 					{ key: 'gnomAD_AF_afr' },
 					{ key: 'gnomAD_AF_eas' },
 					{ key: 'gnomAD_AF_nfe' },
 					{ key: 'SJcontrol_AF' }
 				],
-				in_use: true, // to use numerical axis by default
-				//inuse_infokey:true,
-				inuse_AFtest: true,
 
 				AFtest: {
 					testby_AFdiff: false,
@@ -464,6 +609,8 @@ module.exports = {
 					],
 					allowed_infofields: [
 						{ key: 'AF' },
+						{ key: 'AF_sjlife' },
+						{ key: 'AF_ccss' },
 						{ key: 'SJcontrol_AF' },
 						{ key: 'gnomAD_AF' },
 						{ key: 'gnomAD_AF_afr' },
@@ -515,7 +662,7 @@ module.exports = {
 				}
 			}
 		},
-		// to restrict samples
+		// optional; a hidden TVS to restrict samples, will not be rendered in UI
 		sample_termfilter: {
 			type: 'tvslst',
 			join: '',
@@ -527,9 +674,8 @@ module.exports = {
 						term: {
 							name: 'wgs',
 							id: 'wgs_curated',
-							type: 'categorical',
-							// need to provide type/name/values besides id; in p4 with state rehydration, just need to provide term id
-							values: { '0': { label: 'No' }, '1': { label: 'Yes' } }
+							type: 'categorical'
+							// no need to provide values as it will not be rendered on frontend
 						},
 						values: [{ key: '1', label: 'Yes' }]
 					}

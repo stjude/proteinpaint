@@ -46,8 +46,10 @@ multi_sample_addhighlight
 multi_sample_removehighlight
 
 
-three modes:
-	1 & 2: driven by svcnv file, sv-cnv-vcf-fpkm ranking
+modes:
+
+	driven by svcnv file, sv-cnv-vcf-fpkm ranking
+
 		multi-sample:
 			one row per sample
 			two forms:
@@ -56,14 +58,19 @@ three modes:
 					cnv shown densily
 				full
 					cnv & sv shown together at sample-level
+
+		sampleset:
+			custom set of samples, in groups
+
 		single-sample:
 			show cnv & sv data from a single sample
 			indicated by tk.singlesample {name:"samplename"}
 			spawn from sample group, mode won't mutate
 			fpkm ranking shown as independent track
-	3: ase mode, driven by vcf file and supplemented by rna bam files
-	   always multi-sample
-	   always cohort
+
+	ase mode, driven by vcf file and supplemented by rna bam files
+		always multi-sample
+		always cohort
 
 
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
@@ -72,8 +79,6 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 custom vcf handling:
 	multi-sample
 	single-sample
-
-TODO dense germline variants?
 */
 
 const labyspace = 5
@@ -438,6 +443,7 @@ function addLoadParameter(par, tk) {
 	}
 
 	// cnv
+	if (tk.sampleset) par.sampleset = tk.sampleset
 	if (tk.valueCutoff) par.valueCutoff = tk.valueCutoff
 	if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
 	if (tk.showonlycnvwithsv) par.showonlycnvwithsv = 1
@@ -1240,6 +1246,15 @@ function render_multi_cnvloh(tk, block) {
 			// the group's got a name, show name and border lines
 			const color = tk.legend_samplegroup ? tk.legend_samplegroup.color(samplegroup.name) : '#0A7FA6'
 
+			const glabellst = [samplegroup.name + ' (' + samplegroup.samples.length]
+			if (samplegroup.sampletotalnum)
+				glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%')
+			if (tk.sampleset) {
+				const s = tk.sampleset.find(i => i.name == samplegroup.name)
+				if (s) glabellst.push(', ' + Math.ceil((100 * samplegroup.samples.length) / s.samples.length) + '%')
+			}
+			glabellst.push(')')
+
 			tk.cnvleftg
 				.append('text')
 				.attr('font-size', grouplabelfontsize)
@@ -1249,15 +1264,7 @@ function render_multi_cnvloh(tk, block) {
 				.attr('dominant-baseline', 'central')
 				.attr('fill', color)
 				.attr('x', block.tkleftlabel_xshift)
-				.text(
-					samplegroup.name +
-						' (' +
-						samplegroup.samples.length +
-						(samplegroup.sampletotalnum
-							? ', ' + Math.ceil((100 * samplegroup.samples.length) / samplegroup.sampletotalnum) + '%'
-							: '') +
-						')'
-				)
+				.text(glabellst.join(''))
 				.each(function() {
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 				})
@@ -1301,8 +1308,8 @@ function render_multi_cnvloh(tk, block) {
 
 			// if to draw sample name
 
-			if ((tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
-				// show sample name when is custom track, or no group name in native track, and tall enough
+			if (!samplegroup.name && sample.samplename && sample.height >= minlabfontsize) {
+				// show sample name there is no group name, and tall enough, no matter if custom/native/sampleset
 				sample.svglabel = tk.cnvleftg
 					.append('text')
 					.text(sample.samplename)
@@ -2189,7 +2196,7 @@ export function draw_colorscale_loh(tk) {
 	})
 }
 
-export function focus_singlesample(p) {
+export async function focus_singlesample(p) {
 	/*
 	multi-sample
 	native or custom
@@ -2218,6 +2225,8 @@ export function focus_singlesample(p) {
 		holder = pane.body
 	}
 
+	const assaytkbuttondiv = holder.append('div')
+
 	// for launching block
 	const arg = {
 		style: {
@@ -2228,7 +2237,7 @@ export function focus_singlesample(p) {
 		//hide_mdsHandleHolder:1,
 
 		tklst: [],
-		holder: holder,
+		holder,
 		subpanels: []
 	}
 
@@ -2392,58 +2401,73 @@ export function focus_singlesample(p) {
 		}
 	}
 
-	Promise.resolve()
-		.then(() => {
-			if (tk.iscustom) {
-				// custom track, no serverside config
-				return
-			}
+	let assaytklst
 
-			// get sample-level track from serverside dataset config
-			const par = {
-				jwt: block.jwt,
+	if (!tk.iscustom) {
+		// official track
+		// get sample-level track from serverside dataset config
+		const data = await client.dofetch2('mdssvcnv', {
+			method: 'POST',
+			body: JSON.stringify({
 				genome: block.genome.name,
 				dslabel: tk.mds.label,
 				querykey: tk.querykey,
 				gettrack4singlesample: sample.samplename
+			})
+		})
+		if (data.error) throw data.error
+		if (data.tracks) {
+			// important: must duplicate as block init will erase the .hidden tag
+			assaytklst = data.tracks
+			for (const t of data.tracks) {
+				arg.tklst.push(JSON.parse(JSON.stringify(t)))
 			}
+		}
+	}
+	const bb = block.newblock(arg)
 
-			return fetch(
-				new Request(block.hostURL + '/mdssvcnv', {
-					method: 'POST',
-					body: JSON.stringify(par)
-				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw { message: data.error }
-					if (data.tracks) {
-						for (const t of data.tracks) {
-							arg.tklst.push(t)
-						}
+	if (m) {
+		if (m.dt == common.dtcnv || m.dt == common.dtloh) {
+			bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
+		}
+	}
+	if (assaytklst) {
+		// display buttons for toggling each assay track
+		assaytkbuttondiv
+			.style('display', 'inline-block')
+			.style('margin', '0px 10px 20px 10px')
+			.append('div')
+			.style('margin-bottom', '3px')
+			.text('Show/hide available assay tracks for ' + sample.samplename)
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+		const d = assaytkbuttondiv
+			.append('div')
+			.style('border', 'solid 1px #ccc')
+			.style('border-radius', '7px')
+		for (const t of assaytklst) {
+			const label = d
+				.append('div')
+				.style('display', 'inline-block')
+				.style('white-space', 'nowrap')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+				.append('label')
+			label
+				.append('input')
+				.attr('type', 'checkbox')
+				.style('margin-right', '3px')
+				.property('checked', !t.hidden)
+				.on('change', () => {
+					if (d3event.target.checked) {
+						bb.turnOnTrack(t)
+					} else {
+						bb.turnOffTrack(t)
 					}
 				})
-		})
-		.catch(err => {
-			client.sayerror(holder, err.message)
-			if (err.stack) console.log(err.stack)
-		})
-		.then(() => {
-			const bb = block.newblock(arg)
-
-			if (block.debugmode) {
-				window.bbb = bb
-			}
-
-			if (m) {
-				if (m.dt == common.dtcnv || m.dt == common.dtloh) {
-					bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
-				}
-			}
-			// done launching single-sample view from multi-sample
-		})
+			label.append('span').text(t.name)
+		}
+	}
 }
 
 export function rnabamtk_copyparam(from, to, copysample) {
@@ -2612,7 +2636,21 @@ function prep_samplegroups(tk, block) {
 			plotgroups = lst
 		}
 	}
-
+	if (tk.sampleset) {
+		// for each group, sort samples by the order given
+		for (let i = 0; i < tk.sampleset.length; i++) {
+			if (!plotgroups[i]) continue
+			const foundsamples = []
+			for (const name of tk.sampleset[i].samples) {
+				if (!plotgroups[i].samples) console.log(plotgroups[i])
+				const s = plotgroups[i].samples.find(j => j.samplename == name)
+				if (s) {
+					foundsamples.push(s)
+				}
+			}
+			plotgroups[i].samples = foundsamples
+		}
+	}
 	return [plotgroups, svlst4dense]
 }
 
@@ -2712,11 +2750,18 @@ for both multi- and single-sample
 		}
 
 		tk.nocnvlohsv = true
+		tk.isdense = true
+		tk.isfull = false
 		if (tk.mds.queries) {
 			for (const k in tk.mds.queries) {
-				if (tk.mds.queries[k].type == common.tkt.mdssvcnv) {
+				const t = tk.mds.queries[k]
+				if (t.type == common.tkt.mdssvcnv) {
 					// mds has a svcnv track
 					delete tk.nocnvlohsv
+					if (t.isfull) {
+						tk.isfull = true
+						tk.isdense = false
+					}
 				}
 			}
 		}
@@ -2974,6 +3019,8 @@ function apply_customization_oninit(tk, block) {
 
 		// for now, simply turn the mds track into single-sample mode
 		tk.singlesample = c.singlesample
+	} else if (c.sampleset) {
+		tk.sampleset = c.sampleset
 	}
 
 	// rest are multi-sample
@@ -3067,6 +3114,8 @@ function configPanel(tk, block) {
 
 	may_allow_samplesearch(tk, block)
 
+	makeoption_sampleset(tk, block)
+
 	may_allow_showhidelabel_multi(tk, block)
 
 	may_allow_togglewaterfall_single(tk, block)
@@ -3076,6 +3125,98 @@ function configPanel(tk, block) {
 	configPanel_rnabam(tk, block, loadTk)
 
 	tk.tkconfigtip.showunder(tk.config_handle.node())
+}
+
+function makeoption_sampleset(tk, block) {
+	if (tk.singlesample) return
+	const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '25px')
+	if (tk.sampleset) {
+		row
+			.append('span')
+			.style('opacity', 0.5)
+			.style('padding-right', '10px')
+			.text('Restricted to ' + tk.sampleset.reduce((i, j) => i + j.samples.length, 0) + ' samples')
+		row
+			.append('button')
+			.text('Edit')
+			.on('click', () => {
+				showinput_sampleset(tk, block)
+			})
+		row
+			.append('button')
+			.text('Remove')
+			.on('click', () => {
+				tk.tkconfigtip.hide()
+				delete tk.sampleset
+				loadTk(tk, block)
+			})
+		return
+	}
+	// allow to enter sampleset
+	row
+		.append('button')
+		.text('Use a sample list')
+		.on('click', () => {
+			showinput_sampleset(tk, block)
+		})
+}
+
+function showinput_sampleset(tk, block) {
+	// for editing existing set or create new
+	tk.tkconfigtip.clear()
+	const d = tk.tkconfigtip.d.append('div')
+	const ta = d
+		.append('textarea')
+		.attr('placeholder', 'One sample per row. Each row has sample and optional group name, joined by space or tab.')
+	if (tk.sampleset) {
+		const lst = []
+		for (const l of tk.sampleset) {
+			for (const s of l.samples) {
+				lst.push(s + ' ' + l.name)
+			}
+		}
+		ta.property('value', lst.join('\n'))
+			.style('width', '250px')
+			.style('height', '200px')
+	} else {
+		ta.style('width', '200px').style('height', '100px')
+	}
+	d.append('button')
+		.text('Submit')
+		.style('display', 'block')
+		.on('click', () => {
+			const lst = ta
+				.property('value')
+				.trim()
+				.split('\n')
+			if (lst.length == 0) return
+			const g2l = new Map()
+			const samplesnogrp = []
+			for (const line of lst) {
+				const [sample, group] = line.split(/[\s\t]/)
+				if (!sample) continue
+				if (!group) {
+					samplesnogrp.push(sample)
+				} else {
+					if (!g2l.has(group)) g2l.set(group, [])
+					g2l.get(group).push(sample)
+				}
+			}
+			tk.sampleset = []
+			for (const [name, samples] of g2l) {
+				tk.sampleset.push({ name, samples })
+			}
+			if (samplesnogrp.length) {
+				const g = { samples: samplesnogrp }
+				// has samples without group name, if there are others with group name, use default, otherwise use none
+				if (g2l.size) {
+					g.name = 'Unnamed group'
+				}
+				tk.sampleset.push(g)
+			}
+			tk.tkconfigtip.hide()
+			loadTk(tk, block)
+		})
 }
 
 function may_allow_togglewaterfall_single(tk, block) {

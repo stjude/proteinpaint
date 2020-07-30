@@ -31,22 +31,43 @@ runproteinpaint({
 			vcf:{
 				numerical_axis:{
 					// customization canceled
-					aAFtest:{
+					AFtest:{
 						groups:[
 							{
 								is_termdb:true,
-								filter:{ type:'tvslst',join:'and',in:true,lst:[
-									{type:'tvs',tvs: {
-										term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
-										values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
-									}},
-									{type:'tvs',tvs: {
-										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float'},
-										ranges: [ { value: '0', label: "Not exposed"},
-											{startunbounded:true,stop:2000,stopinclusive:true}
-										]
-									}},
+								filter:{
+									type:'tvslst',
+									join:'',
+									in:true,
+									lst:[
+										{
+											type:"tvs",
+											tag:"cohortFilter",
+											renderAs:"htmlSelect",
+											selectOptionsFrom:"selectCohort",
+											tvs:{
+												term:{id:"subcohort",type:"categorical"},
+												values:[
+													//{key:"SJLIFE",label:"SJLIFE"},
+													{key:"CCSS",label:"CCSS"}
+												]
+											}
+										},
 									/*
+										{type:'tvs',tvs: {
+											term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
+											values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
+										}},
+										{type:'tvs',tvs:{
+											term:{id:'agedx',type:'float',name:'Age at cancer diagnosis'},
+											ranges:[{startunbounded:true,stop:8,stopinclusive:true,label:'<=8'}]
+										}},
+										{type:'tvs',tvs: {
+											term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float'},
+											ranges: [ { value: '0', label: "Not exposed"},
+												{startunbounded:true,stop:2000,stopinclusive:true}
+											]
+										}},
 										//term:{id:'Asthma',name:'Asthma',type:'condition'},
 										term:{id:'Arrhythmias',name:'Arrhythmias',type:'condition'},
 										bar_by_grade:true,
@@ -63,6 +84,41 @@ runproteinpaint({
 									]
 								}
 							},
+
+/*
+							{
+								is_termdb:true,
+								filter:{
+									type:'tvslst',
+									join:'and',
+									in:true,
+									lst:[
+										{
+											type:"tvs",
+											tag:"cohortFilter",
+											renderAs:"htmlSelect",
+											selectOptionsFrom:"selectCohort",
+											tvs:{
+												term:{id:"subcohort",type:"categorical"},
+												values:[
+													{key:"SJLIFE",label:"SJLIFE"},
+													{key:"CCSS",label:"CCSS"}
+												]
+											}
+										},
+										{type:'tvs',tvs: {
+											term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
+											values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
+										}},
+										{type:'tvs',tvs:{
+											term:{id:'agedx',type:'float',name:'Age at cancer diagnosis'},
+											ranges:[{stopunbounded:true,start:8,label:'>8'}]
+										}},
+									]
+								}
+							}
+							*/
+
 							{ is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true }
 						]
 					}

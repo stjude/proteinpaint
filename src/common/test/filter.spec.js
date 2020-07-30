@@ -31,7 +31,8 @@ function getOpts(_opts = {}) {
 			callback(filter) {
 				opts.filterData = filter
 				opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
-				opts.filter.main(opts.filterData)
+				/*** filter.api.main() is already called in filter.refresh() before this callback ***/
+				//opts.filter.main(opts.filterData)
 			}
 		},
 		_opts
@@ -43,7 +44,8 @@ function getOpts(_opts = {}) {
 		holder: holder.append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
-		nav: { activeCohort: 0 },
+		nav: opts.nav,
+		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback
 	})
@@ -57,9 +59,10 @@ function sleep(ms) {
 
 async function addDemographicSexFilter(opts, btn) {
 	btn.click()
-	await sleep(200)
-	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[2]
+	await sleep(300)
+	const termdiv1 = [...opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')].find(
+		elem => elem.__data__.id === 'Demographic Variables'
+	)
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
@@ -395,7 +398,7 @@ tape('+NEW button interaction', async test => {
 		.node()
 		.querySelector('.sja_new_filter_btn')
 		.click()
-	await sleep(50)
+	await sleep(150)
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.node().style.display,
 		'none',
@@ -690,6 +693,7 @@ tape('pill Remove interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const removeOpt = menuRows.filter(d => d.action == 'remove')
+	test.notEqual(removeOpt.style('display'), 'none', `should have a visible pill remove menu option`)
 	removeOpt.node().click()
 	await sleep(30)
 	test.equal(opts.filter.Inner.filter.lst.length, 0, `should remove the corresponding filter.lst[] entry when clicked`)
@@ -780,6 +784,17 @@ tape('group Negate interaction', async test => {
 	)
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+
+	test.equal(
+		opts.holder
+			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
+			.filter(function() {
+				return this.style.display === 'none'
+			})
+			.size(),
+		0,
+		'should show parentheses for non-nested filters'
+	)
 	test.end()
 })
 
@@ -800,6 +815,7 @@ tape('group Remove interaction', async test => {
 	const tipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = tipd.selectAll('tr')
 	const removeOpt = menuRows.filter(d => d.action == 'remove')
+	test.notEqual(removeOpt.style('display'), 'none', `should have a visible group remove menu option`)
 	removeOpt.node().click()
 	await sleep(30)
 	test.equal(opts.filter.Inner.filter.lst.length, 0, `should remove the tvslst corresponding to the clicked group`)
@@ -977,7 +993,8 @@ tape('hidden filters', async test => {
 		},
 		callback(filter) {
 			opts.filterData.lst[1] = filter
-			opts.filter.main(opts.filterData)
+			/*** filter.api.main() is already called in filter.refresh() before this callback ***/
+			//opts.filter.main(opts.filterData)
 		}
 	})
 
@@ -1032,6 +1049,108 @@ tape('hidden filters', async test => {
 	)
 	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	test.end()
+})
+
+tape('renderAs: htmlSelect', async test => {
+	test.timeoutAfter(1000)
+	const termdbConfig = {
+		selectCohort: {
+			// wrap term.id into a term json object so as to use it in tvs;
+			// the term is not required to exist in termdb
+			// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
+			term: {
+				id: 'subcohort',
+				type: 'categorical'
+			},
+			values: [
+				{
+					keys: ['SJLIFE'],
+					label: 'St. Jude Lifetime Cohort (SJLIFE)',
+					shortLabel: 'SJLIFE',
+					isdefault: true,
+					cssSelector: 'tbody > tr > td:nth-child(2)'
+				},
+				{
+					keys: ['CCSS'],
+					label: 'Childhood Cancer Survivor Study (CCSS)',
+					shortLabel: 'CCSS',
+					cssSelector: 'tbody > tr > td:nth-child(3)'
+				},
+				{
+					keys: ['SJLIFE', 'CCSS'],
+					label: 'Combined SJLIFE+CCSS',
+					shortLabel: 'SJLIFE+CCSS',
+					cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
+					// show note under label in smaller text size
+					note:
+						'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
+				}
+			]
+		}
+	}
+	const opts = getOpts({
+		termdbConfig,
+		filterData: {
+			type: 'tvslst',
+			tag: 'filterUiRoot',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tag: 'cohortFilter',
+					renderAs: 'htmlSelect',
+					selectOptionsFrom: 'selectCohort',
+					tvs: {
+						term: termdbConfig.selectCohort.term,
+						values: [
+							{
+								key: 'SJLIFE',
+								label: 'SJLIFE'
+							}
+						]
+					}
+				}
+			]
+		},
+		callback(filter) {
+			opts.filterData = filter
+			/*** filter.api.main() is already called in filter.refresh() before this callback ***/
+			//opts.filter.main(opts.filterData)
+		}
+	})
+
+	const rootAndOr = opts.filter.Inner.dom.holder.selectAll('.sja_filter_add_transformer')
+
+	await opts.filter.main(opts.filterData)
+	test.equal(opts.filter.Inner.dom.holder.selectAll('select').size(), 1, 'should have an HTML select element')
+	const orBtn = rootAndOr.filter(d => d === 'or').node()
+	test.equal(orBtn && orBtn.style.display, 'none', 'should hide the OR button to add root filter items')
+	const andBtn = rootAndOr.filter(d => d === 'and').node()
+	test.notEqual(andBtn && andBtn.style.display, 'none', 'should show the AND button to add root filter items')
+
+	opts.filterData.join = 'and'
+	opts.filterData.lst.push(agedx())
+	await opts.filter.main(opts.filterData)
+	test.equal(
+		rootAndOr
+			.filter(function() {
+				return this.style.display === 'none'
+			})
+			.size(),
+		2,
+		'should not offer an AND or OR button to subnest the root filter'
+	)
+
+	const joinLabel = opts.filter.Inner.dom.holder.select('.sja_filter_join_label')
+	joinLabel.node().click()
+	const tipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = tipd.selectAll('tr')
+	const removeOpt = menuRows.filter(d => d.action == 'remove').node()
+	test.equal(removeOpt && removeOpt.style.display, 'none', 'should hide the Remove option')
+	opts.filter.Inner.dom.controlsTip.hide()
+
 	test.end()
 })
 
@@ -1128,6 +1247,7 @@ tape('getNormalRoot()', async test => {
 				join: 'and',
 				lst: [
 					{
+						tag: 'filterUiRoot',
 						type: 'tvslst',
 						in: true,
 						join: '',
@@ -1158,6 +1278,7 @@ tape('getNormalRoot()', async test => {
 
 	const twoEntryLst = [gettvs('abc', 123), gettvs('xyz', '999')]
 	const userConfiguredFilters = {
+		tag: 'filterUiRoot',
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -1246,6 +1367,7 @@ tape('getNormalRoot()', async test => {
 				lst: [
 					{
 						type: 'tvslst',
+						tag: 'filterUiRoot',
 						in: true,
 						join: '',
 						lst: []

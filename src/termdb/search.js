@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2, sayerror, Menu } from '../client'
+import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
@@ -46,10 +46,14 @@ class TermSearch {
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
-			cohortStr: appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
-				? ''
-				: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.join(',')
-
+			cohortStr:
+				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+					? ''
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
+							.slice()
+							.sort()
+							.join(','),
+			expandedTermIds: appState.tree.expandedTermIds
 		}
 	}
 
@@ -60,12 +64,12 @@ class TermSearch {
 			return
 		}
 		const lst = [
-			'genome=' + this.state.genome, 
-			'dslabel=' + this.state.dslabel, 
+			'genome=' + this.state.genome,
+			'dslabel=' + this.state.dslabel,
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + this.state.cohortStr
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'))
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
@@ -89,7 +93,6 @@ function setRenderers(self) {
 			.attr('placeholder', 'Search')
 			.style('width', '180px')
 			.style('display', 'block')
-			.style('font-size', '24px')
 			.on('input', debounce(self.onInput, 300))
 
 		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
@@ -142,12 +145,15 @@ function setRenderers(self) {
 					.style('margin', '1px 0px')
 					.on('click', () => {
 						self.opts.click_term(term)
+						self.clear()
+						self.dom.input.property('value', '')
 					})
 			}
 		} else {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
+				self.dom.input.property('value', '')
 				const expandedTermIds = [root_ID]
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)

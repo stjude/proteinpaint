@@ -1,4 +1,6 @@
 /*
+only keep European samples from category2vcfsample file
+for Yutaka's group one-off request
  */
 
 if (process.argv.length != 4) {

@@ -1,14 +1,18 @@
 if (process.argv.length != 4) {
-	console.log('<phenotree> <matrix> output termjson to stdout')
+	console.log('<phenotree> <matrix> output termjson to stdout, diagnostic tabular table to stderr')
 	process.exit()
 }
+
 /*
 input files:
-- phenotree MAP
-- matrices
+
+1. phenotree dictionary
+   this file no longer includes CHC terms, only categorical/numerical
+   CHC is dealt in validate.ctcae.js
+1. sample-by-term matrix, for all terms in phenotree
 
 output:
-json object for all atomic terms, but not CHC!!
+json object for all atomic terms
 
 step 1:
 	go over phenotree to initialize json backbone of categorical and numeric terms
@@ -31,17 +35,15 @@ step 3:
 	output
 	print out alerts and diagnostic info
 
-CHC is dealt in validate.ctcae.js
 */
 
 const file_phenotree = process.argv[2]
 const file_matrix = process.argv[3]
+
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
 
-// lines with this as L2 are CHC and not dealt with here
-const L2_CHC = 'Graded Adverse Events'
 const bins = {
 	_min: null,
 	_max: null, // temporary values
@@ -57,21 +59,24 @@ const bins = {
 	}
 }
 
-;(async () => {
+const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+
+main()
+
+async function main() {
 	// step 1
 	const key2terms = step1_parsephenotree()
 	// key: term ID
 	// value: term json obj
 
 	// step 2
-	//for (const file of glob.sync(path.join(dir_matrix, '*'))) { }
 	await step2_parsematrix(file_matrix, key2terms)
 
 	// step 3
-	step3_finalizeterms(key2terms)
+	step3_finalizeterms_diagnosticmsg(key2terms)
 
 	console.log(JSON.stringify(key2terms, null, 2))
-})()
+}
 
 ///////////////////// helpers
 
@@ -92,26 +97,13 @@ function step1_parsephenotree() {
 		.trim()
 		.split('\n')
 
-	let skip_CHC = 0
-
 	for (let i = 1; i < lines.length; i++) {
 		const [t1, t2, t3, t4, t5, key0, configstr0] = lines[i].split('\t')
-
-		const L2 = t2.trim()
-		if (L2 == L2_CHC) {
-			if (!key0) {
-				// key not provided, this line is a chc term, not parsed here
-				skip_CHC++
-				continue
-			} else {
-				// the key should be ctcae_graded and is a categorical, to be parsed here
-			}
-		}
-		// rest of lines are expected to be atomic term
 
 		try {
 			if (!configstr0 || !configstr0.trim()) throw 'configstr missing'
 			const L1 = t1.trim(),
+				L2 = t2.trim(),
 				L3 = t3.trim(),
 				L4 = t4.trim(),
 				L5 = t5.trim(),
@@ -127,12 +119,12 @@ function step1_parsephenotree() {
 			term.name = name
 			key2terms[key] = term
 		} catch (e) {
-			throw e + ': line ' + (i + 1)
+			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-	console.error('skipped ' + skip_CHC + ' CHC lines')
 	return key2terms
 }
+
 function get_name(L2, L3, L4, L5) {
 	if (!L2) throw 'L2 missing'
 	if (!L3) throw 'L3 missing'
@@ -172,7 +164,7 @@ function parseconfig(str) {
 			if (f1 == 'string') {
 				// ignore
 			} else {
-				const [key, value] = f1.split('=')
+				const [key, value] = f1.split(/(?<!\>|\<)=/)
 				if (!value) throw 'first field is not integer/float/string, and not k=v: ' + f1
 				term.values[key] = { label: value }
 			}
@@ -184,11 +176,20 @@ function parseconfig(str) {
 		for (let i = 1; i < l.length; i++) {
 			const field = l[i].trim()
 			if (field == '') continue
-			const [key, value] = field.split('=')
+			const [key, value] = field.split(/(?<!\>|\<)=/)
 			if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 			if (!term.values) term.values = {}
 			term.values[key] = { label: value }
-			if (term.type == 'integer' || term.type == 'float') term.values[key].uncomputable = true
+		}
+
+		if (term.type == 'integer' || term.type == 'float') {
+			// for numeric term, all keys in values are not computable
+			for (const k in term.values) term.values[k].uncomputable = true
+		} else if (term.type == 'categorical') {
+			// select categories are uncomputable
+			for (const k in term.values) {
+				if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
+			}
 		}
 	}
 
@@ -263,7 +264,6 @@ function step2_parsematrix(file, key2terms) {
 			}
 		})
 		rl.on('close', () => {
-			console.error('parsed ' + file)
 			if (header_notermmatch.size) {
 				console.error('matrix header not defined in phenotree: ' + [...header_notermmatch].join(', '))
 			}
@@ -271,13 +271,20 @@ function step2_parsematrix(file, key2terms) {
 		})
 	})
 }
-function step3_finalizeterms(key2terms) {
+
+function step3_finalizeterms_diagnosticmsg(key2terms) {
+	// finalize terms and print diagnostic messages to stderr
+
+	// diagnostic message is a tabular table and has a header
+	console.error('Type\tVariable_ID\tMin/message\tMax\tHidden_categories\tVisible_categories')
+
 	for (const termID in key2terms) {
 		const term = key2terms[termID]
+
 		if (term.type == 'categorical') {
 			if (term._set) {
 				if (term._set.size == 0) {
-					console.error('ERR - ' + termID + ': no categories specified in phenotree and not loaded in matrix')
+					console.error('ERR\t' + termID + '\tno categories specified in phenotree and not loaded in matrix')
 					continue
 				}
 				for (const s of term._set) {
@@ -288,12 +295,12 @@ function step3_finalizeterms(key2terms) {
 				// has predefined categories in .values
 				for (const k in term.values) {
 					if (!term._values_foundinmatrix.has(k)) {
-						console.error('ERR - ' + termID + ': category "' + k + '" not found in matrix')
+						console.error('ERR\t' + termID + '\tcategory not found in matrix: ' + k)
 					}
 				}
 				if (term._values_newinmatrix.size) {
 					for (const k of term._values_newinmatrix) {
-						console.error('ERR - ' + termID + ': categories undeclared in phenotree: ' + k)
+						console.error('ERR\t' + termID + '\tcategory not declared in phenotree: ' + k)
 						term.values[k] = { label: k }
 					}
 				}
@@ -306,42 +313,51 @@ function step3_finalizeterms(key2terms) {
 				delete term.groupsetting.inuse
 				term.groupsetting.disabled = true
 			}
-			continue
-		}
-		// numeric term
-		if (term.values) {
-			// has special cate, do the same validation
+
+			// diagnostic output
+			const uncomputable = [],
+				computable = []
 			for (const k in term.values) {
-				if (!term._values_foundinmatrix.has(k)) {
-					console.error('ERR - ' + termID + ': category "' + k + '" not found in matrix')
-				}
+				if (term.values[k].uncomputable) uncomputable.push(k)
+				else computable.push(k)
 			}
-			delete term._values_foundinmatrix
-		}
-		if (!('_min' in term.bins)) throw '.bins._min missing'
-		if (term.bins._min == term.bins._max) {
-			console.error('ERR - ' + termID + ': no numeric data')
+			console.error('CATEGORICAL\t' + termID + '\t\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
 			continue
 		}
-		console.error('RANGE - ' + termID + ': ' + term.bins._min + ' ' + term.bins._max)
-		// find bin size
-		const range = term.bins._max - term.bins._min
-		term.bins.default.bin_size = Math.ceil(range / 5)
-		/*
-		if (range > 10000) {
-			term.bins.default.bin_size = 4000
-		} else if (range > 4000) {
-			term.bins.default.bin_size = 1000
-		} else if (range > 1000) {
-			term.bins.default.bin_size = 200
-		} else if (range > 100) {
-			term.bins.default.bin_size = 20
-		} else {
-			term.bins.default.bin_size = Math.ceil((term.bins._max - term.bins._min) / 5)
+
+		if (term.type == 'integer' || term.type == 'float') {
+			// numeric term
+
+			if (term.values) {
+				// has special categories, do the same validation
+				for (const k in term.values) {
+					if (!term._values_foundinmatrix.has(k)) {
+						console.error('ERR\t' + termID + '\tcategory not found in matrix: ' + k)
+					}
+				}
+				delete term._values_foundinmatrix
+			}
+			if (!('_min' in term.bins)) throw '.bins._min missing'
+			if (term.bins._min == term.bins._max) {
+				console.error('ERR\t' + termID + '\tno numeric data in matrix')
+				continue
+			}
+			console.error(
+				'NUMERICAL\t' +
+					termID +
+					'\t' +
+					term.bins._min +
+					'\t' +
+					term.bins._max +
+					(term.values ? '\t' + Object.keys(term.values).join(',') : '')
+			)
+			// find bin size
+			const range = term.bins._max - term.bins._min
+			term.bins.default.bin_size = Math.ceil(range / 5)
+			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
+			delete term.bins._min
+			delete term.bins._max
+			continue
 		}
-		*/
-		term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
-		delete term.bins._min
-		delete term.bins._max
 	}
 }

@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 
 const defaultState = {
 	dslabel: 'SJLife',
@@ -43,8 +43,7 @@ ToyStore.prototype.actions = {
 			const lst = ['genome=' + this.state.genome.name + '&dslabel=' + this.state.dslabel]
 			const url = '/termdb?genome=hg38&dslabel=SJLife&gettermbyid=' + action.termid
 			const init = action.init ? action.init : {}
-			const fetchOpts = this.app.opts.fetchOpts ? this.app.opts.fetchOpts : {}
-			const data = await dofetch2(url, init, fetchOpts)
+			const data = await dofetch3(url, init)
 			if (!data.term) {
 				alert(`Term not found for id=${action.termid}`)
 				return

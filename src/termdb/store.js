@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 import { getterm } from '../common/termutils'
 import { graphable } from '../common/termutils'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
@@ -10,7 +10,7 @@ import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/
 
 const defaultState = {
 	nav: {
-		show_tabs: false,
+		header_mode: 'search_only',
 		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort
@@ -131,12 +131,17 @@ class TdbStore {
 			}
 		} else {
 			this.state.activeCohort = -1
+			// since the cohort tab will be hidden, default to making the filter tab active
 			if (this.state.activeTab === 0) this.state.activeTab = 1
+			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
+				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
+				this.state.nav.header_mode = 'search_only'
+			}
 		}
 	}
 
 	async getTermdbConfig() {
-		const data = await dofetch2(
+		const data = await dofetch3(
 			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
 		)
 		// note: in case of error such as missing dataset, supply empty object

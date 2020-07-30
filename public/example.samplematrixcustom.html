@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	samplematrix:{
+		genome:'hg38',
+		iscustom:true,
+		querykey2tracks:{
+			svcnv:{
+				type:'mdssvcnv',
+				url:'https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz',
+			},
+			vcf:{
+				type:'mdsvcf',
+				url:'https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz'
+			}
+		},
+		features:[
+			{ label:'CDKN2A/B', ismutation:1, querykeylst:['svcnv','vcf'], width:50, position:'chr9:21843776-22119276',snvindel:{excludeclasses:{Intron:1}}  },
+			{ label:'CCND1', ismutation:1, querykeylst:['svcnv','vcf'], width:50, position:'chr11:69641086-69654474',snvindel:{excludeclasses:{Intron:1}}  },
+			{ label:'ABL1', ismutation:1, querykeylst:['svcnv','vcf'], width:50, position:'chr9:130713880-130887675',snvindel:{excludeclasses:{Intron:1}}  },
+			{ label:'BCL2', ismutation:1, querykeylst:['svcnv','vcf'], width:50, position:'chr18:63121207-63324763',snvindel:{excludeclasses:{Intron:1}}  },
+		]
+	}
+})
+</script>
+
+</body>
+</html>

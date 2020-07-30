@@ -260,8 +260,10 @@ function multi_show_geneboxplot(arg) {
 			p[k] = tk.checkexpressionrank[k]
 		}
 	} else {
+		const e = tk.mds.queries[tk.querykey].checkexpressionrank
 		p.dslabel = tk.mds.label
-		p.querykey = tk.mds.queries[tk.querykey].checkexpressionrank.querykey
+		p.querykey = e.querykey
+		p.boxplotgroupers = e.boxplotgroupers
 	}
 	// svcnv
 	p.color = {

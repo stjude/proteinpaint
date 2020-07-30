@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch3 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
 import { statTableInit } from './stattable'
@@ -119,7 +119,7 @@ class TdbPlot {
 	async requestData(state) {
 		const dataName = this.getDataName(state)
 		const route = state.config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
-		return await dofetch2(route + dataName, {}, this.app.opts.fetchOpts)
+		return await dofetch3(route + dataName, {}, this.app.opts.fetchOpts)
 	}
 
 	// creates URL search parameter string, that also serves as

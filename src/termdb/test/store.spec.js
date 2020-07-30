@@ -9,10 +9,7 @@ const rx = require('../../common/rx.core')
 **************************/
 
 const runpp = helpers.getRunPp('termdb', {
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 function sleep(ms) {
@@ -234,7 +231,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 				}
 			},
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		app: {

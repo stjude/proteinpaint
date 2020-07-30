@@ -49,8 +49,8 @@ class TdbBarchart {
 			// will use this as callback to bar click
 			// and will not set up bar click menu
 		} else if (!this.opts.bar_click_opts) {
-			this.opts.bar_click_opts = ['hide_bar', 'select_to_gp']
-			if (this.app.getState().nav.show_tabs) this.opts.bar_click_opts.push('add_filter')
+			this.opts.bar_click_opts = ['hide_bar']
+			if (this.app.getState().nav.header_mode === 'with_tabs') this.opts.bar_click_opts.push('add_filter')
 		}
 	}
 
@@ -75,7 +75,10 @@ class TdbBarchart {
 				}
 			},
 			ssid: appState.ssid,
-			bar_click_menu: appState.bar_click_menu || {}
+			bar_click_menu: appState.bar_click_menu || {},
+			// optional
+			activeCohort: appState.activeCohort,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
@@ -130,9 +133,19 @@ class TdbBarchart {
 
 	initExclude() {
 		const term = this.config.term
+		// a non-numeric term.id is used directly as seriesId or dataId
+		const getHiddenId = id =>
+			term.term.type == 'categorical'
+				? id
+				: this.settings.cols && this.settings.cols.includes(term.term.id)
+				? id
+				: term.term.values && id in term.term.values && 'label' in term.term.values[id]
+				? term.term.values[id].label
+				: id
+
 		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
-			.filter(id => term.q.hiddenValues[id])
-			.map(id => (term.term.values && id in term.term.values ? term.term.values[id].label : id))
+			.filter(id => id in term.q.hiddenValues)
+			.map(getHiddenId)
 
 		const term2 = this.config.term2
 		this.settings.exclude.rows =
@@ -140,7 +153,7 @@ class TdbBarchart {
 				? []
 				: Object.keys(term2.q.hiddenValues)
 						.filter(id => term2.q.hiddenValues[id])
-						.map(id => (term2.term.values && id in term2.term.values ? term2.term.values[id].label : id))
+						.map(getHiddenId)
 	}
 
 	processData(chartsData) {

@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { searchInit } from './search'
 import { filterInit } from './filter3'
 import { select } from 'd3-selection'
-import { dofetch2, Menu } from '../client'
+import { dofetch3, Menu } from '../client'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
@@ -28,6 +28,7 @@ class TdbNav {
 		this.searching = false
 		this.hideSubheader = false
 		this.samplecounts = {}
+		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 		this.initUI()
 
 		this.components = {
@@ -35,7 +36,7 @@ class TdbNav {
 				this.app,
 				{
 					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.show_tabs ? this.dom.tip.d : null
+					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null
 				},
 				rx.copyMerge(
 					{
@@ -44,7 +45,9 @@ class TdbNav {
 						callbacks: {
 							'postSearch.nav': data => {
 								if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-								else this.dom.tip.showunder(this.dom.searchDiv.node())
+								else if (this.opts.header_mode === 'with_tabs') {
+									this.dom.tip.showunder(this.dom.searchDiv.node())
+								}
 							}
 						}
 					},
@@ -55,7 +58,7 @@ class TdbNav {
 				this.app,
 				{
 					holder: this.dom.subheader.filter.append('div'),
-					hideLabel: this.opts.show_tabs,
+					hideLabel: this.opts.header_mode === 'with_tabs',
 					emptyLabel: '+Add new filter'
 				},
 				this.app.opts.filter
@@ -71,7 +74,8 @@ class TdbNav {
 			nav: appState.nav,
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter
+			filter: appState.termfilter.filter,
+			expandedTermIds: appState.tree.expandedTermIds
 		}
 	}
 	reactsTo(action) {
@@ -83,18 +87,23 @@ class TdbNav {
 		)
 	}
 	async main() {
-		this.dom.tabDiv.style('display', this.state.nav.show_tabs ? 'inline-block' : 'none')
+		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
+		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
 		this.activeCohort = this.state.activeCohort
 		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
 		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
 		if (!this.dom.cohortTable) this.initCohort()
-		if (this.cohortNames) this.activeCohortName = this.cohortNames[this.activeCohort]
+		if (this.cohortNames) {
+			this.activeCohortName = this.cohortNames[this.activeCohort]
+			if (this.activeCohort !== -1)
+				this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
+		}
 		this.filterJSON = JSON.stringify(this.state.filter)
 		//this.hideSubheader = false
 
-		if (this.state.nav.show_tabs) {
+		if (this.state.nav.header_mode === 'with_tabs') {
 			const promises = []
 			if (!(this.activeCohortName in this.samplecounts)) promises.push(this.getCohortSampleCount())
 			if (!(this.filterJSON in this.samplecounts)) promises.push(this.getFilteredSampleCount())
@@ -110,7 +119,7 @@ class TdbNav {
 			'getcohortsamplecount=' + this.activeCohortName,
 			'cohortValues=' + this.activeCohortName
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
@@ -128,7 +137,7 @@ class TdbNav {
 			'getsamplecount=' + this.activeCohortName,
 			'filter=' + encodeURIComponent(this.filterJSON)
 		]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
@@ -155,7 +164,7 @@ function setRenderers(self) {
 				.style('width', '300px')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
-			sessionDiv: header.append('div'),
+			sessionDiv: header.append('div').style('display', 'inline-block'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'none')
@@ -163,6 +172,31 @@ function setRenderers(self) {
 				.style('border-bottom', '1px solid #000'),
 			tip: new Menu({ padding: '5px' })
 		}
+
+		const appState = self.app.getState()
+		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
+			// not part of filter div
+			self.dom.cohortStandaloneDiv = header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin', '10px')
+				.style('vertical-align', 'top')
+
+			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
+			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function() {
+				return self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
+			})
+
+			self.dom.cohortSelect
+				.selectAll('option')
+				.data(appState.termdbConfig.selectCohort.values)
+				.enter()
+				.append('option')
+				.attr('value', (d, i) => i)
+				.property('selected', (d, i) => i === appState.activeCohort)
+				.html(d => d.shortLabel)
+		}
+
 		self.dom.subheader = Object.freeze({
 			search: self.dom.subheaderDiv.append('div'),
 			cohort: self.dom.subheaderDiv.append('div'),
@@ -213,8 +247,8 @@ function setRenderers(self) {
 	self.updateUI = () => {
 		const selectCohort = self.state.termdbConfig.selectCohort
 		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
-		self.dom.holder.style('margin-bottom', self.state.nav.show_tabs ? '20px' : '')
-		self.dom.header.style('border-bottom', self.state.nav.show_tabs ? '1px solid #000' : '')
+		self.dom.holder.style('margin-bottom', self.state.nav.header_mode === 'with_tabs' ? '20px' : '')
+		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds
 			.style('display', d =>
 				(self.activeCohort !== -1 || !selectCohort) && d.colNum !== 0
@@ -234,7 +268,7 @@ function setRenderers(self) {
 						return d.key == 'top'
 							? this.innerHTML
 							: d.key == 'mid'
-							? self.activeCohortName
+							? self.activeCohortLabel
 							: 'n=' + self.samplecounts[self.activeCohortName]
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
@@ -253,7 +287,11 @@ function setRenderers(self) {
 
 		self.dom.subheaderDiv.style(
 			'display',
-			self.hideSubheader ? 'none' : !self.state.nav.show_tabs && self.activeTab !== 1 ? 'none' : 'block'
+			self.hideSubheader
+				? 'none'
+				: self.state.nav.header_mode !== 'with_tabs' && self.activeTab !== 1
+				? 'none'
+				: 'block'
 		)
 
 		const visibleSubheaders = []
@@ -271,7 +309,9 @@ function setRenderers(self) {
 		}
 		self.dom.subheaderDiv.style(
 			'border-bottom',
-			self.state.nav.show_tabs && visibleSubheaders.length && (self.activeCohort != -1 || !selectCohort)
+			self.state.nav.header_mode == 'with_tabs' &&
+				visibleSubheaders.length &&
+				(self.activeCohort != -1 || !selectCohort)
 				? '1px solid #000'
 				: ''
 		)
@@ -286,7 +326,12 @@ function setRenderers(self) {
 			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
 		}
 		if (self.dom.cohortPrompt) self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
+
+		if (self.opts.header_mode === 'with_cohort_select') {
+			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
+		}
 	}
+
 	self.initCohort = () => {
 		if (self.dom.cohortTable) return
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -295,7 +340,12 @@ function setRenderers(self) {
 			return
 		}
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
-		self.cohortNames = selectCohort.values.map(d => d.keys.join(','))
+		self.cohortNames = selectCohort.values.map(d =>
+			d.keys
+				.slice()
+				.sort()
+				.join(',')
+		)
 
 		self.dom.cohortPrompt = self.dom.subheader.cohort
 			.append('div')

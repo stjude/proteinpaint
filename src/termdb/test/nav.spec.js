@@ -10,12 +10,9 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38',
-		nav: { show_tabs: true }
+		nav: { header_mode: 'with_tabs' }
 	},
-	debug: 1,
-	fetchOpts: {
-		serverData: helpers.serverData
-	}
+	debug: 1
 })
 
 function sleep(ms) {
@@ -49,7 +46,7 @@ tape('\n', function(test) {
 tape('default hidden tabs, no filter', function(test) {
 	runpp({
 		state: {
-			nav: { show_tabs: false }
+			nav: { header_mode: 'search_only' }
 		},
 		nav: {
 			callbacks: {
@@ -74,7 +71,7 @@ tape('empty cohort, then selected', function(test) {
 		state: {
 			activeCohort: -1,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
@@ -97,6 +94,8 @@ tape('empty cohort, then selected', function(test) {
 			.to(testTabFold, 100)
 			.use(triggerTabUnfold)
 			.to(testTabUnfold, 100)
+			.use(triggerCohortSwitch)
+			.to(testPostCohortSwitch, 100)
 			.done(test)
 	}
 
@@ -195,6 +194,25 @@ tape('empty cohort, then selected', function(test) {
 			'should highlight the active tab'
 		)
 	}
+
+	function triggerCohortSwitch(nav) {
+		nav.Inner.dom.cohortOpts
+			.selectAll('input')
+			.filter((d, i) => d.keys.length > 1)
+			.node()
+			.click()
+	}
+
+	function testPostCohortSwitch(nav) {
+		test.equal(
+			nav.Inner.activeCohortName,
+			nav.Inner.activeCohortName
+				.split(',')
+				.sort()
+				.join(','),
+			'should normalize the cohort name by sorting keys and concatenating using a comma'
+		)
+	}
 })
 
 tape('filter subheader', async function(test) {
@@ -203,7 +221,7 @@ tape('filter subheader', async function(test) {
 		state: {
 			activeCohort: 0,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
@@ -265,7 +283,7 @@ tape('no termd.selectCohort', function(test) {
 			dslabel: 'NoCohortSJLife',
 			activeCohort: -1,
 			nav: {
-				show_tabs: true
+				header_mode: 'with_tabs'
 			}
 		},
 		nav: {
@@ -282,12 +300,6 @@ tape('no termd.selectCohort', function(test) {
 		helpers
 			.rideInit({ arg: nav, bus: nav, eventType: 'postRender.test' })
 			.run(testPreCohortSelection)
-			//.use(triggerCohortSelection)
-			//.to(testPostCohortSelection, 100)
-			//.use(triggerTabFold)
-			//.to(testTabFold, 100)
-			//.use(triggerTabUnfold)
-			//.to(testTabUnfold, 100)
 			.done(test)
 	}
 
@@ -310,11 +322,53 @@ tape('no termd.selectCohort', function(test) {
 			1,
 			'should not show the cohort tab'
 		)
-		/*
-		test.notEqual(
-			tds.filter((d, i) => i === 0).style('background-color'),
-			'transparent',
-			'should highlight the active cohort tab'
-		)*/
+	}
+})
+
+tape('with_cohortHtmlSelect', function(test) {
+	runpp({
+		state: {
+			nav: { header_mode: 'with_cohortHtmlSelect' }
+		},
+		nav: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+	function runTests(nav) {
+		test.equal(nav.Inner.dom.tabDiv.style('display'), 'none', 'should hide the tabs by default')
+		test.equal(nav.Inner.dom.holder.style('margin-bottom'), '0px', 'should not set a margin-bottom')
+		test.equal(nav.Inner.dom.holder.style('border-bottom'), '0px none rgb(0, 0, 0)', 'should not show a border-bottom')
+		test.notEqual(nav.Inner.dom.searchDiv.style('display'), 'none', 'should show the search input')
+		test.equal(nav.Inner.dom.subheaderDiv.style('display'), 'none', 'should hide the subheader')
+		test.true(nav.Inner.dom.cohortSelect != undefined, 'should show a cohort select element')
+		test.end()
+	}
+})
+
+tape('with_cohortHtmlSelect + missing ds.termdbConfig.selectCohort', function(test) {
+	runpp({
+		state: {
+			genome: 'hg38',
+			dslabel: 'NoCohortSJLife',
+			activeCohort: 0,
+			nav: {
+				header_mode: 'with_cohortHtmlSelect'
+			}
+		},
+		nav: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+	function runTests(nav) {
+		test.equal(nav.Inner.dom.tabDiv.style('display'), 'none', 'should hide the tabs by default')
+		test.equal(nav.Inner.dom.holder.style('margin-bottom'), '0px', 'should not set a margin-bottom')
+		test.equal(nav.Inner.dom.holder.style('border-bottom'), '0px none rgb(0, 0, 0)', 'should not show a border-bottom')
+		test.notEqual(nav.Inner.dom.searchDiv.style('display'), 'none', 'should show the search input')
+		test.true(nav.Inner.dom.cohortSelect == undefined, 'should not show a cohort select element')
+		test.end()
 	}
 })

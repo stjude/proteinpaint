@@ -22,10 +22,13 @@ b: boxplot
 - tracks []
 - holder
 - data []
-- tvaluemin
-- tvaluemax
 - ma_dotarea
 - vo_dotarea
+- hastvalue
+	if false, tvalue is missing
+	otherwise, requires tvaluemin/max
+- tvaluemin
+- tvaluemax
 
 */
 
@@ -59,12 +62,23 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 		}
 		return
 	}
-	const textfileurl = mavb.url
-	if (!textfileurl) {
+	let request
+	if (mavb.url) {
+		request = new Request(mavb.hostURL + '/urltextfile', {
+			method: 'POST',
+			body: JSON.stringify({ url: mavb.url, jwt: jwt })
+		})
+		delete mavb.url
+	} else if (mavb.file) {
+		request = new Request(mavb.hostURL + '/textfile', {
+			method: 'POST',
+			body: JSON.stringify({ file: mavb.file, jwt: jwt })
+		})
+		delete mavb.file
+	} else {
 		sayerror('neither .input nor .url given for MA-Volcano plot')
 		return
 	}
-	delete mavb.url
 	const wait = holder
 		.append('div')
 		.style('margin', '20px')
@@ -72,12 +86,7 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 		.style('font-size', '1.5em')
 		.text('Loading differential gene expression data ...')
 
-	fetch(
-		new Request(mavb.hostURL + '/urltextfile', {
-			method: 'POST',
-			body: JSON.stringify({ url: textfileurl, jwt: jwt })
-		})
-	)
+	fetch(request)
 		.then(data => {
 			return data.json()
 		})
@@ -187,6 +196,8 @@ function parseRaw(mavb, lines) {
 	if (err) {
 		return err
 	}
+	mavb.hastvalue = header.includes('tvalue')
+
 	const data = []
 
 	let errpvalue = 0
@@ -232,15 +243,14 @@ function parseRaw(mavb, lines) {
 		}
 
 		if (!m.pvalue) {
-			return '(line ' + (i + 1) + ') missing P value'
-		}
-		{
+			errpvalue++
+			continue
+		} else {
 			const v = Number.parseFloat(m.pvalue)
 			if (Number.isNaN(v)) {
 				// ignore lines with invalid p value e.g. NA
 				errpvalue++
 				continue
-				//return 'Line '+(i+1)+': invalid value for P value'
 			}
 			m.pvalue = v
 		}
@@ -250,20 +260,21 @@ function parseRaw(mavb, lines) {
 			if (Number.isNaN(v)) {
 				errpvalueadj++
 				continue
-				//return 'Line '+(i+1)+': invalid value for adjusted P value'
 			}
 			m.pvalueadj = v
 		}
 
-		if (!m.tvalue) {
-			return '(line ' + (i + 1) + ') missing T value'
-		}
-		{
-			const v = Number.parseFloat(m.tvalue)
-			if (Number.isNaN(v)) {
-				return '(line ' + (i + 1) + ') invalid value for T value: ' + m.tvalue
+		if (mavb.hastvalue) {
+			if (!m.tvalue) {
+				return '(line ' + (i + 1) + ') missing T value'
 			}
-			m.tvalue = v
+			{
+				const v = Number.parseFloat(m.tvalue)
+				if (Number.isNaN(v)) {
+					return '(line ' + (i + 1) + ') invalid value for T value: ' + m.tvalue
+				}
+				m.tvalue = v
+			}
 		}
 
 		data.push(m)
@@ -320,9 +331,12 @@ function parseHeader(line) {
 	i = htry('aveexpr', 'average.value')
 	if (i == -1) return ['average.value missing from header']
 	header[i] = 'averagevalue'
+
 	i = htry('t', 't.value')
-	if (i == -1) return ['t.value missing from header']
-	header[i] = 'tvalue'
+	if (i != -1) {
+		header[i] = 'tvalue'
+	}
+
 	i = htry('p.value')
 	if (i == -1) return ['p.value missing from header']
 	header[i] = 'pvalue'
@@ -335,15 +349,17 @@ function parseHeader(line) {
 
 function render(mavb) {
 	// range of absolute(t value) for setting dot radius
-	let tmin = Math.abs(mavb.data[0].tvalue)
-	let tmax = 0
-	for (const d of mavb.data) {
-		const v = Math.abs(d.tvalue)
-		tmin = Math.min(tmin, v)
-		tmax = Math.max(tmax, v)
+	if (mavb.hastvalue) {
+		let tmin = Math.abs(mavb.data[0].tvalue)
+		let tmax = 0
+		for (const d of mavb.data) {
+			const v = Math.abs(d.tvalue)
+			tmin = Math.min(tmin, v)
+			tmax = Math.max(tmax, v)
+		}
+		mavb.tvaluemin = tmin
+		mavb.tvaluemax = tmax
 	}
-	mavb.tvaluemin = tmin
-	mavb.tvaluemax = tmax
 
 	// MA plot
 
@@ -499,7 +515,10 @@ add:
 	const xscale = scaleLinear().domain([minav, maxav])
 	const yscale = scaleLinear().domain([minlogfc, maxlogfc])
 	// radius scale by range of abs(t-value)
-	const radiusscale = scaleLinear().domain([mavb.tvaluemin, mavb.tvaluemax])
+	let radiusscale
+	if (mavb.hastvalue) {
+		radiusscale = scaleLinear().domain([mavb.tvaluemin, mavb.tvaluemax])
+	}
 
 	const dotg = mavb.ma_dotarea
 		.selectAll()
@@ -569,10 +588,10 @@ add:
 
 		xscale.range([0, width])
 		yscale.range([height, 0])
-		radiusscale.range([radius, maxradius])
+		if (radiusscale) radiusscale.range([radius, maxradius])
 
 		circle.each(d => {
-			d.ma_radius = radiusscale(Math.abs(d.tvalue))
+			d.ma_radius = radiusscale ? radiusscale(Math.abs(d.tvalue)) : radius
 		})
 
 		boxh = radius * 3
@@ -658,9 +677,13 @@ add:
 	for (const d of mavb.data) {
 		minlogfc = Math.min(minlogfc, d.logfoldchange)
 		maxlogfc = Math.max(maxlogfc, d.logfoldchange)
-		const v = -Math.log(d.pvalue, 10)
-		minlogpv = Math.min(minlogpv, v)
-		maxlogpv = Math.max(maxlogpv, v)
+		if (d.pvalue == 0) {
+			continue
+		} else {
+			const v = -Math.log(d.pvalue, 10)
+			minlogpv = Math.min(minlogpv, v)
+			maxlogpv = Math.max(maxlogpv, v)
+		}
 	}
 
 	let yaxisw,
@@ -695,7 +718,8 @@ add:
 		.attr('shape-rendering', 'crispEdges')
 	const xscale = scaleLinear().domain([minlogfc, maxlogfc])
 	const yscale = scaleLinear().domain([minlogpv, maxlogpv])
-	const radiusscale = scaleLinear().domain([mavb.tvaluemin, mavb.tvaluemax])
+	let radiusscale
+	if (mavb.hastvalue) radiusscale = scaleLinear().domain([mavb.tvaluemin, mavb.tvaluemax])
 	const dotg = mavb.vo_dotarea
 		.selectAll()
 		.data(mavb.data)
@@ -733,9 +757,9 @@ add:
 
 		radius = Math.max(width, height) / 80
 		const maxradius = radius * 3
-		radiusscale.range([radius, maxradius])
+		if (radiusscale) radiusscale.range([radius, maxradius])
 		circle.each(d => {
-			d.vo_radius = radiusscale(Math.abs(d.tvalue))
+			d.vo_radius = radiusscale ? radiusscale(Math.abs(d.tvalue)) : radius
 		})
 
 		xpad = Math.max(maxradius, width / 50)
@@ -749,7 +773,9 @@ add:
 		xscale.range([0, width])
 		yscale.range([height, 0])
 		dotg.attr('transform', d => {
-			return 'translate(' + xscale(d.logfoldchange) + ',' + yscale(-Math.log(d.pvalue, 10)) + ')'
+			return (
+				'translate(' + xscale(d.logfoldchange) + ',' + yscale(d.pvalue == 0 ? maxlogpv : -Math.log(d.pvalue, 10)) + ')'
+			)
 		})
 		circle.attr('r', d => {
 			return d.vo_radius
@@ -785,7 +811,9 @@ add:
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
 				for (const d of mavb.data) {
-					const v = -Math.log(useun ? d.pvalue : d.pvalueadj, 10)
+					const pv = useun ? d.pvalue : d.pvalueadj
+					if (pv == 0) continue
+					const v = -Math.log(pv, 10)
 					minlogpv = Math.min(minlogpv, v)
 					maxlogpv = Math.max(maxlogpv, v)
 				}
@@ -796,9 +824,8 @@ add:
 					showline: true
 				})
 				dotg.attr('transform', d => {
-					return (
-						'translate(' + xscale(d.logfoldchange) + ',' + yscale(-Math.log(useun ? d.pvalue : d.pvalueadj, 10)) + ')'
-					)
+					const pv = useun ? d.pvalue : d.pvalueadj
+					return 'translate(' + xscale(d.logfoldchange) + ',' + yscale(pv == 0 ? maxlogpv : -Math.log(pv, 10)) + ')'
 				})
 				ylab.text(useun ? '-log(P value)' : '-log(adjusted P value)')
 			})
@@ -819,7 +846,9 @@ function circlemouseover(d) {
 	if (d.pvalueadj != undefined) {
 		lst.push({ k: 'adjusted P value', v: d.pvalueadj })
 	}
-	lst.push({ k: 'T value', v: d.tvalue })
+	if (d.tvalue != undefined) {
+		lst.push({ k: 'T value', v: d.tvalue })
+	}
 	// rest of the attributes
 	for (const k in d) {
 		if (

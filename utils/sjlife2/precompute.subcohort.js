@@ -134,7 +134,7 @@ function getPj(terms, data, cohortBySample, cohortByTermId) {
 		'=': {
 			cohort(row) {
 				return cohortByTermId.get(row.term_id).size > 1
-					? [cohortBySample.get(row.sample), 'SJLIFE,CCSS']
+					? [cohortBySample.get(row.sample), 'CCSS,SJLIFE']
 					: [cohortBySample.get(row.sample)]
 			}
 		}

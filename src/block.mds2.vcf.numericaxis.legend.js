@@ -106,6 +106,13 @@ show menu for numerical axis, under menubutton
 				nm.in_use = true
 				nm.inuse_infokey = false
 				nm.inuse_AFtest = true
+				/* quick fix!!
+				when switching back to AFtest, in any existing is_termdb group, must delete the filterApi
+				so the filter UI can re-render, as the UI dom has been deleted
+				*/
+				if (nm.AFtest && nm.AFtest.groups) {
+					for (const g of nm.AFtest.groups) delete g.filterApi
+				}
 				update()
 			})
 	}

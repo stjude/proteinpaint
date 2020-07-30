@@ -25,6 +25,7 @@ const express = require('express'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
 	path = require('path'),
+	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -51,11 +52,15 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
+	mds3_init = require('./modules/mds3.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
-	utils = require('./modules/utils')
+	utils = require('./modules/utils'),
+	draw_partition = require('./modules/partitionmatrix').draw_partition,
+	variant2samples_closure = require('./modules/variant2samples')
 
 /*
 valuable globals
@@ -80,6 +85,7 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 }
 
 const app = express()
+app.disable('x-powered-by')
 
 if (serverconfig.users) {
 	// { user1 : pass1, user2: pass2, ... }
@@ -93,6 +99,10 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+	if (req.method == 'GET') {
+		// immutable response before expiration
+		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 30}`)
+	}
 	next()
 })
 
@@ -107,11 +117,15 @@ if (serverconfig.jwt) {
 	app.use((req, res, next) => {
 		let j = {}
 		if (req.body && req.method == 'POST') {
-			try {
-				j = JSON.parse(req.body)
-			} catch (err) {
-				res.send({ error: 'Invalid JSON for request body' })
-				return
+			if (typeof req.body == 'object') {
+				j = req.body
+			} else {
+				try {
+					j = JSON.parse(req.body)
+				} catch (err) {
+					res.send({ error: 'Invalid JSON for request body' })
+					return
+				}
 			}
 		}
 		const jwt = j.jwt
@@ -132,13 +146,16 @@ if (serverconfig.jwt) {
 	})
 }
 
-app.post('/genomes', handle_genomes)
+app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/mds3', mds3_request_closure(genomes))
+app.get('/variant2samples', variant2samples_closure(genomes))
+app.get('/dsvariantsummary', handle_dsvariantsummary)
 app.post('/bedjdata', handle_bedjdata)
 app.post('/tkbampile', handle_tkbampile)
 app.post('/snpbyname', handle_snpbyname)
@@ -189,9 +206,13 @@ app.post('/bamnochr', handle_bamnochr)
 // obsolete
 app.get('/tpvafs1', handle_tpvafs1)
 
-const port = serverconfig.port || 3000
-app.listen(port)
-console.log('STANDBY AT PORT ' + port)
+{
+	const port = serverconfig.port || 3000
+	const server = app.listen(port)
+	console.log('STANDBY AT PORT ' + port)
+	// only uncomment below so phewas precompute won't timeout
+	//server.setTimeout(500000)
+}
 
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
@@ -239,6 +260,11 @@ function clientcopy_genome(genomename) {
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
+		if (ds.isMds3) {
+			g2.datasets[ds.label] = mds3_init.client_copy(ds)
+			continue
+		}
+
 		if (ds.isMds) {
 			const _ds = mds_clientcopy(ds)
 			if (_ds) {
@@ -285,6 +311,12 @@ function clientcopy_genome(genomename) {
 		}
 		if (ds.snvindel_legend) {
 			ds2.snvindel_legend = ds.snvindel_legend
+		}
+		if (ds.variant2samples) {
+			ds2.variant2samples = {
+				variantkey: ds.variant2samples.variantkey,
+				levels: ds.variant2samples.levels
+			}
 		}
 		const vcfinfo = {}
 		let hasvcf = false
@@ -348,6 +380,9 @@ function mds_clientcopy(ds) {
 
 	if (ds.singlesamplemutationjson) {
 		ds2.singlesamplemutationjson = 1
+	}
+	if (ds.assayAvailability) {
+		ds2.assayAvailability = 1
 	}
 
 	if (ds.cohort && ds.cohort.sampleAttribute) {
@@ -416,6 +451,7 @@ function mds_clientcopy(ds) {
 		if (q.istrack) {
 			clientquery.istrack = true
 			clientquery.type = q.type
+			clientquery.isfull = q.isfull
 			// track attributes, some are common, many are track type-specific
 			if (q.nochr != undefined) {
 				clientquery.nochr = q.nochr
@@ -460,9 +496,20 @@ function mds_clientcopy(ds) {
 
 				if (q.expressionrank_querykey) {
 					// for checking expression rank
+					const e = ds.queries[q.expressionrank_querykey]
 					clientquery.checkexpressionrank = {
 						querykey: q.expressionrank_querykey,
-						datatype: ds.queries[q.expressionrank_querykey].datatype
+						datatype: e.datatype
+					}
+					if (e.boxplotbysamplegroup && e.boxplotbysamplegroup.additionals) {
+						// quick fix!!
+						// array element 0 is boxplotbysamplegroup.attributes
+						// rest of array, one ele for each of .additionals
+						const lst = []
+						if (e.boxplotbysamplegroup.attributes)
+							lst.push(e.boxplotbysamplegroup.attributes.map(i => i.label).join(', '))
+						for (const i of e.boxplotbysamplegroup.additionals) lst.push(i.label)
+						clientquery.checkexpressionrank.boxplotgroupers = lst
 					}
 				}
 				if (q.vcf_querykey) {
@@ -2539,7 +2586,98 @@ function handle_clinvarVCF(req, res) {
 	}
 }
 
-function handle_dsdata(req, res) {
+async function handle_dsvariantsummary(req, res) {
+	log(req)
+	try {
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'invalid genome'
+		const ds = genome.datasets[req.query.dsname]
+		if (!ds) throw 'dataset not found'
+		if (!ds.stratify) throw 'stratify not supported on this dataset'
+		const strat = ds.stratify.find(i => i.label == req.query.stratify)
+		if (!strat) throw 'unknown stratify method'
+
+		const item2mclass = new Map()
+		// k: item name/key
+		// v: Map
+		//    k: mclass
+		//    v: set of case id
+		if (ds.queries) {
+			await handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass)
+		} else {
+			throw 'unknown query method'
+		}
+		const items = []
+		for (const [itemname, m2c] of item2mclass) {
+			const item = {
+				name: itemname,
+				count: 0,
+				m2c: []
+			}
+			for (const [mclass, s] of m2c) {
+				item.count += s.size
+				item.m2c.push([mclass, s.size])
+			}
+			item.m2c.sort((a, b) => b[1] - a[1])
+			if (ds.onetimequery_projectsize) {
+				if (ds.onetimequery_projectsize.results.has(itemname)) {
+					item.cohortsize = ds.onetimequery_projectsize.results.get(itemname)
+				}
+			}
+			items.push(item)
+		}
+		items.sort((a, b) => b.count - a.count)
+		res.send({ items })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass) {
+	for (const query of ds.queries) {
+		if (query.gdcgraphql_snvindel) {
+			// duplicate code with handle_dsdata_gdcgraphql_snvindel_isoform2variants
+			const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
+			for (const hit of hits) {
+				if (!hit._source) throw '._source{} missing from one of re.hits[]'
+				if (!hit._source.consequence) continue
+				const ts = hit._source.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
+				// get mclass of this variant
+				let mclass
+				if (ts && ts.transcript.consequence_type) {
+					const [dt, _mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
+					mclass = _mclass
+				}
+				if (!mclass) continue
+				// for each occurrence, add to counter
+				if (!hit._source.occurrence) continue
+				if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
+				for (const acase of hit._source.occurrence) {
+					if (!acase.case) throw '.case{} missing from a case'
+					let stratvalue = acase.case
+					for (const key of strat.keys) {
+						stratvalue = stratvalue[key]
+					}
+					if (stratvalue) {
+						// has a valid item for this strat category
+						if (!item2mclass.has(stratvalue)) item2mclass.set(stratvalue, new Map())
+						if (!item2mclass.get(stratvalue).has(mclass)) item2mclass.get(stratvalue).set(mclass, new Set())
+						item2mclass
+							.get(stratvalue)
+							.get(mclass)
+							.add(acase.case.case_id)
+						//const c = item2mclass.get(stratvalue)
+						//c.set(mclass, 1 + (c.get(mclass) || 0))
+					}
+				}
+			}
+		}
+	}
+	return item2mclass
+}
+
+async function handle_dsdata(req, res) {
 	/*
 	poor mechanism, only for old-style official dataset
 
@@ -2547,116 +2685,315 @@ function handle_dsdata(req, res) {
 	*/
 
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!genomes[req.query.genome]) return res.send({ error: 'invalid genome' })
-	if (!req.query.dsname) return res.send({ error: '.dsname missing' })
-	const ds = genomes[req.query.genome].datasets[req.query.dsname]
-	if (!ds) return res.send({ error: 'invalid dsname' })
-	const data = []
-	const tasks = []
+	try {
+		if (!genomes[req.query.genome]) throw 'invalid genome'
+		if (!req.query.dsname) throw '.dsname missing'
+		const ds = genomes[req.query.genome].datasets[req.query.dsname]
+		if (!ds) throw 'invalid dsname'
 
-	for (const query of ds.queries) {
-		if (req.query.expressiononly && !query.isgeneexpression) {
-			/*
-			expression data only
-			TODO mds should know exactly which data type to query, or which vending button to use
-			*/
-			continue
+		/**** for now, process this query here
+		as the /dsdata query will always run before sunburst or stratify queries that rely on project total size
+		***/
+		await may_onetimequery_projectsize(ds)
+
+		const data = []
+
+		for (const query of ds.queries) {
+			if (req.query.expressiononly && !query.isgeneexpression) {
+				/*
+				expression data only
+				TODO mds should know exactly which data type to query, or which vending button to use
+				*/
+				continue
+			}
+			if (req.query.noexpression && query.isgeneexpression) {
+				// skip expression data
+				continue
+			}
+
+			if (query.dsblocktracklst) {
+				/*
+				do not load any tracks here yet
+				TODO should allow loading some/all, when epaint is not there
+				*/
+				continue
+			}
+
+			if (query.vcffile) {
+				const d = await handle_dsdata_vcf(query, req)
+				data.push(d)
+				continue
+			}
+
+			if (query.makequery) {
+				const d = handle_dsdata_makequery(ds, query, req)
+				data.push(d)
+				continue
+			}
+
+			if (query.gdcgraphql_snvindel) {
+				const d = await handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req)
+				data.push(d)
+				continue
+			}
+			throw 'unknow type from one of ds.queries[]'
 		}
-		if (req.query.noexpression && query.isgeneexpression) {
-			// skip expression data
-			continue
+
+		res.send({ data })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
+	}
+}
+
+async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req) {
+	// query variants by isoforms
+	try {
+		const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
+		const lst = [] // parse snv/indels into this list
+		for (const hit of hits) {
+			if (!hit._source) throw '._source{} missing from one of re.hits[]'
+			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
+			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
+			const m = {
+				ssm_id: hit._source.ssm_id,
+				dt: common.dtsnvindel,
+				chr: req.query.range.chr,
+				pos: hit._source.start_position - 1,
+				ref: hit._source.reference_allele,
+				alt: hit._source.tumor_allele,
+				isoform: req.query.isoform,
+				info: {}
+			}
+
+			// sneaky, implies that .occurrence_key is required here
+			m.info[query.gdcgraphql_snvindel.occurrence_key] = hit._score
+
+			gdcgraphql_snvindel_addclass(m, hit._source.consequence)
+			lst.push(m)
 		}
-
-		if (query.dsblocktracklst) {
-			/*
-			do not load any tracks here yet
-			TODO should allow loading some/all, when epaint is not there
-			*/
-			continue
+		const data = { lst }
+		if (ds.stratify) {
+			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, hits)
 		}
+		return data
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw e.message || e
+	}
+}
 
-		if (query.vcffile) {
-			tasks.push(next => {
-				const par = [
-					path.join(serverconfig.tpmasterdir, query.vcffile),
-					(query.vcf.nochr ? req.query.range.chr.replace('chr', '') : req.query.range.chr) +
-						':' +
-						req.query.range.start +
-						'-' +
-						req.query.range.stop
-				]
-				const ps = spawn(tabix, par)
-				const out = [],
-					out2 = []
-				ps.stdout.on('data', i => out.push(i))
-				ps.stderr.on('data', i => out2.push(i))
-				ps.on('close', code => {
-					const e = out2.join('').trim()
-					if (e != '') {
-						next('error querying vcf file')
-						return
-					}
-					const tmp = out.join('').trim()
-					data.push({
-						lines: tmp == '' ? [] : tmp.split('\n'),
-						vcfid: query.vcf.vcfid
-					})
-					next(null)
-				})
-			})
-		} else {
-			// query from ds.newconn
-			tasks.push(next => {
-				const sqlstr = query.makequery(req.query)
-				if (!sqlstr) {
-					// when not using gm, will not query tables such as expression
-					next(null)
-					return
+async function gdcgraphql_snvindel_byisoform(query, isoform) {
+	// used in two placed
+	const variables = JSON.parse(JSON.stringify(query.gdcgraphql_snvindel.byisoform.variables))
+	variables.filters.content.value = [isoform]
+	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			query: query.gdcgraphql_snvindel.byisoform.query,
+			variables
+		})
+	})
+	let re
+	try {
+		const tmp = JSON.parse(response.body)
+		if (
+			!tmp.data ||
+			!tmp.data.analysis ||
+			!tmp.data.analysis.protein_mutations ||
+			!tmp.data.analysis.protein_mutations.data
+		)
+			throw 'structure is not .data.analysis.protein_mutations.data'
+		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
+	} catch (e) {
+		throw 'invalid JSON returned by GDC'
+	}
+	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
+	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
+	return re.hits
+}
+
+function gdcgraphql_snvindel_addclass(m, consequence) {
+	if (consequence) {
+		// [ { transcript } ]
+		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
+		if (ts && ts.transcript.consequence_type) {
+			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
+			m.class = mclass
+			m.mname = ts.transcript.aa_change // may be null!
+
+			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
+			if (ts.transcript.annotation) {
+				for (const k in ts.transcript.annotation) {
+					m.info[k] = ts.transcript.annotation[k]
 				}
-				const rows = ds.newconn.prepare(sqlstr).all()
-				let lst
-				if (query.tidy) {
-					lst = rows.map(i => query.tidy(i))
-				} else {
-					lst = rows
-				}
-				const result = {}
-				if (query.isgeneexpression) {
-					result.lst = lst
-					result.isgeneexpression = true
-					result.config = query.config
-
-					/*
-						loading of junction track as a dependent of epaint
-						attach junction track info in this result, for making the junction button in epaint
-						await user to click that button
-
-						replace-by-mds
-
-						*/
-
-					for (const q2 of ds.queries) {
-						if (!q2.dsblocktracklst) continue
-						for (const tk of q2.dsblocktracklst) {
-							if (tk.type == common.tkt.junction) {
-								result.config.dsjunctiontk = tk
-							}
-						}
-					}
-				} else {
-					result.lst = lst
-				}
-				data.push(result)
-				next(null)
-			})
+			}
 		}
 	}
-	async.series(tasks, err => {
-		if (err) {
-			res.send({ error: err })
-			return
+
+	if (!m.mname) {
+		m.mname = m.ref + '>' + m.alt
+	}
+
+	if (!m.class) {
+		if (common.basecolor[m.ref] && common.basecolor[m.alt]) {
+			m.class = common.mclasssnv
+		} else {
+			if (m.ref == '-') {
+				m.class = common.mclassinsertion
+			} else if (m.alt == '-') {
+				m.class = common.mclassdeletion
+			} else {
+				m.class = common.mclassmnv
+			}
 		}
-		res.send({ data: data })
+	}
+}
+
+function gdcgraphql_snvindel_stratifycount(ds, hits) {
+	/*
+variants returned from query should include occurrence
+from occurrence count the number of unique project/disease/site,
+hardcoded logic only for gdc!!!
+*/
+
+	const label2set = new Map()
+	// k: stratify label, v: Set() of items from this category
+	for (const s of ds.stratify) {
+		label2set.set(s.label, new Set())
+	}
+	for (const hit of hits) {
+		if (!hit._source.occurrence) continue
+		if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
+		for (const acase of hit._source.occurrence) {
+			if (!acase.case) throw '.case{} missing from a case'
+			for (const strat of ds.stratify) {
+				let stratvalue = acase.case
+				for (const key of strat.keys) {
+					stratvalue = stratvalue[key]
+				}
+				if (stratvalue) {
+					label2set.get(strat.label).add(stratvalue)
+				}
+			}
+		}
+	}
+	const labelcount = []
+	for (const [lab, s] of label2set) {
+		labelcount.push([lab, s.size])
+	}
+	return labelcount
+}
+
+async function may_onetimequery_projectsize(ds) {
+	if (!ds.onetimequery_projectsize) return
+	if (ds.onetimequery_projectsize.results) {
+		// already got result
+		return
+	}
+	// do the one time query
+	if (ds.onetimequery_projectsize.gdcgraphql) {
+		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify(ds.onetimequery_projectsize.gdcgraphql)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from GDC for onetimequery_projectsize'
+		}
+		if (
+			!re.data ||
+			!re.data.viewer ||
+			!re.data.viewer.explore ||
+			!re.data.viewer.explore.cases ||
+			!re.data.viewer.explore.cases.total ||
+			!re.data.viewer.explore.cases.total.project__project_id ||
+			!re.data.viewer.explore.cases.total.project__project_id.buckets
+		)
+			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
+		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
+			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
+
+		ds.onetimequery_projectsize.results = new Map()
+		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
+			if (!t.key) throw 'key missing from one bucket'
+			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+			ds.onetimequery_projectsize.results.set(t.key, t.doc_count)
+		}
+		return
+	}
+	throw 'unknown query method for onetimequery_projectsize'
+}
+
+function handle_dsdata_makequery(ds, query, req) {
+	// query from ds.newconn
+	const sqlstr = query.makequery(req.query)
+	if (!sqlstr) {
+		// when not using gm, will not query tables such as expression
+		return
+	}
+	const rows = ds.newconn.prepare(sqlstr).all()
+	let lst
+	if (query.tidy) {
+		lst = rows.map(i => query.tidy(i))
+	} else {
+		lst = rows
+	}
+	const result = {}
+	if (query.isgeneexpression) {
+		result.lst = lst
+		result.isgeneexpression = true
+		result.config = query.config
+
+		/*
+			loading of junction track as a dependent of epaint
+			attach junction track info in this result, for making the junction button in epaint
+			await user to click that button
+
+			replace-by-mds
+
+			*/
+
+		for (const q2 of ds.queries) {
+			if (!q2.dsblocktracklst) continue
+			for (const tk of q2.dsblocktracklst) {
+				if (tk.type == common.tkt.junction) {
+					result.config.dsjunctiontk = tk
+				}
+			}
+		}
+	} else {
+		result.lst = lst
+	}
+	return result
+}
+
+function handle_dsdata_vcf(query, req) {
+	const par = [
+		path.join(serverconfig.tpmasterdir, query.vcffile),
+		(query.vcf.nochr ? req.query.range.chr.replace('chr', '') : req.query.range.chr) +
+			':' +
+			req.query.range.start +
+			'-' +
+			req.query.range.stop
+	]
+	return new Promise((resolve, reject) => {
+		const ps = spawn(tabix, par)
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e != '') reject('error querying vcf file')
+			const tmp = out.join('').trim()
+			resolve({
+				lines: tmp == '' ? [] : tmp.split('\n'),
+				vcfid: query.vcf.vcfid
+			})
+		})
 	})
 }
 
@@ -2794,19 +3131,22 @@ function handle_hicstat(req, res) {
 		if (isurl) {
 			// do not stat
 			resolve()
+		} else {
+			// is file, find
+			fs.stat(file, (err, stat) => {
+				if (err) {
+					if (err.code == 'ENOENT') reject({ message: 'file not found' })
+					if (err.code == 'EACCES') reject({ message: 'no access to the file' })
+				}
+				resolve()
+			})
 		}
-
-		// is file, find
-		fs.stat(file, (err, stat) => {
-			if (err) {
-				if (err.code == 'ENOENT') reject({ message: 'file not found' })
-				if (err.code == 'EACCES') reject({ message: 'no access to the file' })
-			}
-			resolve()
-		})
 	})
 		.then(() => {
-			exec(hicstat + ' ' + file, (err, stdout, stderr) => {
+			// quote the file or url to prevent arbitrary code execution,
+			// in combination to fileurl() checking that there are no
+			// illegal characters in the filename or url
+			exec(hicstat + ' "' + file + '"', (err, stdout, stderr) => {
 				if (err) {
 					res.send({ error: err })
 					return
@@ -3402,7 +3742,7 @@ function handle_urltextfile(req, res) {
 		}
 		switch (response.statusCode) {
 			case 200:
-				res.send({ text: body })
+				res.send({ text: utils.stripJsScript(body) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })
@@ -3910,6 +4250,7 @@ async function handle_mdssvcnv(req, res) {
 	if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
+	if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery)
 
 	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
@@ -3920,6 +4261,10 @@ async function handle_mdssvcnv(req, res) {
 			return res.send({ error: 'zoom in under ' + common.bplen(dsquery.viewrangeupperlimit) + ' to view details' })
 		}
 	}
+
+	/*******
+	TODO rewrite: helper func return {} attached with all possible filters
+	***/
 
 	// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
 	let hiddendt
@@ -3956,6 +4301,20 @@ async function handle_mdssvcnv(req, res) {
 		}
 	}
 
+	let filter_sampleset
+	if (req.query.sampleset) {
+		filter_sampleset = {
+			set: new Set(),
+			sample2group: new Map()
+		}
+		for (const i of req.query.sampleset) {
+			for (const s of i.samples) {
+				filter_sampleset.set.add(s)
+				filter_sampleset.sample2group.set(s, i.name)
+			}
+		}
+	}
+
 	// TODO terms from locusAttribute
 
 	/*
@@ -3976,7 +4335,15 @@ async function handle_mdssvcnv(req, res) {
 	}
 
 	// query svcnv
-	const data_cnv = await handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr)
+	const data_cnv = await handle_mdssvcnv_cnv(
+		ds,
+		dsquery,
+		req,
+		hiddendt,
+		hiddensampleattr,
+		hiddenmattr,
+		filter_sampleset
+	)
 
 	// expression query
 	const [expressionrangelimit, gene2sample2obj] = await handle_mdssvcnv_expression(ds, dsquery, req, data_cnv)
@@ -3993,7 +4360,8 @@ async function handle_mdssvcnv(req, res) {
 		filteralleleattr,
 		hiddendt,
 		hiddenmattr,
-		hiddensampleattr
+		hiddensampleattr,
+		filter_sampleset
 	)
 
 	// group samples by svcnv, calculate expression rank
@@ -4026,7 +4394,7 @@ async function handle_mdssvcnv(req, res) {
 		return
 	}
 
-	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item)
+	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
 
 	const result = {
 		samplegroups: samplegroups,
@@ -4045,6 +4413,47 @@ async function handle_mdssvcnv(req, res) {
 	handle_mdssvcnv_end(ds, result)
 
 	res.send(result)
+}
+
+async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
+	try {
+		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
+		const sample2assay = new Map()
+		// k: sample
+		// v: Map( assay => 'yes')
+		for (const n in ds.cohort.annotation) {
+			if (req.query.key) {
+				// only keep samples matching with key/value
+				const s = ds.cohort.annotation[n]
+				if (s[req.query.key] != req.query.value) continue
+			}
+			sample2assay.set(n, new Map())
+		}
+		for (const [sample, k2v] of sample2assay) {
+			const a = ds.assayAvailability.samples.get(sample)
+			if (!a) continue
+			for (const t of ds.assayAvailability.assays) {
+				if (a[t.id]) {
+					k2v.set(t.id, 'yes')
+				}
+			}
+		}
+		for (const sample of sample2assay.keys()) {
+			if (sample2assay.get(sample).size == 0) sample2assay.delete(sample)
+		}
+		const data = {}
+		data.totalsample = sample2assay.size
+		data.terms = draw_partition({
+			sample2term: sample2assay,
+			terms: ds.assayAvailability.assays,
+			config: {
+				termidorder: req.query.termidorder // optional
+			}
+		})
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
 }
 
 async function handle_mdssvcnv_rnabam(region, genome, dsquery, result) {
@@ -4391,7 +4800,7 @@ async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 	return allsnps
 }
 
-function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item) {
+function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset) {
 	// multi sample
 
 	mdssvcnv_do_copyneutralloh(sample2item)
@@ -4399,7 +4808,46 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 	// group sample by available attributes
 	const samplegroups = []
 
-	if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
+	if (filter_sampleset) {
+		// custom sample set
+
+		const key2group = new Map()
+		// key: group name, v: list of samples from that group
+
+		for (const [n, items] of sample2item) {
+			const groupname = filter_sampleset.sample2group.get(n)
+			if (!key2group.has(groupname)) key2group.set(groupname, [])
+			key2group.get(groupname).push({
+				samplename: n, // hardcoded
+				items: items
+			})
+		}
+
+		if (data_vcf) {
+			// has vcf data and not custom track
+			for (const m of data_vcf) {
+				if (m.dt == common.dtsnvindel) {
+					for (const s of m.sampledata) {
+						let notfound = true
+						const groupname = filter_sampleset.sample2group.get(s.sampleobj.name)
+						if (!key2group.has(groupname)) key2group.set(groupname, [])
+						if (!key2group.get(groupname).find(i => i.samplename == s.sampleobj.name)) {
+							key2group.get(groupname).push({
+								samplename: s.sampleobj.name,
+								items: []
+							})
+						}
+					}
+					continue
+				}
+
+				console.log('unknown dt when grouping samples from vcf: ' + m.dt)
+			}
+		}
+		for (const [name, samples] of key2group) {
+			samplegroups.push({ name, samples })
+		}
+	} else if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
 		/**** group samples by predefined annotation attributes
 		only for official ds
 
@@ -4621,7 +5069,8 @@ async function handle_mdssvcnv_vcf(
 	filteralleleattr,
 	hiddendt,
 	hiddenmattr,
-	hiddensampleattr
+	hiddensampleattr,
+	filter_sampleset
 ) {
 	let vcfquery
 	if (dsquery.iscustom) {
@@ -4819,6 +5268,13 @@ async function handle_mdssvcnv_vcf(
 										}
 										// alter
 										m.sampledata = [thissampleobj]
+									} else if (filter_sampleset) {
+										const lst = m.sampledata.filter(s => filter_sampleset.set.has(s.sampleobj.name))
+										if (lst.length) {
+											m.sampledata = lst
+										} else {
+											continue
+										}
 									}
 
 									if (hiddenmattr) {
@@ -5207,7 +5663,13 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 					})
 					rl.on('line', line => {
 						const l = line.split('\t')
-						const j = JSON.parse(l[3])
+						let j
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							// invalid json
+							return
+						}
 						if (!j.gene) return
 						if (!j.sample) return
 						if (!Number.isFinite(j.value)) return
@@ -5251,7 +5713,7 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 		})
 }
 
-function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr) {
+function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr, filter_sampleset) {
 	if (!dsquery.file && !dsquery.url) {
 		// svcnv file is optional now
 		return []
@@ -5279,7 +5741,13 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 				const start0 = Number.parseInt(l[1])
 				const stop0 = Number.parseInt(l[2])
 
-				const j = JSON.parse(l[3])
+				let j
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					// invalid json, todo: report error
+					return
+				}
 
 				if (j.dt == undefined) {
 					// todo: report bad lines
@@ -5348,6 +5816,8 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 					if (j.sample != req.query.singlesample) {
 						return
 					}
+				} else if (filter_sampleset) {
+					if (!filter_sampleset.set.has(j.sample)) return
 				} else if (j.sample && ds.cohort && ds.cohort.annotation) {
 					// not single-sample
 					// only for official ds
@@ -7384,6 +7854,15 @@ or, export all samples from a group
 							return
 						}
 
+						// quick fix!!!
+						let attributes // which attributes to use
+						if (req.query.index_boxplotgroupers == undefined || req.query.index_boxplotgroupers == 0) {
+							attributes = dsquery.boxplotbysamplegroup.attributes
+						} else {
+							// using one of additional
+							attributes = dsquery.boxplotbysamplegroup.additionals[req.query.index_boxplotgroupers - 1].attributes
+						}
+
 						// same grouping procedure as svcnv
 
 						const sanno = ds.cohort.annotation[j.sample]
@@ -7392,15 +7871,15 @@ or, export all samples from a group
 							return
 						}
 
-						const headname = sanno[dsquery.boxplotbysamplegroup.attributes[0].k]
+						const headname = sanno[attributes[0].k]
 						if (headname == undefined) {
 							nogroupvalues.push({ sample: j.sample, value: j.value }) // hardcoded key
 							return
 						}
 
 						const names = []
-						for (let i = 1; i < dsquery.boxplotbysamplegroup.attributes.length; i++) {
-							const v = sanno[dsquery.boxplotbysamplegroup.attributes[i].k]
+						for (let i = 1; i < attributes.length; i++) {
+							const v = sanno[attributes[i].k]
 							if (v == undefined) {
 								break
 							}
@@ -7416,7 +7895,7 @@ or, export all samples from a group
 								samples: [],
 								attributes: []
 							}
-							for (const a of dsquery.boxplotbysamplegroup.attributes) {
+							for (const a of attributes) {
 								const v = sanno[a.k]
 								if (v == undefined) break
 								const a2 = { k: a.k, kvalue: v }
@@ -9934,7 +10413,9 @@ function handle_samplematrix(req, res) {
 		*/
 			let usesampleset
 
-			if (req.query.limitsamplebyeitherannotation) {
+			if (req.query.sampleset) {
+				usesampleset = new Set(req.query.sampleset)
+			} else if (req.query.limitsamplebyeitherannotation) {
 				// must be official ds
 				if (!ds.cohort) throw 'limitsamplebyeitherannotation but no cohort in ds'
 				if (!ds.cohort.annotation) throw 'limitsamplebyeitherannotation but no cohort.annotation in ds'
@@ -11304,8 +11785,11 @@ function parse_variantgene(line, header) {
 }
 
 function illegalpath(s) {
-	if (s[0] == '/') return true
+	if (s[0] == '/') return true // must not be relative to mount root
+	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
+	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
 	if (s.indexOf('..') != -1) return true
+	if (s.match(/[^\w-%.,~: /\\()\[\]]/i)) return true // must contain only alphanumeric characters with a few exceptions
 	return false
 }
 
@@ -11319,6 +11803,11 @@ function fileurl(req) {
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
 		file = req.query.url
+		// avoid whitespace in case the url is supplied as an argument
+		// to an exec script and thus execute arbitrary space-separated
+		// commands within the url
+		if (file.includes(' ')) return ['url must not contain whitespace']
+		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -11697,6 +12186,10 @@ function pp_init() {
 			ds.label = d.name
 			g.datasets[ds.label] = ds
 
+			if (ds.isMds3) {
+				mds3_init_wrap(ds, g, d)
+				continue
+			}
 			if (ds.isMds) {
 				/********* MDS ************/
 				const err = mds_init(ds, g, d)
@@ -11704,40 +12197,40 @@ function pp_init() {
 				continue
 			}
 
-			/*
-		old official dataset
-		*/
+			/* old official dataset */
+
+			if (ds.onetimequery_projectsize) {
+				if (ds.onetimequery_projectsize.gdcgraphql) {
+					if (!ds.onetimequery_projectsize.gdcgraphql.query)
+						return '.query missing from ds.onetimequery_projectsize.gdcgraphql'
+					if (!ds.onetimequery_projectsize.gdcgraphql.variables)
+						return '.variables missing from ds.onetimequery_projectsize.gdcgraphql'
+				} else {
+					return 'unknown query method of onetimequery_projectsize'
+				}
+			}
+
+			if (ds.variant2samples) {
+				if (!ds.variant2samples.variantkey) return '.variantkey missing from variant2samples'
+				if (!ds.variant2samples.levels) return '.levels[] missing from variant2samples'
+				if (!Array.isArray(ds.variant2samples.levels)) return 'variant2samples.levels[] is not array'
+				// validate levels when final
+				if (['ssm_id'].indexOf(ds.variant2samples.variantkey) == -1) return 'invalid value of variantkey'
+				if (ds.variant2samples.gdcgraphql) {
+					if (!ds.variant2samples.gdcgraphql.query) return '.query missing from variant2samples.gdcgraphql'
+					if (!ds.variant2samples.gdcgraphql.variables) return '.variables missing from variant2samples.gdcgraphql'
+				} else {
+					return 'unknown query method of variant2samples'
+				}
+			}
 
 			if (ds.dbfile) {
-				/*
-			this dataset has a db
-			*/
+				/* this dataset has a db */
 				try {
 					ds.newconn = utils.connect_db(ds.dbfile)
 				} catch (e) {
 					return 'cannot connect to db: ' + ds.dbfile
 				}
-				/*
-			const file=path.join(serverconfig.tpmasterdir,ds.dbfile)
-			ds.__dbopener = new Promise((resolve,reject)=>{
-				ds.db=new sqlite3.Database(file, sqlite3.OPEN_READONLY, err=>{
-					if(err) {
-						reject(err)
-					} else {
-						resolve()
-					}
-				})
-			})
-
-			ds.__dbopener.then(()=>{
-				console.log('Db opened: '+file)
-				delete ds.dbfile
-			})
-			.catch(err=>{
-				console.error('sqlite3: failed to open db at '+file+': '+err)
-				process.exit()
-			})
-			*/
 			}
 
 			if (ds.snvindel_attributes) {
@@ -11832,74 +12325,9 @@ function pp_init() {
 			if (!ds.queries) return 'queries missing from dataset ' + ds.label + ', ' + genomename
 			if (!Array.isArray(ds.queries)) return ds.label + '.queries is not array'
 			for (const q of ds.queries) {
-				if (!q.name) return 'for identification, please supply name for a query in ' + ds.label
-
-				if (q.dsblocktracklst) {
-					/*
-				one or more block track available from this query
-				quick-fix for cohort junction, replace-by-mds
-				*/
-					if (!Array.isArray(q.dsblocktracklst)) return 'dsblocktracklst not an array in ' + ds.label
-					for (const tk of q.dsblocktracklst) {
-						if (!tk.type) return 'missing type for a blocktrack of ' + ds.label
-						if (!tk.file && !tk.url) return 'neither file or url given for a blocktrack of ' + ds.label
-					}
-					continue
-				}
-
-				if (q.vcffile) {
-					// single vcf
-					const meta = child_process
-						.execSync(tabix + ' -H ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-						.trim()
-					if (meta == '') return 'no meta lines in VCF file ' + q.vcffile + ' of query ' + q.name
-					const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
-					if (errs) return 'error parsing VCF meta lines of ' + q.vcffile + ': ' + errs.join('; ')
-					q.vcf = {
-						vcfid: Math.random().toString(),
-						info: info,
-						format: format,
-						samples: samples
-					}
-					if (q.hlinfo) {
-						q.vcf.hlinfo = q.hlinfo
-						delete q.hlinfo
-					}
-					if (q.infopipejoin) {
-						q.vcf.infopipejoin = q.infopipejoin
-						delete q.infopipejoin
-					}
-					const tmp = child_process
-						.execSync(tabix + ' -l ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-						.trim()
-					if (tmp == '') return 'tabix -l found no chromosomes/contigs in ' + q.vcffile + ' of query ' + q.name
-					q.vcf.nochr = common.contigNameNoChr(g, tmp.split('\n'))
-					let infoc = 0
-					if (info) {
-						for (const n in info) infoc++
-					}
-					console.log(
-						'Parsed vcf meta from ' +
-							q.vcffile +
-							': ' +
-							infoc +
-							' INFO, ' +
-							samples.length +
-							' sample, ' +
-							(q.vcf.nochr ? 'no "chr"' : 'has "chr"')
-					)
-				} else {
-					// must be db-querying
-					if (!q.makequery) return ds.label + ': makequery missing for ' + q.name
-					if (q.isgeneexpression) {
-						if (!q.config) return 'config object missing for gene expression query of ' + q.name
-						if (q.config.maf) {
-							q.config.maf.get = q.config.maf.get.toString()
-						}
-					}
-				}
+				const err = legacyds_init_one_query(q, ds, g)
+				if (err) return 'Error parsing a query in "' + ds.label + '": ' + err
 			}
-			// end of ds.queries[]
 
 			if (ds.vcfinfofilter) {
 				const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
@@ -11920,6 +12348,88 @@ function pp_init() {
 	}
 }
 
+function legacyds_init_one_query(q, ds, genome) {
+	/* parse a query from legacy ds.queries[]
+	 */
+	if (!q.name) return '.name missing'
+
+	if (q.dsblocktracklst) {
+		/*
+		not sure if still in use!
+
+		one or more block track available from this query
+		quick-fix for cohort junction, replace-by-mds
+		*/
+		if (!Array.isArray(q.dsblocktracklst)) return 'dsblocktracklst not an array in ' + ds.label
+		for (const tk of q.dsblocktracklst) {
+			if (!tk.type) return 'missing type for a blocktrack of ' + ds.label
+			if (!tk.file && !tk.url) return 'neither file or url given for a blocktrack of ' + ds.label
+		}
+		return
+	}
+
+	if (q.vcffile) {
+		// single vcf
+		const meta = child_process
+			.execSync(tabix + ' -H ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
+			.trim()
+		if (meta == '') return 'no meta lines in VCF file ' + q.vcffile + ' of query ' + q.name
+		const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
+		if (errs) return 'error parsing VCF meta lines of ' + q.vcffile + ': ' + errs.join('; ')
+		q.vcf = {
+			vcfid: Math.random().toString(),
+			info: info,
+			format: format,
+			samples: samples
+		}
+		if (q.hlinfo) {
+			q.vcf.hlinfo = q.hlinfo
+			delete q.hlinfo
+		}
+		if (q.infopipejoin) {
+			q.vcf.infopipejoin = q.infopipejoin
+			delete q.infopipejoin
+		}
+		const tmp = child_process
+			.execSync(tabix + ' -l ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
+			.trim()
+		if (tmp == '') return 'tabix -l found no chromosomes/contigs in ' + q.vcffile + ' of query ' + q.name
+		q.vcf.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
+		let infoc = 0
+		if (info) {
+			for (const n in info) infoc++
+		}
+		console.log(
+			'Parsed vcf meta from ' +
+				q.vcffile +
+				': ' +
+				infoc +
+				' INFO, ' +
+				samples.length +
+				' sample, ' +
+				(q.vcf.nochr ? 'no "chr"' : 'has "chr"')
+		)
+		return
+	}
+
+	if (q.makequery) {
+		if (q.isgeneexpression) {
+			if (!q.config) return 'config object missing for gene expression query of ' + q.name
+			if (q.config.maf) {
+				q.config.maf.get = q.config.maf.get.toString()
+			}
+		}
+		return
+	}
+
+	if (q.gdcgraphql_snvindel) {
+		// TODO validate when it's settled
+		return
+	}
+
+	return 'do not know how to parse query: ' + q.name
+}
+
 /////////////////// __MDS
 
 function mds_init(ds, genome, _servconfig) {
@@ -11931,6 +12441,21 @@ function mds_init(ds, genome, _servconfig) {
 	*/
 
 	mds2_init.server_updateAttr(ds, _servconfig)
+
+	if (ds.assayAvailability) {
+		if (!ds.assayAvailability.file) return '.assayAvailability.file missing'
+		if (!ds.assayAvailability.assays) return '.assayAvailability.assays[] missing'
+		Object.freeze(ds.assayAvailability.assays)
+		ds.assayAvailability.samples = new Map()
+		for (const line of fs
+			.readFileSync(path.join(serverconfig.tpmasterdir, ds.assayAvailability.file), { encoding: 'utf8' })
+			.trim()
+			.split('\n')) {
+			const [sample, t] = line.split('\t')
+			ds.assayAvailability.samples.set(sample, JSON.parse(t))
+		}
+		console.log(ds.assayAvailability.samples.size + ' samples with assay availability (' + ds.label + ')')
+	}
 
 	if (ds.sampleAssayTrack) {
 		if (!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
@@ -12422,7 +12947,6 @@ function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		// 2nd generation track
 		mds2_init_wrap(ds, genome)
 	}
 
@@ -12506,6 +13030,18 @@ because mds_init is sync, so has to improvise to catch exception from mds2_init
 		await mds2_init.init(ds, genome)
 	} catch (e) {
 		console.log('ERROR init mds2 track: ' + e)
+		if (e.stack) console.log(e.stack)
+		process.exit()
+	}
+}
+async function mds3_init_wrap(ds, genome, _servconfig) {
+	/*
+because mds_init is sync, so has to improvise to catch exception from mds2_init
+*/
+	try {
+		await mds3_init.init(ds, genome, _servconfig)
+	} catch (e) {
+		console.log('ERROR init mds3 track: ' + e)
 		if (e.stack) console.log(e.stack)
 		process.exit()
 	}

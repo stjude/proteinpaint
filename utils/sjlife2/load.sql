@@ -63,13 +63,14 @@ CREATE INDEX termhtmldef_id on termhtmldef(id);
 
 drop table if exists category2vcfsample;
 create table category2vcfsample (
+  subcohort character not null,
   group_name character not null,
   term_id character varying(100) not null,
   parent_name character varying(200) null,
   q text not null,
   categories text not null
 );
-.import category2vcfsample.nograde9 category2vcfsample
+.import category2vcfsample category2vcfsample
 
 
 
@@ -86,6 +87,7 @@ create table annotations (
 
 .import annotation.matrix annotations
 .import annotation.admix annotations
+.import annotation.admix.ccss annotations
 
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);
@@ -115,6 +117,9 @@ create index c_grade on chronicevents(grade);
 
 
 DROP TABLE IF EXISTS precomputed;
+drop index if exists p_sample;
+drop index if exists p_termid;
+drop index if exists p_value_for;
 CREATE TABLE precomputed(
   sample TEXT,
   term_id TEXT,
@@ -124,10 +129,27 @@ CREATE TABLE precomputed(
   max_grade integer,
   most_recent integer
 );
+
+.import chronicevents.precomputed precomputed
 CREATE INDEX p_sample on precomputed(sample);
 CREATE INDEX p_termid on precomputed(term_id);
 CREATE INDEX p_value_for on precomputed(value_for);
 
--- imported filename must match the 
--- dataset/sjlife2.hg38.js:cohort.termdb.precomputed_file value
-.import chronicevents.precomputed precomputed
+
+---------------------------------------------
+-- to build the subcohort_terms table
+-- only required if cohort selection is enabled on the dataset
+---------------------------------------------
+
+DROP TABLE IF EXISTS subcohort_terms;
+DROP INDEX IF EXISTS subcohort_terms_cohort;
+DROP INDEX IF EXISTS subcohort_terms_termid;
+CREATE TABLE subcohort_terms (
+ cohort TEXT,
+ term_id TEXT,
+ count INT
+);
+.import term2subcohort subcohort_terms
+
+CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);
+CREATE INDEX subcohort_terms_termid ON subcohort_terms(term_id);

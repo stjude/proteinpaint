@@ -414,7 +414,8 @@ const tkt = {
 	expressionrank: 'expressionrank',
 	aicheck: 'aicheck',
 	ase: 'ase',
-	mds2: 'mds2', // mds 2nd generation
+	mds2: 'mds2', // mds 2nd gen
+	mds3: 'mds3', // 3rd gen
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam'
 }

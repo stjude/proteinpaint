@@ -1,4 +1,3 @@
-import 'babel-polyfill'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import * as client from './client'
 import {findgenemodel_bysymbol} from './gene'
@@ -12,6 +11,7 @@ import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
 import {debounce} from 'debounce'
+import * as parseurl from './app.parseurl'
 
 
 
@@ -43,12 +43,11 @@ launch_singlecell
 */
 
 
-
-
+const ppsrc=document.currentScript.src
 
 // global values
 let holder0,
-	hostURL='',
+	hostURL=ppsrc.includes('://') ? ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0] : '',
 	genomes,
 	variantPageCall_snv,
 	samplecart
@@ -80,8 +79,10 @@ window.runproteinpaint=(arg)=>{
 		return
 	}
 	// parse embedding arguments
-	const holder= arg.holder ? d3select(arg.holder) : d3select(document.body)
-	holder.style('font','1em Arial, sans-serif')
+	const holder= d3select(arg.holder ? arg.holder : document.body).append('div')
+	holder
+		.attr('class', 'sja_root_holder')
+		.style('font','1em Arial, sans-serif')
 		.style('color','black')
 
 	if(arg.host) {
@@ -89,9 +90,9 @@ window.runproteinpaint=(arg)=>{
 	}
 
 	// store fetch parameters
-	localStorage.setItem('hostURL', hostURL)
+	sessionStorage.setItem('hostURL', hostURL)
 	if(arg.jwt) {
-		localStorage.setItem('jwt',arg.jwt)
+		sessionStorage.setItem('jwt',arg.jwt)
 	}
 
 
@@ -119,17 +120,8 @@ window.runproteinpaint=(arg)=>{
 		|| (arg.termdb && arg.termdb.serverData)
 		|| (arg.toy && arg.toy.serverData)
 	// load genomes
-	const response = serverData
-		// use serverData if provided
-		? client.dofetch('genomes', {}, {serverData})
-		// do as usual
-		: fetch( new Request(hostURL+'/genomes',{
-				method:'POST',
-				body:JSON.stringify({
-					jwt: arg.jwt
-				})
-			}))
-			.then(data=>{return data.json()})
+
+	const response = client.dofetch2('genomes',{},{serverData})
 
 	return response.then(data=>{
 		if(data.error) throw({message:'Cannot get genomes: '+data.error})
@@ -445,6 +437,11 @@ function findgene2paint( str, genomename, jwt ) {
 		return
 	}
 	holder0.selectAll('*').remove()
+
+	// may yield tklst from url parameters
+	const urlp=parseurl.url2map()
+	const tklst = parseurl.get_tklst(urlp)
+
 	const pos=string2pos(str,g)
 	if(pos) {
 		// input is coordinate, launch block
@@ -458,7 +455,7 @@ function findgene2paint( str, genomename, jwt ) {
 			stop:pos.stop,
 			dogtag: genomename,
 			allowpopup:true,
-			tklst:[],
+			tklst,
 			debugmode:debugmode
 		}
 		client.first_genetrack_tolist( g, par.tklst )
@@ -482,6 +479,7 @@ function findgene2paint( str, genomename, jwt ) {
 		holder:holder0,
 		variantPageCall_snv:variantPageCall_snv,
 		samplecart:samplecart,
+		tklst,
 		debugmode:debugmode
 	}
 
@@ -678,32 +676,23 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		return
 	}
 
-/*
-	if(arg.jdv) {
-		launchjdv(arg.jdv, holder)
-		return
-	}
-	*/
-
 	if(arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
-		import('./app.parseurl').then(_=>{
-			const err=_.default({
-				genomes:genomes,
-				hostURL:hostURL,
-				variantPageCall_snv:variantPageCall_snv,
-				samplecart:samplecart,
-				holder:holder,
-				selectgenome:selectgenome,
-				debugmode:debugmode
-			})
-			if(err) {
-				error0(err)
-			}
+		const err = parseurl.parse({
+			genomes:genomes,
+			hostURL:hostURL,
+			variantPageCall_snv:variantPageCall_snv,
+			samplecart:samplecart,
+			holder:holder,
+			selectgenome:selectgenome,
+			debugmode:debugmode
 		})
+		if(err) {
+			error0(err)
+		}
 	}
 
 	if (arg.project) {
@@ -1084,7 +1073,7 @@ async function launchblock(arg,holder) {
 		if(h.has('hlregion')) {
 			const lst = []
 			for(const tmp of h.get('hlregion').split(',')) {
-				const pos = string2pos( tmp, genomeobj )
+				const pos = string2pos( tmp, genomeobj, true )
 				if(pos) {
 					lst.push(pos)
 				}

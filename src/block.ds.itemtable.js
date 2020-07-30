@@ -3,11 +3,9 @@ import * as client from './client'
 import * as common from './common'
 import * as vcf from './vcf'
 import * as path from 'path'
+import { stratify } from 'd3-hierarchy'
 
 /*
-
-no sunburst here
-
 
 ********************** EXPORTED
 
@@ -54,61 +52,12 @@ export function itemtable(arg) {
 	.holder
 	*/
 
-	const mlst = arg.mlst
-	const block = arg.block
-	const tk = arg.tk
+	const { mlst, tk, block } = arg
 	if (!mlst || mlst.length == 0) return
 	let holder
 	if (arg.pane) {
 		const pane = client.newpane({ x: arg.x, y: arg.y })
-		if (mlst.length == 1) {
-			const m = mlst[0]
-			const c = common.mclass[m.class]
-			switch (m.dt) {
-				case common.dtsnvindel:
-					pane.header.html(
-						'<span style="font-weight:bold;color:' +
-							c.color +
-							'">' +
-							(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
-							'</span> <span style="font-size:80%">' +
-							c.label +
-							'</span>'
-					)
-					break
-				case common.dtsv:
-				case common.dtfusionrna:
-					const names = []
-					for (let i = 0; i < m.pairlst.length; i++) {
-						if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
-						names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
-					}
-					pane.header.html(names.join(' - ') + '&nbsp;&nbsp;<span style="font-size:80%">' + c.label + '</span>')
-					break
-				case common.dtnloss:
-				case common.dtcloss:
-				case common.dtitd:
-				case common.dtdel:
-				case common.dtcnv:
-					pane.header.html('<span style="font-size:80%">' + c.label + '</span>')
-					break
-				default:
-					pane.header.text('unknown dt ' + m.dt)
-			}
-		} else {
-			const set = new Set()
-			for (const m of mlst) {
-				set.add(m.dt)
-			}
-			if (set.size == 1) {
-				let dt
-				for (dt of set.values()) {
-				}
-				pane.header.text(mlst.length + ' ' + common.dt2label[dt])
-			} else {
-				pane.header.text(mlst.length + ' mutations')
-			}
-		}
+		pane.header.html(mlst2headerhtml(mlst))
 		holder = pane.body
 	} else {
 		holder = arg.holder
@@ -117,8 +66,12 @@ export function itemtable(arg) {
 		console.error('no holder provided for showing table')
 		return
 	}
-	// mlst can be a mixture of dt
-	// show separate table for each datatype
+
+	/*
+	mlst can be a mixture of dt
+	show separate table for each datatype
+	following incrementally adds components to the mlst panel
+	*/
 	const dt2mlst = new Map()
 	for (const m of mlst) {
 		if (!dt2mlst.has(m.dt)) {
@@ -126,6 +79,13 @@ export function itemtable(arg) {
 		}
 		dt2mlst.get(m.dt).push(m)
 	}
+
+	/**** a very quick fix!
+	in any type of variant, only set this when mlst is just one variant with occurrence=1
+	so that variant2samples can append rows to it
+	*/
+	delete tk.__singlevariant_table
+
 	for (const [dt, lst] of dt2mlst) {
 		const div = holder.append('div').style('margin', '10px')
 		if (dt2mlst.size > 1) {
@@ -159,56 +119,54 @@ export function itemtable(arg) {
 				div.append('p').text('unknown dt: ' + dt)
 		}
 	}
-	if (block.samplecart && tk.ds && tk.ds.sampleselectable) {
-		/* select sample API applicable to this track
-		will make one single button for selecting sample, independent of how many datatypes
-		*/
-		const sampleset = new Set()
-		for (const m of mlst) {
-			if (m.sample) {
-				// FIXME hardcoded attribute
-				sampleset.add(m.sample)
-			}
-		}
-		if (sampleset.size > 0) {
-			// note for selection, try to use mname
-			const nameset = new Set()
-			for (const m of mlst) {
-				const classlab = common.mclass[m.class].label
-				let thisnote
-				if (m.dt == common.dtfusionrna || m.dt == common.dtsv) {
-					if (m.mname) {
-						if (m.useNterm) {
-							thisnote = (block.usegm ? block.usegm.name + '-' : '') + m.mname + ' ' + classlab
-						} else {
-							thisnote = m.mname + (block.usegm ? '-' + block.usegm.name : '') + ' ' + classlab
-						}
-					} else {
-						thisnote = (block.usegm ? block.usegm.name : '') + ' ' + classlab
-					}
-				} else {
-					thisnote = (m.mname ? m.mname + ' ' : '') + classlab + (block.usegm ? ' in ' + block.usegm.name : '')
-				}
-				nameset.add(thisnote)
-			}
-			let note
-			if (nameset.size == 1) {
-				note = 'having ' + [...nameset][0]
-			} else {
-				note = 'having mutations' + (block.usegm ? ' in ' + block.usegm.name : '')
-			}
 
-			block.samplecart.setBtns({
-				samplelst: [...sampleset],
-				id: nameset.size ? [...nameset][0] : block.usegm ? block.usegm.name : '',
-				basket: 'Gene Mutation',
-				container: holder
-					.append('div')
-					.style('margin-left', '10px')
-					.append('div')
-			})
+	handle_variant2samples(mlst, holder, tk, block)
+	handle_samplecart(mlst, holder, tk, block)
+}
+
+function mlst2headerhtml(mlst) {
+	if (mlst.length == 1) {
+		const m = mlst[0]
+		const c = common.mclass[m.class]
+		if (m.dt == common.dtsnvindel) {
+			return (
+				'<span style="font-weight:bold;color:' +
+				c.color +
+				'">' +
+				(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
+				'</span> <span style="font-size:80%">' +
+				c.label +
+				'</span>'
+			)
 		}
+		if (m.dt == common.dtsv || m.dt == common.dtfusionrna) {
+			const names = []
+			for (let i = 0; i < m.pairlst.length; i++) {
+				if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
+				names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
+			}
+			return names.join(' - ') + '&nbsp;&nbsp;<span style="font-size:80%">' + c.label + '</span>'
+		}
+		if (
+			m.dt == common.dtnloss ||
+			m.dt == common.dtcloss ||
+			m.dt == common.dtitd ||
+			m.dt == common.dtdel ||
+			m.dt == common.dtcnv
+		) {
+			return '<span style="font-size:80%">' + c.label + '</span>'
+		}
+		return 'unknown dt ' + m.dt
 	}
+	const set = new Set()
+	for (const m of mlst) {
+		set.add(m.dt)
+	}
+	if (set.size == 1) {
+		const dt = [...set][0]
+		return mlst.length + ' ' + common.dt2label[dt]
+	}
+	return mlst.length + ' mutations'
 }
 
 function table_snvindel(mlst, holder, tk, block) {
@@ -1172,11 +1130,13 @@ function mayephl_butt(ep, holder, mlst) {
 		}
 	}
 	if (notfound) {
+		return
+		/*
 		holder
 			.append('button')
 			.text(ep.p.sampletype + ' not in ' + ep.p.name)
 			.attr('disabled', 1)
-		return
+			*/
 	}
 	let hl = false
 	holder
@@ -2888,5 +2848,106 @@ function may_addformat_singlesample(lst, m, tk) {
 				v: s[formatfield]
 			})
 		}
+	}
+}
+
+function handle_samplecart(mlst, holder, tk, block) {
+	if (!block.samplecart || !tk.ds || !tk.ds.sampleselectable) return
+	/* select sample API applicable to this track
+	will make one single button for selecting sample, independent of how many datatypes
+	*/
+	const sampleset = new Set()
+	for (const m of mlst) {
+		if (m.sample) {
+			// FIXME hardcoded attribute
+			sampleset.add(m.sample)
+		}
+	}
+	if (sampleset.size == 0) {
+		// no samples
+		return
+	}
+	// note for selection, try to use mname
+	const nameset = new Set()
+	for (const m of mlst) {
+		const classlab = common.mclass[m.class].label
+		let thisnote
+		if (m.dt == common.dtfusionrna || m.dt == common.dtsv) {
+			if (m.mname) {
+				if (m.useNterm) {
+					thisnote = (block.usegm ? block.usegm.name + '-' : '') + m.mname + ' ' + classlab
+				} else {
+					thisnote = m.mname + (block.usegm ? '-' + block.usegm.name : '') + ' ' + classlab
+				}
+			} else {
+				thisnote = (block.usegm ? block.usegm.name : '') + ' ' + classlab
+			}
+		} else {
+			thisnote = (m.mname ? m.mname + ' ' : '') + classlab + (block.usegm ? ' in ' + block.usegm.name : '')
+		}
+		nameset.add(thisnote)
+	}
+	let note
+	if (nameset.size == 1) {
+		note = 'having ' + [...nameset][0]
+	} else {
+		note = 'having mutations' + (block.usegm ? ' in ' + block.usegm.name : '')
+	}
+
+	block.samplecart.setBtns({
+		samplelst: [...sampleset],
+		id: nameset.size ? [...nameset][0] : block.usegm ? block.usegm.name : '',
+		basket: 'Gene Mutation',
+		container: holder
+			.append('div')
+			.style('margin-left', '10px')
+			.append('div')
+	})
+}
+
+async function handle_variant2samples(mlst, holder, tk, block) {
+	if (mlst.length > 30) return // should disable this at the "To table" option
+	if (!tk.ds || !tk.ds.variant2samples) return
+	// if custom data on client, and also has ds.variant2samples, may need to escape it
+
+	const div = holder.append('div').style('margin', '20px')
+	const wait = div.append('div').text('Loading...')
+	try {
+		const data = await tk.ds.variant2samples.get(mlst)
+		if (data.error) throw data.error
+		wait.remove()
+		const table = div.append('table')
+
+		const root = stratify()(data.nodes)
+		root.sum(i => i.value)
+		root.sort((a, b) => b.value - a.value)
+		root.eachBefore(node => {
+			if (!node.parent) return
+			// one tr per node
+			const tr = table.append('tr')
+			if (node.depth > 1) {
+				tr.style('font-size', '.8em')
+			}
+
+			// 1 - node name
+			const td1 = tr
+				.append('td')
+				.style('padding-left', (node.depth - 1) * 15 + 'px')
+				.text(node.data.name)
+			// may add level-specific link based on .variant2samples.levels
+
+			// 2 - frequency, always show but optional fill
+			const td2 = tr.append('td')
+			if (node.data.cohortsize) {
+				client.fillbar(td2, { f: node.value / node.data.cohortsize })
+			}
+
+			// 3 - count
+			const td3 = tr.append('td')
+			td3.text(node.value + (node.data.cohortsize ? '/' + node.data.cohortsize : ''))
+		})
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
 	}
 }
