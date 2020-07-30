@@ -1,10 +1,10 @@
 module.exports = {
-	species:'rat',    
+	species: 'rat',
 	genomefile: 'genomes/rn6.gz',
 	genedb: {
 		dbfile: 'anno/genes.rn6.db'
 	},
-    tracks: [
+	tracks: [
 		{
 			__isgene: true, // only for initialization
 			translatecoding: true, // instructs to translate coding:[]
@@ -42,7 +42,6 @@ module.exports = {
 		stop: 77625000,
 		gene: 'Pax9'
 	},
-
 
 	majorchr: `chr1	282763074
 chr2	266435125

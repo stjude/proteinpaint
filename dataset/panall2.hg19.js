@@ -95,8 +95,8 @@ module.exports = {
 				attrnamespacer: ', '
 			},
 			expressionrank_querykey: 'genefpkm',
-			vcf_querykey:'snvindel',
-			multihidelabel_vcf:true,
+			vcf_querykey: 'snvindel',
+			multihidelabel_vcf: true,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true
 		},
@@ -106,7 +106,7 @@ module.exports = {
 			istrack: true,
 			type: 'mdsvcf',
 			viewrangeupperlimit: 2000000,
-			tracks:[
+			tracks: [
 				{
 					file: 'hg19/panall2/PanAll.hg19.vcf.gz',
 					type: 'vcf'

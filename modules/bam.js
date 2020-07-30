@@ -6,6 +6,7 @@ const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
+const jStat = require('jStat').jStat
 
 /*
 1. reads are parsed into template/segments
@@ -542,6 +543,38 @@ function may_match_snv(templates, q) {
 	return groups
 }
 
+function build_kmers(sequence, kmer_length) {
+	const num_iterations = sequence.length - kmer_length + 1
+	// console.log(sequence)
+
+	let kmers = []
+	for (let i = 0; i < num_iterations; i++) {
+		let subseq = sequence.substr(i, kmer_length)
+		// console.log(i,kmer)
+		// console.log(subseq)
+		kmers.push(subseq)
+	}
+	return kmers
+}
+
+function jaccard_similarity(kmers1, kmers2) {
+	const kmers1_nodups = new Set(kmers1)
+	const kmers2_nodups = new Set(kmers2)
+
+	const intersection = []
+	for (const kmer1 of kmers1_nodups) {
+		for (const kmer2 of kmers2_nodups) {
+			if (kmer1 == kmer2) {
+				intersection.push(kmer1)
+				break
+			}
+		}
+	}
+
+	const all_kmers = new Set([...kmers1_nodups, ...kmers2_nodups])
+	return intersection.length / all_kmers.size
+}
+
 async function match_complexvariant(templates, q) {
 	// TODO
 	// get flanking sequence, suppose that segments are of same length, use segment length
@@ -570,7 +603,96 @@ async function match_complexvariant(templates, q) {
 	console.log(q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt)
 	console.log('refSeq', leftflankseq + q.variant.ref + rightflankseq)
 	console.log('mutSeq', leftflankseq + q.variant.alt + rightflankseq)
-	return []
+
+	const refallele = q.variant.ref.toUpperCase()
+	const altallele = q.variant.alt.toUpperCase()
+
+	const refseq = leftflankseq + refallele + rightflankseq
+	const altseq = leftflankseq + altallele + rightflankseq
+
+	// console.log(refallele,altallele,refseq,altseq)
+	const kmer_length = 10 // length of kmer
+	const percentile_cutoff = 0.75 // Difference in jaccard similarity betwen reference and alternate allele
+	const ref_kmers = build_kmers(refseq, kmer_length)
+	const alt_kmers = build_kmers(altseq, kmer_length)
+
+	//console.log(ref_kmers)
+	//console.log(alt_kmers)
+
+	const ref_comparisons = []
+	const alt_comparisons = []
+	const refaltstatus = []
+	for (const template of templates) {
+		const read_seq = template.segments[0].seq
+		// let cigar_seq = template.segments[0].cigarstr
+		const read_kmers = build_kmers(read_seq, kmer_length)
+		const ref_comparison = jaccard_similarity(read_kmers, ref_kmers)
+		const alt_comparison = jaccard_similarity(read_kmers, alt_kmers)
+		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
+		const diff_score = alt_comparison - ref_comparison
+		if (diff_score < 0) {
+			ref_comparisons.push(diff_score)
+			refaltstatus.push('ref')
+		} else {
+			if (diff_score >= 0) {
+				alt_comparisons.push(diff_score)
+				refaltstatus.push('alt')
+			}
+		}
+	}
+	const ref_cutoff = jStat.percentile(ref_comparisons, percentile_cutoff)
+	const alt_cutoff = jStat.percentile(alt_comparisons, 1 - percentile_cutoff)
+	// console.log(alt_comparisons)
+	console.log('Reference cutoff:', ref_cutoff)
+	console.log('Alternate cutoff:', alt_cutoff)
+
+	let i = 0
+	let j = 0
+	let k = 0
+	const type2group = make_type2group(q)
+	for (const refalt of refaltstatus) {
+		if (refalt == 'ref') {
+			if (ref_comparisons[j] <= ref_cutoff) {
+				// Label read as reference allele
+				type2group[type_supportref].templates.push(templates[i])
+			} else {
+				// Label read as none
+				type2group[type_supportno].templates.push(templates[i])
+			}
+			j++
+		}
+
+		if (refalt == 'alt') {
+			if (alt_comparisons[k] >= alt_cutoff) {
+				// Label read as alternate allele
+				type2group[type_supportalt].templates.push(templates[i])
+			} else {
+				// Label read as none
+				type2group[type_supportno].templates.push(templates[i])
+			}
+			k++
+		}
+		i++
+	}
+
+	const groups = []
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		g.messagerows.push({
+			h: 15,
+			t:
+				g.templates.length +
+				' reads supporting ' +
+				(k == type_supportref
+					? 'reference allele'
+					: k == type_supportalt
+					? 'mutant allele'
+					: 'neither reference or mutant alleles')
+		})
+		groups.push(g)
+	}
+	return groups
 }
 
 function match_sv(templates, q) {

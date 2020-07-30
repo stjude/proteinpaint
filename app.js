@@ -99,8 +99,10 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
-	if (req.method == 'GET') {
+	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration
+		// by convention, any path that has a dot will be treated as
+		// a static file and not handled here with cache-control
 		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 30}`)
 	}
 	next()

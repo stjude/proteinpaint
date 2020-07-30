@@ -3,6 +3,7 @@ import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
+import url2map from './url2map'
 
 /*
 
@@ -12,6 +13,8 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk.groups[]
+tk.variant{}
+	.chr/pos/ref/alt
 
 group {}
 .data{}
@@ -254,6 +257,8 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
+	may_addvariant(tk)
+
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
@@ -272,6 +277,30 @@ function makeTk(tk, block) {
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 	let laby = block.labelfontsize
 	tk.label_count = block.maketklefthandle(tk, laby)
+}
+
+function may_addvariant(tk) {
+	/********* only a quick fix!
+	to supply a variant from url parameter
+	if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
+	will overwrite the existing tk.variant{}
+
+	the variant may be added on the fly from e.g. a vcf track in the same browser session
+	*/
+	const u2p = url2map()
+	if (u2p.has('variant')) {
+		const tmp = u2p.get('variant').split('.')
+		if (tmp.length != 4) {
+			console.log('urlparam variant should be 4 fields joined by .')
+			return
+		}
+		const pos = Number(tmp[1])
+		if (!Number.isInteger(pos)) {
+			console.log('urlparam variant pos is not integer')
+			return
+		}
+		tk.variant = { chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3] }
+	}
 }
 
 function makeGroup(gd, tk, block) {
