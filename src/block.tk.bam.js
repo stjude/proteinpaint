@@ -299,7 +299,7 @@ function may_addvariant(tk) {
 			console.log('urlparam variant pos is not integer')
 			return
 		}
-		tk.variant = { chr: tmp[0], pos, ref: tmp[1], alt: tmp[2] }
+		tk.variant = { chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3] }
 	}
 }
 
