@@ -554,25 +554,14 @@ function build_kmers(sequence, kmer_length) {
 		// console.log(subseq)
 		kmers.push(subseq)
 	}
-	return kmers
+	const kmers_nodups = new Set(kmers)
+	return kmers_nodups
 }
 
-function jaccard_similarity(kmers1, kmers2) {
-	const kmers1_nodups = new Set(kmers1)
-	const kmers2_nodups = new Set(kmers2)
-
-	const intersection = []
-	for (const kmer1 of kmers1_nodups) {
-		for (const kmer2 of kmers2_nodups) {
-			if (kmer1 == kmer2) {
-				intersection.push(kmer1)
-				break
-			}
-		}
-	}
-
+function jaccard_similarity(kmers1_nodups, kmers2_nodups) {
+	const intersection = new Set([...kmers1_nodups].filter(i => kmers2_nodups.has(i)))
 	const all_kmers = new Set([...kmers1_nodups, ...kmers2_nodups])
-	return intersection.length / all_kmers.size
+	return intersection.size / all_kmers.size
 }
 
 async function match_complexvariant(templates, q) {
