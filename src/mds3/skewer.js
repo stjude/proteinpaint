@@ -10,6 +10,10 @@ import { update as update_legend } from './legend'
 import { itemtable, mlst2samplesummary } from './itemtable'
 
 /*
+legacy code to clean up:
+hlaachange_addnewtrack
+getter_mcset_key
+
 ********************** EXPORTED
 loadTk
 ********************** INTERNAL
@@ -30,9 +34,9 @@ tk.skewer{}
 	.maxheight
 */
 
-// for skewer track
-export const middlealignshift = 0.3
-export const disclabelspacing = 1 // px spacing between disc and label
+const middlealignshift = 0.3
+const disclabelspacing = 1 // px spacing between disc and label
+const minoccur4sunburst = 5 // minimum occurrence for showing skewer, maybe ds specific
 
 /*
 cutoff value of # pixel per bp
@@ -42,7 +46,7 @@ when exonsf>:
 else exon<:
 	basepairs are too tiny and will group mutations by AA position
 */
-export const minbpwidth = 4
+const minbpwidth = 4
 
 const modefold = 0
 const modeshow = 1
@@ -1751,21 +1755,6 @@ export function done_tknodata(tk, block) {
 	return 50
 }
 
-function may_print_stratifycountfromserver(dat, tk) {
-	/*
-	dataset may be equipped to compute stratify category item count at server
-	*/
-	if (!dat.stratifycount) return
-	for (const [label, count] of dat.stratifycount) {
-		const strat = tk.label_stratify.find(i => i.label == label)
-		if (!strat) {
-			console.error('unknown strat label: ' + label)
-			continue
-		}
-		strat.servercount = count
-	}
-}
-
 /*
 d: 
 	if d.aa{}, is a group of skewer.data[0].groups[], and is one or multiple variants sharing the same mname (kras Q61H)
@@ -1776,7 +1765,7 @@ tippos: suggested itemtip position, if not sunburst
 */
 async function click_variants(d, tk, block, tippos) {
 	try {
-		if (d.occurrence > 1 && tk.mds.variant2samples) {
+		if (d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
 			const data = await tk.mds.variant2samples.get(d.mlst, 'sunburst')
