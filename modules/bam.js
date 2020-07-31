@@ -1071,6 +1071,13 @@ function plot_template(ctx, template, group, q) {
 			}
 		}
 	}
+
+	// for testing, print a stat (numeric or string) per template on the right of each row
+	// should not use this in production
+	if (template.__tempscore != undefined) {
+		ctx.fillStyle = 'blue'
+		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
+	}
 }
 
 function plot_segment(ctx, segment, y, group, q) {
