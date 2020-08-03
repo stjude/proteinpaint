@@ -89,14 +89,18 @@ export async function match_complexvariant(templates, q) {
 		if (refalt == 'ref') {
 			if (ref_comparisons[j] <= ref_cutoff) {
 				// Label read as reference allele
-				templates[i].__tempscore =
-					alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
-				type2group[bamcommon.type_supportref].templates.push(templates[i])
+				if (type2group[bamcommon.type_supportref]) {
+					templates[i].__tempscore =
+						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
+					type2group[bamcommon.type_supportref].templates.push(templates[i])
+				}
 			} else {
 				// Label read as none
-				templates[i].__tempscore =
-					alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[i])
+				if (type2group[bamcommon.type_supportno]) {
+					templates[i].__tempscore =
+						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[i])
+				}
 			}
 			j++
 		}
@@ -104,14 +108,18 @@ export async function match_complexvariant(templates, q) {
 		if (refalt == 'alt') {
 			if (alt_comparisons[k] >= alt_cutoff) {
 				// Label read as alternate allele
-				templates[i].__tempscore =
-					alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
-				type2group[bamcommon.type_supportalt].templates.push(templates[i])
+				if (type2group[bamcommon.type_supportalt]) {
+					templates[i].__tempscore =
+						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
+					type2group[bamcommon.type_supportalt].templates.push(templates[i])
+				}
 			} else {
 				// Label read as none
-				templates[i].__tempscore =
-					alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[i])
+				if (type2group[bamcommon.type_supportno]) {
+					templates[i].__tempscore =
+						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[i])
+				}
 			}
 			k++
 		}
