@@ -10,6 +10,9 @@ const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
 
 /*
+XXX quick fix to be removed/disabled later
+-- __tempscore 
+
 1. reads are parsed into template/segments
 2. mismatch checked if sufficient zoom in
 3. divide reads to groups:
@@ -1076,6 +1079,7 @@ function plot_template(ctx, template, group, q) {
 	// should not use this in production
 	if (template.__tempscore != undefined) {
 		ctx.fillStyle = 'blue'
+		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
 	}
 }
