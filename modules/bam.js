@@ -6,9 +6,13 @@ const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
-const jStat = require('jStat').jStat
+const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
+const bamcommon = require('./bam.common')
 
 /*
+XXX quick fix to be removed/disabled later
+-- __tempscore 
+
 1. reads are parsed into template/segments
 2. mismatch checked if sufficient zoom in
 3. divide reads to groups:
@@ -179,12 +183,6 @@ const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-// group types
-const type_all = 'all'
-const type_supportref = 'support_ref'
-const type_supportalt = 'support_alt'
-const type_supportno = 'support_no'
-const type_supportsv = 'support_sv'
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const samtools = serverconfig.samtools || 'samtools'
@@ -455,8 +453,8 @@ async function divide_reads_togroups(templates, q) {
 		// no reads at all, return empty group
 		return [
 			{
-				type: type_all,
-				regions: duplicateRegions(q.regions),
+				type: bamcommon.type_all,
+				regions: bamcommon.duplicateRegions(q.regions),
 				templates,
 				messagerows: [],
 				partstack: q.partstack
@@ -477,31 +475,20 @@ async function divide_reads_togroups(templates, q) {
 	// no variant, return single group
 	return [
 		{
-			type: type_all,
-			regions: duplicateRegions(q.regions),
+			type: bamcommon.type_all,
+			regions: bamcommon.duplicateRegions(q.regions),
 			templates,
 			messagerows: [],
 			partstack: q.partstack
 		}
 	]
 }
-function duplicateRegions(regions) {
-	// each read group needs to keep its own list of regions
-	// to keep track of group-specific rendering parameters
-	return regions.map(i => {
-		return {
-			x: i.x,
-			scale: i.scale,
-			ntwidth: i.ntwidth
-		}
-	})
-}
 
 function may_match_snv(templates, q) {
 	const refallele = q.variant.ref.toUpperCase()
 	const altallele = q.variant.alt.toUpperCase()
 	if (!bases.has(refallele) || !bases.has(altallele)) return
-	const type2group = make_type2group(q)
+	const type2group = bamcommon.make_type2group(q)
 	for (const t of templates) {
 		let used = false
 		for (const s of t.segments) {
@@ -509,9 +496,9 @@ function may_match_snv(templates, q) {
 				if (b.opr == 'X' && b.start == q.variant.pos) {
 					// mismatch on this pos
 					if (b.s == altallele) {
-						if (type2group[type_supportalt]) type2group[type_supportalt].templates.push(t)
+						if (type2group[bamcommon.type_supportalt]) type2group[bamcommon.type_supportalt].templates.push(t)
 					} else {
-						if (type2group[type_supportno]) type2group[type_supportno].templates.push(t)
+						if (type2group[bamcommon.type_supportno]) type2group[bamcommon.type_supportno].templates.push(t)
 					}
 					used = true
 					break
@@ -520,7 +507,7 @@ function may_match_snv(templates, q) {
 			if (used) break
 		}
 		if (!used) {
-			if (type2group[type_supportref]) type2group[type_supportref].templates.push(t)
+			if (type2group[bamcommon.type_supportref]) type2group[bamcommon.type_supportref].templates.push(t)
 		}
 	}
 	const groups = []
@@ -532,161 +519,9 @@ function may_match_snv(templates, q) {
 			t:
 				g.templates.length +
 				' reads supporting ' +
-				(k == type_supportref
+				(k == bamcommon.type_supportref
 					? 'reference allele'
-					: k == type_supportalt
-					? 'mutant allele'
-					: 'neither reference or mutant alleles')
-		})
-		groups.push(g)
-	}
-	return groups
-}
-
-function build_kmers(sequence, kmer_length) {
-	const num_iterations = sequence.length - kmer_length + 1
-	// console.log(sequence)
-
-	let kmers = []
-	for (let i = 0; i < num_iterations; i++) {
-		let subseq = sequence.substr(i, kmer_length)
-		// console.log(i,kmer)
-		// console.log(subseq)
-		kmers.push(subseq)
-	}
-	return kmers
-}
-
-function jaccard_similarity(kmers1, kmers2) {
-	const kmers1_nodups = new Set(kmers1)
-	const kmers2_nodups = new Set(kmers2)
-
-	const intersection = []
-	for (const kmer1 of kmers1_nodups) {
-		for (const kmer2 of kmers2_nodups) {
-			if (kmer1 == kmer2) {
-				intersection.push(kmer1)
-				break
-			}
-		}
-	}
-
-	const all_kmers = new Set([...kmers1_nodups, ...kmers2_nodups])
-	return intersection.length / all_kmers.size
-}
-
-async function match_complexvariant(templates, q) {
-	// TODO
-	// get flanking sequence, suppose that segments are of same length, use segment length
-	const segbplen = templates[0].segments[0].seq.length
-	// need to verify if the retrieved sequence is showing 1bp offset or not
-	const leftflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
-	const rightflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr +
-			':' +
-			(q.variant.pos + q.variant.ref.length + 1) +
-			'-' +
-			(q.variant.pos + segbplen + q.variant.ref.length + 1)
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
-	console.log(q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt)
-	console.log('refSeq', leftflankseq + q.variant.ref + rightflankseq)
-	console.log('mutSeq', leftflankseq + q.variant.alt + rightflankseq)
-
-	const refallele = q.variant.ref.toUpperCase()
-	const altallele = q.variant.alt.toUpperCase()
-
-	const refseq = leftflankseq + refallele + rightflankseq
-	const altseq = leftflankseq + altallele + rightflankseq
-
-	// console.log(refallele,altallele,refseq,altseq)
-	const kmer_length = 10 // length of kmer
-	const percentile_cutoff = 0.75 // Difference in jaccard similarity betwen reference and alternate allele
-	const ref_kmers = build_kmers(refseq, kmer_length)
-	const alt_kmers = build_kmers(altseq, kmer_length)
-
-	//console.log(ref_kmers)
-	//console.log(alt_kmers)
-
-	const ref_comparisons = []
-	const alt_comparisons = []
-	const refaltstatus = []
-	for (const template of templates) {
-		const read_seq = template.segments[0].seq
-		// let cigar_seq = template.segments[0].cigarstr
-		const read_kmers = build_kmers(read_seq, kmer_length)
-		const ref_comparison = jaccard_similarity(read_kmers, ref_kmers)
-		const alt_comparison = jaccard_similarity(read_kmers, alt_kmers)
-		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
-		const diff_score = alt_comparison - ref_comparison
-		if (diff_score < 0) {
-			ref_comparisons.push(diff_score)
-			refaltstatus.push('ref')
-		} else {
-			if (diff_score >= 0) {
-				alt_comparisons.push(diff_score)
-				refaltstatus.push('alt')
-			}
-		}
-	}
-	const ref_cutoff = jStat.percentile(ref_comparisons, percentile_cutoff)
-	const alt_cutoff = jStat.percentile(alt_comparisons, 1 - percentile_cutoff)
-	// console.log(alt_comparisons)
-	console.log('Reference cutoff:', ref_cutoff)
-	console.log('Alternate cutoff:', alt_cutoff)
-
-	let i = 0
-	let j = 0
-	let k = 0
-	const type2group = make_type2group(q)
-	for (const refalt of refaltstatus) {
-		if (refalt == 'ref') {
-			if (ref_comparisons[j] <= ref_cutoff) {
-				// Label read as reference allele
-				type2group[type_supportref].templates.push(templates[i])
-			} else {
-				// Label read as none
-				type2group[type_supportno].templates.push(templates[i])
-			}
-			j++
-		}
-
-		if (refalt == 'alt') {
-			if (alt_comparisons[k] >= alt_cutoff) {
-				// Label read as alternate allele
-				type2group[type_supportalt].templates.push(templates[i])
-			} else {
-				// Label read as none
-				type2group[type_supportno].templates.push(templates[i])
-			}
-			k++
-		}
-		i++
-	}
-
-	const groups = []
-	for (const k in type2group) {
-		const g = type2group[k]
-		if (g.templates.length == 0) continue // empty group, do not include
-		g.messagerows.push({
-			h: 15,
-			t:
-				g.templates.length +
-				' reads supporting ' +
-				(k == type_supportref
-					? 'reference allele'
-					: k == type_supportalt
+					: k == bamcommon.type_supportalt
 					? 'mutant allele'
 					: 'neither reference or mutant alleles')
 		})
@@ -697,41 +532,6 @@ async function match_complexvariant(templates, q) {
 
 function match_sv(templates, q) {
 	// TODO templates may not be all in one array?
-}
-
-function make_type2group(q) {
-	// different type setting for variant and sv
-	const type2group = {}
-	if (q.variant) {
-		if (q.grouptype) {
-			// only return data for one group
-			type2group[q.grouptype] = { partstack: q.partstack }
-		} else {
-			// resulting groups array will follow the order: 1) alt; 2) ref; 3) no
-			type2group[type_supportalt] = {}
-			type2group[type_supportref] = {}
-			type2group[type_supportno] = {}
-		}
-	} else if (q.sv) {
-		if (q.grouptype) {
-			// only return data for one group
-			type2group[q.grouptype] = { partstack: q.partstack }
-		} else {
-			type2group[type_supportsv] = {}
-			type2group[type_supportref] = {}
-		}
-	} else {
-		throw 'q.variant or q.sv missing'
-	}
-	for (const k in type2group) {
-		// fill each group
-		const g = type2group[k]
-		g.type = k
-		g.templates = []
-		g.regions = duplicateRegions(q.regions)
-		g.messagerows = []
-	}
-	return type2group
 }
 
 function get_templates(q) {
@@ -1273,6 +1073,14 @@ function plot_template(ctx, template, group, q) {
 				plot_segment(ctx, seg, template.y, group, q)
 			}
 		}
+	}
+
+	// for testing, print a stat (numeric or string) per template on the right of each row
+	// should not use this in production
+	if (template.__tempscore != undefined) {
+		ctx.fillStyle = 'blue'
+		ctx.font = group.stackheight + 'pt Arial'
+		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
 	}
 }
 
