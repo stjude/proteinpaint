@@ -39,7 +39,13 @@ export async function match_complexvariant(templates, q) {
 
 	// console.log(refallele,altallele,refseq,altseq)
 	const kmer_length = 10 // length of kmer
-	const percentile_cutoff = 0.75 // Difference in jaccard similarity betwen reference and alternate allele
+	// const percentile_cutoff = 0.75 // Difference in jaccard similarity betwen reference and alternate allele
+	let absolute_cutoff = 0.01 * Math.abs(refallele.length - altallele.length)
+	if (absolute_cutoff > 0.05) {
+		absolute_cutoff = 0.05
+	}
+	console.log('Alternate cutoff:', absolute_cutoff)
+
 	const ref_kmers = build_kmers(refseq, kmer_length)
 	const alt_kmers = build_kmers(altseq, kmer_length)
 
@@ -48,82 +54,38 @@ export async function match_complexvariant(templates, q) {
 	//console.log(ref_kmers)
 	//console.log(alt_kmers)
 
-	const ref_comparisons = []
-	const alt_comparisons = []
-
-	const ref_comparisons2 = []
-	const alt_comparisons2 = []
-	const refaltstatus = []
+	const type2group = bamcommon.make_type2group(q)
 	for (const template of templates) {
 		const read_seq = template.segments[0].seq
 		// let cigar_seq = template.segments[0].cigarstr
 		const read_kmers = build_kmers(read_seq, kmer_length)
 		const ref_comparison = jaccard_similarity(read_kmers, ref_kmers, ref_kmers_nodups)
 		const alt_comparison = jaccard_similarity(read_kmers, alt_kmers, alt_kmers_nodups)
-		alt_comparisons2.push(alt_comparison)
-		ref_comparisons2.push(ref_comparison)
 		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
 		const diff_score = alt_comparison - ref_comparison
 		if (diff_score < 0) {
-			ref_comparisons.push(diff_score)
-			refaltstatus.push('ref')
+			if (Math.abs(diff_score) >= absolute_cutoff) {
+				// Label as reference
+				template.__tempscore = alt_comparison.toFixed(4).toString() + ' ' + ref_comparison.toFixed(4).toString()
+				type2group[bamcommon.type_supportref].templates.push(template)
+			} else {
+				// Label as none
+				template.__tempscore = alt_comparison.toFixed(4).toString() + ' ' + ref_comparison.toFixed(4).toString()
+				type2group[bamcommon.type_supportno].templates.push(template)
+			}
 		} else {
 			if (diff_score >= 0) {
-				alt_comparisons.push(diff_score)
-				refaltstatus.push('alt')
-			}
-		}
-	}
-
-	const ref_cutoff = jStat.percentile(ref_comparisons, percentile_cutoff)
-	const alt_cutoff = jStat.percentile(alt_comparisons, 1 - percentile_cutoff)
-	// console.log(alt_comparisons)
-	console.log('Reference cutoff:', ref_cutoff)
-	console.log('Alternate cutoff:', alt_cutoff)
-
-	let i = 0
-	let j = 0
-	let k = 0
-	const type2group = bamcommon.make_type2group(q)
-	for (const refalt of refaltstatus) {
-		if (refalt == 'ref') {
-			if (ref_comparisons[j] <= ref_cutoff) {
-				// Label read as reference allele
-				if (type2group[bamcommon.type_supportref]) {
-					templates[i].__tempscore =
-						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
-					type2group[bamcommon.type_supportref].templates.push(templates[i])
-				}
-			} else {
-				// Label read as none
-				if (type2group[bamcommon.type_supportno]) {
-					templates[i].__tempscore =
-						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+ref_comparisons[j].toFixed(4).toString()
-					type2group[bamcommon.type_supportno].templates.push(templates[i])
+				if (Math.abs(diff_score) >= absolute_cutoff) {
+					// Label as alternate
+					template.__tempscore = alt_comparison.toFixed(4).toString() + ' ' + ref_comparison.toFixed(4).toString()
+					type2group[bamcommon.type_supportalt].templates.push(template)
+				} else {
+					// Label as none
+					template.__tempscore = alt_comparison.toFixed(4).toString() + ' ' + ref_comparison.toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(template)
 				}
 			}
-			j++
 		}
-
-		if (refalt == 'alt') {
-			if (alt_comparisons[k] >= alt_cutoff) {
-				// Label read as alternate allele
-				if (type2group[bamcommon.type_supportalt]) {
-					templates[i].__tempscore =
-						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
-					type2group[bamcommon.type_supportalt].templates.push(templates[i])
-				}
-			} else {
-				// Label read as none
-				if (type2group[bamcommon.type_supportno]) {
-					templates[i].__tempscore =
-						alt_comparisons2[i].toFixed(4).toString() + ' ' + ref_comparisons2[i].toFixed(4).toString() //+" "+alt_comparisons[k].toFixed(4).toString()
-					type2group[bamcommon.type_supportno].templates.push(templates[i])
-				}
-			}
-			k++
-		}
-		i++
 	}
 
 	const groups = []
