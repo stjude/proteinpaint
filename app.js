@@ -7,6 +7,7 @@ const ch_genemcount = {} // genome name - gene name - ds name - mutation class -
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
 const serverconfig = __non_webpack_require__(serverconfigfile)
+exports.features = Object.freeze(serverconfig.features || {})
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -238,7 +239,8 @@ function handle_genomes(req, res) {
 		debugmode: serverconfig.debugmode,
 		headermessage: serverconfig.headermessage,
 		base_zindex: serverconfig.base_zindex,
-		lastdate: lastdate.toDateString()
+		lastdate: lastdate.toDateString(),
+		features: exports.features
 	})
 }
 function clientcopy_genome(genomename) {

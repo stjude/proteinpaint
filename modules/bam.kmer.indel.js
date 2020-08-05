@@ -1,4 +1,5 @@
 // const jStat = require('jStat').jStat
+const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
 const fs = require('fs')
@@ -49,7 +50,7 @@ export async function match_complexvariant(templates, q) {
 	//console.log(ref_kmers)
 	//console.log(alt_kmers)
 
-	let kmer_diff_scores = []
+	const kmer_diff_scores = []
 	for (const template of templates) {
 		const read_seq = template.segments[0].seq
 		// let cigar_seq = template.segments[0].cigarstr
@@ -61,20 +62,19 @@ export async function match_complexvariant(templates, q) {
 		kmer_diff_scores.push(diff_score)
 	}
 	//console.log("Original array:",kmer_diff_scores)
-	let kmer_diff_scores_asc = [...kmer_diff_scores]
-
-	kmer_diff_scores_asc.sort((a, b) => a - b) // Sort array in ascending order
-
-	var file = fs.createWriteStream(
-		q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt + '.txt'
-	)
-	file.on('error', function(err) {
-		/* error handling */
-	})
-	kmer_diff_scores_asc.forEach(function(v) {
-		file.write(v + '\n')
-	})
-	file.end()
+	q.kmer_diff_scores_asc = kmer_diff_scores.slice().sort((a, b) => a - b) // Sort array in ascending order
+	if (features.bamScoreRplot) {
+		const file = fs.createWriteStream(
+			q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt + '.txt'
+		)
+		file.on('error', function(err) {
+			/* error handling */
+		})
+		q.kmer_diff_scores_asc.forEach(function(v) {
+			file.write(v + '\n')
+		})
+		file.end()
+	}
 
 	let j = 0
 	const type2group = bamcommon.make_type2group(q)

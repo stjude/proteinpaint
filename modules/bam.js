@@ -351,6 +351,7 @@ async function do_query(q) {
 		result.groups.push(gr)
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
+	if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	return result
 }
 
