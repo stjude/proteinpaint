@@ -4,6 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
 import url2map from './url2map'
+import { renderScatter } from './scatter'
 
 /*
 
@@ -185,6 +186,7 @@ or update existing groups, in which groupidx will be provided
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
 	block.setllabel()
+	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
 function setTkHeight(tk) {
@@ -574,6 +576,17 @@ function makeGroup(gd, tk, block) {
 function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 	const d = tk.tkconfigtip.d.append('div')
+
+	if (tk.kmer_diff_scores_asc) {
+		tk.kmerScorePlotBtn = d.append('div')
+		tk.kmerScorePlotBtn
+			.append('button')
+			.html('Plot KMER scores')
+			.on('click', () => {
+				const scatterpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
+				renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
+			})
+	}
 
 	{
 		const row = d.append('div')
