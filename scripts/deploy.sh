@@ -185,6 +185,7 @@ REMOTE_UPDATE="
 	chmod -R 755 $REMOTEDIR/$APP
 
 	ln -s /opt/app/pecan/portal/www/sjcharts/public $REMOTEDIR/$APP/public/sjcharts
+	ln -s $REMOTEDIR/$APP/public/bin $REMOTEDIR/$APP/public/no-babel-polyfill
 
 	cd $REMOTEDIR/$APP/
 	$REMOTEDIR/proteinpaint_run_node.sh
