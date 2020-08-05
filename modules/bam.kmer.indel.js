@@ -80,17 +80,23 @@ export async function match_complexvariant(templates, q) {
 	const type2group = bamcommon.make_type2group(q)
 	for (const diff_score of kmer_diff_scores) {
 		if (diff_score >= 0) {
-			templates[j].__tempscore = diff_score.toFixed(4).toString()
-			type2group[bamcommon.type_supportalt].templates.push(templates[j])
+			if (type2group[bamcommon.type_supportalt]) {
+				templates[j].__tempscore = diff_score.toFixed(4).toString()
+				type2group[bamcommon.type_supportalt].templates.push(templates[j])
+			}
 		} else if (diff_score <= 0) {
-			templates[j].__tempscore = diff_score.toFixed(4).toString()
-			type2group[bamcommon.type_supportref].templates.push(templates[j])
+			if (type2group[bamcommon.type_supportref]) {
+				templates[j].__tempscore = diff_score.toFixed(4).toString()
+				type2group[bamcommon.type_supportref].templates.push(templates[j])
+			}
 		}
 
-		//            else if (diff_score > ref_cutoff && diff_score < alt_cutoff){
+		//      else if (diff_score > ref_cutoff && diff_score < alt_cutoff){
+		//              if (type2group[bamcommon.type_supportno]) {
 		//                templates[j].__tempscore = diff_score.toFixed(4).toString()
 		//                type2group[bamcommon.type_supportno].templates.push(templates[j])
 		//	    }
+		//	      }
 		j++
 	}
 
