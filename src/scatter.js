@@ -9,7 +9,9 @@ export function renderScatter({ holder, data }) {
 		data.map((value, i) => {
 			return {
 				x: i,
-				y: value
+				y: value,
+				chartId: 'test',
+				seriesId: 'test'
 			}
 		})
 	)
@@ -23,14 +25,14 @@ class Scatter {
 		this.settings = {
 			svgw: 400,
 			svgh: 400,
-			radius: 5,
-			chartMargin: 20,
+			radius: 1,
+			chartMargin: 30,
 			chartTitleDivHt: 50,
 			svgPadding: {
-				top: 20,
-				right: 20,
-				bottom: 20,
-				left: 20
+				top: 30,
+				right: 30,
+				bottom: 30,
+				left: 50
 			},
 			axisTitleFontSize: 16,
 			duration: 1
@@ -72,8 +74,8 @@ function setRenderers(self) {
 			.style('top', 0) //layout.byChc[d.chc].top)
 			.style('left', 0) //layout.byChc[d.chc].left)
 			.style('text-align', 'left')
-			.style('border', '1px solid #eee')
-			.style('box-shadow', '0px 0px 1px 0px #ccc')
+		//.style('border', '1px solid #eee')
+		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
 		div
 			.append('div')
@@ -180,7 +182,7 @@ function setRenderers(self) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
 
-		const circles = g.selectAll('circle').data(series.data, b => b.x)
+		const circles = g.selectAll('circle').data(series.data) //, b => b.x)
 
 		circles.exit().remove()
 
@@ -222,7 +224,7 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = '...'
+		const xTitleLabel = 'Sort #'
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -390,14 +392,13 @@ function getPj(self) {
 									y: '$y',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
-								},
-								'$y'
+								}
 							]
 						},
-						'-'
+						'$seriesId'
 					]
 				},
-				'test'
+				'$chartId'
 			]
 		},
 		'=': {
