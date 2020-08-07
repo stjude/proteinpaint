@@ -7,7 +7,7 @@ const fs = require('fs')
 export async function match_complexvariant(templates, q) {
 	// TODO
 	// get flanking sequence, suppose that segments are of same length, use segment length
-	const segbplen = templates[0].segments[0].seq.length
+	const segbplen = Math.ceil(1.5 * templates[0].segments[0].seq.length)
 	// need to verify if the retrieved sequence is showing 1bp offset or not
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
