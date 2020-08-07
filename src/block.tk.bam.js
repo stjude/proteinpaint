@@ -14,7 +14,7 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk.groups[]
-tk.variant{}
+tk.variants[ {} ]
 	.chr/pos/ref/alt
 
 group {}
@@ -132,8 +132,8 @@ export async function loadTk(tk, block) {
 
 async function getData(tk, block, additional = []) {
 	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), ...additional]
-	if (tk.variant) {
-		lst.push('variant=' + tk.variant.chr + '.' + tk.variant.pos + '.' + tk.variant.ref + '.' + tk.variant.alt)
+	if (tk.variants) {
+		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -282,26 +282,29 @@ function makeTk(tk, block) {
 }
 
 function may_addvariant(tk) {
-	/********* only a quick fix!
-	to supply a variant from url parameter
+	/********* XXX only a quick fix!
+	to supply one or multiple variant from url parameter
 	if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
-	will overwrite the existing tk.variant{}
+	will overwrite the existing tk.variants{}
+
+	Do no use in production!
 
 	the variant may be added on the fly from e.g. a vcf track in the same browser session
 	*/
 	const u2p = url2map()
-	if (u2p.has('variant')) {
-		const tmp = u2p.get('variant').split('.')
-		if (tmp.length != 4) {
-			console.log('urlparam variant should be 4 fields joined by .')
-			return
-		}
-		const pos = Number(tmp[1])
-		if (!Number.isInteger(pos)) {
-			console.log('urlparam variant pos is not integer')
-			return
-		}
-		tk.variant = { chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3] }
+	if (!u2p.has('variant')) return
+	const tmp = u2p.get('variant').split('.')
+	if (tmp.length < 4) {
+		console.log('urlparam variant should be at least 4 fields joined by .')
+		return
+	}
+	tk.variants = []
+	for (let i = 0; i < tmp.length; i += 4) {
+		const pos = Number(tmp[i + 1])
+		if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		if (!tmp[i + 2]) return console.log('ref allele missing')
+		if (!tmp[i + 3]) return console.log('alt allele missing')
+		tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
 	}
 }
 
