@@ -3,15 +3,24 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 
+const colors = {
+	ref: 'green',
+	alt: 'red',
+	none: 'black'
+}
+
 export function renderScatter({ holder, data }) {
 	const renderer = new Scatter({ holder })
 	renderer.main(
-		data.map((value, i) => {
+		data.map((score, i) => {
 			return {
 				x: i,
-				y: value,
+				y: score.value,
+				groupId: score.groupID,
 				chartId: 'test',
-				seriesId: 'test'
+				seriesId: 'test',
+				fill: colors[score.groupID],
+				stroke: colors[score.groupID]
 			}
 		})
 	)
@@ -25,7 +34,8 @@ class Scatter {
 		this.settings = {
 			svgw: 400,
 			svgh: 400,
-			radius: 1,
+			radius: 3,
+			fillOpacity: 0.2,
 			chartMargin: 30,
 			chartTitleDivHt: 50,
 			svgPadding: {
@@ -192,9 +202,9 @@ function setRenderers(self) {
 			.attr('r', s.radius)
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
-		//.style("fill", color)
-		//.style('fill-opacity', s.fillOpacity)
-		//.style("stroke", color);
+			.style('fill', c => c.fill)
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', c => c.stroke)
 
 		circles
 			.enter()
@@ -203,9 +213,8 @@ function setRenderers(self) {
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
-			.style('fill', 'red')
-			//.style('fill-opacity', s.fillOpacity)
-			.style('stroke', '#000')
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', c => c.stroke)
 			.transition()
 			.duration(duration)
 	}
@@ -391,7 +400,9 @@ function getPj(self) {
 									x: '$x',
 									y: '$y',
 									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
+									'_1:scaledY': '=scaledY()',
+									fill: '$fill',
+									stroke: '$stroke'
 								}
 							]
 						},
