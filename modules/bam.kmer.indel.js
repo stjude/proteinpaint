@@ -134,10 +134,10 @@ export async function match_complexvariant(templates, q) {
 		}
 	}
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
-	console.log('Final array for plotting:', kmer_diff_scores_input)
+	// console.log('Final array for plotting:', kmer_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
 
-	q.kmer_diff_scores_asc = kmer_diff_scores.slice().sort((a, b) => a - b) // Sort array in ascending order
+	q.kmer_diff_scores_asc = kmer_diff_scores_input
 	if (features.bamScoreRplot) {
 		const file = fs.createWriteStream(
 			q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt + '.txt'
