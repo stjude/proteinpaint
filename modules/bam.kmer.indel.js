@@ -2,7 +2,7 @@
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
-const fs = require('fs')
+// const fs = require('fs')
 
 export async function match_complexvariant(templates, q) {
 	// TODO
@@ -77,7 +77,7 @@ export async function match_complexvariant(templates, q) {
 	}
 
 	const ref_indices = determine_maxima(ref_scores)
-	const alt_indices = determine_maxima(alt_scores)
+	const alt_indices = determine_maxima_alt(alt_scores)
 
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
@@ -138,18 +138,18 @@ export async function match_complexvariant(templates, q) {
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
 
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
-	if (features.bamScoreRplot) {
-		const file = fs.createWriteStream(
-			q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt + '.txt'
-		)
-		file.on('error', function(err) {
-			/* error handling */
-		})
-		kmer_diff_scores_input.forEach(function(v) {
-			file.write(v.value + ',' + v.groupID + '\n')
-		})
-		file.end()
-	}
+	//	if (features.bamScoreRplot) {
+	//		const file = fs.createWriteStream(
+	//			q.variant.chr + '.' + q.variant.pos + '.' + q.variant.ref + '.' + q.variant.alt + '.txt'
+	//		)
+	//		file.on('error', function(err) {
+	//			/* error handling */
+	//		})
+	//		kmer_diff_scores_input.forEach(function(v) {
+	//			file.write(v.value + ',' + v.groupID + '\n')
+	//		})
+	//		file.end()
+	//	}
 
 	const groups = []
 	for (const k in type2group) {
@@ -217,7 +217,7 @@ function determine_maxima(kmer_diff_scores) {
 	const max_value = [kmer_diff_scores.length - 1, kmer_diff_scores[kmer_diff_scores.length - 1].value]
 	const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0])
 	console.log(slope_of_line)
-	const intercept_of_line = min_value[1] * slope_of_line
+	const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
 
 	let distances_from_line = []
 	for (let i = 0; i < kmer_diff_scores.length; i++) {
@@ -231,6 +231,65 @@ function determine_maxima(kmer_diff_scores) {
 	const index_array_maximum = distances_from_line.indexOf(array_maximum)
 	// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
 	let indices = []
+	for (let i = 0; i < kmer_diff_scores.length; i++) {
+		if (i < index_array_maximum) {
+			indices.push([kmer_diff_scores[i].groupID, 'none'])
+		} else if (i >= index_array_maximum) {
+			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+		}
+	}
+	//console.log("indices:",indices)
+	return indices
+}
+
+function determine_maxima_alt(kmer_diff_scores) {
+	kmer_diff_scores.sort((a, b) => a.value - b.value)
+	// console.log(kmer_diff_scores)
+
+	let start_point = kmer_diff_scores.length - 1
+	let indices = []
+	let slope = 0
+	let threshold_slope = 0.002 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	if (kmer_diff_scores.length > 1) {
+		for (let i = kmer_diff_scores.length - 1; i > 0; i--) {
+			slope = Math.abs(kmer_diff_scores[i - 1].value - kmer_diff_scores[i].value)
+			console.log('Slope:', slope, kmer_diff_scores.length - 1 - i)
+			if (slope > threshold_slope) {
+				start_point = i
+				break
+			}
+		}
+	} else {
+		console.log('Number of reads too low to determine curvature of slope')
+		indices.push([kmer_diff_scores[0].groupID, 'none'])
+		return indices
+	}
+
+	console.log('start point:', start_point)
+	let kmer_diff_scores_input = []
+	for (let i = 0; i <= start_point; i++) {
+		kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
+	}
+
+	const min_value = [0, kmer_diff_scores[0].value]
+	const max_value = [start_point, kmer_diff_scores[start_point].value]
+	console.log(max_value, kmer_diff_scores[kmer_diff_scores.length - 1].value)
+
+	const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0])
+	console.log(slope_of_line)
+	const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
+
+	let distances_from_line = []
+	for (let i = 0; i < kmer_diff_scores_input.length; i++) {
+		distances_from_line.push(
+			Math.abs(slope_of_line * kmer_diff_scores_input[i][0] - kmer_diff_scores_input[i][1] + intercept_of_line) /
+				Math.sqrt(1 + slope_of_line * slope_of_line)
+		) // distance = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+	}
+	const array_maximum = Math.max(...distances_from_line)
+	// console.log("Array maximum:",array_maximum)
+	const index_array_maximum = distances_from_line.indexOf(array_maximum)
+	// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
 	for (let i = 0; i < kmer_diff_scores.length; i++) {
 		if (i < index_array_maximum) {
 			indices.push([kmer_diff_scores[i].groupID, 'none'])
