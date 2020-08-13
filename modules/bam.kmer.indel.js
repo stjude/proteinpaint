@@ -231,10 +231,17 @@ function determine_maxima(kmer_diff_scores) {
 	const index_array_maximum = distances_from_line.indexOf(array_maximum)
 	// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
 	let indices = []
+	const score_cutoff = kmer_diff_scores[index_array_maximum].value
+	//	for (let i = 0; i < kmer_diff_scores.length; i++) {
+	//		if (i < index_array_maximum) {
+	//			indices.push([kmer_diff_scores[i].groupID, 'none'])
+	//		} else if (i >= index_array_maximum) {
+	//			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+	//		}
 	for (let i = 0; i < kmer_diff_scores.length; i++) {
-		if (i < index_array_maximum) {
+		if (score_cutoff >= kmer_diff_scores[i].value) {
 			indices.push([kmer_diff_scores[i].groupID, 'none'])
-		} else if (i >= index_array_maximum) {
+		} else if (score_cutoff < kmer_diff_scores[i].value) {
 			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
 		}
 	}
@@ -290,10 +297,17 @@ function determine_maxima_alt(kmer_diff_scores) {
 	// console.log("Array maximum:",array_maximum)
 	const index_array_maximum = distances_from_line.indexOf(array_maximum)
 	// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
+	const score_cutoff = kmer_diff_scores[index_array_maximum].value
+	//	for (let i = 0; i < kmer_diff_scores.length; i++) {
+	//		if (i < index_array_maximum) {
+	//			indices.push([kmer_diff_scores[i].groupID, 'none'])
+	//		} else if (i >= index_array_maximum) {
+	//			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+	//		}
 	for (let i = 0; i < kmer_diff_scores.length; i++) {
-		if (i < index_array_maximum) {
+		if (score_cutoff >= kmer_diff_scores[i].value) {
 			indices.push([kmer_diff_scores[i].groupID, 'none'])
-		} else if (i >= index_array_maximum) {
+		} else if (score_cutoff < kmer_diff_scores[i].value) {
 			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
 		}
 	}
