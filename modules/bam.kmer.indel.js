@@ -76,7 +76,7 @@ export async function match_complexvariant(templates, q) {
 		i++
 	}
 
-	const ref_indices = determine_maxima(ref_scores)
+	const ref_indices = determine_maxima_alt(ref_scores)
 	const alt_indices = determine_maxima_alt(alt_scores)
 
 	let index = 0
