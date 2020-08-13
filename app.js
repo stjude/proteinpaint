@@ -4422,6 +4422,7 @@ async function handle_mdssvcnv(req, res) {
 async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 	try {
 		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
+		const skip_termids = new Set(req.query.skip_termids || [])
 		const sample2assay = new Map()
 		// k: sample
 		// v: Map( assay => 'yes')
@@ -4437,6 +4438,7 @@ async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 			const a = ds.assayAvailability.samples.get(sample)
 			if (!a) continue
 			for (const t of ds.assayAvailability.assays) {
+				if (skip_termids.has(t.id)) continue
 				if (a[t.id]) {
 					k2v.set(t.id, 'yes')
 				}
