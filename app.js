@@ -11795,7 +11795,7 @@ function illegalpath(s) {
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
 	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
 	if (s.indexOf('..') != -1) return true
-	if (s.match(/[^\w-%.,~: /\\()\[\]]/i)) return true // must contain only alphanumeric characters with a few exceptions
+	if (s.match(/[^\w-%.,~: /\\()\[\]\+]/i)) return true // must contain only alphanumeric characters with a few exceptions
 	return false
 }
 
