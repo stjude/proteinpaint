@@ -206,9 +206,6 @@ app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
-// obsolete
-app.get('/tpvafs1', handle_tpvafs1)
-
 {
 	const port = serverconfig.port || 3000
 	const server = app.listen(port)
@@ -7431,31 +7428,17 @@ function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
 		return res.send({ error: 'cannot search sample by name in custom track' })
 	}
 	const str = req.query.findsamplename.toLowerCase()
-	const result = []
 
 	// must return grouping attributes for launching expression rank
+	const result = []
 
-	if (dsquery.samples) findadd(dsquery.samples)
-
-	if (result.length < 10 && dsquery.expressionrank_querykey) {
-		// also find expression-only samples
-		const query = ds.queries[dsquery.expressionrank_querykey]
-		if (query && query.samples) {
-			findadd(query.samples)
-		}
+	if (!ds.cohort.__samplelst) {
+		// array of lower case sample names
+		// only init once
+		ds.cohort.__samplelst = []
+		for (const s in ds.cohort.annotation) ds.cohort.__samplelst.push(s.toLowerCase())
 	}
-
-	if (result.length < 10 && dsquery.vcf_querykey) {
-		// also find vcf-only samples
-		const query = ds.queries[dsquery.vcf_querykey]
-		if (query && query.tracks) {
-			for (const tk of query.tracks) {
-				if (tk.samples) {
-					findadd(tk.samples.map(i => i.name))
-				}
-			}
-		}
-	}
+	findadd(ds.cohort.__samplelst)
 
 	// list of samples ready to be returned to client
 	// now append attributes to found samples
@@ -7538,13 +7521,13 @@ function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
 		}
 	}
 
-	return res.send({ result: result })
+	return res.send({ result })
 
 	function findadd(samples) {
 		for (const samplename of samples) {
 			if (result.length > 10) return
 
-			if (samplename.toLowerCase().indexOf(str) == -1) continue
+			if (samplename.indexOf(str) == -1) continue
 
 			const sample = {
 				name: samplename
@@ -11520,101 +11503,6 @@ function handle_translategm(req, res) {
 /****************************************************************************************************/
 
 /* __tp__ */
-
-function handle_tpvafs1(req, res) {
-	var [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	var start = parseInt(req.query.start),
-		stop = parseInt(req.query.stop)
-	if (isNaN(start)) return res.send({ error: 'invalid start' })
-	if (isNaN(stop)) return res.send({ error: 'invalid stop' })
-	log(req)
-	if (isurl) {
-		if (!serverconfig.cachedir) return res.send({ error: 'cachedir not specified in serverconfig' })
-		var tmp = file.split('//')
-		if (tmp.length != 2) return res.send({ error: 'irregular URL: ' + file })
-		var dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-		var loader = new load(dir)
-		fs.stat(dir, function(err, stat) {
-			if (err) {
-				switch (err.code) {
-					case 'ENOENT':
-						exec('mkdir -p "' + dir + '"', function(err) {
-							if (err) {
-								res.send({ error: 'cannot create dir for caching' })
-								return
-							}
-							loader.load()
-						})
-						return
-					case 'EACCES':
-						return res.send({ error: 'permission denied when stating cache dir' })
-					default:
-						return res.send({ error: 'unknown error code when stating: ' + err.code })
-				}
-			}
-			loader.load()
-		})
-	} else {
-		var loader = new load()
-		loader.load()
-	}
-	function load(dir) {
-		this.name = req.query.name
-		this.start = start
-		this.stop = stop
-		this.chr = req.query.chr
-		this.load = () => {
-			var ps = spawn(tabix, [file, this.chr + ':' + this.start + '-' + this.stop], { cwd: dir })
-			var out = [],
-				out2 = []
-			ps.stdout.on('data', data => {
-				out.push(data)
-			})
-			ps.stderr.on('data', data => {
-				out2.push(data)
-			})
-			ps.on('close', code => {
-				if (out2.length > 0) {
-					res.send({ error: out2.join('') })
-					return
-				}
-				var lines = out
-					.join('')
-					.trim()
-					.split('\n')
-				var lst = []
-				var problem = 0
-				lines.forEach(line => {
-					var l = line.split('\t')
-					var position = parseInt(l[1])
-					if (isNaN(position)) {
-						problem++
-						return
-					}
-					var total = parseInt(l[4])
-					if (isNaN(total)) {
-						problem++
-						return
-					}
-					var f = parseFloat(l[5])
-					if (isNaN(f) || f < 0 || f > 1) {
-						problem++
-						return
-					}
-					lst.push({
-						position: position - 1,
-						ref: l[2],
-						mut: l[3],
-						total: total,
-						f: f
-					})
-				})
-				res.send({ items: lst, problem: problem })
-			})
-		}
-	}
-}
 
 /***************************   __util   **/
 
