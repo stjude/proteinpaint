@@ -7436,7 +7436,12 @@ function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
 		// array of lower case sample names
 		// only init once
 		ds.cohort.__samplelst = []
-		for (const s in ds.cohort.annotation) ds.cohort.__samplelst.push(s.toLowerCase())
+		for (const name in ds.cohort.annotation) {
+			ds.cohort.__samplelst.push({
+				name,
+				low: name.toLowerCase()
+			})
+		}
 	}
 	findadd(ds.cohort.__samplelst)
 
@@ -7524,20 +7529,16 @@ function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
 	return res.send({ result })
 
 	function findadd(samples) {
-		for (const samplename of samples) {
+		for (const s of samples) {
 			if (result.length > 10) return
 
-			if (samplename.indexOf(str) == -1) continue
+			if (s.low.indexOf(str) == -1) continue
 
-			const sample = {
-				name: samplename
-			}
-
-			if (result.find(i => i.name == samplename)) {
+			if (result.find(i => i.name == s.name)) {
 				// already found it
 				continue
 			}
-			result.push(sample)
+			result.push(s)
 		}
 	}
 }
