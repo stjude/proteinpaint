@@ -11335,7 +11335,7 @@ function cache_index(indexURL, tkloader, res) {
 			switch (err.code) {
 				case 'ENOENT':
 					// path not found, create path
-					exec('mkdir -p ' + dir, err => {
+					exec('mkdir -p "' + dir + '"', err => {
 						if (err) {
 							return res.send({ error: 'cannot create dir for caching' })
 						}
@@ -11435,7 +11435,7 @@ function cache_index_promise(indexURL) {
 			if (err) {
 				if (err.code == 'ENOENT') {
 					// path not found, create path
-					exec('mkdir -p ' + dir, err => {
+					exec('mkdir -p "' + dir + '"', err => {
 						if (err) reject({ message: 'cannot create dir for caching' })
 						// download file
 						downloadFile(indexURL, indexFilepath, err => {
@@ -11539,7 +11539,7 @@ function handle_tpvafs1(req, res) {
 			if (err) {
 				switch (err.code) {
 					case 'ENOENT':
-						exec('mkdir -p ' + dir, function(err) {
+						exec('mkdir -p "' + dir + '"', function(err) {
 							if (err) {
 								res.send({ error: 'cannot create dir for caching' })
 								return
