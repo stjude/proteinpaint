@@ -148,8 +148,22 @@ const softclipbg_hq = '#4888bf'
 const softclipbg_lq = '#c9e6ff'
 const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
 // insertion, text color gradient to correlate with the quality
-const insertion_hq = '#47FFFC' //'#00FFFB'
-const insertion_lq = '#B2D7D7' //'#009290'
+// cyan
+//const insertion_hq = '#47FFFC' //'#00FFFB'
+//const insertion_lq = '#B2D7D7' //'#009290'
+// red
+//const insertion_hq = '#ff1f1f'
+//const insertion_lq = '#ffa6a6'
+// magenta
+const insertion_hq = '#ff00dd' // '#ff4fe5'
+const insertion_lq = '#ffbff6'
+// bright green
+//const insertion_hq = '#00ff2a'
+//const insertion_lq = '#c4ffce'
+// yellow
+//const insertion_hq = '#ffff14'
+//const insertion_lq = '#ffffa6'
+
 const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 const insertion_maxfontsize = 12
 const insertion_minfontsize = 7
