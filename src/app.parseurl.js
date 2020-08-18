@@ -205,6 +205,12 @@ arg
 			const tmp = urlp.get('mds').split(',')
 			if (tmp[0] && tmp[1]) {
 				par.datasetqueries = [{ dataset: tmp[0], querykey: tmp[1] }]
+				if (urlp.has('sample')) {
+					par.datasetqueries[0].singlesample = { name: urlp.get('sample') }
+					// quick fix!!
+					// tell  mds_load_query_bykey to load assay tracks in this context, but will not do so if launching sample view from main tk
+					par.datasetqueries[0].getsampletrackquickfix = true
+				}
 			}
 		}
 
