@@ -303,16 +303,14 @@ async function mdsjson_parse(json_file) {
 
 function validate_mdsjson(obj) {
 	if (!obj.type) throw 'dataset type is missing'
-	// const file_or_url = obj.file || obj.url
-	if (!obj.file && !obj.url) throw 'file is missing'
-	if (obj.checkexpressionrank) {
-		if (!obj.checkexpressionrank.file && !obj.checkexpressionrank.url) throw 'expression rank file/url is missing'
+	const svcnvfile = obj.svcnvfile || obj.svcnvurl
+	const vcffile = obj.vcffile || obj.vcfurl
+	if (!svcnvfile || !vcffile) throw 'vcf or cnv file/url is required'
+	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
+		if (!obj.expressionfile && !obj.expressionurl) throw 'expression file/url is missing'
 	}
-	if (obj.checkvcf) {
-		if (!obj.checkvcf.file && !obj.checkvcf.url) throw 'vcf file/url is missing'
-	}
-	if (obj.checkrnabam) {
-		if (!obj.checkrnabam.file && !obj.checkrnabam.url) throw 'expression rank file/url is missing'
+	if (Object.keys(obj).filter(x => x.includes('rnabam')).length) {
+		if (!obj.rnabamfile && !obj.rnabamurl) throw 'rnabam file/url is missing'
 	}
 	if (obj.sampleset) {
 		for (const sample of obj.sampleset) {
@@ -326,31 +324,34 @@ function get_json_tklst(tkobj) {
 	const tklst = []
 	const track = {
 		type: tkobj.type,
-		name: tkobj.name,
-		file: tkobj.file
+		name: tkobj.name
 	}
 
+	//svcnv file
+	if (tkobj.svcnvfile) track.file = tkobj.svcnvfile
+	else if (tkobj.svcnvurl) track.url = tkobj.svcnvurl
+
 	// expressionrank
-	if (tkobj.checkexpressionrank) {
+	if (Object.keys(tkobj).filter(x => x.includes('expression')).length) {
 		track.checkexpressionrank = {
-			file: tkobj.checkexpressionrank.file,
-			url: tkobj.checkexpressionrank.url
+			file: tkobj.expressionfile,
+			url: tkobj.expressionurl
 		}
 	}
 
 	// vcf
-	if (tkobj.checkvcf) {
+	if (Object.keys(tkobj).filter(x => x.includes('vcf')).length) {
 		track.checkvcf = {
-			file: tkobj.checkvcf.file,
-			url: tkobj.checkvcf.url
+			file: tkobj.vcffile,
+			url: tkobj.vcfurl
 		}
 	}
 
 	// rna bam
-	if (tkobj.checkrnabam) {
+	if (Object.keys(tkobj).filter(x => x.includes('rnabam')).length) {
 		track.checkrnabam = {
-			file: tkobj.checkrnabam.file,
-			url: tkobj.checkrnabam.url
+			file: tkobj.rnabamfile,
+			url: tkobj.rnabamurl
 		}
 	}
 
