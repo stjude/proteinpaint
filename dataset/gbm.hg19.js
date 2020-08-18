@@ -100,6 +100,8 @@ module.exports = {
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true,
 
+			isfull: true,
+
 			legend_vorigin: {
 				key: 'vorigin',
 				somatic: 'somatic',
