@@ -8,7 +8,7 @@ module.exports = {
 	about: [],
 
 	sampleAssayTrack: {
-		file: 'files/hg19/tcga/gbm/DNA/cov-wgs/table.txt'
+		file: 'files/hg19/tcga/gbm/tracktable/__table'
 	},
 
 	/*
