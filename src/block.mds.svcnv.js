@@ -2243,8 +2243,9 @@ export async function focus_singlesample(p) {
 
 	client.first_genetrack_tolist(block.genome, arg.tklst)
 
-	// detour
 	if (tk.checkrnabam && tk.checkvcf) {
+		// detour
+		// do not consider other assay tracks
 		const sbam = tk.checkrnabam.samples[sample.samplename]
 		if (sbam) {
 			arg.chr = block.rglst[0].chr
@@ -2291,6 +2292,12 @@ export async function focus_singlesample(p) {
 				et[k] = tk.checkexpressionrank[k]
 			}
 			arg.tklst.push(et)
+		}
+		// other assay tracks
+		if (tk.sample2assaytrack && tk.sample2assaytrack[sample.samplename]) {
+			for (const t of tk.sample2assaytrack[sample.samplename]) {
+				arg.tklst.push(t)
+			}
 		}
 	} else if (tk.mds && tk.mds.queries[tk.querykey].checkexpressionrank) {
 		// official mds

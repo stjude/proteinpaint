@@ -183,6 +183,15 @@ arg
 				}
 			}
 		}
+
+		if (position) {
+			par.chr = position.chr
+			par.start = position.start
+			par.stop = position.stop
+		} else if (rglst) {
+			par.rglst = rglst
+		}
+
 		if (urlp.has('hlregion')) {
 			const lst = []
 			for (const t of urlp.get('hlregion').split(',')) {
@@ -196,19 +205,23 @@ arg
 			const tmp = urlp.get('mds').split(',')
 			if (tmp[0] && tmp[1]) {
 				par.datasetqueries = [{ dataset: tmp[0], querykey: tmp[1] }]
+				if (urlp.has('sample')) {
+					par.datasetqueries[0].singlesample = { name: urlp.get('sample') }
+					// quick fix!!
+					// tell  mds_load_query_bykey to load assay tracks in this context, but will not do so if launching sample view from main tk
+					par.datasetqueries[0].getsampletrackquickfix = true
+				}
 			}
+		}
+
+		if (urlp.has('mdsjson')) {
+			init_mdsjson(urlp, arg, par)
+			return
 		}
 
 		par.tklst = get_tklst(urlp)
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
-		if (position) {
-			par.chr = position.chr
-			par.start = position.start
-			par.stop = position.stop
-		} else if (rglst) {
-			par.rglst = rglst
-		}
 		import('./block').then(b => new b.Block(par))
 		return
 	}
@@ -274,6 +287,86 @@ arg
 			)
 		}
 	}
+}
+
+async function init_mdsjson(urlp, arg, par) {
+	const json_file = urlp.get('mdsjson')
+	const genomename = urlp.get('genome')
+	const obj = await mdsjson_parse(json_file)
+	validate_mdsjson(obj)
+	par.tklst = get_json_tklst(obj)
+
+	client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
+	import('./block').then(b => new b.Block(par))
+}
+
+async function mdsjson_parse(json_file) {
+	if (json_file == '') throw '.jsonfile missing'
+	const tmp = await client.dofetch('textfile', { file: json_file })
+	if (tmp.error) throw tmp.error
+	return JSON.parse(tmp.text)
+}
+
+function validate_mdsjson(obj) {
+	if (!obj.type) throw 'dataset type is missing'
+	const svcnvfile = obj.svcnvfile || obj.svcnvurl
+	const vcffile = obj.vcffile || obj.vcfurl
+	if (!svcnvfile || !vcffile) throw 'vcf or cnv file/url is required'
+	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
+		if (!obj.expressionfile && !obj.expressionurl) throw 'expression file/url is missing'
+	}
+	if (Object.keys(obj).filter(x => x.includes('rnabam')).length) {
+		if (!obj.rnabamfile && !obj.rnabamurl) throw 'rnabam file/url is missing'
+	}
+	if (obj.sampleset) {
+		for (const sample of obj.sampleset) {
+			if (!sample.name) throw 'sampleset name is missing'
+			if (!sample.samples) throw 'sampleset samples[] is missing'
+		}
+	}
+}
+
+function get_json_tklst(tkobj) {
+	const tklst = []
+	const track = {
+		type: tkobj.type,
+		name: tkobj.name
+	}
+
+	//svcnv file
+	if (tkobj.svcnvfile) track.file = tkobj.svcnvfile
+	else if (tkobj.svcnvurl) track.url = tkobj.svcnvurl
+
+	// expressionrank
+	if (Object.keys(tkobj).filter(x => x.includes('expression')).length) {
+		track.checkexpressionrank = {
+			file: tkobj.expressionfile,
+			url: tkobj.expressionurl
+		}
+	}
+
+	// vcf
+	if (Object.keys(tkobj).filter(x => x.includes('vcf')).length) {
+		track.checkvcf = {
+			file: tkobj.vcffile,
+			url: tkobj.vcfurl
+		}
+	}
+
+	// rna bam
+	if (Object.keys(tkobj).filter(x => x.includes('rnabam')).length) {
+		track.checkrnabam = {
+			file: tkobj.rnabamfile,
+			url: tkobj.rnabamurl
+		}
+	}
+
+	// sampleset
+	if (tkobj.sampleset) {
+		track.sampleset = tkobj.sampleset
+	}
+	tklst.push(track)
+	return tklst
 }
 
 export function get_tklst(urlp) {

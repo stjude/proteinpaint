@@ -100,6 +100,7 @@ module.exports = {
 			multihidelabel_vcf: true,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true,
+
 			isfull: true,
 
 			legend_vorigin: {

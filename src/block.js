@@ -4556,7 +4556,7 @@ if fromgenetk is provided, will skip this track
 			})
 	}
 
-	mds_load_query_bykey(ds, q) {
+	async mds_load_query_bykey(ds, q) {
 		/*
 	official ds
 	q comes from datasetqueries of embedding, with customizations
@@ -4574,6 +4574,25 @@ if fromgenetk is provided, will skip this track
 		if (this.tklst.find(t => t.mds && t.mds.label == ds.label && t.querykey == q.querykey)) {
 			// already shown
 			return
+		}
+
+		if (q.singlesample && q.getsampletrackquickfix) {
+			const data = await client.dofetch2('mdssvcnv', {
+				method: 'POST',
+				body: JSON.stringify({
+					genome: this.genome.name,
+					dslabel: ds.label,
+					querykey: q.querykey,
+					gettrack4singlesample: q.singlesample.name
+				})
+			})
+			if (data.error) throw data.error
+			if (data.tracks) {
+				for (const t of data.tracks) {
+					const tk = this.block_addtk_template(t)
+					this.tk_load(tk)
+				}
+			}
 		}
 
 		const tk = this.block_addtk_template(tk0)
