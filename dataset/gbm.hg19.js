@@ -1,3 +1,4 @@
+const common = require('../src/common')
 const samplenamekey = 'sample_name'
 
 module.exports = {
@@ -105,6 +106,51 @@ module.exports = {
 				key: 'vorigin',
 				somatic: 'somatic',
 				germline: 'germline'
+			}
+		},
+		snvindel: {
+			hideforthemoment: 1,
+			name: 'TCGA GBM SNV/indel',
+			istrack: true,
+			type: common.tkt.mdsvcf,
+			viewrangeupperlimit: 2000000,
+			tracks: [
+				{
+					file: 'files/hg19/tcga/gbm/gbm.snvindel.vep.vcf.gz',
+					type: 'vcf'
+				}
+			],
+			singlesamples: {
+				tablefile: 'files/hg19/tcga/gbm/split.vcf/split_vcf_table.txt'
+			}
+		},
+
+		genefpkm: {
+			hideforthemoment: 1,
+			name: 'TCGA GBM RNA-seq gene FPKM',
+			isgenenumeric: true,
+			file: 'files/hg19/tcga/gbm/gbm.fpkm.hg19.gz',
+			datatype: 'FPKM',
+
+			// for boxplots & circles, and the standalone expression track
+			itemcolor: 'green',
+
+			// for expression rank checking when coupled to svcnv
+			viewrangeupperlimit: 5000000,
+
+			// yu's data & method for ase/outlier
+			ase: {
+				qvalue: 0.05,
+				meandelta_monoallelic: 0.3,
+				asemarkernumber_biallelic: 0,
+				color_noinfo: '#858585',
+				color_notsure: '#A8E0B5',
+				color_biallelic: '#40859C',
+				color_monoallelic: '#d95f02'
+			},
+			outlier: {
+				pvalue: 0.05,
+				color: '#FF8875'
 			}
 		}
 	}
