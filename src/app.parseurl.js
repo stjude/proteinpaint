@@ -324,6 +324,15 @@ function validate_mdsjson(obj) {
 			if (!sample.samples) throw 'sampleset samples[] is missing'
 		}
 	}
+	if (obj.sample2assaytrack) {
+		for (const [sample, assaylst] of Object.entries(obj.sample2assaytrack)) {
+			if (!assaylst.length) throw 'assay[] missing for ' + sample
+			for (const assay of assaylst) {
+				if (!assay.name) throw 'assay name is missing for ' + sample
+				if (!assay.type) throw 'assay type is missing for ' + sample
+			}
+		}
+	}
 }
 
 function get_json_tklst(tkobj) {
@@ -364,6 +373,11 @@ function get_json_tklst(tkobj) {
 	// sampleset
 	if (tkobj.sampleset) {
 		track.sampleset = tkobj.sampleset
+	}
+
+	// SampleAssayTrack
+	if (tkobj.sample2assaytrack) {
+		track.sample2assaytrack = tkobj.sample2assaytrack
 	}
 	tklst.push(track)
 	return tklst
