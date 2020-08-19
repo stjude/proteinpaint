@@ -81,21 +81,8 @@ module.exports = {
 			segmeanValueCutoff: 0.1,
 			lohLengthUpperLimit: 2000000,
 
-			/*
-     		groupsamplebyattr:{
-     			attrlst:[
-     				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
-     				{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
-     			],
-     			sortgroupby:{
-     				key:'diagnosis_group_short',
-     				order:['ST','BT','HM']
-     			},
-     			attrnamespacer:', ',
-     		},
-            */
-			// expressionrank_querykey: 'genefpkm',
-			// vcf_querykey: 'snvindel',
+			expressionrank_querykey: 'genefpkm',
+			vcf_querykey: 'snvindel',
 
 			multihidelabel_vcf: true,
 			multihidelabel_fusion: false,
