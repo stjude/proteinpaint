@@ -2,9 +2,7 @@ const app = require('../app')
 const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
-const got = require('got')
-const common = require('../src/common')
-// TODO create mds3.gdc.js and import here
+const gdc = require('./mds3.gdc')
 
 /*
 ********************** EXPORTED
@@ -21,13 +19,14 @@ may_init_svcnv
 may_sum_samples
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+//const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
+	validate_query_genecnv(ds, genome)
 	await init_onetimequery_projectsize(ds)
 }
 
@@ -77,9 +76,7 @@ function validate_variant2samples(ds) {
 	}
 	vs.sunburst_ids = new Set(vs.sunburst_ids)
 	if (vs.gdcapi) {
-		if (!vs.gdcapi.query_list) throw '.query_list missing from variant2samples.gdcapi'
-		if (!vs.gdcapi.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
-		if (!vs.gdcapi.variables) throw '.variables missing from variant2samples.gdcapi'
+		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
 		throw 'unknown query method of variant2samples'
 	}
@@ -111,15 +108,15 @@ function validate_sampleSummaries(ds) {
 		v: Map
 		   k: label1 value
 		   v: {}
-			  sampleset: Set of sample_id
-		      mclasses: Map
+			  .sampleset: Set of sample_id
+		      .mclasses: Map
 		         k: mclass
 			     v: Set of sample id
-		      label2: Map
+		      .label2: Map
 		         k: label2 value
 			     v: {}
-				    sampleset: Set of sample id
-					mclasses: Map
+				    .sampleset: Set of sample id
+					.mclasses: Map
 			           k: mclass
 				       v: Set of sample_id
 		*/
@@ -128,39 +125,42 @@ function validate_sampleSummaries(ds) {
 		}
 		return labels
 	}
-	ss.summarize = (mlst, labels, opts) => {
-		// summarize mlst into an existing holder "labels"
-		for (const m of mlst) {
-			if (!m.samples) continue
-			for (const sample of m.samples) {
-				if (sample.sample_id == undefined) continue
-				for (const i of ss.lst) {
-					const v1 = sample[i.label1]
-					if (v1 == undefined) continue
-					const L1 = labels.get(i.label1)
-					if (!L1.has(v1)) {
-						const o = {
-							mclasses: new Map(),
-							sampleset: new Set()
+	ss.summarize = (labels, opts, datalst) => {
+		// each element in datalst represent raw result from one of ds.queries{}
+		// as there can be variable number of queries, the datalst[] is variable
+		for (const mlst of datalst) {
+			for (const m of mlst) {
+				if (!m.samples) continue
+				for (const sample of m.samples) {
+					if (sample.sample_id == undefined) continue
+					for (const i of ss.lst) {
+						const v1 = sample[i.label1]
+						if (v1 == undefined) continue
+						const L1 = labels.get(i.label1)
+						if (!L1.has(v1)) {
+							const o = {
+								mclasses: new Map(),
+								sampleset: new Set()
+							}
+							if (i.label2) {
+								o.label2 = new Map()
+							}
+							L1.set(v1, o)
 						}
+						L1.get(v1).sampleset.add(sample.sample_id)
+						if (!L1.get(v1).mclasses.has(m.class)) L1.get(v1).mclasses.set(m.class, new Set())
+						L1.get(v1)
+							.mclasses.get(m.class)
+							.add(sample.sample_id)
 						if (i.label2) {
-							o.label2 = new Map()
+							const v2 = sample[i.label2]
+							if (v2 == undefined) continue
+							if (!L1.get(v1).label2.has(v2)) L1.get(v1).label2.set(v2, { mclasses: new Map(), sampleset: new Set() })
+							const L2 = L1.get(v1).label2.get(v2)
+							L2.sampleset.add(sample.sample_id)
+							if (!L2.mclasses.has(m.class)) L2.mclasses.set(m.class, new Set())
+							L2.mclasses.get(m.class).add(sample.sample_id)
 						}
-						L1.set(v1, o)
-					}
-					L1.get(v1).sampleset.add(sample.sample_id)
-					if (!L1.get(v1).mclasses.has(m.class)) L1.get(v1).mclasses.set(m.class, new Set())
-					L1.get(v1)
-						.mclasses.get(m.class)
-						.add(sample.sample_id)
-					if (i.label2) {
-						const v2 = sample[i.label2]
-						if (v2 == undefined) continue
-						if (!L1.get(v1).label2.has(v2)) L1.get(v1).label2.set(v2, { mclasses: new Map(), sampleset: new Set() })
-						const L2 = L1.get(v1).label2.get(v2)
-						L2.sampleset.add(sample.sample_id)
-						if (!L2.mclasses.has(m.class)) L2.mclasses.set(m.class, new Set())
-						L2.mclasses.get(m.class).add(sample.sample_id)
 					}
 				}
 			}
@@ -214,130 +214,32 @@ function validate_query_snvindel(ds) {
 	if (!q) return
 	if (!q.byrange) throw '.byrange missing for queries.snvindel'
 	if (q.byrange.gdcapi) {
-		if (!q.byrange.gdcapi.query) throw '.query missing for byrange.gdcapi'
-		if (typeof q.byrange.gdcapi.query != 'string') throw '.query not string in byrange.gdcapi'
-		if (!q.byrange.gdcapi.variables) throw '.variables missing for byrange.gdcapi'
-		// validate .variables
+		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi)
 	} else {
 		throw 'unknown query method for queries.snvindel.byrange'
 	}
 
 	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
 	if (q.byisoform.gdcapi) {
-		gdcapi_init_snvindel_byisoform(ds)
+		gdc.validate_query_snvindel_byisoform(q.byisoform.gdcapi, ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
 	}
 }
 
-function gdcapi_init_snvindel_byisoform(ds) {
-	const api = ds.queries.snvindel.byisoform.gdcapi
-	if (!api.query) throw 'gdcapi.query missing for byisoform.gdcapi'
-	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
-	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
-	api.get = async opts => {
-		const hits = await snvindel_byisoform_gdcapi_run(ds, opts)
-		const mlst = [] // parse snv/indels into this list
-		for (const hit of hits) {
-			if (!hit._source) throw '._source{} missing from one of re.hits[]'
-			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
-			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
-			const m = {
-				ssm_id: hit._source.ssm_id,
-				dt: common.dtsnvindel,
-				chr: hit._source.chromosome,
-				pos: hit._source.start_position - 1,
-				ref: hit._source.reference_allele,
-				alt: hit._source.tumor_allele,
-				isoform: opts.isoform,
-				occurrence: hit._score
-			}
-			gdcapi_snvindel_addclass(m, hit._source.consequence)
-			if (hit._source.occurrence) {
-				m.samples = []
-				for (const acase of hit._source.occurrence) {
-					const c = acase.case
-					// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-					m.samples.push({
-						sample_id: c.case_id,
-						site: c.primary_site,
-						disease: c.disease_type,
-						project: c.project ? c.project.project_id : undefined
-					})
-				}
-			}
-			mlst.push(m)
-		}
-		return mlst
+function validate_query_genecnv(ds, genome) {
+	const q = ds.queries.genecnv
+	if (!q) return
+	if (!q.byisoform) throw '.byisoform missing for queries.genecnv'
+	if (q.byisoform.sqlquery_isoform2gene) {
+		if (!q.byisoform.sqlquery_isoform2gene.statement) throw '.statement missing from byisoform.sqlquery_isoform2gene'
+		q.byisoform.sqlquery_isoform2gene.query = genome.genedb.db.prepare(q.byisoform.sqlquery_isoform2gene.statement)
 	}
-}
-
-function gdcapi_snvindel_addclass(m, consequence) {
-	if (consequence) {
-		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
-		if (ts && ts.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
-			m.class = mclass
-			m.mname = ts.transcript.aa_change // may be null!
-
-			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
-			if (ts.transcript.annotation) {
-				for (const k in ts.transcript.annotation) {
-					m[k] = ts.transcript.annotation[k]
-				}
-			}
-		}
+	if (q.byisoform.gdcapi) {
+		gdc.validate_query_genecnv(q.byisoform)
+	} else {
+		throw 'unknown query method for queries.genecnv.byisoform'
 	}
-
-	if (!m.mname) {
-		m.mname = m.ref + '>' + m.alt
-	}
-
-	if (!m.class) {
-		if (common.basecolor[m.ref] && common.basecolor[m.alt]) {
-			m.class = common.mclasssnv
-		} else {
-			if (m.ref == '-') {
-				m.class = common.mclassinsertion
-			} else if (m.alt == '-') {
-				m.class = common.mclassdeletion
-			} else {
-				m.class = common.mclassmnv
-			}
-		}
-	}
-}
-
-async function snvindel_byisoform_gdcapi_run(ds, opts) {
-	// used in two places
-	// query is ds.queries.snvindel
-	const variables = JSON.parse(JSON.stringify(ds.queries.snvindel.byisoform.gdcapi.variables))
-	variables.filters.content.value = [opts.isoform]
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			query: ds.queries.snvindel.byisoform.gdcapi.query,
-			variables
-		})
-	})
-	let re
-	try {
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'structure is not .data.analysis.protein_mutations.data'
-		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
-	} catch (e) {
-		throw 'invalid JSON returned by GDC'
-	}
-	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	return re.hits
 }
 
 async function init_onetimequery_projectsize(ds) {
@@ -345,35 +247,7 @@ async function init_onetimequery_projectsize(ds) {
 	if (!op) return
 	op.results = new Map()
 	if (op.gdcapi) {
-		if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
-		if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(op.gdcapi)
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC for onetimequery_projectsize'
-		}
-		if (
-			!re.data ||
-			!re.data.viewer ||
-			!re.data.viewer.explore ||
-			!re.data.viewer.explore.cases ||
-			!re.data.viewer.explore.cases.total ||
-			!re.data.viewer.explore.cases.total.project__project_id ||
-			!re.data.viewer.explore.cases.total.project__project_id.buckets
-		)
-			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-			if (!t.key) throw 'key missing from one bucket'
-			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-			op.results.set(t.key, t.doc_count)
-		}
+		await gdc.init_projectsize(op)
 		return
 	}
 	throw 'unknown query method for onetimequery_projectsize'

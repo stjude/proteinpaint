@@ -322,7 +322,239 @@ const variables_projectsize = {
 	}
 }
 
-//////////////// end of query strings ///////////////
+const query_genecnv = `query CancerDistributionBarChart_relayQuery(
+	$caseAggsFilters: FiltersArgument
+	$ssmTested: FiltersArgument
+	$cnvGain: FiltersArgument
+	$cnvLoss: FiltersArgument
+	$cnvTested: FiltersArgument
+	$cnvTestedByGene: FiltersArgument
+	$cnvAll: FiltersArgument
+	$ssmFilters: FiltersArgument
+) {
+	viewer {
+		explore {
+			ssms {
+				hits(first: 0, filters: $ssmFilters) { total }
+			}
+			cases {
+				cnvAll: hits(filters: $cnvAll) { total }
+				cnvTestedByGene: hits(filters: $cnvTestedByGene) { total }
+				gain: aggregations(filters: $cnvGain) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				loss: aggregations(filters: $cnvLoss) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				cnvTotal: aggregations(filters: $cnvTested) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				filtered: aggregations(filters: $caseAggsFilters) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				total: aggregations(filters: $ssmTested) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+			}
+		}
+	}
+}`
+
+const variables_genecnv = {
+	caseAggsFilters: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			},
+			{
+				op: 'NOT',
+				content: {
+					field: 'cases.gene.ssm.observation.observation_id',
+					value: 'MISSING'
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	ssmTested: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			}
+		]
+	},
+	cnvGain: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Gain']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvLoss: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Loss']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvTested: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			}
+		]
+	},
+	cnvTestedByGene: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvAll: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Gain', 'Loss']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	ssmFilters: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	}
+}
+
+///////////////////////////////// end of query strings ///////////////
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
@@ -423,6 +655,7 @@ module.exports = {
 	},
 
 	// this is meant for the leftside labels under tklabel
+	// should not be called sample summary but mclassSummary
 	sampleSummaries: {
 		lst: sampleSummaries
 	},
@@ -432,7 +665,6 @@ module.exports = {
 		snvindel: {
 			forTrack: true,
 			byrange: {
-				// to convert to queries[]
 				gdcapi: {
 					query: query_range2variants,
 					variables: variables_range2variants
@@ -445,14 +677,24 @@ module.exports = {
 				}
 			},
 			occurrence_key
+		},
+		genecnv: {
+			// gene-level cnv of gain/loss categories
+			// only produce project summary, not sample level query
+			byisoform: {
+				sqlquery_isoform2gene: {
+					statement: 'select gene from isoform2gene where isoform=?'
+				},
+				gdcapi: {
+					query: query_genecnv,
+					variables: variables_genecnv
+				}
+			}
 		}
 		/*
 		svfusion: {
 		},
 		cnvpileup:{},
-		genecnv: {
-			// gene-level cnv of gain/loss categories
-		},
 		geneexpression: {
 		},
 		*/

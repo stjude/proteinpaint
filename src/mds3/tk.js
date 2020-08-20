@@ -46,6 +46,7 @@ export async function loadTk(tk, block) {
 		// render each possible track type. if indeed rendered, return sub track height
 		tk.height_main += may_render_skewer(data, tk, block)
 		// add new subtrack type
+		console.log(data.genecnvNosample)
 
 		_finish(data)
 	} catch (e) {
@@ -133,6 +134,7 @@ function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
+		// if any query may use
 	} else {
 		rglst = block.tkarg_rglst(tk)
 	}

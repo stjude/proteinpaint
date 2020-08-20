@@ -6,7 +6,7 @@ const variant2samples_getresult = require('./mds3.variant2samples')
 /*
  */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+//const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -79,14 +79,24 @@ async function load_driver(q, ds, result) {
 		if (q.skewer) {
 			// get skewer data
 			result.skewer = [] // for skewer track
+			// gene-level cnv data will not be directly returned to client, only summaries
+			let genecnvAtsample // sample level data, to find out how to query this data
+			let genecnvNosample // what gdc currently does, no sample info, summary at project level
 			if (ds.queries.snvindel) {
-				result.skewer.push(...(await skewerdata_snvindel(q, ds)))
+				result.skewer.push(...(await query_snvindel(q, ds)))
+			}
+			if (ds.queries.svfusion) {
+				result.skewer.push(...(await query_svfusion(q, ds))) // TODO
 			}
 			if (ds.queries.genecnv) {
-				result.skewer.push(...(await skewerdata_genecnv(q, ds)))
+				result.genecnvNosample = await query_genecnv(q, ds)
+				// should return genecnvAtsample, then will be combined with snvindel for summary
 			}
 			if (result.temp_ss_labels) {
-				ds.sampleSummaries.summarize(result.skewer, result.temp_ss_labels, q)
+				const datalst = [result.skewer]
+				if (genecnvAtsample) datalst.push(genecnvAtsample)
+				ds.sampleSummaries.summarize(result.temp_ss_labels, q, datalst)
+				// for skewer data, will not return sample list for each variant
 				for (const i of result.skewer) {
 					delete i.samples
 				}
@@ -100,8 +110,7 @@ async function load_driver(q, ds, result) {
 	throw 'do not know what client wants'
 }
 
-// TODO skewer to support multiple datatypes on different queries
-async function skewerdata_snvindel(q, ds) {
+async function query_snvindel(q, ds) {
 	if (q.isoform) {
 		if (ds.queries.snvindel.byisoform.gdcapi) {
 			return await ds.queries.snvindel.byisoform.gdcapi.get(q)
@@ -114,3 +123,29 @@ async function skewerdata_snvindel(q, ds) {
 	}
 	throw 'unknown query method for snvindel.byrange'
 }
+
+async function query_genecnv(q, ds) {
+	if (q.isoform) {
+		if (ds.queries.genecnv.byisoform) {
+			let name = q.isoform
+			if (ds.queries.genecnv.byisoform.sqlquery_isoform2gene) {
+				// convert isoform to gene name
+				const tmp = ds.queries.genecnv.byisoform.sqlquery_isoform2gene.query.get(q.isoform)
+				if (tmp && tmp.gene) {
+					name = tmp.gene
+				} else {
+					console.log('no gene found by ' + q.isoform)
+					// do not crash the query! return no data
+					return
+				}
+			}
+			if (ds.queries.genecnv.byisoform.gdcapi) {
+				return await ds.queries.genecnv.byisoform.gdcapi.get(q, name)
+			}
+			throw 'unknown query method of ds.queries.genecnv.byisoform'
+		}
+		throw '.byisoform missing for genecnv query'
+	}
+}
+
+async function query_svfusion(q, ds) {}
