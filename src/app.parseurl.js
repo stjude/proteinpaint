@@ -214,7 +214,7 @@ arg
 			}
 		}
 
-		if (urlp.has('mdsjson')) {
+		if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
 			init_mdsjson(urlp, arg, par)
 			return
 		}
@@ -290,9 +290,11 @@ arg
 }
 
 async function init_mdsjson(urlp, arg, par) {
+	const json_url = urlp.get('mdsjsonurl')
 	const json_file = urlp.get('mdsjson')
 	const genomename = urlp.get('genome')
-	const obj = await mdsjson_parse(json_file)
+	const obj = await mdsjson_parse(json_file, json_url)
+
 	validate_mdsjson(obj)
 	par.tklst = get_json_tklst(obj)
 
@@ -300,9 +302,13 @@ async function init_mdsjson(urlp, arg, par) {
 	import('./block').then(b => new b.Block(par))
 }
 
-async function mdsjson_parse(json_file) {
-	if (json_file == '') throw '.jsonfile missing'
-	const tmp = await client.dofetch('textfile', { file: json_file })
+async function mdsjson_parse(json_file, json_url) {
+	if (json_file !== undefined && json_file == '') throw '.jsonfile missing'
+	if (json_url !== undefined && json_url == '') throw '.jsonurl missing'
+
+	let tmp
+	if (json_file !== undefined) tmp = await client.dofetch('textfile', { file: json_file })
+	else if (json_url !== undefined) tmp = await client.dofetch('urltextfile', { url: json_url })
 	if (tmp.error) throw tmp.error
 	return JSON.parse(tmp.text)
 }
