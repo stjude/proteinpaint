@@ -11926,20 +11926,20 @@ function pp_init() {
 		if (!g.genedb) return genomename + ': .genedb{} missing'
 		if (!g.genedb.dbfile) return genomename + ': .genedb.dbfile missing'
 		{
-			let db
 			try {
-				db = utils.connect_db(g.genedb.dbfile)
+				// keep reference of .db so as to add dataset-specific query statements later
+				g.genedb.db = utils.connect_db(g.genedb.dbfile)
 				//new bettersqlite( path.join(serverconfig.tpmasterdir, g.genedb.dbfile), {readonly:true,fileMustExist:true})
 			} catch (e) {
 				return 'cannot read dbfile: ' + g.genedb.dbfile
 			}
-			g.genedb.getnamebynameorisoform = db.prepare('select name from genes where name=? or isoform=?')
-			g.genedb.getnamebyisoform = db.prepare('select distinct name from genes where isoform=?')
-			g.genedb.getjsonbyname = db.prepare('select isdefault,genemodel from genes where name=?')
-			g.genedb.getjsonbyisoform = db.prepare('select isdefault,genemodel from genes where isoform=?')
-			g.genedb.getnameslike = db.prepare('select distinct name from genes where name like ? limit 20')
+			g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
+			g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
+			g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
+			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
+			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
 			if (g.genedb.hasalias) {
-				g.genedb.getnamebyalias = db.prepare('select name from genealias where alias=?')
+				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
 		}
 
