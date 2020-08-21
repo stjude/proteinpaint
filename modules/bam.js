@@ -1489,7 +1489,7 @@ async function convertread(seg, genome, query) {
 	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + refstop)
 	const quallst = qual2int(seg.qual)
 	const reflst = ['<td>Reference</td>']
-	const querylst = ['<td style="color:black;text-align:left">Read</td>']
+	const querylst = ['<td style="color:black;text-align:left">Read <button>copy</button>&nbsp;</td>']
 	for (const b of seg.boxes) {
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {

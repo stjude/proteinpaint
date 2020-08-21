@@ -676,15 +676,13 @@ if is pair mode, is the template
 		if (result.state != 'granted' && result.state != 'prompt') return
 
 		tk.readpane.body
-			.selectAll('td')
+			.selectAll('button')
 			.filter(function() {
-				return this.innerHTML === 'Read'
-			}) // use hardcoded row label from the server
-			.attr('title', 'Click to copy')
-			.style('cursor', 'pointer')
-			.style('text-decoration', 'underline')
+				console.log(this.innerHTML)
+				return this.innerHTML === 'copy' // use hardcoded row label from the server
+			})
 			.on('click', function() {
-				const dataStr = [...this.parentNode.querySelectorAll('td')]
+				const dataStr = [...this.parentNode.parentNode.querySelectorAll('td')]
 					.slice(1)
 					.map(function(elem) {
 						return elem.innerHTML
