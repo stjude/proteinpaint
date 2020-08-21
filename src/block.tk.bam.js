@@ -673,23 +673,20 @@ if is pair mode, is the template
 	tk.readpane.body.append('div').html(data.html)
 
 	navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
-		if (result.state != 'granted' && result.state != 'prompt') return
+		const btn = tk.readpane.body.selectAll('button').filter(function() {
+			return this.innerHTML.startsWith('Copy') // use hardcoded row label from the server
+		})
 
-		tk.readpane.body
-			.selectAll('button')
-			.filter(function() {
-				console.log(this.innerHTML)
-				return this.innerHTML === 'copy' // use hardcoded row label from the server
-			})
-			.on('click', function() {
-				const dataStr = [...this.parentNode.parentNode.querySelectorAll('td')]
-					.slice(1)
-					.map(function(elem) {
-						return elem.innerHTML
-					})
-					.join('')
+		if (result.state != 'granted' && result.state != 'prompt') {
+			btn.remove()
+		} else {
+			btn.on('click', function() {
+				const tr = this.parentNode.parentNode
+				const i = [...tr.parentNode.childNodes].filter(elem => elem.tagName === 'TR').indexOf(tr)
+				const dataStr = data.seqlst[i - 1] // subtract the first reference row
 				navigator.clipboard.writeText(dataStr).then(() => {}, console.warn)
 			})
+		}
 	})
 }
 
