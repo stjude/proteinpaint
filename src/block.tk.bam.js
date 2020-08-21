@@ -671,6 +671,28 @@ if is pair mode, is the template
 	}
 
 	tk.readpane.body.append('div').html(data.html)
+
+	navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
+		if (result.state != 'granted' && result.state != 'prompt') return
+
+		tk.readpane.body
+			.selectAll('td')
+			.filter(function() {
+				return this.innerHTML === 'Read'
+			}) // use hardcoded row label from the server
+			.attr('title', 'Click to copy')
+			.style('cursor', 'pointer')
+			.style('text-decoration', 'underline')
+			.on('click', function() {
+				const dataStr = [...this.parentNode.querySelectorAll('td')]
+					.slice(1)
+					.map(function(elem) {
+						return elem.innerHTML
+					})
+					.join('')
+				navigator.clipboard.writeText(dataStr).then(() => {}, console.warn)
+			})
+	})
 }
 
 async function enter_partstack(group, tk, block, y) {
