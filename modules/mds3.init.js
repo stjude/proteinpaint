@@ -8,15 +8,7 @@ const gdc = require('./mds3.gdc')
 ********************** EXPORTED
 init
 client_copy
-server_updateAttr
 ********************** INTERNAL
-validate_termdbconfig
-may_validate_info_fields
-may_validate_population
-may_init_vcf
-may_init_ld
-may_init_svcnv
-may_sum_samples
 */
 
 //const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -37,13 +29,15 @@ export function client_copy(ds) {
 	const ds2 = {
 		isMds3: true,
 		label: ds.label,
+		sampleSummaries: ds.sampleSummaries ? ds.sampleSummaries.lst : null,
 		queries: copy_queries(ds)
 	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
 	}
-	if (ds.sampleSummaries) {
-		ds2.has_samplesummary = true
+	if (ds.queries.genecnv) {
+		// quick fix, to show separate label of genecnv
+		ds2.has_genecnv_quickfix = true
 	}
 	if (ds.variant2samples) {
 		ds2.variant2samples = {
@@ -87,6 +81,12 @@ function copy_queries(ds) {
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack
+		}
+	}
+	if (ds.queries.genecnv) {
+		copy.genecnv = {
+			gaincolor: ds.queries.genecnv.gaincolor,
+			losscolor: ds.queries.genecnv.losscolor
 		}
 	}
 	// new query
@@ -179,7 +179,15 @@ function validate_sampleSummaries(ds) {
 					samplecount: o.sampleset.size,
 					mclasses: sort_mclass(o.mclasses)
 				}
-				// todo: add cohortsize
+				// add cohort size, fix it so it can be applied to sub levels
+				if (
+					ds.onetimequery_projectsize &&
+					ds.onetimequery_projectsize.results &&
+					ds.onetimequery_projectsize.results.has(v1)
+				) {
+					L1o.cohortsize = ds.onetimequery_projectsize.results.get(v1)
+				}
+
 				strat.items.push(L1o)
 				if (o.label2) {
 					L1o.label2 = []
@@ -230,13 +238,15 @@ function validate_query_snvindel(ds) {
 function validate_query_genecnv(ds, genome) {
 	const q = ds.queries.genecnv
 	if (!q) return
+	if (!q.gaincolor) throw '.gaincolor missing for queries.genecnv'
+	if (!q.losscolor) throw '.losscolor missing for queries.genecnv'
 	if (!q.byisoform) throw '.byisoform missing for queries.genecnv'
 	if (q.byisoform.sqlquery_isoform2gene) {
 		if (!q.byisoform.sqlquery_isoform2gene.statement) throw '.statement missing from byisoform.sqlquery_isoform2gene'
 		q.byisoform.sqlquery_isoform2gene.query = genome.genedb.db.prepare(q.byisoform.sqlquery_isoform2gene.statement)
 	}
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_genecnv(q.byisoform)
+		gdc.validate_query_genecnv(q.byisoform.gdcapi)
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}

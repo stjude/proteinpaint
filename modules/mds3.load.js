@@ -81,7 +81,6 @@ async function load_driver(q, ds, result) {
 			result.skewer = [] // for skewer track
 			// gene-level cnv data will not be directly returned to client, only summaries
 			let genecnvAtsample // sample level data, to find out how to query this data
-			let genecnvNosample // what gdc currently does, no sample info, summary at project level
 			if (ds.queries.snvindel) {
 				result.skewer.push(...(await query_snvindel(q, ds)))
 			}

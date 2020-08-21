@@ -159,15 +159,15 @@ export async function init_projectsize(op) {
 	}
 }
 
-export function validate_query_genecnv(a) {
-	if (!a.gdcapi.query) throw '.query missing for byisoform.gdcapi'
-	if (typeof a.gdcapi.query != 'string') throw '.query not string for byisoform.gdcapi'
-	if (!a.gdcapi.variables) throw '.variables missing for byisoform.gdcapi'
+export function validate_query_genecnv(api) {
+	if (!api.query) throw '.query missing for byisoform.gdcapi'
+	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
+	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
 	// validate variables
-	a.gdcapi.get = async (opts, name) => {
+	api.get = async (opts, name) => {
 		// following is project-summarized query
 		// should be replaced by sample-level queries
-		const variables = JSON.parse(JSON.stringify(a.gdcapi.variables))
+		const variables = JSON.parse(JSON.stringify(api.variables))
 		variables.caseAggsFilters.content[2].content.value = [name]
 		variables.cnvGain.content[2].content.value = [name]
 		variables.cnvLoss.content[2].content.value = [name]
@@ -176,7 +176,7 @@ export function validate_query_genecnv(a) {
 		variables.ssmFilters.content[1].content.value = [name]
 		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify({ query: a.gdcapi.query, variables })
+			body: JSON.stringify({ query: api.query, variables })
 		})
 		let re
 		try {
@@ -207,7 +207,8 @@ export function validate_query_genecnv(a) {
 		}
 		const lst = []
 		for (const [k, i] of projects) {
-			i.project = k
+			if (i.gain + i.loss == 0) continue
+			i.label = k
 			i.total = project2total.get(k)
 			lst.push(i)
 		}
