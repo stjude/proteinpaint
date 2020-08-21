@@ -38,6 +38,8 @@ export async function loadTk(tk, block) {
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error
 		delete tk.uninitialized
+		// quick fix for left labels to access data attributes and display summary
+		tk._data = data
 
 		tk.clear()
 
@@ -46,7 +48,6 @@ export async function loadTk(tk, block) {
 		// render each possible track type. if indeed rendered, return sub track height
 		tk.height_main += may_render_skewer(data, tk, block)
 		// add new subtrack type
-		console.log(data.genecnvNosample)
 
 		_finish(data)
 	} catch (e) {
@@ -86,7 +87,7 @@ export function get_parameter(tk, block) {
 			// need to load skewer data
 			par.push('skewer=1')
 		}
-		if (tk.mds.has_samplesummary) {
+		if (tk.mds.sampleSummaries) {
 			// need to make sample summary
 			par.push('samplesummary=1')
 		}

@@ -679,6 +679,8 @@ module.exports = {
 			occurrence_key
 		},
 		genecnv: {
+			gaincolor: '#c1433f',
+			losscolor: '#336cd5',
 			// gene-level cnv of gain/loss categories
 			// only produce project summary, not sample level query
 			byisoform: {

@@ -15,7 +15,7 @@ hlaachange_addnewtrack
 getter_mcset_key
 
 ********************** EXPORTED
-loadTk
+may_render_skewer
 ********************** INTERNAL
 
 tk.skewer{}
@@ -32,6 +32,17 @@ tk.skewer{}
 	.selection
 	.stem1, stem2, stem3 // #pixel
 	.maxheight
+
+*********** function cascade
+may_render_skewer
+	make_skewer_data
+		mlst_pretreat
+			dsqueryresult_snvindelfusionitd
+	update_leftlabels
+	skewer_make
+	tkdata_update_x
+	settle_glyph
+	done_tknodata
 */
 
 const middlealignshift = 0.3
@@ -63,6 +74,7 @@ export function may_render_skewer(data, tk, block) {
 		// generate new skewer track with new data
 		tk.skewer.g.selectAll('*').remove()
 		tk.skewer.data = make_skewer_data(data, tk, block)
+		update_leftlabels(data, tk)
 		skewer_make(tk, block)
 	} else {
 		// in gmmode, browser panned, no re-requesting data
@@ -153,6 +165,65 @@ export function may_render_skewer(data, tk, block) {
 	}
 
 	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+}
+
+/*
+labels including dynamic ones by sampleSummaries are already created in makeTk
+here only fill in text, will not create labels
+this allows text content of the same label to be updated later by this script
+data is what's returned by server
+tk.skewer.data has been set
+eventually should be one multi-row label (row1: ssm+fusion, row2: genecnv), one click handler for whole label
+but no separate click handler for label_genecnv
+*/
+function update_leftlabels(data, tk) {
+	const variantcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
+	if (variantcount == 0) {
+		// hide label
+		tk.label_mcount
+			.text('No variants')
+			.attr('class', '')
+			.style('opacity', 0.5)
+	} else {
+		tk.label_mcount
+			.text(
+				variantcount < data.skewer.length
+					? variantcount + ' of ' + data.skewer.length + ' variants'
+					: variantcount + ' variant' + (variantcount > 1 ? 's' : '')
+			)
+			.attr('class', 'sja_clbtext2')
+			.style('opacity', 1)
+	}
+	if (tk.label_genecnv) {
+		fill_label_genecnv(tk, data)
+	}
+	if (tk.label_sampleSummaries && data.sampleSummaries) {
+		for (const ss of data.sampleSummaries) {
+			const lab = tk.label_sampleSummaries[ss.label]
+			if (!lab) throw 'left label not found for a summary: ' + ss.label
+			lab.text(ss.items.length + ' ' + ss.label + (ss.items.length > 1 ? 's' : ''))
+		}
+	}
+}
+
+function fill_label_genecnv(tk, data) {
+	if (!data.genecnvNosample || data.genecnvNosample.length == 0) {
+		tk.label_genecnv
+			.text('No CNV')
+			.attr('class', '')
+			.style('opacity', 0.5)
+		return
+	}
+	// TODO fill in colorful labels
+	tk.label_genecnv
+		.text(
+			data.genecnvNosample.reduce((i, j) => i + j.loss, 0) +
+				' loss, ' +
+				data.genecnvNosample.reduce((i, j) => i + j.gain, 0) +
+				' gain'
+		)
+		.attr('class', 'sja_clbtext2')
+		.style('opacity', 1)
 }
 
 function make_skewer_data(data, tk, block) {
@@ -444,16 +515,10 @@ function mlst2disc(mlst, tk) {
 	return groups
 }
 
-function skewer_make(tk, block) {
-	/*
-new things:
-
-itd/del stacked bars
-
-custom mclass from vcfinfofilter
-
+/*
+sets tk.skewer.maxheight
 */
-
+function skewer_make(tk, block) {
 	const color4disc = m => {
 		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
 			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
@@ -1662,17 +1727,6 @@ export function mlst_pretreat(data, tk, block) {
 		}
 
 		usemlst.push(m)
-	}
-
-	if (usemlst.length == 0) {
-		// hide label
-		tk.label_mcount.text('')
-	} else {
-		tk.label_mcount.text(
-			usemlst.length < data.skewer.length
-				? usemlst.length + ' of ' + data.skewer.length + ' variants'
-				: usemlst.length + ' variant' + (usemlst.length > 1 ? 's' : '')
-		)
 	}
 
 	if (nogenomicpos + nochr > 0) {
