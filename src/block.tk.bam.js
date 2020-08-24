@@ -672,29 +672,28 @@ if is pair mode, is the template
 	}
 	console.log(data.lst)
 
-	tk.readpane.body
-		.append('div')
-		.html(data.html)
-		// wait for html() to return before detecting the copy button
-		.each(async function() {
-			const result = await navigator.permissions.query({ name: 'clipboard-write' })
-			if (result.state != 'granted' && result.state != 'prompt') return
-			d3select(this)
-				.selectAll('tr')
-				.append('td')
-				// exclude Reference row
-				.filter(function() {
-					return this.parentNode != this.parentNode.parentNode.firstChild
-				})
-				.append('button')
-				.text('Copy read sequence')
-				.on('click', function() {
-					const tr = this.parentNode.parentNode
-					const i = [...tr.parentNode.childNodes].filter(elem => elem.tagName === 'TR').indexOf(tr)
-					const dataStr = data.seqlst[i - 1] // subtract the first reference row
-					navigator.clipboard.writeText(dataStr).then(() => {}, console.warn)
-				})
-		})
+	for (const r of data.lst) {
+		tk.readpane.body
+			.append('div')
+			.html(r.alignment + '\n' + r.info)
+			// wait for html() to return before detecting the copy button
+			.each(async function() {
+				const result = await navigator.permissions.query({ name: 'clipboard-write' })
+				if (result.state != 'granted' && result.state != 'prompt') return
+				d3select(this)
+					.selectAll('tr')
+					.append('td')
+					// exclude Reference row
+					.filter(function() {
+						return this.parentNode != this.parentNode.parentNode.firstChild
+					})
+					.append('button')
+					.text('Copy read sequence')
+					.on('click', () => {
+						navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
+					})
+			})
+	}
 }
 
 async function enter_partstack(group, tk, block, y) {
