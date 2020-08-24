@@ -28,15 +28,19 @@ export function make_leftlabels(data, tk, block) {
 				.attr('class', '')
 				.style('opacity', 0.5)
 		} else {
-			lab
-				.text(
+			if (data.skewer) {
+				lab.text(
 					variantcount < data.skewer.length
 						? variantcount + ' of ' + data.skewer.length + ' variants'
 						: variantcount + ' variant' + (variantcount > 1 ? 's' : '')
 				)
-				.on('click', () => {
-					tk.tktip.clear().showunder(d3event.target)
-				})
+			} else {
+				lab.text(variantcount + ' variant' + (variantcount > 1 ? 's' : ''))
+			}
+			lab.on('click', () => {
+				tk.tktip.clear().showunder(d3event.target)
+				menu_mclass(data, tk, block)
+			})
 		}
 		labels.push(lab)
 	}
@@ -90,6 +94,72 @@ function makelabel(tk, block, y) {
 		.attr('class', 'sja_clbtext2')
 		.attr('fill', 'black')
 		.attr('x', block.tkleftlabel_xshift)
+}
+
+function menu_mclass(data, tk, block) {
+	const checkboxdiv = tk.tktip.d.append('div').style('margin-bottom', '10px')
+	for (const [mclass, count] of data.mclass2variantcount) {
+		addrow(mclass, count)
+	}
+	// show hidden mclass without a server-returned count
+	for (const s of tk.hiddenmclass) {
+		if (data.mclass2variantcount.find(i => i[0] == s)) continue
+		addrow(s, 0)
+	}
+
+	const row = tk.tktip.d.append('div')
+	row
+		.append('button')
+		.text('Submit')
+		.style('margin-right', '5px')
+		.on('click', () => {
+			const lst = checkboxdiv.node().getElementsByTagName('input')
+			const unchecked = []
+			for (const i of lst) {
+				if (!i.checked) unchecked.push(i.getAttribute('mclass'))
+			}
+			if (unchecked.length == lst.length) return window.alert('Please check at least one option.')
+			tk.hiddenmclass = new Set(unchecked)
+			tk.tktip.hide()
+			tk.unitiated = true
+			tk.load()
+		})
+	row
+		.append('span')
+		.text('Check_all')
+		.attr('class', 'sja_clbtext2')
+		.style('margin-right', '10px')
+		.on('click', () => {})
+	row
+		.append('span')
+		.text('Clear')
+		.attr('class', 'sja_clbtext2')
+		.style('margin-right', '5px')
+		.on('click', () => {})
+
+	function addrow(mclass, count) {
+		const row = checkboxdiv.append('div')
+		const label = row.append('label')
+		label
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', !tk.hiddenmclass.has(mclass))
+			.attr('mclass', mclass)
+		label
+			.append('span')
+			.style('margin-left', '8px')
+			.style('padding', '0px 6px')
+			.style('border-radius', '6px')
+			.style('background', common.mclass[mclass].color)
+			.style('color', 'white')
+			.style('font-size', '.8em')
+			.text(count)
+		label
+			.append('span')
+			.style('margin-left', '8px')
+			.text(common.mclass[mclass].label)
+			.style('color', common.mclass[mclass].color)
+	}
 }
 
 function stratifymenu_samplesummary(strat, tk, block) {

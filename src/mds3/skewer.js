@@ -19,6 +19,7 @@ may_render_skewer
 ********************** INTERNAL
 
 tk.skewer{}
+	.rawmlst[] -- comes from server-returned data.skewer[]
 	.g
 	.data[]
 		.chr, pos
@@ -69,20 +70,23 @@ export function may_render_skewer(data, tk, block) {
 	}
 	tk.aboveprotein = true
 
-	if (data && data.skewer) {
-		// generate new skewer track with new data
-		tk.skewer.g.selectAll('*').remove()
-		tk.skewer.data = make_skewer_data(data, tk, block)
-		skewer_make(tk, block)
-	} else {
+	if (block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
 		// in gmmode, browser panned, no re-requesting data
 		// no need to re-group
 		// set x
-
 		tkdata_update_x(tk, block)
-
 		tk.skewer.selection.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
 		settle_glyph(tk, block)
+	} else {
+		if (data && data.skewer) {
+			// register new mlst data
+			// otherwise will not overwrite skewer.mlst
+			tk.skewer.rawmlst = data.skewer
+		}
+		// generate new skewer track data from skewer.mlst
+		tk.skewer.g.selectAll('*').remove()
+		tk.skewer.data = make_skewer_data(tk, block)
+		skewer_make(tk, block)
 	}
 
 	if (!tk.skewer.data || tk.skewer.data.length == 0) {
@@ -165,12 +169,15 @@ export function may_render_skewer(data, tk, block) {
 	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
 }
 
-function make_skewer_data(data, tk, block) {
-	const usemlst = mlst_pretreat(data, tk, block)
+function make_skewer_data(tk, block) {
+	// raw data is at tk.skewer.mlst
+	// XXX sort out logic: no need for mlst_pretreat to return, as skewer making will always use full list from skewer.rawmlst
+	const usemlst = mlst_pretreat(tk, block)
 	// m.__x added
 
 	const x2mlst = new Map()
-	for (const m of usemlst) {
+	for (const m of tk.skewer.rawmlst) {
+		if (m.__x == undefined) continue // dropped
 		if (!x2mlst.has(m.__x)) {
 			x2mlst.set(m.__x, [])
 		}
@@ -1621,14 +1628,14 @@ filter data by a systematic filter
 
 - calculate m.__x by mapping coord to view range
 */
-export function mlst_pretreat(data, tk, block) {
+export function mlst_pretreat(tk, block) {
 	let nogenomicpos = 0,
 		outofcds = 0,
 		nochr = 0
 	const unmapped = []
 	const usemlst = [] // usable after filtering, for updating stats
 
-	for (const m of data.skewer) {
+	for (const m of tk.skewer.rawmlst) {
 		delete m.__x
 
 		if (block.gmmode == common.gmmode.protein && block.usegm.codingstart && block.usegm.codingstop) {

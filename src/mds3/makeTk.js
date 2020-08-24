@@ -17,13 +17,15 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
-	//tk.load = _load(tk, block)
+	tk.load = _load(tk, block) // shorthand
 
 	tk.itemtip = new client.Menu()
 
 	get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
+
+	init_mclass(tk)
 
 	mayaddGetter_variant2samples(tk, block)
 
@@ -49,6 +51,17 @@ export async function makeTk(tk, block) {
 	})
 
 	init_legend(tk, block)
+}
+
+function init_mclass(tk) {
+	// hidden mclass is controled on the client side
+	tk.hiddenmclass = new Set()
+	if (tk.mds.hiddenmclass) {
+		// port over default hidden mclass
+		for (const c of tk.mds.hiddenmclass) tk.hiddenmclass.add(c)
+	}
+	// #variant for mclass returned by server
+	tk.mclass2variantcount = new Map()
 }
 
 function get_ds(tk, block) {
@@ -102,10 +115,8 @@ configurations and their location are not stable
 
 function configPanel(tk, block) {}
 
-/*
 function _load(tk, block) {
-	return () => {
-		return loadTk(tk, block)
+	return async () => {
+		return await loadTk(tk, block)
 	}
 }
-*/

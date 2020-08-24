@@ -15,14 +15,15 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			const ds = await get_ds(req.query, genome)
+			const q = init_q(req.query, genome)
+			const ds = await get_ds(q, genome)
 
-			const result = init_result(req.query, ds)
+			const result = init_result(q, ds)
 
-			await load_driver(req.query, ds, result)
+			await load_driver(q, ds, result)
 			// what other loaders can be if not in ds.queries?
 
-			finalize_result(req.query, ds, result)
+			finalize_result(q, ds, result)
 
 			res.send(result)
 		} catch (e) {
@@ -30,6 +31,13 @@ module.exports = genomes => {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+function init_q(query, genome) {
+	if (query.hiddenmclasslst) {
+		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
+	}
+	return query
 }
 
 /*
@@ -100,6 +108,8 @@ async function load_driver(q, ds, result) {
 					delete i.samples
 				}
 			}
+
+			mclass_count_filter(result, q)
 		}
 		// other types of data e.g. cnvpileup
 		return
@@ -107,6 +117,24 @@ async function load_driver(q, ds, result) {
 	// other query type
 
 	throw 'do not know what client wants'
+}
+
+/*
+quick fix --
+hardcodes to add .mclass2variantcount
+result.skewer[] collects data without mclass filtering
+count variants so that even hidden mclass has a count
+*/
+function mclass_count_filter(result, q) {
+	const mclass2variantcount = new Map()
+	const newlst = []
+	for (const m of result.skewer) {
+		mclass2variantcount.set(m.class, 1 + (mclass2variantcount.get(m.class) || 0))
+		if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
+		newlst.push(m)
+	}
+	result.skewer = newlst
+	result.mclass2variantcount = [...mclass2variantcount].sort((i, j) => j[1] - i[1])
 }
 
 async function query_snvindel(q, ds) {

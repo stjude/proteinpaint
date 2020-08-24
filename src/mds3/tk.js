@@ -114,8 +114,8 @@ export function get_parameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	if (tk.legend.mclass.hiddenvalues.size) {
-		// todo
+	if (tk.hiddenmclass.size) {
+		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
 	return par.join('&')
 }
