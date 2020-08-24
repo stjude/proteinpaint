@@ -3758,6 +3758,12 @@ if fromgenetk is provided, will skip this track
 							client.sayerror(this.holder0, err.message)
 						})
 						.then(() => {
+							const tklst = [] // quick fix based on changes to mds3/maketk
+							for (const t of this.tklst) {
+								if (t.type == client.tkt.usegm) continue
+								if (t.type == client.tkt.mds3) delete t.mds
+								tklst.push(t)
+							}
 							new Block({
 								holder: this.holder0,
 								genome: this.genome,
@@ -3766,12 +3772,8 @@ if fromgenetk is provided, will skip this track
 								gmstackheight: 37,
 								usegm: gm1,
 								allgm: this.allgm,
-
-								// can't believe this is missing for all the time....
-								tklst: this.tklst.filter(i => i.type != client.tkt.usegm),
-
+								tklst,
 								gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
-
 								allowpopup: this.allowpopup,
 								hidedatasetexpression: this.hidedatasetexpression,
 								hidegenecontrol: this.hidegenecontrol,
