@@ -6,6 +6,7 @@ import * as client from '../client'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { may_render_skewer } from './skewer'
+import { make_leftlabels } from './leftlabel'
 
 /*
 ********************** EXPORTED
@@ -46,7 +47,14 @@ export async function loadTk(tk, block) {
 		tk.height_main = tk.toppad + tk.bottompad
 
 		// render each possible track type. if indeed rendered, return sub track height
-		tk.height_main += may_render_skewer(data, tk, block)
+
+		// left labels and skewer at same row, whichever taller
+		{
+			const h2 = may_render_skewer(data, tk, block)
+			// must render skewer first, then left labels
+			const h1 = make_leftlabels(data, tk, block)
+			tk.height_main += Math.max(h1, h2)
+		}
 		// add new subtrack type
 
 		_finish(data)
