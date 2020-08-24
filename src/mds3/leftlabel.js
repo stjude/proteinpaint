@@ -15,6 +15,8 @@ export function make_leftlabels(data, tk, block) {
 	tk.leftlabelg.selectAll('*').remove()
 	let laby = labyspace + block.labelfontsize
 
+	const labels = [] // for max width
+
 	{
 		// variant count may combine genecnv and skewer, and show sublabels under main
 		const lab = makelabel(tk, block, laby)
@@ -36,13 +38,14 @@ export function make_leftlabels(data, tk, block) {
 					tk.tktip.clear().showunder(d3event.target)
 				})
 		}
+		labels.push(lab)
 	}
 
 	laby += labyspace + block.labelfontsize
 	if (data.genecnvNosample) {
 		// quick fix; only for genecnv with no sample level info
 		// should be replaced with just one multi-row label showing #variants, #cnv and click for a menu for collective summary
-		makelabel(tk, block, laby)
+		const lab = makelabel(tk, block, laby)
 			.text(
 				data.genecnvNosample.reduce((i, j) => i + j.loss, 0) +
 					' loss, ' +
@@ -54,17 +57,24 @@ export function make_leftlabels(data, tk, block) {
 				stratifymenu_genecnv(data.genecnvNosample, tk, block)
 			})
 		laby += labyspace + block.labelfontsize
+		labels.push(lab)
 	}
 	if (data.sampleSummaries) {
 		for (const strat of data.sampleSummaries) {
-			makelabel(tk, block, laby)
+			const lab = makelabel(tk, block, laby)
 				.text(strat.items.length + ' ' + strat.label + (strat.items.length > 1 ? 's' : ''))
 				.on('click', () => {
 					tk.tktip.clear().showunder(d3event.target)
 					stratifymenu_samplesummary(strat, tk, block)
 				})
 			laby += labyspace + block.labelfontsize
+			labels.push(lab)
 		}
+	}
+	for (const l of labels) {
+		l.each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+		})
 	}
 	return laby
 }

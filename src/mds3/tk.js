@@ -39,8 +39,6 @@ export async function loadTk(tk, block) {
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error
 		delete tk.uninitialized
-		// quick fix for left labels to access data attributes and display summary
-		tk._data = data
 
 		tk.clear()
 
