@@ -670,29 +670,27 @@ if is pair mode, is the template
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
-	console.log(data.lst)
 
 	for (const r of data.lst) {
-		tk.readpane.body
-			.append('div')
-			.html(r.alignment + '\n' + r.info)
-			// wait for html() to return before detecting the copy button
-			.each(async function() {
-				const result = await navigator.permissions.query({ name: 'clipboard-write' })
-				if (result.state != 'granted' && result.state != 'prompt') return
-				d3select(this)
-					.selectAll('tr')
-					.append('td')
-					// exclude Reference row
-					.filter(function() {
-						return this.parentNode != this.parentNode.parentNode.firstChild
-					})
-					.append('button')
-					.text('Copy read sequence')
-					.on('click', () => {
-						navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
-					})
-			})
+		// {seq, alignment (html), info (html) }
+		const div = tk.readpane.body.append('div').style('margin', '20px')
+
+		div.append('div').html(r.alignment)
+
+		const result = await navigator.permissions.query({ name: 'clipboard-write' })
+		if (result.state != 'granted' && result.state != 'prompt') {
+			// no copy button
+		} else {
+			div
+				.append('button')
+				.style('margin-top', '10px')
+				.text('Copy read sequence')
+				.on('click', () => {
+					navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
+				})
+		}
+
+		div.append('div').html(r.info)
 	}
 }
 
