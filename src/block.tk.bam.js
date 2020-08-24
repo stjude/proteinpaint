@@ -670,24 +670,29 @@ if is pair mode, is the template
 		return
 	}
 
-	tk.readpane.body.append('div').html(data.html)
+	tk.readpane.body
+		.append('div')
+		.html(data.html)
+		// wait for html() to return before detecting the copy button
+		.each(async function() {
+			const btn = d3select(this)
+				.selectAll('button')
+				.filter(function() {
+					return this.innerHTML.startsWith('Copy') // use hardcoded row label from the server
+				})
 
-	navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
-		const btn = tk.readpane.body.selectAll('button').filter(function() {
-			return this.innerHTML.startsWith('Copy') // use hardcoded row label from the server
+			const result = await navigator.permissions.query({ name: 'clipboard-write' })
+			if (result.state != 'granted' && result.state != 'prompt') {
+				btn.remove()
+			} else {
+				btn.on('click', function() {
+					const tr = this.parentNode.parentNode
+					const i = [...tr.parentNode.childNodes].filter(elem => elem.tagName === 'TR').indexOf(tr)
+					const dataStr = data.seqlst[i - 1] // subtract the first reference row
+					navigator.clipboard.writeText(dataStr).then(() => {}, console.warn)
+				})
+			}
 		})
-
-		if (result.state != 'granted' && result.state != 'prompt') {
-			btn.remove()
-		} else {
-			btn.on('click', function() {
-				const tr = this.parentNode.parentNode
-				const i = [...tr.parentNode.childNodes].filter(elem => elem.tagName === 'TR').indexOf(tr)
-				const dataStr = data.seqlst[i - 1] // subtract the first reference row
-				navigator.clipboard.writeText(dataStr).then(() => {}, console.warn)
-			})
-		}
-	})
 }
 
 async function enter_partstack(group, tk, block, y) {
