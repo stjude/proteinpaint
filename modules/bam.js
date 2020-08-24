@@ -1547,8 +1547,6 @@ async function convertread(seg, genome, query) {
 			continue
 		}
 	}
-	reflst.push('<td>&nbsp;</td>')
-	querylst.push('<td><button>Copy read sequence</button></td>')
 
 	const lst = []
 	if (seg.rnext)
