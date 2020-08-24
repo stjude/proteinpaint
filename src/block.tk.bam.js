@@ -677,18 +677,26 @@ if is pair mode, is the template
 
 		div.append('div').html(r.alignment)
 
-		const result = await navigator.permissions.query({ name: 'clipboard-write' })
-		if (result.state != 'granted' && result.state != 'prompt') {
+		/*** 
+			Firefox does not seem to support the permision query name == 'clipboard-write'. 
+			Tested that removing this permission check works in Chrome, Safari, FF.
+			May need to reactivate the permission check if users report issues. 
+		***/
+		/*const result = await navigator.permissions.query({ name: 'clipboard-write' })
+		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
 			// no copy button
-		} else {
-			div
-				.append('button')
-				.style('margin-top', '10px')
-				.text('Copy read sequence')
-				.on('click', () => {
-					navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
-				})
-		}
+		} else {*/
+		div
+			.append('button')
+			.style('margin-top', '10px')
+			.text('Copy read sequence')
+			.on('click', function() {
+				navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
+				d3select(this)
+					.append('span')
+					.html('&nbsp;&check;')
+			})
+		//}
 
 		div.append('div').html(r.info)
 	}
