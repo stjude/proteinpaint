@@ -44,6 +44,7 @@ group {}
 .height
 
 enter_partstack()
+getReadInfo
 */
 
 const labyspace = 5
@@ -669,6 +670,7 @@ if is pair mode, is the template
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
+	console.log(data.lst)
 
 	tk.readpane.body
 		.append('div')
