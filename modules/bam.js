@@ -1420,7 +1420,7 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
-	return { html: lst.join('') }
+	return { lst }
 }
 
 async function query_oneread(req, r) {
@@ -1547,6 +1547,7 @@ async function convertread(seg, genome, query) {
 			continue
 		}
 	}
+
 	const lst = []
 	if (seg.rnext)
 		lst.push(
@@ -1571,20 +1572,20 @@ async function convertread(seg, genome, query) {
 	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
 	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
 	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
-	return `
-<div style='margin:20px'>
-	<table style="border-spacing:0px;border-collapse:separate;text-align:center">
-	  <tr style="opacity:.6">${reflst.join('')}</tr>
-	  <tr style="color:white">${querylst.join('')}</tr>
-	</table>
-  <div style='margin-top:10px'>
-    <span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
-    <span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
-    <span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
-    <span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
-    <span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
-    <span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
-  </div>
-  <ul style='padding-left:15px'>${lst.join('')}</ul>
-</div>`
+	return {
+		seq: seg.seq,
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+			  <tr style="opacity:.6">${reflst.join('')}</tr>
+			  <tr style="color:white">${querylst.join('')}</tr>
+			</table>`,
+		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
+			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
+			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
+			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
+		  </div>
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+	}
 }

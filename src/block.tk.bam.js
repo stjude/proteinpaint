@@ -44,6 +44,7 @@ group {}
 .height
 
 enter_partstack()
+getReadInfo
 */
 
 const labyspace = 5
@@ -670,7 +671,27 @@ if is pair mode, is the template
 		return
 	}
 
-	tk.readpane.body.append('div').html(data.html)
+	for (const r of data.lst) {
+		// {seq, alignment (html), info (html) }
+		const div = tk.readpane.body.append('div').style('margin', '20px')
+
+		div.append('div').html(r.alignment)
+
+		const result = await navigator.permissions.query({ name: 'clipboard-write' })
+		if (result.state != 'granted' && result.state != 'prompt') {
+			// no copy button
+		} else {
+			div
+				.append('button')
+				.style('margin-top', '10px')
+				.text('Copy read sequence')
+				.on('click', () => {
+					navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
+				})
+		}
+
+		div.append('div').html(r.info)
+	}
 }
 
 async function enter_partstack(group, tk, block, y) {
