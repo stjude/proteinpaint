@@ -16,8 +16,6 @@ tk.skewer{}
 stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
-const labyspace = 5
-
 export async function makeTk(tk, block) {
 	//tk.load = _load(tk, block)
 
@@ -37,7 +35,7 @@ export async function makeTk(tk, block) {
 
 	tk.tklabel.text(tk.mds.label)
 
-	make_leftlabels(tk, block)
+	tk.leftlabelg = tk.gleft.append('g')
 
 	tk.clear = () => {
 		// called in loadTk
@@ -96,33 +94,6 @@ function mayaddGetter_variant2samples(tk, block) {
 	}
 }
 
-function make_leftlabels(tk, block) {
-	let laby = labyspace + block.labelfontsize
-	tk.label_mcount = block.maketklefthandle(tk, laby)
-	tk.label_mcount.text('Loading...').on('click', () => {})
-	laby += labyspace + block.labelfontsize
-	if (tk.mds.has_genecnv_quickfix) {
-		// only for genecnv with no sample level info
-		// should be replaced with just one multi-row label showing #variants, #cnv and click for a menu for collective summary
-		tk.label_genecnv = block.maketklefthandle(tk, laby)
-		laby += labyspace + block.labelfontsize
-		tk.label_genecnv.text('Loading...').on('click', () => {
-			stratifymenu_genecnv(tk, block)
-		})
-	}
-	if (tk.mds.sampleSummaries) {
-		tk.label_sampleSummaries = {}
-		for (const strat of tk.mds.sampleSummaries) {
-			const lab = block.maketklefthandle(tk, laby)
-			tk.label_sampleSummaries[strat.label1] = lab
-			laby += labyspace + block.labelfontsize
-			lab.on('click', () => {
-				stratifymenu_samplesummary(strat, tk, block)
-			})
-		}
-	}
-}
-
 function parse_client_config(tk) {
 	/* for both official and custom
 configurations and their location are not stable
@@ -130,160 +101,6 @@ configurations and their location are not stable
 }
 
 function configPanel(tk, block) {}
-
-function stratifymenu_samplesummary(strat, tk, block) {
-	// strat is one of tk.mds.sampleSummaries[]
-	if (!tk._data || !tk._data.sampleSummaries) return
-	const result = tk._data.sampleSummaries.find(i => i.label == strat.label1)
-	if (!result) return
-	tk.tktip.showunder(tk.label_sampleSummaries[strat.label1].node()).clear()
-	// scrollable table with fixed header
-	const staydiv = tk.tktip.d
-		.append('div')
-		.style('position', 'relative')
-		.style('padding-top', '20px')
-	const scrolldiv = staydiv.append('div').style('overflow-y', 'scroll')
-	if (result.items.reduce((i, j) => i + 1 + (j.label2 ? j.label2.length : 0), 0) > 20) {
-		scrolldiv.style('height', '400px').style('resize', 'vertical')
-	}
-	const table = scrolldiv.append('table')
-	// 4 columns
-	const tr = table
-		.append('tr')
-		.style('font-size', '.9em')
-		.style('color', '#858585')
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text(strat.label1.toUpperCase())
-	const hascohortsize = result.items[0].cohortsize != undefined
-	if (hascohortsize) {
-		tr.append('td')
-			.append('div')
-			.style('position', 'absolute')
-			.style('top', '0px')
-			.text('%')
-	}
-	tr.append('td')
-	/*
-		.append('div')
-		.style('position','absolute')
-		.style('top','0px')
-		.text('SAMPLES')
-		*/
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('MUTATIONS')
-	for (const item of result.items) {
-		fillrow(item)
-		if (item.label2) {
-			for (const i of item.label2) {
-				fillrow(i, true)
-			}
-		}
-	}
-	function fillrow(item, issub) {
-		const tr = table.append('tr').attr('class', 'sja_clb')
-		tr.append('td')
-			.text(item.label)
-			.style('padding-left', issub ? '10px' : '0px')
-			.style('font-size', issub ? '.8em' : '1em')
-		if (hascohortsize) {
-			const td = tr.append('td')
-			if (item.cohortsize != undefined) {
-				client.fillbar(
-					td,
-					{ f: item.samplecount / item.cohortsize, v1: item.samplecount, v2: item.cohortsize },
-					{ fillbg: '#ECE5FF', fill: '#9F80FF' }
-				)
-			}
-		}
-		tr.append('td')
-			.text(item.samplecount + (item.cohortsize ? ' / ' + item.cohortsize : ''))
-			.style('font-size', '.7em')
-		const td = tr.append('td')
-		for (const [mclass, count] of item.mclasses) {
-			td.append('span')
-				.html(count == 1 ? '&nbsp;' : count)
-				.style('background-color', common.mclass[mclass].color)
-				.attr('class', 'sja_mcdot')
-		}
-	}
-}
-function stratifymenu_genecnv(tk, block) {
-	// quick fix, will abandon when getting sample-level cnv data
-	if (!tk._data || !tk._data.genecnvNosample) return
-	tk.tktip.showunder(tk.label_genecnv.node()).clear()
-	const m = tk._data.genecnvNosample[0]
-	const maxf = (m.gain + m.loss) / m.total
-	const frac2width = f => (100 * f) / maxf
-	// scrollable table with fixed header
-	const staydiv = tk.tktip.d
-		.append('div')
-		.style('position', 'relative')
-		.style('padding-top', '20px')
-	const scrolldiv = staydiv.append('div').style('overflow-y', 'scroll')
-	if (tk._data.genecnvNosample.length > 20) {
-		scrolldiv.style('height', '400px').style('resize', 'vertical')
-	}
-	const table = scrolldiv.append('table')
-	const tr = table
-		.append('tr')
-		.style('font-size', '.9em')
-		.style('color', '#858585')
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Project') // XXX hardcoded!
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Max: ' + Math.ceil(100 * maxf) + '%')
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Loss/Gain/Total')
-	for (const item of tk._data.genecnvNosample) {
-		const tr = table.append('tr').attr('class', 'sja_clb')
-		tr.append('td').text(item.label)
-		const td = tr.append('td')
-		if (item.loss) {
-			td.append('div')
-				.style('background', tk.mds.queries.genecnv.losscolor)
-				.style('display', 'inline-block')
-				.style('width', frac2width(item.loss / item.total) + 'px')
-				.style('height', '15px')
-		}
-		if (item.gain) {
-			td.append('div')
-				.style('background', tk.mds.queries.genecnv.gaincolor)
-				.style('display', 'inline-block')
-				.style('width', frac2width(item.gain / item.total) + 'px')
-				.style('height', '15px')
-		}
-		tr.append('td').html(
-			'<span style="color:' +
-				tk.mds.queries.genecnv.losscolor +
-				'">' +
-				item.loss +
-				'</span>\t\t' +
-				'<span style="color:' +
-				tk.mds.queries.genecnv.gaincolor +
-				'">' +
-				item.gain +
-				'</span>\t\t' +
-				'<span style="opacity:.5;font-size:.8em">' +
-				item.total +
-				'</span>'
-		)
-	}
-}
 
 /*
 function _load(tk, block) {
