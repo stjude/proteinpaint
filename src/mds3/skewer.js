@@ -1740,6 +1740,7 @@ export function done_tknodata(tk, block) {
 	if (block.usegm && block.gmmode != client.gmmode.genomic) {
 		context = block.usegm.name || block.usegm.isoform
 	}
+	console.log(context)
 	tk.skewer.g
 		.append('text')
 		.text(tk.mds.label + ': no mutation in ' + context)

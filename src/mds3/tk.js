@@ -26,9 +26,8 @@ export async function loadTk(tk, block) {
 	const _finish = loadTk_finish_closure(tk, block) // function used at multiple places
 
 	try {
-		if (tk.uninitialized) {
+		if (!tk.mds) {
 			await makeTk(tk, block)
-			// uninitialized flag will only be deleted after data loading as it needs to be accessed in get_parameter
 		}
 
 		tk.tklabel.each(function() {
@@ -38,15 +37,18 @@ export async function loadTk(tk, block) {
 		const par = get_parameter(tk, block)
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error
-		delete tk.uninitialized
 
-		tk.clear()
+		if (tk.uninitialized) {
+			tk.clear()
+			delete tk.uninitialized
+		}
 
 		tk.height_main = tk.toppad + tk.bottompad
 
 		// render each possible track type. if indeed rendered, return sub track height
 
 		// left labels and skewer at same row, whichever taller
+		console.log(data)
 		{
 			const h2 = may_render_skewer(data, tk, block)
 			// must render skewer first, then left labels

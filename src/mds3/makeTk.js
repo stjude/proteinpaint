@@ -40,7 +40,8 @@ export async function makeTk(tk, block) {
 	tk.leftlabelg = tk.gleft.append('g')
 
 	tk.clear = () => {
-		// called in loadTk
+		// called in loadTk, when uninitialized is true
+		if (tk.skewer) tk.skewer.g.selectAll('*').remove()
 	}
 
 	// TODO <g> for other file types

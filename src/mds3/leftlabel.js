@@ -121,7 +121,7 @@ function menu_mclass(data, tk, block) {
 			if (unchecked.length == lst.length) return window.alert('Please check at least one option.')
 			tk.hiddenmclass = new Set(unchecked)
 			tk.tktip.hide()
-			tk.unitiated = true
+			tk.uninitialized = true
 			tk.load()
 		})
 	row
