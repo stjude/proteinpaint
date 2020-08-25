@@ -70,7 +70,8 @@ export function may_render_skewer(data, tk, block) {
 	}
 	tk.aboveprotein = true
 
-	if (block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
+	if (data && !data.skewer && block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
+		// when data.skewer is not given
 		// in gmmode, browser panned, no re-requesting data
 		// no need to re-group
 		// set x
@@ -83,6 +84,7 @@ export function may_render_skewer(data, tk, block) {
 			// otherwise will not overwrite skewer.mlst
 			tk.skewer.rawmlst = data.skewer
 		}
+		// when zooming protein mode, data.skewer is not given but still need to remake skewers
 		// generate new skewer track data from skewer.mlst
 		tk.skewer.g.selectAll('*').remove()
 		tk.skewer.data = make_skewer_data(tk, block)
