@@ -167,6 +167,7 @@ function validate_sampleSummaries(ds) {
 		}
 	}
 	ss.finalize = (labels, opts) => {
+		// convert one "labels" map to list, not in use
 		const out = []
 		for (const [label1, L1] of labels) {
 			const strat = {
@@ -203,6 +204,91 @@ function validate_sampleSummaries(ds) {
 			}
 			strat.items.sort((i, j) => j.samplecount - i.samplecount)
 			out.push(strat)
+		}
+		return out
+	}
+	ss.mergeShowTotal = (totalcount, showcount, q) => {
+		const out = []
+		for (const [label1, L1] of showcount) {
+			const strat = {
+				label: label1,
+				items: []
+			}
+			for (const [v1, o] of L1) {
+				const L1o = {
+					label: v1,
+					samplecount: o.sampleset.size,
+					mclasses: sort_mclass(o.mclasses)
+				}
+				// add cohort size, fix it so it can be applied to sub levels
+				if (
+					ds.onetimequery_projectsize &&
+					ds.onetimequery_projectsize.results &&
+					ds.onetimequery_projectsize.results.has(v1)
+				) {
+					L1o.cohortsize = ds.onetimequery_projectsize.results.get(v1)
+				}
+
+				const totalL1o = totalcount.get(label1).get(v1)
+				const hiddenmclasses = []
+				for (const [mclass, totalsize] of sort_mclass(totalL1o.mclasses)) {
+					const show = L1o.mclasses.find(i => i[0] == mclass)
+					if (!show) {
+						hiddenmclasses.push([mclass, totalsize])
+					} else if (totalsize > show[1]) {
+						hiddenmclasses.push([mclass, totalsize - show[1]])
+					}
+				}
+				if (hiddenmclasses.length) L1o.hiddenmclasses = hiddenmclasses
+
+				strat.items.push(L1o)
+
+				if (o.label2) {
+					L1o.label2 = []
+					for (const [v2, oo] of o.label2) {
+						const L2o = {
+							label: v2,
+							samplecount: oo.sampleset.size,
+							mclasses: sort_mclass(oo.mclasses)
+						}
+						const totalL2o = totalcount
+							.get(label1)
+							.get(v1)
+							.label2.get(v2)
+						const hiddenmclasses = []
+						for (const [mclass, totalsize] of sort_mclass(totalL2o.mclasses)) {
+							const show = L2o.mclasses.find(i => i[0] == mclass)
+							if (!show) {
+								hiddenmclasses.push([mclass, totalsize])
+							} else if (totalsize > show[1]) {
+								hiddenmclasses.push([mclass, totalsize - show[1]])
+							}
+						}
+						if (hiddenmclasses.length) L2o.hiddenmclasses = hiddenmclasses
+						L1o.label2.push(L2o)
+					}
+					L1o.label2.sort((i, j) => j.samplecount - i.samplecount)
+				}
+			}
+			strat.items.sort((i, j) => j.samplecount - i.samplecount)
+
+			// finished all show items in L1
+			// for every total item in L1, see if it's missing from show L1
+			for (const [v1, o] of totalcount.get(label1)) {
+				if (!L1.has(v1)) {
+					// v1 missing in showcount L1
+					const L1o = {
+						label: v1,
+						samplecount: o.sampleset.size,
+						hiddenmclasses: sort_mclass(o.mclasses)
+					}
+					strat.items.push(L1o)
+				}
+			}
+
+			out.push(strat)
+		}
+		for (const [label1, L1] of totalcount) {
 		}
 		return out
 	}

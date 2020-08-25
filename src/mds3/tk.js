@@ -119,6 +119,7 @@ export function get_parameter(tk, block) {
 	if (tk.hiddenmclass.size) {
 		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
+	par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return par.join('&')
 }
 

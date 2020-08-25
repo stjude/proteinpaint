@@ -65,8 +65,9 @@ export function make_leftlabels(data, tk, block) {
 	}
 	if (data.sampleSummaries) {
 		for (const strat of data.sampleSummaries) {
+			const showcount = strat.items.reduce((i, j) => i + (j.mclasses ? 1 : 0), 0)
 			const lab = makelabel(tk, block, laby)
-				.text(strat.items.length + ' ' + strat.label + (strat.items.length > 1 ? 's' : ''))
+				.text(showcount + ' ' + strat.label + (showcount > 1 ? 's' : ''))
 				.on('click', () => {
 					tk.tktip.clear().showunder(d3event.target)
 					stratifymenu_samplesummary(strat, tk, block)
@@ -98,13 +99,13 @@ function makelabel(tk, block, y) {
 
 function menu_mclass(data, tk, block) {
 	const checkboxdiv = tk.tktip.d.append('div').style('margin-bottom', '10px')
-	for (const [mclass, count] of data.mclass2variantcount) {
-		addrow(mclass, count)
+	for (const o of data.mclass2variantcount) {
+		addrow(o)
 	}
 	// show hidden mclass without a server-returned count
 	for (const s of tk.hiddenmclass) {
-		if (data.mclass2variantcount.find(i => i[0] == s)) continue
-		addrow(s, 0)
+		if (data.mclass2variantcount.find(i => i.class == s)) continue
+		addrow({ class: s })
 	}
 
 	const row = tk.tktip.d.append('div')
@@ -129,36 +130,55 @@ function menu_mclass(data, tk, block) {
 		.text('Check_all')
 		.attr('class', 'sja_clbtext2')
 		.style('margin-right', '10px')
-		.on('click', () => {})
+		.on('click', () => {
+			for (const i of checkboxdiv.node().getElementsByTagName('input')) {
+				i.checked = true
+			}
+		})
 	row
 		.append('span')
 		.text('Clear')
 		.attr('class', 'sja_clbtext2')
 		.style('margin-right', '5px')
-		.on('click', () => {})
+		.on('click', () => {
+			for (const i of checkboxdiv.node().getElementsByTagName('input')) {
+				i.checked = false
+			}
+		})
 
-	function addrow(mclass, count) {
+	function addrow(obj) {
+		// {class, showcount, hiddencount}
 		const row = checkboxdiv.append('div')
 		const label = row.append('label')
 		label
 			.append('input')
 			.attr('type', 'checkbox')
-			.property('checked', !tk.hiddenmclass.has(mclass))
-			.attr('mclass', mclass)
+			.property('checked', !tk.hiddenmclass.has(obj.class))
+			.attr('mclass', obj.class)
+		if (obj.showcount > 0) {
+			label
+				.append('span')
+				.style('margin-left', '8px')
+				.style('padding', '0px 6px')
+				.style('border-radius', '6px')
+				.style('background', common.mclass[obj.class].color)
+				.style('color', 'white')
+				.style('font-size', '.8em')
+				.text(obj.showcount)
+		}
+		if (obj.hiddencount) {
+			label
+				.append('span')
+				.style('margin-left', '8px')
+				.style('font-size', '.8em')
+				.style('opacity', 0.5)
+				.text(obj.hiddencount + ' HIDDEN')
+		}
 		label
 			.append('span')
 			.style('margin-left', '8px')
-			.style('padding', '0px 6px')
-			.style('border-radius', '6px')
-			.style('background', common.mclass[mclass].color)
-			.style('color', 'white')
-			.style('font-size', '.8em')
-			.text(count)
-		label
-			.append('span')
-			.style('margin-left', '8px')
-			.text(common.mclass[mclass].label)
-			.style('color', common.mclass[mclass].color)
+			.text(common.mclass[obj.class].label)
+			.style('color', common.mclass[obj.class].color)
 	}
 }
 
@@ -169,16 +189,21 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		.append('div')
 		.style('position', 'relative')
 		.style('padding-top', '20px')
-	const scrolldiv = staydiv.append('div').style('overflow-y', 'scroll')
+	const scrolldiv = staydiv.append('div')
 	if (strat.items.reduce((i, j) => i + 1 + (j.label2 ? j.label2.length : 0), 0) > 20) {
-		scrolldiv.style('height', '400px').style('resize', 'vertical')
+		scrolldiv
+			.style('overflow-y', 'scroll')
+			.style('height', '400px')
+			.style('resize', 'vertical')
 	}
 	const table = scrolldiv.append('table')
-	// 4 columns
 	const tr = table
 		.append('tr')
 		.style('font-size', '.9em')
 		.style('color', '#858585')
+	// 1 - checkbox
+	tr.append('td')
+	// 2 - category label
 	tr.append('td')
 		.append('div')
 		.style('position', 'absolute')
@@ -186,24 +211,54 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		.text(strat.label.toUpperCase())
 	const hascohortsize = strat.items[0].cohortsize != undefined
 	if (hascohortsize) {
+		// 3 - percent bar, for those variants shown
 		tr.append('td')
 			.append('div')
 			.style('position', 'absolute')
 			.style('top', '0px')
-			.text('%')
+			.text('%SHOWN')
 	}
+	{
+		// 4 - samples, for those variants shown
+		const td = tr.append('td')
+		if (!hascohortsize) {
+			// no percent column, print label for this column
+			td.append('div')
+				.style('position', 'absolute')
+				.style('top', '0px')
+				.text('SHOWN')
+		}
+	}
+	// 5 - shown mclass
 	tr.append('td')
 	/*
-		.append('div')
-		.style('position','absolute')
-		.style('top','0px')
-		.text('SAMPLES')
-		*/
-	tr.append('td')
 		.append('div')
 		.style('position', 'absolute')
 		.style('top', '0px')
 		.text('MUTATIONS')
+		*/
+	let hashidden = false
+	for (const i of strat.items) {
+		if (i.hiddenmclasses) {
+			hashidden = true
+		}
+		if (i.label2) {
+			for (const j of i.label2) {
+				if (j.hiddenmclasses) {
+					hashidden = true
+				}
+			}
+		}
+	}
+	if (hashidden) {
+		// 6 - hidden samples
+		// 7 - hidden mclass
+		tr.append('td')
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', '0px')
+			.text('HIDDEN')
+	}
 	for (const item of strat.items) {
 		fillrow(item)
 		if (item.label2) {
@@ -212,10 +267,69 @@ function stratifymenu_samplesummary(strat, tk, block) {
 			}
 		}
 	}
+
+	const row = tk.tktip.d.append('div').style('margin-top', '5px')
+	row
+		.append('button')
+		.text('Submit')
+		.style('margin-right', '5px')
+		.on('click', () => {
+			const lst = table.node().getElementsByTagName('input')
+			const unchecked = []
+			for (const i of lst) {
+				if (!i.checked) unchecked.push(i.getAttribute('category'))
+			}
+			if (unchecked.length == lst.length) return window.alert('Please check at least one option.')
+			tk.samplefiltertemp[strat.label] = unchecked.length ? unchecked : undefined
+			tk.tktip.hide()
+			tk.uninitialized = true
+			tk.load()
+		})
+	row
+		.append('span')
+		.text('Check_all')
+		.attr('class', 'sja_clbtext2')
+		.style('margin-right', '10px')
+		.on('click', () => {
+			for (const i of table.node().getElementsByTagName('input')) {
+				i.checked = true
+			}
+		})
+	row
+		.append('span')
+		.text('Clear')
+		.attr('class', 'sja_clbtext2')
+		.style('margin-right', '5px')
+		.on('click', () => {
+			for (const i of table.node().getElementsByTagName('input')) {
+				i.checked = false
+			}
+		})
+
 	function fillrow(item, issub) {
 		const tr = table.append('tr').attr('class', 'sja_clb')
+
+		let cbid
+		{
+			const td = tr.append('td')
+			if (!issub) {
+				// only make checkbox for first level, not sub level
+				cbid = Math.random().toString()
+				// checkbox
+				td.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', cbid)
+					.property(
+						'checked',
+						!tk.samplefiltertemp[strat.label] || !tk.samplefiltertemp[strat.label].includes(item.label)
+					)
+					.attr('category', item.label)
+			}
+		}
 		tr.append('td')
+			.append('label')
 			.text(item.label)
+			.attr('for', cbid)
 			.style('padding-left', issub ? '10px' : '0px')
 			.style('font-size', issub ? '.8em' : '1em')
 		if (hascohortsize) {
@@ -232,14 +346,28 @@ function stratifymenu_samplesummary(strat, tk, block) {
 			.text(item.samplecount + (item.cohortsize ? ' / ' + item.cohortsize : ''))
 			.style('font-size', '.7em')
 		const td = tr.append('td')
-		for (const [mclass, count] of item.mclasses) {
-			td.append('span')
-				.html(count == 1 ? '&nbsp;' : count)
-				.style('background-color', common.mclass[mclass].color)
-				.attr('class', 'sja_mcdot')
+		if (item.mclasses) {
+			for (const [mclass, count] of item.mclasses) {
+				td.append('span')
+					.html(count == 1 ? '&nbsp;' : count)
+					.style('background-color', common.mclass[mclass].color)
+					.attr('class', 'sja_mcdot')
+			}
+		}
+		if (hashidden) {
+			const td = tr.append('td')
+			if (item.hiddenmclasses) {
+				for (const [mclass, count] of item.hiddenmclasses) {
+					td.append('span')
+						.html(count == 1 ? '&nbsp;' : count)
+						.style('background-color', common.mclass[mclass].color)
+						.attr('class', 'sja_mcdot')
+				}
+			}
 		}
 	}
 }
+
 function stratifymenu_genecnv(dat, tk, block) {
 	// quick fix, will abandon when getting sample-level cnv data
 	// dat[] is .genecnvNosample from server

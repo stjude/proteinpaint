@@ -37,6 +37,7 @@ export function validate_query_snvindel_byisoform(api, ds) {
 				ref: hit._source.reference_allele,
 				alt: hit._source.tumor_allele,
 				isoform: opts.isoform,
+				// occurrence count will be overwritten after sample filtering
 				occurrence: hit._score
 			}
 			snvindel_addclass(m, hit._source.consequence)

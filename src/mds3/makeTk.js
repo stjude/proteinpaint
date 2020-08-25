@@ -21,6 +21,9 @@ export async function makeTk(tk, block) {
 
 	tk.itemtip = new client.Menu()
 
+	tk.samplefiltertemp = {}
+	// switch to .samplefilter with a filter.js object
+
 	get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds

@@ -4,6 +4,28 @@ const utils = require('./utils')
 const variant2samples_getresult = require('./mds3.variant2samples')
 
 /*
+method good for somatic variants, in skewer and gp queries:
+1) query all data without filtering
+2) generate totalcount for variant attr (mclass)
+   and class breakdown for sampleSummaries
+3) filter by variant/sample attr
+4) generate post-filter showcount and hiddencount for variant attr
+   and show/hidden class breakdown for sampleSummaries
+
+
+************************* q{}
+.hiddenmclass Set
+
+************************* returned data {}
+## if no data, return empty arrays, so that the presence of data.skewer indicate data has been queried
+
+.skewer[]
+	ssm, sv, fusion
+	has following hardcoded attributes
+	.occurrence INT
+	.samples [{}]
+		.sample_id
+.genecnvNosample[]
  */
 
 //const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -20,8 +42,15 @@ module.exports = genomes => {
 
 			const result = init_result(q, ds)
 
+			// 1)
 			await load_driver(q, ds, result)
-			// what other loaders can be if not in ds.queries?
+			// data loaded into result{}
+			// 2)
+			make_totalcount(q, ds, result)
+			// 3)
+			filter_data(q, result)
+			// 4)
+			make_showcount(q, ds, result)
 
 			finalize_result(q, ds, result)
 
@@ -33,9 +62,107 @@ module.exports = genomes => {
 	}
 }
 
+function make_totalcount(q, ds, result) {
+	// total count for variant/sample prior to filtering
+
+	if (result.skewer) {
+		const cc = new Map() // k: mclass, v: {}
+		for (const m of result.skewer) {
+			if (!cc.has(m.class)) {
+				cc.set(m.class, { totalcount: 0, showcount: 0 })
+			}
+			cc.get(m.class).totalcount++
+		}
+		result.mclass2countmap = cc
+		// should include cnv segment data here
+		// ??? if to include genecnv data here?
+	}
+
+	if (q.samplesummary && ds.sampleSummaries) {
+		const labels = ds.sampleSummaries.makeholder(q)
+		const datalst = [result.skewer]
+		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
+		ds.sampleSummaries.summarize(labels, q, datalst)
+		result.samplesummary_totalcount = labels
+	}
+}
+
+function filter_data(q, result) {
+	if (result.skewer) {
+		const newskewer = []
+		for (const m of result.skewer) {
+			if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
+
+			// filter by other variant attributes
+
+			// filter by sample attributes
+			if (q.samplefiltertemp) {
+				if (!m.samples) continue
+				const samples = filter_samples(m.samples, q.samplefiltertemp)
+				if (samples.length == 0) continue
+				m.samples = samples
+			}
+			newskewer.push(m)
+		}
+		result.skewer = newskewer
+	}
+
+	if (result.genecnvAtsample) {
+	}
+	// other sample-level data types that need filtering
+}
+
+function filter_samples(samples, filter) {
+	const keep = []
+	for (const sample of samples) {
+		let hidden
+		for (const [key, hiddencategories] of filter) {
+			const value = sample[key]
+			if (value != undefined && hiddencategories.has(value)) {
+				hidden = true
+				break
+			}
+		}
+		if (!hidden) keep.push(sample)
+	}
+	return keep
+}
+
+function make_showcount(q, ds, result) {
+	// total count for variant/sample post filtering
+	if (result.skewer) {
+		for (const m of result.skewer) {
+			result.mclass2countmap.get(m.class).showcount++
+		}
+	}
+	if (q.samplesummary && ds.sampleSummaries) {
+		const labels = ds.sampleSummaries.makeholder(q)
+		const datalst = [result.skewer]
+		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
+		ds.sampleSummaries.summarize(labels, q, datalst)
+		result.samplesummary_showcount = labels
+	}
+}
+
 function init_q(query, genome) {
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
+		delete query.hiddenmclasslst
+	}
+	if (query.samplefiltertemp) {
+		const j = JSON.parse(query.samplefiltertemp)
+		const key2values = new Map()
+		for (const k in j) {
+			const lst = j[k]
+			if (lst.length) {
+				key2values.set(k, new Set(lst))
+			}
+		}
+		if (key2values.size) {
+			query.samplefiltertemp = key2values
+		} else {
+			delete query.samplefiltertemp
+		}
 	}
 	return query
 }
@@ -48,15 +175,34 @@ last, finalize results by converting Set of sample id to sample count
 */
 function init_result(q, ds) {
 	const result = {}
-	if (q.samplesummary && ds.sampleSummaries) {
-		result.temp_ss_labels = ds.sampleSummaries.makeholder(q)
-	}
 	return result
 }
 function finalize_result(q, ds, result) {
-	if (result.temp_ss_labels) {
-		result.sampleSummaries = ds.sampleSummaries.finalize(result.temp_ss_labels, q)
-		delete result.temp_ss_labels
+	if (result.skewer) {
+		for (const m of result.skewer) {
+			m.occurrence = m.samples.length
+			delete m.samples
+		}
+	}
+	if (result.samplesummary_showcount && result.samplesummary_totalcount) {
+		result.sampleSummaries = ds.sampleSummaries.mergeShowTotal(
+			result.samplesummary_totalcount,
+			result.samplesummary_showcount,
+			q
+		)
+		delete result.samplesummary_showcount
+		delete result.samplesummary_totalcount
+	}
+	if (result.mclass2countmap) {
+		result.mclass2variantcount = []
+		for (const [mclass, c] of result.mclass2countmap) {
+			c.class = mclass
+			c.hiddencount = c.totalcount - c.showcount
+			delete c.totalcount
+			result.mclass2variantcount.push(c)
+		}
+		delete result.mclass2countmap
+		result.mclass2variantcount.sort((i, j) => j.showcount - i.showcount)
 	}
 }
 
@@ -75,6 +221,7 @@ async function get_ds(q, genome) {
 
 async function load_driver(q, ds, result) {
 	// various bits of data to be appended as keys to result{}
+	// what other loaders can be if not in ds.queries?
 
 	if (q.variant2samples) {
 		result.data = await variant2samples_getresult(q, ds)
@@ -87,8 +234,6 @@ async function load_driver(q, ds, result) {
 		if (q.skewer) {
 			// get skewer data
 			result.skewer = [] // for skewer track
-			// gene-level cnv data will not be directly returned to client, only summaries
-			let genecnvAtsample // sample level data, to find out how to query this data
 			if (ds.queries.snvindel) {
 				result.skewer.push(...(await query_snvindel(q, ds)))
 			}
@@ -96,20 +241,12 @@ async function load_driver(q, ds, result) {
 				result.skewer.push(...(await query_svfusion(q, ds))) // TODO
 			}
 			if (ds.queries.genecnv) {
+				// gene-level cnv data will not be directly returned to client, only summaries
 				result.genecnvNosample = await query_genecnv(q, ds)
-				// should return genecnvAtsample, then will be combined with snvindel for summary
+				// TODO need api details
+				//result.genecnvAtsample = ....
+				// should return genecnv at sample-level, then will be combined with snvindel for summary
 			}
-			if (result.temp_ss_labels) {
-				const datalst = [result.skewer]
-				if (genecnvAtsample) datalst.push(genecnvAtsample)
-				ds.sampleSummaries.summarize(result.temp_ss_labels, q, datalst)
-				// for skewer data, will not return sample list for each variant
-				for (const i of result.skewer) {
-					delete i.samples
-				}
-			}
-
-			mclass_count_filter(result, q)
 		}
 		// other types of data e.g. cnvpileup
 		return
@@ -117,24 +254,6 @@ async function load_driver(q, ds, result) {
 	// other query type
 
 	throw 'do not know what client wants'
-}
-
-/*
-quick fix --
-hardcodes to add .mclass2variantcount
-result.skewer[] collects data without mclass filtering
-count variants so that even hidden mclass has a count
-*/
-function mclass_count_filter(result, q) {
-	const mclass2variantcount = new Map()
-	const newlst = []
-	for (const m of result.skewer) {
-		mclass2variantcount.set(m.class, 1 + (mclass2variantcount.get(m.class) || 0))
-		if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
-		newlst.push(m)
-	}
-	result.skewer = newlst
-	result.mclass2variantcount = [...mclass2variantcount].sort((i, j) => j[1] - i[1])
 }
 
 async function query_snvindel(q, ds) {
