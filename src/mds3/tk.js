@@ -48,11 +48,15 @@ export async function loadTk(tk, block) {
 		// render each possible track type. if indeed rendered, return sub track height
 
 		// left labels and skewer at same row, whichever taller
-		console.log(data)
 		{
 			const h2 = may_render_skewer(data, tk, block)
 			// must render skewer first, then left labels
-			const h1 = make_leftlabels(data, tk, block)
+			let h1
+			if (data.skewer) {
+				h1 = make_leftlabels(data, tk, block)
+			} else {
+				h1 = 60 // FIXME should be kept at tk.leftlabels.height
+			}
 			tk.height_main += Math.max(h1, h2)
 		}
 		// add new subtrack type

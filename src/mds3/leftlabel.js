@@ -99,13 +99,12 @@ function makelabel(tk, block, y) {
 
 function menu_mclass(data, tk, block) {
 	const checkboxdiv = tk.tktip.d.append('div').style('margin-bottom', '10px')
-	for (const o of data.mclass2variantcount) {
-		addrow(o)
+	for (const [mclass, c] of data.mclass2variantcount) {
+		addrow(mclass, c)
 	}
 	// show hidden mclass without a server-returned count
 	for (const s of tk.hiddenmclass) {
-		if (data.mclass2variantcount.find(i => i.class == s)) continue
-		addrow({ class: s })
+		addrow(s, 0)
 	}
 
 	const row = tk.tktip.d.append('div')
@@ -146,39 +145,37 @@ function menu_mclass(data, tk, block) {
 			}
 		})
 
-	function addrow(obj) {
-		// {class, showcount, hiddencount}
+	function addrow(mclass, count) {
 		const row = checkboxdiv.append('div')
 		const label = row.append('label')
 		label
 			.append('input')
 			.attr('type', 'checkbox')
-			.property('checked', !tk.hiddenmclass.has(obj.class))
-			.attr('mclass', obj.class)
-		if (obj.showcount > 0) {
+			.property('checked', !tk.hiddenmclass.has(mclass))
+			.attr('mclass', mclass)
+		if (count > 0) {
 			label
 				.append('span')
 				.style('margin-left', '8px')
 				.style('padding', '0px 6px')
 				.style('border-radius', '6px')
-				.style('background', common.mclass[obj.class].color)
+				.style('background', common.mclass[mclass].color)
 				.style('color', 'white')
 				.style('font-size', '.8em')
-				.text(obj.showcount)
-		}
-		if (obj.hiddencount) {
+				.text(count > 1 ? count : '')
+		} else {
 			label
 				.append('span')
 				.style('margin-left', '8px')
 				.style('font-size', '.8em')
 				.style('opacity', 0.5)
-				.text(obj.hiddencount + ' HIDDEN')
+				.text('HIDDEN')
 		}
 		label
 			.append('span')
 			.style('margin-left', '8px')
-			.text(common.mclass[obj.class].label)
-			.style('color', common.mclass[obj.class].color)
+			.text(common.mclass[mclass].label)
+			.style('color', common.mclass[mclass].color)
 	}
 }
 
@@ -190,11 +187,16 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		.style('position', 'relative')
 		.style('padding-top', '20px')
 	const scrolldiv = staydiv.append('div')
-	if (strat.items.reduce((i, j) => i + 1 + (j.label2 ? j.label2.length : 0), 0) > 20) {
-		scrolldiv
-			.style('overflow-y', 'scroll')
-			.style('height', '400px')
-			.style('resize', 'vertical')
+	{
+		const catcount =
+			(tk.samplefiltertemp[strat.label] ? tk.samplefiltertemp[strat.label].length : 0) +
+			strat.items.reduce((i, j) => i + 1 + (j.label2 ? j.label2.length : 0), 0)
+		if (catcount > 20) {
+			scrolldiv
+				.style('overflow-y', 'scroll')
+				.style('height', '400px')
+				.style('resize', 'vertical')
+		}
 	}
 	const table = scrolldiv.append('table')
 	const tr = table
@@ -237,6 +239,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		.style('top', '0px')
 		.text('MUTATIONS')
 		*/
+	/*
 	let hashidden = false
 	for (const i of strat.items) {
 		if (i.hiddenmclasses) {
@@ -259,12 +262,20 @@ function stratifymenu_samplesummary(strat, tk, block) {
 			.style('top', '0px')
 			.text('HIDDEN')
 	}
+	*/
 	for (const item of strat.items) {
 		fillrow(item)
 		if (item.label2) {
 			for (const i of item.label2) {
 				fillrow(i, true)
 			}
+		}
+	}
+
+	// hidden categories
+	if (tk.samplefiltertemp && tk.samplefiltertemp[strat.label]) {
+		for (const label of tk.samplefiltertemp[strat.label]) {
+			fillrow({ label })
 		}
 	}
 
@@ -342,9 +353,12 @@ function stratifymenu_samplesummary(strat, tk, block) {
 				)
 			}
 		}
-		tr.append('td')
-			.text(item.samplecount + (item.cohortsize ? ' / ' + item.cohortsize : ''))
-			.style('font-size', '.7em')
+		{
+			const td = tr.append('td')
+			if (item.samplecount != undefined) {
+				td.text(item.samplecount + (item.cohortsize ? ' / ' + item.cohortsize : '')).style('font-size', '.7em')
+			}
+		}
 		const td = tr.append('td')
 		if (item.mclasses) {
 			for (const [mclass, count] of item.mclasses) {
@@ -354,6 +368,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 					.attr('class', 'sja_mcdot')
 			}
 		}
+		/*
 		if (hashidden) {
 			const td = tr.append('td')
 			if (item.hiddenmclasses) {
@@ -365,6 +380,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 				}
 			}
 		}
+		*/
 	}
 }
 

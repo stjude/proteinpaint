@@ -43,17 +43,8 @@ module.exports = genomes => {
 
 			const result = init_result(q, ds)
 
-			// 1)
 			await load_driver(q, ds, result)
 			// data loaded into result{}
-			// 2)
-			make_totalcount(q, ds, result)
-			// 3)
-			filter_data(q, result)
-			// 4)
-			make_showcount(q, ds, result)
-
-			finalize_result(q, ds, result)
 
 			res.send(result)
 		} catch (e) {
@@ -69,12 +60,9 @@ function make_totalcount(q, ds, result) {
 	if (result.skewer) {
 		const cc = new Map() // k: mclass, v: {}
 		for (const m of result.skewer) {
-			if (!cc.has(m.class)) {
-				cc.set(m.class, { totalcount: 0, showcount: 0 })
-			}
-			cc.get(m.class).totalcount++
+			cc.set(m.class, 1 + (cc.get(m.class) || 0))
 		}
-		result.mclass2countmap = cc
+		result.mclass2variantcount = [...cc].sort((i, j) => j[1] - i[1])
 		// should include cnv segment data here
 		// ??? if to include genecnv data here?
 	}
@@ -84,48 +72,7 @@ function make_totalcount(q, ds, result) {
 		const datalst = [result.skewer]
 		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
 		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.samplesummary_totalcount = labels
-	}
-}
-
-function filter_data(q, result) {
-	if (result.skewer) {
-		const newskewer = []
-		for (const m of result.skewer) {
-			if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
-
-			// filter by other variant attributes
-
-			// filter by sample attributes
-			if (q.samplefiltertemp) {
-				if (!m.samples) continue
-				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
-				if (samples.length == 0) continue
-				m.samples = samples
-			}
-			newskewer.push(m)
-		}
-		result.skewer = newskewer
-	}
-
-	if (result.genecnvAtsample) {
-	}
-	// other sample-level data types that need filtering
-}
-
-function make_showcount(q, ds, result) {
-	// total count for variant/sample post filtering
-	if (result.skewer) {
-		for (const m of result.skewer) {
-			result.mclass2countmap.get(m.class).showcount++
-		}
-	}
-	if (q.samplesummary && ds.sampleSummaries) {
-		const labels = ds.sampleSummaries.makeholder(q)
-		const datalst = [result.skewer]
-		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.samplesummary_showcount = labels
+		result.sampleSummaries = ds.sampleSummaries.finalize(labels, q)
 	}
 }
 
@@ -162,6 +109,7 @@ function finalize_result(q, ds, result) {
 			delete m.samples
 		}
 	}
+	/*
 	if (result.samplesummary_showcount && result.samplesummary_totalcount) {
 		result.sampleSummaries = ds.sampleSummaries.mergeShowTotal(
 			result.samplesummary_totalcount,
@@ -182,6 +130,7 @@ function finalize_result(q, ds, result) {
 		delete result.mclass2countmap
 		result.mclass2variantcount.sort((i, j) => j.showcount - i.showcount)
 	}
+	*/
 }
 
 async function get_ds(q, genome) {
@@ -225,6 +174,11 @@ async function load_driver(q, ds, result) {
 				//result.genecnvAtsample = ....
 				// should return genecnv at sample-level, then will be combined with snvindel for summary
 			}
+
+			filter_data(q, result)
+			make_totalcount(q, ds, result)
+
+			finalize_result(q, ds, result)
 		}
 		// other types of data e.g. cnvpileup
 		return
@@ -273,3 +227,47 @@ async function query_genecnv(q, ds) {
 }
 
 async function query_svfusion(q, ds) {}
+
+function filter_data(q, result) {
+	// will not be needed when filters are combined into graphql query language
+	if (result.skewer) {
+		const newskewer = []
+		for (const m of result.skewer) {
+			if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
+
+			// filter by other variant attributes
+
+			// filter by sample attributes
+			if (q.samplefiltertemp) {
+				if (!m.samples) continue
+				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
+				if (samples.length == 0) continue
+				m.samples = samples
+			}
+			newskewer.push(m)
+		}
+		result.skewer = newskewer
+	}
+
+	if (result.genecnvAtsample) {
+	}
+	// other sample-level data types that need filtering
+}
+
+/////////////////////// not used
+
+function make_showcount(q, ds, result) {
+	// total count for variant/sample post filtering
+	if (result.skewer) {
+		for (const m of result.skewer) {
+			result.mclass2countmap.get(m.class).showcount++
+		}
+	}
+	if (q.samplesummary && ds.sampleSummaries) {
+		const labels = ds.sampleSummaries.makeholder(q)
+		const datalst = [result.skewer]
+		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
+		ds.sampleSummaries.summarize(labels, q, datalst)
+		result.samplesummary_showcount = labels
+	}
+}

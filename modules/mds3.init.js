@@ -167,7 +167,7 @@ function validate_sampleSummaries(ds) {
 		}
 	}
 	ss.finalize = (labels, opts) => {
-		// convert one "labels" map to list, not in use
+		// convert one "labels" map to list
 		const out = []
 		for (const [label1, L1] of labels) {
 			const strat = {
@@ -208,6 +208,7 @@ function validate_sampleSummaries(ds) {
 		return out
 	}
 	ss.mergeShowTotal = (totalcount, showcount, q) => {
+		// not in use
 		const out = []
 		for (const [label1, L1] of showcount) {
 			const strat = {
