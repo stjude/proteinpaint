@@ -217,3 +217,53 @@ export function validate_query_genecnv(api) {
 		return lst
 	}
 }
+
+export async function getSamples_gdcapi(q, ds) {
+	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
+
+	const query = {
+		variables: JSON.parse(JSON.stringify(ds.variant2samples.gdcapi.variables)),
+		query: q.get == 'sunburst' ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list // NOTE "sunburst" is type_sunburst
+	}
+	query.variables.filter.content.value = q.ssm_id_lst.split(',')
+
+	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify(query)
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for variant2samples'
+	}
+	if (
+		!re.data ||
+		!re.data.explore ||
+		!re.data.explore.ssms ||
+		!re.data.explore.ssms.hits ||
+		!re.data.explore.ssms.hits.edges
+	)
+		throw 'data structure not data.explore.ssms.hits.edges[]'
+	if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
+
+	const samples = []
+	for (const ssm of re.data.explore.ssms.hits.edges) {
+		if (!ssm.node || !ssm.node.occurrence || !ssm.node.occurrence.hits || !ssm.node.occurrence.hits.edges)
+			throw 'structure of an ssm is not node.occurrence.hits.edges'
+		if (!Array.isArray(ssm.node.occurrence.hits.edges)) throw 'ssm.node.occurrence.hits.edges is not array'
+		for (const sample of ssm.node.occurrence.hits.edges) {
+			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
+			/* samplelist query will retrieve all terms
+			but sunburst will only retrieve a few attr
+			will simply iterate over all terms and missing ones will have undefined value
+			*/
+			const s = {}
+			for (const attr of ds.variant2samples.terms) {
+				s[attr.id] = attr.get(sample.node.case)
+			}
+			samples.push(s)
+		}
+	}
+	return samples
+}

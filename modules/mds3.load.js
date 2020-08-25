@@ -2,6 +2,7 @@ const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const variant2samples_getresult = require('./mds3.variant2samples')
+const samplefilter = require('./mds3.samplefilter')
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -98,7 +99,7 @@ function filter_data(q, result) {
 			// filter by sample attributes
 			if (q.samplefiltertemp) {
 				if (!m.samples) continue
-				const samples = filter_samples(m.samples, q.samplefiltertemp)
+				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
 				if (samples.length == 0) continue
 				m.samples = samples
 			}
@@ -110,22 +111,6 @@ function filter_data(q, result) {
 	if (result.genecnvAtsample) {
 	}
 	// other sample-level data types that need filtering
-}
-
-function filter_samples(samples, filter) {
-	const keep = []
-	for (const sample of samples) {
-		let hidden
-		for (const [key, hiddencategories] of filter) {
-			const value = sample[key]
-			if (value != undefined && hiddencategories.has(value)) {
-				hidden = true
-				break
-			}
-		}
-		if (!hidden) keep.push(sample)
-	}
-	return keep
 }
 
 function make_showcount(q, ds, result) {
@@ -149,17 +134,10 @@ function init_q(query, genome) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
 	}
-	if (query.samplefiltertemp) {
-		const j = JSON.parse(query.samplefiltertemp)
-		const key2values = new Map()
-		for (const k in j) {
-			const lst = j[k]
-			if (lst.length) {
-				key2values.set(k, new Set(lst))
-			}
-		}
-		if (key2values.size) {
-			query.samplefiltertemp = key2values
+	{
+		const filter = samplefilter.parsearg(query)
+		if (filter) {
+			query.samplefiltertemp = filter
 		} else {
 			delete query.samplefiltertemp
 		}

@@ -268,7 +268,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		}
 	}
 
-	const row = tk.tktip.d.append('div').style('margin-top', '5px')
+	const row = tk.tktip.d.append('div').style('margin-top', '15px')
 	row
 		.append('button')
 		.text('Submit')
