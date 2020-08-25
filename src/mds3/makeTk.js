@@ -93,7 +93,7 @@ function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
 	// native track, need to know what to do for custom track
-	tk.mds.variant2samples.get = async (mlst, querytype) => {
+	tk.mds.variant2samples.get = async (tk0, mlst, querytype) => {
 		/*
 		support alternative methods
 		where all data are hosted on client
@@ -104,7 +104,7 @@ function mayaddGetter_variant2samples(tk, block) {
 			'dslabel=' + tk.mds.label,
 			'variant2samples=1',
 			'get=' + querytype,
-			'samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp)
+			'samplefiltertemp=' + JSON.stringify(tk0.samplefiltertemp) // must use tk0 but not tk for this one
 		]
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
