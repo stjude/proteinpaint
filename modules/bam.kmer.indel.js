@@ -415,10 +415,11 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		indices.push([kmer_diff_scores[0].groupID, 'none'])
 		return indices
 	}
-	let score_cutoff = 0
 	if (is_a_line == 1) {
 		// The points are in a line
-		score_cutoff = kmer_diff_scores[0].value
+		for (let i = 0; i < kmer_diff_scores.length; i++) {
+			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+		}
 	} else {
 		// The points are in the shape of a curve
 		console.log('start point:', start_point)
@@ -446,14 +447,14 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		// console.log("Array maximum:",array_maximum)
 		const index_array_maximum = distances_from_line.indexOf(array_maximum)
 		// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
-		score_cutoff = kmer_diff_scores[index_array_maximum].value
+		const score_cutoff = kmer_diff_scores[index_array_maximum].value
 		console.log('score cutoff:', score_cutoff)
-	}
-	for (let i = 0; i < kmer_diff_scores.length; i++) {
-		if (score_cutoff > kmer_diff_scores[i].value) {
-			indices.push([kmer_diff_scores[i].groupID, 'none'])
-		} else if (score_cutoff <= kmer_diff_scores[i].value) {
-			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+		for (let i = 0; i < kmer_diff_scores.length; i++) {
+			if (score_cutoff >= kmer_diff_scores[i].value) {
+				indices.push([kmer_diff_scores[i].groupID, 'none'])
+			} else if (score_cutoff < kmer_diff_scores[i].value) {
+				indices.push([kmer_diff_scores[i].groupID, 'refalt'])
+			}
 		}
 	}
 	//console.log("indices:",indices)
