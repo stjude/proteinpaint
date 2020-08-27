@@ -380,7 +380,7 @@ function jaccard_similarity_weights(
 	let kmers1_weight = 0
 	for (const kmer of kmers1_nodups) {
 		const kmer1_freq = kmer1_counts.get(kmer) // Getting frequency of kmer in read sequence
-		const scores = [...kmer2_seq_values_nodups].filter(i => i.sequence == kmer).map(x => x.value) // Determining score of kmer in ref/alt sequence
+		const scores = [...kmers2_nodups].filter(i => i.sequence == kmer).map(x => x.value) // Determining score of kmer in ref/alt sequence
 		let score = 0 // If kmer not found in ref/alt sequence, penalizing kmer to zero (may be due to incorrect base pair call or splicing)
 		if (scores.length > 0) {
 			// If kmer found in ref/alt sequence, using that score
@@ -388,7 +388,7 @@ function jaccard_similarity_weights(
 		}
 		kmers1_weight += score * kmer1_freq
 	}
-	// console.log("kmers1_weight:",kmers1_weight," kmers2_weight", kmers2_weight," intersection weight:",intersection_weight)
+	//console.log("kmers1_weight:",kmers1_weight," kmers2_weight", kmers2_weight," intersection weight:",intersection_weight)
 	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight)
 }
 
