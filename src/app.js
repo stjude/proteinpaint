@@ -251,7 +251,9 @@ function makeheader(holder,obj, jwt) {
 		.style('display','inline-block')
 		.style('padding',padw)
 		.style('padding-left','5px')
-		.append('select').style('margin','1px 20px 1px 10px')
+		.append('select')
+		.attr('title', 'Select a genome')
+		.style('margin','1px 20px 1px 10px')
 	for(const n in genomes) {
 		selectgenome.append('option')
 			.attr('n',n)
