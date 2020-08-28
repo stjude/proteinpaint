@@ -47,7 +47,7 @@ export async function match_complexvariant(templates, q) {
 	const kmer_length = 6 // length of kmer
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
-	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	const threshold_slope = 0.05 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const maximum_error_tolerance = 0.6 // Maximum error in jaccard similarity allowed to be classifed as ref/alt i.e if (1-error_tolerance) <= jaccard_similarity <= 1 then sequence if ref/alt
 	//----------------------------------------------------------------------------
 
