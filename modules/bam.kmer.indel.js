@@ -48,6 +48,7 @@ export async function match_complexvariant(templates, q) {
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
 	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	const maximum_error_tolerance = 0.5 // Maximum error in jaccard similarity allowed to be classifed as ref/alt i.e if (1-error_tolerance) <= jaccard_similarity <= 1 then sequence if ref/alt
 	//----------------------------------------------------------------------------
 
 	const all_ref_kmers = build_kmers_refalt(
@@ -113,6 +114,11 @@ export async function match_complexvariant(templates, q) {
 	//console.log(alt_kmers)
 
 	const kmer_diff_scores = []
+	let refalt_status = []
+	let ref_comparisons = []
+	let alt_comparisons = []
+	let ref_comparisons2 = []
+	let alt_comparisons2 = []
 	const ref_scores = []
 	const alt_scores = []
 	let i = 0
@@ -137,17 +143,27 @@ export async function match_complexvariant(templates, q) {
 			alt_kmers_weight,
 			all_alt_counts
 		)
+		ref_comparisons.push(ref_comparison)
+		alt_comparisons.push(alt_comparison)
 		//console.log("ref comparison:",ref_comparison,"alt comparison:",alt_comparison)
 		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
 		const diff_score = alt_comparison - ref_comparison
 		kmer_diff_scores.push(diff_score)
-		const item = {
-			value: Math.abs(diff_score),
-			groupID: i
-		}
 		if (diff_score > 0) {
+			const item = {
+				value: alt_comparison,
+				groupID: i
+			}
+			refalt_status.push('alt')
+			alt_comparisons2.push(alt_comparison)
 			alt_scores.push(item)
 		} else if (diff_score <= 0) {
+			const item = {
+				value: ref_comparison,
+				groupID: i
+			}
+			refalt_status.push('ref')
+			ref_comparisons2.push(ref_comparison)
 			ref_scores.push(item)
 		}
 
@@ -155,68 +171,75 @@ export async function match_complexvariant(templates, q) {
 	}
 
 	console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
-	let ref_indices = []
+	let ref_cutoff = 0
 	if (ref_scores.length > 0) {
-		ref_indices = determine_maxima_alt(ref_scores, threshold_slope)
+		ref_cutoff = determine_maxima_alt(ref_scores, threshold_slope)
+		if (1 - maximum_error_tolerance > ref_cutoff) {
+			ref_cutoff = 1 - maximum_error_tolerance
+		}
 	}
-	let alt_indices = []
+	let alt_cutoff = 0
 	if (alt_scores.length > 0) {
-		alt_indices = determine_maxima_alt(alt_scores, threshold_slope)
+		alt_cutoff = determine_maxima_alt(alt_scores, threshold_slope)
+		if (1 - maximum_error_tolerance > alt_cutoff) {
+			alt_cutoff = 1 - maximum_error_tolerance
+		}
 	}
+	console.log('Ref cutoff:', ref_cutoff, 'Alt cutoff:', alt_cutoff)
 
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	let kmer_diff_scores_input = []
-	for (const item of ref_indices) {
-		if (item[1] == 'refalt') {
-			if (type2group[bamcommon.type_supportref]) {
-				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportref].templates.push(templates[index])
-				const input_items = {
-					value: kmer_diff_scores[index],
-					groupID: 'ref'
-				}
-				kmer_diff_scores_input.push(input_items)
-			}
-		} else if (item[1] == 'none') {
-			if (type2group[bamcommon.type_supportno]) {
-				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[index])
-				const input_items = {
-					value: kmer_diff_scores[index],
-					groupID: 'none'
-				}
-				kmer_diff_scores_input.push(input_items)
-			}
-		}
-	}
+	for (const item of refalt_status) {
+		if (item == 'ref') {
+			if (ref_cutoff <= ref_comparisons[index] && ref_comparisons[index] <= 1) {
+				// Checking if jaccard similarity with reference allele is within the error tolerance threshold
 
-	for (const item of alt_indices) {
-		if (item[1] == 'refalt') {
-			if (type2group[bamcommon.type_supportalt]) {
-				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportalt].templates.push(templates[index])
-				const input_items = {
-					value: kmer_diff_scores[index],
-					groupID: 'alt'
+				if (type2group[bamcommon.type_supportref]) {
+					templates[index].__tempscore = '-' + ref_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportref].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'ref'
+					}
+					kmer_diff_scores_input.push(input_items)
 				}
-				kmer_diff_scores_input.push(input_items)
+			} else {
+				if (type2group[bamcommon.type_supportno]) {
+					templates[index].__tempscore = '-' + ref_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'none'
+					}
+					kmer_diff_scores_input.push(input_items)
+				}
 			}
-		} else if (item[1] == 'none') {
-			if (type2group[bamcommon.type_supportno]) {
-				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[index])
-				const input_items = {
-					value: kmer_diff_scores[index],
-					groupID: 'none'
+		} else if (item == 'alt') {
+			if (alt_cutoff <= alt_comparisons[index] && alt_comparisons[index] <= 1) {
+				// Checking if jaccard similarity with alternate allele is within the error tolerance threshold
+				if (type2group[bamcommon.type_supportalt]) {
+					templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportalt].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'alt'
+					}
+					kmer_diff_scores_input.push(input_items)
 				}
-				kmer_diff_scores_input.push(input_items)
+			} else {
+				if (type2group[bamcommon.type_supportno]) {
+					templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'none'
+					}
+					kmer_diff_scores_input.push(input_items)
+				}
 			}
 		}
+		index++
 	}
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
 	// console.log('Final array for plotting:', kmer_diff_scores_input)
@@ -392,18 +415,18 @@ function jaccard_similarity_weights(
 	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight)
 }
 
-function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
-	kmer_diff_scores.sort((a, b) => a.value - b.value)
-	// console.log(kmer_diff_scores)
+function determine_maxima_alt(jaccard_similarities, threshold_slope) {
+	jaccard_similarities.sort((a, b) => a.value - b.value)
+	//console.log(jaccard_similarities)
 
-	let start_point = kmer_diff_scores.length - 1
-	let indices = []
+	let start_point = jaccard_similarities.length - 1
+	let final_cutoff = 0
 	let slope = 0
 	let is_a_line = 1
-	if (kmer_diff_scores.length > 1) {
-		for (let i = kmer_diff_scores.length - 1; i > 0; i--) {
-			slope = Math.abs(kmer_diff_scores[i - 1].value - kmer_diff_scores[i].value)
-			//console.log('Slope:', slope, kmer_diff_scores.length - 1 - i,kmer_diff_scores[i - 1].value,kmer_diff_scores[i].value)
+	if (jaccard_similarities.length > 1) {
+		for (let i = jaccard_similarities.length - 1; i > 0; i--) {
+			slope = Math.abs(jaccard_similarities[i - 1].value - jaccard_similarities[i].value)
+			//console.log('Slope:', slope, jaccard_similarities.length - 1 - i,jaccard_similarities[i - 1].value,jaccard_similarities[i].value)
 			if (slope > threshold_slope) {
 				start_point = i
 				is_a_line = 0
@@ -412,51 +435,42 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		}
 	} else {
 		console.log('Number of reads too low to determine curvature of slope')
-		indices.push([kmer_diff_scores[0].groupID, 'none'])
-		return indices
+		final_cutoff = jaccard_similarities[0].value
+		return final_cutoff
 	}
 	if (is_a_line == 1) {
 		// The points are in a line
-		for (let i = 0; i < kmer_diff_scores.length; i++) {
-			indices.push([kmer_diff_scores[i].groupID, 'refalt'])
-		}
+		final_cutoff = jaccard_similarities[0].value
 	} else {
 		// The points are in the shape of a curve
-		console.log('start point:', start_point)
-		let kmer_diff_scores_input = []
+		//console.log('start point:', start_point)
+		let jaccard_similarities_input = []
 		for (let i = 0; i <= start_point; i++) {
-			kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
+			jaccard_similarities_input.push([i, jaccard_similarities[i].value])
 		}
 
-		const min_value = [0, kmer_diff_scores[0].value]
-		const max_value = [start_point, kmer_diff_scores[start_point].value]
-		console.log('max_value:', max_value)
+		const min_value = [0, jaccard_similarities[0].value]
+		const max_value = [start_point, jaccard_similarities[start_point].value]
+		//console.log('max_value:', max_value)
 
 		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0])
-		console.log('Slope of line:', slope_of_line)
+		//console.log('Slope of line:', slope_of_line)
 		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
 
 		let distances_from_line = []
-		for (let i = 0; i < kmer_diff_scores_input.length; i++) {
+		for (let i = 0; i < jaccard_similarities_input.length; i++) {
 			distances_from_line.push(
-				Math.abs(slope_of_line * kmer_diff_scores_input[i][0] - kmer_diff_scores_input[i][1] + intercept_of_line) /
-					Math.sqrt(1 + slope_of_line * slope_of_line)
+				Math.abs(
+					slope_of_line * jaccard_similarities_input[i][0] - jaccard_similarities_input[i][1] + intercept_of_line
+				) / Math.sqrt(1 + slope_of_line * slope_of_line)
 			) // distance = abs(a*x+b*y+c)/sqrt(a^2+b^2)
 		}
 		const array_maximum = Math.max(...distances_from_line)
 		// console.log("Array maximum:",array_maximum)
 		const index_array_maximum = distances_from_line.indexOf(array_maximum)
-		// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
-		const score_cutoff = kmer_diff_scores[index_array_maximum].value
-		console.log('score cutoff:', score_cutoff)
-		for (let i = 0; i < kmer_diff_scores.length; i++) {
-			if (score_cutoff >= kmer_diff_scores[i].value) {
-				indices.push([kmer_diff_scores[i].groupID, 'none'])
-			} else if (score_cutoff < kmer_diff_scores[i].value) {
-				indices.push([kmer_diff_scores[i].groupID, 'refalt'])
-			}
-		}
+		// console.log("Max index:",index_array_maximum,"Total length:",jaccard_similarities.length)
+		final_cutoff = jaccard_similarities[index_array_maximum].value
 	}
 	//console.log("indices:",indices)
-	return indices
+	return final_cutoff
 }
