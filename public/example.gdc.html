@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang=en>
 <head>
 	 <meta charset="utf-8">
+	 <title>ProteinPaint</title>
 </head>
 <body>
 
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
-<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
+<h1>Example embed</h1>
 <div id=aaa style="margin:10px"></div>
 
 <script>
@@ -16,6 +17,7 @@
 
 
 runproteinpaint({
+	noheader: 1,
 	holder:document.getElementById('aaa'),
 	genome:'hg38',
 	gene:'ENST00000256078',

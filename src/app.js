@@ -238,6 +238,7 @@ function makeheader(holder,obj, jwt) {
 		.style('padding','3px')
 		.attr('size',20)
 		.attr('placeholder','Gene, position, or SNP')
+		.attr('title', 'Search by gene, SNP, or position')
 		.on('keyup', ()=>{
 			if(client.keyupEnter()) entersearch()
 			else debouncer()
@@ -250,7 +251,9 @@ function makeheader(holder,obj, jwt) {
 		.style('display','inline-block')
 		.style('padding',padw)
 		.style('padding-left','5px')
-		.append('select').style('margin','1px 20px 1px 10px')
+		.append('select')
+		.attr('title', 'Select a genome')
+		.style('margin','1px 20px 1px 10px')
 	for(const n in genomes) {
 		selectgenome.append('option')
 			.attr('n',n)
@@ -1113,7 +1116,7 @@ function launchfusioneditor(arg,holder) {
 		const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
 		const p = inputdiv.append('p')
 		p.append('span').html('Genome&nbsp;')
-		const gselect = p.append('select')
+		const gselect = p.append('select').attr('title', 'Select a genome')
 		for (const n in genomes) {
 			gselect.append('option').text(n)
 		}

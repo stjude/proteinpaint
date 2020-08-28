@@ -104,7 +104,7 @@ export class Block {
 			this.legend = {
 				mclasses: new Map(), // two special legend that cover all dstk on display
 				morigins: new Map(),
-				legendcolor: '#EDD8A6',
+				legendcolor: '#7D6836',
 				headtextcolor: '#aaa',
 				vpad: '5px'
 			}
@@ -358,7 +358,7 @@ export class Block {
 				.append('div') // duplicated
 				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', '#7B95AB')
+				.style('background', '#1C5E86')
 				.style('font-size', '.8em')
 				.style('color', 'white')
 				.style('padding', '1px 5px')
