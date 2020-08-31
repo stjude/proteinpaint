@@ -387,6 +387,21 @@ function add_hg38() {
     trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/genes.hg38.db')
     trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
     trydownload(path.join(path_tpannodb, 'snp146.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/snp146.hg38.db')
+
+    {
+        const a = path.join(path_tpanno, 'hicFragment')
+        mkdir(a)
+        trydownload(path.join(a, 'hic.DpnII.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.DpnII.hg38.gz')
+        trydownload(path.join(a, 'hic.DpnII.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.DpnII.hg38.gz.tbi')
+        trydownload(path.join(a, 'hic.EcoRI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.EcoRI.hg38.gz')
+        trydownload(path.join(a, 'hic.EcoRI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.EcoRI.hg38.gz.tbi')
+        trydownload(path.join(a, 'hic.HindIII.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.HindIII.hg38.gz')
+        trydownload(path.join(a, 'hic.HindIII.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.HindIII.hg38.gz.tbi')
+        trydownload(path.join(a, 'hic.MboI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.MboI.hg38.gz')
+        trydownload(path.join(a, 'hic.MboI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.MboI.hg38.gz.tbi')
+        trydownload(path.join(a, 'hic.NcoI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.NcoI.hg38.gz')
+        trydownload(path.join(a, 'hic.NcoI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.NcoI.hg38.gz.tbi')
+    }
         // defaults to have clinvar dataset
         {
             const a = path.join(UC.TP, 'hg38/')
@@ -444,8 +459,6 @@ function add_hg19() {
     trydownload(path.join(path_tpannodb, 'snp146.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/snp146.hg19.db')
 
     {
-        const a = path.join(path_tpanno, 'hicFragment')
-        mkdir(a)
         trydownload(path.join(a, 'hic.DpnII.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz')
         trydownload(path.join(a, 'hic.DpnII.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz.tbi')
         trydownload(path.join(a, 'hic.EcoRI.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.EcoRI.hg19.gz')
