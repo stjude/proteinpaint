@@ -100,6 +100,21 @@ module.exports = {
 		}
 	],
 	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
+	hicenzymefragment: [
+		{
+			enzyme: 'EcoRI',
+			file: 'anno/hicFragment/hic.EcoRI.hg38.gz'
+		},
+		{
+			enzyme: 'MboI',
+			file: 'anno/hicFragment/hic.MboI.hg38.gz'
+		},
+		{
+			enzyme: 'NcoI',
+			file: 'anno/hicFragment/hic.NcoI.hg38.gz'
+		}
+	],
+
 	majorchr: `chr1	248956422
 chr2	242193529
 chr3	198295559
