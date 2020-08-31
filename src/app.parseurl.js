@@ -2,6 +2,7 @@ import blockinit from './block.init'
 import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
+import path from 'path'
 
 /*
 ********************** EXPORTED
@@ -50,6 +51,26 @@ arg
 				break
 			}
 		}
+	}
+
+	if (urlp.has('hicfile')) {
+		const file = urlp.get('hicfile')
+		const gn = urlp.get('genome')
+		if (!gn) return 'genome is required for hic'
+		const genome = arg.genomes[gn]
+		if (!genome) return 'invalid genome'
+		const hic = {
+			genome,
+			file,
+			name: path.basename(file),
+			hostURL: arg.hostURL,
+			enzyme: urlp.get('enzyme'),
+			holder: arg.holder
+		}
+		import('./hic.straw').then(_ => {
+			_.hicparsefile(hic)
+		})
+		return
 	}
 
 	if (urlp.has('singlecell')) {
