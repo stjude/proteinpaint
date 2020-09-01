@@ -469,6 +469,8 @@ function add_hg19() {
 	trydownload(path.join(path_tpannodb, 'snp146.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/snp146.hg19.db')
 
 	{
+		const a = path.join(path_tpanno, 'hicFragment')
+		mkdir(a)
 		trydownload(path.join(a, 'hic.DpnII.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz')
 		trydownload(path.join(a, 'hic.DpnII.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz.tbi')
 		trydownload(path.join(a, 'hic.EcoRI.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.EcoRI.hg19.gz')
