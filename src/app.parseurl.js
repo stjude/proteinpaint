@@ -311,13 +311,33 @@ arg
 }
 
 async function init_mdsjson(urlp, arg, par) {
-	const json_url = urlp.get('mdsjsonurl')
-	const json_file = urlp.get('mdsjson')
+	const url_str = urlp.get('mdsjsonurl')
+	const file_str = urlp.get('mdsjson')
 	const genomename = urlp.get('genome')
-	const obj = await mdsjson_parse(json_file, json_url, arg.holder)
 
-	validate_mdsjson(obj, arg.holder)
-	par.tklst = get_json_tklst(obj)
+	let json_files = [],
+		json_urls = []
+	if (file_str && file_str.includes(',')) json_files = file_str.split(',')
+	else if (file_str) json_files.push(file_str)
+	else if (url_str && url_str.includes(',')) json_urls = url_str.split(',')
+	else if (url_str) json_urls.push(url_str)
+
+	par.tklst = []
+	if (json_files.length) {
+		const json_url = undefined
+		for (const json_file of json_files) {
+			const obj = await mdsjson_parse(json_file, json_url, arg.holder)
+			validate_mdsjson(obj, arg.holder)
+			par.tklst.push(get_json_tk(obj))
+		}
+	} else if (json_urls.length) {
+		const json_file = undefined
+		for (const json_url of json_urls) {
+			const obj = await mdsjson_parse(json_file, json_url, arg.holder)
+			validate_mdsjson(obj, arg.holder)
+			par.tklst.push(get_json_tk(obj))
+		}
+	}
 
 	client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 	import('./block').then(b => new b.Block(par))
@@ -375,8 +395,7 @@ function validate_mdsjson(obj, holder) {
 	}
 }
 
-function get_json_tklst(tkobj) {
-	const tklst = []
+function get_json_tk(tkobj) {
 	const track = {
 		type: tkobj.type,
 		name: tkobj.name
@@ -419,8 +438,7 @@ function get_json_tklst(tkobj) {
 	if (tkobj.sample2assaytrack) {
 		track.sample2assaytrack = tkobj.sample2assaytrack
 	}
-	tklst.push(track)
-	return tklst
+	return track
 }
 
 export function get_tklst(urlp) {
