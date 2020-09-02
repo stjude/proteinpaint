@@ -401,7 +401,11 @@ function get_json_tk(tkobj) {
 		name: tkobj.name
 	}
 
-	//svcnv file
+	// dense or full
+	if (tkobj.isdense || tkobj.isfull === false) track.isdense = true
+	else if (tkobj.isfull) track.isfull = true
+
+	// svcnv file
 	if (tkobj.svcnvfile) track.file = tkobj.svcnvfile
 	else if (tkobj.svcnvurl) track.url = tkobj.svcnvurl
 
