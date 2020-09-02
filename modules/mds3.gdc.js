@@ -102,7 +102,7 @@ async function snvindel_byisoform_run(ds, opts) {
 	// query is ds.queries.snvindel
 	const variables = JSON.parse(JSON.stringify(ds.queries.snvindel.byisoform.gdcapi.variables))
 	variables.filters.content.value = [opts.isoform]
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			query: ds.queries.snvindel.byisoform.gdcapi.query,
@@ -128,10 +128,10 @@ async function snvindel_byisoform_run(ds, opts) {
 	return re.hits
 }
 
-export async function init_projectsize(op) {
+export async function init_projectsize(op, ds) {
 	if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
 	if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify(op.gdcapi)
 	})
@@ -160,7 +160,7 @@ export async function init_projectsize(op) {
 	}
 }
 
-export function validate_query_genecnv(api) {
+export function validate_query_genecnv(api, ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
 	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
@@ -175,7 +175,7 @@ export function validate_query_genecnv(api) {
 		variables.cnvTestedByGene.content[1].content.value = [name]
 		variables.cnvAll.content[2].content.value = [name]
 		variables.ssmFilters.content[1].content.value = [name]
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+		const response = await got.post(ds.apihost, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query: api.query, variables })
 		})
@@ -227,7 +227,7 @@ export async function getSamples_gdcapi(q, ds) {
 	}
 	query.variables.filter.content.value = q.ssm_id_lst.split(',')
 
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify(query)
 	})
