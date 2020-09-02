@@ -82,6 +82,8 @@ template {}
 
 segment {}
 .qname
+.segstart
+.segstop  // alignment start/stop, 0-based
 .seq
 .boxes[]
 .forward
@@ -763,6 +765,8 @@ may skip insertion if on screen width shorter than minimum width
 	}
 	const segment = {
 		qname,
+		segstart,
+		segstop: pos,
 		boxes,
 		forward: !(flag & 0x10),
 		ridx,
