@@ -333,7 +333,7 @@ function validate_query_genecnv(ds, genome) {
 		q.byisoform.sqlquery_isoform2gene.query = genome.genedb.db.prepare(q.byisoform.sqlquery_isoform2gene.statement)
 	}
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_genecnv(q.byisoform.gdcapi)
+		gdc.validate_query_genecnv(q.byisoform.gdcapi, ds)
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}
@@ -344,7 +344,7 @@ async function init_onetimequery_projectsize(ds) {
 	if (!op) return
 	op.results = new Map()
 	if (op.gdcapi) {
-		await gdc.init_projectsize(op)
+		await gdc.init_projectsize(op, ds)
 		return
 	}
 	throw 'unknown query method for onetimequery_projectsize'

@@ -634,6 +634,7 @@ module.exports = {
 	color: '#545454',
 	genome: 'hg38',
 	snvindel_attributes,
+	apihost: 'https://api.gdc.cancer.gov/v0/graphql',
 
 	onetimequery_projectsize: {
 		gdcapi: {
