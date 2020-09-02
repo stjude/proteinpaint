@@ -51,12 +51,16 @@ export async function match_complexvariant(templates, q) {
 	const maximum_error_tolerance = 0.6 // Maximum error in jaccard similarity allowed to be classifed as ref/alt i.e if (1-error_tolerance) <= jaccard_similarity <= 1 then sequence if ref/alt
 	//----------------------------------------------------------------------------
 
+	const indel_start = q.variant.pos
+	const ref_indel_stop = q.variant.pos + refallele.length
+	const alt_indel_stop = q.variant.pos + altallele.length
+
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,
 		q.variant.pos - segbplen,
-		q.variant.pos,
-		q.variant.pos + refallele.length,
+		indel_start,
+		ref_indel_stop,
 		weight_indel,
 		weight_no_indel
 	)
@@ -65,8 +69,8 @@ export async function match_complexvariant(templates, q) {
 		altseq,
 		kmer_length,
 		q.variant.pos - segbplen,
-		q.variant.pos,
-		q.variant.pos + altallele.length,
+		indel_start,
+		alt_indel_stop,
 		weight_indel,
 		weight_no_indel
 	)
@@ -192,7 +196,21 @@ export async function match_complexvariant(templates, q) {
 	let kmer_diff_scores_input = []
 	for (const item of refalt_status) {
 		if (item == 'ref') {
-			if (ref_cutoff <= ref_comparisons[index] && ref_comparisons[index] <= 1) {
+			if (
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= refallele.length ||
+				Math.abs(templates[index].segments[0].segstop - ref_indel_stop) <= refallele.length
+			) {
+				// Checking to see if either end of the read is in close proximity to the indel region
+				if (type2group[bamcommon.type_supportno]) {
+					templates[index].__tempscore = '-' + ref_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'none'
+					}
+					kmer_diff_scores_input.push(input_items)
+				}
+			} else if (ref_cutoff <= ref_comparisons[index] && ref_comparisons[index] <= 1) {
 				// Checking if jaccard similarity with reference allele is within the error tolerance threshold
 
 				if (type2group[bamcommon.type_supportref]) {
@@ -216,7 +234,21 @@ export async function match_complexvariant(templates, q) {
 				}
 			}
 		} else if (item == 'alt') {
-			if (alt_cutoff <= alt_comparisons[index] && alt_comparisons[index] <= 1) {
+			if (
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= altallele.length ||
+				Math.abs(templates[index].segments[0].segstop - alt_indel_stop) <= altallele.length
+			) {
+				// Checking to see if either end of the read is in close proximity to the indel region
+				if (type2group[bamcommon.type_supportno]) {
+					templates[index].__tempscore = '-' + alt_comparisons[index].toFixed(4).toString()
+					type2group[bamcommon.type_supportno].templates.push(templates[index])
+					const input_items = {
+						value: kmer_diff_scores[index],
+						groupID: 'none'
+					}
+					kmer_diff_scores_input.push(input_items)
+				}
+			} else if (alt_cutoff <= alt_comparisons[index] && alt_comparisons[index] <= 1) {
 				// Checking if jaccard similarity with alternate allele is within the error tolerance threshold
 				if (type2group[bamcommon.type_supportalt]) {
 					templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString()
