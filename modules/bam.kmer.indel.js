@@ -55,6 +55,11 @@ export async function match_complexvariant(templates, q) {
 	const ref_indel_stop = q.variant.pos + refallele.length
 	const alt_indel_stop = q.variant.pos + altallele.length
 
+	let allele_length = refallele.length
+	if (altallele.length > refallele.length) {
+		allele_length = altallele.length
+	}
+
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,
@@ -195,10 +200,14 @@ export async function match_complexvariant(templates, q) {
 	const type2group = bamcommon.make_type2group(q)
 	let kmer_diff_scores_input = []
 	for (const item of refalt_status) {
+		//console.log("Qname:",templates[index].segments[0].qname,"Read start:",templates[index].segments[0].segstart,"Read stop:",templates[index].segments[0].segstop,"Indel start:",indel_start,"Ref indel stop:",ref_indel_stop,"Alt indel stop:",alt_indel_stop,"Allele length:",allele_length)
 		if (item == 'ref') {
 			if (
-				Math.abs(templates[index].segments[0].segstart - indel_start) <= refallele.length ||
-				Math.abs(templates[index].segments[0].segstop - ref_indel_stop) <= refallele.length
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= allele_length ||
+				Math.abs(templates[index].segments[0].segstop - ref_indel_stop) <= allele_length ||
+				(indel_start <= templates[index].segments[0].segstart &&
+					templates[index].segments[0].segstart <= ref_indel_stop) ||
+				(indel_start <= templates[index].segments[0].segstop && templates[index].segments[0].segstop <= ref_indel_stop)
 			) {
 				// Checking to see if either end of the read is in close proximity to the indel region
 				if (type2group[bamcommon.type_supportno]) {
@@ -235,8 +244,11 @@ export async function match_complexvariant(templates, q) {
 			}
 		} else if (item == 'alt') {
 			if (
-				Math.abs(templates[index].segments[0].segstart - indel_start) <= altallele.length ||
-				Math.abs(templates[index].segments[0].segstop - alt_indel_stop) <= altallele.length
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= allele_length ||
+				Math.abs(templates[index].segments[0].segstop - alt_indel_stop) <= allele_length ||
+				(indel_start <= templates[index].segments[0].segstart &&
+					templates[index].segments[0].segstart <= alt_indel_stop) ||
+				(indel_start <= templates[index].segments[0].segstop && templates[index].segments[0].segstop <= alt_indel_stop)
 			) {
 				// Checking to see if either end of the read is in close proximity to the indel region
 				if (type2group[bamcommon.type_supportno]) {
