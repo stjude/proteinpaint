@@ -252,7 +252,7 @@ export async function match_complexvariant(templates, q) {
 			) {
 				// Checking to see if either end of the read is in close proximity to the indel region
 				if (type2group[bamcommon.type_supportno]) {
-					templates[index].__tempscore = '-' + alt_comparisons[index].toFixed(4).toString()
+					templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString()
 					type2group[bamcommon.type_supportno].templates.push(templates[index])
 					const input_items = {
 						value: kmer_diff_scores[index],
