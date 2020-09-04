@@ -376,7 +376,7 @@ function validate_mdsjson(obj, holder) {
 	}
 	if (obj.sampleset) {
 		for (const sample of obj.sampleset) {
-			if (!sample.name) error_m = 'sampleset name is missing'
+			if (obj.sampleset.length != 1 && !sample.name) error_m = 'sampleset name is missing'
 			if (!sample.samples) error_m = 'sampleset samples[] is missing'
 		}
 	}
