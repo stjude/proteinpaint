@@ -49,6 +49,7 @@ export async function match_complexvariant(templates, q) {
 	const weight_indel = 10 // Weight when base is inside the indel
 	const threshold_slope = 0.05 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const maximum_error_tolerance = 0.6 // Maximum error in jaccard similarity allowed to be classifed as ref/alt i.e if (1-error_tolerance) <= jaccard_similarity <= 1 then sequence if ref/alt
+	const end_read_padding = 4 // Mininum number of bases required so that a read may qualify for ref/alt classification otherwise automtically classified as 'none'
 	//----------------------------------------------------------------------------
 
 	const indel_start = q.variant.pos
@@ -203,8 +204,8 @@ export async function match_complexvariant(templates, q) {
 		//console.log("Qname:",templates[index].segments[0].qname,"Read start:",templates[index].segments[0].segstart,"Read stop:",templates[index].segments[0].segstop,"Indel start:",indel_start,"Ref indel stop:",ref_indel_stop,"Alt indel stop:",alt_indel_stop,"Allele length:",allele_length)
 		if (item == 'ref') {
 			if (
-				Math.abs(templates[index].segments[0].segstart - indel_start) <= allele_length ||
-				Math.abs(templates[index].segments[0].segstop - ref_indel_stop) <= allele_length ||
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= end_read_padding ||
+				Math.abs(templates[index].segments[0].segstop - ref_indel_stop) <= end_read_padding ||
 				(indel_start <= templates[index].segments[0].segstart &&
 					templates[index].segments[0].segstart <= ref_indel_stop) ||
 				(indel_start <= templates[index].segments[0].segstop && templates[index].segments[0].segstop <= ref_indel_stop)
@@ -244,8 +245,8 @@ export async function match_complexvariant(templates, q) {
 			}
 		} else if (item == 'alt') {
 			if (
-				Math.abs(templates[index].segments[0].segstart - indel_start) <= allele_length ||
-				Math.abs(templates[index].segments[0].segstop - alt_indel_stop) <= allele_length ||
+				Math.abs(templates[index].segments[0].segstart - indel_start) <= end_read_padding ||
+				Math.abs(templates[index].segments[0].segstop - alt_indel_stop) <= end_read_padding ||
 				(indel_start <= templates[index].segments[0].segstart &&
 					templates[index].segments[0].segstart <= alt_indel_stop) ||
 				(indel_start <= templates[index].segments[0].segstop && templates[index].segments[0].segstop <= alt_indel_stop)
