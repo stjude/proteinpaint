@@ -28,17 +28,19 @@ $ node utils/install.pp.js [options]
          First column is key, and the second column is value
          Lines starting with # are ignored
 
-		 Required keys:
+         Required keys:
+
          MAC     - add this key if your system is mac
                    do not add if your system is linux
-         TP      - full path of the TP directory
+         TP      - full path of the TP directory (for files accessed by PP backend)
          CACHE   - full path of the cache directory
          BINPATH - full path to a directory for storing dependent binary files and programs
-         PYTHON2 - the "python2" command on your system (not python3)
+         PYTHON3 - the command of Python version 3 on your system
          GENOMES - prebuilt genomes to be installed on your system, join multiple by comma
-                   hg19, hg38, mm9, mm10, dm3, dm6, danRer10
+                   hg19, hg38, mm9, mm10, rn6, dm3, dm6, danRer10
          
          Optional keys:
+
          URL     - URL of your PP server, to be inserted into public/bin/proteinpaint.js
 		           do not include trailing /bin/
                    default: http://localhost:3000/
@@ -74,7 +76,7 @@ if (arg.has('t')) {
 		TP: '/Users/xzhou1/data/tp/',
 		CACHE: '/Users/xzhou1/data/cache/',
 		BINPATH: '/Users/xzhou1/data/tools/',
-		PYTHON2: 'python',
+		PYTHON3: 'python',
 		GENOMES: 'hg19'
 	}
 } else if (arg.has('c')) {
@@ -114,7 +116,7 @@ if (validateurlmode) {
 
 	if (!UC.BINPATH) abort('BINPATH directory is undefined')
 	mkdir(UC.BINPATH)
-	if (!UC.PYTHON2) abort('PYTHON2 command is undefined')
+	if (!UC.PYTHON3) abort('PYTHON3 command is undefined')
 	if (!UC.GENOMES) abort('GENOMES is undefined')
 	UC.GENOMES = new Set(UC.GENOMES.replace(/ /g, '').split(','))
 
@@ -167,7 +169,7 @@ if (UC.URL) {
 {
 	const a = path.join(UC.BINPATH, 'read_hic_header.py')
 	trydownload(a, 'https://pecan.stjude.cloud/static/pp-support/read_hic_header.py')
-	SC.hicstat = UC.PYTHON2 + ' ' + a
+	SC.hicstat = UC.PYTHON3 + ' ' + a
 }
 {
 	const a = path.join(UC.BINPATH, 'straw')
