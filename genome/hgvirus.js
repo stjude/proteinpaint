@@ -9,6 +9,10 @@ module.exports = {
         start: 7568451,
         stop: 7591984,
     },
+    hicenzymefragment: [{
+        enzyme: 'MboI',
+        file: 'anno/hicFragment/hic.MboI.hgvirus.gz'
+    }],
     majorchr: `chr10_paternal	135534747
     chr11_paternal	135020433
     chr12_paternal	133856534
