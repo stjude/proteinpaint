@@ -766,6 +766,30 @@ exports.contigNameNoChr = function(genome, chrlst) {
 	}
 	return false
 }
+exports.contigNameNoChr2 = function(genome, chrlst) {
+	// returns number of matching chr names that either includes "chr" or not
+	// for detecting if chrlst entirely mismatch with what's in the genome build
+	// TODO replace contigNameNoChr
+	let nochrcount = 0,
+		haschrcount = 0
+	for (const n in genome.majorchr) {
+		if (chrlst.includes(n)) {
+			haschrcount++
+		} else if (chrlst.includes(n.replace('chr', ''))) {
+			nochrcount++
+		}
+	}
+	if (genome.minorchr) {
+		for (const n in genome.minorchr) {
+			if (chrlst.includes(n)) {
+				haschrcount++
+			} else if (chrlst.includes(n.replace('chr', ''))) {
+				nochrcount++
+			}
+		}
+	}
+	return [nochrcount, haschrcount]
+}
 
 exports.getMax_byiqr = function(lst, novaluemax) {
 	/*

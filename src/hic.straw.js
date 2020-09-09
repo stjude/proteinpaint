@@ -331,7 +331,10 @@ export function hicparsestat(hic, txt) {
 	for (const chr in j.Chromosomes) {
 		chrlst.push(chr)
 	}
-	hic.nochr = common.contigNameNoChr(hic.genome, chrlst)
+	//hic.nochr = common.contigNameNoChr(hic.genome, chrlst)
+	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
+	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
+	if (nochrcount > 0) hic.nochr = true
 	// as a way of skipping chrM
 	hic.chrlst = []
 	for (const chr of hic.genome.majorchrorder) {
