@@ -1,11 +1,9 @@
 import * as client from './client'
 
-export async function init_mdsjson(urlp, holder) {
-	const url_str = urlp.get('mdsjsonurl')
-	const file_str = urlp.get('mdsjson')
-
+export async function init_mdsjson(file_str, url_str, holder) {
 	let json_files = [],
 		json_urls = []
+
 	if (file_str && file_str.includes(',')) json_files = file_str.split(',')
 	else if (file_str) json_files.push(file_str)
 	else if (url_str && url_str.includes(',')) json_urls = url_str.split(',')

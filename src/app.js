@@ -12,6 +12,7 @@ import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
 import {debounce} from 'debounce'
 import * as parseurl from './app.parseurl'
+import { init_mdsjson } from './app.mdsjson'
 
 
 
@@ -960,6 +961,11 @@ async function launchblock(arg,holder) {
 			if( t.type == client.tkt.mds2 && t.dslabel ) {
 				// is an official mds2, do not flag as custom
 				continue
+			}
+			if(t.mdsjsonfile || t.mdsjsonurl){
+				const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl, holder)
+				arg.tracks = arg.tracks.filter(tk => tk != t )
+				arg.tracks.push(...tks)
 			}
 			t.iscustom=true
 		}

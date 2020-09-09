@@ -315,7 +315,9 @@ export async function get_tklst(urlp, error_div) {
 	const tklst = []
 
 	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
-		const tks = await init_mdsjson(urlp, error_div)
+		const url_str = urlp.get('mdsjsonurl')
+		const file_str = urlp.get('mdsjson')
+		const tks = await init_mdsjson(file_str, url_str, error_div)
 		tklst.push(...tks)
 	}
 
