@@ -3,6 +3,7 @@ import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
+import { init_mdsjson } from './app.mdsjson'
 
 /*
 ********************** EXPORTED
@@ -30,7 +31,7 @@ export function url2map() {
 	return urlp
 }
 
-export function parse(arg) {
+export async function parse(arg) {
 	/*
 arg
 	.jwt
@@ -235,12 +236,12 @@ arg
 			}
 		}
 
-		if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
-			init_mdsjson(urlp, arg, par)
-			return
-		}
+		// if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+		// 	init_mdsjson(urlp, arg, par)
+		// 	return
+		// }
 
-		par.tklst = get_tklst(urlp)
+		par.tklst = await get_tklst(urlp, arg.holder)
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 		import('./block').then(b => new b.Block(par))
@@ -283,7 +284,7 @@ arg
 			hostURL: arg.hostURL,
 			query: str,
 			genome: arg.genomes[genomename],
-			tklst: get_tklst(urlp),
+			tklst: await get_tklst(urlp, arg.holder),
 			holder: arg.holder,
 			dataset: ds,
 			hlaachange: hlaa,
@@ -310,143 +311,14 @@ arg
 	}
 }
 
-async function init_mdsjson(urlp, arg, par) {
-	const url_str = urlp.get('mdsjsonurl')
-	const file_str = urlp.get('mdsjson')
-	const genomename = urlp.get('genome')
-
-	let json_files = [],
-		json_urls = []
-	if (file_str && file_str.includes(',')) json_files = file_str.split(',')
-	else if (file_str) json_files.push(file_str)
-	else if (url_str && url_str.includes(',')) json_urls = url_str.split(',')
-	else if (url_str) json_urls.push(url_str)
-
-	par.tklst = []
-	if (json_files.length) {
-		const json_url = undefined
-		for (const json_file of json_files) {
-			const obj = await mdsjson_parse(json_file, json_url, arg.holder)
-			validate_mdsjson(obj, arg.holder)
-			par.tklst.push(get_json_tk(obj))
-		}
-	} else if (json_urls.length) {
-		const json_file = undefined
-		for (const json_url of json_urls) {
-			const obj = await mdsjson_parse(json_file, json_url, arg.holder)
-			validate_mdsjson(obj, arg.holder)
-			par.tklst.push(get_json_tk(obj))
-		}
-	}
-
-	client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
-	import('./block').then(b => new b.Block(par))
-}
-
-async function mdsjson_parse(json_file, json_url, holder) {
-	let error_m
-	if (json_file !== undefined && json_file == '') error_m = '.jsonfile missing'
-	if (json_url !== undefined && json_url == '') error_m = '.jsonurl missing'
-	if (error_m) {
-		client.sayerror(holder, error_m)
-		throw error_m
-	}
-
-	let tmp
-	if (json_file !== undefined) tmp = await client.dofetch('textfile', { file: json_file })
-	else if (json_url !== undefined) tmp = await client.dofetch('urltextfile', { url: json_url })
-	if (tmp.error) {
-		client.sayerror(holder, tmp.error)
-		throw tmp.error
-	}
-	return JSON.parse(tmp.text)
-}
-
-function validate_mdsjson(obj, holder) {
-	let error_m
-	if (!obj.type) error_m = 'dataset type is missing'
-	const svcnvfile = obj.svcnvfile || obj.svcnvurl
-	const vcffile = obj.vcffile || obj.vcfurl
-	if (!svcnvfile || !vcffile) error_m = 'vcf or cnv file/url is required'
-	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
-		if (!obj.expressionfile && !obj.expressionurl) error_m = 'expression file/url is missing'
-	}
-	if (Object.keys(obj).filter(x => x.includes('rnabam')).length) {
-		if (!obj.rnabamfile && !obj.rnabamurl) error_m = 'rnabam file/url is missing'
-	}
-	if (obj.sampleset) {
-		for (const sample of obj.sampleset) {
-			if (obj.sampleset.length != 1 && !sample.name) error_m = 'sampleset name is missing'
-			if (!sample.samples) error_m = 'sampleset samples[] is missing'
-		}
-	}
-	if (obj.sample2assaytrack) {
-		for (const [sample, assaylst] of Object.entries(obj.sample2assaytrack)) {
-			if (!assaylst.length) error_m = 'assay[] missing for ' + sample
-			for (const assay of assaylst) {
-				if (!assay.name) error_m = 'assay name is missing for ' + sample
-				if (!assay.type) error_m = 'assay type is missing for ' + sample
-			}
-		}
-	}
-	if (error_m) {
-		client.sayerror(holder, error_m)
-		throw error_m
-	}
-}
-
-function get_json_tk(tkobj) {
-	const track = {
-		type: tkobj.type,
-		name: tkobj.name
-	}
-
-	// dense or full
-	if (tkobj.isdense || tkobj.isfull === false) track.isdense = true
-	else if (tkobj.isfull) track.isfull = true
-
-	// svcnv file
-	if (tkobj.svcnvfile) track.file = tkobj.svcnvfile
-	else if (tkobj.svcnvurl) track.url = tkobj.svcnvurl
-
-	// expressionrank
-	if (Object.keys(tkobj).filter(x => x.includes('expression')).length) {
-		track.checkexpressionrank = {
-			file: tkobj.expressionfile,
-			url: tkobj.expressionurl
-		}
-	}
-
-	// vcf
-	if (Object.keys(tkobj).filter(x => x.includes('vcf')).length) {
-		track.checkvcf = {
-			file: tkobj.vcffile,
-			url: tkobj.vcfurl
-		}
-	}
-
-	// rna bam
-	if (Object.keys(tkobj).filter(x => x.includes('rnabam')).length) {
-		track.checkrnabam = {
-			file: tkobj.rnabamfile,
-			url: tkobj.rnabamurl
-		}
-	}
-
-	// sampleset
-	if (tkobj.sampleset) {
-		track.sampleset = tkobj.sampleset
-	}
-
-	// SampleAssayTrack
-	if (tkobj.sample2assaytrack) {
-		track.sample2assaytrack = tkobj.sample2assaytrack
-	}
-	return track
-}
-
-export function get_tklst(urlp) {
+export async function get_tklst(urlp, error_div) {
 	const tklst = []
+
+	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+		const tks = await init_mdsjson(urlp, error_div)
+		tklst.push(...tks)
+	}
+
 	if (urlp.has('bamfile')) {
 		const lst = urlp.get('bamfile').split(',')
 		for (let i = 0; i < lst.length; i += 2) {

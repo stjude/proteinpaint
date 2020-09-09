@@ -561,7 +561,7 @@ function studyui(x,y) {
 
 
 
-function parseembedthenurl(arg, holder, selectgenome) {
+async function parseembedthenurl(arg, holder, selectgenome) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -684,7 +684,7 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
-		const err = parseurl.parse({
+		const err = await parseurl.parse({
 			genomes:genomes,
 			hostURL:hostURL,
 			variantPageCall_snv:variantPageCall_snv,
