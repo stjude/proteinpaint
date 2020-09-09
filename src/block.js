@@ -748,7 +748,13 @@ export class Block {
 					this.error('Invalid dataset to load: ' + n)
 					continue
 				}
-				const tk = this.block_addtk_template({ type: client.tkt.ds, ds: ds })
+				if (ds.isMds3) {
+					// extends the old "dataset" parameter to support mds3
+					const tk = this.block_addtk_template({ type: client.tkt.mds3, dslabel: n })
+					this.tk_load(tk)
+					continue
+				}
+				const tk = this.block_addtk_template({ type: client.tkt.ds, ds })
 				if (arg.hlaachange) {
 					tk.hlaachange = arg.hlaachange
 				}
