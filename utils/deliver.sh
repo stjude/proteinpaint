@@ -10,6 +10,7 @@ node utils/deliver.packagejson.js > deploys/deliver/proteinpaint/package.json
 cp utils/*.R utils/install.pp.js deploys/deliver/proteinpaint/utils/
 cp genome/* deploys/deliver/proteinpaint/genome/
 cp dataset/clinvar* deploys/deliver/proteinpaint/dataset/
+cp dataset/gdc.hg38.2.js deploys/deliver/proteinpaint/dataset/
 cp public/index.html deploys/deliver/proteinpaint/public/
 
 
