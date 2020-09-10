@@ -136,5 +136,11 @@ function get_json_tk(tkobj) {
 	// loh cutoff settings
 	track.segmeanValueCutoff = tkobj.segmeanValueCutoff || undefined
 	track.lohLengthUpperLimit = tkobj.lohLengthUpperLimit || undefined
+
+	// multihide labels
+	track.multihidelabel_vcf = tkobj.multihidelabel_vcf || undefined
+	track.multihidelabel_fusion = tkobj.multihidelabel_fusion || undefined
+	track.multihidelabel_sv = tkobj.multihidelabel_sv || undefined
+
 	return track
 }
