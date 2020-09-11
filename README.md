@@ -2,16 +2,23 @@
 
 a genomics visualization tool for exploring a cohort's genotype and phenotype data
 
+
+## Usage
+
+Follow the [example project setup](https://github.com/stjude/pp-trial).
+
+
 ## Develop
 
-Clone this repository and install its dependencies:
+Clone this repository
 
 ```bash
 git clone git@github.com:stjude/proteinpaint.git
 cd proteinpaint
-npm install
-node ./utils/install.pp.js
+npm run sethooks
 ```
+
+As needed, follow the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit)
 
 `npm run dev` rebundles backend and frontend code
 

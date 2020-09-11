@@ -61,14 +61,7 @@ APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 
-if [[ "$ENV" == "internal-stage" || "$ENV" == "pp-int-test" || "$ENV" == "pp-irt" ]]; then
-	DEPLOYER=genomeuser
-	REMOTEHOST=pp-irt.stjude.org
-	REMOTEDIR=/opt/app/pp
-	URL="//pp-int-test.stjude.org"
-	SUBDOMAIN=pp-int-test
-
-elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
+if [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	REMOTEDIR=/opt/app/pp
@@ -95,10 +88,6 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 		TEMPHOST=svldtemp01.stjude.org
 	fi
 
-elif [[ "$ENV" == "dist" ]]; then
-	# do nothing for now
-	REGISTRY=https://npm.pkg.github.com/
-	SUBDOMAIN=dist
 else
 	echo "Environment='$ENV' is not supported"
 	exit 1
@@ -161,30 +150,11 @@ else
 		cp public/index.html $APP/public/index.html
 	fi
 
-	if [[ "$ENV" != "dist" ]]; then
-		# tar inside the dir in order to not create
-		# a root directory in tarball
-		cd $APP
-		tar -czf ../$APP-$REV.tgz .
-		cd ..
-	fi
-fi
-	
-##########
-# PUBLISH
-##########
-
-if [[ "$ENV" == "dist" ]]; then
-	echo "Releasing to $ENV ..."
-	cp ../dist/index.js $APP/
-	cp ../dist/README.md $APP/
-	rm -r ../dist
-	# remove dataset js files for now, may expose later
-	rm -r $APP/dataset
-	echo \"$REV $(date)\" >> $APP/public/rev.txt
-	mv $APP ../dist
-	# npm publish
-	exit 0
+	# tar inside the dir in order to not create
+	# a root directory in tarball
+	cd $APP
+	tar -czf ../$APP-$REV.tgz .
+	cd ..
 fi
 
 ##########
@@ -213,7 +183,7 @@ REMOTE_UPDATE="
 	cd $REMOTEDIR/$APP/
 	$REMOTEDIR/proteinpaint_run_node.sh
 
-	echo \"$ENV $REV $(date)\" >> $REMOTEDIR/$APP/public/rev.txt
+	echo \"$ENV $REV $(date)\" > $REMOTEDIR/$APP/public/rev.txt
 "
 
 if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then

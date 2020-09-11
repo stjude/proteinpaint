@@ -2,8 +2,8 @@
   "name": "@stjude/proteinpaint",
   "version": "1.0.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "dist/server.js",
-  "bin": "dist/index.js",
+  "main": "index.js",
+  "bin": "bin.js",
   "scripts": {
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
@@ -105,7 +105,14 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "dist"
+    "genomes",
+    "public/index.html",
+    "public/rev.txt",
+    "utils/binom.R",
+    "utils/chisq.R",
+    "server.js",
+    "bin.js",
+    "index.js"
   ],
   "repository": {
     "type": "git",
