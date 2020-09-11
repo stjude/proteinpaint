@@ -434,7 +434,7 @@ function findgenelst( str, genome, tip, jwt ) {
 
 
 
-function findgene2paint( str, genomename, jwt ) {
+async function findgene2paint( str, genomename, jwt ) {
 	const g=genomes[genomename]
 	if(!g) {
 		console.error('unknown genome '+genomename)
@@ -444,7 +444,7 @@ function findgene2paint( str, genomename, jwt ) {
 
 	// may yield tklst from url parameters
 	const urlp=parseurl.url2map()
-	const tklst = parseurl.get_tklst(urlp)
+	const tklst = await parseurl.get_tklst(urlp)
 
 	const pos=string2pos(str,g)
 	if(pos) {
