@@ -18,7 +18,7 @@ set -e
 
 # default to deploying to ppdev
 if (($# == 0)); then
-	ENV="internal-stage"
+	ENV="pp-test"
 	REV="HEAD"
 	DEPLOYER=$USER
 elif (($# == 1)); then
@@ -94,6 +94,11 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 		TEMPUSER=gnomeuser
 		TEMPHOST=svldtemp01.stjude.org
 	fi
+
+elif [[ "$ENV" == "dist" ]]; then
+	# do nothing for now
+	REGISTRY=https://npm.pkg.github.com/
+	SUBDOMAIN=dist
 else
 	echo "Environment='$ENV' is not supported"
 	exit 1
@@ -139,29 +144,44 @@ else
 	mkdir $APP
 	mkdir $APP/public
 	mkdir $APP/src
+	mkdir $APP/utils
 
 	npm run build-server
 	mv server.js $APP/
 	mv package.json $APP/
 	mv public/builds/$SUBDOMAIN $APP/public/bin
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv utils modules $APP/
+	mv modules $APP/
 	mv genome $APP/
 	mv dataset $APP/
+	mv utils/*.R $APP/utils/
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
-	elif [[ "$ENV" == "internal-stage" ]]; then
-		cp public/pp-int-test.html $APP/public/index.html
 	else
 		cp public/index.html $APP/public/index.html
 	fi
 
-	# tar inside the dir in order to not create
-	# a root directory in tarball
-	cd $APP
-	tar -czf ../$APP-$REV.tgz .
-	cd ..
+	if [[ "$ENV" != "dist" ]]; then
+		# tar inside the dir in order to not create
+		# a root directory in tarball
+		cd $APP
+		tar -czf ../$APP-$REV.tgz .
+		cd ..
+	fi
+fi
+	
+##########
+# PACKAGE
+##########
+
+if [[ "$ENV" == "dist" ]]; then
+	echo "Releasing to $ENV ..."
+	cp ../dist/index.js $APP/
+	cp ../dist/README.md $APP/
+	rm -r ../dist
+	mv $APP ../dist
+	exit 0
 fi
 
 ##########

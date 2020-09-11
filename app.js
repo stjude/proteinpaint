@@ -1,6 +1,7 @@
 // JUMP __MDS __util __rank __smat
 
-const serverconfigfile = './serverconfig.json'
+const path = require('path')
+const serverconfigfile = path.join(process.cwd(), './serverconfig.json')
 
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
@@ -25,7 +26,6 @@ const express = require('express'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
-	path = require('path'),
 	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
@@ -112,7 +112,7 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-app.use(express.static('./public'))
+app.use(express.static(path.join(process.cwd(), './public')))
 app.use(compression())
 
 if (serverconfig.jwt) {
@@ -228,7 +228,7 @@ function handle_genomes(req, res) {
 			hash[genomename] = clientcopy_genome(genomename)
 		}
 	}
-	const date1 = fs.statSync('server.js').mtime
+	const date1 = fs.statSync('/Users/esioson/web/pp-dist/node_modules/proteinpaint/dist/server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
 	const lastdate = date1 < date2 ? date1 : date2
 	res.send({

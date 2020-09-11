@@ -1,8 +1,9 @@
 {
-  "name": "proteinpaint",
+  "name": "@stjude/proteinpaint",
   "version": "1.0.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "app.js",
+  "main": "dist/server.js",
+  "bin": "dist/index.js",
   "scripts": {
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
@@ -47,7 +48,7 @@
     ]
   },
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "devDependencies": {
     "babel-cli": "^6.18.0",
     "babel-core": "^6.26.3",
@@ -99,5 +100,15 @@
     "normalize.css": "^4.2.0",
     "partjson": "^0.58.1",
     "request": "^2.88.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint"
   }
 }
