@@ -80,6 +80,11 @@ function validate_mdsjson(obj) {
 			}
 		}
 	}
+	if (obj.fixedgeneexpression) {
+		for (const gene of obj.fixedgeneexpression) {
+			if (!gene.gene) throw 'gene missing in fixedgeneexpression array'
+		}
+	}
 }
 
 function get_json_tk(tkobj) {
@@ -129,6 +134,11 @@ function get_json_tk(tkobj) {
 	if (tkobj.sample2assaytrack) {
 		track.sample2assaytrack = tkobj.sample2assaytrack
 	}
+
+	// fixed panel of gene expression
+	track.fixedgeneexpression = tkobj.fixedgeneexpression
+	// show all samples
+	track.getallsamples = tkobj.getallsamples
 
 	// cnv cutoff settings
 	track.valueCutoff = tkobj.cnvValueCutoff || undefined
