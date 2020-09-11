@@ -108,8 +108,9 @@
     "genomes",
     "public/index.html",
     "public/rev.txt",
-    "utils/binom.R",
-    "utils/chisq.R",
+    "public/bin",
+    "utils/*.R",
+    "utils/install.pp.js",
     "server.js",
     "bin.js",
     "index.js"

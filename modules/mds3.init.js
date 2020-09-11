@@ -11,7 +11,7 @@ client_copy
 ********************** INTERNAL
 */
 
-//const serverconfig = __non_webpack_require__('./serverconfig.json')
+//const serverconfig = utils.serverconfig
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'

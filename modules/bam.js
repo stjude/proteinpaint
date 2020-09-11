@@ -204,7 +204,7 @@ const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 const samtools = serverconfig.samtools || 'samtools'
 
 module.exports = genomes => {

@@ -1,13 +1,11 @@
 // JUMP __MDS __util __rank __smat
 
-const path = require('path')
-const serverconfigfile = path.join(process.cwd(), './serverconfig.json')
-
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const serverconfig = __non_webpack_require__(serverconfigfile)
+const utils = require('./modules/utils')
+const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
 
 const tabixnoterror = s => {
@@ -19,6 +17,7 @@ const express = require('express'),
 	http = require('http'),
 	https = require('https'),
 	fs = require('fs'),
+	path = require('path'),
 	request = require('request'),
 	async = require('async'),
 	lazy = require('lazy'),
@@ -59,7 +58,6 @@ const express = require('express'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
-	utils = require('./modules/utils'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
 	variant2samples_closure = require('./modules/variant2samples')
 

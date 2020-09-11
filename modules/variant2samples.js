@@ -12,8 +12,6 @@ only requires ds.variant2samples{}
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
 module.exports = genomes => {
 	return async (req, res) => {
 		app.log(req)

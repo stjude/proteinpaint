@@ -20,7 +20,7 @@ may_init_svcnv
 may_sum_samples
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 
 export async function init(ds, genome) {
 	/* initiate the mds2 track upon launching server
