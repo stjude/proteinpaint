@@ -4199,7 +4199,8 @@ async function handle_mdssvcnv(req, res) {
 			iscustom: 1,
 			file: req.query.file,
 			url: req.query.url,
-			indexURL: req.query.indexURL
+			indexURL: req.query.indexURL,
+			allow_getallsamples: true
 		}
 
 		if (req.query.checkexpressionrank) {
@@ -4401,6 +4402,11 @@ async function handle_mdssvcnv(req, res) {
 		samplegroups: samplegroups,
 		vcfrangelimit: vcfrangelimit,
 		data_vcf: data_vcf
+	}
+
+	// QUICK FIX!!
+	if (req.query.getallsamples && dsquery.allow_getallsamples) {
+		result.getallsamples = true
 	}
 
 	if (dsquery.checkrnabam) {
@@ -4966,6 +4972,22 @@ function handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sampl
 		result.gene2coord = {}
 		for (const [n, g] of gene2sample2obj) {
 			result.gene2coord[n] = { chr: g.chr, start: g.start, stop: g.stop }
+		}
+
+		if (result.getallsamples) {
+			// QUICK FIX - only for custom track
+			// merge all fpkm samples into result.samplegroups[0], so all samples will show
+			const hassamples = new Set(result.samplegroups[0].samples.map(i => i.samplename))
+			const toaddsamples = new Set()
+			for (const [n, g] of gene2sample2obj) {
+				for (const sample of g.samples.keys()) {
+					if (hassamples.has(sample)) continue
+					toaddsamples.add(sample)
+				}
+			}
+			for (const sample of toaddsamples) {
+				result.samplegroups[0].samples.push({ samplename: sample, items: [] })
+			}
 		}
 
 		for (const g of result.samplegroups) {
