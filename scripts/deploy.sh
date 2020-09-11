@@ -150,11 +150,10 @@ else
 	mv server.js $APP/
 	mv package.json $APP/
 	mv public/builds/$SUBDOMAIN $APP/public/bin
-	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv modules $APP/
 	mv genome $APP/
 	mv dataset $APP/
-	mv utils/*.R $APP/utils/
+	mv utils/binom.R $APP/utils/
+	mv utils/chisq.R $APP/utils/
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
@@ -172,7 +171,7 @@ else
 fi
 	
 ##########
-# PACKAGE
+# PUBLISH
 ##########
 
 if [[ "$ENV" == "dist" ]]; then
@@ -180,7 +179,11 @@ if [[ "$ENV" == "dist" ]]; then
 	cp ../dist/index.js $APP/
 	cp ../dist/README.md $APP/
 	rm -r ../dist
+	# remove dataset js files for now, may expose later
+	rm -r $APP/dataset
+	echo \"$REV $(date)\" >> $APP/public/rev.txt
 	mv $APP ../dist
+	# npm publish
 	exit 0
 fi
 

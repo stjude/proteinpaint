@@ -2,7 +2,7 @@
 .DS_Store
 /node_modules/
 npm-debug.log
-dist/
+dist/*
 !dist/index.js
 !dist/README.js
 

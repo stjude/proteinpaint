@@ -218,7 +218,6 @@ app.post('/bamnochr', handle_bamnochr)
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
 */
 const infoFilter_unannotated = 'Unannotated'
-
 function handle_genomes(req, res) {
 	const hash = {}
 	if (req.query && req.query.genome) {
@@ -228,7 +227,9 @@ function handle_genomes(req, res) {
 			hash[genomename] = clientcopy_genome(genomename)
 		}
 	}
-	const date1 = fs.statSync('/Users/esioson/web/pp-dist/node_modules/proteinpaint/dist/server.js').mtime
+	// use the /public/../ prefix to server filepath
+	// in order to support the use case as an npm binary
+	const date1 = fs.statSync('public/../server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
 	const lastdate = date1 < date2 ? date1 : date2
 	res.send({
