@@ -13,71 +13,72 @@ export async function init_mdsjson(file_str, url_str, holder) {
 	if (json_files.length) {
 		const json_url = undefined
 		for (const json_file of json_files) {
-			const obj = await mdsjson_parse(json_file, json_url, holder)
-			validate_mdsjson(obj, holder)
-			tklst.push(get_json_tk(obj))
+			try {
+				tklst.push(await tklst_pipeline(json_file, json_url, holder))
+			} catch (e) {
+				client.sayerror(holder, e)
+			}
 		}
 	} else if (json_urls.length) {
 		const json_file = undefined
 		for (const json_url of json_urls) {
-			const obj = await mdsjson_parse(json_file, json_url, holder)
-			validate_mdsjson(obj, holder)
-			tklst.push(get_json_tk(obj))
+			try {
+				tklst.push(await tklst_pipeline(json_file, json_url, holder))
+			} catch (e) {
+				client.sayerror(holder, e)
+			}
 		}
 	}
 
 	return tklst
 }
 
-async function mdsjson_parse(json_file, json_url, holder) {
-	let error_m
-	if (json_file !== undefined && json_file == '') error_m = '.jsonfile missing'
-	if (json_url !== undefined && json_url == '') error_m = '.jsonurl missing'
-	if (error_m) {
-		client.sayerror(holder, error_m)
-		throw error_m
-	}
+async function tklst_pipeline(json_file, json_url) {
+	const obj = await mdsjson_parse(json_file, json_url)
+	validate_mdsjson(obj)
+	const tk = get_json_tk(obj)
+	return tk
+}
+
+async function mdsjson_parse(json_file, json_url) {
+	if (json_file !== undefined && json_file == '') throw '.jsonfile missing'
+	if (json_url !== undefined && json_url == '') throw '.jsonurl missing'
 
 	let tmp
 	if (json_file !== undefined) tmp = await client.dofetch('textfile', { file: json_file })
 	else if (json_url !== undefined) tmp = await client.dofetch('urltextfile', { url: json_url })
 	if (tmp.error) {
-		client.sayerror(holder, tmp.error)
 		throw tmp.error
 	}
 	return JSON.parse(tmp.text)
 }
 
-function validate_mdsjson(obj, holder) {
-	let error_m
-	if (!obj.type) error_m = 'dataset type is missing'
+function validate_mdsjson(obj) {
+	if (!obj) throw 'file is missing'
+	if (!obj.type) throw 'dataset type is missing'
 	const svcnvfile = obj.svcnvfile || obj.svcnvurl
 	const vcffile = obj.vcffile || obj.vcfurl
-	if (!svcnvfile || !vcffile) error_m = 'vcf or cnv file/url is required'
+	if (!svcnvfile || !vcffile) throw 'vcf or cnv file/url is required'
 	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
-		if (!obj.expressionfile && !obj.expressionurl) error_m = 'expression file/url is missing'
+		if (!obj.expressionfile && !obj.expressionurl) throw 'expression file/url is missing'
 	}
 	if (Object.keys(obj).filter(x => x.includes('rnabam')).length) {
-		if (!obj.rnabamfile && !obj.rnabamurl) error_m = 'rnabam file/url is missing'
+		if (!obj.rnabamfile && !obj.rnabamurl) throw 'rnabam file/url is missing'
 	}
 	if (obj.sampleset) {
 		for (const sample of obj.sampleset) {
-			if (obj.sampleset.length != 1 && !sample.name) error_m = 'sampleset name is missing'
-			if (!sample.samples) error_m = 'sampleset samples[] is missing'
+			if (obj.sampleset.length != 1 && !sample.name) throw 'sampleset name is missing'
+			if (!sample.samples) throw 'sampleset samples[] is missing'
 		}
 	}
 	if (obj.sample2assaytrack) {
 		for (const [sample, assaylst] of Object.entries(obj.sample2assaytrack)) {
-			if (!assaylst.length) error_m = 'assay[] missing for ' + sample
+			if (!assaylst.length) throw 'assay[] missing for ' + sample
 			for (const assay of assaylst) {
-				if (!assay.name) error_m = 'assay name is missing for ' + sample
-				if (!assay.type) error_m = 'assay type is missing for ' + sample
+				if (!assay.name) throw 'assay name is missing for ' + sample
+				if (!assay.type) throw 'assay type is missing for ' + sample
 			}
 		}
-	}
-	if (error_m) {
-		client.sayerror(holder, error_m)
-		throw error_m
 	}
 }
 
