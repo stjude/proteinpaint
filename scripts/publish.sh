@@ -24,9 +24,8 @@ else
 	exit 1
 fi
 
-echo "$(git rev-parse HEAD) $(date)" > public/rev.txt
-
 # for traceability, npm will not change the version unless
 # the git working directory is clean (i.e., there are no pending file changes)
 npm version "$REV"
+echo "$(git rev-parse HEAD) $(date)" > public/rev.txt
 npm publish
