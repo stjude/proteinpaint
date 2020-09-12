@@ -11848,7 +11848,8 @@ function pp_init() {
 		if (!g.name) return '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) return '.file missing from genome ' + g.name
 
-		const jsfile = fs.existsSync(g.file) ? g.file : path.join(process.cwd(), './node_modules/@stjude/proteinpaint', g.file); console.log(11851, jsfile)
+		const overrideFile = path.join(process.cwd(), g.file)
+		const jsfile = fs.existsSync(overrideFile) ? overrideFile : g.file
 		const g2 = __non_webpack_require__(jsfile)
 
 		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
@@ -12095,7 +12096,7 @@ function pp_init() {
 			let ds
 			if (d.jsfile) {
 				const overrideFile = path.join(process.cwd(), d.jsfile)
-				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile; console.log(12098, overrideFile, jsfile)
+				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile
 				ds = __non_webpack_require__(jsfile)
 			} else {
 				return 'jsfile not available for dataset ' + d.name + ' of ' + genomename
