@@ -225,11 +225,18 @@ function handle_genomes(req, res) {
 			hash[genomename] = clientcopy_genome(genomename)
 		}
 	}
-	// use the /public/../ prefix to server filepath
-	// in order to support the use case as an npm binary
-	const date1 = fs.statSync('public/../server.js').mtime
+	// detect if proteinpaint was called from outside the
+	// project directory that installed it as an npm dependency
+	const ppbin = process.argv.find(
+		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
+	)
+	// if the pp binary did not start the process, assume that the
+	// server was called in the same directory as the public dir or symlink
+	const dirname = serverconfig.projectdir ? serverconfig.projectdir : ppbin ? path.dirname(ppbin) : 'public/..'
+	console.log(233, ppbin, dirname, process.argv)
+	const date1 = fs.statSync(dirname + '/server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
-	const lastdate = date1 < date2 ? date1 : date2
+	const lastdate = date1 > date2 ? date1 : date2
 	res.send({
 		genomes: hash,
 		debugmode: serverconfig.debugmode,

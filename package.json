@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "index.js",
   "bin": "bin.js",
@@ -101,6 +101,10 @@
     "partjson": "^0.58.1",
     "request": "^2.88.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/pp-trial"
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
   },
@@ -117,8 +121,7 @@
     "utils/install.pp.js",
     "src/common.js"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/stjude/proteinpaint"
+  "bugs": {
+    "url": "https://github.com/stjude/pp-trial"
   }
 }
