@@ -105,15 +105,17 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "genomes",
+    "server.js",
+    "bin.js",
+    "index.js"
+    "genome",
+    "dataset",
     "public/index.html",
     "public/rev.txt",
     "public/bin",
     "utils/*.R",
     "utils/install.pp.js",
-    "server.js",
-    "bin.js",
-    "index.js"
+    "src/common.js"
   ],
   "repository": {
     "type": "git",
