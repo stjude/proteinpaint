@@ -6,19 +6,39 @@ set -e
 # 
 # 
 
-if (($# == 0)); then
+if (($# == 0 || $# > 2)); then
 	echo "Usage:
 
-	./scripts/deliver.sh [ CUSTOMER ]
+	./scripts/deliver.sh [ CUSTOMER ] [ UPDATETYPE ]
+
+	- CUSTOMER 
+		required, name of the customer that will receive the package
+
+	- UPDATETYPE [ patch | minor ]
+		- optional, provide if the package version is being updated specifically for the customer
+		- a 'major' version update is not allowed, since that update type should not be customer specific
 	"
 	exit 1
-else
+elif (($# == 0)); then
 	CUSTOMER=$1
+	UPDATETYPE=""
+elif (($# == 2)); then
+	CUSTOMER=$1
+	UPDATETYPE=$2
 fi
 
-. ./scripts/publish.sh tgz
-# inherit the $TAG value from the publish script
+# NOTE: major 
+if [[ "$UPDATETYPE" == "patch" || "$UPDATETYPE" == "minor" ]]; then
+	npm version $UPDATETYPE
+fi
+
+# get the current tag
+TAG=$(node -p "require('./package.json').version")
 PKGVER="stjude-proteinpaint-$TAG.tgz"
+
+if [[ ! -d tmppack || ! -f tmppack/$PKGVER ]]; then
+	. ./scripts/publish.sh tgz
+fi
 
 cd ./tmppack
 rm -rf package

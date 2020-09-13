@@ -5,7 +5,6 @@
   "main": "index.js",
   "bin": "bin.js",
   "scripts": {
-    "postversion": "./scripts/publish.sh registry",
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
@@ -24,7 +23,11 @@
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
-    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v"
+    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
+
+    "patch-release": "npm version patch && ./scripts/publish.sh registry",
+    "minor-release": "npm version minor && ./scripts/publish.sh registry",
+    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
   },
   "prettier": {
     "semi": false,

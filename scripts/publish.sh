@@ -76,9 +76,6 @@ npx webpack --config=scripts/webpack.config.build.js --env.subdomain=""
 # PUBLISH
 ##########
 
-# get the current tag
-TAG=$(git tag --points-at HEAD)
-
 if [[ "$DEST" == "dry" ]]; then
 	npm publish --dry-run
 	cd ..
@@ -92,6 +89,8 @@ elif [[ "$DEST" == "registry" ]]; then
 	# sensitive information
 	# 
 	echo -e "\nTagging remote with $TAG\n"
+	# get the current tag
+	TAG=$(git tag --points-at HEAD)
 	git push origin "$TAG"
 	npm publish
 	cd ..
