@@ -19,15 +19,22 @@ if (($# == 0 || $# > 2)); then
 		- a 'major' version update is not allowed, since that update type should not be customer specific
 	"
 	exit 1
-elif (($# == 0)); then
+
+elif (($# == 1)); then
 	CUSTOMER=$1
 	UPDATETYPE=""
+
 elif (($# == 2)); then
 	CUSTOMER=$1
 	UPDATETYPE=$2
+
 fi
 
-# NOTE: major 
+if [[ "$CUSTOMER" != "all" && "$CUSTOMER" != "gdc"  ]]; then
+	echo -e "Unsupported customer '$CUSTOMER'"
+	exit 1
+fi
+
 if [[ "$UPDATETYPE" == "patch" || "$UPDATETYPE" == "minor" ]]; then
 	npm version $UPDATETYPE
 fi
@@ -45,20 +52,14 @@ rm -rf package
 tar -xzf $PKGVER
 rm $PKGVER
 
-if [[ "$CUSTOMER" == "gdc" ]]; then
-	echo "Filtering the dataset js files ..."
+if [[ "$CUSTOMER" == "gdc" || "$CUSTOMER" == "all" ]]; then
+	echo "Filtering the dataset js files for gdc ..."
 	# will selectively filter later, remove all for now
 	rm package/dataset/*.js
 	tar -czf $PKGVER package
 	echo "transferring the package ..."
 	scp $PKGVER genomeuser@pp-prt:/opt/app/pecan/portal/www/static/Pk983gP.Rl2410y45/
 	# switch destination to jump-prp1 server later
-
-else 
-	echo "Unrecognized customer='$CUSTOMER'"
-	exit 1
-
 fi
 
-cd ..
-# rm -r tmppack
+rm -rf package

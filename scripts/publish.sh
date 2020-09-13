@@ -94,7 +94,7 @@ elif [[ "$DEST" == "registry" ]]; then
 	git push origin "$TAG"
 	npm publish
 	cd ..
-	rm -r tmppack
+	# rm -r tmppack
 
 elif [[ "$DEST" == "tgz" ]]; then
 	npm pack

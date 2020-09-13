@@ -24,8 +24,8 @@
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
-    "patch-release": "npm version patch && ./scripts/publish.sh registry",
-    "minor-release": "npm version minor && ./scripts/publish.sh registry",
+    "patch-release": "npm version patch && ./scripts/publish.sh registry && ./scripts/deliver all",
+    "minor-release": "npm version minor && ./scripts/publish.sh registry && ./scripts/deliver all",
     "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
   },
   "prettier": {
