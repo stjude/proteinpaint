@@ -43,6 +43,7 @@ server.js
 setup/*gz*
 setup/*
 tmpbuild/*
+tmppack/*
 pp-server/*
 
 *-stash.js

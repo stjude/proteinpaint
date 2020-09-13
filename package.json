@@ -5,6 +5,7 @@
   "main": "index.js",
   "bin": "bin.js",
   "scripts": {
+    "postversion": "./scripts/publish.sh",
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
@@ -13,7 +14,6 @@
     "public-stage": "./scripts/deploy.sh public-stage",
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
-    "irt": "./scripts/deploy.sh internal-stage",
     "test": "tape modules/test/*.spec.js && browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
     "test-back": "tape modules/test/*.spec.js",
     "test-front": "browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",

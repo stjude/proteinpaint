@@ -4,12 +4,8 @@ const path = require('path')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 module.exports = function(env) {
-	const protocol = env.subdomain == 'pp-test' ? '' : 'https:'
-	const urlpath = env.subdomain.startsWith('pecan') || env.subdomain.startsWith('pp-prt') ? 'pp/bin/' : 'bin/'
-	config.output.publicPath =
-		env.subdomain == 'dist'
-			? urlpath
-			: protocol + '//' + (env.subdomain ? env.subdomain : 'pecan-test') + '.stjude.org/' + urlpath
+	const protocol = !env.subdomain ? '' : 'https:'
+	config.output.publicPath = !env.subdomain ? '/bin' : protocol + '//' + env.subdomain + '.stjude.org/bin'
 	config.output.path = __dirname + '/../public/builds/' + (env.subdomain ? env.subdomain : 'pecan-test')
 
 	config.optimization = {
