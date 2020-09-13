@@ -36,9 +36,11 @@ if [[ "$DEST" != "dry" && "$DEST" != "registry" && "$DEST" != "tgz"  ]]; then
 	exit 1
 fi
 
-#######################
+#############################
 # EXTRACT FROM COMMIT
-#######################
+# 
+# ensure recoverability
+#############################
 
 # get commit sha1
 REV=$(git rev-parse --short HEAD)
@@ -74,6 +76,9 @@ npx webpack --config=scripts/webpack.config.build.js --env.subdomain=""
 # PUBLISH
 ##########
 
+# get the current tag
+TAG=$(git tag --points-at HEAD)
+
 if [[ "$DEST" == "dry" ]]; then
 	npm publish --dry-run
 	cd ..
@@ -86,7 +91,6 @@ elif [[ "$DEST" == "registry" ]]; then
 	# that the pp-trial package will not expose any
 	# sensitive information
 	# 
-	TAG=$(git tag --points-at HEAD)
 	echo -e "\nTagging remote with $TAG\n"
 	git push origin "$TAG"
 	npm publish
