@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "index.js",
   "bin": "bin.js",
@@ -24,7 +24,6 @@
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
-
     "patch-release": "npm version patch && ./scripts/publish.sh registry",
     "minor-release": "npm version minor && ./scripts/publish.sh registry",
     "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
