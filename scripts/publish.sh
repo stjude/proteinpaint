@@ -3,12 +3,38 @@
 set -e
 
 # 
-# Intended as a postversion hook when calling `npm version`
-# or run as `$ ./scripts/publish.sh`
+# Intended as a postversion hook when calling 
+# `$ npm version [ patch | minor | major | ... ]`
+# 
+# or run as `$ ./scripts/publish.sh [ .... see Usage below ... ]`
 # 
 # This runs a build from a clean work space to ensure that
 # all published artifacts are traceable to a git commit.
 #
+
+###############
+# ARGUMENTS
+###############
+
+# default to deploying to ppdev
+if (($# == 0)); then
+	DEST="dry"
+elif (($# == 1)); then
+	DEST=$1
+fi
+
+if [[ "$DEST" != "dry" && "$DEST" != "registry" && "$DEST" != "tgz"  ]]; then
+	echo "Usage:
+
+	./scripts/publish.sh [ "" | dry | registry | dry | tgz ]
+
+	- no argument defaults to dry
+	- dry: equivalent to 'npm publish --dry-run'
+	- registry: equivalent to 'npm publish'
+	- tgz: equivalent to 'npm pack'
+	"
+	exit 1
+fi
 
 #######################
 # EXTRACT FROM COMMIT
@@ -19,9 +45,14 @@ REV=$(git rev-parse --short HEAD)
 rm -Rf tmppack 
 mkdir tmppack # temporary workspace
 git archive HEAD | tar -x -C tmppack/
+#
+# to-do?
+# - option to use a customer-specific package that customizes files: [ dataset/*.js ]
+# - or apply a hardcoded dataset filter after packing with the tgz option
+# 
 cp package.json tmppack/
 cd tmppack
-echo "$(git rev-parse HEAD) $(date)" > public/rev.txt
+echo "$REV $(date)" > ./public/rev.txt
 
 # save some time by reusing parent folder's node_modules
 # but making sure to update to the committed package.json
@@ -33,21 +64,47 @@ ln -s ../node_modules node_modules
 ########
 
 # create webpack bundles
-echo "Packing the server bundle ..."
+echo -e "\nPacking the server bundle ...\n"
 npm run build-server
-echo "Packing the client bundle ..."
+echo -e "\nPacking the client bundle ...\n"
 npx webpack --config=scripts/webpack.config.build.js --env.subdomain=""
 
 
-#######################
-# PUBLISH TO REGISTRY
-#######################
+##########
+# PUBLISH
+##########
 
-echo "Delivering the package ..."
+if [[ "$DEST" == "dry" ]]; then
+	npm publish --dry-run
+	cd ..
 
-npm publish # --dry-run # to jsut displayed what would have been published
-# - OR -
-# npm pack # to create just the tar without publishing to registry
+elif [[ "$DEST" == "registry" ]]; then
+	# 
+	# to-do? 
+	# option to filter the dataset js files
+	# to a bare minimum trial experience, so 
+	# that the pp-trial package will not expose any
+	# sensitive information
+	# 
+	TAG=$(git tag --points-at HEAD)
+	echo -e "\nTagging remote with $TAG\n"
+	git push origin "$TAG"
+	npm publish
+	cd ..
+	rm -r tmppack
 
-cd ..
-rm -r tmppack
+elif [[ "$DEST" == "tgz" ]]; then
+	npm pack
+	# delete everything in temp folder except the tar gz file
+	find . -type f ! -name '*.tgz' -delete
+	find . -type d -delete
+	rm node_modules
+	cd ..
+
+	# 
+	# to-do? 
+	# use this publish script from a deliver script
+	# to target the package contents to specific customers
+	# 
+
+fi

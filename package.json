@@ -5,7 +5,7 @@
   "main": "index.js",
   "bin": "bin.js",
   "scripts": {
-    "postversion": "./scripts/publish.sh",
+    "postversion": "./scripts/publish.sh registry",
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
