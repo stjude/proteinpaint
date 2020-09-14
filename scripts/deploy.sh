@@ -121,8 +121,8 @@ else
 		# committed code is used except for the live bundle.
 		# To force rebundle from committed code, 
 		# use "internal-prod" instead of "ppdev" environment
-		mkdir public/builds/$SUBDOMAIN
-		cp ../public/bin/* public/builds/$SUBDOMAIN
+		mkdir public/bin
+		cp ../public/bin/* public/bin
 		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
 	else 
 		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
@@ -138,11 +138,12 @@ else
 	npm run build-server
 	mv server.js $APP/
 	mv package.json $APP/
-	mv public/builds/$SUBDOMAIN $APP/public/bin
+	mv public/bin $APP/public/bin
 	mv genome $APP/
 	mv dataset $APP/
 	mv utils/binom.R $APP/utils/
 	mv utils/chisq.R $APP/utils/
+	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
@@ -181,7 +182,7 @@ REMOTE_UPDATE="
 	ln -s $REMOTEDIR/$APP/public/bin $REMOTEDIR/$APP/public/no-babel-polyfill
 
 	cd $REMOTEDIR/$APP/
-	$REMOTEDIR/proteinpaint_run_node.sh
+	../proteinpaint_run_node.sh
 
 	echo \"$ENV $REV $(date)\" > $REMOTEDIR/$APP/public/rev.txt
 "
@@ -207,4 +208,4 @@ fi
 #############
 
 cd ..
-rm -rf tmpbuild
+# rm -rf tmpbuild
