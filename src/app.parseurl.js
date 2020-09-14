@@ -54,8 +54,13 @@ arg
 		}
 	}
 
-	if (urlp.has('hicfile')) {
-		const file = urlp.get('hicfile')
+	if (urlp.has('hicfile') || urlp.has('hicurl')) {
+		let file, url
+		if (urlp.has('hicfile')) {
+			file = urlp.get('hicfile')
+		} else {
+			url = urlp.get('hicurl')
+		}
 		const gn = urlp.get('genome')
 		if (!gn) return 'genome is required for hic'
 		const genome = arg.genomes[gn]
@@ -63,7 +68,8 @@ arg
 		const hic = {
 			genome,
 			file,
-			name: path.basename(file),
+			url,
+			name: path.basename(file || url),
 			hostURL: arg.hostURL,
 			enzyme: urlp.get('enzyme'),
 			holder: arg.holder
