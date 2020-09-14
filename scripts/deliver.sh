@@ -54,8 +54,8 @@ rm $PKGVER
 
 if [[ "$CUSTOMER" == "gdc" || "$CUSTOMER" == "all" ]]; then
 	echo "Filtering the dataset js files for gdc ..."
-	# will selectively filter later, remove all for now
-	rm package/dataset/*.js
+	# will selectively filter later, 
+	# rm package/dataset/..???.js
 	tar -czf $PKGVER package
 	echo "transferring the package ..."
 	scp $PKGVER genomeuser@pp-prt:/opt/app/pecan/portal/www/static/Pk983gP.Rl2410y45/
