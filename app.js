@@ -3118,10 +3118,6 @@ function handle_svmr(req, res) {
 
 function handle_hicstat(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!req.query.file) {
-		res.send({ error: 'missing file' })
-		return
-	}
 	const [e, file, isurl] = fileurl(req)
 	if (e) {
 		res.send({ error: 'illegal file name' })
@@ -3170,10 +3166,6 @@ function handle_hicdata(req, res) {
 		req.query = JSON.parse(req.body)
 	} catch (e) {
 		res.send({ error: 'invalid request body' })
-		return
-	}
-	if (!req.query.file) {
-		res.send({ error: 'missing file' })
 		return
 	}
 	log(req)
