@@ -259,7 +259,6 @@ module.exports = {
 					snp6: { name: 'SNP6', label: 'SNP Array 6.0' },
 					cc: { name: 'CapVal', label: 'Capture validation' }
 				},
-				hidden: 1,
 				filter: 1
 			},
 			rna_assay: {
