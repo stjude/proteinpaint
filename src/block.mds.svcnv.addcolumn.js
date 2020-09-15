@@ -1009,6 +1009,7 @@ function findgene4fix_searchui(holder, tk, block) {
 	gene_searchbox({
 		div: holder,
 		genome: block.genome.name,
+		tip: tk.tip2,
 		callback: genename => {
 			findgene4fix(genename, tk, block)
 		}
