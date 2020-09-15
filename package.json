@@ -24,6 +24,8 @@
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
+    "tag-patch": "./scripts/tag-version.sh patch",
+    "tag-minor": "./scripts/tag-version.sh minor",
     "patch-release": "npm version patch && ./scripts/publish.sh registry && ./scripts/deliver all",
     "minor-release": "npm version minor && ./scripts/publish.sh registry && ./scripts/deliver all",
     "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
@@ -79,12 +81,10 @@
     "webpack-node-externals": "^1.7.2",
     "webpack-notifier": "^1.7.0"
   },
-  "dependencies": {
+  "bundledDependencies": {
     "async": "^2.6.0",
     "babel-polyfill": "^6.9.1",
-    "better-sqlite3": "^5.4.3",
     "body-parser": "^1.15.2",
-    "canvas": "2.6.0",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
     "d3": "^4.12.2",
@@ -102,6 +102,10 @@
     "normalize.css": "^4.2.0",
     "partjson": "^0.58.1",
     "request": "^2.88.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^5.4.3",
+    "canvas": "2.6.0"
   },
   "repository": {
     "type": "git",

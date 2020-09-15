@@ -29,3 +29,18 @@ As needed, follow the [installation instructions](https://docs.google.com/docume
 `npm run test-browser` bundles the front-end spec files for use at localhost:[port]/testrun.html
 
 `./scripts/deploy.sh [env]` builds and deploys the bundled code
+
+
+## Release
+
+```bash
+# assign a version number to the last commit,
+# since using `npm version` directly causes unnecessary extra commits
+npm run tag-patch # for bug fixes 
+npm run tag-minor # for feature updates 
+
+# publish a new package version
+./scripts/publish registry # to GitHub Packages (@stjude/proteinpaint)
+./scripts/publish tgz	# create a tarball only inside './tmppack'
+./scripts/publish dry # only echoes the expected package contents, no actual files created
+```
