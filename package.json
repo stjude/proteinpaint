@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "index.js",
   "bin": "bin.js",
@@ -79,10 +79,12 @@
     "webpack-node-externals": "^1.7.2",
     "webpack-notifier": "^1.7.0"
   },
-  "bundledDependencies": {
+  "dependencies": {
     "async": "^2.6.0",
     "babel-polyfill": "^6.9.1",
+    "better-sqlite3": "^5.4.3",
     "body-parser": "^1.15.2",
+    "canvas": "2.6.0",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
     "d3": "^4.12.2",
@@ -100,10 +102,6 @@
     "normalize.css": "^4.2.0",
     "partjson": "^0.58.1",
     "request": "^2.88.0"
-  },
-  "dependencies": {
-    "better-sqlite3": "^5.4.3",
-    "canvas": "2.6.0"
   },
   "repository": {
     "type": "git",

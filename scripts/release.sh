@@ -17,8 +17,9 @@ if (($# == 0 || $# > 2)); then
 		'major' is not allowed, since that update type should not be customer specific
 
 	- CUSTOMER 
-		optional name of the customer that will receive the package
+		optional name of the customer that will receive a filtered package
 		defaults to 'all'
+		the default package will still be published in the registry
 	"
 	exit 1
 
@@ -48,7 +49,7 @@ TAG=$(node -p "require('./package.json').version")
 PKGVER="stjude-proteinpaint-$TAG.tgz"
 
 if [[ ! -d tmppack || ! -f tmppack/$PKGVER ]]; then
-	. ./scripts/publish.sh tgz
+	. ./scripts/publish.sh registry
 fi
 
 cd ./tmppack
