@@ -9,35 +9,39 @@ set -e
 if (($# == 0 || $# > 2)); then
 	echo "Usage:
 
-	./scripts/deliver.sh [ CUSTOMER ] [ UPDATETYPE ]
-
-	- CUSTOMER 
-		required, name of the customer that will receive the package
+	./scripts/release.sh [ UPDATETYPE ] [ CUSTOMER ]
 
 	- UPDATETYPE [ patch | minor ]
-		- optional, provide if the package version is being updated specifically for the customer
-		- a 'major' version update is not allowed, since that update type should not be customer specific
+		'patch' for bug fixes
+		'minor' feature updates 
+		'major' is not allowed, since that update type should not be customer specific
+
+	- CUSTOMER 
+		optional name of the customer that will receive the package
+		defaults to 'all'
 	"
 	exit 1
 
 elif (($# == 1)); then
-	CUSTOMER=$1
-	UPDATETYPE=""
+	UPDATETYPE=$1
+	CUSTOMER=all
 
 elif (($# == 2)); then
-	CUSTOMER=$1
-	UPDATETYPE=$2
-
+	UPDATETYPE=$1
+	CUSTOMER=$2
 fi
 
 if [[ "$CUSTOMER" != "all" && "$CUSTOMER" != "gdc"  ]]; then
-	echo -e "Unsupported customer '$CUSTOMER'"
+	echo "Unsupported customer '$CUSTOMER'"
 	exit 1
 fi
 
-if [[ "$UPDATETYPE" == "patch" || "$UPDATETYPE" == "minor" ]]; then
-	npm version $UPDATETYPE
+if [[ "$UPDATETYPE" != "patch" && "$UPDATETYPE" != "minor" ]]; then
+	echo "Invalid update type='$UPDATETYPE'"
+	exit 1
 fi
+
+./scripts/tag-version.sh $UPDATETYPE
 
 # get the current tag
 TAG=$(node -p "require('./package.json').version")
