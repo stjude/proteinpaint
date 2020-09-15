@@ -104,10 +104,4 @@ elif [[ "$DEST" == "tgz" ]]; then
 	rm node_modules
 	cd ..
 
-	# 
-	# to-do? 
-	# use this publish script from a deliver script
-	# to target the package contents to specific customers
-	# 
-
 fi
