@@ -4,6 +4,7 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import { init_mdsjson } from './app.mdsjson'
+import { init_mdsjsonform } from './mdsjsonform'
 
 /*
 ********************** EXPORTED
@@ -314,6 +315,12 @@ arg
 				arg.debugmode
 			)
 		}
+	}
+
+	if (urlp.has('mdsjsonform')) {
+		const par = await init_mdsjsonform(arg.holder)
+
+		//TODO:
 	}
 }
 
