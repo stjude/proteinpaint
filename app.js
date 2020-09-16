@@ -231,8 +231,7 @@ app.post('/bamnochr', handle_bamnochr)
 try {
 	main(app)
 } catch (e) {
-	console.error(e)
-	process.exit(1)
+	throw e
 }
 
 /*
