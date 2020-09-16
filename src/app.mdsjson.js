@@ -80,6 +80,24 @@ function validate_mdsjson(obj) {
 			}
 		}
 	}
+
+	if (obj.groupsamplebyattr) {
+		if (!obj.groupsamplebyattr.attrlst) return '.attrlst[] missing from groupsamplebyattr'
+		if (obj.groupsamplebyattr.attrlst.length == 0) return 'groupsamplebyattr.attrlst[] empty array'
+
+		for (const attr of obj.groupsamplebyattr.attrlst) {
+			if (!attr.k) return 'k missing from one of groupsamplebyattr.attrlst[]'
+		}
+
+		if (obj.groupsamplebyattr.sortgroupby) {
+			if (!obj.groupsamplebyattr.sortgroupby.key) return '.key missing from .sortgroupby'
+			if (!obj.groupsamplebyattr.sortgroupby.order) return '.order[] missing from .sortgroupby'
+			if (!Array.isArray(obj.groupsamplebyattr.sortgroupby.order)) return '.order must be an array'
+			// values of order[] is not validated
+		}
+		if (!obj.groupsamplebyattr.attrnamespacer) obj.groupsamplebyattr.attrnamespacer = ', '
+	}
+
 	if (obj.fixedgeneexpression) {
 		for (const gene of obj.fixedgeneexpression) {
 			if (!gene.gene) throw 'gene missing in fixedgeneexpression array'
@@ -146,6 +164,10 @@ function get_json_tk(tkobj) {
 	// SampleAssayTrack
 	if (tkobj.sample2assaytrack) {
 		track.sample2assaytrack = tkobj.sample2assaytrack
+	}
+
+	if (tkobj.groupsamplebyattr) {
+		track.groupsamplebyattr = tkobj.groupsamplebyattr
 	}
 
 	// fixed panel of gene expression
