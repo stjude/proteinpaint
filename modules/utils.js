@@ -35,7 +35,9 @@ run_fishertest2x3
 exports.init_one_vcf = async function(tk, genome) {
 	let filelocation
 	if (tk.file) {
-		tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+		}
 		filelocation = tk.file
 		await validate_tabixfile(tk.file)
 	} else if (tk.url) {

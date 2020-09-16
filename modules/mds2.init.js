@@ -174,7 +174,9 @@ async function may_init_ld(ld, genome, ds) {
 		if (!tk.name) throw '.name missing from a ld track'
 		if (!Number.isInteger(tk.viewrangelimit)) throw 'viewrangelimit missing from ld track "' + tk.name + '"'
 		if (tk.file) {
-			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+				tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			}
 			await utils.validate_tabixfile(tk.file)
 			tk.nochr = await utils.tabix_is_nochr(tk.file, null, genome)
 			console.log(tk.file + ': ' + (tk.nochr ? 'no chr' : 'has chr'))
