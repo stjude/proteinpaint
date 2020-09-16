@@ -74,15 +74,35 @@ const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
 const hicstraw = serverconfig.hicstraw || 'straw'
 
-{
-	/*
-	have tabix ready before validating
-	*/
+/****
+  main() enables having two options:
+  - validate only (will not start the server)
+  OR
+	- validate and start the server
+	This enables the coorect monitoring by the forever module. 
+	Whereas before 'forever' will endlessly restart the server
+	even if it cannot be initialized in a full working state,
+	the usage in a bash script should now be: 
+	```
+	set -e
+	node server validate 
+	# only proceed to using forever on successul validation
+	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	```
+***/
+
+function main(app) {
 	const err = pp_init()
-	if (err) {
-		console.error('Error: ' + err)
-		process.exit()
+	if (err) throw err
+	if (process.argv[2] == 'validate') {
+		console.log('Validation succeeded. You may now run the server.')
+		return
 	}
+	const port = serverconfig.port || 3000
+	const server = app.listen(port)
+	console.log('STANDBY AT PORT ' + port)
+	// only uncomment below so phewas precompute won't timeout
+	// server.setTimeout(500000)
 }
 
 const app = express()
@@ -206,12 +226,13 @@ app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
-{
-	const port = serverconfig.port || 3000
-	const server = app.listen(port)
-	console.log('STANDBY AT PORT ' + port)
-	// only uncomment below so phewas precompute won't timeout
-	//server.setTimeout(500000)
+// initialize using the serverconfig
+// then start the server
+try {
+	main(app)
+} catch (e) {
+	console.error(e)
+	process.exit(1)
 }
 
 /*
@@ -11841,7 +11862,12 @@ function pp_init() {
 		if (!g.name) return '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) return '.file missing from genome ' + g.name
 
-		const g2 = __non_webpack_require__(g.file)
+		let g2
+		try {
+			g2 = __non_webpack_require__(g.file)
+		} catch (e) {
+			throw `error loading genome file: '${g.file}'` + e
+		}
 
 		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
@@ -12086,7 +12112,11 @@ function pp_init() {
 			if (g.datasets[d.name]) return genomename + ' has duplicating dataset name: ' + d.name
 			let ds
 			if (d.jsfile) {
-				ds = __non_webpack_require__(d.jsfile)
+				try {
+					ds = __non_webpack_require__(d.jsfile)
+				} catch (e) {
+					throw `error loading genome file: '${d.jsfile}'` + e
+				}
 			} else {
 				return 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 			}
