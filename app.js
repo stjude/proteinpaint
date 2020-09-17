@@ -91,39 +91,6 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 	```
 ***/
 
-function main(app) {
-	Promise.resolve()
-		.then(pp_init)
-		.then(err => {
-			if (err) {
-				console.error('\n!!!\n' + err + '\n\n')
-				// when the app server is monitored by another process via the command line,
-				// process.exit(1) is required to stop executiion flow with `set -e`
-				// and thereby avoid unnecessary endless restarts of an invalid server
-				// init with bad config, data, and/or code
-				//
-				// handle returned errors by downstream code
-				//
-				process.exit(1)
-			}
-			if (process.argv[2] == 'validate') {
-				console.log('\nValidation succeeded. You may now run the server.\n')
-				return
-			}
-			const port = serverconfig.port || 3000
-			const server = app.listen(port)
-			console.log('STANDBY AT PORT ' + port)
-			// only uncomment below so phewas precompute won't timeout
-			// server.setTimeout(500000)
-		})
-		.catch(err => {
-			// same rationale as return err handling in the .then() callback above
-			// catch errors as thrown by downstream code
-			console.error('\n!!!\n' + err + '\n\n')
-			process.exit(1)
-		})
-}
-
 const app = express()
 app.disable('x-powered-by')
 
@@ -247,11 +214,35 @@ app.post('/bamnochr', handle_bamnochr)
 
 // initialize using the serverconfig
 // then start the server
-try {
-	main(app)
-} catch (e) {
-	throw e
-}
+pp_init()
+	.then(err => {
+		if (err) {
+			console.error('\n!!!\n' + err + '\n\n')
+			// when the app server is monitored by another process via the command line,
+			// process.exit(1) is required to stop executiion flow with `set -e`
+			// and thereby avoid unnecessary endless restarts of an invalid server
+			// init with bad config, data, and/or code
+			//
+			// handle returned errors by downstream code
+			//
+			process.exit(1)
+		}
+		if (process.argv[2] == 'validate') {
+			console.log('\nValidation succeeded. You may now run the server.\n')
+			return
+		}
+		const port = serverconfig.port || 3000
+		const server = app.listen(port)
+		console.log('STANDBY AT PORT ' + port)
+		// only uncomment below so phewas precompute won't timeout
+		// server.setTimeout(500000)
+	})
+	.catch(err => {
+		// same rationale as return err handling in the .then() callback above
+		// catch errors as thrown by downstream code
+		console.error('\n!!!\n' + err + '\n\n')
+		process.exit(1)
+	})
 
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
