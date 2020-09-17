@@ -92,17 +92,30 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 ***/
 
 function main(app) {
-	const err = pp_init()
-	if (err) throw err
-	if (process.argv[2] == 'validate') {
-		console.log('Validation succeeded. You may now run the server.')
-		return
-	}
-	const port = serverconfig.port || 3000
-	const server = app.listen(port)
-	console.log('STANDBY AT PORT ' + port)
-	// only uncomment below so phewas precompute won't timeout
-	// server.setTimeout(500000)
+	Promise.resolve()
+		.then(pp_init)
+		.then(err => {
+			if (err) {
+				console.error('\n!!!\n' + err + '\n\n')
+				// when the app server is monitored by another process via the command line,
+				// process.exit(1) is required to stop executiion flow with `set -e`
+				// and thereby avoid unnecessary endless restarts of an invalid server
+				// init with bad config, data, and/or code
+				process.exit(1)
+			}
+			if (process.argv[2] == 'validate') {
+				console.log('\nValidation succeeded. You may now run the server.\n')
+				return
+			}
+			const port = serverconfig.port || 3000
+			const server = app.listen(port)
+			console.log('STANDBY AT PORT ' + port)
+			// only uncomment below so phewas precompute won't timeout
+			// server.setTimeout(500000)
+		})
+		.catch(e => {
+			throw e
+		})
 }
 
 const app = express()
@@ -11838,7 +11851,7 @@ function parse_textfilewithheader(text) {
 
 /***************************   end of __util   **/
 
-function pp_init() {
+async function pp_init() {
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) return 'base_zindex must be positive integer'
@@ -12102,6 +12115,7 @@ function pp_init() {
 	*/
 
 		g.datasets = {}
+		const promises = []
 		for (const d of g.rawdslst) {
 			/*
 		for each raw dataset
@@ -12130,7 +12144,7 @@ function pp_init() {
 			}
 			if (ds.isMds) {
 				/********* MDS ************/
-				const err = mds_init(ds, g, d)
+				const err = await mds_init(ds, g, d)
 				if (err) return 'Error with dataset ' + ds.label + ': ' + err
 				continue
 			}
@@ -12370,7 +12384,7 @@ function legacyds_init_one_query(q, ds, genome) {
 
 /////////////////// __MDS
 
-function mds_init(ds, genome, _servconfig) {
+async function mds_init(ds, genome, _servconfig) {
 	/*
 	ds: loaded from datasets/what.js
 	genome: obj {}
@@ -12885,7 +12899,8 @@ function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		mds2_init_wrap(ds, genome)
+		const e = await mds2_init_wrap(ds, genome)
+		if (e) return e
 	}
 
 	if (ds.annotationsampleset2matrix) {
@@ -12964,24 +12979,19 @@ async function mds2_init_wrap(ds, genome) {
 	/*
 because mds_init is sync, so has to improvise to catch exception from mds2_init
 */
-	try {
-		await mds2_init.init(ds, genome)
-	} catch (e) {
-		console.log('ERROR init mds2 track: ' + e)
-		if (e.stack) console.log(e.stack)
-		process.exit()
-	}
+	const e = await mds2_init.init(ds, genome)
+	if (e) return 'ERROR init mds2 track: ' + e
 }
 async function mds3_init_wrap(ds, genome, _servconfig) {
 	/*
 because mds_init is sync, so has to improvise to catch exception from mds2_init
 */
 	try {
-		await mds3_init.init(ds, genome, _servconfig)
+		const e = await mds3_init.init(ds, genome, _servconfig)
 	} catch (e) {
 		console.log('ERROR init mds3 track: ' + e)
 		if (e.stack) console.log(e.stack)
-		process.exit()
+		process.exit(1)
 	}
 }
 

@@ -40,12 +40,16 @@ export async function init(ds, genome) {
 	const tk = ds.track
 	if (!tk.name) tk.name = ds.label
 
-	may_validate_info_fields(tk)
-	may_validate_population(tk)
-	may_init_vcf(tk.vcf, genome, ds)
-	may_init_ld(tk.ld, genome, ds)
-	may_init_svcnv(tk.svcnv, genome, ds)
-	may_sum_samples(tk)
+	try {
+		may_validate_info_fields(tk)
+		may_validate_population(tk)
+		await may_init_vcf(tk.vcf, genome, ds)
+		await may_init_ld(tk.ld, genome, ds)
+		await may_init_svcnv(tk.svcnv, genome, ds)
+		may_sum_samples(tk)
+	} catch (e) {
+		return e
+	}
 	if (tk.samples) console.log(ds.label + ': mds2: ' + tk.samples.length + ' samples')
 }
 
