@@ -101,6 +101,9 @@ function main(app) {
 				// process.exit(1) is required to stop executiion flow with `set -e`
 				// and thereby avoid unnecessary endless restarts of an invalid server
 				// init with bad config, data, and/or code
+				//
+				// handle returned errors by downstream code
+				//
 				process.exit(1)
 			}
 			if (process.argv[2] == 'validate') {
@@ -113,8 +116,11 @@ function main(app) {
 			// only uncomment below so phewas precompute won't timeout
 			// server.setTimeout(500000)
 		})
-		.catch(e => {
-			throw e
+		.catch(err => {
+			// same rationale as return err handling in the .then() callback above
+			// catch errors as thrown by downstream code
+			console.error('\n!!!\n' + err + '\n\n')
+			process.exit(1)
 		})
 }
 
@@ -11878,7 +11884,7 @@ async function pp_init() {
 		try {
 			g2 = __non_webpack_require__(g.file)
 		} catch (e) {
-			throw `error loading genome file: '${g.file}'` + e
+			return `error loading genome file: '${g.file}'` + e
 		}
 
 		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
