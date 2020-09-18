@@ -442,6 +442,10 @@ function addLoadParameter(par, tk) {
 		par.querykey = tk.querykey
 	}
 
+	if (tk.getallsamples) {
+		par.getallsamples = true
+	}
+
 	// cnv
 	if (tk.sampleset) par.sampleset = tk.sampleset
 	if (tk.valueCutoff) par.valueCutoff = tk.valueCutoff
@@ -2600,11 +2604,21 @@ function prep_samplegroups(tk, block) {
 					}
 
 					if (!samplehasvcf) {
-						// this sample has no vcf either, drop
-						continue
+						// this sample has no vcf either
+						if (if_getallsamples(tk)) {
+							// QUICK FIX!!!!
+							// when this is set, will keep samples with empty .items[]
+						} else {
+							continue
+						}
 					}
 				} else {
-					continue
+					if (if_getallsamples(tk)) {
+						// QUICK FIX!!!!
+						// when this is set, will keep samples with empty .items[]
+					} else {
+						continue
+					}
 				}
 			}
 
@@ -2659,6 +2673,14 @@ function prep_samplegroups(tk, block) {
 		}
 	}
 	return [plotgroups, svlst4dense]
+}
+
+function if_getallsamples(tk) {
+	// QUICK FIX
+	if (!tk.getallsamples) return false
+	if (tk.iscustom) return true
+	if (tk.mds && tk.mds.allow_getallsamples) return true
+	return false
 }
 
 function maysortsamplesingroupbydt(g) {
@@ -3166,6 +3188,21 @@ function makeoption_sampleset(tk, block) {
 		.on('click', () => {
 			showinput_sampleset(tk, block)
 		})
+
+	// QUICKFIX
+	// ways to inhibit this button: when sampleset is in use; or if official dataset doesn't say this is allowed
+	// while not using sampleset, check condition if to allow to show all samples
+	if (tk.iscustom || (tk.mds && tk.mds.allow_getallsamples)) {
+		row
+			.append('button')
+			.style('margin-left', '10px')
+			.text(tk.getallsamples ? 'Only show samples with variants' : 'Show all samples')
+			.on('click', () => {
+				tk.getallsamples = !tk.getallsamples
+				tk.tkconfigtip.hide()
+				loadTk(tk, block)
+			})
+	}
 }
 
 function showinput_sampleset(tk, block) {
