@@ -30,8 +30,8 @@ export default function(block) {
 	block.svg.attr('height', newheight)
 
 	const lst = []
-	if (block.usegm.name) lst.push(block.usegm.name)
-	if (block.usegm.isoform) lst.push(block.usegm.isoform)
+	if (block.usegm && block.usegm.name) lst.push(block.usegm.name)
+	if (block.usegm && block.usegm.isoform) lst.push(block.usegm.isoform)
 	client.to_svg(block.svg.node(), lst.length ? lst.join('_') : 'screenshot')
 
 	// recover
