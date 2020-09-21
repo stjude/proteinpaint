@@ -2627,7 +2627,7 @@ function prep_samplegroups(tk, block) {
 		if (g2.samples.length == 0) continue
 
 		// only for tal1 figure
-		maysortsamplesingroupbydt(g2)
+		//maysortsamplesingroupbydt(g2)
 
 		plotgroups.push(g2)
 	}
