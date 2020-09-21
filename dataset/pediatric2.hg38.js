@@ -71,6 +71,7 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2014_RB' },
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
+			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.outcome' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.tallsnp6array' },
