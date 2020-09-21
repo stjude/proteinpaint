@@ -9,17 +9,19 @@ module.exports = function(env) {
 	config.output.publicPath = protocol + '//' + (env.subdomain ? env.subdomain : 'pecan-test') + '.stjude.org/' + urlpath
 	config.output.path = __dirname + '/../public/builds/' + (env.subdomain ? env.subdomain : 'pecan-test')
 
-	config.optimization = {
-		minimizer: [
-			new UglifyJsPlugin({
-				cache: true,
-				parallel: true,
-				uglifyOptions: {
-					mangle: true,
-					compress: true
-				}
-			})
-		]
+	if (env.subdomain != 'ppr') {
+		config.optimization = {
+			minimizer: [
+				new UglifyJsPlugin({
+					cache: true,
+					parallel: true,
+					uglifyOptions: {
+						mangle: true,
+						compress: true
+					}
+				})
+			]
+		}
 	}
 
 	delete config.devtool
