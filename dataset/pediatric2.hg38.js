@@ -205,6 +205,7 @@ module.exports = {
 				values: {
 					pantarget: { name: 'Pan-TARGET', label: 'Pan-cancer analysis of the NCI TARGET dataset' },
 					pcgp: { name: 'PCGP', label: 'Pediatric Cancer Genome Project' },
+					scmc: { name: 'SCMC', label: "Shanghai Children's Medical Center pediatric ALL project" },
 					pedccl: { name: 'PedCCL', label: 'Pediatric Cancer Cell Lines' }
 				},
 				filter: 1

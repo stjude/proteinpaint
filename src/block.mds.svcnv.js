@@ -2627,7 +2627,7 @@ function prep_samplegroups(tk, block) {
 		if (g2.samples.length == 0) continue
 
 		// only for tal1 figure
-		//maysortsamplesingroupbydt(g2)
+		maysortsamplesingroupbydt(g2)
 
 		plotgroups.push(g2)
 	}
@@ -2695,12 +2695,13 @@ function maysortsamplesingroupbydt(g) {
 	const fusionintra = []
 	const rest = []
 	for (const s of g.samples) {
-		if (s.items.find(m => m.dt == common.dtcnv)) {
+		if (s.items.find(m => m.dt == common.dtcnv && m.start < 47720000 && m.stop > 47720000)) {
+			// skip tiny cnvs not overlapping with stil promoter
 			cnv.push(s)
 			continue
 		}
 		{
-			const m = s.items.find(m => m.dt == common.dtfusionrna)
+			const m = s.items.find(m => m.dt == common.dtfusionrna || m.dt == common.dtsv)
 			if (m) {
 				if (m.chrA == m.chrB) {
 					// intra-chr
