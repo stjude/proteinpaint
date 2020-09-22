@@ -12,17 +12,24 @@ export async function init_mdsjsonform(holder) {
 		.style('margin', '10px')
 		.text('Create a Custom GenomePaint Track')
 
-	//.name
-	const tk_name_div = form_div
+	const wrapper_div = form_div
 		.append('div')
-		.style('display', 'block')
-		.style('margin', '5px 10px')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'repeat(2, 250px)')
+		.style('align-items', 'end')
+		.style('grid-auto-rows', '35px')
+		.style('margins', '5px')
+		.style('position', 'relative')
+		.style('padding', '10px')
 
-	tk_name_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
-		.text('Track name')
+	//.name
+	const tk_name_prompt = wrapper_div.append('div')
+
+	tk_name_prompt.append('span').text('Track name')
+
+	const tk_name_div = wrapper_div.append('div')
+
+	tk_name_div.append('div')
 
 	tk_name_div.append('input').attr('size', 20)
 
@@ -30,80 +37,69 @@ export async function init_mdsjsonform(holder) {
 
 	// .isdense
 	//TODO: .isdense available in a track object?
-	const row = form_div
-		.append('div')
-		.style('margin', '2px')
-		.html('Dense Display?')
+	const is_dense_prompt = wrapper_div.append('div')
 
-	const is_dense = row.append('select')
-	is_dense.append('input')
-	is_dense.attr('type', 'checkbox')
-	is_dense.append('option').text('Select') //TODO: Placeholder
-	is_dense.append('option').text('Yes') //True
-	is_dense.append('option').text('No') //False
-	row
-		.append('span')
-		.style('margin-right', '5px')
-		.style('vertical-align', 'left')
+	is_dense_prompt.append('span').text('Dense Display')
 
-	is_dense.append('input').attr('size', 20)
+	const row = wrapper_div.append('div')
+
+	const is_dense_div = row.append('select')
+	is_dense_div.append('input')
+	is_dense_div.attr('type', 'checkbox')
+	is_dense_div.append('option').text('Select') //TODO: Placeholder
+	is_dense_div.append('option').text('Yes') //True
+	is_dense_div.append('option').text('No') //False
+	row.append('span')
+
+	is_dense_div.append('input').attr('size', 20)
 
 	//.isfull left off since .isdense specified
 
 	//.svcnvfile or .svcnvurl
 	//TODO: Function to detect file versus URL.
 	//TODO: Function to detect either SVCNV file or vcf file provided - both are allowed
-	const svcnv_path = form_div
-		.append('div')
-		.style('display', 'block')
-		.style('margin', '5px 10px')
+	const svcnv_path_prompt = wrapper_div.append('div')
 
-	svcnv_path
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
-		.text('SV, CNV file path or URL')
+	svcnv_path_prompt.append('span').text('SV, CNV file path or URL')
 
-	svcnv_path.append('input').attr('size', 20)
+	const svcnv_path_div = wrapper_div.append('div')
+
+	svcnv_path_div.append('div')
+
+	svcnv_path_div.append('input').attr('size', 20)
 
 	//.expressionfile
-	const expression_file = form_div
-		.append('div')
-		.style('display', 'block')
-		.style('margin', '5px 10px')
+	const expression_file_prompt = wrapper_div.append('div')
 
-	expression_file
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
-		.text('Expression file path')
+	expression_file_prompt.append('span').text('Expression file path')
 
-	expression_file.append('input').attr('size', 20)
+	const expression_file_div = wrapper_div.append('div')
+
+	expression_file_div.append('div')
+
+	expression_file_div.append('input').attr('size', 20)
 
 	//.vcffile
-	const vcf_file = form_div
-		.append('div')
-		.style('display', 'block')
-		.style('margin', '5px 10px')
+	const vcf_file_prompt = wrapper_div.append('div')
 
-	vcf_file
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
-		.text('VCF file path')
+	vcf_file_prompt.append('span').text('VCF file path')
 
-	vcf_file.append('input').attr('size', 20)
+	const vcf_file_div = wrapper_div.append('div')
+
+	vcf_file_div.append('div')
+
+	vcf_file_div.append('input').attr('size', 20)
 
 	//TODO: .vcf.hiddenclass not in track object?
 
 	//.sampleset Array
-	const samples_array = form_div
+	const samples_array_div = form_div
 		.append('div')
 		.style('display', 'block')
 		.style('margin', '5px 10px')
 		.html('Sample Sets<br>')
 
-	const samples_table = samples_array
+	const samples_table = samples_array_div
 		.append('table')
 		.style('display', 'inline-block')
 		.style('padding-right', '10px')
@@ -139,7 +135,7 @@ export async function init_mdsjsonform(holder) {
 	//.sample2assaytrack.assaytrack.strand1.file.normalize.dividefactor
 }
 
-function validate_form(arg) {
+function validate_form() {
 	if (svcnv_path == '' || vcf_file == '') {
 		alert('Please provide either a SV, CNV, or VCF file path')
 		return false
