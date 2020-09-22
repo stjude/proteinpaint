@@ -283,7 +283,7 @@ export function hicparsefile(hic, debugmode) {
 			return fetch(
 				new Request(hic.hostURL + '/hicstat', {
 					method: 'POST',
-					body: JSON.stringify({ file: hic.file, jwt: hic.jwt })
+					body: JSON.stringify({ file: hic.file, url: hic.url, jwt: hic.jwt })
 				})
 			).then(data => {
 				return data.json()
@@ -607,6 +607,7 @@ function getdata_leadfollow(hic, lead, follow) {
 	const arg = {
 		jwt: hic.jwt,
 		file: hic.file,
+		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
 		pos2: hic.nochr ? follow.replace('chr', '') : follow,
 		nmeth: hic.wholegenome.nmeth,
@@ -935,6 +936,7 @@ function getdata_chrpair(hic) {
 	const arg = {
 		jwt: hic.jwt,
 		file: hic.file,
+		url: hic.url,
 		pos1: hic.nochr ? chrx.replace('chr', '') : chrx,
 		pos2: hic.nochr ? chry.replace('chr', '') : chry,
 		nmeth: hic.chrpairview.nmeth,
@@ -1621,6 +1623,7 @@ function getdata_detail(hic) {
 	const par = {
 		jwt: hic.jwt,
 		file: hic.file,
+		url: hic.url,
 		pos1:
 			(hic.nochr ? chrx.replace('chr', '') : chrx) +
 			':' +

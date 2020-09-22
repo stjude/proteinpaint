@@ -72,16 +72,22 @@ const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
 const hicstraw = serverconfig.hicstraw || 'straw'
 
-{
-	/*
-	have tabix ready before validating
-	*/
-	const err = pp_init()
-	if (err) {
-		console.error('Error: ' + err)
-		process.exit()
-	}
-}
+/****
+  main() enables having two options:
+  - validate only (will not start the server)
+  OR
+	- validate and start the server
+	This enables the coorect monitoring by the forever module. 
+	Whereas before 'forever' will endlessly restart the server
+	even if it cannot be initialized in a full working state,
+	the usage in a bash script should now be: 
+	```
+	set -e
+	node server validate 
+	# only proceed to using forever on successul validation
+	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	```
+***/
 
 const app = express()
 app.disable('x-powered-by')
@@ -204,13 +210,37 @@ app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
-{
-	const port = serverconfig.port || 3000
-	const server = app.listen(port)
-	console.log('STANDBY AT PORT ' + port)
-	// only uncomment below so phewas precompute won't timeout
-	//server.setTimeout(500000)
-}
+// initialize using the serverconfig
+// then start the server
+pp_init()
+	.then(err => {
+		if (err) {
+			console.error('\n!!!\n' + err + '\n\n')
+			// when the app server is monitored by another process via the command line,
+			// process.exit(1) is required to stop executiion flow with `set -e`
+			// and thereby avoid unnecessary endless restarts of an invalid server
+			// init with bad config, data, and/or code
+			//
+			// handle returned errors by downstream code
+			//
+			process.exit(1)
+		}
+		if (process.argv[2] == 'validate') {
+			console.log('\nValidation succeeded. You may now run the server.\n')
+			return
+		}
+		const port = serverconfig.port || 3000
+		const server = app.listen(port)
+		console.log('STANDBY AT PORT ' + port)
+		// only uncomment below so phewas precompute won't timeout
+		// server.setTimeout(500000)
+	})
+	.catch(err => {
+		// same rationale as return err handling in the .then() callback above
+		// catch errors as thrown by downstream code
+		console.error('\n!!!\n' + err + '\n\n')
+		process.exit(1)
+	})
 
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
@@ -3123,10 +3153,6 @@ function handle_svmr(req, res) {
 
 function handle_hicstat(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!req.query.file) {
-		res.send({ error: 'missing file' })
-		return
-	}
 	const [e, file, isurl] = fileurl(req)
 	if (e) {
 		res.send({ error: 'illegal file name' })
@@ -3175,10 +3201,6 @@ function handle_hicdata(req, res) {
 		req.query = JSON.parse(req.body)
 	} catch (e) {
 		res.send({ error: 'invalid request body' })
-		return
-	}
-	if (!req.query.file) {
-		res.send({ error: 'missing file' })
 		return
 	}
 	log(req)
@@ -11831,7 +11853,7 @@ function parse_textfilewithheader(text) {
 
 /***************************   end of __util   **/
 
-function pp_init() {
+async function pp_init() {
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) return 'base_zindex must be positive integer'
@@ -11856,7 +11878,12 @@ function pp_init() {
 
 		const overrideFile = path.join(process.cwd(), g.file)
 		const jsfile = fs.existsSync(overrideFile) ? overrideFile : g.file
-		const g2 = __non_webpack_require__(jsfile)
+		let g2
+		try {
+			g2 = __non_webpack_require__(g.file)
+		} catch (e) {
+			return `error loading genome file: '${g.file}'` + e
+		}
 
 		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
@@ -12092,6 +12119,7 @@ function pp_init() {
 	*/
 
 		g.datasets = {}
+		const promises = []
 		for (const d of g.rawdslst) {
 			/*
 		for each raw dataset
@@ -12103,7 +12131,11 @@ function pp_init() {
 			if (d.jsfile) {
 				const overrideFile = path.join(process.cwd(), d.jsfile)
 				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile
-				ds = __non_webpack_require__(jsfile)
+				try {
+					ds = __non_webpack_require__(d.jsfile)
+				} catch (e) {
+					throw `error loading genome file: '${d.jsfile}'` + e
+				}
 			} else {
 				return 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 			}
@@ -12118,7 +12150,7 @@ function pp_init() {
 			}
 			if (ds.isMds) {
 				/********* MDS ************/
-				const err = mds_init(ds, g, d)
+				const err = await mds_init(ds, g, d)
 				if (err) return 'Error with dataset ' + ds.label + ': ' + err
 				continue
 			}
@@ -12358,7 +12390,7 @@ function legacyds_init_one_query(q, ds, genome) {
 
 /////////////////// __MDS
 
-function mds_init(ds, genome, _servconfig) {
+async function mds_init(ds, genome, _servconfig) {
 	/*
 	ds: loaded from datasets/what.js
 	genome: obj {}
@@ -12873,7 +12905,8 @@ function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		mds2_init_wrap(ds, genome)
+		const e = await mds2_init_wrap(ds, genome)
+		if (e) return e
 	}
 
 	if (ds.annotationsampleset2matrix) {
@@ -12952,24 +12985,19 @@ async function mds2_init_wrap(ds, genome) {
 	/*
 because mds_init is sync, so has to improvise to catch exception from mds2_init
 */
-	try {
-		await mds2_init.init(ds, genome)
-	} catch (e) {
-		console.log('ERROR init mds2 track: ' + e)
-		if (e.stack) console.log(e.stack)
-		process.exit()
-	}
+	const e = await mds2_init.init(ds, genome)
+	if (e) return 'ERROR init mds2 track: ' + e
 }
 async function mds3_init_wrap(ds, genome, _servconfig) {
 	/*
 because mds_init is sync, so has to improvise to catch exception from mds2_init
 */
 	try {
-		await mds3_init.init(ds, genome, _servconfig)
+		const e = await mds3_init.init(ds, genome, _servconfig)
 	} catch (e) {
 		console.log('ERROR init mds3 track: ' + e)
 		if (e.stack) console.log(e.stack)
-		process.exit()
+		process.exit(1)
 	}
 }
 

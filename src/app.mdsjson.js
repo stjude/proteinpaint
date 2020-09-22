@@ -85,6 +85,11 @@ function validate_mdsjson(obj) {
 			if (!gene.gene) throw 'gene missing in fixedgeneexpression array'
 		}
 	}
+
+	// hidden classes for vcf file
+	if (obj.vcf) {
+		if (!obj.vcf.hiddenclass) throw 'hiddenclasses[] missing from .vcf'
+	}
 }
 
 function get_json_tk(tkobj) {
@@ -114,6 +119,14 @@ function get_json_tk(tkobj) {
 		track.checkvcf = {
 			file: tkobj.vcffile,
 			url: tkobj.vcfurl
+		}
+	}
+
+	// hidden mutation classes
+	if (tkobj.vcf) {
+		if (tkobj.vcf.hiddenclass) {
+			track.vcf = []
+			track.vcf.hiddenclass = tkobj.vcf.hiddenclass
 		}
 	}
 

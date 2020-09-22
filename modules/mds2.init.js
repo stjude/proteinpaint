@@ -40,12 +40,16 @@ export async function init(ds, genome) {
 	const tk = ds.track
 	if (!tk.name) tk.name = ds.label
 
-	may_validate_info_fields(tk)
-	may_validate_population(tk)
-	may_init_vcf(tk.vcf, genome, ds)
-	may_init_ld(tk.ld, genome, ds)
-	may_init_svcnv(tk.svcnv, genome, ds)
-	may_sum_samples(tk)
+	try {
+		may_validate_info_fields(tk)
+		may_validate_population(tk)
+		await may_init_vcf(tk.vcf, genome, ds)
+		await may_init_ld(tk.ld, genome, ds)
+		await may_init_svcnv(tk.svcnv, genome, ds)
+		may_sum_samples(tk)
+	} catch (e) {
+		return e
+	}
 	if (tk.samples) console.log(ds.label + ': mds2: ' + tk.samples.length + ' samples')
 }
 
@@ -174,7 +178,9 @@ async function may_init_ld(ld, genome, ds) {
 		if (!tk.name) throw '.name missing from a ld track'
 		if (!Number.isInteger(tk.viewrangelimit)) throw 'viewrangelimit missing from ld track "' + tk.name + '"'
 		if (tk.file) {
-			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+				tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			}
 			await utils.validate_tabixfile(tk.file)
 			tk.nochr = await utils.tabix_is_nochr(tk.file, null, genome)
 			console.log(tk.file + ': ' + (tk.nochr ? 'no chr' : 'has chr'))

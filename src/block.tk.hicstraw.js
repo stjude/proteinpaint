@@ -74,7 +74,7 @@ export function loadTk(tk, block) {
 			return fetch(
 				new Request(block.hostURL + '/hicstat', {
 					method: 'POST',
-					body: JSON.stringify({ file: tk.file, jwt: block.jwt })
+					body: JSON.stringify({ file: tk.file, url: tk.url, jwt: block.jwt })
 				})
 			)
 				.then(data => {
@@ -424,6 +424,7 @@ function loadStrawdata(tk, block) {
 		const par = {
 			jwt: block.jwt,
 			file: tk.file,
+			url: tk.url,
 			pos1: r._str,
 			pos2: r._str,
 			nmeth: tk.normalizationmethod,
@@ -466,6 +467,7 @@ function loadStrawdata(tk, block) {
 			const par = {
 				jwt: block.jwt,
 				file: tk.file,
+				url: tk.url,
 				pos1: tk.regions[i]._str,
 				pos2: tk.regions[j]._str,
 				nmeth: tk.normalizationmethod,
