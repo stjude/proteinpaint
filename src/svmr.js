@@ -187,6 +187,8 @@ export function svmrparseraw(raw, genome) {
 			notes: [] // collect notes
 		}
 		for (let j = 0; j < header.length; j++) {
+			if (lst[j] !== undefined && lst[j].includes('"'))
+				return ['Input file has  invalid character " e.g. "NM_001007565"']
 			m[header[j].key] = lst[j]
 		}
 		if (!m.rating) {
