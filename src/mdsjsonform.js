@@ -15,9 +15,9 @@ export async function init_mdsjsonform(holder) {
 	const wrapper_div = form_div
 		.append('div')
 		.style('display', 'grid')
-		.style('grid-template-columns', 'repeat(2, 250px)')
+		.style('grid-template-columns', '1fr 4fr')
 		.style('align-items', 'end')
-		.style('grid-auto-rows', '35px')
+		.style('grid-template-rows', '1fr 1fr')
 		.style('margins', '5px')
 		.style('position', 'relative')
 		.style('padding', '10px')
@@ -29,9 +29,10 @@ export async function init_mdsjsonform(holder) {
 
 	const tk_name_div = wrapper_div.append('div')
 
-	tk_name_div.append('div')
-
-	tk_name_div.append('input').attr('size', 20)
+	tk_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
 
 	//.type Not included. Only one value - Appear on form or only include on the backend?
 
@@ -64,20 +65,22 @@ export async function init_mdsjsonform(holder) {
 
 	const svcnv_path_div = wrapper_div.append('div')
 
-	svcnv_path_div.append('div')
-
-	svcnv_path_div.append('input').attr('size', 20)
+	svcnv_path_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
 
 	//.expressionfile
 	const expression_file_prompt = wrapper_div.append('div')
 
-	expression_file_prompt.append('span').text('Expression file path')
+	expression_file_prompt.append('span').text('Gene expression file path')
 
 	const expression_file_div = wrapper_div.append('div')
 
-	expression_file_div.append('div')
-
-	expression_file_div.append('input').attr('size', 20)
+	expression_file_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
 
 	//.vcffile
 	const vcf_file_prompt = wrapper_div.append('div')
@@ -86,37 +89,53 @@ export async function init_mdsjsonform(holder) {
 
 	const vcf_file_div = wrapper_div.append('div')
 
-	vcf_file_div.append('div')
-
-	vcf_file_div.append('input').attr('size', 20)
+	vcf_file_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
 
 	//TODO: .vcf.hiddenclass not in track object?
 
 	//.sampleset Array
-	const samples_array_div = form_div
+	const sample_set_prompt = wrapper_div.append('div')
+
+	sample_set_prompt.append('span').text('Sample Sets')
+
+	const sample_set_grid = wrapper_div.append('div')
+
+	sample_set_grid
 		.append('div')
-		.style('display', 'block')
-		.style('margin', '5px 10px')
-		.html('Sample Sets<br>')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 1fr')
+		// .style('grid-template-rows', '1fr 1fr')
+		.style('grid-gap', '5px')
+		// .style('align-items', 'end')
+		.style('margin', '5px')
+		.style('position', 'relative')
+		.style('background', 'blue')
 
-	const samples_table = samples_array_div
-		.append('table')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
+	const sample_set_name_prompt = sample_set_grid.append('div')
 
-	const table_row = samples_table
-		.append('tr')
-		.style('display', 'inline-block')
-		.style('padding-right', '10px')
+	sample_set_name_prompt.append('span').text('Name')
 
-	const table_header = table_row
-	table_header.append('th').text('Name')
-	table_header.append('th').text('Samples')
+	const sample_set_samples_prompt = sample_set_grid.append('div')
 
-	let sample_set = table_row.append('div')
-	sample_set.append('input').attr('size', 20)
-	sample_set.append('input').attr('size', 40)
-	table_row
+	sample_set_samples_prompt.append('span').text('Samples')
+
+	const sample_set_name_div = sample_set_grid.append('div')
+
+	sample_set_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
+
+	const sample_set_samples_div = sample_set_grid.append('div')
+
+	sample_set_samples_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
+
 	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
