@@ -57,21 +57,26 @@ fi
 cd ./tmppack
 rm -rf package
 tar -xzf $PKGVER
-rm $PKGVER
 
 # standard release
 cd package
 npm publish # publish to registry
 cd ..
+
 # also distribute a tarball in our pecan server
-cp -r package package-std
-tar -czf $PKGVER package-std
 echo "Distributing the tarball ..."
 scp $PKGVER genomeuser@pp-prt:/opt/app/pecan/portal/www/static/Pk983gP.Rl2410y45/
 
 if [[ "$CUSTOMER" == "gdc" || "$CUSTOMER" == "all" ]]; then
 	echo "Creating a tarball for gdc ..."
 	KEY="random-str"
+	ssh -t genomeuser@pp-prt "
+		cd /opt/app/pecan/portal/www/static/Pk983gP.Rl2410y45/
+		tar -xzf $PKGVER
+		echo 'Filtering dataset js files for gdc ...'
+		# rm ... package/dataset/* ...
+		tar -czf $PKGVER-$KEY package
+		mkdir $KEY
+		mv $PKGVER-$KEY $KEY/$PKGVER
+	"
 fi
-
-rm -rf package
