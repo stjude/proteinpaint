@@ -29,7 +29,7 @@ export async function init_mdsjsonform(holder) {
 	//.type Not included. Only one value - Appear on form or only include on the backend?
 
 	// .isdense
-	//TODO: Field available in a track object?
+	//TODO: .isdense available in a track object?
 	const row = form_div
 		.append('div')
 		.style('margin', '2px')
@@ -97,22 +97,31 @@ export async function init_mdsjsonform(holder) {
 	//TODO: .vcf.hiddenclass not in track object?
 
 	//.sampleset Array
-	// const sample_set = {
-	//     name: VAR_NAME,
-	//     samples: []
-	// }
-
 	const samples_array = form_div
 		.append('div')
 		.style('display', 'block')
 		.style('margin', '5px 10px')
+		.html('Sample Sets<br>')
 
 	const samples_table = samples_array
 		.append('table')
 		.style('display', 'inline-block')
 		.style('padding-right', '10px')
 
-	samples_table.setAttribute('name', 'samples')
+	const table_row = samples_table
+		.append('tr')
+		.style('display', 'inline-block')
+		.style('padding-right', '10px')
+
+	const table_header = table_row
+	table_header.append('th').text('Name')
+	table_header.append('th').text('Samples')
+
+	let sample_set = table_row.append('div')
+	sample_set.append('input').attr('size', 20)
+	sample_set.append('input').attr('size', 40)
+	table_row
+	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
 	//.sample2assaytrack.samplename -Key
