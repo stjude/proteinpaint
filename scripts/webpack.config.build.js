@@ -4,8 +4,7 @@ const path = require('path')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 module.exports = function(env) {
-	const protocol = !env.subdomain ? '' : 'https:'
-	config.output.publicPath = !env.subdomain ? '/bin/' : 'https://' + env.subdomain + '.stjude.org/bin/'
+	config.output.publicPath = !env.url ? '/bin/' : env.url + '/bin/'
 	config.output.path = __dirname + '/../public/bin'
 
 	if (env.subdomain != 'ppr') {

@@ -65,14 +65,14 @@ if [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//ppr.stjude.org/"
+	URL="ppr.stjude.org"
 	SUBDOMAIN=ppr
 
 elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prt.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//pp-test.stjude.org/pp"
+	URL="pp-test.stjude.org"
 	SUBDOMAIN=pp-test
 
 elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
@@ -80,7 +80,7 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pp-test.stjude.org
-	URL="//proteinpaint.stjude.org/"
+	URL="proteinpaint.stjude.org"
 	SUBDOMAIN=proteinpaint
 
 	if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
@@ -125,7 +125,7 @@ else
 		cp ../public/bin/* public/bin
 		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
 	else 
-		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+		npx webpack --config=scripts/webpack.config.build.js --env.url=https://$URL
 	fi
 
 	# create dirs to put extracted files

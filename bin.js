@@ -14,16 +14,4 @@
 // option to use forever-monitor (to-do)
 // - OR -
 
-const fs = require('fs')
-const pkg = require('./package.json')
-
-// use the pp packages' public dir for index.html and /bin bundles
-if (!fs.existsSync('public')) {
-	if (pkg._where) {
-		fs.symlink(pkg._where + '/node_modules/@stjude/proteinpaint/public', 'public', () => {})
-	} else {
-		fs.symlink(__dirname + '/public', 'public', () => {})
-	}
-}
-
-require('./server.js')
+require('./index.js')

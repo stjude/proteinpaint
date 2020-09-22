@@ -262,7 +262,13 @@ function handle_genomes(req, res) {
 	)
 	// if the pp binary did not start the process, assume that the
 	// server was called in the same directory as the public dir or symlink
-	const dirname = serverconfig.projectdir ? serverconfig.projectdir : ppbin ? path.dirname(ppbin) : 'public/..'
+	const dirname = serverconfig.projectdir
+		? serverconfig.projectdir
+		: ppbin
+		? path.dirname(ppbin)
+		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
+		? './node_modules/@stjude/proteinpaint/'
+		: 'public/..'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
 	const lastdate = date1 > date2 ? date1 : date2

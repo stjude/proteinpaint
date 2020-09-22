@@ -69,7 +69,7 @@ ln -s ../node_modules node_modules
 echo -e "\nPacking the server bundle ...\n"
 npm run build-server
 echo -e "\nPacking the client bundle ...\n"
-npx webpack --config=scripts/webpack.config.build.js --env.subdomain=""
+npx webpack --config=scripts/webpack.config.build.js --env.url="__PP_URL__"
 
 
 ##########
