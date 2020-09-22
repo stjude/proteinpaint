@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "index.js",
   "bin": "bin.js",
@@ -115,7 +115,7 @@
     "bin.js",
     "index.js",
     "genome",
-    "dataset/clinvar.js",
+    "dataset/clinvar.*.js",
     "public/index.html",
     "public/rev.txt",
     "public/bin",
