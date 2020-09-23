@@ -78,6 +78,7 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
 			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
+			{ file: 'hg19/Pediatric/sampletable/pcgp.target.info' },
 			{ file: 'hg19/Pediatric/sampletable/fpkmOnly.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.outcome' },
@@ -277,6 +278,7 @@ module.exports = {
 				values: {
 					pantarget: { name: 'Pan-TARGET', label: 'Pan-cancer analysis of the NCI TARGET dataset' },
 					pcgp: { name: 'PCGP', label: 'Pediatric Cancer Genome Project' },
+					scmc: { name: 'SCMC', label: 'Shanghai Children\'s Medical Center pediatric ALL project'},
 					pedccl: { name: 'PedCCL', label: 'Pediatric Cancer Cell Lines' }
 				},
 				filter: 1
