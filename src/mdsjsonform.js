@@ -101,35 +101,33 @@ export async function init_mdsjsonform(holder) {
 
 	sample_set_prompt.append('span').text('Sample Sets')
 
-	const sample_set_grid = wrapper_div.append('div')
-
-	sample_set_grid
+	const sample_set_grid_div = wrapper_div
+		.append('div')
 		.append('div')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 1fr')
-		// .style('grid-template-rows', '1fr 1fr')
-		.style('grid-gap', '5px')
-		// .style('align-items', 'end')
-		.style('margin', '5px')
+		.style('grid-template-columns', '1fr 3fr')
+		.style('align-items', 'end')
+		.style('grid-template-rows', '1fr 1fr')
 		.style('position', 'relative')
-		.style('background', 'blue')
 
-	const sample_set_name_prompt = sample_set_grid.append('div')
+	//.sampleset.name
+	const sample_set_name_prompt = sample_set_grid_div.append('div')
 
-	sample_set_name_prompt.append('span').text('Name')
+	sample_set_name_prompt.append('span').text('Sample Set Name')
 
-	const sample_set_samples_prompt = sample_set_grid.append('div')
+	//.sampleset.samples
+	const sample_set_samples_prompt = sample_set_grid_div.append('div')
 
 	sample_set_samples_prompt.append('span').text('Samples')
 
-	const sample_set_name_div = sample_set_grid.append('div')
+	const sample_set_name_div = sample_set_grid_div.append('div')
 
 	sample_set_name_div
 		.append('div')
 		.append('input')
 		.attr('size', 20)
 
-	const sample_set_samples_div = sample_set_grid.append('div')
+	const sample_set_samples_div = sample_set_grid_div.append('div')
 
 	sample_set_samples_div
 		.append('div')
@@ -139,11 +137,64 @@ export async function init_mdsjsonform(holder) {
 	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
-	//.sample2assaytrack.samplename -Key
-	//.sample2assaytrack.assaytrack - Value
-	//.sample2assaytrack.assaytrack.name
+	const sample_assay_sam_name_prompt = wrapper_div.append('div')
+
+	sample_assay_sam_name_prompt.append('span').text('Sample Assay')
+
+	const sample_assay_grid_div = wrapper_div
+		.append('div')
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 2fr 1fr')
+		.style('align-items', 'end')
+		.style('grid-template-rows', '1fr 1fr 1fr')
+		.style('position', 'relative')
+
+	const sample_assay_type_prompt = sample_assay_grid_div.append('div')
+
+	sample_assay_type_prompt.append('span').text('Type')
+
+	const sample_assay_name_prompt = sample_assay_grid_div.append('div')
+
+	sample_assay_name_prompt.append('span').text('Name')
+
+	const sample_assay_file_prompt = sample_assay_grid_div.append('div')
+
+	sample_assay_file_prompt.append('span').text('File Path')
+
+	const s_row = sample_assay_grid_div.append('div')
+
 	//.sample2assaytrack.assaytrack.type
+	const sample_assay_type_div = s_row.append('select')
+	sample_assay_type_div.append('input')
+	sample_assay_type_div.attr('type', 'checkbox')
+	sample_assay_type_div.append('option').text('Select') //TODO: Placeholder
+	sample_assay_type_div.append('option').text('aicheck')
+	sample_assay_type_div.append('option').text('bigwig')
+	sample_assay_type_div.append('option').text('bigwigstranded')
+	sample_assay_type_div.append('option').text('junction')
+	s_row.append('span')
+
+	sample_assay_type_div.append('input').attr('size', 20)
+
+	//.sample2assaytrack.assaytrack.name
+	const sample_assay_name_div = sample_assay_grid_div.append('div')
+
+	sample_assay_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
+
 	//.sample2assaytrack.assaytrack.file
+	const sample_assay_file_div = sample_assay_grid_div.append('div')
+
+	sample_assay_file_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
+
+	//TODO add button to add lines to table
+
 	//.sample2assaytrack.assaytrack.strand1
 	//.sample2assaytrack.assaytrack.strand1.file
 	//.sample2assaytrack.assaytrack.strand1.file.normalize
@@ -152,6 +203,11 @@ export async function init_mdsjsonform(holder) {
 	//.sample2assaytrack.assaytrack.strand2.file
 	//.sample2assaytrack.assaytrack.strand1.file.normalize
 	//.sample2assaytrack.assaytrack.strand1.file.normalize.dividefactor
+	const submit_row = form_div
+
+	const submit_btn = submit_row.append('button')
+
+	submit_btn.append('div').text('Submit')
 }
 
 function validate_form() {
