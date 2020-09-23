@@ -97,29 +97,34 @@ export async function init_mdsjsonform(holder) {
 	//TODO: .vcf.hiddenclass not in track object?
 
 	//.sampleset Array
-	const sample_set_prompt = wrapper_div.append('div')
+	const sample_set_prompt = form_div
 
-	sample_set_prompt.append('span').text('Sample Sets')
+	sample_set_prompt
+		.append('span')
+		.text('Sample Sets')
+		.style('margins', '5px')
+		.style('padding', '10px')
 
-	const sample_set_grid_div = wrapper_div
+	const sample_set_grid_div = form_div
 		.append('div')
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 3fr')
 		.style('align-items', 'end')
 		.style('grid-template-rows', '1fr 1fr')
+		.style('margins', '5px')
 		.style('position', 'relative')
+		.style('padding', '10px')
 
-	//.sampleset.name
 	const sample_set_name_prompt = sample_set_grid_div.append('div')
 
 	sample_set_name_prompt.append('span').text('Sample Set Name')
 
-	//.sampleset.samples
 	const sample_set_samples_prompt = sample_set_grid_div.append('div')
 
 	sample_set_samples_prompt.append('span').text('Samples')
 
+	//.sampleset.name
 	const sample_set_name_div = sample_set_grid_div.append('div')
 
 	sample_set_name_div
@@ -127,28 +132,35 @@ export async function init_mdsjsonform(holder) {
 		.append('input')
 		.attr('size', 20)
 
+	//.sampleset.samples
 	const sample_set_samples_div = sample_set_grid_div.append('div')
 
 	sample_set_samples_div
 		.append('div')
 		.append('input')
-		.attr('size', 20)
+		.attr('size', 30)
 
 	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
-	const sample_assay_sam_name_prompt = wrapper_div.append('div')
+	const sample_assay_sam_name_prompt = form_div
 
-	sample_assay_sam_name_prompt.append('span').text('Sample Assay')
+	sample_assay_sam_name_prompt
+		.append('span')
+		.text('Sample Assay')
+		.style('margins', '5px')
+		.style('padding', '10px')
 
-	const sample_assay_grid_div = wrapper_div
+	const sample_assay_grid_div = form_div
 		.append('div')
 		.append('div')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 2fr 1fr')
+		.style('grid-template-columns', '1fr 1fr 1fr')
 		.style('align-items', 'end')
 		.style('grid-template-rows', '1fr 1fr 1fr')
+		.style('margins', '5px')
 		.style('position', 'relative')
+		.style('padding', '10px')
 
 	const sample_assay_type_prompt = sample_assay_grid_div.append('div')
 
@@ -191,10 +203,10 @@ export async function init_mdsjsonform(holder) {
 	sample_assay_file_div
 		.append('div')
 		.append('input')
-		.attr('size', 20)
+		.attr('size', 30)
 
 	//TODO add button to add lines to table
-
+	//TODO more grids within grids? Is that logical or is there a more elegant solution?
 	//.sample2assaytrack.assaytrack.strand1
 	//.sample2assaytrack.assaytrack.strand1.file
 	//.sample2assaytrack.assaytrack.strand1.file.normalize
@@ -216,3 +228,5 @@ function validate_form() {
 		return false
 	}
 }
+
+//TODO Ask Jaimin how the temporary file will work. Will internal users be able to save their tracks somewhere else rather than reinput all this information into the form? Should the file path print to the screen for that purpose?
