@@ -6,9 +6,17 @@ const fs = require('fs'),
 	vcf = require('../src/vcf'),
 	bettersqlite = require('better-sqlite3')
 
+// do not assume that serverconfig.json is in the same dir as server.js
+// for example, when using proteinpaint as an npm module or binary
+const serverconfigfile = (process.cwd() || '.') + '/serverconfig.json'
 // when unit testing, __non_webpack_require might not be available
 // since a spec might be directly requiring an unpacked or unbundled module
-const serverconfig = typeof __non_webpack_require__ == 'function' && __non_webpack_require__('./serverconfig.json')
+const serverconfig =
+	(typeof __non_webpack_require__ == 'function' && __non_webpack_require__(serverconfigfile)) ||
+	require(serverconfigfile)
+Object.freeze(serverconfig)
+exports.serverconfig = serverconfig
+
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 

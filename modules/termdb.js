@@ -6,8 +6,6 @@ const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
 /*
 ********************** EXPORTED
 handle_request_closure

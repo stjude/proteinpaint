@@ -22,7 +22,7 @@ helper_rows2categories
 helper_conditiongroups2categories
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 
 const minimum_total_sample = 10
 

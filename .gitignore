@@ -2,6 +2,7 @@
 .DS_Store
 /node_modules/
 npm-debug.log
+dist/*
 
 public/bin/*
 public/tmp/*
@@ -19,6 +20,7 @@ public/builds/*
 public/no-babel-polyfill/*
 public/static/*.docx
 public/static/*.pdf
+public/rev.txt
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
@@ -41,6 +43,7 @@ server.js
 setup/*gz*
 setup/*
 tmpbuild/*
+tmppack/*
 pp-server/*
 
 *-stash.js

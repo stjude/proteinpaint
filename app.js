@@ -1,12 +1,11 @@
 // JUMP __MDS __util __rank __smat
 
-const serverconfigfile = './serverconfig.json'
-
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const serverconfig = __non_webpack_require__(serverconfigfile)
+const utils = require('./modules/utils')
+const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
 
 const tabixnoterror = s => {
@@ -18,6 +17,7 @@ const express = require('express'),
 	http = require('http'),
 	https = require('https'),
 	fs = require('fs'),
+	path = require('path'),
 	request = require('request'),
 	async = require('async'),
 	lazy = require('lazy'),
@@ -25,7 +25,6 @@ const express = require('express'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
-	path = require('path'),
 	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
@@ -59,7 +58,6 @@ const express = require('express'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
-	utils = require('./modules/utils'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
 	variant2samples_closure = require('./modules/variant2samples')
 
@@ -118,7 +116,7 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-app.use(express.static('./public'))
+app.use(express.static(path.join(process.cwd(), './public')))
 app.use(compression())
 
 if (serverconfig.jwt) {
@@ -248,7 +246,6 @@ pp_init()
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
 */
 const infoFilter_unannotated = 'Unannotated'
-
 function handle_genomes(req, res) {
 	const hash = {}
 	if (req.query && req.query.genome) {
@@ -258,9 +255,23 @@ function handle_genomes(req, res) {
 			hash[genomename] = clientcopy_genome(genomename)
 		}
 	}
-	const date1 = fs.statSync('server.js').mtime
+	// detect if proteinpaint was called from outside the
+	// project directory that installed it as an npm dependency
+	const ppbin = process.argv.find(
+		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
+	)
+	// if the pp binary did not start the process, assume that the
+	// server was called in the same directory as the public dir or symlink
+	const dirname = serverconfig.projectdir
+		? serverconfig.projectdir
+		: ppbin
+		? path.dirname(ppbin)
+		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
+		? './node_modules/@stjude/proteinpaint/'
+		: 'public/..'
+	const date1 = fs.statSync(dirname + '/server.js').mtime
 	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
-	const lastdate = date1 < date2 ? date1 : date2
+	const lastdate = date1 > date2 ? date1 : date2
 	res.send({
 		genomes: hash,
 		debugmode: serverconfig.debugmode,
@@ -11871,6 +11882,8 @@ async function pp_init() {
 		if (!g.name) return '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) return '.file missing from genome ' + g.name
 
+		const overrideFile = path.join(process.cwd(), g.file)
+		const jsfile = fs.existsSync(overrideFile) ? overrideFile : g.file
 		let g2
 		try {
 			g2 = __non_webpack_require__(g.file)
@@ -12122,6 +12135,8 @@ async function pp_init() {
 			if (g.datasets[d.name]) return genomename + ' has duplicating dataset name: ' + d.name
 			let ds
 			if (d.jsfile) {
+				const overrideFile = path.join(process.cwd(), d.jsfile)
+				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile
 				try {
 					ds = __non_webpack_require__(d.jsfile)
 				} catch (e) {
