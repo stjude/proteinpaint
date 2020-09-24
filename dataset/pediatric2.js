@@ -48,7 +48,8 @@ module.exports = {
 				type: 'categorical',
 				values: { yes: { label: 'yes', color: '#858585' } }
 			},
-			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			// not using "hasrnaseq" for the moment due to slight discrepancy between rnaseq/fpkm availabilities
+			{ id: 'hasfpkm', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
 			{ id: 'hashic', name: 'Hi-C', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
 		]
 	},
@@ -278,7 +279,7 @@ module.exports = {
 				values: {
 					pantarget: { name: 'Pan-TARGET', label: 'Pan-cancer analysis of the NCI TARGET dataset' },
 					pcgp: { name: 'PCGP', label: 'Pediatric Cancer Genome Project' },
-					scmc: { name: 'SCMC', label: 'Shanghai Children\'s Medical Center pediatric ALL project'},
+					scmc: { name: 'SCMC', label: "Shanghai Children's Medical Center pediatric ALL project" },
 					pedccl: { name: 'PedCCL', label: 'Pediatric Cancer Cell Lines' }
 				},
 				filter: 1
