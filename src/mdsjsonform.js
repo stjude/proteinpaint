@@ -42,6 +42,24 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
+	const genome_prompt = wrapper_div.append('div')
+
+	doms.genome = genome_prompt.append('span').text('Genome')
+
+	//.genome
+	const g_row = wrapper_div.append('div')
+
+	const genome_div = g_row.append('select')
+	genome_div.append('input')
+	genome_div.attr('type', 'checkbox')
+	genome_div.append('option').text('Select') //TODO: Placeholder
+	genome_div.append('option').text('hg19')
+	genome_div.append('option').text('hg38')
+	genome_div.append('option').text('mm10')
+	row.append('span')
+
+	genome_div.append('input').attr('size', 20)
+
 	//.name
 	const tk_name_prompt = wrapper_div.append('div')
 
@@ -72,7 +90,7 @@ export async function init_mdsjsonform(par) {
 	is_dense_div.append('option').text('No') //False
 	row.append('span')
 
-	is_dense_div.append('input').attr('size', 20)
+	doms.isdense = is_dense_div.append('input').attr('size', 20)
 
 	//.isfull left off since .isdense specified
 
@@ -93,7 +111,7 @@ export async function init_mdsjsonform(par) {
 	//.expressionfile
 	const expression_file_prompt = wrapper_div.append('div')
 
-	expression_file_prompt.append('span').text('Gene expression file path')
+	doms.expressionfile = expression_file_prompt.append('span').text('Gene expression file path')
 
 	const expression_file_div = wrapper_div.append('div')
 
@@ -109,7 +127,7 @@ export async function init_mdsjsonform(par) {
 
 	const vcf_file_div = wrapper_div.append('div')
 
-	vcf_file_div
+	doms.vcffile = vcf_file_div
 		.append('div')
 		.append('input')
 		.attr('size', 20)
@@ -259,7 +277,7 @@ function validate_input(doms) {
 		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
-
+	obj.isdense = doms.isdense.property('value') || 'True'
 	{
 		const tmp = doms.svcnvfileurl.property('value')
 		if (tmp == '') throw 'Missing SVCNV file path or URL'
@@ -269,7 +287,8 @@ function validate_input(doms) {
 			obj.svcnvfile = tmp
 		}
 	}
-
+	obj.expressionfile = doms.expressionfile.property('value') || 'Gene expression file'
+	obj.vcffile = doms.vcffile.property('value') || 'VCF file'
 	return obj
 }
 
