@@ -267,17 +267,33 @@ export async function init_mdsjsonform(par) {
 		.append('button')
 		.text('Submit')
 		.on('click', async () => {
+			link_holder.html('Loading...')
 			try {
+				let genome
+				{
+					//const n = doms.genome.node()
+					//genome = n.options[n.selectedIndex].text
+					genome = 'hg19'
+				}
 				const deposit = validate_input(doms)
 				const re = await dofetch2('mdsjsonform', { method: 'POST', body: JSON.stringify({ deposit }) })
 				if (re.error) throw re.error
-				// TODO server to return ID of cached file
-				console.log(re)
+				link_holder.html(
+					'<a href=' +
+						window.location.origin +
+						'?block=1&genome=' +
+						genome +
+						'&mdsjsoncache=' +
+						re.id +
+						' target=_blank>View track</a>'
+				)
 			} catch (e) {
 				window.alert('Error: ' + e)
 				return
 			}
 		})
+
+	const link_holder = submit_row.append('span').style('margin-left', '20px')
 }
 
 function validate_input(doms) {
@@ -295,8 +311,8 @@ function validate_input(doms) {
 			obj.svcnvfile = tmp
 		}
 	}
-	obj.expressionfile = doms.expressionfile.property('value') || 'Gene expression file'
-	obj.vcffile = doms.vcffile.property('value') || 'VCF file'
+	//obj.expressionfile = doms.expressionfile.property('value') || 'Gene expression file'
+	//obj.vcffile = doms.vcffile.property('value') || 'VCF file'
 	return obj
 }
 
