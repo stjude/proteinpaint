@@ -4633,11 +4633,14 @@ if fromgenetk is provided, will skip this track
 		const lst = Array.isArray(arg) ? arg : [arg]
 		const toadd = []
 		for (const t of lst) {
-			if (this.tklst.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))) {
-				// already shown
-				continue
+			{
+				const [i, tt] = findtrack(this.tklst, t)
+				if (tt) {
+					// already shown
+					continue
+				}
 			}
-			const f = this.genome.tracks.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			const [i, f] = findtrack(this.genome.tracks, t)
 			if (f) {
 				toadd.push(f)
 			} else {
@@ -4653,7 +4656,7 @@ if fromgenetk is provided, will skip this track
 	turnOffTrack(arg) {
 		const lst = Array.isArray(arg) ? arg : [arg]
 		for (const t of lst) {
-			const idx = this.tklst.findIndex(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			const [idx, f] = findtrack(this.tklst, t)
 			if (idx != -1) this.tk_remove(idx)
 		}
 	}
@@ -4697,6 +4700,42 @@ if fromgenetk is provided, will skip this track
 	}
 
 	/*********** end of class:Block  ************/
+}
+
+function findtrack(lst, t) {
+	// given track object t, find the identical one in lst[]
+	for (const [i, f] of lst.entries()) {
+		if (f.type != t.type) continue
+		if (t.type == client.tkt.junction) {
+			if (t.file || t.url) {
+				// t is a single-sample track
+				if (f.tracks.length == 1) {
+					if (f.tracks[0].file ? f.tracks[0].file == t.file : f.tracks[0].url == t.url) {
+						return [i, f]
+					}
+				} else {
+					// a multi-sample track,
+				}
+			} else if (t.tracks) {
+				if (t.tracks.length == 1 && f.tracks.length == 1) {
+					// both single sample
+					if (f.tracks[0].file ? f.tracks[0].file == t.tracks[0].file : f.tracks[0].url == t.tracks[0].url) {
+						return [i, f]
+					}
+				} else {
+					// number of samples not matching
+				}
+			} else {
+				// should throw exception
+			}
+			continue
+		}
+		// all other track types
+		if (f.type == t.type && (f.file ? f.file == t.file : f.url == t.url)) {
+			return [i, f]
+		}
+	}
+	return [-1, null]
 }
 
 function getrulerunit(span, ticks) {

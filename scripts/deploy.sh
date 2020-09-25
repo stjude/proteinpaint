@@ -18,7 +18,7 @@ set -e
 
 # default to deploying to ppdev
 if (($# == 0)); then
-	ENV="internal-stage"
+	ENV="pp-test"
 	REV="HEAD"
 	DEPLOYER=$USER
 elif (($# == 1)); then
@@ -61,25 +61,18 @@ APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 
-if [[ "$ENV" == "internal-stage" || "$ENV" == "pp-int-test" || "$ENV" == "pp-irt" ]]; then
-	DEPLOYER=genomeuser
-	REMOTEHOST=pp-irt.stjude.org
-	REMOTEDIR=/opt/app/pp
-	URL="//pp-int-test.stjude.org"
-	SUBDOMAIN=pp-int-test
-
-elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
+if [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//ppr.stjude.org/"
+	URL="ppr.stjude.org"
 	SUBDOMAIN=ppr
 
 elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prt.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//pp-test.stjude.org/pp"
+	URL="pp-test.stjude.org"
 	SUBDOMAIN=pp-test
 
 elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
@@ -87,13 +80,14 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pp-test.stjude.org
-	URL="//proteinpaint.stjude.org/"
+	URL="proteinpaint.stjude.org"
 	SUBDOMAIN=proteinpaint
 
 	if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 		TEMPUSER=gnomeuser
 		TEMPHOST=svldtemp01.stjude.org
 	fi
+
 else
 	echo "Environment='$ENV' is not supported"
 	exit 1
@@ -127,11 +121,11 @@ else
 		# committed code is used except for the live bundle.
 		# To force rebundle from committed code, 
 		# use "internal-prod" instead of "ppdev" environment
-		mkdir public/builds/$SUBDOMAIN
-		cp ../public/bin/* public/builds/$SUBDOMAIN
+		mkdir public/bin
+		cp ../public/bin/* public/bin
 		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
 	else 
-		npx webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+		npx webpack --config=scripts/webpack.config.build.js --env.url=https://$URL
 	fi
 
 	# create dirs to put extracted files
@@ -139,20 +133,20 @@ else
 	mkdir $APP
 	mkdir $APP/public
 	mkdir $APP/src
+	mkdir $APP/utils
 
 	npm run build-server
 	mv server.js $APP/
 	mv package.json $APP/
-	mv public/builds/$SUBDOMAIN $APP/public/bin
-	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv utils modules $APP/
+	mv public/bin $APP/public/bin
 	mv genome $APP/
 	mv dataset $APP/
+	mv utils/binom.R $APP/utils/
+	mv utils/chisq.R $APP/utils/
+	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
-	elif [[ "$ENV" == "internal-stage" ]]; then
-		cp public/pp-int-test.html $APP/public/index.html
 	else
 		cp public/index.html $APP/public/index.html
 	fi
@@ -188,9 +182,9 @@ REMOTE_UPDATE="
 	ln -s $REMOTEDIR/$APP/public/bin $REMOTEDIR/$APP/public/no-babel-polyfill
 
 	cd $REMOTEDIR/$APP/
-	$REMOTEDIR/proteinpaint_run_node.sh
+	../proteinpaint_run_node.sh
 
-	echo \"$ENV $REV $(date)\" >> $REMOTEDIR/$APP/public/rev.txt
+	echo \"$ENV $REV $(date)\" > $REMOTEDIR/$APP/public/rev.txt
 "
 
 if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
@@ -214,4 +208,4 @@ fi
 #############
 
 cd ..
-rm -rf tmpbuild
+# rm -rf tmpbuild

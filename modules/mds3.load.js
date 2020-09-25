@@ -29,7 +29,7 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
-//const serverconfig = __non_webpack_require__('./serverconfig.json')
+//const serverconfig = utils.serverconfig
 
 module.exports = genomes => {
 	return async (req, res) => {

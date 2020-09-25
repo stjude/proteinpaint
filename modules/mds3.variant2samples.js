@@ -29,8 +29,6 @@ get types:
   - return summary of each attribute
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
 module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
