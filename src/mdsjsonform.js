@@ -17,21 +17,12 @@ export async function init_mdsjsonform(par) {
 		}
 	}
 
-	const doms = {} // use this to collect all input DOMs
-
-	// TODO create <select> for genomes
-	for (const n in genomes) {
-		console.log(n)
-	}
-
 	const form_div = holder.append('div')
-
 	form_div
 		.append('div')
 		.style('font-size', '20px')
 		.style('margin', '10px')
 		.text('Create a Custom GenomePaint Track')
-
 	const wrapper_div = form_div
 		.append('div')
 		.style('display', 'grid')
@@ -42,6 +33,11 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
+	const doms = {} // use this to collect all input DOMs
+	doms.name = make_name(wrapper_div)
+	//doms.genome = make_genome(wrapper_div, genomes)
+	// more controls...
+
 	const genome_prompt = wrapper_div.append('div')
 
 	doms.genome = genome_prompt.append('span').text('Genome')
@@ -49,28 +45,10 @@ export async function init_mdsjsonform(par) {
 	//.genome
 	const g_row = wrapper_div.append('div')
 
-	const genome_div = g_row.append('select')
-	genome_div.append('input')
-	genome_div.attr('type', 'checkbox')
-	genome_div.append('option').text('Select') //TODO: Placeholder
-	genome_div.append('option').text('hg19')
-	genome_div.append('option').text('hg38')
-	genome_div.append('option').text('mm10')
-	g_row.append('span')
-
-	genome_div.append('input').attr('size', 20)
-
-	//.name
-	const tk_name_prompt = wrapper_div.append('div')
-
-	tk_name_prompt.append('span').text('Track name')
-
-	const tk_name_div = wrapper_div.append('div')
-
-	doms.name = tk_name_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
+	const select = g_row.append('select')
+	for (const n in genomes) {
+		select.append('option').text(n)
+	}
 
 	//.type Not included. Only one value - Appear on form or only include on the backend?
 
@@ -302,6 +280,7 @@ function validate_input(doms) {
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
 	obj.isdense = doms.isdense.property('value') || 'True'
+	// TODO correct the logic that either svcnv or vcf file is required
 	{
 		const tmp = doms.svcnvfileurl.property('value')
 		if (tmp == '') throw 'Missing SVCNV file path or URL'
@@ -319,4 +298,17 @@ function validate_input(doms) {
 function isurl(t) {
 	const a = t.toUpperCase()
 	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
+}
+
+function make_name(div) {
+	const tk_name_prompt = div.append('div')
+
+	tk_name_prompt.append('span').text('Track name')
+
+	const tk_name_div = div.append('div')
+
+	return tk_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
 }
