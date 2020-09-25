@@ -1,5 +1,12 @@
 import * as client from './client'
 
+/*
+********************** EXPORTED
+init_mdsjson
+validate_mdsjson
+get_json_tk
+*/
+
 export async function init_mdsjson(file_str, url_str, holder) {
 	let json_files = [],
 		json_urls = []
@@ -53,12 +60,12 @@ async function mdsjson_parse(json_file, json_url) {
 	return JSON.parse(tmp.text)
 }
 
-function validate_mdsjson(obj) {
+export function validate_mdsjson(obj) {
 	if (!obj) throw 'file is missing'
 	if (!obj.type) throw 'dataset type is missing'
 	const svcnvfile = obj.svcnvfile || obj.svcnvurl
 	const vcffile = obj.vcffile || obj.vcfurl
-	if (!svcnvfile || !vcffile) throw 'vcf or cnv file/url is required'
+	if (!svcnvfile && !vcffile) throw 'vcf or cnv file/url is required'
 	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
 		if (!obj.expressionfile && !obj.expressionurl) throw 'expression file/url is missing'
 	}
@@ -110,7 +117,7 @@ function validate_mdsjson(obj) {
 	}
 }
 
-function get_json_tk(tkobj) {
+export function get_json_tk(tkobj) {
 	const track = {
 		type: tkobj.type,
 		name: tkobj.name
