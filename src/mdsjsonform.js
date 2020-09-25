@@ -10,9 +10,9 @@ export async function init_mdsjsonform(par) {
 
 	{
 		// check if the form is enabled to work on this server
-		const re = await dofetch2('mdsjsonform', { method: 'POST', body: '{"check":1}' })
-		if (!re.enabled) {
-			holder.append('div').text('Sorry. This feature is not enabled on this server.')
+		const re = await dofetch2('mdsjsonform', { method: 'POST', bhody: '{}' })
+		if (re.error) {
+			holder.append('div').text(re.error)
 			return
 		}
 	}
