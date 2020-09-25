@@ -4,7 +4,6 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import { init_mdsjson } from './app.mdsjson'
-import { init_mdsjsonform } from './mdsjsonform'
 
 /*
 ********************** EXPORTED
@@ -44,6 +43,13 @@ arg
 	.debugmode
 */
 	const urlp = url2map()
+
+	if (urlp.has('mdsjsonform')) {
+		const _ = await import('./mdsjsonform')
+		await _.init_mdsjsonform(arg)
+		// will not process other url parameters
+		return
+	}
 
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
@@ -243,11 +249,6 @@ arg
 			}
 		}
 
-		// if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
-		// 	init_mdsjson(urlp, arg, par)
-		// 	return
-		// }
-
 		par.tklst = await get_tklst(urlp, arg.holder)
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
@@ -315,12 +316,6 @@ arg
 				arg.debugmode
 			)
 		}
-	}
-
-	if (urlp.has('mdsjsonform')) {
-		const par = await init_mdsjsonform(arg.holder)
-
-		//TODO:
 	}
 }
 

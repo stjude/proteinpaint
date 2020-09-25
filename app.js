@@ -71,6 +71,10 @@ const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
 const hicstraw = serverconfig.hicstraw || 'straw'
+/*
+this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
+*/
+const infoFilter_unannotated = 'Unannotated'
 
 /****
   main() enables having two options:
@@ -153,6 +157,7 @@ if (serverconfig.jwt) {
 	})
 }
 
+app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
@@ -242,10 +247,19 @@ pp_init()
 		process.exit(1)
 	})
 
-/*
-this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
-*/
-const infoFilter_unannotated = 'Unannotated'
+async function handle_mdsjsonform(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
+	if (req.query.check) return res.send({ enabled: serverconfig.allow_mdsjsonform })
+	if (req.query.deposit) {
+		if (!serverconfig.allow_mdsjsonform) return res.send({ error: 'Not allowed' })
+		const id = Math.random().toString()
+		// TODO write deposit to cache file
+		res.send({ filename: id })
+		return
+	}
+	res.send({ error: 'Invalid request' })
+}
+
 function handle_genomes(req, res) {
 	const hash = {}
 	if (req.query && req.query.genome) {

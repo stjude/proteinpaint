@@ -1,9 +1,29 @@
 import { select as d3select } from 'd3'
 import { vcfvariantisgermline } from './block.mds.svcnv'
+import { dofetch2 } from './client'
 
-//TODO: Genomes in the same or separate function?
+/*
+ */
 
-export async function init_mdsjsonform(holder) {
+export async function init_mdsjsonform(par) {
+	const { holder, genomes } = par
+
+	{
+		// check if the form is enabled to work on this server
+		const re = await dofetch2('mdsjsonform', { method: 'POST', body: '{"check":1}' })
+		if (!re.enabled) {
+			holder.append('div').text('Sorry. This feature is not enabled on this server.')
+			return
+		}
+	}
+
+	const doms = {} // use this to collect all input DOMs
+
+	// TODO create <select> for genomes
+	for (const n in genomes) {
+		console.log(n)
+	}
+
 	const form_div = holder.append('div')
 
 	form_div
@@ -29,7 +49,7 @@ export async function init_mdsjsonform(holder) {
 
 	const tk_name_div = wrapper_div.append('div')
 
-	tk_name_div
+	doms.name = tk_name_div
 		.append('div')
 		.append('input')
 		.attr('size', 20)
@@ -61,11 +81,11 @@ export async function init_mdsjsonform(holder) {
 	//TODO: Function to detect either SVCNV file or vcf file provided - both are allowed
 	const svcnv_path_prompt = wrapper_div.append('div')
 
-	svcnv_path_prompt.append('span').text('SV, CNV file path or URL')
+	svcnv_path_prompt.append('span').text('"SVCNV" file path or URL')
 
 	const svcnv_path_div = wrapper_div.append('div')
 
-	svcnv_path_div
+	doms.svcnvfileurl = svcnv_path_div
 		.append('div')
 		.append('input')
 		.attr('size', 20)
@@ -217,16 +237,45 @@ export async function init_mdsjsonform(holder) {
 	//.sample2assaytrack.assaytrack.strand1.file.normalize.dividefactor
 	const submit_row = form_div
 
-	const submit_btn = submit_row.append('button')
-
-	submit_btn.append('div').text('Submit')
+	submit_row
+		.append('button')
+		.text('Submit')
+		.on('click', async () => {
+			try {
+				const deposit = validate_input(doms)
+				const re = await dofetch2('mdsjsonform', { method: 'POST', body: JSON.stringify({ deposit }) })
+				if (re.error) throw re.error
+				// TODO server to return ID of cached file
+				console.log(re)
+			} catch (e) {
+				window.alert('Error: ' + e)
+				return
+			}
+		})
 }
 
-function validate_form() {
-	if (svcnv_path == '' || vcf_file == '') {
-		alert('Please provide either a SV, CNV, or VCF file path')
-		return false
+function validate_input(doms) {
+	const obj = {
+		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
+	obj.name = doms.name.property('value') || 'Custom track'
+
+	{
+		const tmp = doms.svcnvfileurl.property('value')
+		if (tmp == '') throw 'Missing SVCNV file path or URL'
+		if (isurl(tmp)) {
+			obj.svcnvurl = tmp
+		} else {
+			obj.svcnvfile = tmp
+		}
+	}
+
+	return obj
+}
+
+function isurl(t) {
+	const a = t.toUpperCase()
+	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
 }
 
 //TODO Ask Jaimin how the temporary file will work. Will internal users be able to save their tracks somewhere else rather than reinput all this information into the form? Should the file path print to the screen for that purpose?
