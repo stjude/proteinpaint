@@ -11900,9 +11900,9 @@ async function pp_init() {
 		const jsfile = fs.existsSync(overrideFile) ? overrideFile : g.file
 		let g2
 		try {
-			g2 = __non_webpack_require__(g.file)
+			g2 = __non_webpack_require__(jsfile)
 		} catch (e) {
-			return `error loading genome file: '${g.file}'` + e
+			return `error loading genome file: '${jsfile}'` + e
 		}
 
 		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
@@ -12152,9 +12152,9 @@ async function pp_init() {
 				const overrideFile = path.join(process.cwd(), d.jsfile)
 				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile
 				try {
-					ds = __non_webpack_require__(d.jsfile)
+					ds = __non_webpack_require__(jsfile)
 				} catch (e) {
-					throw `error loading genome file: '${d.jsfile}'` + e
+					throw `error loading genome file: '${jsfile}'` + e
 				}
 			} else {
 				return 'jsfile not available for dataset ' + d.name + ' of ' + genomename

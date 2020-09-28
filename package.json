@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "index.js",
   "bin": "bin.js",
