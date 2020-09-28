@@ -33,38 +33,14 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
-	const doms = {} // use this to collect all input DOMs
-	doms.name = make_name(wrapper_div)
-	doms.isdense = set_dense(wrapper_div)
-	doms.svcnvfileurl = make_svcnv(wrapper_div)
-	doms.vcffile = make_vcf(wrapper_div)
-	doms.expressionfile = make_express_filepath(wrapper_div)
-	// doms.sampleset[name] = make_sa_set_name(sample_set_grid_div) //TODO: Figure out why this didn't work
-	//doms.genome = make_genome(wrapper_div, genomes)
-	// more controls...
-
-	const genome_prompt = wrapper_div.append('div')
-
-	genome_prompt.append('span').text('Genome')
-
-	//.genome
-	const g_row = wrapper_div.append('div')
-
-	const select = g_row.append('select')
-	for (const n in genomes) {
-		select.append('option').text(n)
-	}
-
 	//.sampleset Array
 	const sample_set_prompt = form_div
-
 	sample_set_prompt
 		.append('span')
-		.text('Sample Sets')
+		.text('Sample Sets:')
 		.style('margins', '5px')
 		.style('padding', '10px')
-
-	const sample_set_grid_div = form_div
+	const sampleset_grid_div = form_div
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 3fr')
@@ -73,31 +49,20 @@ export async function init_mdsjsonform(par) {
 		.style('margins', '5px')
 		.style('position', 'relative')
 		.style('padding', '10px')
-
-	const sample_set_samples_prompt = sample_set_grid_div.append('div')
-
-	sample_set_samples_prompt.append('span').text('Samples')
-
-	//.sampleset.samples
-	const sample_set_samples_div = sample_set_grid_div.append('div')
-
-	sample_set_samples_div
-		.append('div')
-		.append('input')
-		.attr('size', 30)
+	sampleset_grid_header(sampleset_grid_div)
 
 	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
-	const sample_assay_sam_name_prompt = form_div
+	const assay_sam_name_prompt = form_div
 
-	sample_assay_sam_name_prompt
+	assay_sam_name_prompt
 		.append('span')
-		.text('Sample Assay')
+		.text('Sample Assays:')
 		.style('margins', '5px')
 		.style('padding', '10px')
 
-	const sample_assay_grid_div = form_div
+	const assay_grid_div = form_div
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 1fr 1fr')
@@ -107,19 +72,27 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
-	const sample_assay_type_prompt = sample_assay_grid_div.append('div')
+	const doms = {}
+	doms.genome = make_genome(wrapper_div, genomes) //TODO - Ask Xin to check this with hg38 and mm10
+	doms.name = make_name(wrapper_div)
+	doms.isdense = set_dense(wrapper_div)
+	doms.svcnvfileurl = make_svcnv(wrapper_div)
+	doms.vcffile = make_vcf(wrapper_div)
+	doms.expressionfile = make_express_filepath(wrapper_div)
+	doms.samplesetname = make_sam_set_name(sampleset_grid_div)
+	doms.samplesetsamples = make_sam_set_samples(sampleset_grid_div)
+
+	const sample_assay_type_prompt = assay_grid_div.append('div')
 
 	sample_assay_type_prompt.append('span').text('Type')
 
-	const sample_assay_name_prompt = sample_assay_grid_div.append('div')
+	const sample_assay_name_prompt = assay_grid_div.append('div')
 
 	sample_assay_name_prompt.append('span').text('Name')
 
-	const third_col_header_div = sample_assay_grid_div.append('div')
+	const third_col_header_div = assay_grid_div.append('div')
 
 	third_col_header_div.append('div')
-
-	// const s_row = sample_assay_grid_div.append('div')
 
 	//TODO add button to add lines to table
 	//.sample2assaytrack.assaytrack.strand1
@@ -171,7 +144,6 @@ function validate_input(doms) {
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
 	obj.isdense = doms.isdense.property('value') || 'True'
-	// TODO correct the logic that either svcnv or vcf file is required
 	{
 		const tmp = doms.svcnvfileurl.property('value')
 		const vcf = doms.vcffile.property('value')
@@ -181,11 +153,27 @@ function validate_input(doms) {
 		} else {
 			obj.svcnvfile = tmp
 		}
+		if (vcf != '') {
+			obj.vcffile = vcf
+		}
 	}
 	{
 		const tmp = doms.expressionfile.property('value')
 		if (tmp != '') {
 			obj.expressionfile = doms.expressionfile.property('value')
+		}
+	}
+	{
+		//TODO ask Jaimin if this is a required track
+		//TODO will need to change logic once the add button is included (index for name and added rows)
+		const tmp = doms.sampletsetname
+		const sam = doms.samplesetsamples
+		if (tmp != '' && sam !== '') throw 'Missing sampleset name or samples'
+		if (tmp != '') {
+			obj.sampleset.name = tmp
+		}
+		if (sam != '') {
+			obj.sampleset.samples = sam
 		}
 	}
 	console.log(obj)
@@ -196,11 +184,21 @@ function isurl(t) {
 	const a = t.toUpperCase()
 	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
 }
+//.genome
+function make_genome(div, genomes) {
+	const genome_prompt = div.append('div')
 
-// function make_genome(div){
+	genome_prompt.append('span').text('Genome')
 
-// }
+	const g_row = div.append('div')
 
+	const select = g_row.append('select')
+	for (const n in genomes) {
+		select.append('option').text(n)
+	}
+}
+
+//.name
 function make_name(div) {
 	const tk_name_prompt = div.append('div')
 
@@ -211,7 +209,7 @@ function make_name(div) {
 	return tk_name_div
 		.append('div')
 		.append('input')
-		.attr('size', 20)
+		.attr('size', 30)
 }
 // .isdense
 function set_dense(div) {
@@ -242,7 +240,7 @@ function make_svcnv(div) {
 	return svcnv_path_div
 		.append('div')
 		.append('input')
-		.attr('size', 20)
+		.attr('size', 55)
 }
 //.vcffile
 function make_vcf(div) {
@@ -255,7 +253,7 @@ function make_vcf(div) {
 	return vcf_file_div
 		.append('div')
 		.append('input')
-		.attr('size', 20)
+		.attr('size', 55)
 }
 //.expressionfile
 function make_express_filepath(div) {
@@ -268,19 +266,34 @@ function make_express_filepath(div) {
 	return expression_file_div
 		.append('div')
 		.append('input')
+		.attr('size', 55)
+}
+function sampleset_grid_header(div) {
+	const sample_set_name_prompt = div.append('div')
+
+	sample_set_name_prompt.append('span').text('Sample Set Name')
+
+	const sample_set_samples_prompt = div.append('div')
+
+	sample_set_samples_prompt.append('span').text('Samples')
+}
+
+//.sampleset.name
+function make_sam_set_name(div) {
+	const sample_set_name_div = div.append('div')
+
+	return sample_set_name_div
+		.append('div')
+		.append('input')
 		.attr('size', 20)
 }
-//.sampleset.name
-//TODO Figure out why this didn't work
-// function make_sa_set_name(div){
-//     const sample_set_name_prompt = div.append('div')
 
-//     sample_set_name_prompt.append('span').text('Sample Set Name')
+//.sampleset.samples
+function make_sam_set_samples(div) {
+	const sample_set_samples_div = div.append('div')
 
-//     const sample_set_name_div = div.append('div')
-
-//     return sample_set_name_div
-//             .append('div')
-//             .append('input')
-//             .attr('size', 20)
-// }
+	sample_set_samples_div
+		.append('div')
+		.append('input')
+		.attr('size', 30)
+}
