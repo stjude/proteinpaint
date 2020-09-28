@@ -5761,8 +5761,9 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 						}
 						gene2sample2obj.get(j.gene).samples.set(j.sample, {
 							value: j.value,
-							ase: j.ase,
-							outlier: j.outlier
+							ase: j.ase
+							// XXX OHE is temporarily disabled!!!
+							//outlier: j.outlier
 						})
 					})
 					const errout = []
@@ -7194,9 +7195,11 @@ function handle_mdsexpressionrank(req, res) {
 								gene2value.get(j.gene).thisvalue = j.value
 
 								// additional stats about gene expression
+								/* XXX OHE!!
 								if (j.outlier) {
 									gene2value.get(j.gene).outlier = j.outlier
 								}
+								*/
 								if (j.ase) {
 									gene2value.get(j.gene).ase = j.ase
 								}
@@ -7473,6 +7476,7 @@ function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
 			if (!j.sample) return
 			if (!j.gene) return
 			if (!Number.isFinite(j.value)) return
+			delete j.outlier // XXX OHE
 
 			if (j.gene.toLowerCase() == q.name.toLowerCase()) {
 				values.push(j)
