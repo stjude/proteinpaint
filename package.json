@@ -105,7 +105,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/pp-trial"
+    "url": "https://github.com/stjude/pp-dist"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
@@ -124,6 +124,6 @@
     "src/common.js"
   ],
   "bugs": {
-    "url": "https://github.com/stjude/pp-trial"
+    "url": "https://github.com/stjude/pp-dist"
   }
 }
