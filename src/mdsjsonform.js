@@ -10,28 +10,19 @@ export async function init_mdsjsonform(par) {
 
 	{
 		// check if the form is enabled to work on this server
-		const re = await dofetch2('mdsjsonform', { method: 'POST', body: '{"check":1}' })
-		if (!re.enabled) {
-			holder.append('div').text('Sorry. This feature is not enabled on this server.')
+		const re = await dofetch2('mdsjsonform', { method: 'POST', body: '{}' })
+		if (re.error) {
+			holder.append('div').text(re.error)
 			return
 		}
 	}
 
-	const doms = {} // use this to collect all input DOMs
-
-	// TODO create <select> for genomes
-	for (const n in genomes) {
-		console.log(n)
-	}
-
 	const form_div = holder.append('div')
-
 	form_div
 		.append('div')
 		.style('font-size', '20px')
 		.style('margin', '10px')
 		.text('Create a Custom GenomePaint Track')
-
 	const wrapper_div = form_div
 		.append('div')
 		.style('display', 'grid')
@@ -42,91 +33,14 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
-	//.name
-	const tk_name_prompt = wrapper_div.append('div')
-
-	tk_name_prompt.append('span').text('Track name')
-
-	const tk_name_div = wrapper_div.append('div')
-
-	doms.name = tk_name_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//.type Not included. Only one value - Appear on form or only include on the backend?
-
-	// .isdense
-	//TODO: .isdense available in a track object?
-	const is_dense_prompt = wrapper_div.append('div')
-
-	is_dense_prompt.append('span').text('Dense Display')
-
-	const row = wrapper_div.append('div')
-
-	const is_dense_div = row.append('select')
-	is_dense_div.append('input')
-	is_dense_div.attr('type', 'checkbox')
-	is_dense_div.append('option').text('Select') //TODO: Placeholder
-	is_dense_div.append('option').text('Yes') //True
-	is_dense_div.append('option').text('No') //False
-	row.append('span')
-
-	is_dense_div.append('input').attr('size', 20)
-
-	//.isfull left off since .isdense specified
-
-	//.svcnvfile or .svcnvurl
-	//TODO: Function to detect file versus URL.
-	//TODO: Function to detect either SVCNV file or vcf file provided - both are allowed
-	const svcnv_path_prompt = wrapper_div.append('div')
-
-	svcnv_path_prompt.append('span').text('"SVCNV" file path or URL')
-
-	const svcnv_path_div = wrapper_div.append('div')
-
-	doms.svcnvfileurl = svcnv_path_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//.expressionfile
-	const expression_file_prompt = wrapper_div.append('div')
-
-	expression_file_prompt.append('span').text('Gene expression file path')
-
-	const expression_file_div = wrapper_div.append('div')
-
-	expression_file_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//.vcffile
-	const vcf_file_prompt = wrapper_div.append('div')
-
-	vcf_file_prompt.append('span').text('VCF file path')
-
-	const vcf_file_div = wrapper_div.append('div')
-
-	vcf_file_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//TODO: .vcf.hiddenclass not in track object?
-
 	//.sampleset Array
 	const sample_set_prompt = form_div
-
 	sample_set_prompt
 		.append('span')
-		.text('Sample Sets')
+		.text('Sample Sets:')
 		.style('margins', '5px')
 		.style('padding', '10px')
-
-	const sample_set_grid_div = form_div
-		.append('div')
+	const sampleset_grid_div = form_div
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 3fr')
@@ -135,44 +49,20 @@ export async function init_mdsjsonform(par) {
 		.style('margins', '5px')
 		.style('position', 'relative')
 		.style('padding', '10px')
-
-	const sample_set_name_prompt = sample_set_grid_div.append('div')
-
-	sample_set_name_prompt.append('span').text('Sample Set Name')
-
-	const sample_set_samples_prompt = sample_set_grid_div.append('div')
-
-	sample_set_samples_prompt.append('span').text('Samples')
-
-	//.sampleset.name
-	const sample_set_name_div = sample_set_grid_div.append('div')
-
-	sample_set_name_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//.sampleset.samples
-	const sample_set_samples_div = sample_set_grid_div.append('div')
-
-	sample_set_samples_div
-		.append('div')
-		.append('input')
-		.attr('size', 30)
+	sampleset_grid_header(sampleset_grid_div)
 
 	//TODO add button to add lines to table
 
 	//.sample2assaytrack Array
-	const sample_assay_sam_name_prompt = form_div
+	const assay_sam_name_prompt = form_div
 
-	sample_assay_sam_name_prompt
+	assay_sam_name_prompt
 		.append('span')
-		.text('Sample Assay')
+		.text('Sample Assays:')
 		.style('margins', '5px')
 		.style('padding', '10px')
 
-	const sample_assay_grid_div = form_div
-		.append('div')
+	const assay_grid_div = form_div
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 1fr 1fr')
@@ -182,51 +72,29 @@ export async function init_mdsjsonform(par) {
 		.style('position', 'relative')
 		.style('padding', '10px')
 
-	const sample_assay_type_prompt = sample_assay_grid_div.append('div')
+	const doms = {}
+	doms.genome = make_genome(wrapper_div, genomes) //TODO - Ask Xin to check this with hg38 and mm10
+	doms.name = make_name(wrapper_div)
+	doms.isdense = set_dense(wrapper_div)
+	doms.svcnvfileurl = make_svcnv(wrapper_div)
+	doms.vcffile = make_vcf(wrapper_div)
+	doms.expressionfile = make_express_filepath(wrapper_div)
+	doms.samplesetname = make_sam_set_name(sampleset_grid_div)
+	doms.samplesetsamples = make_sam_set_samples(sampleset_grid_div)
+
+	const sample_assay_type_prompt = assay_grid_div.append('div')
 
 	sample_assay_type_prompt.append('span').text('Type')
 
-	const sample_assay_name_prompt = sample_assay_grid_div.append('div')
+	const sample_assay_name_prompt = assay_grid_div.append('div')
 
 	sample_assay_name_prompt.append('span').text('Name')
 
-	const sample_assay_file_prompt = sample_assay_grid_div.append('div')
+	const third_col_header_div = assay_grid_div.append('div')
 
-	sample_assay_file_prompt.append('span').text('File Path')
-
-	const s_row = sample_assay_grid_div.append('div')
-
-	//.sample2assaytrack.assaytrack.type
-	const sample_assay_type_div = s_row.append('select')
-	sample_assay_type_div.append('input')
-	sample_assay_type_div.attr('type', 'checkbox')
-	sample_assay_type_div.append('option').text('Select') //TODO: Placeholder
-	sample_assay_type_div.append('option').text('aicheck')
-	sample_assay_type_div.append('option').text('bigwig')
-	sample_assay_type_div.append('option').text('bigwigstranded')
-	sample_assay_type_div.append('option').text('junction')
-	s_row.append('span')
-
-	sample_assay_type_div.append('input').attr('size', 20)
-
-	//.sample2assaytrack.assaytrack.name
-	const sample_assay_name_div = sample_assay_grid_div.append('div')
-
-	sample_assay_name_div
-		.append('div')
-		.append('input')
-		.attr('size', 20)
-
-	//.sample2assaytrack.assaytrack.file
-	const sample_assay_file_div = sample_assay_grid_div.append('div')
-
-	sample_assay_file_div
-		.append('div')
-		.append('input')
-		.attr('size', 30)
+	third_col_header_div.append('div')
 
 	//TODO add button to add lines to table
-	//TODO more grids within grids? Is that logical or is there a more elegant solution?
 	//.sample2assaytrack.assaytrack.strand1
 	//.sample2assaytrack.assaytrack.strand1.file
 	//.sample2assaytrack.assaytrack.strand1.file.normalize
@@ -241,17 +109,33 @@ export async function init_mdsjsonform(par) {
 		.append('button')
 		.text('Submit')
 		.on('click', async () => {
+			link_holder.html('Loading...')
 			try {
+				let genome
+				{
+					//const n = doms.genome.node()
+					//genome = n.options[n.selectedIndex].text
+					genome = 'hg19'
+				}
 				const deposit = validate_input(doms)
 				const re = await dofetch2('mdsjsonform', { method: 'POST', body: JSON.stringify({ deposit }) })
 				if (re.error) throw re.error
-				// TODO server to return ID of cached file
-				console.log(re)
+				link_holder.html(
+					'<a href=' +
+						window.location.origin +
+						'?block=1&genome=' +
+						genome +
+						'&mdsjsoncache=' +
+						re.id +
+						' target=_blank>View track</a>'
+				)
 			} catch (e) {
 				window.alert('Error: ' + e)
 				return
 			}
 		})
+
+	const link_holder = submit_row.append('span').style('margin-left', '20px')
 }
 
 function validate_input(doms) {
@@ -259,17 +143,40 @@ function validate_input(doms) {
 		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
-
+	obj.isdense = doms.isdense.property('value') || 'True'
 	{
 		const tmp = doms.svcnvfileurl.property('value')
-		if (tmp == '') throw 'Missing SVCNV file path or URL'
+		const vcf = doms.vcffile.property('value')
+		if (tmp == '' && vcf == '') throw 'Missing SVCNV file path or URL, or VCF file path'
 		if (isurl(tmp)) {
 			obj.svcnvurl = tmp
 		} else {
 			obj.svcnvfile = tmp
 		}
+		if (vcf != '') {
+			obj.vcffile = vcf
+		}
 	}
-
+	{
+		const tmp = doms.expressionfile.property('value')
+		if (tmp != '') {
+			obj.expressionfile = doms.expressionfile.property('value')
+		}
+	}
+	{
+		//TODO ask Jaimin if this is a required track
+		//TODO will need to change logic once the add button is included (index for name and added rows)
+		const tmp = doms.sampletsetname
+		const sam = doms.samplesetsamples
+		if (tmp != '' && sam !== '') throw 'Missing sampleset name or samples'
+		if (tmp != '') {
+			obj.sampleset.name = tmp
+		}
+		if (sam != '') {
+			obj.sampleset.samples = sam
+		}
+	}
+	console.log(obj)
 	return obj
 }
 
@@ -277,5 +184,116 @@ function isurl(t) {
 	const a = t.toUpperCase()
 	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
 }
+//.genome
+function make_genome(div, genomes) {
+	const genome_prompt = div.append('div')
 
-//TODO Ask Jaimin how the temporary file will work. Will internal users be able to save their tracks somewhere else rather than reinput all this information into the form? Should the file path print to the screen for that purpose?
+	genome_prompt.append('span').text('Genome')
+
+	const g_row = div.append('div')
+
+	const select = g_row.append('select')
+	for (const n in genomes) {
+		select.append('option').text(n)
+	}
+}
+
+//.name
+function make_name(div) {
+	const tk_name_prompt = div.append('div')
+
+	tk_name_prompt.append('span').text('Track name')
+
+	const tk_name_div = div.append('div')
+
+	return tk_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 30)
+}
+// .isdense
+function set_dense(div) {
+	const is_dense_prompt = div.append('div')
+
+	is_dense_prompt.append('span').text('Dense Display')
+
+	const row = div.append('div')
+
+	const is_dense_div = row.append('select')
+	is_dense_div.append('input')
+	is_dense_div.attr('type', 'checkbox')
+	is_dense_div.append('option').text('Select') //TODO: Placeholder
+	is_dense_div.append('option').text('True')
+	is_dense_div.append('option').text('False')
+	row.append('span')
+
+	return is_dense_div.append('input').attr('size', 20)
+}
+//.svcnvfile or .svcnvurl
+function make_svcnv(div) {
+	const svcnv_path_prompt = div.append('div')
+
+	svcnv_path_prompt.append('span').text('"SVCNV" file path or URL')
+
+	const svcnv_path_div = div.append('div')
+
+	return svcnv_path_div
+		.append('div')
+		.append('input')
+		.attr('size', 55)
+}
+//.vcffile
+function make_vcf(div) {
+	const vcf_file_prompt = div.append('div')
+
+	vcf_file_prompt.append('span').text('VCF file path')
+
+	const vcf_file_div = div.append('div')
+
+	return vcf_file_div
+		.append('div')
+		.append('input')
+		.attr('size', 55)
+}
+//.expressionfile
+function make_express_filepath(div) {
+	const expression_file_prompt = div.append('div')
+
+	expression_file_prompt.append('span').text('Gene expression file path')
+
+	const expression_file_div = div.append('div')
+
+	return expression_file_div
+		.append('div')
+		.append('input')
+		.attr('size', 55)
+}
+function sampleset_grid_header(div) {
+	const sample_set_name_prompt = div.append('div')
+
+	sample_set_name_prompt.append('span').text('Sample Set Name')
+
+	const sample_set_samples_prompt = div.append('div')
+
+	sample_set_samples_prompt.append('span').text('Samples')
+}
+
+//.sampleset.name
+function make_sam_set_name(div) {
+	const sample_set_name_div = div.append('div')
+
+	return sample_set_name_div
+		.append('div')
+		.append('input')
+		.attr('size', 20)
+}
+
+//.sampleset.samples
+function make_sam_set_samples(div) {
+	const sample_set_samples_div = div.append('div')
+
+	sample_set_samples_div
+		.append('div')
+		.append('input')
+		.attr('size', 30)
+}

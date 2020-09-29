@@ -249,15 +249,51 @@ pp_init()
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
-	if (req.query.check) return res.send({ enabled: serverconfig.allow_mdsjsonform })
+	if (!serverconfig.allow_mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
-		if (!serverconfig.allow_mdsjsonform) return res.send({ error: 'Not allowed' })
 		const id = Math.random().toString()
-		// TODO write deposit to cache file
-		res.send({ filename: id })
+		const folder = await maymakefolder()
+		const file = path.join(folder, id)
+		await utils.write_file(file, JSON.stringify(req.query.deposit))
+		res.send({ id })
 		return
 	}
-	res.send({ error: 'Invalid request' })
+	if (req.query.draw) {
+		const file = path.join(serverconfig.cachedir, 'mdsjsonform', req.query.draw)
+		const txt = await utils.read_file(file)
+		try {
+			const json = JSON.parse(txt)
+			res.send({ json })
+		} catch (e) {
+			res.send({ error: 'Invalid JSON' })
+		}
+		return
+	}
+	// no other trigger, return empty obj to allow client to test if feature is enabled on server
+	res.send({})
+}
+function maymakefolder() {
+	const p = path.join(serverconfig.cachedir, 'mdsjsonform')
+	return new Promise((resolve, reject) => {
+		fs.stat(p, (e, s) => {
+			if (e) {
+				if (e.code == 'ENOENT') {
+					fs.mkdir(p, e => {
+						if (e) reject('error creating dir')
+						resolve(p)
+					})
+					return
+				}
+				reject('error checking directory')
+			} else {
+				if (s.isDirectory()) {
+					resolve(p)
+				} else {
+					reject('"mdsjsonform" exists but not directory')
+				}
+			}
+		})
+	})
 }
 
 function handle_genomes(req, res) {

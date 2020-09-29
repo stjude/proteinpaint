@@ -3,7 +3,7 @@ import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
-import { init_mdsjson } from './app.mdsjson'
+import * as mdsjson from './app.mdsjson'
 
 /*
 ********************** EXPORTED
@@ -322,10 +322,21 @@ arg
 export async function get_tklst(urlp, error_div) {
 	const tklst = []
 
+	if (urlp.has('mdsjsoncache')) {
+		const re = await client.dofetch2('mdsjsonform', {
+			method: 'POST',
+			body: JSON.stringify({ draw: urlp.get('mdsjsoncache') })
+		})
+		if (re.error) throw re.error
+		mdsjson.validate_mdsjson(re.json)
+		const tk = mdsjson.get_json_tk(re.json)
+		tklst.push(tk)
+	}
+
 	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
 		const url_str = urlp.get('mdsjsonurl')
 		const file_str = urlp.get('mdsjson')
-		const tks = await init_mdsjson(file_str, url_str, error_div)
+		const tks = await mdsjson.init_mdsjson(file_str, url_str, error_div)
 		tklst.push(...tks)
 	}
 
