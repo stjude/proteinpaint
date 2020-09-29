@@ -2,6 +2,7 @@ import { select as d3select } from 'd3'
 import { vcfvariantisgermline } from './block.mds.svcnv'
 import { dofetch2 } from './client'
 import { tab2box } from './client'
+import { tab_wait } from './client'
 import { some } from 'async'
 import { bigwigconfigpanel } from './block.tk.bigwig'
 
@@ -45,6 +46,7 @@ export async function init_mdsjsonform(par) {
 	doms.expressionfile = make_express_filepath(wrapper_div)
 	doms.sampleset = make_sampleset(wrapper_div)
 	doms.assays = make_assays(wrapper_div)
+	console.log(doms)
 
 	const submit_row = form_div
 
@@ -86,7 +88,7 @@ function validate_input(doms) {
 		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
-	obj.isdense = doms.isdense.property('value') || 'True'
+	// obj.isdense = doms.isdense.property('value') || 'True' //TODO change return and this logic statement
 	{
 		const tmp = doms.svcnvfileurl.property('value')
 		const vcf = doms.vcffile.property('value')
@@ -106,6 +108,8 @@ function validate_input(doms) {
 			obj.expressionfile = doms.expressionfile.property('value')
 		}
 	}
+	obj.sampleset = doms.sampleset
+	obj.assay = doms.assay
 	console.log(obj)
 	return obj
 }
@@ -148,15 +152,24 @@ function set_dense(div) {
 	is_dense_prompt.append('span').text('Dense Display')
 
 	const row = div.append('div')
-
-	const is_dense_div = row.append('select')
-	is_dense_div.append('input')
-	is_dense_div.attr('type', 'checkbox')
-	is_dense_div.append('option').text('True')
-	is_dense_div.append('option').text('False')
-	row.append('span')
-
-	return is_dense_div.append('input').attr('size', 20)
+	const radios = ['True', 'False']
+	for (let value of radios) {
+		const radio_btn = row
+			.append('div')
+			.style('margin', '3px')
+			.style('display', 'inline-block')
+		radio_btn
+			.append('input')
+			.attr('type', 'radio')
+			.property('checked', false)
+			.attr('name', 'd')
+			.attr('id', value)
+		radio_btn
+			.append('label')
+			.attr('id', value)
+			.attr('for', value)
+			.text(value)
+	} //TODO return what?
 }
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
@@ -205,22 +218,21 @@ function make_sampleset(div) {
 
 	const row = div.append('div')
 	const radios = ['Yes', 'No']
-	const tabs = ['bigwig', 'junction']
 	for (let value of radios) {
 		const radio_btn = row
 			.append('div')
-			.style('margin-top', '3px')
+			.style('margin', '3px')
 			.style('display', 'inline-block')
 		radio_btn
 			.append('input')
 			.attr('type', 'radio')
 			.property('checked', false)
-			.attr('name', 'r')
+			.attr('name', 's')
 			.attr('id', value)
 			.on('change', () => {
 				const tmp = radio_btn.attr('id')
 				if (tmp == 'Yes') {
-					client.tab2box(div, tabs)
+					make_textbox(div)
 				}
 			})
 		radio_btn
@@ -229,6 +241,15 @@ function make_sampleset(div) {
 			.attr('for', value)
 			.text(value)
 	}
+}
+function make_textbox(div) {
+	const textbox = div.append('div')
+
+	return textbox
+		.append('div')
+		.append('textarea')
+		.attr('rows', 10)
+		.attr('cols', 10)
 }
 
 // radio button for Assay track
@@ -239,22 +260,47 @@ function make_assays(div) {
 
 	const row = div.append('div')
 	const radios = ['Yes', 'No']
-	const tabs = ['bigwig', 'junction']
+	const tabs = {
+		aicheck: {
+			label: 'aicheck',
+			callback: async div => {
+				const wait = client.tab_wait(div)
+			}
+		},
+		bigwig: {
+			label: 'bigwig',
+			callback: async div => {
+				const wait = client.tab_wait(div)
+			}
+		},
+		bigwigstranded: {
+			label: 'bigwig stranded',
+			callback: async div => {
+				const wait = client.tab_wait(div)
+			}
+		},
+		junction: {
+			label: 'Splice Junction',
+			callback: async div => {
+				const wait = client.tab_wait(div)
+			}
+		}
+	}
 	for (let value of radios) {
 		const radio_btn = row
 			.append('div')
-			.style('margin-top', '3px')
+			.style('margin', '3px')
 			.style('display', 'inline-block')
 		radio_btn
 			.append('input')
 			.attr('type', 'radio')
 			.property('checked', false)
-			.attr('name', 'x')
+			.attr('name', 'a')
 			.attr('id', value)
 			.on('change', () => {
 				const tmp = radio_btn.attr('id')
 				if (tmp == 'Yes') {
-					client.tab2box(div, tabs)
+					client.tab2box(div.append('div'), tabs)
 				}
 			})
 		radio_btn
