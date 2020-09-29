@@ -69,7 +69,7 @@ const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
+const hicstat = serverconfig.hicstat ? serverconfig.hicstat.split(' ') : ['python', 'read_hic_header.py']
 const hicstraw = serverconfig.hicstraw || 'straw'
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
@@ -184,7 +184,7 @@ app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
 app.post('/vcfheader', handle_vcfheader)
 
 app.post('/translategm', handle_translategm)
-app.post('/hicstat', handle_hicstat)
+app.get('/hicstat', handle_hicstat)
 app.post('/hicdata', handle_hicdata)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot', handle_mdssamplescatterplot)
@@ -288,6 +288,7 @@ function maymakefolder() {
 }
 
 function handle_genomes(req, res) {
+	log(req)
 	const hash = {}
 	if (req.query && req.query.genome) {
 		hash[req.query.genome] = clientcopy_genome(req.query.genome)
@@ -3197,48 +3198,37 @@ function handle_svmr(req, res) {
 	}
 }
 
-function handle_hicstat(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) {
-		res.send({ error: 'illegal file name' })
-		return
-	}
-
-	new Promise((resolve, reject) => {
-		if (isurl) {
-			// do not stat
-			resolve()
-		} else {
-			// is file, find
-			fs.stat(file, (err, stat) => {
-				if (err) {
-					if (err.code == 'ENOENT') reject({ message: 'file not found' })
-					if (err.code == 'EACCES') reject({ message: 'no access to the file' })
-				}
-				resolve()
-			})
+async function handle_hicstat(req, res) {
+	log(req)
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw 'illegal file name'
+		if (!isurl) {
+			await utils.file_is_readable(file)
 		}
+		const out = await do_hicstat(file)
+		res.send({ out })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+function do_hicstat(file) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(hicstat[0], [hicstat[1], file])
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e) {
+				reject(e)
+			}
+			resolve(out.join('').trim())
+		})
 	})
-		.then(() => {
-			// quote the file or url to prevent arbitrary code execution,
-			// in combination to fileurl() checking that there are no
-			// illegal characters in the filename or url
-			exec(hicstat + ' "' + file + '"', (err, stdout, stderr) => {
-				if (err) {
-					res.send({ error: err })
-					return
-				}
-				if (stderr) {
-					res.send({ error: stderr })
-					return
-				}
-				res.send({ out: stdout })
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-		})
 }
 
 function handle_hicdata(req, res) {
