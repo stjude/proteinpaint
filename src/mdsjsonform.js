@@ -28,12 +28,17 @@ export async function init_mdsjsonform(par) {
 	doms.expressionfile = make_express_filepath(wrapper_div)
 	make_sampleset(wrapper_div, doms)
 	make_assays(wrapper_div, doms)
+	doms.isdense
+	doms.isfull
+
 	console.log(doms)
 
 	const submit_row = form_div
 
 	submit_row
 		.append('button')
+		.style('margin-left', '10px')
+		.style('margin-top', '5px')
 		.text('Submit')
 		.on('click', async () => {
 			link_holder.html('Loading...')
@@ -75,11 +80,12 @@ function make_header(holder) {
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 4fr')
-		.style('align-items', 'end')
-		.style('grid-template-rows', '1fr 1fr')
-		.style('margins', '50px')
+		.style('align-items', 'start')
+		.style('grid-template-rows', '1fr')
+		.style('gap', '10px 10px')
+		.style('margins', '5px')
 		.style('position', 'relative')
-		.style('padding', '20px')
+		.style('padding', '10px')
 	return [form_div, wrapper_div]
 }
 
@@ -88,7 +94,10 @@ function validate_input(doms) {
 		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
-	// obj.isdense = doms.isdense.property('value') || 'True' //TODO change return and this logic statement
+	{
+		obj.isdense = doms.isdense //TODO default values
+		obj.isfull = doms.isfull
+	}
 	{
 		const tmp = doms.svcnvfileurl.property('value')
 		const vcf = doms.vcffile.property('value')
@@ -108,8 +117,19 @@ function validate_input(doms) {
 			obj.expressionfile = doms.expressionfile.property('value')
 		}
 	}
-	obj.sampleset = doms.sampleset
-	obj.assay = doms.assay
+	{
+		const inuse = doms.sampleset_inuse
+		const tmp = doms.sampleset_textarea.property('value')
+		if (inuse == true && tmp == '') throw 'Missing sample subset data'
+		// if (tmp != ''){
+		// 	obj.sampleset = {
+		// 		sampleset = [{
+		// 			name:,
+		// 			samples:
+		// 		}]
+		// 	}
+		// }
+	}
 	console.log(obj)
 	return obj
 }
