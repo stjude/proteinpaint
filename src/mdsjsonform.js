@@ -82,7 +82,7 @@ function make_header(holder) {
 		.style('grid-template-columns', '1fr 4fr')
 		.style('align-items', 'start')
 		.style('grid-template-rows', '1fr')
-		.style('gap', '10px 10px')
+		.style('gap', '15px 10px')
 		.style('margins', '5px')
 		.style('position', 'relative')
 		.style('padding', '10px')
@@ -118,16 +118,39 @@ function validate_input(doms) {
 		}
 	}
 	{
+		//test data:
+		// ss	ss
+		// ss	ss
+		// ss	ss
+		// ss	ss //TODO fix multiple line problem
 		const inuse = doms.sampleset_inuse
 		const tmp = doms.sampleset_textarea.property('value')
 		if (inuse == true && tmp == '') throw 'Missing sample subset data'
-		// if (tmp != ''){
-		// 	obj.sampleset = {
-		// 		sampleset = [{
-		// 			name:,
-		// 			samples:
-		// 		}]
-		// 	}
+		if (tmp != '') {
+			const l = tmp.split('\t')
+			for (let i = 0; i < l.length; i++) {
+				const names = l[0]
+				const samplelist = l[1]
+				obj.sampleset = {
+					sampleset: {
+						name: names,
+						samples: samplelist
+					}
+				}
+			}
+		}
+	}
+	{
+		const bigwig = doms.assaytracks_bigwig_textarea.property('value')
+		const bedj = doms.assaytracks_bedj_textarea.property('value')
+		const junction = doms.assaytracks_junction_textarea.property('value')
+		const bwstranded = doms.assaytracks_bigwigstranded_textarea.property('value')
+		// obj.assaytrack ={
+		// 	sample2assaytrack:{
+		// 		l[0]:{
+		// 			l[1]
+		// 		}
+		// }
 		// }
 	}
 	console.log(obj)
