@@ -24,15 +24,34 @@ export async function init_mdsjsonform(par) {
 	doms.name = make_name(wrapper_div)
 	set_dense(wrapper_div, doms)
 	doms.svcnvfileurl = make_svcnv(wrapper_div)
-	doms.vcffile = make_vcf(wrapper_div)
+	doms.vcffileurl = make_vcf(wrapper_div)
 	doms.expressionfile = make_express_filepath(wrapper_div)
 	make_sampleset(wrapper_div, doms)
 	make_assays(wrapper_div, doms)
-	doms.isdense
-	doms.isfull
-
 	console.log(doms)
+	make_buttons(form_div, doms)
+}
 
+function make_header(holder) {
+	const form_div = holder.append('div')
+	form_div
+		.append('div')
+		.style('font-size', '20px')
+		.style('margin', '10px')
+		.text('Create a Custom GenomePaint Track')
+	const wrapper_div = form_div
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('align-items', 'end')
+		.style('grid-template-rows', '1fr 1fr')
+		.style('margins', '50px')
+		.style('position', 'relative')
+		.style('padding', '20px')
+	return [form_div, wrapper_div]
+}
+
+function make_buttons(form_div, doms) {
 	const submit_row = form_div
 
 	submit_row
@@ -62,31 +81,28 @@ export async function init_mdsjsonform(par) {
 				)
 			} catch (e) {
 				window.alert('Error: ' + e)
+				link_holder.html('')
 				return
 			}
 		})
 
-	const link_holder = submit_row.append('span').style('margin-left', '20px')
-}
+	submit_row
+		.append('button')
+		.text('Example')
+		.on('click', () => {
+			doms.name.property('value', 'BALL cell lines')
+			doms.svcnvfileurl.property('value', 'genomePaint_demo/demo.svcnv.gz')
+			doms.vcffileurl.property('value', 'genomePaint_demo/demo.vcf.gz')
+			doms.expressionfile.property('value', 'genomePaint_demo/demo.fpkm.gz')
+			doms.assaytrack_radios.nodes()[0].click()
+			doms.assaytrack_bigwig_textarea.property(
+				'value',
+				`SJBALL020016_C1	genomePaint_demo/RNAcoverage/SJBALL020016_C1-sense.bw	SJBALL020016_C1 RNAseq coverage
+SJBALL011826_C1	genomePaint_demo/RNAcoverage/SJBALL020016_C1-antisense.bw	mock track`
+			)
+		})
 
-function make_header(holder) {
-	const form_div = holder.append('div')
-	form_div
-		.append('div')
-		.style('font-size', '20px')
-		.style('margin', '10px')
-		.text('Create a Custom ProteinPaint Track')
-	const wrapper_div = form_div
-		.append('div')
-		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
-		.style('align-items', 'start')
-		.style('grid-template-rows', '1fr')
-		.style('gap', '15px 10px')
-		.style('margins', '5px')
-		.style('position', 'relative')
-		.style('padding', '10px')
-	return [form_div, wrapper_div]
+	const link_holder = submit_row.append('span').style('margin-left', '20px')
 }
 
 function validate_input(doms) {
@@ -94,64 +110,66 @@ function validate_input(doms) {
 		type: 'mdssvcnv' // hardcoded, must be the same as common.tkt.mdssvcnv
 	}
 	obj.name = doms.name.property('value') || 'Custom track'
+
+	// .isdense/isfull is already defined
+
 	{
-		obj.isdense = doms.isdense //TODO default values
-		obj.isfull = doms.isfull
-	}
-	{
-		const tmp = doms.svcnvfileurl.property('value')
-		const vcf = doms.vcffile.property('value')
-		if (tmp == '' && vcf == '') throw 'Missing SVCNV file path or URL, or VCF file path'
-		if (isurl(tmp)) {
-			obj.svcnvurl = tmp
-		} else {
-			obj.svcnvfile = tmp
+		const cnv = doms.svcnvfileurl.property('value').trim()
+		const vcf = doms.vcffileurl.property('value').trim()
+		if (!cnv && !vcf) throw 'Either SVCNV or VCF file/URL (or both) needs to be provided.'
+		if (cnv) {
+			if (isurl(cnv)) {
+				obj.svcnvurl = cnv
+			} else {
+				obj.svcnvfile = cnv
+			}
 		}
-		if (vcf != '') {
-			obj.vcffile = vcf
-		}
-	}
-	{
-		const tmp = doms.expressionfile.property('value')
-		if (tmp != '') {
-			obj.expressionfile = doms.expressionfile.property('value')
-		}
-	}
-	{
-		//test data:
-		// ss	ss
-		// ss	ss
-		// ss	ss
-		// ss	ss //TODO fix multiple line problem
-		const inuse = doms.sampleset_inuse
-		const tmp = doms.sampleset_textarea.property('value')
-		if (inuse == true && tmp == '') throw 'Missing sample subset data'
-		if (tmp != '') {
-			const l = tmp.split('\t')
-			for (let i = 0; i < l.length; i++) {
-				const names = l[0]
-				const samplelist = l[1]
-				obj.sampleset = {
-					sampleset: {
-						name: names,
-						samples: samplelist
-					}
-				}
+		if (vcf) {
+			if (isurl(vcf)) {
+				obj.vcfurl = vcf
+			} else {
+				obj.vcffile = vcf
 			}
 		}
 	}
 	{
-		const bigwig = doms.assaytracks_bigwig_textarea.property('value')
-		const bedj = doms.assaytracks_bedj_textarea.property('value')
-		const junction = doms.assaytracks_junction_textarea.property('value')
-		const bwstranded = doms.assaytracks_bigwigstranded_textarea.property('value')
-		// obj.assaytrack ={
-		// 	sample2assaytrack:{
-		// 		l[0]:{
-		// 			l[1]
-		// 		}
-		// }
-		// }
+		const tmp = doms.expressionfile.property('value').trim()
+		if (tmp) {
+			if (isurl(tmp)) {
+				obj.expressionurl = tmp
+			} else {
+				obj.expressionfile = tmp
+			}
+		}
+	}
+
+	if (doms.sampleset_inuse) {
+		const tmp = doms.sampleset_textarea.property('value').trim()
+		if (!tmp) throw 'Missing input for sample subset'
+		const group2lst = new Map()
+		const nogrplst = []
+		for (const line of tmp.split('\n')) {
+			if (!line) continue
+			const [sample, group] = line.split('\t')
+			if (group) {
+				if (!group2lst.has(group)) group2lst.set(group, [])
+				group2lst.get(group).add(sample)
+			} else {
+				nogrplst.push(sample)
+			}
+		}
+		obj.sampleset = []
+		if (nogrplst.length) {
+			obj.sampleset.push({ samples: nogrplst })
+		}
+		for (const [group, lst] of group2lst) {
+			obj.sampleset.push({ name: group, samples: lst })
+		}
+	}
+
+	if (doms.assaytrack_inuse) {
+		obj.sample2assaytrack = {}
+		parse_bigwig(doms, obj)
 	}
 	console.log(obj)
 	return obj
@@ -193,6 +211,9 @@ function make_name(div) {
 function set_dense(div, doms) {
 	// this helper function will not return radio buttons,
 	// the radio buttons will trigger callback that will modify doms{} attribute
+
+	doms.isdense = true // default settings are needed in case the form is submitted without triggering radio callback
+	doms.isfull = false
 	const is_dense_prompt = div.append('div')
 
 	is_dense_prompt.append('span').text('Display')
@@ -290,7 +311,7 @@ function make_assays(div, doms) {
 	const column2 = div.append('div')
 	const radiodiv = column2.append('div')
 	const uidiv = column2.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -301,13 +322,14 @@ function make_assays(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.assaytrack_radios = inputs
 	// contents of uidiv
 	const tabs = [
 		{
 			label: 'bigWig',
 			callback: async div => {
 				div.append('div').text('Instructions')
-				doms.assaytracks_bigwig_textarea = div
+				doms.assaytrack_bigwig_textarea = div
 					.append('textarea')
 					.style('width', '200px')
 					.style('height', '250px')
@@ -317,7 +339,7 @@ function make_assays(div, doms) {
 			label: 'Stranded bigWig',
 			callback: async div => {
 				div.append('div').text('Instructions')
-				doms.assaytracks_bigwigstranded_textarea = div
+				doms.assaytrack_bigwigstranded_textarea = div
 					.append('textarea')
 					.style('width', '200px')
 					.style('height', '250px')
@@ -327,7 +349,7 @@ function make_assays(div, doms) {
 			label: 'JSON-BED (bedj)',
 			callback: async div => {
 				div.append('div').text('Instructions')
-				doms.assaytracks_bedj_textarea = div
+				doms.assaytrack_bedj_textarea = div
 					.append('textarea')
 					.style('width', '200px')
 					.style('height', '250px')
@@ -337,7 +359,7 @@ function make_assays(div, doms) {
 			label: 'Splice junction',
 			callback: async div => {
 				div.append('div').text('Instructions')
-				doms.assaytracks_junction_textarea = div
+				doms.assaytrack_junction_textarea = div
 					.append('textarea')
 					.style('width', '200px')
 					.style('height', '250px')
@@ -345,4 +367,29 @@ function make_assays(div, doms) {
 		}
 	]
 	tab2box(uidiv, tabs)
+}
+
+function parse_bigwig(doms, obj) {
+	const tmp = doms.assaytrack_bigwig_textarea.property('value').trim()
+	if (!tmp) return
+	for (const line of tmp.split('\n')) {
+		if (!line) continue
+		const lst = line.split('\t')
+		const sample = lst[0]
+		if (!lst[1]) {
+			// missing file/url
+			continue
+		}
+		const tk = {
+			name: lst[2] || sample + ' bigwig',
+			type: 'bigwig'
+		}
+		if (isurl(lst[1])) {
+			tk.url = lst[1]
+		} else {
+			tk.file = lst[1]
+		}
+		if (!obj.sample2assaytrack[sample]) obj.sample2assaytrack[sample] = []
+		obj.sample2assaytrack[sample].push(tk)
+	}
 }
