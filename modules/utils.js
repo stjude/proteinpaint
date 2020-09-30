@@ -42,6 +42,7 @@ run_fishertest2x3
 
 exports.file_is_readable = async file => {
 	// need full path to the file
+	// see if file exists and readable
 	try {
 		await fs.promises.stat(file)
 	} catch (e) {
