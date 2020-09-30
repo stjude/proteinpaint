@@ -64,29 +64,40 @@ GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 if [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
-	URL="ppr.stjude.org"
+	HOSTNAME=ppr.stjude.org
 	SUBDOMAIN=ppr
 
 elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prt.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
-	URL="pp-test.stjude.org"
+	HOSTNAME=pp-test.stjude.org
 	SUBDOMAIN=pp-test
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "prp1" || "$ENV" == "pecan" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
-	# TESTHOST=genomeuser@pp-test.stjude.org
-	URL="proteinpaint.stjude.org"
+	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 
-	if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
-		TEMPUSER=gnomeuser
-		TEMPHOST=svldtemp01.stjude.org
-	fi
+elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+	# 
+	# requires these tunnel settings in ~/.ssh/config:
+	# 
+	# Host prp1
+  # User          genomeuser
+  # HostName      pp-prp1.stjude.org
+  # ProxyCommand  ssh gnomeuser@svldtemp01.stjude.org nc %h %p 2> /dev/null
+  #
+	USERatREMOTE=prp1 
+	REMOTEDIR=/opt/app/pp
+	HOSTNAME=proteinpaint.stjude.org
+	SUBDOMAIN=proteinpaint
 
 else
 	echo "Environment='$ENV' is not supported"
@@ -97,7 +108,7 @@ fi
 # EXTRACT AND BUILD FROM COMMIT
 #################################
 
-if [[ -d tmpbuild && -f tmpbuild/$APP-$REV.tgz ]]; then
+if [[ -d tmpbuild && -f tmpbuild/$APP-$REV.tgz && $(grep -l "https://$HOSTNAME/bin" tmpbuild/$APP/public/bin/proteinpaint.js) != "" ]]; then
 	echo "Reusing a previous matching build"
 	cd tmpbuild
 else 
@@ -125,7 +136,7 @@ else
 		cp ../public/bin/* public/bin
 		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
 	else 
-		npx webpack --config=scripts/webpack.config.build.js --env.url=https://$URL
+		npx webpack --config=scripts/webpack.config.build.js --env.url=https://$HOSTNAME
 	fi
 
 	# create dirs to put extracted files
@@ -141,8 +152,7 @@ else
 	mv public/bin $APP/public/bin
 	mv genome $APP/
 	mv dataset $APP/
-	mv utils/binom.R $APP/utils/
-	mv utils/chisq.R $APP/utils/
+	mv utils/*.R $APP/utils/
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
@@ -162,7 +172,9 @@ fi
 # DEPLOY
 ##########
 
-REMOTE_UPDATE="
+echo "Transferring build to $USERatREMOTE"
+scp $APP-$REV.tgz $USERatREMOTE:~
+ssh -t $USERatREMOTE "
 	rm -Rf $REMOTEDIR/$APP-new
 	mkdir $REMOTEDIR/$APP-new
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
@@ -187,25 +199,9 @@ REMOTE_UPDATE="
 	echo \"$ENV $REV $(date)\" > $REMOTEDIR/$APP/public/rev.txt
 "
 
-if [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
-	echo "Transferring to jumpbox at $TEMPHOST."
-	scp $APP-$REV.tgz $TEMPUSER@$TEMPHOST:~
-
-	echo "Transferring build to $REMOTEHOST"
-	ssh -t $TEMPUSER@$TEMPHOST "
-		scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
-		ssh -t $DEPLOYER@$REMOTEHOST \"$REMOTE_UPDATE\"
-		rm $APP-$REV.tgz
-	"
-else 
-	echo "Transferring build to $REMOTEHOST"
-	scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
-	ssh -t $DEPLOYER@$REMOTEHOST "$REMOTE_UPDATE"
-fi
-
 #############
 # CLEANUP
 #############
 
 cd ..
-# rm -rf tmpbuild
+rm -rf tmpbuild

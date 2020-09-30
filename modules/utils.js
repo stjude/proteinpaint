@@ -40,6 +40,19 @@ run_fishertest2x3
 ********************** INTERNAL
 */
 
+exports.file_is_readable = async file => {
+	// need full path to the file
+	// see if file exists and readable
+	try {
+		await fs.promises.stat(file)
+	} catch (e) {
+		if (e.code == 'EACCES') throw 'Permission denied'
+		if (e.code == 'ENOENT') throw 'No such file or directory'
+		if (e.code == 'EPERM') throw 'Operation not permitted'
+		throw 'cannot access file (' + e.code + ')'
+	}
+}
+
 exports.init_one_vcf = async function(tk, genome) {
 	let filelocation
 	if (tk.file) {
