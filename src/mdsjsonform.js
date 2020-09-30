@@ -1,10 +1,6 @@
 import { select as d3select } from 'd3'
-import { vcfvariantisgermline } from './block.mds.svcnv'
-import { dofetch2 } from './client'
-import { tab2box } from './client'
-import { tab_wait } from './client'
-import { some } from 'async'
-import { bigwigconfigpanel } from './block.tk.bigwig'
+import { dofetch2, tab2box, tab_wait } from './client'
+import { make_radios } from './dom'
 
 /*
  */
@@ -21,31 +17,17 @@ export async function init_mdsjsonform(par) {
 		}
 	}
 
-	const form_div = holder.append('div')
-	form_div
-		.append('div')
-		.style('font-size', '20px')
-		.style('margin', '10px')
-		.text('Create a Custom ProteinPaint Track')
-	const wrapper_div = form_div
-		.append('div')
-		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
-		.style('align-items', 'end')
-		.style('grid-template-rows', '1fr 1fr')
-		.style('margins', '50px')
-		.style('position', 'relative')
-		.style('padding', '20px')
+	const [form_div, wrapper_div] = make_header(holder)
 
 	const doms = {}
 	doms.genome = make_genome(wrapper_div, genomes)
 	doms.name = make_name(wrapper_div)
-	doms.isdense = set_dense(wrapper_div)
+	set_dense(wrapper_div, doms)
 	doms.svcnvfileurl = make_svcnv(wrapper_div)
 	doms.vcffile = make_vcf(wrapper_div)
 	doms.expressionfile = make_express_filepath(wrapper_div)
-	doms.sampleset = make_sampleset(wrapper_div)
-	doms.assays = make_assays(wrapper_div)
+	make_sampleset(wrapper_div, doms)
+	make_assays(wrapper_div, doms)
 	console.log(doms)
 
 	const submit_row = form_div
@@ -58,9 +40,8 @@ export async function init_mdsjsonform(par) {
 			try {
 				let genome
 				{
-					//const n = doms.genome.node()
-					//genome = n.options[n.selectedIndex].text
-					genome = 'hg19'
+					const n = doms.genome.node()
+					genome = n.options[n.selectedIndex].text
 				}
 				const deposit = validate_input(doms)
 				const re = await dofetch2('mdsjsonform', { method: 'POST', body: JSON.stringify({ deposit }) })
@@ -81,6 +62,25 @@ export async function init_mdsjsonform(par) {
 		})
 
 	const link_holder = submit_row.append('span').style('margin-left', '20px')
+}
+
+function make_header(holder) {
+	const form_div = holder.append('div')
+	form_div
+		.append('div')
+		.style('font-size', '20px')
+		.style('margin', '10px')
+		.text('Create a Custom ProteinPaint Track')
+	const wrapper_div = form_div
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('align-items', 'end')
+		.style('grid-template-rows', '1fr 1fr')
+		.style('margins', '50px')
+		.style('position', 'relative')
+		.style('padding', '20px')
+	return [form_div, wrapper_div]
 }
 
 function validate_input(doms) {
@@ -130,6 +130,7 @@ function make_genome(div, genomes) {
 	for (const n in genomes) {
 		select.append('option').text(n)
 	}
+	return select
 }
 
 //.name
@@ -145,31 +146,31 @@ function make_name(div) {
 		.append('input')
 		.attr('size', 30)
 }
-// .isdense
-function set_dense(div) {
+// .isdense, isfull
+function set_dense(div, doms) {
+	// this helper function will not return radio buttons,
+	// the radio buttons will trigger callback that will modify doms{} attribute
 	const is_dense_prompt = div.append('div')
 
-	is_dense_prompt.append('span').text('Dense Display')
+	is_dense_prompt.append('span').text('Display')
 
 	const row = div.append('div')
-	const radios = ['True', 'False']
-	for (let value of radios) {
-		const radio_btn = row
-			.append('div')
-			.style('margin', '3px')
-			.style('display', 'inline-block')
-		radio_btn
-			.append('input')
-			.attr('type', 'radio')
-			.property('checked', false)
-			.attr('name', 'd')
-			.attr('id', value)
-		radio_btn
-			.append('label')
-			.attr('id', value)
-			.attr('for', value)
-			.text(value)
-	} //TODO return what?
+	make_radios({
+		holder: row,
+		options: [{ label: 'Dense', value: 1, checked: true }, { label: 'Expanded', value: 2 }],
+		callback: value => {
+			if (value == 1) {
+				doms.isdense = true
+				doms.isfull = false
+			} else {
+				doms.isdense = false
+				doms.isfull = true
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
 }
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
@@ -210,103 +211,95 @@ function make_express_filepath(div) {
 		.append('input')
 		.attr('size', 55)
 }
-// radio button for Sample Set track
-function make_sampleset(div) {
+// .sampleset
+function make_sampleset(div, doms) {
 	const sampleset_prompt = div.append('div')
 
-	sampleset_prompt.append('span').text('Sample Sets')
+	sampleset_prompt.append('span').text('Subset samples')
 
-	const row = div.append('div')
-	const radios = ['Yes', 'No']
-	for (let value of radios) {
-		const radio_btn = row
-			.append('div')
-			.style('margin', '3px')
-			.style('display', 'inline-block')
-		radio_btn
-			.append('input')
-			.attr('type', 'radio')
-			.property('checked', false)
-			.attr('name', 's')
-			.attr('id', value)
-			.on('change', () => {
-				const tmp = radio_btn.attr('id')
-				if (tmp == 'Yes') {
-					make_textbox(div)
-				}
-			})
-		radio_btn
-			.append('label')
-			.attr('id', value)
-			.attr('for', value)
-			.text(value)
-	}
-}
-function make_textbox(div) {
-	const textbox = div.append('div')
-
-	return textbox
-		.append('div')
+	const column2 = div.append('div')
+	const radiodiv = column2.append('div')
+	const uidiv = column2.append('div').style('display', 'none')
+	make_radios({
+		holder: radiodiv,
+		options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
+		callback: value => {
+			doms.sampleset_inuse = value == 2
+			uidiv.style('display', value == 2 ? 'block' : 'none')
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+	// contents of uidiv
+	doms.sampleset_textarea = uidiv
 		.append('textarea')
-		.attr('rows', 10)
-		.attr('cols', 10)
+		.style('width', '200px')
+		.style('height', '250px')
 }
 
-// radio button for Assay track
-function make_assays(div) {
+// Assay track
+function make_assays(div, doms) {
 	const assay_prompt = div.append('div')
 
-	assay_prompt.append('span').text('Sample Assays')
+	assay_prompt.append('span').text('Assay tracks')
 
-	const row = div.append('div')
-	const radios = ['Yes', 'No']
-	const tabs = {
-		aicheck: {
-			label: 'aicheck',
+	const column2 = div.append('div')
+	const radiodiv = column2.append('div')
+	const uidiv = column2.append('div').style('display', 'none')
+	make_radios({
+		holder: radiodiv,
+		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
+		callback: value => {
+			doms.assaytrack_inuse = value == 1
+			uidiv.style('display', value == 1 ? 'block' : 'none')
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+	// contents of uidiv
+	const tabs = [
+		{
+			label: 'bigWig',
 			callback: async div => {
-				const wait = client.tab_wait(div)
+				div.append('div').text('Instructions')
+				doms.assaytracks_bigwig_textarea = div
+					.append('textarea')
+					.style('width', '200px')
+					.style('height', '250px')
 			}
 		},
-		bigwig: {
-			label: 'bigwig',
+		{
+			label: 'Stranded bigWig',
 			callback: async div => {
-				const wait = client.tab_wait(div)
+				div.append('div').text('Instructions')
+				doms.assaytracks_bigwigstranded_textarea = div
+					.append('textarea')
+					.style('width', '200px')
+					.style('height', '250px')
 			}
 		},
-		bigwigstranded: {
-			label: 'bigwig stranded',
+		{
+			label: 'JSON-BED (bedj)',
 			callback: async div => {
-				const wait = client.tab_wait(div)
+				div.append('div').text('Instructions')
+				doms.assaytracks_bedj_textarea = div
+					.append('textarea')
+					.style('width', '200px')
+					.style('height', '250px')
 			}
 		},
-		junction: {
-			label: 'Splice Junction',
+		{
+			label: 'Splice junction',
 			callback: async div => {
-				const wait = client.tab_wait(div)
+				div.append('div').text('Instructions')
+				doms.assaytracks_junction_textarea = div
+					.append('textarea')
+					.style('width', '200px')
+					.style('height', '250px')
 			}
 		}
-	}
-	for (let value of radios) {
-		const radio_btn = row
-			.append('div')
-			.style('margin', '3px')
-			.style('display', 'inline-block')
-		radio_btn
-			.append('input')
-			.attr('type', 'radio')
-			.property('checked', false)
-			.attr('name', 'a')
-			.attr('id', value)
-			.on('change', () => {
-				const tmp = radio_btn.attr('id')
-				if (tmp == 'Yes') {
-					client.tab2box(div.append('div'), tabs)
-				}
-			})
-		radio_btn
-			.append('label')
-			.attr('id', value)
-			.attr('for', value)
-			.text(value)
-	}
+	]
+	tab2box(uidiv, tabs)
 }
