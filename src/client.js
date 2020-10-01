@@ -1884,7 +1884,7 @@ export function gmlst2loci(gmlst) {
 	return locs
 }
 
-export function tab2box(holder, tabs) {
+export function tab2box(holder, tabs, runall) {
 	/*
 tabs[ tab{} ]
 	.label:
@@ -1893,6 +1893,7 @@ tabs[ tab{} ]
 		required
 
 this function attaches .box (d3 dom) to each tab of tabs[]
+
 */
 	const tr = holder
 		.append('table')
@@ -1924,7 +1925,7 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('padding', '3px')
 			.style('display', i == 0 ? 'block' : 'none')
 
-		if (i == 0 && tab.callback) {
+		if ((runall && tab.callback) || (i == 0 && tab.callback)) {
 			tab.callback(tab.box)
 			delete tab.callback
 		}
