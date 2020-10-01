@@ -43,11 +43,12 @@ function make_header(holder) {
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 4fr')
-		.style('align-items', 'end')
-		.style('grid-template-rows', '1fr 1fr')
-		.style('margins', '50px')
+		.style('align-items', 'start')
+		.style('grid-template-rows', '1fr')
+		.style('row-gap', '15px')
+		.style('margins', '5px')
 		.style('position', 'relative')
-		.style('padding', '20px')
+		.style('padding', '10px')
 	return [form_div, wrapper_div]
 }
 
@@ -89,6 +90,8 @@ function make_buttons(form_div, doms) {
 	submit_row
 		.append('button')
 		.text('Example')
+		.style('margin-top', '5px')
+		.style('margin-left', '10px')
 		.on('click', () => {
 			doms.name.property('value', 'BALL cell lines')
 			doms.svcnvfileurl.property('value', 'genomePaint_demo/demo.svcnv.gz')
@@ -170,6 +173,9 @@ function validate_input(doms) {
 	if (doms.assaytrack_inuse) {
 		obj.sample2assaytrack = {}
 		parse_bigwig(doms, obj)
+		parse_bigwigstranded(doms, obj)
+		parse_bedj(doms, obj)
+		parse_junction(doms, obj)
 	}
 	console.log(obj)
 	return obj
@@ -328,7 +334,9 @@ function make_assays(div, doms) {
 		{
 			label: 'bigWig',
 			callback: async div => {
-				div.append('div').text('Instructions')
+				div
+					.append('div')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
 				doms.assaytrack_bigwig_textarea = div
 					.append('textarea')
 					.style('width', '200px')
@@ -338,7 +346,11 @@ function make_assays(div, doms) {
 		{
 			label: 'Stranded bigWig',
 			callback: async div => {
-				div.append('div').text('Instructions')
+				div
+					.append('div')
+					.text(
+						'Copy and paste the sample name, strand 1 file path, strand 2 file path, and track name in a three column format separated by a tabs'
+					)
 				doms.assaytrack_bigwigstranded_textarea = div
 					.append('textarea')
 					.style('width', '200px')
@@ -348,7 +360,9 @@ function make_assays(div, doms) {
 		{
 			label: 'JSON-BED (bedj)',
 			callback: async div => {
-				div.append('div').text('Instructions')
+				div
+					.append('div')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
 				doms.assaytrack_bedj_textarea = div
 					.append('textarea')
 					.style('width', '200px')
@@ -358,7 +372,9 @@ function make_assays(div, doms) {
 		{
 			label: 'Splice junction',
 			callback: async div => {
-				div.append('div').text('Instructions')
+				div
+					.append('div')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
 				doms.assaytrack_junction_textarea = div
 					.append('textarea')
 					.style('width', '200px')
@@ -383,6 +399,102 @@ function parse_bigwig(doms, obj) {
 		const tk = {
 			name: lst[2] || sample + ' bigwig',
 			type: 'bigwig'
+		}
+		if (isurl(lst[1])) {
+			tk.url = lst[1]
+		} else {
+			tk.file = lst[1]
+		}
+		if (!obj.sample2assaytrack[sample]) obj.sample2assaytrack[sample] = []
+		obj.sample2assaytrack[sample].push(tk)
+	}
+}
+
+function parse_bigwigstranded(doms, obj) {
+	const tmp = doms.assaytrack_bigwigstranded_textarea.property('value').trim()
+	if (!tmp) return
+	for (const line of tmp.split('\n')) {
+		if (!line) continue
+		const lst = line.split('\t')
+		const sample = lst[0]
+		if (!lst[1]) {
+			// missing file/url
+			continue
+		}
+		const tk = {
+			name: lst[3] || sample + ' bigwigstranded',
+			type: 'bigwigstranded'
+		}
+		if (isurl(lst[1])) {
+			tk.url1 = {
+				strand1: {
+					url: lst[1]
+				}
+			}
+		} else {
+			tk.file1 = {
+				strand1: {
+					file: lst[1]
+				}
+			}
+		}
+		if (isurl(lst[2])) {
+			tk.url2 = {
+				strand2: {
+					url: lst[2]
+				}
+			}
+		} else {
+			tk.file2 = {
+				strand2: {
+					file: lst[2]
+				}
+			}
+		}
+		if (!obj.sample2assaytrack[sample]) obj.sample2assaytrack[sample] = []
+		obj.sample2assaytrack[sample].push(tk)
+	}
+}
+
+function parse_bedj(doms, obj) {
+	const tmp = doms.assaytrack_bedj_textarea.property('value').trim()
+	if (!tmp) return
+	for (const line of tmp.split('\n')) {
+		if (!line) continue
+		const lst = line.split('\t')
+		const sample = lst[0]
+		if (!lst[1]) {
+			// missing file/url
+			continue
+		}
+		const tk = {
+			name: lst[2] || sample + ' bed',
+			type: 'bedj'
+		}
+		if (isurl(lst[1])) {
+			tk.url = lst[1]
+		} else {
+			tk.file = lst[1]
+		}
+		if (!obj.sample2assaytrack[sample]) obj.sample2assaytrack[sample] = []
+		obj.sample2assaytrack[sample].push(tk)
+	}
+}
+
+function parse_junction(doms, obj) {
+	const tmp = doms.assaytrack_junction_textarea.property('value').trim()
+	if (!tmp) return
+	for (const line of tmp.split('\n')) {
+		if (!line) continue
+		const lst = line.split('\t')
+		const sample = lst[0]
+		if (!lst[1]) {
+			// missing file/url
+			continue
+		}
+		const tk = {
+			name: lst[2] || sample + ' splice junction',
+			type: 'junction'
 		}
 		if (isurl(lst[1])) {
 			tk.url = lst[1]
