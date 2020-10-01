@@ -509,7 +509,7 @@ function make_assaytracks(div, doms) {
 			callback: div => {
 				div
 					.append('div')
-					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by tabs')
 				doms.assaytrack_bigwig_textarea = div
 					.append('textarea')
 					.style('width', '500px')
@@ -522,7 +522,7 @@ function make_assaytracks(div, doms) {
 				div
 					.append('div')
 					.text(
-						'Copy and paste the sample name, strand 1 file path, strand 2 file path, and track name in a three column format separated by a tabs'
+						'Copy and paste the sample name, strand 1 file path, strand 2 file path, and track name in a four column format separated by tabs'
 					)
 				doms.assaytrack_bigwigstranded_textarea = div
 					.append('textarea')
@@ -535,7 +535,7 @@ function make_assaytracks(div, doms) {
 			callback: div => {
 				div
 					.append('div')
-					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by tabs')
 				doms.assaytrack_bedj_textarea = div
 					.append('textarea')
 					.style('width', '500px')
@@ -547,7 +547,7 @@ function make_assaytracks(div, doms) {
 			callback: div => {
 				div
 					.append('div')
-					.text('Copy and paste the sample name, file path, and track name in a three column format separated by a tab')
+					.text('Copy and paste the sample name, file path, and track name in a three column format separated by tabs')
 				doms.assaytrack_junction_textarea = div
 					.append('textarea')
 					.style('width', '500px')
