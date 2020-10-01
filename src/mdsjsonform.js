@@ -4,8 +4,12 @@ import { make_radios } from './dom'
 
 /*
 doms{}
+.isdense_radios DOM
+.assaytrack_radios DOM
 .assaytrack_inuse BOOL
 .sampleset_inuse BOOL
+
+validate_input()
  */
 
 export async function init_mdsjsonform(par) {
@@ -32,7 +36,7 @@ export async function init_mdsjsonform(par) {
 	make_sampleset(wrapper_div, doms)
 	make_assaytracks(wrapper_div, doms)
 	make_getallsamples(wrapper_div, doms)
-	window.doms = doms
+	// window.doms = doms
 	make_buttons(form_div, doms)
 	console.log(doms)
 }
@@ -105,6 +109,7 @@ function make_buttons(form_div, doms) {
 			doms.svcnvfileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.svcnv.hg19.gz')
 			doms.vcffileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.snvindel.vep.vcf.gz')
 			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
+			doms.isdense_radios.nodes()[1].click()
 			doms.assaytrack_radios.nodes()[0].click()
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
@@ -409,7 +414,7 @@ function set_dense(div, doms) {
 	is_dense_prompt.append('span').text('Display')
 
 	const row = div.append('div')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: row,
 		options: [{ label: 'Dense', value: 1, checked: true }, { label: 'Expanded', value: 2 }],
 		callback: value => {
@@ -425,6 +430,7 @@ function set_dense(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.isdense_radios = inputs
 }
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
