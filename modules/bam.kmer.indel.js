@@ -45,14 +45,23 @@ export async function match_complexvariant(templates, q) {
 		.slice(1)
 		.join('')
 		.toUpperCase()
+	const refseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+
 	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
-	console.log('refSeq', leftflankseq + final_ref + rightflankseq)
+	console.log('refSeq', refseq)
 	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
 	const refallele = final_ref.toUpperCase()
 	const altallele = final_alt.toUpperCase()
 
-	const refseq = leftflankseq + refallele + rightflankseq
+	//const refseq = leftflankseq + refallele + rightflankseq
 	const altseq = leftflankseq + altallele + rightflankseq
 
 	// console.log(refallele,altallele,refseq,altseq)
@@ -66,6 +75,10 @@ export async function match_complexvariant(templates, q) {
 	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	//----------------------------------------------------------------------------
 
+	// Checking to see if reference allele is correct or not
+	if (refseq.localeCompare(leftflankseq + refallele + rightflankseq) != 0) {
+		console.log('Reference allele is not correct')
+	}
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,

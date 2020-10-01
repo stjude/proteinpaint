@@ -85,7 +85,7 @@ elif [[ "$DEST" == "registry" ]]; then
 	# to-do? 
 	# option to filter the dataset js files
 	# to a bare minimum trial experience, so 
-	# that the pp-trial package will not expose any
+	# that the pp-dist package will not expose any
 	# sensitive information
 	# 
 	echo -e "\nTagging remote with $TAG\n"

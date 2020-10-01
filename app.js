@@ -69,29 +69,12 @@ const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
+const hicstat = serverconfig.hicstat ? serverconfig.hicstat.split(' ') : ['python', 'read_hic_header.py']
 const hicstraw = serverconfig.hicstraw || 'straw'
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
 */
 const infoFilter_unannotated = 'Unannotated'
-
-/****
-  main() enables having two options:
-  - validate only (will not start the server)
-  OR
-	- validate and start the server
-	This enables the coorect monitoring by the forever module. 
-	Whereas before 'forever' will endlessly restart the server
-	even if it cannot be initialized in a full working state,
-	the usage in a bash script should now be: 
-	```
-	set -e
-	node server validate 
-	# only proceed to using forever on successul validation
-	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
-	```
-***/
 
 const app = express()
 app.disable('x-powered-by')
@@ -201,7 +184,7 @@ app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
 app.post('/vcfheader', handle_vcfheader)
 
 app.post('/translategm', handle_translategm)
-app.post('/hicstat', handle_hicstat)
+app.get('/hicstat', handle_hicstat)
 app.post('/hicdata', handle_hicdata)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot', handle_mdssamplescatterplot)
@@ -215,34 +198,42 @@ app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
 
-// initialize using the serverconfig
-// then start the server
+/****
+	- validate and start the server
+	This enables the coorect monitoring by the forever module. 
+	Whereas before 'forever' will endlessly restart the server
+	even if it cannot be initialized in a full working state,
+	the usage in a bash script should now be: 
+	```
+	set -e
+	node server validate 
+	# only proceed to using forever on successful validation
+	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	```
+***/
+
 pp_init()
-	.then(err => {
-		if (err) {
-			console.error('\n!!!\n' + err + '\n\n')
-			// when the app server is monitored by another process via the command line,
-			// process.exit(1) is required to stop executiion flow with `set -e`
-			// and thereby avoid unnecessary endless restarts of an invalid server
-			// init with bad config, data, and/or code
-			//
-			// handle returned errors by downstream code
-			//
-			process.exit(1)
-		}
+	.then(() => {
+		// no error from server initiation
 		if (process.argv[2] == 'validate') {
 			console.log('\nValidation succeeded. You may now run the server.\n')
 			return
 		}
+		/*
+		if(process.argv[2] == 'phewas-precompute') {
+		}
+		*/
+
 		const port = serverconfig.port || 3000
 		const server = app.listen(port)
 		console.log('STANDBY AT PORT ' + port)
-		// only uncomment below so phewas precompute won't timeout
-		// server.setTimeout(500000)
 	})
 	.catch(err => {
-		// same rationale as return err handling in the .then() callback above
-		// catch errors as thrown by downstream code
+		/* when the app server is monitored by another process via the command line,
+		process.exit(1) is required to stop executiion flow with `set -e`
+		and thereby avoid unnecessary endless restarts of an invalid server
+		init with bad config, data, and/or code
+		*/
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
@@ -297,6 +288,7 @@ function maymakefolder() {
 }
 
 function handle_genomes(req, res) {
+	log(req)
 	const hash = {}
 	if (req.query && req.query.genome) {
 		hash[req.query.genome] = clientcopy_genome(req.query.genome)
@@ -378,7 +370,6 @@ function clientcopy_genome(genomename) {
 			info2table: ds.info2table,
 			info2singletable: ds.info2singletable,
 			url4variant: ds.url4variant,
-			vcfcohorttrack: ds.vcfcohorttrack, // new
 			itemlabelname: ds.itemlabelname
 		}
 
@@ -3207,48 +3198,37 @@ function handle_svmr(req, res) {
 	}
 }
 
-function handle_hicstat(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) {
-		res.send({ error: 'illegal file name' })
-		return
-	}
-
-	new Promise((resolve, reject) => {
-		if (isurl) {
-			// do not stat
-			resolve()
-		} else {
-			// is file, find
-			fs.stat(file, (err, stat) => {
-				if (err) {
-					if (err.code == 'ENOENT') reject({ message: 'file not found' })
-					if (err.code == 'EACCES') reject({ message: 'no access to the file' })
-				}
-				resolve()
-			})
+async function handle_hicstat(req, res) {
+	log(req)
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw 'illegal file name'
+		if (!isurl) {
+			await utils.file_is_readable(file)
 		}
+		const out = await do_hicstat(file)
+		res.send({ out })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+function do_hicstat(file) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(hicstat[0], [hicstat[1], file])
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e) {
+				reject(e)
+			}
+			resolve(out.join('').trim())
+		})
 	})
-		.then(() => {
-			// quote the file or url to prevent arbitrary code execution,
-			// in combination to fileurl() checking that there are no
-			// illegal characters in the filename or url
-			exec(hicstat + ' "' + file + '"', (err, stdout, stderr) => {
-				if (err) {
-					res.send({ error: err })
-					return
-				}
-				if (stderr) {
-					res.send({ error: stderr })
-					return
-				}
-				res.send({ out: stdout })
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-		})
 }
 
 function handle_hicdata(req, res) {
@@ -5797,8 +5777,9 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 						}
 						gene2sample2obj.get(j.gene).samples.set(j.sample, {
 							value: j.value,
-							ase: j.ase,
-							outlier: j.outlier
+							ase: j.ase
+							// XXX OHE is temporarily disabled!!!
+							//outlier: j.outlier
 						})
 					})
 					const errout = []
@@ -7230,9 +7211,11 @@ function handle_mdsexpressionrank(req, res) {
 								gene2value.get(j.gene).thisvalue = j.value
 
 								// additional stats about gene expression
+								/* XXX OHE!!
 								if (j.outlier) {
 									gene2value.get(j.gene).outlier = j.outlier
 								}
+								*/
 								if (j.ase) {
 									gene2value.get(j.gene).ase = j.ase
 								}
@@ -7509,6 +7492,7 @@ function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
 			if (!j.sample) return
 			if (!j.gene) return
 			if (!Number.isFinite(j.value)) return
+			delete j.outlier // XXX OHE
 
 			if (j.gene.toLowerCase() == q.name.toLowerCase()) {
 				values.push(j)
@@ -11912,36 +11896,27 @@ function parse_textfilewithheader(text) {
 async function pp_init() {
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
-		if (Number.isNaN(v) || v <= 0) return 'base_zindex must be positive integer'
+		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
 		serverconfig.base_zindex = v
 	}
-
 	if (serverconfig.jwt) {
-		if (!serverconfig.jwt.secret) return 'jwt.secret missing'
-		if (!serverconfig.jwt.permissioncheck) return 'jwt.permissioncheck missing'
+		if (!serverconfig.jwt.secret) throw 'jwt.secret missing'
+		if (!serverconfig.jwt.permissioncheck) throw 'jwt.permissioncheck missing'
 	}
+	if (!serverconfig.tpmasterdir) throw '.tpmasterdir missing'
+	if (!serverconfig.cachedir) throw '.cachedir missing'
 
-	if (!serverconfig.tpmasterdir) return 'tpmasterdir is not specified in ' + serverconfigfile
-	const putfiledir = 'tmpfile'
-	if (!serverconfig.cachedir) return 'cachedir is not specified in ' + serverconfigfile
-
-	if (!serverconfig.genomes) return 'genomes is not specified in ' + serverconfigfile
-	if (!Array.isArray(serverconfig.genomes)) return '.genomes must be an array in ' + serverconfigfile
+	if (!serverconfig.genomes) throw '.genomes[] missing'
+	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
 
 	for (const g of serverconfig.genomes) {
-		if (!g.name) return '.name missing from a genome: ' + JSON.stringify(g)
-		if (!g.file) return '.file missing from genome ' + g.name
+		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
+		if (!g.file) throw '.file missing from genome ' + g.name
 
 		const overrideFile = path.join(process.cwd(), g.file)
-		const jsfile = fs.existsSync(overrideFile) ? overrideFile : g.file
-		let g2
-		try {
-			g2 = __non_webpack_require__(g.file)
-		} catch (e) {
-			return `error loading genome file: '${g.file}'` + e
-		}
+		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
 
-		if (!g2.genomefile) return '.genomefile missing from genome ' + g.name
+		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
 
 		genomes[g.name] = g2
@@ -11986,8 +11961,8 @@ async function pp_init() {
 	*/
 
 		const g = genomes[genomename]
-		if (!g.majorchr) return genomename + ': majorchr missing'
-		if (!g.defaultcoord) return genomename + ': defaultcoord missing'
+		if (!g.majorchr) throw genomename + ': majorchr missing'
+		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
 		// test samtools and genomefile
 		const cmd =
 			samtools +
@@ -11999,11 +11974,8 @@ async function pp_init() {
 			g.defaultcoord.start +
 			'-' +
 			(g.defaultcoord.start + 1)
-		try {
-			child_process.execSync(cmd)
-		} catch (e) {
-			return 'sequence retrieval command failed: ' + cmd
-		}
+
+		child_process.execSync(cmd)
 
 		if (!g.tracks) {
 			g.tracks = []
@@ -12015,7 +11987,7 @@ async function pp_init() {
 			for (let i = 0; i < lst.length; i += 2) {
 				const chr = lst[i]
 				const c = Number.parseInt(lst[i + 1])
-				if (Number.isNaN(c)) return genomename + ' majorchr invalid chr size for ' + chr + ' (' + lst[i + 1] + ')'
+				if (Number.isNaN(c)) throw genomename + ' majorchr invalid chr size for ' + chr + ' (' + lst[i + 1] + ')'
 				hash[chr] = c
 				chrorder.push(chr)
 			}
@@ -12028,22 +12000,21 @@ async function pp_init() {
 				const hash = {}
 				for (let i = 0; i < lst.length; i += 2) {
 					const c = Number.parseInt(lst[i + 1])
-					if (Number.isNaN(c)) return genomename + ' minorchr invalid chr size for ' + lst[i] + ' (' + lst[i + 1] + ')'
+					if (Number.isNaN(c)) throw genomename + ' minorchr invalid chr size for ' + lst[i] + ' (' + lst[i + 1] + ')'
 					hash[lst[i]] = c
 				}
 				g.minorchr = hash
 			}
 		}
 
-		if (!g.genedb) return genomename + ': .genedb{} missing'
-		if (!g.genedb.dbfile) return genomename + ': .genedb.dbfile missing'
+		if (!g.genedb) throw genomename + ': .genedb{} missing'
+		if (!g.genedb.dbfile) throw genomename + ': .genedb.dbfile missing'
 		{
+			// keep reference of .db so as to add dataset-specific query statements later
 			try {
-				// keep reference of .db so as to add dataset-specific query statements later
 				g.genedb.db = utils.connect_db(g.genedb.dbfile)
-				//new bettersqlite( path.join(serverconfig.tpmasterdir, g.genedb.dbfile), {readonly:true,fileMustExist:true})
 			} catch (e) {
-				return 'cannot read dbfile: ' + g.genedb.dbfile
+				throw 'Error with ' + g.genedb.dbfile + ': ' + e
 			}
 			g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
 			g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
@@ -12055,76 +12026,73 @@ async function pp_init() {
 			}
 		}
 
-		const chrsize = {}
-		for (const n in g.majorchr) {
-			chrsize[n] = g.majorchr[n]
-		}
-		if (g.minorchr) {
-			for (const n in g.minorchr) {
-				chrsize[n] = g.minorchr[n]
-			}
-		}
 		for (const tk of g.tracks) {
 			if (!tk.__isgene) continue
-			if (!tk.file) return 'Tabix file missing for gene track: ' + JSON.stringify(tk)
-			const [err, file] = validate_tabixfile(tk.file)
-			if (err) return tk.file + ': gene tabix file error: ' + err
+			if (!tk.file) throw 'Tabix file missing for gene track: ' + JSON.stringify(tk)
+			try {
+				await utils.validate_tabixfile(path.join(serverconfig.tpmasterdir, tk.file))
+			} catch (e) {
+				throw 'Error with ' + tk.file + ': ' + e
+			}
 		}
 
 		if (g.proteindomain) {
-			if (!g.proteindomain.dbfile) return genomename + '.proteindomain: missing dbfile for sqlite db'
-			if (!g.proteindomain.statement) return genomename + '.proteindomain: missing statement for sqlite db'
+			if (!g.proteindomain.dbfile) throw genomename + '.proteindomain: missing dbfile for sqlite db'
+			if (!g.proteindomain.statement) throw genomename + '.proteindomain: missing statement for sqlite db'
 			let db
 			try {
 				db = utils.connect_db(g.proteindomain.dbfile)
-				//new bettersqlite( path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile), {readonly:true,fileMustExist:true} )
 			} catch (e) {
-				return 'cannot read dbfile: ' + g.proteindomain.dbfile
+				throw 'Error with ' + g.proteindomain.dbfile + ': ' + e
 			}
 			g.proteindomain.getbyisoform = db.prepare(g.proteindomain.statement)
 		}
 
 		if (g.snp) {
-			if (!g.snp.dbfile) return genomename + '.snp: missing sqlite dbfile'
-
-			if (!g.snp.statement_getbyname) return genomename + '.snp: missing statement_getbyname'
-			if (!g.snp.statement_getbycoord) return genomename + '.snp: missing statement_getbycoord'
+			if (!g.snp.dbfile) throw genomename + '.snp: missing sqlite dbfile'
+			if (!g.snp.statement_getbyname) throw genomename + '.snp: missing statement_getbyname'
+			if (!g.snp.statement_getbycoord) throw genomename + '.snp: missing statement_getbycoord'
 
 			let db
 			try {
 				db = utils.connect_db(g.snp.dbfile)
-				//new bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
 			} catch (e) {
-				return 'cannot read dbfile: ' + g.snp.dbfile
+				throw 'Error with ' + g.snp.dbfile + ': ' + e
 			}
 			g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
 			g.snp.getbycoord = db.prepare(g.snp.statement_getbycoord)
 		}
 
 		if (g.clinvarVCF) {
-			if (!g.clinvarVCF.file) return genomename + '.clinvarVCF: VCF file missing'
+			if (!g.clinvarVCF.file) throw genomename + '.clinvarVCF: VCF file missing'
 			g.clinvarVCF.file = path.join(serverconfig.tpmasterdir, g.clinvarVCF.file)
-			if (!g.clinvarVCF.infokey) return genomename + '.clinvarVCF.infokey missing'
-			if (!g.clinvarVCF.categories) return genomename + '.clinvarVCF.categories{} missing'
+			try {
+				await utils.validate_tabixfile(g.clinvarVCF.file)
+			} catch (e) {
+				throw 'Error with ' + g.clinvarVCF.file + ': ' + e
+			}
+
+			if (!g.clinvarVCF.infokey) throw genomename + '.clinvarVCF.infokey missing'
+			if (!g.clinvarVCF.categories) throw genomename + '.clinvarVCF.categories{} missing'
 
 			{
 				const tmp = child_process.execSync(tabix + ' -H ' + g.clinvarVCF.file, { encoding: 'utf8' }).trim()
-				if (!tmp) return genomename + '.clinvarVCF: no meta/header lines'
+				if (!tmp) throw genomename + '.clinvarVCF: no meta/header lines'
 				const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
-				if (errs) return genomename + '.clinvarVCF: error parsing vcf meta: ' + errs.join('\n')
-				if (!info[g.clinvarVCF.infokey]) return genomename + '.clinvarVCF: unknown INFO key for ' + g.clinvarVCF.infokey
+				if (errs) throw genomename + '.clinvarVCF: error parsing vcf meta: ' + errs.join('\n')
+				if (!info[g.clinvarVCF.infokey]) throw genomename + '.clinvarVCF: unknown INFO key for ' + g.clinvarVCF.infokey
 				g.clinvarVCF.info = info
 				g.clinvarVCF.format = format
 			}
 			{
 				const tmp = child_process.execSync(tabix + ' -l ' + g.clinvarVCF.file, { encoding: 'utf8' }).trim()
-				if (tmp == '') return genomename + '.clinvarVCF: no chr listing'
+				if (tmp == '') throw genomename + '.clinvarVCF: no chr listing'
 				g.clinvarVCF.nochr = common.contigNameNoChr(g, tmp.split('\n'))
 			}
 		}
 
 		if (g.fimo_motif) {
-			if (!g.fimo_motif.db) return genomename + '.fimo_motif: db file missing'
+			if (!g.fimo_motif.db) throw genomename + '.fimo_motif: db file missing'
 			g.fimo_motif.db = path.join(serverconfig.tpmasterdir, g.fimo_motif.db)
 			if (g.fimo_motif.annotationfile) {
 				const [err, items] = parse_textfilewithheader(
@@ -12138,29 +12106,34 @@ async function pp_init() {
 		}
 
 		if (g.hicenzymefragment) {
-			if (!Array.isArray(g.hicenzymefragment)) return 'hicenzymefragment should be an array'
+			if (!Array.isArray(g.hicenzymefragment)) throw 'hicenzymefragment should be an array'
 			for (const frag of g.hicenzymefragment) {
-				if (!frag.enzyme) return '.enzyme missing for one element of hicenzymefragment[]'
-				if (!frag.file) return '.file missing for one element of hicenzymefragment[]'
-				const [err, file] = validate_tabixfile(frag.file)
-				if (err) return 'tabix file error for one of hicenzymefragment[]: ' + err
-				// TODO frag.file = file
+				if (!frag.enzyme) throw '.enzyme missing for one element of hicenzymefragment[]'
+				if (!frag.file) throw '.file missing for one element of hicenzymefragment[]'
+				try {
+					await utils.validate_tabixfile(path.join(serverconfig.tpmasterdir, frag.file))
+				} catch (e) {
+					throw 'Error with ' + frag.file + ': ' + e
+				}
 			}
 		}
 
 		if (g.hicdomain) {
-			if (!g.hicdomain.groups) return '.groups{} missing from hicdomain'
+			if (!g.hicdomain.groups) throw '.groups{} missing from hicdomain'
 			for (const groupname in g.hicdomain.groups) {
 				const grp = g.hicdomain.groups[groupname]
-				if (!grp.name) return '.name missing from hicdomain ' + groupname
-				if (!grp.sets) return '.set{} missing from hicdomain ' + groupname
+				if (!grp.name) throw '.name missing from hicdomain ' + groupname
+				if (!grp.sets) throw '.set{} missing from hicdomain ' + groupname
 				for (const setname in grp.sets) {
 					const hs = grp.sets[setname]
-					if (!hs.name) return '.name missing from hicdomain ' + groupname + ' > ' + setname
-					if (!hs.file) return '.file missing from hicdomain ' + groupname + ' > ' + setname
-					const [err, file] = validate_tabixfile(hs.file)
-					if (err) return 'tabix file error for hicdomain ' + groupname + ' > ' + setname + ': ' + err
-					hs.file = file // replace with full path, keep on server side
+					if (!hs.name) throw '.name missing from hicdomain ' + groupname + ' > ' + setname
+					if (!hs.file) throw '.file missing from hicdomain ' + groupname + ' > ' + setname
+					hs.file = path.join(serverconfig.tpmasterdir, hs.file) // replace with full path, keep on server side
+					try {
+						await utils.validate_tabixfile(hs.file)
+					} catch (e) {
+						throw 'Error with ' + hs.file + ': ' + e
+					}
 				}
 			}
 		}
@@ -12181,69 +12154,42 @@ async function pp_init() {
 		for each raw dataset
 		*/
 
-			if (!d.name) return 'a nameless dataset from ' + genomename
-			if (g.datasets[d.name]) return genomename + ' has duplicating dataset name: ' + d.name
-			let ds
-			if (d.jsfile) {
-				const overrideFile = path.join(process.cwd(), d.jsfile)
-				const jsfile = fs.existsSync(overrideFile) ? overrideFile : d.jsfile
-				try {
-					ds = __non_webpack_require__(d.jsfile)
-				} catch (e) {
-					throw `error loading genome file: '${d.jsfile}'` + e
-				}
-			} else {
-				return 'jsfile not available for dataset ' + d.name + ' of ' + genomename
-			}
+			if (!d.name) throw 'a nameless dataset from ' + genomename
+			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
+			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
+			const overrideFile = path.join(process.cwd(), d.jsfile)
+			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
-				mds3_init_wrap(ds, g, d)
+				try {
+					await mds3_init.init(ds, g, d)
+				} catch (e) {
+					if (e.stack) console.log(e.stack)
+					throw 'Error with mds3 dataset ' + ds.label + ': ' + e
+				}
 				continue
 			}
 			if (ds.isMds) {
-				/********* MDS ************/
-				const err = await mds_init(ds, g, d)
-				if (err) return 'Error with dataset ' + ds.label + ': ' + err
+				try {
+					await mds_init(ds, g, d)
+				} catch (e) {
+					throw 'Error with mds dataset ' + ds.label + ': ' + e
+				}
 				continue
 			}
 
 			/* old official dataset */
-
-			if (ds.onetimequery_projectsize) {
-				if (ds.onetimequery_projectsize.gdcgraphql) {
-					if (!ds.onetimequery_projectsize.gdcgraphql.query)
-						return '.query missing from ds.onetimequery_projectsize.gdcgraphql'
-					if (!ds.onetimequery_projectsize.gdcgraphql.variables)
-						return '.variables missing from ds.onetimequery_projectsize.gdcgraphql'
-				} else {
-					return 'unknown query method of onetimequery_projectsize'
-				}
-			}
-
-			if (ds.variant2samples) {
-				if (!ds.variant2samples.variantkey) return '.variantkey missing from variant2samples'
-				if (!ds.variant2samples.levels) return '.levels[] missing from variant2samples'
-				if (!Array.isArray(ds.variant2samples.levels)) return 'variant2samples.levels[] is not array'
-				// validate levels when final
-				if (['ssm_id'].indexOf(ds.variant2samples.variantkey) == -1) return 'invalid value of variantkey'
-				if (ds.variant2samples.gdcgraphql) {
-					if (!ds.variant2samples.gdcgraphql.query) return '.query missing from variant2samples.gdcgraphql'
-					if (!ds.variant2samples.gdcgraphql.variables) return '.variables missing from variant2samples.gdcgraphql'
-				} else {
-					return 'unknown query method of variant2samples'
-				}
-			}
 
 			if (ds.dbfile) {
 				/* this dataset has a db */
 				try {
 					ds.newconn = utils.connect_db(ds.dbfile)
 				} catch (e) {
-					return 'cannot connect to db: ' + ds.dbfile
+					throw 'Error with ' + ds.dbfile + ': ' + e
 				}
 			}
 
@@ -12259,40 +12205,14 @@ async function pp_init() {
 				}
 			}
 
-			if (ds.vcfcohorttrack) {
-				if (!ds.vcfcohorttrack.file) return '.file missing from .vcfcohorttrack of ' + genomename + '.' + ds.label
-				const meta = child_process
-					.execSync(tabix + ' -H ' + path.join(serverconfig.tpmasterdir, ds.vcfcohorttrack.file), { encoding: 'utf8' })
-					.trim()
-				if (meta == '') return 'no meta lines in VCF cohort file ' + ds.vcfcohorttrack.file
-				const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
-				if (errs) return 'error parsing meta lines for VCF cohort file ' + ds.vcfcohorttrack.file
-				ds.vcfcohorttrack.info = info
-				ds.vcfcohorttrack.format = format
-
-				if (ds.vcfcohorttrack.samplenamemap) {
-					ds.vcfcohorttrack.samples = samples.map(ds.vcfcohorttrack.samplenamemap)
-					delete ds.vcfcohorttrack.samplenamemap
-				} else {
-					ds.vcfcohorttrack.samples = samples
-				}
-
-				const tmp = child_process
-					.execSync(tabix + ' -l ' + path.join(serverconfig.tpmasterdir, ds.vcfcohorttrack.file), { encoding: 'utf8' })
-					.trim()
-				if (tmp == '') return 'no chromosomes/contigs from VCF cohort file ' + ds.vcfcohorttrack.file
-				ds.vcfcohorttrack.nochr = common.contigNameNoChr(g, tmp.split('\n'))
-				console.log('Parsed vcf meta from ' + ds.vcfcohorttrack.file + ': ' + samples.length + ' samples')
-			}
-
 			if (ds.cohort) {
 				// a dataset with cohort
 
 				if (ds.cohort.levels) {
-					if (!Array.isArray(ds.cohort.levels)) return 'cohort.levels must be array for ' + genomename + '.' + ds.label
-					if (ds.cohort.levels.length == 0) return 'levels is blank array for cohort of ' + genomename + '.' + ds.label
+					if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
+					if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
 					for (const i of ds.cohort.levels) {
-						if (!i.k) return '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
+						if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
 					}
 				}
 
@@ -12300,7 +12220,7 @@ async function pp_init() {
 					/*
 				cohort content to be loaded lazily from db
 				*/
-					if (!ds.cohort.fromdb.sql) return '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
+					if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
 					const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
 					delete ds.cohort.fromdb
 					ds.cohort.raw = rows ///// backward compatible
@@ -12311,9 +12231,9 @@ async function pp_init() {
 					// sample annotation load directly from text files, in sync
 					let rows = []
 					for (const file of ds.cohort.files) {
-						if (!file.file) return '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
+						if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
 						const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
-						if (!txt) return file.file + ' is empty for ' + genomename + '.' + ds.label
+						if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
 						rows = [...rows, ...d3dsv.tsvParse(txt)]
 					}
 					delete ds.cohort.files
@@ -12327,31 +12247,32 @@ async function pp_init() {
 				if (ds.cohort.tosampleannotation) {
 					// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
 					if (!ds.cohort.tosampleannotation.samplekey)
-						return '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
+						throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
 					if (!ds.cohort.key4annotation)
-						return (
-							'.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' + genomename + '.' + ds.label
-						)
+						throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' +
+							genomename +
+							'.' +
+							ds.label
 					// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
 				}
 			}
 
-			if (!ds.queries) return 'queries missing from dataset ' + ds.label + ', ' + genomename
-			if (!Array.isArray(ds.queries)) return ds.label + '.queries is not array'
+			if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
+			if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
 			for (const q of ds.queries) {
 				const err = legacyds_init_one_query(q, ds, g)
-				if (err) return 'Error parsing a query in "' + ds.label + '": ' + err
+				if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
 			}
 
 			if (ds.vcfinfofilter) {
 				const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
-				if (err) return ds.label + ': vcfinfofilter error: ' + err
+				if (err) throw ds.label + ': vcfinfofilter error: ' + err
 			}
 
 			if (ds.url4variant) {
 				for (const u of ds.url4variant) {
-					if (!u.makelabel) return 'makelabel() missing for one item of url4variant from ' + ds.label
-					if (!u.makeurl) return 'makeurl() missing for one item of url4variant from ' + ds.label
+					if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
+					if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
 					u.makelabel = u.makelabel.toString()
 					u.makeurl = u.makeurl.toString()
 				}
@@ -12451,14 +12372,13 @@ async function mds_init(ds, genome, _servconfig) {
 	ds: loaded from datasets/what.js
 	genome: obj {}
 	_servconfig: the entry in "datasets" array from serverconfig.json
-
 	*/
 
 	mds2_init.server_updateAttr(ds, _servconfig)
 
 	if (ds.assayAvailability) {
-		if (!ds.assayAvailability.file) return '.assayAvailability.file missing'
-		if (!ds.assayAvailability.assays) return '.assayAvailability.assays[] missing'
+		if (!ds.assayAvailability.file) throw '.assayAvailability.file missing'
+		if (!ds.assayAvailability.assays) throw '.assayAvailability.assays[] missing'
 		Object.freeze(ds.assayAvailability.assays)
 		ds.assayAvailability.samples = new Map()
 		for (const line of fs
@@ -12472,7 +12392,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.sampleAssayTrack) {
-		if (!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
+		if (!ds.sampleAssayTrack.file) throw '.file missing from sampleAssayTrack'
 		ds.sampleAssayTrack.samples = new Map()
 
 		let count = 0
@@ -12502,15 +12422,9 @@ async function mds_init(ds, genome, _servconfig) {
 				ds.sampleAssayTrack.samples.set(sample, [])
 			}
 
-			let tk
-			try {
-				tk = JSON.parse(jsontext)
-			} catch (err) {
-				return 'invalid JSON in sampleAssayTrack: ' + jsontext
-			}
-
+			const tk = JSON.parse(jsontext)
 			// TODO validate track
-			if (!common.tkt[tk.type]) return 'invalid type from a sample track: ' + jsontext
+			if (!common.tkt[tk.type]) throw 'invalid type from a sample track: ' + jsontext
 			if (!tk.name) {
 				tk.name = sample + ' ' + assay
 			}
@@ -12531,7 +12445,7 @@ async function mds_init(ds, genome, _servconfig) {
 
 	if (ds.singlesamplemutationjson) {
 		const m = ds.singlesamplemutationjson
-		if (!m.file) return '.file missing from singlesamplemutationjson'
+		if (!m.file) throw '.file missing from singlesamplemutationjson'
 		m.samples = {}
 		let count = 0
 		for (const line of fs
@@ -12557,38 +12471,38 @@ async function mds_init(ds, genome, _servconfig) {
 		and store in ds.cohort.annotation
 		*/
 
-		if (!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
+		if (!Array.isArray(ds.cohort.files)) throw '.cohort.files is not array'
 
-		if (!ds.cohort.tohash) return '.tohash() missing from cohort'
-		if (typeof ds.cohort.tohash != 'function') return '.cohort.tohash is not function'
-		if (!ds.cohort.samplenamekey) return '.samplenamekey missing'
+		if (!ds.cohort.tohash) throw '.tohash() missing from cohort'
+		if (typeof ds.cohort.tohash != 'function') throw '.cohort.tohash is not function'
+		if (!ds.cohort.samplenamekey) throw '.samplenamekey missing'
 
 		// should allow both sample/individual level as key
 		ds.cohort.annotation = {}
 
 		if (ds.cohort.mutation_signature) {
 			const s = ds.cohort.mutation_signature
-			if (!s.sets) return '.mutation_signature.sets missing'
+			if (!s.sets) throw '.mutation_signature.sets missing'
 			for (const k in s.sets) {
 				const ss = s.sets[k]
 				if (!ss.name) ss.name = k
-				if (!ss.signatures) return '.signatures{} missing from a signature set'
+				if (!ss.signatures) throw '.signatures{} missing from a signature set'
 				if (ss.samples) {
-					if (!ss.samples.file) return '.samples.file missing from a signature set'
+					if (!ss.samples.file) throw '.samples.file missing from a signature set'
 					const [err, items] = parse_textfilewithheader(
 						fs.readFileSync(path.join(serverconfig.tpmasterdir, ss.samples.file), { encoding: 'utf8' }).trim()
 					)
 					ss.samples.map = new Map()
 					for (const i of items) {
 						const sample = i[ds.cohort.samplenamekey]
-						if (!sample) return ds.cohort.samplenamekey + ' missing in file ' + ss.samples.file
+						if (!sample) throw ds.cohort.samplenamekey + ' missing in file ' + ss.samples.file
 						ss.samples.map.set(sample, i)
 
 						// parse to float
 						for (const sk in ss.signatures) {
 							if (i[sk]) {
 								const v = Number.parseFloat(i[sk])
-								if (Number.isNaN(v)) return 'mutation signature value is not float: ' + i[sk] + ' from sample ' + sample
+								if (Number.isNaN(v)) throw 'mutation signature value is not float: ' + i[sk] + ' from sample ' + sample
 								if (ss.samples.skipzero && v == 0) {
 									delete i[sk]
 								} else {
@@ -12602,115 +12516,109 @@ async function mds_init(ds, genome, _servconfig) {
 		}
 
 		if (ds.cohort.attributes) {
-			if (!ds.cohort.attributes.lst) return '.lst[] missing for cohort.attributes'
+			if (!ds.cohort.attributes.lst) throw '.lst[] missing for cohort.attributes'
 			if (!Array.isArray(ds.cohort.attributes.lst)) return '.cohort.attributes.lst is not array'
 			for (const attr of ds.cohort.attributes.lst) {
-				if (!attr.key) return '.key missing from one of the .cohort.attributes.lst[]'
-				if (!attr.label) return '.label missing from one of the .cohort.attributes.lst[]'
-				if (!attr.values) return '.values{} missing from ' + attr.label + ' of .cohort.attributes.lst'
+				if (!attr.key) throw '.key missing from one of the .cohort.attributes.lst[]'
+				if (!attr.label) throw '.label missing from one of the .cohort.attributes.lst[]'
+				if (!attr.values) throw '.values{} missing from ' + attr.label + ' of .cohort.attributes.lst'
 				for (const value in attr.values) {
 					if (!attr.values[value].label)
-						return '.label missing from one value of ' + attr.label + ' in .cohort.attributes.lst'
+						throw '.label missing from one value of ' + attr.label + ' in .cohort.attributes.lst'
 				}
 			}
 			if (ds.cohort.attributes.defaulthidden) {
 				// allow attributes hidden by default
 				for (const key in ds.cohort.attributes.defaulthidden) {
 					const hideattr = ds.cohort.attributes.lst.find(i => i.key == key)
-					if (!hideattr) return 'invalid defaulthidden key: ' + key
+					if (!hideattr) throw 'invalid defaulthidden key: ' + key
 					for (const value in ds.cohort.attributes.defaulthidden[key]) {
-						if (!hideattr.values[value]) return 'invalid defaulthidden value ' + value + ' for ' + key
+						if (!hideattr.values[value]) throw 'invalid defaulthidden value ' + value + ' for ' + key
 					}
 				}
 			}
 		}
 
 		if (ds.cohort.hierarchies) {
-			if (!ds.cohort.hierarchies.lst) return '.lst[] missing from .cohort.hierarchies'
-			if (!Array.isArray(ds.cohort.hierarchies.lst)) return '.cohort.hierarchies.lst is not array'
+			if (!ds.cohort.hierarchies.lst) throw '.lst[] missing from .cohort.hierarchies'
+			if (!Array.isArray(ds.cohort.hierarchies.lst)) throw '.cohort.hierarchies.lst is not array'
 			for (const h of ds.cohort.hierarchies.lst) {
-				if (!h.name) return '.name missing from one hierarchy'
-				if (!h.levels) return '.levels[] missing from one hierarchy'
-				if (!Array.isArray(h.levels)) return '.levels is not array from one hierarchy'
+				if (!h.name) throw '.name missing from one hierarchy'
+				if (!h.levels) throw '.levels[] missing from one hierarchy'
+				if (!Array.isArray(h.levels)) throw '.levels is not array from one hierarchy'
 				for (const l of h.levels) {
-					if (!l.k) return '.k missing from one level in hierarchy ' + h.name
+					if (!l.k) throw '.k missing from one level in hierarchy ' + h.name
 				}
 			}
 		}
 
 		if (ds.cohort.sampleAttribute) {
-			if (!ds.cohort.sampleAttribute.attributes) return 'attributes{} missing from cohort.sampleAttribute'
+			if (!ds.cohort.sampleAttribute.attributes) throw 'attributes{} missing from cohort.sampleAttribute'
 			for (const key in ds.cohort.sampleAttribute.attributes) {
 				const a = ds.cohort.sampleAttribute.attributes[key]
-				if (!a.label) return '.label missing for key ' + key + ' from cohort.sampleAttribute.attributes'
+				if (!a.label) throw '.label missing for key ' + key + ' from cohort.sampleAttribute.attributes'
 				if (a.values) {
 					// optional
 					for (const v in a.values) {
 						const b = a.values[v]
-						if (typeof b != 'object') return 'value "' + v + '" not pointing to {} from sampleAttribute'
+						if (typeof b != 'object') throw 'value "' + v + '" not pointing to {} from sampleAttribute'
 						if (!b.name) b.name = v
 					}
 				}
 				if (a.showintrack) {
-					if (!a.isinteger && !a.isfloat) return a.label + ': .showintrack requires .isinteger or .isfloat'
+					if (!a.isinteger && !a.isfloat) throw a.label + ': .showintrack requires .isinteger or .isfloat'
 				}
 			}
 		}
 
 		if (ds.cohort.scatterplot) {
-			if (!ds.cohort.sampleAttribute) return '.sampleAttribute missing but required for .cohort.scatterplot'
+			if (!ds.cohort.sampleAttribute) throw '.sampleAttribute missing but required for .cohort.scatterplot'
 
 			const sp = ds.cohort.scatterplot
 
 			// querykey is required
-			if (!sp.querykey) return '.querykey missing from .cohort.scatterplot'
+			if (!sp.querykey) throw '.querykey missing from .cohort.scatterplot'
 			{
-				if (!ds.queries) return '.cohort.scatterplot.querykey in use but ds.queries{} missing'
+				if (!ds.queries) throw '.cohort.scatterplot.querykey in use but ds.queries{} missing'
 				const tk = ds.queries[sp.querykey]
-				if (!tk) return 'unknown query by .cohort.scatterplot.querykey: ' + sp.querykey
+				if (!tk) throw 'unknown query by .cohort.scatterplot.querykey: ' + sp.querykey
 				if (tk.type != common.tkt.mdssvcnv)
-					return 'type is not ' + common.tkt.mdssvcnv + ' of the track pointed to by .cohort.scatterplot.querykey'
+					throw 'type is not ' + common.tkt.mdssvcnv + ' of the track pointed to by .cohort.scatterplot.querykey'
 			}
 
 			if (sp.colorbygeneexpression) {
-				if (!sp.colorbygeneexpression.querykey) return 'querykey missing from .cohort.scatterplot.colorbygeneexpression'
-				if (!ds.queries) return '.cohort.scatterplot.colorbygeneexpression in use by ds.queries{} missing'
+				if (!sp.colorbygeneexpression.querykey) throw 'querykey missing from .cohort.scatterplot.colorbygeneexpression'
+				if (!ds.queries) throw '.cohort.scatterplot.colorbygeneexpression in use but ds.queries{} missing'
 				const tk = ds.queries[sp.colorbygeneexpression.querykey]
 				if (!tk)
-					return (
-						'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: ' + sp.colorbygeneexpression.querykey
-					)
+					throw 'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: ' +
+						sp.colorbygeneexpression.querykey
 				if (!tk.isgenenumeric)
-					return 'isgenenumeric missing from the track pointed to by .cohort.scatterplot.colorbygeneexpression.querykey'
+					throw 'isgenenumeric missing from the track pointed to by .cohort.scatterplot.colorbygeneexpression.querykey'
 			}
 
 			if (sp.tracks) {
 				// a common set of tracks to be shown in single sample browser upon clicking a dot
 				// must label them as custom otherwise they won't be listed
 				// TODO validate the tracks
-				/*
-				for(const t of sp.tracks) {
-					t.iscustom=1
-				}
-				*/
 			}
 
 			// TODO support multiple plots
-			if (!sp.x) return '.x missing from .cohort.scatterplot'
-			if (!sp.x.attribute) return '.attribute missing from .cohort.scatterplot.x'
+			if (!sp.x) throw '.x missing from .cohort.scatterplot'
+			if (!sp.x.attribute) throw '.attribute missing from .cohort.scatterplot.x'
 			const x = ds.cohort.sampleAttribute.attributes[sp.x.attribute]
-			if (!x) return 'scatterplot.x.attribute is not defined in sampleAttribute'
-			if (!x.isfloat) return 'scatterplot.x is not "isfloat"'
-			if (!sp.y) return '.y missing from .cohort.scatterplot'
-			if (!sp.y.attribute) return '.attribute missing from .cohort.scatterplot.y'
+			if (!x) throw 'scatterplot.x.attribute is not defined in sampleAttribute'
+			if (!x.isfloat) throw 'scatterplot.x is not "isfloat"'
+			if (!sp.y) throw '.y missing from .cohort.scatterplot'
+			if (!sp.y.attribute) throw '.attribute missing from .cohort.scatterplot.y'
 			const y = ds.cohort.sampleAttribute.attributes[sp.y.attribute]
-			if (!y) return 'scatterplot.y.attribute is not defined in sampleAttribute'
-			if (!y.isfloat) return 'scatterplot.y is not "isfloat"'
+			if (!y) throw 'scatterplot.y.attribute is not defined in sampleAttribute'
+			if (!y.isfloat) throw 'scatterplot.y is not "isfloat"'
 			if (sp.colorbyattributes) {
 				for (const attr of sp.colorbyattributes) {
-					if (!attr.key) return '.key missing from one of scatterplot.colorbyattributes'
+					if (!attr.key) throw '.key missing from one of scatterplot.colorbyattributes'
 					const attrreg = ds.cohort.sampleAttribute.attributes[attr.key]
-					if (!attrreg) return 'unknown attribute by key ' + attr.key + ' from scatterplot.colorbyattributes'
+					if (!attrreg) throw 'unknown attribute by key ' + attr.key + ' from scatterplot.colorbyattributes'
 					attr.label = attrreg.label
 					attr.values = attrreg.values
 				}
@@ -12718,11 +12626,11 @@ async function mds_init(ds, genome, _servconfig) {
 		}
 
 		for (const file of ds.cohort.files) {
-			if (!file.file) return '.file missing from one of .cohort.files'
+			if (!file.file) throw '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader(
 				fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), { encoding: 'utf8' }).trim()
 			)
-			if (err) return 'cohort annotation file "' + file.file + '": ' + err
+			if (err) throw 'cohort annotation file "' + file.file + '": ' + err
 			//if(items.length==0) return 'no content from sample annotation file '+file.file
 			console.log(ds.label + ': ' + items.length + ' samples loaded from annotation file ' + file.file)
 			items.forEach(i => {
@@ -12756,7 +12664,7 @@ async function mds_init(ds, genome, _servconfig) {
 		if (ds.cohort.survivalplot) {
 			// ds.cohort.annotation needs to be loaded for initing survival
 			const sp = ds.cohort.survivalplot
-			if (!sp.plots) return '.plots{} missing from survivalplot'
+			if (!sp.plots) throw '.plots{} missing from survivalplot'
 
 			// make the object for initiating client
 			sp.init = {
@@ -12765,10 +12673,10 @@ async function mds_init(ds, genome, _servconfig) {
 
 			for (const k in sp.plots) {
 				const p = sp.plots[k]
-				if (!p.name) return '.name missing from survivalplot ' + k
-				if (!p.serialtimekey) return '.serialtimekey missing from survivalplot ' + k
-				if (!p.iscensoredkey) return '.iscensoredkey missing from survivalplot ' + k
-				if (!p.timelabel) return '.timelabel missing from survivalplot ' + k
+				if (!p.name) throw '.name missing from survivalplot ' + k
+				if (!p.serialtimekey) throw '.serialtimekey missing from survivalplot ' + k
+				if (!p.iscensoredkey) throw '.iscensoredkey missing from survivalplot ' + k
+				if (!p.timelabel) throw '.timelabel missing from survivalplot ' + k
 				p.key = k
 
 				sp.init.plottypes.push({
@@ -12781,10 +12689,10 @@ async function mds_init(ds, genome, _servconfig) {
 			if (sp.samplegroupattrlst) {
 				sp.init.samplegroupings = []
 				for (const a of sp.samplegroupattrlst) {
-					if (!a.key) return '.key missing from an attr of samplegroupattrlst for survival'
+					if (!a.key) throw '.key missing from an attr of samplegroupattrlst for survival'
 
 					const attr = ds.cohort.sampleAttribute.attributes[a.key]
-					if (!attr) return 'unknown attribute key "' + a.key + '" from survival samplegroupattrlst'
+					if (!attr) throw 'unknown attribute key "' + a.key + '" from survival samplegroupattrlst'
 
 					const value2count = new Map()
 					for (const samplename in ds.cohort.annotation) {
@@ -12812,7 +12720,7 @@ async function mds_init(ds, genome, _servconfig) {
 							}
 						}
 					}
-					if (value2count.size == 0) return 'no value found for "' + a.key + '" from survival samplegroupattrlst'
+					if (value2count.size == 0) throw 'no value found for "' + a.key + '" from survival samplegroupattrlst'
 
 					const lst = []
 					for (const [v, c] of value2count) {
@@ -12836,10 +12744,10 @@ async function mds_init(ds, genome, _servconfig) {
 		for vcf:
 			FORMAT
 		*/
-		if (!ds.mutationAttribute.attributes) return 'attributes{} missing from mutationAttribute'
+		if (!ds.mutationAttribute.attributes) throw 'attributes{} missing from mutationAttribute'
 		for (const key in ds.mutationAttribute.attributes) {
 			const a = ds.mutationAttribute.attributes[key]
-			if (!a.label) return '.label missing for key ' + key + ' from mutationAttribute.attributes'
+			if (!a.label) throw '.label missing for key ' + key + ' from mutationAttribute.attributes'
 			if (a.appendto_link) {
 				// this is pmid, no .values{}
 				continue
@@ -12847,7 +12755,7 @@ async function mds_init(ds, genome, _servconfig) {
 			if (a.values) {
 				for (const v in a.values) {
 					const b = a.values[v]
-					if (!b.name) return '.name missing for value ' + v + ' of key ' + key + ' from mutationAttribute.attributes'
+					if (!b.name) throw '.name missing for value ' + v + ' of key ' + key + ' from mutationAttribute.attributes'
 				}
 			} else {
 				// allow values{} missing
@@ -12859,18 +12767,18 @@ async function mds_init(ds, genome, _servconfig) {
 		/*
 		vcf info field, allele-level
 		*/
-		if (!ds.alleleAttribute.attributes) return 'attributes{} missing from alleleAttribute'
+		if (!ds.alleleAttribute.attributes) throw 'attributes{} missing from alleleAttribute'
 		for (const key in ds.alleleAttribute.attributes) {
 			const a = ds.alleleAttribute.attributes[key]
-			if (!a.label) return '.label missing for key ' + key + ' from alleleAttribute.attributes'
+			if (!a.label) throw '.label missing for key ' + key + ' from alleleAttribute.attributes'
 			if (a.isnumeric) {
 				continue
 			}
 			// not numeric value
-			if (!a.values) return '.values{} missing for non-numeric key ' + key + ' from alleleAttribute.attributes'
+			if (!a.values) throw '.values{} missing for non-numeric key ' + key + ' from alleleAttribute.attributes'
 			for (const v in a.values) {
 				const b = a.values[v]
-				if (!b.name) return '.name missing for value ' + v + ' of key ' + key + ' from alleleAttribute.attributes'
+				if (!b.name) throw '.name missing for value ' + v + ' of key ' + key + ' from alleleAttribute.attributes'
 			}
 		}
 	}
@@ -12879,10 +12787,10 @@ async function mds_init(ds, genome, _servconfig) {
 		/*
 		vcf info field, locus-level
 		*/
-		if (!ds.locusAttribute.attributes) return 'attributes{} missing from locusAttribute'
+		if (!ds.locusAttribute.attributes) throw 'attributes{} missing from locusAttribute'
 		for (const key in ds.locusAttribute.attributes) {
 			const a = ds.locusAttribute.attributes[key]
-			if (!a.label) return '.label missing for key ' + key + ' from locusAttribute.attributes'
+			if (!a.label) throw '.label missing for key ' + key + ' from locusAttribute.attributes'
 			if (a.isnumeric) {
 				continue
 			}
@@ -12891,10 +12799,10 @@ async function mds_init(ds, genome, _servconfig) {
 				continue
 			}
 			// not numeric value
-			if (!a.values) return '.values{} missing for non-numeric key ' + key + ' from locusAttribute.attributes'
+			if (!a.values) throw '.values{} missing for non-numeric key ' + key + ' from locusAttribute.attributes'
 			for (const v in a.values) {
 				const b = a.values[v]
-				if (!b.name) return '.name missing for value ' + v + ' of key ' + key + ' from locusAttribute.attributes'
+				if (!b.name) throw '.name missing for value ' + v + ' of key ' + key + ' from locusAttribute.attributes'
 			}
 		}
 	}
@@ -12918,73 +12826,69 @@ async function mds_init(ds, genome, _servconfig) {
 			}
 
 			if (query.istrack) {
-				if (!query.type) return '.type missing for track query ' + querykey
+				if (!query.type) throw '.type missing for track query ' + querykey
 
 				if (query.viewrangeupperlimit) {
 					if (!Number.isInteger(query.viewrangeupperlimit))
-						return '.viewrangeupperlimit should be integer for track query ' + querykey
+						throw '.viewrangeupperlimit should be integer for track query ' + querykey
 				}
 
 				if (query.type == common.tkt.mdsjunction) {
 					const err = mds_init_mdsjunction(query, ds, genome)
-					if (err) return querykey + ' (mdsjunction) error: ' + err
+					if (err) throw querykey + ' (mdsjunction) error: ' + err
 				} else if (query.type == common.tkt.mdscnv) {
 					// obsolete
 
 					const err = mds_init_mdscnv(query, ds, genome)
-					if (err) return querykey + ' (mdscnv) error: ' + err
+					if (err) throw querykey + ' (mdscnv) error: ' + err
 				} else if (query.type == common.tkt.mdssvcnv) {
 					// replaces mdscnv
 
 					const err = mds_init_mdssvcnv(query, ds, genome)
-					if (err) return querykey + ' (svcnv) error: ' + err
+					if (err) throw querykey + ' (svcnv) error: ' + err
 				} else if (query.type == common.tkt.mdsvcf) {
 					// snvindel
 
 					const err = mds_init_mdsvcf(query, ds, genome)
-					if (err) return querykey + ' (vcf) error: ' + err
+					if (err) throw querykey + ' (vcf) error: ' + err
 				} else {
-					return 'unknown track type for a query: ' + query.type + ' ' + querykey
+					throw 'unknown track type for a query: ' + query.type + ' ' + querykey
 				}
-				/* maf-db
-				 * fpkm expression
-				 */
 
 				mds_mayPrecompute_grouptotal(query, ds)
 			} else if (query.isgenenumeric) {
 				const err = mds_init_genenumeric(query, ds, genome)
-				if (err) return querykey + ' (genenumeric) error: ' + err
+				if (err) throw querykey + ' (genenumeric) error: ' + err
 			} else {
-				return 'unknown type of query from ' + querykey
+				throw 'unknown type of query from ' + querykey
 			}
 		}
 	}
 
 	if (ds.track) {
-		const e = await mds2_init_wrap(ds, genome)
-		if (e) return e
+		await mds2_init.init(ds, genome)
 	}
 
 	if (ds.annotationsampleset2matrix) {
-		if (!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
-		if (!ds.cohort.annotation) return 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
-		if (!ds.queries) return 'ds.queries misssing when annotationsampleset2matrix is in use'
-		if (!ds.annotationsampleset2matrix.key) return '.key STR missing in annotationsampleset2matrix'
-		if (!ds.annotationsampleset2matrix.groups) return '.groups{} missing in annotationsampleset2matrix'
+		if (!ds.cohort) throw 'ds.cohort misssing when annotationsampleset2matrix is in use'
+		if (!ds.cohort.annotation) throw 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
+		if (!ds.queries) throw 'ds.queries misssing when annotationsampleset2matrix is in use'
+		if (!ds.annotationsampleset2matrix.key) throw '.key STR missing in annotationsampleset2matrix'
+		if (!ds.annotationsampleset2matrix.groups) throw '.groups{} missing in annotationsampleset2matrix'
 		if (typeof ds.annotationsampleset2matrix.groups != 'object')
-			return 'ds.annotationsampleset2matrix.groups{} not an object'
+			throw 'ds.annotationsampleset2matrix.groups{} not an object'
 		for (const groupvalue in ds.annotationsampleset2matrix.groups) {
 			const thisgroup = ds.annotationsampleset2matrix.groups[groupvalue]
 			// a group will have 1 or more smaller groups, each is samples from a study
 			if (!thisgroup.groups || !Array.isArray(thisgroup.groups) || thisgroup.groups.length == 0)
-				return '.groups[] must be nonempty array in ' + groupvalue
+				throw '.groups[] must be nonempty array in ' + groupvalue
 			for (const group of thisgroup.groups) {
-				if (!group.name) return '.name missing from one of .groups[] in ' + groupvalue
+				if (!group.name) throw '.name missing from one of .groups[] in ' + groupvalue
 				const smat = group.matrixconfig
-				if (!smat) return '.matrixconfig missing from one of .groups[] of ' + groupvalue
-				if (!smat.features) return '.features[] missing from group ' + groupvalue
-				if (!Array.isArray(smat.features)) return '.features[] should be array from group ' + groupvalue
-				if (smat.features.length == 0) return '.features[] zero length from group ' + groupvalue
+				if (!smat) throw '.matrixconfig missing from one of .groups[] of ' + groupvalue
+				if (!smat.features) throw '.features[] missing from group ' + groupvalue
+				if (!Array.isArray(smat.features)) throw '.features[] should be array from group ' + groupvalue
+				if (smat.features.length == 0) throw '.features[] zero length from group ' + groupvalue
 				for (const feature of smat.features) {
 					if (ds.annotationsampleset2matrix.commonfeatureattributes) {
 						// apply common attributes to each feature
@@ -12997,36 +12901,34 @@ async function mds_init(ds, genome, _servconfig) {
 					}
 					if (feature.ismutation) {
 						if (!feature.position)
-							return 'position missing from feature ' + JSON.stringify(feature) + ' from group ' + groupvalue
-						if (!feature.querykeylst) return '.querykeylst[] missing from ismutation feature from group ' + groupvalue
+							throw 'position missing from feature ' + JSON.stringify(feature) + ' from group ' + groupvalue
+						if (!feature.querykeylst) throw '.querykeylst[] missing from ismutation feature from group ' + groupvalue
 						if (!Array.isArray(feature.querykeylst))
-							return '.querykeylst[] not an array from ismutation feature from group ' + groupvalue
+							throw '.querykeylst[] not an array from ismutation feature from group ' + groupvalue
 						if (feature.querykeylst.length == 0)
-							return '.querykeylst[] zero length from ismutation feature from group ' + groupvalue
+							throw '.querykeylst[] zero length from ismutation feature from group ' + groupvalue
 						for (const querykey of feature.querykeylst) {
 							if (!ds.queries[querykey])
-								return 'unknown query key "' + querykey + '" from ismutation feature of group ' + groupvalue
+								throw 'unknown query key "' + querykey + '" from ismutation feature of group ' + groupvalue
 						}
 						continue
 					}
 					return 'unknown feature type from group ' + groupvalue
 				}
 				if (!smat.limitsamplebyeitherannotation)
-					return '.limitsamplebyeitherannotation[] missing from group ' + groupvalue
+					throw '.limitsamplebyeitherannotation[] missing from group ' + groupvalue
 				if (!Array.isArray(smat.limitsamplebyeitherannotation))
-					return '.limitsamplebyeitherannotation[] should be array from group ' + groupvalue
+					throw '.limitsamplebyeitherannotation[] should be array from group ' + groupvalue
 				if (smat.limitsamplebyeitherannotation.length == 0)
-					return '.limitsamplebyeitherannotation[] zero length from group ' + groupvalue
+					throw '.limitsamplebyeitherannotation[] zero length from group ' + groupvalue
 				for (const lim of smat.limitsamplebyeitherannotation) {
-					if (!lim.key) return 'key missing from one of limitsamplebyeitherannotation from group ' + groupvalue
-					if (!lim.value) return 'value missing from one of limitsamplebyeitherannotation from group ' + groupvalue
+					if (!lim.key) throw 'key missing from one of limitsamplebyeitherannotation from group ' + groupvalue
+					if (!lim.value) throw 'value missing from one of limitsamplebyeitherannotation from group ' + groupvalue
 				}
 			}
 		}
 		delete ds.annotationsampleset2matrix.commonfeatureattributes
 	}
-
-	return null
 }
 
 function mds_mayPrecompute_grouptotal(query, ds) {
@@ -13034,26 +12936,6 @@ function mds_mayPrecompute_grouptotal(query, ds) {
 	query.groupsamplebyattr.key2group = new Map()
 	for (const samplename in ds.cohort.annotation) {
 		mdssvcnv_grouper(samplename, [], query.groupsamplebyattr.key2group, [], ds, query)
-	}
-}
-
-async function mds2_init_wrap(ds, genome) {
-	/*
-because mds_init is sync, so has to improvise to catch exception from mds2_init
-*/
-	const e = await mds2_init.init(ds, genome)
-	if (e) return 'ERROR init mds2 track: ' + e
-}
-async function mds3_init_wrap(ds, genome, _servconfig) {
-	/*
-because mds_init is sync, so has to improvise to catch exception from mds2_init
-*/
-	try {
-		const e = await mds3_init.init(ds, genome, _servconfig)
-	} catch (e) {
-		console.log('ERROR init mds3 track: ' + e)
-		if (e.stack) console.log(e.stack)
-		process.exit(1)
 	}
 }
 

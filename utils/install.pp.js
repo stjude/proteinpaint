@@ -144,6 +144,7 @@ if (UC.USER) {
 
 // replace url in js bundle
 if (UC.URL) {
+	SC.URL = UC.URL
 	if (fs.existsSync('public/bin/template.js')) {
 		exec("sed 's%__PP_URL__%" + path.join(UC.URL, 'bin/') + "%' public/bin/template.js > public/bin/proteinpaint.js")
 	} else {

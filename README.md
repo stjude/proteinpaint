@@ -5,7 +5,7 @@ a genomics visualization tool for exploring a cohort's genotype and phenotype da
 
 ## Usage
 
-Follow the [example project setup](https://github.com/stjude/pp-trial).
+Follow the [example project setup](https://github.com/stjude/pp-dist).
 
 
 ## Develop

@@ -280,14 +280,7 @@ export function hicparsefile(hic, debugmode) {
 		})
 
 		.then(() => {
-			return fetch(
-				new Request(hic.hostURL + '/hicstat', {
-					method: 'POST',
-					body: JSON.stringify({ file: hic.file, url: hic.url, jwt: hic.jwt })
-				})
-			).then(data => {
-				return data.json()
-			})
+			return client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
 		})
 
 		.then(data => {
