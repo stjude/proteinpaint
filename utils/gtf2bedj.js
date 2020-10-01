@@ -127,21 +127,8 @@ rl.on('close', () => {
 		}
 
 		if (isoform.coding.length > 0) {
-			if (!isoform.codingstart) {
-				let a = isoform.coding[0][0]
-				for (const b of isoform.coding) a = Math.min(a, b[0])
-				isoform.codingstart = a
-			}
-			if (!isoform.codingstop) {
-				let a = isoform.coding[0][1]
-				for (const b of isoform.coding) a = Math.max(a, b[1])
-				isoform.codingstop = a
-			}
-
-			const a = isoform.codingstart
-			const b = isoform.codingstop
-			isoform.codingstart = Math.min(a, b)
-			isoform.codingstop = Math.max(a, b)
+			isoform.codingstart = Math.min(...isoform.coding.map(i => i[0]))
+			isoform.codingstop = Math.max(...isoform.coding.map(i => i[1]))
 
 			if (isoform.utr.length) {
 				const startcodon = forward ? isoform.codingstart : isoform.codingstop
