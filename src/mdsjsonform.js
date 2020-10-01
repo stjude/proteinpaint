@@ -27,10 +27,14 @@ export async function init_mdsjsonform(par) {
 	doms.svcnvfileurl = make_svcnv(wrapper_div)
 	doms.vcffileurl = make_vcf(wrapper_div)
 	doms.expressionfile = make_expression_filepath(wrapper_div)
+	doms.segmeanValueCutoff = make_segmean_cutoff(wrapper_div)
+	doms.lohLengthUpperLimit = make_loh_upperlimit(wrapper_div)
 	make_sampleset(wrapper_div, doms)
 	make_assaytracks(wrapper_div, doms)
+	make_getallsamples(wrapper_div, doms)
 	window.doms = doms
 	make_buttons(form_div, doms)
+	console.log(doms)
 }
 
 function make_header(holder) {
@@ -240,7 +244,10 @@ function reset_link(d) {
 
 function validate_input(doms) {
 	const obj = {
-		type: tkt.mdssvcnv
+		type: tkt.mdssvcnv,
+		isdense: doms.isdense,
+		isfull: doms.isfull,
+		getallsamples: doms.getallsamples
 	}
 	{
 		const n = doms.genome.node()
@@ -266,6 +273,17 @@ function validate_input(doms) {
 			} else {
 				obj.svcnvfile = cnv
 			}
+			//TODO Figure out why this doesn't work
+			// const cutoff = doms.cnvValueCutoff.property('value')
+			// if (cutoff){
+			// 	obj.cnvValueCutoff = cutoff
+			// }
+			// const limit = doms.cnvLengthUpperLimit.property('value')
+			// if (limit){
+			// 	obj.cnvLengthUpperLimit = limit
+			// }
+			obj.multihidelabel_fusion = doms.multihidelabel_fusion
+			obj.multihidelabel_sv = doms.multihidelabel_sv
 		}
 		if (vcf) {
 			if (isurl(vcf)) {
@@ -273,6 +291,7 @@ function validate_input(doms) {
 			} else {
 				obj.vcffile = vcf
 			}
+			obj.multihidelabel_vcf = doms.multihidelabel_vcf
 		}
 	}
 	{
@@ -285,7 +304,19 @@ function validate_input(doms) {
 			}
 		}
 	}
-
+	//TODO Figure out why this doesn't work
+	// {
+	// 	const tmp = doms.segmeanValueCutoff.property('value')
+	// 	if (tmp){
+	// 		obj.segmeanValueCutoff = doms.segmeanValueCutoff
+	// 	}
+	// }
+	// {
+	// 	const tmp = doms.lohLengthUpperLimit.property('value')
+	// 	if (tmp){
+	// 		obj.lohLengthUpperLimit = doms.lohLengthUpperLimit
+	// 	}
+	// }
 	if (doms.sampleset_inuse) {
 		const tmp = doms.sampleset_textarea.property('value').trim()
 		if (!tmp) throw 'Missing input for sample subset'
@@ -411,6 +442,13 @@ function make_svcnv(div) {
 		.append('div')
 		.append('input')
 		.attr('size', 55)
+		.on('change', () => {
+			//TODO how to make this appear underneath svcnv_path_div?
+			// doms.cnvValueCutoff = make_cnv_cutoff(div,doms) ]
+			// doms.cnvLengthUpperLimit = make_cnv_upperlimit(div,doms)
+			make_multihidelabel_sv(div, doms)
+			make_multihidelabel_fusion(div, doms)
+		})
 }
 //.vcffile
 function make_vcf(div) {
@@ -428,6 +466,9 @@ function make_vcf(div) {
 		.append('div')
 		.append('input')
 		.attr('size', 55)
+		.on('change', () => {
+			make_multihidelabel_vcf(div, doms) //TODO how to make this appear underneath vcf_file_div?
+		})
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -446,6 +487,158 @@ function make_expression_filepath(div) {
 		.append('input')
 		.attr('size', 55)
 }
+// .getallsamples
+function make_getallsamples(div, doms) {
+	doms.getallsamples = true
+
+	const getallsamples_prompt = div.append('div')
+
+	getallsamples_prompt.append('span').text('Get all samples')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
+		callback: value => {
+			if (value == 1) {
+				doms.getallsamples = true
+			} else {
+				doms.getallsamples = false
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
+//TODO Figure out why this returns an array instead of a string in the object. Since it's a selection?
+// // .cnvValueCutoff
+// function make_cnv_cutoff(div) {
+// 	const cnv_cutoff_prompt = div.append('div')
+
+// 	cnv_cutoff_prompt.append('span').text('CNV value cutoff')
+
+// 	const cnv_cutoff_div = div.append('div')
+
+// 	return cnv_cutoff_div
+// 		.append('div')
+// 		.append('input')
+// 		.attr('type', 'number')
+// 		.attr('step', '0.1')
+// }
+// // .cnvLengthUpperLimit
+// function make_cnv_upperlimit(div) {
+// 	const cnv_upperlimit_prompt = div.append('div')
+
+// 	cnv_upperlimit_prompt.append('span').text('CNV length upper limit')
+
+// 	const cnv_upperlimit_div = div.append('div')
+
+// 	return cnv_upperlimit_div
+// 		.append('div')
+// 		.append('input')
+// 		.attr('type', 'number')
+// }
+// // segmeanValueCutoff
+// function make_segmean_cutoff(div) {
+// 	const segmean_cutoff_prompt = div.append('div')
+
+// 	segmean_cutoff_prompt.append('span').text('Segment mean value cutoff')
+
+// 	const segmean_cutoff_div = div.append('div')
+
+// 	return segmean_cutoff_div
+// 		.append('div')
+// 		.append('input')
+// 		.attr('type', 'number')
+// 		.attr('step', '0.1')
+// }
+// // .lohLengthUpperLimit
+// function make_loh_upperlimit(div) {
+// 	const loh_upperlimit_prompt = div.append('div')
+
+// 	loh_upperlimit_prompt.append('span').text('LOH length upper limit')
+
+// 	const loh_upperlimit_div = div.append('div')
+
+// 	return loh_upperlimit_div
+// 		.append('div')
+// 		.append('input')
+// 		.attr('type', 'number')
+// }
+// .multihidelabel_vcf
+function make_multihidelabel_vcf(div, doms) {
+	doms.multihidelabel_vcf = true
+
+	const multihidelabel_vcf_prompt = div.append('div')
+
+	multihidelabel_vcf_prompt.append('span').text('Hide VCF Labels')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
+		callback: value => {
+			if (value == 1) {
+				doms.multihidelabel_vcf = true
+			} else {
+				doms.multihidelabel_vcf = false
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
+// .multihidelabel_fusion
+function make_multihidelabel_fusion(div, doms) {
+	doms.multihidelabel_fusion = true
+
+	const multihidelabel_fusion_prompt = div.append('div')
+
+	multihidelabel_fusion_prompt.append('span').text('Hide Fusion Labels')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
+		callback: value => {
+			if (value == 1) {
+				doms.multihidelabel_fusion = true
+			} else {
+				doms.multihidelabel_fusion = false
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
+// .multihidelabel_sv
+function make_multihidelabel_sv(div, doms) {
+	doms.multihidelabel_sv = true
+
+	const multihidelabel_sv_prompt = div.append('div')
+
+	multihidelabel_sv_prompt.append('span').text('Hide SV Labels')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
+		callback: value => {
+			if (value == 1) {
+				doms.multihidelabel_sv = true
+			} else {
+				doms.multihidelabel_sv = false
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
+
 // .sampleset
 function make_sampleset(div, doms) {
 	const sampleset_prompt = div.append('div')
