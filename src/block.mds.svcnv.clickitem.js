@@ -3191,6 +3191,16 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 				.style('font-size', '.7em')
 				.style('margin', '10px')
 				.text('Drag and move a sequencing type label up/down to change order.')
+			if (samplegroup.attributes) {
+				// quick fix to show full labels
+				const d = tk.tip2.d
+					.append('div')
+					.style('margin', '20px 10px 10px 10px')
+					.style('opacity', 0.7)
+				for (const a of samplegroup.attributes) {
+					d.append('div').text(a.kvalue + (a.fullvalue ? ': ' + a.fullvalue : ''))
+				}
+			}
 		})
 }
 
