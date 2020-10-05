@@ -15,17 +15,10 @@ const samplenamekey = 'sample_name'
 module.exports = {
 	genome: 'hg19',
 	isMds: true,
-
-	about: [
-		{ k: 'Cohort', v: 'PCGP and TARGET' },
-		{ k: 'CNV', v: 'Somatic copy number changes' },
-		{ k: 'LOH', v: 'Somatic copy-neutral LOH' },
-		{ k: 'SV', v: 'Somatic DNA structural variation' },
-		{ k: 'Fusion', v: 'Tumor RNA-seq fusion' },
-		{ k: 'ITD', v: 'ITD from either RNA or DNA' },
-		{ k: 'SNV/indel', v: 'Somatic mutations of tumor, and germline pathogenic mutations' },
-		{ k: 'RNA splice junction', v: 'Tumor RNA splice junctions' }
-	],
+	version: {
+		label: 'Release v1',
+		link: 'https://proteinpaint.stjude.org/genomepaint/release-v1'
+	},
 
 	sampleAssayTrack: {
 		file: 'hg19/Pediatric/tracktable/__table'
