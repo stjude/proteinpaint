@@ -1,6 +1,7 @@
-import { select as d3select } from 'd3'
+import { select, transition } from 'd3'
 import { dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
+// import { check } from 'prettier'
 
 /*
 doms{}
@@ -28,9 +29,12 @@ export async function init_mdsjsonform(par) {
 	doms.position = make_position(wrapper_div)
 	doms.name = make_name(wrapper_div)
 	set_dense(wrapper_div, doms)
-	doms.svcnvfileurl = make_svcnv(wrapper_div)
-	doms.vcffileurl = make_vcf(wrapper_div)
-	doms.expressionfile = make_expression_filepath(wrapper_div)
+	make_svcnv_radios(wrapper_div, doms)
+	make_vcf_radios(wrapper_div, doms)
+	make_expression_radios(wrapper_div, doms)
+	// doms.svcnvfileurl = make_svcnv(wrapper_div)
+	// doms.vcffileurl = make_vcf(wrapper_div)
+	// doms.expressionfile = make_expression_filepath(wrapper_div)
 	doms.segmeanValueCutoff = make_segmean_cutoff(wrapper_div)
 	doms.lohLengthUpperLimit = make_loh_upperlimit(wrapper_div)
 	make_sampleset(wrapper_div, doms)
@@ -51,9 +55,9 @@ function make_header(holder) {
 	const wrapper_div = form_div
 		.append('div')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
+		.style('grid-template-columns', '1fr 3fr')
 		.style('align-items', 'start')
-		.style('grid-template-rows', '1fr')
+		.style('grid-template-rows', '1fr 1fr')
 		.style('row-gap', '15px')
 		.style('margins', '5px')
 		.style('position', 'relative')
@@ -240,6 +244,7 @@ TCGA-27-1831-01A	proteinpaint_demo/hg19/tcga-gbm/junction/SJHGG010641_D1.bam.jun
 		.style('color', 'red')
 		.text('Will overwrite existing contents.')
 }
+
 function reset_link(d) {
 	d.html('')
 		.append('span')
@@ -278,15 +283,14 @@ function validate_input(doms) {
 			} else {
 				obj.svcnvfile = cnv
 			}
-			//TODO Figure out why this doesn't work
-			// const cutoff = doms.cnvValueCutoff.property('value')
-			// if (cutoff){
-			// 	obj.cnvValueCutoff = cutoff
-			// }
-			// const limit = doms.cnvLengthUpperLimit.property('value')
-			// if (limit){
-			// 	obj.cnvLengthUpperLimit = limit
-			// }
+			const cutoff = doms.cnvValueCutoff.property('value')
+			if (cutoff) {
+				obj.cnvValueCutoff = Number(cutoff)
+			}
+			const limit = doms.cnvLengthUpperLimit.property('value')
+			if (limit) {
+				obj.cnvLengthUpperLimit = Number(limit)
+			}
 			obj.multihidelabel_fusion = doms.multihidelabel_fusion
 			obj.multihidelabel_sv = doms.multihidelabel_sv
 		}
@@ -309,19 +313,18 @@ function validate_input(doms) {
 			}
 		}
 	}
-	//TODO Figure out why this doesn't work
-	// {
-	// 	const tmp = doms.segmeanValueCutoff.property('value')
-	// 	if (tmp){
-	// 		obj.segmeanValueCutoff = doms.segmeanValueCutoff
-	// 	}
-	// }
-	// {
-	// 	const tmp = doms.lohLengthUpperLimit.property('value')
-	// 	if (tmp){
-	// 		obj.lohLengthUpperLimit = doms.lohLengthUpperLimit
-	// 	}
-	// }
+	{
+		const tmp = doms.segmeanValueCutoff.property('value')
+		if (tmp) {
+			obj.segmeanValueCutoff = Number(tmp)
+		}
+	}
+	{
+		const tmp = doms.lohLengthUpperLimit.property('value')
+		if (tmp) {
+			obj.lohLengthUpperLimit = Number(tmp)
+		}
+	}
 	if (doms.sampleset_inuse) {
 		const tmp = doms.sampleset_textarea.property('value').trim()
 		if (!tmp) throw 'Missing input for sample subset'
@@ -432,6 +435,35 @@ function set_dense(div, doms) {
 	})
 	doms.isdense_radios = inputs
 }
+// Displays text field and additional options
+function make_svcnv_radios(div, doms) {
+	doms.svcnvfusion = true
+
+	const svcnvfusion_prompt = div.append('div')
+
+	svcnvfusion_prompt
+		.append('span')
+		.html('CNV+SV+Fusion File?<br><span style="font-size:.7em">Either CNV or VCF file is required</span>')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2 }],
+		callback: value => {
+			if (value == 1 && !doms.svcnvfileurl) {
+				doms.svcnvfusion = true
+				row.append('div')
+				doms.svcnvfileurl = make_svcnv(row) //TODO spacing
+				make_control_panel(row, doms)
+			} else {
+				doms.svcnvfusion = false //TODO hide on 'No'
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
 	const svcnv_path_prompt = div.append('div')
@@ -448,14 +480,35 @@ function make_svcnv(div) {
 		.append('div')
 		.append('input')
 		.attr('size', 55)
-		.on('change', () => {
-			//TODO how to make this appear underneath svcnv_path_div?
-			// doms.cnvValueCutoff = make_cnv_cutoff(div,doms) ]
-			// doms.cnvLengthUpperLimit = make_cnv_upperlimit(div,doms)
-			make_multihidelabel_sv(div, doms)
-			make_multihidelabel_fusion(div, doms)
-		})
 }
+
+function make_vcf_radios(div, doms) {
+	doms.vcf = true
+
+	const vcf_prompt = div.append('div')
+
+	vcf_prompt.append('span').text('VCF File?')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2 }],
+		callback: value => {
+			if (value == 1 && !doms.vcffileurl) {
+				doms.vcf = true
+				row.append('div')
+				doms.vcffileurl = make_vcf(row) //TODO spacing
+				make_multihidelabel_vcf(row, doms) //TODO also need to add in hidden classes array. Can't do a grid within a grid...
+			} else {
+				doms.vcf = false //TODO hide on 'No'
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
+}
+
 //.vcffile
 function make_vcf(div) {
 	const vcf_file_prompt = div.append('div')
@@ -463,7 +516,7 @@ function make_vcf(div) {
 	vcf_file_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file path or URL <span style="font-size:.7em">Either CNV or VCF file is required.</span>'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file path or URL'
 		)
 
 	const vcf_file_div = div.append('div')
@@ -472,9 +525,32 @@ function make_vcf(div) {
 		.append('div')
 		.append('input')
 		.attr('size', 55)
-		.on('change', () => {
-			make_multihidelabel_vcf(div, doms) //TODO how to make this appear underneath vcf_file_div?
-		})
+}
+//Creates text field for entry on 'yes'
+function make_expression_radios(div, doms) {
+	doms.expression = true
+
+	const expression_prompt = div.append('div')
+
+	expression_prompt.append('span').text('Gene Expression File?')
+
+	const row = div.append('div')
+	make_radios({
+		holder: row,
+		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2 }],
+		callback: value => {
+			if (value == 1 && !doms.expressionfile) {
+				doms.expression_prompt = true
+				row.append('div')
+				doms.expressionfile = make_expression_filepath(row) //TODO spacing
+			} else {
+				doms.expression = false //TODO hide on 'No'
+			}
+		},
+		styles: {
+			display: 'inline'
+		}
+	})
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -517,132 +593,205 @@ function make_getallsamples(div, doms) {
 		}
 	})
 }
-//TODO Figure out why this returns an array instead of a string in the object. Since it's a selection?
-// // .cnvValueCutoff
-// function make_cnv_cutoff(div) {
-// 	const cnv_cutoff_prompt = div.append('div')
+// .cnvValueCutoff
+function make_cnv_cutoff(div) {
+	const cnv_cutoff_div = div.append('div')
 
-// 	cnv_cutoff_prompt.append('span').text('CNV value cutoff')
+	return cnv_cutoff_div
+		.append('div')
+		.append('input')
+		.attr('type', 'number')
+		.attr('step', '0.1')
+		.property('placeholder', 'CNV value cutoff')
+}
+// .cnvLengthUpperLimit
+function make_cnv_upperlimit(div) {
+	const cnv_upperlimit_div = div.append('div')
 
-// 	const cnv_cutoff_div = div.append('div')
+	return cnv_upperlimit_div
+		.append('div')
+		.append('input')
+		.attr('type', 'number')
+		.property('placeholder', 'CNV upper limit')
+}
+// segmeanValueCutoff
+function make_segmean_cutoff(div) {
+	const segmean_cutoff_prompt = div.append('div')
 
-// 	return cnv_cutoff_div
-// 		.append('div')
-// 		.append('input')
-// 		.attr('type', 'number')
-// 		.attr('step', '0.1')
-// }
-// // .cnvLengthUpperLimit
-// function make_cnv_upperlimit(div) {
-// 	const cnv_upperlimit_prompt = div.append('div')
+	segmean_cutoff_prompt.append('span').text('Segment mean value cutoff')
 
-// 	cnv_upperlimit_prompt.append('span').text('CNV length upper limit')
+	const segmean_cutoff_div = div.append('div')
 
-// 	const cnv_upperlimit_div = div.append('div')
+	return segmean_cutoff_div
+		.append('div')
+		.append('input')
+		.attr('type', 'number')
+		.attr('step', '0.1')
+}
+// .lohLengthUpperLimit
+function make_loh_upperlimit(div) {
+	const loh_upperlimit_prompt = div.append('div')
 
-// 	return cnv_upperlimit_div
-// 		.append('div')
-// 		.append('input')
-// 		.attr('type', 'number')
-// }
-// // segmeanValueCutoff
-// function make_segmean_cutoff(div) {
-// 	const segmean_cutoff_prompt = div.append('div')
+	loh_upperlimit_prompt.append('span').text('LOH length upper limit')
 
-// 	segmean_cutoff_prompt.append('span').text('Segment mean value cutoff')
+	const loh_upperlimit_div = div.append('div')
 
-// 	const segmean_cutoff_div = div.append('div')
-
-// 	return segmean_cutoff_div
-// 		.append('div')
-// 		.append('input')
-// 		.attr('type', 'number')
-// 		.attr('step', '0.1')
-// }
-// // .lohLengthUpperLimit
-// function make_loh_upperlimit(div) {
-// 	const loh_upperlimit_prompt = div.append('div')
-
-// 	loh_upperlimit_prompt.append('span').text('LOH length upper limit')
-
-// 	const loh_upperlimit_div = div.append('div')
-
-// 	return loh_upperlimit_div
-// 		.append('div')
-// 		.append('input')
-// 		.attr('type', 'number')
-// }
+	return loh_upperlimit_div
+		.append('div')
+		.append('input')
+		.attr('type', 'number')
+}
 // .multihidelabel_vcf
 function make_multihidelabel_vcf(div, doms) {
-	doms.multihidelabel_vcf = true
+	const vcf_btn = div.append('div')
+	const tooltip = div.append('div')
 
-	const multihidelabel_vcf_prompt = div.append('div')
+	tooltip
+		.style('font-size', '15px')
+		.text('Hide Multiple VCF Labels') //TODO is this multiple or all?
+		.style('display', 'none')
+		.style('text-align', 'center')
+		.style('position', 'absolute')
+		.style('background-color', '#ebecf0')
+		.style('border-color', 'black')
+		.style('border-radius', '10%')
+		.style('width', '200px')
+		.style('height', '20px')
+		.style('color', '#030d38')
 
-	multihidelabel_vcf_prompt.append('span').text('Hide VCF Labels')
+	vcf_btn //TODO change background onclick so the user can tell
+		.append('button')
+		.style('width', '120px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('VCF Labels')
+		.on('mouseover', () => {
+			tooltip
+				.transition()
+				.duration(200)
+				.style('opacity', 0.9)
 
-	const row = div.append('div')
-	make_radios({
-		holder: row,
-		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
-		callback: value => {
-			if (value == 1) {
-				doms.multihidelabel_vcf = true
+			tooltip.style('display', 'inline-block')
+		})
+		.on('mouseleave', () => {
+			tooltip.style('display', 'none')
+		})
+		.on('click', () => {
+			if (doms.multihidelabel_vcf == '') {
+				return (doms.multihidelabel_vcf = true)
 			} else {
-				doms.multihidelabel_vcf = false
+				return (doms.multihidelabel_vcf = false)
 			}
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
+		})
 }
 // .multihidelabel_fusion
 function make_multihidelabel_fusion(div, doms) {
-	doms.multihidelabel_fusion = true
+	const fusion_btn = div.append('div')
+	const tooltip = div.append('div')
 
-	const multihidelabel_fusion_prompt = div.append('div')
+	tooltip
+		.style('font-size', '15px')
+		.text('Hide Multiple Fusion Labels') //TODO is this multiple or all?
+		.style('display', 'none')
+		.style('text-align', 'center')
+		.style('position', 'absolute')
+		.style('background-color', '#ebecf0')
+		.style('border-color', 'black')
+		.style('border-radius', '10%')
+		.style('width', '200px')
+		.style('height', '20px')
+		.style('color', '#030d38')
 
-	multihidelabel_fusion_prompt.append('span').text('Hide Fusion Labels')
+	fusion_btn //TODO change background onclick so the user can tell
+		.append('button')
+		.style('width', '120px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('Fusion Labels')
+		.on('mouseover', () => {
+			tooltip
+				.transition()
+				.duration(200)
+				.style('opacity', 0.9)
 
-	const row = div.append('div')
-	make_radios({
-		holder: row,
-		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
-		callback: value => {
-			if (value == 1) {
-				doms.multihidelabel_fusion = true
+			tooltip.style('display', 'inline-block')
+		})
+		.on('mouseleave', () => {
+			tooltip.style('display', 'none')
+		})
+		.on('click', () => {
+			if (doms.multihidelabel_fusion == '') {
+				return (doms.multihidelabel_fusion = true)
 			} else {
-				doms.multihidelabel_fusion = false
+				return (doms.multihidelabel_fusion = false)
 			}
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
+		})
 }
 // .multihidelabel_sv
 function make_multihidelabel_sv(div, doms) {
-	doms.multihidelabel_sv = true
+	const sv_btn = div.append('div')
+	const tooltip = div.append('div')
 
-	const multihidelabel_sv_prompt = div.append('div')
+	tooltip
+		.style('font-size', '15px')
+		.text('Hide Multiple SV Labels') //TODO is this multiple or all?
+		.style('display', 'none')
+		.style('text-align', 'center')
+		.style('position', 'absolute')
+		.style('background-color', '#ebecf0')
+		.style('border-color', 'black')
+		.style('border-radius', '10%')
+		.style('width', '200px')
+		.style('height', '20px')
+		.style('color', '#030d38')
 
-	multihidelabel_sv_prompt.append('span').text('Hide SV Labels')
+	sv_btn //TODO change background onclick so the user can tell
+		.append('button')
+		.style('width', '120px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('SV Labels')
+		.on('mouseover', () => {
+			tooltip
+				.transition()
+				.duration(200)
+				.style('opacity', 0.9)
 
-	const row = div.append('div')
-	make_radios({
-		holder: row,
-		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
-		callback: value => {
-			if (value == 1) {
-				doms.multihidelabel_sv = true
+			tooltip.style('display', 'inline-block')
+		})
+		.on('mouseleave', () => {
+			tooltip.style('display', 'none')
+		})
+		.on('click', () => {
+			if (doms.multihidelabel_sv == '') {
+				return (doms.multihidelabel_sv = true)
 			} else {
-				doms.multihidelabel_sv = false
+				return (doms.multihidelabel_sv = false)
 			}
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
+		})
+}
+// Options under CNV+SV+Fusion text field
+function make_control_panel(div, doms) {
+	const row = div.append('div')
+
+	const control_panel = row
+		.append('div')
+		.append('div')
+		.style('margins', '5px')
+		.style('padding', '10px')
+		.style('display', 'inline-block') //TODO actually get fields to display inline instead one after another
+		.style('position', 'relative')
+	control_panel
+	doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
+	doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
+	make_multihidelabel_fusion(control_panel, doms)
+	make_multihidelabel_sv(control_panel, doms)
 }
 
 // .sampleset
