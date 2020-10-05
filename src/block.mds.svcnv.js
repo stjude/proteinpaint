@@ -554,6 +554,10 @@ function render_samplegroups(tk, block) {
 
 	trackclear(tk)
 
+	// track labels will include both bold label and version label
+	let labelheight = block.labelfontsize
+	if (tk.versionlabel) labelheight += block.labelfontsize
+
 	const [groups, svlst4dense] = prep_samplegroups(tk, block)
 
 	tk.samplegroups = groups
@@ -581,13 +585,13 @@ function render_samplegroups(tk, block) {
 	const vcfsvpad = vcfdensityheight && svdensityheight ? 3 : 0
 
 	// track top blank height
-	let hpad = Math.max(block.labelfontsize, vcfdensityheight + svdensityheight + vcfsvpad, genebaraxisheight)
+	let hpad = Math.max(labelheight, vcfdensityheight + svdensityheight + vcfsvpad, genebaraxisheight)
 
 	// may increase hpad: don't allow tk label to overlap with density plot label
 	if (vcfdensityheight) {
-		hpad += Math.max(0, block.labelfontsize * 1.5 - (hpad - svdensityheight - vcfsvpad - vcfdensityheight / 2))
+		hpad += Math.max(0, labelheight + 8 - (hpad - svdensityheight - vcfsvpad - vcfdensityheight / 2))
 	} else if (svdensityheight) {
-		hpad += Math.max(0, block.labelfontsize * 1.5 - (hpad - svdensityheight / 2))
+		hpad += Math.max(0, labelheight + 8 - (hpad - svdensityheight / 2))
 	}
 
 	// adjust config handle position by top blank height
@@ -2902,6 +2906,14 @@ for both multi- and single-sample
 	} else {
 		// multi-sample
 		tk.tklabel.text(tk.name)
+		if (tk.mds && tk.mds.version && tk.mds.version.label) {
+			tk.versionlabel = block.maketklefthandle(tk, block.labelfontsize).text(tk.mds.version.label)
+			if (tk.mds.version.link) {
+				tk.versionlabel.on('click', () => {
+					window.open(tk.mds.version.link)
+				})
+			}
+		}
 		tk.cnvleftg = tk.gleft.append('g')
 		tk.vcfdensityg = tk.glider.append('g')
 		tk.vcfdensitylabelg = tk.gleft.append('g')

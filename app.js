@@ -442,7 +442,7 @@ function mds_clientcopy(ds) {
 		isMds: true,
 		noHandleOnClient: ds.noHandleOnClient,
 		label: ds.label,
-		about: ds.about,
+		version: ds.version,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
