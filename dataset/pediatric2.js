@@ -17,7 +17,7 @@ module.exports = {
 	isMds: true,
 	version: {
 		label: 'Release v1',
-		link: 'https://proteinpaint.stjude.org/genomepaint/release-v1'
+		link: 'https://genomepaint.stjude.cloud/release/v1/'
 	},
 
 	sampleAssayTrack: {
