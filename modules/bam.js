@@ -1424,7 +1424,18 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
+
+	if (genome.blat) {
+		// test blat
+		const result = await do_blat(genome, lst[0].seq)
+	}
+
 	return { lst }
+}
+
+async function do_blat(genome, seq) {
+	const infile = await utils.write_tmpfile('>query\n' + seq + '\n')
+	fs.unlink(infile, () => {})
 }
 
 async function query_oneread(req, r) {

@@ -331,6 +331,7 @@ function clientcopy_genome(genomename) {
 		hasSNP: g.snp ? true : false,
 		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
+		blat: g.blat ? true : false,
 		geneset: g.geneset,
 		defaultcoord: g.defaultcoord,
 		isdefault: g.isdefault,
@@ -11936,6 +11937,12 @@ async function pp_init() {
 		if (g.snp) {
 			// replace snp db
 			g2.snp = g.snp
+		}
+		if (g.blat) {
+			if (!g.blat.host) throw '.blat.host missing for ' + g.name
+			if (!g.blat.port) throw '.blat.port missing for ' + g.name
+			if (!g.blat.file) throw '.blat.file missing for ' + g.name
+			g2.blat = g.blat // enable blat
 		}
 		if (g.nosnp) {
 			// no snp
