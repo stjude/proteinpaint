@@ -696,33 +696,40 @@ if is pair mode, is the template
 					.append('span')
 					.html('&nbsp;&check;')
 			})
-		const blatbutton = row
-			.append('button')
-			.style('margin-left', '10px')
-			.text('BLAT')
-			.on('click', async () => {
-				blatbutton.property('disabled', true)
-				blatdiv.selectAll('*').remove()
-				const wait = blatdiv.append('div').text('Loading...')
-				try {
-					const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + r.seq)
-					if (data.error) throw data.error
-					if (data.nohit) throw 'No hit'
-					if (!data.hits) throw '.hits[] missing'
-					wait.remove()
-					show_blatresult(data.hits, blatdiv, tk, block)
-				} catch (e) {
-					wait.text(data.error)
-				}
-				blatbutton.property('disabled', false)
-			})
-
-		const blatdiv = div.append('div')
+		mayshow_blatbutton(r, row, tk, block)
 
 		div.append('div').html(r.info)
 	}
 }
 
+function mayshow_blatbutton(read, div, tk, block) {
+	if (!block.genome.blat) {
+		// blat not enabled
+		return
+	}
+	const button = div
+		.append('button')
+		.style('margin-left', '10px')
+		.text('BLAT')
+		.on('click', async () => {
+			button.property('disabled', true)
+			blatdiv.selectAll('*').remove()
+			const wait = blatdiv.append('div').text('Loading...')
+			try {
+				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + r.seq)
+				if (data.error) throw data.error
+				if (data.nohit) throw 'No hit'
+				if (!data.hits) throw '.hits[] missing'
+				wait.remove()
+				show_blatresult(data.hits, blatdiv, tk, block)
+			} catch (e) {
+				wait.text(data.error)
+			}
+			button.property('disabled', false)
+		})
+
+	const blatdiv = div.append('div')
+}
 function show_blatresult(hits, div, tk, block) {
 	const table = div.append('table')
 	const tr = table
