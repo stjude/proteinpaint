@@ -1427,15 +1427,11 @@ async function route_getread(genome, req) {
 
 	if (genome.blat) {
 		// test blat
-		const result = await do_blat(genome, lst[0].seq)
+		const result = await utils.do_blat(genome, lst[0].seq)
+		console.log(result)
 	}
 
 	return { lst }
-}
-
-async function do_blat(genome, seq) {
-	const infile = await utils.write_tmpfile('>query\n' + seq + '\n')
-	fs.unlink(infile, () => {})
 }
 
 async function query_oneread(req, r) {

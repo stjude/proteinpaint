@@ -19,9 +19,11 @@ exports.serverconfig = serverconfig
 
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
+const gfClient = serverconfig.gfClient || 'gfClient'
 
 /* p4 ready
 ********************** EXPORTED
+file_is_readable
 init_one_vcf
 validate_tabixfile
 tabix_is_nochr
@@ -43,6 +45,7 @@ run_fishertest2x3
 exports.file_is_readable = async file => {
 	// need full path to the file
 	// see if file exists and readable
+	// to replace file_not_exist file_not_readable
 	try {
 		await fs.promises.stat(file)
 	} catch (e) {
@@ -299,4 +302,30 @@ exports.stripJsScript = function stripJsScript(text) {
 
     /gi                globally, case insensitive
 	*/
+}
+
+exports.do_blat = async function(genome, seq) {
+	const infile = await utils.write_tmpfile('>query\n' + seq + '\n')
+	const outfile = await run_blat(genome, infile)
+	const output = await read_file(outfile)
+	fs.unlink(outfile, () => {})
+	fs.unlink(infile, () => {})
+	return output
+}
+
+function run_blat(genome, infile) {
+	const outfile = path.join(serverconfig.cachedir, Math.random())
+	return new Promise((resolve, reject) => {
+		const ps = spawn(gfClient, [genome.blat.host, genome.blat.port, genome.blat.seqDir, infile, outfile])
+		// may not need console output
+		//const out=[]
+		const out2 = []
+		//ps.stdout.on('data',i=>out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('')
+			if (e) reject('blat server problem')
+			resolve(outfile)
+		})
+	})
 }
