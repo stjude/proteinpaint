@@ -83,7 +83,8 @@ function run_blat(genome, infile) {
 			outfile,
 			'-q=dna',
 			'-nohead',
-			'-minIdentity=30'
+			'-minScore=20',
+			'-minIdentity=0'
 		])
 		const out2 = []
 		ps.stderr.on('data', i => out2.push(i))

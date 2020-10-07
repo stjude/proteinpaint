@@ -716,14 +716,15 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + r.seq)
+				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + read.seq)
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
 				wait.remove()
 				show_blatresult(data.hits, blatdiv, tk, block)
 			} catch (e) {
-				wait.text(data.error)
+				wait.text(e.message || e)
+				if (e.stack) console.log(e.stack)
 			}
 			button.property('disabled', false)
 		})
