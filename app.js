@@ -52,6 +52,7 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
 	mds3_init = require('./modules/mds3.init'),
@@ -148,6 +149,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
 app.get('/dsvariantsummary', handle_dsvariantsummary)
@@ -11942,6 +11944,7 @@ async function pp_init() {
 			if (!g.blat.host) throw '.blat.host missing for ' + g.name
 			if (!g.blat.port) throw '.blat.port missing for ' + g.name
 			if (!g.blat.seqDir) throw '.blat.seqDir missing for ' + g.name
+			g.blat.seqDir = path.join(serverconfig.tpmasterdir, g.blat.seqDir)
 			g2.blat = g.blat // enable blat
 		}
 		if (g.nosnp) {

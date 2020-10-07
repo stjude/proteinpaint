@@ -686,9 +686,9 @@ if is pair mode, is the template
 		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
 			// no copy button
 		} else {*/
-		div
+		const row = div.append('div').style('margin-top', '10px')
+		row
 			.append('button')
-			.style('margin-top', '10px')
 			.text('Copy read sequence')
 			.on('click', function() {
 				navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
@@ -696,9 +696,59 @@ if is pair mode, is the template
 					.append('span')
 					.html('&nbsp;&check;')
 			})
-		//}
+		const blatbutton = row
+			.append('button')
+			.style('margin-left', '10px')
+			.text('BLAT')
+			.on('click', async () => {
+				blatbutton.property('disabled', true)
+				blatdiv.selectAll('*').remove()
+				const wait = blatdiv.append('div').text('Loading...')
+				try {
+					const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + r.seq)
+					if (data.error) throw data.error
+					if (data.nohit) throw 'No hit'
+					if (!data.hits) throw '.hits[] missing'
+					wait.remove()
+					show_blatresult(data.hits, blatdiv, tk, block)
+				} catch (e) {
+					wait.text(data.error)
+				}
+				blatbutton.property('disabled', false)
+			})
+
+		const blatdiv = div.append('div')
 
 		div.append('div').html(r.info)
+	}
+}
+
+function show_blatresult(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('Score')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QEnd')
+	tr.append('td').text('QSize')
+	tr.append('td').text('Identity')
+	tr.append('td').text('Chr')
+	tr.append('td').text('Strand')
+	tr.append('td').text('Start')
+	tr.append('td').text('Stop')
+	for (const h of hits) {
+		const tr = table.append('tr')
+		tr.append('td').text(h.match)
+		tr.append('td').text(h.qstart)
+		tr.append('td').text(h.qstop)
+		tr.append('td').text(h.qstop - h.qstart)
+		tr.append('td').text('?')
+		tr.append('td').text(h.chr)
+		tr.append('td').text(h.strand)
+		tr.append('td').text(h.start)
+		tr.append('td').text(h.stop)
 	}
 }
 

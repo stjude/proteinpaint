@@ -1425,12 +1425,6 @@ async function route_getread(genome, req) {
 		lst.push(await convertread(s, genome, req.query))
 	}
 
-	if (genome.blat) {
-		// test blat
-		const result = await utils.do_blat(genome, lst[0].seq)
-		console.log(result)
-	}
-
 	return { lst }
 }
 
