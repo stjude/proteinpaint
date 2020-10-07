@@ -11941,7 +11941,7 @@ async function pp_init() {
 		if (g.blat) {
 			if (!g.blat.host) throw '.blat.host missing for ' + g.name
 			if (!g.blat.port) throw '.blat.port missing for ' + g.name
-			if (!g.blat.file) throw '.blat.file missing for ' + g.name
+			if (!g.blat.seqDir) throw '.blat.seqDir missing for ' + g.name
 			g2.blat = g.blat // enable blat
 		}
 		if (g.nosnp) {
