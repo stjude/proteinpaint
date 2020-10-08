@@ -836,10 +836,11 @@ function make_settings(obj) {
 	}
 
 	function toggle_background() {
-		const isblack = inputblack.property('checked')
-		const iswhite = inputwhite.property('checked')
-		obj.scene.background = new THREE.Color(isblack ? 0x000000 : 0xffffff)
+		const isblack = obj.background_color == 'black'
+		obj.scene.background = new THREE.Color(isblack ? 0xffffff : 0x000000)
 		obj.use_background_color = isblack ? 0 : 1
+		obj.background_color = isblack ? 'white' : 'black'
+		pcd_pipeline(obj)
 	}
 	// point size change
 	const point_size_div = obj.settings.d
