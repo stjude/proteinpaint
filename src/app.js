@@ -190,8 +190,38 @@ function makeheader(holder,obj, jwt) {
 		.style('padding',padw)
 		.style('font-size','.8em')
 		.style('color',common.defaultcolor)
-	if(obj.lastdate) {
-		headinfo.append('div').text('Last updated: '+obj.lastdate)
+	{
+		// a row for server stats
+		const row = headinfo.append('div')
+		row.append('span')
+			.text(
+				'Code updated: '
+				+(obj.codedate||'??')
+				+', server launched: '
+				+(obj.launchdate||'??')+'.'
+			)
+		if(obj.hasblat) {
+			row.append('a')
+				.style('margin-left','10px')
+				.text('Running BLAT')
+				.on('click',async ()=>{
+					headtip.clear().showunder(d3event.target)
+					const div = headtip.d.append('div').style('margin','10px')
+					const wait = div.append('div').text('Loading...')
+					try {
+						const data = await client.dofetch2('blat?serverstat=1')
+						if(data.error) throw data.error
+						if(!data.lst) throw 'invalid response'
+						wait.remove()
+						for(const i of data.lst) {
+							div.append('div').text(i)
+						}
+					}catch(e) {
+						wait.text(e.message||e)
+						if(e.stack) console.log(e.stack)
+					}
+				})
+		}
 	}
 	if(obj.headermessage) {
 		headinfo.append('div').html(obj.headermessage)

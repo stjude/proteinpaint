@@ -6,11 +6,23 @@ const fs = require('fs'),
 
 const serverconfig = utils.serverconfig
 const gfClient = serverconfig.gfClient || 'gfClient'
+const gfServer = serverconfig.gfServer || 'gfServer'
 
 exports.request_closure = genomes => {
 	return async (req, res) => {
 		app.log(req)
 		try {
+			if (req.query.serverstat) {
+				const lst = []
+				for (const n in genomes) {
+					const g = genomes[n]
+					if (!g.blat) continue
+					lst.push(await server_stat(n, g))
+				}
+				if (lst.length == 0) throw 'found no genome with blat'
+				res.send({ lst })
+				return
+			}
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
@@ -22,6 +34,31 @@ exports.request_closure = genomes => {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+function server_stat(name, g) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(gfServer, ['status', g.blat.host, g.blat.port])
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e) {
+				resolve(name + ' OFF')
+			}
+			const lines = out
+				.join('')
+				.trim()
+				.split('\n')
+			let c = 0
+			for (line of lines) {
+				if (line.startsWith('blat requests')) c = line.split(' ')[2]
+			}
+			resolve(name + ' ON, ' + c + ' requests')
+		})
+	})
 }
 
 async function do_blat(genome, seq) {
