@@ -11943,7 +11943,6 @@ async function pp_init() {
 		if (g.blat) {
 			if (!g.blat.host) throw '.blat.host missing for ' + g.name
 			if (!g.blat.port) throw '.blat.port missing for ' + g.name
-			if (g.blat.seqDir == undefined) throw '.blat.seqDir missing for ' + g.name
 			// gfServer must start with full path to 2bit file
 			g2.blat = g.blat // enable blat
 		}

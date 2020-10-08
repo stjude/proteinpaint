@@ -78,7 +78,7 @@ function run_blat(genome, infile) {
 		const ps = spawn(gfClient, [
 			genome.blat.host,
 			genome.blat.port,
-			genome.blat.seqDir,
+			'', // works with /full/path/to/2bit in blat server
 			infile,
 			outfile,
 			'-q=dna',
