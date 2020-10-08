@@ -390,7 +390,7 @@ async function query_reads(q) {
 		const r = {
 			chr: q.variant.chr,
 			start: q.variant.pos,
-			stop: q.variant.pos
+			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
@@ -1424,6 +1424,7 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
+
 	return { lst }
 }
 

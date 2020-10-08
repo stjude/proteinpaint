@@ -52,6 +52,7 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
 	mds3_init = require('./modules/mds3.init'),
@@ -71,6 +72,8 @@ const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat ? serverconfig.hicstat.split(' ') : ['python', 'read_hic_header.py']
 const hicstraw = serverconfig.hicstraw || 'straw'
+let codedate, // date for code files last updated
+	launchdate // server launch date
 /*
 this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
 */
@@ -148,6 +151,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
 app.get('/dsvariantsummary', handle_dsvariantsummary)
@@ -297,29 +301,18 @@ function handle_genomes(req, res) {
 			hash[genomename] = clientcopy_genome(genomename)
 		}
 	}
-	// detect if proteinpaint was called from outside the
-	// project directory that installed it as an npm dependency
-	const ppbin = process.argv.find(
-		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
-	)
-	// if the pp binary did not start the process, assume that the
-	// server was called in the same directory as the public dir or symlink
-	const dirname = serverconfig.projectdir
-		? serverconfig.projectdir
-		: ppbin
-		? path.dirname(ppbin)
-		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
-		? './node_modules/@stjude/proteinpaint/'
-		: 'public/..'
-	const date1 = fs.statSync(dirname + '/server.js').mtime
-	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
-	const lastdate = date1 > date2 ? date1 : date2
+	let hasblat = false
+	for (const n in genomes) {
+		if (genomes[n].blat) hasblat = true
+	}
 	res.send({
 		genomes: hash,
 		debugmode: serverconfig.debugmode,
 		headermessage: serverconfig.headermessage,
 		base_zindex: serverconfig.base_zindex,
-		lastdate: lastdate.toDateString(),
+		codedate: codedate.toDateString(),
+		launchdate,
+		hasblat,
 		features: exports.features
 	})
 }
@@ -331,6 +324,7 @@ function clientcopy_genome(genomename) {
 		hasSNP: g.snp ? true : false,
 		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
+		blat: g.blat ? true : false,
 		geneset: g.geneset,
 		defaultcoord: g.defaultcoord,
 		isdefault: g.isdefault,
@@ -442,7 +436,7 @@ function mds_clientcopy(ds) {
 		isMds: true,
 		noHandleOnClient: ds.noHandleOnClient,
 		label: ds.label,
-		about: ds.about,
+		version: ds.version,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
@@ -11894,6 +11888,12 @@ function parse_textfilewithheader(text) {
 /***************************   end of __util   **/
 
 async function pp_init() {
+	codedate = get_codedate()
+	launchdate = Date(Date.now())
+		.toString()
+		.split(' ')
+		.slice(0, 5)
+		.join(' ')
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
@@ -11936,6 +11936,12 @@ async function pp_init() {
 		if (g.snp) {
 			// replace snp db
 			g2.snp = g.snp
+		}
+		if (g.blat) {
+			if (!g.blat.host) throw '.blat.host missing for ' + g.name
+			if (!g.blat.port) throw '.blat.port missing for ' + g.name
+			// gfServer must start with full path to 2bit file
+			g2.blat = g.blat // enable blat
 		}
 		if (g.nosnp) {
 			// no snp
@@ -12281,6 +12287,25 @@ async function pp_init() {
 
 		delete g.rawdslst
 	}
+}
+function get_codedate() {
+	// detect if proteinpaint was called from outside the
+	// project directory that installed it as an npm dependency
+	const ppbin = process.argv.find(
+		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
+	)
+	// if the pp binary did not start the process, assume that the
+	// server was called in the same directory as the public dir or symlink
+	const dirname = serverconfig.projectdir
+		? serverconfig.projectdir
+		: ppbin
+		? path.dirname(ppbin)
+		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
+		? './node_modules/@stjude/proteinpaint/'
+		: 'public/..'
+	const date1 = fs.statSync(dirname + '/server.js').mtime
+	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
+	return date1 > date2 ? date1 : date2
 }
 
 function legacyds_init_one_query(q, ds, genome) {

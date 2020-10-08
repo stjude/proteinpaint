@@ -17,6 +17,10 @@ const samplenamekey = 'sample_name'
 module.exports = {
 	genome: 'hg38',
 	isMds: true,
+	version: {
+		label: 'Release v1',
+		link: 'https://genomepaint.stjude.cloud/release/v1/'
+	},
 
 	about: [
 		{ k: 'Cohort', v: 'PCGP and TARGET' },

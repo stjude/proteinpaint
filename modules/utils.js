@@ -22,6 +22,7 @@ const samtools = serverconfig.samtools || 'samtools'
 
 /* p4 ready
 ********************** EXPORTED
+file_is_readable
 init_one_vcf
 validate_tabixfile
 tabix_is_nochr
@@ -43,6 +44,7 @@ run_fishertest2x3
 exports.file_is_readable = async file => {
 	// need full path to the file
 	// see if file exists and readable
+	// to replace file_not_exist file_not_readable
 	try {
 		await fs.promises.stat(file)
 	} catch (e) {

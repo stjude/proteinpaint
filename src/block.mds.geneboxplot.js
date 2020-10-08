@@ -645,6 +645,23 @@ function loadplot(plot) {
 							init2(Math.max(100, d3event.clientX - 100), Math.max(100, d3event.clientY - 100), plot, g)
 						})
 
+					if (g.attributes) {
+						g.label
+							.on('mouseover', () => {
+								plot.tip.clear().show(d3event.clientX, d3event.clientY)
+								const d = plot.tip.d.append('div').style('margin', '10px')
+								for (const a of g.attributes) {
+									d.append('div').html(
+										a.kvalue +
+											(a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">' + a.fullvalue + '</span>' : '')
+									)
+								}
+							})
+							.on('mouseout', () => {
+								plot.tip.hide()
+							})
+					}
+
 					for (const bp of g.boxplots) {
 						let color
 
