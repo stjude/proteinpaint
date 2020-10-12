@@ -191,7 +191,7 @@ app.post('/translategm', handle_translategm)
 app.get('/hicstat', handle_hicstat)
 app.post('/hicdata', handle_hicdata)
 app.post('/samplematrix', handle_samplematrix)
-app.post('/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
 app.post('/mdssamplesignature', handle_mdssamplesignature)
 app.post('/mdssurvivalplot', handle_mdssurvivalplot)
 app.post('/fimo', fimo.handle_closure(genomes))
@@ -9541,47 +9541,45 @@ function handle_mdsjunction_AreadcountbyB(reqquery, res, ds, dsquery) {
 		})
 }
 
-function handle_mdssamplescatterplot(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	Promise.resolve()
-		.then(() => {
-			const gn = genomes[req.query.genome]
-			if (!gn) throw 'invalid genome'
-			const ds = gn.datasets[req.query.dslabel]
-			if (!ds) throw 'invalid dataset'
-			if (!ds.cohort) throw 'no cohort for dataset'
-			if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+async function handle_mdssamplescatterplot(req, res) {
+	log(req)
+	try {
+		const gn = genomes[req.query.genome]
+		if (!gn) throw 'invalid genome'
+		const ds = gn.datasets[req.query.dslabel]
+		if (!ds) throw 'invalid dataset'
+		if (!ds.cohort) throw 'no cohort for dataset'
+		if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
 
-			const sp = ds.cohort.scatterplot
-			if (!sp) throw 'scatterplot not supported for this cohort'
+		const sp = ds.cohort.scatterplot
+		if (!sp) throw 'scatterplot not supported for this dataset'
 
-			const dots = []
-			for (const sample in ds.cohort.annotation) {
-				const anno = ds.cohort.annotation[sample]
-				const x = anno[sp.x.attribute]
-				if (!Number.isFinite(x)) continue
-				const y = anno[sp.y.attribute]
-				if (!Number.isFinite(y)) continue
-				dots.push({
-					sample: sample,
-					x: x,
-					y: y,
-					s: anno
-				})
-			}
-			res.send({
-				colorbyattributes: sp.colorbyattributes, // optional
-				colorbygeneexpression: sp.colorbygeneexpression, // optional
-				querykey: sp.querykey,
-				dots: dots,
-				// optional, quick fix for showing additional tracks when launching single sample view by clicking a dot
-				tracks: sp.tracks
+		const dots = []
+		for (const sample in ds.cohort.annotation) {
+			const anno = ds.cohort.annotation[sample]
+			const x = anno[sp.x.attribute]
+			if (!Number.isFinite(x)) continue
+			const y = anno[sp.y.attribute]
+			if (!Number.isFinite(y)) continue
+			dots.push({
+				sample: sample,
+				x: x,
+				y: y,
+				s: anno
 			})
+		}
+		res.send({
+			colorbyattributes: sp.colorbyattributes, // optional
+			colorbygeneexpression: sp.colorbygeneexpression, // optional
+			querykey: sp.querykey,
+			dots: dots,
+			// optional, quick fix for showing additional tracks when launching single sample view by clicking a dot
+			tracks: sp.tracks
 		})
-		.catch(err => {
-			if (err.stack) console.error(err.stack)
-			res.send({ error: typeof err == 'string' ? err : err.message })
-		})
+	} catch (e) {
+		if (e.stack) console.error(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 function handle_mdssamplesignature(req, res) {
