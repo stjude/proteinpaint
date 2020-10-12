@@ -76,9 +76,23 @@ export async function match_complexvariant(templates, q) {
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
-	if (refseq.localeCompare(leftflankseq + refallele + rightflankseq) != 0) {
-		console.log('Reference allele is not correct')
+	let wrong_ref = 0
+	if (refseq.toUpperCase().localeCompare((leftflankseq + refallele + rightflankseq).toUpperCase()) != 0) {
+		//console.log('Reference allele is not correct')
+		wrong_ref = 1
 	}
+
+	//        let ref_weight=1
+	//        let alt_weight=1
+	//        if (refallele.length > altallele.length) {
+	//          alt_weight=refallele.length/altallele.length
+	//        }
+	//
+	//        else if (altallele.length > refallele.length) {
+	//          ref_weight=altallele.length/refallele.length
+	//        }
+
+	console.log('Ref kmers:')
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,
@@ -89,6 +103,7 @@ export async function match_complexvariant(templates, q) {
 		weight_no_indel
 	)
 	//console.log("all_ref_kmers:",all_ref_kmers)
+	console.log('Alt kmers:')
 	const all_alt_kmers = build_kmers_refalt(
 		altseq,
 		kmer_length,
@@ -142,6 +157,8 @@ export async function match_complexvariant(templates, q) {
 	//console.log(alt_kmers)
 
 	const kmer_diff_scores = []
+	const alt_comparisons = []
+	const ref_comparisons = []
 	const ref_scores = []
 	const alt_scores = []
 	let i = 0
@@ -170,6 +187,8 @@ export async function match_complexvariant(templates, q) {
 		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
 		const diff_score = alt_comparison - ref_comparison
 		kmer_diff_scores.push(diff_score)
+		ref_comparisons.push(ref_comparison)
+		alt_comparisons.push(alt_comparison)
 		const item = {
 			value: Math.abs(diff_score),
 			groupID: i
@@ -200,7 +219,8 @@ export async function match_complexvariant(templates, q) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				templates[index].__tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -211,7 +231,8 @@ export async function match_complexvariant(templates, q) {
 		} else if (item[1] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				templates[index].__tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -226,7 +247,8 @@ export async function match_complexvariant(templates, q) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				templates[index].__tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -237,7 +259,9 @@ export async function match_complexvariant(templates, q) {
 		} else if (item[1] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
-				templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				templates[index].__tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -282,7 +306,11 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
-	return groups
+	if (wrong_ref == 0) {
+		return groups
+	} else {
+		return { groups, alleleerror: 'Reference allele is not correct' }
+	}
 }
 
 function build_kmers(sequence, kmer_length) {
@@ -311,7 +339,6 @@ function build_kmers_refalt(
 ) {
 	const num_iterations = sequence.length - kmer_length + 1
 	// console.log(sequence)
-
 	let kmers = []
 	let kmer_start = left_most_pos
 	let kmer_stop = kmer_start + kmer_length
