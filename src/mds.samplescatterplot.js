@@ -52,7 +52,7 @@ launch_singlesample
 
 const radius = 3
 
-export function init(obj, holder, debugmode) {
+export async function init(obj, holder, debugmode) {
 	/*
 	holder
 	genome
@@ -114,39 +114,33 @@ export function init(obj, holder, debugmode) {
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 
-	const par = {
-		genome: obj.genome.name,
-		dslabel: obj.dslabel
+	const lst = ['genome=' + obj.genome.name, 'dslabel=' + obj.dslabel]
+	try {
+		const data = await client.dofetch2('mdssamplescatterplot?' + lst.join('&'))
+		if (data.error) throw data.error
+		if (!data.dots) throw 'server error'
+		obj.sample2dot = new Map()
+
+		for (const dot of data.dots) {
+			obj.sample2dot.set(dot.sample, dot)
+		}
+		obj.dots = data.dots
+
+		obj.querykey = data.querykey // for the moment it should always be set
+
+		// TODO generic attributes for legend, specify some categorical ones for coloring
+		obj.colorbyattributes = data.colorbyattributes
+		obj.colorbygeneexpression = data.colorbygeneexpression
+		init_dotcolor_legend(obj)
+
+		// optional stuff
+		obj.tracks = data.tracks
+
+		init_plot(obj)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		obj.sayerror(e.message || e)
 	}
-
-	client
-		.dofetch('mdssamplescatterplot', par)
-		.then(data => {
-			if (data.error) throw data.error
-			if (!data.dots) throw 'server error'
-
-			obj.sample2dot = new Map()
-
-			for (const dot of data.dots) {
-				obj.sample2dot.set(dot.sample, dot)
-			}
-			obj.dots = data.dots
-
-			obj.querykey = data.querykey // for the moment it should always be set
-
-			// TODO generic attributes for legend, specify some categorical ones for coloring
-			obj.colorbyattributes = data.colorbyattributes
-			obj.colorbygeneexpression = data.colorbygeneexpression
-			init_dotcolor_legend(obj)
-
-			// optional stuff
-			obj.tracks = data.tracks
-
-			init_plot(obj)
-		})
-		.catch(e => {
-			obj.sayerror(e)
-		})
 }
 
 function init_plot(obj) {
