@@ -326,16 +326,7 @@ async function do_query(q) {
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	indel_out = await divide_reads_togroups(templates, q)
-	//console.log("indel_out:",indel_out['groups'])
-	//console.log("Size of indel_out:",Object.keys(indel_out).length)
-	if (Object.keys(indel_out).length == 3) {
-		q.groups = indel_out
-	} else if (Object.keys(indel_out).length == 2) {
-		q.groups = indel_out['groups']
-		q.alleleerror = indel_out['alleleerror']
-	}
-	//console.log("q.alleleerror:",q.alleleerror)
+	q.groups = await divide_reads_togroups(templates, q)
 	if (result.count.r == 0) {
 		q.groups[0].messagerows.push({
 			h: 30,
