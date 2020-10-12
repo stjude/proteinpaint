@@ -100,6 +100,7 @@ may attach coloring scheme to result{} for returning to client
 	let cell2color_byexp // color by gene expression values
 	let collect_category2color
 	let collect_category_count
+	let collect_gene_expression2color
 	// if color scheme is automatic, collect colors here for returning to client
 
 	if (q.getpcd.category_autocolor) {
@@ -115,6 +116,7 @@ may attach coloring scheme to result{} for returning to client
 		categorical_color_function = getCustomCatColor(q.getpcd.cat_values, auto_color_fn)
 		collect_category2color = {}
 		collect_category_count = {}
+		collect_gene_expression2color = {}
 	} else if (q.getpcd.gene_expression) {
 		const ge = q.getpcd.gene_expression
 		if (!ge.file) throw 'gene_expression.file missing'
@@ -254,6 +256,16 @@ may attach coloring scheme to result{} for returning to client
 				}
 				result.category2color = collect_category2color
 				result.categorycount = collect_category_count
+			}
+
+			if (collect_gene_expression2color) {
+				// if legend order for gene expression data is defined in the config, add that to return to client
+				if (q.getpcd.ge_customorder) {
+					//TODO need to define order for ge
+					collect_gene_expression2color = getCustomCatOrder(collect_gene_expression2color, q.getpcd.ge_values) //TODO need to define values for ge
+				}
+				result.category2color = collect_gene_expression2color //TODO define this elsewhere. Problematic with var above
+				result.gecount = collect_gene_expression_count //TODO define this elsewhere
 			}
 
 			// get abs of min and max to get radius of point cloud
