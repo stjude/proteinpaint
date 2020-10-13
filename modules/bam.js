@@ -326,7 +326,16 @@ async function do_query(q) {
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	q.groups = await divide_reads_togroups(templates, q)
+	const result_out = await divide_reads_togroups(templates, q)
+	//console.log("q.alleleerror:",result_out['alleleerror'])
+	if (result_out['alleleerror']) {
+		//console.log("Incorrect reference allele indel case")
+		q.groups = result_out['groups']
+		q.alleleerror = result_out['alleleerror']
+	} else {
+		q.groups = result_out
+	}
+
 	if (result.count.r == 0) {
 		q.groups[0].messagerows.push({
 			h: 30,

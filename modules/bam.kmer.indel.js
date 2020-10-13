@@ -306,7 +306,11 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
-	return groups
+	if (wrong_ref == 0) {
+		return groups
+	} else {
+		return { groups, alleleerror: 'Reference allele is not correct' }
+	}
 }
 
 function build_kmers(sequence, kmer_length) {
