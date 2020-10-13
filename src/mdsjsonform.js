@@ -1,6 +1,7 @@
 import { select, transition } from 'd3'
-import { dofetch2, tab2box, tkt } from './client'
+import { dofetch2, tab2box, tkt, launch_block } from './client'
 import { make_radios } from './dom'
+import { findgene } from './findgene'
 // import { check } from 'prettier'
 
 /*
@@ -379,11 +380,45 @@ function make_position(div) {
 		.append('div')
 		.append('span')
 		.text('Default position')
+
+	dom.coord.tip = new client.Menu({ padding: '0px' })
+
 	return div
 		.append('div')
 		.append('input')
 		.attr('size', 30)
 		.property('placeholder', 'chr:start-stop')
+		.on('keyup', () => {
+			findgene(doms.genome, dom.coord.tip, d3event.target, d3event.key, (gm, gmlst, pos) => {
+				if (gm || gmlst) {
+					return launch_block_protein({
+						genome: usegenomeobj,
+						gm: gm,
+						gmlst: gmlst,
+						arg: arg
+					})
+				}
+				if (pos) {
+					return client.launch_block({
+						genome: usegenomeobj,
+						holder: arg.showholder,
+						range_0based: pos
+					})
+				}
+			})
+		})
+}
+function launch_block_protein(p) {
+	const { arg, genome, gm, gmlst } = p
+
+	arg.showholder.selectAll('*').remove()
+
+	client.launch_block({
+		holder: arg.showholder,
+		genome: genome,
+		gm: gm,
+		gmlst: gmlst
+	})
 }
 
 //.name
@@ -442,31 +477,22 @@ function make_svcnv_radios(div, doms) {
 		)
 
 	const row = div.append('div')
-	// const radiodiv = row.append('div')
-	// const controls = row.append('div').style('display', 'none')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			// //****Doesn't work */
-			// doms.svcnv_inuse = value == 1
-			// controls.style('display', value == 1 ? 'block' : 'none')
-
-			if (value == 1 && !doms.svcnvfileurl) {
-				doms.svcnvfusion = true
-				row.append('div')
-				doms.svcnvfileurl = make_svcnv(row) //TODO spacing
-				make_control_panel(row, doms)
-			} else {
-				doms.svcnvfusion = false //TODO hide on 'No'
-			}
+			doms.svcnv_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
-	// controls = make_control_panel(row, doms), (doms.svcnvfileurl = make_svcnv(row))
-	// controls = make_control_panel(row, doms), make_svcnv(row)
+	doms.svcnv_controls = controls
+	make_svcnv(controls)
+	make_control_panel(controls, doms)
 }
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
@@ -489,27 +515,23 @@ function make_vcf_radios(div, doms) {
 		.html(
 			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file path or URL'
 		)
-
 	const row = div.append('div')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			if (value == 1 && !doms.vcffileurl) {
-				doms.vcf = true
-				row.append('div')
-				doms.vcffileurl = make_vcf(row) //TODO spacing
-				//TODO also need to add in hidden classes array. Can't do a grid within a grid...
-			} else {
-				doms.vcf = false //TODO hide on 'No'
-			}
+			doms.vcf_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
+	doms.vcf_controls = controls
+	make_vcf(controls)
 }
-
 //.vcffile
 function make_vcf(div) {
 	const vcf_file_div = div.append('div')
@@ -533,22 +555,21 @@ function make_expression_radios(div, doms) {
 		)
 
 	const row = div.append('div')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			if (value == 1 && !doms.expressionfile) {
-				doms.expression = true
-				row.append('div')
-				doms.expressionfile = make_expression_filepath(row) //TODO spacing
-			} else {
-				doms.expression = false //TODO hide on 'No'
-			}
+			doms.expression_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
+	doms.expression_controls = controls
+	make_expression_filepath(controls)
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -560,30 +581,6 @@ function make_expression_filepath(div) {
 		.attr('size', 55)
 		.property('placeholder', 'File path or URL')
 }
-// // .getallsamples
-// function make_getallsamples(div, doms) {
-// 	doms.getallsamples = true
-
-// 	const getallsamples_prompt = div.append('div')
-
-// 	getallsamples_prompt.append('span').text('Get all samples')
-
-// 	const row = div.append('div')
-// 	make_radios({
-// 		holder: row,
-// 		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
-// 		callback: value => {
-// 			if (value == 1) {
-// 				doms.getallsamples = true
-// 			} else {
-// 				doms.getallsamples = false
-// 			}
-// 		},
-// 		styles: {
-// 			display: 'inline'
-// 		}
-// 	})
-// }
 // .cnvValueCutoff
 function make_cnv_cutoff(div) {
 	const cnv_cutoff_div = div.append('div')
@@ -633,7 +630,7 @@ function make_loh_upperlimit(div) {
 
 // 	tooltip
 // 		.style('font-size', '15px')
-// 		.text('Hide Multiple VCF Labels') //TODO is this multiple or all?
+// 		.text('Hide Multiple VCF Labels')
 // 		.style('display', 'none')
 // 		.style('text-align', 'center')
 // 		.style('position', 'absolute')
