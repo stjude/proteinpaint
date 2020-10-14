@@ -1,7 +1,7 @@
 import { select, transition } from 'd3'
 import { dofetch2, tab2box, tkt, launch_block } from './client'
 import { make_radios } from './dom'
-import { findgene } from './findgene'
+import { gene_searchbox, findgenemodel_bysymbol } from './gene'
 // import { check } from 'prettier'
 
 /*
@@ -252,7 +252,6 @@ function validate_input(doms) {
 		type: tkt.mdssvcnv,
 		isdense: doms.isdense,
 		isfull: doms.isfull,
-		getallsamples: doms.getallsamples
 	}
 	{
 		const n = doms.genome.node()
@@ -286,8 +285,8 @@ function validate_input(doms) {
 			if (limit) {
 				obj.cnvLengthUpperLimit = Number(limit)
 			}
-			obj.multihidelabel_fusion = doms.multihidelabel_fusion
-			obj.multihidelabel_sv = doms.multihidelabel_sv
+			// obj.multihidelabel_fusion = doms.multihidelabel_fusion
+			// obj.multihidelabel_sv = doms.multihidelabel_sv
 		}
 		if (vcf) {
 			if (isurl(vcf)) {
@@ -295,7 +294,7 @@ function validate_input(doms) {
 			} else {
 				obj.vcffile = vcf
 			}
-			obj.multihidelabel_vcf = doms.multihidelabel_vcf
+			// obj.multihidelabel_vcf = doms.multihidelabel_vcf
 		}
 	}
 	{
@@ -376,49 +375,34 @@ function make_genome(div, genomes) {
 }
 //.position
 function make_position(div) {
-	div
-		.append('div')
-		.append('span')
-		.text('Default position')
+	const position_prompt = div.append('div')
 
-	dom.coord.tip = new client.Menu({ padding: '0px' })
+	position_prompt.append('span').text('Default position')
 
-	return div
+	const position = div.append('div')
+
+	return position
 		.append('div')
 		.append('input')
 		.attr('size', 30)
 		.property('placeholder', 'chr:start-stop')
-		.on('keyup', () => {
-			findgene(doms.genome, dom.coord.tip, d3event.target, d3event.key, (gm, gmlst, pos) => {
-				if (gm || gmlst) {
-					return launch_block_protein({
-						genome: usegenomeobj,
-						gm: gm,
-						gmlst: gmlst,
-						arg: arg
-					})
-				}
-				if (pos) {
-					return client.launch_block({
-						genome: usegenomeobj,
-						holder: arg.showholder,
-						range_0based: pos
-					})
+		.on('click', () => {
+			gene_searchbox({
+				div: position,
+				resultdiv: position,
+				genome: doms.genome,
+				callback: genename => {
+					//TODO needs to callback to the original div with position
+					const gmlst = await findgenemodel_bysymbol(doms.genome, genename)
+					const fixedgene = {
+						gene: name,
+						chr: gm.chr,
+						start: gm.start,
+						stop: gm.stop
+					}
 				}
 			})
 		})
-}
-function launch_block_protein(p) {
-	const { arg, genome, gm, gmlst } = p
-
-	arg.showholder.selectAll('*').remove()
-
-	client.launch_block({
-		holder: arg.showholder,
-		genome: genome,
-		gm: gm,
-		gmlst: gmlst
-	})
 }
 
 //.name
@@ -473,7 +457,7 @@ function make_svcnv_radios(div, doms) {
 	svcnvfusion_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9 target=_blank>CNV+SV+fusion</a> file path or URL<br><span style="font-size:.7em">Either CNV or VCF file is required</span>'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9 target=_blank>CNV+SV+fusion</a> file<br><span style="font-size:.7em">Either CNV or VCF file is required</span>'
 		)
 
 	const row = div.append('div')
@@ -504,7 +488,7 @@ function make_svcnv(div) {
 		.attr('size', 55)
 		.property('placeholder', 'File path or URL')
 }
-
+//Displays text field and additional options
 function make_vcf_radios(div, doms) {
 	doms.vcf = true
 
@@ -513,7 +497,7 @@ function make_vcf_radios(div, doms) {
 	vcf_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file path or URL'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file'
 		)
 	const row = div.append('div')
 	const radiodiv = row.append('div')
@@ -551,7 +535,7 @@ function make_expression_radios(div, doms) {
 	expression_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy target=_blank>Gene expression</a> file path or URL'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy target=_blank>Gene expression</a> file'
 		)
 
 	const row = div.append('div')
@@ -760,42 +744,63 @@ function make_loh_upperlimit(div) {
 // }
 // Options under CNV+SV+Fusion text field
 function make_control_panel(div, doms) {
-	const row = div.append('div')
 
-	const control_panel = row
+	const control_panel = div.append('div')
 		.append('div')
 		// .style('margins', '5px')
 		.style('width', '49%')
 		.style('padding', '10px')
 		.style('display', 'inline') //TODO actually get fields to display inline instead one after another
 		.style('position', 'relative')
-	control_panel
-	doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
-	doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
-	doms.segmeanValueCutoff = make_segmean_cutoff(control_panel)
-	doms.lohLengthUpperLimit = make_loh_upperlimit(control_panel)
+	// control_panel
+		doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
+		doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
+		doms.segmeanValueCutoff = make_segmean_cutoff(control_panel)
+		doms.lohLengthUpperLimit = make_loh_upperlimit(control_panel)
 }
 
 // .sampleset
 function make_sampleset(div, doms) {
-	const sampleset_prompt = div.append('div')
+	const sampleset_btn = div.append('div')
 
-	sampleset_prompt.append('span').text('Subset samples')
+	sampleset_btn
+		.append('button')
+		.style('width', '230px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('Define Sample Subset')
+		.on('click', () => {
+			if (uidiv.style('display') == 'none') {
+				uidiv.style('display', 'block') //TODO fadein fn
+			} else {
+				uidiv.style('display', 'none') //TODO fadeout fn
+			}
+		})
+	const hold_column = div.append('div')
+	const uidiv = hold_column.append('div')
+		.style('display', 'none')
 
-	const column2 = div.append('div')
-	const radiodiv = column2.append('div')
-	const uidiv = column2.append('div').style('display', 'none')
-	make_radios({
-		holder: radiodiv,
-		options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
-		callback: value => {
-			doms.sampleset_inuse = value == 2
-			uidiv.style('display', value == 2 ? 'block' : 'none')
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
+	//**Previous radio button option */
+	// const sampleset_prompt = div.append('div')
+
+	// sampleset_prompt.append('span').text('Subset samples')
+
+	// const column2 = div.append('div')
+	// const radiodiv = column2.append('div')
+	// const uidiv = column2.append('div').style('display', 'none')
+	// make_radios({
+	// 	holder: radiodiv,
+	// 	options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
+	// 	callback: value => {
+	// 		doms.sampleset_inuse = value == 2
+	// 		uidiv.style('display', value == 2 ? 'block' : 'none')
+	// 	},
+	// 	styles: {
+	// 		display: 'inline'
+	// 	}
+	// })
 	// contents of uidiv
 	doms.sampleset_textarea = uidiv
 		.append('textarea')
@@ -805,25 +810,48 @@ function make_sampleset(div, doms) {
 
 // Assay track
 function make_assaytracks(div, doms) {
-	const assay_prompt = div.append('div')
+	const sampleset_btn = div.append('div')
 
-	assay_prompt.append('span').text('Assay tracks')
+	sampleset_btn
+		.append('button')
+		.style('width', '230px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('Define Sample Assay Tracks')
+		.on('click', () => {
+			if (uidiv.style('display') == 'none') {
+				uidiv.style('display', 'block') //TODO fadein fn
+			} else {
+				uidiv.style('display', 'none') //TODO fadeout fn
+			}
+		})
+	const hold_column = div.append('div')
+	const uidiv = hold_column.append('div')
+		.style('display', 'none')
 
-	const column2 = div.append('div')
-	const radiodiv = column2.append('div')
-	const uidiv = column2.append('div').style('display', 'none')
-	const { divs, labels, inputs } = make_radios({
-		holder: radiodiv,
-		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
-		callback: value => {
-			doms.assaytrack_inuse = value == 1
-			uidiv.style('display', value == 1 ? 'block' : 'none')
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
-	doms.assaytrack_radios = inputs
+	//**Previous radio button option */
+	// const assay_prompt = div.append('div')
+
+	// assay_prompt.append('span').text('Assay tracks')
+
+	// const column2 = div.append('div')
+	// const radiodiv = column2.append('div')
+	// const uidiv = column2.append('div').style('display', 'none')
+	// const { divs, labels, inputs } = make_radios({
+	// 	holder: radiodiv,
+	// 	options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
+	// 	callback: value => {
+	// 		doms.assaytrack_inuse = value == 1
+	// 		uidiv.style('display', value == 1 ? 'block' : 'none')
+	// 	},
+	// 	styles: {
+	// 		display: 'inline'
+	// 	}
+	// })
+	// doms.assaytrack_radios = inputs
+
 	// contents of uidiv
 	const tabs = [
 		{
@@ -1000,3 +1028,30 @@ function parse_junction(doms) {
 	}
 	return tks
 }
+
+// function fadein(div) { //TODO does not work, need a fadein and fadeout function
+// 	let timer = null
+// 	if (div.style('opacity') != 1){
+// 		clearTimeout(timer)
+// 		div.style('display', 'block')
+// 		timer = setInterval(() => {
+// 			div.style('opacity') == div.style('opacity') + .10;
+// 			if (+getComputedStyle(div).getPropertyValue("opacity") >= 1) {
+// 			  clearInterval(timer);
+// 			}
+// 		}, 100)
+// 	}
+// }
+// function fadeout(div) {
+	// let timer = null
+	// if (div.style('opacity') != 0){
+	// 	clearTimeout(timer)
+	// 	div.style('display', 'block')
+	// 	timer = setInterval(() => {
+	// 		div.style('opacity') == div.style('opacity') - .10;
+	// 		if (+getComputedStyle(div).getPropertyValue("opacity") <= 0) {
+	// 		  clearInterval(timer);
+	// 		}
+	// 	}, 100)
+	// }
+// }
