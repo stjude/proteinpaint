@@ -320,20 +320,15 @@ async function do_query(q) {
 		count: {
 			r: q.totalnumreads
 		},
-		groups: [],
-		alleleerror: ''
+		groups: []
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	const result_out = await divide_reads_togroups(templates, q)
-	//console.log("q.alleleerror:",result_out['alleleerror'])
-	if (result_out['alleleerror']) {
-		//console.log("Incorrect reference allele indel case")
-		q.groups = result_out['groups']
-		q.alleleerror = result_out['alleleerror']
-	} else {
-		q.groups = result_out
+	{
+		const out = await divide_reads_togroups(templates, q)
+		q.groups = out.groups
+		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
 
 	if (result.count.r == 0) {
@@ -475,14 +470,44 @@ async function may_checkrefseq4mismatch(templates, q) {
 	}
 }
 
+/*
+loaded reads for all regions under q.regions
+divide to groups if to match with variant
+plot each group into a separate canvas
+
+return {}
+  .groups[]
+  .refalleleerror
+*/
 async function divide_reads_togroups(templates, q) {
-	/* loaded reads for all regions under q.regions
-	divide to groups if to match with variant
-	plot each group into a separate canvas
-	*/
 	if (templates.length == 0) {
 		// no reads at all, return empty group
-		return [
+		return {
+			groups: [
+				{
+					type: bamcommon.type_all,
+					regions: bamcommon.duplicateRegions(q.regions),
+					templates,
+					messagerows: [],
+					partstack: q.partstack
+				}
+			]
+		}
+	}
+
+	if (q.variant) {
+		// if snv, simple match; otherwise complex match
+		const lst = may_match_snv(templates, q)
+		if (lst) return { groups: lst }
+		return await match_complexvariant(templates, q)
+	}
+	if (q.sv) {
+		return match_sv(templates, q)
+	}
+
+	// no variant, return single group
+	return {
+		groups: [
 			{
 				type: bamcommon.type_all,
 				regions: bamcommon.duplicateRegions(q.regions),
@@ -492,27 +517,6 @@ async function divide_reads_togroups(templates, q) {
 			}
 		]
 	}
-
-	if (q.variant) {
-		// if snv, simple match; otherwise complex match
-		const lst = may_match_snv(templates, q)
-		if (lst) return lst
-		return await match_complexvariant(templates, q)
-	}
-	if (q.sv) {
-		return match_sv(templates, q)
-	}
-
-	// no variant, return single group
-	return [
-		{
-			type: bamcommon.type_all,
-			regions: bamcommon.duplicateRegions(q.regions),
-			templates,
-			messagerows: [],
-			partstack: q.partstack
-		}
-	]
 }
 
 function may_match_snv(templates, q) {
