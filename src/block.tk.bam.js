@@ -169,7 +169,8 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
-	setTkHeight(tk)
+	//console.log("refalleleerror:",data['refalleleerror'])
+	setTkHeight(tk, data['refalleleerror'])
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
@@ -190,9 +191,12 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
-function setTkHeight(tk) {
+function setTkHeight(tk, refallelestatus) {
 	// call after any group is updated
 	let h = 0
+	if (refallelestatus == true) {
+		h = 50
+	} // Creating space for `reference allele incorrect` message
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (g.partstack) {
@@ -201,8 +205,15 @@ function setTkHeight(tk) {
 		}
 		h += g.data.height
 	}
+	//        console.log("tk.toppad:",tk.toppad)
+	//        console.log("tk.bottompad:",tk.bottompad)
+	//        console.log("tk.height:",tk.height)
+	//        console.log("tk.height_main:",tk.height_main)
 	tk.height_main = tk.height = h
+	//        console.log("tk.height_main:",tk.height_main)
+	//        console.log("h:",h)
 	tk.height_main += tk.toppad + tk.bottompad
+	//        console.log("tk.height_main:",tk.height_main)
 }
 
 function updateExistingGroups(data, tk, block) {
