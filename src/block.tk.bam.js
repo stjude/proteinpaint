@@ -34,6 +34,8 @@ group {}
 	.vslider{}
 		.g
 		.boxy
+	.variantg <g>
+	.variantrowheight
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -169,8 +171,8 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
-	//console.log("refalleleerror:",data['refalleleerror'])
-	setTkHeight(tk, data['refalleleerror'])
+	may_render_variant(data, tk, block)
+	setTkHeight(tk)
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
@@ -191,12 +193,43 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
-function setTkHeight(tk, refallelestatus) {
+function may_render_variant(data, tk, block) {
+	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
+	// in tk.dom.variantg, indicate location and status of the variant
+	if (!tk.dom.variantg) return
+	tk.dom.variantg.selectAll('*').remove()
+	let x1, x2 // on screen pixel start/stop of the variant box
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
+		if (hits) {
+			x1 = hits[0].x - bb.exonsf / 2
+		}
+	}
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos + tk.variants[0].ref.length)
+		if (hits) {
+			x2 = hits[0].x - bb.exonsf / 2
+		}
+	}
+	if (x1 >= block.width || x2 <= 0) {
+		// variant is out of range
+		return
+	}
+	tk.dom.variantg
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', 0)
+		.attr('width', x2 - x1)
+		.attr('height', tk.dom.variantrowheight - 2)
+	// TODO show variant info alongside box
+}
+
+function setTkHeight(tk) {
 	// call after any group is updated
 	let h = 0
-	if (refallelestatus == true) {
-		h = 50
-	} // Creating space for `reference allele incorrect` message
+	if (tk.dom.variantg) {
+		h += tk.dom.variantrowheight
+	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (g.partstack) {
@@ -271,7 +304,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_addvariant(tk)
+	may_addvariant(tk) // only quick fix!! TODO may allow adding variant on the fly??
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
@@ -285,6 +318,11 @@ function makeTk(tk, block) {
 	// <g> of each group is added dynamically to glider
 	tk.dom = {
 		vsliderg: tk.gright.append('g')
+	}
+	if (tk.variants) {
+		// assuming that variant will only be added upon track initiation
+		tk.dom.variantg = tk.glider.append('g')
+		tk.dom.variantrowheight = 20
 	}
 	tk.asPaired = false
 
