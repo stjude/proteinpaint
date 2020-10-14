@@ -238,6 +238,7 @@ pp_init()
 		and thereby avoid unnecessary endless restarts of an invalid server
 		init with bad config, data, and/or code
 		*/
+		if (err.stack) console.log(err.stack)
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
@@ -13230,7 +13231,9 @@ function mds_init_mdssvcnv(query, ds, genome) {
 				}
 			}
 			if (unknown.size) {
-				console.log('mdssvcnv unannotated samples: ' + [...unknown].join(' '))
+				console.log(
+					'mdssvcnv unannotated samples: ' + (query.noprintunannotatedsamples ? unknown.size : [...unknown].join(' '))
+				)
 			}
 		}
 
