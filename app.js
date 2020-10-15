@@ -12487,6 +12487,10 @@ async function mds_init(ds, genome, _servconfig) {
 		console.log(count + ' samples for disco plot')
 	}
 
+	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
+		await mds2_init.init_db(ds, genome)
+	}
+
 	if (ds.cohort && ds.cohort.files) {
 		/*
 		*********** legacy mds *************
@@ -12890,7 +12894,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		await mds2_init.init(ds, genome)
+		await mds2_init.init_track(ds, genome)
 	}
 
 	if (ds.annotationsampleset2matrix) {
