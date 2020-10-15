@@ -3201,11 +3201,140 @@ async function handle_hicstat(req, res) {
 		if (!isurl) {
 			await utils.file_is_readable(file)
 		}
-		const out = await do_hicstat(file)
+		const out = await do_hicstat2(file)
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function do_hicstat2(file) {
+	return new Promise((resolve, reject) => {
+		if (!file) throw '.hic file or url is missing'
+		const out_data = {}
+		out_data['Chromosomes'] = {}
+		out_data['Base pair-delimited resolutions'] = []
+		out_data['Fragment-delimited resolutions'] = []
+		const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity })
+		let lineCounter = 0,
+			last_line = 0
+		let nChr,
+			ChrCount = 0,
+			bp_res_n = -1,
+			frag_res_n = 0
+		let all_flag = false,
+			complete_flag = false
+		rl.on('line', line => {
+			if (line.includes('HIC')) {
+				let { new_line, str } = getString(line)
+				const buf = Buffer.from(new_line, 'ascii')
+				let obj = getHextoInt(new_line)
+				new_line = obj.new_line
+				out_data['Hic Version'] = obj.int_val
+				const strings = buf
+					.toString('hex')
+					.split(/00/)
+					.filter(String)
+				out_data['Genome ID'] = Buffer.from(strings[2], 'hex').toString()
+			} else if (line.includes('All') && !all_flag) {
+				let new_line, Chr, Chr_len
+				let obj = getHextoInt(line)
+				new_line = obj.new_line
+				nChr = obj.int_val
+				// while(ChrCount != nChr && new_line.length > 8){
+				while (ChrCount < 6 && new_line.length > 2) {
+					let obj = getString(new_line)
+					new_line = obj.new_line
+					Chr = obj.str
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					Chr_len = obj.int_val
+					out_data['Chromosomes'][Chr] = Chr_len
+					ChrCount++
+				}
+				all_flag = true
+				last_line = lineCounter
+			} else if (all_flag && lineCounter == last_line + 1 && ChrCount != nChr) {
+				let new_line,
+					Chr,
+					Chr_len,
+					bp_res_i = 0,
+					frag_res_i = 0
+				new_line = line
+				while (ChrCount < nChr && new_line.length > 2) {
+					let obj = getString(new_line)
+					new_line = obj.new_line
+					Chr = obj.str
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					Chr_len = obj.int_val
+					out_data['Chromosomes'][Chr] = Chr_len
+					ChrCount++
+				}
+				if (ChrCount == nChr) {
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					bp_res_n = obj.int_val
+				}
+				while (bp_res_i < bp_res_n) {
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					bp_res = obj.int_val
+					out_data['Base pair-delimited resolutions'].push(bp_res)
+					bp_res_i++
+				}
+				if (bp_res_i == bp_res_n) {
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					frag_res_n = obj.int_val
+				}
+				while (frag_res_i < frag_res_n) {
+					obj = getHextoInt(new_line)
+					new_line = obj.new_line
+					frag_res = obj.int_val
+					out_data['Fragment-delimited resolutions'].push(frag_res)
+					frag_res_i++
+				}
+				if (frag_res_i == frag_res_n) complete_flag = true
+				last_line = lineCounter
+			} else if (complete_flag) {
+				rl.close()
+			}
+			lineCounter++
+		})
+
+		rl.on('close', () => {
+			resolve(JSON.stringify(out_data))
+		})
+	})
+
+	function getString(line) {
+		let str = ''
+		let uri_array = encodeURIComponent(line).split('')
+		if (uri_array.slice(0, 3).join('') == '%00') uri_array = uri_array.slice(3, uri_array.length)
+		for (let char of uri_array) {
+			if (char !== '%') {
+				str += char
+			} else break
+		}
+		const new_line = line.replace(str, '')
+		return { new_line, str }
+	}
+
+	function getHextoInt(line) {
+		const buf = Buffer.from(line, 'ascii')
+		let hex_line = buf.toString('hex')
+		if (hex_line.substr(0, 4) == '0000') hex_line = hex_line.substr(2, hex_line.length)
+		const hex_str = hex_line.substr(2, 8)
+		const hex = hex_str
+			.match(/.{2}/g)
+			.reverse()
+			.join('')
+		const int_val = parseInt(hex, 16)
+		const new_hexline = hex_line.replace(hex_str, '')
+		const new_line = Buffer.from(new_hexline, 'hex').toString()
+		return { new_line, int_val }
 	}
 }
 
