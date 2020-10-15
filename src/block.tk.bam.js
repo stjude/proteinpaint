@@ -221,7 +221,55 @@ function may_render_variant(data, tk, block) {
 		.attr('y', 0)
 		.attr('width', x2 - x1)
 		.attr('height', tk.dom.variantrowheight - 2)
+
+	const variant_string =
+		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+	//        console.log("Length of variant string:",variant_string.length)
+	//        console.log("x1:",x1)
+	//        console.log("x2:",x2)
+	// Determining where to place the text. Before, inside or after the box
+	let variant_start_text_pos = 0
+	const space_param = 15
+	const pad_param = 10
+	if (variant_string.length * space_param < x1) {
+		variant_start_text_pos = 0
+	} else {
+		variant_start_text_pos = x2 + pad_param
+	}
+
+	tk.dom.variantg
+		.append('text')
+		.attr('x', variant_start_text_pos)
+		.attr('y', 15)
+		.attr('dy', '.10em')
+		.text(variant_string)
 	// TODO show variant info alongside box
+
+	if (data.refalleleerror == true) {
+		const text_string = 'Incorrect reference allele'
+		// Determining position to place the string and avoid overwriting variant string
+		let text_start_pos = 0
+		if (
+			variant_start_text_pos == 0 &&
+			text_string.length * space_param + pad_param < x1 - variant_string.length * space_param
+		) {
+			text_start_pos = variant_string.length * space_param + pad_param
+		} else if (variant_start_text_pos != 0 && text_string.length * space_param < x1) {
+			text_start_pos = 0
+		} else if (variant_start_text_pos == x2 + pad_param) {
+			text_start_pos = x2 + variant_string.length * space_param + pad_param
+		} else {
+			text_start_pos = x2 + pad_param
+		}
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', text_start_pos)
+			.attr('y', 15)
+			.style('fill', 'red')
+			.attr('dy', '.10em')
+			.text(text_string)
+	}
 }
 
 function setTkHeight(tk) {
@@ -238,22 +286,15 @@ function setTkHeight(tk) {
 		}
 		h += g.data.height
 	}
-	//        console.log("tk.toppad:",tk.toppad)
-	//        console.log("tk.bottompad:",tk.bottompad)
-	//        console.log("tk.height:",tk.height)
-	//        console.log("tk.height_main:",tk.height_main)
 	tk.height_main = tk.height = h
-	//        console.log("tk.height_main:",tk.height_main)
-	//        console.log("h:",h)
 	tk.height_main += tk.toppad + tk.bottompad
-	//        console.log("tk.height_main:",tk.height_main)
 }
 
 function updateExistingGroups(data, tk, block) {
 	// to update all existing groups and reset each group to fullstack
 	for (const gd of data.groups) {
 		const group = tk.groups.find(g => g.data.type == gd.type)
-		if (!group) throw 'unknown group type: ' + gd.type
+		if (!group) continue // throw 'unknown group type: ' + gd.type
 		group.data = gd
 
 		update_boxes(group, tk, block)
