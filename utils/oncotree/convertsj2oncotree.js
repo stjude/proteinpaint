@@ -25,12 +25,17 @@ const oncomissing = []
 		.readFileSync(file_sj2oncotree, { encoding: 'utf8' })
 		.trim()
 		.split('\n')
+	const sjcodes = new Set() // to detect duplicating codes
 	for (let i = 1; i < lines.length; i++) {
 		const [sjgroup, sjname, sjcode, onco] = lines[i].split('\t')
+
+		if (sjcodes.has(sjcode)) console.error('Duplicating SJ code: ' + sjcode)
+		sjcodes.add(sjcode)
+
 		if (onco == '<NA>') {
 			oncomissing.push('<NA> (<NA>)\t' + sjname + ' (' + sjcode + ')')
 		} else {
-			sj2onco.set(sjname, onco)
+			sj2onco.set(sjcode, onco)
 		}
 	}
 }

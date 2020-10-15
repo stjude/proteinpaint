@@ -16,3 +16,5 @@ node ~/proteinpaint/utils/oncotree/table2annotation.js oncotree.sjsubset table.o
 
 node ~/proteinpaint/utils/oncotree/oncotree2term.js oncotree.sjsubset
 # made two files: termdb/terms and termdb/ancestry
+
+sqlite3 db < load.sql
