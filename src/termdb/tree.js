@@ -400,6 +400,9 @@ function setRenderers(self) {
 							self.opts.click_term(term)
 						})
 				}
+			} else if (self.opts.set_custombtns) {
+				self.opts.set_custombtns(term, div.append('div').style('display', 'inline-block'), termIsDisabled, cls_termview)
+				// div.append('div').attr('class', cls_termgraphdiv)
 			} else {
 				// no modifier, show view button and graph div
 				div
