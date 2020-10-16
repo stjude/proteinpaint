@@ -16,6 +16,8 @@ obj:
 	.y
 	.sample
 	.s {}
+.dots_user[]
+	x/y/sample
 .dotselection
 .sample2dot MAP
 .scattersvg SVG
@@ -114,8 +116,18 @@ export async function init(obj, holder, debugmode) {
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 
-	const lst = ['genome=' + obj.genome.name, 'dslabel=' + obj.dslabel]
 	try {
+		const lst = ['genome=' + obj.genome.name, 'dslabel=' + obj.dslabel]
+
+		if (obj.analysisdata) {
+			if (obj.analysisdata.subset) {
+				// pass subset attr to server to filter samples
+				if (!obj.analysisdata.subset.key) throw '.subset.key missing'
+				if (!obj.analysisdata.subset.value) throw '.subset.value missing'
+				lst.push('subsetkey=' + obj.analysisdata.subset.key)
+				lst.push('subsetvalue=' + obj.analysisdata.subset.value)
+			}
+		}
 		const data = await client.dofetch2('mdssamplescatterplot?' + lst.join('&'))
 		if (data.error) throw data.error
 		if (!data.dots) throw 'server error'
@@ -124,7 +136,7 @@ export async function init(obj, holder, debugmode) {
 		for (const dot of data.dots) {
 			obj.sample2dot.set(dot.sample, dot)
 		}
-		obj.dots = data.dots
+		combine_data(obj, data)
 
 		obj.querykey = data.querykey // for the moment it should always be set
 
@@ -143,12 +155,53 @@ export async function init(obj, holder, debugmode) {
 	}
 }
 
+function combine_data(obj, data) {
+	// data is returned by server
+	if (!obj.analysisdata) {
+		obj.dots = data.dots
+		return
+	}
+	if (!obj.analysisdata.str) throw '.analysisdata.str missing'
+
+	const analysis = new Map() // only for server-hosted samples
+	// k: sample id, v: {x,y}
+	obj.dots_user = [] // for user samples
+	for (const line of obj.analysisdata.str.trim().split('\n')) {
+		const l = line.split('\t')
+		if (l.length < 3) {
+			// to report
+			continue
+		}
+		const sample = l[2]
+		if (!sample) continue
+		const j = {
+			x: Number(l[0]),
+			y: Number(l[1])
+		}
+		if (Number.isNaN(j.x) || Number.isNaN(j.y)) continue
+		if (l[3]) {
+			j.sample = sample
+			obj.dots_user.push(j)
+			continue
+		}
+		analysis.set(sample, j)
+	}
+	obj.dots = []
+	for (const i of data.dots) {
+		const j = analysis.get(i.sample)
+		if (!j) continue
+		i.x = j.x
+		i.y = j.y
+		obj.dots.push(i)
+	}
+}
+
 function init_plot(obj) {
 	let minx = obj.dots[0].x,
 		maxx = minx,
 		miny = obj.dots[0].y,
 		maxy = miny
-	for (const d of obj.dots) {
+	for (const d of [...obj.dots, ...(obj.dots_user || [])]) {
 		minx = Math.min(minx, d.x)
 		maxx = Math.max(maxx, d.x)
 		miny = Math.min(miny, d.y)
@@ -163,14 +216,14 @@ function init_plot(obj) {
 		leftpad = 100,
 		rightpad = 30,
 		vpad = 20,
-		width = 500,
-		height = 500
+		width = 800, // make automatic
+		height = 800
 
 	const svg = obj.scattersvg
 
 	const xaxisg = svg.append('g')
 	const yaxisg = svg.append('g')
-	const dotg = svg.append('g')
+	const dotg = svg.append('g').attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')')
 
 	const dots = dotg
 		.selectAll()
@@ -184,7 +237,7 @@ function init_plot(obj) {
 		.attr('r', radius)
 		.on('mouseover', d => {
 			d3event.target.setAttribute('stroke', 'white')
-			const lst = [{ k: 'name', v: d.sample }]
+			const lst = [{ k: 'Sample', v: d.sample }]
 			for (const attrkey in obj.mds.sampleAttribute.attributes) {
 				const attr = obj.mds.sampleAttribute.attributes[attrkey]
 				const v = d.s[attrkey]
@@ -207,16 +260,67 @@ function init_plot(obj) {
 
 	obj.dotselection = circles
 
+	let userdots, usercircles, userlabelg, userlabels
+	if (obj.dots_user) {
+		userdots = dotg
+			.selectAll()
+			.data(obj.dots_user)
+			.enter()
+			.append('g')
+		usercircles = userdots
+			.append('circle')
+			.attr('stroke', 'none')
+			.attr('fill', 'black')
+			.attr('r', radius)
+			.on('mouseover', d => {
+				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
+			})
+			.on('mouseout', d => {
+				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
+			})
+		userlabelg = dotg
+			.selectAll()
+			.data(obj.dots_user)
+			.enter()
+			.append('g')
+		userlabels = userlabelg
+			.append('text')
+			.text(d => d.sample)
+			.on('mouseover', d => {
+				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
+			})
+			.on('mouseout', d => {
+				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
+			})
+			.on('mousedown', () => {
+				d3event.preventDefault()
+				const b = d3select(document.body)
+				const x = d3event.clientX
+				const y = d3event.clientY
+				const w0 = width
+				const h0 = height
+				b.on('mousemove', () => {
+					width = w0 + d3event.clientX - x
+					height = h0 + d3event.clientY - y
+					resize()
+				})
+				b.on('mouseup', () => {
+					b.on('mousemove', null).on('mouseup', null)
+				})
+			})
+	}
+
 	assign_color4dots(obj)
 
 	function resize() {
 		bottompad = width / 20 + 20
 		svg.attr('width', leftpad + vpad + width + rightpad).attr('height', toppad + height + vpad + bottompad)
-		xaxisg.attr('transform', 'translate(' + (leftpad + vpad) + ',' + (toppad + height + vpad) + ')')
-		yaxisg.attr('transform', 'translate(' + leftpad + ',' + toppad + ')')
-		dotg.attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')')
+		//dotg
 		xscale.range([0, width])
 		yscale.range([height, 0])
+		/*
+		xaxisg.attr('transform', 'translate(' + (leftpad + vpad) + ',' + (toppad + height + vpad) + ')')
+		yaxisg.attr('transform', 'translate(' + leftpad + ',' + toppad + ')')
 		client.axisstyle({
 			axis: xaxisg.call(axisBottom().scale(xscale)),
 			color: 'black',
@@ -229,7 +333,12 @@ function init_plot(obj) {
 			fontsize: height / 40,
 			showline: true
 		})
+		*/
 		dots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+		if (userdots) {
+			userdots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+			userlabelg.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+		}
 		//circles.attr('r',radius)
 	}
 	resize()
