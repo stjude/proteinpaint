@@ -33,7 +33,7 @@ const oncomissing = []
 		sjcodes.add(sjcode)
 
 		if (onco == '<NA>') {
-			oncomissing.push('<NA> (<NA>)\t' + sjname + ' (' + sjcode + ')')
+			oncomissing.push('St. Jude only (<NA>)\t' + sjname + ' (' + sjcode + ')')
 		} else {
 			sj2onco.set(sjcode, onco)
 		}
