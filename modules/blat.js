@@ -28,7 +28,7 @@ exports.request_closure = genomes => {
 			if (!genome) throw 'invalid genome'
 			if (!genome.blat) throw 'blat not enabled'
 			if (!req.query.seq) throw '.seq missing'
-			res.send(await do_blat(genome, req.query.seq))
+			res.send(await do_blat2(genome, req.query.seq))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -106,6 +106,60 @@ async function do_blat(genome, seq) {
 		}
 		hits.push(h)
 	}
+	console.log(hits)
+	return { hits }
+}
+
+async function do_blat2(genome, seq) {
+	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
+	const outfile = await run_blat2(genome, infile)
+	const outputstr = (await utils.read_file(outfile)).trim()
+	fs.unlink(outfile, () => {})
+	fs.unlink(infile, () => {})
+	if (outputstr == '') return { nohit: 1 }
+	const lines = outputstr.split('\n')
+	const hits = []
+	let h = {}
+	let temp_seq = ''
+	for (const line of lines) {
+		const l = line.split(' ').filter(function(el) {
+			return el != ''
+		})
+		//console.log(l)
+		if (l[0] == 'a') {
+			h = {}
+			h.score = parseFloat(l[1].substr(6, l[1].length)).toFixed(2)
+		} else if (l[0] == 's') {
+			if (l[1] == 'query') {
+				h.query_startpos = l[2]
+				h.query_alignlen = l[3]
+				h.query_strand = l[4]
+				h.query_totallen = l[5]
+				h.query_alignment = l[6] //.replace(/-/g,"N")
+				//		    h.query_alignment=''
+				//		    for (let i=0; i<l[6].length; i++) {
+				//			if (i==l[6].length-1)
+				//			   {h.query_alignment+=l[6].substr(i,1) }
+				//			else {h.query_alignment+=l[6].substr(i,1)+'\t'}
+				//	            }
+				hits.push(h)
+			} else {
+				h.ref_chr = l[1]
+				h.ref_startpos = l[2]
+				h.ref_alignlen = l[3]
+				h.ref_strand = l[4]
+				h.ref_totallen = l[5] // This is actually the chromosome length
+				h.ref_alignment = l[6] // .replace(/-/g,"N")
+				//		    h.ref_alignment=''
+				//		    for (i=0; i<l[6].length; i++) {
+				//			if (i==l[6].length-1)
+				//			   {h.ref_alignment+=l[6].substr(i,1) }
+				//			else {h.ref_alignment+=l[6].substr(i,1)+'\t'}
+				//	            }
+			}
+		}
+	}
+	//console.log(hits)
 	return { hits }
 }
 
@@ -122,6 +176,34 @@ function run_blat(genome, infile) {
 			'-nohead',
 			'-minScore=20',
 			'-minIdentity=0'
+		])
+		const out2 = []
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const e = out2.join('')
+			if (e) {
+				console.log('BLAT error', e)
+				reject('blat server problem')
+			}
+			resolve(outfile)
+		})
+	})
+}
+
+function run_blat2(genome, infile) {
+	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+	return new Promise((resolve, reject) => {
+		const ps = spawn(gfClient, [
+			genome.blat.host,
+			genome.blat.port,
+			'', // works with /full/path/to/2bit in blat server
+			infile,
+			outfile,
+			'-q=dna',
+			'-nohead',
+			'-minScore=20',
+			'-minIdentity=0',
+			'-out=maf'
 		])
 		const out2 = []
 		ps.stderr.on('data', i => out2.push(i))

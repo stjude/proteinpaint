@@ -811,7 +811,7 @@ function mayshow_blatbutton(read, div, tk, block) {
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
 				wait.remove()
-				show_blatresult(data.hits, blatdiv, tk, block)
+				show_blatresult2(data.hits, blatdiv, tk, block)
 			} catch (e) {
 				wait.text(e.message || e)
 				if (e.stack) console.log(e.stack)
@@ -850,8 +850,49 @@ function show_blatresult(hits, div, tk, block) {
 	}
 }
 
+function show_blatresult2(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		//.style('font-family','plain')
+		.style('font-size', '.8em')
+	tr.append('td').text('Score')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStrand')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RAlignLen')
+	tr.append('td').text('Seq Align')
+	for (const h of hits) {
+		let tr = table.append('tr')
+		tr.append('td').text(h.score)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_strand)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_alignlen)
+		tr.append('td').text(h.query_alignment.toUpperCase() + ' Query')
+
+		tr = table.append('tr')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text(h.ref_alignment.toUpperCase() + ' Ref')
+	}
+}
+
 async function enter_partstack(group, tk, block, y) {
-	/* for a group, enter part stack mode from full stack mode
+	/* for a group, enter part stack mode rom full stack mode
 	will only update data and rendering of this group, but not other groups
 	*/
 	group.data_fullstack = group.data
