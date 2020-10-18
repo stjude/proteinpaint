@@ -7,6 +7,7 @@ const ch_dbtable = new Map() // k: db path, v: db stuff
 const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
+const util = require('util')
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -3210,131 +3211,94 @@ async function handle_hicstat(req, res) {
 }
 
 async function do_hicstat2(file) {
-	return new Promise((resolve, reject) => {
-		if (!file) throw '.hic file or url is missing'
-		const out_data = {}
-		out_data['Chromosomes'] = {}
-		out_data['Base pair-delimited resolutions'] = []
-		out_data['Fragment-delimited resolutions'] = []
-		const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity })
-		let lineCounter = 0,
-			last_line = 0
-		let nChr,
-			ChrCount = 0,
-			bp_res_n = -1,
-			frag_res_n = 0
-		let all_flag = false,
-			complete_flag = false
-		rl.on('line', line => {
-			if (line.includes('HIC')) {
-				let { new_line, str } = getString(line)
-				const buf = Buffer.from(new_line, 'ascii')
-				let obj = getHextoInt(new_line)
-				new_line = obj.new_line
-				out_data['Hic Version'] = obj.int_val
-				const strings = buf
-					.toString('hex')
-					.split(/00/)
-					.filter(String)
-				out_data['Genome ID'] = Buffer.from(strings[2], 'hex').toString()
-			} else if (line.includes('All') && !all_flag) {
-				let new_line, Chr, Chr_len
-				let obj = getHextoInt(line)
-				new_line = obj.new_line
-				nChr = obj.int_val
-				// while(ChrCount != nChr && new_line.length > 8){
-				while (ChrCount < 6 && new_line.length > 2) {
-					let obj = getString(new_line)
-					new_line = obj.new_line
-					Chr = obj.str
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					Chr_len = obj.int_val
-					out_data['Chromosomes'][Chr] = Chr_len
-					ChrCount++
-				}
-				all_flag = true
-				last_line = lineCounter
-			} else if (all_flag && lineCounter == last_line + 1 && ChrCount != nChr) {
-				let new_line,
-					Chr,
-					Chr_len,
-					bp_res_i = 0,
-					frag_res_i = 0
-				new_line = line
-				while (ChrCount < nChr && new_line.length > 2) {
-					let obj = getString(new_line)
-					new_line = obj.new_line
-					Chr = obj.str
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					Chr_len = obj.int_val
-					out_data['Chromosomes'][Chr] = Chr_len
-					ChrCount++
-				}
-				if (ChrCount == nChr) {
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					bp_res_n = obj.int_val
-				}
-				while (bp_res_i < bp_res_n) {
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					bp_res = obj.int_val
-					out_data['Base pair-delimited resolutions'].push(bp_res)
-					bp_res_i++
-				}
-				if (bp_res_i == bp_res_n) {
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					frag_res_n = obj.int_val
-				}
-				while (frag_res_i < frag_res_n) {
-					obj = getHextoInt(new_line)
-					new_line = obj.new_line
-					frag_res = obj.int_val
-					out_data['Fragment-delimited resolutions'].push(frag_res)
-					frag_res_i++
-				}
-				if (frag_res_i == frag_res_n) complete_flag = true
-				last_line = lineCounter
-			} else if (complete_flag) {
-				rl.close()
-			}
-			lineCounter++
-		})
+	const out_data = {}
+	const data = await readHicHeader(file, 0, 32000)
+	const view = new DataView(data)
+	let position = 0
+	const magic = getString()
+	if (magic !== 'HIC') {
+		throw Error('Unsupported hic file')
+	}
+	const version = getInt()
+	if (version !== 8) {
+		throw Error('Unsupported hic version: ' + version)
+	}
+	out_data['Hic Version'] = version
+	position += 8 // skip unwatnted part
+	const genomeId = getString()
+	out_data['Genome ID'] = genomeId
 
-		rl.on('close', () => {
-			resolve(JSON.stringify(out_data))
-		})
-	})
+	// skip unwatnted attributes
+	let attributes = {}
+	const attr_n = getInt()
+	let attr_i = 0
 
-	function getString(line) {
-		let str = ''
-		let uri_array = encodeURIComponent(line).split('')
-		if (uri_array.slice(0, 3).join('') == '%00') uri_array = uri_array.slice(3, uri_array.length)
-		for (let char of uri_array) {
-			if (char !== '%') {
-				str += char
-			} else break
-		}
-		const new_line = line.replace(str, '')
-		return { new_line, str }
+	while (attr_i !== attr_n) {
+		attributes[getString()] = getString()
+		attr_i++
 	}
 
-	function getHextoInt(line) {
-		const buf = Buffer.from(line, 'ascii')
-		let hex_line = buf.toString('hex')
-		if (hex_line.substr(0, 4) == '0000') hex_line = hex_line.substr(2, hex_line.length)
-		const hex_str = hex_line.substr(2, 8)
-		const hex = hex_str
-			.match(/.{2}/g)
-			.reverse()
-			.join('')
-		const int_val = parseInt(hex, 16)
-		const new_hexline = hex_line.replace(hex_str, '')
-		const new_line = Buffer.from(new_hexline, 'hex').toString()
-		return { new_line, int_val }
+	// Chromosomes
+	out_data['Chromosomes'] = {}
+	let nChrs = getInt()
+	let Chr_i = 0
+	while (Chr_i !== nChrs) {
+		out_data['Chromosomes'][getString()] = getInt()
+		Chr_i++
+	}
+
+	// basepair resolutions
+	out_data['Base pair-delimited resolutions'] = []
+	let bpRes_n = getInt()
+	let bpRes_i = 0
+	while (bpRes_i !== bpRes_n) {
+		out_data['Base pair-delimited resolutions'].push(getInt())
+		bpRes_i++
+	}
+
+	// fragment resolutions
+	out_data['Fragment-delimited resolutions'] = []
+	let FragRes_n = getInt()
+	let FragRes_i = 0
+	while (FragRes_i !== FragRes_n) {
+		out_data['Fragment-delimited resolutions'].push(getInt())
+		FragRes_i++
+	}
+
+	const output = JSON.stringify(out_data)
+	return output
+
+	async function readHicHeader(file, position, length) {
+		const fsOpen = util.promisify(fs.open)
+		const fsRead = util.promisify(fs.read)
+
+		const buffer = Buffer.alloc(length)
+		const fd = await fsOpen(file, 'r')
+		const result = await fsRead(fd, buffer, 0, length, position)
+
+		fs.close(fd, function(error) {
+			return error
+		})
+
+		const buf = result.buffer
+		const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+
+		return arrayBuffer
+	}
+
+	function getString() {
+		let str = ''
+		let chr
+		while ((chr = view.getUint8(position++)) != 0) {
+			str += String.fromCharCode(chr)
+		}
+		return str
+	}
+
+	function getInt() {
+		const IntVal = view.getInt32(position, true)
+		position += 4
+		return IntVal
 	}
 }
 
