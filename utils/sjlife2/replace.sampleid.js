@@ -17,6 +17,8 @@ for (const line of fs
 const infile = process.argv[2]
 const columns = process.argv[3].split(',').map(Number)
 
+const missingsamples = new Set()
+
 const lines = fs
 	.readFileSync(infile, { encoding: 'utf8' })
 	.trim()
@@ -36,15 +38,24 @@ for (let i = 0; i < lines.length; i++) {
 	if (columns.length == 1) {
 		// must be 0
 		const id = str2id.get(l[0])
-		if (id == undefined) throw 'unknown mapping for ' + l[0]
+		if (id == undefined) {
+			missingsamples.add(l[0])
+			continue
+		}
 		l[0] = id
 		console.log(l.join('\t'))
 		continue
 	}
 	// must be 0 and 1
 	const id = str2id.get(l[0] || l[1])
-	if (id == undefined) throw 'unknown mapping for ' + (l[0] || l[1])
+	if (id == undefined) {
+		missingsamples.add(l[0] || l[1])
+		continue
+	}
 	l.shift()
 	l[0] = id
 	console.log(l.join('\t'))
+}
+if (missingsamples.size) {
+	console.error(missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
 }

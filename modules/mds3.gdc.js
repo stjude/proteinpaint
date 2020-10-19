@@ -22,6 +22,7 @@ export function validate_query_snvindel_byisoform(api, ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
 	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
+	if (typeof api.variables != 'function') throw 'byisoform.gdcapi.variables() is not a function'
 	api.get = async opts => {
 		const hits = await snvindel_byisoform_run(ds, opts)
 		const mlst = [] // parse snv/indels into this list
@@ -100,13 +101,11 @@ function snvindel_addclass(m, consequence) {
 async function snvindel_byisoform_run(ds, opts) {
 	// used in two places
 	// query is ds.queries.snvindel
-	const variables = JSON.parse(JSON.stringify(ds.queries.snvindel.byisoform.gdcapi.variables))
-	variables.filters.content.value = [opts.isoform]
 	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			query: ds.queries.snvindel.byisoform.gdcapi.query,
-			variables
+			variables: ds.queries.snvindel.byisoform.gdcapi.variables(opts)
 		})
 	})
 	let re

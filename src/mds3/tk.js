@@ -103,6 +103,10 @@ export function get_parameter(tk, block) {
 			// need to make sample summary
 			par.push('samplesummary=1')
 		}
+		if (tk.set_id) {
+			// quick fix!!!
+			par.push('set_id=' + tk.set_id)
+		}
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform
