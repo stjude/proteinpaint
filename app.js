@@ -3202,7 +3202,7 @@ async function handle_hicstat(req, res) {
 		if (!isurl) {
 			await utils.file_is_readable(file)
 		}
-		const out = await do_hicstat2(file)
+		const out = await do_hicstat(file)
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -3210,7 +3210,7 @@ async function handle_hicstat(req, res) {
 	}
 }
 
-async function do_hicstat2(file) {
+async function do_hicstat(file) {
 	const out_data = {}
 	const data = await readHicHeader(file, 0, 32000)
 	const view = new DataView(data)
@@ -3300,23 +3300,6 @@ async function do_hicstat2(file) {
 		position += 4
 		return IntVal
 	}
-}
-
-function do_hicstat(file) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(hicstat[0], [hicstat[1], file])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const e = out2.join('').trim()
-			if (e) {
-				reject(e)
-			}
-			resolve(out.join('').trim())
-		})
-	})
 }
 
 function handle_hicdata(req, res) {
