@@ -855,7 +855,6 @@ function show_blatresult2(hits, div, tk, block) {
 	const tr = table
 		.append('tr')
 		.style('opacity', 0.5)
-		//.style('font-family','plain')
 		.style('font-size', '.8em')
 	tr.append('td').text('Score')
 	tr.append('td').text('QStart')
@@ -865,7 +864,7 @@ function show_blatresult2(hits, div, tk, block) {
 	tr.append('td').text('RStrand')
 	tr.append('td').text('RStart')
 	tr.append('td').text('RAlignLen')
-	tr.append('td').text('Seq Align')
+	tr.append('td').text('SeqAlign')
 	for (const h of hits) {
 		let tr = table.append('tr')
 		tr.append('td').text(h.score)
@@ -876,7 +875,9 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_strand)
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
-		tr.append('td').text(h.query_alignment.toUpperCase() + ' Query')
+		tr.append('td')
+			.text(h.query_alignment.toUpperCase() + ' Query')
+			.style('font-family', 'courier')
 
 		tr = table.append('tr')
 		tr.append('td').text('')
@@ -887,7 +888,9 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text('')
 		tr.append('td').text('')
 		tr.append('td').text('')
-		tr.append('td').text(h.ref_alignment.toUpperCase() + ' Ref')
+		tr.append('td')
+			.text(h.ref_alignment.toUpperCase() + ' Ref')
+			.style('font-family', 'courier')
 	}
 }
 
