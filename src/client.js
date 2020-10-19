@@ -1963,7 +1963,7 @@ export function add_scriptTag(path) {
 	// path like /static/js/three.js, must begin with /
 	return new Promise((resolve, reject) => {
 		const script = document.createElement('script')
-		script.setAttribute('src', window.location.origin + path)
+		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
 		document.head.appendChild(script)
 		script.onload = resolve
 	})
