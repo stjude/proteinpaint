@@ -3,7 +3,7 @@
 drop index if exists sidmap_id;
 drop table if exists sampleidmap;
 create table sampleidmap (
-  id integer not null,
+  id character not null,
   name character varying(100) not null
 );
 .import 'samples.idmap' sampleidmap
