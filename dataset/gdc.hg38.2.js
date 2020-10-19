@@ -32,6 +32,7 @@ query Lolliplot_relayQuery(
 		}
 	}
 }`
+/*
 const variables_isoform2variants = {
 	filters: {
 		op: '=',
@@ -41,6 +42,34 @@ const variables_isoform2variants = {
 		}
 	},
 	score: 'occurrence.case.project.project_id'
+}
+*/
+function variables_isoform2variants(p) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		},
+		score: 'occurrence.case.project.project_id'
+	}
+	if (p.set_id) {
+		f.filters.content.push({
+			op: 'in',
+			content: {
+				field: 'cases.case_id',
+				value: [p.set_id]
+			}
+		})
+	}
+	return f
 }
 
 /*
