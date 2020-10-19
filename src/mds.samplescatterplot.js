@@ -221,8 +221,8 @@ function init_plot(obj) {
 
 	const svg = obj.scattersvg
 
-	const xaxisg = svg.append('g')
-	const yaxisg = svg.append('g')
+	//const xaxisg = svg.append('g')
+	//const yaxisg = svg.append('g')
 	const dotg = svg.append('g').attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')')
 
 	const dots = dotg
@@ -288,21 +288,25 @@ function init_plot(obj) {
 			.text(d => d.sample)
 			.on('mouseover', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
+				svg.style('cursor', 'move')
 			})
 			.on('mouseout', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
+				svg.style('cursor', 'auto')
 			})
-			.on('mousedown', () => {
+			.on('mousedown', d => {
 				d3event.preventDefault()
 				const b = d3select(document.body)
 				const x = d3event.clientX
 				const y = d3event.clientY
-				const w0 = width
-				const h0 = height
+				// <g> is movable
+				const g = userlabelg.filter(i => i.sample == d.sample)
+				const [x1, y1] = g
+					.attr('transform')
+					.match(/[\d\.]+/g)
+					.map(Number)
 				b.on('mousemove', () => {
-					width = w0 + d3event.clientX - x
-					height = h0 + d3event.clientY - y
-					resize()
+					g.attr('transform', 'translate(' + (x1 + d3event.clientX - x) + ',' + (y1 + d3event.clientY - y) + ')')
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
@@ -318,26 +322,10 @@ function init_plot(obj) {
 		//dotg
 		xscale.range([0, width])
 		yscale.range([height, 0])
-		/*
-		xaxisg.attr('transform', 'translate(' + (leftpad + vpad) + ',' + (toppad + height + vpad) + ')')
-		yaxisg.attr('transform', 'translate(' + leftpad + ',' + toppad + ')')
-		client.axisstyle({
-			axis: xaxisg.call(axisBottom().scale(xscale)),
-			color: 'black',
-			fontsize: width / 40,
-			showline: true
-		})
-		client.axisstyle({
-			axis: yaxisg.call(axisLeft().scale(yscale)),
-			color: 'black',
-			fontsize: height / 40,
-			showline: true
-		})
-		*/
 		dots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
 		if (userdots) {
 			userdots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
-			userlabelg.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+			userlabelg.transition().attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
 		}
 		//circles.attr('r',radius)
 	}
@@ -452,6 +440,7 @@ function init_dotcolor_legend(obj) {
 
 			for (const [value, o] of attr.values) {
 				// for each value
+				if (o.count == 0) continue
 
 				const cell = cellholder
 					.append('div')
