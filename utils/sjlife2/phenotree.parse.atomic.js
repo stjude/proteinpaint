@@ -70,7 +70,7 @@ async function main() {
 	// value: term json obj
 
 	// step 2
-	await step2_parsematrix(file_matrix, key2terms)
+	await step2_parsematrix(key2terms)
 
 	// step 3
 	step3_finalizeterms_diagnosticmsg(key2terms)
@@ -201,10 +201,10 @@ function parseconfig(str) {
 	return term
 }
 
-function step2_parsematrix(file, key2terms) {
+function step2_parsematrix(key2terms) {
 	return new Promise((resolve, reject) => {
 		let headerlst
-		const rl = readline.createInterface({ input: fs.createReadStream(file) })
+		const rl = readline.createInterface({ input: fs.createReadStream(file_matrix) })
 		const header_notermmatch = new Set()
 		rl.on('line', line => {
 			const l = line.split('\t')
@@ -214,8 +214,8 @@ function step2_parsematrix(file, key2terms) {
 				return
 			}
 
-			// do not parse first 1-4 columns, starting from 5th column
-			for (let i = 4; i < l.length; i++) {
+			// do not parse first three columns, starting from 4th column
+			for (let i = 3; i < l.length; i++) {
 				const headerfield = headerlst[i]
 				if (!headerfield) throw 'headerfield missing: ' + i
 				const str = l[i]
