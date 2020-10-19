@@ -1,7 +1,7 @@
 import { select, transition } from 'd3'
-import { dofetch2, tab2box, tkt, launch_block } from './client'
+import { dofetch, dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
-import { gene_searchbox, findgenemodel_bysymbol } from './gene'
+import { gene_searchbox } from './gene'
 // import { check } from 'prettier'
 
 /*
@@ -26,13 +26,13 @@ export async function init_mdsjsonform(par) {
 	}
 	const [form_div, wrapper_div] = make_header(holder)
 	const doms = {}
-	doms.genome = make_genome(wrapper_div, genomes)
+	make_genome(wrapper_div, genomes, doms)
 	doms.position = make_position(wrapper_div)
 	doms.name = make_name(wrapper_div)
-	set_dense(wrapper_div, doms)
 	make_svcnv_radios(wrapper_div, doms)
 	make_vcf_radios(wrapper_div, doms)
 	make_expression_radios(wrapper_div, doms)
+	set_dense(wrapper_div, doms)
 	make_sampleset(wrapper_div, doms)
 	make_assaytracks(wrapper_div, doms)
 	window.doms = doms
@@ -251,7 +251,7 @@ function validate_input(doms) {
 	const obj = {
 		type: tkt.mdssvcnv,
 		isdense: doms.isdense,
-		isfull: doms.isfull,
+		isfull: doms.isfull
 	}
 	{
 		const n = doms.genome.node()
@@ -360,7 +360,7 @@ function isurl(t) {
 	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
 }
 //.genome
-function make_genome(div, genomes) {
+function make_genome(div, genomes, doms) {
 	const genome_prompt = div.append('div')
 
 	genome_prompt.append('span').text('Genome')
@@ -371,34 +371,40 @@ function make_genome(div, genomes) {
 	for (const n in genomes) {
 		select.append('option').text(n)
 	}
-	return select
+	doms.genome = select.property('value')
 }
 //.position
-function make_position(div) {
+function make_position(div, doms) {
 	const position_prompt = div.append('div')
 
 	position_prompt.append('span').text('Default position')
 
 	const position = div.append('div')
 
-	return position
+	position
 		.append('div')
 		.append('input')
 		.attr('size', 30)
-		.property('placeholder', 'chr:start-stop')
+		.property('placeholder', 'chr:start-stop or gene')
 		.on('click', () => {
 			gene_searchbox({
-				div: position,
-				resultdiv: position,
-				genome: doms.genome,
-				callback: genename => {
-					//TODO needs to callback to the original div with position
-					const gmlst = await findgenemodel_bysymbol(doms.genome, genename)
-					const fixedgene = {
-						gene: name,
-						chr: gm.chr,
-						start: gm.start,
-						stop: gm.stop
+				div: position.append('div'),
+				resultdiv: position.append('div'),
+				genome: doms.genome.name, //TODO why can't this be read?
+				callback: async genename => {
+					const gmlst = await client.dofetch('genelookup', { genome: doms.genome.name, input: genename, deep: 1 })
+					if (gmlst && gmlst[0]) {
+						const gm = gmlst[0]
+						if (!doms.genes) doms.genes = []
+						const geneidx = doms.genes.findIndex(i => i.gene == genename)
+						if (geneidx == -1) {
+							doms.genes.push({
+								gene: genename,
+								chr: gm.chr,
+								start: gm.start,
+								stop: gm.stop //TODO nothing is returned to the view port.. or doms or obj
+							})
+						}
 					}
 				}
 			})
@@ -744,8 +750,8 @@ function make_loh_upperlimit(div) {
 // }
 // Options under CNV+SV+Fusion text field
 function make_control_panel(div, doms) {
-
-	const control_panel = div.append('div')
+	const control_panel = div
+		.append('div')
 		.append('div')
 		// .style('margins', '5px')
 		.style('width', '49%')
@@ -753,10 +759,10 @@ function make_control_panel(div, doms) {
 		.style('display', 'inline') //TODO actually get fields to display inline instead one after another
 		.style('position', 'relative')
 	// control_panel
-		doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
-		doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
-		doms.segmeanValueCutoff = make_segmean_cutoff(control_panel)
-		doms.lohLengthUpperLimit = make_loh_upperlimit(control_panel)
+	doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
+	doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
+	doms.segmeanValueCutoff = make_segmean_cutoff(control_panel)
+	doms.lohLengthUpperLimit = make_loh_upperlimit(control_panel)
 }
 
 // .sampleset
@@ -779,8 +785,7 @@ function make_sampleset(div, doms) {
 			}
 		})
 	const hold_column = div.append('div')
-	const uidiv = hold_column.append('div')
-		.style('display', 'none')
+	const uidiv = hold_column.append('div').style('display', 'none')
 
 	//**Previous radio button option */
 	// const sampleset_prompt = div.append('div')
@@ -828,8 +833,7 @@ function make_assaytracks(div, doms) {
 			}
 		})
 	const hold_column = div.append('div')
-	const uidiv = hold_column.append('div')
-		.style('display', 'none')
+	const uidiv = hold_column.append('div').style('display', 'none')
 
 	//**Previous radio button option */
 	// const assay_prompt = div.append('div')
@@ -1043,15 +1047,15 @@ function parse_junction(doms) {
 // 	}
 // }
 // function fadeout(div) {
-	// let timer = null
-	// if (div.style('opacity') != 0){
-	// 	clearTimeout(timer)
-	// 	div.style('display', 'block')
-	// 	timer = setInterval(() => {
-	// 		div.style('opacity') == div.style('opacity') - .10;
-	// 		if (+getComputedStyle(div).getPropertyValue("opacity") <= 0) {
-	// 		  clearInterval(timer);
-	// 		}
-	// 	}, 100)
-	// }
+// let timer = null
+// if (div.style('opacity') != 0){
+// 	clearTimeout(timer)
+// 	div.style('display', 'block')
+// 	timer = setInterval(() => {
+// 		div.style('opacity') == div.style('opacity') - .10;
+// 		if (+getComputedStyle(div).getPropertyValue("opacity") <= 0) {
+// 		  clearInterval(timer);
+// 		}
+// 	}, 100)
+// }
 // }
