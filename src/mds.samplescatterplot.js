@@ -4,6 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
+import { lasso } from 'd3-lasso'
 
 /*
 obj:
@@ -460,7 +461,7 @@ function init_dotcolor_legend(obj) {
 						// not yet, select this one
 						for (const o2 of attr.values.values()) {
 							o2.selected = false
-							o2.cell.style('border', '')
+							cell.style('border', '')
 						}
 						o.selected = true
 						cell.style('border', 'solid 1px #858585')
@@ -524,6 +525,10 @@ function click_dot(dot, obj) {
 				holder: pane.body
 			})
 		})
+}
+
+function lasso_select() {
+	// TODO: add lasso to select dots from scatterplot
 }
 
 function launch_singlesample(p) {
