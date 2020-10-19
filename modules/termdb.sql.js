@@ -870,6 +870,25 @@ thus less things to worry about...
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
+	if (tables.sampleidmap) {
+		const s = cn.prepare('SELECT * FROM sampleidmap')
+		let id2name
+		// new method added to ds{}, under same name of table
+		// the method could be defined indepenent of db
+		ds.sampleidmap = {
+			get: id => {
+				if (!id2name) {
+					id2name = new Map()
+					// k: sample id, v: sample name
+					for (const { id, name } of s.all()) {
+						id2name.set(id, name)
+					}
+				}
+				return id2name.get(id) || id
+			}
+		}
+	}
+
 	if (tables.category2vcfsample) {
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
@@ -1136,6 +1155,7 @@ function test_tables(cn) {
 		annotations: s.get('annotations'),
 		chronicevents: s.get('chronicevents'),
 		precomputed: s.get('precomputed'),
-		subcohort_terms: s.get('subcohort_terms')
+		subcohort_terms: s.get('subcohort_terms'),
+		sampleidmap: s.get('sampleidmap')
 	}
 }
