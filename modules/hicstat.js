@@ -1,9 +1,12 @@
+import { resolveNaptr } from 'dns'
+
 const fs = require('fs')
 const util = require('util')
+const got = require('got')
 
-export async function do_hicstat(file) {
+export async function do_hicstat(file, isurl) {
 	const out_data = {}
-	const data = await readHicHeader(file, 0, 32000)
+	const data = isurl ? await readHicUrlHeader(file, 0, 32000) : await readHicFileHeader(file, 0, 32000)
 	const view = new DataView(data)
 	let position = 0
 	const magic = getString()
@@ -59,7 +62,7 @@ export async function do_hicstat(file) {
 	const output = JSON.stringify(out_data)
 	return output
 
-	async function readHicHeader(file, position, length) {
+	async function readHicFileHeader(file, position, length) {
 		const fsOpen = util.promisify(fs.open)
 		const fsRead = util.promisify(fs.read)
 
@@ -75,6 +78,20 @@ export async function do_hicstat(file) {
 		const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
 
 		return arrayBuffer
+	}
+
+	async function readHicUrlHeader(url, position, length) {
+		try {
+			const response = await got.get(url, {
+				headers: { Range: 'bytes=' + position + '-' + (length - 1) },
+				responseType: 'buffer'
+			})
+			const buf = response.body
+			const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+			return arrayBuffer
+		} catch (error) {
+			console.log(error.response)
+		}
 	}
 
 	function getString() {
