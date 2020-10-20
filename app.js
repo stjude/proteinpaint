@@ -61,7 +61,8 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	variant2samples_closure = require('./modules/variant2samples')
+	variant2samples_closure = require('./modules/variant2samples'),
+	do_hicstat = require('./modules/hicstat').do_hicstat
 
 /*
 valuable globals
@@ -3207,98 +3208,6 @@ async function handle_hicstat(req, res) {
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
-	}
-}
-
-async function do_hicstat(file) {
-	const out_data = {}
-	const data = await readHicHeader(file, 0, 32000)
-	const view = new DataView(data)
-	let position = 0
-	const magic = getString()
-	if (magic !== 'HIC') {
-		throw Error('Unsupported hic file')
-	}
-	const version = getInt()
-	if (version !== 8) {
-		throw Error('Unsupported hic version: ' + version)
-	}
-	out_data['Hic Version'] = version
-	position += 8 // skip unwatnted part
-	const genomeId = getString()
-	out_data['Genome ID'] = genomeId
-
-	// skip unwatnted attributes
-	let attributes = {}
-	const attr_n = getInt()
-	let attr_i = 0
-
-	while (attr_i !== attr_n) {
-		attributes[getString()] = getString()
-		attr_i++
-	}
-
-	// Chromosomes
-	out_data['Chromosomes'] = {}
-	let nChrs = getInt()
-	let Chr_i = 0
-	while (Chr_i !== nChrs) {
-		out_data['Chromosomes'][getString()] = getInt()
-		Chr_i++
-	}
-
-	// basepair resolutions
-	out_data['Base pair-delimited resolutions'] = []
-	let bpRes_n = getInt()
-	let bpRes_i = 0
-	while (bpRes_i !== bpRes_n) {
-		out_data['Base pair-delimited resolutions'].push(getInt())
-		bpRes_i++
-	}
-
-	// fragment resolutions
-	out_data['Fragment-delimited resolutions'] = []
-	let FragRes_n = getInt()
-	let FragRes_i = 0
-	while (FragRes_i !== FragRes_n) {
-		out_data['Fragment-delimited resolutions'].push(getInt())
-		FragRes_i++
-	}
-
-	const output = JSON.stringify(out_data)
-	return output
-
-	async function readHicHeader(file, position, length) {
-		const fsOpen = util.promisify(fs.open)
-		const fsRead = util.promisify(fs.read)
-
-		const buffer = Buffer.alloc(length)
-		const fd = await fsOpen(file, 'r')
-		const result = await fsRead(fd, buffer, 0, length, position)
-
-		fs.close(fd, function(error) {
-			return error
-		})
-
-		const buf = result.buffer
-		const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
-
-		return arrayBuffer
-	}
-
-	function getString() {
-		let str = ''
-		let chr
-		while ((chr = view.getUint8(position++)) != 0) {
-			str += String.fromCharCode(chr)
-		}
-		return str
-	}
-
-	function getInt() {
-		const IntVal = view.getInt32(position, true)
-		position += 4
-		return IntVal
 	}
 }
 
