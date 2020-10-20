@@ -416,7 +416,7 @@ module.exports = {
 			y: {
 				attribute: 'y'
 			},
-			colorbyattributes: [{ key: 'diagnosis' }, { key: 'diagnosis_group' }],
+			colorbyattributes: [{ key: 'diagnosis' } /*{ key: 'diagnosis_group' }*/],
 			querykey: 'svcnv'
 		}
 	},
