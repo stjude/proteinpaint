@@ -202,13 +202,13 @@ function may_render_variant(data, tk, block) {
 	{
 		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
 		if (hits) {
-			x1 = hits[0].x - bb.exonsf / 2
+			x1 = hits[0].x - block.exonsf / 2
 		}
 	}
 	{
 		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos + tk.variants[0].ref.length)
 		if (hits) {
-			x2 = hits[0].x - bb.exonsf / 2
+			x2 = hits[0].x - block.exonsf / 2
 		}
 	}
 	if (x1 >= block.width || x2 <= 0) {
