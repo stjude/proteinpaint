@@ -7,7 +7,8 @@ const validate_single_numericrange = require('../src/mds.termdb.termvaluesetting
 
 /*
 ********************** EXPORTED
-init
+init_db
+init_track
 client_copy
 server_updateAttr
 ********************** INTERNAL
@@ -20,21 +21,20 @@ may_init_svcnv
 may_sum_samples
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 
-export async function init(ds, genome) {
+export async function init_db(ds, genome) {
+	/* db should be required
+	must initiate db first, then process other things
+	as db may be needed (e.g. getting json of a term)
+	*/
+	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
+	validate_termdbconfig(ds.cohort.termdb)
+	server_init_db_queries(ds)
+}
+export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server
 	 */
-
-	if (ds.cohort && ds.cohort.db) {
-		/* db should be required
-		must initiate db first, then process other things
-		as db may be needed (e.g. getting json of a term)
-		*/
-		if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
-		validate_termdbconfig(ds.cohort.termdb)
-		server_init_db_queries(ds)
-	}
 
 	if (!ds.track) throw 'no mds2 track; missing ds.track{}'
 	const tk = ds.track
@@ -42,9 +42,9 @@ export async function init(ds, genome) {
 
 	may_validate_info_fields(tk)
 	may_validate_population(tk)
-	may_init_vcf(tk.vcf, genome, ds)
-	may_init_ld(tk.ld, genome, ds)
-	may_init_svcnv(tk.svcnv, genome, ds)
+	await may_init_vcf(tk.vcf, genome, ds)
+	await may_init_ld(tk.ld, genome, ds)
+	await may_init_svcnv(tk.svcnv, genome, ds)
 	may_sum_samples(tk)
 	if (tk.samples) console.log(ds.label + ': mds2: ' + tk.samples.length + ' samples')
 }
@@ -174,7 +174,9 @@ async function may_init_ld(ld, genome, ds) {
 		if (!tk.name) throw '.name missing from a ld track'
 		if (!Number.isInteger(tk.viewrangelimit)) throw 'viewrangelimit missing from ld track "' + tk.name + '"'
 		if (tk.file) {
-			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+				tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			}
 			await utils.validate_tabixfile(tk.file)
 			tk.nochr = await utils.tabix_is_nochr(tk.file, null, genome)
 			console.log(tk.file + ': ' + (tk.nochr ? 'no chr' : 'has chr'))

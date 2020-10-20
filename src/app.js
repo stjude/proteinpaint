@@ -12,6 +12,7 @@ import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
 import {debounce} from 'debounce'
 import * as parseurl from './app.parseurl'
+import { init_mdsjson } from './app.mdsjson'
 
 
 
@@ -189,8 +190,38 @@ function makeheader(holder,obj, jwt) {
 		.style('padding',padw)
 		.style('font-size','.8em')
 		.style('color',common.defaultcolor)
-	if(obj.lastdate) {
-		headinfo.append('div').text('Last updated: '+obj.lastdate)
+	{
+		// a row for server stats
+		const row = headinfo.append('div')
+		row.append('span')
+			.text(
+				'Code updated: '
+				+(obj.codedate||'??')
+				+', server launched: '
+				+(obj.launchdate||'??')+'.'
+			)
+		if(obj.hasblat) {
+			row.append('a')
+				.style('margin-left','10px')
+				.text('Running BLAT')
+				.on('click',async ()=>{
+					headtip.clear().showunder(d3event.target)
+					const div = headtip.d.append('div').style('margin','10px')
+					const wait = div.append('div').text('Loading...')
+					try {
+						const data = await client.dofetch2('blat?serverstat=1')
+						if(data.error) throw data.error
+						if(!data.lst) throw 'invalid response'
+						wait.remove()
+						for(const i of data.lst) {
+							div.append('div').text(i)
+						}
+					}catch(e) {
+						wait.text(e.message||e)
+						if(e.stack) console.log(e.stack)
+					}
+				})
+		}
 	}
 	if(obj.headermessage) {
 		headinfo.append('div').html(obj.headermessage)
@@ -238,6 +269,7 @@ function makeheader(holder,obj, jwt) {
 		.style('padding','3px')
 		.attr('size',20)
 		.attr('placeholder','Gene, position, or SNP')
+		.attr('title', 'Search by gene, SNP, or position')
 		.on('keyup', ()=>{
 			if(client.keyupEnter()) entersearch()
 			else debouncer()
@@ -250,7 +282,9 @@ function makeheader(holder,obj, jwt) {
 		.style('display','inline-block')
 		.style('padding',padw)
 		.style('padding-left','5px')
-		.append('select').style('margin','1px 20px 1px 10px')
+		.append('select')
+		.attr('title', 'Select a genome')
+		.style('margin','1px 20px 1px 10px')
 	for(const n in genomes) {
 		selectgenome.append('option')
 			.attr('n',n)
@@ -430,7 +464,7 @@ function findgenelst( str, genome, tip, jwt ) {
 
 
 
-function findgene2paint( str, genomename, jwt ) {
+async function findgene2paint( str, genomename, jwt ) {
 	const g=genomes[genomename]
 	if(!g) {
 		console.error('unknown genome '+genomename)
@@ -440,7 +474,7 @@ function findgene2paint( str, genomename, jwt ) {
 
 	// may yield tklst from url parameters
 	const urlp=parseurl.url2map()
-	const tklst = parseurl.get_tklst(urlp)
+	const tklst = await parseurl.get_tklst(urlp)
 
 	const pos=string2pos(str,g)
 	if(pos) {
@@ -558,7 +592,7 @@ function studyui(x,y) {
 
 
 
-function parseembedthenurl(arg, holder, selectgenome) {
+async function parseembedthenurl(arg, holder, selectgenome) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -681,7 +715,7 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
-		const err = parseurl.parse({
+		const err = await parseurl.parse({
 			genomes:genomes,
 			hostURL:hostURL,
 			variantPageCall_snv:variantPageCall_snv,
@@ -958,6 +992,11 @@ async function launchblock(arg,holder) {
 				// is an official mds2, do not flag as custom
 				continue
 			}
+			if(t.mdsjsonfile || t.mdsjsonurl){
+				const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl, holder)
+				arg.tracks = arg.tracks.filter(tk => tk != t )
+				arg.tracks.push(...tks)
+			}
 			t.iscustom=true
 		}
 	}
@@ -1113,7 +1152,7 @@ function launchfusioneditor(arg,holder) {
 		const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
 		const p = inputdiv.append('p')
 		p.append('span').html('Genome&nbsp;')
-		const gselect = p.append('select')
+		const gselect = p.append('select').attr('title', 'Select a genome')
 		for (const n in genomes) {
 			gselect.append('option').text(n)
 		}

@@ -17,6 +17,10 @@ const samplenamekey = 'sample_name'
 module.exports = {
 	genome: 'hg38',
 	isMds: true,
+	version: {
+		label: 'Release v1',
+		link: 'https://genomepaint.stjude.cloud/release/v1/'
+	},
 
 	about: [
 		{ k: 'Cohort', v: 'PCGP and TARGET' },
@@ -28,6 +32,24 @@ module.exports = {
 		{ k: 'SNV/indel', v: 'Somatic mutations of tumor, and germline pathogenic mutations' },
 		{ k: 'RNA splice junction', v: 'Tumor RNA splice junctions' }
 	],
+
+	assayAvailability: {
+		file: 'hg19/Pediatric/assayAvailability/sample.by.assay',
+		assays: [
+			{ id: 'haswgs', name: 'WGS', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hascgi', name: 'CGI', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'haswes', name: 'WES', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hassnp6', name: 'SNP6 array', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{
+				id: 'hascaptureseq',
+				name: 'Capture-seq',
+				type: 'categorical',
+				values: { yes: { label: 'yes', color: '#858585' } }
+			},
+			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			{ id: 'hashic', name: 'Hi-C', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
+		]
+	},
 
 	/*
 	cohort and sample annotation
@@ -53,6 +75,8 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2014_RB' },
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
+			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
+			{ file: 'hg19/Pediatric/sampletable/pcgp.target.info' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.outcome' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.tallsnp6array' },
@@ -186,6 +210,7 @@ module.exports = {
 				values: {
 					pantarget: { name: 'Pan-TARGET', label: 'Pan-cancer analysis of the NCI TARGET dataset' },
 					pcgp: { name: 'PCGP', label: 'Pediatric Cancer Genome Project' },
+					scmc: { name: 'SCMC', label: "Shanghai Children's Medical Center pediatric ALL project" },
 					pedccl: { name: 'PedCCL', label: 'Pediatric Cancer Cell Lines' }
 				},
 				filter: 1

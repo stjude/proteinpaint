@@ -15,17 +15,10 @@ const samplenamekey = 'sample_name'
 module.exports = {
 	genome: 'hg19',
 	isMds: true,
-
-	about: [
-		{ k: 'Cohort', v: 'PCGP and TARGET' },
-		{ k: 'CNV', v: 'Somatic copy number changes' },
-		{ k: 'LOH', v: 'Somatic copy-neutral LOH' },
-		{ k: 'SV', v: 'Somatic DNA structural variation' },
-		{ k: 'Fusion', v: 'Tumor RNA-seq fusion' },
-		{ k: 'ITD', v: 'ITD from either RNA or DNA' },
-		{ k: 'SNV/indel', v: 'Somatic mutations of tumor, and germline pathogenic mutations' },
-		{ k: 'RNA splice junction', v: 'Tumor RNA splice junctions' }
-	],
+	version: {
+		label: 'Release v1',
+		link: 'https://genomepaint.stjude.cloud/release/v1/'
+	},
 
 	sampleAssayTrack: {
 		file: 'hg19/Pediatric/tracktable/__table'
@@ -48,7 +41,8 @@ module.exports = {
 				type: 'categorical',
 				values: { yes: { label: 'yes', color: '#858585' } }
 			},
-			{ id: 'hasrnaseq', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
+			// not using "hasrnaseq" for the moment due to slight discrepancy between rnaseq/fpkm availabilities
+			{ id: 'hasfpkm', name: 'RNA-seq', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } },
 			{ id: 'hashic', name: 'Hi-C', type: 'categorical', values: { yes: { label: 'yes', color: '#858585' } } }
 		]
 	},
@@ -77,13 +71,15 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2014_RB' },
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
+			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
+			{ file: 'hg19/Pediatric/sampletable/pcgp.target.info' },
+			{ file: 'hg19/Pediatric/sampletable/fpkmOnly.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.outcome' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples.tallsnp6array' },
 			{ file: 'hg19/Pediatric/sampletable/pedccl.celllines' },
 			{ file: 'hg19/Pediatric/sampletable/pcgp.telomerecall' },
 			{ file: 'hg19/Pediatric/sampletable/pediatric.sampletable' },
-			{ file: 'hg19/Pediatric/sampletable/fpkmOnly.samples' },
 			{ file: 'hg19/Pediatric/sampletable/2017xenografts.sampletable' }
 		],
 		samplenamekey: samplenamekey,
@@ -260,7 +256,6 @@ module.exports = {
 					snp6: { name: 'SNP6', label: 'SNP Array 6.0' },
 					cc: { name: 'CapVal', label: 'Capture validation' }
 				},
-				hidden: 1,
 				filter: 1
 			},
 			rna_assay: {
@@ -277,6 +272,7 @@ module.exports = {
 				values: {
 					pantarget: { name: 'Pan-TARGET', label: 'Pan-cancer analysis of the NCI TARGET dataset' },
 					pcgp: { name: 'PCGP', label: 'Pediatric Cancer Genome Project' },
+					scmc: { name: 'SCMC', label: "Shanghai Children's Medical Center pediatric ALL project" },
 					pedccl: { name: 'PedCCL', label: 'Pediatric Cancer Cell Lines' }
 				},
 				filter: 1

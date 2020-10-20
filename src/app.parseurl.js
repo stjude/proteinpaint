@@ -2,6 +2,8 @@ import blockinit from './block.init'
 import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
+import path from 'path'
+import * as mdsjson from './app.mdsjson'
 
 /*
 ********************** EXPORTED
@@ -29,7 +31,7 @@ export function url2map() {
 	return urlp
 }
 
-export function parse(arg) {
+export async function parse(arg) {
 	/*
 arg
 	.jwt
@@ -42,6 +44,13 @@ arg
 */
 	const urlp = url2map()
 
+	if (urlp.has('mdsjsonform')) {
+		const _ = await import('./mdsjsonform')
+		await _.init_mdsjsonform(arg)
+		// will not process other url parameters
+		return
+	}
+
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
 		for (let i = 0; i < arg.selectgenome.node().childNodes.length; i++) {
@@ -50,6 +59,32 @@ arg
 				break
 			}
 		}
+	}
+
+	if (urlp.has('hicfile') || urlp.has('hicurl')) {
+		let file, url
+		if (urlp.has('hicfile')) {
+			file = urlp.get('hicfile')
+		} else {
+			url = urlp.get('hicurl')
+		}
+		const gn = urlp.get('genome')
+		if (!gn) return 'genome is required for hic'
+		const genome = arg.genomes[gn]
+		if (!genome) return 'invalid genome'
+		const hic = {
+			genome,
+			file,
+			url,
+			name: path.basename(file || url),
+			hostURL: arg.hostURL,
+			enzyme: urlp.get('enzyme'),
+			holder: arg.holder
+		}
+		import('./hic.straw').then(_ => {
+			_.hicparsefile(hic)
+		})
+		return
 	}
 
 	if (urlp.has('singlecell')) {
@@ -183,6 +218,15 @@ arg
 				}
 			}
 		}
+
+		if (position) {
+			par.chr = position.chr
+			par.start = position.start
+			par.stop = position.stop
+		} else if (rglst) {
+			par.rglst = rglst
+		}
+
 		if (urlp.has('hlregion')) {
 			const lst = []
 			for (const t of urlp.get('hlregion').split(',')) {
@@ -196,19 +240,18 @@ arg
 			const tmp = urlp.get('mds').split(',')
 			if (tmp[0] && tmp[1]) {
 				par.datasetqueries = [{ dataset: tmp[0], querykey: tmp[1] }]
+				if (urlp.has('sample')) {
+					par.datasetqueries[0].singlesample = { name: urlp.get('sample') }
+					// quick fix!!
+					// tell  mds_load_query_bykey to load assay tracks in this context, but will not do so if launching sample view from main tk
+					par.datasetqueries[0].getsampletrackquickfix = true
+				}
 			}
 		}
 
-		par.tklst = get_tklst(urlp)
+		par.tklst = await get_tklst(urlp, arg.holder)
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
-		if (position) {
-			par.chr = position.chr
-			par.start = position.start
-			par.stop = position.stop
-		} else if (rglst) {
-			par.rglst = rglst
-		}
 		import('./block').then(b => new b.Block(par))
 		return
 	}
@@ -249,7 +292,7 @@ arg
 			hostURL: arg.hostURL,
 			query: str,
 			genome: arg.genomes[genomename],
-			tklst: get_tklst(urlp),
+			tklst: await get_tklst(urlp, arg.holder),
 			holder: arg.holder,
 			dataset: ds,
 			hlaachange: hlaa,
@@ -276,8 +319,27 @@ arg
 	}
 }
 
-export function get_tklst(urlp) {
+export async function get_tklst(urlp, error_div) {
 	const tklst = []
+
+	if (urlp.has('mdsjsoncache')) {
+		const re = await client.dofetch2('mdsjsonform', {
+			method: 'POST',
+			body: JSON.stringify({ draw: urlp.get('mdsjsoncache') })
+		})
+		if (re.error) throw re.error
+		mdsjson.validate_mdsjson(re.json)
+		const tk = mdsjson.get_json_tk(re.json)
+		tklst.push(tk)
+	}
+
+	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+		const url_str = urlp.get('mdsjsonurl')
+		const file_str = urlp.get('mdsjson')
+		const tks = await mdsjson.init_mdsjson(file_str, url_str, error_div)
+		tklst.push(...tks)
+	}
+
 	if (urlp.has('bamfile')) {
 		const lst = urlp.get('bamfile').split(',')
 		for (let i = 0; i < lst.length; i += 2) {

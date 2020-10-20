@@ -442,6 +442,10 @@ function addLoadParameter(par, tk) {
 		par.querykey = tk.querykey
 	}
 
+	if (tk.getallsamples) {
+		par.getallsamples = true
+	}
+
 	// cnv
 	if (tk.sampleset) par.sampleset = tk.sampleset
 	if (tk.valueCutoff) par.valueCutoff = tk.valueCutoff
@@ -550,6 +554,10 @@ function render_samplegroups(tk, block) {
 
 	trackclear(tk)
 
+	// track labels will include both bold label and version label
+	let labelheight = block.labelfontsize
+	if (tk.versionlabel) labelheight += block.labelfontsize
+
 	const [groups, svlst4dense] = prep_samplegroups(tk, block)
 
 	tk.samplegroups = groups
@@ -577,13 +585,13 @@ function render_samplegroups(tk, block) {
 	const vcfsvpad = vcfdensityheight && svdensityheight ? 3 : 0
 
 	// track top blank height
-	let hpad = Math.max(block.labelfontsize, vcfdensityheight + svdensityheight + vcfsvpad, genebaraxisheight)
+	let hpad = Math.max(labelheight, vcfdensityheight + svdensityheight + vcfsvpad, genebaraxisheight)
 
 	// may increase hpad: don't allow tk label to overlap with density plot label
 	if (vcfdensityheight) {
-		hpad += Math.max(0, block.labelfontsize * 1.5 - (hpad - svdensityheight - vcfsvpad - vcfdensityheight / 2))
+		hpad += Math.max(0, labelheight + 8 - (hpad - svdensityheight - vcfsvpad - vcfdensityheight / 2))
 	} else if (svdensityheight) {
-		hpad += Math.max(0, block.labelfontsize * 1.5 - (hpad - svdensityheight / 2))
+		hpad += Math.max(0, labelheight + 8 - (hpad - svdensityheight / 2))
 	}
 
 	// adjust config handle position by top blank height
@@ -2243,8 +2251,9 @@ export async function focus_singlesample(p) {
 
 	client.first_genetrack_tolist(block.genome, arg.tklst)
 
-	// detour
 	if (tk.checkrnabam && tk.checkvcf) {
+		// detour
+		// do not consider other assay tracks
 		const sbam = tk.checkrnabam.samples[sample.samplename]
 		if (sbam) {
 			arg.chr = block.rglst[0].chr
@@ -2291,6 +2300,12 @@ export async function focus_singlesample(p) {
 				et[k] = tk.checkexpressionrank[k]
 			}
 			arg.tklst.push(et)
+		}
+		// other assay tracks
+		if (tk.sample2assaytrack && tk.sample2assaytrack[sample.samplename]) {
+			for (const t of tk.sample2assaytrack[sample.samplename]) {
+				arg.tklst.push(t)
+			}
 		}
 	} else if (tk.mds && tk.mds.queries[tk.querykey].checkexpressionrank) {
 		// official mds
@@ -2593,11 +2608,21 @@ function prep_samplegroups(tk, block) {
 					}
 
 					if (!samplehasvcf) {
-						// this sample has no vcf either, drop
-						continue
+						// this sample has no vcf either
+						if (if_getallsamples(tk)) {
+							// QUICK FIX!!!!
+							// when this is set, will keep samples with empty .items[]
+						} else {
+							continue
+						}
 					}
 				} else {
-					continue
+					if (if_getallsamples(tk)) {
+						// QUICK FIX!!!!
+						// when this is set, will keep samples with empty .items[]
+					} else {
+						continue
+					}
 				}
 			}
 
@@ -2654,6 +2679,14 @@ function prep_samplegroups(tk, block) {
 	return [plotgroups, svlst4dense]
 }
 
+function if_getallsamples(tk) {
+	// QUICK FIX
+	if (!tk.getallsamples) return false
+	if (tk.iscustom) return true
+	if (tk.mds && tk.mds.allow_getallsamples) return true
+	return false
+}
+
 function maysortsamplesingroupbydt(g) {
 	/*
 	temporary, only for making tal1 figure
@@ -2666,12 +2699,13 @@ function maysortsamplesingroupbydt(g) {
 	const fusionintra = []
 	const rest = []
 	for (const s of g.samples) {
-		if (s.items.find(m => m.dt == common.dtcnv)) {
+		if (s.items.find(m => m.dt == common.dtcnv && m.start < 47720000 && m.stop > 47720000)) {
+			// skip tiny cnvs not overlapping with stil promoter
 			cnv.push(s)
 			continue
 		}
 		{
-			const m = s.items.find(m => m.dt == common.dtfusionrna)
+			const m = s.items.find(m => m.dt == common.dtfusionrna || m.dt == common.dtsv)
 			if (m) {
 				if (m.chrA == m.chrB) {
 					// intra-chr
@@ -2872,6 +2906,14 @@ for both multi- and single-sample
 	} else {
 		// multi-sample
 		tk.tklabel.text(tk.name)
+		if (tk.mds && tk.mds.version && tk.mds.version.label) {
+			tk.versionlabel = block.maketklefthandle(tk, block.labelfontsize).text(tk.mds.version.label)
+			if (tk.mds.version.link) {
+				tk.versionlabel.on('click', () => {
+					window.open(tk.mds.version.link)
+				})
+			}
+		}
 		tk.cnvleftg = tk.gleft.append('g')
 		tk.vcfdensityg = tk.glider.append('g')
 		tk.vcfdensitylabelg = tk.gleft.append('g')
@@ -3159,6 +3201,21 @@ function makeoption_sampleset(tk, block) {
 		.on('click', () => {
 			showinput_sampleset(tk, block)
 		})
+
+	// QUICKFIX
+	// ways to inhibit this button: when sampleset is in use; or if official dataset doesn't say this is allowed
+	// while not using sampleset, check condition if to allow to show all samples
+	if (tk.iscustom || (tk.mds && tk.mds.allow_getallsamples)) {
+		row
+			.append('button')
+			.style('margin-left', '10px')
+			.text(tk.getallsamples ? 'Only show samples with variants' : 'Show all samples')
+			.on('click', () => {
+				tk.getallsamples = !tk.getallsamples
+				tk.tkconfigtip.hide()
+				loadTk(tk, block)
+			})
+	}
 }
 
 function showinput_sampleset(tk, block) {

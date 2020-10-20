@@ -6,14 +6,23 @@ const fs = require('fs'),
 	vcf = require('../src/vcf'),
 	bettersqlite = require('better-sqlite3')
 
+// do not assume that serverconfig.json is in the same dir as server.js
+// for example, when using proteinpaint as an npm module or binary
+const serverconfigfile = (process.cwd() || '.') + '/serverconfig.json'
 // when unit testing, __non_webpack_require might not be available
 // since a spec might be directly requiring an unpacked or unbundled module
-const serverconfig = typeof __non_webpack_require__ == 'function' && __non_webpack_require__('./serverconfig.json')
+const serverconfig =
+	(typeof __non_webpack_require__ == 'function' && __non_webpack_require__(serverconfigfile)) ||
+	require(serverconfigfile)
+Object.freeze(serverconfig)
+exports.serverconfig = serverconfig
+
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 
 /* p4 ready
 ********************** EXPORTED
+file_is_readable
 init_one_vcf
 validate_tabixfile
 tabix_is_nochr
@@ -32,10 +41,26 @@ run_fishertest2x3
 ********************** INTERNAL
 */
 
+exports.file_is_readable = async file => {
+	// need full path to the file
+	// see if file exists and readable
+	// to replace file_not_exist file_not_readable
+	try {
+		await fs.promises.stat(file)
+	} catch (e) {
+		if (e.code == 'EACCES') throw 'Permission denied'
+		if (e.code == 'ENOENT') throw 'No such file or directory'
+		if (e.code == 'EPERM') throw 'Operation not permitted'
+		throw 'cannot access file (' + e.code + ')'
+	}
+}
+
 exports.init_one_vcf = async function(tk, genome) {
 	let filelocation
 	if (tk.file) {
-		tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
+			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+		}
 		filelocation = tk.file
 		await validate_tabixfile(tk.file)
 	} else if (tk.url) {

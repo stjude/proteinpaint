@@ -4,22 +4,22 @@ const path = require('path')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 module.exports = function(env) {
-	const protocol = env.subdomain == 'pp-test' ? '' : 'https:'
-	const urlpath = env.subdomain.startsWith('pecan') || env.subdomain.startsWith('pp-prt') ? 'pp/bin/' : 'bin/'
-	config.output.publicPath = protocol + '//' + (env.subdomain ? env.subdomain : 'pecan-test') + '.stjude.org/' + urlpath
-	config.output.path = __dirname + '/../public/builds/' + (env.subdomain ? env.subdomain : 'pecan-test')
+	config.output.publicPath = !env.url ? '/bin/' : env.url + '/bin/'
+	config.output.path = __dirname + '/../public/bin'
 
-	config.optimization = {
-		minimizer: [
-			new UglifyJsPlugin({
-				cache: true,
-				parallel: true,
-				uglifyOptions: {
-					mangle: true,
-					compress: true
-				}
-			})
-		]
+	if (env.subdomain != 'ppr') {
+		config.optimization = {
+			minimizer: [
+				new UglifyJsPlugin({
+					cache: true,
+					parallel: true,
+					uglifyOptions: {
+						mangle: true,
+						compress: true
+					}
+				})
+			]
+		}
 	}
 
 	delete config.devtool

@@ -24,7 +24,7 @@ parseline_AFtest
 		getallelecount_samplegroup_vcfline
 */
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 
 export async function handle_ssidbyonem(q, genome, ds, result) {
 	/*
@@ -193,7 +193,7 @@ export async function handle_vcfbyrange(q, genome, ds, result) {
 
 	await may_apply_fishertest(q)
 
-	vcfbyrange_collect_result(result, q, tk0)
+	vcfbyrange_collect_result(result, q, tk0, ds)
 }
 
 function set_querymode(q, vcftk, ds) {
@@ -344,7 +344,7 @@ termfilter{}
 	return newlst
 }
 
-function vcfbyrange_collect_result(result, q, tk) {
+function vcfbyrange_collect_result(result, q, tk, ds) {
 	/*
 done querying, collect result, also clear rglst which is shared by others
 
@@ -352,7 +352,11 @@ for specific type of query mode, send additional info
 */
 
 	if (q.exportgenotype) {
-		result.exportgenotype = 'variant\tSNP\t' + tk.samples.map(i => i.name).join('\t') + '\n' + result.mlst.join('\n')
+		result.exportgenotype =
+			'variant\tSNP\t' +
+			tk.samples.map(i => (ds.sampleidmap ? ds.sampleidmap.get(i.name) : i.name)).join('\t') +
+			'\n' +
+			result.mlst.join('\n')
 		delete result.mlst
 		return
 	}

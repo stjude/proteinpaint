@@ -104,7 +104,7 @@ export class Block {
 			this.legend = {
 				mclasses: new Map(), // two special legend that cover all dstk on display
 				morigins: new Map(),
-				legendcolor: '#EDD8A6',
+				legendcolor: '#7D6836',
 				headtextcolor: '#aaa',
 				vpad: '5px'
 			}
@@ -358,7 +358,7 @@ export class Block {
 				.append('div') // duplicated
 				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', '#7B95AB')
+				.style('background', '#1C5E86')
 				.style('font-size', '.8em')
 				.style('color', 'white')
 				.style('padding', '1px 5px')
@@ -748,7 +748,13 @@ export class Block {
 					this.error('Invalid dataset to load: ' + n)
 					continue
 				}
-				const tk = this.block_addtk_template({ type: client.tkt.ds, ds: ds })
+				if (ds.isMds3) {
+					// extends the old "dataset" parameter to support mds3
+					const tk = this.block_addtk_template({ type: client.tkt.mds3, dslabel: n })
+					this.tk_load(tk)
+					continue
+				}
+				const tk = this.block_addtk_template({ type: client.tkt.ds, ds })
 				if (arg.hlaachange) {
 					tk.hlaachange = arg.hlaachange
 				}
@@ -3758,6 +3764,12 @@ if fromgenetk is provided, will skip this track
 							client.sayerror(this.holder0, err.message)
 						})
 						.then(() => {
+							const tklst = [] // quick fix based on changes to mds3/maketk
+							for (const t of this.tklst) {
+								if (t.type == client.tkt.usegm) continue
+								if (t.type == client.tkt.mds3) delete t.mds
+								tklst.push(t)
+							}
 							new Block({
 								holder: this.holder0,
 								genome: this.genome,
@@ -3766,12 +3778,8 @@ if fromgenetk is provided, will skip this track
 								gmstackheight: 37,
 								usegm: gm1,
 								allgm: this.allgm,
-
-								// can't believe this is missing for all the time....
-								tklst: this.tklst.filter(i => i.type != client.tkt.usegm),
-
+								tklst,
 								gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
-
 								allowpopup: this.allowpopup,
 								hidedatasetexpression: this.hidedatasetexpression,
 								hidegenecontrol: this.hidegenecontrol,
@@ -4556,7 +4564,7 @@ if fromgenetk is provided, will skip this track
 			})
 	}
 
-	mds_load_query_bykey(ds, q) {
+	async mds_load_query_bykey(ds, q) {
 		/*
 	official ds
 	q comes from datasetqueries of embedding, with customizations
@@ -4574,6 +4582,25 @@ if fromgenetk is provided, will skip this track
 		if (this.tklst.find(t => t.mds && t.mds.label == ds.label && t.querykey == q.querykey)) {
 			// already shown
 			return
+		}
+
+		if (q.singlesample && q.getsampletrackquickfix) {
+			const data = await client.dofetch2('mdssvcnv', {
+				method: 'POST',
+				body: JSON.stringify({
+					genome: this.genome.name,
+					dslabel: ds.label,
+					querykey: q.querykey,
+					gettrack4singlesample: q.singlesample.name
+				})
+			})
+			if (data.error) throw data.error
+			if (data.tracks) {
+				for (const t of data.tracks) {
+					const tk = this.block_addtk_template(t)
+					this.tk_load(tk)
+				}
+			}
 		}
 
 		const tk = this.block_addtk_template(tk0)
@@ -4606,11 +4633,14 @@ if fromgenetk is provided, will skip this track
 		const lst = Array.isArray(arg) ? arg : [arg]
 		const toadd = []
 		for (const t of lst) {
-			if (this.tklst.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))) {
-				// already shown
-				continue
+			{
+				const [i, tt] = findtrack(this.tklst, t)
+				if (tt) {
+					// already shown
+					continue
+				}
 			}
-			const f = this.genome.tracks.find(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			const [i, f] = findtrack(this.genome.tracks, t)
 			if (f) {
 				toadd.push(f)
 			} else {
@@ -4626,7 +4656,7 @@ if fromgenetk is provided, will skip this track
 	turnOffTrack(arg) {
 		const lst = Array.isArray(arg) ? arg : [arg]
 		for (const t of lst) {
-			const idx = this.tklst.findIndex(i => i.type == t.type && (t.file ? t.file == i.file : t.url == i.url))
+			const [idx, f] = findtrack(this.tklst, t)
 			if (idx != -1) this.tk_remove(idx)
 		}
 	}
@@ -4670,6 +4700,42 @@ if fromgenetk is provided, will skip this track
 	}
 
 	/*********** end of class:Block  ************/
+}
+
+function findtrack(lst, t) {
+	// given track object t, find the identical one in lst[]
+	for (const [i, f] of lst.entries()) {
+		if (f.type != t.type) continue
+		if (t.type == client.tkt.junction) {
+			if (t.file || t.url) {
+				// t is a single-sample track
+				if (f.tracks.length == 1) {
+					if (f.tracks[0].file ? f.tracks[0].file == t.file : f.tracks[0].url == t.url) {
+						return [i, f]
+					}
+				} else {
+					// a multi-sample track,
+				}
+			} else if (t.tracks) {
+				if (t.tracks.length == 1 && f.tracks.length == 1) {
+					// both single sample
+					if (f.tracks[0].file ? f.tracks[0].file == t.tracks[0].file : f.tracks[0].url == t.tracks[0].url) {
+						return [i, f]
+					}
+				} else {
+					// number of samples not matching
+				}
+			} else {
+				// should throw exception
+			}
+			continue
+		}
+		// all other track types
+		if (f.type == t.type && (f.file ? f.file == t.file : f.url == t.url)) {
+			return [i, f]
+		}
+	}
+	return [-1, null]
 }
 
 function getrulerunit(span, ticks) {

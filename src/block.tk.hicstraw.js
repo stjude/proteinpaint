@@ -71,20 +71,11 @@ export function loadTk(tk, block) {
 		hic file is always custom, need to stat the file
 		*/
 
-			return fetch(
-				new Request(block.hostURL + '/hicstat', {
-					method: 'POST',
-					body: JSON.stringify({ file: tk.file, jwt: block.jwt })
-				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw data.error
-					const err = hicstraw.hicparsestat(tk.hic, data.out)
-					if (err) throw err
-				})
+			return client.dofetch2('hicstat?' + (tk.file ? 'file=' + tk.file : 'url=' + tk.url)).then(data => {
+				if (data.error) throw data.error
+				const err = hicstraw.hicparsestat(tk.hic, data.out)
+				if (err) throw err
+			})
 		})
 
 		.then(() => {
@@ -424,6 +415,7 @@ function loadStrawdata(tk, block) {
 		const par = {
 			jwt: block.jwt,
 			file: tk.file,
+			url: tk.url,
 			pos1: r._str,
 			pos2: r._str,
 			nmeth: tk.normalizationmethod,
@@ -466,6 +458,7 @@ function loadStrawdata(tk, block) {
 			const par = {
 				jwt: block.jwt,
 				file: tk.file,
+				url: tk.url,
 				pos1: tk.regions[i]._str,
 				pos2: tk.regions[j]._str,
 				nmeth: tk.normalizationmethod,

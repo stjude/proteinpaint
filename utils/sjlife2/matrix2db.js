@@ -13,7 +13,7 @@ const lines = fs
 const header = lines[0].split('\t')
 for (let i = 1; i < lines.length; i++) {
 	const l = lines[i].split('\t')
-	const sample = l[0] || l[1]
+	const sample = l[0]
 	for (let j = 1; j < header.length; j++) {
 		const v = l[j]
 		if (v == '') continue

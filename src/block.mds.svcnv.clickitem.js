@@ -3179,13 +3179,10 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 				return
 			}
 			wait.remove()
-			plot_partition({
+			initui_partition({
 				data,
 				par,
-				svg: tk.tip2.d
-					.append('div')
-					.style('margin', '10px')
-					.append('svg'),
+				div: tk.tip2.d.append('div').style('margin', '10px'),
 				boxtip: tk.tktip,
 				headlabel: samplegroup.name
 			})
@@ -3194,41 +3191,97 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 				.style('font-size', '.7em')
 				.style('margin', '10px')
 				.text('Drag and move a sequencing type label up/down to change order.')
+			if (samplegroup.attributes) {
+				// quick fix to show full labels
+				const d = tk.tip2.d
+					.append('div')
+					.style('margin', '20px 10px 10px 10px')
+					.style('opacity', 0.7)
+				for (const a of samplegroup.attributes) {
+					d.append('div').text(a.kvalue + (a.fullvalue ? ': ' + a.fullvalue : ''))
+				}
+			}
 		})
 }
 
-function plot_partition(opts) {
+function initui_partition(opts) {
 	// quick fix
-	const rows = [] // for moving rows
+	// call when menu option is clicked, render map with all assay types, and checkboxes for each
+
+	const plot = {
+		headlabel: opts.headlabel,
+		par: opts.par,
+		rows: [], // for moving rows
+		hidetermid: new Set(),
+		svg: opts.div.append('svg')
+	}
+
+	plot_partition(plot, opts.data)
+
+	// make one checkbox for each term
+	const div = opts.div
+		.append('div')
+		.append('div')
+		.style('display', 'inline')
+	for (const term of opts.data.terms) {
+		const cell = div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin-right', '15px')
+			.style('white-space', 'nowrap')
+		const label = cell.append('label')
+		label
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', true)
+			.on('change', async () => {
+				if (d3event.target.checked) {
+					plot.hidetermid.delete(term.id)
+					if (plot.par.termidorder && !plot.par.termidorder.includes(term.id)) {
+						plot.par.termidorder.push(term.id)
+					}
+				} else {
+					plot.hidetermid.add(term.id)
+				}
+				plot.par.skip_termids = [...plot.hidetermid]
+				const data = await client.dofetch('mdssvcnv', plot.par)
+				plot_partition(plot, data)
+			})
+		label
+			.append('span')
+			.text(term.name)
+			.style('padding-left', '5px')
+	}
+}
+
+function plot_partition(plot, data) {
 	const toppad = 20, // leave enough space for header in graphg
 		bottompad = 5,
-		hpad = 5
-	const rowheight = 25
-	const fontsize = 16
-	const rowspace = 1
-	const labxspace = 10
+		hpad = 5,
+		rowheight = 25,
+		fontsize = 16,
+		rowspace = 1,
+		labxspace = 10,
+		symbolpxwidth = 15
 
-	/*
-	const termwidth = Math.min(200, opts.data.totalsample * 10)
-	const sf = termwidth / opts.data.totalsample
-	*/
+	// clear existing plot
+	plot.rows = []
+	plot.svg.selectAll('*').remove()
 
-	const symbolpxwidth = 15
 	let maxsymbolcount = 0
-	for (const t of opts.data.terms) {
+	for (const t of data.terms) {
 		const b = t.blocks[t.blocks.length - 1]
 		maxsymbolcount = Math.max(maxsymbolcount, b.x + b.symbolwidth)
 	}
 	const termwidth = symbolpxwidth * maxsymbolcount
 
-	opts.svg.selectAll('*').remove()
-	const graphg = opts.svg.append('g')
+	const graphg = plot.svg.append('g')
 
 	// header
 	graphg
 		.append('rect')
 		.attr('width', termwidth)
-		.attr('height', opts.data.terms.length * (rowheight + rowspace) - rowspace)
+		.attr('height', data.terms.length * (rowheight + rowspace) - rowspace)
 		.attr('stroke', '#858585')
 		.attr('fill', 'none')
 	{
@@ -3238,7 +3291,7 @@ function plot_partition(opts) {
 			.attr('text-anchor', 'middle')
 			.attr('font-size', fontsize - 2)
 			.attr('y', -5)
-			.text((opts.headlabel ? opts.headlabel + ', ' : '') + 'n=' + opts.data.totalsample)
+			.text((plot.headlabel ? plot.headlabel + ', ' : '') + 'n=' + data.totalsample)
 			.each(function() {
 				headlabw = this.getBBox().width
 			})
@@ -3247,7 +3300,7 @@ function plot_partition(opts) {
 
 	let maxlabelw = 0
 	let y = 0
-	for (const term of opts.data.terms) {
+	for (const term of data.terms) {
 		const rowg = graphg.append('g').attr('transform', 'translate(0,' + y + ')')
 		// tick
 		rowg
@@ -3261,7 +3314,7 @@ function plot_partition(opts) {
 			y,
 			rowg
 		}
-		rows.push(thisrow)
+		plot.rows.push(thisrow)
 		thisrow.svglabel = rowg
 			.append('text')
 			.text(term.name + ', n=' + term.samplecount)
@@ -3283,20 +3336,20 @@ function plot_partition(opts) {
 				b.on('mousemove', () => {
 					const my = d3event.clientY
 					deltay = my - my0
-					const rowidx = rows.findIndex(i => i.id == thisrow.id)
+					const rowidx = plot.rows.findIndex(i => i.id == thisrow.id)
 					if (deltay < 0) {
 						if (rowidx > 0 && -deltay >= rowheight - 2) {
-							rows.splice(rowidx, 1)
-							rows.splice(rowidx - 1, 0, thisrow)
+							plot.rows.splice(rowidx, 1)
+							plot.rows.splice(rowidx - 1, 0, thisrow)
 							reorderRows()
 							deltay = 0
 							my0 = my
 							nochange = false
 						}
 					} else {
-						if (rowidx < rows.length - 1 && deltay >= rowheight - 2) {
-							rows.splice(rowidx, 1)
-							rows.splice(rowidx + 1, 0, thisrow)
+						if (rowidx < plot.rows.length - 1 && deltay >= rowheight - 2) {
+							plot.rows.splice(rowidx, 1)
+							plot.rows.splice(rowidx + 1, 0, thisrow)
 							reorderRows()
 							deltay = 0
 							my0 = my
@@ -3311,9 +3364,10 @@ function plot_partition(opts) {
 					reorderRows()
 					if (nochange) return
 					thisrow.svglabel.text('Loading...')
-					opts.par.termidorder = rows.map(i => i.id)
-					opts.data = await client.dofetch('mdssvcnv', opts.par)
-					plot_partition(opts)
+					plot.par.termidorder = plot.rows.map(i => i.id)
+					plot.par.skip_termids = [...plot.hidetermid]
+					const data = await client.dofetch('mdssvcnv', plot.par)
+					plot_partition(plot, data)
 				})
 			})
 
@@ -3390,13 +3444,13 @@ function plot_partition(opts) {
 		y += rowheight + rowspace
 	}
 	graphg.attr('transform', 'translate(' + (hpad + maxlabelw + labxspace) + ',' + toppad + ')')
-	opts.svg
+	plot.svg
 		.attr('width', hpad * 2 + maxlabelw + labxspace + termwidth)
-		.attr('height', toppad + (rowheight + rowspace) * opts.data.terms.length + bottompad)
+		.attr('height', toppad + (rowheight + rowspace) * data.terms.length + bottompad)
 
 	function reorderRows() {
 		let y = 0
-		for (const t of rows) {
+		for (const t of plot.rows) {
 			if (!t.moving) t.rowg.transition().attr('transform', 'translate(0,' + y + ')')
 			t.y = y
 			y += rowheight + rowspace

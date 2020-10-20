@@ -43,7 +43,7 @@ export async function mlst2samplesummary(mlst, tk, block, table) {
 	try {
 		if (mlst.length == 1 && mlst[0].occurrence == 1) {
 			// one single sample, print details
-			const data = await tk.mds.variant2samples.get(mlst, 'samples')
+			const data = await tk.mds.variant2samples.get(tk, mlst, 'samples')
 			if (data.error) throw data.error
 			if (!data.data || !data.data[0]) throw 'result error'
 			trtemp.remove()
@@ -55,7 +55,7 @@ export async function mlst2samplesummary(mlst, tk, block, table) {
 			return
 		}
 		// multiple samples
-		const data = await tk.mds.variant2samples.get(mlst, 'summary')
+		const data = await tk.mds.variant2samples.get(tk, mlst, 'summary')
 		if (data.error) throw data.error
 		if (!data.data) throw 'result error'
 		trtemp.remove()

@@ -82,6 +82,8 @@ template {}
 
 segment {}
 .qname
+.segstart
+.segstop  // alignment start/stop, 0-based
 .seq
 .boxes[]
 .forward
@@ -148,8 +150,25 @@ const softclipbg_hq = '#4888bf'
 const softclipbg_lq = '#c9e6ff'
 const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
 // insertion, text color gradient to correlate with the quality
+// cyan
 const insertion_hq = '#47FFFC' //'#00FFFB'
 const insertion_lq = '#B2D7D7' //'#009290'
+// red
+//const insertion_hq = '#ff1f1f'
+//const insertion_lq = '#ffa6a6'
+// magenta
+//const insertion_hq = '#ff00dd' // '#ff4fe5'
+//const insertion_lq = '#ffbff6'
+// bright green
+//const insertion_hq = '#00ff2a'
+//const insertion_lq = '#c4ffce'
+// yellow
+//const insertion_hq = '#ffff14'
+//const insertion_lq = '#ffffa6'
+// white
+//const insertion_hq = '#ffffff'
+//const insertion_lq = '#d4d4d4'
+
 const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 const insertion_maxfontsize = 12
 const insertion_minfontsize = 7
@@ -157,6 +176,7 @@ const insertion_minfontsize = 7
 const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
+const insertion_vlinecolor = 'black'
 
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
@@ -184,7 +204,7 @@ const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+const serverconfig = utils.serverconfig
 const samtools = serverconfig.samtools || 'samtools'
 
 module.exports = genomes => {
@@ -300,7 +320,8 @@ async function do_query(q) {
 		count: {
 			r: q.totalnumreads
 		},
-		groups: []
+		groups: [],
+		alleleerror: ''
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
@@ -344,7 +365,7 @@ async function do_query(q) {
 		for (const template of group.templates) {
 			plot_template(ctx, template, group, q)
 		}
-		plot_insertions(ctx, group, q)
+		plot_insertions(ctx, group, q, gr.messagerowheights)
 
 		if (q.asPaired) gr.count.t = group.templates.length
 		gr.src = canvas.toDataURL()
@@ -370,7 +391,7 @@ async function query_reads(q) {
 		const r = {
 			chr: q.variant.chr,
 			start: q.variant.pos,
-			stop: q.variant.pos
+			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
@@ -745,6 +766,8 @@ may skip insertion if on screen width shorter than minimum width
 	}
 	const segment = {
 		qname,
+		segstart,
+		segstop: pos,
 		boxes,
 		forward: !(flag & 0x10),
 		ridx,
@@ -1236,19 +1259,45 @@ function plot_segment(ctx, segment, y, group, q) {
 	}
 }
 
-function plot_insertions(ctx, group, q) {
+function plot_insertions(ctx, group, q, messagerowheights) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
 if b.qual is available, set text color based on it
 */
+	for (const [ridx, r] of group.regions.entries()) {
+		if (!r.to_printnt) continue
+		// matched nucleotides are shown as white letters in this region
+		// before plotting any insertions, to better identify insertions (also white)
+		// find out all insertion positions
+		const xpos = new Set()
+		for (const template of group.templates) {
+			for (const segment of template.segments) {
+				if (segment.ridx != ridx) continue
+				const insertions = segment.boxes.filter(i => i.opr == 'I')
+				if (!insertions.length) continue
+				for (const b of insertions) {
+					xpos.add(r.x + r.scale(b.start))
+				}
+			}
+		}
+		// plot a black v line under each position
+		ctx.strokeStyle = insertion_vlinecolor
+		for (const x of xpos) {
+			ctx.beginPath()
+			ctx.moveTo(x, messagerowheights)
+			ctx.lineTo(x, group.canvasheight)
+			ctx.stroke()
+		}
+	}
+
 	for (const template of group.templates) {
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
 			const insertions = segment.boxes.filter(i => i.opr == 'I')
 			if (!insertions.length) continue
 			ctx.font = Math.max(insertion_maxfontsize, group.stackheight - 2) + 'pt Arial'
-			insertions.forEach(b => {
+			for (const b of insertions) {
 				const x = r.x + r.scale(b.start)
 				if (b.qual) {
 					ctx.fillStyle = qual2insertion(b.qual.reduce((i, j) => i + j, 0) / b.qual.length / maxqual)
@@ -1258,7 +1307,7 @@ if b.qual is available, set text color based on it
 				const text = b.s.length == 1 ? b.s : b.s.length
 				// text y position to observe if the read is in an overlapping pair and shifted down
 				ctx.fillText(text, x, template.y + group.stackheight * (segment.on2ndrow || 0) + group.stackheight / 2)
-			})
+			}
 		}
 	}
 }
@@ -1376,7 +1425,8 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
-	return { html: lst.join('') }
+
+	return { lst }
 }
 
 async function query_oneread(req, r) {
@@ -1503,6 +1553,7 @@ async function convertread(seg, genome, query) {
 			continue
 		}
 	}
+
 	const lst = []
 	if (seg.rnext)
 		lst.push(
@@ -1527,20 +1578,20 @@ async function convertread(seg, genome, query) {
 	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
 	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
 	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
-	return `
-<div style='margin:20px'>
-	<table style="border-spacing:0px;border-collapse:separate;text-align:center">
-	  <tr style="opacity:.6">${reflst.join('')}</tr>
-	  <tr style="color:white">${querylst.join('')}</tr>
-	</table>
-  <div style='margin-top:10px'>
-    <span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
-    <span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
-    <span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
-    <span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
-    <span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
-    <span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
-  </div>
-  <ul style='padding-left:15px'>${lst.join('')}</ul>
-</div>`
+	return {
+		seq: seg.seq,
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+			  <tr style="opacity:.6">${reflst.join('')}</tr>
+			  <tr style="color:white">${querylst.join('')}</tr>
+			</table>`,
+		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
+			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
+			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
+			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
+		  </div>
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+	}
 }

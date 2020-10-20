@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang=en>
 <head>
 	 <meta charset="utf-8">
+	 <title>ProteinPaint</title>
 </head>
 <body>
 
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
-<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
 <div id=aaa style="margin:10px"></div>
 
@@ -18,15 +18,17 @@
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	genome:'hg38',
-	gene:'ENST00000256078',
+	gene:'ENST00000389048',
+	//gene:'ENST00000256078',
 	nobox:true,
 
 	tracks:[
 
 		{
 			type:'mds3',
-			dslabel:'GDC2',
+			dslabel:'GDC',
 			// customizations to the official track
+			set_id: 'set_id:DDw3QnUB_tcD1Zw3Af72'
 		}
 	],
 })

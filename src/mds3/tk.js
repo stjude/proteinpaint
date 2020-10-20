@@ -6,6 +6,7 @@ import * as client from '../client'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { may_render_skewer } from './skewer'
+import { make_leftlabels } from './leftlabel'
 
 /*
 ********************** EXPORTED
@@ -25,9 +26,8 @@ export async function loadTk(tk, block) {
 	const _finish = loadTk_finish_closure(tk, block) // function used at multiple places
 
 	try {
-		if (tk.uninitialized) {
+		if (!tk.mds) {
 			await makeTk(tk, block)
-			// uninitialized flag will only be deleted after data loading as it needs to be accessed in get_parameter
 		}
 
 		tk.tklabel.each(function() {
@@ -37,14 +37,28 @@ export async function loadTk(tk, block) {
 		const par = get_parameter(tk, block)
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error
-		delete tk.uninitialized
 
-		tk.clear()
+		if (tk.uninitialized) {
+			tk.clear()
+			delete tk.uninitialized
+		}
 
 		tk.height_main = tk.toppad + tk.bottompad
 
 		// render each possible track type. if indeed rendered, return sub track height
-		tk.height_main += may_render_skewer(data, tk, block)
+
+		// left labels and skewer at same row, whichever taller
+		{
+			const h2 = may_render_skewer(data, tk, block)
+			// must render skewer first, then left labels
+			let h1
+			if (data.skewer) {
+				h1 = make_leftlabels(data, tk, block)
+			} else {
+				h1 = 60 // FIXME should be kept at tk.leftlabels.height
+			}
+			tk.height_main += Math.max(h1, h2)
+		}
 		// add new subtrack type
 
 		_finish(data)
@@ -85,9 +99,13 @@ export function get_parameter(tk, block) {
 			// need to load skewer data
 			par.push('skewer=1')
 		}
-		if (tk.mds.has_samplesummary) {
+		if (tk.mds.sampleSummaries) {
 			// need to make sample summary
 			par.push('samplesummary=1')
+		}
+		if (tk.set_id) {
+			// quick fix!!!
+			par.push('set_id=' + tk.set_id)
 		}
 	} else {
 		// in gmmode and not first time loading the track,
@@ -106,9 +124,10 @@ export function get_parameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	if (tk.legend.mclass.hiddenvalues.size) {
-		// todo
+	if (tk.hiddenmclass.size) {
+		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
+	par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return par.join('&')
 }
 
@@ -133,6 +152,7 @@ function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
+		// if any query may use
 	} else {
 		rglst = block.tkarg_rglst(tk)
 	}

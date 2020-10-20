@@ -50,7 +50,7 @@ const maxAcceptableFetchResponseTime = 15000 // disable with 0, or default to 15
 const maxNumReportsPerSession = 2
 
 export async function get_one_genome(name) {
-	const data = await dofetch2('genomes', { method: 'POST', body: JSON.stringify({ genome: name }) })
+	const data = await dofetch2(`genomes?genome=${name}`)
 	if (!data.genomes) throw 'error'
 	const g = data.genomes[name]
 	if (!g) throw 'unknown genome: ' + name
@@ -1884,7 +1884,7 @@ export function gmlst2loci(gmlst) {
 	return locs
 }
 
-export function tab2box(holder, tabs) {
+export function tab2box(holder, tabs, runall) {
 	/*
 tabs[ tab{} ]
 	.label:
@@ -1893,6 +1893,7 @@ tabs[ tab{} ]
 		required
 
 this function attaches .box (d3 dom) to each tab of tabs[]
+
 */
 	const tr = holder
 		.append('table')
@@ -1924,7 +1925,7 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('padding', '3px')
 			.style('display', i == 0 ? 'block' : 'none')
 
-		if (i == 0 && tab.callback) {
+		if ((runall && tab.callback) || (i == 0 && tab.callback)) {
 			tab.callback(tab.box)
 			delete tab.callback
 		}
@@ -1962,7 +1963,7 @@ export function add_scriptTag(path) {
 	// path like /static/js/three.js, must begin with /
 	return new Promise((resolve, reject) => {
 		const script = document.createElement('script')
-		script.setAttribute('src', window.location.origin + path)
+		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
 		document.head.appendChild(script)
 		script.onload = resolve
 	})
