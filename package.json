@@ -1,8 +1,9 @@
 {
-  "name": "proteinpaint",
-  "version": "1.0.0",
+  "name": "@stjude/proteinpaint",
+  "version": "1.5.4",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "app.js",
+  "main": "index.js",
+  "bin": "bin.js",
   "scripts": {
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
@@ -12,7 +13,6 @@
     "public-stage": "./scripts/deploy.sh public-stage",
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
-    "irt": "./scripts/deploy.sh internal-stage",
     "test": "tape modules/test/*.spec.js && browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
     "test-back": "tape modules/test/*.spec.js",
     "test-front": "browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
@@ -23,7 +23,10 @@
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
-    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v"
+    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
+    "release-patch": "./scripts/release.sh patch",
+    "release-minor": "./scripts/release.sh minor",
+    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
   },
   "prettier": {
     "semi": false,
@@ -47,7 +50,7 @@
     ]
   },
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "devDependencies": {
     "babel-cli": "^6.18.0",
     "babel-core": "^6.26.3",
@@ -99,5 +102,28 @@
     "normalize.css": "^4.2.0",
     "partjson": "^0.58.1",
     "request": "^2.88.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/pp-dist"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "files": [
+    "server.js",
+    "bin.js",
+    "index.js",
+    "genome",
+    "dataset/clinvar.*.js",
+    "public/index.html",
+    "public/rev.txt",
+    "public/bin",
+    "utils/*.R",
+    "utils/install.pp.js",
+    "src/common.js"
+  ],
+  "bugs": {
+    "url": "https://github.com/stjude/pp-dist"
   }
 }

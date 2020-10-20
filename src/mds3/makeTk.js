@@ -16,16 +16,19 @@ tk.skewer{}
 stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
-const labyspace = 5
-
 export async function makeTk(tk, block) {
-	tk.load = _load(tk, block)
+	tk.load = _load(tk, block) // shorthand
 
 	tk.itemtip = new client.Menu()
+
+	tk.samplefiltertemp = {}
+	// switch to .samplefilter with a filter.js object
 
 	get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
+
+	init_mclass(tk)
 
 	mayaddGetter_variant2samples(tk, block)
 
@@ -37,12 +40,11 @@ export async function makeTk(tk, block) {
 
 	tk.tklabel.text(tk.mds.label)
 
-	let laby = labyspace + block.labelfontsize
-	tk.label_mcount = block.maketklefthandle(tk, laby)
-	laby += labyspace + block.labelfontsize
+	tk.leftlabelg = tk.gleft.append('g')
 
 	tk.clear = () => {
-		// called in loadTk
+		// called in loadTk, when uninitialized is true
+		if (tk.skewer) tk.skewer.g.selectAll('*').remove()
 	}
 
 	// TODO <g> for other file types
@@ -53,6 +55,17 @@ export async function makeTk(tk, block) {
 	})
 
 	init_legend(tk, block)
+}
+
+function init_mclass(tk) {
+	// hidden mclass is controled on the client side
+	tk.hiddenmclass = new Set()
+	if (tk.mds.hiddenmclass) {
+		// port over default hidden mclass
+		for (const c of tk.mds.hiddenmclass) tk.hiddenmclass.add(c)
+	}
+	// #variant for mclass returned by server
+	tk.mclass2variantcount = new Map()
 }
 
 function get_ds(tk, block) {
@@ -80,13 +93,19 @@ function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
 	// native track, need to know what to do for custom track
-	tk.mds.variant2samples.get = async (mlst, querytype) => {
+	tk.mds.variant2samples.get = async (tk0, mlst, querytype) => {
 		/*
 		support alternative methods
 		where all data are hosted on client
 		*/
 		// hardcode to getsummary and using fixed levels
-		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + querytype]
+		const par = [
+			'genome=' + block.genome.name,
+			'dslabel=' + tk.mds.label,
+			'variant2samples=1',
+			'get=' + querytype,
+			'samplefiltertemp=' + JSON.stringify(tk0.samplefiltertemp) // must use tk0 but not tk for this one
+		]
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
 			// in such case, need alternative query method
@@ -107,7 +126,7 @@ configurations and their location are not stable
 function configPanel(tk, block) {}
 
 function _load(tk, block) {
-	return () => {
-		return loadTk(tk, block)
+	return async () => {
+		return await loadTk(tk, block)
 	}
 }

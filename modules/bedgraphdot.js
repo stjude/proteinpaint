@@ -4,71 +4,58 @@ const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 
-
-
-
 /*
-********************** EXPORTED
-********************** INTERNAL
-*/
+ ********************** EXPORTED
+ ********************** INTERNAL
+ */
 
+const serverconfig = utils.serverconfig
 
-
-
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
-
-
-
-module.exports = (genomes) =>{
+module.exports = genomes => {
 	return async (req, res) => {
-		if(app.reqbodyisinvalidjson(req,res)) return
+		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
-			const gn = genomes[ q.genome ]
-			if(!gn) throw 'unknown genome'
+			const gn = genomes[q.genome]
+			if (!gn) throw 'unknown genome'
 
 			let dir = null
-			if( q.file ) {
+			if (q.file) {
 				q.file = path.join(serverconfig.tpmasterdir, q.file)
-			} else if(q.url) {
-				dir = await app.cache_index_promise( q.indexURL || q.url+'.tbi' )
+			} else if (q.url) {
+				dir = await app.cache_index_promise(q.indexURL || q.url + '.tbi')
 			} else {
 				throw 'file or url missing'
 			}
 
-			const nochr = await utils.tabix_is_nochr( q.file || q.url, dir, gn )
+			const nochr = await utils.tabix_is_nochr(q.file || q.url, dir, gn)
 
-			const result = await run_request( q, dir, nochr )
+			const result = await run_request(q, dir, nochr)
 
-			res.send( result )
-		} catch(e) {
-			if(e.stack) console.log(e.stack)
-			res.send({error: (e.message || e)})
+			res.send(result)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			res.send({ error: e.message || e })
 		}
 	}
 }
 
+async function run_request(q, dir, nochr) {
+	const result = { rglst: [] }
 
+	let minv = 0,
+		maxv = 0
 
-
-async function run_request ( q, dir, nochr ) {
-
-	const result = { rglst:[] }
-
-	let minv=0,
-		maxv=0
-
-	if( q.autoscale ) {
+	if (q.autoscale) {
 		// figure out the hard way
-		for(const r of q.rglst) {
-			const coord = (nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
-			await utils.get_lines_tabix( [ q.file, coord ], dir, line=>{
-				const [chr,s1,s2,s3] = line.split('\t')
-				for(const s of s3.split(',')) {
+		for (const r of q.rglst) {
+			const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+			await utils.get_lines_tabix([q.file, coord], dir, line => {
+				const [chr, s1, s2, s3] = line.split('\t')
+				for (const s of s3.split(',')) {
 					const v = Number(s)
-					minv = Math.min(minv,v)
-					maxv = Math.max(maxv,v)
+					minv = Math.min(minv, v)
+					maxv = Math.max(maxv, v)
 				}
 			})
 		}
@@ -79,49 +66,51 @@ async function run_request ( q, dir, nochr ) {
 		maxv = q.maxv
 	}
 
-	const hscale = app.makeyscale().height(q.barheight).min(minv).max(maxv)
+	const hscale = app
+		.makeyscale()
+		.height(q.barheight)
+		.min(minv)
+		.max(maxv)
 
-	for(const r of q.rglst) {
-
+	for (const r of q.rglst) {
 		const r2 = {
 			chr: r.chr,
 			start: r.start,
 			stop: r.stop,
 			width: r.width,
 			reverse: r.reverse,
-			xoff: r.xoff,
+			xoff: r.xoff
 		}
 
-		const canvas = createCanvas( r.width, q.barheight )
+		const canvas = createCanvas(r.width, q.barheight)
 		const ctx = canvas.getContext('2d')
 
 		// query for this variant
-		const coord = (nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
-		await utils.get_lines_tabix( [ q.file, coord ], dir, line=>{
+		const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+		await utils.get_lines_tabix([q.file, coord], dir, line => {
+			const [chr, s1, s2, s3] = line.split('\t')
 
-			const [chr,s1,s2,s3] = line.split('\t')
+			const start = Math.max(Number.parseInt(s1), r.start)
+			const stop = Math.min(Number.parseInt(s2), r.stop)
 
-			const start = Math.max( Number.parseInt(s1), r.start )
-			const stop  = Math.min( Number.parseInt(s2), r.stop )
+			const x1 = ((r.reverse ? r.stop - stop : start - r.start) * r.width) / (r.stop - r.start)
+			const x2 = ((r.reverse ? r.stop - start : stop - r.start) * r.width) / (r.stop - r.start)
 
-			const x1 = (r.reverse ? (r.stop-stop) : (start-r.start)) * r.width / (r.stop-r.start)
-			const x2 = (r.reverse ? (r.stop-start) : (stop-r.start)) * r.width / (r.stop-r.start)
-
-			for(const str of s3.split(',')) {
+			for (const str of s3.split(',')) {
 				const v = Number(str)
 
-				ctx.fillStyle = v>0 ? q.pcolor : q.ncolor
-				const tmp=hscale(v)
+				ctx.fillStyle = v > 0 ? q.pcolor : q.ncolor
+				const tmp = hscale(v)
 
-				const w = Math.max(1, x2-x1)
+				const w = Math.max(1, x2 - x1)
 				ctx.fillRect(x1, tmp.y, w, 2)
 
-				if(v>maxv) {
+				if (v > maxv) {
 					ctx.fillStyle = req.query.pcolor2
-					ctx.fillRect(x1,0, w,2)
-				} else if(v<minv) {
+					ctx.fillRect(x1, 0, w, 2)
+				} else if (v < minv) {
 					ctx.fillStyle = req.query.ncolor2
-					ctx.fillRect(x1,q.barheight-2,w,2)
+					ctx.fillRect(x1, q.barheight - 2, w, 2)
 				}
 			}
 		})

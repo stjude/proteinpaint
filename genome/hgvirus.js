@@ -1,15 +1,21 @@
 module.exports = {
-    species: 'human',
-    genomefile: 'genomes/hgvirus.gz',
-    genedb: {
-        dbfile: 'anno/genes.hgvirus.db'
-    },
-    defaultcoord: {
-        chr: 'chr17_paternal',
-        start: 7568451,
-        stop: 7591984,
-    },
-    majorchr: `chr10_paternal	135534747
+	species: 'human',
+	genomefile: 'genomes/hgvirus.gz',
+	genedb: {
+		dbfile: 'anno/genes.hgvirus.db'
+	},
+	defaultcoord: {
+		chr: 'chr17_paternal',
+		start: 7568451,
+		stop: 7591984
+	},
+	hicenzymefragment: [
+		{
+			enzyme: 'MboI',
+			file: 'anno/hicFragment/hic.MboI.hgvirus.gz'
+		}
+	],
+	majorchr: `chr10_paternal	135534747
     chr11_paternal	135020433
     chr12_paternal	133856534
     chr13_paternal	115169878
@@ -33,5 +39,5 @@ module.exports = {
     chr9_paternal	141213431
     chrM_paternal	16571
     chrX_paternal	155275199
-    chrY_paternal	59373566`,
+    chrY_paternal	59373566`
 }

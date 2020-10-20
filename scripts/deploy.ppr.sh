@@ -20,9 +20,7 @@ cp genome/* tmpbuild/genome/
 cp dataset/* tmpbuild/dataset/
 cp src/common.js src/vcf.js src/bulk* src/tree.js tmpbuild/src/
 cp public/bin/* tmpbuild/public/bin/
-cp public/dev.html tmpbuild/public/
-cp utils/binom.R tmpbuild/utils/
-cp utils/chisq.R tmpbuild/utils/
+cp utils/*.R tmpbuild/utils/
 
 sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
 

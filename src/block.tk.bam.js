@@ -14,7 +14,7 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk.groups[]
-tk.variant{}
+tk.variants[ {} ]
 	.chr/pos/ref/alt
 
 group {}
@@ -34,6 +34,8 @@ group {}
 	.vslider{}
 		.g
 		.boxy
+	.variantg <g>
+	.variantrowheight
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -44,6 +46,7 @@ group {}
 .height
 
 enter_partstack()
+getReadInfo
 */
 
 const labyspace = 5
@@ -132,8 +135,8 @@ export async function loadTk(tk, block) {
 
 async function getData(tk, block, additional = []) {
 	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), ...additional]
-	if (tk.variant) {
-		lst.push('variant=' + tk.variant.chr + '.' + tk.variant.pos + '.' + tk.variant.ref + '.' + tk.variant.alt)
+	if (tk.variants) {
+		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -168,6 +171,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
+	may_render_variant(data, tk, block)
 	setTkHeight(tk)
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
@@ -189,9 +193,91 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
+function may_render_variant(data, tk, block) {
+	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
+	// in tk.dom.variantg, indicate location and status of the variant
+	if (!tk.dom.variantg) return
+	tk.dom.variantg.selectAll('*').remove()
+	let x1, x2 // on screen pixel start/stop of the variant box
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
+		if (hits) {
+			x1 = hits[0].x - bb.exonsf / 2
+		}
+	}
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos + tk.variants[0].ref.length)
+		if (hits) {
+			x2 = hits[0].x - bb.exonsf / 2
+		}
+	}
+	if (x1 >= block.width || x2 <= 0) {
+		// variant is out of range
+		return
+	}
+	tk.dom.variantg
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', 0)
+		.attr('width', x2 - x1)
+		.attr('height', tk.dom.variantrowheight - 2)
+
+	const variant_string =
+		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+	//        console.log("Length of variant string:",variant_string.length)
+	//        console.log("x1:",x1)
+	//        console.log("x2:",x2)
+	// Determining where to place the text. Before, inside or after the box
+	let variant_start_text_pos = 0
+	const space_param = 15
+	const pad_param = 10
+	if (variant_string.length * space_param < x1) {
+		variant_start_text_pos = 0
+	} else {
+		variant_start_text_pos = x2 + pad_param
+	}
+
+	tk.dom.variantg
+		.append('text')
+		.attr('x', variant_start_text_pos)
+		.attr('y', 15)
+		.attr('dy', '.10em')
+		.text(variant_string)
+	// TODO show variant info alongside box
+
+	if (data.refalleleerror == true) {
+		const text_string = 'Incorrect reference allele'
+		// Determining position to place the string and avoid overwriting variant string
+		let text_start_pos = 0
+		if (
+			variant_start_text_pos == 0 &&
+			text_string.length * space_param + pad_param < x1 - variant_string.length * space_param
+		) {
+			text_start_pos = variant_string.length * space_param + pad_param
+		} else if (variant_start_text_pos != 0 && text_string.length * space_param < x1) {
+			text_start_pos = 0
+		} else if (variant_start_text_pos == x2 + pad_param) {
+			text_start_pos = x2 + variant_string.length * space_param + pad_param
+		} else {
+			text_start_pos = x2 + pad_param
+		}
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', text_start_pos)
+			.attr('y', 15)
+			.style('fill', 'red')
+			.attr('dy', '.10em')
+			.text(text_string)
+	}
+}
+
 function setTkHeight(tk) {
 	// call after any group is updated
 	let h = 0
+	if (tk.dom.variantg) {
+		h += tk.dom.variantrowheight
+	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (g.partstack) {
@@ -208,7 +294,7 @@ function updateExistingGroups(data, tk, block) {
 	// to update all existing groups and reset each group to fullstack
 	for (const gd of data.groups) {
 		const group = tk.groups.find(g => g.data.type == gd.type)
-		if (!group) throw 'unknown group type: ' + gd.type
+		if (!group) continue // throw 'unknown group type: ' + gd.type
 		group.data = gd
 
 		update_boxes(group, tk, block)
@@ -259,7 +345,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_addvariant(tk)
+	may_addvariant(tk) // only quick fix!! TODO may allow adding variant on the fly??
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
@@ -274,6 +360,11 @@ function makeTk(tk, block) {
 	tk.dom = {
 		vsliderg: tk.gright.append('g')
 	}
+	if (tk.variants) {
+		// assuming that variant will only be added upon track initiation
+		tk.dom.variantg = tk.glider.append('g')
+		tk.dom.variantrowheight = 20
+	}
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
@@ -282,26 +373,29 @@ function makeTk(tk, block) {
 }
 
 function may_addvariant(tk) {
-	/********* only a quick fix!
-	to supply a variant from url parameter
+	/********* XXX only a quick fix!
+	to supply one or multiple variant from url parameter
 	if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
-	will overwrite the existing tk.variant{}
+	will overwrite the existing tk.variants{}
+
+	Do no use in production!
 
 	the variant may be added on the fly from e.g. a vcf track in the same browser session
 	*/
 	const u2p = url2map()
-	if (u2p.has('variant')) {
-		const tmp = u2p.get('variant').split('.')
-		if (tmp.length != 4) {
-			console.log('urlparam variant should be 4 fields joined by .')
-			return
-		}
-		const pos = Number(tmp[1])
-		if (!Number.isInteger(pos)) {
-			console.log('urlparam variant pos is not integer')
-			return
-		}
-		tk.variant = { chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3] }
+	if (!u2p.has('variant')) return
+	const tmp = u2p.get('variant').split('.')
+	if (tmp.length < 4) {
+		console.log('urlparam variant should be at least 4 fields joined by .')
+		return
+	}
+	tk.variants = []
+	for (let i = 0; i < tmp.length; i += 4) {
+		const pos = Number(tmp[i + 1])
+		if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		if (!tmp[i + 2]) return console.log('ref allele missing')
+		if (!tmp[i + 3]) return console.log('alt allele missing')
+		tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
 	}
 }
 
@@ -667,11 +761,141 @@ if is pair mode, is the template
 		return
 	}
 
-	tk.readpane.body.append('div').html(data.html)
+	for (const r of data.lst) {
+		// {seq, alignment (html), info (html) }
+		const div = tk.readpane.body.append('div').style('margin', '20px')
+
+		div.append('div').html(r.alignment)
+
+		/*** 
+			Firefox does not seem to support the permision query name == 'clipboard-write'. 
+			Tested that removing this permission check works in Chrome, Safari, FF.
+			May need to reactivate the permission check if users report issues. 
+		***/
+		/*const result = await navigator.permissions.query({ name: 'clipboard-write' })
+		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
+			// no copy button
+		} else {*/
+		const row = div.append('div').style('margin-top', '10px')
+		row
+			.append('button')
+			.text('Copy read sequence')
+			.on('click', function() {
+				navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
+				d3select(this)
+					.append('span')
+					.html('&nbsp;&check;')
+			})
+		mayshow_blatbutton(r, row, tk, block)
+
+		div.append('div').html(r.info)
+	}
+}
+
+function mayshow_blatbutton(read, div, tk, block) {
+	if (!block.genome.blat) {
+		// blat not enabled
+		return
+	}
+	const button = div
+		.append('button')
+		.style('margin-left', '10px')
+		.text('BLAT')
+		.on('click', async () => {
+			button.property('disabled', true)
+			blatdiv.selectAll('*').remove()
+			const wait = blatdiv.append('div').text('Loading...')
+			try {
+				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + read.seq)
+				if (data.error) throw data.error
+				if (data.nohit) throw 'No hit'
+				if (!data.hits) throw '.hits[] missing'
+				wait.remove()
+				show_blatresult2(data.hits, blatdiv, tk, block)
+			} catch (e) {
+				wait.text(e.message || e)
+				if (e.stack) console.log(e.stack)
+			}
+			button.property('disabled', false)
+		})
+
+	const blatdiv = div.append('div')
+}
+function show_blatresult(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('Score')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QEnd')
+	tr.append('td').text('QSize')
+	tr.append('td').text('Identity')
+	tr.append('td').text('Chr')
+	tr.append('td').text('Strand')
+	tr.append('td').text('Start')
+	tr.append('td').text('Stop')
+	for (const h of hits) {
+		const tr = table.append('tr')
+		tr.append('td').text(h.match)
+		tr.append('td').text(h.qstart)
+		tr.append('td').text(h.qstop)
+		tr.append('td').text(h.qstop - h.qstart)
+		tr.append('td').text('?')
+		tr.append('td').text(h.chr)
+		tr.append('td').text(h.strand)
+		tr.append('td').text(h.start)
+		tr.append('td').text(h.stop)
+	}
+}
+
+function show_blatresult2(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('Score')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStrand')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RAlignLen')
+	tr.append('td').text('SeqAlign')
+	for (const h of hits) {
+		let tr = table.append('tr')
+		tr.append('td').text(h.score)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_strand)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_alignlen)
+		tr.append('td')
+			.text(h.query_alignment.toUpperCase() + ' Query')
+			.style('font-family', 'courier')
+
+		tr = table.append('tr')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td')
+			.text(h.ref_alignment.toUpperCase() + ' Ref')
+			.style('font-family', 'courier')
+	}
 }
 
 async function enter_partstack(group, tk, block, y) {
-	/* for a group, enter part stack mode from full stack mode
+	/* for a group, enter part stack mode rom full stack mode
 	will only update data and rendering of this group, but not other groups
 	*/
 	group.data_fullstack = group.data
