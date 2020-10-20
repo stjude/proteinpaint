@@ -3203,7 +3203,7 @@ async function handle_hicstat(req, res) {
 		if (!isurl) {
 			await utils.file_is_readable(file)
 		}
-		const out = await do_hicstat(file)
+		const out = await do_hicstat(file, isurl)
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })
