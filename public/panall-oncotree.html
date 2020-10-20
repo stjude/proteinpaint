@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+
+
+<div id=aaa style="margin:10px"></div>
+<div id=bbb style="margin:10px"></div>
+<div id=mm9 style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	//host: 'https://ppr.stjude.org',
+	holder:document.getElementById('aaa'),
+	noheader:1,
+	parseurl:true,
+	genome:'hg38',
+	termdb: {
+		state:{
+			dslabel:'pediatric-cloud',
+			genome:'hg38'
+		},
+		tree: {
+			set_custombtns(term, holder, termIsDisabled, cls_termview) { //console.log(term)
+				// holder.selectAll('*').remove()
+				holder.append('div')
+					.attr('class', termIsDisabled ? '' : 'sja_menuoption ' + cls_termview)
+					.style('display', 'inline-block')
+					.style('border-radius', '5px')
+					.style('margin-left', '20px')
+					.style('font-size', '0.8em')
+					.style('opacity', termIsDisabled ? 0.4 : 1)
+					.text('EDIT')
+
+				// need to already have the term's child or leaf terms with sample counts
+				// fake it for now
+				const leafterms = []
+				const numchildren = Math.ceil(5*Math.random());
+				for(let i=0; i<numchildren; i++) leafterms.push({name: 'fake1', samplecount: Math.ceil(50*Math.random())})
+
+				holder.append('div')
+					.style('display', 'inline-block')
+					.selectAll('.termsamplecounts')
+					.data(leafterms, d=>d.name)
+					.enter()
+					.append('div')
+					.attr('class', 'termsamplecounts')
+					.style('display', 'inline-block')
+					.style('width', '20px')
+					.style('height', '20px')
+					.style('border-radius', '10px')
+					.style('margin-left', '5px')
+					.style('padding', '2px')
+					.style('background-color', '#999')
+					.style('color', '#fff')
+					.style('text-align', 'center')
+					.style('line-height', '22px')
+					.text(d => d.samplecount)
+			}
+		}
+	}
+})
+
+/*
+runproteinpaint({
+	//host: 'https://ppr.stjude.org',
+	holder:document.getElementById('aaa'),
+	noheader:1,
+	parseurl:true,
+	genome:'hg19',
+	mdssamplescatterplot:{
+		dataset:'Pan-ALL'
+	},
+})
+*/
+/*
+
+runproteinpaint({
+	host: 'https://ppr.stjude.org',
+	holder:document.getElementById('bbb'),
+	noheader:1,
+	parseurl:true,
+	genome:'hg19',
+	block:1,
+	nativetracks:'RefGene',
+	nobox:1,
+	position:'chr9:36790479-37054449',
+	datasetqueries:[ {dataset:'Pan-ALL',querykey:'svcnv'},{dataset:'Pan-ALL',querykey:'junction'} ],
+	tracks:[
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM012512_G2.bw","name":"SJNORM012512_G2 RNA"},
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM012512_G4.bw","name":"SJNORM012512_G4 RNA"},
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G1.bw","name":"SJNORM016096_G1 RNA"},
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G2.bw","name":"SJNORM016096_G2 RNA"},
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G3.bw","name":"SJNORM016096_G3 RNA"},
+		{"hidden":1,"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G4.bw","name":"SJNORM016096_G4 RNA"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G4 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058742_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058742_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060282_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060282_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060284_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060284_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060287_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060287_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G3 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059996_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059996_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060286_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060286_G2 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059996_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059996_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060162_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060162_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G5 bone_marrow CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060286_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060286_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G3 bone_marrow CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G5 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060278_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060278_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058744_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058744_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058745_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058745_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G1 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060155_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060155_G3 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060281_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060281_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060157_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060157_G2 bone_marrow CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060282_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060282_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058744_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058744_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058750_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058750_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060287_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060287_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059995_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059995_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058794_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058794_G2 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060288_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060288_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060278_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060278_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G1 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058748_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058748_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060163_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060163_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060288_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060288_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060158_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060158_G1 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060283_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060283_G2 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060163_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060163_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058748_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058748_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060282_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060282_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060281_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060281_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G3 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G4 bone_marrow CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G1 bone_marrow CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060285_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060285_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G2 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060282_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060282_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058751_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058751_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060278_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060278_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G5 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058745_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058745_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G1 RNA"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060155_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060155_G1 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060157_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060157_G4 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G6 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G6 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058742_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058742_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G4 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060281_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060281_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G6 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058745_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058745_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060285_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060285_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G2 bone_marrow CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058746_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058746_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060288_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060288_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058751_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058751_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060163_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060163_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060285_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060285_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060281_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060281_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060164_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060164_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060288_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060288_G4 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058745_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058745_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060280_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060280_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060162_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060162_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060280_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060280_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058744_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058744_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059996_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059996_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058795_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058795_G2 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060279_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060279_G2 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060283_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060283_G3 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G5 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058744_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058744_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058794_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058794_G5 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058751_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058751_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058796_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058796_G3 bone_marrow CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059995_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059995_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060163_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060163_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059995_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059995_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058742_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058742_G3 cord_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058748_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058748_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058744_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058744_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060278_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060278_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060164_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060164_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060155_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060155_G2 bone_marrow CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058742_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058742_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060162_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060162_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060162_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060162_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060284_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060284_G2 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060283_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060283_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058745_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058745_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059995_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059995_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058750_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058750_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058753_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058753_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058748_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058748_G4 cord_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060157_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060157_G3 bone_marrow CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059996_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059996_G5 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058794_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058794_G1 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058797_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058797_G6 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058743_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058743_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059995_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059995_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060161_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060161_G5 cord_blood CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060287_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060287_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060160_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060160_G4 bone_marrow CD34"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060286_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060286_G4 whole_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058750_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058750_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060285_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060285_G2 whole_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060157_G5.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060157_G5 bone_marrow CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060287_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060287_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058749_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058749_G1 RNA"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058752_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058752_G1 cord_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060282_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060282_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM059996_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM059996_G4 whole_blood CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060157_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060157_G1 bone_marrow CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM058742_G6.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM058742_G6 cord_blood CD56"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060164_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060164_G2 cord_blood CD14"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060287_G3.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060287_G3 whole_blood CD15"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G4.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G4 bone_marrow CD19"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060278_G1.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060278_G1 whole_blood CD3"},
+		{"file": "hg19/pan-all/RNAbw.normal/SJNORM060156_G2.bw", "type": "bigwig", "hidden": 1, "name": "SJNORM060156_G2 bone_marrow CD14"},
+	]
+})
+
+
+
+runproteinpaint({
+	host: 'https://ppr.stjude.org',
+	holder:document.getElementById('bbb'),
+	noheader:1,
+	parseurl:true,
+	genome:'mm9',
+	block:1,
+	nativetracks:'RefGene',
+	nobox:1,
+	position:'chr4:44532520-44732180',
+	tracks:[
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMALL057910_D1.bw", "name":"SJMMALL057910_D1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMBALL056740_D1.bw","name":"SJMMBALL056740_D1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMBALL056741_D1.bw","name":"SJMMBALL056741_D1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMBALL056742_D1.bw","name":"SJMMBALL056742_D1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMBALL056743_D1.bw","name":"SJMMBALL056743_D1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMNORM056745_G1.bw","name":"SJMMNORM056745_G1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMNORM056746_G1.bw","name":"SJMMNORM056746_G1 RNA"},
+		{"type":"bigwig","file":"hg19/pan-all/RNAbw.mm9/SJMMNORM056747_G1.bw","name":"SJMMNORM056747_G1 RNA"},
+	]
+})
+
+*/
+
+</script>
+
+</body>
+</html>

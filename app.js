@@ -9551,21 +9551,23 @@ async function handle_mdssamplescatterplot(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.cohort) throw 'no cohort for dataset'
 		if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
-
 		const sp = ds.cohort.scatterplot
 		if (!sp) throw 'scatterplot not supported for this dataset'
 
 		const dots = []
 		for (const sample in ds.cohort.annotation) {
 			const anno = ds.cohort.annotation[sample]
+			if (req.query.subsetkey) {
+				if (anno[req.query.subsetkey] != req.query.subsetvalue) continue
+			}
 			const x = anno[sp.x.attribute]
 			if (!Number.isFinite(x)) continue
 			const y = anno[sp.y.attribute]
 			if (!Number.isFinite(y)) continue
 			dots.push({
-				sample: sample,
-				x: x,
-				y: y,
+				sample,
+				x,
+				y,
 				s: anno
 			})
 		}

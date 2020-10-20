@@ -21,11 +21,24 @@ module.exports = {
 		},
 		sampleAttribute: {
 			attributes: {
-				x: { label: 'X', isfloat: 1 },
-				y: { label: 'Y', isfloat: 1 },
+				x: { label: 'X', isfloat: 1, clientnoshow: 1 },
+				y: { label: 'Y', isfloat: 1, clientnoshow: 1 },
+				diagnosis_name: { label: 'Diagnosis name' },
+				diagnosis_group: {
+					label: 'Diagnosis group',
+					filter: 1,
+					values: {
+						'Hematologic Malignancy': { color: '#db6042' },
+						'Solid Tumor': { color: '#dba842' },
+						'Brain Tumor': { color: '#4287db' }
+					}
+				},
+				agedx: { label: 'Age at diagnosis (year)', isfloat: 1 },
+				ethnicity: { label: 'Ethnicity' },
+				race: { label: 'Race' },
+				sex: { label: 'Sex' },
 				diagnosis: {
-					// used in tsne
-					label: 'Primary subtype',
+					label: 'Diagnosis',
 					filter: 1,
 					values: {
 						ACC: {
@@ -403,7 +416,7 @@ module.exports = {
 			y: {
 				attribute: 'y'
 			},
-			colorbyattributes: [{ key: 'diagnosis' }],
+			colorbyattributes: [{ key: 'diagnosis' } /*{ key: 'diagnosis_group' }*/],
 			querykey: 'svcnv'
 		}
 	},
