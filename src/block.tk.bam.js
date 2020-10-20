@@ -229,8 +229,8 @@ function may_render_variant(data, tk, block) {
 	//        console.log("x2:",x2)
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
-	const space_param = 15
-	const pad_param = 10
+	const space_param = 10
+	const pad_param = 15
 	if (variant_string.length * space_param < x1) {
 		variant_start_text_pos = 0
 	} else {
