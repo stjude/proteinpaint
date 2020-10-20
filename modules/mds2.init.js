@@ -7,7 +7,8 @@ const validate_single_numericrange = require('../src/mds.termdb.termvaluesetting
 
 /*
 ********************** EXPORTED
-init
+init_db
+init_track
 client_copy
 server_updateAttr
 ********************** INTERNAL
@@ -22,19 +23,18 @@ may_sum_samples
 
 const serverconfig = utils.serverconfig
 
-export async function init(ds, genome) {
+export async function init_db(ds, genome) {
+	/* db should be required
+	must initiate db first, then process other things
+	as db may be needed (e.g. getting json of a term)
+	*/
+	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
+	validate_termdbconfig(ds.cohort.termdb)
+	server_init_db_queries(ds)
+}
+export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server
 	 */
-
-	if (ds.cohort && ds.cohort.db) {
-		/* db should be required
-		must initiate db first, then process other things
-		as db may be needed (e.g. getting json of a term)
-		*/
-		if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
-		validate_termdbconfig(ds.cohort.termdb)
-		server_init_db_queries(ds)
-	}
 
 	if (!ds.track) throw 'no mds2 track; missing ds.track{}'
 	const tk = ds.track

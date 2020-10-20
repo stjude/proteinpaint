@@ -191,7 +191,7 @@ app.post('/translategm', handle_translategm)
 app.get('/hicstat', handle_hicstat)
 app.post('/hicdata', handle_hicdata)
 app.post('/samplematrix', handle_samplematrix)
-app.post('/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
 app.post('/mdssamplesignature', handle_mdssamplesignature)
 app.post('/mdssurvivalplot', handle_mdssurvivalplot)
 app.post('/fimo', fimo.handle_closure(genomes))
@@ -238,6 +238,7 @@ pp_init()
 		and thereby avoid unnecessary endless restarts of an invalid server
 		init with bad config, data, and/or code
 		*/
+		if (err.stack) console.log(err.stack)
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
@@ -9541,47 +9542,47 @@ function handle_mdsjunction_AreadcountbyB(reqquery, res, ds, dsquery) {
 		})
 }
 
-function handle_mdssamplescatterplot(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	Promise.resolve()
-		.then(() => {
-			const gn = genomes[req.query.genome]
-			if (!gn) throw 'invalid genome'
-			const ds = gn.datasets[req.query.dslabel]
-			if (!ds) throw 'invalid dataset'
-			if (!ds.cohort) throw 'no cohort for dataset'
-			if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+async function handle_mdssamplescatterplot(req, res) {
+	log(req)
+	try {
+		const gn = genomes[req.query.genome]
+		if (!gn) throw 'invalid genome'
+		const ds = gn.datasets[req.query.dslabel]
+		if (!ds) throw 'invalid dataset'
+		if (!ds.cohort) throw 'no cohort for dataset'
+		if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+		const sp = ds.cohort.scatterplot
+		if (!sp) throw 'scatterplot not supported for this dataset'
 
-			const sp = ds.cohort.scatterplot
-			if (!sp) throw 'scatterplot not supported for this cohort'
-
-			const dots = []
-			for (const sample in ds.cohort.annotation) {
-				const anno = ds.cohort.annotation[sample]
-				const x = anno[sp.x.attribute]
-				if (!Number.isFinite(x)) continue
-				const y = anno[sp.y.attribute]
-				if (!Number.isFinite(y)) continue
-				dots.push({
-					sample: sample,
-					x: x,
-					y: y,
-					s: anno
-				})
+		const dots = []
+		for (const sample in ds.cohort.annotation) {
+			const anno = ds.cohort.annotation[sample]
+			if (req.query.subsetkey) {
+				if (anno[req.query.subsetkey] != req.query.subsetvalue) continue
 			}
-			res.send({
-				colorbyattributes: sp.colorbyattributes, // optional
-				colorbygeneexpression: sp.colorbygeneexpression, // optional
-				querykey: sp.querykey,
-				dots: dots,
-				// optional, quick fix for showing additional tracks when launching single sample view by clicking a dot
-				tracks: sp.tracks
+			const x = anno[sp.x.attribute]
+			if (!Number.isFinite(x)) continue
+			const y = anno[sp.y.attribute]
+			if (!Number.isFinite(y)) continue
+			dots.push({
+				sample,
+				x,
+				y,
+				s: anno
 			})
+		}
+		res.send({
+			colorbyattributes: sp.colorbyattributes, // optional
+			colorbygeneexpression: sp.colorbygeneexpression, // optional
+			querykey: sp.querykey,
+			dots: dots,
+			// optional, quick fix for showing additional tracks when launching single sample view by clicking a dot
+			tracks: sp.tracks
 		})
-		.catch(err => {
-			if (err.stack) console.error(err.stack)
-			res.send({ error: typeof err == 'string' ? err : err.message })
-		})
+	} catch (e) {
+		if (e.stack) console.error(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 function handle_mdssamplesignature(req, res) {
@@ -12488,6 +12489,10 @@ async function mds_init(ds, genome, _servconfig) {
 		console.log(count + ' samples for disco plot')
 	}
 
+	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
+		await mds2_init.init_db(ds, genome)
+	}
+
 	if (ds.cohort && ds.cohort.files) {
 		/*
 		*********** legacy mds *************
@@ -12891,7 +12896,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.track) {
-		await mds2_init.init(ds, genome)
+		await mds2_init.init_track(ds, genome)
 	}
 
 	if (ds.annotationsampleset2matrix) {
@@ -13232,7 +13237,9 @@ function mds_init_mdssvcnv(query, ds, genome) {
 				}
 			}
 			if (unknown.size) {
-				console.log('mdssvcnv unannotated samples: ' + [...unknown].join(' '))
+				console.log(
+					'mdssvcnv unannotated samples: ' + (query.noprintunannotatedsamples ? unknown.size : [...unknown].join(' '))
+				)
 			}
 		}
 

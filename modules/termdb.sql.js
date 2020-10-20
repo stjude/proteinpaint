@@ -845,6 +845,7 @@ thus less things to worry about...
 */
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
+	if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing'
 
 	let cn
 	if (ds.cohort.db.file) {
@@ -859,11 +860,36 @@ thus less things to worry about...
 
 	ds.cohort.db.connection = cn
 
-	if (!ds.cohort.termdb) throw 'ds.cohor.termdb missing'
+	const tables = test_tables(cn)
+	if (!tables.terms) throw 'terms table missing'
+	if (!tables.ancestry) throw 'ancestry table missing'
+	if (!tables.annotations) throw 'annotations table missing'
+	if (ds.cohort.termdb.selectCohort && !tables.subcohort_terms)
+		throw 'subcohort_terms table is missing while termdb.selectCohort is enabled'
+
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
-	{
+	if (tables.sampleidmap) {
+		const s = cn.prepare('SELECT * FROM sampleidmap')
+		let id2name
+		// new method added to ds{}, under same name of table
+		// the method could be defined indepenent of db
+		ds.sampleidmap = {
+			get: id => {
+				if (!id2name) {
+					id2name = new Map()
+					// k: sample id, v: sample name
+					for (const { id, name } of s.all()) {
+						id2name.set(id, name)
+					}
+				}
+				return id2name.get(id) || id
+			}
+		}
+	}
+
+	if (tables.category2vcfsample) {
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
 		let cache
@@ -877,7 +903,7 @@ thus less things to worry about...
 			return cache
 		}
 	}
-	{
+	if (tables.alltermsbyorder) {
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = () => {
@@ -1084,7 +1110,7 @@ thus less things to worry about...
 			return s.all(id)
 		}
 	}
-	{
+	if (tables.termhtmldef) {
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info
 		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
@@ -1115,5 +1141,21 @@ thus less things to worry about...
 			}
 			return s_cohort[questionmarks]
 		}
+	}
+}
+
+function test_tables(cn) {
+	const s = cn.prepare('SELECT name FROM sqlite_master WHERE type="table" AND name=?')
+	return {
+		terms: s.get('terms'),
+		ancestry: s.get('ancestry'),
+		alltermsbyorder: s.get('alltermsbyorder'),
+		termhtmldef: s.get('termhtmldef'),
+		category2vcfsample: s.get('category2vcfsample'),
+		annotations: s.get('annotations'),
+		chronicevents: s.get('chronicevents'),
+		precomputed: s.get('precomputed'),
+		subcohort_terms: s.get('subcohort_terms'),
+		sampleidmap: s.get('sampleidmap')
 	}
 }
