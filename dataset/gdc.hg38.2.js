@@ -32,19 +32,13 @@ query Lolliplot_relayQuery(
 		}
 	}
 }`
-/*
-const variables_isoform2variants = {
-	filters: {
-		op: '=',
-		content: {
-			field: 'consequence.transcript.transcript_id'
-			// value=[isoform] added here
-		}
-	},
-	score: 'occurrence.case.project.project_id'
-}
-*/
+
 function variables_isoform2variants(p) {
+	// p:{}
+	// .isoform
+	// .set_id
+	if (!p.isoform) throw '.isoform missing'
+	if (typeof p.isoform != 'string') throw '.isoform value not string'
 	const f = {
 		filters: {
 			op: 'and',
@@ -61,6 +55,7 @@ function variables_isoform2variants(p) {
 		score: 'occurrence.case.project.project_id'
 	}
 	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
 		f.filters.content.push({
 			op: 'in',
 			content: {
@@ -73,6 +68,7 @@ function variables_isoform2variants(p) {
 }
 
 /*
+not in use for the moment
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
@@ -133,15 +129,32 @@ query GdcSsmByGene($filter: FiltersArgument) {
 		}
 	}
 }`
-const variables_range2variants = {
-	filter: {
-		op: 'and',
-		content: [
-			{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
-			{ op: '>=', content: { field: 'start_position' } },
-			{ op: '<=', content: { field: 'end_position' } }
-		]
+function variables_range2variants(p) {
+	// p:{}
+	// .chr/start/stop
+	// .set_id
+	if (!p.chr) throw '.chr missing'
+	if (typeof p.chr != 'string') throw '.chr value not string'
+	if (!Number.isInteger(p.start)) throw '.start not integer'
+	if (!Number.isInteger(p.stop)) throw '.stop not integer'
+	const f = {
+		filter: {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'chromosome', value: [p.chr] } },
+				{ op: '>=', content: { field: 'start_position', value: [p.start] } },
+				{ op: '<=', content: { field: 'end_position', value: [p.stop] } }
+			]
+		}
 	}
+	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
+		f.filter.content.push({
+			op: 'in',
+			content: { field: 'cases.case_id', value: [p.set_id] }
+		})
+	}
+	return f
 }
 
 /*
@@ -227,97 +240,30 @@ query OneSsm($filter: FiltersArgument) {
 		}
 	}
 }`
-const variables_variant2samples = {
-	filter: {
-		op: 'in',
-		content: {
-			field: 'ssm_id'
-			// value=[ssm_id] added here
+function variables_variant2samples(p) {
+	// p:{}
+	// .ssm_id_lst, string
+	// .set_id
+	if (!p.ssm_id_lst) throw '.ssm_id_lst missing'
+	if (typeof p.ssm_id_lst != 'string') throw '.ssm_id_lst value not string'
+	return {
+		filter: { op: 'in', content: { field: 'ssm_id', value: p.ssm_id_lst.split(',') } }
+	}
+	const f = {
+		filter: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'ssm_id', value: p.ssm_id_lst.split(',') } }]
 		}
 	}
+	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
+		f.filter.content.push({
+			op: 'in',
+			content: { field: 'cases.case_id', value: [p.set_id] }
+		})
+	}
+	return f
 }
-/* flat list of term objects, not hierarchical
-may make a central termdb (or in memory term list)
-and only include a list of term ids in variant2samples.terms[]
-*/
-const ssmCaseAttr = [
-	{
-		name: 'Project',
-		id: 'project',
-		type: 'categorical',
-		get: m => {
-			// the getter will not be passed to client
-			if (m.project) return m.project.project_id
-			return null
-		}
-	},
-	{
-		name: 'Disease',
-		id: 'disease',
-		type: 'categorical',
-		get: m => m.disease_type
-	},
-	{
-		name: 'Primary site',
-		id: 'primary_site',
-		type: 'categorical',
-		get: m => m.primary_site
-	},
-	{
-		name: 'Available variation data',
-		id: 'available_variation_data',
-		type: 'categorical',
-		get: m => m.available_variation_data
-	},
-	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
-	/*
-	{
-		name: 'Tissue source site',
-		id: 'tissue_source_site',
-		type:'categorical',
-		get: m => {
-			if (m.tissue_source_site) return m.tissue_source_site.name
-			return null
-		}
-	},
-	*/
-	{
-		name: 'Gender',
-		id: 'gender',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.gender
-			return null
-		}
-	},
-	{
-		name: 'Birth year',
-		id: 'year_of_birth',
-		type: 'integer',
-		get: m => {
-			if (m.demographic) return m.demographic.year_of_birth
-			return null
-		}
-	},
-	{
-		name: 'Race',
-		id: 'race',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.race
-			return null
-		}
-	},
-	{
-		name: 'Ethnicity',
-		id: 'ethnicity',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.ethnicity
-			return null
-		}
-	}
-]
 
 /*
 one time query: will only run once and result is cached on serverside
@@ -584,6 +530,89 @@ const variables_genecnv = {
 }
 
 ///////////////////////////////// end of query strings ///////////////
+
+/* flat list of term objects, not hierarchical
+may make a central termdb (or in memory term list)
+and only include a list of term ids in variant2samples.terms[]
+*/
+const ssmCaseAttr = [
+	{
+		name: 'Project',
+		id: 'project',
+		type: 'categorical',
+		get: m => {
+			// the getter will not be passed to client
+			if (m.project) return m.project.project_id
+			return null
+		}
+	},
+	{
+		name: 'Disease',
+		id: 'disease',
+		type: 'categorical',
+		get: m => m.disease_type
+	},
+	{
+		name: 'Primary site',
+		id: 'primary_site',
+		type: 'categorical',
+		get: m => m.primary_site
+	},
+	{
+		name: 'Available variation data',
+		id: 'available_variation_data',
+		type: 'categorical',
+		get: m => m.available_variation_data
+	},
+	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	/*
+	{
+		name: 'Tissue source site',
+		id: 'tissue_source_site',
+		type:'categorical',
+		get: m => {
+			if (m.tissue_source_site) return m.tissue_source_site.name
+			return null
+		}
+	},
+	*/
+	{
+		name: 'Gender',
+		id: 'gender',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.gender
+			return null
+		}
+	},
+	{
+		name: 'Birth year',
+		id: 'year_of_birth',
+		type: 'integer',
+		get: m => {
+			if (m.demographic) return m.demographic.year_of_birth
+			return null
+		}
+	},
+	{
+		name: 'Race',
+		id: 'race',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.race
+			return null
+		}
+	},
+	{
+		name: 'Ethnicity',
+		id: 'ethnicity',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.ethnicity
+			return null
+		}
+	}
+]
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 

@@ -23,7 +23,14 @@ const query = `query Lolliplot_relayQuery(
 }`
 
 const variables = {
-	filters: { op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } },
+	//filters: { op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } },
+	filters: {
+		op: 'and',
+		content: [
+			{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } },
+			{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72'] } }
+		]
+	},
 	score: 'occurrence.case.project.project_id'
 }
 
@@ -36,7 +43,7 @@ const variables = {
 		//console.log(response.body)
 
 		const re = JSON.parse(JSON.parse(response.body).data.analysis.protein_mutations.data)
-		const hit0 = re.hits[0]
+		const hit0 = re.hits[1]
 		console.log(JSON.stringify(hit0, null, 2))
 		console.log(re.hits.length, 'hits')
 	} catch (error) {
