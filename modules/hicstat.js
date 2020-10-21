@@ -1,5 +1,3 @@
-import { resolveNaptr } from 'dns'
-
 const fs = require('fs')
 const util = require('util')
 const got = require('got')
