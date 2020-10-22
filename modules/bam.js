@@ -320,7 +320,8 @@ async function do_query(q) {
 		count: {
 			r: q.totalnumreads
 		},
-		groups: []
+		groups: [],
+		alleleerror: ''
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width

@@ -1,5 +1,14 @@
 .mode tab
 
+drop index if exists sidmap_id;
+drop table if exists sampleidmap;
+create table sampleidmap (
+  id character not null,
+  name character varying(100) not null
+);
+.import 'samples.idmap' sampleidmap
+create index sidmap_id on sampleidmap(id);
+
 
 drop index if exists terms_id;
 drop index if exists terms_p;
@@ -86,7 +95,7 @@ create table annotations (
 );
 
 .import annotation.matrix annotations
-.import annotation.admix annotations
+.import annotation.admix.sjlife annotations
 .import annotation.admix.ccss annotations
 
 create index a_sample on annotations(sample);

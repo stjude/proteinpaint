@@ -8,20 +8,21 @@ GDC graphql API
 export function validate_variant2sample(a) {
 	if (!a.query_list) throw '.query_list missing from variant2samples.gdcapi'
 	if (!a.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
-	if (!a.variables) throw '.variables missing from variant2samples.gdcapi'
+	if (typeof a.variables != 'function') throw '.variant2samples.gdcapi.variables() not a function'
 }
 
 export function validate_query_snvindel_byrange(a) {
 	if (!a.query) throw '.query missing for byrange.gdcapi'
 	if (typeof a.query != 'string') throw '.query not string in byrange.gdcapi'
-	if (!a.variables) throw '.variables missing for byrange.gdcapi'
-	// validate .variables
+	if (typeof a.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
+	// TODO a.get()
 }
 
 export function validate_query_snvindel_byisoform(api, ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
 	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
+	if (typeof api.variables != 'function') throw 'byisoform.gdcapi.variables() is not a function'
 	api.get = async opts => {
 		const hits = await snvindel_byisoform_run(ds, opts)
 		const mlst = [] // parse snv/indels into this list
@@ -100,13 +101,11 @@ function snvindel_addclass(m, consequence) {
 async function snvindel_byisoform_run(ds, opts) {
 	// used in two places
 	// query is ds.queries.snvindel
-	const variables = JSON.parse(JSON.stringify(ds.queries.snvindel.byisoform.gdcapi.variables))
-	variables.filters.content.value = [opts.isoform]
 	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			query: ds.queries.snvindel.byisoform.gdcapi.query,
-			variables
+			variables: ds.queries.snvindel.byisoform.gdcapi.variables(opts)
 		})
 	})
 	let re
@@ -220,12 +219,10 @@ export function validate_query_genecnv(api, ds) {
 
 export async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-
 	const query = {
-		variables: JSON.parse(JSON.stringify(ds.variant2samples.gdcapi.variables)),
+		variables: ds.variant2samples.gdcapi.variables(q),
 		query: q.get == 'sunburst' ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list // NOTE "sunburst" is type_sunburst
 	}
-	query.variables.filter.content.value = q.ssm_id_lst.split(',')
 
 	const response = await got.post(ds.apihost, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
