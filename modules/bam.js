@@ -1419,6 +1419,7 @@ async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
+	console.log('req.query:', req.query)
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
 	if (!req.query.viewstart) throw '.viewstart missing'
@@ -1438,7 +1439,6 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
-
 	return { lst }
 }
 
@@ -1567,6 +1567,22 @@ async function convertread(seg, genome, query) {
 		}
 	}
 
+	//console.log("seg.boxes:",seg.boxes)
+	// Determining start and stop position of softclips (if any)
+	let soft_start = 0
+	let soft_stop = 0
+	let soft_present = 0
+	for (const box of seg.boxes) {
+		soft_start = soft_stop
+		soft_stop += box.len
+		if (box.opr == 'S') {
+			soft_present = 1
+			//console.log("soft_start:",soft_start)
+			//console.log("soft_stop:",soft_stop)
+			break
+		}
+	}
+
 	const lst = []
 	if (seg.rnext)
 		lst.push(
@@ -1591,7 +1607,8 @@ async function convertread(seg, genome, query) {
 	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
 	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
 	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
-	return {
+
+	let seq_data = {
 		seq: seg.seq,
 		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
 			  <tr style="opacity:.6">${reflst.join('')}</tr>
@@ -1607,4 +1624,9 @@ async function convertread(seg, genome, query) {
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
 	}
+	if (soft_present == 1) {
+		seq_data.soft_start = soft_start
+		seq_data.soft_stop = soft_stop
+	}
+	return seq_data
 }

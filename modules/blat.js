@@ -28,7 +28,8 @@ exports.request_closure = genomes => {
 			if (!genome) throw 'invalid genome'
 			if (!genome.blat) throw 'blat not enabled'
 			if (!req.query.seq) throw '.seq missing'
-			res.send(await do_blat2(genome, req.query.seq))
+			console.log('req.query:', req.query)
+			res.send(await do_blat2(genome, req.query.seq, req.query.soft_start, req.query.soft_stop))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -110,8 +111,9 @@ async function do_blat(genome, seq) {
 	return { hits }
 }
 
-async function do_blat2(genome, seq) {
+async function do_blat2(genome, seq, soft_start, soft_stop) {
 	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
+	console.log('soft_start:', soft_start, 'soft_stop:', soft_stop)
 	const outfile = await run_blat2(genome, infile)
 	const outputstr = (await utils.read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
@@ -135,13 +137,30 @@ async function do_blat2(genome, seq) {
 				h.query_alignlen = l[3]
 				h.query_strand = l[4]
 				h.query_totallen = l[5]
-				h.query_alignment = l[6] //.replace(/-/g,"N")
-				//		    h.query_alignment=''
-				//		    for (let i=0; i<l[6].length; i++) {
-				//			if (i==l[6].length-1)
-				//			   {h.query_alignment+=l[6].substr(i,1) }
-				//			else {h.query_alignment+=l[6].substr(i,1)+'\t'}
-				//	            }
+				h.query_alignment = l[6]
+				if (soft_start) {
+					h.query_stoppos = parseInt(l[2]) + parseInt(l[3] - 1)
+					//console.log("h.query_stoppos:",h.query_stoppos)
+					// Checking to see if the alignment coordinates lie within soft clip
+					if (parseInt(soft_start) <= parseInt(h.query_startpos) && parseInt(h.query_stoppos) <= parseInt(soft_stop)) {
+						h.query_insoftclip = true
+					} else if (
+						parseInt(soft_start) >= parseInt(h.query_startpos) &&
+						parseInt(h.query_stoppos) >= parseInt(soft_stop)
+					) {
+						h.query_insoftclip = true
+					}
+					//				    else if ((parseInt(soft_start) >= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) >= parseInt(soft_stop))) {
+					//                                       h.query_insoftclip=true
+					//				    }
+					//				    else if ((parseInt(soft_start) <= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) <= parseInt(soft_stop))) {
+					//                                       h.query_insoftclip=true
+					//				    }
+					else {
+						h.query_insoftclip = false
+					}
+				}
+				//console.log("h:",h)
 				hits.push(h)
 			} else {
 				h.ref_chr = l[1]
@@ -149,13 +168,7 @@ async function do_blat2(genome, seq) {
 				h.ref_alignlen = l[3]
 				h.ref_strand = l[4]
 				h.ref_totallen = l[5] // This is actually the chromosome length
-				h.ref_alignment = l[6] // .replace(/-/g,"N")
-				//		    h.ref_alignment=''
-				//		    for (i=0; i<l[6].length; i++) {
-				//			if (i==l[6].length-1)
-				//			   {h.ref_alignment+=l[6].substr(i,1) }
-				//			else {h.ref_alignment+=l[6].substr(i,1)+'\t'}
-				//	            }
+				h.ref_alignment = l[6]
 			}
 		}
 	}

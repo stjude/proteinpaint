@@ -806,7 +806,17 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + read.seq)
+				//console.log("read.soft_start:",read.soft_start,"read.soft_stop:",read.soft_stop)
+				const data = await client.dofetch2(
+					'blat?genome=' +
+						block.genome.name +
+						'&seq=' +
+						read.seq +
+						'&soft_start=' +
+						read.soft_start +
+						'&soft_stop=' +
+						read.soft_stop
+				)
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
@@ -875,9 +885,16 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_strand)
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
-		tr.append('td')
-			.text(h.query_alignment.toUpperCase() + ' Query')
-			.style('font-family', 'courier')
+		if (h.query_insoftclip == true) {
+			tr.append('td')
+				.text(h.query_alignment.toUpperCase() + ' Query')
+				.style('font-family', 'courier')
+				.style('color', 'blue')
+		} else {
+			tr.append('td')
+				.text(h.query_alignment.toUpperCase() + ' Query')
+				.style('font-family', 'courier')
+		}
 
 		tr = table.append('tr')
 		tr.append('td').text('')
@@ -891,6 +908,16 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td')
 			.text(h.ref_alignment.toUpperCase() + ' Ref')
 			.style('font-family', 'courier')
+		//                if (h.query_insoftclip==true) {
+		//		   tr.append('td')
+		//			.text(h.ref_alignment.toUpperCase() + ' Ref')
+		//			.style('font-family', 'courier').style('color', 'blue')
+		//                }
+		//                else {
+		//		   tr.append('td')
+		//			.text(h.ref_alignment.toUpperCase() + ' Ref')
+		//			.style('font-family', 'courier')
+		//                }
 	}
 }
 
