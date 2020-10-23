@@ -144,12 +144,10 @@ async function do_blat2(genome, seq, soft_start, soft_stop) {
 					// Checking to see if the alignment coordinates lie within soft clip
 					if (parseInt(soft_start) <= parseInt(h.query_startpos) && parseInt(h.query_stoppos) <= parseInt(soft_stop)) {
 						h.query_insoftclip = true
-					} else if (
-						parseInt(soft_start) >= parseInt(h.query_startpos) &&
-						parseInt(h.query_stoppos) >= parseInt(soft_stop)
-					) {
-						h.query_insoftclip = true
 					}
+					//                                        else if (parseInt(soft_start) >= parseInt(h.query_startpos) && parseInt(h.query_stoppos) >= parseInt(soft_stop)) {
+					//						h.query_insoftclip = true
+					//					}
 					//				    else if ((parseInt(soft_start) >= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) >= parseInt(soft_stop))) {
 					//                                       h.query_insoftclip=true
 					//				    }
