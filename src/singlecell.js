@@ -590,7 +590,7 @@ function update_controlpanel(obj, data) {
 		}
 		boxplot_cat_select.on('change', () => {
 			const gene = obj.gene_expression.genes[obj.use_gene_index]
-			const cat = obj.cells.categories[parseInt(boxplot_cat_select.node().value) - obj.cells.axis2columnidx.length - 1]
+			const cat = obj.cells.categories[parseInt(boxplot_cat_select.node().selectedIndex) - 1]
 			const arg = {
 				genome: obj.genome.name,
 				getgeneboxplot: {
@@ -1178,7 +1178,6 @@ function make_plot(data, obj, colidx) {
 
 	function apply() {
 		const gene = obj.gene_expression.genes[obj.use_gene_index]
-		const cat = obj.cells.categories[parseInt(colidx) - obj.cells.axis2columnidx.length - 1]
 		const arg = {
 			genome: obj.genome.name,
 			getgeneboxplot: {
