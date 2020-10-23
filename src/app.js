@@ -755,17 +755,20 @@ function launchmdssamplescatterplot(arg, holder) {
 		return
 	}
 	arg.genome = genome
-	if(!arg.dataset) {
-		error0('missing dataset for mdssamplescatterplot')
+	if(arg.dataset) {
+		arg.mds = genome.datasets[arg.dataset]
+		if(!arg.mds) {
+			error0('invalid dataset for mdssamplescatterplot')
+			return
+		}
+		arg.dslabel = arg.dataset
+		delete arg.dataset
+	} else if(arg.analysisdata) {
+		// validate later
+	} else {
+		error0('neither .dataset or .analysisdata is given')
 		return
 	}
-	arg.mds = genome.datasets[arg.dataset]
-	if(!arg.mds) {
-		error0('invalid dataset for mdssamplescatterplot')
-		return
-	}
-	arg.dslabel = arg.dataset
-	delete arg.dataset
 	import('./mds.samplescatterplot').then(_=>{
 		_.init(arg, holder, debugmode)
 	})

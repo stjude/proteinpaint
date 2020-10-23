@@ -10,6 +10,18 @@ import { lasso } from 'd3-lasso'
 obj:
 .holder
 .legendtable
+
+.analysisdata{}
+	// full custom data
+	.level1/2/3
+	.samples[]
+		.x/y/sample_name
+	.colorby
+	.key2color{}
+
+// available for official datasets
+.mds{}
+
 .genome {}
 .dslabel
 .dots [ {} ]
