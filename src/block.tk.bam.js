@@ -812,10 +812,10 @@ function mayshow_blatbutton(read, div, tk, block) {
 						block.genome.name +
 						'&seq=' +
 						read.seq +
-						'&soft_start=' +
-						read.soft_start +
-						'&soft_stop=' +
-						read.soft_stop
+						'&soft_starts=' +
+						read.soft_starts +
+						'&soft_stops=' +
+						read.soft_stops
 				)
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'

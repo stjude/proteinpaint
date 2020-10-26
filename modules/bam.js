@@ -1571,6 +1571,8 @@ async function convertread(seg, genome, query) {
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0
+	let soft_starts = []
+	let soft_stops = []
 	let soft_present = 0
 	for (const box of seg.boxes) {
 		soft_start = soft_stop
@@ -1579,7 +1581,9 @@ async function convertread(seg, genome, query) {
 			soft_present = 1
 			//console.log("soft_start:",soft_start)
 			//console.log("soft_stop:",soft_stop)
-			break
+			console.log('Soft clip')
+			soft_starts.push(soft_start)
+			soft_stops.push(soft_stop)
 		}
 	}
 
@@ -1625,8 +1629,8 @@ async function convertread(seg, genome, query) {
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
 	}
 	if (soft_present == 1) {
-		seq_data.soft_start = soft_start
-		seq_data.soft_stop = soft_stop
+		seq_data.soft_starts = soft_starts
+		seq_data.soft_stops = soft_stops
 	}
 	return seq_data
 }

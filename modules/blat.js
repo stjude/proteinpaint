@@ -28,8 +28,8 @@ exports.request_closure = genomes => {
 			if (!genome) throw 'invalid genome'
 			if (!genome.blat) throw 'blat not enabled'
 			if (!req.query.seq) throw '.seq missing'
-			console.log('req.query:', req.query)
-			res.send(await do_blat2(genome, req.query.seq, req.query.soft_start, req.query.soft_stop))
+			//console.log('req.query:', req.query)
+			res.send(await do_blat2(genome, req.query.seq, req.query.soft_starts, req.query.soft_stops))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -111,9 +111,9 @@ async function do_blat(genome, seq) {
 	return { hits }
 }
 
-async function do_blat2(genome, seq, soft_start, soft_stop) {
+async function do_blat2(genome, seq, soft_starts, soft_stops) {
 	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
-	console.log('soft_start:', soft_start, 'soft_stop:', soft_stop)
+	console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
 	const outfile = await run_blat2(genome, infile)
 	const outputstr = (await utils.read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
@@ -138,24 +138,36 @@ async function do_blat2(genome, seq, soft_start, soft_stop) {
 				h.query_strand = l[4]
 				h.query_totallen = l[5]
 				h.query_alignment = l[6]
-				if (soft_start) {
-					h.query_stoppos = parseInt(l[2]) + parseInt(l[3] - 1)
+				h.query_stoppos = parseInt(l[2]) + parseInt(l[3] - 1)
+				if (soft_starts) {
 					//console.log("h.query_stoppos:",h.query_stoppos)
 					// Checking to see if the alignment coordinates lie within soft clip
-					if (parseInt(soft_start) <= parseInt(h.query_startpos) && parseInt(h.query_stoppos) <= parseInt(soft_stop)) {
-						h.query_insoftclip = true
-					}
-					//                                        else if (parseInt(soft_start) >= parseInt(h.query_startpos) && parseInt(h.query_stoppos) >= parseInt(soft_stop)) {
-					//						h.query_insoftclip = true
-					//					}
-					//				    else if ((parseInt(soft_start) >= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) >= parseInt(soft_stop))) {
-					//                                       h.query_insoftclip=true
-					//				    }
-					//				    else if ((parseInt(soft_start) <= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) <= parseInt(soft_stop))) {
-					//                                       h.query_insoftclip=true
-					//				    }
-					else {
-						h.query_insoftclip = false
+					const soft_starts_array = soft_starts.split(',')
+					const soft_stops_array = soft_stops.split(',')
+					//console.log("soft_starts_array:",soft_starts_array)
+					//console.log("soft_stops_array:",soft_stops_array)
+					for (let m = 0; m < soft_starts_array.length; m++) {
+						soft_start = soft_starts_array[m]
+						soft_stop = soft_stops_array[m]
+						if (
+							parseInt(soft_start) <= parseInt(h.query_startpos) &&
+							parseInt(h.query_stoppos) <= parseInt(soft_stop)
+						) {
+							h.query_insoftclip = true
+							break
+						}
+						//                                        else if (parseInt(soft_start) >= parseInt(h.query_startpos) && parseInt(h.query_stoppos) >= parseInt(soft_stop)) {
+						//						h.query_insoftclip = true
+						//					}
+						//				    else if ((parseInt(soft_start) >= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) >= parseInt(soft_stop))) {
+						//                                       h.query_insoftclip=true
+						//				    }
+						//				    else if ((parseInt(soft_start) <= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) <= parseInt(soft_stop))) {
+						//                                       h.query_insoftclip=true
+						//				    }
+						else {
+							h.query_insoftclip = false
+						}
 					}
 				}
 				//console.log("h:",h)
