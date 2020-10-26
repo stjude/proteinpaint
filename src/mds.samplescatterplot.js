@@ -10,6 +10,18 @@ import { lasso } from 'd3-lasso'
 obj:
 .holder
 .legendtable
+
+.analysisdata{}
+	// full custom data
+	.level1/2/3
+	.samples[]
+		.x/y/sample_name
+	.colorby
+	.key2color{}
+
+// available for official datasets
+.mds{}
+
 .genome {}
 .dslabel
 .dots [ {} ]
@@ -218,7 +230,8 @@ function init_plot(obj) {
 		rightpad = 30,
 		vpad = 20,
 		width = 800, // make automatic
-		height = 800
+		height = 800,
+		fontsize = 18
 
 	const svg = obj.scattersvg
 
@@ -286,6 +299,7 @@ function init_plot(obj) {
 			.append('g')
 		userlabels = userlabelg
 			.append('text')
+			.attr('font-size', fontsize)
 			.text(d => d.sample)
 			.on('mouseover', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
@@ -326,7 +340,21 @@ function init_plot(obj) {
 		dots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
 		if (userdots) {
 			userdots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
-			userlabelg.transition().attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+			userlabelg
+				.transition() // smooth motion of the text label
+				.attr('transform', d => {
+					const x = xscale(d.x),
+						y = yscale(d.y)
+					// check label width
+					let lw
+					userlabels
+						.filter(i => i.sample == d.sample)
+						.each(function() {
+							lw = this.getBBox().width
+						})
+						.attr('text-anchor', x + lw >= width ? 'end' : 'start')
+					return 'translate(' + x + ',' + y + ')'
+				})
 		}
 		//circles.attr('r',radius)
 	}

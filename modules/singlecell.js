@@ -318,7 +318,10 @@ async function get_geneboxplot(q, gn, res) {
 	// also get kernel density for violin plot
 
 	const ge = q.getgeneboxplot
-	const categorical_color_function = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+	const categorical_color_function =
+		q.getgeneboxplot.values_count && q.getgeneboxplot.values_count <= 10
+			? d3scale.scaleOrdinal(d3scale.schemeCategory10)
+			: d3scale.scaleOrdinal(d3scale.schemeCategory20)
 
 	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{
@@ -363,7 +366,7 @@ async function get_geneboxplot(q, gn, res) {
 		category2values.get(v.category).push({ value: v.expvalue })
 	}
 
-	const boxplots = []
+	const boxplots_ = []
 	// each element is one category
 
 	const scaleticks = d3scale
@@ -391,8 +394,41 @@ async function get_geneboxplot(q, gn, res) {
 		//b.density =  kde( values.map( i=> i.value ) )
 		b.density = histofunc(values)
 
-		boxplots.push(b)
+		boxplots_.push(b)
 	}
+
+	let boxplots = []
+	if (q.getgeneboxplot.cat_values) {
+		const cat_len = Object.keys(q.getgeneboxplot.cat_values).length
+
+		// Add values in new vat2col in order
+		for (var i = 1; i <= cat_len; i++) {
+			const found = q.getgeneboxplot.cat_values.find(v => {
+				if (v.order == i) return v.value
+			})
+			if (found) boxplots.push(boxplots_.filter(bx => bx.category == found.value)[0])
+		}
+
+		// // Add values which doesn't have order defined in config file
+		for (const v of q.getgeneboxplot.cat_values) {
+			if (!v.order) boxplots.push(boxplots_.filter(bx => bx.category == v.value)[0])
+		}
+
+		// // Add values which are not defined in config file
+		for (const bx of boxplots_) {
+			const found = q.getgeneboxplot.cat_values.find(v => {
+				if (v.value == bx['category']) return true
+			})
+			if (!found) boxplots.push(bx)
+		}
+
+		for (const bx of boxplots) {
+			const found = q.getgeneboxplot.cat_values.find(v => {
+				if (v.value == bx['category']) return v
+			})
+			if (found && found.color) bx.color = found.color
+		}
+	} else boxplots = boxplots_
 
 	res.send({ boxplots, minexpvalue, maxexpvalue })
 }

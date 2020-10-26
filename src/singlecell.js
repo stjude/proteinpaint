@@ -590,6 +590,7 @@ function update_controlpanel(obj, data) {
 		}
 		boxplot_cat_select.on('change', () => {
 			const gene = obj.gene_expression.genes[obj.use_gene_index]
+			const cat = obj.cells.categories[parseInt(boxplot_cat_select.node().selectedIndex) - 1]
 			const arg = {
 				genome: obj.genome.name,
 				getgeneboxplot: {
@@ -601,7 +602,11 @@ function update_controlpanel(obj, data) {
 					cellfile: obj.cells.file,
 					barcodecolumnidx: obj.cells.barcodecolumnidx,
 					categorycolumnidx: parseInt(boxplot_cat_select.node().value),
-					delimiter: obj.cells.delimiter || '\t'
+					delimiter: obj.cells.delimiter || '\t',
+					category_customorder: cat.customorder && cat.values ? true : false,
+					category_autoorder: !cat.customorder ? true : false,
+					cat_values: cat.values,
+					values_count: cat.values_count
 				}
 			}
 			client.dofetch('singlecell', arg).then(data => {
@@ -1183,7 +1188,11 @@ function make_plot(data, obj, colidx) {
 				cellfile: obj.cells.file,
 				barcodecolumnidx: obj.cells.barcodecolumnidx,
 				categorycolumnidx: parseInt(colidx),
-				delimiter: obj.cells.delimiter || '\t'
+				delimiter: obj.cells.delimiter || '\t',
+				category_customorder: cat.customorder && cat.values ? true : false,
+				category_autoorder: !cat.customorder ? true : false,
+				cat_values: cat.values,
+				values_count: cat.values_count
 			}
 		}
 

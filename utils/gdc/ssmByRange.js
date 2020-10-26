@@ -1,9 +1,19 @@
 const got = require('got')
 
-const query = `query PROJECTS_EDGES($filters_2: FiltersArgument) {
+let chr = 'chr1',
+	start = 114704468,
+	stop = 114716771
+if (process.argv[2]) {
+	const l = process.argv[2].split(/[:-]/)
+	chr = l[0]
+	start = Number(l[1])
+	stop = Number(l[2])
+}
+
+const query = `query PROJECTS_EDGES($filters: FiltersArgument) {
   explore {
     ssms {
-      hits(first: 100000, filters: $filters_2) {
+      hits(first: 100000, filters: $filters) {
         total
         edges {
           node {
@@ -55,12 +65,13 @@ const query = `query PROJECTS_EDGES($filters_2: FiltersArgument) {
 }`
 
 const range = {
-	filters_2: {
+	filters: {
 		op: 'and',
 		content: [
-			{ op: 'in', content: { field: 'chromosome', value: ['chr11'] } },
-			{ op: '>=', content: { field: 'start_position', value: [108222831] } },
-			{ op: '<=', content: { field: 'end_position', value: [108369099] } }
+			{ op: 'in', content: { field: 'chromosome', value: [chr] } },
+			{ op: '>=', content: { field: 'start_position', value: [start] } },
+			{ op: '<=', content: { field: 'end_position', value: [stop] } }
+			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72']}},
 		]
 	}
 }
@@ -74,7 +85,17 @@ const range = {
 				variables: range
 			})
 		})
-		console.log(JSON.stringify(JSON.parse(response.body), null, 2))
+		const hits = JSON.parse(response.body).data.explore.ssms.hits.edges
+		console.log(hits.length, 'variants')
+		for (const m of hits) {
+			console.log(
+				'\n' +
+					m.node.consequence.hits.edges
+						.map(i => i.node.transcript.transcript_id + '/' + i.node.transcript.aa_change)
+						.join(',')
+			)
+			console.log('==> ' + m.node.occurrence.hits.edges.length + ' cases')
+		}
 	} catch (error) {
 		console.log(error)
 	}
