@@ -27,7 +27,7 @@ obj:
 .dots [ {} ]
 	.x
 	.y
-	.sample
+	.sample // hardcoded!!
 	.s {}
 .dots_user[]
 	x/y/sample
@@ -130,8 +130,28 @@ export async function init(obj, holder, debugmode) {
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 
 	try {
-		const lst = ['genome=' + obj.genome.name, 'dslabel=' + obj.dslabel]
+		await get_data(obj)
+		/* added:
+		obj.sample2dot
+		obj.dots
+		obj.colorbyattributes
+		obj.colorbygeneexpression
+		obj.tracks
+		*/
 
+		init_dotcolor_legend(obj)
+
+		init_plot(obj)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		obj.sayerror(e.message || e)
+	}
+}
+
+async function get_data(obj) {
+	if (obj.dslabel) {
+		// server data from official dataset
+		const lst = ['genome=' + obj.genome.name, 'dslabel=' + obj.dslabel]
 		if (obj.analysisdata) {
 			if (obj.analysisdata.subset) {
 				// pass subset attr to server to filter samples
@@ -145,26 +165,73 @@ export async function init(obj, holder, debugmode) {
 		if (data.error) throw data.error
 		if (!data.dots) throw 'server error'
 		obj.sample2dot = new Map()
-
 		for (const dot of data.dots) {
 			obj.sample2dot.set(dot.sample, dot)
 		}
 		combine_data(obj, data)
-
-		obj.querykey = data.querykey // for the moment it should always be set
-
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		obj.colorbyattributes = data.colorbyattributes
 		obj.colorbygeneexpression = data.colorbygeneexpression
-		init_dotcolor_legend(obj)
-
 		// optional stuff
 		obj.tracks = data.tracks
+		obj.querykey = data.querykey // for the moment it should always be set
 
-		init_plot(obj)
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		obj.sayerror(e.message || e)
+		obj.sample_attributes = obj.mds.sampleAttribute.attributes
+		return
+	}
+	///////////////////// client data /////////////////////
+	const ad = obj.analysisdata
+	if (!ad) throw 'both .analysisdata{} and .dslabel are missing'
+	if (ad.samples) {
+		// list
+		if (!Array.isArray(ad.samples)) throw '.analysisdata.samples is not array'
+		obj.dots = ad.samples
+		// may load from tabular data
+	} else {
+		throw 'unknown data encoding in .analysisdata{}'
+	}
+	obj.sample2dot = new Map()
+	for (const d of obj.dots) {
+		if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) throw 'non-numeric x/y for a sample'
+		if (ad.samplekey) {
+			d.sample = d[ad.samplekey]
+			delete d[ad.samplekey]
+		}
+		obj.sample2dot.set(d.sample, d)
+	}
+	if (ad.sample_attributes) {
+		for (const d of obj.dots) {
+			d.s = {}
+			for (const k in ad.sample_attributes) {
+				d.s[k] = d[k]
+				delete d[k]
+			}
+		}
+		obj.sample_attributes = ad.sample_attributes
+	}
+	if (ad.colorbyattributes) {
+		if (!Array.isArray(ad.colorbyattributes)) throw '.colorbyattributes[] is not array'
+		if (!obj.sample_attributes) throw '.sample_attributes{} missing when .colorbyattributes is defined'
+		for (const a of ad.colorbyattributes) {
+			if (typeof a != 'object') throw 'one of .colorbyattributes[] is not array'
+			if (!a.key) throw '.key missing from one of .colorbyattributes[]'
+			const a2 = obj.sample_attributes[a.key]
+			if (!a2) throw 'unknown key from .colorbyattributes: ' + a.key
+			a.label = a2.label
+		}
+		obj.colorbyattributes = ad.colorbyattributes
+	}
+	if (ad.user_samples) {
+		if (!Array.isArray(ad.user_samples)) throw '.user_samples[] is not array'
+		obj.dots_user = []
+		for (const d of ad.user_samples) {
+			if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) throw 'non-numeric x/y for a USER sample'
+			if (ad.samplekey) {
+				d.sample = d[ad.samplekey]
+				delete d[ad.samplekey]
+			}
+			obj.dots_user.push(d)
+		}
 	}
 }
 
@@ -252,13 +319,15 @@ function init_plot(obj) {
 		.on('mouseover', d => {
 			d3event.target.setAttribute('stroke', 'white')
 			const lst = [{ k: 'Sample', v: d.sample }]
-			for (const attrkey in obj.mds.sampleAttribute.attributes) {
-				const attr = obj.mds.sampleAttribute.attributes[attrkey]
-				const v = d.s[attrkey]
-				lst.push({
-					k: attr.label,
-					v: d.s[attrkey]
-				})
+			if (obj.sample_attributes) {
+				for (const attrkey in obj.sample_attributes) {
+					const attr = obj.sample_attributes[attrkey]
+					const v = d.s[attrkey]
+					lst.push({
+						k: attr.label,
+						v: d.s[attrkey]
+					})
+				}
 			}
 
 			client.make_table_2col(obj.tip.clear().d, lst)
