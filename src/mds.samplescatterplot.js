@@ -29,16 +29,24 @@ obj:
 	.y
 	.sample // hardcoded!!
 	.s {}
+
 .dots_user[]
 	x/y/sample
+
 .dotselection
 .sample2dot MAP
+
+.sample_attributes{}
+
+.attr_levels[]
+
 .scattersvg SVG
 .colorbyattributes [ {} ]
 	.key
 	.label
 	.__inuse
 	.labelhandle
+	.colorfunc()
 	.values MAP
 		k: value name
 		v: {}
@@ -139,6 +147,8 @@ export async function init(obj, holder, debugmode) {
 		obj.tracks
 		*/
 
+		finish_setup(obj)
+
 		init_dotcolor_legend(obj)
 
 		init_plot(obj)
@@ -191,36 +201,25 @@ async function get_data(obj) {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
 	obj.sample2dot = new Map()
+	// reformat each sample
 	for (const d of obj.dots) {
 		if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) throw 'non-numeric x/y for a sample'
 		if (ad.samplekey) {
 			d.sample = d[ad.samplekey]
 			delete d[ad.samplekey]
 		}
-		obj.sample2dot.set(d.sample, d)
-	}
-	if (ad.sample_attributes) {
-		for (const d of obj.dots) {
+		if (ad.sample_attributes) {
 			d.s = {}
 			for (const k in ad.sample_attributes) {
 				d.s[k] = d[k]
 				delete d[k]
 			}
 		}
-		obj.sample_attributes = ad.sample_attributes
+		obj.sample2dot.set(d.sample, d)
 	}
-	if (ad.colorbyattributes) {
-		if (!Array.isArray(ad.colorbyattributes)) throw '.colorbyattributes[] is not array'
-		if (!obj.sample_attributes) throw '.sample_attributes{} missing when .colorbyattributes is defined'
-		for (const a of ad.colorbyattributes) {
-			if (typeof a != 'object') throw 'one of .colorbyattributes[] is not array'
-			if (!a.key) throw '.key missing from one of .colorbyattributes[]'
-			const a2 = obj.sample_attributes[a.key]
-			if (!a2) throw 'unknown key from .colorbyattributes: ' + a.key
-			a.label = a2.label
-		}
-		obj.colorbyattributes = ad.colorbyattributes
-	}
+	obj.sample_attributes = ad.sample_attributes
+	obj.colorbyattributes = ad.colorbyattributes
+	obj.attr_levels = ad.attr_levels
 	if (ad.user_samples) {
 		if (!Array.isArray(ad.user_samples)) throw '.user_samples[] is not array'
 		obj.dots_user = []
@@ -273,6 +272,51 @@ function combine_data(obj, data) {
 		i.x = j.x
 		i.y = j.y
 		obj.dots.push(i)
+	}
+}
+
+function finish_setup(obj) {
+	if (obj.colorbyattributes) {
+		if (!Array.isArray(obj.colorbyattributes)) throw '.colorbyattributes[] is not array'
+		if (!obj.sample_attributes) throw '.sample_attributes{} missing when .colorbyattributes is defined'
+		for (const a of obj.colorbyattributes) {
+			if (typeof a != 'object') throw 'one of .colorbyattributes[] is not array'
+			if (!a.key) throw '.key missing from one of .colorbyattributes[]'
+			const a2 = obj.sample_attributes[a.key]
+			if (!a2) throw 'unknown key from .colorbyattributes: ' + a.key
+			a.label = a2.label
+			a.values = a2.values
+		}
+		for (const attr of obj.colorbyattributes) {
+			attr.colorfunc = scaleOrdinal(schemeCategory10)
+			if (attr.values) {
+				/*
+				provided by dataset config
+				{ value: {color} }
+				convert to map
+				*/
+				const values = new Map()
+				for (const value in attr.values) {
+					const v = attr.values[value]
+					v.count = 0
+					if (!v.color) v.color = attr.colorfunc(value)
+					values.set(value, v)
+				}
+				attr.values = values
+			} else {
+				attr.values = new Map()
+			}
+		}
+	}
+	if (obj.attr_levels) {
+		if (!Array.isArray(obj.attr_levels)) throw '.attr_levels[] is not array'
+		if (obj.attr_levels.length == 0) throw '.attr_levels[] array is empty'
+		if (!obj.sample_attributes) throw '.sample_attributes is missing when .attr_levels is defined'
+		for (const l of obj.attr_levels) {
+			if (!l.key) throw '.key missing from one of attr_levels[]'
+			const a = obj.sample_attributes[l.key]
+			if (!a) throw 'unknown key from .attr_levels: ' + l.key
+		}
 	}
 }
 
@@ -478,7 +522,96 @@ function init_dotcolor_legend(obj) {
 	by gene expression
 	*/
 
-	if (obj.colorbyattributes) {
+	if (obj.attr_levels) {
+		// hardcoded 3 levels
+		const div = obj.legendtable
+			.append('tr')
+			.append('td')
+			.append('div')
+		const L1 = obj.attr_levels[0]
+		L1.v2c = new Map()
+		// k: unique value by this level, v: {count}
+		L1.unannotated = 0
+		for (const d of obj.dots) {
+			const v = d.s[L1.key]
+			if (v == undefined) {
+				L1.unannotated++
+				continue
+			}
+			if (!L1.v2c.has(v)) L1.v2c.set(v, { dots: [] })
+			L1.v2c.get(v).dots.push(d)
+		}
+		for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+			const L1div = div.append('div').style('margin-top', '20px')
+			L1div.append('div')
+				.html(L1value + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
+				.style('margin', '10px')
+
+			const L2 = obj.attr_levels[1]
+			if (L2) {
+				const L2values = obj.colorbyattributes.find(i => i.key == L2.key).values
+				L2.v2c = new Map()
+				L2.unannotated = 0
+				for (const d of L1o.dots) {
+					const v = d.s[L2.key]
+					if (v == undefined) {
+						L2.unannotated++
+						continue
+					}
+					if (!L2.v2c.has(v)) {
+						const o = L2values.get(v)
+						o.dots = []
+						L2.v2c.set(v, o)
+					}
+					L2.v2c.get(v).dots.push(d)
+				}
+				for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+					const cell = L1div.append('div')
+						.style('display', 'inline-block')
+						.style('white-space', 'nowrap')
+						.attr('class', 'sja_clb')
+						.on('click', () => {
+							// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+
+							if (L2o.selected) {
+								// already selected, turn off
+								L2o.selected = false
+								cell.style('border', '')
+								obj.dotselection.transition().attr('r', radius)
+								return
+							}
+
+							// not yet, select this one
+							for (const o2 of L2values.values()) {
+								o2.selected = false
+								cell.style('border', '')
+							}
+							L2o.selected = true
+							cell.style('border', 'solid 1px #858585')
+							obj.dotselection.transition().attr('r', d => (d.s[L2value] == L2value ? radius : 0))
+						})
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.attr('class', 'sja_mcdot')
+						.style('background', L2o.color)
+						.style('margin-right', '3px')
+						.text(L2o.dots.length)
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.style('color', L2o.color)
+						.text(L2value)
+					L2o.cell = cell
+				}
+			}
+
+			if (L1.unannotated) {
+				const d = div.append('div').style('margin-top', '20px')
+				d.append('div').html('(Unannotated) <span style="font-size:.7em">n=' + L1.unannotated + '</span>')
+			}
+		}
+	} else if (obj.colorbyattributes) {
 		if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
 
 		for (const attr of obj.colorbyattributes) {
@@ -506,27 +639,9 @@ function init_dotcolor_legend(obj) {
 				attr.labelhandle.style('background', '#ededed').style('border-bottom', 'solid 2px #858585')
 			}
 
-			const colorfunc = scaleOrdinal(schemeCategory10)
-			if (attr.values) {
-				/*
-				provided by dataset config
-				{ value: {color} }
-				convert to map
-				*/
-				const values = new Map()
-				for (const value in attr.values) {
-					const v = attr.values[value]
-					v.count = 0
-					values.set(value, v)
-				}
-				attr.values = values
-			} else {
-				attr.values = new Map()
-			}
-
 			for (const d of obj.dots) {
 				const value = d.s[attr.key]
-				const color = colorfunc(value)
+				const color = attr.colorfunc(value)
 				if (!attr.values.has(value)) {
 					attr.values.set(value, { count: 1, color: color })
 				}
