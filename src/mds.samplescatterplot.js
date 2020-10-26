@@ -4,7 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { lasso } from 'd3-lasso'
+import { lasso as d3lasso } from 'd3-lasso'
 
 /*
 obj:
@@ -496,6 +496,8 @@ function init_plot(obj) {
 				b.on('mousemove', null).on('mouseup', null)
 			})
 		})
+
+	lasso_select(obj, dots)
 }
 
 function assign_color4dots(obj) {
@@ -739,8 +741,87 @@ function click_dot(dot, obj) {
 		})
 }
 
-function lasso_select() {
-	// TODO: add lasso to select dots from scatterplot
+function lasso_select(obj, dots) {
+	const svg = obj.scattersvg
+
+	// Lasso functions
+	function lasso_start() {
+		lasso
+			.items()
+			.attr('r', 2)
+			.style('fill-opacity', '.5')
+			.classed('not_possible', true)
+			.classed('selected', false)
+	}
+
+	const lasso_draw = function() {
+		// Style the possible dots
+		lasso
+			.possibleItems()
+			.attr('r', 3)
+			.style('fill-opacity', '1')
+			.classed('not_possible', false)
+			.classed('possible', true)
+
+		// Style the not possible dot
+		// lasso.notPossibleItems()
+		// 	.attr('r',2)
+		// 	.style('fill-opacity','.5')
+		// 	.classed('not_possible',true)
+		// 	.classed('possible',false)
+	}
+
+	const lasso_end = function() {
+		// Reset the color of all dots
+		lasso
+			.items()
+			.classed('not_possible', false)
+			.classed('possible', false)
+
+		// Style the selected dots
+		lasso
+			.selectedItems()
+			.attr('r', 5)
+			.style('fill-opacity', '0.8')
+
+		// Reset the style of the not selected dots
+		lasso
+			.notSelectedItems()
+			.attr('r', 3)
+			.style('fill-opacity', '1')
+	}
+
+	const lasso = d3lasso()
+		.closePathSelect(true)
+		.closePathDistance(100)
+		.items(dots.selectAll('circle'))
+		.targetArea(svg)
+		.on('start', lasso_start)
+		.on('draw', lasso_draw)
+		.on('end', lasso_end)
+
+	svg.call(lasso)
+
+	const las = svg.select('.lasso')
+
+	las
+		.select('path')
+		.style('stroke', '#505050')
+		.style('stroke-width', '2px')
+
+	las.select('.drawn').style('fill-opacity', '.05')
+
+	las
+		.select('.loop_close')
+		.style('fill', 'none')
+		.style('stroke-dasharray', '4,4')
+
+	console.log(las.select('.loop_close'))
+
+	las
+		.select('.origin')
+		.style('fill', '#3399FF')
+		.style('fill-opacity', '.5')
 }
 
 function launch_singlesample(p) {
