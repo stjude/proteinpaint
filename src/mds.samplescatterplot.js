@@ -638,13 +638,13 @@ function legend_attr_levels(obj) {
 				L2o.cell = cell
 			}
 			if (L2.unannotated) {
-				const d = div.append('div').style('margin-top', '20px')
+				const d = L1div.append('div').style('margin-top', '20px')
 				d.append('div').text('Unannotated for "' + L2.key + '": ' + L2.unannotated)
 			}
 		}
 	}
 	if (L1.unannotated) {
-		const d = div.append('div').style('margin-top', '20px')
+		const d = scrolldiv.append('div').style('margin-top', '20px')
 		d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
 	}
 	if (L1.v2c.size > 10) {
