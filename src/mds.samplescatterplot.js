@@ -66,8 +66,8 @@ init()
 ********************** INTERNAL
 get_data()
 finish_setup
-init_plot()
 init_dotcolor_legend
+init_plot()
 click_dot
 launch_singlesample
 
@@ -311,7 +311,7 @@ function finish_setup(obj) {
 	}
 	if (obj.attr_levels) {
 		if (!Array.isArray(obj.attr_levels)) throw '.attr_levels[] is not array'
-		if (obj.attr_levels.length == 0) throw '.attr_levels[] array is empty'
+		if (obj.attr_levels.length < 2) throw '.attr_levels[] array has less than 2 items'
 		if (!obj.sample_attributes) throw '.sample_attributes is missing when .attr_levels is defined'
 		for (const l of obj.attr_levels) {
 			if (!l.key) throw '.key missing from one of attr_levels[]'
@@ -522,202 +522,220 @@ function assign_color4dots(obj) {
 
 function init_dotcolor_legend(obj) {
 	/*
-	show legend for coloring dots/samples
-	by pre-defined sample attributes, categorical
-	by gene expression
+	dispatch function, 3 choices of legend:
+	1. attr_levels
+	2. flat list of colorbyattributes
+	3. gene expression, not implemented
 	*/
 
 	if (obj.attr_levels) {
-		// hardcoded 3 levels
-		const div = obj.legendtable
-			.append('tr')
-			.append('td')
-			.append('div')
-		const L1 = obj.attr_levels[0]
-		L1.v2c = new Map()
-		// k: unique value by this level, v: {count}
-		L1.unannotated = 0
-		for (const d of obj.dots) {
-			const v = d.s[L1.key]
-			if (v == undefined || v == null) {
-				L1.unannotated++
-				continue
-			}
-			if (!L1.v2c.has(v)) L1.v2c.set(v, { dots: [] })
-			L1.v2c.get(v).dots.push(d)
-			if (L1.label) {
-				L1.v2c.get(v).label = d.s[L1.label]
-			}
-		}
-		for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
-			const L1div = div.append('div').style('margin-top', '20px')
-			L1div.append('div')
-				.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
-				.style('margin', '10px')
-
-			const L2 = obj.attr_levels[1]
-			if (L2) {
-				const L2values = obj.colorbyattributes.find(i => i.key == L2.key).values
-				L2.v2c = new Map()
-				L2.unannotated = 0
-				for (const d of L1o.dots) {
-					const v = d.s[L2.key]
-					if (v == undefined || v == null) {
-						L2.unannotated++
-						continue
-					}
-					if (!L2.v2c.has(v)) {
-						const o = L2values.get(v)
-						o.dots = []
-						L2.v2c.set(v, o)
-					}
-					L2.v2c.get(v).dots.push(d)
-					if (L2.label) {
-						L2.v2c.get(v).label = d.s[L2.label]
-					}
-				}
-				for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
-					const cell = L1div.append('div')
-						.style('display', 'inline-block')
-						.style('white-space', 'nowrap')
-						.attr('class', 'sja_clb')
-						.on('click', () => {
-							// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
-
-							if (L2o.selected) {
-								// already selected, turn off
-								L2o.selected = false
-								cell.style('border', '')
-								obj.dotselection.transition().attr('r', radius)
-								return
-							}
-
-							// not yet, select this one
-							for (const o2 of L2values.values()) {
-								o2.selected = false
-								cell.style('border', '')
-							}
-							L2o.selected = true
-							cell.style('border', 'solid 1px #858585')
-							obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : 1))
-						})
-					cell
-						.append('div')
-						.style('display', 'inline-block')
-						.attr('class', 'sja_mcdot')
-						.style('background', L2o.color)
-						.style('margin-right', '3px')
-						.text(L2o.dots.length)
-					cell
-						.append('div')
-						.style('display', 'inline-block')
-						.style('color', L2o.color)
-						.text(L2o.label || L2value)
-					L2o.cell = cell
-				}
-				if (L2.unannotated) {
-					const d = div.append('div').style('margin-top', '20px')
-					d.append('div').text('Unannotated for "' + L2.key + '": ' + L2.unannotated)
-				}
-			}
-		}
-		if (L1.unannotated) {
-			const d = div.append('div').style('margin-top', '20px')
-			d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
-		}
-	} else if (obj.colorbyattributes) {
-		if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
-
-		for (const attr of obj.colorbyattributes) {
-			const tr = obj.legendtable.append('tr')
-
-			// legend item name
-			attr.labelhandle = tr
-				.append('td')
-				.append('div')
-				.style('white-space', 'nowrap')
-				.text(attr.label)
-				.attr('class', 'sja_clb')
-				.on('click', () => {
-					// click an attribute to select it for coloring dots
-					for (const attr2 of obj.colorbyattributes) {
-						attr2.__inuse = false
-						attr2.labelhandle.style('background', '').style('border-bottom', '')
-					}
-					attr.__inuse = true
-					attr.labelhandle.style('background', '#ededed').style('border-bottom', 'solid 2px #858585')
-					assign_color4dots(obj)
-				})
-
-			if (attr.__inuse) {
-				attr.labelhandle.style('background', '#ededed').style('border-bottom', 'solid 2px #858585')
-			}
-
-			for (const d of obj.dots) {
-				const value = d.s[attr.key]
-				const color = attr.colorfunc(value)
-				if (!attr.values.has(value)) {
-					attr.values.set(value, { count: 1, color: color })
-				}
-				attr.values.get(value).count++
-			}
-
-			// legend values
-			const cellholder = tr.append('td')
-
-			for (const [value, o] of attr.values) {
-				// for each value
-				if (o.count == 0) continue
-
-				const cell = cellholder
-					.append('div')
-					.style('display', 'inline-block')
-					.attr('class', 'sja_clb')
-					.on('click', () => {
-						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
-
-						if (o.selected) {
-							// already selected, turn off
-							o.selected = false
-							cell.style('border', '')
-							obj.dotselection.transition().attr('r', radius)
-							return
-						}
-
-						// not yet, select this one
-						for (const o2 of attr.values.values()) {
-							o2.selected = false
-							cell.style('border', '')
-						}
-						o.selected = true
-						cell.style('border', 'solid 1px #858585')
-						obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : 0))
-					})
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.attr('class', 'sja_mcdot')
-					.style('background', o.color)
-					.style('margin-right', '3px')
-					.text(o.count)
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('color', o.color)
-					.text(o.name || value)
-				o.cell = cell
-			}
-		}
+		legend_attr_levels(obj)
+		return
 	}
-
+	if (obj.colorbyattributes) {
+		legend_flatlist(obj)
+		return
+	}
 	if (obj.colorbygeneexpression) {
-		/*
+		/* TODO
 		const tr = obj.legendtable.append('tr')
 		obj.colorbygeneexpression.labelhandle = tr.append('td')
 			.append('div')
 			.text('Gene expression')
 		const td = tr.append('td')
 		*/
+	}
+}
+
+function legend_attr_levels(obj) {
+	// hardcoded 3 levels
+	const staydiv = obj.legendtable
+		.append('tr')
+		.append('td')
+		.append('div')
+		.style('position', 'relative')
+	const scrolldiv = staydiv.append('div')
+	const L1 = obj.attr_levels[0]
+	L1.v2c = new Map()
+	// k: unique value by this level, v: {count}
+	L1.unannotated = 0
+	for (const d of obj.dots) {
+		const v = d.s[L1.key]
+		if (v == undefined || v == null) {
+			L1.unannotated++
+			continue
+		}
+		if (!L1.v2c.has(v)) L1.v2c.set(v, { dots: [] })
+		L1.v2c.get(v).dots.push(d)
+		if (L1.label) {
+			L1.v2c.get(v).label = d.s[L1.label]
+		}
+	}
+	for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+		const L1div = scrolldiv.append('div').style('margin-top', '20px')
+		L1div.append('div')
+			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
+			.style('margin', '10px')
+
+		const L2 = obj.attr_levels[1]
+		if (L2) {
+			const L2values = obj.colorbyattributes.find(i => i.key == L2.key).values
+			L2.v2c = new Map()
+			L2.unannotated = 0
+			for (const d of L1o.dots) {
+				const v = d.s[L2.key]
+				if (v == undefined || v == null) {
+					L2.unannotated++
+					continue
+				}
+				if (!L2.v2c.has(v)) {
+					const o = L2values.get(v)
+					o.dots = []
+					L2.v2c.set(v, o)
+				}
+				L2.v2c.get(v).dots.push(d)
+				if (L2.label) {
+					L2.v2c.get(v).label = d.s[L2.label]
+				}
+			}
+			for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+				const cell = L1div.append('div')
+					.style('display', 'inline-block')
+					.style('white-space', 'nowrap')
+					.attr('class', 'sja_clb')
+					.on('click', () => {
+						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+
+						if (L2o.selected) {
+							// already selected, turn off
+							L2o.selected = false
+							cell.style('border', '')
+							obj.dotselection.transition().attr('r', radius)
+							return
+						}
+
+						// not yet, select this one
+						for (const o2 of L2values.values()) {
+							o2.selected = false
+							cell.style('border', '')
+						}
+						L2o.selected = true
+						cell.style('border', 'solid 1px #858585')
+						obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : 1))
+					})
+				cell
+					.append('div')
+					.style('display', 'inline-block')
+					.attr('class', 'sja_mcdot')
+					.style('background', L2o.color)
+					.style('margin-right', '3px')
+					.text(L2o.dots.length)
+				cell
+					.append('div')
+					.style('display', 'inline-block')
+					.style('color', L2o.color)
+					.text(L2o.label || L2value)
+				L2o.cell = cell
+			}
+			if (L2.unannotated) {
+				const d = div.append('div').style('margin-top', '20px')
+				d.append('div').text('Unannotated for "' + L2.key + '": ' + L2.unannotated)
+			}
+		}
+	}
+	if (L1.unannotated) {
+		const d = div.append('div').style('margin-top', '20px')
+		d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
+	}
+	if (L1.v2c.size > 10) {
+		scrolldiv
+			.style('overflow-y', 'scroll')
+			.style('height', '800px')
+			.style('resize', 'vertical')
+	}
+}
+function legend_flatlist(obj) {
+	if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
+
+	for (const attr of obj.colorbyattributes) {
+		const tr = obj.legendtable.append('tr')
+
+		// legend item name
+		attr.labelhandle = tr
+			.append('td')
+			.append('div')
+			.style('white-space', 'nowrap')
+			.text(attr.label)
+			.attr('class', 'sja_clb')
+			.on('click', () => {
+				// click an attribute to select it for coloring dots
+				for (const attr2 of obj.colorbyattributes) {
+					attr2.__inuse = false
+					attr2.labelhandle.style('background', '').style('border-bottom', '')
+				}
+				attr.__inuse = true
+				attr.labelhandle.style('background', '#ededed').style('border-bottom', 'solid 2px #858585')
+				assign_color4dots(obj)
+			})
+
+		if (attr.__inuse) {
+			attr.labelhandle.style('background', '#ededed').style('border-bottom', 'solid 2px #858585')
+		}
+
+		for (const d of obj.dots) {
+			const value = d.s[attr.key]
+			const color = attr.colorfunc(value)
+			if (!attr.values.has(value)) {
+				attr.values.set(value, { count: 1, color: color })
+			}
+			attr.values.get(value).count++
+		}
+
+		// legend values
+		const cellholder = tr.append('td')
+
+		for (const [value, o] of attr.values) {
+			// for each value
+			if (o.count == 0) continue
+
+			const cell = cellholder
+				.append('div')
+				.style('display', 'inline-block')
+				.attr('class', 'sja_clb')
+				.on('click', () => {
+					// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+
+					if (o.selected) {
+						// already selected, turn off
+						o.selected = false
+						cell.style('border', '')
+						obj.dotselection.transition().attr('r', radius)
+						return
+					}
+
+					// not yet, select this one
+					for (const o2 of attr.values.values()) {
+						o2.selected = false
+						cell.style('border', '')
+					}
+					o.selected = true
+					cell.style('border', 'solid 1px #858585')
+					obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : 0))
+				})
+			cell
+				.append('div')
+				.style('display', 'inline-block')
+				.attr('class', 'sja_mcdot')
+				.style('background', o.color)
+				.style('margin-right', '3px')
+				.text(o.count)
+			cell
+				.append('div')
+				.style('display', 'inline-block')
+				.style('color', o.color)
+				.text(o.name || value)
+			o.cell = cell
+		}
 	}
 }
 
