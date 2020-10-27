@@ -252,6 +252,7 @@ arg
 		try {
 			par.tklst = await get_tklst(urlp, arg.holder)
 		} catch (e) {
+			if (e.stack) console.log(e.stack)
 			return e.message || e
 		}
 
@@ -292,11 +293,18 @@ arg
 				hlaa.set(s, false)
 			}
 		}
+		let tklst
+		try {
+			tklst = await get_tklst(urlp, arg.holder)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			return e.message || e
+		}
 		blockinit({
 			hostURL: arg.hostURL,
 			query: str,
 			genome: arg.genomes[genomename],
-			tklst: await get_tklst(urlp, arg.holder),
+			tklst,
 			holder: arg.holder,
 			dataset: ds,
 			hlaachange: hlaa,
