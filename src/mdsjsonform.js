@@ -110,6 +110,7 @@ function make_buttons(form_div, doms) {
 			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
 			doms.isdense_radios.nodes()[1].click()
 			// doms.assaytrack_radios.nodes()[0].click()
+			doms.uidiv_inuse.style('display', 'block')
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
 				`TCGA-06-0152-02A	proteinpaint_demo/hg19/tcga-gbm/rna-bw/SJHGG010643_R1.bw	TCGA-06-0152-02A RNA coverage
@@ -834,6 +835,7 @@ function make_assaytracks(div, doms) {
 		})
 	const hold_column = div.append('div')
 	const uidiv = hold_column.append('div').style('display', 'none')
+	doms.uidiv_inuse = uidiv
 
 	//**Previous radio button option */
 	// const assay_prompt = div.append('div')
