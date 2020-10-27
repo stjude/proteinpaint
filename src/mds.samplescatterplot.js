@@ -64,6 +64,8 @@ obj:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
+get_data()
+finish_setup
 init_plot()
 init_dotcolor_legend
 click_dot
@@ -315,6 +317,10 @@ function finish_setup(obj) {
 			if (!l.key) throw '.key missing from one of attr_levels[]'
 			const a = obj.sample_attributes[l.key]
 			if (!a) throw 'unknown key from .attr_levels: ' + l.key
+			if (l.label) {
+				const b = obj.sample_attributes[l.label]
+				if (!b) throw 'unknown label from .attr_levels: ' + l.label
+			}
 		}
 	}
 }
@@ -539,11 +545,14 @@ function init_dotcolor_legend(obj) {
 			}
 			if (!L1.v2c.has(v)) L1.v2c.set(v, { dots: [] })
 			L1.v2c.get(v).dots.push(d)
+			if (L1.label) {
+				L1.v2c.get(v).label = d.s[L1.label]
+			}
 		}
 		for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
 			const L1div = div.append('div').style('margin-top', '20px')
 			L1div.append('div')
-				.html(L1value + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
+				.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
 				.style('margin', '10px')
 
 			const L2 = obj.attr_levels[1]
@@ -563,6 +572,9 @@ function init_dotcolor_legend(obj) {
 						L2.v2c.set(v, o)
 					}
 					L2.v2c.get(v).dots.push(d)
+					if (L2.label) {
+						L2.v2c.get(v).label = d.s[L2.label]
+					}
 				}
 				for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
 					const cell = L1div.append('div')
@@ -600,7 +612,7 @@ function init_dotcolor_legend(obj) {
 						.append('div')
 						.style('display', 'inline-block')
 						.style('color', L2o.color)
-						.text(L2value)
+						.text(L2o.label || L2value)
 					L2o.cell = cell
 				}
 			}
