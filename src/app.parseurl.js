@@ -249,7 +249,11 @@ arg
 			}
 		}
 
-		par.tklst = await get_tklst(urlp, arg.holder)
+		try {
+			par.tklst = await get_tklst(urlp, arg.holder)
+		} catch (e) {
+			return e.message || e
+		}
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 		import('./block').then(b => new b.Block(par))
@@ -338,6 +342,15 @@ export async function get_tklst(urlp, error_div) {
 		const file_str = urlp.get('mdsjson')
 		const tks = await mdsjson.init_mdsjson(file_str, url_str, error_div)
 		tklst.push(...tks)
+	}
+
+	if (urlp.has('tkjsonfile')) {
+		const re = await client.dofetch('textfile', { file: urlp.get('tkjsonfile') })
+		if (re.error) throw re.error
+		if (!re.text) throw '.text missing'
+		const lst = JSON.parse(re.text)
+		// TODO facet table, maybe as a special item in the array
+		tklst.push(...lst)
 	}
 
 	if (urlp.has('bamfile')) {
