@@ -124,7 +124,7 @@ export function get_json_tk(tkobj) {
 	}
 
 	// dense or full
-	if (tkobj.isdense || tkobj.isfull === false) track.isdense = true
+	if (tkobj.isdense == 'true' || tkobj.isdense == true || tkobj.isfull === false) track.isdense = true
 	else if (tkobj.isfull) track.isfull = true
 
 	// svcnv file
@@ -183,12 +183,12 @@ export function get_json_tk(tkobj) {
 	track.getallsamples = tkobj.getallsamples
 
 	// cnv cutoff settings
-	track.valueCutoff = tkobj.cnvValueCutoff || undefined
-	track.bplengthUpperLimit = tkobj.cnvLengthUpperLimit || undefined
+	track.valueCutoff = tkobj.cnvValueCutoff !== undefined ? tkobj.cnvValueCutoff : undefined
+	track.bplengthUpperLimit = tkobj.cnvLengthUpperLimit !== undefined ? tkobj.cnvLengthUpperLimit : undefined
 
 	// loh cutoff settings
-	track.segmeanValueCutoff = tkobj.segmeanValueCutoff || undefined
-	track.lohLengthUpperLimit = tkobj.lohLengthUpperLimit || undefined
+	track.segmeanValueCutoff = tkobj.segmeanValueCutoff !== undefined ? tkobj.segmeanValueCutoff : undefined
+	track.lohLengthUpperLimit = tkobj.lohLengthUpperLimit !== undefined ? tkobj.lohLengthUpperLimit : undefined
 
 	// multihide labels
 	track.multihidelabel_vcf = tkobj.multihidelabel_vcf || undefined
