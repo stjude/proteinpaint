@@ -102,7 +102,7 @@ export async function init(obj, holder, debugmode) {
 
 	const tr1 = _table.append('tr') // row has two <td>
 
-	const tr1td1 = tr1.append('td')
+	const tr1td1 = tr1.append('td').style('vertical-align', 'top')
 	const tr1td2 = tr1.append('td').style('vertical-align', 'top')
 
 	{
@@ -539,7 +539,7 @@ function init_dotcolor_legend(obj) {
 		L1.unannotated = 0
 		for (const d of obj.dots) {
 			const v = d.s[L1.key]
-			if (v == undefined) {
+			if (v == undefined || v == null) {
 				L1.unannotated++
 				continue
 			}
@@ -562,7 +562,7 @@ function init_dotcolor_legend(obj) {
 				L2.unannotated = 0
 				for (const d of L1o.dots) {
 					const v = d.s[L2.key]
-					if (v == undefined) {
+					if (v == undefined || v == null) {
 						L2.unannotated++
 						continue
 					}
@@ -599,7 +599,7 @@ function init_dotcolor_legend(obj) {
 							}
 							L2o.selected = true
 							cell.style('border', 'solid 1px #858585')
-							obj.dotselection.transition().attr('r', d => (d.s[L2value] == L2value ? radius : 0))
+							obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : 1))
 						})
 					cell
 						.append('div')
@@ -615,12 +615,15 @@ function init_dotcolor_legend(obj) {
 						.text(L2o.label || L2value)
 					L2o.cell = cell
 				}
+				if (L2.unannotated) {
+					const d = div.append('div').style('margin-top', '20px')
+					d.append('div').text('Unannotated for "' + L2.key + '": ' + L2.unannotated)
+				}
 			}
-
-			if (L1.unannotated) {
-				const d = div.append('div').style('margin-top', '20px')
-				d.append('div').html('(Unannotated) <span style="font-size:.7em">n=' + L1.unannotated + '</span>')
-			}
+		}
+		if (L1.unannotated) {
+			const d = div.append('div').style('margin-top', '20px')
+			d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
 		}
 	} else if (obj.colorbyattributes) {
 		if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
