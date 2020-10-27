@@ -26,7 +26,7 @@ export async function init_mdsjsonform(par) {
 	}
 	const [form_div, wrapper_div] = make_header(holder)
 	const doms = {}
-	make_genome(wrapper_div, genomes, doms)
+	doms.genome = make_genome(wrapper_div, genomes)
 	doms.position = make_position(wrapper_div)
 	doms.name = make_name(wrapper_div)
 	make_svcnv_radios(wrapper_div, doms)
@@ -109,7 +109,7 @@ function make_buttons(form_div, doms) {
 			doms.vcffileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.snvindel.vep.vcf.gz')
 			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
 			doms.isdense_radios.nodes()[1].click()
-			doms.assaytrack_radios.nodes()[0].click()
+			// doms.assaytrack_radios.nodes()[0].click()
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
 				`TCGA-06-0152-02A	proteinpaint_demo/hg19/tcga-gbm/rna-bw/SJHGG010643_R1.bw	TCGA-06-0152-02A RNA coverage
@@ -257,7 +257,6 @@ function validate_input(doms) {
 		const n = doms.genome.node()
 		obj.genome = n.options[n.selectedIndex].text
 	}
-
 	{
 		const tmp = doms.position.property('value').trim()
 		if (tmp) obj.position = tmp
@@ -343,7 +342,7 @@ function validate_input(doms) {
 		}
 	}
 
-	if (doms.assaytrack_inuse) {
+	if (doms.assaytrack_inuse == true) {
 		const lst = [...parse_bigwig(doms), ...parse_bigwigstranded(doms), ...parse_bedj(doms), ...parse_junction(doms)]
 		obj.sample2assaytrack = {}
 		for (const { sample, tk } of lst) {
@@ -360,7 +359,7 @@ function isurl(t) {
 	return a.startsWith('HTTP://') || a.startsWith('HTTPS://')
 }
 //.genome
-function make_genome(div, genomes, doms) {
+function make_genome(div, genomes) {
 	const genome_prompt = div.append('div')
 
 	genome_prompt.append('span').text('Genome')
@@ -371,7 +370,8 @@ function make_genome(div, genomes, doms) {
 	for (const n in genomes) {
 		select.append('option').text(n)
 	}
-	doms.genome = select.property('value')
+	return select
+	//doms.genome = select.property('value') - this messed up the examples and submit button
 }
 //.position
 function make_position(div, doms) {
@@ -381,34 +381,34 @@ function make_position(div, doms) {
 
 	const position = div.append('div')
 
-	position
+	return position
 		.append('div')
 		.append('input')
 		.attr('size', 30)
 		.property('placeholder', 'chr:start-stop or gene')
-		.on('click', () => {
-			gene_searchbox({
-				div: position.append('div'),
-				resultdiv: position.append('div'),
-				genome: doms.genome.name, //TODO why can't this be read?
-				callback: async genename => {
-					const gmlst = await client.dofetch('genelookup', { genome: doms.genome.name, input: genename, deep: 1 })
-					if (gmlst && gmlst[0]) {
-						const gm = gmlst[0]
-						if (!doms.genes) doms.genes = []
-						const geneidx = doms.genes.findIndex(i => i.gene == genename)
-						if (geneidx == -1) {
-							doms.genes.push({
-								gene: genename,
-								chr: gm.chr,
-								start: gm.start,
-								stop: gm.stop //TODO nothing is returned to the view port.. or doms or obj
-							})
-						}
-					}
-				}
-			})
-		})
+	// .on('click', () => {
+	// 	gene_searchbox({
+	// 		div: position.append('div'),
+	// 		resultdiv: position.append('div'),
+	// 		genome: doms.genome.name, //TODO why can't this be read?
+	// 		callback: async genename => {
+	// 			const gmlst = await client.dofetch('genelookup', { genome: doms.genome.name, input: genename, deep: 1 })
+	// 			if (gmlst && gmlst[0]) {
+	// 				const gm = gmlst[0]
+	// 				if (!doms.genes) doms.genes = []
+	// 				const geneidx = doms.genes.findIndex(i => i.gene == genename)
+	// 				if (geneidx == -1) {
+	// 					doms.genes.push({
+	// 						gene: genename,
+	// 						chr: gm.chr,
+	// 						start: gm.start,
+	// 						stop: gm.stop //TODO nothing is returned to the view port.. or doms or obj
+	// 					})
+	// 				}
+	// 			}
+	// 		}
+	// 	})
+	// })
 }
 
 //.name
@@ -481,7 +481,7 @@ function make_svcnv_radios(div, doms) {
 		}
 	})
 	doms.svcnv_controls = controls
-	make_svcnv(controls)
+	doms.svcnvfileurl = make_svcnv(controls)
 	make_control_panel(controls, doms)
 }
 //.svcnvfile or .svcnvurl
@@ -520,7 +520,7 @@ function make_vcf_radios(div, doms) {
 		}
 	})
 	doms.vcf_controls = controls
-	make_vcf(controls)
+	doms.vcffileurl = make_vcf(controls)
 }
 //.vcffile
 function make_vcf(div) {
@@ -559,7 +559,7 @@ function make_expression_radios(div, doms) {
 		}
 	})
 	doms.expression_controls = controls
-	make_expression_filepath(controls)
+	doms.expressionfile = make_expression_filepath(controls)
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -815,9 +815,9 @@ function make_sampleset(div, doms) {
 
 // Assay track
 function make_assaytracks(div, doms) {
-	const sampleset_btn = div.append('div')
+	const assay_btn = div.append('div')
 
-	sampleset_btn
+	assay_btn
 		.append('button')
 		.style('width', '230px')
 		.style('height', '30px')
