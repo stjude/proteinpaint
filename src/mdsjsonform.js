@@ -1,6 +1,7 @@
 import { select, transition } from 'd3'
-import { dofetch2, tab2box, tkt } from './client'
+import { dofetch, dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
+import { gene_searchbox } from './gene'
 // import { check } from 'prettier'
 
 /*
@@ -28,10 +29,10 @@ export async function init_mdsjsonform(par) {
 	doms.genome = make_genome(wrapper_div, genomes)
 	doms.position = make_position(wrapper_div)
 	doms.name = make_name(wrapper_div)
-	set_dense(wrapper_div, doms)
 	make_svcnv_radios(wrapper_div, doms)
 	make_vcf_radios(wrapper_div, doms)
 	make_expression_radios(wrapper_div, doms)
+	set_dense(wrapper_div, doms)
 	make_sampleset(wrapper_div, doms)
 	make_assaytracks(wrapper_div, doms)
 	window.doms = doms
@@ -108,7 +109,8 @@ function make_buttons(form_div, doms) {
 			doms.vcffileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.snvindel.vep.vcf.gz')
 			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
 			doms.isdense_radios.nodes()[1].click()
-			doms.assaytrack_radios.nodes()[0].click()
+			// doms.assaytrack_radios.nodes()[0].click()
+			doms.uidiv_inuse.style('display', 'block')
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
 				`TCGA-06-0152-02A	proteinpaint_demo/hg19/tcga-gbm/rna-bw/SJHGG010643_R1.bw	TCGA-06-0152-02A RNA coverage
@@ -250,14 +252,12 @@ function validate_input(doms) {
 	const obj = {
 		type: tkt.mdssvcnv,
 		isdense: doms.isdense,
-		isfull: doms.isfull,
-		getallsamples: doms.getallsamples
+		isfull: doms.isfull
 	}
 	{
 		const n = doms.genome.node()
 		obj.genome = n.options[n.selectedIndex].text
 	}
-
 	{
 		const tmp = doms.position.property('value').trim()
 		if (tmp) obj.position = tmp
@@ -285,8 +285,8 @@ function validate_input(doms) {
 			if (limit) {
 				obj.cnvLengthUpperLimit = Number(limit)
 			}
-			obj.multihidelabel_fusion = doms.multihidelabel_fusion
-			obj.multihidelabel_sv = doms.multihidelabel_sv
+			// obj.multihidelabel_fusion = doms.multihidelabel_fusion
+			// obj.multihidelabel_sv = doms.multihidelabel_sv
 		}
 		if (vcf) {
 			if (isurl(vcf)) {
@@ -294,7 +294,7 @@ function validate_input(doms) {
 			} else {
 				obj.vcffile = vcf
 			}
-			obj.multihidelabel_vcf = doms.multihidelabel_vcf
+			// obj.multihidelabel_vcf = doms.multihidelabel_vcf
 		}
 	}
 	{
@@ -343,7 +343,7 @@ function validate_input(doms) {
 		}
 	}
 
-	if (doms.assaytrack_inuse) {
+	if (doms.assaytrack_inuse == true) {
 		const lst = [...parse_bigwig(doms), ...parse_bigwigstranded(doms), ...parse_bedj(doms), ...parse_junction(doms)]
 		obj.sample2assaytrack = {}
 		for (const { sample, tk } of lst) {
@@ -372,18 +372,44 @@ function make_genome(div, genomes) {
 		select.append('option').text(n)
 	}
 	return select
+	//doms.genome = select.property('value') - this messed up the examples and submit button
 }
 //.position
-function make_position(div) {
-	div
-		.append('div')
-		.append('span')
-		.text('Default position')
-	return div
+function make_position(div, doms) {
+	const position_prompt = div.append('div')
+
+	position_prompt.append('span').text('Default position')
+
+	const position = div.append('div')
+
+	return position
 		.append('div')
 		.append('input')
 		.attr('size', 30)
-		.property('placeholder', 'chr:start-stop')
+		.property('placeholder', 'chr:start-stop or gene')
+	// .on('click', () => {
+	// 	gene_searchbox({
+	// 		div: position.append('div'),
+	// 		resultdiv: position.append('div'),
+	// 		genome: doms.genome.name, //TODO why can't this be read?
+	// 		callback: async genename => {
+	// 			const gmlst = await client.dofetch('genelookup', { genome: doms.genome.name, input: genename, deep: 1 })
+	// 			if (gmlst && gmlst[0]) {
+	// 				const gm = gmlst[0]
+	// 				if (!doms.genes) doms.genes = []
+	// 				const geneidx = doms.genes.findIndex(i => i.gene == genename)
+	// 				if (geneidx == -1) {
+	// 					doms.genes.push({
+	// 						gene: genename,
+	// 						chr: gm.chr,
+	// 						start: gm.start,
+	// 						stop: gm.stop //TODO nothing is returned to the view port.. or doms or obj
+	// 					})
+	// 				}
+	// 			}
+	// 		}
+	// 	})
+	// })
 }
 
 //.name
@@ -438,35 +464,26 @@ function make_svcnv_radios(div, doms) {
 	svcnvfusion_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9 target=_blank>CNV+SV+fusion</a> file path or URL<br><span style="font-size:.7em">Either CNV or VCF file is required</span>'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9 target=_blank>CNV+SV+fusion</a> file<br><span style="font-size:.7em">Either CNV or VCF file is required</span>'
 		)
 
 	const row = div.append('div')
-	// const radiodiv = row.append('div')
-	// const controls = row.append('div').style('display', 'none')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			// //****Doesn't work */
-			// doms.svcnv_inuse = value == 1
-			// controls.style('display', value == 1 ? 'block' : 'none')
-
-			if (value == 1 && !doms.svcnvfileurl) {
-				doms.svcnvfusion = true
-				row.append('div')
-				doms.svcnvfileurl = make_svcnv(row) //TODO spacing
-				make_control_panel(row, doms)
-			} else {
-				doms.svcnvfusion = false //TODO hide on 'No'
-			}
+			doms.svcnv_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
-	// controls = make_control_panel(row, doms), (doms.svcnvfileurl = make_svcnv(row))
-	// controls = make_control_panel(row, doms), make_svcnv(row)
+	doms.svcnv_controls = controls
+	doms.svcnvfileurl = make_svcnv(controls)
+	make_control_panel(controls, doms)
 }
 //.svcnvfile or .svcnvurl
 function make_svcnv(div) {
@@ -478,7 +495,7 @@ function make_svcnv(div) {
 		.attr('size', 55)
 		.property('placeholder', 'File path or URL')
 }
-
+//Displays text field and additional options
 function make_vcf_radios(div, doms) {
 	doms.vcf = true
 
@@ -487,29 +504,25 @@ function make_vcf_radios(div, doms) {
 	vcf_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file path or URL'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx target=_blank>VCF</a> file'
 		)
-
 	const row = div.append('div')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			if (value == 1 && !doms.vcffileurl) {
-				doms.vcf = true
-				row.append('div')
-				doms.vcffileurl = make_vcf(row) //TODO spacing
-				//TODO also need to add in hidden classes array. Can't do a grid within a grid...
-			} else {
-				doms.vcf = false //TODO hide on 'No'
-			}
+			doms.vcf_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
+	doms.vcf_controls = controls
+	doms.vcffileurl = make_vcf(controls)
 }
-
 //.vcffile
 function make_vcf(div) {
 	const vcf_file_div = div.append('div')
@@ -529,26 +542,25 @@ function make_expression_radios(div, doms) {
 	expression_prompt
 		.append('span')
 		.html(
-			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy target=_blank>Gene expression</a> file path or URL'
+			'<a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy target=_blank>Gene expression</a> file'
 		)
 
 	const row = div.append('div')
+	const radiodiv = row.append('div')
+	const controls = row.append('div').style('display', 'none')
 	make_radios({
-		holder: row,
+		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
-			if (value == 1 && !doms.expressionfile) {
-				doms.expression = true
-				row.append('div')
-				doms.expressionfile = make_expression_filepath(row) //TODO spacing
-			} else {
-				doms.expression = false //TODO hide on 'No'
-			}
+			doms.expression_inuse = value == 1
+			controls.style('display', value == 1 ? 'block' : 'none')
 		},
 		styles: {
 			display: 'inline'
 		}
 	})
+	doms.expression_controls = controls
+	doms.expressionfile = make_expression_filepath(controls)
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -560,30 +572,6 @@ function make_expression_filepath(div) {
 		.attr('size', 55)
 		.property('placeholder', 'File path or URL')
 }
-// // .getallsamples
-// function make_getallsamples(div, doms) {
-// 	doms.getallsamples = true
-
-// 	const getallsamples_prompt = div.append('div')
-
-// 	getallsamples_prompt.append('span').text('Get all samples')
-
-// 	const row = div.append('div')
-// 	make_radios({
-// 		holder: row,
-// 		options: [{ label: 'True', value: 1, checked: true }, { label: 'False', value: 2 }],
-// 		callback: value => {
-// 			if (value == 1) {
-// 				doms.getallsamples = true
-// 			} else {
-// 				doms.getallsamples = false
-// 			}
-// 		},
-// 		styles: {
-// 			display: 'inline'
-// 		}
-// 	})
-// }
 // .cnvValueCutoff
 function make_cnv_cutoff(div) {
 	const cnv_cutoff_div = div.append('div')
@@ -633,7 +621,7 @@ function make_loh_upperlimit(div) {
 
 // 	tooltip
 // 		.style('font-size', '15px')
-// 		.text('Hide Multiple VCF Labels') //TODO is this multiple or all?
+// 		.text('Hide Multiple VCF Labels')
 // 		.style('display', 'none')
 // 		.style('text-align', 'center')
 // 		.style('position', 'absolute')
@@ -763,16 +751,15 @@ function make_loh_upperlimit(div) {
 // }
 // Options under CNV+SV+Fusion text field
 function make_control_panel(div, doms) {
-	const row = div.append('div')
-
-	const control_panel = row
+	const control_panel = div
+		.append('div')
 		.append('div')
 		// .style('margins', '5px')
 		.style('width', '49%')
 		.style('padding', '10px')
 		.style('display', 'inline') //TODO actually get fields to display inline instead one after another
 		.style('position', 'relative')
-	control_panel
+	// control_panel
 	doms.cnvValueCutoff = make_cnv_cutoff(control_panel, doms)
 	doms.cnvLengthUpperLimit = make_cnv_upperlimit(control_panel, doms)
 	doms.segmeanValueCutoff = make_segmean_cutoff(control_panel)
@@ -781,24 +768,45 @@ function make_control_panel(div, doms) {
 
 // .sampleset
 function make_sampleset(div, doms) {
-	const sampleset_prompt = div.append('div')
+	const sampleset_btn = div.append('div')
 
-	sampleset_prompt.append('span').text('Subset samples')
+	sampleset_btn
+		.append('button')
+		.style('width', '230px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('Define Sample Subset')
+		.on('click', () => {
+			if (uidiv.style('display') == 'none') {
+				uidiv.style('display', 'block') //TODO fadein fn
+			} else {
+				uidiv.style('display', 'none') //TODO fadeout fn
+			}
+		})
+	const hold_column = div.append('div')
+	const uidiv = hold_column.append('div').style('display', 'none')
 
-	const column2 = div.append('div')
-	const radiodiv = column2.append('div')
-	const uidiv = column2.append('div').style('display', 'none')
-	make_radios({
-		holder: radiodiv,
-		options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
-		callback: value => {
-			doms.sampleset_inuse = value == 2
-			uidiv.style('display', value == 2 ? 'block' : 'none')
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
+	//**Previous radio button option */
+	// const sampleset_prompt = div.append('div')
+
+	// sampleset_prompt.append('span').text('Subset samples')
+
+	// const column2 = div.append('div')
+	// const radiodiv = column2.append('div')
+	// const uidiv = column2.append('div').style('display', 'none')
+	// make_radios({
+	// 	holder: radiodiv,
+	// 	options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
+	// 	callback: value => {
+	// 		doms.sampleset_inuse = value == 2
+	// 		uidiv.style('display', value == 2 ? 'block' : 'none')
+	// 	},
+	// 	styles: {
+	// 		display: 'inline'
+	// 	}
+	// })
 	// contents of uidiv
 	doms.sampleset_textarea = uidiv
 		.append('textarea')
@@ -808,25 +816,48 @@ function make_sampleset(div, doms) {
 
 // Assay track
 function make_assaytracks(div, doms) {
-	const assay_prompt = div.append('div')
+	const assay_btn = div.append('div')
 
-	assay_prompt.append('span').text('Assay tracks')
+	assay_btn
+		.append('button')
+		.style('width', '230px')
+		.style('height', '30px')
+		.style('text-align', 'center')
+		.style('font-size', '15px')
+		.style('display', 'inline-block')
+		.text('Define Sample Assay Tracks')
+		.on('click', () => {
+			if (uidiv.style('display') == 'none') {
+				uidiv.style('display', 'block') //TODO fadein fn
+			} else {
+				uidiv.style('display', 'none') //TODO fadeout fn
+			}
+		})
+	const hold_column = div.append('div')
+	const uidiv = hold_column.append('div').style('display', 'none')
+	doms.uidiv_inuse = uidiv
 
-	const column2 = div.append('div')
-	const radiodiv = column2.append('div')
-	const uidiv = column2.append('div').style('display', 'none')
-	const { divs, labels, inputs } = make_radios({
-		holder: radiodiv,
-		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
-		callback: value => {
-			doms.assaytrack_inuse = value == 1
-			uidiv.style('display', value == 1 ? 'block' : 'none')
-		},
-		styles: {
-			display: 'inline'
-		}
-	})
-	doms.assaytrack_radios = inputs
+	//**Previous radio button option */
+	// const assay_prompt = div.append('div')
+
+	// assay_prompt.append('span').text('Assay tracks')
+
+	// const column2 = div.append('div')
+	// const radiodiv = column2.append('div')
+	// const uidiv = column2.append('div').style('display', 'none')
+	// const { divs, labels, inputs } = make_radios({
+	// 	holder: radiodiv,
+	// 	options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
+	// 	callback: value => {
+	// 		doms.assaytrack_inuse = value == 1
+	// 		uidiv.style('display', value == 1 ? 'block' : 'none')
+	// 	},
+	// 	styles: {
+	// 		display: 'inline'
+	// 	}
+	// })
+	// doms.assaytrack_radios = inputs
+
 	// contents of uidiv
 	const tabs = [
 		{
@@ -1003,3 +1034,30 @@ function parse_junction(doms) {
 	}
 	return tks
 }
+
+// function fadein(div) { //TODO does not work, need a fadein and fadeout function
+// 	let timer = null
+// 	if (div.style('opacity') != 1){
+// 		clearTimeout(timer)
+// 		div.style('display', 'block')
+// 		timer = setInterval(() => {
+// 			div.style('opacity') == div.style('opacity') + .10;
+// 			if (+getComputedStyle(div).getPropertyValue("opacity") >= 1) {
+// 			  clearInterval(timer);
+// 			}
+// 		}, 100)
+// 	}
+// }
+// function fadeout(div) {
+// let timer = null
+// if (div.style('opacity') != 0){
+// 	clearTimeout(timer)
+// 	div.style('display', 'block')
+// 	timer = setInterval(() => {
+// 		div.style('opacity') == div.style('opacity') - .10;
+// 		if (+getComputedStyle(div).getPropertyValue("opacity") <= 0) {
+// 		  clearInterval(timer);
+// 		}
+// 	}, 100)
+// }
+// }
