@@ -167,16 +167,14 @@ arg
 		}
 		const genomename = urlp.get('genome')
 		const genomeobj = arg.genomes[genomename]
-		if (!genomeobj) {
-			return 'invalid genome: ' + genomename
-		}
+		if (!genomeobj) return 'invalid genome: ' + genomename
 
 		const par = {
 			nobox: 1,
 			hostURL: arg.hostURL,
 			jwt: arg.jwt,
 			holder: arg.holder,
-			genome: arg.genomes[genomename],
+			genome: genomeobj,
 			dogtag: genomename,
 			allowpopup: true,
 			debugmode: arg.debugmode
@@ -250,7 +248,7 @@ arg
 		}
 
 		try {
-			par.tklst = await get_tklst(urlp, arg.holder)
+			par.tklst = await get_tklst(urlp, arg.holder, genomeobj)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -275,13 +273,10 @@ arg
 		}
 		if (urlp.has('genome')) {
 			genomename = urlp.get('genome')
-			if (!arg.genomes[genomename]) {
-				return 'invalid genome: ' + genomename
-			}
 		}
-		if (!genomename) {
-			return 'No genome, and none set as default'
-		}
+		if (!genomename) return 'No genome, and none set as default'
+		const genomeobj = arg.genomes[genomename]
+		if (!genomeobj) return 'invalid genome: ' + genomename
 		let ds = null
 		if (urlp.has('dataset')) {
 			ds = urlp.get('dataset').split(',')
@@ -295,7 +290,7 @@ arg
 		}
 		let tklst
 		try {
-			tklst = await get_tklst(urlp, arg.holder)
+			tklst = await get_tklst(urlp, arg.holder, genomeobj)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -331,7 +326,7 @@ arg
 	}
 }
 
-export async function get_tklst(urlp, error_div) {
+export async function get_tklst(urlp, error_div, genomeobj) {
 	const tklst = []
 
 	if (urlp.has('mdsjsoncache')) {
@@ -357,8 +352,16 @@ export async function get_tklst(urlp, error_div) {
 		if (re.error) throw re.error
 		if (!re.text) throw '.text missing'
 		const lst = JSON.parse(re.text)
-		// TODO facet table, maybe as a special item in the array
-		tklst.push(...lst)
+		const tracks = []
+		for (const i of lst) {
+			if (i.isfacet) {
+				if (!genomeobj.tkset) genomeobj.tkset = []
+				// parse facet to tkset
+			} else {
+				// must be a track
+				tklst.push(i)
+			}
+		}
 	}
 
 	if (urlp.has('bamfile')) {
