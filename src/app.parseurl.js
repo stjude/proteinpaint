@@ -356,7 +356,20 @@ export async function get_tklst(urlp, error_div, genomeobj) {
 		for (const i of lst) {
 			if (i.isfacet) {
 				if (!genomeobj.tkset) genomeobj.tkset = []
-				// parse facet to tkset
+				if (!i.tracks) throw '.tracks[] missing from a facet table'
+				if (!Array.isArray(i.tracks)) throw '.tracks[] not an array from a facet table'
+				i.tklst = i.tracks
+				delete i.tracks
+				for (const t of i.tklst) {
+					if (!t.assay) throw '.assay missing from a facet track'
+					t.assayname = t.assay
+					delete t.assay
+					if (!t.sample) throw '.sample missing from a facet track'
+					t.patient = t.sample
+					delete t.sample
+					if (!t.sampletype) t.sampletype = t.patient
+				}
+				genomeobj.tkset.push(i)
 			} else {
 				// must be a track
 				tklst.push(i)
