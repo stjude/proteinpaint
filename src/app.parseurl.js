@@ -368,6 +368,8 @@ export async function get_tklst(urlp, error_div, genomeobj) {
 					t.patient = t.sample
 					delete t.sample
 					if (!t.sampletype) t.sampletype = t.patient
+					// must assign tkid otherwise the tk buttons from facet table won't work
+					t.tkid = Math.random().toString()
 				}
 				genomeobj.tkset.push(i)
 			} else {
