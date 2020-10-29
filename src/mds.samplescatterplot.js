@@ -301,22 +301,6 @@ function finish_setup(obj) {
 				if (!a.values[k].color) a.values[k].color = cf(k)
 			}
 		}
-		/*
-		for (const attr of obj.colorbyattributes) {
-			if (attr.values) {
-				const values = new Map()
-				for (const value in attr.values) {
-					const v = attr.values[value]
-					v.count = 0
-					if (!v.color) v.color = attr.colorfunc(value)
-					values.set(value, v)
-				}
-				attr.values = values
-			} else {
-				attr.values = new Map()
-			}
-		}
-		*/
 	}
 	if (obj.attr_levels) {
 		if (!Array.isArray(obj.attr_levels)) throw '.attr_levels[] is not array'
@@ -777,7 +761,7 @@ function legend_flatlist(obj) {
 		for (const value in attr.values) {
 			// for each value
 			const o = attr.values[value]
-			if (o.count == 0) continue
+			if (o.count == 0 || o.count == undefined) continue
 
 			const cell = cellholder
 				.append('div')
@@ -790,19 +774,36 @@ function legend_flatlist(obj) {
 						// already selected, turn off
 						o.selected = false
 						cell.style('border', '')
-						obj.dotselection.transition().attr('r', radius)
+						let alloff = true
+						for (const k in attr.values) {
+							if (attr.values[k].selected) alloff = false
+						}
+						if (alloff) {
+							obj.dotselection.transition().attr('r', radius)
+						} else {
+							obj.dotselection
+								.filter(d => d.s[attr.key] == value)
+								.transition()
+								.attr('r', radius_tiny)
+						}
 						return
 					}
 
 					// not yet, select this one
+					let alloff = true
 					for (const k in attr.values) {
-						const o2 = attr.values[k]
-						o2.selected = false
-						cell.style('border', '')
+						if (attr.values[k].selected) alloff = false
 					}
 					o.selected = true
 					cell.style('border', 'solid 1px #858585')
-					obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : 0))
+					if (alloff) {
+						obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : radius_tiny))
+					} else {
+						obj.dotselection
+							.filter(d => d.s[attr.key] == value)
+							.transition()
+							.attr('r', radius)
+					}
 				})
 			cell
 				.append('div')
@@ -825,6 +826,7 @@ function click_dot(dot, obj) {
 	/*
 	clicking a dot to launch browser view of tracks from this sample
 	*/
+	if (!obj.dslabel) return
 
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text(dot.sample)
