@@ -1581,7 +1581,6 @@ async function convertread(seg, genome, query) {
 			soft_present = 1
 			//console.log("soft_start:",soft_start)
 			//console.log("soft_stop:",soft_stop)
-			console.log('Soft clip')
 			soft_starts.push(soft_start)
 			soft_stops.push(soft_stop)
 		}

@@ -875,6 +875,8 @@ function show_blatresult2(hits, div, tk, block) {
 	tr.append('td').text('RStart')
 	tr.append('td').text('RAlignLen')
 	tr.append('td').text('SeqAlign')
+	let soft_clipped_region = ''
+	let non_soft_clipped_region = ''
 	for (const h of hits) {
 		let tr = table.append('tr')
 		tr.append('td').text(h.score)
@@ -886,10 +888,54 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
 		if (h.query_insoftclip == true) {
-			tr.append('td')
-				.text(h.query_alignment.toUpperCase() + ' Query')
-				.style('font-family', 'courier')
-				.style('color', 'blue')
+			if (h.query_soft_boundaries == '-1') {
+				// Alignment completely inside softclip
+				tr.append('td')
+					.text(h.query_alignment.toUpperCase() + ' Query')
+					.style('font-family', 'courier')
+					.style('color', 'blue')
+			} else {
+				const boundaries = h.query_soft_boundaries.split(':')
+				const direction = boundaries[0]
+				const boundary = parseInt(boundaries[1])
+				if (direction == 'right') {
+					// Softclip is on left side and alignment extends onto the right
+					soft_clipped_region = h.query_alignment.substr(0, boundary - parseInt(h.query_startpos))
+					non_soft_clipped_region = h.query_alignment.substr(boundary - parseInt(h.query_startpos), h.query_stoppos)
+					const td = tr.append('td')
+					td.append('span')
+						.text(soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'black')
+					td.append('span')
+						.text(non_soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'blue')
+					td.append('span')
+						.text(' Query')
+						.style('font-family', 'courier')
+						.style('color', 'black')
+				} else if (direction == 'left') {
+					// Softclip is on right side and alignment extends onto the left
+					non_soft_clipped_region = h.query_alignment.substr(0, boundary - parseInt(h.query_startpos))
+					soft_clipped_region = h.query_alignment.substr(boundary - parseInt(h.query_startpos), h.query_stoppos)
+					const td = tr.append('td')
+					td.append('span')
+						.text(non_soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'blue')
+					td.append('span')
+						.text(soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'black')
+					td.append('span')
+						.text(' Query')
+						.style('font-family', 'courier')
+						.style('color', 'black')
+				} else {
+					console.log('Something is not right, please check!!')
+				}
+			}
 		} else {
 			tr.append('td')
 				.text(h.query_alignment.toUpperCase() + ' Query')

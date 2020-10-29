@@ -146,6 +146,7 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 					const soft_stops_array = soft_stops.split(',')
 					//console.log("soft_starts_array:",soft_starts_array)
 					//console.log("soft_stops_array:",soft_stops_array)
+					h.query_insoftclip = false
 					for (let m = 0; m < soft_starts_array.length; m++) {
 						soft_start = soft_starts_array[m]
 						soft_stop = soft_stops_array[m]
@@ -154,19 +155,37 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 							parseInt(h.query_stoppos) <= parseInt(soft_stop)
 						) {
 							h.query_insoftclip = true
+							h.query_soft_boundaries = '-1' // Indicating the whole of the alignment is inside the softclip
 							break
-						}
-						//                                        else if (parseInt(soft_start) >= parseInt(h.query_startpos) && parseInt(h.query_stoppos) >= parseInt(soft_stop)) {
-						//						h.query_insoftclip = true
-						//					}
-						//				    else if ((parseInt(soft_start) >= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) >= parseInt(soft_stop))) {
-						//                                       h.query_insoftclip=true
-						//				    }
-						//				    else if ((parseInt(soft_start) <= parseInt(h.query_startpos)) && (parseInt(h.query_stoppos) <= parseInt(soft_stop))) {
-						//                                       h.query_insoftclip=true
-						//				    }
-						else {
-							h.query_insoftclip = false
+						} else if (
+							parseInt(soft_start) > parseInt(h.query_startpos) &&
+							parseInt(h.query_stoppos) > parseInt(soft_start)
+						) {
+							console.log('Alignment extends onto the left side of the soft-clip')
+							console.log('h.query_alignment:', h.query_alignment)
+							console.log('soft_start:', soft_start)
+							console.log('soft_stop:', soft_stop)
+							console.log('h.query_startpos:', h.query_startpos)
+							console.log('h.query_stoppos:', h.query_stoppos)
+							h.query_insoftclip = true
+							console.log('h.query_insoftclip:', h.query_insoftclip)
+							h.query_soft_boundaries = 'right:' + soft_start // Alignment extends onto the left side of the soft-clip
+						} else if (
+							parseInt(soft_stop) > parseInt(h.query_startpos) &&
+							parseInt(h.query_stoppos) > parseInt(soft_stop)
+						) {
+							console.log('Alignment extends onto the right side of the soft-clip')
+							console.log('h.query_alignment:', h.query_alignment)
+							console.log('soft_start:', soft_start)
+							console.log('soft_stop:', soft_stop)
+							console.log('h.query_startpos:', h.query_startpos)
+							console.log('h.query_stoppos:', h.query_stoppos)
+							h.query_insoftclip = true
+							console.log('h.query_insoftclip:', h.query_insoftclip)
+							h.query_soft_boundaries = 'left:' + soft_stop //Alignment extends onto the right side of the soft clip
+						} else {
+							//h.query_soft_boundaries="-1"
+							continue
 						}
 					}
 				}
