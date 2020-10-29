@@ -571,7 +571,9 @@ function legend_attr_levels(obj) {
 			L1.v2c.get(v).label = d.s[L1.label]
 		}
 	}
-	for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+	// multiple ways to decide order of L1values
+	for (const L1value of get_itemOrderList(L1, obj)) {
+		const L1o = L1.v2c.get(L1value)
 		const L1div = scrolldiv.append('div').style('margin-top', '20px')
 		L1div.append('div')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
@@ -598,7 +600,8 @@ function legend_attr_levels(obj) {
 					L2.v2c.get(v).label = d.s[L2.label]
 				}
 			}
-			for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+			for (const L2value of get_itemOrderList(L2, obj)) {
+				const L2o = L2.v2c.get(L2value)
 				const cell = L1div.append('div')
 					.style('display', 'inline-block')
 					.style('white-space', 'nowrap')
@@ -654,6 +657,30 @@ function legend_attr_levels(obj) {
 			.style('resize', 'vertical')
 	}
 }
+
+/*
+level{}
+.key
+.v2c Map
+	k: value
+	v: {dots[]}
+
+will reference sample_attributes[key].values{} for outputting ordered list of keys
+*/
+function get_itemOrderList(level, obj) {
+	const register = obj.sample_attributes[level.key]
+	if (!register.values || register.orderByCount) {
+		// no predefined values
+		return [...level.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length).map(i => i[0])
+	}
+	// by predefined order in register.values{}
+	const lst = []
+	for (const k in register.values) {
+		if (level.v2c.has(k)) lst.push(k)
+	}
+	return lst
+}
+
 function legend_flatlist(obj) {
 	if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
 
