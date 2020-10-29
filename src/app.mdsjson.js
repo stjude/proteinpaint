@@ -197,3 +197,59 @@ export function get_json_tk(tkobj) {
 
 	return track
 }
+
+export async function get_scatterplot_data(json_file, json_url, holder) {
+	let data = {}
+	const obj = await mdsjson_parse(json_file, json_url)
+	validate_scatter_json(obj)
+	data.mdssamplescatterplot = obj
+	return data
+}
+
+function validate_scatter_json(obj) {
+	// console.log(obj)
+	let sample_attrs = []
+	const samplekey = obj.analysisdata.samplekey
+
+	if (!obj) throw 'file is missing'
+	if (!obj.analysisdata) throw '"analysisdata" is required for sctter plot'
+
+	// validate sample_attributes
+	if (obj.analysisdata.sample_attributes) sample_attrs = Object.keys(obj.analysisdata.sample_attributes)
+
+	// validate attr_levels
+	if (obj.analysisdata.attr_levels) {
+		for (const attr of obj.analysisdata.attr_levels) {
+			if (!attr.key) throw '"key" is required field for "attr_levels"'
+			if (!sample_attrs.filter(x => x.includes(attr.key)).length) throw '"key" must be present in "sample_attrs{}"'
+		}
+	}
+
+	// validate colorbyattributes
+	if (obj.analysisdata.colorbyattributes) {
+		for (const attr of obj.analysisdata.colorbyattributes) {
+			if (!attr.key) throw '"key" is required field for "colorbyattributes"'
+			if (!sample_attrs.filter(x => x.includes(attr.key)).length) throw '"key" must be present in "sample_attrs{}"'
+		}
+	}
+
+	// validate samples
+	if (!obj.analysisdata.samples) throw '"samples" is required field'
+	validate_samples(obj.analysisdata.samples, 'samples[]')
+
+	// validate user's samples
+	if (obj.analysisdata.user_samples) {
+		validate_samples(obj.analysisdata.user_samples, 'user_samples[]')
+	}
+
+	function validate_samples(samples, samples_name) {
+		for (const sample of samples) {
+			if (!sample.x) throw '"x" is required for each sample in ' + samples_name
+			if (!sample.y) throw '"y" is required for each sample in ' + samples_name
+			if (!samplekey && !sample.sample) '"sample" should be present for each sample in ' + samples_name
+			if (samplekey && !Object.keys(sample).filter(x => x.includes(samplekey)).length) {
+				throw samplekey + ' must be present for each sample in ' + samples_name
+			}
+		}
+	}
+}

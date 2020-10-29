@@ -161,6 +161,29 @@ arg
 		return
 	}
 
+	if (urlp.has('scatterplot')) {
+		if (!urlp.has('genome')) return '"genome" is required for "scatterplot"'
+		const genomename = urlp.get('genome')
+		const genome = arg.genomes[genomename]
+		if (!genome) return 'invalid genome: ' + genomename
+		let plot_data
+		try {
+			if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+				const url_str = urlp.get('mdsjsonurl')
+				const file_str = urlp.get('mdsjson')
+				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str, arg.holder)
+			}
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			return e.message || e
+		}
+
+		import('./mds.samplescatterplot').then(_ => {
+			_.init(plot_data.mdssamplescatterplot, arg.holder, false)
+		})
+		return
+	}
+
 	if (urlp.has('block')) {
 		if (!urlp.has('genome')) {
 			return 'missing genome for block'
