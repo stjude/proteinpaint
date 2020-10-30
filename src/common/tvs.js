@@ -1,7 +1,6 @@
 import * as rx from './rx.core'
 import * as dom from '../dom'
 import { select } from 'd3-selection'
-import { appInit } from '../termdb/app'
 import * as client from '../client'
 import { getCategoricalMethods } from './tvs.categorical'
 import { getConditionMethods } from './tvs.conditional'
@@ -265,37 +264,5 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayTreeMenu = holder => {
-		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		// const one_term_div = self.dom.holder.selectAll('div')
-		// const terms = one_term_div.classed('add_term_btn')
-		// 	? self.termfilter.terms
-		// 	: self.termfilter.terms.filter(t => t.id != term.termId)
-		appInit(null, {
-			holder: self.dom.tip.d,
-			state: {
-				genome: self.genome,
-				dslabel: self.dslabel
-			},
-			tree: {
-				disable_terms: [self.term.id]
-			},
-			modifiers: {
-				//modifier to replace filter by clicking term btn
-				//TODO: add tvs as new filter from '+' button
-				tvs_select: tvs => {
-					self.replaceFilter({ term: tvs })
-				}
-			},
-			app: {
-				callbacks: { 'postInit.test': () => {} }
-			},
-			barchart: {
-				bar_click_override: tvslst => {
-					self.dom.tip.hide()
-					self.opts.callback(tvslst[0])
-				}
-			}
-		})
-	}
+	// optional event handlers
 }
