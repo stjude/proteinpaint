@@ -178,7 +178,7 @@ arg
 			return e.message || e
 		}
 
-		import('./mds.samplescatterplot').then(_ => {
+		await import('./mds.samplescatterplot').then(_ => {
 			_.init(plot_data.mdssamplescatterplot, arg.holder, false)
 		})
 		return
