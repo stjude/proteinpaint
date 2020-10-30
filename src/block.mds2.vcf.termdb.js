@@ -191,6 +191,22 @@ function make_phewas_ui(obj, div, tk) {
 			callback: async f => {
 				obj.termfilter.filter = f
 				await run_phewas(obj)
+			},
+			showTermSrc: ({ holder, clicked_terms, bar_click_override }) => {
+				this.app.appInit(null, {
+					holder,
+					state: {
+						genome: obj.genome.name,
+						dslabel: obj.mds.label,
+						activeCohort: this.state.activeCohort,
+						nav: {
+							header_mode: 'search_only'
+						},
+						termfilter: JSON.parse(JSON.stringify(obj.termfilter))
+					},
+					tree: { disable_terms: clicked_terms },
+					barchart: { bar_click_override }
+				})
 			}
 		}).main(obj.termfilter.filter)
 
