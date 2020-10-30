@@ -68,6 +68,7 @@ get_data()
 finish_setup
 init_dotcolor_legend
 init_plot()
+assign_color4dots
 click_dot
 launch_singlesample
 
@@ -75,6 +76,7 @@ launch_singlesample
 */
 
 const radius = 3
+const radius_tiny = 0.7
 
 export async function init(obj, holder, debugmode) {
 	/*
@@ -179,7 +181,7 @@ async function get_data(obj) {
 		for (const dot of data.dots) {
 			obj.sample2dot.set(dot.sample, dot)
 		}
-		combine_data(obj, data)
+		combine_clientserverdata(obj, data)
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		obj.colorbyattributes = data.colorbyattributes
 		obj.colorbygeneexpression = data.colorbygeneexpression
@@ -235,13 +237,13 @@ async function get_data(obj) {
 	}
 }
 
-function combine_data(obj, data) {
+function combine_clientserverdata(obj, data) {
 	// data is returned by server
 	if (!obj.analysisdata) {
 		obj.dots = data.dots
 		return
 	}
-	if (!obj.analysisdata.str) throw '.analysisdata.str missing'
+	if (!obj.analysisdata.str) throw '.analysisdata.str missing while trying to combine client/server data'
 
 	const analysis = new Map() // only for server-hosted samples
 	// k: sample id, v: {x,y}
@@ -287,25 +289,17 @@ function finish_setup(obj) {
 			if (!a2) throw 'unknown key from .colorbyattributes: ' + a.key
 			a.label = a2.label
 			a.values = a2.values
-		}
-		for (const attr of obj.colorbyattributes) {
-			attr.colorfunc = scaleOrdinal(schemeCategory10)
-			if (attr.values) {
-				/*
-				provided by dataset config
-				{ value: {color} }
-				convert to map
-				*/
-				const values = new Map()
-				for (const value in attr.values) {
-					const v = attr.values[value]
-					v.count = 0
-					if (!v.color) v.color = attr.colorfunc(value)
-					values.set(value, v)
+			if (!a.values) {
+				a.values = {}
+				for (const d of obj.dots) {
+					const v = d.s[a.key]
+					if (v == undefined || v == null) continue
+					a.values[v] = {}
 				}
-				attr.values = values
-			} else {
-				attr.values = new Map()
+			}
+			const cf = scaleOrdinal(schemeCategory10)
+			for (const k in a.values) {
+				if (!a.values[k].color) a.values[k].color = cf(k)
 			}
 		}
 	}
@@ -315,11 +309,26 @@ function finish_setup(obj) {
 		if (!obj.sample_attributes) throw '.sample_attributes is missing when .attr_levels is defined'
 		for (const l of obj.attr_levels) {
 			if (!l.key) throw '.key missing from one of attr_levels[]'
-			const a = obj.sample_attributes[l.key]
-			if (!a) throw 'unknown key from .attr_levels: ' + l.key
+			const register = obj.sample_attributes[l.key]
+			if (!register) throw '.attr_levels key missing from sample_attributes{}: ' + l.key
+			if (!register.values) {
+				// no predefined list of values given, add them
+				register.values = {}
+				for (const d of obj.dots) {
+					const v = d.s[l.key]
+					if (v == undefined || v == null || register.values[v]) continue
+					register.values[v] = {}
+				}
+				const cf = scaleOrdinal(schemeCategory10)
+				for (const k in register.values) {
+					if (!register.values[k].color) register.values[k].color = cf(k)
+				}
+				// as the values are automatically summed up, let them show in descending order
+				register.orderByCount = true
+			}
 			if (l.label) {
-				const b = obj.sample_attributes[l.label]
-				if (!b) throw 'unknown label from .attr_levels: ' + l.label
+				// do not require label of a level to be registered in sample_attributes
+				// as no color will be associated with a label value
 			}
 		}
 	}
@@ -507,14 +516,18 @@ function assign_color4dots(obj) {
 	let byattr
 
 	if (obj.colorbygeneexpression && obj.colorbygeneexpression.__inuse) {
+	} else if (obj.attr_levels) {
+		byattr = { key: obj.attr_levels[1].key }
+		byattr.values = obj.sample_attributes[byattr.key].values
 	} else if (obj.colorbyattributes) {
-		byattr = obj.colorbyattributes.find(i => i.__inuse) || obj.colorbyattributes[0]
+		byattr = { key: (obj.colorbyattributes.find(i => i.__inuse) || obj.colorbyattributes[0]).key }
+		byattr.values = obj.sample_attributes[byattr.key].values
 	}
 
 	obj.dotselection.transition().attr('fill', d => {
 		if (byattr) {
-			const value = d.s[byattr.key]
-			return byattr.values.get(value).color
+			const v = d.s[byattr.key]
+			return byattr.values[v] ? byattr.values[v].color : 'black'
 		}
 		return '#ccc'
 	})
@@ -547,8 +560,12 @@ function init_dotcolor_legend(obj) {
 	}
 }
 
+/*
+hardcoded 2 levels
+level 1 is not colored
+level 2 is colored and based on sample_attributes[L2key].values{}
+*/
 function legend_attr_levels(obj) {
-	// hardcoded 3 levels
 	const staydiv = obj.legendtable
 		.append('tr')
 		.append('td')
@@ -571,15 +588,17 @@ function legend_attr_levels(obj) {
 			L1.v2c.get(v).label = d.s[L1.label]
 		}
 	}
-	for (const [L1value, L1o] of [...L1.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+	// multiple ways to decide order of L1values
+	for (const L1value of get_itemOrderList(L1, obj)) {
+		const L1o = L1.v2c.get(L1value)
 		const L1div = scrolldiv.append('div').style('margin-top', '20px')
 		L1div.append('div')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
-			.style('margin', '10px')
+			.style('margin-top', '15px')
 
 		const L2 = obj.attr_levels[1]
 		if (L2) {
-			const L2values = obj.colorbyattributes.find(i => i.key == L2.key).values
+			const L2values = obj.sample_attributes[L2.key].values
 			L2.v2c = new Map()
 			L2.unannotated = 0
 			for (const d of L1o.dots) {
@@ -589,7 +608,7 @@ function legend_attr_levels(obj) {
 					continue
 				}
 				if (!L2.v2c.has(v)) {
-					const o = L2values.get(v)
+					const o = L2values[v]
 					o.dots = []
 					L2.v2c.set(v, o)
 				}
@@ -598,7 +617,8 @@ function legend_attr_levels(obj) {
 					L2.v2c.get(v).label = d.s[L2.label]
 				}
 			}
-			for (const [L2value, L2o] of [...L2.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length)) {
+			for (const L2value of get_itemOrderList(L2, obj)) {
+				const L2o = L2.v2c.get(L2value)
 				const cell = L1div.append('div')
 					.style('display', 'inline-block')
 					.style('white-space', 'nowrap')
@@ -607,21 +627,44 @@ function legend_attr_levels(obj) {
 						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
 
 						if (L2o.selected) {
-							// already selected, turn off
+							// already selected, turn off this category in legend
 							L2o.selected = false
 							cell.style('border', '')
-							obj.dotselection.transition().attr('r', radius)
+
+							let alloff = true
+							for (const k in L2values) {
+								if (L2values[k].selected) alloff = false
+							}
+							if (alloff) {
+								// all items are unselected, turn dots to default
+								obj.dotselection.transition().attr('r', radius)
+							} else {
+								// still other items selected, only turn dots of this category to tiny
+								obj.dotselection
+									.filter(d => d.s[L2.key] == L2value)
+									.transition()
+									.attr('r', radius_tiny)
+							}
 							return
 						}
 
 						// not yet, select this one
-						for (const o2 of L2values.values()) {
-							o2.selected = false
-							cell.style('border', '')
+						let alloff = true
+						for (const k in L2values) {
+							if (L2values[k].selected) alloff = false
 						}
 						L2o.selected = true
 						cell.style('border', 'solid 1px #858585')
-						obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : 1))
+						if (alloff) {
+							// none other groups selected so far, turn all the other groups tiny
+							obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : radius_tiny))
+						} else {
+							// some other groups are also highlighted, only turn this group big
+							obj.dotselection
+								.filter(d => d.s[L2.key] == L2value)
+								.transition()
+								.attr('r', radius)
+						}
 					})
 				cell
 					.append('div')
@@ -654,6 +697,30 @@ function legend_attr_levels(obj) {
 			.style('resize', 'vertical')
 	}
 }
+
+/*
+level{}
+.key
+.v2c Map
+	k: value
+	v: {dots[]}
+
+will reference sample_attributes[key].values{} for outputting ordered list of keys
+*/
+function get_itemOrderList(level, obj) {
+	const register = obj.sample_attributes[level.key]
+	if (!register.values || register.orderByCount) {
+		// no predefined values
+		return [...level.v2c].sort((i, j) => j[1].dots.length - i[1].dots.length).map(i => i[0])
+	}
+	// by predefined order in register.values{}
+	const lst = []
+	for (const k in register.values) {
+		if (level.v2c.has(k)) lst.push(k)
+	}
+	return lst
+}
+
 function legend_flatlist(obj) {
 	if (!obj.colorbyattributes.find(i => i.__inuse)) obj.colorbyattributes[0].__inuse = true
 
@@ -683,20 +750,19 @@ function legend_flatlist(obj) {
 		}
 
 		for (const d of obj.dots) {
-			const value = d.s[attr.key]
-			const color = attr.colorfunc(value)
-			if (!attr.values.has(value)) {
-				attr.values.set(value, { count: 1, color: color })
-			}
-			attr.values.get(value).count++
+			const v = d.s[attr.key]
+			if (v == undefined || v == null) continue
+			if (!attr.values[v]) attr.values[v] = { color: 'black' }
+			attr.values[v].count = 1 + (attr.values[v].count || 0)
 		}
 
 		// legend values
 		const cellholder = tr.append('td')
 
-		for (const [value, o] of attr.values) {
+		for (const value in attr.values) {
 			// for each value
-			if (o.count == 0) continue
+			const o = attr.values[value]
+			if (o.count == 0 || o.count == undefined) continue
 
 			const cell = cellholder
 				.append('div')
@@ -709,18 +775,36 @@ function legend_flatlist(obj) {
 						// already selected, turn off
 						o.selected = false
 						cell.style('border', '')
-						obj.dotselection.transition().attr('r', radius)
+						let alloff = true
+						for (const k in attr.values) {
+							if (attr.values[k].selected) alloff = false
+						}
+						if (alloff) {
+							obj.dotselection.transition().attr('r', radius)
+						} else {
+							obj.dotselection
+								.filter(d => d.s[attr.key] == value)
+								.transition()
+								.attr('r', radius_tiny)
+						}
 						return
 					}
 
 					// not yet, select this one
-					for (const o2 of attr.values.values()) {
-						o2.selected = false
-						cell.style('border', '')
+					let alloff = true
+					for (const k in attr.values) {
+						if (attr.values[k].selected) alloff = false
 					}
 					o.selected = true
 					cell.style('border', 'solid 1px #858585')
-					obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : 0))
+					if (alloff) {
+						obj.dotselection.transition().attr('r', d => (d.s[attr.key] == value ? radius : radius_tiny))
+					} else {
+						obj.dotselection
+							.filter(d => d.s[attr.key] == value)
+							.transition()
+							.attr('r', radius)
+					}
 				})
 			cell
 				.append('div')
@@ -743,6 +827,7 @@ function click_dot(dot, obj) {
 	/*
 	clicking a dot to launch browser view of tracks from this sample
 	*/
+	if (!obj.dslabel) return
 
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text(dot.sample)
