@@ -712,7 +712,7 @@ function configPanel(tk, block) {
 	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
 	  <li><b>Base qualities</b> are rendered when 1 bp is wider than 2 pixels. See color scale below. When base quality is not used or is unavailable, full colors are used.</li>
 	  <li><b>Sequences</b> from mismatch and softclip will be printed when 1 bp is wider than 7 pixels.</li>
-	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that's in use.</li>
+	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that is in use.</li>
 	  <li><b>Deletions</b> are gaps joined by red horizontal lines.</li>
 	  <li><b>Split reads</b> and splice junctions are indicated by solid gray lines.</li>
 	  <li><b>Read pairs</b> are joined by dashed gray lines.</li>
@@ -729,6 +729,10 @@ get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
 */
+	//        console.log("tk:",tk.readpane.body)
+	//        console.log("block:",block)
+	//        console.log("box:",box)
+	//	console.log("tmp:",tmp)
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
@@ -760,6 +764,7 @@ if is pair mode, is the template
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
+	console.log('data.lst:', data.lst)
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -831,33 +836,29 @@ function mayshow_blatbutton(read, div, tk, block) {
 
 	const blatdiv = div.append('div')
 }
-function show_blatresult(hits, div, tk, block) {
-	const table = div.append('table')
-	const tr = table
-		.append('tr')
-		.style('opacity', 0.5)
-		.style('font-size', '.8em')
-	tr.append('td').text('Score')
-	tr.append('td').text('QStart')
-	tr.append('td').text('QEnd')
-	tr.append('td').text('QSize')
-	tr.append('td').text('Identity')
-	tr.append('td').text('Chr')
-	tr.append('td').text('Strand')
-	tr.append('td').text('Start')
-	tr.append('td').text('Stop')
-	for (const h of hits) {
-		const tr = table.append('tr')
-		tr.append('td').text(h.match)
-		tr.append('td').text(h.qstart)
-		tr.append('td').text(h.qstop)
-		tr.append('td').text(h.qstop - h.qstart)
-		tr.append('td').text('?')
-		tr.append('td').text(h.chr)
-		tr.append('td').text(h.strand)
-		tr.append('td').text(h.start)
-		tr.append('td').text(h.stop)
+function show_blatresult3(hits, div, tk, block, lst) {
+	tk.readpane.body.selectAll('*').remove()
+
+	for (const r of lst) {
+		// {seq, alignment (html), info (html) }
+		const div = tk.readpane.body.append('div').style('margin', '20px')
+		div.append('div').html(r.alignment)
 	}
+
+	const width = 200
+	const height = 200
+	const svg = div
+		.append('svg')
+		.attr('width', width)
+		.attr('height', height)
+	svg
+		.append('line')
+		.attr('x1', 100)
+		.attr('y1', 100)
+		.attr('x2', 200)
+		.attr('y2', 200)
+		.style('stroke', 'rgb(255,0,0)')
+		.style('stroke-width', 2)
 }
 
 function show_blatresult2(hits, div, tk, block) {
@@ -874,7 +875,16 @@ function show_blatresult2(hits, div, tk, block) {
 	tr.append('td').text('RStrand')
 	tr.append('td').text('RStart')
 	tr.append('td').text('RAlignLen')
+	let repeat_file_present = 0
+	for (const track of block.genome.tracks) {
+		if (track['name'] == 'RepeatMasker') {
+			tr.append('td').text('InRepeatRegion')
+			repeat_file_present = 1
+			break
+		}
+	}
 	tr.append('td').text('SeqAlign')
+
 	let soft_clipped_region = ''
 	let non_soft_clipped_region = ''
 	for (const h of hits) {
@@ -887,6 +897,11 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_strand)
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
+		if (repeat_file_present == 1) {
+			console.log('h.ref_in_repeat:', h.ref_in_repeat)
+			tr.append('td').text(h.ref_in_repeat)
+		}
+
 		if (h.query_insoftclip == true) {
 			if (h.query_soft_boundaries == '-1') {
 				// Alignment completely inside softclip
@@ -943,6 +958,7 @@ function show_blatresult2(hits, div, tk, block) {
 		}
 
 		tr = table.append('tr')
+		tr.append('td').text('')
 		tr.append('td').text('')
 		tr.append('td').text('')
 		tr.append('td').text('')

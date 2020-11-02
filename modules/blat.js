@@ -3,6 +3,8 @@ const fs = require('fs'),
 	spawn = require('child_process').spawn,
 	utils = require('./utils'),
 	app = require('../app')
+const { exec } = require('child_process')
+const execSync = require('child_process').execSync
 
 const serverconfig = utils.serverconfig
 const gfClient = serverconfig.gfClient || 'gfClient'
@@ -62,55 +64,6 @@ function server_stat(name, g) {
 	})
 }
 
-async function do_blat(genome, seq) {
-	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
-	const outfile = await run_blat(genome, infile)
-	const outputstr = (await utils.read_file(outfile)).trim()
-	fs.unlink(outfile, () => {})
-	fs.unlink(infile, () => {})
-	if (outputstr == '') return { nohit: 1 }
-	const lines = outputstr.split('\n')
-	const hits = []
-	for (const line of lines) {
-		const l = line.split('\t')
-		const h = {
-			match: Number(l[0]),
-			mismatch: Number(l[1]),
-			repmatch: Number(l[2]),
-			ncount: Number(l[3]),
-			qnuminsert: Number(l[4]),
-			qbaseinsert: Number(l[5]),
-			tnuminsert: Number(l[6]),
-			tbaseinsert: Number(l[7]),
-			strand: l[8],
-			qstart: Number(l[11]),
-			qstop: Number(l[12]),
-			chr: l[13],
-			start: Number(l[15]),
-			stop: Number(l[16])
-		}
-		const blockcount = Number(l[17])
-		if (blockcount > 1) {
-			// more than 1 block
-			h.lst = []
-			const blocksizes = l[18].split(',').map(Number)
-			const qstarts = l[19].split(',').map(Number)
-			const tstarts = l[20].split(',').map(Number)
-			for (let i = 0; i < blockcount; i++) {
-				h.lst.push({
-					qstart: qstarts[i],
-					qstop: qstarts[i] + blocksizes[i],
-					start: tstarts[i],
-					stop: tstarts[i] + blocksizes[i]
-				})
-			}
-		}
-		hits.push(h)
-	}
-	console.log(hits)
-	return { hits }
-}
-
 async function do_blat2(genome, seq, soft_starts, soft_stops) {
 	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
 	console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
@@ -122,7 +75,6 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 	const lines = outputstr.split('\n')
 	const hits = []
 	let h = {}
-	let temp_seq = ''
 	for (const line of lines) {
 		const l = line.split(' ').filter(function(el) {
 			return el != ''
@@ -161,27 +113,27 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 							parseInt(soft_start) > parseInt(h.query_startpos) &&
 							parseInt(h.query_stoppos) > parseInt(soft_start)
 						) {
-							console.log('Alignment extends onto the left side of the soft-clip')
-							console.log('h.query_alignment:', h.query_alignment)
-							console.log('soft_start:', soft_start)
-							console.log('soft_stop:', soft_stop)
-							console.log('h.query_startpos:', h.query_startpos)
-							console.log('h.query_stoppos:', h.query_stoppos)
+							//console.log('Alignment extends onto the left side of the soft-clip')
+							//console.log('h.query_alignment:', h.query_alignment)
+							//console.log('soft_start:', soft_start)
+							//console.log('soft_stop:', soft_stop)
+							//console.log('h.query_startpos:', h.query_startpos)
+							//console.log('h.query_stoppos:', h.query_stoppos)
 							h.query_insoftclip = true
-							console.log('h.query_insoftclip:', h.query_insoftclip)
+							//console.log('h.query_insoftclip:', h.query_insoftclip)
 							h.query_soft_boundaries = 'right:' + soft_start // Alignment extends onto the left side of the soft-clip
 						} else if (
 							parseInt(soft_stop) > parseInt(h.query_startpos) &&
 							parseInt(h.query_stoppos) > parseInt(soft_stop)
 						) {
-							console.log('Alignment extends onto the right side of the soft-clip')
-							console.log('h.query_alignment:', h.query_alignment)
-							console.log('soft_start:', soft_start)
-							console.log('soft_stop:', soft_stop)
-							console.log('h.query_startpos:', h.query_startpos)
-							console.log('h.query_stoppos:', h.query_stoppos)
+							//console.log('Alignment extends onto the right side of the soft-clip')
+							//console.log('h.query_alignment:', h.query_alignment)
+							//console.log('soft_start:', soft_start)
+							//console.log('soft_stop:', soft_stop)
+							//console.log('h.query_startpos:', h.query_startpos)
+							//console.log('h.query_stoppos:', h.query_stoppos)
 							h.query_insoftclip = true
-							console.log('h.query_insoftclip:', h.query_insoftclip)
+							//console.log('h.query_insoftclip:', h.query_insoftclip)
 							h.query_soft_boundaries = 'left:' + soft_stop //Alignment extends onto the right side of the soft clip
 						} else {
 							//h.query_soft_boundaries="-1"
@@ -189,7 +141,6 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 						}
 					}
 				}
-				//console.log("h:",h)
 				hits.push(h)
 			} else {
 				h.ref_chr = l[1]
@@ -198,11 +149,124 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_strand = l[4]
 				h.ref_totallen = l[5] // This is actually the chromosome length
 				h.ref_alignment = l[6]
+				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
+				if (genome.repeatmasker) {
+					const outfile = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
+					const outputstr = (await utils.read_file(outfile)).trim()
+					fs.unlink(outfile, () => {})
+					if (outputstr.length == 0) {
+						h.ref_in_repeat = 'N'
+					} else {
+						h.ref_in_repeat = 'Y'
+					}
+				}
 			}
 		}
 	}
 	//console.log(hits)
+	// Sorting alignments in descending order of score
+	hits.sort((a, b) => {
+		return b.score - a.score
+	})
 	return { hits }
+}
+
+function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
+	return new Promise((resolve, reject) => {
+		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+		console.log(
+			'touch ' +
+				outfile +
+				' && tabix -p bed ' +
+				genome.repeatmasker.dbfile +
+				' ' +
+				ref_chr +
+				':' +
+				ref_startpos +
+				'-' +
+				ref_stoppos +
+				' >> ' +
+				outfile
+		)
+		exec(
+			'touch ' +
+				outfile +
+				' && tabix -p bed ' +
+				genome.repeatmasker.dbfile +
+				' ' +
+				ref_chr +
+				':' +
+				ref_startpos +
+				'-' +
+				ref_stoppos +
+				' >> ' +
+				outfile,
+			(error, stdout, stderr) => {
+				if (stdout) {
+					console.log('stdout:', stdout)
+				}
+
+				if (error) {
+					console.log(`error: ${error.message}`)
+				} else {
+					if (stderr) {
+						console.log(`stderr: ${stderr}`)
+					}
+					resolve(outfile)
+				}
+			}
+		)
+	})
+}
+
+function determine_repeat_in_ref2(genome, ref_chr, ref_startpos, ref_stoppos) {
+	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+	return new Promise((resolve, reject) => {
+		console.log(
+			'tabix -p bed ' +
+				genome.repeatmasker.dbfile +
+				' ' +
+				ref_chr +
+				':' +
+				ref_startpos +
+				'-' +
+				ref_stoppos +
+				' > ' +
+				outfile
+		)
+		//console.log(ref_chr+":"+ref_startpos+"-"+ref_stoppos)
+		const ls = spawn('tabix', [
+			'-p',
+			'bed',
+			genome.repeatmasker.dbfile,
+			//"chr1:9000-10400"
+			//"chrY:59362789-59362997"
+			ref_chr + ':' + ref_startpos + '-' + ref_stoppos,
+			'>',
+			outfile
+		])
+		// "chr1:9000-10400"
+		//    ls.stdout.setEncoding('utf8')
+		//    ls.stdout.on("data", function(data) {
+		//		//Here is where the output goes
+		//		data=data.toString()
+		//		console.log('stdout: ' + data)
+		//	    })
+
+		ls.stderr.on('data', data => {
+			console.log(`stderr: ${data}`)
+		})
+
+		//    ls.on('error', (error) => {
+		//	    console.log(`error: ${error.message}`)
+		//	})
+
+		ls.on('close', code => {
+			console.log(`child process exited with code ${code}`)
+			resolve(outfile)
+		})
+	})
+	//console.log("data:",data)
 }
 
 function run_blat(genome, infile) {
@@ -247,6 +311,7 @@ function run_blat2(genome, infile) {
 			'-minIdentity=0',
 			'-out=maf'
 		])
+		//console.log("ps:",ps)
 		const out2 = []
 		ps.stderr.on('data', i => out2.push(i))
 		ps.on('close', code => {
