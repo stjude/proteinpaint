@@ -194,6 +194,12 @@ async function may_init_vcf(vcftk, genome, ds) {
 
 	if (vcftk.file) {
 		await utils.init_one_vcf(vcftk, genome)
+		// convert vcf string names to integer, per termdb design spec
+		for (const n of vcftk.samples) {
+			const i = Number(n.name)
+			if (!Number.isInteger(i)) throw 'non-integer vcf sample: ' + n.name
+			n.name = i
+		}
 		console.log(
 			vcftk.file +
 				': ' +
