@@ -152,7 +152,9 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
 				if (genome.repeatmasker) {
 					const outfile = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
+					//console.log("outfile:",outfile)
 					const outputstr = (await utils.read_file(outfile)).trim()
+					//console.log("outputstr:",outputstr)
 					fs.unlink(outfile, () => {})
 					if (outputstr.length == 0) {
 						h.ref_in_repeat = 'N'
@@ -174,24 +176,26 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
 	return new Promise((resolve, reject) => {
 		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
-		console.log(
-			'touch ' +
-				outfile +
-				' && tabix -p bed ' +
-				genome.repeatmasker.dbfile +
-				' ' +
-				ref_chr +
-				':' +
-				ref_startpos +
-				'-' +
-				ref_stoppos +
-				' >> ' +
-				outfile
-		)
+		//		console.log(
+		//			'touch ' +
+		//				outfile +
+		//				' && tabix -p bed ' +
+		//				serverconfig.tpmasterdir + "/" + genome.repeatmasker.dbfile +
+		//				' ' +
+		//				ref_chr +
+		//				':' +
+		//				ref_startpos +
+		//				'-' +
+		//				ref_stoppos +
+		//				' >> ' +
+		//				outfile
+		//		)
 		exec(
 			'touch ' +
 				outfile +
 				' && tabix -p bed ' +
+				serverconfig.tpmasterdir +
+				'/' +
 				genome.repeatmasker.dbfile +
 				' ' +
 				ref_chr +
