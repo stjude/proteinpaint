@@ -334,6 +334,7 @@ function finish_setup(obj) {
 }
 
 function init_plot(obj) {
+	const rootholder = obj.scattersvg.node().closest('.sja_root_holder')
 	let minx = obj.dots[0].x,
 		maxx = minx,
 		miny = obj.dots[0].y,
@@ -486,10 +487,7 @@ function init_plot(obj) {
 				})
 		}
 		//circles.attr('r',radius)
-		currBbox = obj.scattersvg
-			.node()
-			.closest('.sja_root_holder')
-			.getBoundingClientRect()
+		currBbox = rootholder.getBoundingClientRect()
 	}
 	resize()
 
@@ -518,10 +516,7 @@ function init_plot(obj) {
 		})
 
 	function resetDimensions() {
-		const bbox = obj.scattersvg
-			.node()
-			.closest('.sja_root_holder')
-			.getBoundingClientRect()
+		const bbox = rootholder.getBoundingClientRect()
 		const w = (width * bbox.width) / currBbox.width
 		width = obj.dimensions.minWidth ? Math.max(obj.dimensions.minWidth, w) : w
 		const h = (height * bbox.height) / currBbox.height
@@ -531,11 +526,12 @@ function init_plot(obj) {
 	}
 
 	let timeout
-	if (obj.dimensions.autoResize)
-		window.onresize = () => {
+	if (obj.dimensions.autoResize) {
+		window.addEventListener('resize', () => {
 			if (timeout) clearTimeout(timeout)
 			timeout = setTimeout(resetDimensions, 50)
-		}
+		})
+	}
 }
 
 function assign_color4dots(obj) {
