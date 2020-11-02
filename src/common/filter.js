@@ -2,7 +2,6 @@ import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
 import * as dom from '../dom'
-import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 
@@ -243,20 +242,26 @@ function setRenderers(self) {
 			.d.append('table')
 			.style('border-collapse', 'collapse')
 
+		const menuOptions = [
+			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
+			{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
+			{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
+			{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
+		]
+
+		// option to add a Replace option in the second row
+		if (self.opts.showTermSrc) {
+			menuOptions.splice(1, 0, {
+				action: 'replace',
+				html: ['', 'Replace', '&rsaquo;'],
+				handler: self.displayTreeMenu,
+				bar_click_override: self.replaceTerm
+			})
+		}
+
 		self.dom.table
 			.selectAll('tr')
-			.data([
-				{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
-				{
-					action: 'replace',
-					html: ['', 'Replace', '&rsaquo;'],
-					handler: self.displayTreeMenu,
-					bar_click_override: self.replaceTerm
-				},
-				{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
-				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
-				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
-			])
+			.data(menuOptions)
 			.enter()
 			.append('tr')
 			.attr('class', 'sja_menuoption')
@@ -739,79 +744,64 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		appInit(null, {
+		self.opts.showTermSrc({
 			holder: self.dom.treeBody,
-			state: {
-				genome: self.genome,
-				dslabel: self.dslabel,
-				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
-				termfilter: {
-					filter: self.rawFilter
-				}
-			},
-			tree: {
-				disable_terms:
-					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
-						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-								.map(d => d.tvs.term.id)
-						: []
-			},
-			barchart: {
-				bar_click_override: tvslst => {
-					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+			clicked_terms:
+				self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
+					? self.activeData.filter.lst
+							.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+							.map(d => d.tvs.term.id)
+					: [],
+			bar_click_override: tvslst => {
+				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 
-					if (!filterUiRoot.lst.length) {
-						if (tvslst.length > 1) filterUiRoot.join = 'and'
-						filterUiRoot.lst.push(...tvslst)
+				if (!filterUiRoot.lst.length) {
+					if (tvslst.length > 1) filterUiRoot.join = 'and'
+					filterUiRoot.lst.push(...tvslst)
+					self.refresh(filterUiRoot)
+				} else if (d != 'or' && d != 'and') {
+					throw 'unhandled new term(s): invalid appender join value'
+				} else {
+					if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
+
+					if (filterUiRoot.join == d) {
+						if (tvslst.length < 2 || filterUiRoot.join == 'and') {
+							filterUiRoot.lst.push(...tvslst)
+						} else {
+							filterUiRoot.push({
+								type: 'tvslst',
+								in: true,
+								join: 'and',
+								lst: tvslst
+							})
+						}
 						self.refresh(filterUiRoot)
-					} else if (d != 'or' && d != 'and') {
-						throw 'unhandled new term(s): invalid appender join value'
+					} else if (d == 'and' || tvslst.length < 2) {
+						delete filterUiRoot.tag
+						self.refresh({
+							tag: 'filterUiRoot',
+							type: 'tvslst',
+							in: true,
+							join: d,
+							lst: [filterUiRoot, ...tvslst]
+						})
 					} else {
-						if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
-
-						if (filterUiRoot.join == d) {
-							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-								filterUiRoot.lst.push(...tvslst)
-							} else {
-								filterUiRoot.push({
+						delete filterUiRoot.tag
+						self.refresh({
+							tag: 'filterUiRoot',
+							type: 'tvslst',
+							in: true,
+							join: 'or',
+							lst: [
+								filterUiRoot,
+								{
 									type: 'tvslst',
 									in: true,
 									join: 'and',
 									lst: tvslst
-								})
-							}
-							self.refresh(filterUiRoot)
-						} else if (d == 'and' || tvslst.length < 2) {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: d,
-								lst: [filterUiRoot, ...tvslst]
-							})
-						} else {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: 'or',
-								lst: [
-									filterUiRoot,
-									{
-										type: 'tvslst',
-										in: true,
-										join: 'and',
-										lst: tvslst
-									}
-								]
-							})
-						}
+								}
+							]
+						})
 					}
 				}
 			}
@@ -832,40 +822,23 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
-
-		appInit(null, {
+		self.opts.showTermSrc({
 			holder: self.dom.treeBody,
-			state: {
-				genome: self.genome,
-				dslabel: self.dslabel,
-				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
-				termfilter: {
-					filter: self.rawFilter
-				}
-			},
-			tree: {
-				disable_terms:
-					self.activeData &&
-					self.activeData.filter &&
-					self.activeData.filter.lst &&
-					self.activeData.filter.join == 'and'
-						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-								.map(d => d.tvs.term.id)
-						: [self.activeData.item.tvs.term.id]
-			},
-			barchart: {
-				bar_click_override: d.bar_click_override
-					? d.bar_click_override
-					: !filter.join ||
-					  !filter.lst.length ||
-					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-					? self.appendTerm
-					: self.subnestFilter
-			}
+
+			clicked_terms:
+				self.activeData && self.activeData.filter && self.activeData.filter.lst && self.activeData.filter.join == 'and'
+					? self.activeData.filter.lst
+							.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+							.map(d => d.tvs.term.id)
+					: [self.activeData.item.tvs.term.id],
+
+			bar_click_override: d.bar_click_override
+				? d.bar_click_override
+				: !filter.join ||
+				  !filter.lst.length ||
+				  (self.activeData.elem && self.activeData.elem.className.includes('join'))
+				? self.appendTerm
+				: self.subnestFilter
 		})
 	}
 

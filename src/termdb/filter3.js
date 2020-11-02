@@ -53,10 +53,26 @@ class TdbFilter {
 			debug: this.app.opts.debug,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
+			showTermSrc: ({ holder, clicked_terms, bar_click_override }) => {
+				this.app.appInit(null, {
+					holder,
+					state: {
+						genome: this.state.genome,
+						dslabel: this.state.dslabel,
+						activeCohort: this.state.activeCohort,
+						nav: {
+							header_mode: 'search_only'
+						},
+						termfilter: JSON.parse(JSON.stringify(this.state.termfilter.filter))
+					},
+					tree: { disable_terms: clicked_terms },
+					barchart: { bar_click_override }
+				})
+			},
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter: filter
+					filter
 				})
 			}
 		})

@@ -20,6 +20,7 @@ class TdbApp {
 	constructor(coordApp, opts) {
 		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
+		this.appInit = exports.appInit
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
