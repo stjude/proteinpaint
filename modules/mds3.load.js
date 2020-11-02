@@ -105,8 +105,10 @@ function init_result(q, ds) {
 function finalize_result(q, ds, result) {
 	if (result.skewer) {
 		for (const m of result.skewer) {
-			m.occurrence = m.samples.length
-			delete m.samples
+			if (m.samples) {
+				m.occurrence = m.samples.length
+				delete m.samples
+			}
 		}
 	}
 	/*

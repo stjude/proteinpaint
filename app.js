@@ -7,6 +7,7 @@ const ch_dbtable = new Map() // k: db path, v: db stuff
 const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
+const util = require('util')
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -60,7 +61,8 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	variant2samples_closure = require('./modules/variant2samples')
+	variant2samples_closure = require('./modules/variant2samples'),
+	do_hicstat = require('./modules/hicstat').do_hicstat
 
 /*
 valuable globals
@@ -3201,29 +3203,12 @@ async function handle_hicstat(req, res) {
 		if (!isurl) {
 			await utils.file_is_readable(file)
 		}
-		const out = await do_hicstat(file)
+		const out = await do_hicstat(file, isurl)
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
-}
-
-function do_hicstat(file) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(hicstat[0], [hicstat[1], file])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const e = out2.join('').trim()
-			if (e) {
-				reject(e)
-			}
-			resolve(out.join('').trim())
-		})
-	})
 }
 
 function handle_hicdata(req, res) {

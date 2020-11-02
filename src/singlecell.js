@@ -590,6 +590,7 @@ function update_controlpanel(obj, data) {
 		}
 		boxplot_cat_select.on('change', () => {
 			const gene = obj.gene_expression.genes[obj.use_gene_index]
+			const cat = obj.cells.categories[parseInt(boxplot_cat_select.node().selectedIndex) - 1]
 			const arg = {
 				genome: obj.genome.name,
 				getgeneboxplot: {
@@ -601,7 +602,11 @@ function update_controlpanel(obj, data) {
 					cellfile: obj.cells.file,
 					barcodecolumnidx: obj.cells.barcodecolumnidx,
 					categorycolumnidx: parseInt(boxplot_cat_select.node().value),
-					delimiter: obj.cells.delimiter || '\t'
+					delimiter: obj.cells.delimiter || '\t',
+					category_customorder: cat.customorder && cat.values ? true : false,
+					category_autoorder: !cat.customorder ? true : false,
+					cat_values: cat.values,
+					values_count: cat.values_count
 				}
 			}
 			client.dofetch('singlecell', arg).then(data => {
@@ -836,10 +841,11 @@ function make_settings(obj) {
 	}
 
 	function toggle_background() {
-		const isblack = inputblack.property('checked')
-		const iswhite = inputwhite.property('checked')
-		obj.scene.background = new THREE.Color(isblack ? 0x000000 : 0xffffff)
+		const isblack = obj.background_color == 'black'
+		obj.scene.background = new THREE.Color(isblack ? 0xffffff : 0x000000)
 		obj.use_background_color = isblack ? 0 : 1
+		obj.background_color = isblack ? 'white' : 'black'
+		pcd_pipeline(obj)
 	}
 	// point size change
 	const point_size_div = obj.settings.d
@@ -1183,7 +1189,11 @@ function make_plot(data, obj, colidx) {
 				cellfile: obj.cells.file,
 				barcodecolumnidx: obj.cells.barcodecolumnidx,
 				categorycolumnidx: parseInt(colidx),
-				delimiter: obj.cells.delimiter || '\t'
+				delimiter: obj.cells.delimiter || '\t',
+				category_customorder: cat.customorder && cat.values ? true : false,
+				category_autoorder: !cat.customorder ? true : false,
+				cat_values: cat.values,
+				values_count: cat.values_count
 			}
 		}
 
