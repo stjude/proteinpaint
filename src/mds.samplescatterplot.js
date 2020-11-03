@@ -4,6 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 
 /*
 obj:
@@ -139,6 +140,7 @@ export async function init(obj, holder, debugmode) {
 
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
+	obj.scattersvg_buttons = scatterdiv.append('div')
 
 	try {
 		await get_data(obj)
@@ -347,8 +349,8 @@ function init_plot(obj) {
 		maxy = Math.max(maxy, d.y)
 	}
 
-	const xscale = scaleLinear().domain([minx, maxx])
-	const yscale = scaleLinear().domain([miny, maxy])
+	const xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
+	const yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
 
 	if (!obj.dimensions) obj.dimensions = {}
 	let currBbox
@@ -366,7 +368,7 @@ function init_plot(obj) {
 
 	//const xaxisg = svg.append('g')
 	//const yaxisg = svg.append('g')
-	const dotg = svg.append('g').attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')')
+	const dotg = (obj.dotg = svg.append('g').attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')'))
 
 	const dots = dotg
 		.selectAll()
@@ -531,6 +533,134 @@ function init_plot(obj) {
 		window.addEventListener('resize', () => {
 			if (timeout) clearTimeout(timeout)
 			timeout = setTimeout(resetDimensions, 50)
+		})
+	}
+
+	makeConfigPanel(obj)
+}
+
+function makeConfigPanel(obj) {
+	const svg = obj.scattersvg
+
+	// settings buttons
+	obj.scattersvg_buttons
+		.style('position', 'absolute')
+		.style('right', '0px')
+		.style('top', '0px')
+
+	// zoom button
+	obj.zoom_active = false
+	const zoom_btn = obj.scattersvg_buttons
+		.append('div')
+		.style('padding', '2px 5px')
+		.style('border', '1px solid #999')
+		.style('color', '#999')
+		.style('background-color', '#fff')
+		.style('cursor', 'pointer')
+		.style('font-weight', '300')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.text('Pan / Zoom')
+		.on('click', zoomToggle)
+
+	const zoom_menu = obj.scattersvg_buttons
+		.append('div')
+		.style('margin-top', '2px')
+		.style('padding', '2px 5px')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.style('display', obj.zoom_active ? 'block' : 'none')
+		.style('background-color', '#ddd')
+
+	const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+	zoom_inout_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px 4px')
+		.style('font-size', '80%')
+		.text('Zoom')
+
+	zoom_inout_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '70%')
+		.html('<p style="margin:1px;">Mouse wheel </br>or use these buttons</p>')
+
+	const zoom_in_btn = zoom_inout_div
+		.append('button')
+		.style('margin', '1px')
+		.style('padding', '2px 7px')
+		.text('+')
+
+	const zoom_out_btn = zoom_inout_div
+		.append('button')
+		.style('margin', '1px')
+		.style('padding', '2px 8px')
+		.text('-')
+
+	const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+	pan_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '80%')
+		.text('Pan')
+
+	pan_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '70%')
+		.html('<p style="margin:1px;">Mouse click </br>+ Mouse move</p>')
+
+	const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+	const reset_btn = reset_div
+		.append('button')
+		.style('margin', '1px')
+		.style('padding', '2px 8px')
+		.text('Reset')
+
+	function zoomToggle() {
+		obj.zoom_active = obj.zoom_active ? false : true
+
+		zoom_btn
+			.style('border', obj.zoom_active ? '2px solid #000' : '1px solid #999')
+			.style('color', obj.zoom_active ? '#000' : '#999')
+			.style('background-color', obj.zoom_active ? '#eee' : '#fff')
+			.style('font-weight', obj.zoom_active ? '400' : '300')
+
+		zoom_menu.style('display', obj.zoom_active ? 'block' : 'none')
+
+		const zoom = d3zoom()
+			.scaleExtent([1, 5])
+			.on('zoom', obj.zoom_active ? zoomed : null)
+
+		function zoomed() {
+			const new_xScale = d3event.transform.rescaleX(obj.xscale)
+			const new_yScale = d3event.transform.rescaleY(obj.yscale)
+			const dots = obj.dotg.selectAll('g')
+			dots.attr('transform', d => 'translate(' + new_xScale(d.x) + ',' + new_yScale(d.y) + ')')
+		}
+
+		svg.call(zoom)
+
+		zoom_in_btn.on('click', () => {
+			zoom.scaleBy(svg.transition().duration(750), 1.5)
+		})
+
+		zoom_out_btn.on('click', () => {
+			zoom.scaleBy(svg.transition().duration(750), 0.5)
+		})
+
+		reset_btn.on('click', () => {
+			svg
+				.transition()
+				.duration(750)
+				.call(zoom.transform, zoomIdentity)
 		})
 	}
 }
