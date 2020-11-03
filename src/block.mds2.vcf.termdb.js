@@ -4,7 +4,7 @@ import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { event as d3event } from 'd3-selection'
 import { filterInit } from './common/filter'
-import { appInit } from './termdb/app'
+import { appInit, showTermSrc } from './termdb/app'
 
 /*
 obj{}
@@ -192,7 +192,7 @@ function make_phewas_ui(obj, div, tk) {
 				obj.termfilter.filter = f
 				await run_phewas(obj)
 			},
-			termSrc: { type: 'termdb', appInit }
+			showTermSrc
 		}).main(obj.termfilter.filter)
 
 		obj.dom.filter_says = obj.dom.row_filter.append('div').style('display', 'inline-block')

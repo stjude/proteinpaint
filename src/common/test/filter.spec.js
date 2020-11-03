@@ -1,7 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const { filterInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
-const { appInit } = require('../../termdb/app')
+const { showTermSrc } = require('../../termdb/app')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -43,7 +43,6 @@ function getOpts(_opts = {}) {
 	const dslabel = 'SJLife'
 
 	opts.filter = filterInit({
-		appInit,
 		btn: holder.append('div'),
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
@@ -53,7 +52,7 @@ function getOpts(_opts = {}) {
 		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback,
-		termSrc: { type: 'termdb', show: appInit }
+		showTermSrc
 	})
 
 	return opts

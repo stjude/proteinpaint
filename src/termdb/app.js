@@ -20,7 +20,6 @@ class TdbApp {
 	constructor(coordApp, opts) {
 		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
-		this.appInit = exports.appInit
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
@@ -110,4 +109,21 @@ function setInteractivity(self) {
 			}
 		}
 	}
+}
+
+export function showTermSrc({ holder, genome, dslabel, activeCohort, filter, clicked_terms, select_callback }) {
+	exports.appInit(null, {
+		holder,
+		state: {
+			genome,
+			dslabel,
+			activeCohort,
+			nav: {
+				header_mode: 'search_only'
+			},
+			termfilter: { filter }
+		},
+		tree: { disable_terms: clicked_terms },
+		barchart: { bar_click_override: select_callback }
+	})
 }

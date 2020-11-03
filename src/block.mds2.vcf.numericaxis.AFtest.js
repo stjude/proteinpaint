@@ -3,7 +3,7 @@ import * as client from './client'
 import * as dom from './dom'
 import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
-import { appInit } from './termdb/app'
+import { appInit, showTermSrc } from './termdb/app'
 
 /*
 
@@ -494,7 +494,7 @@ function show_group_termdb(group, tk, block) {
 				group.filter = f
 				await tk.load()
 			},
-			termSrc: { type: 'termdb', appInit }
+			showTermSrc
 		})
 	}
 	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async

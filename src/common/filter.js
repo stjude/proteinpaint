@@ -250,7 +250,7 @@ function setRenderers(self) {
 		]
 
 		// option to add a Replace option in the second row
-		if (self.opts.termSrc) {
+		if (self.opts.showTermSrc) {
 			menuOptions.splice(1, 0, {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
@@ -744,89 +744,75 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		if (self.opts.termSrc) {
-			console.log(747, self.opts.termSrc)
-			if (self.opts.termSrc.type == 'termdb') {
-				self.opts.termSrc.show(null, {
-					holder: self.dom.termSrcDiv,
-					state: {
-						genome: self.genome,
-						dslabel: self.dslabel,
-						activeCohort: self.activeCohort,
-						nav: {
-							header_mode: 'search_only'
-						},
-						termfilter: {
-							filter: self.rawFilter
-						}
-					},
-					tree: {
-						disable_terms:
-							self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
-								? self.activeData.filter.lst
-										.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-										.map(d => d.tvs.term.id)
-								: []
-					},
-					barchart: {
-						bar_click_override: tvslst => {
-							const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		if (self.opts.showTermSrc) {
+			self.opts.showTermSrc({
+				holder: self.dom.termSrcDiv,
+				genome: self.genome,
+				dslabel: self.dslabel,
+				activeCohort: self.activeCohort,
+				filter: JSON.parse(self.rawCopy),
+				// clicked_terms will typically be used to disable term selection
+				clicked_terms:
+					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
+						? self.activeData.filter.lst
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.map(d => d.tvs.term.id)
+						: [],
+				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
+				select_callback: tvslst => {
+					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 
-							if (!filterUiRoot.lst.length) {
-								if (tvslst.length > 1) filterUiRoot.join = 'and'
+					if (!filterUiRoot.lst.length) {
+						if (tvslst.length > 1) filterUiRoot.join = 'and'
+						filterUiRoot.lst.push(...tvslst)
+						self.refresh(filterUiRoot)
+					} else if (d != 'or' && d != 'and') {
+						throw 'unhandled new term(s): invalid appender join value'
+					} else {
+						if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
+
+						if (filterUiRoot.join == d) {
+							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
 								filterUiRoot.lst.push(...tvslst)
-								self.refresh(filterUiRoot)
-							} else if (d != 'or' && d != 'and') {
-								throw 'unhandled new term(s): invalid appender join value'
 							} else {
-								if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
-
-								if (filterUiRoot.join == d) {
-									if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-										filterUiRoot.lst.push(...tvslst)
-									} else {
-										filterUiRoot.push({
-											type: 'tvslst',
-											in: true,
-											join: 'and',
-											lst: tvslst
-										})
-									}
-									self.refresh(filterUiRoot)
-								} else if (d == 'and' || tvslst.length < 2) {
-									delete filterUiRoot.tag
-									self.refresh({
-										tag: 'filterUiRoot',
-										type: 'tvslst',
-										in: true,
-										join: d,
-										lst: [filterUiRoot, ...tvslst]
-									})
-								} else {
-									delete filterUiRoot.tag
-									self.refresh({
-										tag: 'filterUiRoot',
-										type: 'tvslst',
-										in: true,
-										join: 'or',
-										lst: [
-											filterUiRoot,
-											{
-												type: 'tvslst',
-												in: true,
-												join: 'and',
-												lst: tvslst
-											}
-										]
-									})
-								}
+								filterUiRoot.push({
+									type: 'tvslst',
+									in: true,
+									join: 'and',
+									lst: tvslst
+								})
 							}
+							self.refresh(filterUiRoot)
+						} else if (d == 'and' || tvslst.length < 2) {
+							delete filterUiRoot.tag
+							self.refresh({
+								tag: 'filterUiRoot',
+								type: 'tvslst',
+								in: true,
+								join: d,
+								lst: [filterUiRoot, ...tvslst]
+							})
+						} else {
+							delete filterUiRoot.tag
+							self.refresh({
+								tag: 'filterUiRoot',
+								type: 'tvslst',
+								in: true,
+								join: 'or',
+								lst: [
+									filterUiRoot,
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: tvslst
+									}
+								]
+							})
 						}
 					}
-				})
-			} else {
-				throw 'unsupported filter.opts.termSrc.type'
-			}
+				}
+			})
 		}
 	}
 
@@ -845,38 +831,27 @@ function setInteractivity(self) {
 		}
 		const filter = self.activeData.filter
 
-		if (self.opts.termSrc) {
-			if (self.opts.termSrc.type == 'termdb') {
-				self.opts.termSrc.show(null, {
-					holder: self.dom.termSrcDiv,
-					state: {
-						genome: self.genome,
-						dslabel: self.dslabel,
-						activeCohort: self.activeCohort,
-						nav: {
-							header_mode: 'search_only'
-						},
-						termfilter: {
-							filter: self.rawFilter
-						}
-					},
-					tree: {
-						disable_terms:
-							filter && filter.lst && filter.join == 'and'
-								? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
-								: [self.activeData.item.tvs.term.id]
-					},
-					barchart: {
-						bar_click_override: d.bar_click_override
-							? d.bar_click_override
-							: !filter.join ||
-							  !filter.lst.length ||
-							  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-							? self.appendTerm
-							: self.subnestFilter
-					}
-				})
-			}
+		if (self.opts.showTermSrc) {
+			self.opts.showTermSrc({
+				holder: self.dom.termSrcDiv,
+				genome: self.genome,
+				dslabel: self.dslabel,
+				activeCohort: self.activeCohort,
+				filter: JSON.parse(self.rawCopy),
+				// clicked_terms will typically be used to disable term selection
+				clicked_terms:
+					filter && filter.lst && filter.join == 'and'
+						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
+						: [self.activeData.item.tvs.term.id],
+				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
+				select_callback: d.bar_click_override
+					? d.bar_click_override
+					: !filter.join ||
+					  !filter.lst.length ||
+					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
+					? self.appendTerm
+					: self.subnestFilter
+			})
 		}
 	}
 
