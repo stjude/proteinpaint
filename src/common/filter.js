@@ -43,7 +43,7 @@ class Filter {
 				padding: '5px',
 				offsetX: 20,
 				offsetY: -34,
-				clearSelector: '.sja_tree_tip_body'
+				clearSelector: '.sja_term_src_body'
 			})
 		}
 		this.durations = { exit: 500 }
@@ -250,7 +250,7 @@ function setRenderers(self) {
 		]
 
 		// option to add a Replace option in the second row
-		if (self.opts.showTermSrc) {
+		if (self.opts.termSrc) {
 			menuOptions.splice(1, 0, {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
@@ -280,7 +280,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_tree_tip_head')
 			.style('padding', '3px')
-		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
+		self.dom.termSrcDiv = self.dom.treeTip.d.append('div').attr('class', 'sja_term_src_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
 		const isNotLabels = self.dom.treeHead
@@ -744,68 +744,90 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		self.opts.showTermSrc({
-			holder: self.dom.treeBody,
-			clicked_terms:
-				self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
-					? self.activeData.filter.lst
-							.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-							.map(d => d.tvs.term.id)
-					: [],
-			bar_click_override: tvslst => {
-				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-
-				if (!filterUiRoot.lst.length) {
-					if (tvslst.length > 1) filterUiRoot.join = 'and'
-					filterUiRoot.lst.push(...tvslst)
-					self.refresh(filterUiRoot)
-				} else if (d != 'or' && d != 'and') {
-					throw 'unhandled new term(s): invalid appender join value'
-				} else {
-					if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
-
-					if (filterUiRoot.join == d) {
-						if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-							filterUiRoot.lst.push(...tvslst)
-						} else {
-							filterUiRoot.push({
-								type: 'tvslst',
-								in: true,
-								join: 'and',
-								lst: tvslst
-							})
+		if (self.opts.termSrc) {
+			console.log(747, self.opts.termSrc)
+			if (self.opts.termSrc.type == 'termdb') {
+				self.opts.termSrc.show(null, {
+					holder: self.dom.termSrcDiv,
+					state: {
+						genome: self.genome,
+						dslabel: self.dslabel,
+						activeCohort: self.activeCohort,
+						nav: {
+							header_mode: 'search_only'
+						},
+						termfilter: {
+							filter: self.rawFilter
 						}
-						self.refresh(filterUiRoot)
-					} else if (d == 'and' || tvslst.length < 2) {
-						delete filterUiRoot.tag
-						self.refresh({
-							tag: 'filterUiRoot',
-							type: 'tvslst',
-							in: true,
-							join: d,
-							lst: [filterUiRoot, ...tvslst]
-						})
-					} else {
-						delete filterUiRoot.tag
-						self.refresh({
-							tag: 'filterUiRoot',
-							type: 'tvslst',
-							in: true,
-							join: 'or',
-							lst: [
-								filterUiRoot,
-								{
-									type: 'tvslst',
-									in: true,
-									join: 'and',
-									lst: tvslst
+					},
+					tree: {
+						disable_terms:
+							self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
+								? self.activeData.filter.lst
+										.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+										.map(d => d.tvs.term.id)
+								: []
+					},
+					barchart: {
+						bar_click_override: tvslst => {
+							const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+
+							if (!filterUiRoot.lst.length) {
+								if (tvslst.length > 1) filterUiRoot.join = 'and'
+								filterUiRoot.lst.push(...tvslst)
+								self.refresh(filterUiRoot)
+							} else if (d != 'or' && d != 'and') {
+								throw 'unhandled new term(s): invalid appender join value'
+							} else {
+								if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
+
+								if (filterUiRoot.join == d) {
+									if (tvslst.length < 2 || filterUiRoot.join == 'and') {
+										filterUiRoot.lst.push(...tvslst)
+									} else {
+										filterUiRoot.push({
+											type: 'tvslst',
+											in: true,
+											join: 'and',
+											lst: tvslst
+										})
+									}
+									self.refresh(filterUiRoot)
+								} else if (d == 'and' || tvslst.length < 2) {
+									delete filterUiRoot.tag
+									self.refresh({
+										tag: 'filterUiRoot',
+										type: 'tvslst',
+										in: true,
+										join: d,
+										lst: [filterUiRoot, ...tvslst]
+									})
+								} else {
+									delete filterUiRoot.tag
+									self.refresh({
+										tag: 'filterUiRoot',
+										type: 'tvslst',
+										in: true,
+										join: 'or',
+										lst: [
+											filterUiRoot,
+											{
+												type: 'tvslst',
+												in: true,
+												join: 'and',
+												lst: tvslst
+											}
+										]
+									})
 								}
-							]
-						})
+							}
+						}
 					}
-				}
+				})
+			} else {
+				throw 'unsupported filter.opts.termSrc.type'
 			}
-		})
+		}
 	}
 
 	// menu to replace a term or add a subnested filter
@@ -822,31 +844,47 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
 		}
 		const filter = self.activeData.filter
-		self.opts.showTermSrc({
-			holder: self.dom.treeBody,
 
-			clicked_terms:
-				self.activeData && self.activeData.filter && self.activeData.filter.lst && self.activeData.filter.join == 'and'
-					? self.activeData.filter.lst
-							.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-							.map(d => d.tvs.term.id)
-					: [self.activeData.item.tvs.term.id],
-
-			bar_click_override: d.bar_click_override
-				? d.bar_click_override
-				: !filter.join ||
-				  !filter.lst.length ||
-				  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-				? self.appendTerm
-				: self.subnestFilter
-		})
+		if (self.opts.termSrc) {
+			if (self.opts.termSrc.type == 'termdb') {
+				self.opts.termSrc.show(null, {
+					holder: self.dom.termSrcDiv,
+					state: {
+						genome: self.genome,
+						dslabel: self.dslabel,
+						activeCohort: self.activeCohort,
+						nav: {
+							header_mode: 'search_only'
+						},
+						termfilter: {
+							filter: self.rawFilter
+						}
+					},
+					tree: {
+						disable_terms:
+							filter && filter.lst && filter.join == 'and'
+								? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
+								: [self.activeData.item.tvs.term.id]
+					},
+					barchart: {
+						bar_click_override: d.bar_click_override
+							? d.bar_click_override
+							: !filter.join ||
+							  !filter.lst.length ||
+							  (self.activeData.elem && self.activeData.elem.className.includes('join'))
+							? self.appendTerm
+							: self.subnestFilter
+					}
+				})
+			}
+		}
 	}
 
 	self.editTerm = function(elem) {
 		select(elem.parentNode)
 			.selectAll('tr')
 			.style('background-color', self.highlightEditRow)
-		const holder = self.dom.treeBody
+		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
 		self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()

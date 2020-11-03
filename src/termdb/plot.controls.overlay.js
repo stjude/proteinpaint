@@ -52,8 +52,32 @@ class Overlay {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: {
-						term2: term2
+					config: { term2 }
+				})
+			},
+			showTermSrc: tip => {
+				appInit(null, {
+					holder: tip.d,
+					state: {
+						genome: this.state.genome,
+						dslabel: this.state.dslabel,
+						activeCohort: 'activeCohort' in this.state ? this.state.activeCohort : -1
+					},
+					tree: {
+						click_term: term => {
+							tip.hide()
+							const data = { id: term.id, term, q: {} }
+							let _term = term
+							if ((term.type == 'integer' || term.type == 'float') && term.bins.less) {
+								// instructed to use bins.less which is present
+								// make a decoy term replacing bins.default with bins.less
+								_term = JSON.parse(JSON.stringify(term))
+								_term.bins.default = _term.bins.less
+							}
+							termsetting_fill_q(data.q, _term)
+							self.opts.callback(data)
+						},
+						disable_terms: self.disable_terms
 					}
 				})
 			}

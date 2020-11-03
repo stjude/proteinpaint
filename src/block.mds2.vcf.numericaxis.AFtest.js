@@ -494,32 +494,7 @@ function show_group_termdb(group, tk, block) {
 				group.filter = f
 				await tk.load()
 			},
-			showTermSrc: ({ holder, clicked_terms, bar_click_override }) => {
-				let activeCohort = -1
-				const cohortFilter = getFilterItemByTag(group.filter, 'cohortFilter')
-				if (cohortFilter && tk.mds.termdb.selectCohort) {
-					const defaultCohort = cohortFilter.tvs.values
-						.map(d => d.key)
-						.sort()
-						.join(',')
-					activeCohort = tk.mds.termdb.selectCohort.values.findIndex(v => v.keys.sort().join(',') === defaultCohort)
-				}
-
-				appInit(null, {
-					holder,
-					state: {
-						genome: block.genome.name,
-						dslabel: tk.dslabel,
-						activeCohort,
-						nav: {
-							header_mode: 'search_only'
-						},
-						termfilter: combine_groupfilter_with_hidden(group.filter, tk)
-					},
-					tree: { disable_terms: clicked_terms },
-					barchart: { bar_click_override }
-				})
-			}
+			termSrc: { type: 'termdb', appInit }
 		})
 	}
 	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async

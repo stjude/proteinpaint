@@ -53,22 +53,7 @@ function getOpts(_opts = {}) {
 		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback,
-		showTermSrc: ({ holder, clicked_terms, bar_click_override }) => {
-			appInit(null, {
-				holder,
-				state: {
-					genome,
-					dslabel,
-					activeCohort: 0,
-					nav: {
-						header_mode: 'search_only'
-					},
-					termfilter: JSON.parse(JSON.stringify(opts.filterData))
-				},
-				tree: { disable_terms: clicked_terms },
-				barchart: { bar_click_override }
-			})
-		}
+		termSrc: { type: 'termdb', show: appInit }
 	})
 
 	return opts
