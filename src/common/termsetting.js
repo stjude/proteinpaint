@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
-import { appInit } from '../termdb/app'
 import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
 import { setNumericMethods } from './termsetting.numeric2'
@@ -249,15 +248,15 @@ function setInteractivity(self) {
 
 	self.showTree = holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		appInit(null, {
-			holder: self.dom.tip.d,
-			state: {
+		if (self.opts.showTermSrc) {
+			self.opts.showTermSrc({
+				holder: self.dom.tip.d,
 				genome: self.genome,
 				dslabel: self.dslabel,
-				activeCohort: 'activeCohort' in self ? self.activeCohort : -1
-			},
-			tree: {
-				click_term: term => {
+				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
+				clicked_terms: self.disable_terms,
+				srctype: 'termsetting',
+				select_callback: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
 					let _term = term
@@ -269,10 +268,9 @@ function setInteractivity(self) {
 					}
 					termsetting_fill_q(data.q, _term)
 					self.opts.callback(data)
-				},
-				disable_terms: self.disable_terms
-			}
-		})
+				}
+			})
+		}
 	}
 
 	self.showMenu = () => {

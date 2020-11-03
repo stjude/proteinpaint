@@ -109,10 +109,21 @@ function setInteractivity(self) {
 			}
 		}
 	}
+
+	self.showTermSrc = showTermSrc
 }
 
-export function showTermSrc({ holder, genome, dslabel, activeCohort, filter, clicked_terms, select_callback }) {
-	exports.appInit(null, {
+export function showTermSrc({
+	srctype,
+	holder,
+	genome,
+	dslabel,
+	activeCohort,
+	filter,
+	clicked_terms,
+	select_callback
+}) {
+	const arg = {
 		holder,
 		state: {
 			genome,
@@ -123,7 +134,18 @@ export function showTermSrc({ holder, genome, dslabel, activeCohort, filter, cli
 			},
 			termfilter: { filter }
 		},
-		tree: { disable_terms: clicked_terms },
-		barchart: { bar_click_override: select_callback }
-	})
+		tree: { disable_terms: clicked_terms }
+	}
+
+	if (srctype == 'termsetting') {
+		arg.tree.click_term = select_callback
+	} else if (srctype == 'tvs') {
+		arg.barchart = {
+			bar_click_override: select_callback
+		}
+	} else {
+		throw 'unsupported srctype value'
+	}
+
+	exports.appInit(null, arg)
 }

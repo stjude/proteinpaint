@@ -2,6 +2,7 @@ import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
+import { showTermSrc } from '../termdb/app'
 
 /*
 options for term2:
@@ -55,32 +56,7 @@ class Overlay {
 					config: { term2 }
 				})
 			},
-			showTermSrc: tip => {
-				appInit(null, {
-					holder: tip.d,
-					state: {
-						genome: this.state.genome,
-						dslabel: this.state.dslabel,
-						activeCohort: 'activeCohort' in this.state ? this.state.activeCohort : -1
-					},
-					tree: {
-						click_term: term => {
-							tip.hide()
-							const data = { id: term.id, term, q: {} }
-							let _term = term
-							if ((term.type == 'integer' || term.type == 'float') && term.bins.less) {
-								// instructed to use bins.less which is present
-								// make a decoy term replacing bins.default with bins.less
-								_term = JSON.parse(JSON.stringify(term))
-								_term.bins.default = _term.bins.less
-							}
-							termsetting_fill_q(data.q, _term)
-							self.opts.callback(data)
-						},
-						disable_terms: self.disable_terms
-					}
-				})
-			}
+			showTermSrc
 		})
 	}
 	getState(appState) {

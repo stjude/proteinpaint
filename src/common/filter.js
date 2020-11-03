@@ -758,6 +758,7 @@ function setInteractivity(self) {
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
 						: [],
+				srctype: 'tvs',
 				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
 				select_callback: tvslst => {
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
@@ -843,6 +844,7 @@ function setInteractivity(self) {
 					filter && filter.lst && filter.join == 'and'
 						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
 						: [self.activeData.item.tvs.term.id],
+				srctype: 'tvs',
 				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
 				select_callback: d.bar_click_override
 					? d.bar_click_override
