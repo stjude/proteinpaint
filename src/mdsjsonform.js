@@ -2,6 +2,7 @@ import { select, transition } from 'd3'
 import { dofetch, dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
 import { gene_searchbox } from './gene'
+import { compose } from 'async'
 // import { check } from 'prettier'
 
 /*
@@ -109,6 +110,9 @@ function make_buttons(form_div, doms) {
 			doms.vcffileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.snvindel.vep.vcf.gz')
 			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
 			doms.isdense_radios.nodes()[1].click()
+			doms.svcnv_radios.nodes()[0].click()
+			doms.vcf_radios.nodes()[0].click()
+			doms.expression_radios.nodes()[0].click()
 			// doms.assaytrack_radios.nodes()[0].click()
 			doms.uidiv_inuse.style('display', 'block')
 			doms.assaytrack_bigwig_textarea.property(
@@ -470,7 +474,7 @@ function make_svcnv_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -481,6 +485,7 @@ function make_svcnv_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.svcnv_radios = inputs
 	doms.svcnv_controls = controls
 	doms.svcnvfileurl = make_svcnv(controls)
 	make_control_panel(controls, doms)
@@ -509,7 +514,7 @@ function make_vcf_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -520,6 +525,7 @@ function make_vcf_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.vcf_radios = inputs
 	doms.vcf_controls = controls
 	doms.vcffileurl = make_vcf(controls)
 }
@@ -548,7 +554,7 @@ function make_expression_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -559,6 +565,7 @@ function make_expression_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.expression_radios = inputs
 	doms.expression_controls = controls
 	doms.expressionfile = make_expression_filepath(controls)
 }
