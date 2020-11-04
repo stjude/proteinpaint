@@ -157,9 +157,12 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 					//console.log("outputstr:",outputstr)
 					fs.unlink(outfile, () => {})
 					if (outputstr.length == 0) {
-						h.ref_in_repeat = 'N'
+						h.ref_in_repeat = '-'
 					} else {
-						h.ref_in_repeat = 'Y'
+						const tabix_lines = outputstr.split('\n')
+						const columns = tabix_lines[0].split('\t') // Only selecting the first line for annotation when query spans two or more different repeats
+						const json_object = JSON.parse(columns[3])
+						h.ref_in_repeat = json_object.category
 					}
 				}
 			}
@@ -176,20 +179,22 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
 	return new Promise((resolve, reject) => {
 		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
-		//		console.log(
-		//			'touch ' +
-		//				outfile +
-		//				' && tabix -p bed ' +
-		//				serverconfig.tpmasterdir + "/" + genome.repeatmasker.dbfile +
-		//				' ' +
-		//				ref_chr +
-		//				':' +
-		//				ref_startpos +
-		//				'-' +
-		//				ref_stoppos +
-		//				' >> ' +
-		//				outfile
-		//		)
+		console.log(
+			'touch ' +
+				outfile +
+				' && tabix -p bed ' +
+				serverconfig.tpmasterdir +
+				'/' +
+				genome.repeatmasker.dbfile +
+				' ' +
+				ref_chr +
+				':' +
+				ref_startpos +
+				'-' +
+				ref_stoppos +
+				' >> ' +
+				outfile
+		)
 		exec(
 			'touch ' +
 				outfile +
