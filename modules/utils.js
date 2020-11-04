@@ -234,7 +234,7 @@ samplefilterset:
 		const [genotype, samplesStr] = line.split('\t')
 		if (!samplesStr) continue
 		if (!genotype_type_set.has(genotype)) throw 'unknown hardcoded genotype label: ' + genotype
-		const samples_original = samplesStr.split(',')
+		const samples_original = samplesStr.split(',').map(d => Number(d))
 		const samplelst = samplefilterset ? samples_original.filter(i => samplefilterset.has(i)) : samples_original
 		for (const sample of samplelst) {
 			sample2gt.set(sample, genotype)
