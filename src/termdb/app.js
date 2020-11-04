@@ -109,4 +109,43 @@ function setInteractivity(self) {
 			}
 		}
 	}
+
+	self.showTermSrc = showTermSrc
+}
+
+export function showTermSrc({
+	srctype,
+	holder,
+	genome,
+	dslabel,
+	activeCohort,
+	filter,
+	clicked_terms,
+	select_callback
+}) {
+	const arg = {
+		holder,
+		state: {
+			genome,
+			dslabel,
+			activeCohort,
+			nav: {
+				header_mode: 'search_only'
+			},
+			termfilter: { filter }
+		},
+		tree: { disable_terms: clicked_terms }
+	}
+
+	if (srctype == 'termsetting') {
+		arg.tree.click_term = select_callback
+	} else if (srctype == 'tvs') {
+		arg.barchart = {
+			bar_click_override: select_callback
+		}
+	} else {
+		throw 'unsupported srctype value'
+	}
+
+	exports.appInit(null, arg)
 }

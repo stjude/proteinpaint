@@ -3,7 +3,7 @@
 drop index if exists sidmap_id;
 drop table if exists sampleidmap;
 create table sampleidmap (
-  id character not null,
+  id integer not null,
   name character varying(100) not null
 );
 .import 'samples.idmap' sampleidmap
@@ -89,7 +89,7 @@ drop index if exists a_sample;
 drop index if exists a_termid;
 drop index if exists a_value;
 create table annotations (
-  sample character varying(50) not null,
+  sample integer not null,
   term_id character varying(100) not null,
   value character varying(255) not null
 );

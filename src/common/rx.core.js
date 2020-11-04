@@ -174,6 +174,7 @@ function getAppApi(self) {
 	// pattern to hide the mutable parts, not checked here
 	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
+	if (self.appInit) api.appInit = self.appInit
 	return api
 }
 

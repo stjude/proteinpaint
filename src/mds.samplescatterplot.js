@@ -335,6 +335,7 @@ function finish_setup(obj) {
 }
 
 function init_plot(obj) {
+	const rootholder = obj.scattersvg.node().closest('.sja_root_holder')
 	let minx = obj.dots[0].x,
 		maxx = minx,
 		miny = obj.dots[0].y,
@@ -349,13 +350,16 @@ function init_plot(obj) {
 	const xscale = scaleLinear().domain([minx, maxx])
 	const yscale = scaleLinear().domain([miny, maxy])
 
+	if (!obj.dimensions) obj.dimensions = {}
+	let currBbox
+
 	let toppad = 30,
 		bottompad = 50,
 		leftpad = 100,
 		rightpad = 30,
 		vpad = 20,
-		width = 800, // make automatic
-		height = 800,
+		width = obj.dimensions.width ? obj.dimensions.width : 800, // make automatic
+		height = obj.dimensions.height ? obj.dimensions.height : 800,
 		fontsize = 18
 
 	const svg = obj.scattersvg
@@ -484,6 +488,7 @@ function init_plot(obj) {
 				})
 		}
 		//circles.attr('r',radius)
+		currBbox = rootholder.getBoundingClientRect()
 	}
 	resize()
 
@@ -510,6 +515,24 @@ function init_plot(obj) {
 				b.on('mousemove', null).on('mouseup', null)
 			})
 		})
+
+	function resetDimensions() {
+		const bbox = rootholder.getBoundingClientRect()
+		const w = (width * bbox.width) / currBbox.width
+		width = obj.dimensions.minWidth ? Math.max(obj.dimensions.minWidth, w) : w
+		const h = (height * bbox.height) / currBbox.height
+		height = obj.dimensions.minHeight ? Math.max(obj.dimensions.minHeight, h) : h
+		currBbox = bbox
+		resize()
+	}
+
+	let timeout
+	if (obj.dimensions.autoResize) {
+		window.addEventListener('resize', () => {
+			if (timeout) clearTimeout(timeout)
+			timeout = setTimeout(resetDimensions, 50)
+		})
+	}
 }
 
 function assign_color4dots(obj) {
