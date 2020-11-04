@@ -89,7 +89,7 @@ drop index if exists a_sample;
 drop index if exists a_termid;
 drop index if exists a_value;
 create table annotations (
-  sample integer varying(50) not null,
+  sample integer not null,
   term_id character varying(100) not null,
   value character varying(255) not null
 );
