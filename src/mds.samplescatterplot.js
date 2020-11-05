@@ -444,6 +444,7 @@ function init_plot(obj) {
 			})
 			.on('mousedown', d => {
 				d3event.preventDefault()
+				d3event.stopPropagation()
 				const b = d3select(document.body)
 				const x = d3event.clientX
 				const y = d3event.clientY
