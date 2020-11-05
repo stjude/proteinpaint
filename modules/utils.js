@@ -4,7 +4,7 @@ const fs = require('fs'),
 	readline = require('readline'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
-	fetch = require('node-fetch'),
+	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
 	bettersqlite = require('better-sqlite3')
 
 // do not assume that serverconfig.json is in the same dir as server.js
@@ -104,18 +104,19 @@ async function try_downloadIndexFile(url, tofile) {
 		const res = await fetch(url)
 		if (res.status != 200) {
 			// resource missing
-			console.log('wrong status', res.status)
+			//console.log('wrong status', res.status)
 			return false
 		}
 		const contentType = res.headers.get('content-type')
 		if (!contentType) {
 			// missing content type
-			console.log('missing content type from header')
+			//console.log('missing content type from header')
 			return false
 		}
-		if (!contentType.toLowerCase().includes('gzip')) {
+		const c = contentType.toLowerCase()
+		if (!c.includes('gzip') && c != 'application/octet-stream') {
 			// "gzip" must be included
-			console.log('wrong content type: ' + contentType)
+			//console.log('wrong content type: ' + contentType)
 			return false
 		}
 		await stream2file(res.body, tofile)

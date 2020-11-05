@@ -1299,7 +1299,10 @@ should guard against file content error e.g. two tabs separating columns
 			if (!isurl) return { file: tkfile }
 
 			return utils.cache_index(req.query.indexURL || [tkfile + '.tbi', tkfile + '.csi']).then(dir => {
-				if (!dir) throw 'invalid index file url'
+				if (!dir) {
+					console.log('xx')
+					throw 'invalid index file url'
+				}
 				return { file: tkfile, dir }
 			})
 		})
