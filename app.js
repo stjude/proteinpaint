@@ -19,14 +19,13 @@ const express = require('express'),
 	https = require('https'),
 	fs = require('fs'),
 	path = require('path'),
-	request = require('request'),
+	got = require('got'),
 	async = require('async'),
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
-	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -3776,25 +3775,24 @@ function handle_textfile(req, res) {
 	}
 }
 
-function handle_urltextfile(req, res) {
+async function handle_urltextfile(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const url = req.query.url
-	request(url, (error, response, body) => {
-		if (error) {
-			// request encounters error, abort
-			return res.send({ error: 'Error downloading file: ' + url })
-		}
+	try {
+		const response = await got(url)
 		switch (response.statusCode) {
 			case 200:
-				res.send({ text: utils.stripJsScript(body) })
+				res.send({ text: utils.stripJsScript(response.body) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })
 				return
 			default:
-				res.send({ error: 'unknown status code: ' + response.statusCode })
+				res.send({ error: 'unknown status code: ' + response.status })
 		}
-	})
+	} catch (e) {
+		return res.send({ error: 'Error downloading file: ' + url })
+	}
 }
 
 function handle_junction(req, res) {
@@ -11402,14 +11400,20 @@ function cache_index(indexURL, tkloader, res) {
 							.on('error', () => {
 								return res.send({ error: 'failed to download index file' })
 							})
-						request(indexURL, (error, response, body) => {
+
+						try {
+							got.stream(indexURL).pipe(writestream)
+						} catch (error) {
+							return res.send({ error: 'Error downloading ' + indexURL })
+						}
+						/*request(indexURL, (error, response, body) => {
 							if (error) {
 								return res.send({ error: 'Error downloading ' + indexURL })
 							}
 							if (response.statusCode == 404) {
 								return res.send({ error: 'File not found: ' + indexURL })
 							}
-						}).pipe(writestream)
+						}).pipe(writestream)*/
 					})
 					return
 				case 'EACCES':
@@ -11435,12 +11439,18 @@ function cache_index(indexURL, tkloader, res) {
 							.on('error', () => {
 								return res.send({ error: 'failed to download index file' })
 							})
-						request(indexURL, (error, response, body) => {
+
+						try {
+							got.stream(indexURL).pipe(writestream)
+						} catch (error) {
+							return res.send({ error: 'Error downloading ' + indexURL })
+						}
+						/*request(indexURL, (error, response, body) => {
 							if (error) {
 								// request encounters error, abort
 								return res.send({ error: 'Error downloading ' + indexURL })
 							}
-						}).pipe(writestream)
+						}).pipe(writestream)*/
 						return
 					case 'EACCES':
 						return res.send({ error: 'permission denied when stating cache dir' })
