@@ -4,6 +4,7 @@ const fs = require('fs'),
 	readline = require('readline'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
+	got = require('got'),
 	bettersqlite = require('better-sqlite3')
 
 // do not assume that serverconfig.json is in the same dir as server.js
@@ -40,6 +41,73 @@ run_fishertest
 run_fishertest2x3
 ********************** INTERNAL
 */
+
+/* call it as:
+
+bam can only have .bai index
+await cache_index(bam_url+'.bai')
+
+tabix file index is uncertain and can be either tbi or csi
+await cache_index(vcf_url+'.tbi', vcf_url+'.csi') 
+*/
+exports.cache_index = async () => {
+	for (const _url of arguments) {
+		const tmp = _url.split('://')
+		if (tmp.length != 2) throw 'improper URL for an index file'
+		const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
+		const indexfile = path.basename(tmp[1])
+		try {
+			await fs.promises.stat(dir)
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// make dir
+				try {
+					await fs.promises.mkdir(dir, { recursive: true })
+				} catch (e) {
+					throw 'index url dir: cannot mkdir'
+				}
+			} else {
+				throw 'stating index url dir: ' + e.code
+			}
+		}
+		// dir is ready
+		const path2file = path.join(dir, indexfile)
+		try {
+			await fs.promises.stat(path2file)
+			// index file exists
+			return dir
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// download index file
+				if (await download_binary_file(_url, path.join(dir, indexfile))) {
+					return dir
+				}
+				// failed to download a binary file, try the next url
+			} else {
+				throw 'stating indexl url file: ' + e.code
+			}
+		}
+	}
+}
+function download_binary_file(url, tofile) {
+	/* attempt to download the index file
+
+	must detect following:
+	- downloading throws an HTTPError (https://proteinpaint.stjude.org/invalid)
+	- downloaded text data but not binary (https://pecan.stjude.cloud/invalid)
+
+	if either is true, should not 
+	*/
+	return new Promise((resolve, reject) => {
+		const f = fs.createWriteStream(tofile)
+		f.on('finish', () => {
+			f.close(() => {
+				resolve()
+			})
+		})
+		got.stream(url).pipe(f)
+	})
+}
 
 exports.file_is_readable = async file => {
 	// need full path to the file
