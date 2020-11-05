@@ -4,7 +4,7 @@ const fs = require('fs'),
 	readline = require('readline'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
-	got = require('got'),
+	fetch = require('node-fetch'),
 	bettersqlite = require('better-sqlite3')
 
 // do not assume that serverconfig.json is in the same dir as server.js
@@ -48,10 +48,10 @@ bam can only have .bai index
 await cache_index(bam_url+'.bai')
 
 tabix file index is uncertain and can be either tbi or csi
-await cache_index(vcf_url+'.tbi', vcf_url+'.csi') 
+await cache_index([vcf_url+'.tbi', vcf_url+'.csi']) 
 */
-exports.cache_index = async () => {
-	for (const _url of arguments) {
+exports.cache_index = async arg => {
+	for (const _url of Array.isArray(arg) ? arg : [arg]) {
 		const tmp = _url.split('://')
 		if (tmp.length != 2) throw 'improper URL for an index file'
 		const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
@@ -79,7 +79,7 @@ exports.cache_index = async () => {
 		} catch (e) {
 			if (e.code == 'ENOENT') {
 				// download index file
-				if (await download_binary_file(_url, path.join(dir, indexfile))) {
+				if (await try_downloadIndexFile(_url, path2file)) {
 					return dir
 				}
 				// failed to download a binary file, try the next url
@@ -88,9 +88,11 @@ exports.cache_index = async () => {
 			}
 		}
 	}
+	// a valid index file cannot be found from given urls
+	return null
 }
-function download_binary_file(url, tofile) {
-	/* attempt to download the index file
+async function try_downloadIndexFile(url, tofile) {
+	/* try to download the index file
 
 	must detect following:
 	- downloading throws an HTTPError (https://proteinpaint.stjude.org/invalid)
@@ -98,14 +100,36 @@ function download_binary_file(url, tofile) {
 
 	if either is true, should not 
 	*/
+	try {
+		const res = await fetch(url)
+		if (res.status != 200) {
+			// resource missing
+			console.log('wrong status', res.status)
+			return false
+		}
+		const contentType = res.headers.get('content-type')
+		if (!contentType) {
+			// missing content type
+			console.log('missing content type from header')
+			return false
+		}
+		if (!contentType.toLowerCase().includes('gzip')) {
+			// "gzip" must be included
+			console.log('wrong content type: ' + contentType)
+			return false
+		}
+		await stream2file(res.body, tofile)
+		return true
+	} catch (e) {
+		// fetch thrown, must be invalid url
+		return false
+	}
+}
+function stream2file(from, file) {
 	return new Promise((resolve, reject) => {
-		const f = fs.createWriteStream(tofile)
-		f.on('finish', () => {
-			f.close(() => {
-				resolve()
-			})
-		})
-		got.stream(url).pipe(f)
+		const f = fs.createWriteStream(file)
+		from.pipe(f)
+		from.on('end', () => resolve())
 	})
 }
 
