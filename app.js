@@ -19,14 +19,13 @@ const express = require('express'),
 	https = require('https'),
 	fs = require('fs'),
 	path = require('path'),
-	request = require('request'),
+	got = require('got'),
 	async = require('async'),
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	exec = child_process.exec,
-	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -844,7 +843,11 @@ if file/url ends with .gz, it is bedgraph
 		// is bedgraph, will cache index if is url
 		isbedgraph = true
 		if (isurl) {
-			bedgraphdir = await cache_index_promise(req.query.indexURL || file + '.tbi')
+			try {
+				bedgraphdir = await utils.cache_index(file, req.query.indexURL)
+			} catch (e) {
+				return res.send({ error: 'index caching error' })
+			}
 		}
 	}
 
@@ -1068,172 +1071,127 @@ if file/url ends with .gz, it is bedgraph
 		})
 }
 
-function handle_tkaicheck(req, res) {
+async function handle_tkaicheck(req, res) {
 	/*
 	no caching markers, draw them as along as they are retrieved
 	do not try to estimate marker size, determined by client
 	*/
 
 	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
 
-	const coveragemax = req.query.coveragemax || 100
-	if (!Number.isInteger(coveragemax)) return res.send({ error: 'invalid coveragemax' })
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const coveragemax = req.query.coveragemax || 100
+		if (!Number.isInteger(coveragemax)) throw 'invalid coveragemax'
+		const vafheight = req.query.vafheight
+		if (!Number.isInteger(vafheight)) throw 'invalid vafheight'
+		const coverageheight = req.query.coverageheight
+		if (!Number.isInteger(coverageheight)) throw 'invalid coverageheight'
+		const rowspace = req.query.rowspace
+		if (!Number.isInteger(rowspace)) throw 'invalid rowspace'
+		const dotsize = req.query.dotsize || 1
+		if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
+		if (!req.query.rglst) throw '.rglst missing'
 
-	const vafheight = req.query.vafheight
-	if (!Number.isInteger(vafheight)) return res.send({ error: 'invalid vafheight' })
-	const coverageheight = req.query.coverageheight
-	if (!Number.isInteger(coverageheight)) return res.send({ error: 'invalid coverageheight' })
-	const rowspace = req.query.rowspace
-	if (!Number.isInteger(rowspace)) return res.send({ error: 'invalid rowspace' })
-	const dotsize = req.query.dotsize || 1
-	if (!Number.isInteger(dotsize)) return res.send({ error: 'invalid dotsize' })
+		const gtotalcutoff = req.query.gtotalcutoff
+		const gmafrestrict = req.query.gmafrestrict
 
-	if (!req.query.rglst) return res.send({ error: 'region list missing' })
+		const canvas = createCanvas(
+			req.query.width * req.query.devicePixelRatio,
+			(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
+		)
+		const ctx = canvas.getContext('2d')
+		if (req.query.devicePixelRatio > 1) {
+			ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		}
 
-	const gtotalcutoff = req.query.gtotalcutoff
-	const gmafrestrict = req.query.gmafrestrict
+		// vaf track background
+		ctx.fillStyle = '#f1f1f1'
+		ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
+		ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
+		ctx.fillStyle = '#FAFAD9'
+		ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
+		ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
 
-	const canvas = createCanvas(
-		req.query.width * req.query.devicePixelRatio,
-		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
-	)
-	const ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) {
-		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		let dir // when using url
+		if (isurl) {
+			dir = await utils.cache_index(file, req.query.indexURL)
+		}
+
+		let x = 0
+		for (const r of req.query.rglst) {
+			r.x = x
+			x += req.query.regionspace + r.width
+		}
+
+		const samplecolor = '#786312'
+		const aicolor = '#122778'
+		const barcolor = '#858585'
+		const coverageabovemaxcolor = 'red'
+
+		for (const r of req.query.rglst) {
+			const xsf = r.width / (r.stop - r.start) // pixel per bp
+			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
+				const l = line.split('\t')
+				const pos = Number.parseInt(l[1])
+				const mintumor = Number.parseInt(l[2])
+				const tintumor = Number.parseInt(l[3])
+				const minnormal = Number.parseInt(l[4])
+				const tinnormal = Number.parseInt(l[5])
+				if (Number.isNaN(mintumor) || Number.isNaN(tintumor) || Number.isNaN(minnormal) || Number.isNaN(tinnormal))
+					return
+
+				if (gtotalcutoff && tinnormal < gtotalcutoff) return
+
+				const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
+
+				// marker maf
+				ctx.fillStyle = samplecolor
+				const vaftumor = mintumor / tintumor
+				ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
+				const vafnormal = minnormal / tinnormal
+
+				if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) return
+
+				ctx.fillRect(x, vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal), dotsize, 2)
+				ctx.fillStyle = aicolor
+				// ai
+				const ai = Math.abs(vaftumor - vafnormal)
+				ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
+
+				// coverage bars
+				//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
+				ctx.fillStyle = barcolor
+				let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
+				let y = coverageheight - barh
+				ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
+
+				//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
+				ctx.fillStyle = barcolor
+				barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
+				y = coverageheight - barh
+				ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
+
+				// coverage above max
+				if (tintumor >= coveragemax) {
+					ctx.fillStyle = coverageabovemaxcolor
+					ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
+				}
+				if (tinnormal >= coveragemax) {
+					ctx.fillStyle = coverageabovemaxcolor
+					ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
+				}
+			})
+		}
+		res.send({
+			src: canvas.toDataURL(),
+			coveragemax: coveragemax
+		})
+	} catch (e) {
+		if (err.stack) console.log(err.stack)
+		res.send({ error: e.message || e })
 	}
-
-	// vaf track background
-	ctx.fillStyle = '#f1f1f1'
-	ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
-	ctx.fillStyle = '#FAFAD9'
-	ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return { file: file }
-			const indexurl = req.query.indexURL || file + '.tbi'
-
-			return cache_index_promise(indexurl).then(dir => {
-				return { file: file, dir: dir }
-			})
-		})
-
-		.then(fileobj => {
-			let x = 0
-			for (const r of req.query.rglst) {
-				r.x = x
-				x += req.query.regionspace + r.width
-			}
-
-			const samplecolor = '#786312'
-			const aicolor = '#122778'
-			const barcolor = '#858585'
-			const coverageabovemaxcolor = 'red'
-
-			const tasks = [] // each region draw
-
-			for (const r of req.query.rglst) {
-				tasks.push(
-					new Promise((resolve, reject) => {
-						const ps = spawn(tabix, [fileobj.file, r.chr + ':' + r.start + '-' + r.stop])
-						const out = []
-						const out2 = []
-						ps.stdout.on('data', i => out.push(i))
-						ps.stderr.on('data', i => out2.push(i))
-						ps.on('close', code => {
-							const err = out2.join('')
-							if (err && !tabixnoterror(err)) reject({ message: err })
-
-							const xsf = r.width / (r.stop - r.start) // pixel per bp
-
-							for (const line of out
-								.join('')
-								.trim()
-								.split('\n')) {
-								const l = line.split('\t')
-								const pos = Number.parseInt(l[1])
-								const mintumor = Number.parseInt(l[2])
-								const tintumor = Number.parseInt(l[3])
-								const minnormal = Number.parseInt(l[4])
-								const tinnormal = Number.parseInt(l[5])
-								if (
-									Number.isNaN(mintumor) ||
-									Number.isNaN(tintumor) ||
-									Number.isNaN(minnormal) ||
-									Number.isNaN(tinnormal)
-								) {
-									reject('line with invalid allele count: ' + line)
-								}
-
-								if (gtotalcutoff && tinnormal < gtotalcutoff) continue
-
-								const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
-
-								// marker maf
-								ctx.fillStyle = samplecolor
-								const vaftumor = mintumor / tintumor
-								ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
-								const vafnormal = minnormal / tinnormal
-
-								if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) continue
-
-								ctx.fillRect(
-									x,
-									vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal),
-									dotsize,
-									2
-								)
-								ctx.fillStyle = aicolor
-								// ai
-								const ai = Math.abs(vaftumor - vafnormal)
-								ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
-
-								// coverage bars
-								//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
-								let y = coverageheight - barh
-								ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
-
-								//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
-								y = coverageheight - barh
-								ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
-
-								// coverage above max
-								if (tintumor >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
-								}
-								if (tinnormal >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
-								}
-							}
-							resolve()
-						})
-					})
-				)
-			}
-			return Promise.all(tasks)
-		})
-		.then(() => {
-			res.send({
-				src: canvas.toDataURL(),
-				coveragemax: coveragemax
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.log(err.stack)
-			}
-		})
 }
 
 function handle_tkbedj(req, res) {
@@ -1298,10 +1256,9 @@ should guard against file content error e.g. two tabs separating columns
 		*********************************/
 
 			if (!isurl) return { file: tkfile }
-			const indexurl = req.query.indexURL || tkfile + '.tbi'
 
-			return cache_index_promise(indexurl).then(dir => {
-				return { file: tkfile, dir: dir }
+			return utils.cache_index(tkfile, req.query.indexURL).then(dir => {
+				return { file: tkfile, dir }
 			})
 		})
 
@@ -3776,25 +3733,24 @@ function handle_textfile(req, res) {
 	}
 }
 
-function handle_urltextfile(req, res) {
+async function handle_urltextfile(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const url = req.query.url
-	request(url, (error, response, body) => {
-		if (error) {
-			// request encounters error, abort
-			return res.send({ error: 'Error downloading file: ' + url })
-		}
+	try {
+		const response = await got(url)
 		switch (response.statusCode) {
 			case 200:
-				res.send({ text: utils.stripJsScript(body) })
+				res.send({ text: utils.stripJsScript(response.body) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })
 				return
 			default:
-				res.send({ error: 'unknown status code: ' + response.statusCode })
+				res.send({ error: 'unknown status code: ' + response.status })
 		}
-	})
+	} catch (e) {
+		return res.send({ error: 'Error downloading file: ' + url })
+	}
 }
 
 function handle_junction(req, res) {
@@ -11402,14 +11358,20 @@ function cache_index(indexURL, tkloader, res) {
 							.on('error', () => {
 								return res.send({ error: 'failed to download index file' })
 							})
-						request(indexURL, (error, response, body) => {
+
+						try {
+							got.stream(indexURL).pipe(writestream)
+						} catch (error) {
+							return res.send({ error: 'Error downloading ' + indexURL })
+						}
+						/*request(indexURL, (error, response, body) => {
 							if (error) {
 								return res.send({ error: 'Error downloading ' + indexURL })
 							}
 							if (response.statusCode == 404) {
 								return res.send({ error: 'File not found: ' + indexURL })
 							}
-						}).pipe(writestream)
+						}).pipe(writestream)*/
 					})
 					return
 				case 'EACCES':
@@ -11435,12 +11397,18 @@ function cache_index(indexURL, tkloader, res) {
 							.on('error', () => {
 								return res.send({ error: 'failed to download index file' })
 							})
-						request(indexURL, (error, response, body) => {
+
+						try {
+							got.stream(indexURL).pipe(writestream)
+						} catch (error) {
+							return res.send({ error: 'Error downloading ' + indexURL })
+						}
+						/*request(indexURL, (error, response, body) => {
 							if (error) {
 								// request encounters error, abort
 								return res.send({ error: 'Error downloading ' + indexURL })
 							}
-						}).pipe(writestream)
+						}).pipe(writestream)*/
 						return
 					case 'EACCES':
 						return res.send({ error: 'permission denied when stating cache dir' })
