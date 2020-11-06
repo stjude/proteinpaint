@@ -4,7 +4,7 @@ import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { event as d3event } from 'd3-selection'
 import { filterInit } from './common/filter'
-import { appInit } from './termdb/app'
+import { appInit, showTermSrc } from './termdb/app'
 
 /*
 obj{}
@@ -192,22 +192,7 @@ function make_phewas_ui(obj, div, tk) {
 				obj.termfilter.filter = f
 				await run_phewas(obj)
 			},
-			showTermSrc: ({ holder, clicked_terms, bar_click_override }) => {
-				this.app.appInit(null, {
-					holder,
-					state: {
-						genome: obj.genome.name,
-						dslabel: obj.mds.label,
-						activeCohort: this.state.activeCohort,
-						nav: {
-							header_mode: 'search_only'
-						},
-						termfilter: JSON.parse(JSON.stringify(obj.termfilter))
-					},
-					tree: { disable_terms: clicked_terms },
-					barchart: { bar_click_override }
-				})
-			}
+			showTermSrc
 		}).main(obj.termfilter.filter)
 
 		obj.dom.filter_says = obj.dom.row_filter.append('div').style('display', 'inline-block')

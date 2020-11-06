@@ -2,6 +2,7 @@ import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
+import { showTermSrc } from '../termdb/app'
 
 /*
 options for term2:
@@ -52,11 +53,10 @@ class Overlay {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: {
-						term2: term2
-					}
+					config: { term2 }
 				})
-			}
+			},
+			showTermSrc
 		})
 	}
 	getState(appState) {

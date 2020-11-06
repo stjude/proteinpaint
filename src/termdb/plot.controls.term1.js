@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
+import { showTermSrc } from '../termdb/app'
 
 /*
 for configuring term1; wraps termsetting
@@ -76,7 +77,8 @@ class Term1ui {
 						}
 					}
 				})
-			}
+			},
+			showTermSrc
 		})
 	}
 }

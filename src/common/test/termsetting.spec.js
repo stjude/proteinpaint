@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
+const showTermSrc = require('../../termdb/app').showTermSrc
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -36,7 +37,8 @@ function getOpts(_opts = {}) {
 		callback: function(termsetting) {
 			opts.tsData = termsetting
 			opts.pill.main(opts.tsData)
-		}
+		},
+		showTermSrc
 	})
 
 	return opts
