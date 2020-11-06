@@ -207,6 +207,7 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = utils.serverconfig
 const samtools = serverconfig.samtools || 'samtools'
+const sambamba = serverconfig.sambamba || 'sambamba'
 
 module.exports = genomes => {
 	return async (req, res) => {
