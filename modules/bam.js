@@ -230,7 +230,7 @@ module.exports = genomes => {
 			) // Currently 'chr' is removed from chromosome string, please look into this
 			const coverage_plot_file_str = (await utils.read_file(coverage_plot_file)).trim()
 			fs.unlink(coverage_plot_file, () => {})
-			console.log('coverage_plot_file_str:', coverage_plot_file_str)
+			//console.log('coverage_plot_file_str:', coverage_plot_file_str)
 			let total_cov = []
 			let As_cov = []
 			let Cs_cov = []
