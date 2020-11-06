@@ -42,36 +42,49 @@ run_fishertest2x3
 ********************** INTERNAL
 */
 
-/* call it as:
+/*
+when either tbi or csi could be used and should be at the same URL,
+just provide the gz file URL:
 
-bam can only have .bai index
-await cache_index(bam_url+'.bai')
+   await cache_index(gz_url)
 
-tabix file index is uncertain and can be either tbi or csi
-await cache_index([vcf_url+'.tbi', vcf_url+'.csi']) 
+when a index URL is given (e.g. vended from dnanexus), provide both:
+
+   await cache_index(gz_url, index_url)
+
 */
-exports.cache_index = async arg => {
-	for (const _url of Array.isArray(arg) ? arg : [arg]) {
-		const tmp = _url.split('://')
-		if (tmp.length != 2) throw 'improper URL for an index file'
-		const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-		const indexfile = path.basename(tmp[1])
-		try {
-			await fs.promises.stat(dir)
-		} catch (e) {
-			if (e.code == 'ENOENT') {
-				// make dir
-				try {
-					await fs.promises.mkdir(dir, { recursive: true })
-				} catch (e) {
-					throw 'index url dir: cannot mkdir'
-				}
-			} else {
-				throw 'stating index url dir: ' + e.code
+exports.cache_index = async (gzurl, indexurl) => {
+	if (!gzurl) throw '.gz file URL missing'
+	if (typeof gzurl != 'string') throw '.gz file URL not string'
+	if (indexurl) {
+		if (typeof indexurl != 'string') throw 'index URL not string'
+	}
+	const [e, protocol, body] = test_url(gzurl)
+	if (e) throw '.gz file URL error: ' + e
+	// build cache directory using gz file url and do not include index portion
+	// e.g. cache/https/domain/path/to/file.gz/
+	const dir = path.join(serverconfig.cachedir, protocol, body)
+	try {
+		await fs.promises.stat(dir)
+	} catch (e) {
+		if (e.code == 'ENOENT') {
+			// make dir
+			try {
+				await fs.promises.mkdir(dir, { recursive: true })
+			} catch (e) {
+				throw 'url dir: cannot mkdir'
 			}
+		} else {
+			throw 'stating gz url dir: ' + e.code
 		}
-		// dir is ready
-		const path2file = path.join(dir, indexfile)
+	}
+	// dir is ready
+	if (indexurl) {
+		// index url given, may download it
+		const [e, protocol2, body2] = test_url(indexurl)
+		if (e) throw 'indexl url error: ' + e
+		// first, detect if the index file already exists in the dir+indexfile
+		const path2file = path.join(dir, path.basename(body2))
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
@@ -79,19 +92,27 @@ exports.cache_index = async arg => {
 		} catch (e) {
 			if (e.code == 'ENOENT') {
 				// download index file
-				if (await try_downloadIndexFile(_url, path2file)) {
-					return dir
-				}
-				// failed to download a binary file, try the next url
+				await download_index(indexurl, path2file)
+				return dir
 			} else {
 				throw 'stating indexl url file: ' + e.code
 			}
 		}
+	} else {
+		// no url specified for index
+		// assume the appropriate index exists under dir
+		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		return dir
 	}
-	// a valid index file cannot be found from given urls
-	return null
 }
-async function try_downloadIndexFile(url, tofile) {
+function test_url(u) {
+	const tmp = u.split('://')
+	if (tmp.length != 2) return ['improper url']
+	if (tmp[0].length < 3) return ['protocol string length too short'] // ftp??
+	if (tmp[1].length < 5) return ['body string length too short'] // a/b.gz at minimum
+	return [null, tmp[0], tmp[1]]
+}
+async function download_index(url, tofile) {
 	/* try to download the index file
 
 	must detect following:
@@ -103,30 +124,16 @@ async function try_downloadIndexFile(url, tofile) {
 	try {
 		const res = await fetch(url)
 		if (res.status != 200) {
-			// resource missing
-			//console.log('wrong status', res.status)
-			return false
-		}
-		const contentType = res.headers.get('content-type')
-		if (!contentType) {
-			// missing content type
-			//console.log('missing content type from header')
-			return false
-		}
-		const c = contentType.toLowerCase()
-		if (!c.includes('gzip') && c != 'application/octet-stream') {
-			// "gzip" must be included
-			//console.log('wrong content type: ' + contentType)
-			return false
+			throw 'index file not accessible from url with status code ' + res.status
 		}
 		await stream2file(res.body, tofile)
-		return true
 	} catch (e) {
 		// fetch thrown, must be invalid url
-		return false
+		throw 'cannot download from url'
 	}
 }
 function stream2file(from, file) {
+	// TODO any error to catch here
 	return new Promise((resolve, reject) => {
 		const f = fs.createWriteStream(file)
 		from.pipe(f)

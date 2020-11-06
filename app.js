@@ -843,8 +843,11 @@ if file/url ends with .gz, it is bedgraph
 		// is bedgraph, will cache index if is url
 		isbedgraph = true
 		if (isurl) {
-			bedgraphdir = await utils.cache_index(req.query.indexURL || [file + '.tbi', file + '.csi'])
-			if (!bedgraphdir) return res.send({ error: 'index file url error' })
+			try {
+				bedgraphdir = await utils.cache_index(file, req.query.indexURL)
+			} catch (e) {
+				return res.send({ error: 'index caching error' })
+			}
 		}
 	}
 
@@ -1114,9 +1117,8 @@ function handle_tkaicheck(req, res) {
 
 	Promise.resolve()
 		.then(() => {
-			if (!isurl) return { file: file }
-			return utils.cache_index(req.query.indexURL || [file + '.tbi' || file + '.csi']).then(dir => {
-				if (!dir) throw 'invalid index file url'
+			if (!isurl) return { file }
+			return utils.cache_index(file, req.query.indexURL).then(dir => {
 				return { file, dir }
 			})
 		})
@@ -1298,11 +1300,7 @@ should guard against file content error e.g. two tabs separating columns
 
 			if (!isurl) return { file: tkfile }
 
-			return utils.cache_index(req.query.indexURL || [tkfile + '.tbi', tkfile + '.csi']).then(dir => {
-				if (!dir) {
-					console.log('xx')
-					throw 'invalid index file url'
-				}
+			return utils.cache_index(tkfile, req.query.indexURL).then(dir => {
 				return { file: tkfile, dir }
 			})
 		})
