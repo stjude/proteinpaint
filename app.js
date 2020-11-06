@@ -1071,170 +1071,127 @@ if file/url ends with .gz, it is bedgraph
 		})
 }
 
-function handle_tkaicheck(req, res) {
+async function handle_tkaicheck(req, res) {
 	/*
 	no caching markers, draw them as along as they are retrieved
 	do not try to estimate marker size, determined by client
 	*/
 
 	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
 
-	const coveragemax = req.query.coveragemax || 100
-	if (!Number.isInteger(coveragemax)) return res.send({ error: 'invalid coveragemax' })
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const coveragemax = req.query.coveragemax || 100
+		if (!Number.isInteger(coveragemax)) throw 'invalid coveragemax'
+		const vafheight = req.query.vafheight
+		if (!Number.isInteger(vafheight)) throw 'invalid vafheight'
+		const coverageheight = req.query.coverageheight
+		if (!Number.isInteger(coverageheight)) throw 'invalid coverageheight'
+		const rowspace = req.query.rowspace
+		if (!Number.isInteger(rowspace)) throw 'invalid rowspace'
+		const dotsize = req.query.dotsize || 1
+		if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
+		if (!req.query.rglst) throw '.rglst missing'
 
-	const vafheight = req.query.vafheight
-	if (!Number.isInteger(vafheight)) return res.send({ error: 'invalid vafheight' })
-	const coverageheight = req.query.coverageheight
-	if (!Number.isInteger(coverageheight)) return res.send({ error: 'invalid coverageheight' })
-	const rowspace = req.query.rowspace
-	if (!Number.isInteger(rowspace)) return res.send({ error: 'invalid rowspace' })
-	const dotsize = req.query.dotsize || 1
-	if (!Number.isInteger(dotsize)) return res.send({ error: 'invalid dotsize' })
+		const gtotalcutoff = req.query.gtotalcutoff
+		const gmafrestrict = req.query.gmafrestrict
 
-	if (!req.query.rglst) return res.send({ error: 'region list missing' })
+		const canvas = createCanvas(
+			req.query.width * req.query.devicePixelRatio,
+			(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
+		)
+		const ctx = canvas.getContext('2d')
+		if (req.query.devicePixelRatio > 1) {
+			ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		}
 
-	const gtotalcutoff = req.query.gtotalcutoff
-	const gmafrestrict = req.query.gmafrestrict
+		// vaf track background
+		ctx.fillStyle = '#f1f1f1'
+		ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
+		ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
+		ctx.fillStyle = '#FAFAD9'
+		ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
+		ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
 
-	const canvas = createCanvas(
-		req.query.width * req.query.devicePixelRatio,
-		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
-	)
-	const ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) {
-		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		let dir // when using url
+		if (isurl) {
+			dir = await utils.cache_index(file, req.query.indexURL)
+		}
+
+		let x = 0
+		for (const r of req.query.rglst) {
+			r.x = x
+			x += req.query.regionspace + r.width
+		}
+
+		const samplecolor = '#786312'
+		const aicolor = '#122778'
+		const barcolor = '#858585'
+		const coverageabovemaxcolor = 'red'
+
+		for (const r of req.query.rglst) {
+			const xsf = r.width / (r.stop - r.start) // pixel per bp
+			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
+				const l = line.split('\t')
+				const pos = Number.parseInt(l[1])
+				const mintumor = Number.parseInt(l[2])
+				const tintumor = Number.parseInt(l[3])
+				const minnormal = Number.parseInt(l[4])
+				const tinnormal = Number.parseInt(l[5])
+				if (Number.isNaN(mintumor) || Number.isNaN(tintumor) || Number.isNaN(minnormal) || Number.isNaN(tinnormal))
+					return
+
+				if (gtotalcutoff && tinnormal < gtotalcutoff) return
+
+				const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
+
+				// marker maf
+				ctx.fillStyle = samplecolor
+				const vaftumor = mintumor / tintumor
+				ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
+				const vafnormal = minnormal / tinnormal
+
+				if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) return
+
+				ctx.fillRect(x, vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal), dotsize, 2)
+				ctx.fillStyle = aicolor
+				// ai
+				const ai = Math.abs(vaftumor - vafnormal)
+				ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
+
+				// coverage bars
+				//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
+				ctx.fillStyle = barcolor
+				let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
+				let y = coverageheight - barh
+				ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
+
+				//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
+				ctx.fillStyle = barcolor
+				barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
+				y = coverageheight - barh
+				ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
+
+				// coverage above max
+				if (tintumor >= coveragemax) {
+					ctx.fillStyle = coverageabovemaxcolor
+					ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
+				}
+				if (tinnormal >= coveragemax) {
+					ctx.fillStyle = coverageabovemaxcolor
+					ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
+				}
+			})
+		}
+		res.send({
+			src: canvas.toDataURL(),
+			coveragemax: coveragemax
+		})
+	} catch (e) {
+		if (err.stack) console.log(err.stack)
+		res.send({ error: e.message || e })
 	}
-
-	// vaf track background
-	ctx.fillStyle = '#f1f1f1'
-	ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
-	ctx.fillStyle = '#FAFAD9'
-	ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return { file }
-			return utils.cache_index(file, req.query.indexURL).then(dir => {
-				return { file, dir }
-			})
-		})
-
-		.then(fileobj => {
-			let x = 0
-			for (const r of req.query.rglst) {
-				r.x = x
-				x += req.query.regionspace + r.width
-			}
-
-			const samplecolor = '#786312'
-			const aicolor = '#122778'
-			const barcolor = '#858585'
-			const coverageabovemaxcolor = 'red'
-
-			const tasks = [] // each region draw
-
-			for (const r of req.query.rglst) {
-				tasks.push(
-					new Promise((resolve, reject) => {
-						const ps = spawn(tabix, [fileobj.file, r.chr + ':' + r.start + '-' + r.stop])
-						const out = []
-						const out2 = []
-						ps.stdout.on('data', i => out.push(i))
-						ps.stderr.on('data', i => out2.push(i))
-						ps.on('close', code => {
-							const err = out2.join('')
-							if (err && !tabixnoterror(err)) reject({ message: err })
-
-							const xsf = r.width / (r.stop - r.start) // pixel per bp
-
-							for (const line of out
-								.join('')
-								.trim()
-								.split('\n')) {
-								const l = line.split('\t')
-								const pos = Number.parseInt(l[1])
-								const mintumor = Number.parseInt(l[2])
-								const tintumor = Number.parseInt(l[3])
-								const minnormal = Number.parseInt(l[4])
-								const tinnormal = Number.parseInt(l[5])
-								if (
-									Number.isNaN(mintumor) ||
-									Number.isNaN(tintumor) ||
-									Number.isNaN(minnormal) ||
-									Number.isNaN(tinnormal)
-								) {
-									reject('line with invalid allele count: ' + line)
-								}
-
-								if (gtotalcutoff && tinnormal < gtotalcutoff) continue
-
-								const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
-
-								// marker maf
-								ctx.fillStyle = samplecolor
-								const vaftumor = mintumor / tintumor
-								ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
-								const vafnormal = minnormal / tinnormal
-
-								if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) continue
-
-								ctx.fillRect(
-									x,
-									vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal),
-									dotsize,
-									2
-								)
-								ctx.fillStyle = aicolor
-								// ai
-								const ai = Math.abs(vaftumor - vafnormal)
-								ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
-
-								// coverage bars
-								//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
-								let y = coverageheight - barh
-								ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
-
-								//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
-								y = coverageheight - barh
-								ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
-
-								// coverage above max
-								if (tintumor >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
-								}
-								if (tinnormal >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
-								}
-							}
-							resolve()
-						})
-					})
-				)
-			}
-			return Promise.all(tasks)
-		})
-		.then(() => {
-			res.send({
-				src: canvas.toDataURL(),
-				coveragemax: coveragemax
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.log(err.stack)
-			}
-		})
 }
 
 function handle_tkbedj(req, res) {
