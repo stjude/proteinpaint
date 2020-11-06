@@ -8,6 +8,7 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
+const { exec } = require('child_process')
 
 /*
 XXX quick fix to be removed/disabled later
@@ -219,6 +220,42 @@ module.exports = genomes => {
 				return
 			}
 			const q = await get_q(genome, req)
+			const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+			const coverage_plot_file = await create_coverage_plot(
+				q.file,
+				coverage_input.chr.replace('chr', ''),
+				coverage_input.start,
+				coverage_input.stop
+			) // Currently 'chr' is removed from chromosome string, please look into this
+			const coverage_plot_file_str = (await utils.read_file(coverage_plot_file)).trim()
+			fs.unlink(coverage_plot_file, () => {})
+			console.log('coverage_plot_file_str:', coverage_plot_file_str)
+			let total_cov = []
+			let As_cov = []
+			let Cs_cov = []
+			let Gs_cov = []
+			let Ts_cov = []
+			let first_iter = 1
+			for (const line of coverage_plot_file_str.split('\n')) {
+				if (first_iter == 1) {
+					first_iter = 0
+				} else {
+					const columns = line.split('\t')
+					total_cov.push(columns[2])
+					As_cov.push(columns[3])
+					Cs_cov.push(columns[4])
+					Gs_cov.push(columns[5])
+					Ts_cov.push(columns[6])
+				}
+			}
+			const coverage_data = {
+				total_cov: total_cov,
+				As_cov: As_cov,
+				Cs_cov: Cs_cov,
+				Gs_cov: Gs_cov,
+				Ts_cov: Ts_cov
+			}
+			q.coverage_data = coverage_data
 			res.send(await do_query(q))
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -398,6 +435,7 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
+		//const outfile = await create_coverage_plot(r, q)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -434,6 +472,31 @@ function query_region(r, q) {
 		rl.on('close', () => {
 			resolve()
 		})
+	})
+}
+
+function create_coverage_plot(bam_file, chr, start, stop) {
+	// function for creating the
+	return new Promise((resolve, reject) => {
+		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile)
+		exec(
+			'sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile,
+			(error, stdout, stderr) => {
+				if (stdout) {
+					console.log('stdout:', stdout)
+				}
+
+				if (error) {
+					console.log(`error: ${error.message}`)
+				} else {
+					if (stderr) {
+						console.log(`stderr: ${stderr}`)
+					}
+					resolve(outfile)
+				}
+			}
+		)
 	})
 }
 
