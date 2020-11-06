@@ -482,7 +482,7 @@ function create_coverage_plot(bam_file, chr, start, stop) {
 		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
 		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile)
 		exec(
-			'sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile,
+			sambamba + ' depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile,
 			(error, stdout, stderr) => {
 				if (stdout) {
 					console.log('stdout:', stdout)
