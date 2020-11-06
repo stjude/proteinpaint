@@ -45,6 +45,7 @@ obj:
 	.label
 	.__inuse
 	.labelhandle
+	.colorfunc()
 	.values MAP
 		k: value name
 		v: {}

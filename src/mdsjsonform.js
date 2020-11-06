@@ -2,6 +2,7 @@ import { select, transition } from 'd3'
 import { dofetch, dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
 import { gene_searchbox } from './gene'
+import { compose } from 'async'
 // import { check } from 'prettier'
 
 /*
@@ -107,10 +108,13 @@ function make_buttons(form_div, doms) {
 			doms.name.property('value', 'TCGA GBM somatic alterations')
 			doms.svcnvfileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.svcnv.hg19.gz')
 			doms.vcffileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.snvindel.vep.vcf.gz')
-			doms.expressionfile.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
+			doms.expressionfileurl.property('value', 'proteinpaint_demo/hg19/tcga-gbm/gbm.fpkm.hg19.gz')
 			doms.isdense_radios.nodes()[1].click()
+			doms.svcnv_radios.nodes()[0].click()
+			doms.vcf_radios.nodes()[0].click()
+			doms.expression_radios.nodes()[0].click()
 			// doms.assaytrack_radios.nodes()[0].click()
-			doms.uidiv_inuse.style('display', 'block')
+			doms.assay_uidiv_inuse.style('display', 'block')
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
 				`TCGA-06-0152-02A	proteinpaint_demo/hg19/tcga-gbm/rna-bw/SJHGG010643_R1.bw	TCGA-06-0152-02A RNA coverage
@@ -298,7 +302,7 @@ function validate_input(doms) {
 		}
 	}
 	{
-		const tmp = doms.expressionfile.property('value').trim()
+		const tmp = doms.expressionfileurl.property('value').trim()
 		if (tmp) {
 			if (isurl(tmp)) {
 				obj.expressionurl = tmp
@@ -319,9 +323,9 @@ function validate_input(doms) {
 			obj.lohLengthUpperLimit = Number(tmp)
 		}
 	}
-	if (doms.sampleset_inuse) {
+	if (doms.sampleset_uidiv_inuse) {
 		const tmp = doms.sampleset_textarea.property('value').trim()
-		if (!tmp) throw 'Missing input for sample subset'
+		// if (!tmp && doms.sampleset_uidiv_inuse.style('display', 'block')) throw 'Missing input for sample subset'
 		const group2lst = new Map()
 		const nogrplst = []
 		for (const line of tmp.split('\n')) {
@@ -343,7 +347,7 @@ function validate_input(doms) {
 		}
 	}
 
-	if (doms.assaytrack_inuse == true) {
+	if (doms.assay_uidiv_inuse) {
 		const lst = [...parse_bigwig(doms), ...parse_bigwigstranded(doms), ...parse_bedj(doms), ...parse_junction(doms)]
 		obj.sample2assaytrack = {}
 		for (const { sample, tk } of lst) {
@@ -386,7 +390,7 @@ function make_position(div, doms) {
 		.append('div')
 		.append('input')
 		.attr('size', 30)
-		.property('placeholder', 'chr:start-stop or gene')
+		.property('placeholder', 'chr:start-stop')
 	// .on('click', () => {
 	// 	gene_searchbox({
 	// 		div: position.append('div'),
@@ -470,7 +474,7 @@ function make_svcnv_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -481,6 +485,7 @@ function make_svcnv_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.svcnv_radios = inputs
 	doms.svcnv_controls = controls
 	doms.svcnvfileurl = make_svcnv(controls)
 	make_control_panel(controls, doms)
@@ -509,7 +514,7 @@ function make_vcf_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -520,6 +525,7 @@ function make_vcf_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.vcf_radios = inputs
 	doms.vcf_controls = controls
 	doms.vcffileurl = make_vcf(controls)
 }
@@ -548,7 +554,7 @@ function make_expression_radios(div, doms) {
 	const row = div.append('div')
 	const radiodiv = row.append('div')
 	const controls = row.append('div').style('display', 'none')
-	make_radios({
+	const { divs, labels, inputs } = make_radios({
 		holder: radiodiv,
 		options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
 		callback: value => {
@@ -559,8 +565,9 @@ function make_expression_radios(div, doms) {
 			display: 'inline'
 		}
 	})
+	doms.expression_radios = inputs
 	doms.expression_controls = controls
-	doms.expressionfile = make_expression_filepath(controls)
+	doms.expressionfileurl = make_expression_filepath(controls)
 }
 //.expressionfile
 function make_expression_filepath(div) {
@@ -787,6 +794,7 @@ function make_sampleset(div, doms) {
 		})
 	const hold_column = div.append('div')
 	const uidiv = hold_column.append('div').style('display', 'none')
+	doms.sampleset_uidiv_inuse = uidiv
 
 	//**Previous radio button option */
 	// const sampleset_prompt = div.append('div')
@@ -835,7 +843,7 @@ function make_assaytracks(div, doms) {
 		})
 	const hold_column = div.append('div')
 	const uidiv = hold_column.append('div').style('display', 'none')
-	doms.uidiv_inuse = uidiv
+	doms.assay_uidiv_inuse = uidiv
 
 	//**Previous radio button option */
 	// const assay_prompt = div.append('div')

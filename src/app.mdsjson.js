@@ -5,6 +5,7 @@ import * as client from './client'
 init_mdsjson
 validate_mdsjson
 get_json_tk
+get_scatterplot_data
 */
 
 export async function init_mdsjson(file_str, url_str, holder) {
@@ -196,4 +197,11 @@ export function get_json_tk(tkobj) {
 	track.multihidelabel_sv = tkobj.multihidelabel_sv || undefined
 
 	return track
+}
+
+export async function get_scatterplot_data(json_file, json_url) {
+	let data = {}
+	const obj = await mdsjson_parse(json_file, json_url)
+	data.mdssamplescatterplot = obj
+	return data
 }
