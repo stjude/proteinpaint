@@ -52,6 +52,7 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	aicheck_request_closure = require('./modules/aicheck'),
 	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
@@ -152,6 +153,7 @@ app.post('/pdomain', handle_pdomain)
 app.post('/tkbedj', handle_tkbedj)
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/tkaicheck', aicheck_request_closure(genomes))
 app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
@@ -162,7 +164,6 @@ app.post('/snpbyname', handle_snpbyname)
 app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post('/tkbigwig', handle_tkbigwig)
-app.post('/tkaicheck', handle_tkaicheck)
 
 app.post('/snp', handle_snpbycoord)
 app.post('/clinvarVCF', handle_clinvarVCF)
@@ -1069,129 +1070,6 @@ if file/url ends with .gz, it is bedgraph
 			}
 			res.send({ error: typeof err == 'string' ? err : err.message })
 		})
-}
-
-async function handle_tkaicheck(req, res) {
-	/*
-	no caching markers, draw them as along as they are retrieved
-	do not try to estimate marker size, determined by client
-	*/
-
-	if (reqbodyisinvalidjson(req, res)) return
-
-	try {
-		const [e, file, isurl] = fileurl(req)
-		if (e) throw e
-		const coveragemax = req.query.coveragemax || 100
-		if (!Number.isInteger(coveragemax)) throw 'invalid coveragemax'
-		const vafheight = req.query.vafheight
-		if (!Number.isInteger(vafheight)) throw 'invalid vafheight'
-		const coverageheight = req.query.coverageheight
-		if (!Number.isInteger(coverageheight)) throw 'invalid coverageheight'
-		const rowspace = req.query.rowspace
-		if (!Number.isInteger(rowspace)) throw 'invalid rowspace'
-		const dotsize = req.query.dotsize || 1
-		if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
-		if (!req.query.rglst) throw '.rglst missing'
-
-		const gtotalcutoff = req.query.gtotalcutoff
-		const gmafrestrict = req.query.gmafrestrict
-
-		const canvas = createCanvas(
-			req.query.width * req.query.devicePixelRatio,
-			(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
-		)
-		const ctx = canvas.getContext('2d')
-		if (req.query.devicePixelRatio > 1) {
-			ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-		}
-
-		// vaf track background
-		ctx.fillStyle = '#f1f1f1'
-		ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
-		ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
-		ctx.fillStyle = '#FAFAD9'
-		ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
-		ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
-
-		let dir // when using url
-		if (isurl) {
-			dir = await utils.cache_index(file, req.query.indexURL)
-		}
-
-		let x = 0
-		for (const r of req.query.rglst) {
-			r.x = x
-			x += req.query.regionspace + r.width
-		}
-
-		const samplecolor = '#786312'
-		const aicolor = '#122778'
-		const barcolor = '#858585'
-		const coverageabovemaxcolor = 'red'
-
-		for (const r of req.query.rglst) {
-			const xsf = r.width / (r.stop - r.start) // pixel per bp
-			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-				const l = line.split('\t')
-				const pos = Number.parseInt(l[1])
-				const mintumor = Number.parseInt(l[2])
-				const tintumor = Number.parseInt(l[3])
-				const minnormal = Number.parseInt(l[4])
-				const tinnormal = Number.parseInt(l[5])
-				if (Number.isNaN(mintumor) || Number.isNaN(tintumor) || Number.isNaN(minnormal) || Number.isNaN(tinnormal))
-					return
-
-				if (gtotalcutoff && tinnormal < gtotalcutoff) return
-
-				const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
-
-				// marker maf
-				ctx.fillStyle = samplecolor
-				const vaftumor = mintumor / tintumor
-				ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
-				const vafnormal = minnormal / tinnormal
-
-				if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) return
-
-				ctx.fillRect(x, vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal), dotsize, 2)
-				ctx.fillStyle = aicolor
-				// ai
-				const ai = Math.abs(vaftumor - vafnormal)
-				ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
-
-				// coverage bars
-				//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
-				ctx.fillStyle = barcolor
-				let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
-				let y = coverageheight - barh
-				ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
-
-				//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
-				ctx.fillStyle = barcolor
-				barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
-				y = coverageheight - barh
-				ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
-
-				// coverage above max
-				if (tintumor >= coveragemax) {
-					ctx.fillStyle = coverageabovemaxcolor
-					ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
-				}
-				if (tinnormal >= coveragemax) {
-					ctx.fillStyle = coverageabovemaxcolor
-					ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
-				}
-			})
-		}
-		res.send({
-			src: canvas.toDataURL(),
-			coveragemax: coveragemax
-		})
-	} catch (e) {
-		if (err.stack) console.log(err.stack)
-		res.send({ error: e.message || e })
-	}
 }
 
 function handle_tkbedj(req, res) {
