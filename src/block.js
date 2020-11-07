@@ -3057,25 +3057,22 @@ seekrange(chr,start,stop) {
 			rglst: this.tkarg_rglst(),
 			stackheight: tk.stackheight,
 			stackspace: tk.stackspace,
-			color: tk.color,
 			regionspace: this.regionspace,
 			width: this.width,
-			file: tk.file,
-			url: tk.url,
-			indexURL: tk.indexURL,
-			translatecoding: tk.translatecoding,
-			categories: tk.categories,
 			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
-		if (tk.onerow) {
-			par.onerow = true
+		if (tk.file) {
+			par.file = tk.file
+		} else {
+			par.url = tk.url
+			if (tk.indexURL) par.indexURL = tk.indexURL
 		}
-		if (tk.usevalue) {
-			par.usevalue = tk.usevalue
-		}
-		if (tk.bplengthUpperLimit) {
-			par.bplengthUpperLimit = tk.bplengthUpperLimit
-		}
+		if (tk.color) par.color = tk.color
+		if (tk.categories) par.categories = tk.categories
+		if (tk.translatecoding) par.translatecoding = 1
+		if (tk.onerow) par.onerow = 1
+		if (tk.usevalue) par.usevalue = tk.usevalue
+		if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
 		if (this.usegm && this.gmmode != client.gmmode.genomic) {
 			// important, will render a gene in a single row across rglst
 			par.gmregion = this.tkarg_maygm(tk)[0]
