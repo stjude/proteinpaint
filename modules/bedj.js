@@ -141,9 +141,9 @@ should guard against file content error e.g. two tabs separating columns
 			for (const _r of item.rglst) {
 				let cumx = 0
 				for (let i = 0; i < _r.idx; i++) {
-					cumx += rglst[i].width + regionspace
+					cumx += req.query.rglst[i].width + regionspace
 				}
-				const r = rglst[_r.idx]
+				const r = req.query.rglst[_r.idx]
 				const thin = []
 				if (item.utr5) {
 					thin.push(...item.utr5)
