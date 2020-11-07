@@ -711,12 +711,14 @@ async function get_data(q, tkfile, dir, flag_gm, gmisoform) {
 		let errlinecount = 0
 		await utils.get_lines_tabix([tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop], dir, line => {
 			const l = line.split('\t')
-			let j
-			try {
-				j = JSON.parse(l[3])
-			} catch (e) {
-				errlinecount++
-				return
+			let j = {}
+			if (l[3]) {
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					errlinecount++
+					return
+				}
 			}
 			if (j.isoformonly && j.isoformonly != gmisoform) {
 				// this is specific for what? idr per isoforms?
@@ -746,12 +748,14 @@ async function get_data(q, tkfile, dir, flag_gm, gmisoform) {
 		const itemofthisregion = []
 		await utils.get_lines_tabix([tkfile, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
 			const l = line.split('\t')
-			let j
-			try {
-				j = JSON.parse(l[3])
-			} catch (e) {
-				errlinecount++
-				return
+			let j = {}
+			if (l[3]) {
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					errlinecount++
+					return
+				}
 			}
 			j.chr = l[0]
 			j.start = Number.parseInt(l[1])
