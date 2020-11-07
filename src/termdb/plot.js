@@ -109,17 +109,12 @@ class TdbPlot {
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
-		const data = await this.requestData(this.state)
+		const dataName = this.getDataName(this.state)
+		const data = await this.app.vocab.getPlotData(this.id, dataName)
 		if (data.error) throw data.error
 		this.syncParams(this.config, data)
 		this.currData = data
 		return data
-	}
-
-	async requestData(state) {
-		const dataName = this.getDataName(state)
-		const route = state.config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
-		return await dofetch3(route + dataName, {}, this.app.opts.fetchOpts)
 	}
 
 	// creates URL search parameter string, that also serves as

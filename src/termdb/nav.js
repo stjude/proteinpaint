@@ -105,44 +105,18 @@ class TdbNav {
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			const promises = []
-			if (!(this.activeCohortName in this.samplecounts)) promises.push(this.getCohortSampleCount())
-			if (!(this.filterJSON in this.samplecounts)) promises.push(this.getFilteredSampleCount())
+			if (!(this.activeCohortName in this.samplecounts))
+				promises.push(this.app.vocab.getCohortSampleCount(this.activeCohortName))
+			if (!(this.filterJSON in this.samplecounts)) {
+				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
+					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
+				} else {
+					promises.push(this.app.vocab.getFilteredSampleCount(this.activeCohortName, this.filterJSON))
+				}
+			}
 			if (promises.length) await Promise.all(promises)
 		}
 		this.updateUI()
-	}
-	async getCohortSampleCount() {
-		if (this.activeCohort == -1) return
-		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
-			'getcohortsamplecount=' + this.activeCohortName,
-			'cohortValues=' + this.activeCohortName
-		]
-		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		if (!data) throw `missing data`
-		else if (data.error) throw data.error
-		else {
-			this.samplecounts[this.activeCohortName] = data[0].samplecount
-		}
-	}
-	async getFilteredSampleCount() {
-		if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
-			this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
-			return
-		}
-		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
-			'getsamplecount=' + this.activeCohortName,
-			'filter=' + encodeURIComponent(this.filterJSON)
-		]
-		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		if (!data) throw `missing data`
-		else if (data.error) throw data.error
-		else {
-			this.samplecounts[this.filterJSON] = data[0].samplecount
-		}
 	}
 }
 

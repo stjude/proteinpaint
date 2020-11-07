@@ -91,7 +91,7 @@ class TdbStore {
 			filterUiRoot = this.state.termfilter.filter
 		}
 
-		this.state.termdbConfig = await this.getTermdbConfig()
+		this.state.termdbConfig = await this.app.vocab.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
@@ -138,14 +138,6 @@ class TdbStore {
 				this.state.nav.header_mode = 'search_only'
 			}
 		}
-	}
-
-	async getTermdbConfig() {
-		const data = await dofetch3(
-			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
-		)
-		// note: in case of error such as missing dataset, supply empty object
-		return data.termdbConfig || {}
 	}
 
 	fromJson(str) {

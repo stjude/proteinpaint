@@ -63,14 +63,7 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
-			'findterm=' + encodeURIComponent(str),
-			'cohortStr=' + this.state.cohortStr
-		]
-		const data = await dofetch3('termdb?' + lst.join('&'))
-		if (data.error) throw data.error
+		const data = await this.app.vocab.findTerm(str, this.state.cohortStr)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {

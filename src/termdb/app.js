@@ -1,5 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
+import { getVocab } from './vocabulary'
 import { navInit } from './nav'
 import { treeInit } from './tree'
 import { storeInit } from './store'
@@ -25,6 +26,7 @@ class TdbApp {
 		// the TdbApp may be the root app or a component within another app
 		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
 		this.app = coordApp ? coordApp : this.api
+		this.api.vocab = getVocab(this.api, this.app.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
@@ -33,9 +35,6 @@ class TdbApp {
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
-		if (this.opts.dev) {
-			window.tt = this
-		}
 
 		if (!coordApp) {
 			// catch initialization error
@@ -60,14 +59,11 @@ class TdbApp {
 			}
 		}
 	}
-	/*
-	async main() { //console.log(this.state.tree.expandedTermIds)
-		// may add other logic here or return data as needed,
-		// for example request and cache metadata that maybe throughout
-		// the app by many components; the metadata may be exposed
-		// later via something like app.api.lookup, to-do
-		// if (this.projectName) this.saveState()
-	}*/
+
+	async main() {
+		//console.log(this.state.tree.expandedTermIds)
+		this.api.vocab.main()
+	}
 
 	initOpts(o) {
 		if (!('app' in o)) o.app = {}
