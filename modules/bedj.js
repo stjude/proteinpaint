@@ -70,7 +70,7 @@ should guard against file content error e.g. two tabs separating columns
 	}
 
 	const color = req.query.color || '#3D7A4B'
-	const flag_gm = req.query.gmregion // use as boolean
+	const flag_gm = req.query.gmregion ? JSON.parse(req.query.gmregion) : null
 	const gmisoform = req.query.isoform
 	const flag_onerow = req.query.onerow
 	const categories = req.query.categories ? JSON.parse(req.query.categories) : null
