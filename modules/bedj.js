@@ -30,18 +30,24 @@ async function do_query(req, genomes) {
 	const [e, tkfile, isurl] = app.fileurl(req)
 	if (e) throw e
 
-	const stackheight = Number(req.query.stackheight),
-		stackspace = Number(req.query.stackspace),
-		regionspace = Number(req.query.regionspace),
+	let stackheight, stackspace, regionspace, width
+	if (req.query.getdata) {
+		// no rendering, return list of parsed items
+		if (req.query.getBED) {
+			// experimental parameter to pass over BED file items to clientside
+		}
+	} else {
+		stackheight = Number(req.query.stackheight)
+		stackspace = Number(req.query.stackspace)
+		regionspace = Number(req.query.regionspace)
 		width = Number(req.query.width)
-
-	if (Number.isNaN(stackheight)) throw 'stackheight is not integer'
-	const fontsize = Math.max(10, stackheight - 2)
-
-	if (Number.isNaN(stackspace)) throw 'stackspace is not integer'
-	if (Number.isNaN(regionspace)) throw 'regionspace is not integer'
-	// width could be float!!
-	if (Number.isNaN(width)) throw 'width is not a number'
+		if (Number.isNaN(stackheight)) throw 'stackheight is not integer'
+		fontsize = Math.max(10, stackheight - 2)
+		if (Number.isNaN(stackspace)) throw 'stackspace is not integer'
+		if (Number.isNaN(regionspace)) throw 'regionspace is not integer'
+		// width could be float!!
+		if (Number.isNaN(width)) throw 'width is not a number'
+	}
 
 	if (req.query.usevalue) {
 		if (!req.query.usevalue.key) throw '.key missing from .usevalue'
@@ -81,7 +87,7 @@ async function do_query(req, genomes) {
 		dir = await utils.cache_index(tkfile, req.query.indexURL)
 	}
 
-	const regionitems = await get_data(req.query, tkfile, dir, flag_gm, gmisoform)
+	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
 
 	const items = []
 
@@ -710,7 +716,7 @@ may return additional info for:
 	})
 }
 
-async function get_data(q, tkfile, dir, flag_gm, gmisoform) {
+async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	if (flag_gm) {
 		// query over the gene region, just one region
 		const items = []
@@ -718,7 +724,9 @@ async function get_data(q, tkfile, dir, flag_gm, gmisoform) {
 		await utils.get_lines_tabix([tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop], dir, line => {
 			const l = line.split('\t')
 			let j = {}
-			if (l[3]) {
+			if (q.getBED) {
+				j.rest = l.slice(3)
+			} else if (l[3]) {
 				try {
 					j = JSON.parse(l[3])
 				} catch (e) {
@@ -755,7 +763,9 @@ async function get_data(q, tkfile, dir, flag_gm, gmisoform) {
 		await utils.get_lines_tabix([tkfile, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
 			const l = line.split('\t')
 			let j = {}
-			if (l[3]) {
+			if (q.getBED) {
+				j.rest = l.slice(3)
+			} else if (l[3]) {
 				try {
 					j = JSON.parse(l[3])
 				} catch (e) {
