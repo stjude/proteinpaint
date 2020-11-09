@@ -7,6 +7,13 @@ const nt2aa = require('../src/common').nt2aa
 
 const serverconfig = utils.serverconfig
 
+/*
+should guard against file content error e.g. two tabs separating columns
+
+genome=? is only required for gene tracks that will be translated, otherwise not required
+
+*/
+
 module.exports = genomes => {
 	return async (req, res) => {
 		app.log(req)
@@ -20,15 +27,8 @@ module.exports = genomes => {
 }
 
 async function do_query(req, genomes) {
-	/*
-should guard against file content error e.g. two tabs separating columns
-
-*/
 	const [e, tkfile, isurl] = app.fileurl(req)
 	if (e) throw e
-	if (!req.query.genome) throw 'genome missing'
-	const genomeobj = genomes[req.query.genome]
-	if (!genomeobj) throw 'invalid genome'
 
 	const stackheight = Number(req.query.stackheight),
 		stackspace = Number(req.query.stackspace),
@@ -83,10 +83,6 @@ should guard against file content error e.g. two tabs separating columns
 
 	const regionitems = await get_data(req.query, tkfile, dir, flag_gm, gmisoform)
 
-	/*********************************
-	    4 - render
-	*********************************/
-
 	const items = []
 
 	// apply filtering
@@ -108,7 +104,10 @@ should guard against file content error e.g. two tabs separating columns
 		}
 	}
 
-	// TODO may return items without rendering
+	if (req.query.getdata) {
+		///////////////////////// exit ///////////////////
+		return { items }
+	}
 
 	if (items.length == 0) {
 		const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
@@ -119,6 +118,7 @@ should guard against file content error e.g. two tabs separating columns
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 		ctx.fillText('No data in view range', width / 2, stackheight / 2)
+		///////////////////////// exit ///////////////////
 		return {
 			src: canvas.toDataURL(),
 			height: stackheight
@@ -126,8 +126,8 @@ should guard against file content error e.g. two tabs separating columns
 	}
 
 	const thinpad = Math.ceil(stackheight / 4) - 1
+
 	if (flag_onerow || items.length >= 400) {
-		// __onerow__
 		// may render strand
 		const notmanyitem = items.length < 200
 		const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
@@ -184,12 +184,12 @@ should guard against file content error e.g. two tabs separating columns
 				}
 			}
 		}
+		///////////////////////// exit ///////////////////
 		return {
 			src: canvas.toDataURL(),
 			height: stackheight,
 			mapisoform: mapisoform
 		}
-		// end of __onerow__
 	}
 
 	let returngmdata = null
@@ -208,6 +208,12 @@ should guard against file content error e.g. two tabs separating columns
 
 	const bpcount = req.query.rglst.reduce((a, b) => a + b.stop - b.start, 0)
 	const maytranslate = req.query.translatecoding && bpcount < width * 3
+	let genomeobj
+	if (maytranslate) {
+		if (!req.query.genome) throw 'genome missing for translating genes'
+		genomeobj = genomes[req.query.genome]
+		if (!genomeobj) throw 'invalid genome'
+	}
 	const translateitem = []
 	const namespace = 1
 	const namepad = 10 // box no struct: [pad---name---pad]
