@@ -57,8 +57,8 @@ class TdbStore {
 
 	validateOpts() {
 		const s = this.state
-		if (!s.genome) throw '.state.genome missing'
-		if (!s.dslabel) throw '.state.dslabel missing'
+		if (!s.genome && !this.app.opts.vocab) throw '.state.genome missing'
+		if (!s.dslabel && !this.app.opts.vocab) throw '.state.dslabel missing'
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {

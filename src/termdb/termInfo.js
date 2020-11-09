@@ -33,7 +33,7 @@ class TdbTermInfo {
 			return
 		}
 		this.dom.holder.style('display', 'block')
-		const data = await this.app.getTermInfo()
+		const data = await this.app.vocab.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }

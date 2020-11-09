@@ -5,7 +5,7 @@ export function getVocab(app, opts) {
 	if (state.dslabel) {
 		return new DefaultVocab(app)
 	} else if (opts.vocab) {
-		new CustomVocab(app)
+		return new CustomVocab(app)
 	} /*else {
 		throw 'unable to set a vocabulary source'
 	}*/
@@ -78,10 +78,8 @@ class DefaultVocab {
 	}
 
 	// from termdb/terminfo
-	async getTermInfo() {
-		const args = [
-			'genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&getterminfo=1&tid=' + this.state.term.id
-		]
+	async getTermInfo(id) {
+		const args = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&getterminfo=1&tid=' + id]
 		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
@@ -127,7 +125,76 @@ class CustomVocab {
 		this.vocab = app.opts.vocab
 	}
 
-	main() {
-		this.state = this.app.getState()
+	main(vocab) {
+		if (vocab) Object.assign(this.vocab, vocab)
+	}
+
+	getTermdbConfig() {
+		return { termdbConfig: { selectCohort: this.vocab.selectCohort } }
+	}
+
+	getTermChildren(term, cohortValuelst) {
+		const cohortValuestr = (cohortValuelst || [])
+			.slice()
+			.sort()
+			.join(',')
+		const parent_id = term.__tree_isroot ? null : term.id
+		return {
+			lst: this.vocab.terms.filter(
+				t =>
+					t.parent_id === parent_id &&
+					(!cohortValuestr.length || cohortValuestr === t.cohortValues.slice().sort.join(','))
+			)
+		}
+	}
+
+	// from termdb/plot
+	async getPlotData(plotId, dataName) {
+		return { charts: [], refs: {} }
+	}
+
+	// from termdb/search
+	async findTerm(str, cohortStr) {
+		const cohortValuestr = cohortValuelst
+			.slice()
+			.sort()
+			.join(',')
+		return {
+			lst: this.vocab.terms.filter(
+				t =>
+					t.name.includes(str) && (!cohortValuestr.length || cohortValuestr === t.cohortValues.slice().sort.join(','))
+			)
+		}
+	}
+
+	// from termdb/terminfo
+	async getTermInfo(id) {
+		const term = this.vocab.find(t => t.id === id)
+		if (!term) return undefined
+		return { terminfo: t.info }
+	}
+
+	// from termdb/nav
+	async getCohortSampleCount(cohortName) {
+		if (!cohortName) return
+		const term = this.vocab.find(t => t.id === id)
+		if (!term || !term.cohortValues.includes(cohortName)) return
+		if (!term.samplecount) term.samplecount = {}
+		if (!(cohortName in term.samplecount)) {
+			term.samplecount[cohortName] = Object.keys(this.vocab.sampleannotation).length
+		}
+		return { samplecount: term.samplecount[cohortName] }
+	}
+
+	/*** To-Do ***/
+	async getFilteredSampleCount(cohortName, filterJSON) {
+		if (!cohortName) return
+		const term = this.vocab.find(t => t.id === id)
+		if (!term || !term.cohortValues.includes(cohortName)) return
+		if (!term.samplecount) term.samplecount = {}
+		if (!(cohortName in term.samplecount)) {
+			term.samplecount[cohortName] = Object.keys(this.vocab.sampleannotation).length
+		}
+		return { samplecount: 'TBD' }
 	}
 }
