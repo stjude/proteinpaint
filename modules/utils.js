@@ -249,10 +249,12 @@ function get_lines_tabix(args, dir, callback) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			callback(line)
-		})
+		const em = []
+		rl.on('line', line => callback(line))
+		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
+			const e = em.join('').trim()
+			if (e) reject(e)
 			resolve()
 		})
 	})

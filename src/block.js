@@ -2987,7 +2987,7 @@ seekrange(chr,start,stop) {
 		// FIXME when printing new error old error register is overwritten!!
 		tk.gerror = tk.glider
 			.append('text')
-			.text(msg)
+			.text(msg.length > this.width / 10 ? msg.substring(0, this.width / 10 - 20) + '...' : msg)
 			.attr('x', this.width / 2)
 			.attr('text-anchor', 'middle')
 			.attr('y', y ? y : (tk.height_main - tk.toppad - tk.bottompad) / 2)
