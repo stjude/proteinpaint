@@ -53,6 +53,7 @@ const express = require('express'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
 	aicheck_request_closure = require('./modules/aicheck'),
+	bampile_request = require('./modules/bampile'),
 	bedj_request_closure = require('./modules/bedj'),
 	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
@@ -159,7 +160,7 @@ app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
 app.get('/dsvariantsummary', handle_dsvariantsummary)
-app.post('/tkbampile', handle_tkbampile)
+app.get('/tkbampile', bampile_request)
 app.post('/snpbyname', handle_snpbyname)
 app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
 
@@ -1070,210 +1071,6 @@ if file/url ends with .gz, it is bedgraph
 			}
 			res.send({ error: typeof err == 'string' ? err : err.message })
 		})
-}
-
-function handle_tkbampile(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
-	const [e, tkfile, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	let usegrade = req.query.usegrade
-	const allheight = req.query.allheight,
-		fineheight = req.query.fineheight,
-		fineymax = req.query.fineymax,
-		midpad = req.query.midpad
-	;(regionspace = req.query.regionspace), (width = req.query.width)
-	if (!Number.isInteger(allheight)) return res.send({ error: 'allheight is not integer' })
-	if (!Number.isInteger(fineheight)) return res.send({ error: 'fineheight is not integer' })
-	if (!Number.isInteger(fineymax)) return res.send({ error: 'fineymax is not integer' })
-	if (!Number.isInteger(midpad)) return res.send({ error: 'midpad is not integer' })
-	if (!Number.isInteger(regionspace)) return res.send({ error: 'regionspace is not integer' })
-	// width could be float!!
-	if (!Number.isFinite(width)) return res.send({ error: 'width is not a number' })
-	const rglst = req.query.rglst
-	if (!rglst) return res.send({ error: 'no rglst[]' })
-	if (!Array.isArray(rglst)) return res.send({ error: 'rglst is not an array' })
-	if (rglst.length == 0) return res.send({ error: 'empty rglst' })
-	for (const r of rglst) {
-		// TODO validate reggions
-		if (r.reverse) {
-			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
-		} else {
-			r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
-		}
-	}
-
-	const bampileloader = dir => {
-		const loop = idx => {
-			const r = rglst[idx]
-			r.items = []
-			// TODO store lines first, no parsing json if too many
-			const ps = spawn(tabix, [tkfile, r.chr + ':' + r.start + '-' + r.stop], { cwd: dir })
-			const thisout = []
-			const errout = []
-			ps.stdout.on('data', i => thisout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const _e = errout.join('')
-				if (_e && !tabixnoterror(_e)) {
-					res.send({ error: _e })
-					return
-				}
-
-				const lines = thisout
-					.join('')
-					.trim()
-					.split('\n')
-				let errlinecount = 0
-				for (const line of lines) {
-					if (line == '') continue
-					const l = line.split('\t')
-					let j
-					try {
-						j = JSON.parse(l[2])
-					} catch (e) {
-						errlinecount++
-						continue
-					}
-					const pos = Number.parseInt(l[1])
-					if (Number.isNaN(pos)) {
-						errlinecount++
-						continue
-					}
-					r.items.push({ pos: pos, data: j })
-				}
-				if (idx == rglst.length - 1) {
-					render()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-
-	if (isurl) {
-		const indexURL = req.query.indexURL || tkfile + '.tbi'
-		cache_index(indexURL, bampileloader, res)
-	} else {
-		bampileloader(null)
-	}
-
-	function render() {
-		const height = allheight + midpad + fineheight
-		const canvas = createCanvas(width, height)
-		const itemcount = rglst.reduce((i, j) => i + j.items.length, 0)
-		const ctx = canvas.getContext('2d')
-		if (itemcount == 0) {
-			// no data
-			ctx.font = '15px Arial'
-			ctx.fillStyle = '#aaa'
-			ctx.textAlign = 'center'
-			ctx.textBaseline = 'middle'
-			ctx.fillText('No data in view range', width / 2, height / 2)
-			res.send({ src: canvas.toDataURL() })
-			return
-		}
-		let allgrades = null
-		if (!usegrade) {
-			// get all grades
-			const gradeset = new Set()
-			for (const r of rglst) {
-				for (const i of r.items) {
-					for (const k in i.data) {
-						gradeset.add(k)
-					}
-				}
-			}
-			allgrades = [...gradeset]
-			if (allgrades.length > 0) {
-				usegrade = allgrades[0]
-			}
-			if (!usegrade) {
-				res.send({ src: canvas.toDataURL() })
-				return
-			}
-		}
-		let allmax = 0
-		for (const r of rglst) {
-			for (const i of r.items) {
-				if (i.data[usegrade]) {
-					let sum = 0
-					for (const nt in i.data[usegrade]) {
-						sum += i.data[usegrade][nt]
-					}
-					allmax = Math.max(allmax, sum)
-				}
-			}
-		}
-		const gray = '#ededed'
-		let x = 0
-		const allhsf = allheight / allmax
-		const allhsf2 = fineheight / fineymax
-		for (const r of rglst) {
-			const bpwidth = r.width / (r.stop - r.start)
-			for (const item of r.items) {
-				const ntd = item.data[usegrade]
-				if (!ntd) continue
-				const xx = r.scale(item.pos)
-				let sum = 0
-				const ntlst = []
-				for (const nt in ntd) {
-					ntlst.push({ nt: nt, v: ntd[nt] })
-					sum += ntd[nt]
-				}
-				///////// allheight graph
-				// gray bar atcg sum
-				ctx.fillStyle = gray
-				const thisbary = allhsf * (allmax - sum)
-				ctx.fillRect(x + xx, thisbary, bpwidth, allhsf * sum)
-				// other nt bases
-				if (ntlst.length > 1) {
-					ntlst.sort((a, b) => b.v - a.v)
-					for (let i = 1; i < ntlst.length; i++) {
-						let cum = 0
-						for (let j = 0; j < i; j++) {
-							cum += ntlst[j].v
-						}
-						ctx.fillStyle = common.basecolor[ntlst[i].nt]
-						ctx.fillRect(x + xx, thisbary + allhsf * cum, bpwidth, allhsf * ntlst[i].v)
-					}
-				}
-				/////// fineheight graph
-				// gray bar atcg sum
-				ctx.fillStyle = gray
-				const thisbary2 = allheight + midpad + allhsf2 * (fineymax - Math.min(sum, fineymax))
-				ctx.fillRect(x + xx, thisbary2, bpwidth, allhsf2 * Math.min(sum, fineymax))
-				if (ntlst.length > 1) {
-					for (let i = 1; i < ntlst.length; i++) {
-						let cum = 0
-						for (let j = 0; j < i; j++) {
-							cum += ntlst[j].v
-						}
-						ctx.fillStyle = common.basecolor[ntlst[i].nt]
-						ctx.fillRect(
-							x + xx,
-							thisbary2 + allhsf2 * (fineymax - Math.min(fineymax, sum - cum)),
-							bpwidth,
-							allhsf2 * Math.min(fineymax, ntlst[i].v)
-						)
-					}
-				}
-			}
-			x += r.width + regionspace
-		}
-		res.send({
-			src: canvas.toDataURL(),
-			allgrades: allgrades,
-			usegrade: usegrade,
-			allmax: allmax
-		})
-	}
 }
 
 function handle_snpbyname(req, res) {
