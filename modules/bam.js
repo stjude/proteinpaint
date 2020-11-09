@@ -8,7 +8,6 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
-const { exec } = require('child_process')
 
 /*
 XXX quick fix to be removed/disabled later
@@ -222,22 +221,22 @@ module.exports = genomes => {
 			}
 			const q = await get_q(genome, req)
 			const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
-			const coverage_plot_file = await create_coverage_plot(
+			const coverage_plot_str = await create_coverage_plot(
 				q.file,
 				coverage_input.chr.replace('chr', ''),
 				coverage_input.start,
 				coverage_input.stop
 			) // Currently 'chr' is removed from chromosome string, please look into this
-			const coverage_plot_file_str = (await utils.read_file(coverage_plot_file)).trim()
-			fs.unlink(coverage_plot_file, () => {})
-			//console.log('coverage_plot_file_str:', coverage_plot_file_str)
+			//const coverage_plot_file_str = (await utils.read_file(coverage_plot_file)).trim()
+			//fs.unlink(coverage_plot_file, () => {})
+			console.log('coverage_plot_str:', coverage_plot_str)
 			let total_cov = []
 			let As_cov = []
 			let Cs_cov = []
 			let Gs_cov = []
 			let Ts_cov = []
 			let first_iter = 1
-			for (const line of coverage_plot_file_str.split('\n')) {
+			for (const line of coverage_plot_str.split('\n')) {
 				if (first_iter == 1) {
 					first_iter = 0
 				} else {
@@ -479,25 +478,25 @@ function query_region(r, q) {
 function create_coverage_plot(bam_file, chr, start, stop) {
 	// function for creating the
 	return new Promise((resolve, reject) => {
-		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
-		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile)
-		exec(
-			sambamba + ' depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop + ' > ' + outfile,
-			(error, stdout, stderr) => {
-				if (stdout) {
-					console.log('stdout:', stdout)
-				}
+		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
 
-				if (error) {
-					console.log(`error: ${error.message}`)
-				} else {
-					if (stderr) {
-						console.log(`stderr: ${stderr}`)
-					}
-					resolve(outfile)
-				}
-			}
-		)
+		const ls = spawn(sambamba, ['depth', 'base', bam_file, '-L', chr + ':' + start + '-' + stop])
+
+		ls.stdout.on('data', function(data) {
+			//Here is where the output goes
+			data = data.toString()
+			//console.log('stdout: ' + data)
+			resolve(data)
+		})
+
+		ls.stderr.on('data', data => {
+			console.log(`stderr: ${data}`)
+		})
+
+		ls.on('close', code => {
+			console.log(`child process exited with code ${code}`)
+			resolve('')
+		})
 	})
 }
 

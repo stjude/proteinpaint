@@ -3,10 +3,9 @@ const fs = require('fs'),
 	spawn = require('child_process').spawn,
 	utils = require('./utils'),
 	app = require('../app')
-const { exec } = require('child_process')
-const execSync = require('child_process').execSync
 
 const serverconfig = utils.serverconfig
+const tabix = serverconfig.tabix || 'tabix'
 const gfClient = serverconfig.gfClient || 'gfClient'
 const gfServer = serverconfig.gfServer || 'gfServer'
 
@@ -151,11 +150,11 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
 				if (genome.repeatmasker) {
-					const outfile = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
+					const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
 					//console.log("outfile:",outfile)
-					const outputstr = (await utils.read_file(outfile)).trim()
+					//const outputstr = (await utils.read_file(outfile)).trim()
 					//console.log("outputstr:",outputstr)
-					fs.unlink(outfile, () => {})
+					//fs.unlink(outfile, () => {})
 					if (outputstr.length == 0) {
 						h.ref_in_repeat = '-'
 					} else {
@@ -178,11 +177,9 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 
 function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
 	return new Promise((resolve, reject) => {
-		const outfile = path.join(serverconfig.cachedir, Math.random().toString())
 		console.log(
-			'touch ' +
-				outfile +
-				' && tabix -p bed ' +
+			tabix +
+				' -p bed ' +
 				serverconfig.tpmasterdir +
 				'/' +
 				genome.repeatmasker.dbfile +
@@ -191,76 +188,24 @@ function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
 				':' +
 				ref_startpos +
 				'-' +
-				ref_stoppos +
-				' >> ' +
-				outfile
-		)
-		exec(
-			'touch ' +
-				outfile +
-				' && tabix -p bed ' +
-				serverconfig.tpmasterdir +
-				'/' +
-				genome.repeatmasker.dbfile +
-				' ' +
-				ref_chr +
-				':' +
-				ref_startpos +
-				'-' +
-				ref_stoppos +
-				' >> ' +
-				outfile,
-			(error, stdout, stderr) => {
-				if (stdout) {
-					console.log('stdout:', stdout)
-				}
-
-				if (error) {
-					console.log(`error: ${error.message}`)
-				} else {
-					if (stderr) {
-						console.log(`stderr: ${stderr}`)
-					}
-					resolve(outfile)
-				}
-			}
-		)
-	})
-}
-
-function determine_repeat_in_ref2(genome, ref_chr, ref_startpos, ref_stoppos) {
-	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
-	return new Promise((resolve, reject) => {
-		console.log(
-			'tabix -p bed ' +
-				genome.repeatmasker.dbfile +
-				' ' +
-				ref_chr +
-				':' +
-				ref_startpos +
-				'-' +
-				ref_stoppos +
-				' > ' +
-				outfile
+				ref_stoppos
 		)
 		//console.log(ref_chr+":"+ref_startpos+"-"+ref_stoppos)
-		const ls = spawn('tabix', [
+
+		const ls = spawn(tabix, [
 			'-p',
 			'bed',
-			genome.repeatmasker.dbfile,
-			//"chr1:9000-10400"
-			//"chrY:59362789-59362997"
-			ref_chr + ':' + ref_startpos + '-' + ref_stoppos,
-			'>',
-			outfile
+			serverconfig.tpmasterdir + '/' + genome.repeatmasker.dbfile,
+			ref_chr + ':' + ref_startpos + '-' + ref_stoppos
 		])
-		// "chr1:9000-10400"
+
 		//    ls.stdout.setEncoding('utf8')
-		//    ls.stdout.on("data", function(data) {
-		//		//Here is where the output goes
-		//		data=data.toString()
-		//		console.log('stdout: ' + data)
-		//	    })
+		ls.stdout.on('data', function(data) {
+			//Here is where the output goes
+			data = data.toString()
+			console.log('stdout: ' + data)
+			resolve(data)
+		})
 
 		ls.stderr.on('data', data => {
 			console.log(`stderr: ${data}`)
@@ -272,7 +217,7 @@ function determine_repeat_in_ref2(genome, ref_chr, ref_startpos, ref_stoppos) {
 
 		ls.on('close', code => {
 			console.log(`child process exited with code ${code}`)
-			resolve(outfile)
+			resolve('')
 		})
 	})
 	//console.log("data:",data)
