@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	block:1,
+	position:'chr11:69449264-69475901',
+	genome:'hg19',
+	tracks:[
+		{
+			type:'bedj',
+			name:'bedj',
+			file:'anno/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'3-column bed',
+			file:'proteinpaint_demo/hg19/misc/rmsk.bed3.gz'
+		},
+		{
+			type:'bedj',
+			name:'.tbi index pecan',
+			url:'https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'.csi index pecan',
+			url:'https://pecan.stjude.cloud/static/pp-support/indexUrlTest/csi/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'Missing index file pecan',
+			url:'https://pecan.stjude.cloud/static/pp-support/indexUrlTest/missing/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'Wrong index file pecan',
+			url:'https://pecan.stjude.cloud/static/pp-support/indexUrlTest/wrong/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'.tbi index PP',
+			url:'https://proteinpaint.stjude.org/indexUrlTest/tbi/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'.csi index PP',
+			url:'https://proteinpaint.stjude.org/indexUrlTest/csi/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'Missing index file PP',
+			url:'https://proteinpaint.stjude.org/indexUrlTest/missing/refGene.hg19.gz'
+		},
+		{
+			type:'bedj',
+			name:'Wrong index file PP',
+			url:'https://proteinpaint.stjude.org/indexUrlTest/wrong/refGene.hg19.gz'
+		},
+
+	],
+})
+</script>
+
+</body>
+</html>
