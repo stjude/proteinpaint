@@ -3642,7 +3642,7 @@ async function handle_mdssvcnv_vcf(
 				// for custom url the index has already been cached at initial load
 				// still need to get cache dir for loading index
 				if (vcftk.file) return ''
-				return cache_index_promise(vcftk.indexURL || vcftk.url + '.tbi')
+				return utils.cache_index(vcftk.url, vcftk.indexURL)
 			})
 			.then(dir => {
 				vcftk.dir = dir // reuse in rnabam
@@ -4135,7 +4135,7 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 			// cache expression index
 
 			if (expressionquery.file) return ''
-			return cache_index_promise(expressionquery.indexURL || expressionquery.url + '.tbi')
+			return utils.cache_index(expressionquery.url, expressionquery.indexURL)
 		})
 		.then(dir => {
 			// get expression data
@@ -5237,7 +5237,7 @@ async function handle_bamnochr(req, res) {
 			q.file = path.join(serverconfig.tpmasterdir, q.file)
 		} else {
 			if (!q.url) throw 'no bam file or url'
-			q.url_dir = await cache_index_promise(q.indexURL || q.url + '.bai')
+			q.url_dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
 		}
 
 		const nochr = await bam_ifnochr(q.file || q.url, genome, q.url_dir)
