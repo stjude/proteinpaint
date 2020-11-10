@@ -279,7 +279,6 @@ module.exports = genomes => {
 					}
 				}
 			}
-			console.log('coverage counter:', coverage_counter)
 			console.log('ref_seq:', ref_seq)
 			console.log('ref_seq length:', ref_seq.length)
 			console.log('con_seq:', consensus_seq)
