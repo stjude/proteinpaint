@@ -1,6 +1,4 @@
 const app = require('../app')
-const path = require('path')
-const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const basecolor = require('../src/common').basecolor

@@ -33,6 +33,7 @@ write_tmpfile
 read_file
 file_not_exist
 file_not_readable
+get_header_tabix
 get_header_vcf
 get_fasta
 connect_db
@@ -170,7 +171,7 @@ exports.init_one_vcf = async function(tk, genome) {
 		throw 'no file or url given for vcf file'
 	}
 
-	const [info, format, samples, errors] = await get_header_vcf(filelocation, tk.dir)
+	const [info, format, samples, errors] = await exports.get_header_vcf(filelocation, tk.dir)
 	if (errors) {
 		console.log(errors.join('\n'))
 		throw 'got above errors parsing vcf'
@@ -234,15 +235,16 @@ function file_not_readable(file) {
 exports.file_not_readable = file_not_readable
 exports.file_not_exist = file_not_exist
 
-async function get_header_vcf(file, dir) {
-	/* file is full path file or url
-	 */
+exports.get_header_tabix = async (file, dir) => {
+	// file is full path file or url
 	const lines = []
 	await get_lines_tabix([file, '-H'], dir, line => {
 		lines.push(line)
 	})
-
-	return vcf.vcfparsemeta(lines)
+	return lines
+}
+exports.get_header_vcf = async (file, dir) => {
+	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
 }
 
 function get_lines_tabix(args, dir, callback) {

@@ -7,13 +7,13 @@ const ch_dbtable = new Map() // k: db path, v: db stuff
 const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
-const util = require('util')
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
 }
 
 const express = require('express'),
+	util = require('util'),
 	url = require('url'),
 	http = require('http'),
 	https = require('https'),
@@ -54,6 +54,7 @@ const express = require('express'),
 	bam_request_closure = require('./modules/bam'),
 	aicheck_request_closure = require('./modules/aicheck'),
 	bampile_request = require('./modules/bampile'),
+	junction_request = require('./modules/junction'),
 	bedj_request_closure = require('./modules/bedj'),
 	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
@@ -166,6 +167,7 @@ app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post('/tkbigwig', handle_tkbigwig)
 
+app.get('/tabixheader', handle_tabixheader)
 app.post('/snp', handle_snpbycoord)
 app.post('/clinvarVCF', handle_clinvarVCF)
 app.post('/isoformlst', handle_isoformlst)
@@ -176,7 +178,7 @@ app.post('/dsgenestat', handle_dsgenestat)
 app.post('/study', handle_study)
 app.post('/textfile', handle_textfile)
 app.post('/urltextfile', handle_urltextfile)
-app.post('/junction', handle_junction) // legacy
+app.get('/junction', junction_request) // legacy
 app.post('/mdsjunction', handle_mdsjunction)
 app.post('/mdscnv', handle_mdscnv)
 app.post('/mdssvcnv', handle_mdssvcnv)
@@ -293,6 +295,20 @@ function maymakefolder() {
 			}
 		})
 	})
+}
+
+async function handle_tabixheader(req, res) {
+	log(req)
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		const lines = await utils.get_header_tabix(file, dir)
+		res.send({ lines })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 function handle_genomes(req, res) {
@@ -2286,87 +2302,6 @@ async function handle_urltextfile(req, res) {
 		}
 	} catch (e) {
 		return res.send({ error: 'Error downloading file: ' + url })
-	}
-}
-
-function handle_junction(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
-	const [e, file, isurl] = fileurl(req)
-	if (e) {
-		return res.send({ error: e })
-	}
-	if (!req.query.rglst) {
-		// TODO validate regions
-		return res.send({ error: 'rglst missing' })
-	}
-
-	if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000) {
-		return res.send({ error: 'Zoom in below 1 Mb to show junctions' })
-	}
-
-	const junctionloader = usedir => {
-		const errout = []
-		const items = []
-		const loopdone = () => {
-			const e = errout.join('')
-			if (e && !tabixnoterror(e)) {
-				res.send({ error: e })
-				return
-			}
-			res.send({ lst: items })
-		}
-		const loop = idx => {
-			const r = req.query.rglst[idx]
-			// TODO store lines first, no parsing json if too many
-			const ps = spawn(tabix, [file, r.chr + ':' + r.start + '-' + r.stop], { cwd: usedir })
-			const thisout = []
-			ps.stdout.on('data', i => thisout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const lines = thisout
-					.join('')
-					.trim()
-					.split('\n')
-				for (const line of lines) {
-					if (line == '') continue
-					const l = line.split('\t')
-					const start = Number.parseInt(l[1]),
-						stop = Number.parseInt(l[2])
-					if ((start >= r.start && start <= r.stop) || (stop >= r.start && stop <= r.stop)) {
-						// only use those with either start/stop in region
-						const j = {
-							chr: r.chr,
-							start: start,
-							stop: stop,
-							type: l[4],
-							rawdata: []
-						}
-						for (let i = 5; i < l.length; i++) {
-							j.rawdata.push(Number.parseInt(l[i]))
-						}
-						items.push(j)
-					}
-				}
-				if (idx == req.query.rglst.length - 1) {
-					loopdone()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-	if (isurl) {
-		const indexURL = req.query.indexURL || file + '.tbi'
-		cache_index(indexURL, junctionloader, res)
-	} else {
-		junctionloader()
 	}
 }
 
