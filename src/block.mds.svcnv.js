@@ -2662,13 +2662,19 @@ function prep_samplegroups(tk, block) {
 		}
 	}
 	if (tk.sampleset) {
+		//sort plotgroups in same order as tk.sampleset
+		const sortOrder = []
+		tk.sampleset.forEach(pg => sortOrder.push(pg.name))
+		plotgroups.sort((a, b) => {
+			if (sortOrder.indexOf(a.name) > sortOrder.indexOf(b.name)) return 1
+			else return -1
+		})
 		// for each group, sort samples by the order given
 		for (const sampleset of tk.sampleset) {
 			const plotgroup = plotgroups.find(pg => pg.name == sampleset.name)
-			if (!plotgroup) continue
+			if (!plotgroup || !plotgroup.samples) continue
 			const foundsamples = []
 			for (const name of sampleset.samples) {
-				if (!plotgroup.samples) console.log(plotgroup)
 				const s = plotgroup.samples.find(j => j.samplename == name)
 				if (s) {
 					foundsamples.push(s)
