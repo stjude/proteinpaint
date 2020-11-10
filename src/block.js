@@ -14,7 +14,7 @@ import * as Legend from './block.legend'
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
 import { pgvfromtemplate, pgvmaketk, pgvload } from './block.tk.pgv.adaptor'
-import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction'
+import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction.adaptor'
 import { bampilefromtemplate, bampilemaketk, bampileload } from './block.tk.bampile'
 import { bigwigfromtemplate, bigwigmaketk, bigwigload, bigwigloadsubpanel } from './block.tk.bigwig'
 import { aicheckfromtemplate, aicheckmaketk, aicheckload, aicheckloadsubpanel } from './block.tk.aicheck.adaptor'
