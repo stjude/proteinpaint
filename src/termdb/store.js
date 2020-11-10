@@ -57,8 +57,12 @@ class TdbStore {
 
 	validateOpts() {
 		const s = this.state
-		if (!s.genome && !this.app.opts.vocab) throw '.state.genome missing'
-		if (!s.dslabel && !this.app.opts.vocab) throw '.state.dslabel missing'
+		if (!this.app.opts.vocab) {
+			if (!s.genome) throw '.state.genome missing'
+			if (!s.dslabel) throw '.state.dslabel missing'
+		} else {
+			if (!Array.isArray(this.app.opts.vocab.terms)) throw 'vocab.terms must be an array of objects'
+		}
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {

@@ -155,14 +155,9 @@ class CustomVocab {
 
 	// from termdb/search
 	async findTerm(str, cohortStr) {
-		const cohortValuestr = cohortValuelst
-			.slice()
-			.sort()
-			.join(',')
 		return {
 			lst: this.vocab.terms.filter(
-				t =>
-					t.name.includes(str) && (!cohortValuestr.length || cohortValuestr === t.cohortValues.slice().sort.join(','))
+				t => t.name.includes(str) && (!cohortStr || cohortStr === t.cohortValues.slice().sort.join(','))
 			)
 		}
 	}
