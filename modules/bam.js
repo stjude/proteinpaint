@@ -219,23 +219,36 @@ module.exports = genomes => {
 				res.send(await route_getread(genome, req))
 				return
 			}
+
 			const q = await get_q(genome, req)
 			const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+			const ref_seq = (await utils.get_fasta(
+				q.genome,
+				coverage_input.chr +
+					':' +
+					parseInt(coverage_input.start).toString() +
+					'-' +
+					parseInt(coverage_input.stop).toString()
+			))
+				.split('\n')
+				.slice(1)
+				.join('')
+				.toUpperCase()
+
 			const coverage_plot_str = await create_coverage_plot(
 				q.file,
 				coverage_input.chr.replace('chr', ''),
 				coverage_input.start,
 				coverage_input.stop
-			) // Currently 'chr' is removed from chromosome string, please look into this
-			//const coverage_plot_file_str = (await utils.read_file(coverage_plot_file)).trim()
-			//fs.unlink(coverage_plot_file, () => {})
-			console.log('coverage_plot_str:', coverage_plot_str)
+			)
+			//console.log('coverage_plot_str:', coverage_plot_str)
 			let total_cov = []
 			let As_cov = []
 			let Cs_cov = []
 			let Gs_cov = []
 			let Ts_cov = []
 			let first_iter = 1
+			let consensus_seq = ''
 			for (const line of coverage_plot_str.split('\n')) {
 				if (first_iter == 1) {
 					first_iter = 0
@@ -246,8 +259,32 @@ module.exports = genomes => {
 					Cs_cov.push(columns[4])
 					Gs_cov.push(columns[5])
 					Ts_cov.push(columns[6])
+					const max_value = Math.max(
+						parseInt(columns[3]),
+						parseInt(columns[4]),
+						parseInt(columns[5]),
+						parseInt(columns[6])
+					)
+					if (max_value == parseInt(columns[3])) {
+						consensus_seq += 'A'
+					}
+					if (max_value == parseInt(columns[4])) {
+						consensus_seq += 'C'
+					}
+					if (max_value == parseInt(columns[5])) {
+						consensus_seq += 'G'
+					}
+					if (max_value == parseInt(columns[6])) {
+						consensus_seq += 'T'
+					}
 				}
 			}
+			console.log('coverage counter:', coverage_counter)
+			console.log('ref_seq:', ref_seq)
+			console.log('ref_seq length:', ref_seq.length)
+			console.log('con_seq:', consensus_seq)
+			console.log('consensus length:', consensus_seq.length)
+
 			const coverage_data = {
 				total_cov: total_cov,
 				As_cov: As_cov,
