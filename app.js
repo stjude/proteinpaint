@@ -250,7 +250,7 @@ pp_init()
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!serverconfig.allow_mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (!exports.features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
 		const id = Math.random().toString()
 		const folder = await maymakefolder()
@@ -2803,7 +2803,11 @@ async function handle_mdssvcnv(req, res) {
 
 	// cache svcnv tk url index
 	if (dsquery.url) {
-		dsquery.dir = await cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+		try {
+			dsquery.dir = await utils.cache_index(dsquery.url, dsquery.indexURL)
+		} catch (e) {
+			return res.send({ error: 'svcnv file index url error' })
+		}
 	}
 
 	// query svcnv
