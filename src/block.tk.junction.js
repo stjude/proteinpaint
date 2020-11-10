@@ -93,7 +93,7 @@ function makeTk(tk, block) {
 	}
 }
 
-export function loadTk(tk, block) {
+export function junctionload(tk, block) {
 	if (tk.uninitialized) {
 		makeTk(tk, block)
 		delete tk.uninitialized

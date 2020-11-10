@@ -65,6 +65,6 @@ export function junctionmaketk(tk, block) {
 
 export function junctionload(tk, block) {
 	import('./block.tk.junction').then(_ => {
-		_.loadTk(tk, block)
+		_.junctionload(tk, block)
 	})
 }
