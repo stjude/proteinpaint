@@ -2664,8 +2664,7 @@ function prep_samplegroups(tk, block) {
 	}
 	if (tk.sampleset) {
 		//sort plotgroups in same order as tk.sampleset
-		const sortOrder = []
-		tk.sampleset.forEach(pg => sortOrder.push(pg.name))
+		const sortOrder = tk.sampleset.map(i => i.name)
 		plotgroups.sort((a, b) => {
 			if (sortOrder.indexOf(a.name) > sortOrder.indexOf(b.name)) return 1
 			else return -1
