@@ -23,7 +23,7 @@ module.exports = genomes => {
 			if (q.file) {
 				q.file = path.join(serverconfig.tpmasterdir, q.file)
 			} else if (q.url) {
-				dir = await app.cache_index_promise(q.indexURL || q.url + '.tbi')
+				dir = await utils.cache_index(q.url, q.indexURL)
 			} else {
 				throw 'file or url missing'
 			}

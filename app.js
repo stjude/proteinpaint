@@ -9214,7 +9214,7 @@ async function handle_vcfheader(req, res) {
 		if (e) throw e
 		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		res.send({
-			metastr: (await utils.get_header_tabix(file, dir)).join(''),
+			metastr: (await utils.get_header_tabix(file, dir)).join('\n'),
 			nochr: await utils.tabix_is_nochr(file, dir, g)
 		})
 	} catch (e) {
@@ -9223,278 +9223,26 @@ async function handle_vcfheader(req, res) {
 	}
 }
 
-function handle_vcf(req, res) {
+async function handle_vcf(req, res) {
 	// single vcf
 	if (reqbodyisinvalidjson(req, res)) return
-
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	const vcfloader = usedir => {
-		if (req.query.header) {
-			// get header, no data
-			const tasks = []
-			// 0: meta
-			tasks.push(next => {
-				const ps = spawn(tabix, ['-H', file], { cwd: usedir })
-				const thisout = []
-				const thiserr = []
-				ps.stdout.on('data', i => thisout.push(i))
-				ps.stderr.on('data', i => thiserr.push(i))
-				ps.on('close', code => {
-					const e = thiserr.join('')
-					if (e && !tabixnoterror(e)) {
-						next(e)
-						return
-					}
-					next(null, thisout.join(''))
-				})
-			})
-			// 1: chr
-			tasks.push(next => {
-				const ps = spawn(tabix, ['-l', file], { cwd: usedir })
-				const thisout = []
-				const thiserr = []
-				ps.stdout.on('data', i => thisout.push(i))
-				ps.stderr.on('data', i => thiserr.push(i))
-				ps.on('close', code => {
-					const e = thiserr.join('')
-					if (e && !tabixnoterror(e)) {
-						next(e)
-						return
-					}
-					next(null, thisout.join(''))
-				})
-			})
-			async.series(tasks, (err, results) => {
-				if (err) {
-					res.send({ error: err })
-					return
-				}
-				res.send({
-					metastr: results[0],
-					chrstr: results[1]
-				})
-			})
-			return
-		}
-		// get actual variant data
-		const errout = []
-		const dataout = []
-		const loopdone = () => {
-			if (errout.length) {
-				res.send({ error: errout.join('') })
-				return
-			}
-			/*
-			data retrieved for all rglst[]
-			TODO may calculate the sampleidx for each variant
-			*/
-			res.send({
-				linestr: dataout.join('').trim()
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? utils.cache_index(file, req.query.indexURL) : null
+		if (!req.query.rglst) throw 'rglst missing'
+		const lines = []
+		for (const r of req.query.rglst) {
+			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
+				lines.push(line)
 			})
 		}
-		const loop = idx => {
-			const r = req.query.rglst[idx]
-			const ps = spawn(tabix, [file, r.chr + ':' + r.start + '-' + r.stop], { cwd: usedir })
-			ps.stdout.on('data', i => dataout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				if (idx == req.query.rglst.length - 1) {
-					loopdone()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-	if (isurl) {
-		const indexURL = req.query.indexURL || file + '.tbi'
-		cache_index(indexURL, vcfloader, res)
-	} else {
-		vcfloader()
+		res.send({ linestr: lines.join('\n') })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
 }
-
-function cache_index(indexURL, tkloader, res) {
-	const tmp = indexURL.split('//')
-	if (tmp.length != 2) {
-		return res.send({ error: 'irregular index URL: ' + indexURL })
-	}
-	// path of the index file, not including file name
-	const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-
-	/*
-	index file full path
-	for .tbi index file coming from dnanexus, convert the downloaded cache file to .csi
-	XXX FIXME why .tbi index doesn't work natively on dnanexus??
-	*/
-	let indexfile = path.basename(tmp[1])
-	if (
-		indexURL.startsWith('https://dl.dnanex.us') ||
-		indexURL.startsWith('https://westus.dl.azure.dnanex.us') ||
-		indexURL.startsWith('https://westus.dl.stagingazure.dnanex.us')
-	) {
-		indexfile = indexfile.replace(/tbi$/, 'csi')
-	}
-
-	const indexFilepath = path.join(dir, indexfile)
-
-	fs.stat(dir, (err, stat) => {
-		if (err) {
-			switch (err.code) {
-				case 'ENOENT':
-					// path not found, create path
-					exec('mkdir -p "' + dir + '"', err => {
-						if (err) {
-							return res.send({ error: 'cannot create dir for caching' })
-						}
-						// download file
-						const writestream = fs
-							.createWriteStream(indexFilepath)
-							.on('close', () => {
-								// file downloaded
-								tkloader(dir)
-							})
-							.on('error', () => {
-								return res.send({ error: 'failed to download index file' })
-							})
-
-						try {
-							got.stream(indexURL).pipe(writestream)
-						} catch (error) {
-							return res.send({ error: 'Error downloading ' + indexURL })
-						}
-						/*request(indexURL, (error, response, body) => {
-							if (error) {
-								return res.send({ error: 'Error downloading ' + indexURL })
-							}
-							if (response.statusCode == 404) {
-								return res.send({ error: 'File not found: ' + indexURL })
-							}
-						}).pipe(writestream)*/
-					})
-					return
-				case 'EACCES':
-					return res.send({ error: 'permission denied when stating cache dir' })
-				default:
-					return res.send({ error: 'unknown error code when stating: ' + err.code })
-			}
-		}
-		// path exists
-		// check if index file exists
-		fs.stat(indexFilepath, (err, stat) => {
-			if (err) {
-				switch (err.code) {
-					case 'ENOENT':
-						// file not found
-						// download file
-						const writestream = fs
-							.createWriteStream(indexFilepath)
-							.on('close', () => {
-								// file downloaded
-								tkloader(dir)
-							})
-							.on('error', () => {
-								return res.send({ error: 'failed to download index file' })
-							})
-
-						try {
-							got.stream(indexURL).pipe(writestream)
-						} catch (error) {
-							return res.send({ error: 'Error downloading ' + indexURL })
-						}
-						/*request(indexURL, (error, response, body) => {
-							if (error) {
-								// request encounters error, abort
-								return res.send({ error: 'Error downloading ' + indexURL })
-							}
-						}).pipe(writestream)*/
-						return
-					case 'EACCES':
-						return res.send({ error: 'permission denied when stating cache dir' })
-					default:
-						return res.send({ error: 'unknown error code when stating: ' + err.code })
-				}
-			}
-			// index file exists
-			tkloader(dir)
-		})
-	})
-}
-
-function cache_index_promise(indexURL) {
-	return new Promise((resolve, reject) => {
-		if (!indexURL) resolve()
-
-		const tmp = indexURL.split('//')
-		if (tmp.length != 2) reject({ message: 'irregular index URL: ' + indexURL })
-
-		// path of the index file, not including file name
-		const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-
-		/*
-	index file full path
-	for .tbi index file coming from dnanexus, convert the downloaded cache file to .csi
-	XXX FIXME why .tbi index doesn't work natively on dnanexus??
-	*/
-		let indexfile = path.basename(tmp[1])
-		if (
-			indexURL.startsWith('https://dl.dnanex.us') ||
-			indexURL.startsWith('https://westus.dl.azure.dnanex.us') ||
-			indexURL.startsWith('https://westus.dl.stagingazure.dnanex.us')
-		) {
-			if (indexURL.endsWith('bai')) {
-				indexfile = indexfile.replace(/bai$/, 'csi')
-			} else {
-				indexfile = indexfile.replace(/tbi$/, 'csi')
-			}
-		}
-
-		const indexFilepath = path.join(dir, indexfile)
-
-		fs.stat(dir, (err, stat) => {
-			if (err) {
-				if (err.code == 'ENOENT') {
-					// path not found, create path
-					exec('mkdir -p "' + dir + '"', err => {
-						if (err) reject({ message: 'cannot create dir for caching' })
-						// download file
-						downloadFile(indexURL, indexFilepath, err => {
-							if (err) reject({ message: err })
-							resolve(dir)
-						})
-					})
-					return
-				} else if (err.code == 'EACCES') {
-					reject({ message: 'permission denied when stating cache dir' })
-				}
-				reject({ message: 'unknown error code when stating: ' + err.code })
-			}
-			// path exists
-			// check if index file exists
-			fs.stat(indexFilepath, (err, stat) => {
-				if (err) {
-					if (err.code == 'ENOENT') {
-						// file not found, download
-						downloadFile(indexURL, indexFilepath, err => {
-							if (err) reject({ message: err })
-							resolve(dir)
-						})
-						return
-					} else if (err.code == 'EACCES') {
-						reject({ message: 'permission denied when stating cache dir' })
-					}
-					reject({ message: 'unknown error code when stating: ' + err.code })
-				}
-				// index file exists
-				resolve(dir)
-			})
-		})
-	})
-}
-exports.cache_index_promise = cache_index_promise
 
 function handle_translategm(req, res) {
 	try {

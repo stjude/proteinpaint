@@ -165,7 +165,7 @@ exports.init_one_vcf = async function(tk, genome) {
 		await validate_tabixfile(tk.file)
 	} else if (tk.url) {
 		filelocation = tk.url
-		tk.dir = await app.cache_index_promise(tk.indexURL || tk.url + '.tbi')
+		tk.dir = await utils.cache_index(tk.url, tk.indexURL)
 	} else {
 		throw 'no file or url given for vcf file'
 	}
