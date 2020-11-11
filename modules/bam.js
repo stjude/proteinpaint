@@ -348,7 +348,7 @@ async function get_q(genome, req) {
 		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
 	if (isurl) {
-		q.dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
+		q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
 	}
 	if (req.query.variant) {
 		const t = req.query.variant.split('.')
@@ -1556,7 +1556,6 @@ async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
-	console.log('req.query:', req.query)
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
 	if (!req.query.viewstart) throw '.viewstart missing'
@@ -1582,10 +1581,7 @@ async function route_getread(genome, req) {
 async function query_oneread(req, r) {
 	const [e, _file, isurl] = app.fileurl(req)
 	if (e) throw e
-	let dir
-	if (isurl) {
-		dir = await app.cache_index_promise(req.query.indexURL || _file + '.bai')
-	}
+	const dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	//const pos = Number(req.query.pos)
 	//if (!Number.isInteger(pos)) throw '.pos not integer'
 	let firstseg, lastseg
