@@ -1826,13 +1826,10 @@ pos
 genome{ name }
 */
 	if (!genome || !genome.hasClinvarVCF) return
-	const p = {
-		genome: genome.name,
-		chr: chr,
-		pos: pos,
-		ref: ref,
-		alt: alt
-	}
+	if (!Number.isInteger(pos)) throw 'pos is not integer'
+	const _c = genome.chrlookup[chr.toUpperCase()]
+	if (_c.len < pos) throw 'position out of bound: ' + pos
+	const p = { genome: genome.name, chr, pos, ref, alt }
 	return dofetch('clinvarVCF', p).then(data => {
 		if (data.error) throw data.error
 		return data.hit
