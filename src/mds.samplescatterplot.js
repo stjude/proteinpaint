@@ -4,7 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { zoom as d3zoom, zoomIdentity } from 'd3'
+import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
 
 /*
 obj:
@@ -469,16 +469,18 @@ function init_plot(obj) {
 		bottompad = width / 20 + 20
 		svg.attr('width', leftpad + vpad + width + rightpad).attr('height', toppad + height + vpad + bottompad)
 		//dotg
-		xscale.range([0, width])
-		yscale.range([height, 0])
-		dots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+		const new_xscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_xscale : xscale
+		const new_yscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_yscale : yscale
+		new_xscale.range([0, width])
+		new_yscale.range([height, 0])
+		dots.attr('transform', d => 'translate(' + new_xscale(d.x) + ',' + new_yscale(d.y) + ')')
 		if (userdots) {
-			userdots.attr('transform', d => 'translate(' + xscale(d.x) + ',' + yscale(d.y) + ')')
+			userdots.attr('transform', d => 'translate(' + new_xscale(d.x) + ',' + new_yscale(d.y) + ')')
 			userlabelg
 				.transition() // smooth motion of the text label
 				.attr('transform', d => {
-					const x = xscale(d.x),
-						y = yscale(d.y)
+					const x = new_xscale(d.x),
+						y = new_yscale(d.y)
 					// check label width
 					let lw
 					userlabels
@@ -641,10 +643,11 @@ function makeConfigPanel(obj) {
 			.on('zoom', obj.zoom_active ? zoomed : null)
 
 		function zoomed() {
-			const new_xScale = d3event.transform.rescaleX(obj.xscale)
-			const new_yScale = d3event.transform.rescaleY(obj.yscale)
+			obj.new_xscale = d3event.transform.rescaleX(obj.xscale)
+			obj.new_yscale = d3event.transform.rescaleY(obj.yscale)
+			obj.zoomed_scale = d3event.transform.k
 			const dots = obj.dotg.selectAll('g')
-			dots.attr('transform', d => 'translate(' + new_xScale(d.x) + ',' + new_yScale(d.y) + ')')
+			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
 		}
 
 		svg.call(zoom)
