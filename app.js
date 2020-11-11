@@ -7964,10 +7964,8 @@ tk is from ds.queries{}
 	// more configs are here
 	const st = q.samplerule.set
 
-	let dir
-	if (tk.url) {
-		dir = await cache_index_promise(tk.indexURL || tk.url + '.tbi')
-	}
+	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null // does km ever work on custom track?
+
 	return new Promise((resolve, reject) => {
 		const gain = new Set() // use if cnvonly
 		const loss = new Set()
@@ -8071,10 +8069,7 @@ only return the set of mutated sample names
 	// more configs are here
 	const st = q.samplerule.set
 
-	let dir
-	if (tk.url) {
-		dir = await cache_index_promise(tk.indexURL || tk.url + '.tbi')
-	}
+	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null
 	return new Promise((resolve, reject) => {
 		const ps = spawn(
 			tabix,
@@ -8234,10 +8229,7 @@ async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds
 	}
 	if (!genenumquery) throw 'no gene numeric query from ds'
 
-	let dir
-	if (genenumquery.url) {
-		dir = await cache_index_promise(genenumquery.indexURL || genenumquery.url + '.tbi')
-	}
+	const dir = genenumquery.url ? await utils.cache_index(genenumquery.url, genenumquery.indexURL) : null
 
 	const st = q.samplerule.set
 
@@ -8610,7 +8602,7 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -8673,7 +8665,7 @@ function samplematrix_task_iscnv(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -8743,7 +8735,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -8806,7 +8798,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -8865,7 +8857,7 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -8930,7 +8922,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -9094,7 +9086,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 		const q = Promise.resolve()
 			.then(() => {
 				if (tk.file) return
-				return cache_index_promise(tk.indexURL || tk.url + '.tbi')
+				return utils.cache_index(tk.url, tk.indexURL)
 			})
 			.then(dir => {
 				return new Promise((resolve, reject) => {
