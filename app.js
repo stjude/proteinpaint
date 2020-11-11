@@ -2991,7 +2991,7 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 
 		if (sbam.url) {
 			// even if no het snp still init dir, will calculate fpkm later for all bams
-			sbam.dir = await cache_index_promise(sbam.indexURL || sbam.url + '.bai')
+			sbam.dir = await utils.cache_index(sbam.url, sbam.indexURL || sbam.url + '.bai')
 		} else if (sbam.file) {
 			sbam.file = path.join(serverconfig.tpmasterdir, sbam.file)
 		}
@@ -6055,11 +6055,27 @@ async function handle_mdsgenevalueonesample(req, res) {
 			ds = ds1
 			dsquery = dsquery1
 		}
+		const dir = dsquery.file ? null : await utils.cache_index(dsquery.url, dsquery.indexURL)
 
 		const gene2value = {}
 		let nodata = true
 		for (const gene of q.genes) {
-			const v = await handle_mdsgenevalueonesample_get(ds, dsquery, gene, q.sample)
+			let v
+			await utils.get_lines_tabix(
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					gene.chr + ':' + gene.start + '-' + gene.stop
+				],
+				dir,
+				line => {
+					const l = line.split('\t')
+					if (!l[3]) return
+					const j = JSON.parse(l[3])
+					if (j.gene == gene.gene && j.sample == q.sample) {
+						v = j.value
+					}
+				}
+			)
 			if (Number.isFinite(v)) {
 				gene2value[gene.gene] = v
 				nodata = false
@@ -6074,44 +6090,6 @@ async function handle_mdsgenevalueonesample(req, res) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
-}
-
-async function handle_mdsgenevalueonesample_get(ds, dsquery, gene, sample) {
-	/*
-gene{}
-	.gene
-	.chr
-	.start
-	.stop
-sample STR
-*/
-	if (dsquery.url) {
-		dsquery.dir = await cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
-	}
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			tabix,
-			[
-				dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-				gene.chr + ':' + gene.start + '-' + gene.stop
-			],
-			{ cwd: dsquery.dir }
-		)
-		const rl = readline.createInterface({
-			input: sp.stdout
-		})
-		rl.on('line', line => {
-			const l = line.split('\t')
-			if (!l[3]) return
-			const j = JSON.parse(l[3])
-			if (j.gene == gene.gene && j.sample == sample) {
-				resolve(j.value)
-			}
-		})
-		sp.on('close', () => {
-			resolve(null)
-		})
-	})
 }
 
 function handle_mdsgeneboxplot(req, res) {
