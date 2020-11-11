@@ -265,12 +265,14 @@ function loadTk_mayinitiatecustomvcf(tk, block) {
 	if (tk.checkvcf && !tk.checkvcf.stringifiedObj) {
 		// driven by svcnv file
 		// load vcf meta keep on client for parsing vcf data
-		const arg = {
-			file: tk.checkvcf.file,
-			url: tk.checkvcf.url,
-			indexURL: tk.checkvcf.indexURL
+		const arg = ['genome=' + block.genome.name]
+		if (tk.checkvcf.file) {
+			arg.push('file=' + tk.checkvcf.file)
+		} else {
+			arg.push('url=' + tk.checkvcf.url)
+			if (tk.checkvcf.indexURL) arg.push('indexURL=' + tk.checkvcf.indexURL)
 		}
-		return client.dofetch('/vcfheader', arg).then(data => {
+		return client.dofetch2('vcfheader?' + arg.join('&')).then(data => {
 			if (!data) throw { message: 'server error!' }
 			if (data.error) throw { message: data.error }
 
@@ -279,8 +281,7 @@ function loadTk_mayinitiatecustomvcf(tk, block) {
 			tk.checkvcf.info = info
 			tk.checkvcf.format = format
 			tk.checkvcf.samples = samples
-			tk.checkvcf.nochr = common.contigNameNoChr(block.genome, data.chrstr.split('\n'))
-
+			tk.checkvcf.nochr = data.nochr
 			tk.checkvcf.stringifiedObj = JSON.stringify(tk.checkvcf)
 		})
 	}

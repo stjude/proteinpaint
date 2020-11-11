@@ -189,7 +189,7 @@ app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
 
 app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
 
-app.post('/vcfheader', handle_vcfheader)
+app.get('/vcfheader', handle_vcfheader)
 
 app.post('/translategm', handle_translategm)
 app.get('/hicstat', handle_hicstat)
@@ -9203,61 +9203,24 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 
 /***********  __smat ends ************/
 
-function handle_vcfheader(req, res) {
-	/*
-	get header for a single custom vcf track
-	*/
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return
-			return cache_index_promise(req.query.indexURL || file + '.tbi')
+async function handle_vcfheader(req, res) {
+	// get header for a single custom vcf track
+	log(req)
+	try {
+		if (!req.query.genome) throw 'genome missing'
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		res.send({
+			metastr: (await utils.get_header_tabix(file, dir)).join(''),
+			nochr: await utils.tabix_is_nochr(file, dir, g)
 		})
-		.then(dir => {
-			return new Promise((resolve, reject) => {
-				const ps = spawn(tabix, ['-H', file], { cwd: dir })
-				const data = []
-				const err = []
-				ps.stdout.on('data', i => data.push(i))
-				ps.stderr.on('data', i => err.push(i))
-				ps.on('close', code => {
-					const errstr = err.join('')
-					if (errstr && !tabixnoterror(errstr)) reject({ message: errstr })
-					resolve({
-						dir: dir,
-						metastr: data.join('')
-					})
-				})
-			})
-		})
-		.then(out => {
-			return new Promise((resolve, reject) => {
-				const ps = spawn(tabix, ['-l', file], { cwd: out.dir })
-				const data = []
-				const err = []
-				ps.stdout.on('data', i => data.push(i))
-				ps.stderr.on('data', i => err.push(i))
-				ps.on('close', code => {
-					const errstr = err.join('')
-					if (errstr && !tabixnoterror(errstr)) reject({ message: errstr })
-					out.chrstr = data.join('')
-					resolve(out)
-				})
-			})
-		})
-		.then(out => {
-			res.send({
-				metastr: out.metastr,
-				chrstr: out.chrstr
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) console.error(err.stack)
-		})
+	} catch (e) {
+		if (e.stack) console.error(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 function handle_vcf(req, res) {
