@@ -5,6 +5,7 @@ import * as client from './client'
 import { make_radios } from './dom'
 import url2map from './url2map'
 import { renderScatter } from './scatter'
+//import * as d3 from 'd3'
 
 /*
 
@@ -148,7 +149,6 @@ async function getData(tk, block, additional = []) {
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	if (data.error) throw data.error
 	return data
@@ -163,6 +163,7 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 	tk.nochr = data.nochr
+	console.log('data.groups', data.groups)
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
@@ -171,6 +172,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
+	//plot_coverage(data, tk, block)
 	may_render_variant(data, tk, block)
 	setTkHeight(tk)
 	tk.tklabel.each(function() {
@@ -191,6 +193,26 @@ or update existing groups, in which groupidx will be provided
 		})
 	block.setllabel()
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
+}
+
+function plot_coverage(data, tk, block) {
+	//console.log("tk:",tk)
+	console.log('data:', data)
+	//	const coverage_plot = {
+	//		data: data,
+	//		dom: {
+	//			imgg: tk.glider.append('g'),
+	//			vslider: {
+	//				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
+	//			}
+	//		}
+	//	}
+	//        const coverage_stay=document.createElement('img')
+	//	coverage_plot.img_stay = tk.dom.vsliderg
+	//		.append('image')
+	//		.attr('xlink:href', "coverage_stay")
+	//		.attr('width', tk.dom.coverageplotwidth)
+	//		.attr('height', tk.dom.coverageplotheight)
 }
 
 function may_render_variant(data, tk, block) {
@@ -274,7 +296,7 @@ function may_render_variant(data, tk, block) {
 
 function setTkHeight(tk) {
 	// call after any group is updated
-	let h = 0
+	let h = 0 //tk.dom.coverageplotheight
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight
 	}
@@ -364,6 +386,8 @@ function makeTk(tk, block) {
 		// assuming that variant will only be added upon track initiation
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 20
+		tk.dom.coverageplotheight = 250
+		tk.dom.coverageplotwidth = 100
 	}
 	tk.asPaired = false
 

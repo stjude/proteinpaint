@@ -221,83 +221,117 @@ module.exports = genomes => {
 			}
 
 			const q = await get_q(genome, req)
-			const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
-			const ref_seq = (await utils.get_fasta(
-				q.genome,
-				coverage_input.chr +
-					':' +
-					parseInt(coverage_input.start).toString() +
-					'-' +
-					parseInt(coverage_input.stop).toString()
-			))
-				.split('\n')
-				.slice(1)
-				.join('')
-				.toUpperCase()
-
-			const coverage_plot_str = await create_coverage_plot(
-				q.file,
-				coverage_input.chr.replace('chr', ''),
-				coverage_input.start,
-				coverage_input.stop
-			)
-			//console.log('coverage_plot_str:', coverage_plot_str)
-			let total_cov = []
-			let As_cov = []
-			let Cs_cov = []
-			let Gs_cov = []
-			let Ts_cov = []
-			let first_iter = 1
-			let consensus_seq = ''
-			for (const line of coverage_plot_str.split('\n')) {
-				if (first_iter == 1) {
-					first_iter = 0
-				} else {
-					const columns = line.split('\t')
-					total_cov.push(columns[2])
-					As_cov.push(columns[3])
-					Cs_cov.push(columns[4])
-					Gs_cov.push(columns[5])
-					Ts_cov.push(columns[6])
-					const max_value = Math.max(
-						parseInt(columns[3]),
-						parseInt(columns[4]),
-						parseInt(columns[5]),
-						parseInt(columns[6])
-					)
-					if (max_value == parseInt(columns[3])) {
-						consensus_seq += 'A'
-					}
-					if (max_value == parseInt(columns[4])) {
-						consensus_seq += 'C'
-					}
-					if (max_value == parseInt(columns[5])) {
-						consensus_seq += 'G'
-					}
-					if (max_value == parseInt(columns[6])) {
-						consensus_seq += 'T'
-					}
-				}
-			}
-			console.log('ref_seq:', ref_seq)
-			console.log('ref_seq length:', ref_seq.length)
-			console.log('con_seq:', consensus_seq)
-			console.log('consensus length:', consensus_seq.length)
-
-			const coverage_data = {
-				total_cov: total_cov,
-				As_cov: As_cov,
-				Cs_cov: Cs_cov,
-				Gs_cov: Gs_cov,
-				Ts_cov: Ts_cov
-			}
-			q.coverage_data = coverage_data
+			//get_coverage(q,req) // Run this function to get coverage/pilup plot data
 			res.send(await do_query(q))
+			//console.log("q:",q)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+async function get_coverage(q, req) {
+	const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+	const ref_seq = (await utils.get_fasta(
+		q.genome,
+		coverage_input.chr +
+			':' +
+			parseInt(coverage_input.start).toString() +
+			'-' +
+			parseInt(coverage_input.stop).toString()
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+
+	const coverage_plot_str = await run_sambamba(
+		q.file,
+		coverage_input.chr.replace('chr', ''),
+		coverage_input.start,
+		coverage_input.stop
+	)
+	//console.log('coverage_plot_str:', coverage_plot_str)
+	let total_cov = []
+	let As_cov = []
+	let Cs_cov = []
+	let Gs_cov = []
+	let Ts_cov = []
+	let ref_cov = []
+	let first_iter = 1
+	let consensus_seq = ''
+	let seq_iter = 0
+	for (const line of coverage_plot_str.split('\n')) {
+		if (first_iter == 1) {
+			first_iter = 0
+		} else if (line.length == 0) {
+			continue
+		} else {
+			const columns = line.split('\t')
+			total_cov.push(parseInt(columns[2]))
+			const max_value = Math.max(parseInt(columns[3]), parseInt(columns[4]), parseInt(columns[5]), parseInt(columns[6]))
+			if (max_value == parseInt(columns[3])) {
+				// Look into this
+				consensus_seq += 'A'
+			}
+			if (max_value == parseInt(columns[4])) {
+				consensus_seq += 'C'
+			}
+			if (max_value == parseInt(columns[5])) {
+				consensus_seq += 'G'
+			}
+			if (max_value == parseInt(columns[6])) {
+				consensus_seq += 'T'
+			}
+
+			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
+			if (ref_seq[seq_iter] == 'A') {
+				As_cov.push(0)
+				ref_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				Gs_cov.push(parseInt(columns[5]))
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'C') {
+				As_cov.push(parseInt(columns[3]))
+				ref_cov.push(parseInt(columns[4]))
+				Cs_cov.push(0)
+				Gs_cov.push(parseInt(columns[5]))
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'G') {
+				As_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				ref_cov.push(parseInt(columns[5]))
+				Gs_cov.push(0)
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'T') {
+				As_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				Gs_cov.push(parseInt(columns[5]))
+				ref_cov.push(parseInt(columns[6]))
+				Ts_cov.push(0)
+			}
+			seq_iter += 1
+		}
+	}
+	console.log('ref_seq:', ref_seq)
+	//console.log('ref_seq length:', ref_seq.length)
+	console.log('con_seq:', consensus_seq)
+	//console.log('consensus length:', consensus_seq.length)
+
+	const coverage_data = {
+		total_cov: total_cov,
+		As_cov: As_cov,
+		Cs_cov: Cs_cov,
+		Gs_cov: Gs_cov,
+		Ts_cov: Ts_cov,
+		ref_cov: ref_cov,
+		ref_seq: ref_seq
+	}
+	q.coverage_data = coverage_data
 }
 
 async function get_q(genome, req) {
@@ -449,7 +483,11 @@ async function do_query(q) {
 		result.groups.push(gr)
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
-	if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	//if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	if (q.kmer_diff_scores_asc) {
+		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	}
+	result.coverage_data = q.coverage_data
 	return result
 }
 
@@ -511,7 +549,7 @@ function query_region(r, q) {
 	})
 }
 
-function create_coverage_plot(bam_file, chr, start, stop) {
+function run_sambamba(bam_file, chr, start, stop) {
 	// function for creating the
 	return new Promise((resolve, reject) => {
 		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
