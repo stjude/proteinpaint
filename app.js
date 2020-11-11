@@ -5253,7 +5253,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.rnabamfile = path.join(serverconfig.tpmasterdir, q.rnabamfile)
 	} else {
 		if (!q.rnabamurl) throw 'no file or url for rna bam'
-		q.rnabamurl_dir = await cache_index_promise(q.rnabamindexURL || q.rnabamurl + '.bai')
+		q.rnabamurl_dir = await utils.cache_index(q.rnabamurl, q.rnabamindexURL || q.rnabamurl + '.bai')
 	}
 
 	q.rnabam_nochr = await bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
@@ -5262,7 +5262,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.vcffile = path.join(serverconfig.tpmasterdir, q.vcffile)
 	} else {
 		if (!q.vcfurl) throw 'no file or url for vcf'
-		q.vcfurl_dir = await cache_index_promise(q.vcfindexURL || q.vcfurl + '.tbi')
+		q.vcfurl_dir = await utils.cache_index(q.vcfurl, q.vcfindexURL)
 	}
 	q.vcf_nochr = await tabix_ifnochr(q.vcffile || q.vcfurl, genome, q.vcfurl_dir)
 }
@@ -5572,7 +5572,7 @@ function handle_mdsexpressionrank(req, res) {
 			if (dsquery.file) return
 			if (!dsquery.url) throw 'file or url missing'
 
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			const tasks = []
@@ -5806,9 +5806,29 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		}
 		if (!_c) throw 'missing expression data source'
 
-		const dir = await cache_index_promise(_c.file ? null : _c.indexURL || _c.url + '.tbi')
+		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
-		const values = await mdssvcnv_exit_getexpression4gene_getdata(dir, _c, q)
+		const values = []
+		await utils.get_lines_tabix(
+			[_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+			dir,
+			line => {
+				const l = line.split('\t')
+				let j
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					reject('invalid json from expression data')
+				}
+				if (!j.sample) return
+				if (!j.gene) return
+				if (!Number.isFinite(j.value)) return
+				delete j.outlier // XXX OHE
+				if (j.gene.toLowerCase() == q.name.toLowerCase()) {
+					values.push(j)
+				}
+			}
+		)
 
 		// convert to rank
 		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values)
@@ -5871,51 +5891,6 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	}
 
 	return sample2rank
-}
-
-function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
-	return new Promise((resolve, reject) => {
-		const values = []
-		const errout = []
-
-		const ps = spawn(
-			tabix,
-			[
-				expquery.file ? path.join(serverconfig.tpmasterdir, expquery.file) : expquery.url,
-				q.chr + ':' + q.start + '-' + q.stop
-			],
-			{ cwd: dir }
-		)
-		ps.stderr.on('data', d => errout.push(d))
-
-		const rl = readline.createInterface({ input: ps.stdout })
-
-		rl.on('line', line => {
-			const l = line.split('\t')
-
-			let j
-			try {
-				j = JSON.parse(l[3])
-			} catch (e) {
-				reject('invalid json from expression data')
-			}
-
-			if (!j.sample) return
-			if (!j.gene) return
-			if (!Number.isFinite(j.value)) return
-			delete j.outlier // XXX OHE
-
-			if (j.gene.toLowerCase() == q.name.toLowerCase()) {
-				values.push(j)
-			}
-		})
-
-		rl.on('close', () => {
-			const err = errout.join('')
-			if (err && !tabixnoterror(err)) reject(err)
-			resolve(values)
-		})
-	})
 }
 
 function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {

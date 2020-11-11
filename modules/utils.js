@@ -44,14 +44,13 @@ run_fishertest2x3
 */
 
 /*
-when either tbi or csi could be used and should be at the same URL,
-just provide the gz file URL:
+-- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
 
-   await cache_index(gz_url)
+   await cache_index(gz_url, indexURL) // indexURL can be undefined
 
-when a index URL is given (e.g. vended from dnanexus), provide both:
+-- for bam, always use
 
-   await cache_index(gz_url, index_url)
+   await cache_index(bam_url, indexURL || bam_url+'.bai')
 
 */
 exports.cache_index = async (gzurl, indexurl) => {
