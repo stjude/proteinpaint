@@ -778,9 +778,10 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	let clickedData
 	function triggerBarClick(plot) {
 		const elem = barDiv
+			.selectAll('.bars-cell')
+			.selectAll('rect')
+			.filter(d => d.colId == 'Test A')
 			.node()
-			.querySelector('.bars-cell')
-			.querySelector('rect')
 		clickedData = elem.__data__
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
