@@ -95,25 +95,27 @@ function makeTk(tk, block) {
 	})
 }
 
-function tkarg(tk, block) {
-	const a = {
-		jwt: block.jwt,
-		rglst: block.tkarg_rglst(),
-		regionspace: block.regionspace,
-		width: block.width,
-		coveragemax: tk.coveragemax,
-		gtotalcutoff: tk.gtotalcutoff,
-		gmafrestrict: tk.gmafrestrict,
-		file: tk.file,
-		url: tk.url,
-		indexURL: tk.indexURL,
-		vafheight: tk.vafheight,
-		coverageheight: tk.coverageheight,
-		rowspace: tk.rowspace,
-		dotsize: tk.dotsize,
-		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+function tkarg(tk, block, width, rglst) {
+	const lst = [
+		'rglst=' + JSON.stringify(rglst || block.tkarg_rglst()),
+		'regionspace=' + block.regionspace,
+		'width=' + (width || block.width),
+		'coveragemax=' + tk.coveragemax,
+		'gtotalcutoff=' + tk.gtotalcutoff,
+		'gmafrestrict=' + tk.gmafrestrict,
+		'vafheight=' + tk.vafheight,
+		'coverageheight=' + tk.coverageheight,
+		'rowspace=' + tk.rowspace,
+		'dotsize=' + tk.dotsize,
+		'devicePixelRatio=' + (window.devicePixelRatio > 1 ? window.devicePixelRatio : 1)
+	]
+	if (tk.file) {
+		lst.push('file=' + tk.file)
+	} else {
+		lst.push('url=' + tk.url)
+		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 	}
-	return a
+	return lst.join('&')
 }
 
 export function loadTk(tk, block) {
@@ -126,10 +128,8 @@ export function loadTk(tk, block) {
 
 	block.tkcloakon(tk)
 
-	const par = tkarg(tk, block)
-
 	client
-		.dofetch('tkaicheck', par)
+		.dofetch2('tkaicheck?' + tkarg(tk, block))
 		.then(data => {
 			if (data.error) throw { message: data.error }
 
@@ -237,28 +237,17 @@ export function loadTk(tk, block) {
 
 export function loadTksubpanel(tk, block, panel) {
 	block.tkcloakon_subpanel(panel)
-	const par = tkarg(tk, block)
-
-	par.width = panel.width
-	par.rglst = [
+	const par = tkarg(tk, block, panel.width, [
 		{
 			chr: panel.chr,
 			start: panel.start,
 			stop: panel.stop,
 			width: panel.width
 		}
-	]
-	//delete par.percentile
-	//delete par.autoscale
+	])
 
-	const req = new Request(block.hostURL + '/tkaicheck', {
-		method: 'POST',
-		body: JSON.stringify(par)
-	})
-	fetch(req)
-		.then(data => {
-			return data.json()
-		})
+	client
+		.dofetch2('tkaicheck?' + par)
 		.then(data => {
 			if (data.error) throw { message: data.error }
 

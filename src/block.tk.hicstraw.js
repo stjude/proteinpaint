@@ -190,37 +190,28 @@ function setResolution(tk, block) {
 
 			// fetch fragments for each region
 			for (const r of regions) {
+				const lst = [
+					'getdata=1',
+					'getBED=1',
+					'file=' + tk.hic.enzymefile,
+					'rglst=' + JSON.stringify([{ chr: r.chr, start: r.start, stop: r.stop }])
+				]
 				tasks.push(
-					fetch(
-						new Request(block.hostURL + '/bedjdata', {
-							method: 'POST',
-							body: JSON.stringify({
-								jwt: block.jwt,
-								file: tk.hic.enzymefile,
-								isbed: true,
-								rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
-							})
-						})
-					)
-						.then(data => {
-							return data.json()
-						})
-						.then(data => {
-							if (data.error) throw data.error
-							if (!data.items) throw '.items[] missing at mapping coord to fragment index'
+					client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+						if (data.error) throw data.error
+						if (!data.items) throw '.items[] missing at mapping coord to fragment index'
 
-							const [err, map, start, stop] = hicstraw.hicparsefragdata(data.items)
-							if (err) throw err
-							r.frag = {
-								id2coord: map,
-								startidx: start,
-								stopidx: stop
-							}
-							return
-						})
+						const [err, map, start, stop] = hicstraw.hicparsefragdata(data.items)
+						if (err) throw err
+						r.frag = {
+							id2coord: map,
+							startidx: start,
+							stopidx: stop
+						}
+						return
+					})
 				)
 			}
-
 			return Promise.all(tasks)
 		})
 		.then(() => {
@@ -257,28 +248,19 @@ function mayLoadDomainoverlay(tk, block) {
 		// fetch domains for each region
 		const tasks = []
 		for (const r of tk.regions) {
+			const lst = ['getdata=1', 'getBED=1', 'rglst=' + JSON.stringify([{ chr: r.chr, start: r.start, stop: r.stop }])]
+			if (tk.domainoverlay.file) {
+				lst.push('file=' + tk.domainoverlay.file)
+			} else {
+				lst.push('url=' + tk.domainoverlay.url)
+			}
 			tasks.push(
-				fetch(
-					new Request(block.hostURL + '/bedjdata', {
-						method: 'POST',
-						body: JSON.stringify({
-							jwt: block.jwt,
-							file: tk.domainoverlay.file,
-							url: tk.domainoverlay.url,
-							isbed: true,
-							rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
-						})
-					})
-				)
-					.then(data => {
-						return data.json()
-					})
-					.then(data => {
-						if (data.error) throw data.error
-						if (!data.items || data.items.length == 0) return
-						r.domainlst = data.items
-						// each item is a domain, may support inter-chr domains by parsing json
-					})
+				client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+					if (data.error) throw data.error
+					if (!data.items || data.items.length == 0) return
+					r.domainlst = data.items
+					// each item is a domain, may support inter-chr domains by parsing json
+				})
 			)
 		}
 		return Promise.all(tasks)
@@ -334,61 +316,60 @@ function bedfile_load(tk, block) {
 	/*
 	at end, set tk.data[]
 	*/
-	const arg = {
-		isbed: 1,
-		file: tk.bedfile,
-		url: tk.bedurl,
-		indexURL: tk.bedindexURL,
-		rglst: tk.regions.map(i => {
-			return { chr: i.chr, start: i.start, stop: i.stop }
-		})
+	const lst = [
+		'getdata=1',
+		'getBED=1',
+		'rglst=' +
+			JSON.stringify(
+				tk.regions.map(i => {
+					return { chr: i.chr, start: i.start, stop: i.stop }
+				})
+			)
+	]
+	if (tk.bedfile) {
+		lst.push('file=' + tk.bedfile)
+	} else {
+		lst.push('url=' + tk.bedurl)
+		if (tk.bedindexURL) lst.push('indexURL=' + tk.bedindexURL)
 	}
-	return fetch(
-		new Request(block.hostURL + '/bedjdata', {
-			method: 'POST',
-			body: JSON.stringify(arg)
-		})
-	)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			if (data.error) throw data.error
-			tk.data = []
-			if (!data.items) {
-				return
-			}
-			// remove duplicating lines
-			const usedlines = new Set()
-			/*
+
+	return client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+		if (data.error) throw data.error
+		tk.data = []
+		if (!data.items) {
+			return
+		}
+		// remove duplicating lines
+		const usedlines = new Set()
+		/*
 		used lines from the bed file
 		for each uniq interaction, it would have a duplicating line
 		e.g. {chr1, start1, stop1, rest:{chr2,start2,stop2} }
 		will have duplicating line of "chr2 start2 stop2 chr1 start1 stop1", and this line should be skipped
 		*/
 
-			for (const i of data.items) {
-				const skipline = i.chr + ' ' + i.start + ' ' + i.stop + ' ' + i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2]
-				if (usedlines.has(skipline)) continue
+		for (const i of data.items) {
+			const skipline = i.chr + ' ' + i.start + ' ' + i.stop + ' ' + i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2]
+			if (usedlines.has(skipline)) continue
 
-				const thisline = i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2] + ' ' + i.chr + ' ' + i.start + ' ' + i.stop
-				usedlines.add(thisline)
+			const thisline = i.rest[0] + ' ' + i.rest[1] + ' ' + i.rest[2] + ' ' + i.chr + ' ' + i.start + ' ' + i.stop
+			usedlines.add(thisline)
 
-				const chr2 = i.rest[0]
-				const start2 = Number.parseInt(i.rest[1])
-				const stop2 = Number.parseInt(i.rest[2])
-				if (Number.isNaN(start2)) throw 'invalid start2 position: ' + i.rest[1]
-				if (Number.isNaN(stop2)) throw 'invalid stop2 position: ' + i.rest[2]
+			const chr2 = i.rest[0]
+			const start2 = Number.parseInt(i.rest[1])
+			const stop2 = Number.parseInt(i.rest[2])
+			if (Number.isNaN(start2)) throw 'invalid start2 position: ' + i.rest[1]
+			if (Number.isNaN(stop2)) throw 'invalid stop2 position: ' + i.rest[2]
 
-				const value = Number.parseFloat(i.rest[3])
-				if (Number.isNaN(value)) throw 'invalid value: ' + i.rest[3]
-				const point = coordpair2plotpoint(i.chr, i.start, i.stop, chr2, start2, stop2, block)
-				if (point) {
-					point.push(value)
-					tk.data.push(point)
-				}
+			const value = Number.parseFloat(i.rest[3])
+			if (Number.isNaN(value)) throw 'invalid value: ' + i.rest[3]
+			const point = coordpair2plotpoint(i.chr, i.start, i.stop, chr2, start2, stop2, block)
+			if (point) {
+				point.push(value)
+				tk.data.push(point)
 			}
-		})
+		}
+	})
 }
 
 function loadStrawdata(tk, block) {

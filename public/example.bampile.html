@@ -17,19 +17,14 @@ runproteinpaint({
 	parseurl:true,
 	nobox:1,
 	block:1,
-	chr:'chr4',start:55599321,
+	position:'chr12:25362480-25363264',
 	genome:'hg19',
 	nativetracks:'refgene',
 	tracks:[
 		{
-			type:'bam',
-			name:'test local',
-			file:'hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam',
-		},
-		{
-			type:'bam',
-			name:'pecan kit wes',
-			url:'https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/wes.kit.e21.bam'
+			type:'bampile',
+			name:'test',
+			file:'proteinpaint_demo/hg19/bampile/tk.gz'
 		},
 	],
 })

@@ -2662,18 +2662,25 @@ function prep_samplegroups(tk, block) {
 		}
 	}
 	if (tk.sampleset) {
+		//sort plotgroups in same order as tk.sampleset
+		const sortOrder = []
+		tk.sampleset.forEach(pg => sortOrder.push(pg.name))
+		plotgroups.sort((a, b) => {
+			if (sortOrder.indexOf(a.name) > sortOrder.indexOf(b.name)) return 1
+			else return -1
+		})
 		// for each group, sort samples by the order given
-		for (let i = 0; i < tk.sampleset.length; i++) {
-			if (!plotgroups[i]) continue
+		for (const sampleset of tk.sampleset) {
+			const plotgroup = plotgroups.find(pg => pg.name == sampleset.name)
+			if (!plotgroup || !plotgroup.samples) continue
 			const foundsamples = []
-			for (const name of tk.sampleset[i].samples) {
-				if (!plotgroups[i].samples) console.log(plotgroups[i])
-				const s = plotgroups[i].samples.find(j => j.samplename == name)
+			for (const name of sampleset.samples) {
+				const s = plotgroup.samples.find(j => j.samplename == name)
 				if (s) {
 					foundsamples.push(s)
 				}
 			}
-			plotgroups[i].samples = foundsamples
+			plotgroup.samples = foundsamples
 		}
 	}
 	return [plotgroups, svlst4dense]

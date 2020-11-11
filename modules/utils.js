@@ -33,6 +33,7 @@ write_tmpfile
 read_file
 file_not_exist
 file_not_readable
+get_header_tabix
 get_header_vcf
 get_fasta
 connect_db
@@ -43,14 +44,13 @@ run_fishertest2x3
 */
 
 /*
-when either tbi or csi could be used and should be at the same URL,
-just provide the gz file URL:
+-- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
 
-   await cache_index(gz_url)
+   await cache_index(gz_url, indexURL) // indexURL can be undefined
 
-when a index URL is given (e.g. vended from dnanexus), provide both:
+-- for bam, always use
 
-   await cache_index(gz_url, index_url)
+   await cache_index(bam_url, indexURL || bam_url+'.bai')
 
 */
 exports.cache_index = async (gzurl, indexurl) => {
@@ -170,7 +170,7 @@ exports.init_one_vcf = async function(tk, genome) {
 		throw 'no file or url given for vcf file'
 	}
 
-	const [info, format, samples, errors] = await get_header_vcf(filelocation, tk.dir)
+	const [info, format, samples, errors] = await exports.get_header_vcf(filelocation, tk.dir)
 	if (errors) {
 		console.log(errors.join('\n'))
 		throw 'got above errors parsing vcf'
@@ -234,25 +234,28 @@ function file_not_readable(file) {
 exports.file_not_readable = file_not_readable
 exports.file_not_exist = file_not_exist
 
-async function get_header_vcf(file, dir) {
-	/* file is full path file or url
-	 */
+exports.get_header_tabix = async (file, dir) => {
+	// file is full path file or url
 	const lines = []
 	await get_lines_tabix([file, '-H'], dir, line => {
 		lines.push(line)
 	})
-
-	return vcf.vcfparsemeta(lines)
+	return lines
+}
+exports.get_header_vcf = async (file, dir) => {
+	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
 }
 
 function get_lines_tabix(args, dir, callback) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			callback(line)
-		})
+		const em = []
+		rl.on('line', line => callback(line))
+		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
+			const e = em.join('').trim()
+			if (e) reject(e)
 			resolve()
 		})
 	})

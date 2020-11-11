@@ -3,6 +3,20 @@ const d3s = require('d3-selection')
 import * as client from '../../client'
 import { init_mdsjsonform } from '../../mdsjsonform'
 
+/**
+	run it as:
+	$ cd src/mainapp/test/
+	$ npx watchify mdsjsonform.spec.js -o ../../../public/bin/spec.bundle.js -v
+
+	after it starts, open this url in brower: http://localhost:3000/testrun.html
+	result of tests will be in browser console
+	refresh the page to rerun all tests
+
+	troubleshoot help: 
+	if testrun.html prints 'This feature is not enabled on this server.',
+	add '"features":{"mdsjsonform": true}' to serverconfig.json.
+ */
+
 /*************************
  reusable helper functions
 **************************/

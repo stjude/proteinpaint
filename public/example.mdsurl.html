@@ -17,20 +17,18 @@ runproteinpaint({
 	parseurl:true,
 	nobox:1,
 	block:1,
-	chr:'chr4',start:55599321,
-	genome:'hg19',
+	genome:'hg38',
 	nativetracks:'refgene',
+	position:'chr6:29880478-29954463',
 	tracks:[
 		{
-			type:'bam',
-			name:'test local',
-			file:'hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam',
+			type:'mdssvcnv',
+			name:'custom mds',
+			url:'https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz',
+			checkexpressionrank:{url:'https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz'},
+			checkvcf:{url:'https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz'},
 		},
-		{
-			type:'bam',
-			name:'pecan kit wes',
-			url:'https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/wes.kit.e21.bam'
-		},
+
 	],
 })
 </script>
