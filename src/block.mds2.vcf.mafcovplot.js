@@ -1,6 +1,5 @@
 import * as client from './client'
 import { termsettingInit } from './common/termsetting'
-import { showTermSrc } from './termdb/app'
 
 /*
 ********************** EXPORTED
@@ -61,8 +60,7 @@ will include tk.vcf.plot_mafcov.overlay_term
 				obj.overlay_term = data || {}
 				api.main(obj.overlay_term)
 				do_plot(obj)
-			},
-			showTermSrc
+			}
 		})
 		if (obj.overlay_term.term) {
 			api.main(obj.overlay_term)

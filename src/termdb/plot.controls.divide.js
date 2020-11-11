@@ -2,7 +2,6 @@ import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
-import { showTermSrc } from '../termdb/app'
 
 /*
 model after overlay2.js
@@ -52,8 +51,7 @@ class Divide {
 					id: this.opts.id,
 					config: { term0: term0 }
 				})
-			},
-			showTermSrc
+			}
 		})
 	}
 	getState(appState) {

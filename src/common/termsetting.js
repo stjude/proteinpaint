@@ -5,6 +5,7 @@ import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag a
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { appInit } from '../termdb/app'
 
 /*
 
@@ -86,8 +87,10 @@ class TermSetting {
 
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.genome) throw '.genome missing'
-		if (!o.dslabel) throw '.dslabel missing'
+		if (!o.vocab) {
+			if (!o.genome) throw '.genome missing'
+			if (!o.dslabel) throw '.dslabel missing'
+		}
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
@@ -248,15 +251,21 @@ function setInteractivity(self) {
 
 	self.showTree = holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		if (self.opts.showTermSrc) {
-			self.opts.showTermSrc({
-				holder: self.dom.tip.d,
-				genome: self.genome,
-				dslabel: self.dslabel,
+
+		appInit(null, {
+			vocab: self.opts.vocab, // could be null if genome + dslabel are provided
+			genome: self.genome, // could be null if vocab is provided
+			dslabel: self.dslabel, // could be null if vocab is provided
+			holder: self.dom.tip.d,
+			state: {
 				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
-				clicked_terms: self.disable_terms,
-				srctype: 'termsetting',
-				select_callback: term => {
+				nav: {
+					header_mode: 'search_only'
+				}
+			},
+			tree: {
+				disable_terms: self.disable_terms,
+				click_term: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
 					let _term = term
@@ -269,8 +278,8 @@ function setInteractivity(self) {
 					termsetting_fill_q(data.q, _term)
 					self.opts.callback(data)
 				}
-			})
-		}
+			}
+		})
 	}
 
 	self.showMenu = () => {

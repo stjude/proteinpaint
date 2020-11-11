@@ -119,7 +119,7 @@ export function showTermSrc({
 	clicked_terms,
 	select_callback
 }) {
-	const arg = {
+	exports.appInit(null, {
 		holder,
 		state: {
 			genome,
@@ -130,18 +130,9 @@ export function showTermSrc({
 			},
 			termfilter: { filter }
 		},
-		tree: { disable_terms: clicked_terms }
-	}
-
-	if (srctype == 'termsetting') {
-		arg.tree.click_term = select_callback
-	} else if (srctype == 'tvs') {
-		arg.barchart = {
+		tree: { disable_terms: clicked_terms },
+		barchart: {
 			bar_click_override: select_callback
 		}
-	} else {
-		throw 'unsupported srctype value'
-	}
-
-	exports.appInit(null, arg)
+	})
 }

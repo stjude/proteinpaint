@@ -20,7 +20,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('getVocab', test => {
+tape('getVocab(), default', test => {
 	const app = {
 		opts: {
 			state: {
@@ -41,7 +41,7 @@ tape('getVocab', test => {
 	test.end()
 })
 
-tape('vocab.getTermdbConfig()', async test => {
+tape('getVocab(), custom', async test => {
 	runpp({
 		state: {},
 		vocab: {
@@ -116,10 +116,17 @@ tape('vocab.getTermdbConfig()', async test => {
 	})
 
 	function runTests1(app) {
-		console.log(86, app)
-		test.equal(typeof app.vocab, 'object', 'should set a app.vocab object when an opts.state.dslabel is set')
-		//const config = app.vocab.getTermdbConfig()
-		//test.deepEqual(config && Object.keys(config), 'termdbConfig', 'getTermdbConfig() should return ')
+		test.equal(typeof app.vocab, 'object', 'should return a vocab object')
+		test.equal(typeof app.vocab.getTermdbConfig, 'function', 'should have a vocab.getTermdbConfig function')
+		test.equal(typeof app.vocab.getTermChildren, 'function', 'should have a vocab.getTermChildren function')
+		test.equal(typeof app.vocab.getPlotData, 'function', 'should have a vocab.getPlotData function')
+		test.equal(typeof app.vocab.findTerm, 'function', 'should have a vocab.findTerm function')
+		test.equal(typeof app.vocab.getCohortSampleCount, 'function', 'should have a vocab.getCohortSampleCount function')
+		test.equal(
+			typeof app.vocab.getFilteredSampleCount,
+			'function',
+			'should have a vocab.getFilteredSampleCount function'
+		)
 		test.end()
 	}
 })
