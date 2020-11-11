@@ -6657,51 +6657,7 @@ function boxplot_getvalue(lst) {
 }
 exports.boxplot_getvalue = boxplot_getvalue
 
-function mds_query_arg_check_may_cache_index(q) {
-	return new Promise((resolve, reject) => {
-		if (!q.genome) reject({ message: 'no genome' })
-		const G = genomes[q.genome]
-		if (!G) reject({ message: 'invalid genome' })
-
-		if (q.iscustom) {
-			// won't have q.dslabel and q.querykey, but still generates such objects to keep the data processing going
-			const ds = {}
-			const dsquery = {}
-
-			if (q.url) {
-				// track file by url
-				const indexURL = q.indexURL || q.url + '.tbi'
-				cache_index_promise(indexURL)
-					.then(dir => {
-						dsquery.usedir = dir
-						dsquery.url = q.url
-						resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: true })
-					})
-					.catch(err => {
-						reject(err)
-					})
-				return
-			}
-
-			if (!q.file) reject({ message: 'no file or url given' })
-			dsquery.file = q.file
-			resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: true })
-		}
-
-		// official ds, still the track file would be url? the index already cached in the init()?
-		if (!G.datasets) reject({ message: 'genome is not equipped with datasets' })
-		if (!q.dslabel) reject({ message: 'dslabel missing' })
-		const ds = G.datasets[q.dslabel]
-		if (!ds) reject({ message: 'invalid dslabel' })
-		if (!ds.queries) reject({ message: 'dataset is not equipped with queries' })
-		if (!q.querykey) reject({ message: 'querykey missing' })
-		const dsquery = ds.queries[q.querykey]
-		if (!dsquery) reject({ message: 'invalid querykey' })
-		resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: false })
-	})
-}
-
-function handle_mdsjunction(req, res) {
+async function handle_mdsjunction(req, res) {
 	/*
 	get all junctions in view range, make stats for:
 		- sample annotation
@@ -6727,8 +6683,6 @@ function handle_mdsjunction(req, res) {
 		k: event.attrValue (event type code)
 		v: cutoff {side,value}
 
-
-
 	******* routes
 		* get details on specific junction
 		* get median read count for A junctions by the same set of samples of junction B (passing filters)
@@ -6737,52 +6691,60 @@ function handle_mdsjunction(req, res) {
 
 	try {
 		req.query = JSON.parse(req.body)
+		log(req)
+		const q = req.query
+		if (!q.genome) throw 'genome missing'
+		const gn = genomes[q.genome]
+		if (!gn) throw 'invalid genome'
+
+		let ds = {},
+			dsquery = {},
+			dir,
+			sample2client
+
+		if (q.iscustom) {
+			// won't have q.dslabel and q.querykey, but still generate adhoc objects
+			if (q.url) {
+				dsquery.url = q.url
+				dir = await utils.cache_index(q.url, q.indexURL)
+			} else {
+				if (!q.file) throw 'no file or url given'
+				dsquery.file = q.file
+			}
+		} else {
+			// official ds, still the track file would be url? the index already cached in the init()?
+			if (!gn.datasets) throw 'genome is not equipped with datasets'
+			if (!q.dslabel) throw 'dslabel missing'
+			ds = gn.datasets[q.dslabel]
+			if (!ds) throw 'invalid dslabel'
+			if (!ds.queries) throw 'dataset is not equipped with queries'
+			if (!q.querykey) throw 'querykey missing'
+			dsquery = ds.queries[q.querykey]
+			if (!dsquery) throw 'invalid querykey'
+		}
+
+		if (req.query.getsamples) {
+			// first time querying a custom track, get list of samples and keep on client, not on server
+			const lines = await utils.get_header_tabix(
+				dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+				dir
+			)
+			if (lines[0]) {
+				// has header line
+				const l = lines[0].split('\t')
+				if (l.length > 5) {
+					sample2client = l.slice(5)
+				}
+			}
+		}
+		handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom: q.iscustom, sample2client })
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-	log(req)
-
-	mds_query_arg_check_may_cache_index(req.query)
-		.then(oo => {
-			if (req.query.getsamples) {
-				// first time querying a custom track, get list of samples and keep on client, not on server
-				return new Promise((resolve, reject) => {
-					exec(
-						tabix + ' -H ' + (oo.dsquery.file ? path.join(serverconfig.tpmasterdir, oo.dsquery.file) : oo.dsquery.url),
-						{ cwd: oo.dsquery.usecwd, encoding: 'utf8' },
-						(err, stdout, stderr) => {
-							if (err) reject(err)
-							if (stderr && !tabixnoterror(stderr)) reject({ message: 'cannot read header line: ' + stderr })
-							oo.samplelst = []
-							const str = stdout.trim()
-							if (str) {
-								const l = stdout.split('\t')
-								if (l.length > 5) {
-									oo.sample2client = l.slice(5)
-								}
-							}
-							resolve(oo)
-						}
-					)
-				})
-			}
-			return oo
-		})
-
-		.then(oo => {
-			handle_mdsjunction_actual(req, res, oo)
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.log('ERROR: mdsjunction')
-				console.log(err.stack)
-			}
-		})
 }
 
-function handle_mdsjunction_actual(req, res, oo) {
+function handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom, sample2client }) {
 	/*
 	run after URL index cached
 
@@ -6791,8 +6753,6 @@ function handle_mdsjunction_actual(req, res, oo) {
 	dsquery: query object
 
 	*/
-
-	const { gn, ds, dsquery, iscustom, sample2client } = oo
 
 	if (req.query.junction) {
 		///// route
