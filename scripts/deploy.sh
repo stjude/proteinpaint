@@ -61,7 +61,15 @@ APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 
-if [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
+if [[ "$ENV" == "pp-irt" || "$ENV" == "pp-int-test" ]]; then
+	DEPLOYER=genomeuser
+	REMOTEHOST=pp-irt.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
+	REMOTEDIR=/opt/app/pp
+	HOSTNAME=pp-int-test.stjude.org
+	SUBDOMAIN=pp-int-test
+
+elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST

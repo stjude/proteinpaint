@@ -76,10 +76,10 @@ export async function match_complexvariant(templates, q) {
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
-	let wrong_ref = 0
+	let refalleleerror = false
 	if (refseq.toUpperCase().localeCompare((leftflankseq + refallele + rightflankseq).toUpperCase()) != 0) {
 		//console.log('Reference allele is not correct')
-		wrong_ref = 1
+		refalleleerror = true
 	}
 
 	//        let ref_weight=1
@@ -306,7 +306,7 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
-	return groups
+	return { groups, refalleleerror }
 }
 
 function build_kmers(sequence, kmer_length) {

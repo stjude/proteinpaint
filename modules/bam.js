@@ -206,6 +206,7 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = utils.serverconfig
 const samtools = serverconfig.samtools || 'samtools'
+const sambamba = serverconfig.sambamba || 'sambamba'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -218,13 +219,119 @@ module.exports = genomes => {
 				res.send(await route_getread(genome, req))
 				return
 			}
+
 			const q = await get_q(genome, req)
+			//get_coverage(q,req) // Run this function to get coverage/pilup plot data
 			res.send(await do_query(q))
+			//console.log("q:",q)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+async function get_coverage(q, req) {
+	const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+	const ref_seq = (await utils.get_fasta(
+		q.genome,
+		coverage_input.chr +
+			':' +
+			parseInt(coverage_input.start).toString() +
+			'-' +
+			parseInt(coverage_input.stop).toString()
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+
+	const coverage_plot_str = await run_sambamba(
+		q.file,
+		coverage_input.chr.replace('chr', ''),
+		coverage_input.start,
+		coverage_input.stop
+	)
+	//console.log('coverage_plot_str:', coverage_plot_str)
+	let total_cov = []
+	let As_cov = []
+	let Cs_cov = []
+	let Gs_cov = []
+	let Ts_cov = []
+	let ref_cov = []
+	let first_iter = 1
+	let consensus_seq = ''
+	let seq_iter = 0
+	for (const line of coverage_plot_str.split('\n')) {
+		if (first_iter == 1) {
+			first_iter = 0
+		} else if (line.length == 0) {
+			continue
+		} else {
+			const columns = line.split('\t')
+			total_cov.push(parseInt(columns[2]))
+			const max_value = Math.max(parseInt(columns[3]), parseInt(columns[4]), parseInt(columns[5]), parseInt(columns[6]))
+			if (max_value == parseInt(columns[3])) {
+				// Look into this
+				consensus_seq += 'A'
+			}
+			if (max_value == parseInt(columns[4])) {
+				consensus_seq += 'C'
+			}
+			if (max_value == parseInt(columns[5])) {
+				consensus_seq += 'G'
+			}
+			if (max_value == parseInt(columns[6])) {
+				consensus_seq += 'T'
+			}
+
+			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
+			if (ref_seq[seq_iter] == 'A') {
+				As_cov.push(0)
+				ref_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				Gs_cov.push(parseInt(columns[5]))
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'C') {
+				As_cov.push(parseInt(columns[3]))
+				ref_cov.push(parseInt(columns[4]))
+				Cs_cov.push(0)
+				Gs_cov.push(parseInt(columns[5]))
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'G') {
+				As_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				ref_cov.push(parseInt(columns[5]))
+				Gs_cov.push(0)
+				Ts_cov.push(parseInt(columns[6]))
+			}
+			if (ref_seq[seq_iter] == 'T') {
+				As_cov.push(parseInt(columns[3]))
+				Cs_cov.push(parseInt(columns[4]))
+				Gs_cov.push(parseInt(columns[5]))
+				ref_cov.push(parseInt(columns[6]))
+				Ts_cov.push(0)
+			}
+			seq_iter += 1
+		}
+	}
+	console.log('ref_seq:', ref_seq)
+	//console.log('ref_seq length:', ref_seq.length)
+	console.log('con_seq:', consensus_seq)
+	//console.log('consensus length:', consensus_seq.length)
+
+	const coverage_data = {
+		total_cov: total_cov,
+		As_cov: As_cov,
+		Cs_cov: Cs_cov,
+		Gs_cov: Gs_cov,
+		Ts_cov: Ts_cov,
+		ref_cov: ref_cov,
+		ref_seq: ref_seq
+	}
+	q.coverage_data = coverage_data
 }
 
 async function get_q(genome, req) {
@@ -320,13 +427,17 @@ async function do_query(q) {
 		count: {
 			r: q.totalnumreads
 		},
-		groups: [],
-		alleleerror: ''
+		groups: []
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
-	q.groups = await divide_reads_togroups(templates, q)
+	{
+		const out = await divide_reads_togroups(templates, q)
+		q.groups = out.groups
+		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
+	}
+
 	if (result.count.r == 0) {
 		q.groups[0].messagerows.push({
 			h: 30,
@@ -372,7 +483,11 @@ async function do_query(q) {
 		result.groups.push(gr)
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
-	if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	//if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	if (q.kmer_diff_scores_asc) {
+		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
+	}
+	result.coverage_data = q.coverage_data
 	return result
 }
 
@@ -394,6 +509,7 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
+		//const outfile = await create_coverage_plot(r, q)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -433,6 +549,31 @@ function query_region(r, q) {
 	})
 }
 
+function run_sambamba(bam_file, chr, start, stop) {
+	// function for creating the
+	return new Promise((resolve, reject) => {
+		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
+
+		const ls = spawn(sambamba, ['depth', 'base', bam_file, '-L', chr + ':' + start + '-' + stop])
+
+		ls.stdout.on('data', function(data) {
+			//Here is where the output goes
+			data = data.toString()
+			//console.log('stdout: ' + data)
+			resolve(data)
+		})
+
+		ls.stderr.on('data', data => {
+			console.log(`stderr: ${data}`)
+		})
+
+		ls.on('close', code => {
+			console.log(`child process exited with code ${code}`)
+			resolve('')
+		})
+	})
+}
+
 async function may_checkrefseq4mismatch(templates, q) {
 	// requires ntwidth
 	// read quality is not parsed yet, so need to set cidx for mismatch box so its quality can be added later
@@ -466,14 +607,44 @@ async function may_checkrefseq4mismatch(templates, q) {
 	}
 }
 
+/*
+loaded reads for all regions under q.regions
+divide to groups if to match with variant
+plot each group into a separate canvas
+
+return {}
+  .groups[]
+  .refalleleerror
+*/
 async function divide_reads_togroups(templates, q) {
-	/* loaded reads for all regions under q.regions
-	divide to groups if to match with variant
-	plot each group into a separate canvas
-	*/
 	if (templates.length == 0) {
 		// no reads at all, return empty group
-		return [
+		return {
+			groups: [
+				{
+					type: bamcommon.type_all,
+					regions: bamcommon.duplicateRegions(q.regions),
+					templates,
+					messagerows: [],
+					partstack: q.partstack
+				}
+			]
+		}
+	}
+
+	if (q.variant) {
+		// if snv, simple match; otherwise complex match
+		const lst = may_match_snv(templates, q)
+		if (lst) return { groups: lst }
+		return await match_complexvariant(templates, q)
+	}
+	if (q.sv) {
+		return match_sv(templates, q)
+	}
+
+	// no variant, return single group
+	return {
+		groups: [
 			{
 				type: bamcommon.type_all,
 				regions: bamcommon.duplicateRegions(q.regions),
@@ -483,27 +654,6 @@ async function divide_reads_togroups(templates, q) {
 			}
 		]
 	}
-
-	if (q.variant) {
-		// if snv, simple match; otherwise complex match
-		const lst = may_match_snv(templates, q)
-		if (lst) return lst
-		return await match_complexvariant(templates, q)
-	}
-	if (q.sv) {
-		return match_sv(templates, q)
-	}
-
-	// no variant, return single group
-	return [
-		{
-			type: bamcommon.type_all,
-			regions: bamcommon.duplicateRegions(q.regions),
-			templates,
-			messagerows: [],
-			partstack: q.partstack
-		}
-	]
 }
 
 function may_match_snv(templates, q) {
@@ -1406,6 +1556,7 @@ async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
+	console.log('req.query:', req.query)
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
 	if (!req.query.viewstart) throw '.viewstart missing'
@@ -1425,7 +1576,6 @@ async function route_getread(genome, req) {
 	for (const s of seglst) {
 		lst.push(await convertread(s, genome, req.query))
 	}
-
 	return { lst }
 }
 
@@ -1554,6 +1704,25 @@ async function convertread(seg, genome, query) {
 		}
 	}
 
+	//console.log("seg.boxes:",seg.boxes)
+	// Determining start and stop position of softclips (if any)
+	let soft_start = 0
+	let soft_stop = 0
+	let soft_starts = []
+	let soft_stops = []
+	let soft_present = 0
+	for (const box of seg.boxes) {
+		soft_start = soft_stop
+		soft_stop += box.len
+		if (box.opr == 'S') {
+			soft_present = 1
+			//console.log("soft_start:",soft_start)
+			//console.log("soft_stop:",soft_stop)
+			soft_starts.push(soft_start)
+			soft_stops.push(soft_stop)
+		}
+	}
+
 	const lst = []
 	if (seg.rnext)
 		lst.push(
@@ -1578,7 +1747,8 @@ async function convertread(seg, genome, query) {
 	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
 	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
 	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
-	return {
+
+	let seq_data = {
 		seq: seg.seq,
 		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
 			  <tr style="opacity:.6">${reflst.join('')}</tr>
@@ -1594,4 +1764,9 @@ async function convertread(seg, genome, query) {
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
 	}
+	if (soft_present == 1) {
+		seq_data.soft_starts = soft_starts
+		seq_data.soft_stops = soft_stops
+	}
+	return seq_data
 }

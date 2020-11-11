@@ -5,6 +5,7 @@ import * as client from './client'
 import { make_radios } from './dom'
 import url2map from './url2map'
 import { renderScatter } from './scatter'
+//import * as d3 from 'd3'
 
 /*
 
@@ -34,6 +35,8 @@ group {}
 	.vslider{}
 		.g
 		.boxy
+	.variantg <g>
+	.variantrowheight
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -146,7 +149,6 @@ async function getData(tk, block, additional = []) {
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	if (data.error) throw data.error
 	return data
@@ -161,6 +163,7 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 	tk.nochr = data.nochr
+	console.log('data.groups', data.groups)
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
@@ -169,6 +172,8 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
+	//plot_coverage(data, tk, block)
+	may_render_variant(data, tk, block)
 	setTkHeight(tk)
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
@@ -190,9 +195,111 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
+function plot_coverage(data, tk, block) {
+	//console.log("tk:",tk)
+	console.log('data:', data)
+	//	const coverage_plot = {
+	//		data: data,
+	//		dom: {
+	//			imgg: tk.glider.append('g'),
+	//			vslider: {
+	//				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
+	//			}
+	//		}
+	//	}
+	//        const coverage_stay=document.createElement('img')
+	//	coverage_plot.img_stay = tk.dom.vsliderg
+	//		.append('image')
+	//		.attr('xlink:href', "coverage_stay")
+	//		.attr('width', tk.dom.coverageplotwidth)
+	//		.attr('height', tk.dom.coverageplotheight)
+}
+
+function may_render_variant(data, tk, block) {
+	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
+	// in tk.dom.variantg, indicate location and status of the variant
+	if (!tk.dom.variantg) return
+	tk.dom.variantg.selectAll('*').remove()
+	let x1, x2 // on screen pixel start/stop of the variant box
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
+		if (hits) {
+			x1 = hits[0].x - block.exonsf / 2
+		}
+	}
+	{
+		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos + tk.variants[0].ref.length)
+		if (hits) {
+			x2 = hits[0].x - block.exonsf / 2
+		}
+	}
+	if (x1 >= block.width || x2 <= 0) {
+		// variant is out of range
+		return
+	}
+	tk.dom.variantg
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', 0)
+		.attr('width', x2 - x1)
+		.attr('height', tk.dom.variantrowheight - 2)
+
+	const variant_string =
+		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+	//        console.log("Length of variant string:",variant_string.length)
+	//        console.log("x1:",x1)
+	//        console.log("x2:",x2)
+	// Determining where to place the text. Before, inside or after the box
+	let variant_start_text_pos = 0
+	const space_param = 10
+	const pad_param = 15
+	if (variant_string.length * space_param < x1) {
+		variant_start_text_pos = 0
+	} else {
+		variant_start_text_pos = x2 + pad_param
+	}
+
+	tk.dom.variantg
+		.append('text')
+		.attr('x', variant_start_text_pos)
+		.attr('y', 15)
+		.attr('dy', '.10em')
+		.text(variant_string)
+	// TODO show variant info alongside box
+
+	if (data.refalleleerror == true) {
+		const text_string = 'Incorrect reference allele'
+		// Determining position to place the string and avoid overwriting variant string
+		let text_start_pos = 0
+		if (
+			variant_start_text_pos == 0 &&
+			text_string.length * space_param + pad_param < x1 - variant_string.length * space_param
+		) {
+			text_start_pos = variant_string.length * space_param + pad_param
+		} else if (variant_start_text_pos != 0 && text_string.length * space_param < x1) {
+			text_start_pos = 0
+		} else if (variant_start_text_pos == x2 + pad_param) {
+			text_start_pos = x2 + variant_string.length * space_param + pad_param
+		} else {
+			text_start_pos = x2 + pad_param
+		}
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', text_start_pos)
+			.attr('y', 15)
+			.style('fill', 'red')
+			.attr('dy', '.10em')
+			.text(text_string)
+	}
+}
+
 function setTkHeight(tk) {
 	// call after any group is updated
-	let h = 0
+	let h = 0 //tk.dom.coverageplotheight
+	if (tk.dom.variantg) {
+		h += tk.dom.variantrowheight
+	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (g.partstack) {
@@ -209,7 +316,7 @@ function updateExistingGroups(data, tk, block) {
 	// to update all existing groups and reset each group to fullstack
 	for (const gd of data.groups) {
 		const group = tk.groups.find(g => g.data.type == gd.type)
-		if (!group) throw 'unknown group type: ' + gd.type
+		if (!group) continue // throw 'unknown group type: ' + gd.type
 		group.data = gd
 
 		update_boxes(group, tk, block)
@@ -260,7 +367,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_addvariant(tk)
+	may_addvariant(tk) // only quick fix!! TODO may allow adding variant on the fly??
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
@@ -274,6 +381,13 @@ function makeTk(tk, block) {
 	// <g> of each group is added dynamically to glider
 	tk.dom = {
 		vsliderg: tk.gright.append('g')
+	}
+	if (tk.variants) {
+		// assuming that variant will only be added upon track initiation
+		tk.dom.variantg = tk.glider.append('g')
+		tk.dom.variantrowheight = 20
+		tk.dom.coverageplotheight = 250
+		tk.dom.coverageplotwidth = 100
 	}
 	tk.asPaired = false
 
@@ -622,7 +736,7 @@ function configPanel(tk, block) {
 	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
 	  <li><b>Base qualities</b> are rendered when 1 bp is wider than 2 pixels. See color scale below. When base quality is not used or is unavailable, full colors are used.</li>
 	  <li><b>Sequences</b> from mismatch and softclip will be printed when 1 bp is wider than 7 pixels.</li>
-	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that's in use.</li>
+	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that is in use.</li>
 	  <li><b>Deletions</b> are gaps joined by red horizontal lines.</li>
 	  <li><b>Split reads</b> and splice junctions are indicated by solid gray lines.</li>
 	  <li><b>Read pairs</b> are joined by dashed gray lines.</li>
@@ -639,6 +753,10 @@ get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
 */
+	//        console.log("tk:",tk.readpane.body)
+	//        console.log("block:",block)
+	//        console.log("box:",box)
+	//	console.log("tmp:",tmp)
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
@@ -670,6 +788,7 @@ if is pair mode, is the template
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
+	console.log('data.lst:', data.lst)
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -716,12 +835,22 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await client.dofetch2('blat?genome=' + block.genome.name + '&seq=' + read.seq)
+				//console.log("read.soft_start:",read.soft_start,"read.soft_stop:",read.soft_stop)
+				const data = await client.dofetch2(
+					'blat?genome=' +
+						block.genome.name +
+						'&seq=' +
+						read.seq +
+						'&soft_starts=' +
+						read.soft_starts +
+						'&soft_stops=' +
+						read.soft_stops
+				)
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
 				wait.remove()
-				show_blatresult(data.hits, blatdiv, tk, block)
+				show_blatresult2(data.hits, blatdiv, tk, block)
 			} catch (e) {
 				wait.text(e.message || e)
 				if (e.stack) console.log(e.stack)
@@ -731,7 +860,32 @@ function mayshow_blatbutton(read, div, tk, block) {
 
 	const blatdiv = div.append('div')
 }
-function show_blatresult(hits, div, tk, block) {
+function show_blatresult3(hits, div, tk, block, lst) {
+	tk.readpane.body.selectAll('*').remove()
+
+	for (const r of lst) {
+		// {seq, alignment (html), info (html) }
+		const div = tk.readpane.body.append('div').style('margin', '20px')
+		div.append('div').html(r.alignment)
+	}
+
+	const width = 200
+	const height = 200
+	const svg = div
+		.append('svg')
+		.attr('width', width)
+		.attr('height', height)
+	svg
+		.append('line')
+		.attr('x1', 100)
+		.attr('y1', 100)
+		.attr('x2', 200)
+		.attr('y2', 200)
+		.style('stroke', 'rgb(255,0,0)')
+		.style('stroke-width', 2)
+}
+
+function show_blatresult2(hits, div, tk, block) {
 	const table = div.append('table')
 	const tr = table
 		.append('tr')
@@ -739,29 +893,122 @@ function show_blatresult(hits, div, tk, block) {
 		.style('font-size', '.8em')
 	tr.append('td').text('Score')
 	tr.append('td').text('QStart')
-	tr.append('td').text('QEnd')
-	tr.append('td').text('QSize')
-	tr.append('td').text('Identity')
-	tr.append('td').text('Chr')
-	tr.append('td').text('Strand')
-	tr.append('td').text('Start')
-	tr.append('td').text('Stop')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStrand')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RAlignLen')
+	let repeat_file_present = 0
+	for (const track of block.genome.tracks) {
+		if (track['name'] == 'RepeatMasker') {
+			tr.append('td').text('InRepeatRegion')
+			repeat_file_present = 1
+			break
+		}
+	}
+	tr.append('td').text('SeqAlign')
+
+	let soft_clipped_region = ''
+	let non_soft_clipped_region = ''
 	for (const h of hits) {
-		const tr = table.append('tr')
-		tr.append('td').text(h.match)
-		tr.append('td').text(h.qstart)
-		tr.append('td').text(h.qstop)
-		tr.append('td').text(h.qstop - h.qstart)
-		tr.append('td').text('?')
-		tr.append('td').text(h.chr)
-		tr.append('td').text(h.strand)
-		tr.append('td').text(h.start)
-		tr.append('td').text(h.stop)
+		let tr = table.append('tr')
+		tr.append('td').text(h.score)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_strand)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_alignlen)
+		if (repeat_file_present == 1) {
+			console.log('h.ref_in_repeat:', h.ref_in_repeat)
+			tr.append('td').text(h.ref_in_repeat)
+		}
+
+		if (h.query_insoftclip == true) {
+			if (h.query_soft_boundaries == '-1') {
+				// Alignment completely inside softclip
+				tr.append('td')
+					.text(h.query_alignment.toUpperCase() + ' Query')
+					.style('font-family', 'courier')
+					.style('color', 'blue')
+			} else {
+				const boundaries = h.query_soft_boundaries.split(':')
+				const direction = boundaries[0]
+				const boundary = parseInt(boundaries[1])
+				if (direction == 'right') {
+					// Softclip is on left side and alignment extends onto the right
+					soft_clipped_region = h.query_alignment.substr(0, boundary - parseInt(h.query_startpos))
+					non_soft_clipped_region = h.query_alignment.substr(boundary - parseInt(h.query_startpos), h.query_stoppos)
+					const td = tr.append('td')
+					td.append('span')
+						.text(soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'black')
+					td.append('span')
+						.text(non_soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'blue')
+					td.append('span')
+						.text(' Query')
+						.style('font-family', 'courier')
+						.style('color', 'black')
+				} else if (direction == 'left') {
+					// Softclip is on right side and alignment extends onto the left
+					non_soft_clipped_region = h.query_alignment.substr(0, boundary - parseInt(h.query_startpos))
+					soft_clipped_region = h.query_alignment.substr(boundary - parseInt(h.query_startpos), h.query_stoppos)
+					const td = tr.append('td')
+					td.append('span')
+						.text(non_soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'blue')
+					td.append('span')
+						.text(soft_clipped_region.toUpperCase())
+						.style('font-family', 'courier')
+						.style('color', 'black')
+					td.append('span')
+						.text(' Query')
+						.style('font-family', 'courier')
+						.style('color', 'black')
+				} else {
+					console.log('Something is not right, please check!!')
+				}
+			}
+		} else {
+			tr.append('td')
+				.text(h.query_alignment.toUpperCase() + ' Query')
+				.style('font-family', 'courier')
+		}
+
+		tr = table.append('tr')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td').text('')
+		tr.append('td')
+			.text(h.ref_alignment.toUpperCase() + ' Ref')
+			.style('font-family', 'courier')
+		//                if (h.query_insoftclip==true) {
+		//		   tr.append('td')
+		//			.text(h.ref_alignment.toUpperCase() + ' Ref')
+		//			.style('font-family', 'courier').style('color', 'blue')
+		//                }
+		//                else {
+		//		   tr.append('td')
+		//			.text(h.ref_alignment.toUpperCase() + ' Ref')
+		//			.style('font-family', 'courier')
+		//                }
 	}
 }
 
 async function enter_partstack(group, tk, block, y) {
-	/* for a group, enter part stack mode from full stack mode
+	/* for a group, enter part stack mode rom full stack mode
 	will only update data and rendering of this group, but not other groups
 	*/
 	group.data_fullstack = group.data
