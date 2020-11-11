@@ -25,7 +25,6 @@ const express = require('express'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
-	exec = child_process.exec,
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -75,7 +74,6 @@ const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstat = serverconfig.hicstat ? serverconfig.hicstat.split(' ') : ['python', 'read_hic_header.py']
 const hicstraw = serverconfig.hicstraw || 'straw'
 let codedate, // date for code files last updated
 	launchdate // server launch date
