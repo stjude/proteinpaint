@@ -35,7 +35,7 @@ export async function setNumericMethods(self) {
 			ypad: 20
 		}
 		try {
-			self.num_obj.density_data = await getDensityPlotData(self)
+			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj)
 			//console.log(38, self.num_obj.density_data)
 		} catch (err) {
 			console.log(err)
@@ -128,32 +128,6 @@ export async function setNumericMethods(self) {
 		if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
 		return data
 	}
-}
-
-async function getDensityPlotData(self) {
-	let density_q =
-		'/termdb?density=1' +
-		'&genome=' +
-		self.opts.vocab.genome +
-		'&dslabel=' +
-		self.opts.vocab.dslabel +
-		'&termid=' +
-		self.term.id +
-		'&width=' +
-		self.num_obj.plot_size.width +
-		'&height=' +
-		self.num_obj.plot_size.height +
-		'&xpad=' +
-		self.num_obj.plot_size.xpad +
-		'&ypad=' +
-		self.num_obj.plot_size.ypad
-
-	if (typeof self.filter != 'undefined') {
-		density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(self.filter))
-	}
-	const density_data = await client.dofetch3(density_q)
-	if (density_data.error) throw density_data.error
-	return density_data
 }
 
 function setqDefaults(self) {

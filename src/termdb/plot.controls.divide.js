@@ -34,6 +34,7 @@ class Divide {
 	}
 	initPill() {
 		this.pill = termsettingInit({
+			vocabApi: this.app.vocab,
 			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,

@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
+const getVocab = require('../../termdb/vocabulary').getVocab
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -24,16 +25,19 @@ function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
+	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
+	const state = { vocab, termfilter: {} }
+	const app = {
+		getState() {
+			return state
+		},
+		opts: { state }
+	}
 
 	opts.pill = termsettingInit({
 		holder,
-		vocab: opts.vocab
-			? opts.vocab
-			: {
-					route: 'termdb',
-					genome, // could be null if opts.vocab is provided
-					dslabel // could be null if opts.vocab is provided
-			  },
+		vocabApi: getVocab(app, { state }),
+		vocab,
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,

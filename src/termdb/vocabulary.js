@@ -32,6 +32,7 @@ export function getVocab(app, opts) {
 class TermdbVocab {
 	constructor(app) {
 		this.app = app
+		this.state = this.app.opts.state
 		this.vocab = this.app.opts.state.vocab
 	}
 
@@ -132,6 +133,32 @@ class TermdbVocab {
 		else {
 			return data[0].samplecount
 		}
+	}
+
+	async getDensityPlotData(term_id, num_obj) {
+		let density_q =
+			'/termdb?density=1' +
+			'&genome=' +
+			this.vocab.genome +
+			'&dslabel=' +
+			this.vocab.dslabel +
+			'&termid=' +
+			term_id +
+			'&width=' +
+			num_obj.plot_size.width +
+			'&height=' +
+			num_obj.plot_size.height +
+			'&xpad=' +
+			num_obj.plot_size.xpad +
+			'&ypad=' +
+			num_obj.plot_size.ypad
+		console.log(this)
+		if (typeof this.state.termfilter.filter != 'undefined') {
+			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
+		}
+		const density_data = await dofetch3(density_q)
+		if (density_data.error) throw density_data.error
+		return density_data
 	}
 }
 
