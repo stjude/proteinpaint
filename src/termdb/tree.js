@@ -179,7 +179,7 @@ class TdbTree {
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
 		*/
-		const data = await this.app.vocab.getTermChildren(
+		const data = await this.app.vocabApi.getTermChildren(
 			term,
 			this.state.toSelectCohort ? this.state.cohortValuelst : null
 		)

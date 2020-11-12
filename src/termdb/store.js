@@ -97,7 +97,7 @@ class TdbStore {
 			filterUiRoot = this.state.termfilter.filter
 		}
 
-		this.state.termdbConfig = await this.app.vocab.getTermdbConfig()
+		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {

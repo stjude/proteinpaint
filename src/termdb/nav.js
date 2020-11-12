@@ -104,12 +104,12 @@ class TdbNav {
 		if (this.state.nav.header_mode === 'with_tabs') {
 			const promises = []
 			if (!(this.activeCohortName in this.samplecounts))
-				promises.push(this.app.vocab.getCohortSampleCount(this.activeCohortName))
+				promises.push(this.app.vocabApi.getCohortSampleCount(this.activeCohortName))
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
 					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
 				} else {
-					promises.push(this.app.vocab.getFilteredSampleCount(this.activeCohortName, this.filterJSON))
+					promises.push(this.app.vocabApi.getFilteredSampleCount(this.activeCohortName, this.filterJSON))
 				}
 			}
 			if (promises.length) await Promise.all(promises)

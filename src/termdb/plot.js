@@ -108,7 +108,7 @@ class TdbPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		const dataName = this.getDataName(this.state)
-		const data = await this.app.vocab.getPlotData(this.id, dataName)
+		const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 		if (data.error) throw data.error
 		this.syncParams(this.config, data)
 		this.currData = data

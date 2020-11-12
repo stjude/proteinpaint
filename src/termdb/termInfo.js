@@ -31,7 +31,7 @@ class TdbTermInfo {
 			return
 		}
 		this.dom.holder.style('display', 'block')
-		const data = await this.app.vocab.getTermInfo(this.state.term.id)
+		const data = await this.app.vocabApi.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }

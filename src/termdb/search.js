@@ -61,7 +61,7 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocab.findTerm(str, this.state.cohortStr)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {

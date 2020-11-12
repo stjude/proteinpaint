@@ -26,7 +26,7 @@ class TdbApp {
 		// the TdbApp may be the root app or a component within another app
 		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
 		this.app = coordApp ? coordApp : this.api
-		this.api.vocab = getVocab(this.api, this.app.opts)
+		this.api.vocabApi = getVocab(this.api, this.app.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
@@ -62,7 +62,7 @@ class TdbApp {
 
 	async main() {
 		//console.log(this.state.tree.expandedTermIds)
-		this.api.vocab.main()
+		this.api.vocabApi.main()
 	}
 
 	initOpts(o) {

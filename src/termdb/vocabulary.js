@@ -152,7 +152,7 @@ class TermdbVocab {
 			num_obj.plot_size.xpad +
 			'&ypad=' +
 			num_obj.plot_size.ypad
-		console.log(this)
+
 		if (typeof this.state.termfilter.filter != 'undefined') {
 			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
 		}
