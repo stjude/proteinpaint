@@ -68,8 +68,6 @@ class TdbNav {
 	getState(appState) {
 		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
 			activeCohort: appState.activeCohort,

@@ -34,8 +34,7 @@ class Divide {
 	}
 	initPill() {
 		this.pill = termsettingInit({
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
+			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
@@ -56,8 +55,7 @@ class Divide {
 	}
 	getState(appState) {
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
+			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id]

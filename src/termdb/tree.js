@@ -101,8 +101,6 @@ class TdbTree {
 	getState(appState) {
 		const filter = getNormalRoot(appState.termfilter.filter)
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,

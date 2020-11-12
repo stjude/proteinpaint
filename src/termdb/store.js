@@ -57,11 +57,13 @@ class TdbStore {
 
 	validateOpts() {
 		const s = this.state
-		if (!this.app.opts.vocab) {
-			if (!s.genome) throw '.state.genome missing'
-			if (!s.dslabel) throw '.state.dslabel missing'
+		// assume that any vocabulary with a route
+		// will require genome + dslabel
+		if (s.vocab.route) {
+			if (!s.vocab.genome) throw '.state[.vocab].genome missing'
+			if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
 		} else {
-			if (!Array.isArray(this.app.opts.vocab.terms)) throw 'vocab.terms must be an array of objects'
+			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 		}
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)

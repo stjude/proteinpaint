@@ -27,9 +27,13 @@ function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
 
 	opts.pill = termsettingInit({
 		holder,
-		genome, // could be null if opts.vocab is provided
-		dslabel, // could be null if opts.vocab is provided
-		vocab: opts.vocab, // could be null if genome + dslabel are provided
+		vocab: opts.vocab
+			? opts.vocab
+			: {
+					route: 'termdb',
+					genome, // could be null if opts.vocab is provided
+					dslabel // could be null if opts.vocab is provided
+			  },
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,

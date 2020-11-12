@@ -134,9 +134,9 @@ async function getDensityPlotData(self) {
 	let density_q =
 		'/termdb?density=1' +
 		'&genome=' +
-		self.opts.genome +
+		self.opts.vocab.genome +
 		'&dslabel=' +
-		self.opts.dslabel +
+		self.opts.vocab.dslabel +
 		'&termid=' +
 		self.term.id +
 		'&width=' +

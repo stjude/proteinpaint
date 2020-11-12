@@ -97,8 +97,6 @@ class TdbPlot {
 		}
 		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
@@ -121,7 +119,7 @@ class TdbPlot {
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
 		const plot = this.config // the plot object in state
-		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
+		const params = []
 
 		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')

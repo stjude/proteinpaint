@@ -44,8 +44,6 @@ class TermSearch {
 
 	getState(appState) {
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''

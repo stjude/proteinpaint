@@ -1,33 +1,49 @@
 import { dofetch3 } from '../client'
 
 export function getVocab(app, opts) {
-	const state = opts.state ? opts.state : {}
-	if (state.dslabel) {
-		return new DefaultVocab(app)
-	} else if (opts.vocab) {
-		return new CustomVocab(app)
-	} /*else {
-		throw 'unable to set a vocabulary source'
-	}*/
+	/*** start legacy support for state.genome, .dslabel ***/
+	if (!opts.state) return // let termdb/store handle error
+	if (!opts.state.vocab) {
+		opts.state.vocab = opts.vocab ? opts.vocab : {}
+	}
+	const vocab = opts.state.vocab
+	if (opts.state.genome) {
+		vocab.genome = opts.state.genome
+		delete opts.state.genome
+	}
+	if (opts.state.dslabel) {
+		vocab.dslabel = opts.state.dslabel
+		delete opts.state.dslabel
+	}
+	if (!vocab.route && vocab.dslabel) {
+		vocab.route = 'termdb'
+	}
+	/*** end legacy support ***/
+
+	if (vocab.route == 'termdb') {
+		return new TermdbVocab(app)
+	} else if (!vocab.route && vocab.terms) {
+		return new FrontendVocab(app)
+	} else {
+		//throw `unsupported vocab.route =='${vocab.route}'`
+	}
 }
 
-class DefaultVocab {
+class TermdbVocab {
 	constructor(app) {
 		this.app = app
-		this.state = {
-			genome: this.app.opts.state.genome,
-			dslabel: this.app.opts.state.dslabel
-		}
+		this.vocab = this.app.opts.state.vocab
 	}
 
 	main() {
 		this.state = this.app.getState()
+		this.vocab = this.state.vocab
 	}
 
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		const data = await dofetch3(
-			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
+			'termdb?genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&gettermdbconfig=1'
 		)
 		// note: in case of error such as missing dataset, supply empty object
 		return data.termdbConfig || {}
@@ -36,8 +52,8 @@ class DefaultVocab {
 	// migrated from termdb/tree
 	async getTermChildren(term, cohortValuelst) {
 		const lst = [
-			'genome=' + this.state.genome,
-			'&dslabel=' + this.state.dslabel,
+			'genome=' + this.vocab.genome,
+			'&dslabel=' + this.vocab.dslabel,
 			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
 		]
 		if (cohortValuelst) {
@@ -58,8 +74,8 @@ class DefaultVocab {
 	async getPlotData(plotId, dataName) {
 		const config = this.state.tree.plots[plotId]
 		const route = config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
-		const url = route + dataName
-		const data = await dofetch3(route + dataName, {}, this.app.opts.fetchOpts)
+		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
+		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -67,8 +83,8 @@ class DefaultVocab {
 	// from termdb/search
 	async findTerm(str, cohortStr) {
 		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + cohortStr
 		]
@@ -79,7 +95,7 @@ class DefaultVocab {
 
 	// from termdb/terminfo
 	async getTermInfo(id) {
-		const args = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&getterminfo=1&tid=' + id]
+		const args = ['genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&getterminfo=1&tid=' + id]
 		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
@@ -89,8 +105,8 @@ class DefaultVocab {
 	async getCohortSampleCount(cohortName) {
 		if (!cohortName) return
 		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
 			'getcohortsamplecount=' + cohortName,
 			'cohortValues=' + cohortName
 		]
@@ -105,8 +121,8 @@ class DefaultVocab {
 	async getFilteredSampleCount(cohortName, filterJSON) {
 		if (!cohortName) return
 		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
 			'getsamplecount=' + cohortName,
 			'filter=' + encodeURIComponent(filterJSON)
 		]
@@ -119,10 +135,13 @@ class DefaultVocab {
 	}
 }
 
-class CustomVocab {
+// to-do
+// class Mds3Vocab {}
+
+class FrontendVocab {
 	constructor(app) {
 		this.app = app
-		this.vocab = app.opts.vocab
+		this.vocab = app.opts.state.vocab
 	}
 
 	main(vocab) {

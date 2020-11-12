@@ -20,8 +20,6 @@ class TdbTermInfo {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			isVisible: config.settings.termInfo.isVisible,
 			term: config.term
 		}

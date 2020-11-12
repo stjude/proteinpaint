@@ -16,9 +16,9 @@ const cache = { serverData: {} }
 
 exports.getterm = async function(termid, dslabel = null, genome = null) {
 	if (!termid) throw 'getterm: termid missing'
-	if (this && this.state) {
-		if (this.state.dslabel) dslabel = this.state.dslabel
-		if (this.state.genome) genome = this.state.genome
+	if (this && this.state && this.state.vocab) {
+		if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
+		if (this.state.vocab.genome) genome = this.state.vocab.genome
 	}
 	if (!dslabel) throw 'getterm: dslabel missing'
 	if (!genome) throw 'getterm: genome missing'

@@ -5,7 +5,6 @@ import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag a
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
-import { appInit } from '../termdb/app'
 
 /*
 
@@ -52,8 +51,7 @@ import { appInit } from '../termdb/app'
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.genome = opts.genome
-		this.dslabel = opts.dslabel
+		this.vocab = opts.vocab
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
@@ -87,10 +85,9 @@ class TermSetting {
 
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.vocab) {
-			if (!o.genome) throw '.genome missing'
-			if (!o.dslabel) throw '.dslabel missing'
-		}
+		if (!o.vocab) throw '.vocab missing'
+		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
+		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
@@ -249,15 +246,13 @@ function setInteractivity(self) {
 		self.opts.callback(null)
 	}
 
-	self.showTree = holder => {
+	self.showTree = async holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-
-		appInit(null, {
-			vocab: self.opts.vocab, // could be null if genome + dslabel are provided
-			genome: self.genome, // could be null if vocab is provided
-			dslabel: self.dslabel, // could be null if vocab is provided
+		const termdb = await require('../termdb/app')
+		termdb.appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
+				vocab: self.opts.vocab,
 				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
 				nav: {
 					header_mode: 'search_only'
