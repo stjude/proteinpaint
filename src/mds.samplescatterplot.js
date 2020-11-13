@@ -78,6 +78,7 @@ launch_singlesample
 
 const radius = 3
 const radius_tiny = 0.7
+const userdotcolor = 'black'
 
 export async function init(obj, holder, debugmode) {
 	/*
@@ -92,6 +93,7 @@ export async function init(obj, holder, debugmode) {
 	}
 
 	obj.menu = new client.Menu({ padding: '5px' })
+	obj.menu2 = new client.Menu({ padding: '10px' })
 	obj.tip = new client.Menu({ padding: '5px' })
 
 	obj.errordiv = holder.append('div').style('margin', '10px')
@@ -234,6 +236,7 @@ async function get_data(obj) {
 				d.sample = d[ad.samplekey]
 				delete d[ad.samplekey]
 			}
+			if (!d.color) d.color = userdotcolor
 			obj.dots_user.push(d)
 		}
 	}
@@ -265,6 +268,7 @@ function combine_clientserverdata(obj, data) {
 		if (Number.isNaN(j.x) || Number.isNaN(j.y)) continue
 		if (l[3]) {
 			j.sample = sample
+			j.color = userdotcolor
 			obj.dots_user.push(j)
 			continue
 		}
@@ -417,7 +421,7 @@ function init_plot(obj) {
 		usercircles = userdots
 			.append('circle')
 			.attr('stroke', 'none')
-			.attr('fill', 'black')
+			.attr('fill', d => d.color)
 			.attr('r', radius)
 			.on('mouseover', d => {
 				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
@@ -432,6 +436,7 @@ function init_plot(obj) {
 			.append('g')
 		userlabels = userlabelg
 			.append('text')
+			.attr('fill', d => d.color)
 			.attr('font-size', fontsize)
 			.text(d => d.sample)
 			.on('mouseover', d => {
@@ -461,6 +466,32 @@ function init_plot(obj) {
 					b.on('mousemove', null).on('mouseup', null)
 				})
 			})
+			.on('dblclick', d => {
+				obj.menu2.clear().show(d3event.clientX - 90, d3event.clientY)
+				obj.menu2.d
+					.append('input')
+					.attr('type', 'text')
+					.property('value', d.sample)
+					.style('display', 'block')
+					.style('margin-bottom', '5px')
+					.on('keyup', () => {
+						if (!client.keyupEnter()) return
+						const v = d3event.target.value
+						userlabels.filter(i => i.sample == d.sample).text(v)
+						d.sample = v
+						obj.menu2.hide()
+					})
+				obj.menu2.d
+					.append('input')
+					.attr('type', 'color')
+					.property('value', d.color)
+					.on('change', () => {
+						const v = d3event.target.value
+						userlabels.filter(i => i.sample == d.sample).attr('fill', v)
+						usercircles.filter(i => i.sample == d.sample).attr('fill', v)
+					})
+			})
+		userlabels.append('title').text('Double-click to edit')
 	}
 
 	assign_color4dots(obj)
