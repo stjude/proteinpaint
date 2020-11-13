@@ -2,7 +2,6 @@ import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
 import * as dom from '../dom'
-import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 
@@ -44,7 +43,7 @@ class Filter {
 				padding: '5px',
 				offsetX: 20,
 				offsetY: -34,
-				clearSelector: '.sja_tree_tip_body'
+				clearSelector: '.sja_term_src_body'
 			})
 		}
 		this.durations = { exit: 500 }
@@ -243,20 +242,26 @@ function setRenderers(self) {
 			.d.append('table')
 			.style('border-collapse', 'collapse')
 
+		const menuOptions = [
+			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
+			{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
+			{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
+			{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
+		]
+
+		// option to add a Replace option in the second row
+		if (self.opts.showTermSrc) {
+			menuOptions.splice(1, 0, {
+				action: 'replace',
+				html: ['', 'Replace', '&rsaquo;'],
+				handler: self.displayTreeMenu,
+				bar_click_override: self.replaceTerm
+			})
+		}
+
 		self.dom.table
 			.selectAll('tr')
-			.data([
-				{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
-				{
-					action: 'replace',
-					html: ['', 'Replace', '&rsaquo;'],
-					handler: self.displayTreeMenu,
-					bar_click_override: self.replaceTerm
-				},
-				{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
-				{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
-				{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
-			])
+			.data(menuOptions)
 			.enter()
 			.append('tr')
 			.attr('class', 'sja_menuoption')
@@ -275,7 +280,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_tree_tip_head')
 			.style('padding', '3px')
-		self.dom.treeBody = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_body')
+		self.dom.termSrcDiv = self.dom.treeTip.d.append('div').attr('class', 'sja_term_src_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
 		const isNotLabels = self.dom.treeHead
@@ -739,29 +744,23 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		appInit(null, {
-			holder: self.dom.treeBody,
-			state: {
+		if (self.opts.showTermSrc) {
+			self.opts.showTermSrc({
+				holder: self.dom.termSrcDiv,
 				genome: self.genome,
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
-				termfilter: {
-					filter: self.rawFilter
-				}
-			},
-			tree: {
-				disable_terms:
+				filter: JSON.parse(self.rawCopy),
+				// clicked_terms will typically be used to disable term selection
+				clicked_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
 						? self.activeData.filter.lst
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
-						: []
-			},
-			barchart: {
-				bar_click_override: tvslst => {
+						: [],
+				srctype: 'tvs',
+				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
+				select_callback: tvslst => {
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 
 					if (!filterUiRoot.lst.length) {
@@ -814,8 +813,8 @@ function setInteractivity(self) {
 						}
 					}
 				}
-			}
-		})
+			})
+		}
 	}
 
 	// menu to replace a term or add a subnested filter
@@ -833,47 +832,36 @@ function setInteractivity(self) {
 		}
 		const filter = self.activeData.filter
 
-		appInit(null, {
-			holder: self.dom.treeBody,
-			state: {
+		if (self.opts.showTermSrc) {
+			self.opts.showTermSrc({
+				holder: self.dom.termSrcDiv,
 				genome: self.genome,
 				dslabel: self.dslabel,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
-				termfilter: {
-					filter: self.rawFilter
-				}
-			},
-			tree: {
-				disable_terms:
-					self.activeData &&
-					self.activeData.filter &&
-					self.activeData.filter.lst &&
-					self.activeData.filter.join == 'and'
-						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
-								.map(d => d.tvs.term.id)
-						: [self.activeData.item.tvs.term.id]
-			},
-			barchart: {
-				bar_click_override: d.bar_click_override
+				filter: JSON.parse(self.rawCopy),
+				// clicked_terms will typically be used to disable term selection
+				clicked_terms:
+					filter && filter.lst && filter.join == 'and'
+						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
+						: [self.activeData.item.tvs.term.id],
+				srctype: 'tvs',
+				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
+				select_callback: d.bar_click_override
 					? d.bar_click_override
 					: !filter.join ||
 					  !filter.lst.length ||
 					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 					? self.appendTerm
 					: self.subnestFilter
-			}
-		})
+			})
+		}
 	}
 
 	self.editTerm = function(elem) {
 		select(elem.parentNode)
 			.selectAll('tr')
 			.style('background-color', self.highlightEditRow)
-		const holder = self.dom.treeBody
+		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
 		self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()

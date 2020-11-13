@@ -14,19 +14,18 @@ const tabixnoterror = s => {
 }
 
 const express = require('express'),
+	util = require('util'),
 	url = require('url'),
 	http = require('http'),
 	https = require('https'),
 	fs = require('fs'),
 	path = require('path'),
-	request = require('request'),
+	got = require('got'),
 	async = require('async'),
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
-	exec = child_process.exec,
-	got = require('got'),
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color = require('d3-color'),
@@ -53,6 +52,10 @@ const express = require('express'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	bam_request_closure = require('./modules/bam'),
+	aicheck_request_closure = require('./modules/aicheck'),
+	bampile_request = require('./modules/bampile'),
+	junction_request = require('./modules/junction'),
+	bedj_request_closure = require('./modules/bedj'),
 	blat_request_closure = require('./modules/blat').request_closure,
 	mds3_request_closure = require('./modules/mds3.load'),
 	mds2_init = require('./modules/mds2.init'),
@@ -72,7 +75,6 @@ const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstat = serverconfig.hicstat ? serverconfig.hicstat.split(' ') : ['python', 'read_hic_header.py']
 const hicstraw = serverconfig.hicstraw || 'straw'
 let codedate, // date for code files last updated
 	launchdate // server launch date
@@ -150,21 +152,21 @@ app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)
-app.post('/tkbedj', handle_tkbedj)
+app.get('/tkbedj', bedj_request_closure(genomes))
 app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get('/tkbam', bam_request_closure(genomes))
+app.get('/tkaicheck', aicheck_request_closure(genomes))
 app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
 app.get('/variant2samples', variant2samples_closure(genomes))
 app.get('/dsvariantsummary', handle_dsvariantsummary)
-app.post('/bedjdata', handle_bedjdata)
-app.post('/tkbampile', handle_tkbampile)
+app.get('/tkbampile', bampile_request)
 app.post('/snpbyname', handle_snpbyname)
 app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post('/tkbigwig', handle_tkbigwig)
-app.post('/tkaicheck', handle_tkaicheck)
 
+app.get('/tabixheader', handle_tabixheader)
 app.post('/snp', handle_snpbycoord)
 app.post('/clinvarVCF', handle_clinvarVCF)
 app.post('/isoformlst', handle_isoformlst)
@@ -175,7 +177,7 @@ app.post('/dsgenestat', handle_dsgenestat)
 app.post('/study', handle_study)
 app.post('/textfile', handle_textfile)
 app.post('/urltextfile', handle_urltextfile)
-app.post('/junction', handle_junction) // legacy
+app.get('/junction', junction_request) // legacy
 app.post('/mdsjunction', handle_mdsjunction)
 app.post('/mdscnv', handle_mdscnv)
 app.post('/mdssvcnv', handle_mdssvcnv)
@@ -183,11 +185,10 @@ app.post('/mds2', mds2_load.handle_request(genomes))
 app.post('/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot', handle_mdsgeneboxplot)
 app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
-//app.post('/mdsgeneboxplot_svcnv',handle_mdsgeneboxplot_svcnv) // no longer used
 
 app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
 
-app.post('/vcfheader', handle_vcfheader)
+app.get('/vcfheader', handle_vcfheader)
 
 app.post('/translategm', handle_translategm)
 app.get('/hicstat', handle_hicstat)
@@ -247,7 +248,7 @@ pp_init()
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
-	if (!serverconfig.allow_mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (!exports.features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
 		const id = Math.random().toString()
 		const folder = await maymakefolder()
@@ -292,6 +293,20 @@ function maymakefolder() {
 			}
 		})
 	})
+}
+
+async function handle_tabixheader(req, res) {
+	log(req)
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		const lines = await utils.get_header_tabix(file, dir)
+		res.send({ lines })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 function handle_genomes(req, res) {
@@ -844,7 +859,11 @@ if file/url ends with .gz, it is bedgraph
 		// is bedgraph, will cache index if is url
 		isbedgraph = true
 		if (isurl) {
-			bedgraphdir = await cache_index_promise(req.query.indexURL || file + '.tbi')
+			try {
+				bedgraphdir = await utils.cache_index(file, req.query.indexURL)
+			} catch (e) {
+				return res.send({ error: 'index caching error' })
+			}
 		}
 	}
 
@@ -1066,1518 +1085,6 @@ if file/url ends with .gz, it is bedgraph
 			}
 			res.send({ error: typeof err == 'string' ? err : err.message })
 		})
-}
-
-function handle_tkaicheck(req, res) {
-	/*
-	no caching markers, draw them as along as they are retrieved
-	do not try to estimate marker size, determined by client
-	*/
-
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	const coveragemax = req.query.coveragemax || 100
-	if (!Number.isInteger(coveragemax)) return res.send({ error: 'invalid coveragemax' })
-
-	const vafheight = req.query.vafheight
-	if (!Number.isInteger(vafheight)) return res.send({ error: 'invalid vafheight' })
-	const coverageheight = req.query.coverageheight
-	if (!Number.isInteger(coverageheight)) return res.send({ error: 'invalid coverageheight' })
-	const rowspace = req.query.rowspace
-	if (!Number.isInteger(rowspace)) return res.send({ error: 'invalid rowspace' })
-	const dotsize = req.query.dotsize || 1
-	if (!Number.isInteger(dotsize)) return res.send({ error: 'invalid dotsize' })
-
-	if (!req.query.rglst) return res.send({ error: 'region list missing' })
-
-	const gtotalcutoff = req.query.gtotalcutoff
-	const gmafrestrict = req.query.gmafrestrict
-
-	const canvas = createCanvas(
-		req.query.width * req.query.devicePixelRatio,
-		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
-	)
-	const ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) {
-		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-	}
-
-	// vaf track background
-	ctx.fillStyle = '#f1f1f1'
-	ctx.fillRect(0, 0, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight + coverageheight, req.query.width, vafheight / 2) // normal
-	ctx.fillStyle = '#FAFAD9'
-	ctx.fillRect(0, vafheight / 2, req.query.width, vafheight / 2) // tumor
-	ctx.fillRect(0, rowspace * 2 + vafheight * 1.5 + coverageheight, req.query.width, vafheight / 2) // normal
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return { file: file }
-			const indexurl = req.query.indexURL || file + '.tbi'
-
-			return cache_index_promise(indexurl).then(dir => {
-				return { file: file, dir: dir }
-			})
-		})
-
-		.then(fileobj => {
-			let x = 0
-			for (const r of req.query.rglst) {
-				r.x = x
-				x += req.query.regionspace + r.width
-			}
-
-			const samplecolor = '#786312'
-			const aicolor = '#122778'
-			const barcolor = '#858585'
-			const coverageabovemaxcolor = 'red'
-
-			const tasks = [] // each region draw
-
-			for (const r of req.query.rglst) {
-				tasks.push(
-					new Promise((resolve, reject) => {
-						const ps = spawn(tabix, [fileobj.file, r.chr + ':' + r.start + '-' + r.stop])
-						const out = []
-						const out2 = []
-						ps.stdout.on('data', i => out.push(i))
-						ps.stderr.on('data', i => out2.push(i))
-						ps.on('close', code => {
-							const err = out2.join('')
-							if (err && !tabixnoterror(err)) reject({ message: err })
-
-							const xsf = r.width / (r.stop - r.start) // pixel per bp
-
-							for (const line of out
-								.join('')
-								.trim()
-								.split('\n')) {
-								const l = line.split('\t')
-								const pos = Number.parseInt(l[1])
-								const mintumor = Number.parseInt(l[2])
-								const tintumor = Number.parseInt(l[3])
-								const minnormal = Number.parseInt(l[4])
-								const tinnormal = Number.parseInt(l[5])
-								if (
-									Number.isNaN(mintumor) ||
-									Number.isNaN(tintumor) ||
-									Number.isNaN(minnormal) ||
-									Number.isNaN(tinnormal)
-								) {
-									reject('line with invalid allele count: ' + line)
-								}
-
-								if (gtotalcutoff && tinnormal < gtotalcutoff) continue
-
-								const x = Math.ceil(r.x + xsf * (r.reverse ? r.stop - pos : pos - r.start) - dotsize / 2)
-
-								// marker maf
-								ctx.fillStyle = samplecolor
-								const vaftumor = mintumor / tintumor
-								ctx.fillRect(x, vafheight * (1 - vaftumor), dotsize, 2)
-								const vafnormal = minnormal / tinnormal
-
-								if (gmafrestrict && (vafnormal < gmafrestrict || vafnormal > 1 - gmafrestrict)) continue
-
-								ctx.fillRect(
-									x,
-									vafheight + rowspace + coverageheight + rowspace + vafheight * (1 - vafnormal),
-									dotsize,
-									2
-								)
-								ctx.fillStyle = aicolor
-								// ai
-								const ai = Math.abs(vaftumor - vafnormal)
-								ctx.fillRect(x, vafheight * 2 + rowspace * 4 + coverageheight * 2 + vafheight * (1 - ai), dotsize, 2)
-
-								// coverage bars
-								//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								let barh = ((tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight) / coveragemax
-								let y = coverageheight - barh
-								ctx.fillRect(x, y + vafheight + rowspace, dotsize, barh)
-
-								//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
-								ctx.fillStyle = barcolor
-								barh = ((tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight) / coveragemax
-								y = coverageheight - barh
-								ctx.fillRect(x, y + 3 * rowspace + 2 * vafheight + coverageheight, dotsize, barh)
-
-								// coverage above max
-								if (tintumor >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, vafheight + rowspace, dotsize, 2)
-								}
-								if (tinnormal >= coveragemax) {
-									ctx.fillStyle = coverageabovemaxcolor
-									ctx.fillRect(x, 3 * rowspace + 2 * vafheight + coverageheight, dotsize, 2)
-								}
-							}
-							resolve()
-						})
-					})
-				)
-			}
-			return Promise.all(tasks)
-		})
-		.then(() => {
-			res.send({
-				src: canvas.toDataURL(),
-				coveragemax: coveragemax
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.log(err.stack)
-			}
-		})
-}
-
-function handle_tkbedj(req, res) {
-	/*
-should guard against file content error e.g. two tabs separating columns
-
-*/
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, tkfile, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	if (!req.query.genome) return res.send({ error: 'no genome' })
-	const g = genomes[req.query.genome]
-	if (!g) return res.send({ error: 'invalid genome: ' + req.query.genome })
-	const genomefile = g.genomefile
-
-	const stackheight = req.query.stackheight,
-		stackspace = req.query.stackspace,
-		regionspace = req.query.regionspace,
-		width = req.query.width
-
-	if (!Number.isInteger(stackheight)) return res.send({ error: 'stackheight is not integer' })
-	const fontsize = Math.max(10, stackheight - 2)
-
-	if (!Number.isInteger(stackspace)) return res.send({ error: 'stackspace is not integer' })
-	if (!Number.isInteger(regionspace)) return res.send({ error: 'regionspace is not integer' })
-	// width could be float!!
-	if (!Number.isFinite(width)) return res.send({ error: 'width is not a number' })
-
-	if (req.query.usevalue) {
-		if (!req.query.usevalue.key) return res.send({ error: '.key missing from .usevalue' })
-		if (req.query.usevalue.dropBelowCutoff && !Number.isFinite(req.query.usevalue.dropBelowCutoff))
-			return res.send({ error: 'invalid value for .usevalue.dropBelowCutoff' })
-	}
-
-	if (req.query.bplengthUpperLimit && !Number.isInteger(req.query.bplengthUpperLimit))
-		return res.send({ error: 'invalid value for bplengthUpperLimit' })
-
-	const rglst = req.query.rglst
-	if (!rglst) return res.send({ error: 'no rglst[]' })
-	if (!Array.isArray(rglst)) return res.send({ error: 'rglst is not an array' })
-	if (rglst.length == 0) return res.send({ error: 'empty rglst' })
-	for (const r of rglst) {
-		// TODO validate regions
-		if (r.reverse) {
-			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
-		} else {
-			r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
-		}
-	}
-
-	const color = req.query.color || '#3D7A4B'
-	const flag_gm = req.query.gmregion
-	const gmisoform = req.query.isoform
-	const flag_onerow = req.query.onerow
-	const categories = req.query.categories
-	const __isgene = req.query.__isgene
-
-	Promise.resolve()
-		.then(() => {
-			/*********************************
-		    1 - cache url index
-		*********************************/
-
-			if (!isurl) return { file: tkfile }
-			const indexurl = req.query.indexURL || tkfile + '.tbi'
-
-			return cache_index_promise(indexurl).then(dir => {
-				return { file: tkfile, dir: dir }
-			})
-		})
-
-		.then(fileobj => {
-			// .file, .dir
-
-			/*********************************
-		    2 - fetch data
-
-			somehow cannot use promise.resolve().then(), but must create new promise
-
-		*********************************/
-
-			if (flag_gm) {
-				// query over the gene region
-				return new Promise((resolve, reject) => {
-					const ps = spawn(tabix, [fileobj.file, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop], {
-						cwd: fileobj.dir
-					})
-					const thisout = []
-					const errout = []
-					ps.stdout.on('data', i => thisout.push(i))
-					ps.stderr.on('data', i => errout.push(i))
-					ps.on('close', code => {
-						const _e = errout.join('')
-						if (_e && !tabixnoterror(_e)) {
-							reject({ message: _e })
-						}
-
-						const lines = thisout
-							.join('')
-							.trim()
-							.split('\n')
-						let errlinecount = 0
-						const items = []
-						for (const line of lines) {
-							if (line == '') continue
-							const l = line.split('\t')
-							let j
-							try {
-								j = JSON.parse(l[3])
-							} catch (e) {
-								errlinecount++
-								continue
-							}
-							if (j.isoformonly && j.isoformonly != gmisoform) {
-								continue
-							}
-							j.chr = l[0]
-							j.start = Number.parseInt(l[1])
-							if (Number.isNaN(j.start)) {
-								errlinecount++
-								continue
-							}
-							j.stop = Number.parseInt(l[2])
-							if (Number.isNaN(j.stop)) {
-								errlinecount++
-								continue
-							}
-							j.rglst = []
-							for (let i = 0; i < rglst.length; i++) {
-								const r = rglst[i]
-								// simply decide by the whole gene span, not by exons, otherwise there will result in gaps
-								if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
-									j.rglst.push({
-										idx: i
-									})
-								}
-							}
-							if (j.rglst.length == 0) continue
-							items.push(j)
-						}
-						resolve([items])
-					})
-				})
-			} else {
-				// query over genomic regions
-				// each item belong to only one region
-
-				const tasklst = []
-
-				for (const [idx, r] of req.query.rglst.entries()) {
-					tasklst.push(
-						new Promise((resolve, reject) => {
-							const ps = spawn(tabix, [fileobj.file, r.chr + ':' + r.start + '-' + r.stop], { cwd: fileobj.dir })
-							const thisout = []
-							const errout = []
-							ps.stdout.on('data', i => thisout.push(i))
-							ps.stderr.on('data', i => errout.push(i))
-							ps.on('close', code => {
-								const _e = errout.join('')
-								if (_e && !tabixnoterror(_e)) {
-									reject({ message: _e })
-								}
-
-								const items = []
-
-								const lines = thisout
-									.join('')
-									.trim()
-									.split('\n')
-								let errlinecount = 0
-								for (const line of lines) {
-									if (line == '') continue
-									const l = line.split('\t')
-									let j
-									try {
-										j = JSON.parse(l[3])
-									} catch (e) {
-										errlinecount++
-										continue
-									}
-									j.chr = l[0]
-									j.start = Number.parseInt(l[1])
-									if (Number.isNaN(j.start)) {
-										errlinecount++
-										continue
-									}
-									j.stop = Number.parseInt(l[2])
-									if (Number.isNaN(j.stop)) {
-										errlinecount++
-										continue
-									}
-									j.rglst = [{ idx: idx }]
-									items.push(j)
-								}
-								resolve(items)
-							})
-						})
-					)
-				}
-				return Promise.all(tasklst)
-			}
-		})
-
-		.then(regionitems => {
-			/*********************************
-		    4 - render
-		*********************************/
-
-			const items = []
-
-			// apply filtering
-			for (const lst of regionitems) {
-				for (const i of lst) {
-					if (req.query.usevalue) {
-						const v = i[req.query.usevalue.key]
-						if (!Number.isFinite(v)) {
-							continue
-						}
-						if (req.query.usevalue.dropBelowCutoff && v < req.query.usevalue.dropBelowCutoff) {
-							continue
-						}
-					}
-					if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
-						continue
-					}
-					items.push(i)
-				}
-			}
-
-			// TODO may return items without rendering
-
-			if (items.length == 0) {
-				// will draw, but no data
-				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
-				const ctx = canvas.getContext('2d')
-				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-				ctx.font = stackheight + 'px Arial'
-				ctx.fillStyle = '#aaa'
-				ctx.textAlign = 'center'
-				ctx.textBaseline = 'middle'
-				ctx.fillText('No data in view range', width / 2, stackheight / 2)
-				return {
-					src: canvas.toDataURL(),
-					height: stackheight
-				}
-			}
-
-			const thinpad = Math.ceil(stackheight / 4) - 1
-			if (flag_onerow || items.length >= 400) {
-				// __onerow__
-				// may render strand
-				const notmanyitem = items.length < 200
-				const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
-				const ctx = canvas.getContext('2d')
-				if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-				const mapisoform = items.length <= 200 ? [] : null
-				for (const item of items) {
-					const fillcolor =
-						categories && item.category && categories[item.category]
-							? categories[item.category].color
-							: item.color || color
-					ctx.fillStyle = fillcolor
-					for (const _r of item.rglst) {
-						let cumx = 0
-						for (let i = 0; i < _r.idx; i++) {
-							cumx += rglst[i].width + regionspace
-						}
-						const r = rglst[_r.idx]
-						const thin = []
-						if (item.utr5) {
-							thin.push(...item.utr5)
-						}
-						if (item.utr3) {
-							thin.push(...item.utr3)
-						}
-						if (item.exon && (!item.coding || item.coding.length == 0)) {
-							thin.push(...item.exon)
-						}
-						for (const e of thin) {
-							const a = Math.max(r.start, e[0])
-							const b = Math.min(r.stop, e[1])
-							const pxa = cumx + r.scale(r.reverse ? b : a)
-							const pxb = cumx + r.scale(r.reverse ? a : b)
-							ctx.fillRect(pxa, thinpad, Math.max(1, pxb - pxa), stackheight - thinpad * 2)
-							bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item)
-						}
-						const thick = []
-						if (item.exon) {
-							if (item.coding && item.coding.length > 0) {
-								thick.push(...item.coding)
-							}
-						} else {
-							thick.push([item.start, item.stop])
-						}
-						for (const e of thick) {
-							const a = Math.max(r.start, e[0])
-							const b = Math.min(r.stop, e[1])
-							const pxa = cumx + r.scale(r.reverse ? b : a)
-							const pxb = cumx + r.scale(r.reverse ? a : b)
-							ctx.fillRect(pxa, 0, Math.max(1, pxb - pxa), stackheight)
-							bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item)
-							if (item.strand && notmanyitem) {
-								ctx.strokeStyle = 'white'
-								strokearrow(ctx, item.strand, pxa, thinpad, pxb - pxa, stackheight - thinpad * 2)
-							}
-						}
-					}
-				}
-				return {
-					src: canvas.toDataURL(),
-					height: stackheight,
-					mapisoform: mapisoform
-				}
-				// end of __onerow__
-			}
-
-			let returngmdata = null
-			if (__isgene && items.length < 50) {
-				// gene data requested and not too many, so return data
-				returngmdata = []
-				for (const i of items) {
-					const j = {}
-					for (const k in i) {
-						if (k == 'canvas' || k == 'rglst') continue
-						j[k] = i[k]
-					}
-					returngmdata.push(j)
-				}
-			}
-
-			const bpcount = rglst.reduce((a, b) => a + b.stop - b.start, 0)
-			const maytranslate = req.query.translatecoding && bpcount < width * 3
-			const translateitem = []
-			const namespace = 1
-			const namepad = 10 // box no struct: [pad---name---pad]
-			const canvas = createCanvas(10, 10) // for measuring text only
-			let ctx = canvas.getContext('2d')
-			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-			ctx.font = 'bold ' + fontsize + 'px Arial'
-			const packfull = items.length < 200
-			const mapisoform = items.length < 200 ? [] : null
-			// sort items
-			// TODO from different chrs
-			let sortreverse = false
-			if (flag_gm) {
-				sortreverse = flag_gm.reverse
-			}
-			for (const r of rglst) {
-				if (r.reverse) {
-					sortreverse = true
-				}
-			}
-
-			items.sort((a, b) => {
-				if (sortreverse) {
-					if (a.stop == b.stop) {
-						return a.start - b.start
-					}
-					return b.stop - a.stop
-				} else {
-					if (a.start == b.start) {
-						return b.stop - a.stop
-					}
-					return a.start - b.start
-				}
-			})
-			let hasstruct = false
-			for (const i of items) {
-				if (i.exon) hasstruct = true
-			}
-
-			// stack
-			const stack = [0]
-			let maxstack = 1,
-				mapexon = null
-
-			for (const item of items) {
-				// px position in the whole view range
-				let itemstartpx = null,
-					itemstoppx = null
-
-				for (const _r of item.rglst) {
-					let cumx = 0
-					for (let i = 0; i < _r.idx; i++) {
-						cumx += rglst[i].width + regionspace
-					}
-					const r = rglst[_r.idx]
-					const a = Math.max(item.start, r.start)
-					const b = Math.min(item.stop, r.stop)
-					if (a < b) {
-						// item in this region
-						const pxa = cumx + r.scale(r.reverse ? b : a)
-						const pxb = cumx + r.scale(r.reverse ? a : b)
-						if (itemstartpx == null) {
-							itemstartpx = pxa
-							itemstoppx = pxb
-						} else {
-							itemstartpx = Math.min(itemstartpx, pxa)
-							itemstoppx = Math.max(itemstoppx, pxb)
-						}
-					}
-				}
-				if (itemstartpx == null) {
-					continue
-				}
-				item.canvas = {
-					start: itemstartpx,
-					stop: itemstoppx,
-					stranded: item.strand != undefined
-				}
-				if (item.coding && maytranslate) {
-					item.willtranslate = true // so later the strand will not show
-					translateitem.push(item)
-				}
-				let boxstart = itemstartpx
-				let boxstop = itemstoppx
-				if (packfull) {
-					// check item name
-					const namestr = item.name ? item.name : null
-					if (namestr) {
-						item.canvas.namestr = namestr
-						const namewidth = ctx.measureText(namestr).width
-						item.canvas.namewidth = namewidth
-
-						if (hasstruct) {
-							if (item.canvas.start >= namewidth + namespace) {
-								item.canvas.namestart = item.canvas.start - namespace
-								boxstart = item.canvas.namestart - namewidth
-								item.canvas.textalign = 'right'
-							} else if (item.canvas.stop + namewidth + namespace <= width) {
-								item.canvas.namestart = item.canvas.stop + namespace
-								boxstop = item.canvas.namestart + namewidth
-								item.canvas.textalign = 'left'
-							} else {
-								item.canvas.namehover = true
-								item.canvas.textalign = 'left'
-							}
-						} else {
-							if (Math.min(width, item.canvas.stop) - Math.max(0, item.canvas.start) >= namewidth + namepad * 2) {
-								item.canvas.namein = true
-							} else if (item.canvas.start >= namewidth + namespace) {
-								item.canvas.namestart = item.canvas.start - namespace
-								boxstart = item.canvas.namestart - namewidth
-								item.canvas.textalign = 'right'
-							} else if (item.canvas.stop + namewidth + namespace <= width) {
-								item.canvas.namestart = item.canvas.stop + namespace
-								boxstop = item.canvas.namestart + namewidth
-								item.canvas.textalign = 'left'
-							} else {
-								// why??
-								item.canvas.namein = true
-							}
-						}
-					}
-				}
-				if (item.canvas.stop - item.canvas.start > width * 0.3) {
-					// enable
-					mapexon = []
-				}
-				for (let i = 1; i <= maxstack; i++) {
-					if (stack[i] == undefined || stack[i] < boxstart) {
-						item.canvas.stack = i
-						stack[i] = boxstop
-						break
-					}
-				}
-				if (item.canvas.stack == undefined) {
-					maxstack++
-					stack[maxstack] = boxstop
-					item.canvas.stack = maxstack
-				}
-				bedj_may_mapisoform(mapisoform, item.canvas.start, item.canvas.stop, item.canvas.stack, item)
-			}
-
-			// render
-
-			canvas.width = width * req.query.devicePixelRatio
-			const finalheight = (stackheight + stackspace) * maxstack - stackspace
-			canvas.height = finalheight * req.query.devicePixelRatio
-			ctx = canvas.getContext('2d')
-			if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-			ctx.font = 'bold ' + fontsize + 'px Arial'
-			ctx.textBaseline = 'middle'
-			ctx.lineWidth = 1
-
-			for (const item of items) {
-				// render an item
-
-				const c = item.canvas
-				if (!c) {
-					// invisible item
-					continue
-				}
-				const fillcolor =
-					categories && item.category && categories[item.category]
-						? categories[item.category].color
-						: item.color || color
-				const y = (stackheight + stackspace) * (c.stack - 1)
-				ctx.fillStyle = fillcolor
-				if (item.exon || item.rglst.length > 1) {
-					// through line
-					ctx.strokeStyle = fillcolor
-					ctx.beginPath()
-					ctx.moveTo(c.start, Math.floor(y + stackheight / 2) + 0.5)
-					ctx.lineTo(c.stop, Math.floor(y + stackheight / 2) + 0.5)
-					ctx.stroke()
-				}
-				for (const _r of item.rglst) {
-					let cumx = 0
-					for (let i = 0; i < _r.idx; i++) {
-						cumx += rglst[i].width + regionspace
-					}
-					const region = rglst[_r.idx]
-					const thinbox = []
-					if (item.utr3) {
-						thinbox.push(...item.utr3)
-					}
-					if (item.utr5) {
-						thinbox.push(...item.utr5)
-					}
-					if (item.exon && (!item.coding || item.coding.length == 0)) {
-						thinbox.push(...item.exon)
-					}
-					for (const e of thinbox) {
-						const a = Math.max(e[0], region.start)
-						const b = Math.min(e[1], region.stop)
-						if (a < b) {
-							const pxa = cumx + region.scale(region.reverse ? b : a)
-							const pxb = cumx + region.scale(region.reverse ? a : b)
-							ctx.fillRect(pxa, y + thinpad, Math.max(1, pxb - pxa), stackheight - thinpad * 2)
-						}
-					}
-					const thick = []
-					if (item.exon) {
-						if (item.coding && item.coding.length > 0) {
-							thick.push(...item.coding)
-						}
-					} else {
-						thick.push([item.start, item.stop])
-					}
-					let _strand = item.strand
-					if (c.stranded && region.reverse) {
-						_strand = item.strand == '+' ? '-' : '+'
-					}
-					for (const e of thick) {
-						const a = Math.max(e[0], region.start)
-						const b = Math.min(e[1], region.stop)
-						if (a < b) {
-							const pxa = cumx + region.scale(region.reverse ? b : a)
-							const pxb = cumx + region.scale(region.reverse ? a : b)
-							ctx.fillRect(pxa, y, Math.max(1, pxb - pxa), stackheight)
-
-							// strand marks inside box
-
-							if (c.stranded && !item.willtranslate) {
-								ctx.strokeStyle = 'white'
-
-								if (c.namein) {
-									/*
-								patch!!!
-								to acknowledge name inside box cases
-								this always happens to a singular item with no exon structure
-								*/
-									const w = (pxb - pxa - c.namewidth) / 2
-									strokearrow(ctx, _strand, pxa, y + thinpad, w, stackheight - thinpad * 2)
-									strokearrow(ctx, _strand, pxa + w + c.namewidth, y + thinpad, w, stackheight - thinpad * 2)
-								} else {
-									strokearrow(ctx, _strand, pxa, y + thinpad, pxb - pxa, stackheight - thinpad * 2)
-								}
-							}
-						}
-					}
-					if (c.stranded && item.intron) {
-						// intron arrows
-						ctx.strokeStyle = fillcolor
-						for (const e of item.intron) {
-							const a = Math.max(e[0], region.start)
-							const b = Math.min(e[1], region.stop)
-							if (a < b) {
-								const pxa = cumx + region.scale(region.reverse ? b : a)
-								const pxb = cumx + region.scale(region.reverse ? a : b)
-								strokearrow(ctx, _strand, pxa, y + thinpad, pxb - pxa, stackheight - thinpad * 2)
-							}
-						}
-					}
-					if (mapexon && item.exon) {
-						for (let i = 0; i < item.exon.length; i++) {
-							const e = item.exon[i]
-							if (e[1] <= region.start || e[0] >= region.stop) continue
-							const a = Math.max(e[0], region.start)
-							const b = Math.min(e[1], region.stop)
-							if (a < b) {
-								const x1 = cumx + region.scale(region.reverse ? b : a)
-								const x2 = cumx + region.scale(region.reverse ? a : b)
-								mapexon.push({
-									chr: item.chr,
-									start: Math.min(e[0], e[1]),
-									stop: Math.max(e[0], e[1]),
-									x1: x1,
-									x2: x2,
-									y: c.stack,
-									name: 'Exon ' + (i + 1) + '/' + item.exon.length
-								})
-							}
-						}
-						for (let i = 1; i < item.exon.length; i++) {
-							const istart = item.exon[item.strand == '+' ? i - 1 : i][1],
-								istop = item.exon[item.strand == '+' ? i : i - 1][0]
-							if (istop <= region.start || istart >= region.stop) continue
-							const a = Math.max(istart, region.start)
-							const b = Math.min(istop, region.stop)
-							if (a < b) {
-								const x1 = cumx + region.scale(region.reverse ? b : a)
-								const x2 = cumx + region.scale(region.reverse ? a : b)
-								if (x2 < 0) continue
-								mapexon.push({
-									chr: item.chr,
-									start: istart,
-									stop: istop,
-									x1: x1,
-									x2: x2,
-									y: c.stack,
-									name: 'Intron ' + i + '/' + (item.exon.length - 1)
-								})
-							}
-						}
-					}
-				}
-				// name
-				if (c.namestart != undefined) {
-					ctx.textAlign = c.textalign
-					ctx.fillStyle = fillcolor
-					ctx.fillText(c.namestr, c.namestart, y + stackheight / 2)
-				} else if (c.namehover) {
-					const x = Math.max(10, c.start + 10)
-					ctx.fillStyle = 'white'
-					ctx.fillRect(x, y, c.namewidth + 10, stackheight)
-					ctx.strokeStyle = fillcolor
-					ctx.strokeRect(x + 1.5, y + 0.5, c.namewidth + 10 - 3, stackheight - 2)
-					ctx.fillStyle = fillcolor
-					ctx.textAlign = 'center'
-					ctx.fillText(c.namestr, x + c.namewidth / 2 + 5, y + stackheight / 2)
-				} else if (c.namein) {
-					ctx.textAlign = 'center'
-					ctx.fillStyle = 'white'
-					ctx.fillText(c.namestr, (Math.max(0, c.start) + Math.min(width, c.stop)) / 2, y + stackheight / 2)
-				}
-			}
-
-			const result = {
-				height: finalheight,
-				mapisoform: mapisoform,
-				mapexon: mapexon,
-				returngmdata: returngmdata
-			}
-			if (translateitem.length) {
-				// items to be translated
-				result.canvas = canvas
-				result.ctx = ctx
-				result.translateitem = translateitem
-			} else {
-				// nothing to be translated
-				result.src = canvas.toDataURL()
-			}
-			return result
-		})
-
-		.then(result => {
-			/*********************************
-		    5 - translate
-		*********************************/
-
-			if (!result.translateitem) {
-				// nothing to be translated
-				return result
-			}
-
-			return new Promise((resolve, reject) => {
-				const translateitem = result.translateitem
-				const canvas = result.canvas
-				const ctx = result.ctx
-				delete result.translateitem
-				delete result.canvas
-				delete result.ctx
-
-				const mapaa = []
-
-				const arg = ['faidx', genomefile]
-				for (const i of translateitem) {
-					arg.push(i.chr + ':' + (i.start + 1) + '-' + i.stop)
-				}
-				const _out = [],
-					_out2 = []
-				const sp2 = spawn(samtools, arg)
-				sp2.stdout.on('data', i => _out.push(i))
-				sp2.stderr.on('data', i => _out2.push(i))
-				sp2.on('close', code => {
-					const dnalst = []
-					let thisseq = null
-					for (const line of _out
-						.join('')
-						.trim()
-						.split('\n')) {
-						if (line[0] == '>') {
-							if (thisseq) {
-								dnalst.push(thisseq)
-							}
-							thisseq = ''
-							continue
-						}
-						thisseq += line
-					}
-					dnalst.push(thisseq)
-
-					if (dnalst.length != translateitem.length) {
-						console.error(
-							'ERROR: number mismatch between gene and retrieved sequence: ' +
-								translateitem.length +
-								' ' +
-								dnalst.length
-						)
-						result.src = canvas.toDataURL()
-						resolve(result)
-					}
-
-					const altcolor = 'rgba(122,103,44,.7)',
-						errcolor = 'red',
-						startcolor = 'rgba(0,255,0,.4)',
-						stopcolor = 'rgba(255,0,0,.5)'
-					ctx.textAlign = 'center'
-					ctx.textBaseline = 'middle'
-					for (let i = 0; i < translateitem.length; i++) {
-						// need i
-						const item = translateitem[i]
-						const fillcolor =
-							categories && item.category && categories[item.category]
-								? categories[item.category].color
-								: item.color || color
-						const c = item.canvas
-						const y = (stackheight + stackspace) * (c.stack - 1)
-						item.genomicseq = dnalst[i].toUpperCase()
-						const aaseq = common.nt2aa(item)
-						for (const _r of item.rglst) {
-							const region = rglst[_r.idx]
-							let cumx = 0
-							for (let j = 0; j < _r.idx; j++) {
-								cumx += rglst[j].width + regionspace
-							}
-							const bppx = region.width / (region.stop - region.start)
-							const _fs = Math.min(stackheight, bppx * 3)
-							const aafontsize = _fs < 8 ? null : _fs
-							let minustrand = false
-							if (c.stranded && item.strand == '-') {
-								minustrand = true
-							}
-							let cds = 0
-							if (aafontsize) {
-								ctx.font = aafontsize + 'px Arial'
-							}
-							for (const e of item.coding) {
-								// each exon, they are ordered 5' to 3'
-								if (minustrand) {
-									if (e[0] >= item.stop) {
-										cds += e[1] - e[0]
-										continue
-									}
-									if (e[1] <= item.start) {
-										break
-									}
-								} else {
-									if (e[1] <= item.start) {
-										cds += e[1] - e[0]
-										continue
-									}
-									if (e[0] >= item.stop) {
-										break
-									}
-								}
-								const lookstart = Math.max(item.start, e[0]),
-									lookstop = Math.min(item.stop, e[1])
-								if (minustrand) {
-									cds += e[1] - lookstop
-								} else {
-									cds += lookstart - e[0]
-								}
-								let codonspan = 0
-								for (let k = 0; k < lookstop - lookstart; k++) {
-									// each coding base
-									cds++
-									codonspan++
-									let aanumber
-									if (cds % 3 == 0) {
-										aanumber = cds / 3 - 1
-									} else {
-										if (k < lookstop - lookstart - 1) {
-											continue
-										} else {
-											// at the 3' end of this exon
-											aanumber = Math.floor(cds / 3)
-										}
-									}
-									let aa = aaseq[aanumber],
-										_fillcolor = Math.ceil(cds / 3) % 2 == 0 ? altcolor : null
-									if (!aa) {
-										aa = 4 // show text "4" to indicate error
-										_fillcolor = errcolor
-									} else if (aa == 'M') {
-										_fillcolor = startcolor
-									} else if (aa == '*') {
-										_fillcolor = stopcolor
-									}
-									// draw aa
-									let thispx,
-										thiswidth = bppx * codonspan
-									if (minustrand) {
-										const thispos = lookstop - 1 - k
-										thispx = cumx + region.scale(thispos)
-									} else {
-										const thispos = lookstart + k + 1 - codonspan
-										thispx = cumx + region.scale(thispos)
-									}
-									if (region.reverse) {
-										// correction!
-										thispx -= thiswidth
-									}
-									codonspan = 0
-									if (thispx >= cumx && thispx <= cumx + region.width) {
-										// in view range
-										// rect
-										if (_fillcolor) {
-											ctx.fillStyle = _fillcolor
-											ctx.fillRect(thispx, y, thiswidth, stackheight)
-										}
-										if (aafontsize) {
-											ctx.fillStyle = 'white'
-											ctx.fillText(aa, thispx + thiswidth / 2, y + stackheight / 2)
-										}
-										mapaa.push({
-											x1: thispx,
-											x2: thispx + thiswidth,
-											y: item.canvas.stack,
-											name: aa + (aanumber + 1) + ' <span style="font-size:.7em;color:#858585">AA residue</span>'
-										})
-									}
-								}
-							}
-						}
-						if (c.namehover) {
-							ctx.font = 'bold ' + fontsize + 'px Arial'
-							const x = Math.max(10, c.start + 10)
-							ctx.fillStyle = 'white'
-							ctx.fillRect(x, y, c.namewidth + 10, stackheight)
-							ctx.strokeStyle = fillcolor
-							ctx.strokeRect(x + 1.5, y + 0.5, c.namewidth + 10 - 3, stackheight - 2)
-							ctx.fillStyle = fillcolor
-							ctx.fillText(c.namestr, x + c.namewidth / 2 + 5, y + stackheight / 2)
-						}
-					}
-					// done translating
-					result.src = canvas.toDataURL()
-					result.mapaa = mapaa
-					resolve(result)
-				})
-			})
-		})
-		.then(result => {
-			/*********************************
-		    6 - return
-		*********************************/
-
-			res.send(result)
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.error(err.stack)
-			}
-		})
-}
-
-function bedj_may_mapisoform(lst, pxa, pxb, y, item) {
-	/* only handle singular bed items, or entire isoform
-do not handle exon/intron parts
-may return additional info for:
-- creating url for clicking items
-*/
-	if (!lst) return // not to map
-	if (!item.name && !item.isoform) return // no name
-	const show = []
-	if (item.name) show.push(item.name)
-	if (item.isoform) show.push(item.isoform)
-	lst.push({
-		// return position for displaying in tooltip
-		chr: item.chr,
-		start: item.start,
-		stop: item.stop,
-		x1: pxa,
-		x2: pxb,
-		y: y, // stack number
-		/* isoform is for client to select one and launch protein view
-		 */
-		isoform: item.isoform,
-		//name:show.join(' ')+printcoord(item.chr, e[0], e[1])
-		name: show.join(' ')
-	})
-}
-
-function printcoord(chr, start, stop) {
-	return (
-		' <span style="font-size:.7em;color:#858585">' +
-		chr +
-		':' +
-		(start + 1) +
-		'-' +
-		stop +
-		' ' +
-		common.bplen(stop - start) +
-		'</span>'
-	)
-}
-
-function handle_bedjdata(req, res) {
-	/*
-	.file
-	.url
-	.rglst []
-	.gmregion
-		.chr
-		.start
-		.stop
-	.isbed
-		if true, treat as bed and do not parse json
-
-	bed items from all query regions are merged into one array to return
-	*/
-
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
-	const [e, tkfile, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	const rglst = req.query.rglst
-	if (!rglst) return res.send({ error: 'no rglst[]' })
-	if (!Array.isArray(rglst)) return res.send({ error: 'rglst is not an array' })
-	if (rglst.length == 0) return res.send({ error: 'empty rglst' })
-
-	const flag_gm = req.query.gmregion
-
-	const isbed = req.query.isbed
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return { file: tkfile }
-			const indexurl = req.query.indexURL || tkfile + '.tbi'
-
-			return cache_index_promise(indexurl).then(dir => {
-				return { file: tkfile, dir: dir }
-			})
-		})
-
-		.then(fileobj => {
-			if (flag_gm) {
-				// query over the gene region
-				return new Promise((resolve, reject) => {
-					const ps = spawn(tabix, [fileobj.file, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop], {
-						cwd: fileobj.dir
-					})
-					const thisout = []
-					const errout = []
-					ps.stdout.on('data', i => thisout.push(i))
-					ps.stderr.on('data', i => errout.push(i))
-					ps.on('close', code => {
-						const _e = errout.join('')
-						if (_e && !tabixnoterror(_e)) {
-							reject(_e)
-						}
-
-						const lines = thisout
-							.join('')
-							.trim()
-							.split('\n')
-						let errlinecount = 0
-						const items = []
-						for (const line of lines) {
-							if (line == '') continue
-							const l = line.split('\t')
-
-							let j
-							if (isbed) {
-								j = {
-									chr: l[0],
-									start: Number.parseInt(l[1]),
-									stop: Number.parseInt(l[2]),
-									rest: l.slice(3)
-								}
-								if (Number.isNaN(j.start)) {
-									errlinecount++
-									continue
-								}
-								if (Number.isNaN(j.stop)) {
-									errlinecount++
-									continue
-								}
-							} else {
-								try {
-									j = JSON.parse(l[3])
-								} catch (e) {
-									errlinecount++
-									continue
-								}
-								j.chr = l[0]
-								j.start = Number.parseInt(l[1])
-								if (Number.isNaN(j.start)) {
-									errlinecount++
-									continue
-								}
-								j.stop = Number.parseInt(l[2])
-								if (Number.isNaN(j.stop)) {
-									errlinecount++
-									continue
-								}
-							}
-							items.push(j)
-						}
-						resolve([items])
-					})
-				})
-			} else {
-				// query over genomic regions
-				// each item belong to only one region
-				const tasks = []
-				for (const r of rglst) {
-					tasks.push(
-						new Promise((resolve, reject) => {
-							const items = []
-							const ps = spawn(tabix, [fileobj.file, r.chr + ':' + r.start + '-' + r.stop], { cwd: fileobj.dir })
-							const thisout = []
-							const errout = []
-							ps.stdout.on('data', i => thisout.push(i))
-							ps.stderr.on('data', i => errout.push(i))
-							ps.on('close', code => {
-								const _e = errout.join('')
-								if (_e && !tabixnoterror(_e)) {
-									reject(_e)
-								}
-
-								const lines = thisout
-									.join('')
-									.trim()
-									.split('\n')
-								let errlinecount = 0
-								for (const line of lines) {
-									if (line == '') continue
-									const l = line.split('\t')
-									let j
-									if (isbed) {
-										j = {
-											chr: l[0],
-											start: Number.parseInt(l[1]),
-											stop: Number.parseInt(l[2]),
-											rest: l.slice(3)
-										}
-										if (Number.isNaN(j.start)) {
-											errlinecount++
-											continue
-										}
-										if (Number.isNaN(j.stop)) {
-											errlinecount++
-											continue
-										}
-									} else {
-										try {
-											j = JSON.parse(l[3])
-										} catch (e) {
-											errlinecount++
-											continue
-										}
-										j.chr = l[0]
-										j.start = Number.parseInt(l[1])
-										if (Number.isNaN(j.start)) {
-											errlinecount++
-											continue
-										}
-										j.stop = Number.parseInt(l[2])
-										if (Number.isNaN(j.stop)) {
-											errlinecount++
-											continue
-										}
-									}
-									items.push(j)
-								}
-								resolve(items)
-							})
-						})
-					)
-				}
-				return Promise.all(tasks)
-			}
-		})
-		.then(data => {
-			const items = []
-			for (const d of data) {
-				for (const i of d) items.push(i)
-			}
-			res.send({ items: items })
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-		})
-}
-
-function handle_tkbampile(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
-	const [e, tkfile, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-	let usegrade = req.query.usegrade
-	const allheight = req.query.allheight,
-		fineheight = req.query.fineheight,
-		fineymax = req.query.fineymax,
-		midpad = req.query.midpad
-	;(regionspace = req.query.regionspace), (width = req.query.width)
-	if (!Number.isInteger(allheight)) return res.send({ error: 'allheight is not integer' })
-	if (!Number.isInteger(fineheight)) return res.send({ error: 'fineheight is not integer' })
-	if (!Number.isInteger(fineymax)) return res.send({ error: 'fineymax is not integer' })
-	if (!Number.isInteger(midpad)) return res.send({ error: 'midpad is not integer' })
-	if (!Number.isInteger(regionspace)) return res.send({ error: 'regionspace is not integer' })
-	// width could be float!!
-	if (!Number.isFinite(width)) return res.send({ error: 'width is not a number' })
-	const rglst = req.query.rglst
-	if (!rglst) return res.send({ error: 'no rglst[]' })
-	if (!Array.isArray(rglst)) return res.send({ error: 'rglst is not an array' })
-	if (rglst.length == 0) return res.send({ error: 'empty rglst' })
-	for (const r of rglst) {
-		// TODO validate reggions
-		if (r.reverse) {
-			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
-		} else {
-			r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
-		}
-	}
-
-	const bampileloader = dir => {
-		const loop = idx => {
-			const r = rglst[idx]
-			r.items = []
-			// TODO store lines first, no parsing json if too many
-			const ps = spawn(tabix, [tkfile, r.chr + ':' + r.start + '-' + r.stop], { cwd: dir })
-			const thisout = []
-			const errout = []
-			ps.stdout.on('data', i => thisout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const _e = errout.join('')
-				if (_e && !tabixnoterror(_e)) {
-					res.send({ error: _e })
-					return
-				}
-
-				const lines = thisout
-					.join('')
-					.trim()
-					.split('\n')
-				let errlinecount = 0
-				for (const line of lines) {
-					if (line == '') continue
-					const l = line.split('\t')
-					let j
-					try {
-						j = JSON.parse(l[2])
-					} catch (e) {
-						errlinecount++
-						continue
-					}
-					const pos = Number.parseInt(l[1])
-					if (Number.isNaN(pos)) {
-						errlinecount++
-						continue
-					}
-					r.items.push({ pos: pos, data: j })
-				}
-				if (idx == rglst.length - 1) {
-					render()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-
-	if (isurl) {
-		const indexURL = req.query.indexURL || tkfile + '.tbi'
-		cache_index(indexURL, bampileloader, res)
-	} else {
-		bampileloader(null)
-	}
-
-	function render() {
-		const height = allheight + midpad + fineheight
-		const canvas = createCanvas(width, height)
-		const itemcount = rglst.reduce((i, j) => i + j.items.length, 0)
-		const ctx = canvas.getContext('2d')
-		if (itemcount == 0) {
-			// no data
-			ctx.font = '15px Arial'
-			ctx.fillStyle = '#aaa'
-			ctx.textAlign = 'center'
-			ctx.textBaseline = 'middle'
-			ctx.fillText('No data in view range', width / 2, height / 2)
-			res.send({ src: canvas.toDataURL() })
-			return
-		}
-		let allgrades = null
-		if (!usegrade) {
-			// get all grades
-			const gradeset = new Set()
-			for (const r of rglst) {
-				for (const i of r.items) {
-					for (const k in i.data) {
-						gradeset.add(k)
-					}
-				}
-			}
-			allgrades = [...gradeset]
-			if (allgrades.length > 0) {
-				usegrade = allgrades[0]
-			}
-			if (!usegrade) {
-				res.send({ src: canvas.toDataURL() })
-				return
-			}
-		}
-		let allmax = 0
-		for (const r of rglst) {
-			for (const i of r.items) {
-				if (i.data[usegrade]) {
-					let sum = 0
-					for (const nt in i.data[usegrade]) {
-						sum += i.data[usegrade][nt]
-					}
-					allmax = Math.max(allmax, sum)
-				}
-			}
-		}
-		const gray = '#ededed'
-		let x = 0
-		const allhsf = allheight / allmax
-		const allhsf2 = fineheight / fineymax
-		for (const r of rglst) {
-			const bpwidth = r.width / (r.stop - r.start)
-			for (const item of r.items) {
-				const ntd = item.data[usegrade]
-				if (!ntd) continue
-				const xx = r.scale(item.pos)
-				let sum = 0
-				const ntlst = []
-				for (const nt in ntd) {
-					ntlst.push({ nt: nt, v: ntd[nt] })
-					sum += ntd[nt]
-				}
-				///////// allheight graph
-				// gray bar atcg sum
-				ctx.fillStyle = gray
-				const thisbary = allhsf * (allmax - sum)
-				ctx.fillRect(x + xx, thisbary, bpwidth, allhsf * sum)
-				// other nt bases
-				if (ntlst.length > 1) {
-					ntlst.sort((a, b) => b.v - a.v)
-					for (let i = 1; i < ntlst.length; i++) {
-						let cum = 0
-						for (let j = 0; j < i; j++) {
-							cum += ntlst[j].v
-						}
-						ctx.fillStyle = common.basecolor[ntlst[i].nt]
-						ctx.fillRect(x + xx, thisbary + allhsf * cum, bpwidth, allhsf * ntlst[i].v)
-					}
-				}
-				/////// fineheight graph
-				// gray bar atcg sum
-				ctx.fillStyle = gray
-				const thisbary2 = allheight + midpad + allhsf2 * (fineymax - Math.min(sum, fineymax))
-				ctx.fillRect(x + xx, thisbary2, bpwidth, allhsf2 * Math.min(sum, fineymax))
-				if (ntlst.length > 1) {
-					for (let i = 1; i < ntlst.length; i++) {
-						let cum = 0
-						for (let j = 0; j < i; j++) {
-							cum += ntlst[j].v
-						}
-						ctx.fillStyle = common.basecolor[ntlst[i].nt]
-						ctx.fillRect(
-							x + xx,
-							thisbary2 + allhsf2 * (fineymax - Math.min(fineymax, sum - cum)),
-							bpwidth,
-							allhsf2 * Math.min(fineymax, ntlst[i].v)
-						)
-					}
-				}
-			}
-			x += r.width + regionspace
-		}
-		res.send({
-			src: canvas.toDataURL(),
-			allgrades: allgrades,
-			usegrade: usegrade,
-			allmax: allmax
-		})
-	}
-}
-
-function strokearrow(ctx, strand, x, y, w, h) {
-	const pad = h / 2,
-		arrowwidth = h / 2,
-		arrowpad = Math.max(h / 2, 6)
-	if (w - pad * 2 < arrowwidth) return
-	var arrownum = Math.ceil((w - pad * 2) / (arrowwidth + arrowpad))
-	if (arrownum <= 0) return
-	var forward = strand == '+'
-	var x0 = Math.ceil(x + (w - arrowwidth * arrownum - arrowpad * (arrownum - 1)) / 2)
-	for (var i = 0; i < arrownum; i++) {
-		ctx.beginPath()
-		if (forward) {
-			ctx.moveTo(x0, y)
-			ctx.lineTo(x0 + arrowwidth, y + h / 2)
-			ctx.moveTo(x0 + arrowwidth, y + h / 2 + 1)
-			ctx.lineTo(x0, y + h)
-		} else {
-			ctx.moveTo(x0 + arrowwidth, y)
-			ctx.lineTo(x0, y + h / 2)
-			ctx.moveTo(x0, y + h / 2 + 1)
-			ctx.lineTo(x0 + arrowwidth, y + h)
-		}
-		ctx.stroke()
-		x0 += arrowwidth + arrowpad
-	}
 }
 
 function handle_snpbyname(req, res) {
@@ -3776,105 +2283,23 @@ function handle_textfile(req, res) {
 	}
 }
 
-function handle_urltextfile(req, res) {
+async function handle_urltextfile(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const url = req.query.url
-	request(url, (error, response, body) => {
-		if (error) {
-			// request encounters error, abort
-			return res.send({ error: 'Error downloading file: ' + url })
-		}
+	try {
+		const response = await got(url)
 		switch (response.statusCode) {
 			case 200:
-				res.send({ text: utils.stripJsScript(body) })
+				res.send({ text: utils.stripJsScript(response.body) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })
 				return
 			default:
-				res.send({ error: 'unknown status code: ' + response.statusCode })
+				res.send({ error: 'unknown status code: ' + response.status })
 		}
-	})
-}
-
-function handle_junction(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
-	const [e, file, isurl] = fileurl(req)
-	if (e) {
-		return res.send({ error: e })
-	}
-	if (!req.query.rglst) {
-		// TODO validate regions
-		return res.send({ error: 'rglst missing' })
-	}
-
-	if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000) {
-		return res.send({ error: 'Zoom in below 1 Mb to show junctions' })
-	}
-
-	const junctionloader = usedir => {
-		const errout = []
-		const items = []
-		const loopdone = () => {
-			const e = errout.join('')
-			if (e && !tabixnoterror(e)) {
-				res.send({ error: e })
-				return
-			}
-			res.send({ lst: items })
-		}
-		const loop = idx => {
-			const r = req.query.rglst[idx]
-			// TODO store lines first, no parsing json if too many
-			const ps = spawn(tabix, [file, r.chr + ':' + r.start + '-' + r.stop], { cwd: usedir })
-			const thisout = []
-			ps.stdout.on('data', i => thisout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const lines = thisout
-					.join('')
-					.trim()
-					.split('\n')
-				for (const line of lines) {
-					if (line == '') continue
-					const l = line.split('\t')
-					const start = Number.parseInt(l[1]),
-						stop = Number.parseInt(l[2])
-					if ((start >= r.start && start <= r.stop) || (stop >= r.start && stop <= r.stop)) {
-						// only use those with either start/stop in region
-						const j = {
-							chr: r.chr,
-							start: start,
-							stop: stop,
-							type: l[4],
-							rawdata: []
-						}
-						for (let i = 5; i < l.length; i++) {
-							j.rawdata.push(Number.parseInt(l[i]))
-						}
-						items.push(j)
-					}
-				}
-				if (idx == req.query.rglst.length - 1) {
-					loopdone()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-	if (isurl) {
-		const indexURL = req.query.indexURL || file + '.tbi'
-		cache_index(indexURL, junctionloader, res)
-	} else {
-		junctionloader()
+		return res.send({ error: 'Error downloading file: ' + url })
 	}
 }
 
@@ -4376,7 +2801,11 @@ async function handle_mdssvcnv(req, res) {
 
 	// cache svcnv tk url index
 	if (dsquery.url) {
-		dsquery.dir = await cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+		try {
+			dsquery.dir = await utils.cache_index(dsquery.url, dsquery.indexURL)
+		} catch (e) {
+			return res.send({ error: 'svcnv file index url error' })
+		}
 	}
 
 	// query svcnv
@@ -4560,7 +2989,7 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 
 		if (sbam.url) {
 			// even if no het snp still init dir, will calculate fpkm later for all bams
-			sbam.dir = await cache_index_promise(sbam.indexURL || sbam.url + '.bai')
+			sbam.dir = await utils.cache_index(sbam.url, sbam.indexURL || sbam.url + '.bai')
 		} else if (sbam.file) {
 			sbam.file = path.join(serverconfig.tpmasterdir, sbam.file)
 		}
@@ -5211,7 +3640,7 @@ async function handle_mdssvcnv_vcf(
 				// for custom url the index has already been cached at initial load
 				// still need to get cache dir for loading index
 				if (vcftk.file) return ''
-				return cache_index_promise(vcftk.indexURL || vcftk.url + '.tbi')
+				return utils.cache_index(vcftk.url, vcftk.indexURL)
 			})
 			.then(dir => {
 				vcftk.dir = dir // reuse in rnabam
@@ -5704,7 +4133,7 @@ function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 			// cache expression index
 
 			if (expressionquery.file) return ''
-			return cache_index_promise(expressionquery.indexURL || expressionquery.url + '.tbi')
+			return utils.cache_index(expressionquery.url, expressionquery.indexURL)
 		})
 		.then(dir => {
 			// get expression data
@@ -6806,7 +5235,7 @@ async function handle_bamnochr(req, res) {
 			q.file = path.join(serverconfig.tpmasterdir, q.file)
 		} else {
 			if (!q.url) throw 'no bam file or url'
-			q.url_dir = await cache_index_promise(q.indexURL || q.url + '.bai')
+			q.url_dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
 		}
 
 		const nochr = await bam_ifnochr(q.file || q.url, genome, q.url_dir)
@@ -6822,7 +5251,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.rnabamfile = path.join(serverconfig.tpmasterdir, q.rnabamfile)
 	} else {
 		if (!q.rnabamurl) throw 'no file or url for rna bam'
-		q.rnabamurl_dir = await cache_index_promise(q.rnabamindexURL || q.rnabamurl + '.bai')
+		q.rnabamurl_dir = await utils.cache_index(q.rnabamurl, q.rnabamindexURL || q.rnabamurl + '.bai')
 	}
 
 	q.rnabam_nochr = await bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
@@ -6831,7 +5260,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.vcffile = path.join(serverconfig.tpmasterdir, q.vcffile)
 	} else {
 		if (!q.vcfurl) throw 'no file or url for vcf'
-		q.vcfurl_dir = await cache_index_promise(q.vcfindexURL || q.vcfurl + '.tbi')
+		q.vcfurl_dir = await utils.cache_index(q.vcfurl, q.vcfindexURL)
 	}
 	q.vcf_nochr = await tabix_ifnochr(q.vcffile || q.vcfurl, genome, q.vcfurl_dir)
 }
@@ -7141,7 +5570,7 @@ function handle_mdsexpressionrank(req, res) {
 			if (dsquery.file) return
 			if (!dsquery.url) throw 'file or url missing'
 
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			const tasks = []
@@ -7375,9 +5804,29 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		}
 		if (!_c) throw 'missing expression data source'
 
-		const dir = await cache_index_promise(_c.file ? null : _c.indexURL || _c.url + '.tbi')
+		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
-		const values = await mdssvcnv_exit_getexpression4gene_getdata(dir, _c, q)
+		const values = []
+		await utils.get_lines_tabix(
+			[_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+			dir,
+			line => {
+				const l = line.split('\t')
+				let j
+				try {
+					j = JSON.parse(l[3])
+				} catch (e) {
+					reject('invalid json from expression data')
+				}
+				if (!j.sample) return
+				if (!j.gene) return
+				if (!Number.isFinite(j.value)) return
+				delete j.outlier // XXX OHE
+				if (j.gene.toLowerCase() == q.name.toLowerCase()) {
+					values.push(j)
+				}
+			}
+		)
 
 		// convert to rank
 		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values)
@@ -7440,51 +5889,6 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	}
 
 	return sample2rank
-}
-
-function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
-	return new Promise((resolve, reject) => {
-		const values = []
-		const errout = []
-
-		const ps = spawn(
-			tabix,
-			[
-				expquery.file ? path.join(serverconfig.tpmasterdir, expquery.file) : expquery.url,
-				q.chr + ':' + q.start + '-' + q.stop
-			],
-			{ cwd: dir }
-		)
-		ps.stderr.on('data', d => errout.push(d))
-
-		const rl = readline.createInterface({ input: ps.stdout })
-
-		rl.on('line', line => {
-			const l = line.split('\t')
-
-			let j
-			try {
-				j = JSON.parse(l[3])
-			} catch (e) {
-				reject('invalid json from expression data')
-			}
-
-			if (!j.sample) return
-			if (!j.gene) return
-			if (!Number.isFinite(j.value)) return
-			delete j.outlier // XXX OHE
-
-			if (j.gene.toLowerCase() == q.name.toLowerCase()) {
-				values.push(j)
-			}
-		})
-
-		rl.on('close', () => {
-			const err = errout.join('')
-			if (err && !tabixnoterror(err)) reject(err)
-			resolve(values)
-		})
-	})
 }
 
 function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
@@ -7649,11 +6053,27 @@ async function handle_mdsgenevalueonesample(req, res) {
 			ds = ds1
 			dsquery = dsquery1
 		}
+		const dir = dsquery.file ? null : await utils.cache_index(dsquery.url, dsquery.indexURL)
 
 		const gene2value = {}
 		let nodata = true
 		for (const gene of q.genes) {
-			const v = await handle_mdsgenevalueonesample_get(ds, dsquery, gene, q.sample)
+			let v
+			await utils.get_lines_tabix(
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					gene.chr + ':' + gene.start + '-' + gene.stop
+				],
+				dir,
+				line => {
+					const l = line.split('\t')
+					if (!l[3]) return
+					const j = JSON.parse(l[3])
+					if (j.gene == gene.gene && j.sample == q.sample) {
+						v = j.value
+					}
+				}
+			)
 			if (Number.isFinite(v)) {
 				gene2value[gene.gene] = v
 				nodata = false
@@ -7668,44 +6088,6 @@ async function handle_mdsgenevalueonesample(req, res) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
-}
-
-async function handle_mdsgenevalueonesample_get(ds, dsquery, gene, sample) {
-	/*
-gene{}
-	.gene
-	.chr
-	.start
-	.stop
-sample STR
-*/
-	if (dsquery.url) {
-		dsquery.dir = await cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
-	}
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			tabix,
-			[
-				dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-				gene.chr + ':' + gene.start + '-' + gene.stop
-			],
-			{ cwd: dsquery.dir }
-		)
-		const rl = readline.createInterface({
-			input: sp.stdout
-		})
-		rl.on('line', line => {
-			const l = line.split('\t')
-			if (!l[3]) return
-			const j = JSON.parse(l[3])
-			if (j.gene == gene.gene && j.sample == sample) {
-				resolve(j.value)
-			}
-		})
-		sp.on('close', () => {
-			resolve(null)
-		})
-	})
 }
 
 function handle_mdsgeneboxplot(req, res) {
@@ -7817,14 +6199,14 @@ or, export all samples from a group
 		.then(() => {
 			if (dsquery.file) return
 			if (!dsquery.url) throw { message: 'file or url missing' }
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			dsquery.dir = dir
 			if (!svcnv) return
 			if (svcnv.dsquery.file) return
 			if (!svcnv.dsquery.url) throw { message: 'svcnv file or url missing' }
-			return cache_index_promise(svcnv.dsquery.indexURL || svcnv.dsquery.url + '.tbi')
+			return utils.cache_index(svcnv.dsquery.url, svcnv.dsquery.indexURL)
 		})
 		.then(dir => {
 			if (svcnv) svcnv.dsquery.dir = dir
@@ -8274,391 +6656,7 @@ function boxplot_getvalue(lst) {
 }
 exports.boxplot_getvalue = boxplot_getvalue
 
-function handle_mdsgeneboxplot_svcnv(req, res) {
-	/*
-	!!!!!!!!!!!! no longer used!!!
-	*/
-	if (reqbodyisinvalidjson(req, res)) return
-	if (!req.query.gene) return res.send({ error: 'gene name missing' })
-	if (!req.query.chr) return res.send({ error: 'chr missing' })
-	if (!Number.isInteger(req.query.start)) return res.send({ error: 'start missing' })
-	if (!Number.isInteger(req.query.stop)) return res.send({ error: 'stop missing' })
-	const width = req.query.width
-	const height = req.query.height
-	if (!Number.isInteger(width) || !Number.isInteger(height))
-		return res.send({ error: 'invalid value for width/height/ypad' })
-	if (!req.query.svcnv) return res.send({ error: 'svcnv{} missing' })
-	if (req.query.svcnv.valueCutoff) {
-		if (!Number.isFinite(req.query.svcnv.valueCutoff)) return res.send({ error: 'invalid value for svcnv.valueCutoff' })
-	}
-	if (req.query.svcnv.bplengthUpperLimit) {
-		if (!Number.isFinite(req.query.svcnv.bplengthUpperLimit))
-			return res.send({ error: 'invalid value for svcnv.bplengthUpperLimit' })
-	}
-
-	const boxplotcolor = 'black'
-	const outliercolor = '#aaa'
-
-	let gn, ds, dsquery
-
-	if (req.query.iscustom) {
-		gn = genomes[req.query.genome]
-		if (!gn) return res.send({ error: 'invalid genome' })
-		if (!req.query.file && !req.query.url) return res.send({ error: 'no file or url for expression data' })
-		ds = {}
-		dsquery = {
-			file: req.query.file,
-			url: req.query.url,
-			indexURL: req.query.indexURL
-		}
-	} else {
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check(req.query)
-		if (err) return res.send({ error: err })
-		gn = gn1
-		ds = ds1
-		dsquery = dsquery1
-	}
-
-	const svcnv = {}
-	if (req.query.iscustom) {
-		svcnv.dsquery = {
-			file: req.query.svcnv.file,
-			url: req.query.svcnv.url,
-			indexURL: req.query.svcnv.indexURL
-		}
-	} else {
-		req.query.svcnv.genome = req.query.genome
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check(req.query.svcnv)
-		if (err) return res.send({ error: err })
-		svcnv.ds = ds1
-		svcnv.dsquery = dsquery1
-	}
-
-	Promise.resolve()
-		.then(() => {
-			if (dsquery.file) return
-			if (!dsquery.url) throw { message: 'file or url missing' }
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
-		})
-		.then(dir => {
-			dsquery.dir = dir
-			if (svcnv.dsquery.file) return
-			if (!svcnv.dsquery.url) throw { message: 'svcnv file or url missing' }
-			return cache_index_promise(svcnv.dsquery.indexURL || svcnv.dsquery.url + '.tbi')
-		})
-		.then(dir => {
-			svcnv.dsquery.dir = dir
-			return new Promise((resolve, reject) => {
-				const ps = spawn(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						req.query.chr + ':' + req.query.start + '-' + req.query.stop
-					],
-					{ cwd: dsquery.dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				const key2samplegroup = new Map()
-				const nogroupvalues = []
-				let hierarchylevels
-				if (ds.cohort && ds.cohort.annotation && ds.cohort.hierarchies && dsquery.boxplotbyhierarchy) {
-					hierarchylevels = ds.cohort.hierarchies.lst[dsquery.boxplotbyhierarchy.hierarchyidx].levels
-				}
-				rl.on('line', line => {
-					const l = line.split('\t')
-					const j = JSON.parse(l[3])
-					if (!j.gene) return
-					if (j.gene != req.query.gene) return
-					if (!Number.isFinite(j.value)) return
-					if (hierarchylevels) {
-						if (!j.sample) return nogroupvalues.push(j.value)
-						const anno = ds.cohort.annotation[j.sample]
-						if (!anno) return nogroupvalues.push(j.value)
-						const L1 = anno[hierarchylevels[0].k]
-						if (!L1) return nogroupvalues.push(j.value)
-						const L2 = anno[hierarchylevels[1].k]
-						if (!L2) return nogroupvalues.push(j.value)
-						const k = L1 + ', ' + L2
-						if (!key2samplegroup.has(k)) key2samplegroup.set(k, [])
-						key2samplegroup.get(k).push({ sample: j.sample, value: j.value })
-					} else {
-						nogroupvalues.push({ sample: j.sample, value: j.value })
-					}
-				})
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) throw { message: e }
-					const lst = []
-					for (const [n, l] of key2samplegroup) {
-						lst.push({ name: n, values: l })
-					}
-					if (nogroupvalues.length) {
-						lst.push({ values: nogroupvalues })
-					}
-					resolve(lst)
-				})
-			})
-		})
-		.then(groups => {
-			return new Promise((resolve, reject) => {
-				const ps = spawn(
-					tabix,
-					[
-						svcnv.dsquery.file ? path.join(serverconfig.tpmasterdir, svcnv.dsquery.file) : svcnv.dsquery.url,
-						req.query.chr + ':' + req.query.start + '-' + req.query.stop
-					],
-					{ cwd: svcnv.dsquery.dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				const sample2event = new Map()
-				rl.on('line', line => {
-					const l = line.split('\t')
-					const j = JSON.parse(l[3])
-					if (!j.sample) return
-					if (j.chrA || j.chrB) {
-						// sv
-						if (!sample2event.has(j.sample)) sample2event.set(j.sample, {})
-						sample2event.get(j.sample).sv = 1
-					} else {
-						// cnv
-						if (req.query.svcnv.bplengthUpperLimit) {
-							if (Number.parseInt(l[2]) - Number.parseInt(l[1]) > req.query.svcnv.bplengthUpperLimit) return
-						}
-						if (!Number.isFinite(j.value)) return
-						if (req.query.svcnv.valueCutoff) {
-							if (Math.abs(j.value) < req.query.svcnv.valueCutoff) return
-						}
-						if (!sample2event.has(j.sample)) sample2event.set(j.sample, {})
-						if (j.value > 0) {
-							sample2event.get(j.sample).gain = 1
-						} else if (j.value < 0) {
-							sample2event.get(j.sample).loss = 1
-						}
-					}
-				})
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) throw { message: e }
-					resolve({ groups: groups, sample2event: sample2event })
-				})
-			})
-		})
-		.then(data => {
-			const { groups, sample2event } = data
-
-			if (req.query.iscustom) {
-				const l = groups[0].values
-				l.sort((i, j) => j.value - i.value)
-				return res.send({ lst: l, max: l[0].value, min: l[l.length - 1].value, sample2event: sample2event })
-			}
-			const plots = []
-			let min = null,
-				max = null
-			for (const group of groups) {
-				group.values.sort((i, j) => i.value - j.value)
-				const l = group.values.length
-				if (min == null) {
-					min = group.values[0].value
-					max = group.values[l - 1].value
-				} else {
-					min = Math.min(min, group.values[0].value)
-					max = Math.max(max, group.values[l - 1].value)
-				}
-				const p50 = group.values[Math.floor(l / 2)].value
-				const p25 = group.values[Math.floor(l / 4)].value
-				const p75 = group.values[Math.floor((l * 3) / 4)].value
-				const iqr = (p75 - p25) * 1.5
-				let w1, w2
-				{
-					const i = group.values.findIndex(i => i.value > p25 - iqr)
-					w1 = group.values[i == -1 ? 0 : i].value
-					const j = group.values.findIndex(i => i.value > p75 + iqr)
-					w2 = group.values[j == -1 ? group.values.length - 1 : j - 1].value
-				}
-
-				const outlier2value = new Map()
-				group.values.forEach(i => {
-					if (i.value < p25 - iqr || i.value > p75 + iqr) outlier2value.set(i.sample, i.value)
-				})
-				const gsample2event = new Map()
-				group.values.forEach(i => {
-					const e = sample2event.get(i.sample)
-					if (e == undefined) return
-					e.v = i.value
-					gsample2event.set(i.sample, e)
-				})
-
-				plots.push({
-					name: group.name + ' (' + group.values.length + ')',
-					w1: w1,
-					w2: w2,
-					p25: p25,
-					p50: p50,
-					p75: p75,
-					outlier2value: outlier2value,
-					sample2event: gsample2event
-				})
-			}
-
-			const scale = (req.query.uselog ? d3scale.scaleLog() : d3scale.scaleLinear()).domain([min, max]).range([0, width])
-
-			for (const g of plots) {
-				const canvas = createCanvas(width, height)
-				const ctx = canvas.getContext('2d')
-
-				// boxplot
-				ctx.strokeStyle = boxplotcolor
-				ctx.fillStyle = 'white'
-				{
-					const x1 = Math.floor(scale(g.w1)) + 0.5
-					const x2 = Math.floor(scale(g.w2)) + 0.5
-					ctx.beginPath()
-					ctx.moveTo(x1, 0)
-					ctx.lineTo(x1, height)
-					ctx.moveTo(x2, 0)
-					ctx.lineTo(x2, height)
-					ctx.moveTo(x1, height / 2 - 0.5)
-					ctx.lineTo(x2, height / 2 - 0.5)
-					ctx.stroke()
-					ctx.closePath()
-				}
-				{
-					const x1 = Math.floor(scale(g.p25)) + 0.5
-					const x2 = Math.floor(scale(g.p75)) + 0.5
-					ctx.fillRect(x1, 0, x2 - x1, height)
-					ctx.strokeRect(x1, 0.5, x2 - x1, height - 0.5)
-				}
-				{
-					const x = Math.floor(scale(g.p50)) + 0.5
-					ctx.beginPath()
-					ctx.moveTo(x, 0)
-					ctx.lineTo(x, height)
-					ctx.stroke()
-					ctx.closePath()
-				}
-
-				const ypad = 2
-
-				// boxplot outlier
-				ctx.fillStyle = '#ccc'
-				for (const [sample, value] of g.outlier2value) {
-					const x = Math.floor(scale(value)) + 0.5
-					ctx.beginPath()
-					ctx.arc(x, height / 2, 2, 0, Math.PI * 2)
-					ctx.fill()
-					ctx.closePath()
-				}
-
-				// samples
-				/*
-			ctx.textAlign='center'
-			ctx.textBaseline='middle'
-			ctx.font = height+'px Arial'
-			*/
-				const strokelen = height / 2 - ypad * 2
-				for (const [sample, e] of g.sample2event) {
-					if (e.v == undefined) continue
-					const x = Math.floor(scale(e.v)) + 0.5
-					if (e.sv) {
-						//ctx.fillText('*', x, height/2+4)
-						ctx.strokeStyle = boxplotcolor
-						ctx.beginPath()
-						ctx.arc(x, height / 2, 3, 0, Math.PI * 2)
-						ctx.stroke()
-						ctx.closePath()
-					}
-					if (e.gain) {
-						ctx.strokeStyle = 'red'
-						ctx.beginPath()
-						ctx.moveTo(x, ypad)
-						ctx.lineTo(x, strokelen)
-						ctx.stroke()
-						ctx.closePath()
-					}
-					if (e.loss) {
-						ctx.strokeStyle = 'blue'
-						ctx.beginPath()
-						ctx.moveTo(x, height / 2 + ypad)
-						ctx.lineTo(x, height / 2 + ypad + strokelen)
-						ctx.stroke()
-						ctx.closePath()
-					}
-				}
-
-				g.src = canvas.toDataURL()
-			}
-			plots.sort((i, j) => {
-				if (i.name < j.name) return -1
-				if (i.name > j.name) return 1
-				return 0
-			})
-			res.send({
-				groups: plots.map(i => {
-					return { name: i.name, src: i.src }
-				}),
-				min: min,
-				max: max
-			})
-		})
-		.catch(err => {
-			if (err.stack) console.log(err)
-			res.send({ error: err.message })
-		})
-}
-
-function mds_query_arg_check_may_cache_index(q) {
-	return new Promise((resolve, reject) => {
-		if (!q.genome) reject({ message: 'no genome' })
-		const G = genomes[q.genome]
-		if (!G) reject({ message: 'invalid genome' })
-
-		if (q.iscustom) {
-			// won't have q.dslabel and q.querykey, but still generates such objects to keep the data processing going
-			const ds = {}
-			const dsquery = {}
-
-			if (q.url) {
-				// track file by url
-				const indexURL = q.indexURL || q.url + '.tbi'
-				cache_index_promise(indexURL)
-					.then(dir => {
-						dsquery.usedir = dir
-						dsquery.url = q.url
-						resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: true })
-					})
-					.catch(err => {
-						reject(err)
-					})
-				return
-			}
-
-			if (!q.file) reject({ message: 'no file or url given' })
-			dsquery.file = q.file
-			resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: true })
-		}
-
-		// official ds, still the track file would be url? the index already cached in the init()?
-		if (!G.datasets) reject({ message: 'genome is not equipped with datasets' })
-		if (!q.dslabel) reject({ message: 'dslabel missing' })
-		const ds = G.datasets[q.dslabel]
-		if (!ds) reject({ message: 'invalid dslabel' })
-		if (!ds.queries) reject({ message: 'dataset is not equipped with queries' })
-		if (!q.querykey) reject({ message: 'querykey missing' })
-		const dsquery = ds.queries[q.querykey]
-		if (!dsquery) reject({ message: 'invalid querykey' })
-		resolve({ g: G, ds: ds, dsquery: dsquery, iscustom: false })
-	})
-}
-
-function handle_mdsjunction(req, res) {
+async function handle_mdsjunction(req, res) {
 	/*
 	get all junctions in view range, make stats for:
 		- sample annotation
@@ -8684,8 +6682,6 @@ function handle_mdsjunction(req, res) {
 		k: event.attrValue (event type code)
 		v: cutoff {side,value}
 
-
-
 	******* routes
 		* get details on specific junction
 		* get median read count for A junctions by the same set of samples of junction B (passing filters)
@@ -8694,52 +6690,60 @@ function handle_mdsjunction(req, res) {
 
 	try {
 		req.query = JSON.parse(req.body)
+		log(req)
+		const q = req.query
+		if (!q.genome) throw 'genome missing'
+		const gn = genomes[q.genome]
+		if (!gn) throw 'invalid genome'
+
+		let ds = {},
+			dsquery = {},
+			dir,
+			sample2client
+
+		if (q.iscustom) {
+			// won't have q.dslabel and q.querykey, but still generate adhoc objects
+			if (q.url) {
+				dsquery.url = q.url
+				dir = await utils.cache_index(q.url, q.indexURL)
+			} else {
+				if (!q.file) throw 'no file or url given'
+				dsquery.file = q.file
+			}
+		} else {
+			// official ds, still the track file would be url? the index already cached in the init()?
+			if (!gn.datasets) throw 'genome is not equipped with datasets'
+			if (!q.dslabel) throw 'dslabel missing'
+			ds = gn.datasets[q.dslabel]
+			if (!ds) throw 'invalid dslabel'
+			if (!ds.queries) throw 'dataset is not equipped with queries'
+			if (!q.querykey) throw 'querykey missing'
+			dsquery = ds.queries[q.querykey]
+			if (!dsquery) throw 'invalid querykey'
+		}
+
+		if (req.query.getsamples) {
+			// first time querying a custom track, get list of samples and keep on client, not on server
+			const lines = await utils.get_header_tabix(
+				dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+				dir
+			)
+			if (lines[0]) {
+				// has header line
+				const l = lines[0].split('\t')
+				if (l.length > 5) {
+					sample2client = l.slice(5)
+				}
+			}
+		}
+		handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom: q.iscustom, sample2client })
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-	log(req)
-
-	mds_query_arg_check_may_cache_index(req.query)
-		.then(oo => {
-			if (req.query.getsamples) {
-				// first time querying a custom track, get list of samples and keep on client, not on server
-				return new Promise((resolve, reject) => {
-					exec(
-						tabix + ' -H ' + (oo.dsquery.file ? path.join(serverconfig.tpmasterdir, oo.dsquery.file) : oo.dsquery.url),
-						{ cwd: oo.dsquery.usecwd, encoding: 'utf8' },
-						(err, stdout, stderr) => {
-							if (err) reject(err)
-							if (stderr && !tabixnoterror(stderr)) reject({ message: 'cannot read header line: ' + stderr })
-							oo.samplelst = []
-							const str = stdout.trim()
-							if (str) {
-								const l = stdout.split('\t')
-								if (l.length > 5) {
-									oo.sample2client = l.slice(5)
-								}
-							}
-							resolve(oo)
-						}
-					)
-				})
-			}
-			return oo
-		})
-
-		.then(oo => {
-			handle_mdsjunction_actual(req, res, oo)
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) {
-				console.log('ERROR: mdsjunction')
-				console.log(err.stack)
-			}
-		})
 }
 
-function handle_mdsjunction_actual(req, res, oo) {
+function handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom, sample2client }) {
 	/*
 	run after URL index cached
 
@@ -8748,8 +6752,6 @@ function handle_mdsjunction_actual(req, res, oo) {
 	dsquery: query object
 
 	*/
-
-	const { gn, ds, dsquery, iscustom, sample2client } = oo
 
 	if (req.query.junction) {
 		///// route
@@ -9961,10 +7963,8 @@ tk is from ds.queries{}
 	// more configs are here
 	const st = q.samplerule.set
 
-	let dir
-	if (tk.url) {
-		dir = await cache_index_promise(tk.indexURL || tk.url + '.tbi')
-	}
+	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null // does km ever work on custom track?
+
 	return new Promise((resolve, reject) => {
 		const gain = new Set() // use if cnvonly
 		const loss = new Set()
@@ -10068,10 +8068,7 @@ only return the set of mutated sample names
 	// more configs are here
 	const st = q.samplerule.set
 
-	let dir
-	if (tk.url) {
-		dir = await cache_index_promise(tk.indexURL || tk.url + '.tbi')
-	}
+	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null
 	return new Promise((resolve, reject) => {
 		const ps = spawn(
 			tabix,
@@ -10231,10 +8228,7 @@ async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds
 	}
 	if (!genenumquery) throw 'no gene numeric query from ds'
 
-	let dir
-	if (genenumquery.url) {
-		dir = await cache_index_promise(genenumquery.indexURL || genenumquery.url + '.tbi')
-	}
+	const dir = genenumquery.url ? await utils.cache_index(genenumquery.url, genenumquery.indexURL) : null
 
 	const st = q.samplerule.set
 
@@ -10607,7 +8601,7 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -10670,7 +8664,7 @@ function samplematrix_task_iscnv(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -10740,7 +8734,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -10803,7 +8797,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -10862,7 +8856,7 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -10927,7 +8921,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 	const q = Promise.resolve()
 		.then(() => {
 			if (dsquery.file) return
-			return cache_index_promise(dsquery.indexURL || dsquery.url + '.tbi')
+			return utils.cache_index(dsquery.url, dsquery.indexURL)
 		})
 		.then(dir => {
 			return new Promise((resolve, reject) => {
@@ -11091,7 +9085,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 		const q = Promise.resolve()
 			.then(() => {
 				if (tk.file) return
-				return cache_index_promise(tk.indexURL || tk.url + '.tbi')
+				return utils.cache_index(tk.url, tk.indexURL)
 			})
 			.then(dir => {
 				return new Promise((resolve, reject) => {
@@ -11208,323 +9202,46 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 
 /***********  __smat ends ************/
 
-function handle_vcfheader(req, res) {
-	/*
-	get header for a single custom vcf track
-	*/
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	Promise.resolve()
-		.then(() => {
-			if (!isurl) return
-			return cache_index_promise(req.query.indexURL || file + '.tbi')
+async function handle_vcfheader(req, res) {
+	// get header for a single custom vcf track
+	log(req)
+	try {
+		if (!req.query.genome) throw 'genome missing'
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		res.send({
+			metastr: (await utils.get_header_tabix(file, dir)).join('\n'),
+			nochr: await utils.tabix_is_nochr(file, dir, g)
 		})
-		.then(dir => {
-			return new Promise((resolve, reject) => {
-				const ps = spawn(tabix, ['-H', file], { cwd: dir })
-				const data = []
-				const err = []
-				ps.stdout.on('data', i => data.push(i))
-				ps.stderr.on('data', i => err.push(i))
-				ps.on('close', code => {
-					const errstr = err.join('')
-					if (errstr && !tabixnoterror(errstr)) reject({ message: errstr })
-					resolve({
-						dir: dir,
-						metastr: data.join('')
-					})
-				})
-			})
-		})
-		.then(out => {
-			return new Promise((resolve, reject) => {
-				const ps = spawn(tabix, ['-l', file], { cwd: out.dir })
-				const data = []
-				const err = []
-				ps.stdout.on('data', i => data.push(i))
-				ps.stderr.on('data', i => err.push(i))
-				ps.on('close', code => {
-					const errstr = err.join('')
-					if (errstr && !tabixnoterror(errstr)) reject({ message: errstr })
-					out.chrstr = data.join('')
-					resolve(out)
-				})
-			})
-		})
-		.then(out => {
-			res.send({
-				metastr: out.metastr,
-				chrstr: out.chrstr
-			})
-		})
-		.catch(err => {
-			res.send({ error: err.message })
-			if (err.stack) console.error(err.stack)
-		})
+	} catch (e) {
+		if (e.stack) console.error(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
-function handle_vcf(req, res) {
+async function handle_vcf(req, res) {
 	// single vcf
 	if (reqbodyisinvalidjson(req, res)) return
-
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	const vcfloader = usedir => {
-		if (req.query.header) {
-			// get header, no data
-			const tasks = []
-			// 0: meta
-			tasks.push(next => {
-				const ps = spawn(tabix, ['-H', file], { cwd: usedir })
-				const thisout = []
-				const thiserr = []
-				ps.stdout.on('data', i => thisout.push(i))
-				ps.stderr.on('data', i => thiserr.push(i))
-				ps.on('close', code => {
-					const e = thiserr.join('')
-					if (e && !tabixnoterror(e)) {
-						next(e)
-						return
-					}
-					next(null, thisout.join(''))
-				})
-			})
-			// 1: chr
-			tasks.push(next => {
-				const ps = spawn(tabix, ['-l', file], { cwd: usedir })
-				const thisout = []
-				const thiserr = []
-				ps.stdout.on('data', i => thisout.push(i))
-				ps.stderr.on('data', i => thiserr.push(i))
-				ps.on('close', code => {
-					const e = thiserr.join('')
-					if (e && !tabixnoterror(e)) {
-						next(e)
-						return
-					}
-					next(null, thisout.join(''))
-				})
-			})
-			async.series(tasks, (err, results) => {
-				if (err) {
-					res.send({ error: err })
-					return
-				}
-				res.send({
-					metastr: results[0],
-					chrstr: results[1]
-				})
-			})
-			return
-		}
-		// get actual variant data
-		const errout = []
-		const dataout = []
-		const loopdone = () => {
-			if (errout.length) {
-				res.send({ error: errout.join('') })
-				return
-			}
-			/*
-			data retrieved for all rglst[]
-			TODO may calculate the sampleidx for each variant
-			*/
-			res.send({
-				linestr: dataout.join('').trim()
+	try {
+		const [e, file, isurl] = fileurl(req)
+		if (e) throw e
+		const dir = isurl ? utils.cache_index(file, req.query.indexURL) : null
+		if (!req.query.rglst) throw 'rglst missing'
+		const lines = []
+		for (const r of req.query.rglst) {
+			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
+				lines.push(line)
 			})
 		}
-		const loop = idx => {
-			const r = req.query.rglst[idx]
-			const ps = spawn(tabix, [file, r.chr + ':' + r.start + '-' + r.stop], { cwd: usedir })
-			ps.stdout.on('data', i => dataout.push(i))
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				if (idx == req.query.rglst.length - 1) {
-					loopdone()
-				} else {
-					loop(idx + 1)
-				}
-			})
-		}
-		loop(0)
-	}
-	if (isurl) {
-		const indexURL = req.query.indexURL || file + '.tbi'
-		cache_index(indexURL, vcfloader, res)
-	} else {
-		vcfloader()
+		res.send({ linestr: lines.join('\n') })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
 }
-
-function cache_index(indexURL, tkloader, res) {
-	const tmp = indexURL.split('//')
-	if (tmp.length != 2) {
-		return res.send({ error: 'irregular index URL: ' + indexURL })
-	}
-	// path of the index file, not including file name
-	const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-
-	/*
-	index file full path
-	for .tbi index file coming from dnanexus, convert the downloaded cache file to .csi
-	XXX FIXME why .tbi index doesn't work natively on dnanexus??
-	*/
-	let indexfile = path.basename(tmp[1])
-	if (
-		indexURL.startsWith('https://dl.dnanex.us') ||
-		indexURL.startsWith('https://westus.dl.azure.dnanex.us') ||
-		indexURL.startsWith('https://westus.dl.stagingazure.dnanex.us')
-	) {
-		indexfile = indexfile.replace(/tbi$/, 'csi')
-	}
-
-	const indexFilepath = path.join(dir, indexfile)
-
-	fs.stat(dir, (err, stat) => {
-		if (err) {
-			switch (err.code) {
-				case 'ENOENT':
-					// path not found, create path
-					exec('mkdir -p "' + dir + '"', err => {
-						if (err) {
-							return res.send({ error: 'cannot create dir for caching' })
-						}
-						// download file
-						const writestream = fs
-							.createWriteStream(indexFilepath)
-							.on('close', () => {
-								// file downloaded
-								tkloader(dir)
-							})
-							.on('error', () => {
-								return res.send({ error: 'failed to download index file' })
-							})
-						request(indexURL, (error, response, body) => {
-							if (error) {
-								return res.send({ error: 'Error downloading ' + indexURL })
-							}
-							if (response.statusCode == 404) {
-								return res.send({ error: 'File not found: ' + indexURL })
-							}
-						}).pipe(writestream)
-					})
-					return
-				case 'EACCES':
-					return res.send({ error: 'permission denied when stating cache dir' })
-				default:
-					return res.send({ error: 'unknown error code when stating: ' + err.code })
-			}
-		}
-		// path exists
-		// check if index file exists
-		fs.stat(indexFilepath, (err, stat) => {
-			if (err) {
-				switch (err.code) {
-					case 'ENOENT':
-						// file not found
-						// download file
-						const writestream = fs
-							.createWriteStream(indexFilepath)
-							.on('close', () => {
-								// file downloaded
-								tkloader(dir)
-							})
-							.on('error', () => {
-								return res.send({ error: 'failed to download index file' })
-							})
-						request(indexURL, (error, response, body) => {
-							if (error) {
-								// request encounters error, abort
-								return res.send({ error: 'Error downloading ' + indexURL })
-							}
-						}).pipe(writestream)
-						return
-					case 'EACCES':
-						return res.send({ error: 'permission denied when stating cache dir' })
-					default:
-						return res.send({ error: 'unknown error code when stating: ' + err.code })
-				}
-			}
-			// index file exists
-			tkloader(dir)
-		})
-	})
-}
-
-function cache_index_promise(indexURL) {
-	return new Promise((resolve, reject) => {
-		if (!indexURL) resolve()
-
-		const tmp = indexURL.split('//')
-		if (tmp.length != 2) reject({ message: 'irregular index URL: ' + indexURL })
-
-		// path of the index file, not including file name
-		const dir = path.join(serverconfig.cachedir, tmp[0], tmp[1])
-
-		/*
-	index file full path
-	for .tbi index file coming from dnanexus, convert the downloaded cache file to .csi
-	XXX FIXME why .tbi index doesn't work natively on dnanexus??
-	*/
-		let indexfile = path.basename(tmp[1])
-		if (
-			indexURL.startsWith('https://dl.dnanex.us') ||
-			indexURL.startsWith('https://westus.dl.azure.dnanex.us') ||
-			indexURL.startsWith('https://westus.dl.stagingazure.dnanex.us')
-		) {
-			if (indexURL.endsWith('bai')) {
-				indexfile = indexfile.replace(/bai$/, 'csi')
-			} else {
-				indexfile = indexfile.replace(/tbi$/, 'csi')
-			}
-		}
-
-		const indexFilepath = path.join(dir, indexfile)
-
-		fs.stat(dir, (err, stat) => {
-			if (err) {
-				if (err.code == 'ENOENT') {
-					// path not found, create path
-					exec('mkdir -p "' + dir + '"', err => {
-						if (err) reject({ message: 'cannot create dir for caching' })
-						// download file
-						downloadFile(indexURL, indexFilepath, err => {
-							if (err) reject({ message: err })
-							resolve(dir)
-						})
-					})
-					return
-				} else if (err.code == 'EACCES') {
-					reject({ message: 'permission denied when stating cache dir' })
-				}
-				reject({ message: 'unknown error code when stating: ' + err.code })
-			}
-			// path exists
-			// check if index file exists
-			fs.stat(indexFilepath, (err, stat) => {
-				if (err) {
-					if (err.code == 'ENOENT') {
-						// file not found, download
-						downloadFile(indexURL, indexFilepath, err => {
-							if (err) reject({ message: err })
-							resolve(dir)
-						})
-						return
-					} else if (err.code == 'EACCES') {
-						reject({ message: 'permission denied when stating cache dir' })
-					}
-					reject({ message: 'unknown error code when stating: ' + err.code })
-				}
-				// index file exists
-				resolve(dir)
-			})
-		})
-	})
-}
-exports.cache_index_promise = cache_index_promise
 
 function handle_translategm(req, res) {
 	try {

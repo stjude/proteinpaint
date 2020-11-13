@@ -14,7 +14,7 @@ import * as Legend from './block.legend'
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
 import { pgvfromtemplate, pgvmaketk, pgvload } from './block.tk.pgv.adaptor'
-import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction'
+import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction.adaptor'
 import { bampilefromtemplate, bampilemaketk, bampileload } from './block.tk.bampile'
 import { bigwigfromtemplate, bigwigmaketk, bigwigload, bigwigloadsubpanel } from './block.tk.bigwig'
 import { aicheckfromtemplate, aicheckmaketk, aicheckload, aicheckloadsubpanel } from './block.tk.aicheck.adaptor'
@@ -2987,7 +2987,7 @@ seekrange(chr,start,stop) {
 		// FIXME when printing new error old error register is overwritten!!
 		tk.gerror = tk.glider
 			.append('text')
-			.text(msg)
+			.text(msg.length > this.width / 10 ? msg.substring(0, this.width / 10 - 20) + '...' : msg)
 			.attr('x', this.width / 2)
 			.attr('text-anchor', 'middle')
 			.attr('y', y ? y : (tk.height_main - tk.toppad - tk.bottompad) / 2)
@@ -3057,25 +3057,22 @@ seekrange(chr,start,stop) {
 			rglst: this.tkarg_rglst(),
 			stackheight: tk.stackheight,
 			stackspace: tk.stackspace,
-			color: tk.color,
 			regionspace: this.regionspace,
 			width: this.width,
-			file: tk.file,
-			url: tk.url,
-			indexURL: tk.indexURL,
-			translatecoding: tk.translatecoding,
-			categories: tk.categories,
 			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
-		if (tk.onerow) {
-			par.onerow = true
+		if (tk.file) {
+			par.file = tk.file
+		} else {
+			par.url = tk.url
+			if (tk.indexURL) par.indexURL = tk.indexURL
 		}
-		if (tk.usevalue) {
-			par.usevalue = tk.usevalue
-		}
-		if (tk.bplengthUpperLimit) {
-			par.bplengthUpperLimit = tk.bplengthUpperLimit
-		}
+		if (tk.color) par.color = tk.color
+		if (tk.categories) par.categories = tk.categories
+		if (tk.translatecoding) par.translatecoding = 1
+		if (tk.onerow) par.onerow = 1
+		if (tk.usevalue) par.usevalue = tk.usevalue
+		if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
 		if (this.usegm && this.gmmode != client.gmmode.genomic) {
 			// important, will render a gene in a single row across rglst
 			par.gmregion = this.tkarg_maygm(tk)[0]

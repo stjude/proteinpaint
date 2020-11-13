@@ -345,29 +345,20 @@ export function loadTk(tk, block) {
 			if (tk.categories) {
 				arg.categories = tk.categories
 			}
-
-			const req = new Request(block.hostURL + '/tkbedj', {
-				method: 'POST',
-				body: JSON.stringify(arg)
+			const task = client.dofetch2('tkbedj?' + arg2lst(arg)).then(data => {
+				if (data.error) {
+					throw data.error
+				}
+				t.height = t.toppad + data.height + t.bottompad
+				t.img
+					.attr('width', block.width)
+					.attr('height', data.height)
+					.attr('xlink:href', data.src)
+				if (block.pannedpx != undefined) {
+					t.img.attr('x', block.pannedpx * -1)
+				}
+				block.bedj_tooltip(t, data)
 			})
-			const task = fetch(req)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) {
-						throw data.error
-					}
-					t.height = t.toppad + data.height + t.bottompad
-					t.img
-						.attr('width', block.width)
-						.attr('height', data.height)
-						.attr('xlink:href', data.src)
-					if (block.pannedpx != undefined) {
-						t.img.attr('x', block.pannedpx * -1)
-					}
-					block.bedj_tooltip(t, data)
-				})
 			tasks.push(task)
 		} else if (t.type == client.tkt.bigwig) {
 			const arg = block.tkarg_q(t)
@@ -424,52 +415,48 @@ export function loadTk(tk, block) {
 
 		for (const gvtk of tk.genevaluetklst) {
 			const arg = block.tkarg_bedj(gvtk)
-			const req = new Request(block.hostURL + '/bedjdata', { method: 'POST', body: JSON.stringify(arg) })
-			const task = fetch(req)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw data.error
-					if (data.items && data.items.length > 0) {
-						for (const i of data.items) {
-							if (!i.gene || !i.sample) continue
-							tk.geneset.add(i.gene)
-							if (!tk.sample2gvtk2gene.has(i.sample)) {
-								tk.sample2gvtk2gene.set(i.sample, new Map())
-							}
-							if (!tk.sample2gvtk2gene.get(i.sample).has(gvtk.name)) {
-								tk.sample2gvtk2gene.get(i.sample).set(gvtk.name, new Map())
-							}
-							if (gvtk.multivaluekey) {
-								if (
-									!tk.sample2gvtk2gene
-										.get(i.sample)
-										.get(gvtk.name)
-										.has(i.gene)
-								) {
-									tk.sample2gvtk2gene
-										.get(i.sample)
-										.get(gvtk.name)
-										.set(i.gene, [])
-								}
+			//const req = new Request(block.hostURL + '/bedjdata', { method: 'POST', body: JSON.stringify(arg) })
+			const task = client.dofetch2('tkbedj?getdata=1&' + arg2lst(arg)).then(data => {
+				if (data.error) throw data.error
+				if (data.items && data.items.length > 0) {
+					for (const i of data.items) {
+						if (!i.gene || !i.sample) continue
+						tk.geneset.add(i.gene)
+						if (!tk.sample2gvtk2gene.has(i.sample)) {
+							tk.sample2gvtk2gene.set(i.sample, new Map())
+						}
+						if (!tk.sample2gvtk2gene.get(i.sample).has(gvtk.name)) {
+							tk.sample2gvtk2gene.get(i.sample).set(gvtk.name, new Map())
+						}
+						if (gvtk.multivaluekey) {
+							if (
+								!tk.sample2gvtk2gene
+									.get(i.sample)
+									.get(gvtk.name)
+									.has(i.gene)
+							) {
 								tk.sample2gvtk2gene
 									.get(i.sample)
 									.get(gvtk.name)
-									.get(i.gene)
-									.push({
-										name: i[gvtk.multivaluekey],
-										value: i.value
-									})
-							} else {
-								tk.sample2gvtk2gene
-									.get(i.sample)
-									.get(gvtk.name)
-									.set(i.gene, i.value)
+									.set(i.gene, [])
 							}
+							tk.sample2gvtk2gene
+								.get(i.sample)
+								.get(gvtk.name)
+								.get(i.gene)
+								.push({
+									name: i[gvtk.multivaluekey],
+									value: i.value
+								})
+						} else {
+							tk.sample2gvtk2gene
+								.get(i.sample)
+								.get(gvtk.name)
+								.set(i.gene, i.value)
 						}
 					}
-				})
+				}
+			})
 			tasks.push(task)
 		}
 	}
@@ -1367,4 +1354,13 @@ function gvtklabelclick(gvtk, tk, block) {
 	if (gvtk.multivaluekey) {
 		// to show sample by value type matrix?
 	}
+}
+
+function arg2lst(a) {
+	const lst = []
+	for (const k in a) {
+		const v = a[k]
+		lst.push(k + '=' + encodeURIComponent(typeof v == 'object' ? JSON.stringify(v) : v))
+	}
+	return lst.join('&')
 }

@@ -265,12 +265,14 @@ function loadTk_mayinitiatecustomvcf(tk, block) {
 	if (tk.checkvcf && !tk.checkvcf.stringifiedObj) {
 		// driven by svcnv file
 		// load vcf meta keep on client for parsing vcf data
-		const arg = {
-			file: tk.checkvcf.file,
-			url: tk.checkvcf.url,
-			indexURL: tk.checkvcf.indexURL
+		const arg = ['genome=' + block.genome.name]
+		if (tk.checkvcf.file) {
+			arg.push('file=' + tk.checkvcf.file)
+		} else {
+			arg.push('url=' + tk.checkvcf.url)
+			if (tk.checkvcf.indexURL) arg.push('indexURL=' + tk.checkvcf.indexURL)
 		}
-		return client.dofetch('/vcfheader', arg).then(data => {
+		return client.dofetch2('vcfheader?' + arg.join('&')).then(data => {
 			if (!data) throw { message: 'server error!' }
 			if (data.error) throw { message: data.error }
 
@@ -279,8 +281,7 @@ function loadTk_mayinitiatecustomvcf(tk, block) {
 			tk.checkvcf.info = info
 			tk.checkvcf.format = format
 			tk.checkvcf.samples = samples
-			tk.checkvcf.nochr = common.contigNameNoChr(block.genome, data.chrstr.split('\n'))
-
+			tk.checkvcf.nochr = data.nochr
 			tk.checkvcf.stringifiedObj = JSON.stringify(tk.checkvcf)
 		})
 	}
@@ -2662,18 +2663,24 @@ function prep_samplegroups(tk, block) {
 		}
 	}
 	if (tk.sampleset) {
+		//sort plotgroups in same order as tk.sampleset
+		const sortOrder = tk.sampleset.map(i => i.name)
+		plotgroups.sort((a, b) => {
+			if (sortOrder.indexOf(a.name) > sortOrder.indexOf(b.name)) return 1
+			else return -1
+		})
 		// for each group, sort samples by the order given
-		for (let i = 0; i < tk.sampleset.length; i++) {
-			if (!plotgroups[i]) continue
+		for (const sampleset of tk.sampleset) {
+			const plotgroup = plotgroups.find(pg => pg.name == sampleset.name)
+			if (!plotgroup || !plotgroup.samples) continue
 			const foundsamples = []
-			for (const name of tk.sampleset[i].samples) {
-				if (!plotgroups[i].samples) console.log(plotgroups[i])
-				const s = plotgroups[i].samples.find(j => j.samplename == name)
+			for (const name of sampleset.samples) {
+				const s = plotgroup.samples.find(j => j.samplename == name)
 				if (s) {
 					foundsamples.push(s)
 				}
 			}
-			plotgroups[i].samples = foundsamples
+			plotgroup.samples = foundsamples
 		}
 	}
 	return [plotgroups, svlst4dense]

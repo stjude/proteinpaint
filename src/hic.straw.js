@@ -1483,21 +1483,14 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 			hic.detailview.frag = {}
 
 			// query fragment index for x
-			const arg = {
-				jwt: hic.jwt,
-				file: hic.enzymefile,
-				isbed: true,
-				rglst: [{ chr: chrx, start: xstart, stop: xstop }]
-			}
+			const lst = [
+				'getdata=1',
+				'getBED=1',
+				'file=' + hic.enzymefile,
+				'rglst=' + JSON.stringify([{ chr: chrx, start: xstart, stop: xstop }])
+			]
 
-			return fetch(
-				new Request(hic.hostURL + '/bedjdata', {
-					method: 'POST',
-					body: JSON.stringify(arg)
-				})
-			).then(data => {
-				return data.json()
-			})
+			return client.dofetch2('tkbedj?' + lst.join('&'))
 		})
 
 		.then(xfragment => {
@@ -1521,20 +1514,13 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 			hic.detailview.frag.xstopfrag = stop
 
 			// query fragment index for y
-			const arg = {
-				jwt: hic.jwt,
-				file: hic.enzymefile,
-				isbed: true,
-				rglst: [{ chr: chry, start: ystart, stop: ystop }]
-			}
-			return fetch(
-				new Request(hic.hostURL + '/bedjdata', {
-					method: 'POST',
-					body: JSON.stringify(arg)
-				})
-			).then(data => {
-				return data.json()
-			})
+			const lst = [
+				'getdata=1',
+				'getBED=1',
+				'file=' + hic.enzymefile,
+				'rglst=' + JSON.stringify([{ chr: chry, start: ystart, stop: ystop }])
+			]
+			return client.dofetch2('tkbedj?' + lst.join('&'))
 		})
 
 		.then(yfragment => {

@@ -161,22 +161,43 @@ arg
 		return
 	}
 
+	if (urlp.has('scatterplot')) {
+		if (!urlp.has('genome')) return '"genome" is required for "scatterplot"'
+		const genomename = urlp.get('genome')
+		const genome = arg.genomes[genomename]
+		if (!genome) return 'invalid genome: ' + genomename
+		let plot_data
+		try {
+			if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+				const url_str = urlp.get('mdsjsonurl')
+				const file_str = urlp.get('mdsjson')
+				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str, arg.holder)
+			}
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			return e.message || e
+		}
+
+		await import('./mds.samplescatterplot').then(_ => {
+			_.init(plot_data.mdssamplescatterplot, arg.holder, false)
+		})
+		return
+	}
+
 	if (urlp.has('block')) {
 		if (!urlp.has('genome')) {
 			return 'missing genome for block'
 		}
 		const genomename = urlp.get('genome')
 		const genomeobj = arg.genomes[genomename]
-		if (!genomeobj) {
-			return 'invalid genome: ' + genomename
-		}
+		if (!genomeobj) return 'invalid genome: ' + genomename
 
 		const par = {
 			nobox: 1,
 			hostURL: arg.hostURL,
 			jwt: arg.jwt,
 			holder: arg.holder,
-			genome: arg.genomes[genomename],
+			genome: genomeobj,
 			dogtag: genomename,
 			allowpopup: true,
 			debugmode: arg.debugmode
@@ -249,7 +270,12 @@ arg
 			}
 		}
 
-		par.tklst = await get_tklst(urlp, arg.holder)
+		try {
+			par.tklst = await get_tklst(urlp, arg.holder, genomeobj)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			return e.message || e
+		}
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 		import('./block').then(b => new b.Block(par))
@@ -270,13 +296,10 @@ arg
 		}
 		if (urlp.has('genome')) {
 			genomename = urlp.get('genome')
-			if (!arg.genomes[genomename]) {
-				return 'invalid genome: ' + genomename
-			}
 		}
-		if (!genomename) {
-			return 'No genome, and none set as default'
-		}
+		if (!genomename) return 'No genome, and none set as default'
+		const genomeobj = arg.genomes[genomename]
+		if (!genomeobj) return 'invalid genome: ' + genomename
 		let ds = null
 		if (urlp.has('dataset')) {
 			ds = urlp.get('dataset').split(',')
@@ -288,11 +311,18 @@ arg
 				hlaa.set(s, false)
 			}
 		}
+		let tklst
+		try {
+			tklst = await get_tklst(urlp, arg.holder, genomeobj)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			return e.message || e
+		}
 		blockinit({
 			hostURL: arg.hostURL,
 			query: str,
 			genome: arg.genomes[genomename],
-			tklst: await get_tklst(urlp, arg.holder),
+			tklst,
 			holder: arg.holder,
 			dataset: ds,
 			hlaachange: hlaa,
@@ -319,7 +349,7 @@ arg
 	}
 }
 
-export async function get_tklst(urlp, error_div) {
+export async function get_tklst(urlp, error_div, genomeobj) {
 	const tklst = []
 
 	if (urlp.has('mdsjsoncache')) {
@@ -338,6 +368,38 @@ export async function get_tklst(urlp, error_div) {
 		const file_str = urlp.get('mdsjson')
 		const tks = await mdsjson.init_mdsjson(file_str, url_str, error_div)
 		tklst.push(...tks)
+	}
+
+	if (urlp.has('tkjsonfile')) {
+		const re = await client.dofetch('textfile', { file: urlp.get('tkjsonfile') })
+		if (re.error) throw re.error
+		if (!re.text) throw '.text missing'
+		const lst = JSON.parse(re.text)
+		const tracks = []
+		for (const i of lst) {
+			if (i.isfacet) {
+				if (!genomeobj.tkset) genomeobj.tkset = []
+				if (!i.tracks) throw '.tracks[] missing from a facet table'
+				if (!Array.isArray(i.tracks)) throw '.tracks[] not an array from a facet table'
+				i.tklst = i.tracks
+				delete i.tracks
+				for (const t of i.tklst) {
+					if (!t.assay) throw '.assay missing from a facet track'
+					t.assayname = t.assay
+					delete t.assay
+					if (!t.sample) throw '.sample missing from a facet track'
+					t.patient = t.sample
+					delete t.sample
+					if (!t.sampletype) t.sampletype = t.patient
+					// must assign tkid otherwise the tk buttons from facet table won't work
+					t.tkid = Math.random().toString()
+				}
+				genomeobj.tkset.push(i)
+			} else {
+				// must be a track
+				tklst.push(i)
+			}
+		}
 	}
 
 	if (urlp.has('bamfile')) {

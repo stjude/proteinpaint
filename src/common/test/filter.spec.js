@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const { filterInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
+const { showTermSrc } = require('../../termdb/app')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -38,16 +39,20 @@ function getOpts(_opts = {}) {
 		_opts
 	)
 
+	const genome = 'hg38'
+	const dslabel = 'SJLife'
+
 	opts.filter = filterInit({
 		btn: holder.append('div'),
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
-		genome: 'hg38',
-		dslabel: 'SJLife',
+		genome,
+		dslabel,
 		nav: opts.nav,
 		termdbConfig: opts.termdbConfig,
 		debug: true,
-		callback: opts.callback
+		callback: opts.callback,
+		showTermSrc
 	})
 
 	return opts

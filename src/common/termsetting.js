@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
-import { appInit } from '../termdb/app'
 import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
 import { setNumericMethods } from './termsetting.numeric2'
@@ -52,8 +51,7 @@ import { setConditionalMethods } from './termsetting.conditional'
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.genome = opts.genome
-		this.dslabel = opts.dslabel
+		this.vocab = opts.vocab
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
@@ -87,8 +85,9 @@ class TermSetting {
 
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.genome) throw '.genome missing'
-		if (!o.dslabel) throw '.dslabel missing'
+		if (!o.vocab) throw '.vocab missing'
+		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
+		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
@@ -247,16 +246,20 @@ function setInteractivity(self) {
 		self.opts.callback(null)
 	}
 
-	self.showTree = holder => {
+	self.showTree = async holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		appInit(null, {
+		const termdb = await require('../termdb/app')
+		termdb.appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
-				genome: self.genome,
-				dslabel: self.dslabel,
-				activeCohort: 'activeCohort' in self ? self.activeCohort : -1
+				vocab: self.opts.vocab,
+				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
+				nav: {
+					header_mode: 'search_only'
+				}
 			},
 			tree: {
+				disable_terms: self.disable_terms,
 				click_term: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
@@ -269,8 +272,7 @@ function setInteractivity(self) {
 					}
 					termsetting_fill_q(data.q, _term)
 					self.opts.callback(data)
-				},
-				disable_terms: self.disable_terms
+				}
 			}
 		})
 	}

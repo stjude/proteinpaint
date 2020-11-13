@@ -2337,19 +2337,20 @@ sort samples by f.issampleattribute
 		if not loaded, will load header for a custom vcf track
 		*/
 		if (tk.info) return
-
-		const arg = {
-			file: tk.file,
-			url: tk.url,
-			indexURL: tk.indexURL
+		const arg = ['genome=' + this.genome.name]
+		if (tk.file) {
+			arg.push('file=' + tk.file)
+		} else {
+			arg.push('url=' + tk.url)
+			if (tk.indexURL) arg.push('indexURL=' + tk.indexURL)
 		}
-		return client.dofetch('/vcfheader', arg).then(data => {
+		return client.dofetch2('vcfheader?' + arg.join('&')).then(data => {
 			const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 			if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
 			tk.info = info
 			tk.format = format
 			tk.samples = samples
-			tk.nochr = common.contigNameNoChr(this.genome, data.chrstr.split('\n'))
+			tk.nochr = data.nochr
 		})
 	}
 

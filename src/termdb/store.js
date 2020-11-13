@@ -57,8 +57,14 @@ class TdbStore {
 
 	validateOpts() {
 		const s = this.state
-		if (!s.genome) throw '.state.genome missing'
-		if (!s.dslabel) throw '.state.dslabel missing'
+		// assume that any vocabulary with a route
+		// will require genome + dslabel
+		if (s.vocab.route) {
+			if (!s.vocab.genome) throw '.state[.vocab].genome missing'
+			if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
+		} else {
+			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
+		}
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {
@@ -91,7 +97,7 @@ class TdbStore {
 			filterUiRoot = this.state.termfilter.filter
 		}
 
-		this.state.termdbConfig = await this.getTermdbConfig()
+		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
@@ -138,14 +144,6 @@ class TdbStore {
 				this.state.nav.header_mode = 'search_only'
 			}
 		}
-	}
-
-	async getTermdbConfig() {
-		const data = await dofetch3(
-			'termdb?genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&gettermdbconfig=1'
-		)
-		// note: in case of error such as missing dataset, supply empty object
-		return data.termdbConfig || {}
 	}
 
 	fromJson(str) {

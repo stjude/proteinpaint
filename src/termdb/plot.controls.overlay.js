@@ -37,8 +37,8 @@ class Overlay {
 	}
 	initPill() {
 		this.pill = termsettingInit({
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
+			vocabApi: this.app.vocab,
+			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
@@ -52,17 +52,14 @@ class Overlay {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: {
-						term2: term2
-					}
+					config: { term2 }
 				})
 			}
 		})
 	}
 	getState(appState) {
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
+			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid

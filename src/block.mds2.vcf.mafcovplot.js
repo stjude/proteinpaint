@@ -54,8 +54,11 @@ will include tk.vcf.plot_mafcov.overlay_term
 		const tsholder = row.append('div')
 		const api = termsettingInit({
 			holder: tsholder,
-			genome: obj.block.genome.name,
-			dslabel: obj.tk.mds.label,
+			vocab: {
+				route: 'termdb',
+				genome: obj.block.genome.name,
+				dslabel: obj.tk.mds.label
+			},
 			callback: data => {
 				obj.overlay_term = data || {}
 				api.main(obj.overlay_term)

@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
+const vocabInit = require('../../termdb/vocabulary').vocabInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -14,7 +15,7 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-function getOpts(_opts = {}) {
+function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
 	const holder = d3s
 		.select('body')
 		.append('div')
@@ -24,11 +25,19 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
+	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
+	const state = { vocab, termfilter: {} }
+	const app = {
+		getState() {
+			return state
+		},
+		opts: { state }
+	}
 
 	opts.pill = termsettingInit({
 		holder,
-		genome: 'hg38',
-		dslabel: 'SJLife',
+		vocabApi: vocabInit(app, { state }),
+		vocab,
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
@@ -783,5 +792,127 @@ tape('Conditional term', async test => {
 		'Should have bluepill summary btn "By Max Grade" as default'
 	)
 
+	test.end()
+})
+
+tape('Custom vocabulary', async test => {
+	const dummyTerm = {
+		id: 'dummy',
+		parent_id: 'a',
+		isleaf: true,
+		name: 'show_full_menu',
+		type: 'categorical',
+		values: {
+			cat1: { label: 'Cat 1' }
+		}
+	}
+	const vocab = {
+		terms: [
+			dummyTerm,
+			{
+				id: 'a',
+				name: 'AAA',
+				parent_id: null
+			},
+			{
+				id: 'b',
+				name: 'BBB',
+				parent_id: null
+			},
+			{
+				type: 'categorical',
+				id: 'c',
+				name: 'CCC',
+				parent_id: 'a',
+				isleaf: true,
+				groupsetting: {
+					disabled: true
+				}
+			},
+			{
+				type: 'integer',
+				id: 'd',
+				name: 'DDD',
+				parent_id: 'a',
+				isleaf: true,
+				bins: {
+					default: {
+						bin_size: 3,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
+					}
+				}
+			},
+			{
+				type: 'condition',
+				id: 'e',
+				name: 'EEE',
+				parent_id: 'a',
+				isleaf: true,
+				groupsetting: {
+					disabled: true
+				}
+			},
+			{
+				type: 'categorical',
+				id: 'f',
+				name: 'FFF',
+				parent_id: 'b',
+				isleaf: true,
+				groupsetting: {
+					disabled: true
+				}
+			},
+			{
+				type: 'categorical',
+				id: 'g',
+				name: 'CCC',
+				parent_id: 'ab',
+				isleaf: true,
+				groupsetting: {
+					disabled: true
+				}
+			}
+		]
+	}
+	const opts = getOpts(
+		{
+			showFullMenu: true,
+			tsData: {
+				term: dummyTerm,
+				disable_terms: ['dummy']
+			},
+			vocab
+		},
+		null,
+		null
+	)
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	test.ok(pilldiv, 'a <div class=ts_pill> is created for the pill')
+	pilldiv.click()
+	const tipd = opts.pill.Inner.dom.tip.d
+	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
+
+	const replaceBtn = tipd
+		.selectAll('.sja_menuoption')
+		.filter(function() {
+			return this.innerText.toLowerCase() == 'replace'
+		})
+		.node()
+	test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
+
+	replaceBtn.click()
+	await sleep(50)
+	test.equal(
+		tipd.selectAll('.termdiv').size(),
+		vocab.terms.filter(d => d.parent_id === null).length,
+		'should display the correct number of custom root terms'
+	)
+
+	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })

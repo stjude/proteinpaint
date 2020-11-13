@@ -9,6 +9,10 @@ module.exports = {
 		dbfile: 'anno/db/proteindomain.db',
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
+	repeatmasker: {
+		dbfile: 'anno/rmsk.hg19.gz',
+		statement: 'RepeatMasker database'
+	},
 	snp: {
 		dbfile: 'anno/db/snp146.hg19.db',
 		statement_getbyname: 'select * from snp146 where name=?',

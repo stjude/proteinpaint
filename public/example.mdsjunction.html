@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	block:1,
+	genome:'hg19',
+	nativetracks:'refgene',
+	tracks:[
+		{
+			type:'mdsjunction',
+			name:'native',
+			dslabel:'Pediatric2',
+			querykey:'junction'
+		},
+		{
+			type:'mdsjunction',
+			name:'custom',
+			file:'hg19/Pediatric/pcgp.target.junction.hg19.gz',
+		},
+
+	],
+})
+</script>
+
+</body>
+</html>

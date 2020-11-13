@@ -111,7 +111,7 @@ tape('tvs (common): buttons', async test => {
 		.node()
 		.querySelectorAll('input')[0]
 		.click()
-	opts.filter.Inner.dom.treeBody
+	opts.filter.Inner.dom.termSrcDiv
 		.selectAll('.apply_btn')
 		.node()
 		.click()
@@ -153,7 +153,7 @@ tape('tvs: Categorical', async test => {
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
 	await sleep(700)
-	const tipd = opts.filter.Inner.dom.treeBody
+	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
 	test.equal(tipd.selectAll('.value_checkbox').size(), 24, 'Should have checkbox for each value')
@@ -260,7 +260,7 @@ tape('tvs: Numerical', async test => {
 	editOpt.node().click()
 
 	await sleep(700)
-	const tipd = opts.filter.Inner.dom.treeBody
+	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 2, 'Should have 2 button to apply value change')
 	test.equal(tipd.selectAll('.delete_btn').size(), 1, 'Should have 1 button to remove the range')
@@ -557,7 +557,7 @@ tape('tvs: Conditional', async test => {
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
 	await sleep(1200)
-	const tipd = opts.filter.Inner.dom.treeBody
+	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
 	test.equal(tipd.selectAll('.value_checkbox').size(), 5, 'Should have checkbox for each value')

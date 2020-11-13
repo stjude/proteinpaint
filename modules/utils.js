@@ -4,6 +4,7 @@ const fs = require('fs'),
 	readline = require('readline'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
+	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
 	bettersqlite = require('better-sqlite3')
 
 // do not assume that serverconfig.json is in the same dir as server.js
@@ -32,6 +33,7 @@ write_tmpfile
 read_file
 file_not_exist
 file_not_readable
+get_header_tabix
 get_header_vcf
 get_fasta
 connect_db
@@ -40,6 +42,104 @@ run_fishertest
 run_fishertest2x3
 ********************** INTERNAL
 */
+
+/*
+-- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
+
+   await cache_index(gz_url, indexURL) // indexURL can be undefined
+
+-- for bam, always use
+
+   await cache_index(bam_url, indexURL || bam_url+'.bai')
+
+*/
+exports.cache_index = async (gzurl, indexurl) => {
+	if (!gzurl) throw '.gz file URL missing'
+	if (typeof gzurl != 'string') throw '.gz file URL not string'
+	if (indexurl) {
+		if (typeof indexurl != 'string') throw 'index URL not string'
+	}
+	const [e, protocol, body] = test_url(gzurl)
+	if (e) throw '.gz file URL error: ' + e
+	// build cache directory using gz file url and do not include index portion
+	// e.g. cache/https/domain/path/to/file.gz/
+	const dir = path.join(serverconfig.cachedir, protocol, body)
+	try {
+		await fs.promises.stat(dir)
+	} catch (e) {
+		if (e.code == 'ENOENT') {
+			// make dir
+			try {
+				await fs.promises.mkdir(dir, { recursive: true })
+			} catch (e) {
+				throw 'url dir: cannot mkdir'
+			}
+		} else {
+			throw 'stating gz url dir: ' + e.code
+		}
+	}
+	// dir is ready
+	if (indexurl) {
+		// index url given, may download it
+		const [e, protocol2, body2] = test_url(indexurl)
+		if (e) throw 'indexl url error: ' + e
+		// first, detect if the index file already exists in the dir+indexfile
+		const path2file = path.join(dir, path.basename(body2))
+		try {
+			await fs.promises.stat(path2file)
+			// index file exists
+			return dir
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// download index file
+				await download_index(indexurl, path2file)
+				return dir
+			} else {
+				throw 'stating indexl url file: ' + e.code
+			}
+		}
+	} else {
+		// no url specified for index
+		// assume the appropriate index exists under dir
+		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		return dir
+	}
+}
+function test_url(u) {
+	const tmp = u.split('://')
+	if (tmp.length != 2) return ['improper url']
+	if (tmp[0].length < 3) return ['protocol string length too short'] // ftp??
+	if (tmp[1].length < 5) return ['body string length too short'] // a/b.gz at minimum
+	return [null, tmp[0], tmp[1]]
+}
+async function download_index(url, tofile) {
+	/* try to download the index file
+
+	must detect following:
+	- downloading throws an HTTPError (https://proteinpaint.stjude.org/invalid)
+	- downloaded text data but not binary (https://pecan.stjude.cloud/invalid)
+
+	if either is true, should not 
+	*/
+	try {
+		const res = await fetch(url)
+		if (res.status != 200) {
+			throw 'index file not accessible from url with status code ' + res.status
+		}
+		await stream2file(res.body, tofile)
+	} catch (e) {
+		// fetch thrown, must be invalid url
+		throw 'cannot download from url'
+	}
+}
+function stream2file(from, file) {
+	// TODO any error to catch here
+	return new Promise((resolve, reject) => {
+		const f = fs.createWriteStream(file)
+		from.pipe(f)
+		from.on('end', () => resolve())
+	})
+}
 
 exports.file_is_readable = async file => {
 	// need full path to the file
@@ -65,12 +165,12 @@ exports.init_one_vcf = async function(tk, genome) {
 		await validate_tabixfile(tk.file)
 	} else if (tk.url) {
 		filelocation = tk.url
-		tk.dir = await app.cache_index_promise(tk.indexURL || tk.url + '.tbi')
+		tk.dir = await utils.cache_index(tk.url, tk.indexURL)
 	} else {
 		throw 'no file or url given for vcf file'
 	}
 
-	const [info, format, samples, errors] = await get_header_vcf(filelocation, tk.dir)
+	const [info, format, samples, errors] = await exports.get_header_vcf(filelocation, tk.dir)
 	if (errors) {
 		console.log(errors.join('\n'))
 		throw 'got above errors parsing vcf'
@@ -134,25 +234,28 @@ function file_not_readable(file) {
 exports.file_not_readable = file_not_readable
 exports.file_not_exist = file_not_exist
 
-async function get_header_vcf(file, dir) {
-	/* file is full path file or url
-	 */
+exports.get_header_tabix = async (file, dir) => {
+	// file is full path file or url
 	const lines = []
 	await get_lines_tabix([file, '-H'], dir, line => {
 		lines.push(line)
 	})
-
-	return vcf.vcfparsemeta(lines)
+	return lines
+}
+exports.get_header_vcf = async (file, dir) => {
+	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
 }
 
 function get_lines_tabix(args, dir, callback) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			callback(line)
-		})
+		const em = []
+		rl.on('line', line => callback(line))
+		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
+			const e = em.join('').trim()
+			if (e) reject(e)
 			resolve()
 		})
 	})
@@ -234,7 +337,7 @@ samplefilterset:
 		const [genotype, samplesStr] = line.split('\t')
 		if (!samplesStr) continue
 		if (!genotype_type_set.has(genotype)) throw 'unknown hardcoded genotype label: ' + genotype
-		const samples_original = samplesStr.split(',')
+		const samples_original = samplesStr.split(',').map(d => Number(d))
 		const samplelst = samplefilterset ? samples_original.filter(i => samplefilterset.has(i)) : samples_original
 		for (const sample of samplelst) {
 			sample2gt.set(sample, genotype)

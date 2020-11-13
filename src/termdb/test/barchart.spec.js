@@ -10,8 +10,10 @@ const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
-		genome: 'hg38',
+		vocab: {
+			dslabel: 'SJLife',
+			genome: 'hg38'
+		},
 		nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1
@@ -778,9 +780,10 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	let clickedData
 	function triggerBarClick(plot) {
 		const elem = barDiv
+			.selectAll('.bars-cell')
+			.selectAll('rect')
+			.filter(d => d.colId == 'Test A')
 			.node()
-			.querySelector('.bars-cell')
-			.querySelector('rect')
 		clickedData = elem.__data__
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}

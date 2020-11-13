@@ -1,10 +1,10 @@
 const serverconfig = require('../../serverconfig')
-const request = require('request')
+const got = require('got')
 const tape = require('tape')
 const dodiff = require('deep-object-diff')
 const barchart_data = require('./back.barchart').barchart_data
 
-function compareResponseData(test, params, mssg) {
+async function compareResponseData(test, params, mssg) {
 	/* 
     RECOMMENDED:
     In case of failing tests, 
@@ -21,17 +21,13 @@ function compareResponseData(test, params, mssg) {
 		refkey = ''
 	const url0 = getSqlUrl(params)
 
-	request(url0, (error, response, body) => {
-		if (error) {
-			console.log(url0)
-			test.fail(error)
-		}
-		if (!body) test.fail('empty response for barsql at :' + url0)
-		//else if (body.includes("error")) test.fail(body)
+	try {
+		const response = await got(url0)
+		if (!response.body) test.fail('empty response for barsql at :' + url0)
 		else {
 			switch (response.statusCode) {
 				case 200:
-					const data0 = JSON.parse(body)
+					const data0 = JSON.parse(response.body)
 					// reshape sql results in order to match
 					// the compared results
 					const dataCharts = data0
@@ -57,7 +53,10 @@ function compareResponseData(test, params, mssg) {
 					test.fail('invalid status')
 			}
 		}
-	})
+	} catch (error) {
+		console.log(url0)
+		test.fail(error)
+	}
 }
 
 exports.compareResponseData = compareResponseData

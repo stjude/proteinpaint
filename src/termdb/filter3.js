@@ -4,6 +4,7 @@ import { Menu } from '../client'
 import * as dom from '../dom'
 import { filterInit } from '../common/filter'
 import * as client from '../client'
+import { showTermSrc } from '../termdb/app'
 /*
 for configuring filter; just a thin wrapper of blue filter UI
 execution flow:
@@ -46,17 +47,18 @@ class TdbFilter {
 	initFilter() {
 		// only call in main(), requires this.state{}
 		this.filterApi = filterInit({
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
 			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
+			showTermSrc,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
-					filter: filter
+					filter
 				})
 			}
 		})

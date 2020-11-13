@@ -37,51 +37,31 @@ export function loadvcftk(block, tk) {
 		.then(() => {
 			if (!vcfconfig.headernotloaded) return
 			delete vcfconfig.headernotloaded
-
-			// load header for the current vcf file
-			const arg = {
-				jwt: block.jwt,
-				file: vcfconfig.file,
-				url: vcfconfig.url,
-				indexURL: vcfconfig.indexURL,
-				header: 1
+			const arg = ['genome=' + block.genome.name]
+			if (vcfconfig.file) {
+				arg.push('file=' + vcfconfig.file)
+			} else {
+				arg.push('url=' + vcfconfig.url)
+				if (vcfconfig.indexURL) arg.push('indexURL=' + vcfconfig.indexURL)
 			}
-			return fetch(
-				new Request(block.hostURL + '/vcf', {
-					method: 'POST',
-					body: JSON.stringify(arg)
-				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw { message: data.error }
-					if (!data.metastr) throw { message: 'no meta lines for vcf file ' + tk.name }
-
-					const [info, format, samples, errs] = vcf.vcfparsemeta(data.metastr.split('\n'))
-					if (errs) throw { error: 'vcf meta error for file ' + tk.name + ': ' + errs.join('; ') }
-
-					vcfconfig.info = info
-					vcfconfig.format = format
-
-					if (vcfconfig.samplenamemap) {
-						vcfconfig.samples = samples.map(vcfconfig.samplenamemap)
-					} else {
-						vcfconfig.samples = samples
-					}
-
-					if (!data.chrstr) throw { error: 'no chromosome names found for ' + tk.name }
-
-					vcfconfig.nochr = common.contigNameNoChr(block.genome, data.chrstr.split('\n'))
-
-					return
-				})
+			return client.dofetch2('vcfheader?' + arg.join('&')).then(data => {
+				if (data.error) throw { message: data.error }
+				if (!data.metastr) throw { message: 'no meta lines for vcf file ' + tk.name }
+				const [info, format, samples, errs] = vcf.vcfparsemeta(data.metastr.split('\n'))
+				if (errs) throw { error: 'vcf meta error for file ' + tk.name + ': ' + errs.join('; ') }
+				vcfconfig.info = info
+				vcfconfig.format = format
+				if (vcfconfig.samplenamemap) {
+					vcfconfig.samples = samples.map(vcfconfig.samplenamemap)
+				} else {
+					vcfconfig.samples = samples
+				}
+				vcfconfig.nochr = data.nochr
+			})
 		})
 		.then(() => {
 			// load m data for vcf
 			const arg = {
-				jwt: block.jwt,
 				file: vcfconfig.file,
 				url: vcfconfig.url,
 				indexURL: vcfconfig.indexURL,
@@ -92,21 +72,12 @@ export function loadvcftk(block, tk) {
 					r.chr = r.chr.replace('chr', '')
 				}
 			}
-			return fetch(
-				new Request(block.hostURL + '/vcf', {
-					method: 'POST',
-					body: JSON.stringify(arg)
-				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw { message: data.error }
-					const lines = data.linestr ? data.linestr.trim().split('\n') : []
-					load2tk([{ vcfid: vcfconfig.vcfid, lines: lines }], block, tk)
-					return
-				})
+			return client.dofetch2('vcf', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
+				if (data.error) throw { message: data.error }
+				const lines = data.linestr ? data.linestr.trim().split('\n') : []
+				load2tk([{ vcfid: vcfconfig.vcfid, lines: lines }], block, tk)
+				return
+			})
 		})
 		.catch(err => {
 			if (err.stack) console.log(err.stack)
