@@ -21,7 +21,7 @@ function sleep(ms) {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- termdb store -***-')
+	test.pass('-***- termdb/store -***-')
 	test.end()
 })
 
@@ -43,7 +43,11 @@ tape('init errors', function(test) {
 	}
 
 	runpp({
-		state: {},
+		state: {
+			vocab: {
+				route: 'termdb'
+			}
+		},
 		app: {
 			callbacks: {
 				'postInit.test': testMissingGenome
@@ -53,12 +57,17 @@ tape('init errors', function(test) {
 	function testMissingGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		setTimeout(() => {
-			test.equal(d.text(), 'Error: .state.genome missing', 'should be displayed for missing .state.genome')
+			test.equal(d.text(), 'Error: .state[.vocab].genome missing', 'should be displayed for missing .state.genome')
 		}, 200)
 	}
 
 	runpp({
-		state: { genome: 'hg38' },
+		state: {
+			vocab: {
+				route: 'termdb',
+				genome: 'hg38'
+			}
+		},
 		app: {
 			callbacks: {
 				'postInit.test': testMissingDslabel
@@ -68,7 +77,7 @@ tape('init errors', function(test) {
 	function testMissingDslabel(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		setTimeout(() => {
-			test.equal(d.text(), 'Error: .state.dslabel missing', 'should be displayed for missing .state.dslabel')
+			test.equal(d.text(), 'Error: .state[.vocab].dslabel missing', 'should be displayed for missing .state.dslabel')
 			test.end()
 		}, 400)
 	}

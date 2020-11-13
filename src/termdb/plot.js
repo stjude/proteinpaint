@@ -97,8 +97,6 @@ class TdbPlot {
 		}
 		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
@@ -109,24 +107,19 @@ class TdbPlot {
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
-		const data = await this.requestData(this.state)
+		const dataName = this.getDataName(this.state)
+		const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 		if (data.error) throw data.error
 		this.syncParams(this.config, data)
 		this.currData = data
 		return data
 	}
 
-	async requestData(state) {
-		const dataName = this.getDataName(state)
-		const route = state.config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
-		return await dofetch3(route + dataName, {}, this.app.opts.fetchOpts)
-	}
-
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
 		const plot = this.config // the plot object in state
-		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
+		const params = []
 
 		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')

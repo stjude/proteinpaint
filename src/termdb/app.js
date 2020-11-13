@@ -1,5 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
+import { getVocab } from './vocabulary'
 import { navInit } from './nav'
 import { treeInit } from './tree'
 import { storeInit } from './store'
@@ -25,6 +26,7 @@ class TdbApp {
 		// the TdbApp may be the root app or a component within another app
 		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
 		this.app = coordApp ? coordApp : this.api
+		this.api.vocabApi = getVocab(this.api, this.app.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
@@ -33,9 +35,6 @@ class TdbApp {
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
-		if (this.opts.dev) {
-			window.tt = this
-		}
 
 		if (!coordApp) {
 			// catch initialization error
@@ -60,14 +59,11 @@ class TdbApp {
 			}
 		}
 	}
-	/*
-	async main() { //console.log(this.state.tree.expandedTermIds)
-		// may add other logic here or return data as needed,
-		// for example request and cache metadata that maybe throughout
-		// the app by many components; the metadata may be exposed
-		// later via something like app.api.lookup, to-do
-		// if (this.projectName) this.saveState()
-	}*/
+
+	async main() {
+		//console.log(this.state.tree.expandedTermIds)
+		this.api.vocabApi.main()
+	}
 
 	initOpts(o) {
 		if (!('app' in o)) o.app = {}
@@ -123,7 +119,7 @@ export function showTermSrc({
 	clicked_terms,
 	select_callback
 }) {
-	const arg = {
+	exports.appInit(null, {
 		holder,
 		state: {
 			genome,
@@ -134,18 +130,9 @@ export function showTermSrc({
 			},
 			termfilter: { filter }
 		},
-		tree: { disable_terms: clicked_terms }
-	}
-
-	if (srctype == 'termsetting') {
-		arg.tree.click_term = select_callback
-	} else if (srctype == 'tvs') {
-		arg.barchart = {
+		tree: { disable_terms: clicked_terms },
+		barchart: {
 			bar_click_override: select_callback
 		}
-	} else {
-		throw 'unsupported srctype value'
-	}
-
-	exports.appInit(null, arg)
+	})
 }

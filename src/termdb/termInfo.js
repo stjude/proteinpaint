@@ -20,8 +20,6 @@ class TdbTermInfo {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			isVisible: config.settings.termInfo.isVisible,
 			term: config.term
 		}
@@ -33,11 +31,7 @@ class TdbTermInfo {
 			return
 		}
 		this.dom.holder.style('display', 'block')
-		const args = [
-			'genome=' + this.state.genome + '&dslabel=' + this.state.dslabel + '&getterminfo=1&tid=' + this.state.term.id
-		]
-		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
-		if (data.error) throw data.error
+		const data = await this.app.vocabApi.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }

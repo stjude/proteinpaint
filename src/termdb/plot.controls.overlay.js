@@ -2,7 +2,6 @@ import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
-import { showTermSrc } from '../termdb/app'
 
 /*
 options for term2:
@@ -38,8 +37,8 @@ class Overlay {
 	}
 	initPill() {
 		this.pill = termsettingInit({
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
+			vocabApi: this.app.vocab,
+			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
@@ -55,14 +54,12 @@ class Overlay {
 					id: this.opts.id,
 					config: { term2 }
 				})
-			},
-			showTermSrc
+			}
 		})
 	}
 	getState(appState) {
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
+			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid

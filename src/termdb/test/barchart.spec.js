@@ -10,8 +10,10 @@ const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
-		genome: 'hg38',
+		vocab: {
+			dslabel: 'SJLife',
+			genome: 'hg38'
+		},
 		nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1
