@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
-import { getVocab } from './vocabulary'
+import { vocabInit } from './vocabulary'
 import { navInit } from './nav'
 import { treeInit } from './tree'
 import { storeInit } from './store'
@@ -26,7 +26,7 @@ class TdbApp {
 		// the TdbApp may be the root app or a component within another app
 		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
 		this.app = coordApp ? coordApp : this.api
-		this.api.vocabApi = getVocab(this.api, this.app.opts)
+		this.api.vocabApi = vocabInit(this.api, this.app.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style

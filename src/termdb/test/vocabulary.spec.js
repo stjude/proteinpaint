@@ -1,6 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-const getVocab = require('../vocabulary').getVocab
+const vocabInit = require('../vocabulary').vocabInit
 const appInit = require('../app').appInit
 
 /*************************
@@ -20,7 +20,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('getVocab(), default', test => {
+tape('vocabInit(), default', test => {
 	const app = {
 		opts: {
 			state: {
@@ -29,15 +29,15 @@ tape('getVocab(), default', test => {
 			}
 		}
 	}
-	const vocab = getVocab(app, app.opts)
+	const vocabApi = vocabInit(app, app.opts)
 
-	test.equal(typeof vocab, 'object', 'should return a vocab object')
-	test.equal(typeof vocab.getTermdbConfig, 'function', 'should have a vocab.getTermdbConfig function')
-	test.equal(typeof vocab.getTermChildren, 'function', 'should have a vocab.getTermChildren function')
-	test.equal(typeof vocab.getPlotData, 'function', 'should have a vocab.getPlotData function')
-	test.equal(typeof vocab.findTerm, 'function', 'should have a vocab.findTerm function')
-	test.equal(typeof vocab.getCohortSampleCount, 'function', 'should have a vocab.getCohortSampleCount function')
-	test.equal(typeof vocab.getFilteredSampleCount, 'function', 'should have a vocab.getFilteredSampleCount function')
+	test.equal(typeof vocabApi, 'object', 'should return a vocab object')
+	test.equal(typeof vocabApi.getTermdbConfig, 'function', 'should have a vocab.getTermdbConfig function')
+	test.equal(typeof vocabApi.getTermChildren, 'function', 'should have a vocab.getTermChildren function')
+	test.equal(typeof vocabApi.getPlotData, 'function', 'should have a vocab.getPlotData function')
+	test.equal(typeof vocabApi.findTerm, 'function', 'should have a vocab.findTerm function')
+	test.equal(typeof vocabApi.getCohortSampleCount, 'function', 'should have a vocab.getCohortSampleCount function')
+	test.equal(typeof vocabApi.getFilteredSampleCount, 'function', 'should have a vocab.getFilteredSampleCount function')
 	test.end()
 })
 

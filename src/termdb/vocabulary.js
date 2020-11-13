@@ -1,6 +1,6 @@
 import { dofetch3 } from '../client'
 
-export function getVocab(app, opts) {
+export function vocabInit(app, opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
 	if (!opts.state) return // let termdb/store handle error
 	if (!opts.state.vocab) {
@@ -21,23 +21,24 @@ export function getVocab(app, opts) {
 	/*** end legacy support ***/
 
 	if (vocab.route == 'termdb') {
-		return new TermdbVocab(app)
+		return new TermdbVocab(app, opts)
 	} else if (!vocab.route && vocab.terms) {
-		return new FrontendVocab(app)
+		return new FrontendVocab(app, opts)
 	} else {
 		//throw `unsupported vocab.route =='${vocab.route}'`
 	}
 }
 
 class TermdbVocab {
-	constructor(app) {
+	constructor(app, opts) {
 		this.app = app
-		this.state = this.app.opts.state
-		this.vocab = this.app.opts.state.vocab
+		this.opts = opts
+		this.state = opts.state
+		this.vocab = opts.state.vocab
 	}
 
 	main() {
-		this.state = this.app.getState()
+		this.state = this.app ? this.app.getState() : this.opts.state
 		this.vocab = this.state.vocab
 	}
 
@@ -153,7 +154,7 @@ class TermdbVocab {
 			'&ypad=' +
 			num_obj.plot_size.ypad
 
-		if (typeof this.state.termfilter.filter != 'undefined') {
+		if (this.state.termfilter && typeof this.state.termfilter.filter != 'undefined') {
 			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
 		}
 		const density_data = await dofetch3(density_q)
@@ -166,9 +167,10 @@ class TermdbVocab {
 // class Mds3Vocab {}
 
 class FrontendVocab {
-	constructor(app) {
+	constructor(app, opts) {
 		this.app = app
-		this.vocab = app.opts.state.vocab
+		this.opts = opts
+		this.vocab = opts.state.vocab
 	}
 
 	main(vocab) {
