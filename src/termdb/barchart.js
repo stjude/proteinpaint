@@ -61,6 +61,8 @@ class TdbBarchart {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('barchart'),
+			genome: appState.vocab.genome,
+			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
