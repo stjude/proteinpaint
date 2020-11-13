@@ -489,6 +489,7 @@ function init_plot(obj) {
 						const v = d3event.target.value
 						userlabels.filter(i => i.sample == d.sample).attr('fill', v)
 						usercircles.filter(i => i.sample == d.sample).attr('fill', v)
+						d.color = v
 					})
 			})
 		userlabels.append('title').text('Double-click to edit')
