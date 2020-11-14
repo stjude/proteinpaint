@@ -447,7 +447,8 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 			//                console.log("ref_barHeight:",ref_barHeight)
 			//                }
 			if (val > 0) {
-				drawBar(ctx, padding + barIndex * barSize, y_start, nucleotide_length, barHeight, color)
+				drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
+				// drawBar(ctx, padding + barIndex * nucleotide_length, y_start, nucleotide_length, barHeight, color)
 			}
 		}
 		barIndex++
