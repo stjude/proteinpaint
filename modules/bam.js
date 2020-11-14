@@ -202,6 +202,9 @@ const readspace_bp = 5
 const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
+const pileupplotheight = 250 // Height for pileup plot
+const pileupplotwidth = 100 // Width for pileup plot
+
 const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = require('./serverconfig')
@@ -221,8 +224,7 @@ module.exports = genomes => {
 			}
 
 			const q = await get_q(genome, req)
-			//get_coverage(q,req) // Run this function to get coverage/pilup plot data
-			res.send(await do_query(q))
+			res.send(await do_query(q, req))
 			//console.log("q:",q)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -231,28 +233,24 @@ module.exports = genomes => {
 	}
 }
 
-async function get_coverage(q, req) {
-	const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+async function get_pileup(q, req) {
+	const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 	const ref_seq = (await utils.get_fasta(
 		q.genome,
-		coverage_input.chr +
-			':' +
-			parseInt(coverage_input.start).toString() +
-			'-' +
-			parseInt(coverage_input.stop).toString()
+		pileup_input.chr + ':' + parseInt(pileup_input.start).toString() + '-' + parseInt(pileup_input.stop).toString()
 	))
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
 
-	const coverage_plot_str = await run_sambamba(
+	const pileup_plot_str = await run_sambamba(
 		q.file,
-		coverage_input.chr.replace('chr', ''),
-		coverage_input.start,
-		coverage_input.stop
+		pileup_input.chr.replace('chr', ''),
+		pileup_input.start,
+		pileup_input.stop
 	)
-	//console.log('coverage_plot_str:', coverage_plot_str)
+	//console.log('pileup_plot_str:', pileup_plot_str)
 	let total_cov = []
 	let As_cov = []
 	let Cs_cov = []
@@ -262,7 +260,7 @@ async function get_coverage(q, req) {
 	let first_iter = 1
 	let consensus_seq = ''
 	let seq_iter = 0
-	for (const line of coverage_plot_str.split('\n')) {
+	for (const line of pileup_plot_str.split('\n')) {
 		if (first_iter == 1) {
 			first_iter = 0
 		} else if (line.length == 0) {
@@ -322,16 +320,157 @@ async function get_coverage(q, req) {
 	console.log('con_seq:', consensus_seq)
 	//console.log('consensus length:', consensus_seq.length)
 
-	const coverage_data = {
+	const pileup_height = 250
+	const pileup_data = {
 		total_cov: total_cov,
 		As_cov: As_cov,
 		Cs_cov: Cs_cov,
 		Gs_cov: Gs_cov,
 		Ts_cov: Ts_cov,
 		ref_cov: ref_cov,
-		ref_seq: ref_seq
+		ref_seq: ref_seq,
+		width: q.canvaswidth,
+		height: pileup_height,
+		src: pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pileup_height, req.query.nucleotide_length) // Creating image to be seen at the front end
 	}
-	q.coverage_data = coverage_data
+	q.pileup_data = pileup_data
+}
+
+function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pileup_height, nucleotide_length) {
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	//const maxValue = Math.max(...total_cov)
+	const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
+	console.log('maxValue:', maxValue)
+	const padding = 0
+	const canvasActualHeight = canvas.height //- padding * 2
+	const canvasActualWidth = canvas.width //- padding * 2
+
+	//drawing the grid lines
+	let gridValue = 0
+	const gridScale = 1
+	while (gridValue <= maxValue) {
+		var gridY = canvasActualHeight * (1 - gridValue / maxValue) + padding
+		//            drawLine(
+		//		     ctx,
+		//		     0,
+		//		     gridY,
+		//		     canvas.width,
+		//		     gridY,
+		//                     'rgb(200, 0, 0)'
+		//		     )
+
+		//writing grid markers
+		ctx.save()
+		ctx.fillStyle = 'rgb(200, 0, 0)'
+		ctx.font = 'bold 10px Arial'
+		ctx.fillText(gridValue, 10, gridY - 2)
+		ctx.restore()
+
+		gridValue += gridScale
+	}
+
+	//	let barIndex = 0
+	//        const numberOfBars = total_cov.length
+	//        const barSize = (canvasActualWidth)/numberOfBars
+	//        let val=0
+	//	    for (iter in total_cov){
+	//                val=total_cov[iter]
+	//                console.log("val:",val)
+	//                const barHeight = Math.round( canvasActualHeight * val/maxValue)
+	//                drawBar(
+	//    		    ctx,
+	//    		    padding + barIndex * barSize,
+	//    		    canvas.height - barHeight - padding,
+	//    		    barSize,
+	//    		    barHeight,
+	//                        'rgb(200, 0, 0)'
+	//    		    )
+	//                barIndex++
+	//            }
+
+	let barIndex = 0
+	const numberOfBars = total_cov.length
+	const barSize = canvasActualWidth / numberOfBars
+	let val = 0
+	let barHeight = 0
+	let y_start = 0
+	let color = ''
+	let ref_barHeight = 0
+	let ref_y_start = 0
+	for (iter in total_cov) {
+		for (let i = 0; i < 5; i++) {
+			if (i == 0) {
+				val = Ts_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start = canvas.height - barHeight - padding
+				color = 'rgb(0,0,255)' //T-blue
+			} else if (i == 1) {
+				val = As_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start -= barHeight
+				color = 'rgb(220,20,60)' //A-red
+			} else if (i == 2) {
+				val = Cs_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start -= barHeight
+				color = 'rgb(0,100,0)' //C-green
+			} else if (i == 3) {
+				val = Gs_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start -= barHeight
+				color = 'rgb(255,20,147)' //G-pink
+			} else if (i == 4) {
+				val = ref_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start -= barHeight
+				color = 'rgb(192,192,192)' //Ref-grey
+			}
+			//                console.log("val:",val)
+			//                console.log("barHeight:",barHeight)
+			//                console.log("iter:",iter)
+			//                console.log("i:",i)
+			//                console.log("y_start:",y_start)
+
+			//                if (i==0) {
+			//                   ref_barHeight=barHeight
+			//                   ref_y_start=y_start
+			//                }
+			//                if (val > 0 && i!=0) {
+			//                console.log("val:",val)
+			//                console.log("i:",i)
+			//                console.log("iter:",iter)
+			//                console.log("color:",color)
+			//                console.log("y_start:",y_start)
+			//                console.log("barHeight:",barHeight)
+			//                console.log("ref_y_start:",ref_y_start)
+			//                console.log("ref_barHeight:",ref_barHeight)
+			//                }
+			if (val > 0) {
+				drawBar(ctx, padding + barIndex * barSize, y_start, nucleotide_length, barHeight, color)
+			}
+		}
+		barIndex++
+	}
+
+	return canvas.toDataURL()
+}
+
+function drawLine(ctx, startX, startY, endX, endY, color) {
+	ctx.save()
+	ctx.strokeStyle = color
+	ctx.beginPath()
+	ctx.moveTo(startX, startY)
+	ctx.lineTo(endX, endY)
+	ctx.stroke()
+	ctx.restore()
+}
+
+function drawBar(ctx, upperLeftCornerX, upperLeftCornerY, width, height, color) {
+	ctx.save()
+	ctx.fillStyle = color
+	ctx.fillRect(upperLeftCornerX, upperLeftCornerY, width, height)
+	ctx.restore()
 }
 
 async function get_q(genome, req) {
@@ -411,7 +550,7 @@ async function get_q(genome, req) {
 	return q
 }
 
-async function do_query(q) {
+async function do_query(q, req) {
 	await query_reads(q)
 	delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
@@ -487,7 +626,9 @@ async function do_query(q) {
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-	result.coverage_data = q.coverage_data
+	await get_pileup(q, req) // Run this function to get pilup plot data
+	result.pileup_data = q.pileup_data
+	//console.log("result:",result)
 	return result
 }
 
@@ -509,7 +650,6 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
-		//const outfile = await create_coverage_plot(r, q)
 		q.regions[0].lines = r.lines
 		return
 	}
