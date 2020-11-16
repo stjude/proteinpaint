@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
 
 		let dir
 		if (isurl) {
-			dir = utils.cache_index(tkfile, req.query.indexURL)
+			dir = await utils.cache_index(tkfile, req.query.indexURL)
 		}
 
 		for (const r of rglst) {
