@@ -257,12 +257,13 @@ async function get_pileup(q, req) {
 	let Gs_cov = []
 	let Ts_cov = []
 	let ref_cov = []
-	let first_iter = 1
+	let first_iter = 0
 	let consensus_seq = ''
 	let seq_iter = 0
 	for (const line of pileup_plot_str.split('\n')) {
-		if (first_iter == 1) {
-			first_iter = 0
+		if (first_iter < 2) {
+			first_iter += 1
+			continue
 		} else if (line.length == 0) {
 			continue
 		} else {
@@ -284,28 +285,28 @@ async function get_pileup(q, req) {
 			}
 
 			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
-			if (ref_seq[seq_iter] == 'A') {
+			if (ref_seq[seq_iter + 1] == 'A') {
 				As_cov.push(0)
 				ref_cov.push(parseInt(columns[3]))
 				Cs_cov.push(parseInt(columns[4]))
 				Gs_cov.push(parseInt(columns[5]))
 				Ts_cov.push(parseInt(columns[6]))
 			}
-			if (ref_seq[seq_iter] == 'C') {
+			if (ref_seq[seq_iter + 1] == 'C') {
 				As_cov.push(parseInt(columns[3]))
 				ref_cov.push(parseInt(columns[4]))
 				Cs_cov.push(0)
 				Gs_cov.push(parseInt(columns[5]))
 				Ts_cov.push(parseInt(columns[6]))
 			}
-			if (ref_seq[seq_iter] == 'G') {
+			if (ref_seq[seq_iter + 1] == 'G') {
 				As_cov.push(parseInt(columns[3]))
 				Cs_cov.push(parseInt(columns[4]))
 				ref_cov.push(parseInt(columns[5]))
 				Gs_cov.push(0)
 				Ts_cov.push(parseInt(columns[6]))
 			}
-			if (ref_seq[seq_iter] == 'T') {
+			if (ref_seq[seq_iter + 1] == 'T') {
 				As_cov.push(parseInt(columns[3]))
 				Cs_cov.push(parseInt(columns[4]))
 				Gs_cov.push(parseInt(columns[5]))
@@ -339,8 +340,8 @@ async function get_pileup(q, req) {
 function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pileup_height, nucleotide_length) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
-	//const maxValue = Math.max(...total_cov)
-	const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
+	const maxValue = Math.max(...total_cov)
+	//const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
 	console.log('maxValue:', maxValue)
 	const padding = 0
 	const canvasActualHeight = canvas.height //- padding * 2
@@ -392,6 +393,10 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 	let barIndex = 0
 	const numberOfBars = total_cov.length
 	const barSize = canvasActualWidth / numberOfBars
+	//	console.log("barSize:",barSize)
+	//	console.log("nucleotide_length:",nucleotide_length)
+	//	console.log("q.devicePixelRatio:",q.devicePixelRatio)
+
 	let val = 0
 	let barHeight = 0
 	let y_start = 0
@@ -447,8 +452,15 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 			//                console.log("ref_barHeight:",ref_barHeight)
 			//                }
 			if (val > 0) {
-				drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
-				// drawBar(ctx, padding + barIndex * nucleotide_length, y_start, nucleotide_length, barHeight, color)
+				//drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
+				drawBar(
+					ctx,
+					padding + barIndex * nucleotide_length * q.devicePixelRatio,
+					y_start,
+					nucleotide_length * q.devicePixelRatio,
+					barHeight,
+					color
+				)
 			}
 		}
 		barIndex++
