@@ -107,6 +107,10 @@ export function get_parameter(tk, block) {
 			// quick fix!!!
 			par.push('set_id=' + tk.set_id)
 		}
+		if (tk.token) {
+			// quick fix!!!
+			par.push('token=' + tk.token)
+		}
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform

@@ -19,41 +19,37 @@ export function validate_query_snvindel_byrange(a) {
 }
 
 export function validate_query_snvindel_byisoform(api, ds) {
-	if (!api.query) throw '.query missing for byisoform.gdcapi'
-	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
-	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
-	if (typeof api.variables != 'function') throw 'byisoform.gdcapi.variables() is not a function'
+	if (!api.endpoint) throw '.endpoint missing for byisoform.gdcapi'
+	if (!api.fields) throw '.fields missing for byisoform.gdcapi'
+	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
+	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
 	api.get = async opts => {
-		const hits = await snvindel_byisoform_run(ds, opts)
+		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
 		for (const hit of hits) {
-			if (!hit._source) throw '._source{} missing from one of re.hits[]'
-			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
-			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
+			if (!hit.ssm_id) throw 'hit.ssm_id missing'
+			if (!Number.isInteger(hit.start_position)) throw 'hit.start_position is not integer'
 			const m = {
-				ssm_id: hit._source.ssm_id,
+				ssm_id: hit.ssm_id,
 				dt: common.dtsnvindel,
-				chr: hit._source.chromosome,
-				pos: hit._source.start_position - 1,
-				ref: hit._source.reference_allele,
-				alt: hit._source.tumor_allele,
+				chr: hit.chromosome,
+				pos: hit.start_position - 1,
+				ref: hit.reference_allele,
+				alt: hit.tumor_allele,
 				isoform: opts.isoform,
 				// occurrence count will be overwritten after sample filtering
-				occurrence: hit._score
+				occurrence: hit.cases.length
 			}
-			snvindel_addclass(m, hit._source.consequence)
-			if (hit._source.occurrence) {
-				m.samples = []
-				for (const acase of hit._source.occurrence) {
-					const c = acase.case
-					// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-					m.samples.push({
-						sample_id: c.case_id,
-						site: c.primary_site,
-						disease: c.disease_type,
-						project: c.project ? c.project.project_id : undefined
-					})
-				}
+			snvindel_addclass(m, hit.consequence)
+			m.samples = []
+			for (const c of hit.cases) {
+				// site/disease/project corresponds to ds.sampleSummaries.lst[].label
+				m.samples.push({
+					sample_id: c.case_id,
+					site: c.primary_site,
+					disease: c.disease_type,
+					project: c.project ? c.project.project_id : undefined
+				})
 			}
 			mlst.push(m)
 		}
@@ -64,18 +60,19 @@ export function validate_query_snvindel_byisoform(api, ds) {
 function snvindel_addclass(m, consequence) {
 	if (consequence) {
 		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
-		if (ts && ts.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
+		if (consequence.transcript.consequence_type) {
+			const [dt, mclass, rank] = common.vepinfo(consequence.transcript.consequence_type)
 			m.class = mclass
-			m.mname = ts.transcript.aa_change // may be null!
+			m.mname = consequence.transcript.aa_change // may be null!
 
 			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
+			/*
 			if (ts.transcript.annotation) {
 				for (const k in ts.transcript.annotation) {
 					m[k] = ts.transcript.annotation[k]
 				}
 			}
+			*/
 		}
 	}
 
@@ -98,33 +95,47 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
-async function snvindel_byisoform_run(ds, opts) {
+async function snvindel_byisoform_run(api, opts) {
 	// used in two places
 	// query is ds.queries.snvindel
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			query: ds.queries.snvindel.byisoform.gdcapi.query,
-			variables: ds.queries.snvindel.byisoform.gdcapi.variables(opts)
-		})
-	})
-	let re
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (opts.token) headers['X-Auth-Token'] = opts.token
+	const response = await got(
+		api.endpoint +
+			'?size=100000' +
+			'&fields=' +
+			api.fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.filters(opts))),
+		{ method: 'GET', headers }
+	)
+	let tmp
 	try {
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'structure is not .data.analysis.protein_mutations.data'
-		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
+		tmp = JSON.parse(response.body)
 	} catch (e) {
 		throw 'invalid JSON returned by GDC'
 	}
-	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	return re.hits
+	if (!tmp.data || !tmp.data.hits) throw 'returned data not data.hits[]'
+	if (!Array.isArray(tmp.data.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
+	const snv2cases = new Map()
+	// key: aachange or chr.pos.ref.alt
+	for (const hit of tmp.data.hits) {
+		if (!hit.ssm) continue
+		if (!hit.ssm.consequence) continue
+		if (!hit.case) continue
+		const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		if (!consequence) continue
+		const key =
+			consequence.transcript.aa_change ||
+			hit.ssm.chromosome + '.' + hit.ssm.start_position + '.' + hit.ssm.reference_allele + '.' + hit.ssm.tumor_allele
+		if (!snv2cases.has(key)) {
+			hit.ssm.cases = []
+			hit.ssm.consequence = consequence // keep only info for this isoform
+			snv2cases.set(key, hit.ssm)
+		}
+		snv2cases.get(key).cases.push(hit.case)
+	}
+	return [...snv2cases.values()]
 }
 
 export async function init_projectsize(op, ds) {

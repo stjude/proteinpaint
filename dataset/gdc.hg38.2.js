@@ -3,68 +3,53 @@
 /*
 query list of variants by isoform
 */
-const query_isoform2variants = `
-query Lolliplot_relayQuery(
-	$filters: FiltersArgument
-	$score: String
-) {
-	analysis {
-		protein_mutations {
-			data(first: 10000, score: $score, filters: $filters, fields: [
-				"ssm_id"
-				"chromosome"
-				"start_position"
-				"reference_allele"
-				"tumor_allele"
-				"consequence.transcript.aa_change"
-				"consequence.transcript.consequence_type"
-				"consequence.transcript.transcript_id"
-				"consequence.transcript.annotation.vep_impact"
-				"consequence.transcript.annotation.polyphen_impact"
-				"consequence.transcript.annotation.polyphen_score"
-				"consequence.transcript.annotation.sift_impact"
-				"consequence.transcript.annotation.sift_score"
-				"occurrence.case.project.project_id"
-				"occurrence.case.primary_site"
-				"occurrence.case.disease_type"
-				"occurrence.case.case_id"
-			])
-		}
-	}
-}`
-
-function variables_isoform2variants(p) {
-	// p:{}
-	// .isoform
-	// .set_id
-	if (!p.isoform) throw '.isoform missing'
-	if (typeof p.isoform != 'string') throw '.isoform value not string'
-	const f = {
-		filters: {
+const isoform2variants = {
+	endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+	size: 100000,
+	fields: [
+		'ssm.ssm_id',
+		'ssm.chromosome',
+		'ssm.start_position',
+		'ssm.reference_allele',
+		'ssm.tumor_allele',
+		'ssm.consequence.transcript.transcript_id',
+		'ssm.consequence.transcript.consequence_type',
+		'ssm.consequence.transcript.aa_change',
+		'case.project.project_id',
+		'case.case_id',
+		'case.primary_site',
+		'case.disease_type'
+	],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
 			op: 'and',
 			content: [
 				{
 					op: '=',
 					content: {
-						field: 'consequence.transcript.transcript_id',
+						field: 'ssms.consequence.transcript.transcript_id',
 						value: [p.isoform]
 					}
 				}
 			]
-		},
-		score: 'occurrence.case.project.project_id'
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		return f
 	}
-	if (p.set_id) {
-		if (typeof p.set_id != 'string') throw '.set_id value not string'
-		f.filters.content.push({
-			op: 'in',
-			content: {
-				field: 'cases.case_id',
-				value: [p.set_id]
-			}
-		})
-	}
-	return f
 }
 
 /*
@@ -730,10 +715,7 @@ module.exports = {
 				}
 			},
 			byisoform: {
-				gdcapi: {
-					query: query_isoform2variants,
-					variables: variables_isoform2variants
-				}
+				gdcapi: isoform2variants
 			},
 			occurrence_key
 		},
