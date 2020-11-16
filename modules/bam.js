@@ -250,13 +250,14 @@ async function get_pileup(q, req) {
 		pileup_input.start,
 		pileup_input.stop
 	)
-	//console.log('pileup_plot_str:', pileup_plot_str)
+	console.log('pileup_plot_str:', pileup_plot_str)
 	let total_cov = []
 	let As_cov = []
 	let Cs_cov = []
 	let Gs_cov = []
 	let Ts_cov = []
 	let ref_cov = []
+	let del_cov = []
 	let first_iter = 0
 	let consensus_seq = ''
 	let seq_iter = 0
@@ -285,6 +286,8 @@ async function get_pileup(q, req) {
 			}
 
 			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
+
+			del_cov.push(parseInt(columns[7]))
 			if (ref_seq[seq_iter + 1] == 'A') {
 				As_cov.push(0)
 				ref_cov.push(parseInt(columns[3]))
@@ -332,12 +335,23 @@ async function get_pileup(q, req) {
 		ref_seq: ref_seq,
 		width: q.canvaswidth,
 		height: pileup_height,
-		src: pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pileup_height, req.query.nucleotide_length) // Creating image to be seen at the front end
+		src: pileup_plot(
+			q,
+			total_cov,
+			As_cov,
+			Cs_cov,
+			Gs_cov,
+			Ts_cov,
+			ref_cov,
+			del_cov,
+			pileup_height,
+			req.query.nucleotide_length
+		) // Creating image to be seen at the front end
 	}
 	q.pileup_data = pileup_data
 }
 
-function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pileup_height, nucleotide_length) {
+function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, del_cov, pileup_height, nucleotide_length) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	const maxValue = Math.max(...total_cov)
@@ -348,28 +362,30 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 	const canvasActualWidth = canvas.width //- padding * 2
 
 	//drawing the grid lines
-	let gridValue = 0
-	const gridScale = 1
-	while (gridValue <= maxValue) {
-		var gridY = canvasActualHeight * (1 - gridValue / maxValue) + padding
-		//            drawLine(
-		//		     ctx,
-		//		     0,
-		//		     gridY,
-		//		     canvas.width,
-		//		     gridY,
-		//                     'rgb(200, 0, 0)'
-		//		     )
+	//	let gridValue = 0
+	//	const gridScale = 1
+	//	while (gridValue <= maxValue) {
+	//		var gridY = canvasActualHeight * (1 - gridValue / maxValue) + padding
+	//		            drawLine(
+	//				     ctx,
+	//				     0,
+	//				     gridY,
+	//				     canvas.width,
+	//				     gridY,
+	//		                     'rgb(200, 0, 0)'
+	//				     )
+	//
+	//		//writing grid markers
+	//		ctx.save()
+	//		ctx.fillStyle = 'rgb(200, 0, 0)'
+	//		ctx.font = 'bold 10px Arial'
+	//		ctx.fillText(gridValue, 10, gridY - 2)
+	//		ctx.restore()
+	//
+	//		gridValue += gridScale
+	//	}
 
-		//writing grid markers
-		ctx.save()
-		ctx.fillStyle = 'rgb(200, 0, 0)'
-		ctx.font = 'bold 10px Arial'
-		ctx.fillText(gridValue, 10, gridY - 2)
-		ctx.restore()
-
-		gridValue += gridScale
-	}
+	//      Only ref_cov
 
 	//	let barIndex = 0
 	//        const numberOfBars = total_cov.length
@@ -404,7 +420,7 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 	let ref_barHeight = 0
 	let ref_y_start = 0
 	for (iter in total_cov) {
-		for (let i = 0; i < 5; i++) {
+		for (let i = 0; i < 6; i++) {
 			if (i == 0) {
 				val = Ts_cov[iter]
 				barHeight = Math.round((canvasActualHeight * val) / maxValue)
@@ -426,10 +442,15 @@ function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, pile
 				y_start -= barHeight
 				color = 'rgb(255,20,147)' //G-pink
 			} else if (i == 4) {
+				val = del_cov[iter]
+				barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				y_start -= barHeight
+				color = 'rgb(165,42,42)' //Ref-grey
+			} else if (i == 5) {
 				val = ref_cov[iter]
 				barHeight = Math.round((canvasActualHeight * val) / maxValue)
 				y_start -= barHeight
-				color = 'rgb(192,192,192)' //Ref-grey
+				color = 'rgb(192,192,192)' //Ref-brown
 			}
 			//                console.log("val:",val)
 			//                console.log("barHeight:",barHeight)
