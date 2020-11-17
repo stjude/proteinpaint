@@ -171,7 +171,7 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			tk.groups.push(makeGroup(g, tk, block))
+			tk.groups.push(makeGroup(g, tk, block, data))
 		}
 	} else {
 		updateExistingGroups(data, tk, block)
@@ -429,7 +429,7 @@ function may_addvariant(tk) {
 	}
 }
 
-function makeGroup(gd, tk, block) {
+function makeGroup(gd, tk, block, data) {
 	// make a group object using returned data for this group, and show tk image
 	const group = {
 		data: gd,
@@ -493,7 +493,7 @@ function makeGroup(gd, tk, block) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
-				enter_partstack(group, tk, block, my - group.data.messagerowheights)
+				enter_partstack(group, tk, block, my - group.data.messagerowheights, data)
 				return
 			}
 			if (!group.data.templatebox) return
@@ -595,9 +595,10 @@ function makeGroup(gd, tk, block) {
 					'stackstop=' + group.partstack.stop,
 					'grouptype=' + group.data.type
 				])
+				console.log('Line 598')
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
-				setTkHeight(tk)
+				setTkHeight(tk, data)
 				block.tkcloakoff(tk, {})
 				block.block_setheight()
 			})
@@ -1013,7 +1014,7 @@ function show_blatresult2(hits, div, tk, block) {
 	}
 }
 
-async function enter_partstack(group, tk, block, y) {
+async function enter_partstack(group, tk, block, y, data) {
 	/* for a group, enter part stack mode rom full stack mode
 	will only update data and rendering of this group, but not other groups
 	*/
@@ -1047,7 +1048,7 @@ async function enter_partstack(group, tk, block, y) {
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 
-	setTkHeight(tk)
+	setTkHeight(tk, data)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
 }
