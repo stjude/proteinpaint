@@ -550,7 +550,7 @@ function makeGroup(gd, tk, block, data) {
 			delete group.partstack
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
-			setTkHeight(tk)
+			setTkHeight(tk, data)
 			block.block_setheight()
 		})
 	group.dom.vslider.boxg = group.dom.vslider.g.append('g')
