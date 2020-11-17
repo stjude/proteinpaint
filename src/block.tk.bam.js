@@ -201,7 +201,7 @@ or update existing groups, in which groupidx will be provided
 
 function plot_pileup(data, tk, block) {
 	//console.log("tk:",tk)
-	console.log('data:', data.pileup_data)
+	//console.log('data:', data.pileup_data)
 	//		const pileup_plot = {
 	//			data: data,
 	//			dom: {
@@ -211,7 +211,7 @@ function plot_pileup(data, tk, block) {
 	//				}
 	//			}
 	//		}
-	console.log('data.pileup_data.width:', data.pileup_data.width)
+	//console.log('data.pileup_data.width:', data.pileup_data.width)
 	const pileup_plot = tk.dom.pileup_g
 		.append('image')
 		.attr('xlink:href', data.pileup_data.src)
@@ -246,7 +246,7 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('rect')
 		.attr('x', x1)
-		.attr('y', data.pileup_data.height) // This value pushes the variant bar downwards/upwards
+		.attr('y', data.pileup_data.height + 10) // This value pushes the variant bar downwards/upwards
 		.attr('width', x2 - x1)
 		.attr('height', tk.dom.variantrowheight - 2)
 
@@ -268,7 +268,7 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('text')
 		.attr('x', variant_start_text_pos)
-		.attr('y', data.pileup_data.height + 15)
+		.attr('y', data.pileup_data.height + 25)
 		.attr('dy', '.10em')
 		.text(variant_string)
 	// TODO show variant info alongside box
@@ -293,7 +293,7 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
-			.attr('y', data.pileup_data.height + 15)
+			.attr('y', data.pileup_data.height + 25)
 			.style('fill', 'red')
 			.attr('dy', '.10em')
 			.text(text_string)
@@ -302,7 +302,7 @@ function may_render_variant(data, tk, block) {
 
 function setTkHeight(tk, data) {
 	// call after any group is updated
-	let h = data.pileup_data.height //tk.dom.pileupplotheight
+	let h = data.pileup_data.height + 15 //tk.dom.pileupplotheight
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight
 	}
