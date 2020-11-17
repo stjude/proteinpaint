@@ -176,7 +176,15 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
-	plot_pileup(data, tk, block)
+	if (!tk.dom.pileup_g.pilep_img) {
+		tk.dom.pileup_g.pilep_img = plot_pileup(data, tk, block)
+	} else {
+		tk.dom.pileup_g.pilep_img
+			.attr('xlink:href', data.pileup_data.src)
+			.attr('width', data.pileup_data.width)
+			.attr('height', data.pileup_data.height)
+	}
+
 	may_render_variant(data, tk, block)
 	setTkHeight(tk, data)
 	tk.tklabel.each(function() {
@@ -219,6 +227,7 @@ function plot_pileup(data, tk, block) {
 		//.attr('y', data.pileup_data.y)
 		.attr('width', data.pileup_data.width)
 		.attr('height', data.pileup_data.height)
+	return pileup_plot
 }
 
 function may_render_variant(data, tk, block) {
@@ -386,10 +395,12 @@ function makeTk(tk, block) {
 	tk.readpane.pane.style('display', 'none')
 	// <g> of each group is added dynamically to glider
 	tk.pileupheight = 100
+
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
+
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
 		tk.dom.variantg = tk.glider.append('g')
