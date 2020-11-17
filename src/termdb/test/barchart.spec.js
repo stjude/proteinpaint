@@ -3,6 +3,7 @@ const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
 const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
+const vocabData = require('./vocabData')
 
 /*************************
  reusable helper functions
@@ -1010,5 +1011,71 @@ tape('numeric filter - only special value', function(test) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 bar')
+	}
+})
+
+tape.only('custom vocab: categorical terms with numeric filter', test => {
+	test.timeoutAfter(3000)
+
+	const custom_runpp = helpers.getRunPp('termdb', {
+		debug: 1,
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			vocab: vocabData.getExample()
+		}
+	})
+
+	custom_runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: vocabData.terms.find(t => t.id == 'd'),
+								ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }]
+							}
+						}
+					]
+				}
+			},
+			tree: {
+				expandedTermIds: ['root', 'a'],
+				visiblePlotIds: ['c'],
+				plots: {
+					c: {
+						term: vocabData.terms.find(t => t.id == 'c'),
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+		testBarCount(plot)
+		test.end()
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numBars, 2, 'should have 2 bars')
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })

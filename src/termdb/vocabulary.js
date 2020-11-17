@@ -1,4 +1,7 @@
 import { dofetch3 } from '../client'
+import { getBarchartData } from './barchart.data'
+
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
 export function vocabInit(app, opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -161,6 +164,26 @@ class TermdbVocab {
 		if (density_data.error) throw density_data.error
 		return density_data
 	}
+
+	async getterm(termid, dslabel = null, genome = null) {
+		if (!termid) throw 'getterm: termid missing'
+		if (this && this.state && this.state.vocab) {
+			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
+			if (this.state.vocab.genome) genome = this.state.vocab.genome
+		}
+		if (!dslabel) throw 'getterm: dslabel missing'
+		if (!genome) throw 'getterm: genome missing'
+		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
+		if (data.error) throw 'getterm: ' + data.error
+		if (!data.term) throw 'no term found for ' + termid
+		return data.term
+	}
+
+	graphable(term) {
+		if (!term) throw 'graphable: term is missing'
+		// term.isgenotype??
+		return graphableTypes.has(term.type)
+	}
 }
 
 // to-do
@@ -170,11 +193,18 @@ class FrontendVocab {
 	constructor(app, opts) {
 		this.app = app
 		this.opts = opts
+		this.state = opts.state
 		this.vocab = opts.state.vocab
+		this.datarows = []
+		if (opts.state.vocab.sampleannotation) {
+			const anno = opts.state.vocab.sampleannotation
+			Object.keys(anno).forEach(sample => this.datarows.push({ sample, data: anno[sample] }))
+		}
 	}
 
 	main(vocab) {
 		if (vocab) Object.assign(this.vocab, vocab)
+		this.state = this.opts.state
 	}
 
 	getTermdbConfig() {
@@ -198,7 +228,17 @@ class FrontendVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		return { charts: [], refs: {} }
+		const config = this.state.tree.plots[plotId]
+		const q = {
+			term1: config.term,
+			term1_q: config.term_q,
+			term0: config.term0,
+			term0_q: config.term0_q,
+			term2: config.term2,
+			term2_q: config.term2_q,
+			filter: this.state.termfilter && this.state.termfilter.filter
+		}
+		return getBarchartData(q, this.datarows)
 	}
 
 	// from termdb/search
@@ -239,5 +279,20 @@ class FrontendVocab {
 			term.samplecount[cohortName] = Object.keys(this.vocab.sampleannotation).length
 		}
 		return { samplecount: 'TBD' }
+	}
+
+	async getDensityPlotData(term_id, num_obj) {
+		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
+	}
+
+	async getterm(termid) {
+		if (!termid) throw 'getterm: termid missing'
+		return this.vocab.terms.find(d => d.id == termid)
+	}
+
+	graphable(term) {
+		if (!term) throw 'graphable: term is missing'
+		// term.isgenotype??
+		return graphableTypes.has(term.type)
 	}
 }

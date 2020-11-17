@@ -2,8 +2,6 @@ import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
-import { getterm } from '../common/termutils'
-import { graphable } from '../common/termutils'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
@@ -42,7 +40,6 @@ class TdbStore {
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 		//this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
-		this.getterm = getterm
 		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
 
 		this.app = app
@@ -86,7 +83,7 @@ class TdbStore {
 			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
 			for (const t of ['term', 'term2', 'term0']) {
 				if (!savedPlot[t]) continue
-				savedPlot[t].term = await this.getterm(savedPlot[t].id)
+				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
@@ -220,7 +217,7 @@ TdbStore.prototype.actions = {
 		const plot = this.state.tree.plots[action.id]
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
-			validatePlot(plot)
+			validatePlot(plot, this.app.vocabApi)
 		}
 	},
 
@@ -244,7 +241,7 @@ TdbStore.prototype.actions = {
 
 exports.storeInit = rx.getInitFxn(TdbStore)
 
-function validatePlot(p) {
+function validatePlot(p, vocabApi) {
 	/*
 	only work for hydrated plot object already in the state
 	not for the saved state
@@ -272,14 +269,14 @@ function validatePlot(p) {
 	}
 	if (p.term0) {
 		try {
-			validatePlotTerm(p.term0)
+			validatePlotTerm(p.term0, vocabApi)
 		} catch (e) {
 			throw 'plot.term0 error: ' + e
 		}
 	}
 }
 
-function validatePlotTerm(t) {
+function validatePlotTerm(t, vocabApi) {
 	/*
 	for p.term, p.term2, p.term0
 	{ id, term, q }
@@ -287,7 +284,7 @@ function validatePlotTerm(t) {
 
 	// somehow plots are missing this
 	if (!t.term) throw '.term{} missing'
-	if (!graphable(t.term)) throw '.term is not graphable (not a valid type)'
+	if (!vocabApi.graphable(t.term)) throw '.term is not graphable (not a valid type)'
 	if (!t.term.name) throw '.term.name missing'
 	t.id = t.term.id
 
