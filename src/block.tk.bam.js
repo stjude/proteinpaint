@@ -606,7 +606,6 @@ function makeGroup(gd, tk, block, data) {
 					'stackstop=' + group.partstack.stop,
 					'grouptype=' + group.data.type
 				])
-				console.log('Line 598')
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				setTkHeight(tk, data)
