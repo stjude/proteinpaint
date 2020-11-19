@@ -4,7 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { lasso as d3lasso } from 'd3-lasso'
+import { default as d3lasso } from '../modules/lasso'
 import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
 
 /*

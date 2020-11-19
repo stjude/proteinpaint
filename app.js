@@ -7,7 +7,6 @@ const ch_dbtable = new Map() // k: db path, v: db stuff
 const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
-const util = require('util')
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
