@@ -176,6 +176,8 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
+
+	// Plotting pileup plot
 	if (!tk.dom.pileup_g.pilep_img) {
 		tk.dom.pileup_g.pilep_img = plot_pileup(data, tk, block)
 	} else {

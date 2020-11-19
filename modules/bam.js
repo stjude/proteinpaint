@@ -202,9 +202,6 @@ const readspace_bp = 5
 const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
-const pileupplotheight = 250 // Height for pileup plot
-const pileupplotwidth = 100 // Width for pileup plot
-
 const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = require('./serverconfig')
@@ -234,260 +231,191 @@ module.exports = genomes => {
 }
 
 async function get_pileup(q, req) {
-	const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
-	const ref_seq = (await utils.get_fasta(
-		q.genome,
-		pileup_input.chr + ':' + parseInt(pileup_input.start).toString() + '-' + parseInt(pileup_input.stop).toString()
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
-
-	const pileup_plot_str = await run_sambamba(
-		q.file,
-		pileup_input.chr.replace('chr', ''),
-		pileup_input.start,
-		pileup_input.stop
-	)
-	console.log('pileup_plot_str:', pileup_plot_str)
-	let total_cov = []
-	let As_cov = []
-	let Cs_cov = []
-	let Gs_cov = []
-	let Ts_cov = []
-	let ref_cov = []
-	let del_cov = []
-	let first_iter = 0
-	let consensus_seq = ''
-	let seq_iter = 0
-	for (const line of pileup_plot_str.split('\n')) {
-		if (first_iter < 2) {
-			first_iter += 1
-			continue
-		} else if (line.length == 0) {
-			continue
-		} else {
-			const columns = line.split('\t')
-			total_cov.push(parseInt(columns[2]))
-			const max_value = Math.max(parseInt(columns[3]), parseInt(columns[4]), parseInt(columns[5]), parseInt(columns[6]))
-			if (max_value == parseInt(columns[3])) {
-				// Look into this
-				consensus_seq += 'A'
-			}
-			if (max_value == parseInt(columns[4])) {
-				consensus_seq += 'C'
-			}
-			if (max_value == parseInt(columns[5])) {
-				consensus_seq += 'G'
-			}
-			if (max_value == parseInt(columns[6])) {
-				consensus_seq += 'T'
-			}
-
-			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
-
-			del_cov.push(parseInt(columns[7]))
-			if (ref_seq[seq_iter + 1] == 'A') {
-				As_cov.push(0)
-				ref_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter + 1] == 'C') {
-				As_cov.push(parseInt(columns[3]))
-				ref_cov.push(parseInt(columns[4]))
-				Cs_cov.push(0)
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter + 1] == 'G') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				ref_cov.push(parseInt(columns[5]))
-				Gs_cov.push(0)
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter + 1] == 'T') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				ref_cov.push(parseInt(columns[6]))
-				Ts_cov.push(0)
-			}
-			seq_iter += 1
-		}
-	}
-	console.log('ref_seq:', ref_seq)
-	//console.log('ref_seq length:', ref_seq.length)
-	console.log('con_seq:', consensus_seq)
-	//console.log('consensus length:', consensus_seq.length)
-
 	const pileup_height = 250
-	const pileup_data = {
-		total_cov: total_cov,
-		As_cov: As_cov,
-		Cs_cov: Cs_cov,
-		Gs_cov: Gs_cov,
-		Ts_cov: Ts_cov,
-		ref_cov: ref_cov,
-		ref_seq: ref_seq,
-		width: q.canvaswidth,
-		height: pileup_height,
-		src: pileup_plot(
-			q,
-			total_cov,
-			As_cov,
-			Cs_cov,
-			Gs_cov,
-			Ts_cov,
-			ref_cov,
-			del_cov,
-			pileup_height,
-			req.query.nucleotide_length
-		) // Creating image to be seen at the front end
-	}
-	q.pileup_data = pileup_data
-}
-
-function pileup_plot(q, total_cov, As_cov, Cs_cov, Gs_cov, Ts_cov, ref_cov, del_cov, pileup_height, nucleotide_length) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
-	const maxValue = Math.max(...total_cov)
-	//const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
-	console.log('maxValue:', maxValue)
-	const padding = 0
-	const canvasActualHeight = canvas.height //- padding * 2
-	const canvasActualWidth = canvas.width //- padding * 2
+	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 
-	//drawing the grid lines
-	//	let gridValue = 0
-	//	const gridScale = 1
-	//	while (gridValue <= maxValue) {
-	//		var gridY = canvasActualHeight * (1 - gridValue / maxValue) + padding
-	//		            drawLine(
-	//				     ctx,
-	//				     0,
-	//				     gridY,
-	//				     canvas.width,
-	//				     gridY,
-	//		                     'rgb(200, 0, 0)'
-	//				     )
-	//
-	//		//writing grid markers
-	//		ctx.save()
-	//		ctx.fillStyle = 'rgb(200, 0, 0)'
-	//		ctx.font = 'bold 10px Arial'
-	//		ctx.fillText(gridValue, 10, gridY - 2)
-	//		ctx.restore()
-	//
-	//		gridValue += gridScale
-	//	}
+	for (const r of q.regions) {
+		const ref_seq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
 
-	//      Only ref_cov
-
-	//	let barIndex = 0
-	//        const numberOfBars = total_cov.length
-	//        const barSize = (canvasActualWidth)/numberOfBars
-	//        let val=0
-	//	    for (iter in total_cov){
-	//                val=total_cov[iter]
-	//                console.log("val:",val)
-	//                const barHeight = Math.round( canvasActualHeight * val/maxValue)
-	//                drawBar(
-	//    		    ctx,
-	//    		    padding + barIndex * barSize,
-	//    		    canvas.height - barHeight - padding,
-	//    		    barSize,
-	//    		    barHeight,
-	//                        'rgb(200, 0, 0)'
-	//    		    )
-	//                barIndex++
-	//            }
-
-	let barIndex = 0
-	const numberOfBars = total_cov.length
-	const barSize = canvasActualWidth / numberOfBars
-	//	console.log("barSize:",barSize)
-	//	console.log("nucleotide_length:",nucleotide_length)
-	//	console.log("q.devicePixelRatio:",q.devicePixelRatio)
-
-	let val = 0
-	let barHeight = 0
-	let y_start = 0
-	let color = ''
-	let ref_barHeight = 0
-	let ref_y_start = 0
-	for (iter in total_cov) {
-		for (let i = 0; i < 6; i++) {
-			if (i == 0) {
-				val = Ts_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start = canvas.height - barHeight - padding
-				color = 'rgb(0,0,255)' //T-blue
-			} else if (i == 1) {
-				val = As_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start -= barHeight
-				color = 'rgb(220,20,60)' //A-red
-			} else if (i == 2) {
-				val = Cs_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start -= barHeight
-				color = 'rgb(0,100,0)' //C-green
-			} else if (i == 3) {
-				val = Gs_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start -= barHeight
-				color = 'rgb(255,20,147)' //G-pink
-			} else if (i == 4) {
-				val = del_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start -= barHeight
-				color = 'rgb(165,42,42)' //Ref-grey
-			} else if (i == 5) {
-				val = ref_cov[iter]
-				barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				y_start -= barHeight
-				color = 'rgb(192,192,192)' //Ref-brown
-			}
-			//                console.log("val:",val)
-			//                console.log("barHeight:",barHeight)
-			//                console.log("iter:",iter)
-			//                console.log("i:",i)
-			//                console.log("y_start:",y_start)
-
-			//                if (i==0) {
-			//                   ref_barHeight=barHeight
-			//                   ref_y_start=y_start
-			//                }
-			//                if (val > 0 && i!=0) {
-			//                console.log("val:",val)
-			//                console.log("i:",i)
-			//                console.log("iter:",iter)
-			//                console.log("color:",color)
-			//                console.log("y_start:",y_start)
-			//                console.log("barHeight:",barHeight)
-			//                console.log("ref_y_start:",ref_y_start)
-			//                console.log("ref_barHeight:",ref_barHeight)
-			//                }
-			if (val > 0) {
-				//drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
-				drawBar(
-					ctx,
-					padding + barIndex * nucleotide_length * q.devicePixelRatio,
-					y_start,
-					nucleotide_length * q.devicePixelRatio,
-					barHeight,
-					color
+		const pileup_plot_str = await run_sambamba(q.file, r.chr.replace('chr', ''), r.start, r.stop)
+		console.log('pileup_plot_str:', pileup_plot_str)
+		let total_cov = []
+		let As_cov = []
+		let Cs_cov = []
+		let Gs_cov = []
+		let Ts_cov = []
+		let ref_cov = []
+		let del_cov = []
+		let first_iter = 0
+		let consensus_seq = ''
+		let seq_iter = 0
+		for (const line of pileup_plot_str.split('\n')) {
+			if (first_iter < 2) {
+				first_iter += 1
+				continue
+			} else if (line.length == 0) {
+				continue
+			} else {
+				const columns = line.split('\t')
+				total_cov.push(parseInt(columns[2]))
+				const max_value = Math.max(
+					parseInt(columns[3]),
+					parseInt(columns[4]),
+					parseInt(columns[5]),
+					parseInt(columns[6])
 				)
+				if (max_value == parseInt(columns[3])) {
+					// Look into this
+					consensus_seq += 'A'
+				}
+				if (max_value == parseInt(columns[4])) {
+					consensus_seq += 'C'
+				}
+				if (max_value == parseInt(columns[5])) {
+					consensus_seq += 'G'
+				}
+				if (max_value == parseInt(columns[6])) {
+					consensus_seq += 'T'
+				}
+
+				// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
+
+				del_cov.push(parseInt(columns[7]))
+				if (ref_seq[seq_iter + 1] == 'A') {
+					As_cov.push(0)
+					ref_cov.push(parseInt(columns[3]))
+					Cs_cov.push(parseInt(columns[4]))
+					Gs_cov.push(parseInt(columns[5]))
+					Ts_cov.push(parseInt(columns[6]))
+				}
+				if (ref_seq[seq_iter + 1] == 'C') {
+					As_cov.push(parseInt(columns[3]))
+					ref_cov.push(parseInt(columns[4]))
+					Cs_cov.push(0)
+					Gs_cov.push(parseInt(columns[5]))
+					Ts_cov.push(parseInt(columns[6]))
+				}
+				if (ref_seq[seq_iter + 1] == 'G') {
+					As_cov.push(parseInt(columns[3]))
+					Cs_cov.push(parseInt(columns[4]))
+					ref_cov.push(parseInt(columns[5]))
+					Gs_cov.push(0)
+					Ts_cov.push(parseInt(columns[6]))
+				}
+				if (ref_seq[seq_iter + 1] == 'T') {
+					As_cov.push(parseInt(columns[3]))
+					Cs_cov.push(parseInt(columns[4]))
+					Gs_cov.push(parseInt(columns[5]))
+					ref_cov.push(parseInt(columns[6]))
+					Ts_cov.push(0)
+				}
+				seq_iter += 1
 			}
 		}
-		barIndex++
-	}
+		console.log('ref_seq:', ref_seq)
+		//console.log('ref_seq length:', ref_seq.length)
+		console.log('con_seq:', consensus_seq)
+		//console.log('consensus length:', consensus_seq.length)
 
-	return canvas.toDataURL()
+		const maxValue = Math.max(...total_cov)
+		//const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
+		console.log('maxValue:', maxValue)
+
+		const padding = 0
+		const zoom_cutoff = 4.9 // Variable determining if alternate alleles should be displayed or not in pileup plot
+		const canvasActualHeight = canvas.height //- padding * 2
+		const canvasActualWidth = canvas.width //- padding * 2
+
+		console.log('r.ntwidth:', r.ntwidth)
+		if (r.ntwidth > zoom_cutoff) {
+			let val = 0
+			let barIndex = 0
+			let barHeight = 0
+			let y_start = 0
+			let color = ''
+			let ref_barHeight = 0
+			let ref_y_start = 0
+			for (iter in total_cov) {
+				for (let i = 0; i < 6; i++) {
+					if (i == 0) {
+						val = Ts_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start = canvas.height - barHeight - padding
+						color = 'rgb(0,0,255)' //T-blue
+					} else if (i == 1) {
+						val = As_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start -= barHeight
+						color = 'rgb(220,20,60)' //A-red
+					} else if (i == 2) {
+						val = Cs_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start -= barHeight
+						color = 'rgb(0,100,0)' //C-green
+					} else if (i == 3) {
+						val = Gs_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start -= barHeight
+						color = 'rgb(255,20,147)' //G-pink
+					} else if (i == 4) {
+						val = del_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start -= barHeight
+						color = 'rgb(165,42,42)' //Del-brown
+					} else if (i == 5) {
+						val = ref_cov[iter]
+						barHeight = Math.round((canvasActualHeight * val) / maxValue)
+						y_start -= barHeight
+						color = 'rgb(192,192,192)' //Ref-grey
+					}
+
+					if (val > 0) {
+						//drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
+						drawBar(
+							ctx,
+							r.x + barIndex * req.query.nucleotide_length * q.devicePixelRatio,
+							y_start,
+							req.query.nucleotide_length * q.devicePixelRatio,
+							barHeight,
+							color
+						)
+					}
+				}
+				barIndex++
+			}
+		} else {
+			let barIndex = 0
+			const numberOfBars = total_cov.length
+			const barSize = canvasActualWidth / numberOfBars
+			let val = 0
+			for (iter in total_cov) {
+				val = total_cov[iter]
+				console.log('val:', val)
+				const barHeight = Math.round((canvasActualHeight * val) / maxValue)
+				drawBar(
+					ctx,
+					r.x + barIndex * req.query.nucleotide_length * q.devicePixelRatio,
+					canvas.height - barHeight - padding,
+					req.query.nucleotide_length * q.devicePixelRatio,
+					barHeight,
+					'rgb(192,192,192)'
+				)
+				barIndex++
+			}
+		}
+	}
+	const pileup_data = {
+		width: q.canvaswidth,
+		height: pileup_height,
+		src: canvas.toDataURL()
+	}
+	q.pileup_data = pileup_data
 }
 
 function drawLine(ctx, startX, startY, endX, endY, color) {
