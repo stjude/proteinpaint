@@ -233,6 +233,7 @@ module.exports = genomes => {
 
 async function get_pileup(q, req) {
 	const pileup_height = 250
+	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const totalcolor = 'rgb(192,192,192)' //Ref-grey
 	const ctx = canvas.getContext('2d')
@@ -249,7 +250,7 @@ async function get_pileup(q, req) {
 			.join('')
 			.toUpperCase()
 
-		const bplst = await run_sambamba(q, r, ref_seq)
+		const bplst = await run_sambamba(q, r, ref_seq, zoom_cutoff)
 		// each ele is {}
 		// .position
 		// .total/A/T/C/G/refskip
@@ -262,39 +263,49 @@ async function get_pileup(q, req) {
 		let y = 0
 		const sf = pileup_height / maxValue
 		console.log('basecolor:', basecolor)
-		for (const bp of bplst) {
-			const x = (bp.position - r.start + 1) * r.ntwidth
-			//y = (maxValue-bp.total)*sf
-			//y=maxValue*sf
-			y = 0
-			if (bp.A) {
-				ctx.fillStyle = basecolor.basecolor.A //'rgb(220,20,60)'
-				const h = bp.A * sf
+
+		if (r.ntwidth > zoom_cutoff) {
+			for (const bp of bplst) {
+				const x = (bp.position - r.start + 1) * r.ntwidth
+				//y = (maxValue-bp.total)*sf
+				//y=maxValue*sf
+				y = 0
+				if (bp.A) {
+					ctx.fillStyle = basecolor.basecolor.A //'rgb(220,20,60)'
+					const h = bp.A * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.C) {
+					ctx.fillStyle = basecolor.basecolor.C //'rgb(0,100,0)'
+					const h = bp.C * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.G) {
+					ctx.fillStyle = basecolor.basecolor.G //'rgb(255,20,147)'
+					const h = bp.G * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.T) {
+					ctx.fillStyle = basecolor.basecolor.T //'rgb(0,0,255)'
+					const h = bp.T * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				ctx.fillStyle = 'rgb(192,192,192)'
+				const h = bp.ref * sf
 				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
-				y += h
 			}
-			if (bp.C) {
-				ctx.fillStyle = basecolor.basecolor.C //'rgb(0,100,0)'
-				const h = bp.C * sf
+		} else {
+			for (const bp of bplst) {
+				const x = (bp.position - r.start + 1) * r.ntwidth
+				y = 0
+				ctx.fillStyle = 'rgb(192,192,192)'
+				const h = bp.total * sf
 				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
-				y += h
 			}
-			if (bp.G) {
-				ctx.fillStyle = basecolor.basecolor.G //'rgb(255,20,147)'
-				const h = bp.G * sf
-				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
-				y += h
-			}
-			if (bp.T) {
-				ctx.fillStyle = basecolor.basecolor.T //'rgb(0,0,255)'
-				const h = bp.T * sf
-				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
-				y += h
-			}
-			ctx.fillStyle = 'rgb(192,192,192)'
-			const h = bp.total * sf
-			ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
-			console.log('ref_height:', pileup_height - y)
 		}
 	}
 	const pileup_data = {
@@ -538,7 +549,7 @@ function query_region(r, q) {
 	})
 }
 
-function run_sambamba(q, r, ref_seq) {
+function run_sambamba(q, r, ref_seq, zoom_cutoff) {
 	// function for creating the
 	const bplst = []
 	return new Promise((resolve, reject) => {
@@ -571,32 +582,47 @@ function run_sambamba(q, r, ref_seq) {
 			const G = Number.parseInt(columns[5])
 			const T = Number.parseInt(columns[6])
 
-			const maxValue = Math.max(A, C, G, T)
-			if (maxValue == A) {
-				consensus_seq += 'A'
-			} else if (maxValue == C) {
-				consensus_seq += 'C'
-			} else if (maxValue == T) {
-				consensus_seq += 'T'
-			} else if (maxValue == G) {
-				consensus_seq += 'G'
-			}
+			//const maxValue = Math.max(A, C, G, T)
+			//if (maxValue == A) {
+			//	consensus_seq += 'A'
+			//} else if (maxValue == C) {
+			//	consensus_seq += 'C'
+			//} else if (maxValue == T) {
+			//	consensus_seq += 'T'
+			//} else if (maxValue == G) {
+			//	consensus_seq += 'G'
+			//}
 
 			const bp = {
 				total: Number.parseInt(columns[2]),
 				position
 			}
-
-			if (A && ref != 'A') bp.A = A
-			if (T && ref != 'T') bp.T = T
-			if (C && ref != 'C') bp.C = C
-			if (G && ref != 'G') bp.G = G
-			console.log('bp:', bp)
-			console.log('ref:', ref)
+			if (r.ntwidth > zoom_cutoff) {
+				if (ref != 'A') {
+					bp.A = A
+				} else {
+					bp.ref = A
+				} //A &&
+				if (ref != 'T') {
+					bp.T = T
+				} else {
+					bp.ref = T
+				} //T &&
+				if (ref != 'C') {
+					bp.C = C
+				} else {
+					bp.ref = C
+				} //C &&
+				if (ref != 'G') {
+					bp.G = G
+				} else {
+					bp.ref = G
+				} //G &&
+			}
 			bplst.push(bp)
 		})
 		rl.on('close', () => {
-			console.log('con_seq:', consensus_seq)
+			//console.log('con_seq:', consensus_seq)
 			console.log('ref_seq:', ref_seq)
 			resolve(bplst)
 		})
