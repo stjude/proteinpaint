@@ -357,15 +357,24 @@ function init_plot(obj) {
 	const yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
 
 	if (!obj.dimensions) obj.dimensions = {}
-	let currBbox
+	if (!('autoResize' in obj.dimensions)) obj.dimensions.autoResize = true
+	if (!('minWidth' in obj.dimensions)) obj.dimensions.minWidth = 300
+	if (!('minHeight' in obj.dimensions)) obj.dimensions.minHeight = 300
 
+	let currBbox // to be used for maintaining chart height:width ratio when resizing based on div size
+	const estlegendwidth = 250 // estimated legend width to the right side of the chart
+	const bbox = rootholder.getBoundingClientRect()
 	let toppad = 30,
 		bottompad = 50,
 		leftpad = 100,
 		rightpad = 30,
 		vpad = 20,
-		width = obj.dimensions.width ? obj.dimensions.width : 800, // make automatic
-		height = obj.dimensions.height ? obj.dimensions.height : 800,
+		width = obj.dimensions.width
+			? obj.dimensions.width
+			: Math.max(obj.dimensions.minWidth, 0.75 * (bbox.width - estlegendwidth)),
+		height = obj.dimensions.height
+			? obj.dimensions.height
+			: Math.max(obj.dimensions.minHeight, Math.min(1.2 * width, 0.5 * bbox.height)),
 		fontsize = 18
 
 	const svg = obj.scattersvg
