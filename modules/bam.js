@@ -8,6 +8,7 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
+const basecolor = require('../src/common')
 
 /*
 XXX quick fix to be removed/disabled later
@@ -233,181 +234,67 @@ module.exports = genomes => {
 async function get_pileup(q, req) {
 	const pileup_height = 250
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
+	const totalcolor = 'rgb(192,192,192)' //Ref-grey
 	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 
 	for (const r of q.regions) {
+		// seq may already have been retrieved for the region
 		const ref_seq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
 			.split('\n')
 			.slice(1)
 			.join('')
 			.toUpperCase()
 
-		const pileup_plot_str = await run_sambamba(q.file, r.chr.replace('chr', ''), r.start, r.stop)
-		console.log('pileup_plot_str:', pileup_plot_str)
-		let total_cov = []
-		let As_cov = []
-		let Cs_cov = []
-		let Gs_cov = []
-		let Ts_cov = []
-		let ref_cov = []
-		let del_cov = []
-		let first_iter = 0
-		let consensus_seq = ''
-		let seq_iter = 0
-		for (const line of pileup_plot_str.split('\n')) {
-			if (first_iter < 2) {
-				first_iter += 1
-				continue
-			} else if (line.length == 0) {
-				continue
-			} else {
-				const columns = line.split('\t')
-				total_cov.push(parseInt(columns[2]))
-				const max_value = Math.max(
-					parseInt(columns[3]),
-					parseInt(columns[4]),
-					parseInt(columns[5]),
-					parseInt(columns[6])
-				)
-				if (max_value == parseInt(columns[3])) {
-					// Look into this
-					consensus_seq += 'A'
-				}
-				if (max_value == parseInt(columns[4])) {
-					consensus_seq += 'C'
-				}
-				if (max_value == parseInt(columns[5])) {
-					consensus_seq += 'G'
-				}
-				if (max_value == parseInt(columns[6])) {
-					consensus_seq += 'T'
-				}
-
-				// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
-
-				del_cov.push(parseInt(columns[7]))
-				if (ref_seq[seq_iter + 1] == 'A') {
-					As_cov.push(0)
-					ref_cov.push(parseInt(columns[3]))
-					Cs_cov.push(parseInt(columns[4]))
-					Gs_cov.push(parseInt(columns[5]))
-					Ts_cov.push(parseInt(columns[6]))
-				}
-				if (ref_seq[seq_iter + 1] == 'C') {
-					As_cov.push(parseInt(columns[3]))
-					ref_cov.push(parseInt(columns[4]))
-					Cs_cov.push(0)
-					Gs_cov.push(parseInt(columns[5]))
-					Ts_cov.push(parseInt(columns[6]))
-				}
-				if (ref_seq[seq_iter + 1] == 'G') {
-					As_cov.push(parseInt(columns[3]))
-					Cs_cov.push(parseInt(columns[4]))
-					ref_cov.push(parseInt(columns[5]))
-					Gs_cov.push(0)
-					Ts_cov.push(parseInt(columns[6]))
-				}
-				if (ref_seq[seq_iter + 1] == 'T') {
-					As_cov.push(parseInt(columns[3]))
-					Cs_cov.push(parseInt(columns[4]))
-					Gs_cov.push(parseInt(columns[5]))
-					ref_cov.push(parseInt(columns[6]))
-					Ts_cov.push(0)
-				}
-				seq_iter += 1
-			}
-		}
-		console.log('ref_seq:', ref_seq)
+		const bplst = await run_sambamba(q, r, ref_seq)
+		// each ele is {}
+		// .position
+		// .total/A/T/C/G/refskip
+		//console.log("con_seq:",con_seq)
 		//console.log('ref_seq length:', ref_seq.length)
-		console.log('con_seq:', consensus_seq)
-		//console.log('consensus length:', consensus_seq.length)
 
-		const maxValue = Math.max(...total_cov)
-		//const maxValue = Math.max(...As_cov, ...Cs_cov, ...Gs_cov, ...Ts_cov) + 2
+		const maxValue = Math.max(...bplst.map(i => i.total))
 		console.log('maxValue:', maxValue)
-
-		const padding = 0
-		const zoom_cutoff = 4.9 // Variable determining if alternate alleles should be displayed or not in pileup plot
-		const canvasActualHeight = canvas.height //- padding * 2
-		const canvasActualWidth = canvas.width //- padding * 2
-
-		console.log('r.ntwidth:', r.ntwidth)
-		if (r.ntwidth > zoom_cutoff) {
-			let val = 0
-			let barIndex = 0
-			let barHeight = 0
-			let y_start = 0
-			let color = ''
-			let ref_barHeight = 0
-			let ref_y_start = 0
-			for (iter in total_cov) {
-				for (let i = 0; i < 6; i++) {
-					if (i == 0) {
-						val = Ts_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start = canvas.height - barHeight - padding
-						color = 'rgb(0,0,255)' //T-blue
-					} else if (i == 1) {
-						val = As_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start -= barHeight
-						color = 'rgb(220,20,60)' //A-red
-					} else if (i == 2) {
-						val = Cs_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start -= barHeight
-						color = 'rgb(0,100,0)' //C-green
-					} else if (i == 3) {
-						val = Gs_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start -= barHeight
-						color = 'rgb(255,20,147)' //G-pink
-					} else if (i == 4) {
-						val = del_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start -= barHeight
-						color = 'rgb(165,42,42)' //Del-brown
-					} else if (i == 5) {
-						val = ref_cov[iter]
-						barHeight = Math.round((canvasActualHeight * val) / maxValue)
-						y_start -= barHeight
-						color = 'rgb(192,192,192)' //Ref-grey
-					}
-
-					if (val > 0) {
-						//drawBar(ctx, padding + barIndex * barSize, y_start, barSize, barHeight, color)
-						drawBar(
-							ctx,
-							r.x + barIndex * req.query.nucleotide_length * q.devicePixelRatio,
-							y_start,
-							req.query.nucleotide_length * q.devicePixelRatio,
-							barHeight,
-							color
-						)
-					}
-				}
-				barIndex++
+		console.log('pileup_height * q.devicePixelRatio:', pileup_height)
+		let y = 0
+		const sf = pileup_height / maxValue
+		console.log('basecolor:', basecolor)
+		for (const bp of bplst) {
+			const x = (bp.position - r.start + 1) * r.ntwidth
+			//y = (maxValue-bp.total)*sf
+			//y=maxValue*sf
+			y = 0
+			if (bp.A) {
+				ctx.fillStyle = basecolor.basecolor.A //'rgb(220,20,60)'
+				const h = bp.A * sf
+				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				y += h
 			}
-		} else {
-			let barIndex = 0
-			const numberOfBars = total_cov.length
-			const barSize = canvasActualWidth / numberOfBars
-			let val = 0
-			for (iter in total_cov) {
-				val = total_cov[iter]
-				console.log('val:', val)
-				const barHeight = Math.round((canvasActualHeight * val) / maxValue)
-				drawBar(
-					ctx,
-					r.x + barIndex * req.query.nucleotide_length * q.devicePixelRatio,
-					canvas.height - barHeight - padding,
-					req.query.nucleotide_length * q.devicePixelRatio,
-					barHeight,
-					'rgb(192,192,192)'
-				)
-				barIndex++
+			if (bp.C) {
+				ctx.fillStyle = basecolor.basecolor.C //'rgb(0,100,0)'
+				const h = bp.C * sf
+				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				y += h
 			}
+			if (bp.G) {
+				ctx.fillStyle = basecolor.basecolor.G //'rgb(255,20,147)'
+				const h = bp.G * sf
+				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				y += h
+			}
+			if (bp.T) {
+				ctx.fillStyle = basecolor.basecolor.T //'rgb(0,0,255)'
+				const h = bp.T * sf
+				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				y += h
+			}
+			ctx.fillStyle = 'rgb(192,192,192)'
+			const h = bp.total * sf
+			ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+			console.log('ref_height:', pileup_height - y)
 		}
 	}
 	const pileup_data = {
@@ -651,27 +538,67 @@ function query_region(r, q) {
 	})
 }
 
-function run_sambamba(bam_file, chr, start, stop) {
+function run_sambamba(q, r, ref_seq) {
 	// function for creating the
+	const bplst = []
 	return new Promise((resolve, reject) => {
-		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
+		//console.log('sambamba depth base ' + (q.file||q.url)+ ' -L ' + (q.nochr ? r.chr.replace('chr','') : r.chr) + ':' + r.start + '-' + r.stop)
 
-		const ls = spawn(sambamba, ['depth', 'base', bam_file, '-L', chr + ':' + start + '-' + stop])
+		const ls = spawn(
+			sambamba,
+			[
+				'depth',
+				'base',
+				q.file || q.url,
+				'-L',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ls.stdout })
+		let first = true
+		let consensus_seq = ''
+		rl.on('line', line => {
+			if (first) {
+				first = false
+				return
+			}
+			const columns = line.split('\t')
+			const position = Number.parseInt(columns[1]) - 1
+			const ref = ref_seq[position - r.start + 2]
+			const A = Number.parseInt(columns[3])
+			const C = Number.parseInt(columns[4])
+			const G = Number.parseInt(columns[5])
+			const T = Number.parseInt(columns[6])
 
-		ls.stdout.on('data', function(data) {
-			//Here is where the output goes
-			data = data.toString()
-			//console.log('stdout: ' + data)
-			resolve(data)
+			const maxValue = Math.max(A, C, G, T)
+			if (maxValue == A) {
+				consensus_seq += 'A'
+			} else if (maxValue == C) {
+				consensus_seq += 'C'
+			} else if (maxValue == T) {
+				consensus_seq += 'T'
+			} else if (maxValue == G) {
+				consensus_seq += 'G'
+			}
+
+			const bp = {
+				total: Number.parseInt(columns[2]),
+				position
+			}
+
+			if (A && ref != 'A') bp.A = A
+			if (T && ref != 'T') bp.T = T
+			if (C && ref != 'C') bp.C = C
+			if (G && ref != 'G') bp.G = G
+			console.log('bp:', bp)
+			console.log('ref:', ref)
+			bplst.push(bp)
 		})
-
-		ls.stderr.on('data', data => {
-			console.log(`stderr: ${data}`)
-		})
-
-		ls.on('close', code => {
-			console.log(`child process exited with code ${code}`)
-			resolve('')
+		rl.on('close', () => {
+			console.log('con_seq:', consensus_seq)
+			console.log('ref_seq:', ref_seq)
+			resolve(bplst)
 		})
 	})
 }
