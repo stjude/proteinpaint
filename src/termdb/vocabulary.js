@@ -1,5 +1,6 @@
 import { dofetch3 } from '../client'
 import { getBarchartData } from './barchart.data'
+import { termsetting_fill_q } from '../common/termsetting'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -228,10 +229,18 @@ class FrontendVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
+		if (!(plotId in this.state.tree.plots)) {
+			const term = this.vocab.terms.find(t => t.id === plotId)
+			const q = {}
+			termsetting_fill_q(q, term)
+			this.state.tree.plots[plotId] = {
+				term: { term, q }
+			}
+		}
 		const config = this.state.tree.plots[plotId]
 		const q = {
-			term1: config.term.term,
-			term1_q: config.term.q,
+			term1: config.term ? config.term.term : {},
+			term1_q: config.term ? config.term.q : undefined,
 			term0: config.term0 ? config.term0.term : undefined,
 			term0_q: config.term0 ? config.term0.q : undefined,
 			term2: config.term2 ? config.term2.term : undefined,
