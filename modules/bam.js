@@ -336,9 +336,9 @@ function softclip_pileup(r, templates) {
 	//console.log("softclipped_pileup length:",softclipped_pileup.length)
 
 	for (const template of templates) {
-		//console.log("startpos:",template.segments[0].segstart)
 		let prev = ''
 		let bp_iter = parseInt(template.segments[0].segstart) - parseInt(r.start) + 1 // Records position in the view range
+		let first_element_of_cigar = 1
 		for (let i = 0; i < template.segments[0].cigarstr.length; i++) {
 			const cigar = template.segments[0].cigarstr[i]
 			if (cigar.match(/[0-9]/)) {
@@ -346,8 +346,22 @@ function softclip_pileup(r, templates) {
 				continue
 			}
 			if (cigar == 'S') {
-				//console.log("prev:",prev," soft-clip")
+				//			        console.log("r.start:",r.start)
+				//		                console.log("startpos:",template.segments[0].segstart)
+				//		                console.log("cigar:",template.segments[0].cigarstr)
+				//				console.log("prev:",prev," soft-clip")
+				//                              console.log("bp_iter:",bp_iter)
 
+				// Checking to see if the first element of cigar is softclip or not
+				if (first_element_of_cigar == 1) {
+					//                               console.log("prev:",prev)
+					//                               console.log("r.start:",r.start)
+					//                               console.log("template.segments[0].segstart:",template.segments[0].segstart)
+					//                               console.log("bp_iter:",bp_iter)
+					bp_iter = bp_iter - parseInt(prev)
+					first_element_of_cigar = 0
+					//                               console.log("bp_iter after prev:",bp_iter)
+				}
 				// Calculating soft-clip pileup here
 				for (let j = bp_iter; j < parseInt(prev) + bp_iter; j++) {
 					if (j < 0) {
@@ -365,6 +379,7 @@ function softclip_pileup(r, templates) {
 				continue
 			} else {
 				bp_iter += parseInt(prev)
+				first_element_of_cigar = 0
 				prev = ''
 			}
 		}
@@ -900,6 +915,7 @@ may skip insertion if on screen width shorter than minimum width
 		return
 	}
 	const segstart = segstart_1based - 1
+	//console.log("segstart:",segstart," cigar:",cigarstr)
 
 	if (cigarstr == '*') {
 		return
