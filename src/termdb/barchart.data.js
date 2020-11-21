@@ -1,6 +1,7 @@
 import Partjson from 'partjson'
+import { compute_bins } from '../../modules/termdb.bins'
 
-export function getBarchartData(q, data0) {
+export function getBarchartData(_q, data0) {
 	/*
   Intended to be used in tests, to generate 
   alternatively computed results to compare 
@@ -10,8 +11,11 @@ export function getBarchartData(q, data0) {
   data0:  the response data from /termdb-barsql, 
           needed to reuse computed bins
 */
+	// need to not overwrite original term definition data
+	const q = JSON.parse(JSON.stringify(_q))
+
 	// support legacy query parameter names
-	if (!q.term1) q.term1 = {}
+	if (!q.term1) q.term1 = q.term ? q.term : {}
 	if (!q.term1_q) q.term1_q = {}
 	if (!q.term0) q.term0 = {}
 	if (!q.term0_q) q.term0_q = {}
@@ -19,7 +23,7 @@ export function getBarchartData(q, data0) {
 	if (!q.term2_q) q.term2_q = {}
 	if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 
-	const pj = getPj(q, data0) //console.log(21, pj.tree)
+	const pj = getPj(q, data0)
 	if (pj.tree.results) pj.tree.results.pjtime = pj.times
 	return pj.tree.results
 }
@@ -111,6 +115,8 @@ function getPj(q, data) {
 
 	const idValFxns = {
 		categorical: getCategoricalIdVal,
+		integer: getNumericIdVal,
+		float: getNumericIdVal,
 		undefined: getUndefinedIdVal
 	}
 
@@ -120,9 +126,9 @@ function getPj(q, data) {
 		template: templateBar,
 		'=': {
 			idVal(row, context) {
-				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q)
-				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q)
-				const [dataId, dataVal] = idValFxns[q.term0.type](row.data, q.term2, q.term2_q)
+				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
+				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
+				const [dataId, dataVal] = idValFxns[q.term0.type](row.data, q.term2, q.term2_q, data)
 				return {
 					chartId,
 					chartVal,
@@ -179,16 +185,25 @@ function getPj(q, data) {
 				const nonempty = result.serieses.filter(series => series.total)
 				result.serieses.splice(0, result.serieses.length, ...nonempty)
 			},
-			sortColsRows(result) {},
+			sortColsRows(result) {
+				if (q.term1_q.orderedLabels) {
+					const labels = q.term1_q.orderedLabels
+					result.cols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
+				}
+				if (q.term2.orderedLabels) {
+					const labels = q.term2_q.orderedLabels
+					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
+				}
+			},
 			sortCharts(result) {},
 			useColOrder() {
-				//return inReqs[1].orderedLabels.length > 0
+				return q.term1_q.orderedLabels && q.term1_q.orderedLabels.length > 0
 			},
 			useRowOrder() {
-				//return inReqs[2].orderedLabels.length > 0
+				return q.term2_q.orderedLabels && q.term2_q.orderedLabels.length > 0
 			},
 			bins() {
-				//return inReqs.map(d => d.bins)
+				return [q.term0_q, q.term1_q, q.term2_q].map(d => d.computed_bins)
 			},
 			q() {}
 		}
@@ -207,56 +222,53 @@ function setDatasetAnnotations(item) {
 	}
 }
 
-function getCategoricalIdVal(d, term, q) {
+function getCategoricalIdVal(d, term, q, rows) {
 	const id = 'id' in term ? d[term.id] : '-'
 	const value = 'id' in term ? '' + d[term.id] : undefined
 	return [[id], value]
 }
 
-function getUndefinedIdVal() {
-	return [['-'], undefined]
-}
-
-function get_numeric_bin_name(term_q, termid, term, termnum, inReq, data0) {
-	if (!data0.refs.bins) throw 'missing bins array in server response of /termdb-barsql'
-	const index = +termnum.slice(-1)
-	const bins = data0.refs.bins[index]
-	const binconfig = data0.refs.bins[index] //.binconfig
-	inReq.bins = bins
-	inReq.binconfig = binconfig
-	inReq.orderedLabels = bins.map(d => d.label)
-	term_q.results = data0.refs.q[index].results
-
-	inReq.joinFxns[termid] = row => {
-		const v = row[termid]
-		if (!isNumeric(v)) return
+function getNumericIdVal(d, term, q, rows) {
+	const ids = []
+	if (!('id' in term) || !(term.id in d)) return [ids, undefined]
+	if (!q.computed_bins) {
+		const summary = {}
+		rows.map(row => {
+			const v = row.data[term.id]
+			if (!isNumeric(v)) return
+			if (!('min' in summary) || summary.min > v) summary.min = v
+			if (!('max' in summary) || summary.max < v) summary.max = v
+		})
+		q.computed_bins = compute_bins(q, percentiles => summary)
+		q.orderedLabels = q.computed_bins.map(d => d.label)
+	}
+	const v = d[term.id]
+	if (isNumeric(v)) {
 		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
-			return term.values[v].label
+			ids.push(term.values[v].label)
 		}
 
-		for (const b of bins) {
+		for (const b of q.computed_bins) {
 			if (b.startunbounded) {
-				if (v < b.stop) return b.label
-				if (b.stopinclusive && v == b.stop) return b.label
+				if (v < b.stop) ids.push(b.label)
+				if (b.stopinclusive && v == b.stop) ids.push(b.label)
 			}
 			if (b.stopunbounded) {
-				if (v > b.start) return b.label
-				if (b.stopinclusive && v == b.start) return b.label
+				if (v > b.start) ids.push(b.label)
+				if (b.stopinclusive && v == b.start) ids.push(b.label)
 			}
 			if (b.startinclusive && v < b.start) continue
 			if (!b.startinclusive && v <= b.start) continue
 			if (b.stopinclusive && v > b.stop) continue
 			if (!b.stopinclusive && v >= b.stop) continue
-			return b.label
+			ids.push(b.label)
 		}
 	}
+	return [ids, v]
+}
 
-	inReq.numValFxns[termid] = row => {
-		const v = row[termid]
-		if (!term.values || !('' + v in term.values) || !term.values[v].uncomputable) {
-			if (isNumeric(v)) return v
-		}
-	}
+function getUndefinedIdVal() {
+	return [['-'], undefined]
 }
 
 function sample_match_termvaluesetting(row, filter) {
@@ -281,6 +293,7 @@ function sample_match_termvaluesetting(row, filter) {
 				thistermmatch = t.valueset.has(samplevalue)
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
+
 				for (const range of t.ranges) {
 					if ('value' in range) {
 						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)

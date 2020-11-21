@@ -230,12 +230,12 @@ class FrontendVocab {
 	async getPlotData(plotId, dataName) {
 		const config = this.state.tree.plots[plotId]
 		const q = {
-			term1: config.term,
-			term1_q: config.term_q,
-			term0: config.term0,
-			term0_q: config.term0_q,
-			term2: config.term2,
-			term2_q: config.term2_q,
+			term1: config.term.term,
+			term1_q: config.term.q,
+			term0: config.term0 ? config.term0.term : undefined,
+			term0_q: config.term0 ? config.term0.q : undefined,
+			term2: config.term2 ? config.term2.term : undefined,
+			term2_q: config.term2 ? config.term2.q : undefined,
 			filter: this.state.termfilter && this.state.termfilter.filter
 		}
 		return getBarchartData(q, this.datarows)

@@ -29,8 +29,12 @@ const terms = [
 		name: 'DDD',
 		parent_id: 'a',
 		isleaf: true,
-		groupsetting: {
-			disabled: true
+		bins: {
+			default: {
+				bin_size: 0.2,
+				stopinclusive: true,
+				first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true }
+			}
 		}
 	},
 	{
@@ -98,6 +102,26 @@ const vocab = JSON.stringify({
 		5: {
 			c: 0,
 			d: 0.4
+		},
+		6: {
+			c: 1,
+			d: 0.3
+		},
+		7: {
+			c: 0,
+			d: 0.5
+		},
+		8: {
+			c: 1,
+			d: 0.9
+		},
+		9: {
+			c: 0,
+			d: 0.05
+		},
+		10: {
+			c: 1,
+			d: 1.1
 		}
 	}
 })

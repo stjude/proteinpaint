@@ -1014,7 +1014,7 @@ tape('numeric filter - only special value', function(test) {
 	}
 })
 
-tape.only('custom vocab: categorical terms with numeric filter', test => {
+tape('custom vocab: categorical terms with numeric filter', test => {
 	test.timeoutAfter(3000)
 
 	const custom_runpp = helpers.getRunPp('termdb', {
@@ -1076,6 +1076,76 @@ tape.only('custom vocab: categorical terms with numeric filter', test => {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numBars, 2, 'should have 2 bars')
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+})
+
+tape('custom vocab: numeric terms with categorical filter', test => {
+	test.timeoutAfter(3000)
+	const vocab = vocabData.getExample()
+	const custom_runpp = helpers.getRunPp('termdb', {
+		debug: 1,
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			vocab
+		}
+	})
+
+	const dterm = vocab.terms.find(t => t.id == 'd')
+	custom_runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: vocab.terms.find(t => t.id == 'c'),
+								values: [{ key: 1 }]
+							}
+						}
+					]
+				}
+			},
+			tree: {
+				expandedTermIds: ['root', 'a'],
+				visiblePlotIds: ['d'],
+				plots: {
+					d: {
+						term: {
+							term: dterm,
+							q: dterm.bins.default
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+		testBarCount(plot)
+		test.end()
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numBars, 5, 'should have 2 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })
