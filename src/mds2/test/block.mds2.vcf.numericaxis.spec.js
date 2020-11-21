@@ -17,7 +17,17 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('AF Test: term tree menu', async test => {
+/*
+	NOTE: Only un-skip (enable) this test when it is done in isolation
+	or until .sja_* can be selected uniquely for this mds2 track. 
+	
+	The document.body.querySelectorAll('.sja_*') conflicts with other tests
+	that generate similarly-classed DOM tooltips or menus. Running this test with 
+	other component specs will require being able to determine the particular
+	tooltip or menu that is launched by this mds2 track.
+
+*/
+tape('AF Test: term tree menu (must be an isolated test for now!)', async test => {
 	const holder = document.body.appendChild(document.createElement('div'))
 	runproteinpaint({
 		holder,
