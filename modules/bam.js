@@ -231,7 +231,7 @@ module.exports = genomes => {
 	}
 }
 
-async function get_pileup(q, req) {
+async function get_pileup(q, req, templates) {
 	const pileup_height = 250
 	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
@@ -251,6 +251,7 @@ async function get_pileup(q, req) {
 			.toUpperCase()
 
 		const bplst = await run_sambamba(q, r, ref_seq, zoom_cutoff)
+		const softclip_pileup_lst = softclip_pileup(r, templates)
 		// each ele is {}
 		// .position
 		// .total/A/T/C/G/refskip
@@ -258,12 +259,9 @@ async function get_pileup(q, req) {
 		//console.log('ref_seq length:', ref_seq.length)
 
 		const maxValue = Math.max(...bplst.map(i => i.total))
-		console.log('maxValue:', maxValue)
-		console.log('pileup_height * q.devicePixelRatio:', pileup_height)
 		let y = 0
 		const sf = pileup_height / maxValue
-		console.log('basecolor:', basecolor)
-
+		let i = 0
 		if (r.ntwidth > zoom_cutoff) {
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
@@ -294,9 +292,20 @@ async function get_pileup(q, req) {
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
-				ctx.fillStyle = 'rgb(192,192,192)'
-				const h = bp.ref * sf
-				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				// Rendering soft clips
+				{
+					ctx.fillStyle = '#000000'
+					const h = softclip_pileup_lst[i] * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				// Rendering reference allele
+				{
+					ctx.fillStyle = 'rgb(192,192,192)'
+					const h = bp.ref * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				}
+				i += 1
 			}
 		} else {
 			for (const bp of bplst) {
@@ -314,6 +323,53 @@ async function get_pileup(q, req) {
 		src: canvas.toDataURL()
 	}
 	q.pileup_data = pileup_data
+}
+
+function softclip_pileup(r, templates) {
+	//console.log("templates:",templates)
+
+	// Initializing softclipped array
+	let softclipped_pileup = []
+	for (let i = 0; i <= parseInt(r.stop) - parseInt(r.start); i++) {
+		softclipped_pileup.push(0)
+	}
+	//console.log("softclipped_pileup length:",softclipped_pileup.length)
+
+	for (const template of templates) {
+		//console.log("startpos:",template.segments[0].segstart)
+		let prev = ''
+		let bp_iter = parseInt(template.segments[0].segstart) - parseInt(r.start) + 1 // Records position in the view range
+		for (let i = 0; i < template.segments[0].cigarstr.length; i++) {
+			const cigar = template.segments[0].cigarstr[i]
+			if (cigar.match(/[0-9]/)) {
+				prev += cigar
+				continue
+			}
+			if (cigar == 'S') {
+				//console.log("prev:",prev," soft-clip")
+
+				// Calculating soft-clip pileup here
+				for (let j = bp_iter; j < parseInt(prev) + bp_iter; j++) {
+					if (j < 0) {
+						continue
+					} // When a read starts before the current view range
+					else if (j > softclipped_pileup.length - 1) {
+						break
+					} // When a read extends beyond current view range
+					else {
+						softclipped_pileup[j] += 1
+					}
+				}
+				bp_iter += parseInt(prev)
+				prev = ''
+				continue
+			} else {
+				bp_iter += parseInt(prev)
+				prev = ''
+			}
+		}
+	}
+	return softclipped_pileup
 }
 
 function drawLine(ctx, startX, startY, endX, endY, color) {
@@ -486,9 +542,8 @@ async function do_query(q, req) {
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-	await get_pileup(q, req) // Run this function to get pilup plot data
+	await get_pileup(q, req, templates) // Run this function to get pilup plot data
 	result.pileup_data = q.pileup_data
-	//console.log("result:",result)
 	return result
 }
 
@@ -623,7 +678,7 @@ function run_sambamba(q, r, ref_seq, zoom_cutoff) {
 		})
 		rl.on('close', () => {
 			//console.log('con_seq:', consensus_seq)
-			console.log('ref_seq:', ref_seq)
+			//console.log('ref_seq:', ref_seq)
 			resolve(bplst)
 		})
 	})
@@ -1318,6 +1373,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
+	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P') continue // do not handle
