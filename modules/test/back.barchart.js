@@ -404,7 +404,7 @@ function load_genotype_by_sample(id) {
 	const genotype2sample = new Map()
 	for (const line of text.split('\n')) {
 		const [type, samplesStr] = line.split('\t')
-		const samples = samplesStr.split(',')
+		const samples = samplesStr.split(',').map(d => Number(d))
 		for (const sample of samples) {
 			bySample[sample] = type
 		}
