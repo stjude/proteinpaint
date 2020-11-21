@@ -1049,7 +1049,9 @@ tape('custom vocab: categorical terms with numeric filter', test => {
 				visiblePlotIds: ['c'],
 				plots: {
 					c: {
-						term: vocabData.terms.find(t => t.id == 'c'),
+						term: {
+							term: vocabData.terms.find(t => t.id == 'c')
+						},
 						settings: {
 							currViews: ['barchart']
 						}

@@ -249,13 +249,13 @@ function validatePlot(p, vocabApi) {
 	if (!p.id) throw 'plot error: plot.id missing'
 	if (!p.term) throw 'plot error: plot.term{} not an object'
 	try {
-		validatePlotTerm(p.term)
+		validatePlotTerm(p.term, vocabApi)
 	} catch (e) {
 		throw 'plot.term error: ' + e
 	}
 	if (p.term2) {
 		try {
-			validatePlotTerm(p.term2)
+			validatePlotTerm(p.term2, vocabApi)
 		} catch (e) {
 			throw 'plot.term2 error: ' + e
 		}
