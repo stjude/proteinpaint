@@ -3,54 +3,87 @@
 /*
 query list of variants by isoform
 */
-const isoform2variants = {
-	endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
-	size: 100000,
-	fields: [
-		'ssm.ssm_id',
-		'ssm.chromosome',
-		'ssm.start_position',
-		'ssm.reference_allele',
-		'ssm.tumor_allele',
-		'ssm.consequence.transcript.transcript_id',
-		'ssm.consequence.transcript.consequence_type',
-		'ssm.consequence.transcript.aa_change',
-		'case.project.project_id',
-		'case.case_id',
-		'case.primary_site',
-		'case.disease_type'
-	],
-	filters: p => {
-		// p:{}
-		// .isoform
-		// .set_id
-		if (!p.isoform) throw '.isoform missing'
-		if (typeof p.isoform != 'string') throw '.isoform value not string'
-		const f = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'ssms.consequence.transcript.transcript_id',
-						value: [p.isoform]
+const isoform2variants = [
+	{
+		endpoint: 'https://api.gdc.cancer.gov/ssms',
+		size: 100000,
+		fields: [
+			'ssm_id',
+			'chromosome',
+			'start_position',
+			'reference_allele',
+			'tumor_allele',
+			'consequence.transcript.transcript_id',
+			'consequence.transcript.consequence_type',
+			'consequence.transcript.aa_change'
+		],
+		filters: p => {
+			// p:{}
+			// .isoform
+			// .set_id
+			if (!p.isoform) throw '.isoform missing'
+			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			const f = {
+				op: 'and',
+				content: [
+					{
+						op: '=',
+						content: {
+							field: 'consequence.transcript.transcript_id',
+							value: [p.isoform]
+						}
 					}
-				}
-			]
+				]
+			}
+			if (p.set_id) {
+				if (typeof p.set_id != 'string') throw '.set_id value not string'
+				f.content.push({
+					op: 'in',
+					content: {
+						field: 'cases.case_id',
+						value: [p.set_id]
+					}
+				})
+			}
+			return f
 		}
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
+	},
+	{
+		endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+		size: 100000,
+		fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
+		filters: p => {
+			// p:{}
+			// .isoform
+			// .set_id
+			if (!p.isoform) throw '.isoform missing'
+			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			const f = {
+				op: 'and',
+				content: [
+					{
+						op: '=',
+						content: {
+							field: 'ssms.consequence.transcript.transcript_id',
+							value: [p.isoform]
+						}
+					}
+				]
+			}
+			if (p.set_id) {
+				if (typeof p.set_id != 'string') throw '.set_id value not string'
+				f.content.push({
+					op: 'in',
+					content: {
+						field: 'cases.case_id',
+						value: [p.set_id]
+					}
+				})
+			}
+			return f
 		}
-		return f
 	}
-}
+]
 
 /*
 not in use for the moment
@@ -715,7 +748,7 @@ module.exports = {
 				}
 			},
 			byisoform: {
-				gdcapi: isoform2variants
+				gdcapi: { lst: isoform2variants }
 			},
 			occurrence_key
 		},

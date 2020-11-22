@@ -19,10 +19,14 @@ export function validate_query_snvindel_byrange(a) {
 }
 
 export function validate_query_snvindel_byisoform(api, ds) {
-	if (!api.endpoint) throw '.endpoint missing for byisoform.gdcapi'
-	if (!api.fields) throw '.fields missing for byisoform.gdcapi'
-	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
-	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
+	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
+	if (api.lst.length != 2) throw 'api.lst is not array of length 2'
+	for (const a of api.lst) {
+		if (!a.endpoint) throw '.endpoint missing for byisoform.gdcapi'
+		if (!a.fields) throw '.fields missing for byisoform.gdcapi'
+		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
+		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
+	}
 	api.get = async opts => {
 		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
@@ -96,46 +100,63 @@ function snvindel_addclass(m, consequence) {
 }
 
 async function snvindel_byisoform_run(api, opts) {
-	// used in two places
+	// function may be shared
 	// query is ds.queries.snvindel
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	if (opts.token) headers['X-Auth-Token'] = opts.token
-	const response = await got(
-		api.endpoint +
-			'?size=100000' +
+	const p1 = got(
+		api.lst[0].endpoint +
+			'?size=' +
+			api.lst[0].size +
 			'&fields=' +
-			api.fields.join(',') +
+			api.lst[0].fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.filters(opts))),
+			encodeURIComponent(JSON.stringify(api.lst[0].filters(opts))),
 		{ method: 'GET', headers }
 	)
-	let tmp
+	const p2 = got(
+		api.lst[1].endpoint +
+			'?size=' +
+			api.lst[1].size +
+			'&fields=' +
+			api.lst[1].fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.lst[1].filters(opts))),
+		{ method: 'GET', headers }
+	)
+	const [tmp1, tmp2] = await Promise.all([p1, p2])
+	let re_ssms, re_cases
 	try {
-		tmp = JSON.parse(response.body)
+		re_ssms = JSON.parse(tmp1.body)
+		re_cases = JSON.parse(tmp2.body)
 	} catch (e) {
 		throw 'invalid JSON returned by GDC'
 	}
-	if (!tmp.data || !tmp.data.hits) throw 'returned data not data.hits[]'
-	if (!Array.isArray(tmp.data.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	const snv2cases = new Map()
-	// key: aachange or chr.pos.ref.alt
-	for (const hit of tmp.data.hits) {
-		if (!hit.ssm) continue
-		if (!hit.ssm.consequence) continue
-		if (!hit.case) continue
-		const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == opts.isoform)
-		if (!consequence) continue
-		const key =
-			consequence.transcript.aa_change ||
-			hit.ssm.chromosome + '.' + hit.ssm.start_position + '.' + hit.ssm.reference_allele + '.' + hit.ssm.tumor_allele
-		if (!snv2cases.has(key)) {
-			hit.ssm.cases = []
-			hit.ssm.consequence = consequence // keep only info for this isoform
-			snv2cases.set(key, hit.ssm)
+	if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
+	if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
+	if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+	const id2ssm = new Map()
+	// key: ssm_id, value: ssm {}
+	for (const h of re_ssms.data.hits) {
+		if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
+		if (!h.consequence) throw '.consequence[] missing from a ssm'
+		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		if (!consequence) {
+			// may alert??
 		}
-		snv2cases.get(key).cases.push(hit.case)
+		h.consequence = consequence // keep only info for this isoform
+		h.cases = []
+		id2ssm.set(h.ssm_id, h)
 	}
-	return [...snv2cases.values()]
+	for (const h of re_cases.data.hits) {
+		if (!h.ssm) throw '.ssm{} missing from a case'
+		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
+		const ssm = id2ssm.get(h.ssm.ssm_id)
+		if (!ssm) throw 'ssm_id not found in ssms query'
+		if (!h.case) throw '.case{} missing from a case'
+		ssm.cases.push(h.case)
+	}
+	return [...id2ssm.values()]
 }
 
 export async function init_projectsize(op, ds) {
