@@ -251,7 +251,6 @@ async function get_pileup(q, req, templates) {
 			.toUpperCase()
 
 		const bplst = await run_sambamba(q, r, ref_seq, zoom_cutoff)
-		const softclip_pileup_lst = softclip_pileup(r, templates)
 		//console.log("bplst length:",bplst.length)
 		//console.log("softclip_pileup_lst length:",softclip_pileup_lst.length)
 
@@ -266,6 +265,7 @@ async function get_pileup(q, req, templates) {
 		const sf = pileup_height / maxValue
 		let i = 0
 		if (r.ntwidth > zoom_cutoff) {
+			const softclip_pileup_lst = softclip_pileup(r, templates)
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				//y = (maxValue-bp.total)*sf
