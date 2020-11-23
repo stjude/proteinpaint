@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Call this script from the tp/files/hg38/sjlife directory.
+# The filepath to the proteinpaint directory will be determined
+# from the command line entry and used for the load.sql script.
+
 set -e
 
 # scp hpc:~/tp/files/hg38/sjlife/vcf/min/vcf.gz* vcf/
