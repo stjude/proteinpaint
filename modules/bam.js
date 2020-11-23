@@ -626,16 +626,16 @@ function run_sambamba(q, r, ref_seq, zoom_cutoff) {
 	// function for creating the
 	const bplst = []
 	return new Promise((resolve, reject) => {
-		console.log(
-			'sambamba depth base ' +
-				(q.file || q.url) +
-				' -L ' +
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
-				':' +
-				r.start +
-				'-' +
-				r.stop
-		)
+		//		console.log(
+		//			'sambamba depth base ' +
+		//				(q.file || q.url) +
+		//				' -L ' +
+		//				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
+		//				':' +
+		//				r.start +
+		//				'-' +
+		//				r.stop
+		//		)
 
 		const ls = spawn(
 			sambamba,
