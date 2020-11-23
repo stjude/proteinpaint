@@ -258,16 +258,6 @@ may attach coloring scheme to result{} for returning to client
 				result.categorycount = collect_category_count
 			}
 
-			if (collect_gene_expression2color) {
-				// if legend order for gene expression data is defined in the config, add that to return to client
-				if (q.getpcd.ge_customorder) {
-					//TODO need to define order for ge
-					collect_gene_expression2color = getCustomCatOrder(collect_gene_expression2color, q.getpcd.ge_values) //TODO need to define values for ge
-				}
-				result.category2color = collect_gene_expression2color //TODO define this elsewhere. Problematic with var above
-				result.gecount = collect_gene_expression_count //TODO define this elsewhere
-			}
-
 			// get abs of min and max to get radius of point cloud
 			result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
 			resolve(lines)
