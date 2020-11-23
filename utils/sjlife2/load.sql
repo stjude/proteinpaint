@@ -109,7 +109,7 @@ drop index if exists c_sample;
 drop index if exists c_termid;
 drop index if exists c_grade;
 create table chronicevents (
-  sample character varying(50) not null,
+  sample integer not null,
   term_id character varying(100) not null,
   grade integer not null,
   age_graded real not null,
@@ -130,7 +130,7 @@ drop index if exists p_sample;
 drop index if exists p_termid;
 drop index if exists p_value_for;
 CREATE TABLE precomputed(
-  sample TEXT,
+  sample integer,
   term_id TEXT,
   value_for TEXT,
   value TEXT,
