@@ -272,32 +272,32 @@ async function get_pileup(q, req, templates) {
 				//y=maxValue*sf
 				y = 0
 				if (bp.A) {
-					ctx.fillStyle = basecolor.basecolor.A //'rgb(220,20,60)'
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.A //'rgb(220,20,60)'
 					const h = bp.A * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.C) {
-					ctx.fillStyle = basecolor.basecolor.C //'rgb(0,100,0)'
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.C //'rgb(0,100,0)'
 					const h = bp.C * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.G) {
-					ctx.fillStyle = basecolor.basecolor.G //'rgb(255,20,147)'
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.G //'rgb(255,20,147)'
 					const h = bp.G * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.T) {
-					ctx.fillStyle = basecolor.basecolor.T //'rgb(0,0,255)'
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.T //'rgb(0,0,255)'
 					const h = bp.T * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
 				// Rendering soft clips
 				{
-					ctx.fillStyle = '#000000'
+					ctx.fillStyle = 'rgb(70,130,180)'
 					const h = softclip_pileup_lst[i] * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
