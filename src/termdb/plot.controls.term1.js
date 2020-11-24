@@ -50,7 +50,7 @@ class Term1ui {
 	setPill() {
 		// can only call after getting this.state
 		this.pill = termsettingInit({
-			vocabApi: this.app.vocab,
+			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
