@@ -1,6 +1,7 @@
 import { dofetch3 } from '../client'
 import { getBarchartData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -159,7 +160,8 @@ class TermdbVocab {
 			num_obj.plot_size.ypad
 
 		if (this.state.termfilter && typeof this.state.termfilter.filter != 'undefined') {
-			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
+			const filterRoot = getNormalRoot(this.state.termfilter.filter)
+			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(filterRoot))
 		}
 		const density_data = await dofetch3(density_q)
 		if (density_data.error) throw density_data.error
@@ -291,6 +293,29 @@ class FrontendVocab {
 	}
 
 	async getDensityPlotData(term_id, num_obj) {
+		const countsByVal = new Map()
+		let minvalue,
+			maxvalue,
+			samplecount = 0
+		for (const sample in this.vocab.sampleannotation) {
+			if (!(term_id in this.vocab.sampleannotation[sample])) continue
+			const v = this.vocab.sampleannotation[sample][term_id]
+			samplecount += 1
+			if (minvalue === undefined || v < minvalue) minvalue = v
+			if (maxvalue === undefined || v > maxvalue) maxvalue = v
+			if (!countsByVal.has(v)) countsByVal.set(v, [v, 0])
+			countsByVal.get(v)[1] += 1
+		}
+
+		const density = [...countsByVal.values()]
+		return {
+			density,
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
+			minvalue,
+			maxvalue,
+			samplecount
+		}
+
 		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
 	}
 
