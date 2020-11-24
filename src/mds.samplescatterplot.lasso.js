@@ -1,13 +1,10 @@
-import * as selection from 'd3-selection'
 import { drag as d3drag, event, mouse } from 'd3'
-// import classifyPoint from 'robust-point-in-polygon'
 
-export default function() {
+export function make_lasso() {
 	let items = [],
 		closePathDistance = 75,
 		closePathSelect = true,
 		isPathClosed = false,
-		hoverSelect = true,
 		targetArea,
 		on = { start: function() {}, draw: function() {}, end: function() {} }
 
@@ -25,17 +22,10 @@ export default function() {
 		// add an origin node
 		const origin_node = g.append('circle').attr('class', 'origin')
 
-		// The transformed lasso path for rendering
-		let tpath
-
-		// The lasso origin for calculations
-		let origin
-
-		// The transformed lasso origin for rendering
-		let torigin
-
-		// Store off coordinates drawn
-		let drawnCoords
+		let tpath,  // The transformed lasso path for rendering
+			origin, // The lasso origin for calculations
+			torigin, // The transformed lasso origin for rendering
+			drawnCoords // Store off coordinates drawn
 
 		// Apply drag behaviors
 		let drag = d3drag()
@@ -59,20 +49,11 @@ export default function() {
 			items.nodes().forEach(function(e) {
 				e.__lasso.possible = false
 				e.__lasso.selected = false
-				e.__lasso.hoverSelect = false
 				e.__lasso.loopSelect = false
 
 				let box = e.getBoundingClientRect()
 				e.__lasso.lassoPoint = [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)]
 			})
-
-			// if hover is on, add hover function
-			if (hoverSelect) {
-				items.on('mouseover.lasso', function() {
-					// if hovered, change lasso selection attribute to true
-					this.__lasso.hoverSelect = true
-				})
-			}
 
 			// Run user defined start function
 			on.start()
@@ -133,7 +114,7 @@ export default function() {
 
 			items.nodes().forEach(function(n) {
 				n.__lasso.loopSelect = pointInPolygon(n.__lasso.lassoPoint, drawnCoords)
-				n.__lasso.possible = n.__lasso.hoverSelect || n.__lasso.loopSelect
+				n.__lasso.possible = n.__lasso.loopSelect
 			})
 
 			on.draw()
@@ -239,13 +220,6 @@ export default function() {
 	lasso.isPathClosed = function(_) {
 		if (!arguments.length) return isPathClosed
 		isPathClosed = _ === true ? true : false
-		return lasso
-	}
-
-	// Option to select on hover or not
-	lasso.hoverSelect = function(_) {
-		if (!arguments.length) return hoverSelect
-		hoverSelect = _ === true ? true : false
 		return lasso
 	}
 

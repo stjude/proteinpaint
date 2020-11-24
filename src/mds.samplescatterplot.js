@@ -4,8 +4,8 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { default as d3lasso } from '../modules/lasso'
-import { zoom as d3zoom, zoomIdentity, drag as d3drag } from 'd3'
+import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 
 /*
 obj:
@@ -669,6 +669,8 @@ function makeConfigPanel(obj) {
 			.style('background-color', obj.zoom_active ? '#eee' : '#fff')
 			.style('font-weight', obj.zoom_active ? '400' : '300')
 
+		lasso_btn.style('pointer-events', obj.zoom_active ? 'none' : 'auto')
+
 		zoom_menu.style('display', obj.zoom_active ? 'block' : 'none')
 
 		const zoom = d3zoom()
@@ -716,9 +718,39 @@ function makeConfigPanel(obj) {
 		.text('Lasso select')
 		.on('click', lassoToggle)
 
+	const lasso_menu = obj.scattersvg_buttons
+		.append('div')
+		.style('margin-top', '2px')
+		.style('padding', '2px 5px')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.style('display', obj.lasso_active ? 'block' : 'none')
+		.style('background-color', '#ddd')
+
+	const lasso_div = lasso_menu.append('div').style('margin', '5px 2px')
+
+	lasso_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '80%')
+		.text('Lasso usage')
+
+	lasso_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '70%')
+		.html(
+			'<p style="margin:1px;">Mouse click </br>+ Mouse move <br>' +
+				'TIP: Release the mouse <br> when desired dots <br> are selected, without <br>closing the loop. </p>'
+		)
+
 	function lassoToggle() {
 		const dots = obj.dotg.selectAll('g')
 		obj.lasso_active = obj.lasso_active ? false : true
+		zoom_btn.style('pointer-events', obj.lasso_active ? 'none' : 'auto')
+		lasso_menu.style('display', obj.lasso_active ? 'block' : 'none')
 
 		lasso_btn
 			.style('border', obj.lasso_active ? '2px solid #000' : '1px solid #999')
@@ -1094,7 +1126,7 @@ function lasso_select(obj, dots) {
 		// Style the possible dots
 		lasso
 			.possibleItems()
-			.attr('r', 3)
+			.attr('r', radius)
 			.style('fill-opacity', '1')
 			.classed('not_possible', false)
 			.classed('possible', true)
@@ -1109,6 +1141,8 @@ function lasso_select(obj, dots) {
 
 	function lasso_end() {
 		if (!obj.lasso_active) return
+
+		const unselected_dots = svg.selectAll('.possible').size()
 		// Reset the color of all dots
 		lasso
 			.items()
@@ -1118,13 +1152,13 @@ function lasso_select(obj, dots) {
 		// Style the selected dots
 		lasso
 			.selectedItems()
-			.attr('r', 5)
+			.attr('r', radius)
 			.style('fill-opacity', '0.8')
 
 		// Reset the style of the not selected dots
 		lasso
 			.notSelectedItems()
-			.attr('r', 3)
+			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
 	}
 
