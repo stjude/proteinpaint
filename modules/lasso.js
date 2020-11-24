@@ -3,7 +3,7 @@ import { drag as d3drag, event, mouse } from 'd3'
 // import classifyPoint from 'robust-point-in-polygon'
 
 export default function() {
-	var items = [],
+	let items = [],
 		closePathDistance = 75,
 		closePathSelect = true,
 		isPathClosed = false,
@@ -14,31 +14,31 @@ export default function() {
 	// Function to execute on call
 	function lasso(_this) {
 		// add a new group for the lasso
-		var g = _this.append('g').attr('class', 'lasso')
+		const g = _this.append('g').attr('class', 'lasso')
 
 		// add the drawn path for the lasso
-		var dyn_path = g.append('path').attr('class', 'drawn')
+		const dyn_path = g.append('path').attr('class', 'drawn')
 
 		// add a closed path
-		var close_path = g.append('path').attr('class', 'loop_close')
+		const close_path = g.append('path').attr('class', 'loop_close')
 
 		// add an origin node
-		var origin_node = g.append('circle').attr('class', 'origin')
+		const origin_node = g.append('circle').attr('class', 'origin')
 
 		// The transformed lasso path for rendering
-		var tpath
+		let tpath
 
 		// The lasso origin for calculations
-		var origin
+		let origin
 
 		// The transformed lasso origin for rendering
-		var torigin
+		let torigin
 
 		// Store off coordinates drawn
-		var drawnCoords
+		let drawnCoords
 
 		// Apply drag behaviors
-		var drag = d3drag()
+		let drag = d3drag()
 			.on('start', dragstart)
 			.on('drag', dragmove)
 			.on('end', dragend)
@@ -62,7 +62,7 @@ export default function() {
 				e.__lasso.hoverSelect = false
 				e.__lasso.loopSelect = false
 
-				var box = e.getBoundingClientRect()
+				let box = e.getBoundingClientRect()
 				e.__lasso.lassoPoint = [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)]
 			})
 
@@ -80,7 +80,7 @@ export default function() {
 
 		function dragmove() {
 			// Get mouse position within body, used for calculations
-			var x, y
+			let x, y
 			if (event.sourceEvent.type === 'touchmove') {
 				x = event.sourceEvent.touches[0].clientX
 				y = event.sourceEvent.touches[0].clientY
@@ -90,8 +90,8 @@ export default function() {
 			}
 
 			// Get mouse position within drawing area, used for rendering
-			var tx = mouse(this)[0]
-			var ty = mouse(this)[1]
+			let tx = mouse(this)[0]
+			let ty = mouse(this)[1]
 
 			// Initialize the path or add the latest point to it
 			if (tpath === '') {
@@ -111,10 +111,10 @@ export default function() {
 			drawnCoords.push([x, y])
 
 			// Calculate the current distance from the lasso origin
-			var distance = Math.sqrt(Math.pow(x - origin[0], 2) + Math.pow(y - origin[1], 2))
+			const distance = Math.sqrt(Math.pow(x - origin[0], 2) + Math.pow(y - origin[1], 2))
 
 			// Set the closed path line
-			var close_draw_path = 'M ' + tx + ' ' + ty + ' L ' + torigin[0] + ' ' + torigin[1]
+			const close_draw_path = 'M ' + tx + ' ' + ty + ' L ' + torigin[0] + ' ' + torigin[1]
 
 			// Draw the lines
 			dyn_path.attr('d', tpath)
@@ -132,7 +132,7 @@ export default function() {
 			}
 
 			items.nodes().forEach(function(n) {
-				// n.__lasso.loopSelect = (isPathClosed && closePathSelect) ? (classifyPoint(drawnCoords,n.__lasso.lassoPoint) < 1) : false
+				n.__lasso.loopSelect = pointInPolygon(n.__lasso.lassoPoint, drawnCoords)
 				n.__lasso.possible = n.__lasso.hoverSelect || n.__lasso.loopSelect
 			})
 
@@ -156,13 +156,34 @@ export default function() {
 			// Run user defined end function
 			on.end()
 		}
+
+		function pointInPolygon(point, vs) {
+			let xi,
+				xj,
+				yi,
+				yj,
+				i,
+				intersect,
+				x = point[0],
+				y = point[1],
+				inside = false
+			for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+				;(xi = vs[i][0]),
+					(yi = vs[i][1]),
+					(xj = vs[j][0]),
+					(yj = vs[j][1]),
+					(intersect = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+				if (intersect) inside = !inside
+			}
+			return inside
+		}
 	}
 
 	// Set or get list of items for lasso to select
 	lasso.items = function(_) {
 		if (!arguments.length) return items
 		items = _
-		var nodes = items.nodes()
+		const nodes = items.nodes()
 		nodes.forEach(function(n) {
 			n.__lasso = {
 				possible: false,
@@ -232,7 +253,7 @@ export default function() {
 	lasso.on = function(type, _) {
 		if (!arguments.length) return on
 		if (arguments.length === 1) return on[type]
-		var types = ['start', 'draw', 'end']
+		const types = ['start', 'draw', 'end']
 		if (types.indexOf(type) > -1) {
 			on[type] = _
 		}

@@ -5,7 +5,7 @@ import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { default as d3lasso } from '../modules/lasso'
-import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
+import { zoom as d3zoom, zoomIdentity, drag as d3drag } from 'd3'
 
 /*
 obj:
@@ -554,7 +554,6 @@ function init_plot(obj) {
 			})
 		})
 
-	lasso_select(obj, dots)
 	function resetDimensions() {
 		const bbox = rootholder.getBoundingClientRect()
 		const w = (width * bbox.width) / currBbox.width
@@ -684,7 +683,8 @@ function makeConfigPanel(obj) {
 			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
 		}
 
-		svg.call(zoom)
+		if (obj.zoom_active) svg.call(zoom)
+		else svg.on('.zoom', null)
 
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 1.5)
@@ -700,6 +700,33 @@ function makeConfigPanel(obj) {
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
 		})
+	}
+
+	const lasso_btn = obj.scattersvg_buttons
+		.append('div')
+		.style('padding', '2px 5px')
+		.style('margin-top', '5px')
+		.style('border', '1px solid #999')
+		.style('color', '#999')
+		.style('background-color', '#fff')
+		.style('cursor', 'pointer')
+		.style('font-weight', '300')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.text('Lasso select')
+		.on('click', lassoToggle)
+
+	function lassoToggle() {
+		const dots = obj.dotg.selectAll('g')
+		obj.lasso_active = obj.lasso_active ? false : true
+
+		lasso_btn
+			.style('border', obj.lasso_active ? '2px solid #000' : '1px solid #999')
+			.style('color', obj.lasso_active ? '#000' : '#999')
+			.style('background-color', obj.lasso_active ? '#eee' : '#fff')
+			.style('font-weight', obj.lasso_active ? '400' : '300')
+
+		lasso_select(obj, dots)
 	}
 }
 
@@ -1049,9 +1076,11 @@ function click_dot(dot, obj) {
 
 function lasso_select(obj, dots) {
 	const svg = obj.scattersvg
+	let lasso
 
 	// Lasso functions
 	function lasso_start() {
+		if (!obj.lasso_active) return
 		lasso
 			.items()
 			.attr('r', 2)
@@ -1060,7 +1089,8 @@ function lasso_select(obj, dots) {
 			.classed('selected', false)
 	}
 
-	const lasso_draw = function() {
+	function lasso_draw() {
+		if (!obj.lasso_active) return
 		// Style the possible dots
 		lasso
 			.possibleItems()
@@ -1077,7 +1107,8 @@ function lasso_select(obj, dots) {
 		// 	.classed('possible',false)
 	}
 
-	const lasso_end = function() {
+	function lasso_end() {
+		if (!obj.lasso_active) return
 		// Reset the color of all dots
 		lasso
 			.items()
@@ -1097,37 +1128,44 @@ function lasso_select(obj, dots) {
 			.style('fill-opacity', '1')
 	}
 
-	const lasso = d3lasso()
-		.closePathSelect(true)
-		.closePathDistance(100)
-		.items(dots.selectAll('circle'))
-		.targetArea(svg)
-		.on('start', lasso_start)
-		.on('draw', lasso_draw)
-		.on('end', lasso_end)
+	if (obj.lasso_active) {
+		lasso = d3lasso()
+			.closePathSelect(true)
+			.closePathDistance(100)
+			.items(dots.selectAll('circle'))
+			.targetArea(svg)
 
-	svg.call(lasso)
+		lasso
+			.on('start', lasso_start)
+			.on('draw', lasso_draw)
+			.on('end', lasso_end)
 
-	const las = svg.select('.lasso')
+		svg.call(lasso)
 
-	las
-		.select('path')
-		.style('stroke', '#505050')
-		.style('stroke-width', '2px')
+		const las = svg.select('.lasso')
 
-	las.select('.drawn').style('fill-opacity', '.05')
+		las
+			.select('path')
+			.style('stroke', '#505050')
+			.style('stroke-width', '2px')
 
-	las
-		.select('.loop_close')
-		.style('fill', 'none')
-		.style('stroke-dasharray', '4,4')
+		las.select('.drawn').style('fill-opacity', '.05')
 
-	console.log(las.select('.loop_close'))
+		las
+			.select('.loop_close')
+			.style('fill', 'none')
+			.style('stroke-dasharray', '4,4')
 
-	las
-		.select('.origin')
-		.style('fill', '#3399FF')
-		.style('fill-opacity', '.5')
+		// console.log(las.select('.loop_close'))
+
+		las
+			.select('.origin')
+			.style('fill', '#3399FF')
+			.style('fill-opacity', '.5')
+	} else {
+		svg.selectAll('.lasso').remove()
+		svg.on('mousedown.drag', null)
+	}
 }
 
 function launch_singlesample(p) {
