@@ -1,4 +1,5 @@
 import dofetch2 from './client'
+import { check } from 'prettier'
 
 export async function init_examples(par) {
 	const { holder } = par
@@ -100,12 +101,40 @@ function make_header(div) {
 
 function make_intro(div) {
 	const intro = div.append('div')
-	intro.append('div')
+	intro.append('div').style('padding', '10px')
+
+	const intro_header = intro.append('div')
+	intro_header
+		.append('div')
+		.style('margin', '10px')
+		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+		.style('font-size', '20px')
+		.style('text-align', 'center')
+		.style('border-radius', '4px')
+		.style('color', '#324870')
+		.text('Welcome to our Examples Page!')
+
+	const lists = intro.append('div')
+	lists.append('div').html(`
+        <p>Please note the following:
+            <ul>
+                <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
+                <li>Questions? Comments? Use the Contact Us button to email the ProteinPaint team.</li>
+            </ul>
+        </p>
+        <p>Links:
+            <ul>
+                <li>Example: Opens a new tab of an embedded runproteinpaint() call in an html file.</li>
+                <li>URL: Some tracks do not require creating a new html or json file. For these tracks, a parameterized URL accesses files from the hpc. The link opens a new tab with an example of a parameterized URL.</li>
+                <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
+            </ul>
+        </p>`)
 }
 
 function make_main_grid(div) {}
 
-const link1List = document.getElementById('browserList')
+//Copied over js from here down - leave be until incorporated into working code.
+const browserList = document.getElementById('browserList')
 const experimentalList = document.getElementById('experimentalList')
 const appList = document.getElementById('appList')
 const searchBar = document.getElementById('searchBar')
@@ -149,6 +178,9 @@ function displayBrowserTracks(tracks) {
                     <li class="track">
                     <h6>${track.name}</h6>
                     ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+                    <li class="track">
+                    <h6>${track.name}</h6>
+                    ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
                     ${
 											track.buttons.example
 												? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`
@@ -171,7 +203,7 @@ function displayBrowserTracks(tracks) {
 			}
 		})
 		.join('')
-	link1List.innerHTML = htmlString
+	browserList.innerHTML = htmlString
 }
 
 function displayExperimentalTracks(tracks) {
@@ -181,6 +213,9 @@ function displayExperimentalTracks(tracks) {
 			const subheading = `${track.subheading}`
 			if (app == 'Genome Browser' && subheading == 'Experimental Tracks') {
 				return `
+                <li class="track">
+                <h6>${track.name}</h6>
+                ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
                 <li class="track">
                 <h6>${track.name}</h6>
                 ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
@@ -199,9 +234,8 @@ function displayExperimentalTracks(tracks) {
 									track.buttons.url
 										? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
 										: ''
-								}                ${
-					track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''
-				}
+								}
+                ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
                 </div>
                 </li>`
 			}
@@ -235,9 +269,8 @@ function displayAppTracks(tracks) {
 									track.buttons.url
 										? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
 										: ''
-								}                ${
-					track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''
-				}
+								}
+                ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
                 </div>
                 </li>`
 			}
