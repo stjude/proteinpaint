@@ -1,5 +1,5 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
+import tape from 'tape'
+import { select } from 'd3-selection'
 import * as client from '../../client'
 import { init_mdsjsonform } from '../../mdsjsonform'
 
@@ -22,8 +22,7 @@ import { init_mdsjsonform } from '../../mdsjsonform'
 **************************/
 
 async function getOpts(_opts = {}) {
-	const holder = d3s
-		.select('body')
+	const holder = select('body')
 		.append('div')
 		.style('position', 'relative')
 		.style('margin', '20px')
@@ -97,6 +96,7 @@ tape('Check components of mdsjson form', async test => {
 })
 
 tape('Check behavior of Example button', async test => {
+	test.timeoutAfter(3000)
 	const opts = await getOpts()
 
 	const arg = {

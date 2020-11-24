@@ -248,7 +248,7 @@ function setInteractivity(self) {
 
 	self.showTree = async holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		const termdb = await require('../termdb/app')
+		const termdb = await import('../termdb/app')
 		termdb.appInit(null, {
 			holder: self.dom.tip.d,
 			state: {

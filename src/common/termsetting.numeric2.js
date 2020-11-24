@@ -38,7 +38,7 @@ export async function setNumericMethods(self) {
 			// check if termsettingInit() was called outside of termdb/app
 			// in which case it will not have an opts.vocabApi
 			if (!self.opts.vocabApi) {
-				const vocabulary = await require('../termdb/vocabulary')
+				const vocabulary = await import('../termdb/vocabulary')
 				self.opts.vocabApi = vocabulary.vocabInit(null, { state: { vocab: self.opts.vocab } })
 			}
 			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj)
