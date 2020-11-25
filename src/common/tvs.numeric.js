@@ -530,7 +530,7 @@ export function getNumericMethods(self) {
 				if (!client.keyupEnter()) return
 				brush.stop_input.property('disabled', true)
 				try {
-					if (brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
+					if (+brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
 					update_input()
 				} catch (e) {
 					window.alert(e)

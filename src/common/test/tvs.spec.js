@@ -448,14 +448,13 @@ tape('tvs: Numerical', async test => {
 		.click()
 	await sleep(1000)
 
-	tipd.node().querySelectorAll('.start_select')[1].selectedIndex = 2
 	tipd
 		.node()
 		.querySelectorAll('.start_select')[1]
-		.dispatchEvent(new Event('change'))
-
+		.dispatchEvent(new Event('click'))
+	const start_value_premerge = tipd.node().querySelectorAll('.start_input')[0].value
 	const stop_input = tipd.node().querySelectorAll('.stop_input')[1]
-	stop_input.value = 1000
+	stop_input.value = 1050
 	//press 'Enter' to update bins
 	stop_input.addEventListener('keyup', () => {})
 	stop_input.dispatchEvent(enter_event)
@@ -467,7 +466,7 @@ tape('tvs: Numerical', async test => {
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
-			.innerHTML.includes('≤ 5000'),
+			.innerHTML.includes(' ' + start_value_premerge),
 		'should merge ranges into 1 range'
 	)
 
