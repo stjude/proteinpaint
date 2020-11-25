@@ -9,8 +9,6 @@ import { getNumericMethods } from './tvs.numeric'
 class TVS {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.genome = opts.genome
-		this.dslabel = opts.dslabel
 		this.dom = { holder: opts.holder, controlsTip: opts.controlsTip, tip: new client.Menu({ padding: '5px' }) }
 		this.durations = { exit: 0 }
 
@@ -44,8 +42,7 @@ class TVS {
 	}
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.genome) throw '.genome missing'
-		if (!o.dslabel) throw '.dslabel missing'
+		if (!o.vocabApi) throw '.vocabApi missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}

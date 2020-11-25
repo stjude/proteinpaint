@@ -4,6 +4,7 @@ import { Menu } from '../client'
 import * as dom from '../dom'
 import { TVSInit } from './tvs'
 import * as client from '../client'
+import { vocabInit } from '../termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
@@ -34,8 +35,6 @@ const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 class Filter {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.genome = opts.genome
-		this.dslabel = opts.dslabel
 		this.dom = {
 			holder: opts.holder,
 			controlsTip: new Menu({ padding: '0px' }),
@@ -93,6 +92,7 @@ class Filter {
 				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
 				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
 				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+				this.setVocabApi()
 				this.updateUI(this.dom.filterContainer, this.filter)
 			},
 			/*
@@ -110,8 +110,14 @@ class Filter {
 	}
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.genome) throw '.genome missing'
-		if (!o.dslabel) throw '.dslabel missing'
+		if (!o.vocab) throw '.vocab missing'
+
+		if (o.vocab.route) {
+			if (!o.vocab.genome) throw 'vocab.genome missing'
+			if (!o.vocab.dslabel) throw 'vocab.dslabel missing'
+		} else {
+			if (!o.vocab.terms) throw 'vocab.terms missing'
+		}
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (o.getVisibleRoot && typeof o.getVisibleRoot != 'function')
 			throw '.getVisibleRoot() must be a function if set as an option'
@@ -192,6 +198,35 @@ class Filter {
 			return getNormalRoot(parentCopy)
 		}
 	}
+	setVocabApi() {
+		if (!this.vocabApi) {
+			const app = {
+				getState: () => {
+					const filter = JSON.parse(this.rawCopy)
+					const cohortFilter = getFilterItemByTag(filter, 'cohortFilter')
+					if (cohortFilter && this.opts.termdbConfig) {
+						cohortFilter.tvs.values =
+							this.activeCohort == -1
+								? []
+								: this.opts.termdbConfig.selectCohort.values[this.activeCohort].keys.map(key => {
+										return { key, label: key }
+								  })
+					}
+
+					return {
+						vocab: this.opts.vocab,
+						termfilter: { filter }
+					}
+				}
+			}
+
+			this.vocabApi = vocabInit(app, {
+				state: app.getState()
+			})
+		}
+
+		this.vocabApi.main()
+	}
 }
 
 exports.filterInit = rx.getInitFxn(Filter)
@@ -203,7 +238,7 @@ exports.filterInit = rx.getInitFxn(Filter)
 let filterIndex = 0
 
 function setRenderers(self) {
-	self.initUI = function() {
+	self.initUI = async function() {
 		if (self.opts.newBtn) {
 			self.opts.newBtn.on('click.filter', self.displayTreeNew)
 		} else {
@@ -250,7 +285,7 @@ function setRenderers(self) {
 		]
 
 		// option to add a Replace option in the second row
-		if (self.opts.showTermSrc) {
+		if (self.opts.vocab) {
 			menuOptions.splice(1, 0, {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
@@ -484,8 +519,7 @@ function setRenderers(self) {
 				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 		} else {
 			const pill = TVSInit({
-				genome: self.genome,
-				dslabel: self.dslabel,
+				vocabApi: self.vocabApi,
 				holder,
 				debug: self.opts.debug,
 				callback: tvs => {
@@ -723,7 +757,7 @@ function setInteractivity(self) {
 	}
 
 	// menu to add a new term
-	self.displayTreeNew = function(d) {
+	self.displayTreeNew = async function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		self.dom.isNotInput.property('checked', !self.filter.in)
@@ -744,23 +778,27 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		if (self.opts.showTermSrc) {
-			self.opts.showTermSrc({
-				holder: self.dom.termSrcDiv,
-				genome: self.genome,
-				dslabel: self.dslabel,
+		const termdb = await import('../termdb/app')
+		termdb.appInit(null, {
+			holder: self.dom.termSrcDiv,
+			state: {
+				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				filter: JSON.parse(self.rawCopy),
-				// clicked_terms will typically be used to disable term selection
-				clicked_terms:
+				nav: {
+					header_mode: 'search_only'
+				},
+				termfilter: { filter: JSON.parse(self.rawCopy) }
+			},
+			tree: {
+				disable_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
 						? self.activeData.filter.lst
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
-						: [],
-				srctype: 'tvs',
-				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
-				select_callback: tvslst => {
+						: []
+			},
+			barchart: {
+				bar_click_override: tvslst => {
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 
 					if (!filterUiRoot.lst.length) {
@@ -813,14 +851,14 @@ function setInteractivity(self) {
 						}
 					}
 				}
-			})
-		}
+			}
+		})
 	}
 
 	// menu to replace a term or add a subnested filter
 	// elem: the clicked menu row option
 	// d: elem.__data__
-	self.displayTreeMenu = function(elem, d) {
+	self.displayTreeMenu = async function(elem, d) {
 		select(elem).style('background-color', MENU_OPTION_HIGHLIGHT_COLOR)
 		self.dom.holder.selectAll('.sja_filter_add_transformer').style('display', 'none')
 		const blankPill = self.dom.filterContainer.select('.sja_filter_blank_pill').node()
@@ -832,29 +870,33 @@ function setInteractivity(self) {
 		}
 		const filter = self.activeData.filter
 
-		if (self.opts.showTermSrc) {
-			self.opts.showTermSrc({
-				holder: self.dom.termSrcDiv,
-				genome: self.genome,
-				dslabel: self.dslabel,
+		const termdb = await import('../termdb/app')
+		termdb.appInit(null, {
+			holder: self.dom.termSrcDiv,
+			state: {
+				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				filter: JSON.parse(self.rawCopy),
-				// clicked_terms will typically be used to disable term selection
-				clicked_terms:
+				nav: {
+					header_mode: 'search_only'
+				},
+				termfilter: { filter: JSON.parse(self.rawCopy) }
+			},
+			tree: {
+				disable_terms:
 					filter && filter.lst && filter.join == 'and'
 						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
-						: [self.activeData.item.tvs.term.id],
-				srctype: 'tvs',
-				// call this after a user selects a term from the termSrc UI (such as the termdb tree)
-				select_callback: d.bar_click_override
+						: [self.activeData.item.tvs.term.id]
+			},
+			barchart: {
+				bar_click_override: d.bar_click_override
 					? d.bar_click_override
 					: !filter.join ||
 					  !filter.lst.length ||
 					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 					? self.appendTerm
 					: self.subnestFilter
-			})
-		}
+			}
+		})
 	}
 
 	self.editTerm = function(elem) {

@@ -27,7 +27,7 @@ tape('\n', function(test) {
 	tooltip or menu that is launched by this mds2 track.
 
 */
-tape('AF Test: term tree menu (must be an isolated test for now!)', async test => {
+tape.skip('AF Test: term tree menu (must be an isolated test for now!)', async test => {
 	const holder = document.body.appendChild(document.createElement('div'))
 	runproteinpaint({
 		holder,

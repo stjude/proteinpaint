@@ -47,8 +47,7 @@ class TdbFilter {
 	initFilter() {
 		// only call in main(), requires this.state{}
 		this.filterApi = filterInit({
-			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
+			vocab: this.state.vocab,
 			nav: this.state.nav,
 			holder: this.dom.filterDiv,
 			debug: this.app.opts.debug,

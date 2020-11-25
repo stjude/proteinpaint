@@ -187,6 +187,27 @@ class TermdbVocab {
 		// term.isgenotype??
 		return graphableTypes.has(term.type)
 	}
+
+	async getCategories(term, filter, lst = null) {
+		const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}
+	}
 }
 
 // to-do

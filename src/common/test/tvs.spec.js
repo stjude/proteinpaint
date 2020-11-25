@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
+const vocabInit = require('../../termdb/vocabulary').vocabInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -23,13 +24,44 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'SJLife' }
 
 	opts.filter = filterInit({
+		vocab,
+		termdbConfig: {
+			selectCohort: {
+				term: { id: 'subcohort', type: 'categorical' },
+				showMessageWhenNotSelected:
+					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				values: [
+					{
+						keys: ['SJLIFE'],
+						label: 'St. Jude Lifetime Cohort (SJLIFE)',
+						shortLabel: 'SJLIFE',
+						isdefault: true,
+						cssSelector: 'tbody > tr > td:nth-child(2)'
+					},
+					{
+						keys: ['CCSS'],
+						label: 'Childhood Cancer Survivor Study (CCSS)',
+						shortLabel: 'CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(3)'
+					},
+					{
+						keys: ['SJLIFE', 'CCSS'],
+						label: 'Combined SJLIFE+CCSS',
+						shortLabel: 'SJLIFE+CCSS',
+						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)'
+					}
+				],
+				highlightCohortBy: 'cssSelector',
+				htmlinfo:
+					'<table>\n<thead>\n  <tr>\n    <td>Features</td>\n\t<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>\n\t<td>Childhood Cancer Survivor Study (CCSS)</td>\n  </tr>\n</thead>\n<tbody>\n  <tr>\n    <td>Survivors on Portal</td>\n\t<td>4528</td>\n\t<td>2641</td>\n  </tr>\n  <tr>\n\t<td>Years of cancer diagnosis</td>\n\t<td>1962-2012</td>\n\t<td>1987-1999 ("Expanded Cohort")</td>\n  </tr>\n  <tr>\n\t<td>Inclusion criteria</td>\n\t<td>Survived &ge; 5 years from diagnosis</td>\n\t<td>Survived &ge; 5 years from diagnosis</td>\n  </tr>\n  <tr>\n\t<td>Age at cancer diagnosis</td>\n\t<td><25 years</td>\n\t<td><21 years</td>\n  </tr>\n  <tr>\n\t<td>Cancer diagnosis</td>\n\t<td>All diagnoses</td>\n\t<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>\n  </tr>\n  <tr>\n\t<td>Study design</td>\n\t<td>Retrospective cohort with prospective follow-up, hospital-based</td>\n\t<td>Retrospective cohort with prospective follow-up, hospital-based</td>\n  </tr>\n  <tr>\n\t<td>Methods of contact</td>\n\t<td>Clinic visits and surveys</td>\n\t<td>Surveys</td>\n  </tr>\n  <tr>\n\t<td>Source of sequenced germline DNA</td>\n\t<td>Blood</td>\n\t<td>Saliva or blood</td>\n  </tr>\n  <tr>\n\t<td>Therapeutic exposures</td>\n\t<td>Chemotherapy, radiation, surgery</td>\n\t<td>Chemotherapy, radiation, surgery</td>\n  </tr>\n  <tr>\n\t<td>Methods for ascertainment of outcomes</td>\n\t<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>\n\t<td>Self-report, pathology reports (secondary neoplasm), NDI</td>\n  </tr>\n</tbody>\n</table>'
+			}
+		},
 		btn: holder.append('div'),
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
-		genome: 'hg38',
-		dslabel: 'SJLife',
 		debug: true,
 		callback: function(filter) {
 			opts.filterData = filter
@@ -152,7 +184,7 @@ tape('tvs: Categorical', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(700)
+	await sleep(1000)
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
@@ -423,7 +455,7 @@ tape('tvs: Numerical', async test => {
 		.dispatchEvent(new Event('change'))
 
 	const stop_input = tipd.node().querySelectorAll('.stop_input')[1]
-	stop_input.value = 5000
+	stop_input.value = 1000
 	//press 'Enter' to update bins
 	stop_input.addEventListener('keyup', () => {})
 	stop_input.dispatchEvent(enter_event)
@@ -699,21 +731,21 @@ tape('tvs: Cohort + Numerical', async test => {
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
-	await sleep(200)
+	await sleep(400)
 	// remember the density data for comparison later
 	const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
 
-	opts.filter.Inner.opts.activeCohort = 2
+	opts.filter.Inner.opts.activeCohort = 1
 	const selectElem = opts.filter.Inner.dom.holder.select('select')
 	selectElem
-		.property('value', 2)
+		.property('value', 1)
 		.on('change')
 		.call(selectElem.node())
-	await sleep(200)
+	await sleep(400)
 	// trigger fill-in of pill.num_obj.density_data
 	pill.click()
 	editOpt.node().click()
-	await sleep(200)
+	await sleep(400)
 
 	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
 	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')

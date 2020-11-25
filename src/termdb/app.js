@@ -108,31 +108,3 @@ function setInteractivity(self) {
 
 	self.showTermSrc = showTermSrc
 }
-
-export function showTermSrc({
-	srctype,
-	holder,
-	genome,
-	dslabel,
-	activeCohort,
-	filter,
-	clicked_terms,
-	select_callback
-}) {
-	exports.appInit(null, {
-		holder,
-		state: {
-			genome,
-			dslabel,
-			activeCohort,
-			nav: {
-				header_mode: 'search_only'
-			},
-			termfilter: { filter }
-		},
-		tree: { disable_terms: clicked_terms },
-		barchart: {
-			bar_click_override: select_callback
-		}
-	})
-}

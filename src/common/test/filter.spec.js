@@ -39,15 +39,13 @@ function getOpts(_opts = {}) {
 		_opts
 	)
 
-	const genome = 'hg38'
-	const dslabel = 'SJLife'
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'SJLife' }
 
 	opts.filter = filterInit({
 		btn: holder.append('div'),
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
-		genome,
-		dslabel,
+		vocab,
 		nav: opts.nav,
 		termdbConfig: opts.termdbConfig,
 		debug: true,
@@ -549,8 +547,14 @@ tape('pill Edit interaction', async test => {
 		'none',
 		'should display the tree tip when clicking the edit option'
 	)
+	await sleep(120)
+	test.equal(
+		opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.apply_btn').length,
+		1,
+		'should display an apply button in the edit menu'
+	)
 
-	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	//document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
 	test.end()
 })
 
