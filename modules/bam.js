@@ -251,7 +251,8 @@ async function get_pileup(q, req, templates) {
 			.toUpperCase()
 
 		const bplst = await run_sambamba(q, r, ref_seq, zoom_cutoff)
-		//console.log("bplst length:",bplst.length)
+		//const bplst2=await run_samtools_mpileup(q, r, ref_seq, zoom_cutoff)
+		//console.log("bplst2:",bplst2)
 		//console.log("softclip_pileup_lst length:",softclip_pileup_lst.length)
 
 		// each ele is {}
@@ -621,6 +622,123 @@ function query_region(r, q) {
 		})
 	})
 }
+
+function run_samtools_mpileup(q, r, ref_seq, zoom_cutoff) {
+	// function for creating the
+	const bplst = []
+	return new Promise((resolve, reject) => {
+		console.log(
+			'samtools mpileup ' +
+			(q.file || q.url) +
+			' -f ' +
+			'/Users/rpaul1/docker/local/hg19_nochr.fasta ' + // q.genome.genomefile + ' ' + //
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
+				':' +
+				r.start +
+				'-' +
+				r.stop
+		)
+		const ls = spawn(
+			samtools,
+			[
+				'mpileup',
+				q.file || q.url,
+				'-f',
+				'/Users/rpaul1/docker/local/hg19_nochr.fasta', // Need to look into compatibility of reference genome q.genome.genomefile,//
+				'-r',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ls.stdout })
+		let first = true
+		let consensus_seq = ''
+		rl.on('line', line => {
+			console.log(line)
+			const columns = line.split('\t')
+			const total = Number.parseInt(columns[3])
+			const base_string = columns[4]
+			let A = 0
+			let T = 0
+			let C = 0
+			let G = 0
+			let ref = 0
+			//Check to see if there are any insertions/deletions in the base string
+			if (base_string.includes('+') || base_string.includes('-')) {
+				console.log('Insertion or deletion at ', columns[1])
+				let ins_del = 0
+				for (let i = 0; i < base_string.length; i++) {
+					if (base_string.charAt(i) == '+' || base_string.charAt(i) == '-') {
+						ins_del = 1
+					}
+					if (ins_del == 1 && base_string.charAt(i) == ',') {
+						ins_del = 0
+					}
+					if (ins_del == 0 && (base_string.charAt(i) == 'A' || base_string.charAt(i) == 'a')) {
+						A += 1
+					}
+					if (ins_del == 0 && (base_string.charAt(i) == 'T' || base_string.charAt(i) == 't')) {
+						T += 1
+					}
+					if (ins_del == 0 && (base_string.charAt(i) == 'C' || base_string.charAt(i) == 'c')) {
+						C += 1
+					}
+					if (ins_del == 0 && (base_string.charAt(i) == 'G' || base_string.charAt(i) == 'g')) {
+						G += 1
+					}
+				}
+				ref = total - A - T - C - G
+			} else {
+				A = countString(base_string, 'A') + countString(base_string, 'a')
+				T = countString(base_string, 'T') + countString(base_string, 't')
+				C = countString(base_string, 'C') + countString(base_string, 'c')
+				G = countString(base_string, 'G') + countString(base_string, 'g')
+				ref = total - A - T - C - G
+			}
+
+			const bp = {
+				total: total,
+				position: parseInt(columns[1]) - 2
+			}
+			if (r.ntwidth > zoom_cutoff) {
+				bp.A = A
+				bp.T = T
+				bp.C = C
+				bp.G = G
+				bp.ref = ref
+			}
+			bplst.push(bp)
+		})
+		rl.on('close', () => {
+			//console.log('con_seq:', consensus_seq)
+			//console.log('ref_seq:', ref_seq)
+			resolve(bplst)
+		})
+	})
+}
+
+function countString(str, letter) {
+	let count = 0
+
+	// looping through the items
+	for (let i = 0; i < str.length; i++) {
+		// check if the character is at that position
+		if (str.charAt(i) == letter) {
+			count += 1
+		}
+	}
+	return count
+}
+
+//function countString(str, letter) {
+//
+//    // creating regex
+//    const re = new RegExp(letter, 'g')
+//
+//    // matching the pattern
+//    return str.match(re).length
+//
+//}
 
 function run_sambamba(q, r, ref_seq, zoom_cutoff) {
 	// function for creating the
