@@ -206,7 +206,7 @@ class Filter {
 					const cohortFilter = getFilterItemByTag(filter, 'cohortFilter')
 					if (cohortFilter && this.opts.termdbConfig) {
 						cohortFilter.tvs.values =
-							this.activeCohort == -1
+							this.activeCohort == -1 || this.activeCohort === undefined
 								? []
 								: this.opts.termdbConfig.selectCohort.values[this.activeCohort].keys.map(key => {
 										return { key, label: key }

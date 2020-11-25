@@ -51,9 +51,9 @@ will include tk.vcf.plot_mafcov.overlay_term
 			.style('margin-bottom', '10px')
 			.html('Overlay term&nbsp;')
 
-		const tsholder = row.append('div')
 		const api = termsettingInit({
-			holder: tsholder,
+			$id: 'sja-pp-block-' + block.blockId + '-' + block.tklst.findIndex(t => t == tk) + '-mavcovplot',
+			holder: row.append('div'),
 			vocab: {
 				route: 'termdb',
 				genome: obj.block.genome.name,

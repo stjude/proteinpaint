@@ -66,8 +66,15 @@ const ntpxwidth = 20 // max allowed pixel width for a nt
 const hlregioncolor = '#ccffff' // default color
 const rulergrabzindex = 1000
 
+let blockId = 1
+
 export class Block {
 	constructor(arg) {
+		/*** NOTE: This block instance is returned when calling runproteinpaint({block: true, ....}) ***/
+
+		// assign a blockId to help in targeted DOM selection, in testing and maybe live usage.
+		this.blockId = blockId++
+
 		// temp fix, to use in dofetch2( {serverData} )
 		this.cache = {}
 

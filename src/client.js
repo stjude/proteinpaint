@@ -741,6 +741,10 @@ export function newpane(pm) {
 		.style('top', pm.y + window.pageYOffset + 'px')
 		.style('opacity', 0)
 
+	if (pm.$id) {
+		pp.pane.attr('id', pm.$id)
+	}
+
 	if (base_zindex) {
 		// fixed, from embedding instructions
 		pp.pane.style('z-index', base_zindex)

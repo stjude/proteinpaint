@@ -486,8 +486,11 @@ function show_group_termdb(group, tk, block) {
 	if (!group.filterApi) {
 		group.filterApi = filterInit({
 			holder: group.dom.td3,
-			genome: block.genome.name,
-			dslabel: tk.dslabel,
+			vocab: {
+				route: 'termdb',
+				genome: block.genome.name,
+				dslabel: tk.dslabel
+			},
 			emptyLabel: 'Entire cohort',
 			termdbConfig: block.genome.datasets[tk.dslabel].termdb,
 			callback: async f => {

@@ -109,6 +109,10 @@ exports.termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		if (self.opts.$id) {
+			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
+		}
+
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')

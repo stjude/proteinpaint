@@ -27,9 +27,9 @@ tape('\n', function(test) {
 	tooltip or menu that is launched by this mds2 track.
 
 */
-tape.skip('AF Test: term tree menu (must be an isolated test for now!)', async test => {
+tape('AF Test: term tree menu', async test => {
 	const holder = document.body.appendChild(document.createElement('div'))
-	runproteinpaint({
+	const pp = await runproteinpaint({
 		holder,
 		noheader: 1,
 
@@ -204,7 +204,7 @@ tape.skip('AF Test: term tree menu (must be an isolated test for now!)', async t
 	await sleep(300)
 	const circle = holder.querySelector('.sja_aa_disckick')
 	circle.dispatchEvent(new Event('click'))
-	const pane = document.body.querySelector('.sja_pane')
+	const pane = document.body.querySelector('#sja-pp-block-' + pp.block.blockId + '-0-vcf_clickvariant')
 	await sleep(400) //; console.log(document.body.querySelector('.sja_pane'), [...document.body.querySelector('.sja_pane').querySelectorAll('.sja_menuoption')])
 	const clininfobtn = [...pane.querySelectorAll('.sja_menuoption')].find(elem => elem.innerText == 'Clinical info')
 	if (!clininfobtn) test.fail('should have clinical info button')
@@ -229,8 +229,7 @@ tape.skip('AF Test: term tree menu (must be an isolated test for now!)', async t
 		else {
 			selecttermbtn.click()
 			await sleep(300)
-			const menudivs = [...document.body.querySelectorAll('.sja_menu_div')]
-			const treemenu = menudivs.find(elem => elem.querySelectorAll('.termdiv').length > 0)
+			const treemenu = document.body.querySelector('#sja-pp-block-' + pp.block.blockId + '-0-mavcovplot-ts-tip')
 			if (!treemenu) test.fail('should have a tree menu for the Coverage-MAV plot')
 			else {
 				test.equal(
