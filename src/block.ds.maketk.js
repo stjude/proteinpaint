@@ -30,7 +30,6 @@ dsmaketk()
 
 label_mcount_fillpane()
 label_strat_fillpane()
-label_strat_fillpane_server
 
 mlstfilter() 
 
@@ -51,29 +50,6 @@ export default function dsmaketk(tk, block) {
 	legend
 
 	*/
-
-	if (tk.ds.variant2samples) {
-		tk.ds.variant2samples.get = async mlst => {
-			/*
-			TODO support alternative methods
-			where all data are hosted on client
-			*/
-
-			// hardcode to getsummary and using fixed levels
-			const par = [
-				'genome=' + block.genome.name,
-				'dsname=' + tk.ds.label,
-				'levels=' + JSON.stringify(tk.ds.variant2samples.levels),
-				'getsummary=1'
-			]
-			if (tk.ds.variant2samples.variantkey == 'ssm_id') {
-				par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
-			} else {
-				throw 'unknown variantkey'
-			}
-			return await client.dofetch2('variant2samples?' + par.join('&'), {}, { serverData: block.cache })
-		}
-	}
 
 	tk.labyspace = 5 // must kept with tk: will be used by ds.numericmode
 
@@ -681,12 +657,6 @@ function label_mcount_fillpane(tk, block, handle, tip) {
 function label_strat_fillpane(tk, block, strat, tip) {
 	tip.clear()
 
-	if (strat.byserver) {
-		// query server to compute stratification
-		label_strat_fillpane_server(tk, block, strat, tip)
-		return
-	}
-
 	// compute stratification on client
 
 	const mlst = mlstfilter(tk, block)
@@ -784,59 +754,6 @@ function label_strat_fillpane(tk, block, strat, tip) {
 		})
 	})
 	tip.showunder(strat.svglabel.node())
-}
-
-async function label_strat_fillpane_server(tk, block, strat, tip) {
-	tip.showunder(strat.svglabel.node())
-	const wait = tip.d.append('div').text('Loading...')
-	const par = [
-		'genome=' + block.genome.name,
-		'dsname=' + tk.ds.label,
-		'isoform=' + block.usegm.isoform,
-		'stratify=' + strat.label
-	]
-	try {
-		const data = await client.dofetch2('dsvariantsummary?' + par.join('&'), {}, { serverData: block.cache })
-		if (data.error) throw data.error
-		wait.remove()
-
-		const table = tip.d.append('table')
-		// 4 columns
-		const tr = table
-			.append('tr')
-			.style('font-size', '.9em')
-			.style('color', '#858585')
-		tr.append('td').text(strat.label.toUpperCase())
-		if (data.items[0].cohortsize != undefined) {
-			tr.append('td').text('%')
-		}
-		tr.append('td') // mcount total
-		tr.append('td').text('MUTATIONS')
-		for (const item of data.items) {
-			const tr = table.append('tr').attr('class', 'sja_clb')
-			tr.append('td').text(item.name)
-			if (item.cohortsize != undefined) {
-				client.fillbar(
-					tr.append('td'),
-					{ f: item.count / item.cohortsize, v1: item.count, v2: item.cohortsize },
-					{ fillbg: '#ECE5FF', fill: '#9F80FF' }
-				)
-			}
-			tr.append('td')
-				.text(item.count)
-				.style('font-size', '.7em')
-			const td = tr.append('td')
-			for (const [mclass, count] of item.m2c) {
-				td.append('span')
-					.html(count == 1 ? '&nbsp;' : count)
-					.style('background-color', common.mclass[mclass].color)
-					.attr('class', 'sja_mcdot')
-			}
-		}
-	} catch (e) {
-		wait.text('Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
 }
 
 function ctrlui_vcfinfofilter(tk, block) {
