@@ -167,7 +167,7 @@ app.post('/tkbigwig', handle_tkbigwig)
 
 app.get('/tabixheader', handle_tabixheader)
 app.post('/snp', handle_snpbycoord)
-app.post('/clinvarVCF', handle_clinvarVCF)
+app.get('/clinvarVCF', handle_clinvarVCF)
 app.post('/isoformlst', handle_isoformlst)
 app.post('/dbdata', handle_dbdata)
 app.post('/img', handle_img)
@@ -1122,52 +1122,51 @@ function handle_snpbycoord(req, res) {
 	res.send({ results: hits })
 }
 
-function handle_clinvarVCF(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
+async function handle_clinvarVCF(req, res) {
+	log(req)
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'unknown genome'
 		if (!g.clinvarVCF) throw 'no clinvar for this genome'
-
-		const ps = spawn(tabix, [
-			g.clinvarVCF.file,
-			(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) +
-				':' +
-				req.query.pos +
-				'-' +
-				(req.query.pos + 1)
-		])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.on('close', () => {
-			const str = out.join('').trim()
-			if (!str) {
-				res.send({})
-				return
-			}
-			for (const line of str.split('\n')) {
+		const pos = Number(req.query.pos)
+		if (!Number.isInteger(pos)) throw 'pos is not integer'
+		if (pos < 0) throw 'pos is not positive integer'
+		if (!req.query.chr) throw 'chr missing'
+		{
+			const c = g.chrlookup[req.query.chr.toUpperCase()]
+			if (!c) throw 'invalid chr'
+			if (pos > c.len) throw 'pos out of bound'
+		}
+		let m
+		await utils.get_lines_tabix(
+			[
+				g.clinvarVCF.file,
+				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
+			],
+			null,
+			line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
-				for (const m of mlst) {
-					if (m.pos == req.query.pos && m.ref == req.query.ref && m.alt == req.query.alt) {
+				for (const m0 of mlst) {
+					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
 						// match
-						const k = m.info[g.clinvarVCF.infokey]
-						const v = g.clinvarVCF.categories[k]
-						res.send({
-							hit: {
-								id: m.vcf_ID,
-								value: v ? v.label : k,
-								bg: v ? v.color : '#858585',
-								textcolor: v && v.textcolor ? v.textcolor : 'black'
-							}
-						})
-						return
+						m = m0
 					}
 				}
 			}
-			res.send({})
+		)
+		if (!m) return res.send({})
+		const k = m.info[g.clinvarVCF.infokey]
+		const v = g.clinvarVCF.categories[k]
+		res.send({
+			hit: {
+				id: m.vcf_ID,
+				value: v ? v.label : k,
+				bg: v ? v.color : '#858585',
+				textcolor: v && v.textcolor ? v.textcolor : 'black'
+			}
 		})
 	} catch (e) {
+		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
 }
@@ -9702,6 +9701,11 @@ async function pp_init() {
 			g.majorchr = hash
 			g.majorchrorder = chrorder
 		}
+		g.chrlookup = {}
+		// k: uppercase chr, v: {name:str, len:int, major:bool}
+		for (const n in g.majorchr) {
+			g.chrlookup[n.toUpperCase()] = { name: n, len: g.majorchr[n], major: true }
+		}
 		if (g.minorchr) {
 			if (typeof g.minorchr == 'string') {
 				const lst = g.minorchr.trim().split(/[\s\t\n]+/)
@@ -9712,6 +9716,9 @@ async function pp_init() {
 					hash[lst[i]] = c
 				}
 				g.minorchr = hash
+			}
+			for (const n in g.minorchr) {
+				g.chrlookup[n.toUpperCase()] = { name: n, len: g.minorchr[n] }
 			}
 		}
 
