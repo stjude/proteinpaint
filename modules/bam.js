@@ -207,7 +207,6 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = require('./serverconfig')
 const samtools = serverconfig.samtools || 'samtools'
-const sambamba = serverconfig.sambamba || 'sambamba'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -243,17 +242,9 @@ async function get_pileup(q, req, templates) {
 	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 
 	for (const r of q.regions) {
-		// seq may already have been retrieved for the region
-		const ref_seq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
-			.split('\n')
-			.slice(1)
-			.join('')
-			.toUpperCase()
-
-		const bplst = await run_sambamba(q, r, ref_seq, zoom_cutoff)
-		//const bplst2=await run_samtools_mpileup(q, r, ref_seq, zoom_cutoff)
+		const bplst = await run_samtools_depth(q, r)
 		//console.log("bplst2:",bplst2)
-		//console.log("softclip_pileup_lst length:",softclip_pileup_lst.length)
+		//console.log("softclip_pileup_lst length:",pileup_output.softclip_pileup_lst.length)
 
 		// each ele is {}
 		// .position
@@ -266,7 +257,7 @@ async function get_pileup(q, req, templates) {
 		const sf = pileup_height / maxValue
 		let i = 0
 		if (r.ntwidth > zoom_cutoff) {
-			const softclip_pileup_lst = softclip_pileup(r, templates)
+			softclip_mismatch_pileup(r, templates, bplst)
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				//y = (maxValue-bp.total)*sf
@@ -297,9 +288,9 @@ async function get_pileup(q, req, templates) {
 					y += h
 				}
 				// Rendering soft clips
-				{
+				if (bp.softclip) {
 					ctx.fillStyle = 'rgb(70,130,180)'
-					const h = softclip_pileup_lst[i] * sf
+					const h = bp.softclip * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
@@ -329,19 +320,13 @@ async function get_pileup(q, req, templates) {
 	q.pileup_data = pileup_data
 }
 
-function softclip_pileup(r, templates) {
-	//console.log("templates:",templates)
-
-	// Initializing softclipped array
-	let softclipped_pileup = []
-	for (let i = 0; i <= parseInt(r.stop) - parseInt(r.start); i++) {
-		softclipped_pileup.push(0)
-	}
-	//console.log("softclipped_pileup length:",softclipped_pileup.length)
+function softclip_mismatch_pileup(r, templates, bplst) {
+	console.log('bplst[0].position:', bplst[0].position)
+	console.log('r.start:', r.start)
 	let bp_iter = 0
 	for (const template of templates) {
 		let prev = ''
-		bp_iter = parseInt(template.segments[0].segstart) - parseInt(r.start) + 1 // Records position in the view range
+		bp_iter = parseInt(template.segments[0].segstart) - parseInt(bplst[0].position) - 1 // Records position in the view range
 		let first_element_of_cigar = 1
 		for (let i = 0; i < template.segments[0].cigarstr.length; i++) {
 			const cigar = template.segments[0].cigarstr[i]
@@ -371,11 +356,15 @@ function softclip_pileup(r, templates) {
 					if (j < 0) {
 						continue
 					} // When a read starts before the current view range
-					else if (j > softclipped_pileup.length - 1) {
+					else if (j > parseInt(r.stop) - parseInt(bplst[0].position) - 2) {
 						break
 					} // When a read extends beyond current view range
 					else {
-						softclipped_pileup[j] += 1
+						if (!bplst[j].softclip) {
+							bplst[j].softclip = 1
+						} else {
+							bplst[j].softclip += 1
+						}
 					}
 				}
 				bp_iter += parseInt(prev)
@@ -387,8 +376,56 @@ function softclip_pileup(r, templates) {
 				prev = ''
 			}
 		}
+
+		for (let i = 0; i < template.segments[0].boxes.length; i++) {
+			if (template.segments[0].boxes[i].opr == 'X') {
+				//console.log("template.segments[0].boxes[i]:",template.segments[0].boxes[i])
+				bp_iter = parseInt(template.segments[0].boxes[i].start) - parseInt(bplst[0].position) - 1 // Records position in the view range
+				//console.log("r.start:",r.start)
+				//console.log("bp_iter:",bp_iter)
+				if (bp_iter >= 0 && parseInt(r.stop) - parseInt(bplst[0].position) - 2 >= bp_iter) {
+					// Checking to see if the variant is within the view range
+					if (template.segments[0].boxes[i].s == 'A') {
+						if (!bplst[bp_iter].A) {
+							bplst[bp_iter].A = 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						} else {
+							bplst[bp_iter].A += 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						}
+					}
+					if (template.segments[0].boxes[i].s == 'T') {
+						if (!bplst[bp_iter].T) {
+							bplst[bp_iter].T = 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						} else {
+							bplst[bp_iter].T += 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						}
+					}
+					if (template.segments[0].boxes[i].s == 'C') {
+						if (!bplst[bp_iter].C) {
+							bplst[bp_iter].C = 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						} else {
+							bplst[bp_iter].C += 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						}
+					}
+					if (template.segments[0].boxes[i].s == 'G') {
+						if (!bplst[bp_iter].G) {
+							bplst[bp_iter].G = 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						} else {
+							bplst[bp_iter].G += 1
+							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						}
+					}
+				}
+			}
+		}
 	}
-	return softclipped_pileup
+	//return pileup_output
 }
 
 function drawLine(ctx, startX, startY, endX, endY, color) {
@@ -623,15 +660,14 @@ function query_region(r, q) {
 	})
 }
 
-function run_samtools_mpileup(q, r, ref_seq, zoom_cutoff) {
+function run_samtools_depth(q, r) {
 	// function for creating the
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		console.log(
-			'samtools mpileup ' +
-			(q.file || q.url) +
-			' -f ' +
-			'/Users/rpaul1/docker/local/hg19_nochr.fasta ' + // q.genome.genomefile + ' ' + //
+			'samtools depth ' +
+				(q.file || q.url) +
+				' -r ' +
 				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
 				':' +
 				r.start +
@@ -640,131 +676,7 @@ function run_samtools_mpileup(q, r, ref_seq, zoom_cutoff) {
 		)
 		const ls = spawn(
 			samtools,
-			[
-				'mpileup',
-				q.file || q.url,
-				'-f',
-				'/Users/rpaul1/docker/local/hg19_nochr.fasta', // Need to look into compatibility of reference genome q.genome.genomefile,//
-				'-r',
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-			],
-			{ cwd: q.dir }
-		)
-		const rl = readline.createInterface({ input: ls.stdout })
-		let first = true
-		let consensus_seq = ''
-		rl.on('line', line => {
-			console.log(line)
-			const columns = line.split('\t')
-			const total = Number.parseInt(columns[3])
-			const base_string = columns[4]
-			let A = 0
-			let T = 0
-			let C = 0
-			let G = 0
-			let ref = 0
-			//Check to see if there are any insertions/deletions in the base string
-			if (base_string.includes('+') || base_string.includes('-')) {
-				console.log('Insertion or deletion at ', columns[1])
-				let ins_del = 0
-				for (let i = 0; i < base_string.length; i++) {
-					if (base_string.charAt(i) == '+' || base_string.charAt(i) == '-') {
-						ins_del = 1
-					}
-					if (ins_del == 1 && base_string.charAt(i) == ',') {
-						ins_del = 0
-					}
-					if (ins_del == 0 && (base_string.charAt(i) == 'A' || base_string.charAt(i) == 'a')) {
-						A += 1
-					}
-					if (ins_del == 0 && (base_string.charAt(i) == 'T' || base_string.charAt(i) == 't')) {
-						T += 1
-					}
-					if (ins_del == 0 && (base_string.charAt(i) == 'C' || base_string.charAt(i) == 'c')) {
-						C += 1
-					}
-					if (ins_del == 0 && (base_string.charAt(i) == 'G' || base_string.charAt(i) == 'g')) {
-						G += 1
-					}
-				}
-				ref = total - A - T - C - G
-			} else {
-				A = countString(base_string, 'A') + countString(base_string, 'a')
-				T = countString(base_string, 'T') + countString(base_string, 't')
-				C = countString(base_string, 'C') + countString(base_string, 'c')
-				G = countString(base_string, 'G') + countString(base_string, 'g')
-				ref = total - A - T - C - G
-			}
-
-			const bp = {
-				total: total,
-				position: parseInt(columns[1]) - 2
-			}
-			if (r.ntwidth > zoom_cutoff) {
-				bp.A = A
-				bp.T = T
-				bp.C = C
-				bp.G = G
-				bp.ref = ref
-			}
-			bplst.push(bp)
-		})
-		rl.on('close', () => {
-			//console.log('con_seq:', consensus_seq)
-			//console.log('ref_seq:', ref_seq)
-			resolve(bplst)
-		})
-	})
-}
-
-function countString(str, letter) {
-	let count = 0
-
-	// looping through the items
-	for (let i = 0; i < str.length; i++) {
-		// check if the character is at that position
-		if (str.charAt(i) == letter) {
-			count += 1
-		}
-	}
-	return count
-}
-
-//function countString(str, letter) {
-//
-//    // creating regex
-//    const re = new RegExp(letter, 'g')
-//
-//    // matching the pattern
-//    return str.match(re).length
-//
-//}
-
-function run_sambamba(q, r, ref_seq, zoom_cutoff) {
-	// function for creating the
-	const bplst = []
-	return new Promise((resolve, reject) => {
-		//		console.log(
-		//			'sambamba depth base ' +
-		//				(q.file || q.url) +
-		//				' -L ' +
-		//				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
-		//				':' +
-		//				r.start +
-		//				'-' +
-		//				r.stop
-		//		)
-
-		const ls = spawn(
-			sambamba,
-			[
-				'depth',
-				'base',
-				q.file || q.url,
-				'-L',
-				'--min-coverage=0',
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-			],
+			['depth', q.file || q.url, '-r', (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 			{ cwd: q.dir }
 		)
 		const rl = readline.createInterface({ input: ls.stdout })
@@ -772,60 +684,15 @@ function run_sambamba(q, r, ref_seq, zoom_cutoff) {
 		let consensus_seq = ''
 		rl.on('line', line => {
 			//console.log(line)
-			if (first) {
-				first = false
-				return
-			}
 			const columns = line.split('\t')
-			const position = Number.parseInt(columns[1]) - 1
-			const ref = ref_seq[position - r.start + 2]
-			const A = Number.parseInt(columns[3])
-			const C = Number.parseInt(columns[4])
-			const G = Number.parseInt(columns[5])
-			const T = Number.parseInt(columns[6])
-
-			//const maxValue = Math.max(A, C, G, T)
-			//if (maxValue == A) {
-			//	consensus_seq += 'A'
-			//} else if (maxValue == C) {
-			//	consensus_seq += 'C'
-			//} else if (maxValue == T) {
-			//	consensus_seq += 'T'
-			//} else if (maxValue == G) {
-			//	consensus_seq += 'G'
-			//}
-
 			const bp = {
 				total: Number.parseInt(columns[2]),
-				position
-			}
-			if (r.ntwidth > zoom_cutoff) {
-				if (ref != 'A') {
-					bp.A = A
-				} else {
-					bp.ref = A
-				} //A &&
-				if (ref != 'T') {
-					bp.T = T
-				} else {
-					bp.ref = T
-				} //T &&
-				if (ref != 'C') {
-					bp.C = C
-				} else {
-					bp.ref = C
-				} //C &&
-				if (ref != 'G') {
-					bp.G = G
-				} else {
-					bp.ref = G
-				} //G &&
+				position: parseInt(columns[1]) - 2,
+				ref: Number.parseInt(columns[2])
 			}
 			bplst.push(bp)
 		})
 		rl.on('close', () => {
-			//console.log('con_seq:', consensus_seq)
-			//console.log('ref_seq:', ref_seq)
 			resolve(bplst)
 		})
 	})
@@ -855,6 +722,7 @@ async function may_checkrefseq4mismatch(templates, q) {
 				}
 			}
 			if (mismatches.length) segment.boxes.push(...mismatches)
+			//console.log("segment.boxes:",segment.boxes)
 		}
 	}
 	// attr no longer needed
