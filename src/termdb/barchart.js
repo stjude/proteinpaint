@@ -87,6 +87,11 @@ class TdbBarchart {
 		if (data) this.currServerData = data
 		this.config = this.state.config
 		if (!this.setVisibility()) return
+		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
+			for (const q of this.currServerData.refs.q) {
+				if (q.error) throw q.error //console.log(89, data.refs.q)
+			}
+		}
 		this.updateSettings(this.config)
 		this.chartsData = this.processData(this.currServerData)
 		this.render()

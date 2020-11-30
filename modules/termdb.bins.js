@@ -201,7 +201,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	}
 
 	if (!isNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
-	const maxNumBins = 50 // harcoded limit for now to not stress sqlite
+	const maxNumBins = 100 // harcoded limit for now to not stress sqlite
 
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
 		currBin.label = get_bin_label(currBin, bc)
