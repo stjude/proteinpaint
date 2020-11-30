@@ -1156,59 +1156,6 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 	}
 })
 
-tape('max number of bins: below', test => {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state: {
-			tree: {
-				expandedTermIds: ['root', 'Genomic Profiling Status', 'wgs_sample_age'],
-				visiblePlotIds: ['wgs_sample_age'],
-				plots: {
-					wgs_sample_age: {
-						term: {
-							term: {
-								id: 'wgs_sample_age'
-							},
-							q: {
-								type: 'regular',
-								bin_size: 1,
-								stopinclusive: true,
-								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-								numDecimals: 1,
-								last_bin: { start: 50, bin: 'last', stopunbounded: true },
-								startinclusive: false
-							}
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
-				}
-			}
-		},
-		plot: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	let barDiv
-	function runTests(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
-			.run(testBarCount)
-			.done(test)
-	}
-
-	function testBarCount(plot) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 48, 'should have 48 age bars')
-	}
-})
-
 tape('max number of bins: exceeded', test => {
 	test.timeoutAfter(3000)
 
