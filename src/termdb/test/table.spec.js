@@ -14,6 +14,10 @@ const runpp = helpers.getRunPp('termdb', {
 	debug: 1
 })
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**************
  test sections
 ***************/
@@ -99,5 +103,49 @@ tape('default behavior', function(test) {
 			table.data.refs.rows.length,
 			'table columns should match the number of series.data entries'
 		)
+	}
+})
+
+tape('column labels', function(test) {
+	test.timeoutAfter(3000)
+
+	const termfilter = { terms: [] }
+	runpp({
+		termfilter,
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						settings: { currViews: ['table'] },
+						term: { id: 'agedx' },
+						term2: { id: 'sex' }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	async function runTests(plot) {
+		const table = plot.Inner.components.table.Inner
+		const tableDiv = table.dom.div
+		await sleep(1000)
+		test.deepEqual(
+			[
+				...tableDiv
+					.select('table')
+					.node()
+					.querySelectorAll('th')
+			].map(elem => elem.innerText),
+			['Male', 'Female', '≤5', '6 to 10', '11 to 15', '16 to 20', '21 to 24'],
+			'should use term.values{key: {label}} as column labels, if available'
+		)
+		test.end()
 	}
 })
