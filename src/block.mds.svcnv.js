@@ -2342,6 +2342,7 @@ export async function focus_singlesample(p) {
 		t2.url = tk.url
 		t2.indexURL = tk.indexURL
 		t2.iscustom = true
+		t2.legend_vorigin = tk.legend_vorigin
 	} else {
 		// official
 		t2.mds = tk.mds
