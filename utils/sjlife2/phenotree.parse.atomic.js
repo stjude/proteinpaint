@@ -1,5 +1,7 @@
-if (process.argv.length != 4) {
-	console.log('<phenotree> <matrix> output termjson to stdout, diagnostic tabular table to stderr')
+if (process.argv.length < 4) {
+	console.log(
+		'<phenotree> <matrix> <keep/termconfig, optional> output termjson to stdout, diagnostic tabular table to stderr'
+	)
 	process.exit()
 }
 
@@ -8,8 +10,9 @@ input files:
 
 1. phenotree dictionary
    this file no longer includes CHC terms, only categorical/numerical
-   CHC is dealt in validate.ctcae.js
-1. sample-by-term matrix, for all terms in phenotree
+   CHC will be processed in validate.ctcae.js
+2. sample-by-term matrix, for all terms in phenotree
+3. keep/termconfig, optional file of precoded configurations
 
 output:
 json object for all atomic terms
@@ -39,6 +42,7 @@ step 3:
 
 const file_phenotree = process.argv[2]
 const file_matrix = process.argv[3]
+const file_termconfig = process.argv[4]
 
 const fs = require('fs')
 const readline = require('readline')
@@ -74,6 +78,10 @@ async function main() {
 
 	// step 3
 	step3_finalizeterms_diagnosticmsg(key2terms)
+
+	if (file_termconfig) {
+		step4_applyconfig(key2terms)
+	}
 
 	console.log(JSON.stringify(key2terms, null, 2))
 }
@@ -360,4 +368,44 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			continue
 		}
 	}
+}
+
+function step4_applyconfig(key2terms) {
+	for (const line of fs
+		.readFileSync(file_termconfig, { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const [id, configtype, str] = line.split('\t')
+		const term = key2terms[id]
+		if (!term) throw 'applyconfig: unknown term id: ' + id
+		const config = str2config(str)
+		if (configtype == 'bins') {
+			if (config.bin_size) {
+				const n = Number(config.bin_size)
+				if (Number.isNaN(n)) throw 'applyconfig: bin_size is not number for ' + id
+				term.bins.default.bin_size = n
+			}
+			if (config['first_bin.stop']) {
+				const n = Number(config['first_bin.stop'])
+				if (Number.isNaN(n)) throw 'applyconfig: first_bin.stop is not number for ' + id
+				term.bins.default.first_bin.stop = n
+			}
+			if (config['last_bin.start']) {
+				const n = Number(config['last_bin.start'])
+				if (Number.isNaN(n)) throw 'applyconfig: last_bin.start is not number for ' + id
+				if (!term.bins.default.last_bin) term.bins.default.last_bin = { stopunbounded: true }
+				term.bins.default.last_bin.start = n
+			}
+		} else {
+			throw 'applyconfig: unknown configtype: ' + configtype
+		}
+	}
+}
+function str2config(str) {
+	const config = {}
+	for (const s of str.split(';')) {
+		const [k, v] = s.split('=')
+		config[k] = v
+	}
+	return config
 }

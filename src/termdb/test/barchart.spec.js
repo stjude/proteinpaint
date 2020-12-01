@@ -20,6 +20,10 @@ const runpp = helpers.getRunPp('termdb', {
 	debug: 1
 })
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**************
  test sections
 ***************/
@@ -1149,5 +1153,93 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numBars, 5, 'should have 2 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+})
+
+tape('max number of bins: exceeded', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							},
+							q: {
+								type: 'regular',
+								bin_size: 1000,
+								stopinclusive: true,
+								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+								numDecimals: 1,
+								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+								startinclusive: false
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should have 31 age bars')
+		triggerExceedMaxBin(plot)
+		await sleep(1000)
+		testExceedMaxBin(plot)
+		test.end()
+	}
+
+	function testBarCount(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should have 31 age bars')
+	}
+
+	function triggerExceedMaxBin(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'aaclassic_5',
+			config: {
+				term: {
+					id: 'aaclassic_5',
+					term: plot.Inner.config.term.term,
+					q: {
+						type: 'regular',
+						bin_size: 100,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+						numDecimals: 1,
+						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+						startinclusive: false
+					}
+				}
+			}
+		})
+	}
+
+	function testExceedMaxBin(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should still have 31 age bars and not re-render on error')
+		const errorbar = plot.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
+		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
 })

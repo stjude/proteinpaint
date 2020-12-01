@@ -132,14 +132,12 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const bc = binconfig
 	validate_bins(bc)
 	if (bc.type == 'custom') return JSON.parse(JSON.stringify(bc.lst))
-	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js get_bins()'
+	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js compute_bins()'
 	const percentiles = target_percentiles(bc)
 	const summary = summaryfxn(percentiles)
 	if (!summary || typeof summary !== 'object') throw 'invalid returned value by summaryfxn'
 	bc.results = { summary }
-	const decimals = ('' + bc.bin_size).split('.')[1]
-	bc.numDecimals = (decimals && decimals.length) || 0
-	bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'r')
+	setNumDecimalsFormatter(bc)
 
 	const orderedLabels = []
 	const min = bc.first_bin.startunbounded
@@ -201,7 +199,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	}
 
 	if (!isNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
-	const maxNumBins = 50 // harcoded limit for now to not stress sqlite
+	const maxNumBins = 100 // harcoded limit for now to not stress sqlite
 
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
 		currBin.label = get_bin_label(currBin, bc)
@@ -247,14 +245,23 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 
 exports.compute_bins = compute_bins
 
+function setNumDecimalsFormatter(bc) {
+	if (!bc.numDecimals) {
+		const decimals = ('' + bc.bin_size).split('.')[1] || (bc.first_bin && ('' + bc.first_bin.stop).split('.')[1])
+		bc.numDecimals = (decimals && decimals.length) || 0
+	}
+	if (!bc.binLabelFormatter) {
+		const formatterSymbol = bc.numDecimals ? 'f' : 'r'
+		bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + formatterSymbol)
+	}
+}
+
 function get_bin_label(bin, binconfig) {
 	/*
   Generate a numeric bin label given a bin configuration
 */
 	const bc = binconfig
-	const first_bin = bc.first_bin ? bc.first_bin : bc.lst[0]
-	if (!('numDecimals' in bc)) bc.numDecimals = ('' + first_bin.stop).split('.').length - 1
-	if (typeof bc.binLabelFormatter !== 'function') bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + 'f')
+	setNumDecimalsFormatter(bc)
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"

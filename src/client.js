@@ -214,8 +214,6 @@ function validate_oldds(ds) {
 				if (!ds.cohort) {
 					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
 				}
-			} else if (strat.byserver) {
-				// allowed
 			} else {
 				if (!strat.attr1) {
 					return 'stratify method ' + strat.label + ' not using cohort but no attr1 in ' + ds.label
@@ -1822,7 +1820,7 @@ m{}
 		.text('ALLELE')
 }
 
-export function may_findmatchingclinvar(chr, pos, ref, alt, genome) {
+export async function may_findmatchingclinvar(chr, pos, ref, alt, genome) {
 	/*
 chr: string
 pos
@@ -1834,10 +1832,10 @@ genome{ name }
 	const _c = genome.chrlookup[chr.toUpperCase()]
 	if (_c.len < pos) throw 'position out of bound: ' + pos
 	const p = { genome: genome.name, chr, pos, ref, alt }
-	return dofetch('clinvarVCF', p).then(data => {
-		if (data.error) throw data.error
-		return data.hit
-	})
+	const lst = ['genome=' + genome.name, 'chr=' + chr, 'pos=' + pos, 'ref=' + ref, 'alt=' + alt]
+	const data = await dofetch2('clinvarVCF?' + lst.join('&'))
+	if (data.error) throw data.error
+	return data.hit
 }
 
 export function clinvar_printhtml(m, d) {

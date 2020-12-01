@@ -1,5 +1,5 @@
 const tape = require('tape')
-const b = require('../../modules/termdb.bins')
+const b = require('../termdb.bins')
 
 /*************************
  reusable helper functions
@@ -400,8 +400,25 @@ tape('compute_bins() percentile', function(test) {
 	test.end()
 })
 
-tape.skip('get_term_bins() ', function(test) {
-	// to-do
+tape('compute_bins() wgs_sample_age', function(test) {
+	const stop = 17.1834269032
+	const binconfig = {
+		type: 'regular',
+		bin_size: 13,
+		stopinclusive: true,
+		first_bin: {
+			startunbounded: true,
+			stop,
+			stopinclusive: true
+		}
+	}
+	const bins = b.compute_bins(binconfig, () => {
+		return { vmin: 4, vmax: 66, max: 66, min: 4 }
+	})
+	test.equal(bins.length, 5, 'should create 5 bins')
+	test.equal(bins[0].label, '≤' + stop, 'should include the first bin stop value in the bin label')
+	test.equal(bins[4].label, '57.1834269032 to 66.0000000000', 'should include decimals in the last bin label')
+	test.end()
 })
 
 tape('compute_bins() custom', function(test) {
