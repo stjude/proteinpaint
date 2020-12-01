@@ -247,7 +247,7 @@ exports.compute_bins = compute_bins
 
 function setNumDecimalsFormatter(bc) {
 	if (!bc.numDecimals) {
-		const decimals = ('' + bc.bin_size).split('.')[1] || ('' + bc.first_bin.stop).split('.')[1]
+		const decimals = ('' + bc.bin_size).split('.')[1] || (bc.first_bin && ('' + bc.first_bin.stop).split('.')[1])
 		bc.numDecimals = (decimals && decimals.length) || 0
 	}
 	if (!bc.binLabelFormatter) {
