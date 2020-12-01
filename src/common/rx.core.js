@@ -44,7 +44,6 @@ function getInitFxn(_Class_) {
 			self.bus = new Bus(self.api, self.eventTypes, callbacks)
 		}
 		if (self.bus) self.bus.emit('postInit')
-
 		return api
 	}
 }
@@ -293,6 +292,7 @@ class Bus {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
 			}
 			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
+			if (eventType.startsWith('postInit')) delete this.events[eventType]
 		} else {
 			throw `invalid callback for ${this.name} eventType=${eventType}`
 		}

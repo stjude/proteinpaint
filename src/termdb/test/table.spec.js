@@ -27,7 +27,7 @@ tape('\n', function(test) {
 })
 
 tape('default behavior', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(6000)
 
 	const termfilter = { terms: [] }
 	runpp({
@@ -47,7 +47,7 @@ tape('default behavior', function(test) {
 		},
 		plot: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -58,9 +58,11 @@ tape('default behavior', function(test) {
 		tableDiv = table.dom.div
 		helpers
 			.rideInit({ arg: plot, eventType: 'postRender.test' })
-			.run(testHiddenTable, { wait: 200 })
-			.use(triggerViewTable, { wait: 400 })
-			.to(testVisibleTable, { wait: 1500 })
+			.run(testHiddenTable)
+			.use(triggerViewTable)
+			.to(testVisibleTable)
+			.use(triggerTerm2Removal)
+			.to(testTerm2Removal)
 			.done(test)
 	}
 
@@ -104,6 +106,25 @@ tape('default behavior', function(test) {
 			'table columns should match the number of series.data entries'
 		)
 	}
+
+	function triggerTerm2Removal(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plot.Inner.id,
+			config: {
+				term2: null
+			}
+		})
+	}
+
+	function testTerm2Removal(plot) {
+		test.equal(tableDiv.style('display'), 'none', 'should be hidden when term2 is removed')
+		test.deepEqual(
+			plot.Inner.config.settings.currViews,
+			['barchart'],
+			'should switch to barchart view when term2 is removed'
+		)
+	}
 })
 
 tape('column labels', function(test) {
@@ -127,7 +148,7 @@ tape('column labels', function(test) {
 		},
 		plot: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})

@@ -99,7 +99,7 @@ exports.rideInit = function(opts = {}) {
 		The exported rideInit() test helper function tries to 
 		reliably sequence UI tests using chained Promises, with
 		each Promise either (a) riding on an event bus (such as
-		tree postRender), or (b) riding just on just the Promise
+		tree postRender), or (b) riding just on the Promise
 		chain itself (without using an event bus). 
 
 		The idea is to minimize the dependency on less reliable,
@@ -228,56 +228,24 @@ class Ride {
 	*/
 	addToThen(callback, opts, after) {
 		if (!after) {
-			if (opts.wait) {
-				this.resolved = this.resolved.then(triggerFxn => {
-					return new Promise((resolve, reject) => {
-						opts.bus.on(opts.eventType, () => {
-							setTimeout(() => {
-								opts.bus.on(opts.eventType, null)
-								callback(opts.arg)
-								resolve()
-							}, opts.wait)
-						})
-						if (typeof triggerFxn == 'function') triggerFxn()
+			this.resolved = this.resolved.then(async triggerFxn => {
+				opts.bus.on(opts.eventType, null)
+				return new Promise(async (resolve, reject) => {
+					opts.bus.on(opts.eventType, async () => {
+						await sleep(opts.wait)
+						callback(opts.arg)
+						resolve()
 					})
-				})
-			} else {
-				this.resolved = this.resolved.then(triggerFxn => {
-					return new Promise((resolve, reject) => {
-						opts.bus.on(opts.eventType, () => {
-							opts.bus.on(opts.eventType, null)
-							callback(opts.arg)
-							resolve()
-						})
-						if (typeof triggerFxn == 'function') triggerFxn()
-					})
-				})
-			}
-			return
-		} else if (!opts.bus) {
-			/* 
-			will delete the conditions below once the revised implementation is verified
-		*/
-			// equivalent to addToRun() method
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					if (typeof after == 'function') after(opts.arg)
-					setTimeout(
-						() => {
-							callback(opts.arg)
-							resolve()
-						},
-						!opts.wait || isNaN(opts.wait) ? 0 : +opts.wait
-					)
+					if (triggerFxn) await triggerFxn()
 				})
 			})
 		} else if (opts.wait) {
-			this.resolved = this.resolved.then(() => {
+			this.resolved = this.resolved.then(async () => {
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {
-						setTimeout(() => {
+						setTimeout(async () => {
 							opts.bus.on(opts.eventType, null)
-							callback(opts.arg)
+							await callback(opts.arg)
 							resolve()
 						}, opts.wait)
 					})
@@ -304,35 +272,25 @@ class Ride {
 	// .use() enables setting a different opts.arg to be used for triggerFxn
 	//
 	addUseThen(triggerFxn, opts) {
-		this.resolved = this.resolved.then(() => {
+		//Promise(resolve => setTimeout(resolve, ms))
+		this.resolved = this.resolved.then(async () => {
+			console.log('triggerFxn', triggerFxn.name)
 			// supply a trigger function as argument to the next .then()
-			return () => {
-				setTimeout(
-					() => {
-						triggerFxn(opts.arg)
-					},
-					isNaN(opts.wait) ? 0 : opts.wait
-				)
-			}
+			await sleep(isNaN(opts.wait) ? 0 : opts.wait)
+			return () => triggerFxn(opts.arg)
 		})
 	}
 
 	addRunThen(callback, after, opts) {
-		if (typeof after == 'number') {
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					setTimeout(() => {
-						callback(opts.arg)
-						resolve()
-					}, after)
-				})
-			})
-		} else {
-			this.resolved = this.resolved.then(() => {
-				callback(opts.arg)
-			})
-		}
+		this.resolved = this.resolved.then(async () => {
+			await sleep(typeof after == 'number' ? after : 0)
+			callback(opts.arg)
+		})
 	}
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /*

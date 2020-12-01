@@ -156,6 +156,14 @@ class TdbStore {
 			}
 		}
 	}
+
+	adjustPlotCurrViews(plotConfig) {
+		if (!plotConfig) return
+		const currViews = plotConfig.settings.currViews
+		if (currViews.includes('table') && !plotConfig.term2) {
+			plotConfig.settings.currViews = ['barchart']
+		}
+	}
 }
 
 /*
@@ -173,6 +181,9 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+		for (const plotId in this.state.plots) {
+			this.adjustPlotCurrViews(this.state.plots[plotId])
+		}
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
@@ -219,6 +230,7 @@ TdbStore.prototype.actions = {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
 		}
+		this.adjustPlotCurrViews(plot)
 	},
 
 	filter_replace(action) {
