@@ -6,9 +6,7 @@ GDC graphql API
 */
 
 export function validate_variant2sample(a) {
-	if (!a.query_list) throw '.query_list missing from variant2samples.gdcapi'
-	if (!a.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
-	if (typeof a.variables != 'function') throw '.variant2samples.gdcapi.variables() not a function'
+	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
 export function validate_query_snvindel_byrange(a) {
@@ -99,11 +97,17 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
+function getheaders(q) {
+	// q is req.query{}
+	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (q.token) h['X-Auth-Token'] = q.token
+	return h
+}
+
 async function snvindel_byisoform_run(api, opts) {
 	// function may be shared
 	// query is ds.queries.snvindel
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (opts.token) headers['X-Auth-Token'] = opts.token
+	const headers = getheaders(opts)
 	const p1 = got(
 		api.lst[0].endpoint +
 			'?size=' +
@@ -251,48 +255,34 @@ export function validate_query_genecnv(api, ds) {
 
 export async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-	const query = {
-		variables: ds.variant2samples.gdcapi.variables(q),
-		query: q.get == 'sunburst' ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list // NOTE "sunburst" is type_sunburst
-	}
-
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(query)
-	})
+	const api = ds.variant2samples.gdcapi
+	const response = await got(
+		api.endpoint +
+			'?size=' +
+			api.size +
+			'&fields=' +
+			(q.get == 'sunburst' ? api.fields_sunburst : api.fields_list).join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.filters(q))),
+		{ method: 'GET', headers: getheaders(q) }
+	)
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
 		throw 'invalid JSON from GDC for variant2samples'
 	}
-	if (
-		!re.data ||
-		!re.data.explore ||
-		!re.data.explore.ssms ||
-		!re.data.explore.ssms.hits ||
-		!re.data.explore.ssms.hits.edges
-	)
-		throw 'data structure not data.explore.ssms.hits.edges[]'
-	if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
 
 	const samples = []
-	for (const ssm of re.data.explore.ssms.hits.edges) {
-		if (!ssm.node || !ssm.node.occurrence || !ssm.node.occurrence.hits || !ssm.node.occurrence.hits.edges)
-			throw 'structure of an ssm is not node.occurrence.hits.edges'
-		if (!Array.isArray(ssm.node.occurrence.hits.edges)) throw 'ssm.node.occurrence.hits.edges is not array'
-		for (const sample of ssm.node.occurrence.hits.edges) {
-			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
-			/* samplelist query will retrieve all terms
-			but sunburst will only retrieve a few attr
-			will simply iterate over all terms and missing ones will have undefined value
-			*/
-			const s = {}
-			for (const attr of ds.variant2samples.terms) {
-				s[attr.id] = attr.get(sample.node.case)
-			}
-			samples.push(s)
+	for (const s of re.data.hits) {
+		if (!s.case) throw '.case{} missing from a hit'
+		const sample = {}
+		for (const attr of ds.variant2samples.terms) {
+			sample[attr.id] = attr.get(s.case)
 		}
+		samples.push(sample)
 	}
 	return samples
 }

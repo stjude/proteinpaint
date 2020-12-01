@@ -193,94 +193,47 @@ don't know a js method to alter the list of attributes in `case { }` part
 - sunburst
   only return subset of attributes selected for sunburst chart
 */
-const query_variant2samples_sunburst = `
-query OneSsm($filter: FiltersArgument) {
-	explore {
-		ssms {
-			hits(first: 10000, filters: $filter) {
-				edges {
-					node {
-						occurrence {
-							hits {
-								edges {
-									node {
-										case {
-											project {
-												project_id
-											}
-											disease_type
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}`
-const query_variant2samples_list = `
-query OneSsm($filter: FiltersArgument) {
-	explore {
-		ssms {
-			hits(first: 10000, filters: $filter) {
-				edges {
-					node {
-						occurrence {
-							hits {
-								edges {
-									node {
-										case {
-											project {
-												project_id
-											}
-											disease_type
-											primary_site
-											case_id
-											available_variation_data
-											state
-											# tissue_source_site { name }
-											demographic {
-												gender
-												year_of_birth
-												race
-												ethnicity
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}`
-function variables_variant2samples(p) {
-	// p:{}
-	// .ssm_id_lst, string
-	// .set_id
-	if (!p.ssm_id_lst) throw '.ssm_id_lst missing'
-	if (typeof p.ssm_id_lst != 'string') throw '.ssm_id_lst value not string'
-	return {
-		filter: { op: 'in', content: { field: 'ssm_id', value: p.ssm_id_lst.split(',') } }
-	}
-	const f = {
-		filter: {
+const variant2samples = {
+	endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+	size: 100000,
+	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
+	fields_list: [
+		'case.project.project_id',
+		'case.case_id',
+		'case.disease_type',
+		'case.primary_site',
+		'case.available_variation_data',
+		'case.demographic.gender',
+		'case.demographic.year_of_birth',
+		'case.demographic.race',
+		'case.demographic.ethnicity'
+	],
+	filters: p => {
+		if (!p.ssm_id_lst) throw '.ssm_id_lst missing'
+		const f = {
 			op: 'and',
-			content: [{ op: 'in', content: { field: 'ssm_id', value: p.ssm_id_lst.split(',') } }]
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssm.ssm_id',
+						value: p.ssm_id_lst.split(',')
+					}
+				}
+			]
 		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		return f
 	}
-	if (p.set_id) {
-		if (typeof p.set_id != 'string') throw '.set_id value not string'
-		f.filter.content.push({
-			op: 'in',
-			content: { field: 'cases.case_id', value: [p.set_id] }
-		})
-	}
-	return f
 }
 
 /*
@@ -724,11 +677,7 @@ module.exports = {
 		// required
 		terms: ssmCaseAttr,
 		sunburst_ids: ['project', 'disease'], // term id
-		gdcapi: {
-			query_sunburst: query_variant2samples_sunburst,
-			query_list: query_variant2samples_list,
-			variables: variables_variant2samples
-		}
+		gdcapi: variant2samples
 	},
 
 	// this is meant for the leftside labels under tklabel
