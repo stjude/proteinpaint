@@ -26,7 +26,7 @@ tape('\n', function(test) {
 })
 
 tape('history processing', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 
 	runpp({
 		recover: {
@@ -49,7 +49,7 @@ tape('history processing', function(test) {
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
 			.use(triggerExpand1)
-			.to(triggerExpand2)
+			.use(triggerExpand2, { wait: 1000 })
 			.to(testDispatchedTracking, { arg: recover })
 			.use(triggerUndo, { arg: recover, bus: _recover })
 			.to(testUndo, { arg: recover, bus: _recover, wait: 20 })
@@ -63,16 +63,19 @@ tape('history processing', function(test) {
 		})
 	}
 
+	let _tree
 	function triggerExpand2(tree) {
 		tree.Inner.app.dispatch({
 			type: 'app_refresh',
 			state: { tree: { expandedTermIds: ['root', 'Clinically-assessed Variables', 'ctcae_graded'] } }
 		})
+		_tree = tree
 	}
 
 	function testDispatchedTracking(recover) {
-		test.equal(recover.currIndex, 2, 'should have its currIndex at 2 after 2 dispatches')
+		test.equal(recover.currIndex, 2, 'should have its currIndex at 2- after 2 dispatches')
 		test.deepEqual(recover.state, recover.history[2], 'should set the state to the corresponding history entry')
+		_tree.on('postRender.test', null)
 	}
 
 	function triggerUndo(recover) {

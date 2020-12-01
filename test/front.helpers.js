@@ -241,10 +241,10 @@ class Ride {
 			})
 		} else if (opts.wait) {
 			this.resolved = this.resolved.then(async () => {
+				opts.bus.on(opts.eventType, null)
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {
 						setTimeout(async () => {
-							opts.bus.on(opts.eventType, null)
 							await callback(opts.arg)
 							resolve()
 						}, opts.wait)
@@ -254,9 +254,9 @@ class Ride {
 			})
 		} else {
 			this.resolved = this.resolved.then(() => {
+				opts.bus.on(opts.eventType, null)
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {
-						opts.bus.on(opts.eventType, null)
 						callback(opts.arg)
 						resolve()
 					})
@@ -273,8 +273,8 @@ class Ride {
 	//
 	addUseThen(triggerFxn, opts) {
 		//Promise(resolve => setTimeout(resolve, ms))
-		this.resolved = this.resolved.then(async () => {
-			console.log('triggerFxn', triggerFxn.name)
+		this.resolved = this.resolved.then(async prevTriggerFxn => {
+			if (typeof prevTriggerFxn == 'function') await prevTriggerFxn()
 			// supply a trigger function as argument to the next .then()
 			await sleep(isNaN(opts.wait) ? 0 : opts.wait)
 			return () => triggerFxn(opts.arg)

@@ -39,7 +39,7 @@ tape('unsupported overlay types', function(test) {
 		},
 		boxplot: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -64,8 +64,10 @@ tape('unsupported overlay types', function(test) {
 			type: 'plot_edit',
 			id: box.id,
 			config: {
+				settings: { currViews: ['boxplot'] },
 				term2: {
-					term: termjson['sex']
+					term: termjson['sex'],
+					q: {}
 				}
 			}
 		})

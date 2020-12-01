@@ -86,6 +86,7 @@ class TdbStore {
 				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
 		}
 
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
@@ -161,6 +162,12 @@ class TdbStore {
 		if (!plotConfig) return
 		const currViews = plotConfig.settings.currViews
 		if (currViews.includes('table') && !plotConfig.term2) {
+			plotConfig.settings.currViews = ['barchart']
+		}
+		if (
+			currViews.includes('boxplot') &&
+			(!plotConfig.term2 || (plotConfig.term2.term.type !== 'integer' && plotConfig.term2.term.type !== 'float'))
+		) {
 			plotConfig.settings.currViews = ['barchart']
 		}
 	}

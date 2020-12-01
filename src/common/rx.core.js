@@ -292,7 +292,6 @@ class Bus {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
 			}
 			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
-			if (eventType.startsWith('postInit')) delete this.events[eventType]
 		} else {
 			throw `invalid callback for ${this.name} eventType=${eventType}`
 		}
@@ -316,6 +315,7 @@ class Bus {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
 					this.events[type](arg || this.defaultArg)
+					if (eventType == 'postInit') delete this.events[type]
 				}
 			}
 		}, wait)
