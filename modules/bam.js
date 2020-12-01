@@ -9,6 +9,7 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
 const basecolor = require('../src/common')
+const jStat = require('jStat').jStat
 
 /*
 XXX quick fix to be removed/disabled later
@@ -242,10 +243,9 @@ async function get_pileup(q, req, templates) {
 	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 
 	for (const r of q.regions) {
+		console.log('r.ntwidth:', r.ntwidth)
+		console.log('q.devicePixelRatio:', q.devicePixelRatio)
 		const bplst = await run_samtools_depth(q, r)
-		//console.log("bplst2:",bplst2)
-		//console.log("softclip_pileup_lst length:",pileup_output.softclip_pileup_lst.length)
-
 		// each ele is {}
 		// .position
 		// .total/A/T/C/G/refskip
@@ -303,6 +303,32 @@ async function get_pileup(q, req, templates) {
 				i += 1
 			}
 		} else {
+			if (r.ntwidth < 1) {
+				// Summarizing pileup when sufficiently zoomed out
+				const num_nucleotides = Math.round(1 / r.ntwidth)
+				const nucleotide_iteration = Math.floor(bplst.length / num_nucleotides)
+				const nucleotide_remainder = bplst.length % num_nucleotides
+				for (let i = 0; i < nucleotide_iteration; i++) {
+					const nucleotide_list = []
+					for (let j = 0; j < num_nucleotides; j++) {
+						nucleotide_list.push(bplst[i * num_nucleotides + j].total)
+					}
+					const nucleotide_mean = jStat.mean(nucleotide_list)
+					for (let j = 0; j < num_nucleotides; j++) {
+						bplst[i * num_nucleotides + j].total = nucleotide_mean
+					}
+				}
+				// Iterating through the remainder of base-pairs
+				const nucleotide_list = []
+				for (let j = 0; j < nucleotide_remainder; j++) {
+					nucleotide_list.push(bplst[i * num_nucleotides + j].total)
+				}
+				const nucleotide_mean = jStat.mean(nucleotide_list)
+				for (let j = 0; j < nucleotide_remainder; j++) {
+					bplst[i * num_nucleotides + j].total = nucleotide_mean
+				}
+			}
+
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				y = 0
@@ -321,8 +347,6 @@ async function get_pileup(q, req, templates) {
 }
 
 function softclip_mismatch_pileup(r, templates, bplst) {
-	console.log('bplst[0].position:', bplst[0].position)
-	console.log('r.start:', r.start)
 	let bp_iter = 0
 	for (const template of templates) {
 		let prev = ''
@@ -425,7 +449,6 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 			}
 		}
 	}
-	//return pileup_output
 }
 
 function drawLine(ctx, startX, startY, endX, endY, color) {
