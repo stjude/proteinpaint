@@ -127,6 +127,10 @@ export default function getHandlers(self) {
 				if (d === undefined) return
 				const termNum = d.type == 'col' ? 'term' : 'term2'
 				const term = self.config[termNum]
+				const isHidden =
+					'isHidden' in d
+						? !d.isHidden
+						: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.config.term.id,
@@ -134,7 +138,7 @@ export default function getHandlers(self) {
 						[termNum]: {
 							id: term.id,
 							term: term.term,
-							q: getUpdatedQfromClick(d, term, false)
+							q: getUpdatedQfromClick(d, term, isHidden)
 						}
 					}
 				})

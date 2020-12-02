@@ -1353,7 +1353,7 @@ tape('no visible series data, no overlay', function(test) {
 	}
 })
 
-tape('no visible series data, with overlay', function(test) {
+tape.only('all hidden + with overlay, legend click', function(test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -1401,9 +1401,11 @@ tape('no visible series data, with overlay', function(test) {
 			.run(testBarCount)
 			.run(triggerBarClick)
 			.use(triggerMenuClick, { wait: 1100 })
-			.to(testRemovedOverlay, { wait: 100 })
+			.to(testRemovedOverlayByMenu, { wait: 100 })
 			.use(triggerUnhideOverlay, { wait: 1100 })
 			.to(testUnhiddenOverlay, { wait: 100 })
+			.use(triggerOverlayHideByLegendClick, { wait: 1000 })
+			.to(testhiddenOverlayByLegendClick, { wait: 100 })
 			.done(test)
 	}
 
@@ -1446,7 +1448,7 @@ tape('no visible series data, with overlay', function(test) {
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testRemovedOverlay(plot) {
+	function testRemovedOverlayByMenu(plot) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
@@ -1465,5 +1467,19 @@ tape('no visible series data, with overlay', function(test) {
 		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
+	}
+
+	function triggerOverlayHideByLegendClick(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.select('.legend-row')
+			.node()
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testhiddenOverlayByLegendClick(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
 	}
 })
