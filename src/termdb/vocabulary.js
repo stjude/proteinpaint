@@ -141,7 +141,7 @@ class TermdbVocab {
 		}
 	}
 
-	async getDensityPlotData(term_id, num_obj) {
+	async getDensityPlotData(term_id, num_obj, filter) {
 		let density_q =
 			'/termdb?density=1' +
 			'&genome=' +
@@ -159,8 +159,11 @@ class TermdbVocab {
 			'&ypad=' +
 			num_obj.plot_size.ypad
 
-		if (this.state.termfilter && typeof this.state.termfilter.filter != 'undefined') {
-			const filterRoot = getNormalRoot(this.state.termfilter.filter)
+		// must use the filter as supplied from a tvs pill,
+		// since that filter excludes the tvs itself in order
+		// to show all available values for its term
+		if (filter) {
+			const filterRoot = getNormalRoot(filter)
 			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(filterRoot))
 		}
 		const density_data = await dofetch3(density_q)
@@ -313,7 +316,7 @@ class FrontendVocab {
 		return { samplecount: 'TBD' }
 	}
 
-	async getDensityPlotData(term_id, num_obj) {
+	async getDensityPlotData(term_id, num_obj, filter) {
 		const countsByVal = new Map()
 		let minvalue,
 			maxvalue,

@@ -64,7 +64,7 @@ export function getNumericMethods(self) {
 		}
 
 		try {
-			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj)
+			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
 		} catch (err) {
 			console.log(err)
 		}
