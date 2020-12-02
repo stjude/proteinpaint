@@ -146,6 +146,7 @@ if (serverconfig.jwt) {
 	})
 }
 
+app.post('/examples', handle_examples)
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
@@ -244,6 +245,19 @@ pp_init()
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
+
+async function handle_examples(req, res) {
+	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (req.query) {
+		// const file = JSON.parse('/modules/feature.js')
+		// res.send({ file })
+		// return
+		const id = Math.random().toString()
+		res.send({ filename: id })
+		return
+	}
+	res.send({ error: 'Invalid request' })
+}
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
