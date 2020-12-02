@@ -8,7 +8,6 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { to_svg } from '../client'
-import { set_hiddenvalues } from '../common/termsetting'
 
 const colors = {
 	c10: scaleOrdinal(schemeCategory10),
@@ -24,6 +23,13 @@ class TdbBarchart {
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,
+			banner: opts.holder
+				.append('div')
+				.style('display', 'none')
+				.style('text-align', 'center')
+				.style('padding', '24px')
+				.style('font-size', '22px')
+				.style('color', '#aaa'),
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
@@ -66,9 +72,9 @@ class TdbBarchart {
 			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
-				term: config.term,
-				term0: config.term0,
-				term2: config.term2,
+				term: JSON.parse(JSON.stringify(config.term)),
+				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
+				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
 				settings: {
 					common: config.settings.common,
 					barchart: config.settings.barchart
@@ -159,6 +165,38 @@ class TdbBarchart {
 				: Object.keys(term2.q.hiddenValues)
 						.filter(id => term2.q.hiddenValues[id])
 						.map(getHiddenId)
+
+		const combinedTermIds =
+			(term && term.id) + ';;' + (term2 && term2.id) + ';;' + (this.config.term0 && this.config.term0.id)
+
+		/*
+			if all the series are assigned to be hidden on first render,
+			show the usually hidden values instead to avoid confusion
+			with an invisible barchart
+		*/
+		if (combinedTermIds !== this.currCombinedTermIds) {
+			for (const chart of this.currServerData.charts) {
+				if (this.settings.exclude.cols.length >= chart.serieses.length) {
+					this.settings.exclude.cols = []
+					if (term.q && term.q.hiddenValues) {
+						for (const key in term.q.hiddenValues) {
+							term.q.hiddenValues[key] = 0
+						}
+					}
+				}
+				for (const series of chart.serieses) {
+					if (this.settings.exclude.rows.length >= series.data.length) {
+						this.settings.exclude.rows = []
+						if (term2.q && term2.q.hiddenValues) {
+							for (const key in term2.q.hiddenValues) {
+								term2.q.hiddenValues[key] = 0
+							}
+						}
+					}
+				}
+			}
+			this.currCombinedTermIds = combinedTermIds
+		}
 	}
 
 	processData(chartsData) {
@@ -376,6 +414,16 @@ function setRenderers(self) {
 
 		self.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
 		self.legendRenderer(self.getLegendGrps())
+
+		if (!self.visibleCharts.length) {
+			self.dom.banner
+				.html(
+					`No visible barchart data to render<br/><span style='font-size: 16px'>click on a hidden legend label below to display the barchart</span>`
+				)
+				.style('display', 'block')
+		} else {
+			self.dom.banner.text('').style('display', 'none')
+		}
 	}
 
 	self.exitChart = function(chart) {

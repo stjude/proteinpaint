@@ -992,9 +992,9 @@ tape('numeric filter - only special value', function(test) {
 	function runNumericValueTests(plot) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
-			.run(testNoBar, { wait: 300 })
-			.use(triggerHiddenLegendClick, { wait: 300 })
-			.to(testHasBar, { wait: 300 })
+			//.run(testNoBar, { wait: 300 })
+			//.use(triggerHiddenLegendClick, { wait: 300 })
+			.run(testHasBar, { wait: 300 })
 			.done(test)
 	}
 
@@ -1014,7 +1014,11 @@ tape('numeric filter - only special value', function(test) {
 	function testHasBar(plot) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 bar')
+		test.equal(
+			numBars,
+			1,
+			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank plot'
+		)
 	}
 })
 
@@ -1241,5 +1245,107 @@ tape('max number of bins: exceeded', test => {
 		test.equal(numBars, 31, 'should still have 31 age bars and not re-render on error')
 		const errorbar = plot.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
 		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
+	}
+})
+
+tape('no visible charts data', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Platinum Agent',
+					'cisplateq_5'
+				],
+				visiblePlotIds: ['cisplateq_5'],
+				plots: {
+					cisplateq_5: {
+						term: {
+							id: 'cisplateq_5'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.use(triggerHideBar)
+			.to(testEmptyChart, { wait: 100 })
+			.use(triggerUnhideBar)
+			.to(testUnhiddenChart, { wait: 100 })
+			.done(test)
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(
+			numBars,
+			1,
+			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'none',
+			'should hide the banner when at least one chart is visible'
+		)
+	}
+
+	function triggerHideBar(plot) {
+		barDiv
+			.select('.bars-rowlabels')
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testEmptyChart(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'block',
+			'should display a banner when no charts are visible'
+		)
+		test.true(
+			plot.Inner.components.barchart.Inner.dom.banner.text().includes('No visible'),
+			'should label the banner with no visible data'
+		)
+	}
+
+	function triggerUnhideBar(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.select('.legend-row')
+			.node()
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testUnhiddenChart(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
+		/*test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style("display"),
+			'none',
+			'should hide the banner when the chart is unhidden'
+		)*/
 	}
 })
