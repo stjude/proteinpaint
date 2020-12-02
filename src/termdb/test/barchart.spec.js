@@ -1248,11 +1248,14 @@ tape('max number of bins: exceeded', test => {
 	}
 })
 
-tape('no visible charts data', function(test) {
+tape('no visible series data, no overlay', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
 			tree: {
 				expandedTermIds: [
 					'root',
@@ -1288,9 +1291,9 @@ tape('no visible charts data', function(test) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
 			.run(testBarCount)
-			.use(triggerHideBar)
+			.use(triggerHideBar, { wait: 1000 })
 			.to(testEmptyChart, { wait: 100 })
-			.use(triggerUnhideBar)
+			.use(triggerUnhideBar, { wait: 1100 })
 			.to(testUnhiddenChart, { wait: 100 })
 			.done(test)
 	}
@@ -1298,7 +1301,7 @@ tape('no visible charts data', function(test) {
 	let barDiv
 	function testBarCount(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
 		test.equal(
 			numBars,
 			1,
@@ -1313,8 +1316,8 @@ tape('no visible charts data', function(test) {
 
 	function triggerHideBar(plot) {
 		barDiv
-			.select('.bars-rowlabels')
 			.node()
+			.querySelector('.bars-rowlabels text')
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -1334,8 +1337,8 @@ tape('no visible charts data', function(test) {
 
 	function triggerUnhideBar(plot) {
 		plot.Inner.components.barchart.Inner.dom.legendDiv
-			.select('.legend-row')
 			.node()
+			.querySelector('.legend-row')
 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -1347,5 +1350,120 @@ tape('no visible charts data', function(test) {
 			'none',
 			'should hide the banner when the chart is unhidden'
 		)*/
+	}
+})
+
+tape('no visible series data, with overlay', function(test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Platinum Agent',
+					'cisplateq_5'
+				],
+				visiblePlotIds: ['cisplateq_5'],
+				plots: {
+					cisplateq_5: {
+						term: {
+							id: 'cisplateq_5'
+						},
+						term2: {
+							id: 'sex'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.run(triggerBarClick)
+			.use(triggerMenuClick, { wait: 1100 })
+			.to(testRemovedOverlay, { wait: 100 })
+			.use(triggerUnhideOverlay, { wait: 1100 })
+			.to(testUnhiddenOverlay, { wait: 100 })
+			.done(test)
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(
+			numBars,
+			1,
+			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(
+			numOverlays,
+			2,
+			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'none',
+			'should hide the banner when at least one chart is visible'
+		)
+	}
+
+	let clickedData
+	function triggerBarClick(plot) {
+		const elem = barDiv
+			.node()
+			.querySelector('.bars-cell')
+			.querySelector('rect')
+		elem.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('Hide "Male"'))
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testRemovedOverlay(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
+	}
+
+	function triggerUnhideOverlay(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.select('.legend-row')
+			.node()
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testUnhiddenOverlay(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
 	}
 })

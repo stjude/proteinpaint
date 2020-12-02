@@ -128,7 +128,8 @@ class TdbBarchart {
 			rowspace: config.settings.common.barspace
 		}
 
-		this.initExclude()
+		this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
+		this.setExclude(this.config.term, this.config.term2)
 		Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {}, {
 			exclude: this.settings.exclude
 		})
@@ -142,8 +143,48 @@ class TdbBarchart {
 		}
 	}
 
-	initExclude() {
-		const term = this.config.term
+	mayResetHidden(term, term2, term0) {
+		const combinedTermIds = (term && term.id) + ';;' + (term2 && term2.id) + ';;' + (term0 && term0.id)
+		if (combinedTermIds === this.currCombinedTermIds) return
+		// only reset hidden if terms have changed
+		for (const chart of this.currServerData.charts) {
+			if (term.q && term.q.hiddenValues) {
+				this.mayEditHiddenValues(term, chart.serieses.length, 'term')
+			}
+			if (term2 && term2.q && term2.q.hiddenValues) {
+				for (const series of chart.serieses) {
+					this.mayEditHiddenValues(term2, series.data.length, 'term2')
+				}
+			}
+		}
+		this.currCombinedTermIds = combinedTermIds
+	}
+
+	mayEditHiddenValues(term, numAvailable, termNum) {
+		const numHidden = Object.keys(term.q.hiddenValues).filter(key => term.q.hiddenValues[key]).length
+		if (numHidden < numAvailable) return
+		/*
+			if all the serieses are assigned to be hidden on first render,
+			show the usually hidden values instead to avoid confusion
+			with an empty plot
+		*/
+		for (const key in term.q.hiddenValues) {
+			if (!term.q.hiddenValues[key]) return
+			delete term.q.hiddenValues[key]
+		}
+		// since config.[term | term2 | term0] are copies of appState,
+		// must save the changes to q.hiddenValues in the stored state
+		// for consistent behavior in later app.dispatch or barchart updates
+		this.app.save({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				[termNum]: term
+			}
+		})
+	}
+
+	setExclude(term, term2) {
 		// a non-numeric term.id is used directly as seriesId or dataId
 		const getHiddenId = id =>
 			term.term.type == 'categorical'
@@ -155,48 +196,15 @@ class TdbBarchart {
 				: id
 
 		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
-			.filter(id => id in term.q.hiddenValues)
+			.filter(id => term.q.hiddenValues[id])
 			.map(getHiddenId)
 
-		const term2 = this.config.term2
 		this.settings.exclude.rows =
 			!term2 || !term2.q || !term2.q.hiddenValues
 				? []
 				: Object.keys(term2.q.hiddenValues)
 						.filter(id => term2.q.hiddenValues[id])
 						.map(getHiddenId)
-
-		const combinedTermIds =
-			(term && term.id) + ';;' + (term2 && term2.id) + ';;' + (this.config.term0 && this.config.term0.id)
-
-		/*
-			if all the series are assigned to be hidden on first render,
-			show the usually hidden values instead to avoid confusion
-			with an invisible barchart
-		*/
-		if (combinedTermIds !== this.currCombinedTermIds) {
-			for (const chart of this.currServerData.charts) {
-				if (this.settings.exclude.cols.length >= chart.serieses.length) {
-					this.settings.exclude.cols = []
-					if (term.q && term.q.hiddenValues) {
-						for (const key in term.q.hiddenValues) {
-							term.q.hiddenValues[key] = 0
-						}
-					}
-				}
-				for (const series of chart.serieses) {
-					if (this.settings.exclude.rows.length >= series.data.length) {
-						this.settings.exclude.rows = []
-						if (term2.q && term2.q.hiddenValues) {
-							for (const key in term2.q.hiddenValues) {
-								term2.q.hiddenValues[key] = 0
-							}
-						}
-					}
-				}
-			}
-			this.currCombinedTermIds = combinedTermIds
-		}
 	}
 
 	processData(chartsData) {
@@ -331,6 +339,7 @@ class TdbBarchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
+		const headingStyle = 'color: #aaa; font-weight: 400'
 		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
@@ -363,7 +372,7 @@ class TdbBarchart {
 
 			if (items.length) {
 				legendGrps.push({
-					name: 'Hidden ' + t1.term.name + ' value',
+					name: `<span style="${headingStyle}">` + t1.term.name + '</span>',
 					items
 				})
 			}
@@ -378,7 +387,8 @@ class TdbBarchart {
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t2.term.name + (value_by_label ? ', ' + value_by_label : ''),
+				name:
+					`<span style="${headingStyle}">` + t2.term.name + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
