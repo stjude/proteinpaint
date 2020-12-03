@@ -11,10 +11,12 @@ export async function init_examples(par) {
 			return
 		}
 	}
+	// const data = JSON.parse('./modules/feature.json')
 	const wrapper_div = make_examples_page(holder)
 	make_header(wrapper_div)
 	make_intro(wrapper_div)
-	// make_main_grid(wrapper_div)
+	make_showHideBtn(wrapper_div)
+	make_main_grid(wrapper_div)
 }
 
 function make_examples_page(holder) {
@@ -28,21 +30,23 @@ function make_examples_page(holder) {
 }
 
 function make_header(div) {
+	//TODO styling hot mess
 	const header_div = div.append('div')
 	header_div
-		.append('div')
 		.style('padding', '10px')
 		.style('margin', '0px')
+		.style('height', '125px')
 		.style('background-image', 'linear-gradient(to bottom right, #1b2646, #324870)')
 		.style('display', 'grid')
-		.style('grid-template-columns', '3fr 1fr 1fr')
-		.style('grid-template-areas', '"htext contact-button request-button" "htext searchbar searchbar"')
+		// .style('grid-template-columns', '3fr 1fr 1fr')
+		// .style('grid-template-rows', '1fr 1fr')
+		.style('grid-template-areas', '"htext contactBtn requestBtn" "htext searchBar searchBar"')
 		.style('gap', '20px')
 
 	const htext = header_div.append('div')
 	htext
-		.append('div')
 		.style('grid-area', 'htext')
+		// .style('grid-area', '1 / 1 / 2 / 1')
 		.style('top', '5%')
 		.style('float', 'left')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
@@ -52,13 +56,15 @@ function make_header(div) {
 		.style('text-align', 'left')
 		.style('tab-size', '8')
 		.style('margin-left', '40px')
+		// .style('background-image','none')
 		.style('color', 'white')
 		.html('GenomePaint, Genome Browser,<br>and Other App Examples') //TODO add in tab or new line?
 
 	const contact_btn = header_div.append('div')
 	contact_btn
-		.append('div')
-		.style('grid-area', 'contact-button')
+		.append('button')
+		.style('grid-area', 'contactBtn')
+		// .style('grid-area', '1 / 2 / 1 / 2')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '14px')
 		.style('height', '30px')
@@ -69,14 +75,16 @@ function make_header(div) {
 		.style('border', '1px black')
 		.style('border-style', 'solid')
 		.style('margin', '10px')
-		.html(
-			'<a href="https://stjude.service-now.com/sn_portal" target="_blank"<button>Request hpc:~/tp Access</button></a>'
-		)
+		.text('Request hpc:~/tp Access')
+		.on('click', () => {
+			window.open('https://stjude.service-now.com/sn_portal', '_blank')
+		})
 
 	const request_btn = header_div.append('div')
 	request_btn
-		.append('div')
-		.style('grid-area', 'request-button')
+		.append('button')
+		.style('grid-area', 'requestBtn')
+		// .style('grid-area', '1 / 3 / 1 / 3')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '14px')
 		.style('height', '30px')
@@ -86,7 +94,7 @@ function make_header(div) {
 		.style('border-radius', '8px')
 		.style('border', '1px solid black')
 		.style('margin', '10px')
-		.html('<a href="mailto:PPTeam@STJUDE.ORG" subject="Inquiry from ppr Examples Page"><button>Contact Us</button></a>')
+		.html('<a href="mailto:PPTeam@STJUDE.ORG" subject="Inquiry from ppr Examples Page">Contact Us</a>')
 
 	const searchBar = header_div.append('div')
 	searchBar
@@ -94,9 +102,11 @@ function make_header(div) {
 		.append('input')
 		.attr('type', 'text')
 		.property('position', 'relative')
-		.style('grid-area', 'searchbar')
+		.style('grid-area', 'searchBar')
+		// .style('grid-area', '2 / 2 / auto / span 2')
 		.style('height', '24px')
 		.style('width', '500px')
+		.style('float', 'right')
 		.style('border-radius', '3px')
 		.style('border', '1px solid #eaeaea')
 		.style('padding', '5px 10px')
@@ -106,7 +116,11 @@ function make_header(div) {
 
 function make_intro(div) {
 	const intro = div.append('div')
-	intro.append('div').style('padding', '10px')
+	intro
+		.append('div')
+		.style('padding', '10px')
+		.style('display', 'block')
+		.attr('class', 'intro_div')
 
 	const intro_header = intro.append('div')
 	intro_header
@@ -118,9 +132,14 @@ function make_intro(div) {
 		.style('border-radius', '4px')
 		.style('color', '#324870')
 		.text('Welcome to our Examples Page!')
+		.attr('class', 'intro_div')
+		.style('display', 'block')
 
 	const lists = intro.append('div')
-	lists.append('div').html(`
+	lists
+		.append('div')
+		.attr('class', 'intro_div')
+		.style('display', 'block').html(`
         <p>Please note the following:
             <ul>
                 <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
@@ -136,9 +155,48 @@ function make_intro(div) {
         </p>`)
 }
 
-// function make_main_grid(div) {}
+function make_showHideBtn(div) {
+	const showHideBtn = div.append('div')
+	const intro = document.getElementsByClassName('intro_div')
+	showHideBtn
+		.append('button') //TODO renders but doesn't work
+		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+		.style('font-size', '11px')
+		.style('height', '30px')
+		.style('width', '80px')
+		.style('text-align', 'center')
+		.style('background-color', '#e6e7eb')
+		.style('border-radius', '8px')
+		.style('border', 'none')
+		.style('margin-left', '40px')
+		.style('margin-top', '10px')
+		.text('Show/Hide')
+		.on('click', () => {
+			if (intro.style('display') == 'block') {
+				intro.style('display', 'none')
+			} else {
+				intro.style('display', 'none')
+			}
+		})
+}
 
-//Copied over js from here down - leave be until incorporated into working code.
+//Creates the two column outer grid
+function make_main_grid(div) {
+	const track_grid = div.append('div')
+	track_grid
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr)')
+		.style('grid-template-areas', '"gbrowser otherapp"')
+		.style('gap', '10px')
+		.style('background-color', 'white')
+		.style('padding', '10px 20px')
+		.style('text-align', 'left')
+		.style('margin', '15px')
+}
+
+/******Copied over js from here down - leave be until incorporated into working code*****/
+
 // const browserList = document.getElementById('browserList')
 // const experimentalList = document.getElementById('experimentalList')
 // const appList = document.getElementById('appList')
@@ -249,12 +307,3 @@ function make_intro(div) {
 // }
 
 // loadTracks()
-
-// function collapseContent() {
-// 	const intro = document.getElementById('intro-div')
-// 	if (intro.style.display === 'none') {
-// 		intro.style.display = 'block'
-// 	} else {
-// 		intro.style.display = 'none'
-// 	}
-// }
