@@ -28,7 +28,7 @@ class TdbBarchart {
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
-				.style('font-size', '22px')
+				.style('font-size', '16px')
 				.style('color', '#aaa'),
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
@@ -426,10 +426,12 @@ function setRenderers(self) {
 		self.legendRenderer(self.getLegendGrps())
 
 		if (!self.visibleCharts.length) {
+			const clickLegendMessage =
+				self.settings.exclude.cols.length || self.settings.exclude.rows.length
+					? `<br/><span>click on a legend label below to display the barchart</span>`
+					: ''
 			self.dom.banner
-				.html(
-					`No visible barchart data to render<br/><span style='font-size: 16px'>click on a hidden legend label below to display the barchart</span>`
-				)
+				.html(`<span>No visible barchart data to render</span>${clickLegendMessage}`)
 				.style('display', 'block')
 		} else {
 			self.dom.banner.text('').style('display', 'none')

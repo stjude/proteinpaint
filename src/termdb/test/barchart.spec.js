@@ -1353,7 +1353,7 @@ tape('no visible series data, no overlay', function(test) {
 	}
 })
 
-tape.only('all hidden + with overlay, legend click', function(test) {
+tape('all hidden + with overlay, legend click', function(test) {
 	test.timeoutAfter(5000)
 
 	runpp({
