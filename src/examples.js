@@ -1,4 +1,3 @@
-import { html, select as d3select } from 'd3'
 import { dofetch2 } from './client'
 // import { check } from 'prettier'
 
