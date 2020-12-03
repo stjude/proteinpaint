@@ -249,9 +249,6 @@ pp_init()
 async function handle_examples(req, res) {
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
-		// const file = JSON.parse('/modules/feature.js')
-		// res.send({ file })
-		// return
 		const id = Math.random().toString()
 		res.send({ filename: id })
 		return

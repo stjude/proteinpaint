@@ -15,8 +15,7 @@ export async function init_examples(par) {
 	const wrapper_div = make_examples_page(holder)
 	make_header(wrapper_div)
 	make_intro(wrapper_div)
-	make_showHideBtn(wrapper_div)
-	make_main_grid(wrapper_div)
+	make_main_track_grid(wrapper_div)
 }
 
 function make_examples_page(holder) {
@@ -30,7 +29,6 @@ function make_examples_page(holder) {
 }
 
 function make_header(div) {
-	//TODO styling hot mess
 	const header_div = div.append('div')
 	header_div
 		.style('padding', '10px')
@@ -38,7 +36,7 @@ function make_header(div) {
 		.style('height', '125px')
 		.style('background-image', 'linear-gradient(to bottom right, #1b2646, #324870)')
 		.style('display', 'grid')
-		// .style('grid-template-columns', '3fr 1fr 1fr')
+		.style('grid-template-columns', '3fr 1fr 1fr')
 		// .style('grid-template-rows', '1fr 1fr')
 		.style('grid-template-areas', '"htext contactBtn requestBtn" "htext searchBar searchBar"')
 		.style('gap', '20px')
@@ -56,7 +54,6 @@ function make_header(div) {
 		.style('text-align', 'left')
 		.style('tab-size', '8')
 		.style('margin-left', '40px')
-		// .style('background-image','none')
 		.style('color', 'white')
 		.html('GenomePaint, Genome Browser,<br>and Other App Examples') //TODO add in tab or new line?
 
@@ -64,7 +61,6 @@ function make_header(div) {
 	contact_btn
 		.append('button')
 		.style('grid-area', 'contactBtn')
-		// .style('grid-area', '1 / 2 / 1 / 2')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '14px')
 		.style('height', '30px')
@@ -84,7 +80,6 @@ function make_header(div) {
 	request_btn
 		.append('button')
 		.style('grid-area', 'requestBtn')
-		// .style('grid-area', '1 / 3 / 1 / 3')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '14px')
 		.style('height', '30px')
@@ -96,17 +91,17 @@ function make_header(div) {
 		.style('margin', '10px')
 		.html('<a href="mailto:PPTeam@STJUDE.ORG" subject="Inquiry from ppr Examples Page">Contact Us</a>')
 
-	const searchBar = header_div.append('div')
+	const searchBar_div = header_div.append('div')
+	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
+
+	const searchBar = searchBar_div.append('div')
 	searchBar
 		.append('div')
 		.append('input')
 		.attr('type', 'text')
-		.property('position', 'relative')
-		.style('grid-area', 'searchBar')
-		// .style('grid-area', '2 / 2 / auto / span 2')
-		.style('height', '24px')
-		.style('width', '500px')
-		.style('float', 'right')
+		.attr('size', 55)
+		// .style('height', '24px')
+		// .style('width', '500px')
 		.style('border-radius', '3px')
 		.style('border', '1px solid #eaeaea')
 		.style('padding', '5px 10px')
@@ -153,6 +148,8 @@ function make_intro(div) {
                 <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
             </ul>
         </p>`)
+
+	make_showHideBtn(div)
 }
 
 function make_showHideBtn(div) {
@@ -181,7 +178,7 @@ function make_showHideBtn(div) {
 }
 
 //Creates the two column outer grid
-function make_main_grid(div) {
+function make_main_track_grid(div) {
 	const track_grid = div.append('div')
 	track_grid
 		.append('div')
