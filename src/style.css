@@ -532,3 +532,382 @@ table {
   
 input[type="search"].tree_search {-webkit-appearance: searchfield;}
 input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearance: searchfield-cancel-button;}
+
+/* Example page style */
+
+.header {
+    padding: 10px;
+    margin: 0px;
+    height: 125px;
+    background-image: linear-gradient(to bottom right, #1b2646, #324870);
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr;
+    grid-template-areas: 'htext contact-button request-button' 'htext searchbar searchbar';
+    gap: 20px;
+}
+
+.header-text {
+    grid-area: htext;
+    top: 5%;
+    float: left;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-weight: lighter;
+    font-size: 30px;
+    letter-spacing: 2.5px;
+    text-align: left;
+    tab-size: 8;
+    margin-left: 40px;
+    color: white;
+}
+
+.tab {
+    display: inline-block;
+    margin-left: 40px
+}
+
+.contact-btn {
+    grid-area: contact-button;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 14px;
+    height: 30px;
+    width: 220px;
+    text-align: center;
+    background-color: #e6e7eb;
+    border-radius: 8px;
+    border: 1px black;
+    border-style: solid;
+    margin: 10px;
+}
+
+.request-btn {
+    grid-area: request-button;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 14px;
+    height: 30px;
+    width: 220px;
+    text-align: center;
+    background-color: #e6e7eb;
+    border-radius: 8px;
+    border-style: none;
+    border: 1px black;
+    border-style: solid;
+    margin: 10px;
+}
+
+#gpaint-btn:hover,
+
+/* #doc-btn:hover,
+#url-btn:hover,
+#example-btn:hover, */
+
+#showHide:hover,
+button:hover {
+    background-color: white;
+    color: #0d47ba;
+    border: 1px #adb7c9;
+    border-style: solid;
+}
+
+#searchBarDiv {
+    grid-area: searchbar;
+    position: relative;
+}
+
+#searchBar {
+    width: 500px;
+    height: 24px;
+    border-radius: 3px;
+    border: 1px solid #eaeaea;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.intro {
+    padding: 10px;
+}
+
+.intro-p {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 16px;
+    font-style: oblique;
+    font-weight: 500;
+    text-align: left;
+    color: #324870;
+    margin-left: 40px;
+    margin-right: 40px;
+}
+
+.intro-list {
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    text-align: left;
+    margin-left: 65px;
+    margin-right: 40px;
+}
+
+#showHide {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 11px;
+    height: 30px;
+    width: 80px;
+    text-align: center;
+    background-color: #e6e7eb;
+    border-radius: 8px;
+    border: none;
+    margin-left: 40px;
+    margin-top: 10px;
+}
+
+h1 {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 24px;
+    text-align: center;
+    color: #3B469A;
+    margin: 30px;
+}
+
+h3 {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-weight: 525;
+    letter-spacing: 2px;
+    font-size: 20px;
+    text-align: center;
+    color: #324870;
+    margin: 10px;
+    border-radius: 4px;
+}
+
+h5 {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-style: oblique;
+    font-weight: 500;
+    font-size: 18px;
+    text-align: left;
+    color: #324870;
+    margin: 10px;
+    padding: 10px;
+}
+
+hr {
+    background: linear-gradient(to right, #324870, #D3D3D3, white);
+    border: none;
+    height: 2px;
+    margin: auto;
+    margin-top: 0px;
+    margin-bottom: 3%;
+}
+
+.track-grid {
+    background-color: white;
+    padding: 10px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(425px, 1fr));
+    grid-template-areas: 'gbrowser otherapps';
+    text-align: left;
+    gap: 10px;
+    margin: 15px;
+}
+
+.gbrowser-header,
+.app-header {
+    color: white;
+    background: radial-gradient( #1b2646, #324870);
+    padding: 10px;
+}
+
+.gbrowser-col {
+    grid-area: gbrowser;
+    background-color: white;
+    border-radius: 20px;
+}
+
+.app-col {
+    grid-area: otherapps;
+    background-color: white;
+    border-radius: 20px;
+}
+
+.gpaint-card {
+    background-color: white;
+    border-radius: 20px;
+    border: 1px solid #D3D3D3;
+    display: grid;
+    width: minmax(320px, auto);
+    height: fit-content;
+    grid-template-columns: 1fr 4fr;
+    grid-template-areas: 'image link' 'image citation';
+    align-items: center;
+    justify-items: left;
+    text-align: left;
+    padding: 10px;
+    margin: 5px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.gpaint-img {
+    grid-area: image;
+    width: 125px;
+    height: 125px;
+    align-self: center;
+    justify-self: left;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+.gpaint-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#gpaint-link {
+    grid-area: link;
+    margin-left: 10px;
+    align-self: left;
+    justify-self: left;
+}
+
+#gpaint-citation {
+    grid-area: citation;
+    margin-left: 10px;
+}
+
+#browserList,
+#experimentalList,
+#appList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.track {
+    background-color: white;
+    border-radius: 20px;
+    border: 1px solid #D3D3D3;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 1fr 5fr;
+    grid-template-areas: 'image name' 'image blurb' 'image links';
+    gap: 5px;
+    align-items: center;
+    justify-items: left;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.gpaint-card::after,
+.track::after {
+    content: "";
+    border-radius: 20px;
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.gpaint-card:hover,
+.track:hover {
+    -webkit-transform: scale(1.05, 1.05);
+    transform: scale(1.05, 1.05);
+}
+
+.gpaint-card:hover::after,
+.track:hover::after {
+    opacity: 1;
+}
+
+.track-image {
+    grid-area: image;
+    width: 125px;
+    height: 125px;
+    align-self: center;
+    justify-self: center;
+}
+
+.track-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+.track>h6 {
+    grid-area: name;
+    text-align: left;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding-left: 10px;
+}
+
+#track-blurb {
+    grid-area: blurb;
+    text-align: left;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 12.5px;
+    font-weight: 300;
+}
+
+.track-btns {
+    grid-area: links;
+    display: flex;
+}
+
+#example-url {
+    margin: 10px;
+}
+
+#url-url {
+    margin: 10px;
+}
+
+#doc-url {
+    margin: 10px;
+}
+
+.url-tooltip-outer {
+    position: relative;
+    display: inline-block;
+}
+
+.url-tooltip-outer .url-tooltip-span {
+    visibility: hidden;
+    width: 120px;
+    background-color: #f2f0f0;
+    color: #1b2646;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -60px;
+}
+
+.url-tooltip-outer .url-tooltip-span::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #f2f0f0 transparent transparent transparent;
+}
+
+.url-tooltip-outer:hover .url-tooltip-span {
+    visibility: visible;
+}

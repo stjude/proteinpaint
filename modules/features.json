@@ -1,248 +1,251 @@
-[{
-    "name": "BigWig",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/bigwig.html",
-        "url": "https://proteinpaint.stjude.org/?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
-        "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
-    },
-    "searchterms": ["coverage", "numeric"]
-},
 {
-    "name": "ChromHMM + gene expression, aka PGV",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/pgv.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
-    },
-    "searchterms": []
-},
-{
-    "name": "Expression Rank",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/exprank.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
-    },
-    "searchterms": []
-},
-{
-    "name": "Hi-C",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/hic.html",
-        "url": "https://ppr.stjude.org/?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
-        "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
-    },
-    "searchterms": []
-},
-{
-    "name": "JSON BED",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/bedj.html",
-        "url": "https://ppr.stjude.org/?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
-        "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
-    },
-    "searchterms": []
-},
-{
-    "name": "Splice junction",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/junction.html",
-        "url": "https://ppr.stjude.org/?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
-        "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
-    },
-    "searchterms": []
-},
-{
-    "name": "Stranded BigWig",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/bigwig.stranded.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
-    },
-    "searchterms": []
-},
-{
-    "name": "Track list and Facet table",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
-    "buttons": {
-        "example": "",
-        "url": "https://ppr.stjude.org/?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
-        "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
-    },
-    "searchterms": []
-},
-{
-    "name": "Tumor-normal DNA allelic imbalance, aka aicheck",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/aicheck.html",
-        "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
-        "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
-    },
-    "searchterms": []
-},
-{
-    "name": "VCF",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/clinvar.html",
-        "url": "https://ppr.stjude.org/?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
-        "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
-    },
-    "searchterms": []
-},
-{
-    "name": "Viewing Pediatric and COSMIC mutations, aka Lollipop",
-    "app": "Genome Browser",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
-    "buttons": {
-        "example": "",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
-    },
-    "searchterms": []
-},
-{
-    "name": "ASE track",
-    "app": "Genome Browser",
-    "subheading": "Experimental Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/ase.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
-    },
-    "searchterms": []
-},
-{
-    "name": "BAM",
-    "app": "Genome Browser",
-    "subheading": "Experimental Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/bam.html",
-        "url": "",
-        "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
-    },
-    "searchterms": ["BLAT", "indel typing"]
-},
-{
-    "name": "Bampile",
-    "app": "Genome Browser",
-    "subheading": "Experimental Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
-    "buttons": {
-        "example": "",
-        "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
-        "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
-    },
-    "searchterms": []
-},
-{
-    "name": "Use FusionEditor",
-    "app": "Other Apps",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
-    "buttons": {
-        "example": "https://proteinpaint.stjude.org/FusionEditor/",
-        "url": "",
-        "doc": ""
-    },
-    "searchterms": []
-},
-{
-    "name": "Differential gene expression as MA and Volcano plots, with RNA-seq coverage",
-    "app": "Other Apps",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/mavb.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
-    },
-    "searchterms": []
-},
-{
-    "name": "Generic Scatterplot",
-    "app": "Other Apps",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/examples/tsne.custom.html",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
-    },
-    "searchterms": []
-},
-{
-    "name": "Single Cell",
-    "app": "Other Apps",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
-    "buttons": {
-        "example": "",
-        "url": "https://ppr.stjude.org/?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
-        "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
-    },
-    "searchterms": []
-},
-{
-    "name": "Study View",
-    "app": "Other Apps",
-    "subheading": "Tracks",
-    "blurb": "",
-    "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
-    "buttons": {
-        "example": "https://ppr.stjude.org/?study=ClinicalPilot ",
-        "url": "",
-        "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
-    },
-    "searchterms": ["heatmap", "heat map"]
+    "examples":[
+        {
+            "name": "BigWig",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/bigwig.html",
+                "url": "https://proteinpaint.stjude.org/?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
+            },
+            "searchterms": ["coverage", "numeric"]
+        },
+        {
+            "name": "ChromHMM + gene expression, aka PGV",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/pgv.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Expression Rank",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/exprank.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Hi-C",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/hic.html",
+                "url": "https://ppr.stjude.org/?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
+                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "JSON BED",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/bedj.html",
+                "url": "https://ppr.stjude.org/?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
+                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Splice junction",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/junction.html",
+                "url": "https://ppr.stjude.org/?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
+                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Stranded BigWig",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/bigwig.stranded.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Track list and Facet table",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
+            "buttons": {
+                "example": "",
+                "url": "https://ppr.stjude.org/?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
+                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Tumor-normal DNA allelic imbalance, aka aicheck",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/aicheck.html",
+                "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
+                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "VCF",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/clinvar.html",
+                "url": "https://ppr.stjude.org/?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
+                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Viewing Pediatric and COSMIC mutations, aka Lollipop",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "buttons": {
+                "example": "",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "ASE track",
+            "app": "Genome Browser",
+            "subheading": "Experimental Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/ase.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "BAM",
+            "app": "Genome Browser",
+            "subheading": "Experimental Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/bam.html",
+                "url": "",
+                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+            },
+            "searchterms": ["BLAT", "indel typing"]
+        },
+        {
+            "name": "Bampile",
+            "app": "Genome Browser",
+            "subheading": "Experimental Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
+            "buttons": {
+                "example": "",
+                "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
+                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Use FusionEditor",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
+            "buttons": {
+                "example": "https://proteinpaint.stjude.org/FusionEditor/",
+                "url": "",
+                "doc": ""
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Differential gene expression as MA and Volcano plots, with RNA-seq coverage",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/mavb.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Generic Scatterplot",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/examples/tsne.custom.html",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Single Cell",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
+            "buttons": {
+                "example": "",
+                "url": "https://ppr.stjude.org/?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
+                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Study View",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
+            "buttons": {
+                "example": "https://ppr.stjude.org/?study=ClinicalPilot ",
+                "url": "",
+                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
+            },
+            "searchterms": ["heatmap", "heat map"]
+        }
+    ]
 }
-]

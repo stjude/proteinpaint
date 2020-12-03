@@ -247,10 +247,16 @@ pp_init()
 	})
 
 async function handle_examples(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
-		const id = Math.random().toString()
-		res.send({ filename: id })
+		if (req.query.getexamplejson) {
+			const txt = await utils.read_file(serverconfig.examplejson)
+			const json = JSON.parse(txt)
+			res.send({ examples: json.examples })
+		} else {
+			res.send({ error: 'examples json file not defined' })
+		}
 		return
 	}
 	res.send({ error: 'Invalid request' })
