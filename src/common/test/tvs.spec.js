@@ -428,12 +428,13 @@ tape('tvs: Numerical', async test => {
 		'Should unhide button to add new range'
 	)
 
-	//test merging ranges by adding new range
+	// hide the visible uncomputable bin
 	tipd
 		.node()
 		.querySelectorAll('.value_checkbox')[0]
 		.click()
 
+	// test merging ranges by adding new range
 	tipd.selectAll('.apply_btn')._groups[0][1].click()
 	await sleep(800)
 
@@ -452,9 +453,10 @@ tape('tvs: Numerical', async test => {
 		.node()
 		.querySelectorAll('.start_select')[1]
 		.dispatchEvent(new Event('click'))
-	const start_value_premerge = tipd.node().querySelectorAll('.start_input')[0].value
-	const stop_input = tipd.node().querySelectorAll('.stop_input')[1]
-	stop_input.value = 1050
+	const start_value_premerge = +tipd.node().querySelectorAll('.start_input')[0].value
+	const stop_input = tipd.node().querySelectorAll('.stop_input')[0]
+	tipd.node().querySelectorAll('.start_input')[1].value = +stop_input.value - 400
+	tipd.node().querySelectorAll('.stop_input')[1].value = 5000
 	//press 'Enter' to update bins
 	stop_input.addEventListener('keyup', () => {})
 	stop_input.dispatchEvent(enter_event)
@@ -466,7 +468,7 @@ tape('tvs: Numerical', async test => {
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
-			.innerHTML.includes(' ' + start_value_premerge),
+			.innerHTML.includes(start_value_premerge + ' '),
 		'should merge ranges into 1 range'
 	)
 
