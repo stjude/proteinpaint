@@ -533,7 +533,7 @@ const ssmCaseAttr = [
 		name: 'Available variation data',
 		id: 'available_variation_data',
 		type: 'categorical',
-		get: m => m.available_variation_data
+		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
 	},
 	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
 	/*
