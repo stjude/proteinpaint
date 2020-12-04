@@ -7,6 +7,7 @@ const ch_dbtable = new Map() // k: db path, v: db stuff
 const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
+let examples
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -251,9 +252,7 @@ async function handle_examples(req, res) {
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
 		if (req.query.getexamplejson) {
-			const txt = await utils.read_file(serverconfig.examplejson)
-			const json = JSON.parse(txt)
-			res.send({ examples: json.examples })
+			res.send({ examples })
 		} else {
 			res.send({ error: 'examples json file not defined' })
 		}
@@ -10006,7 +10005,13 @@ async function pp_init() {
 
 		delete g.rawdslst
 	}
+
+	//add reading examples json here
+	const txt = await utils.read_file(serverconfig.examplejson)
+	const json = JSON.parse(txt)
+	examples = json.examples
 }
+
 function get_codedate() {
 	// detect if proteinpaint was called from outside the
 	// project directory that installed it as an npm dependency
