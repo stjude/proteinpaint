@@ -4,7 +4,6 @@ import { Menu } from '../client'
 import * as dom from '../dom'
 import { filterInit } from '../common/filter'
 import * as client from '../client'
-import { showTermSrc } from '../termdb/app'
 /*
 for configuring filter; just a thin wrapper of blue filter UI
 execution flow:
@@ -53,7 +52,6 @@ class TdbFilter {
 			debug: this.app.opts.debug,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
-			showTermSrc,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
