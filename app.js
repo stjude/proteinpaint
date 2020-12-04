@@ -5,9 +5,8 @@ const ch_genemcount = {} // genome name - gene name - ds name - mutation class -
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
 const utils = require('./modules/utils')
-const serverconfig = utils.serverconfig
+let serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
-let examples
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -247,12 +246,30 @@ pp_init()
 		process.exit(1)
 	})
 
+async function serverconfig_init() {
+	let temp_serverconfig = {}
+
+	// copy serverconfig to temp_obj
+	for (let i in utils.serverconfig) {
+		temp_serverconfig[i] = utils.serverconfig[i]
+	}
+
+	// add examples json to temp_obj
+	const txt = await utils.read_file(utils.serverconfig.examplejson)
+	const json = JSON.parse(txt)
+	temp_serverconfig.examples = json.examples
+
+	// freeze serverconfig obj
+	const serverconfig_freeze = Object.freeze(temp_serverconfig)
+	return serverconfig_freeze
+}
+
 async function handle_examples(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
 		if (req.query.getexamplejson) {
-			res.send({ examples })
+			res.send({ examples: serverconfig.examples })
 		} else {
 			res.send({ error: 'examples json file not defined' })
 		}
@@ -10005,11 +10022,7 @@ async function pp_init() {
 
 		delete g.rawdslst
 	}
-
-	//add reading examples json here
-	const txt = await utils.read_file(serverconfig.examplejson)
-	const json = JSON.parse(txt)
-	examples = json.examples
+	serverconfig = await serverconfig_init()
 }
 
 function get_codedate() {
