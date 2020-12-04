@@ -1,5 +1,5 @@
 import { dofetch3 } from '../client'
-import { getBarchartData } from './barchart.data'
+import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 
@@ -344,6 +344,31 @@ class FrontendVocab {
 	async getterm(termid) {
 		if (!termid) throw 'getterm: termid missing'
 		return this.vocab.terms.find(d => d.id == termid)
+	}
+
+	async getCategories(term, filter, lst = null) {
+		const q = { term, filter }
+		const data = getCategoryData(q, this.datarows)
+		console.log(data)
+		return data
+		/*const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}*/
 	}
 
 	graphable(term) {

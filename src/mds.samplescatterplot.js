@@ -246,7 +246,7 @@ async function get_data(obj) {
 	const filterApi = filterInit({
 		btn: obj.filterDiv.append('div'),
 		btnLabel: 'Filter',
-		emptyLabel: 'Select term',
+		emptyLabel: '+New Filter',
 		holder: obj.filterDiv.append('div'),
 		vocab: getVocabFromSamplesArray(ad.samples),
 		//termdbConfig: opts.termdbConfig,
