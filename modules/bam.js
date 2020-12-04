@@ -257,7 +257,12 @@ async function get_pileup(q, req, templates) {
 		const sf = pileup_height / maxValue
 		let i = 0
 		if (r.ntwidth > zoom_cutoff) {
-			softclip_mismatch_pileup(r, templates, bplst)
+			const refseq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
+				.split('\n')
+				.slice(1)
+				.join('')
+				.toUpperCase()
+			softclip_mismatch_pileup(r, templates, bplst, refseq)
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				//y = (maxValue-bp.total)*sf
@@ -288,9 +293,34 @@ async function get_pileup(q, req, templates) {
 					y += h
 				}
 				// Rendering soft clips
-				if (bp.softclip) {
-					ctx.fillStyle = 'rgb(70,130,180)'
-					const h = bp.softclip * sf
+				//if (bp.softclip) {
+				//	ctx.fillStyle = 'rgb(70,130,180)'
+				//	const h = bp.softclip * sf
+				//	ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				//	y += h
+				//}
+
+				if (bp.softclipA) {
+					ctx.fillStyle = basecolor.basecolor.A
+					const h = bp.softclipA * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipT) {
+					ctx.fillStyle = basecolor.basecolor.T
+					const h = bp.softclipT * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipC) {
+					ctx.fillStyle = basecolor.basecolor.C
+					const h = bp.softclipC * sf
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipG) {
+					ctx.fillStyle = basecolor.basecolor.G
+					const h = bp.softclipG * sf
 					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
 					y += h
 				}
@@ -346,126 +376,134 @@ async function get_pileup(q, req, templates) {
 	q.pileup_data = pileup_data
 }
 
-function softclip_mismatch_pileup(r, templates, bplst) {
+function softclip_mismatch_pileup(r, templates, bplst, refseq) {
 	let bp_iter = 0
 	for (const template of templates) {
-		let prev = ''
-		bp_iter = parseInt(template.segments[0].segstart) - parseInt(bplst[0].position) - 1 // Records position in the view range
-		let first_element_of_cigar = 1
-		for (let i = 0; i < template.segments[0].cigarstr.length; i++) {
-			const cigar = template.segments[0].cigarstr[i]
-			if (cigar.match(/[0-9]/)) {
-				prev += cigar
-				continue
-			}
-			if (cigar == 'S') {
-				//							        console.log("r.start:",r.start)
-				//						                console.log("startpos:",template.segments[0].segstart)
-				//						                console.log("cigar:",template.segments[0].cigarstr)
-				//								console.log("prev:",prev," soft-clip")
-				//				                              console.log("bp_iter:",bp_iter)
+		for (const segment of template.segments) {
+			bp_iter = parseInt(segment.segstart) - parseInt(bplst[0].position) - 1 // Records position in the view range
+			let first_element_of_cigar = 1
+			for (const box of segment.boxes) {
+				if (box.opr == 'S') {
+					console.log('Softclip seq:', box.s, box.start, segment.qname, refseq.length)
+					// Checking to see if the first element of cigar is softclip or not
+					if (first_element_of_cigar == 1) {
+						bp_iter = bp_iter - parseInt(box.len)
+						first_element_of_cigar = 0
+					}
+					// Calculating soft-clip pileup here
+					for (let j = bp_iter; j < parseInt(box.len) + bp_iter; j++) {
+						if (j < 0) {
+							continue
+						} // When a read starts before the current view range
+						else if (j > parseInt(r.stop) - parseInt(bplst[0].position) - 2) {
+							break
+						} // When a read extends beyond current view range
+						else {
+							if (!bplst[j].softclip) {
+								bplst[j].softclip = 1
+							} else {
+								bplst[j].softclip += 1
+							}
 
-				// Checking to see if the first element of cigar is softclip or not
-				if (first_element_of_cigar == 1) {
-					//					                               console.log("prev:",prev)
-					//					                               console.log("r.start:",r.start)
-					//					                               console.log("template.segments[0].segstart:",template.segments[0].segstart)
-					//					                               console.log("bp_iter:",bp_iter)
-					bp_iter = bp_iter - parseInt(prev)
+							// Check to see if softclip reference allele or not
+							//console.log("base:",box.s[j-bp_iter])
+							//console.log("refs:",refseq[j])
+							if (refseq[j] != box.s[j - bp_iter]) {
+								if (box.s[j - bp_iter] == 'A') {
+									if (!bplst[j].softclipA) {
+										bplst[j].softclipA = 1
+									} else {
+										bplst[j].softclipA += 1
+									}
+								}
+
+								if (box.s[j - bp_iter] == 'T') {
+									if (!bplst[j].softclipT) {
+										bplst[j].softclipT = 1
+									} else {
+										bplst[j].softclipT += 1
+									}
+								}
+
+								if (box.s[j - bp_iter] == 'C') {
+									if (!bplst[j].softclipC) {
+										bplst[j].softclipC = 1
+									} else {
+										bplst[j].softclipC += 1
+									}
+								}
+
+								if (box.s[j - bp_iter] == 'G') {
+									if (!bplst[j].softclipG) {
+										bplst[j].softclipG = 1
+									} else {
+										bplst[j].softclipG += 1
+									}
+								}
+							}
+
+							//const softclip_seq=segment.seq.substring(box.cidx, box.cidx+box.len)
+							//                                                console.log("b.opr:",b.opr)
+							//                                                console.log("b.cidx:",b.cidx)
+						}
+					}
+					bp_iter += parseInt(box.len)
+					continue
+				} else {
+					bp_iter += parseInt(box.len)
 					first_element_of_cigar = 0
-					//                               console.log("bp_iter after prev:",bp_iter)
 				}
-				// Calculating soft-clip pileup here
-				for (let j = bp_iter; j < parseInt(prev) + bp_iter; j++) {
-					if (j < 0) {
-						continue
-					} // When a read starts before the current view range
-					else if (j > parseInt(r.stop) - parseInt(bplst[0].position) - 2) {
-						break
-					} // When a read extends beyond current view range
-					else {
-						if (!bplst[j].softclip) {
-							bplst[j].softclip = 1
-						} else {
-							bplst[j].softclip += 1
-						}
-					}
-				}
-				bp_iter += parseInt(prev)
-				prev = ''
-				continue
-			} else {
-				bp_iter += parseInt(prev)
-				first_element_of_cigar = 0
-				prev = ''
 			}
-		}
 
-		for (let i = 0; i < template.segments[0].boxes.length; i++) {
-			if (template.segments[0].boxes[i].opr == 'X') {
-				//console.log("template.segments[0].boxes[i]:",template.segments[0].boxes[i])
-				bp_iter = parseInt(template.segments[0].boxes[i].start) - parseInt(bplst[0].position) - 1 // Records position in the view range
-				//console.log("r.start:",r.start)
-				//console.log("bp_iter:",bp_iter)
-				if (bp_iter >= 0 && parseInt(r.stop) - parseInt(bplst[0].position) - 2 >= bp_iter) {
-					// Checking to see if the variant is within the view range
-					if (template.segments[0].boxes[i].s == 'A') {
-						if (!bplst[bp_iter].A) {
-							bplst[bp_iter].A = 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
-						} else {
-							bplst[bp_iter].A += 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+			for (let i = 0; i < segment.boxes.length; i++) {
+				if (segment.boxes[i].opr == 'X') {
+					//console.log("segment.boxes[i]:",template.segment.boxes[i])
+					bp_iter = parseInt(segment.boxes[i].start) - parseInt(bplst[0].position) - 1 // Records position in the view range
+					//console.log("r.start:",r.start)
+					//console.log("bp_iter:",bp_iter)
+					if (bp_iter >= 0 && parseInt(r.stop) - parseInt(bplst[0].position) - 2 >= bp_iter) {
+						// Checking to see if the variant is within the view range
+						if (segment.boxes[i].s == 'A') {
+							if (!bplst[bp_iter].A) {
+								bplst[bp_iter].A = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].A += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
 						}
-					}
-					if (template.segments[0].boxes[i].s == 'T') {
-						if (!bplst[bp_iter].T) {
-							bplst[bp_iter].T = 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
-						} else {
-							bplst[bp_iter].T += 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						if (segment.boxes[i].s == 'T') {
+							if (!bplst[bp_iter].T) {
+								bplst[bp_iter].T = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].T += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
 						}
-					}
-					if (template.segments[0].boxes[i].s == 'C') {
-						if (!bplst[bp_iter].C) {
-							bplst[bp_iter].C = 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
-						} else {
-							bplst[bp_iter].C += 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						if (segment.boxes[i].s == 'C') {
+							if (!bplst[bp_iter].C) {
+								bplst[bp_iter].C = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].C += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
 						}
-					}
-					if (template.segments[0].boxes[i].s == 'G') {
-						if (!bplst[bp_iter].G) {
-							bplst[bp_iter].G = 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
-						} else {
-							bplst[bp_iter].G += 1
-							bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+						if (segment.boxes[i].s == 'G') {
+							if (!bplst[bp_iter].G) {
+								bplst[bp_iter].G = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].G += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-}
-
-function drawLine(ctx, startX, startY, endX, endY, color) {
-	ctx.save()
-	ctx.strokeStyle = color
-	ctx.beginPath()
-	ctx.moveTo(startX, startY)
-	ctx.lineTo(endX, endY)
-	ctx.stroke()
-	ctx.restore()
-}
-
-function drawBar(ctx, upperLeftCornerX, upperLeftCornerY, width, height, color) {
-	ctx.save()
-	ctx.fillStyle = color
-	ctx.fillRect(upperLeftCornerX, upperLeftCornerY, width, height)
-	ctx.restore()
 }
 
 async function get_q(genome, req) {
