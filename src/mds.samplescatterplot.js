@@ -5,6 +5,8 @@ import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
+import { filterInit } from './common/filter'
+import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /*
 obj:
@@ -137,9 +139,9 @@ export async function init(obj, holder, debugmode) {
 			})
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
-
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 	obj.scattersvg_buttons = scatterdiv.append('div')
@@ -240,6 +242,21 @@ async function get_data(obj) {
 			obj.dots_user.push(d)
 		}
 	}
+
+	const filterApi = filterInit({
+		btn: obj.filterDiv.append('div'),
+		btnLabel: 'Filter',
+		emptyLabel: 'Select term',
+		holder: obj.filterDiv.append('div'),
+		vocab: getVocabFromSamplesArray(ad.samples),
+		//termdbConfig: opts.termdbConfig,
+		debug: true,
+		callback(d) {
+			console.log(d)
+		}
+	})
+
+	filterApi.main({ type: 'tvslst', join: '', lst: [] })
 }
 
 function combine_clientserverdata(obj, data) {

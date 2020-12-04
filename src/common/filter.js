@@ -215,7 +215,8 @@ class Filter {
 
 					return {
 						vocab: this.opts.vocab,
-						termfilter: { filter }
+						termfilter: { filter },
+						tree: { plots: {} }
 					}
 				}
 			}
