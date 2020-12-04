@@ -405,39 +405,39 @@ function softclip_mismatch_pileup(r, templates, bplst, refseq) {
 								bplst[j].softclip += 1
 							}
 
-							// Check to see if softclip reference allele or not
-							//console.log("base:",box.s[j-bp_iter])
-							//console.log("refs:",refseq[j])
-							if (refseq[j] != box.s[j - bp_iter]) {
-								if (box.s[j - bp_iter] == 'A') {
-									if (!bplst[j].softclipA) {
-										bplst[j].softclipA = 1
-									} else {
-										bplst[j].softclipA += 1
+							// Check to see if softclip is reference allele or not
+							if (box.s) {
+								if (refseq[j] != box.s[j - bp_iter]) {
+									if (box.s[j - bp_iter] == 'A') {
+										if (!bplst[j].softclipA) {
+											bplst[j].softclipA = 1
+										} else {
+											bplst[j].softclipA += 1
+										}
 									}
-								}
 
-								if (box.s[j - bp_iter] == 'T') {
-									if (!bplst[j].softclipT) {
-										bplst[j].softclipT = 1
-									} else {
-										bplst[j].softclipT += 1
+									if (box.s[j - bp_iter] == 'T') {
+										if (!bplst[j].softclipT) {
+											bplst[j].softclipT = 1
+										} else {
+											bplst[j].softclipT += 1
+										}
 									}
-								}
 
-								if (box.s[j - bp_iter] == 'C') {
-									if (!bplst[j].softclipC) {
-										bplst[j].softclipC = 1
-									} else {
-										bplst[j].softclipC += 1
+									if (box.s[j - bp_iter] == 'C') {
+										if (!bplst[j].softclipC) {
+											bplst[j].softclipC = 1
+										} else {
+											bplst[j].softclipC += 1
+										}
 									}
-								}
 
-								if (box.s[j - bp_iter] == 'G') {
-									if (!bplst[j].softclipG) {
-										bplst[j].softclipG = 1
-									} else {
-										bplst[j].softclipG += 1
+									if (box.s[j - bp_iter] == 'G') {
+										if (!bplst[j].softclipG) {
+											bplst[j].softclipG = 1
+										} else {
+											bplst[j].softclipG += 1
+										}
 									}
 								}
 							}
