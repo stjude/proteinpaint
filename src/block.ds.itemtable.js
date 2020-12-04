@@ -1868,7 +1868,7 @@ function caller_pmid(m) {
 				return ''
 			}
 			if (typeof m.pmid == 'number') {
-				return '<a target=_blank href=http://www.ncbi.nlm.nih.gov/pubmed/' + m.pmid + '>' + m.pmid + '</a>'
+				return '<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '>' + m.pmid + '</a>'
 			}
 			const lst = m.pmid.split(',')
 			const out = []
@@ -1878,7 +1878,7 @@ function caller_pmid(m) {
 				if (Number.isNaN(j)) {
 					out.push(i)
 				} else {
-					out.push('<a target=_blank href=http://www.ncbi.nlm.nih.gov/pubmed/' + i + '>' + i + '</a>')
+					out.push('<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + i + '>' + i + '</a>')
 				}
 			}
 			return out.join(' ')

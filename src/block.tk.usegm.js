@@ -1036,7 +1036,7 @@ function domainlegend(tk, block) {
 		if (domaintype.Pfam) {
 			row
 				.append('a')
-				.attr('href', 'http://pfam.xfam.org/family/PF' + domaintype.Pfam.substr(4))
+				.attr('href', 'https://pfam.xfam.org/family/PF' + domaintype.Pfam.substr(4))
 				.attr('target', '_blank')
 				.text('Pfam')
 				.style('font-size', '.7em')
@@ -1045,10 +1045,7 @@ function domainlegend(tk, block) {
 		if (domaintype.SMART) {
 			row
 				.append('a')
-				.attr(
-					'href',
-					'http://smart.embl-heidelberg.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=' + domaintype.SMART.substr(5)
-				)
+				.attr('href', 'https://smart.embl.de/smart/do_annotation.pl?BLAST=DUMMY&DOMAIN=' + domaintype.SMART.substr(5))
 				.attr('target', '_blank')
 				.text('SMART')
 				.style('font-size', '.7em')
@@ -1077,7 +1074,7 @@ function domainlegend(tk, block) {
 			// may support comma-joined ids
 			row
 				.append('a')
-				.attr('href', 'http://www.ncbi.nlm.nih.gov/pubmed/' + domaintype.pmid)
+				.attr('href', 'https://pubmed.ncbi.nlm.nih.gov/' + domaintype.pmid + '/')
 				.attr('target', '_blank')
 				.text('PubMed ' + domaintype.pmid)
 				.style('font-size', '.7em')
