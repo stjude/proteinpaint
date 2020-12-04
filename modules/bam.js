@@ -256,13 +256,8 @@ async function get_pileup(q, req, templates) {
 		let y = 0
 		const sf = pileup_height / maxValue
 		let i = 0
+		softclip_mismatch_pileup(r, templates, bplst)
 		if (r.ntwidth > zoom_cutoff) {
-			const refseq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
-				.split('\n')
-				.slice(1)
-				.join('')
-				.toUpperCase()
-			softclip_mismatch_pileup(r, templates, bplst, refseq)
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				//y = (maxValue-bp.total)*sf
@@ -362,6 +357,14 @@ async function get_pileup(q, req, templates) {
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				y = 0
+				if (bp.softclip) {
+					ctx.fillStyle = 'rgb(70,130,180)'
+					const h = bp.softclip * sf
+					console.log('Hello')
+					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					y += h
+				}
+
 				ctx.fillStyle = 'rgb(192,192,192)'
 				const h = bp.total * sf
 				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
@@ -376,26 +379,25 @@ async function get_pileup(q, req, templates) {
 	q.pileup_data = pileup_data
 }
 
-function softclip_mismatch_pileup(r, templates, bplst, refseq) {
+function softclip_mismatch_pileup(r, templates, bplst) {
 	let bp_iter = 0
 	for (const template of templates) {
 		for (const segment of template.segments) {
-			bp_iter = parseInt(segment.segstart) - parseInt(bplst[0].position) - 1 // Records position in the view range
+			bp_iter = Number.parseInt(segment.segstart) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 			let first_element_of_cigar = 1
 			for (const box of segment.boxes) {
 				if (box.opr == 'S') {
-					console.log('Softclip seq:', box.s, box.start, segment.qname, refseq.length)
 					// Checking to see if the first element of cigar is softclip or not
 					if (first_element_of_cigar == 1) {
-						bp_iter = bp_iter - parseInt(box.len)
+						bp_iter = bp_iter - Number.parseInt(box.len)
 						first_element_of_cigar = 0
 					}
 					// Calculating soft-clip pileup here
-					for (let j = bp_iter; j < parseInt(box.len) + bp_iter; j++) {
+					for (let j = bp_iter; j < Number.parseInt(box.len) + bp_iter; j++) {
 						if (j < 0) {
 							continue
 						} // When a read starts before the current view range
-						else if (j > parseInt(r.stop) - parseInt(bplst[0].position) - 2) {
+						else if (j > Number.parseInt(r.stop) - Number.parseInt(bplst[0].position) - 2) {
 							break
 						} // When a read extends beyond current view range
 						else {
@@ -406,51 +408,51 @@ function softclip_mismatch_pileup(r, templates, bplst, refseq) {
 							}
 
 							// Check to see if softclip is reference allele or not
-							if (box.s) {
-								if (refseq[j] != box.s[j - bp_iter]) {
-									if (box.s[j - bp_iter] == 'A') {
-										if (!bplst[j].softclipA) {
-											bplst[j].softclipA = 1
-										} else {
-											bplst[j].softclipA += 1
-										}
-									}
-
-									if (box.s[j - bp_iter] == 'T') {
-										if (!bplst[j].softclipT) {
-											bplst[j].softclipT = 1
-										} else {
-											bplst[j].softclipT += 1
-										}
-									}
-
-									if (box.s[j - bp_iter] == 'C') {
-										if (!bplst[j].softclipC) {
-											bplst[j].softclipC = 1
-										} else {
-											bplst[j].softclipC += 1
-										}
-									}
-
-									if (box.s[j - bp_iter] == 'G') {
-										if (!bplst[j].softclipG) {
-											bplst[j].softclipG = 1
-										} else {
-											bplst[j].softclipG += 1
-										}
-									}
+							//if (box.s) {
+							//if (refseq[j] != box.s[j - bp_iter]) {
+							if (box.s[j - bp_iter] == 'A') {
+								if (!bplst[j].softclipA) {
+									bplst[j].softclipA = 1
+								} else {
+									bplst[j].softclipA += 1
 								}
 							}
+
+							if (box.s[j - bp_iter] == 'T') {
+								if (!bplst[j].softclipT) {
+									bplst[j].softclipT = 1
+								} else {
+									bplst[j].softclipT += 1
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'C') {
+								if (!bplst[j].softclipC) {
+									bplst[j].softclipC = 1
+								} else {
+									bplst[j].softclipC += 1
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'G') {
+								if (!bplst[j].softclipG) {
+									bplst[j].softclipG = 1
+								} else {
+									bplst[j].softclipG += 1
+								}
+							}
+							//}
+							//}
 
 							//const softclip_seq=segment.seq.substring(box.cidx, box.cidx+box.len)
 							//                                                console.log("b.opr:",b.opr)
 							//                                                console.log("b.cidx:",b.cidx)
 						}
 					}
-					bp_iter += parseInt(box.len)
+					bp_iter += Number.parseInt(box.len)
 					continue
 				} else {
-					bp_iter += parseInt(box.len)
+					bp_iter += Number.parseInt(box.len)
 					first_element_of_cigar = 0
 				}
 			}
@@ -458,10 +460,10 @@ function softclip_mismatch_pileup(r, templates, bplst, refseq) {
 			for (let i = 0; i < segment.boxes.length; i++) {
 				if (segment.boxes[i].opr == 'X') {
 					//console.log("segment.boxes[i]:",template.segment.boxes[i])
-					bp_iter = parseInt(segment.boxes[i].start) - parseInt(bplst[0].position) - 1 // Records position in the view range
+					bp_iter = Number.parseInt(segment.boxes[i].start) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 					//console.log("r.start:",r.start)
 					//console.log("bp_iter:",bp_iter)
-					if (bp_iter >= 0 && parseInt(r.stop) - parseInt(bplst[0].position) - 2 >= bp_iter) {
+					if (bp_iter >= 0 && Number.parseInt(r.stop) - Number.parseInt(bplst[0].position) - 2 >= bp_iter) {
 						// Checking to see if the variant is within the view range
 						if (segment.boxes[i].s == 'A') {
 							if (!bplst[bp_iter].A) {
@@ -748,7 +750,7 @@ function run_samtools_depth(q, r) {
 			const columns = line.split('\t')
 			const bp = {
 				total: Number.parseInt(columns[2]),
-				position: parseInt(columns[1]) - 2,
+				position: Number.parseInt(columns[1]) - 2,
 				ref: Number.parseInt(columns[2])
 			}
 			bplst.push(bp)
@@ -1241,9 +1243,9 @@ at the end, set q.canvasheight
 					// insertion has been decided to be visible so always get seq
 					b.s = segment.seq.substr(b.cidx, b.len)
 				} else if (b.opr == 'X' || b.opr == 'S') {
-					if (r.to_printnt) {
-						b.s = segment.seq.substr(b.cidx, b.len)
-					}
+					//if (r.to_printnt) {
+					b.s = segment.seq.substr(b.cidx, b.len)
+					//}
 				}
 				delete b.cidx
 			}
