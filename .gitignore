@@ -1,10 +1,14 @@
 *.swp
 .DS_Store
 /node_modules/
+*/*/node_modules/
 npm-debug.log
 dist/*
+*/*/dist/
 
 public/bin/*
+*/*/public/bin/*
+
 public/tmp/*
 public/data/*
 public/stage/*
