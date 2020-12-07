@@ -3,6 +3,7 @@
 /node_modules/
 npm-debug.log
 dist/*
+wrappers/*
 
 public/bin/*
 public/tmp/*

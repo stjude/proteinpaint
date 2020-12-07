@@ -1228,8 +1228,6 @@ function handle_dsdata_makequery(ds, query, req) {
 		// when not using gm, will not query tables such as expression
 		return
 	}
-	console.log(sqlstr)
-	console.log(values)
 	const rows = ds.newconn.prepare(sqlstr).all(values)
 	let lst
 	if (query.tidy) {
