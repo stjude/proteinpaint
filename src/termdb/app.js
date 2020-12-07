@@ -91,7 +91,7 @@ class TdbApp {
 	}
 }
 
-exports.appInit = rx.getInitFxn(TdbApp)
+export const appInit = rx.getInitFxn(TdbApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {

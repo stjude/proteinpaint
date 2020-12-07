@@ -258,7 +258,7 @@ TdbStore.prototype.actions = {
 	}
 }
 
-exports.storeInit = rx.getInitFxn(TdbStore)
+export const storeInit = rx.getInitFxn(TdbStore)
 
 function validatePlot(p, vocabApi) {
 	/*

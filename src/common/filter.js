@@ -229,7 +229,7 @@ class Filter {
 	}
 }
 
-exports.filterInit = rx.getInitFxn(Filter)
+export const filterInit = rx.getInitFxn(Filter)
 
 // will assign an incremented index to each filter UI instance
 // to help namespace the body.on('click') event handler;
@@ -1056,7 +1056,7 @@ function setInteractivity(self) {
 *************************/
 
 // find the first filter item that has a matching term.id
-function findItemByTermId(item, id) {
+export function findItemByTermId(item, id) {
 	if (item.type === 'tvs' && item.tvs.term.id === id) return item
 	if (item.type !== 'tvslst') return
 	for (const subitem of item.lst) {
@@ -1064,11 +1064,10 @@ function findItemByTermId(item, id) {
 		if (matchingItem) return matchingItem
 	}
 }
-exports.findItemByTermId = findItemByTermId
 
 // find filter item by the sequential $id
 // assigned at the time of adding a filter entry
-function findItem(item, $id) {
+export function findItem(item, $id) {
 	if (item.$id === $id) return item
 	if (item.type !== 'tvslst') return
 	for (const subitem of item.lst) {
@@ -1076,9 +1075,8 @@ function findItem(item, $id) {
 		if (matchingItem) return matchingItem
 	}
 }
-exports.findItem = findItem
 
-function findParent(parent, $id) {
+export function findParent(parent, $id) {
 	if (parent.$id === $id) return parent
 	if (!parent.lst) return
 	for (const item of parent.lst) {
@@ -1089,9 +1087,8 @@ function findParent(parent, $id) {
 		}
 	}
 }
-exports.findParent = findParent
 
-function getFilterItemByTag(item, tag) {
+export function getFilterItemByTag(item, tag) {
 	if (item.tag === tag) return item
 	if (item.type !== 'tvslst') return
 	for (const subitem of item.lst) {
@@ -1099,7 +1096,6 @@ function getFilterItemByTag(item, tag) {
 		if (matchingItem) return matchingItem
 	}
 }
-exports.getFilterItemByTag = getFilterItemByTag
 
 function getWrappedTvslst(lst = [], join = '', $id = null) {
 	const filter = {
@@ -1118,14 +1114,12 @@ function getWrappedTvslst(lst = [], join = '', $id = null) {
 
 	.filter{} the raw filter root
 */
-function getNormalRoot(rawFilter) {
+export function getNormalRoot(rawFilter) {
 	if (!rawFilter) return getWrappedTvslst([])
 	const filter = JSON.parse(JSON.stringify(rawFilter))
 	const processedFilter = normalizeFilter(filter)
 	return processedFilter.type == 'tvslst' ? processedFilter : getWrappedTvslst([processedFilter])
 }
-
-exports.getNormalRoot = getNormalRoot
 
 /* 
 	Potentially
@@ -1207,7 +1201,7 @@ lst:[]
   the function returns a (modified) copy of the first filter, and will not modify it
   rest of the array will be joined to the first one under "and"
 */
-function filterJoin(lst) {
+export function filterJoin(lst) {
 	if (!lst || lst.length == 0) return
 	let f = JSON.parse(JSON.stringify(lst[0]))
 	if (lst.length == 1) return f
@@ -1240,8 +1234,6 @@ function filterJoin(lst) {
 	}
 	return f
 }
-
-exports.filterJoin = filterJoin
 
 function getValuesForHtmlSelect(self, item) {
 	return item.selectOptionsFrom == 'selectCohort'

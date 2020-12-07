@@ -9584,7 +9584,8 @@ async function pp_init() {
 
 			// FIXME document the purpose of being able to use override file
 			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name

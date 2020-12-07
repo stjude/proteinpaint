@@ -1,6 +1,6 @@
-const d3format = require('d3-format')
+import * as d3format from 'd3-format'
 
-function validate_bins(binconfig) {
+export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
 
 	const bc = binconfig
@@ -107,9 +107,7 @@ function validate_bins(binconfig) {
 	}
 }
 
-exports.validate_bins = validate_bins
-
-function compute_bins(binconfig, summaryfxn) {
+export function compute_bins(binconfig, summaryfxn) {
 	/*
   Bins generator
   
@@ -243,8 +241,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	return bins
 }
 
-exports.compute_bins = compute_bins
-
 function setNumDecimalsFormatter(bc) {
 	if (!bc.numDecimals) {
 		const decimals = ('' + bc.bin_size).split('.')[1] || (bc.first_bin && ('' + bc.first_bin.stop).split('.')[1])
@@ -256,7 +252,7 @@ function setNumDecimalsFormatter(bc) {
 	}
 }
 
-function get_bin_label(bin, binconfig) {
+export function get_bin_label(bin, binconfig) {
 	/*
   Generate a numeric bin label given a bin configuration
 */
@@ -328,9 +324,7 @@ function get_bin_label(bin, binconfig) {
 	return oper0 + v0 + ' to ' + oper1 + v1
 }
 
-exports.get_bin_label = get_bin_label
-
-function target_percentiles(binconfig) {
+export function target_percentiles(binconfig) {
 	const percentiles = []
 	const f = binconfig.first_bin
 	if (f && isNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
@@ -340,8 +334,6 @@ function target_percentiles(binconfig) {
 	if (l && isNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
 	return percentiles
 }
-
-exports.target_percentiles = target_percentiles
 
 function isNumeric(n) {
 	return !isNaN(parseFloat(n)) && isFinite(n)

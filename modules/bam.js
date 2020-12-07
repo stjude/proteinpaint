@@ -8,7 +8,7 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
-
+console.log('abcxyz')
 /*
 XXX quick fix to be removed/disabled later
 -- __tempscore 

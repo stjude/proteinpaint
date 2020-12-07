@@ -5,7 +5,7 @@ Arguments
 self: a termsetting instance
 */
 
-exports.setConditionalMethods = function setConditionalMethods(self) {
+export function setConditionalMethods(self) {
 	setCategoricalMethods(self)
 
 	self.showEditMenu = async function(div) {

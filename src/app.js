@@ -10,7 +10,7 @@ import {loadstudycohort} from './tp.init'
 import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
-import {debounce} from 'debounce'
+import * as debounce from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 
@@ -72,7 +72,7 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 
-window.runproteinpaint=(arg)=>{
+export function runproteinpaint(arg) {
 	if(arg.clear) {
 		// for use by pecan
 		d3selectAll('.sja_menu').remove()
@@ -166,7 +166,7 @@ window.runproteinpaint=(arg)=>{
 	})
 }
 
-
+window.runproteinpaint = runproteinpaint
 
 function makeheader(holder,obj, jwt) {
 	/*

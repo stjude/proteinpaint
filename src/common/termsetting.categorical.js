@@ -5,13 +5,15 @@ Arguments
 self: a termsetting instance
 */
 
-exports.setCategoricalMethods = function setCategoricalMethods(self) {
+export function setCategoricalMethods(self) {
 	self.showEditMenu = function(div) {
 		self.showGrpOpts(div)
 	}
 
 	self.term_name_gen = function(d) {
-		return d.name.length <= 20 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+		return d.name.length <= 20
+			? d.name
+			: '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
 	}
 
 	self.get_status_msg = function() {
