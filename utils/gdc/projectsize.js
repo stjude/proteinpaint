@@ -15,13 +15,13 @@ query CancerDistributionSsmTable_relayQuery(
               key
             }
           }
-          project__disease_type {
+          disease_type {
             buckets {
               doc_count
               key
             }
           }
-          project__primary_site{
+          primary_site{
             buckets {
               doc_count
               key
@@ -57,14 +57,14 @@ if (token) headers['X-Auth-Token'] = token
 			console.log(lst.length, 'projects')
 		}
 		{
-			const lst = re.data.viewer.explore.cases.total.project__disease_type.buckets
+			const lst = re.data.viewer.explore.cases.total.disease_type.buckets
 			for (const v of lst) {
 				console.log(v.key, v.doc_count)
 			}
 			console.log(lst.length, 'disease types')
 		}
 		{
-			const lst = re.data.viewer.explore.cases.total.project__primary_site.buckets
+			const lst = re.data.viewer.explore.cases.total.primary_site.buckets
 			for (const v of lst) {
 				console.log(v.key, v.doc_count)
 			}
