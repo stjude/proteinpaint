@@ -63,7 +63,6 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	variant2samples_closure = require('./modules/variant2samples'),
 	do_hicstat = require('./modules/hicstat').do_hicstat
 
 /*
@@ -157,8 +156,6 @@ app.get('/tkbam', bam_request_closure(genomes))
 app.get('/tkaicheck', aicheck_request_closure(genomes))
 app.get('/blat', blat_request_closure(genomes))
 app.get('/mds3', mds3_request_closure(genomes))
-app.get('/variant2samples', variant2samples_closure(genomes))
-app.get('/dsvariantsummary', handle_dsvariantsummary)
 app.get('/tkbampile', bampile_request)
 app.post('/snpbyname', handle_snpbyname)
 app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
@@ -167,7 +164,7 @@ app.post('/tkbigwig', handle_tkbigwig)
 
 app.get('/tabixheader', handle_tabixheader)
 app.post('/snp', handle_snpbycoord)
-app.post('/clinvarVCF', handle_clinvarVCF)
+app.get('/clinvarVCF', handle_clinvarVCF)
 app.post('/isoformlst', handle_isoformlst)
 app.post('/dbdata', handle_dbdata)
 app.post('/img', handle_img)
@@ -405,12 +402,6 @@ function clientcopy_genome(genomename) {
 		}
 		if (ds.snvindel_legend) {
 			ds2.snvindel_legend = ds.snvindel_legend
-		}
-		if (ds.variant2samples) {
-			ds2.variant2samples = {
-				variantkey: ds.variant2samples.variantkey,
-				levels: ds.variant2samples.levels
-			}
 		}
 		const vcfinfo = {}
 		let hasvcf = false
@@ -1122,145 +1113,53 @@ function handle_snpbycoord(req, res) {
 	res.send({ results: hits })
 }
 
-function handle_clinvarVCF(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
+async function handle_clinvarVCF(req, res) {
+	log(req)
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'unknown genome'
 		if (!g.clinvarVCF) throw 'no clinvar for this genome'
-
-		const ps = spawn(tabix, [
-			g.clinvarVCF.file,
-			(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) +
-				':' +
-				req.query.pos +
-				'-' +
-				(req.query.pos + 1)
-		])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.on('close', () => {
-			const str = out.join('').trim()
-			if (!str) {
-				res.send({})
-				return
-			}
-			for (const line of str.split('\n')) {
+		const pos = Number(req.query.pos)
+		if (!Number.isInteger(pos)) throw 'pos is not integer'
+		if (pos < 0) throw 'pos is not positive integer'
+		if (!req.query.chr) throw 'chr missing'
+		{
+			const c = g.chrlookup[req.query.chr.toUpperCase()]
+			if (!c) throw 'invalid chr'
+			if (pos > c.len) throw 'pos out of bound'
+		}
+		let m
+		await utils.get_lines_tabix(
+			[
+				g.clinvarVCF.file,
+				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
+			],
+			null,
+			line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
-				for (const m of mlst) {
-					if (m.pos == req.query.pos && m.ref == req.query.ref && m.alt == req.query.alt) {
+				for (const m0 of mlst) {
+					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
 						// match
-						const k = m.info[g.clinvarVCF.infokey]
-						const v = g.clinvarVCF.categories[k]
-						res.send({
-							hit: {
-								id: m.vcf_ID,
-								value: v ? v.label : k,
-								bg: v ? v.color : '#858585',
-								textcolor: v && v.textcolor ? v.textcolor : 'black'
-							}
-						})
-						return
+						m = m0
 					}
 				}
 			}
-			res.send({})
+		)
+		if (!m) return res.send({})
+		const k = m.info[g.clinvarVCF.infokey]
+		const v = g.clinvarVCF.categories[k]
+		res.send({
+			hit: {
+				id: m.vcf_ID,
+				value: v ? v.label : k,
+				bg: v ? v.color : '#858585',
+				textcolor: v && v.textcolor ? v.textcolor : 'black'
+			}
 		})
 	} catch (e) {
-		res.send({ error: e.message || e })
-	}
-}
-
-async function handle_dsvariantsummary(req, res) {
-	log(req)
-	try {
-		const genome = genomes[req.query.genome]
-		if (!genome) throw 'invalid genome'
-		const ds = genome.datasets[req.query.dsname]
-		if (!ds) throw 'dataset not found'
-		if (!ds.stratify) throw 'stratify not supported on this dataset'
-		const strat = ds.stratify.find(i => i.label == req.query.stratify)
-		if (!strat) throw 'unknown stratify method'
-
-		const item2mclass = new Map()
-		// k: item name/key
-		// v: Map
-		//    k: mclass
-		//    v: set of case id
-		if (ds.queries) {
-			await handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass)
-		} else {
-			throw 'unknown query method'
-		}
-		const items = []
-		for (const [itemname, m2c] of item2mclass) {
-			const item = {
-				name: itemname,
-				count: 0,
-				m2c: []
-			}
-			for (const [mclass, s] of m2c) {
-				item.count += s.size
-				item.m2c.push([mclass, s.size])
-			}
-			item.m2c.sort((a, b) => b[1] - a[1])
-			if (ds.onetimequery_projectsize) {
-				if (ds.onetimequery_projectsize.results.has(itemname)) {
-					item.cohortsize = ds.onetimequery_projectsize.results.get(itemname)
-				}
-			}
-			items.push(item)
-		}
-		items.sort((a, b) => b.count - a.count)
-		res.send({ items })
-	} catch (e) {
-		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-}
-
-async function handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass) {
-	for (const query of ds.queries) {
-		if (query.gdcgraphql_snvindel) {
-			// duplicate code with handle_dsdata_gdcgraphql_snvindel_isoform2variants
-			const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
-			for (const hit of hits) {
-				if (!hit._source) throw '._source{} missing from one of re.hits[]'
-				if (!hit._source.consequence) continue
-				const ts = hit._source.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
-				// get mclass of this variant
-				let mclass
-				if (ts && ts.transcript.consequence_type) {
-					const [dt, _mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
-					mclass = _mclass
-				}
-				if (!mclass) continue
-				// for each occurrence, add to counter
-				if (!hit._source.occurrence) continue
-				if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
-				for (const acase of hit._source.occurrence) {
-					if (!acase.case) throw '.case{} missing from a case'
-					let stratvalue = acase.case
-					for (const key of strat.keys) {
-						stratvalue = stratvalue[key]
-					}
-					if (stratvalue) {
-						// has a valid item for this strat category
-						if (!item2mclass.has(stratvalue)) item2mclass.set(stratvalue, new Map())
-						if (!item2mclass.get(stratvalue).has(mclass)) item2mclass.get(stratvalue).set(mclass, new Set())
-						item2mclass
-							.get(stratvalue)
-							.get(mclass)
-							.add(acase.case.case_id)
-						//const c = item2mclass.get(stratvalue)
-						//c.set(mclass, 1 + (c.get(mclass) || 0))
-					}
-				}
-			}
-		}
-	}
-	return item2mclass
 }
 
 async function handle_dsdata(req, res) {
@@ -1276,11 +1175,6 @@ async function handle_dsdata(req, res) {
 		if (!req.query.dsname) throw '.dsname missing'
 		const ds = genomes[req.query.genome].datasets[req.query.dsname]
 		if (!ds) throw 'invalid dsname'
-
-		/**** for now, process this query here
-		as the /dsdata query will always run before sunburst or stratify queries that rely on project total size
-		***/
-		await may_onetimequery_projectsize(ds)
 
 		const data = []
 
@@ -1317,11 +1211,6 @@ async function handle_dsdata(req, res) {
 				continue
 			}
 
-			if (query.gdcgraphql_snvindel) {
-				const d = await handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req)
-				data.push(d)
-				continue
-			}
 			throw 'unknow type from one of ds.queries[]'
 		}
 
@@ -1332,195 +1221,16 @@ async function handle_dsdata(req, res) {
 	}
 }
 
-async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req) {
-	// query variants by isoforms
-	try {
-		const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
-		const lst = [] // parse snv/indels into this list
-		for (const hit of hits) {
-			if (!hit._source) throw '._source{} missing from one of re.hits[]'
-			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
-			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
-			const m = {
-				ssm_id: hit._source.ssm_id,
-				dt: common.dtsnvindel,
-				chr: req.query.range.chr,
-				pos: hit._source.start_position - 1,
-				ref: hit._source.reference_allele,
-				alt: hit._source.tumor_allele,
-				isoform: req.query.isoform,
-				info: {}
-			}
-
-			// sneaky, implies that .occurrence_key is required here
-			m.info[query.gdcgraphql_snvindel.occurrence_key] = hit._score
-
-			gdcgraphql_snvindel_addclass(m, hit._source.consequence)
-			lst.push(m)
-		}
-		const data = { lst }
-		if (ds.stratify) {
-			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, hits)
-		}
-		return data
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		throw e.message || e
-	}
-}
-
-async function gdcgraphql_snvindel_byisoform(query, isoform) {
-	// used in two placed
-	const variables = JSON.parse(JSON.stringify(query.gdcgraphql_snvindel.byisoform.variables))
-	variables.filters.content.value = [isoform]
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			query: query.gdcgraphql_snvindel.byisoform.query,
-			variables
-		})
-	})
-	let re
-	try {
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'structure is not .data.analysis.protein_mutations.data'
-		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
-	} catch (e) {
-		throw 'invalid JSON returned by GDC'
-	}
-	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	return re.hits
-}
-
-function gdcgraphql_snvindel_addclass(m, consequence) {
-	if (consequence) {
-		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
-		if (ts && ts.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
-			m.class = mclass
-			m.mname = ts.transcript.aa_change // may be null!
-
-			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
-			if (ts.transcript.annotation) {
-				for (const k in ts.transcript.annotation) {
-					m.info[k] = ts.transcript.annotation[k]
-				}
-			}
-		}
-	}
-
-	if (!m.mname) {
-		m.mname = m.ref + '>' + m.alt
-	}
-
-	if (!m.class) {
-		if (common.basecolor[m.ref] && common.basecolor[m.alt]) {
-			m.class = common.mclasssnv
-		} else {
-			if (m.ref == '-') {
-				m.class = common.mclassinsertion
-			} else if (m.alt == '-') {
-				m.class = common.mclassdeletion
-			} else {
-				m.class = common.mclassmnv
-			}
-		}
-	}
-}
-
-function gdcgraphql_snvindel_stratifycount(ds, hits) {
-	/*
-variants returned from query should include occurrence
-from occurrence count the number of unique project/disease/site,
-hardcoded logic only for gdc!!!
-*/
-
-	const label2set = new Map()
-	// k: stratify label, v: Set() of items from this category
-	for (const s of ds.stratify) {
-		label2set.set(s.label, new Set())
-	}
-	for (const hit of hits) {
-		if (!hit._source.occurrence) continue
-		if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
-		for (const acase of hit._source.occurrence) {
-			if (!acase.case) throw '.case{} missing from a case'
-			for (const strat of ds.stratify) {
-				let stratvalue = acase.case
-				for (const key of strat.keys) {
-					stratvalue = stratvalue[key]
-				}
-				if (stratvalue) {
-					label2set.get(strat.label).add(stratvalue)
-				}
-			}
-		}
-	}
-	const labelcount = []
-	for (const [lab, s] of label2set) {
-		labelcount.push([lab, s.size])
-	}
-	return labelcount
-}
-
-async function may_onetimequery_projectsize(ds) {
-	if (!ds.onetimequery_projectsize) return
-	if (ds.onetimequery_projectsize.results) {
-		// already got result
-		return
-	}
-	// do the one time query
-	if (ds.onetimequery_projectsize.gdcgraphql) {
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(ds.onetimequery_projectsize.gdcgraphql)
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC for onetimequery_projectsize'
-		}
-		if (
-			!re.data ||
-			!re.data.viewer ||
-			!re.data.viewer.explore ||
-			!re.data.viewer.explore.cases ||
-			!re.data.viewer.explore.cases.total ||
-			!re.data.viewer.explore.cases.total.project__project_id ||
-			!re.data.viewer.explore.cases.total.project__project_id.buckets
-		)
-			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-
-		ds.onetimequery_projectsize.results = new Map()
-		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-			if (!t.key) throw 'key missing from one bucket'
-			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-			ds.onetimequery_projectsize.results.set(t.key, t.doc_count)
-		}
-		return
-	}
-	throw 'unknown query method for onetimequery_projectsize'
-}
-
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
-	const sqlstr = query.makequery(req.query)
+	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
 		return
 	}
-	const rows = ds.newconn.prepare(sqlstr).all()
+	console.log(sqlstr)
+	console.log(values)
+	const rows = ds.newconn.prepare(sqlstr).all(values)
 	let lst
 	if (query.tidy) {
 		lst = rows.map(i => query.tidy(i))
@@ -6638,19 +6348,19 @@ function boxplot_getvalue(lst) {
 	const p05 = lst[Math.floor(l * 0.05)].value
 	const p95 = lst[Math.floor(l * 0.95)].value
 	const p01 = lst[Math.floor(l * 0.01)].value
-	const iqr = (p75 - p25) * 1.5
+	const iqr = p75 - p25
 
 	let w1, w2
 	if (iqr == 0) {
 		w1 = 0
 		w2 = 0
 	} else {
-		const i = lst.findIndex(i => i.value > p25 - iqr)
+		const i = lst.findIndex(i => i.value > p25 - iqr * 1.5)
 		w1 = lst[i == -1 ? 0 : i].value
-		const j = lst.findIndex(i => i.value > p75 + iqr)
+		const j = lst.findIndex(i => i.value > p75 + iqr * 1.5)
 		w2 = lst[j == -1 ? l - 1 : j - 1].value
 	}
-	const out = lst.filter(i => i.value < p25 - iqr || i.value > p75 + iqr)
+	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 exports.boxplot_getvalue = boxplot_getvalue
@@ -9702,6 +9412,11 @@ async function pp_init() {
 			g.majorchr = hash
 			g.majorchrorder = chrorder
 		}
+		g.chrlookup = {}
+		// k: uppercase chr, v: {name:str, len:int, major:bool}
+		for (const n in g.majorchr) {
+			g.chrlookup[n.toUpperCase()] = { name: n, len: g.majorchr[n], major: true }
+		}
 		if (g.minorchr) {
 			if (typeof g.minorchr == 'string') {
 				const lst = g.minorchr.trim().split(/[\s\t\n]+/)
@@ -9712,6 +9427,9 @@ async function pp_init() {
 					hash[lst[i]] = c
 				}
 				g.minorchr = hash
+			}
+			for (const n in g.minorchr) {
+				g.chrlookup[n.toUpperCase()] = { name: n, len: g.minorchr[n] }
 			}
 		}
 
@@ -9865,6 +9583,8 @@ async function pp_init() {
 			if (!d.name) throw 'a nameless dataset from ' + genomename
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
+
+			// FIXME document the purpose of being able to use override file
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 
@@ -10081,11 +9801,6 @@ function legacyds_init_one_query(q, ds, genome) {
 				q.config.maf.get = q.config.maf.get.toString()
 			}
 		}
-		return
-	}
-
-	if (q.gdcgraphql_snvindel) {
-		// TODO validate when it's settled
 		return
 	}
 

@@ -225,7 +225,7 @@ module.exports = {
 			},
 			pmid: {
 				label: 'PubMed',
-				appendto_link: 'http://www.ncbi.nlm.nih.gov/pubmed/'
+				appendto_link: 'https://pubmed.ncbi.nlm.nih.gov/'
 			},
 			mutation_signature: {
 				label: 'Mutation signature'

@@ -101,8 +101,6 @@ class TdbTree {
 	getState(appState) {
 		const filter = getNormalRoot(appState.termfilter.filter)
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
@@ -181,21 +179,10 @@ class TdbTree {
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
 		*/
-		const lst = [
-			'genome=' + this.state.genome,
-			'&dslabel=' + this.state.dslabel,
-			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
-		]
-		if (this.state.toSelectCohort) {
-			lst.push(
-				'cohortValues=' +
-					this.state.cohortValuelst
-						.slice()
-						.sort()
-						.join(',')
-			)
-		}
-		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await this.app.vocabApi.getTermChildren(
+			term,
+			this.state.toSelectCohort ? this.state.cohortValuelst : null
+		)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
 			// do not throw exception; its children terms may have been filtered out

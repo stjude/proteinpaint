@@ -1,7 +1,6 @@
 import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
-import { showTermSrc } from '../termdb/app'
 
 /*
 for configuring term1; wraps termsetting
@@ -36,8 +35,7 @@ class Term1ui {
 	}
 	getState(appState) {
 		const state = {
-			genome: appState.genome,
-			dslabel: appState.dslabel,
+			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			plot: appState.tree.plots[this.id]
 		}
@@ -52,8 +50,8 @@ class Term1ui {
 	setPill() {
 		// can only call after getting this.state
 		this.pill = termsettingInit({
-			genome: this.state.genome,
-			dslabel: this.state.dslabel,
+			vocabApi: this.app.vocabApi,
+			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,
@@ -77,8 +75,7 @@ class Term1ui {
 						}
 					}
 				})
-			},
-			showTermSrc
+			}
 		})
 	}
 }

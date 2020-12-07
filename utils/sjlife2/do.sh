@@ -1,17 +1,17 @@
-node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
+#node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
 # also makes "samples.string2intID"
 
-node ~/proteinpaint/utils/sjlife2/make.sampleidmap.js > samples.idmap
-node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
+#node ~/proteinpaint/utils/sjlife2/make.sampleidmap.js > samples.idmap
+#node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
 
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 > raw/intID/outcomes_sjlife.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/subneoplasms.txt 0,1 > raw/intID/subneoplasms.txt
+#node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 > raw/intID/outcomes_sjlife.txt
+#node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
+#node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/subneoplasms.txt 0,1 > raw/intID/subneoplasms.txt
 
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annotation.admix.sjlife
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
+#node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annotation.admix.sjlife
+#node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix > keep/termjson 2>diagnostic_messages.txt
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig > keep/termjson 2>diagnostic_messages.txt
 sh ~/proteinpaint/utils/sjlife2/phenotree.makeentiretree.sh
 node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.tree keep/termjson

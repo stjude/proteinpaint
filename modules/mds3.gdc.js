@@ -6,9 +6,7 @@ GDC graphql API
 */
 
 export function validate_variant2sample(a) {
-	if (!a.query_list) throw '.query_list missing from variant2samples.gdcapi'
-	if (!a.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
-	if (typeof a.variables != 'function') throw '.variant2samples.gdcapi.variables() not a function'
+	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
 export function validate_query_snvindel_byrange(a) {
@@ -19,41 +17,41 @@ export function validate_query_snvindel_byrange(a) {
 }
 
 export function validate_query_snvindel_byisoform(api, ds) {
-	if (!api.query) throw '.query missing for byisoform.gdcapi'
-	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
-	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
-	if (typeof api.variables != 'function') throw 'byisoform.gdcapi.variables() is not a function'
+	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
+	if (api.lst.length != 2) throw 'api.lst is not array of length 2'
+	for (const a of api.lst) {
+		if (!a.endpoint) throw '.endpoint missing for byisoform.gdcapi'
+		if (!a.fields) throw '.fields missing for byisoform.gdcapi'
+		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
+		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
+	}
 	api.get = async opts => {
-		const hits = await snvindel_byisoform_run(ds, opts)
+		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
 		for (const hit of hits) {
-			if (!hit._source) throw '._source{} missing from one of re.hits[]'
-			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
-			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
+			if (!hit.ssm_id) throw 'hit.ssm_id missing'
+			if (!Number.isInteger(hit.start_position)) throw 'hit.start_position is not integer'
 			const m = {
-				ssm_id: hit._source.ssm_id,
+				ssm_id: hit.ssm_id,
 				dt: common.dtsnvindel,
-				chr: hit._source.chromosome,
-				pos: hit._source.start_position - 1,
-				ref: hit._source.reference_allele,
-				alt: hit._source.tumor_allele,
+				chr: hit.chromosome,
+				pos: hit.start_position - 1,
+				ref: hit.reference_allele,
+				alt: hit.tumor_allele,
 				isoform: opts.isoform,
 				// occurrence count will be overwritten after sample filtering
-				occurrence: hit._score
+				occurrence: hit.cases.length
 			}
-			snvindel_addclass(m, hit._source.consequence)
-			if (hit._source.occurrence) {
-				m.samples = []
-				for (const acase of hit._source.occurrence) {
-					const c = acase.case
-					// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-					m.samples.push({
-						sample_id: c.case_id,
-						site: c.primary_site,
-						disease: c.disease_type,
-						project: c.project ? c.project.project_id : undefined
-					})
-				}
+			snvindel_addclass(m, hit.consequence)
+			m.samples = []
+			for (const c of hit.cases) {
+				// site/disease/project corresponds to ds.sampleSummaries.lst[].label
+				m.samples.push({
+					sample_id: c.case_id,
+					site: c.primary_site,
+					disease: c.disease_type,
+					project: c.project ? c.project.project_id : undefined
+				})
 			}
 			mlst.push(m)
 		}
@@ -64,18 +62,19 @@ export function validate_query_snvindel_byisoform(api, ds) {
 function snvindel_addclass(m, consequence) {
 	if (consequence) {
 		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
-		if (ts && ts.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
+		if (consequence.transcript.consequence_type) {
+			const [dt, mclass, rank] = common.vepinfo(consequence.transcript.consequence_type)
 			m.class = mclass
-			m.mname = ts.transcript.aa_change // may be null!
+			m.mname = consequence.transcript.aa_change // may be null!
 
 			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
+			/*
 			if (ts.transcript.annotation) {
 				for (const k in ts.transcript.annotation) {
 					m[k] = ts.transcript.annotation[k]
 				}
 			}
+			*/
 		}
 	}
 
@@ -98,33 +97,70 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
-async function snvindel_byisoform_run(ds, opts) {
-	// used in two places
+function getheaders(q) {
+	// q is req.query{}
+	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (q.token) h['X-Auth-Token'] = q.token
+	return h
+}
+
+async function snvindel_byisoform_run(api, opts) {
+	// function may be shared
 	// query is ds.queries.snvindel
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			query: ds.queries.snvindel.byisoform.gdcapi.query,
-			variables: ds.queries.snvindel.byisoform.gdcapi.variables(opts)
-		})
-	})
-	let re
+	const headers = getheaders(opts)
+	const p1 = got(
+		api.lst[0].endpoint +
+			'?size=' +
+			api.lst[0].size +
+			'&fields=' +
+			api.lst[0].fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.lst[0].filters(opts))),
+		{ method: 'GET', headers }
+	)
+	const p2 = got(
+		api.lst[1].endpoint +
+			'?size=' +
+			api.lst[1].size +
+			'&fields=' +
+			api.lst[1].fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.lst[1].filters(opts))),
+		{ method: 'GET', headers }
+	)
+	const [tmp1, tmp2] = await Promise.all([p1, p2])
+	let re_ssms, re_cases
 	try {
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'structure is not .data.analysis.protein_mutations.data'
-		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
+		re_ssms = JSON.parse(tmp1.body)
+		re_cases = JSON.parse(tmp2.body)
 	} catch (e) {
 		throw 'invalid JSON returned by GDC'
 	}
-	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	return re.hits
+	if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
+	if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
+	if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+	const id2ssm = new Map()
+	// key: ssm_id, value: ssm {}
+	for (const h of re_ssms.data.hits) {
+		if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
+		if (!h.consequence) throw '.consequence[] missing from a ssm'
+		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		if (!consequence) {
+			// may alert??
+		}
+		h.consequence = consequence // keep only info for this isoform
+		h.cases = []
+		id2ssm.set(h.ssm_id, h)
+	}
+	for (const h of re_cases.data.hits) {
+		if (!h.ssm) throw '.ssm{} missing from a case'
+		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
+		const ssm = id2ssm.get(h.ssm.ssm_id)
+		if (!ssm) throw 'ssm_id not found in ssms query'
+		if (!h.case) throw '.case{} missing from a case'
+		ssm.cases.push(h.case)
+	}
+	return [...id2ssm.values()]
 }
 
 export async function init_projectsize(op, ds) {
@@ -219,48 +255,34 @@ export function validate_query_genecnv(api, ds) {
 
 export async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-	const query = {
-		variables: ds.variant2samples.gdcapi.variables(q),
-		query: q.get == 'sunburst' ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list // NOTE "sunburst" is type_sunburst
-	}
-
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(query)
-	})
+	const api = ds.variant2samples.gdcapi
+	const response = await got(
+		api.endpoint +
+			'?size=' +
+			api.size +
+			'&fields=' +
+			(q.get == 'sunburst' ? api.fields_sunburst : api.fields_list).join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.filters(q))),
+		{ method: 'GET', headers: getheaders(q) }
+	)
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
 		throw 'invalid JSON from GDC for variant2samples'
 	}
-	if (
-		!re.data ||
-		!re.data.explore ||
-		!re.data.explore.ssms ||
-		!re.data.explore.ssms.hits ||
-		!re.data.explore.ssms.hits.edges
-	)
-		throw 'data structure not data.explore.ssms.hits.edges[]'
-	if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
 
 	const samples = []
-	for (const ssm of re.data.explore.ssms.hits.edges) {
-		if (!ssm.node || !ssm.node.occurrence || !ssm.node.occurrence.hits || !ssm.node.occurrence.hits.edges)
-			throw 'structure of an ssm is not node.occurrence.hits.edges'
-		if (!Array.isArray(ssm.node.occurrence.hits.edges)) throw 'ssm.node.occurrence.hits.edges is not array'
-		for (const sample of ssm.node.occurrence.hits.edges) {
-			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
-			/* samplelist query will retrieve all terms
-			but sunburst will only retrieve a few attr
-			will simply iterate over all terms and missing ones will have undefined value
-			*/
-			const s = {}
-			for (const attr of ds.variant2samples.terms) {
-				s[attr.id] = attr.get(sample.node.case)
-			}
-			samples.push(s)
+	for (const s of re.data.hits) {
+		if (!s.case) throw '.case{} missing from a hit'
+		const sample = {}
+		for (const attr of ds.variant2samples.terms) {
+			sample[attr.id] = attr.get(s.case)
 		}
+		samples.push(sample)
 	}
 	return samples
 }

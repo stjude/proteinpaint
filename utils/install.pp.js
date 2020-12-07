@@ -35,7 +35,6 @@ $ node utils/install.pp.js [options]
          TP      - full path of the TP directory (for files accessed by PP backend)
          CACHE   - full path of the cache directory
          BINPATH - full path to a directory for storing dependent binary files and programs
-         PYTHON3 - the command of Python version 3 on your system
          GENOMES - prebuilt genomes to be installed on your system, join multiple by comma
                    hg19, hg38, mm9, mm10, rn6, dm3, dm6, danRer10
          
@@ -166,11 +165,6 @@ if (UC.URL) {
 		exec('chmod +x ' + a)
 		SC.bigwigsummary = a
 	}
-}
-{
-	const a = path.join(UC.BINPATH, 'read_hic_header.py')
-	trydownload(a, 'https://pecan.stjude.cloud/static/pp-support/read_hic_header.py')
-	SC.hicstat = UC.PYTHON3 + ' ' + a
 }
 {
 	const a = path.join(UC.BINPATH, 'straw')

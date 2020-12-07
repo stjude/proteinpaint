@@ -245,15 +245,20 @@ function setViewOpts(opts) {
 				? 'scatter'
 				: 'barchart'
 
+			const numericTypes = ['integer', 'float']
+
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
 				d.value == 'barchart'
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'boxplot' && plot.term2 && numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
-					: d.value == 'scatter' && plot.term.term.type == 'float' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'scatter' &&
+					  numericTypes.includes(plot.term.term.type) &&
+					  plot.term2 &&
+					  numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
 					: 'none'
 			)

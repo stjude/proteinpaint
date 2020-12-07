@@ -76,7 +76,7 @@ const templateBar = JSON.stringify({
 						data: [
 							{
 								dataId: '@key',
-								total: '+1',
+								total: '+1'
 								//samples: ['$sample']
 							},
 							'&idVal.dataId[]'
@@ -330,8 +330,6 @@ function set_condition_fxn(termid, values, tdb, inReq, index) {
 			return Array.isArray(value) ? value : [value]
 		}
 	}
-
-	inReq.un
 }
 
 function getPrecomputedKey(q) {
@@ -365,7 +363,8 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 
 	inReq.joinFxns[termid] = row => {
 		const v = row[termid]
-		if (!isNumeric(v)) return; if (row.sample=='SJL5117302') console.log(367, termid, row[termid])
+		if (!isNumeric(v)) return
+		if (row.sample == 'SJL5117302') console.log(367, termid, row[termid])
 		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
 			return term.values[v].label
 		}
@@ -405,7 +404,7 @@ function load_genotype_by_sample(id) {
 	const genotype2sample = new Map()
 	for (const line of text.split('\n')) {
 		const [type, samplesStr] = line.split('\t')
-		const samples = samplesStr.split(',')
+		const samples = samplesStr.split(',').map(d => Number(d))
 		for (const sample of samples) {
 			bySample[sample] = type
 		}

@@ -3,7 +3,7 @@ import * as client from './client'
 import * as dom from './dom'
 import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
-import { appInit, showTermSrc } from './termdb/app'
+import { appInit } from './termdb/app'
 
 /*
 
@@ -486,15 +486,17 @@ function show_group_termdb(group, tk, block) {
 	if (!group.filterApi) {
 		group.filterApi = filterInit({
 			holder: group.dom.td3,
-			genome: block.genome.name,
-			dslabel: tk.dslabel,
+			vocab: {
+				route: 'termdb',
+				genome: block.genome.name,
+				dslabel: tk.dslabel
+			},
 			emptyLabel: 'Entire cohort',
 			termdbConfig: block.genome.datasets[tk.dslabel].termdb,
 			callback: async f => {
 				group.filter = f
 				await tk.load()
-			},
-			showTermSrc
+			}
 		})
 	}
 	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async

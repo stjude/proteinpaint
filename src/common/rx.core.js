@@ -44,7 +44,6 @@ function getInitFxn(_Class_) {
 			self.bus = new Bus(self.api, self.eventTypes, callbacks)
 		}
 		if (self.bus) self.bus.emit('postInit')
-
 		return api
 	}
 }
@@ -316,6 +315,7 @@ class Bus {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
 					this.events[type](arg || this.defaultArg)
+					if (eventType == 'postInit') delete this.events[type]
 				}
 			}
 		}, wait)

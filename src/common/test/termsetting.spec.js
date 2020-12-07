@@ -1,7 +1,8 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
-const showTermSrc = require('../../termdb/app').showTermSrc
+const vocabInit = require('../../termdb/vocabulary').vocabInit
+const vocabData = require('../../termdb/test/vocabData')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -15,7 +16,7 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-function getOpts(_opts = {}) {
+function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
 	const holder = d3s
 		.select('body')
 		.append('div')
@@ -25,11 +26,19 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
+	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
+	const state = { vocab, termfilter: {} }
+	const app = {
+		getState() {
+			return state
+		},
+		opts: { state }
+	}
 
 	opts.pill = termsettingInit({
 		holder,
-		genome: 'hg38',
-		dslabel: 'SJLife',
+		//vocabApi: vocabInit(app, { state }),
+		vocab,
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
@@ -37,8 +46,7 @@ function getOpts(_opts = {}) {
 		callback: function(termsetting) {
 			opts.tsData = termsetting
 			opts.pill.main(opts.tsData)
-		},
-		showTermSrc
+		}
 	})
 
 	return opts
@@ -785,5 +793,80 @@ tape('Conditional term', async test => {
 		'Should have bluepill summary btn "By Max Grade" as default'
 	)
 
+	test.end()
+})
+
+tape('Custom vocabulary', async test => {
+	const vocab = vocabData.getExample()
+	const opts = getOpts(
+		{
+			showFullMenu: true,
+			tsData: {
+				term: vocab.terms.find(d => d.id === 'c'),
+				disable_terms: ['c']
+			},
+			vocab
+		},
+		null,
+		null
+	)
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	test.ok(pilldiv, 'a <div class=ts_pill> is created for the pill')
+	pilldiv.click()
+	const tipd = opts.pill.Inner.dom.tip.d
+	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
+
+	const replaceBtn = tipd
+		.selectAll('.sja_menuoption')
+		.filter(function() {
+			return this.innerText.toLowerCase() == 'replace'
+		})
+		.node()
+	test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
+
+	replaceBtn.click()
+	await sleep(50)
+	test.equal(
+		tipd.selectAll('.termdiv').size(),
+		vocab.terms.filter(d => d.parent_id === null).length,
+		'should display the correct number of custom root terms'
+	)
+
+	tipd
+		.selectAll('.termbtn')
+		.filter(d => d.id === 'a')
+		.node()
+		.click()
+	await sleep(200)
+	tipd
+		.selectAll('.sja_tree_click_term')
+		.filter(d => d.id === 'd')
+		.node()
+		.click()
+	await sleep(800)
+	const pilldiv1 = opts.holder.node().querySelector('.term_name_btn ')
+	test.equal(
+		pilldiv1.innerText,
+		'DDD',
+		`should change the termsetting pill label to '${vocab.terms.find(d => d.id === 'd').name}'`
+	)
+
+	pilldiv1.click()
+	await sleep(50)
+	const editBtn = tipd
+		.selectAll('.sja_menuoption')
+		.filter(function() {
+			return this.innerText.toLowerCase() == 'edit'
+		})
+		.node()
+		.click()
+
+	//test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
+
+	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })

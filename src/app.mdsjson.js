@@ -192,9 +192,11 @@ export function get_json_tk(tkobj) {
 	track.lohLengthUpperLimit = tkobj.lohLengthUpperLimit !== undefined ? tkobj.lohLengthUpperLimit : undefined
 
 	// multihide labels
-	track.multihidelabel_vcf = tkobj.multihidelabel_vcf || undefined
-	track.multihidelabel_fusion = tkobj.multihidelabel_fusion || undefined
-	track.multihidelabel_sv = tkobj.multihidelabel_sv || undefined
+	track.multihidelabel_vcf = tkobj.multihidelabel_vcf !== undefined ? tkobj.multihidelabel_vcf : undefined
+	track.multihidelabel_fusion = tkobj.multihidelabel_fusion !== undefined ? tkobj.multihidelabel_fusion : undefined
+	track.multihidelabel_sv = tkobj.multihidelabel_sv !== undefined ? tkobj.multihidelabel_sv : undefined
+
+	track.legend_vorigin = tkobj.legend_vorigin
 
 	return track
 }

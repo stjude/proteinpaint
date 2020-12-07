@@ -214,8 +214,6 @@ function validate_oldds(ds) {
 				if (!ds.cohort) {
 					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
 				}
-			} else if (strat.byserver) {
-				// allowed
 			} else {
 				if (!strat.attr1) {
 					return 'stratify method ' + strat.label + ' not using cohort but no attr1 in ' + ds.label
@@ -740,6 +738,10 @@ export function newpane(pm) {
 		.style('left', pm.x + window.pageXOffset + 'px')
 		.style('top', pm.y + window.pageYOffset + 'px')
 		.style('opacity', 0)
+
+	if (pm.$id) {
+		pp.pane.attr('id', pm.$id)
+	}
 
 	if (base_zindex) {
 		// fixed, from embedding instructions
@@ -1802,7 +1804,7 @@ m{}
 */
 	d.append('a')
 		.text(m.name)
-		.attr('href', 'http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs=' + m.name)
+		.attr('href', 'https://www.ncbi.nlm.nih.gov/snp/' + m.name)
 		.attr('target', '_blank')
 	d.append('div')
 		.attr('class', 'sja_tinylogo_body')
@@ -1818,7 +1820,7 @@ m{}
 		.text('ALLELE')
 }
 
-export function may_findmatchingclinvar(chr, pos, ref, alt, genome) {
+export async function may_findmatchingclinvar(chr, pos, ref, alt, genome) {
 	/*
 chr: string
 pos
@@ -1826,17 +1828,14 @@ pos
 genome{ name }
 */
 	if (!genome || !genome.hasClinvarVCF) return
-	const p = {
-		genome: genome.name,
-		chr: chr,
-		pos: pos,
-		ref: ref,
-		alt: alt
-	}
-	return dofetch('clinvarVCF', p).then(data => {
-		if (data.error) throw data.error
-		return data.hit
-	})
+	if (!Number.isInteger(pos)) throw 'pos is not integer'
+	const _c = genome.chrlookup[chr.toUpperCase()]
+	if (_c.len < pos) throw 'position out of bound: ' + pos
+	const p = { genome: genome.name, chr, pos, ref, alt }
+	const lst = ['genome=' + genome.name, 'chr=' + chr, 'pos=' + pos, 'ref=' + ref, 'alt=' + alt]
+	const data = await dofetch2('clinvarVCF?' + lst.join('&'))
+	if (data.error) throw data.error
+	return data.hit
 }
 
 export function clinvar_printhtml(m, d) {

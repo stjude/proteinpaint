@@ -72,6 +72,7 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
 			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
+			{ file: 'hg19/Pediatric/sampletable/2020_panNBL' },
 			{ file: 'hg19/Pediatric/sampletable/pcgp.target.info' },
 			{ file: 'hg19/Pediatric/sampletable/fpkmOnly.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
@@ -287,7 +288,7 @@ module.exports = {
 			},
 			pmid: {
 				label: 'PubMed',
-				appendto_link: 'http://www.ncbi.nlm.nih.gov/pubmed/'
+				appendto_link: 'https://pubmed.ncbi.nlm.nih.gov/'
 			},
 			mutation_signature: {
 				label: 'Mutation signature'

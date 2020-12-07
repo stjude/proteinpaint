@@ -34,7 +34,7 @@ class TdbScatter {
 				term2: config.term2,
 				settings: {
 					common: config.settings.common,
-					scatter: config.settings.scatter
+					scatter: JSON.parse(JSON.stringify(config.settings.scatter))
 				}
 			}
 		}

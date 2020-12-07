@@ -51,8 +51,7 @@ import { setConditionalMethods } from './termsetting.conditional'
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.genome = opts.genome
-		this.dslabel = opts.dslabel
+		this.vocab = opts.vocab
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
@@ -86,8 +85,9 @@ class TermSetting {
 
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.genome) throw '.genome missing'
-		if (!o.dslabel) throw '.dslabel missing'
+		if (!o.vocab) throw '.vocab missing'
+		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
+		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
@@ -109,6 +109,10 @@ exports.termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		if (self.opts.$id) {
+			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
+		}
+
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
@@ -246,17 +250,21 @@ function setInteractivity(self) {
 		self.opts.callback(null)
 	}
 
-	self.showTree = holder => {
+	self.showTree = async holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		if (self.opts.showTermSrc) {
-			self.opts.showTermSrc({
-				holder: self.dom.tip.d,
-				genome: self.genome,
-				dslabel: self.dslabel,
+		const termdb = await import('../termdb/app')
+		termdb.appInit(null, {
+			holder: self.dom.tip.d,
+			state: {
+				vocab: self.opts.vocab,
 				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
-				clicked_terms: self.disable_terms,
-				srctype: 'termsetting',
-				select_callback: term => {
+				nav: {
+					header_mode: 'search_only'
+				}
+			},
+			tree: {
+				disable_terms: self.disable_terms,
+				click_term: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
 					let _term = term
@@ -269,8 +277,8 @@ function setInteractivity(self) {
 					termsetting_fill_q(data.q, _term)
 					self.opts.callback(data)
 				}
-			})
-		}
+			}
+		})
 	}
 
 	self.showMenu = () => {
@@ -287,12 +295,7 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('edit')
+			.text('Edit')
 			.on('click', () => {
 				self.dom.tip.clear()
 				self.showEditMenu(self.dom.tip.d)
@@ -301,11 +304,6 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
 			.text('Replace')
 			.on('click', () => {
 				self.dom.tip.clear()
@@ -315,11 +313,6 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
 			.text('Remove')
 			.on('click', () => {
 				self.dom.tip.hide()
