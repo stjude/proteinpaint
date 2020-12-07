@@ -10,7 +10,7 @@ import {loadstudycohort} from './tp.init'
 import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
-import * as debounce from 'debounce'
+import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 

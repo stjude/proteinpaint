@@ -50,7 +50,8 @@ export default [
 				browser: true,
 				//jsnext: true,
 				//main: true,
-				preferBuiltins: false
+				preferBuiltins: false,
+				moduleDirectories: ['./node_modules', '../../node_modules', './dist']
 			}),
 
 			babel({

@@ -8,6 +8,7 @@ dist/*
 
 public/bin/*
 */*/public/bin/*
+public/portal
 
 public/tmp/*
 public/data/*
