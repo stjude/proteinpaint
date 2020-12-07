@@ -3,9 +3,9 @@ module.exports = {
 	mode: 'production', // default
 	entry: './index.js',
 	output: {
-		path: __dirname + '/public/wp/',
+		path: __dirname + '/public/bin/',
 		filename: 'portal.js',
-		publicPath: '/wp/',
+		publicPath: '/bin/',
 		jsonpFunction: 'ppJsonp',
 		libraryTarget: 'umd'
 	},

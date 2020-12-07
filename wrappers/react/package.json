@@ -6,7 +6,7 @@
   "browser": "dist/proteinpaint.js",
   "module": "dist/proteinpaint.js",
   "scripts": {
-    "dev": "npx webpack --config=./webpack.config.es6.js",
+    "dev": "rm -rf dist/; webpack --config=./webpack.config.es6.js --env.NODE_ENV=development --watch --progress --colors",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Xin Zhou",

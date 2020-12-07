@@ -1,12 +1,10 @@
-const pkg = require('./package.json')
-
 module.exports = {
 	target: 'web',
 	mode: 'production', // default
-	entry: '../../src/app.js',
+	entry: './index.js',
 	output: {
-		path: __dirname + '/dist/',
-		filename: pkg.main,
+		path: __dirname + '/dist',
+		filename: 'proteinpaint.js',
 		//publicPath:'/bin/',
 		jsonpFunction: 'ppJsonp',
 		libraryTarget: 'umd'

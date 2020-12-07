@@ -1,13 +1,8 @@
 // import * as React from 'react'
-import { runproteinpaint } from 'pp-react'
-import * as common from '../../src/common'
-import { select } from 'd3-selection'
+import { PpReact } from 'pp-react'
 
 console.log('test ....')
-console.log(common.defaultcolor)
-//console.log(common.d3color)
-//console.log(common.Partjson)
-console.log(10, runproteinpaint)
+console.log(PpReact)
 
 /*
 runproteinpaint({

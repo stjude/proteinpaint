@@ -4,7 +4,7 @@
   "description": "example portal app that uses Proteinpaint as a node_module",
   "main": "index.js",
   "scripts": {
-    "dev": "npx webpack --config=./webpack.config.portal.js",
+    "dev": "rm -rf public/bin; webpack --config=./webpack.config.portal.js --env.NODE_ENV=development --watch --progress --colors",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
