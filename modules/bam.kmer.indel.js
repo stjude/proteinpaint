@@ -214,7 +214,7 @@ export async function match_complexvariant(templates, q) {
 
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
-	let kmer_diff_scores_input = []
+	const kmer_diff_scores_input = []
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
@@ -313,7 +313,7 @@ function build_kmers(sequence, kmer_length) {
 	const num_iterations = sequence.length - kmer_length + 1
 	// console.log(sequence)
 
-	let kmers = []
+	const kmers = []
 	for (let i = 0; i < num_iterations; i++) {
 		const subseq = sequence.substr(i, kmer_length)
 		// console.log(i,kmer)
@@ -335,7 +335,7 @@ function build_kmers_refalt(
 ) {
 	const num_iterations = sequence.length - kmer_length + 1
 	// console.log(sequence)
-	let kmers = []
+	const kmers = []
 	let kmer_start = left_most_pos
 	let kmer_stop = kmer_start + kmer_length
 	for (let i = 0; i < num_iterations; i++) {
@@ -367,7 +367,7 @@ function build_kmers_refalt(
 	const kmers_nodup = Array.from(new Set([...kmers.map(x => x.sequence)]))
 	//console.log("kmers_nodup length:",kmers_nodup.length)
 
-	let kmers2 = []
+	const kmers2 = []
 	for (const kmer of kmers_nodup) {
 		// Calulating mean of scores for each kmer
 		const kmer_values = kmers.filter(i => i.sequence == kmer).map(x => x.value)
@@ -379,7 +379,7 @@ function build_kmers_refalt(
 		kmers2.push(input_items)
 	}
 
-	let kmers3 = []
+	const kmers3 = []
 	for (const kmer of kmers) {
 		const kmer_values = kmers2.filter(i => i.sequence == kmer.sequence).map(x => x.value)
 		const kmer_value = kmer_values[0]
@@ -449,7 +449,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 	// console.log(kmer_diff_scores)
 
 	let start_point = kmer_diff_scores.length - 1
-	let indices = []
+	const indices = []
 	let slope = 0
 	let is_a_line = 1
 	if (kmer_diff_scores.length > 1) {
@@ -475,7 +475,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 	} else {
 		// The points are in the shape of a curve
 		console.log('start point:', start_point)
-		let kmer_diff_scores_input = []
+		const kmer_diff_scores_input = []
 		for (let i = 0; i <= start_point; i++) {
 			kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
 		}
@@ -488,7 +488,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		console.log('Slope of line:', slope_of_line)
 		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
 
-		let distances_from_line = []
+		const distances_from_line = []
 		for (let i = 0; i < kmer_diff_scores_input.length; i++) {
 			distances_from_line.push(
 				Math.abs(slope_of_line * kmer_diff_scores_input[i][0] - kmer_diff_scores_input[i][1] + intercept_of_line) /
