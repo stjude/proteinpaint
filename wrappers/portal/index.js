@@ -5,9 +5,10 @@ import { select } from 'd3-selection'
 console.log('test ....')
 console.log(5, 'portal/index.js', testWrapper)
 
-export function portalInit() {
+export function portalInit(host = 'http://localhost:3000') {
 	console.log(9, 'portalInit()', document)
 	testWrapper.runproteinpaint({
+		host,
 		noheader: true,
 		holder: select('body')
 			.append('div')
