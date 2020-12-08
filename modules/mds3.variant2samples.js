@@ -58,11 +58,9 @@ function make_sunburst(samples, ds) {
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
-		ds.variant2samples.terms
-			.filter(i => ds.variant2samples.sunburst_ids.has(i.id))
-			.map(i => {
-				return { k: i.id }
-			})
+		ds.variant2samples.termidlst.map(i => {
+			return { k: i }
+		})
 	)
 	for (const node of nodes) {
 		delete node.lst
@@ -82,7 +80,9 @@ function make_sunburst(samples, ds) {
 
 function make_summary(samples, ds) {
 	const entries = []
-	for (const term of ds.variant2samples.terms) {
+	for (const termid of ds.variant2samples.termidlst) {
+		const term = ds.termdb.getTermById(termid)
+		if (!term) continue
 		// may skip a term
 		if (term.type == 'categorical') {
 			const cat2count = new Map()

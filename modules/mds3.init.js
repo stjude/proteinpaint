@@ -15,6 +15,7 @@ client_copy
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
+	validate_termdb(ds)
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
@@ -32,6 +33,22 @@ export function client_copy(ds) {
 		sampleSummaries: ds.sampleSummaries ? ds.sampleSummaries.lst : null,
 		queries: copy_queries(ds)
 	}
+	if (ds.termdb) {
+		ds2.termdb = {}
+		if (ds.termdb.id2term) {
+			// if okay to expose the whole vocabulary to client?
+			// if to keep vocabulary at backend
+			ds2.termdb.id2term = {}
+			for (const id in ds.termdb.id2term) {
+				const t = {}
+				for (const k in ds.termdb.id2term[id]) {
+					if (k == 'get') continue
+					t[k] = ds.termdb.id2term[id][k]
+				}
+				ds2.termdb.id2term[id] = t
+			}
+		}
+	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
 	}
@@ -42,10 +59,25 @@ export function client_copy(ds) {
 	if (ds.variant2samples) {
 		ds2.variant2samples = {
 			variantkey: ds.variant2samples.variantkey,
-			terms: ds.variant2samples.terms
+			termidlst: ds.variant2samples.termidlst
 		}
 	}
 	return ds2
+}
+
+function validate_termdb(ds) {
+	const tdb = ds.termdb
+	if (!tdb) return
+	if (tdb.id2term) {
+		// the need for get function is only for gdc
+		for (const id in tdb.id2term) {
+			if (!tdb.id2term[id].get) throw '.get() missing from term: ' + id
+			if (typeof tdb.id2term[id].get != 'function') throw '.get() is not function from term: ' + id
+		}
+	} else {
+		throw 'unknown source of termdb vocabulary'
+	}
+	tdb.getTermById = id => tdb.id2term[id]
 }
 
 function validate_variant2samples(ds) {
@@ -53,20 +85,18 @@ function validate_variant2samples(ds) {
 	if (!vs) return
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (!vs.terms) throw '.terms[] missing from variant2samples'
-	if (!Array.isArray(vs.terms)) throw 'variant2samples.terms[] is not array'
-	if (vs.terms.length == 0) throw '.terms[] empty array from variant2samples'
-	for (const at of vs.terms) {
-		// each attr is a term, with a getter function
-		if (!at.name) throw '.name missing from an attribute term of variant2samples'
-		if (at.id == undefined) throw '.id missing from an attribute term of variant2samples' // allow id to be integer 0
-		if (typeof at.get != 'function') throw `.get() missing or not a function in attr "${at.id}" of variant2samples`
+	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
+	if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
+	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
+	if (!ds.termdb) throw 'ds.termdb missiing when variant2samples.termidlst is in use'
+	for (const id of vs.termidlst) {
+		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
 	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
 	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
 	for (const id of vs.sunburst_ids) {
-		if (!vs.terms.find(i => i.id == id)) throw `sunburst id "${id}" not found in variant2samples.terms`
+		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 	}
 	vs.sunburst_ids = new Set(vs.sunburst_ids)
 	if (vs.gdcapi) {
@@ -96,10 +126,15 @@ function copy_queries(ds) {
 function validate_sampleSummaries(ds) {
 	const ss = ds.sampleSummaries
 	if (!ss) return
+	if (!ds.termdb) throw 'ds.termdb missing while sampleSummary is in use'
 	if (!ss.lst) throw '.lst missing from sampleSummaries'
 	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries'
 	for (const i of ss.lst) {
 		if (!i.label1) throw '.label1 from one of sampleSummaries.lst'
+		if (!ds.termdb.getTermById(i.label1)) throw 'no term match with .label1: ' + i.label1
+		if (i.label2) {
+			if (!ds.termdb.getTermById(i.label2)) throw 'no term match with .label2: ' + i.label2
+		}
 	}
 	ss.makeholder = opts => {
 		const labels = new Map()
