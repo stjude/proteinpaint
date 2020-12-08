@@ -187,6 +187,17 @@ or update existing groups, in which groupidx will be provided
 			.attr('height', data.pileup_data.height)
 	}
 
+	// Plotting the y-axis for the pileup plot
+	tk.dom.pileup_axis.selectAll('*').remove()
+	const scale = scaleLinear()
+		.domain([0, data.pileup_data.maxValue])
+		.range([data.pileup_data.height, 0])
+	client.axisstyle({
+		axis: tk.dom.pileup_axis.call(axisRight().scale(scale)),
+		color: 'black',
+		showline: true
+	})
+
 	may_render_variant(data, tk, block)
 	setTkHeight(tk, data)
 	tk.tklabel.each(function() {
@@ -210,23 +221,9 @@ or update existing groups, in which groupidx will be provided
 }
 
 function plot_pileup(data, tk, block) {
-	//console.log("tk:",tk)
-	//console.log('data:', data.pileup_data)
-	//		const pileup_plot = {
-	//			data: data,
-	//			dom: {
-	//				imgg: tk.glider.append('g'),
-	//				vslider: {
-	//					g: tk.dom.pileup_g.append('g').attr('transform', 'scale(0)')
-	//				}
-	//			}
-	//		}
-	//console.log('data.pileup_data.width:', data.pileup_data.width)
 	const pileup_plot = tk.dom.pileup_g
 		.append('image')
 		.attr('xlink:href', data.pileup_data.src)
-		//.attr('x', data.pileup_data.x)
-		//.attr('y', data.pileup_data.y)
 		.attr('width', data.pileup_data.width)
 		.attr('height', data.pileup_data.height)
 	return pileup_plot
@@ -400,6 +397,7 @@ function makeTk(tk, block) {
 
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
+		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
 
