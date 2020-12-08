@@ -232,11 +232,12 @@ module.exports = genomes => {
 }
 
 async function get_pileup(q, req, templates) {
-	const pileup_height = 250
+	const pileup_height = 100
 	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const totalcolor = 'rgb(192,192,192)' //Ref-grey
 	const ctx = canvas.getContext('2d')
+	let maxValue = 0
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
@@ -252,7 +253,7 @@ async function get_pileup(q, req, templates) {
 		//console.log("con_seq:",con_seq)
 		//console.log('ref_seq length:', ref_seq.length)
 
-		const maxValue = Math.max(...bplst.map(i => i.total))
+		maxValue = Math.max(...bplst.map(i => i.total))
 		let y = 0
 		const sf = pileup_height / maxValue
 		let i = 0
@@ -374,6 +375,7 @@ async function get_pileup(q, req, templates) {
 	const pileup_data = {
 		width: q.canvaswidth,
 		height: pileup_height,
+		maxValue: maxValue,
 		src: canvas.toDataURL()
 	}
 	q.pileup_data = pileup_data
