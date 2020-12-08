@@ -4,20 +4,23 @@ import React, { useState } from 'react'
 import { render } from 'react-dom'
 
 console.log('.... test wrappers/react/index.jsx')
-console.log(React)
 console.log(common)
 
 function PpReact() {
-	console.log(11)
 	const [state, setState] = useState("CLICK ME")
-  return <button onClick={() => setState("CLICKED")}>{state}</button>;
+  return (
+  	<div style={{width:'100%', textAlign: 'center'}}>
+  		<button onClick={() => setState(state == "CLICKED" ? "unclicked" : "CLICKED")}>{state}</button>
+  	</div>
+  )
 }
+
 
 export default {
 	common,
 	runproteinpaint,
 	PpReact(holder) {
-		console.log(19, 'react/index.jsx::PpReact')
-		render(<Pp-React />, holder)
+		const elem = render(<PpReact />, holder)
+		console.log(23, elem)
 	}
 }
