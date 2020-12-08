@@ -1,26 +1,10 @@
-import * as common from '../../src/common'
-import { runproteinpaint } from '../../src/app'
-import React, { useState } from 'react'
-import { render } from 'react-dom'
+import React from 'react'
+import ReactDOM from 'react-dom'
+import App from './App'
 
-console.log('.... test wrappers/react/index.jsx')
-console.log(common)
-
-function PpReact() {
-	const [state, setState] = useState("CLICK ME")
-  return (
-  	<div style={{width:'100%', textAlign: 'center'}}>
-  		<button onClick={() => setState(state == "CLICKED" ? "unclicked" : "CLICKED")}>{state}</button>
-  	</div>
-  )
+const serverdata = {
+	host: 'http://localhost:3000',
+	basepath: 'proteinpaint/'
 }
 
-
-export default {
-	common,
-	runproteinpaint,
-	PpReact(holder) {
-		const elem = render(<PpReact />, holder)
-		console.log(23, elem)
-	}
-}
+ReactDOM.render(<App serverdata = {serverdata} />, document.getElementById('aaa'))
