@@ -25,11 +25,14 @@ module.exports = {
 			},
 
 			{
-				test: /\.js$/,
+				test: /.(js|jsx)$/,
 				use: [
 					{
 						loader: 'babel-loader',
-						options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
+						options: {
+							//presets: ['@babel/preset-react'],
+							plugins: ['syntax-dynamic-import']
+						}
 					}
 				]
 			}

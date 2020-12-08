@@ -5,7 +5,7 @@ module.exports = {
 	output: {
 		path: __dirname + '/dist',
 		filename: 'proteinpaint.js',
-		//publicPath:'/bin/',
+		publicPath: '/react/dist/',
 		jsonpFunction: 'ppJsonp',
 		libraryTarget: 'umd',
 		library: 'testWrapper'
@@ -30,7 +30,7 @@ module.exports = {
 					{
 						loader: 'babel-loader',
 						options: {
-							presets: ['@babel/preset-env', '@babel/preset-react'],
+							presets: ['@babel/preset-react'],
 							plugins: ['syntax-dynamic-import']
 						}
 					}

@@ -8,6 +8,7 @@ console.log(5, 'portal/index.js', testWrapper)
 export function portalInit() {
 	console.log(9, 'portalInit()', document)
 	testWrapper.runproteinpaint({
+		noheader: true,
 		holder: select('body')
 			.append('div')
 			.node(),

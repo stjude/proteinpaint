@@ -145,9 +145,16 @@ if (serverconfig.jwt) {
 	})
 }
 
+// hardcoded basepath='/portal/' value, should be
+// defined later as serverconfig.basepath
+// -- not optimal since this redirect results in two HTTP requests
+// -- much better is if express.js simply rerouted within the same request
+app.get('/portal/:actualroute', (req, res) => {
+	res.redirect('/' + req.params.actualroute)
+})
+
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
-app.get('/portal/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)
