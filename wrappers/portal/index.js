@@ -3,7 +3,7 @@ import testWrapper from 'pp-react'
 import { select } from 'd3-selection'
 
 console.log('test ....')
-console.log(5, 'portal/index.js', testWrapper)
+console.log(5, 'wrappers/portal/index.js', testWrapper)
 
 export function portalInit(host = 'http://localhost:3000') {
 	console.log(9, 'portalInit()', document)

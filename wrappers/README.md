@@ -10,6 +10,8 @@ cd wrappers/react
 npm install
 npm run dev
 npm link
+cd public
+ln -s ../dist dist
 ```
 
 Set up an example portal app that embeds the react wrapper component
@@ -22,7 +24,8 @@ npm link pp-react
 
 Expose the example portal app via the pp server
 ```bash
-cd public
+# go to proteinpaint/public
+cd ../../public
 ln -s ../wrappers/portal/public portal
 ln -s ../wrappers/react/public react
 
