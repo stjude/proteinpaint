@@ -147,6 +147,7 @@ if (serverconfig.jwt) {
 
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
+app.get('/portal/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
 app.post('/ntseq', handle_ntseq)
 app.post('/pdomain', handle_pdomain)

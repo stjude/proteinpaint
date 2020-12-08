@@ -20,12 +20,12 @@ npm run dev
 npm link pp-react
 ```
 
-Expose the example portal app via the node server
+Expose the example portal app via the pp server
 ```bash
 cd public
 ln -s ../wrappers/portal/public portal
+ln -s ../wrappers/react/public react
 
-# then load http://localhost:3000/portal/, 
+# then load http://localhost:3000/[react || portal], 
 # edit the port :3000 based on your serverconfig.port
 ```
-

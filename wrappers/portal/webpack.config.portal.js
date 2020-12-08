@@ -1,13 +1,14 @@
 module.exports = {
 	target: 'web',
-	mode: 'development', // default
+	mode: 'development',
 	entry: './index.js',
 	output: {
 		path: __dirname + '/public/bin/',
 		filename: 'portal.js',
 		publicPath: '/bin/',
 		jsonpFunction: 'ppJsonp',
-		libraryTarget: 'umd'
+		libraryTarget: 'umd',
+		library: 'AReactApp'
 	},
 	module: {
 		rules: [

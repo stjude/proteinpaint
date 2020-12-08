@@ -49,7 +49,7 @@ headtip.d.style('z-index', 5555)
 
 
 export function runproteinpaint(arg) {
-	const ppsrc = document.currentScript.src
+	const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
 
 	const app = {
 		error0(m) {

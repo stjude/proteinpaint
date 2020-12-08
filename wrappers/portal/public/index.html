@@ -1,11 +1,17 @@
 <html>
 <head>
-	<script src='./bin/portal.js' type='module'></script>
+	<style>
+		h1 {
+			text-align: center;
+		}
+	</style>
 </head>
 <body>
-<h2>Hello!</h2>
-<script type='module'>
-	//import * as d3color from './web_modules/d3-color/index.js'
-	//console.log(d3color)
+<h1>a react-based portal</h1>
+<script src='./bin/portal.js'></script>
+<script>
+window.onload = () => {
+	window.AReactApp.portalInit()
+}
 </script>
 </body>

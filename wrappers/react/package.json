@@ -12,14 +12,18 @@
   "author": "Xin Zhou",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.12.9",
     "react": "^17.0.1",
+    "react-dom": "^17.0.1",
     "rollup": "^2.34.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.12.9",
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-react": "^7.12.7",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
+    "babel-loader": "^8.2.2",
     "rollup-plugin-postcss": "^3.1.8",
     "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12"

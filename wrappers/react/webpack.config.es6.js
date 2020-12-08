@@ -1,13 +1,14 @@
 module.exports = {
 	target: 'web',
-	mode: 'development', // default
-	entry: './index.js',
+	mode: 'development',
+	entry: './index.jsx',
 	output: {
 		path: __dirname + '/dist',
 		filename: 'proteinpaint.js',
 		//publicPath:'/bin/',
 		jsonpFunction: 'ppJsonp',
-		libraryTarget: 'umd'
+		libraryTarget: 'umd',
+		library: 'testWrapper'
 	},
 	module: {
 		rules: [
@@ -24,11 +25,14 @@ module.exports = {
 			},
 
 			{
-				test: /\.js$/,
+				test: /.(js|jsx)$/,
 				use: [
 					{
 						loader: 'babel-loader',
-						options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
+						options: {
+							presets: ['@babel/preset-env', '@babel/preset-react'],
+							plugins: ['syntax-dynamic-import']
+						}
 					}
 				]
 			}
