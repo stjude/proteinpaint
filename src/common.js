@@ -1,6 +1,3 @@
-export { default as Partjson } from 'partjson'
-// export * as d3color from 'd3-color'
-
 /*
 shared between client and server
 
