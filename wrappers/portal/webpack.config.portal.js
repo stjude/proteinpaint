@@ -1,6 +1,6 @@
 module.exports = {
 	target: 'web',
-	mode: 'production', // default
+	mode: 'development', // default
 	entry: './index.js',
 	output: {
 		path: __dirname + '/public/bin/',
