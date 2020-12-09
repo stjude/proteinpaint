@@ -10,44 +10,56 @@ export async function init_examples(par) {
 	}
 
 	const wrapper_div = make_examples_page(holder)
-	make_header(wrapper_div)
+	make_header(wrapper_div, track_arg)
 	make_intro(wrapper_div)
 	const track_grid = make_main_track_grid(wrapper_div)
 	const gbrowswer_col = make_gbrowser_col(track_grid)
 	const otherapp_col = make_otherapp_col(track_grid)
 
-	//genomepaint panel
-	gbrowswer_col.append('h5').html('GenomePaint')
+	// genomepaint panel
+	gbrowswer_col
+		.append('h5')
+		.html('GenomePaint')
+		.append('hr')
 	make_gpaint_card(gbrowswer_col)
 
 	// tracks panel
-	gbrowswer_col.append('h5').html('Tracks')
+	//subgrid
+	gbrowswer_col
+		.append('h5')
+		.html('Tracks')
+		.append('hr')
 	const browserList = gbrowswer_col.append('ul')
 	browserList
 		.attr('class', 'track-list')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
 		.style('padding', '10px')
 		.style('border-radius', '8px')
 
 	// experimental tracks panel
-	gbrowswer_col.append('h5').html('Experimental Tracks')
+	//subgrid
+	gbrowswer_col
+		.append('h5')
+		.html('Experimental Tracks')
+		.append('hr')
 	const experimentalList = gbrowswer_col.append('ul')
 	experimentalList
 		.attr('class', 'track-list')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
 		.style('padding', '10px')
 		.style('border-radius', '8px')
 
 	// otherapps track panel
+	//subgrid
 	const appList = otherapp_col.append('ul')
 	appList
 		.attr('class', 'track-list')
 		.style('display', 'grid')
-		.style('grid-template-columns', '1fr 4fr')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
 		.style('padding', '10px')
 		.style('border-radius', '8px')
@@ -71,7 +83,7 @@ function make_examples_page(holder) {
 	return wrapper_div
 }
 
-function make_header(div) {
+function make_header(div, args) {
 	const header_div = div.append('div')
 	header_div
 		.style('padding', '10px')
@@ -98,8 +110,8 @@ function make_header(div) {
 		.style('color', 'white')
 		.html('GenomePaint, Genome Browser,<br>and Other App Examples') //TODO add in tab or new line?
 
-	const contact_btn = header_div.append('div')
-	contact_btn
+	const request_btn = header_div.append('div')
+	request_btn
 		.append('button')
 		.style('grid-area', 'contactBtn')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
@@ -117,8 +129,8 @@ function make_header(div) {
 			window.open('https://stjude.service-now.com/sn_portal', '_blank')
 		})
 
-	const request_btn = header_div.append('div')
-	request_btn
+	const contact_btn = header_div.append('div')
+	contact_btn
 		.append('button')
 		.style('grid-area', 'requestBtn')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
@@ -130,31 +142,35 @@ function make_header(div) {
 		.style('border-radius', '8px')
 		.style('border', '1px solid black')
 		.style('margin', '10px')
-		.html('<a href="mailto:PPTeam@STJUDE.ORG" subject="Inquiry from ppr Examples Page">Contact Us</a>')
+		.text('Contact Us')
+		.on('click', () => {
+			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from ppr Examples Page'
+		})
 
 	const searchBar_div = header_div.append('div')
 	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
-	make_searchbar(searchBar_div)
+	make_searchbar(searchBar_div, args)
 
-	return header_div
+	return [htext, request_btn, contact_btn, searchBar_div]
 }
 
-function make_searchbar(div) {
+function make_searchbar(div, args) {
 	const searchBar = div.append('div')
 	searchBar
 		.append('div')
 		.append('input')
 		.attr('type', 'text')
-		.attr('size', 55)
+		.style('width', '500px')
+		.style('height', '24px')
 		.attr('id', 'searchBar')
 		.style('border-radius', '3px')
 		.style('border', '1px solid #eaeaea')
 		.style('padding', '5px 10px')
 		.style('font-size', '12px')
 		.property('placeholder', 'Search tracks or features')
-		.on('keyup', async e => {
+		.on('keyup', e => {
 			const searchInput = e.target.value.toLowerCase()
-			const filteredTracks = tracks.filter(track => {
+			const filteredTracks = args.tracks.filter(track => {
 				let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
 					if (searchTermFound) {
 						return true
@@ -167,6 +183,7 @@ function make_searchbar(div) {
 			displayExperimentalTracks(filteredTracks)
 			displayAppTracks(filteredTracks)
 		})
+
 	return searchBar
 }
 
@@ -181,6 +198,8 @@ function make_intro(div) {
 		.style('margin', '10px')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '20px')
+		.style('font-weight', '525')
+		.style('letter-spacing', '2px')
 		.style('text-align', 'center')
 		.style('border-radius', '4px')
 		.style('color', '#324870')
@@ -290,6 +309,7 @@ function make_gbrowser_header(div) {
 function make_gpaint_card(div) {
 	const gpaint_card_div = div.append('div')
 	gpaint_card_div
+		.attr('class', 'gpaint-card')
 		.style('background-color', 'white')
 		.style('padding', '10px')
 		.style('margin', '5px')
