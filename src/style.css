@@ -549,14 +549,6 @@ button:hover {
     border-style: solid;
 }
 
-h1 {
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 24px;
-    text-align: center;
-    color: #3B469A;
-    margin: 30px;
-}
-
 h3 {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 525;
@@ -588,33 +580,6 @@ hr {
     margin-bottom: 3%;
 }
 
-
-.gbrowser-header,
-.app-header {
-    color: white;
-    background: radial-gradient( #1b2646, #324870);
-    padding: 10px;
-}
-
-.gpaint-card {
-    background-color: white;
-    border-radius: 20px;
-    border: 1px solid #D3D3D3;
-    display: grid;
-    width: minmax(320px, auto);
-    height: fit-content;
-    grid-template-columns: 1fr 4fr;
-    grid-template-areas: 'image link' 'image citation';
-    align-items: center;
-    justify-items: left;
-    text-align: left;
-    padding: 10px;
-    margin: 5px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-
 .gpaint-img {
     grid-area: image;
     width: 125px;
@@ -641,16 +606,6 @@ hr {
 #gpaint-citation {
     grid-area: citation;
     margin-left: 10px;
-}
-
-#browserList,
-#experimentalList,
-#appList {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 10px;
-    padding: 10px;
-    border-radius: 8px;
 }
 
 .track {

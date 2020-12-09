@@ -22,14 +22,35 @@ export async function init_examples(par) {
 
 	// tracks panel
 	gbrowswer_col.append('h5').html('Tracks')
-	const browserList = gbrowswer_col.append('ul').attr('class', 'track-list')
+	const browserList = gbrowswer_col.append('ul')
+	browserList
+		.attr('class', 'track-list')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('gap', '10px')
+		.style('padding', '10px')
+		.style('border-radius', '8px')
 
 	// experimental tracks panel
 	gbrowswer_col.append('h5').html('Experimental Tracks')
-	const experimentalList = gbrowswer_col.append('ul').attr('class', 'track-list')
+	const experimentalList = gbrowswer_col.append('ul')
+	experimentalList
+		.attr('class', 'track-list')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('gap', '10px')
+		.style('padding', '10px')
+		.style('border-radius', '8px')
 
 	// otherapps track panel
-	const appList = otherapp_col.append('ul').attr('class', 'track-list')
+	const appList = otherapp_col.append('ul')
+	appList
+		.attr('class', 'track-list')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('gap', '10px')
+		.style('padding', '10px')
+		.style('border-radius', '8px')
 
 	const track_arg = {
 		tracks: re.examples,
@@ -290,6 +311,8 @@ function make_gpaint_card(div) {
         </a>
         <a href=https://ppr.stjude.org/?mdsjsonform=1 target="_blank" id="gpaint-link">Create a Custom Track</a>
         <p id="gpaint-citation">Citation: Zhou et. al. Cancer Cell, in press</p>`)
+
+	return gpaint_card_div
 }
 
 //Creates the outer Other App column
