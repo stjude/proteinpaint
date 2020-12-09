@@ -45,13 +45,16 @@ export function validate_query_snvindel_byisoform(api, ds) {
 			snvindel_addclass(m, hit.consequence)
 			m.samples = []
 			for (const c of hit.cases) {
-				// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-				m.samples.push({
-					sample_id: c.case_id,
-					site: c.primary_site,
-					disease: c.disease_type,
-					project: c.project ? c.project.project_id : undefined
-				})
+				const sample = { sample_id: c.case_id }
+				if (ds.sampleSummaries) {
+					// At the snvindel query, each sample obj will only carry a subset of attributes
+					// as defined here, for producing sub-labels
+					for (const i of ds.sampleSummaries.lst) {
+						sample[i.label1] = ds.termdb.getTermById(i.label1).get(c)
+						if (i.label2) sample[i.label2] = ds.termdb.getTermById(i.label2).get(c)
+					}
+				}
+				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
@@ -279,8 +282,8 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
-		for (const attr of ds.variant2samples.terms) {
-			sample[attr.id] = attr.get(s.case)
+		for (const id of ds.variant2samples.termidlst) {
+			sample[id] = ds.termdb.getTermById(id).get(s.case)
 		}
 		samples.push(sample)
 	}

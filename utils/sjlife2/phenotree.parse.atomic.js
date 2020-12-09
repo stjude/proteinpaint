@@ -49,8 +49,11 @@ const readline = require('readline')
 const path = require('path')
 
 const bins = {
+	// temporary values
+	_n: 0, // count number of samples with a valid values
 	_min: null,
-	_max: null, // temporary values
+	_max: null,
+
 	default: {
 		type: 'regular',
 		bin_size: 5,
@@ -262,6 +265,8 @@ function step2_parsematrix(key2terms) {
 					}
 				}
 				const value = Number(str)
+				if (Number.isNaN(value)) throw 'invalid value for a numeric term (' + term.id + ') at line ' + (i + 1)
+				term.bins._n++
 				if (term.bins._min == null) {
 					term.bins._min = value
 					term.bins._max = value
@@ -353,10 +358,13 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			console.error(
 				'NUMERICAL\t' +
 					termID +
-					'\t' +
+					'\tn=' +
+					term.bins._n +
+					',min=' +
 					term.bins._min +
-					'\t' +
+					',max=' +
 					term.bins._max +
+					'\t' +
 					(term.values ? '\t' + Object.keys(term.values).join(',') : '')
 			)
 			// find bin size
@@ -365,6 +373,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
+			delete term.bins._n
 			continue
 		}
 	}

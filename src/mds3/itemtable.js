@@ -47,10 +47,13 @@ export async function mlst2samplesummary(mlst, tk, block, table) {
 			if (data.error) throw data.error
 			if (!data.data || !data.data[0]) throw 'result error'
 			trtemp.remove()
-			for (const term of tk.mds.variant2samples.terms) {
+
+			for (const termid of tk.mds.variant2samples.termidlst) {
+				const term = tk.mds.termdb.getTermById(termid)
+				if (!term) throw 'unknown term id: ' + termid
 				const [td1, td2] = row_headervalue(table)
 				td1.text(term.name)
-				td2.text(data.data[0][term.id])
+				td2.text(data.data[0][termid])
 			}
 			return
 		}

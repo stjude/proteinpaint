@@ -1,3 +1,10 @@
+const cohorthierarchy = [
+	{ k: 'diagnosis_group_short', label: 'Group', full: 'diagnosis_group_full', hide: true },
+	{ k: 'diagnosis_short', label: 'Cancer', full: 'diagnosis_full' },
+	{ k: 'diagnosis_subtype_short', label: 'Subtype', full: 'diagnosis_subtype_full' },
+	{ k: 'diagnosis_subgroup_short', label: 'Subgroup', full: 'diagnosis_subgroup_full', hide: true }
+]
+
 module.exports = function(common) {
 	const label2mclass = {}
 	for (const c in common.mclass) {
@@ -7,13 +14,6 @@ module.exports = function(common) {
 	for (const c in common.morigin) {
 		label2origin[common.morigin[c].label.toUpperCase()] = c
 	}
-
-	const cohorthierarchy = [
-		{ k: 'diagnosis_group_short', label: 'Group', full: 'diagnosis_group_full', hide: true },
-		{ k: 'diagnosis_short', label: 'Cancer', full: 'diagnosis_full' },
-		{ k: 'diagnosis_subtype_short', label: 'Subtype', full: 'diagnosis_subtype_full' },
-		{ k: 'diagnosis_subgroup_short', label: 'Subgroup', full: 'diagnosis_subgroup_full', hide: true }
-	]
 
 	return {
 		dbfile: 'anno/db/pediatric.hg19.db',
@@ -193,11 +193,10 @@ module.exports = function(common) {
 				name: 'pediatric snv/indel',
 				genemcount: {
 					query: n => {
-						return (
-							"select gene_symbol,sample_name,variant_class from snvindel_hg19 where gene_symbol='" +
-							n +
-							"' collate nocase"
-						)
+						return [
+							'select gene_symbol,sample_name,variant_class from snvindel_hg19 where gene_symbol=? collate nocase',
+							n
+						]
 					},
 					summary: (mlst, re) => {
 						let gene
@@ -224,13 +223,11 @@ module.exports = function(common) {
 					}
 				},
 				makequery: q => {
-					const k = q.isoform
-					if (!k) return null
-					return (
-						"select snvindel_hg19.*, sample_master.* from snvindel_hg19 left join sample_master on snvindel_hg19.sample_name=sample_master.sample_name where snvindel_hg19.isoform_accession='" +
-						k +
-						"' collate nocase"
-					)
+					if (!q.isoform) return [null]
+					return [
+						'select snvindel_hg19.*, sample_master.* from snvindel_hg19 left join sample_master on snvindel_hg19.sample_name=sample_master.sample_name where snvindel_hg19.isoform_accession=? collate nocase',
+						q.isoform
+					]
 				},
 				tidy: l => {
 					const m = {
@@ -333,13 +330,10 @@ module.exports = function(common) {
 				name: 'pediatric fusion transcript',
 				genemcount: {
 					query: n => {
-						return (
-							"select genes,sample_name from rna_fusion where genes like '%" +
-							n +
-							"' or genes like '%" +
-							n +
-							",%' collate nocase"
-						)
+						return [
+							'select genes,sample_name from rna_fusion where genes like ? or genes like ? collate nocase',
+							['%' + s, '%' + s + '%']
+						]
 					},
 					summary: (mlst, re) => {
 						for (const m of mlst) {
@@ -365,22 +359,17 @@ module.exports = function(common) {
 					}
 				},
 				makequery: q => {
-					const s = q.isoform
-					if (!s) return null
-					return (
-						'select e.*,s.* from rna_fusion as e,sample_master as s ' +
-						"where (e.isoforms like '%" +
-						s.toUpperCase() +
-						"' or e.isoforms like '%" +
-						s.toUpperCase() +
-						",%'" +
-						" or e.genes like '%" +
-						s.toUpperCase() +
-						"' or e.genes like '%" +
-						s.toUpperCase() +
-						",%')" +
-						'and e.sample_name=s.sample_name collate nocase'
-					)
+					if (!q.isoform) return [null]
+					const s = q.isoform.toUpperCase()
+					return [
+						`select e.*,s.* from rna_fusion as e,sample_master as s
+						where (e.isoforms like ? 
+						or e.isoforms like ?
+						or e.genes like ?
+						or e.genes like ?) 
+						and e.sample_name=s.sample_name collate nocase`,
+						['%' + s, '%' + s + ',%', '%' + s, '%' + s + '%']
+					]
 				},
 				tidy: r => {
 					let fusion
@@ -442,13 +431,10 @@ module.exports = function(common) {
 				name: 'pediatric sv',
 				genemcount: {
 					query: n => {
-						return (
-							"select genes,sample_name from sv where genes like '%" +
-							n +
-							"' or genes like '%" +
-							n +
-							",%' collate nocase"
-						)
+						return [
+							'select genes,sample_name from sv where genes like ? or genes like ? collate nocase',
+							['%' + s, '%' + s + '%']
+						]
 					},
 					summary: (mlst, re) => {
 						for (const m of mlst) {
@@ -474,22 +460,17 @@ module.exports = function(common) {
 					}
 				},
 				makequery: q => {
-					const s = q.isoform
-					if (!s) return null
-					return (
-						'select e.*,s.* from sv as e,sample_master as s ' +
-						"where (e.isoforms like '%" +
-						s.toUpperCase() +
-						"' or e.isoforms like '%" +
-						s.toUpperCase() +
-						",%'" +
-						" or e.genes like '%" +
-						s.toUpperCase() +
-						"' or e.genes like '%" +
-						s.toUpperCase() +
-						",%')" +
-						'and e.sample_name=s.sample_name collate nocase'
-					)
+					if (!q.isoform) return [null]
+					const s = q.isoform.toUpperCase()
+					return [
+						`select e.*,s.* from sv as e,sample_master as s
+						where (e.isoforms like ? 
+						or e.isoforms like ?
+						or e.genes like ? 
+						or e.genes like ?)
+						and e.sample_name=s.sample_name collate nocase`,
+						['%' + s, '%' + s + '%', '%' + s, '%' + s + '%']
+					]
 				},
 				tidy: r => {
 					let fusion
@@ -554,11 +535,10 @@ module.exports = function(common) {
 				makequery: q => {
 					const k = q.genename
 					if (!k) return null
-					return (
-						"select mbarrayexpression.*, sample_master.* from mbarrayexpression left join sample_master on mbarrayexpression.sample=sample_master.sample_name where mbarrayexpression.gene='" +
-						k +
-						"' collate nocase"
-					)
+					return [
+						'select mbarrayexpression.*, sample_master.* from mbarrayexpression left join sample_master on mbarrayexpression.sample=sample_master.sample_name where mbarrayexpression.gene=? collate nocase',
+						[k]
+					]
 				},
 				config: {
 					// client-side, tk-specific attributes
@@ -579,11 +559,10 @@ module.exports = function(common) {
 				makequery: q => {
 					const k = q.genename
 					if (!k) return null
-					return (
-						"select pcgp_fpkm.*, sample_master.* from pcgp_fpkm left join sample_master on pcgp_fpkm.sample=sample_master.sample_name where pcgp_fpkm.gene='" +
-						k +
-						"' collate nocase"
-					)
+					return [
+						'select pcgp_fpkm.*, sample_master.* from pcgp_fpkm left join sample_master on pcgp_fpkm.sample=sample_master.sample_name where pcgp_fpkm.gene=? collate nocase',
+						[k]
+					]
 				},
 				config: {
 					// client-side, tk-specific attributes

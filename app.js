@@ -1231,12 +1231,12 @@ async function handle_dsdata(req, res) {
 
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
-	const sqlstr = query.makequery(req.query)
+	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
 		return
 	}
-	const rows = ds.newconn.prepare(sqlstr).all()
+	const rows = ds.newconn.prepare(sqlstr).all(values)
 	let lst
 	if (query.tidy) {
 		lst = rows.map(i => query.tidy(i))

@@ -584,6 +584,77 @@ const ssmCaseAttr = [
 		}
 	}
 ]
+/*
+hardcoding a flat list of terms here
+any possibility of dynamically querying terms from api??
+*/
+const id2term = {
+	project: {
+		name: 'Project',
+		id: 'project',
+		type: 'categorical',
+		get: m => {
+			// the getter will not be passed to client
+			if (m.project) return m.project.project_id
+			return null
+		}
+	},
+	disease: {
+		name: 'Disease',
+		id: 'disease',
+		type: 'categorical',
+		get: m => m.disease_type
+	},
+	primary_site: {
+		name: 'Primary site',
+		id: 'primary_site',
+		type: 'categorical',
+		get: m => m.primary_site
+	},
+	available_variation_data: {
+		name: 'Available variation data',
+		id: 'available_variation_data',
+		type: 'categorical',
+		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
+	},
+	state: { name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	gender: {
+		name: 'Gender',
+		id: 'gender',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.gender
+			return null
+		}
+	},
+	year_of_birth: {
+		name: 'Birth year',
+		id: 'year_of_birth',
+		type: 'integer',
+		get: m => {
+			if (m.demographic) return m.demographic.year_of_birth
+			return null
+		}
+	},
+	race: {
+		name: 'Race',
+		id: 'race',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.race
+			return null
+		}
+	},
+	ethnicity: {
+		name: 'Ethnicity',
+		id: 'ethnicity',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.ethnicity
+			return null
+		}
+	}
+}
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
@@ -653,9 +724,8 @@ const snvindel_attributes = [
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 const sampleSummaries = [
 	// for a group of samples that carry certain variants
-	// TODO project/disease hierarchy
-	{ label1: 'project', label2: 'disease' },
-	{ label1: 'site' }
+	{ label1: 'project', label2: 'disease' }
+	//{ label1: 'primary_site' }
 ]
 
 module.exports = {
@@ -672,10 +742,26 @@ module.exports = {
 		}
 	},
 
+	// termdb as a generic interface
+	// getters will be added to abstract the detailed implementations
+	termdb: {
+		id2term
+	},
+
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
-		// required
-		terms: ssmCaseAttr,
+		// list of terms to show as items in detailed info page
+		termidlst: [
+			'project',
+			'disease',
+			'primary_site',
+			'available_variation_data',
+			'state',
+			'gender',
+			'year_of_birth',
+			'race',
+			'ethnicity'
+		],
 		sunburst_ids: ['project', 'disease'], // term id
 		gdcapi: variant2samples
 	},

@@ -28,6 +28,8 @@ export async function makeTk(tk, block) {
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
 
+	init_termdb(tk, block)
+
 	init_mclass(tk)
 
 	mayaddGetter_variant2samples(tk, block)
@@ -87,6 +89,15 @@ function get_ds(tk, block) {
 	}
 	*/
 	// if variant2samples is enabled for custom ds, it will also have the async get()
+}
+
+function init_termdb(tk, block) {
+	const tdb = tk.mds.termdb
+	if (!tdb) return
+	tdb.getTermById = id => {
+		if (tdb.id2term) return tdb.id2term[id]
+		return null
+	}
 }
 
 function mayaddGetter_variant2samples(tk, block) {

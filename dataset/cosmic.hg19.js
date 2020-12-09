@@ -32,9 +32,7 @@ module.exports = function(common) {
 				name: 'cosmic snv/indel',
 				genemcount: {
 					query: n => {
-						return (
-							"select annovar_sj_gene,sample_name,annovar_sj_class from cosmic_hg19 where annovar_sj_gene='" + n + "'"
-						)
+						return ['select annovar_sj_gene,sample_name,annovar_sj_class from cosmic_hg19 where annovar_sj_gene=?', n]
 					},
 					summary: (mlst, re) => {
 						let gene
@@ -61,17 +59,15 @@ module.exports = function(common) {
 					}
 				},
 				makequery: q => {
-					const k = q.isoform
-					if (!k) return null
-					return (
-						'select primary_site,primary_histology,histology_subtype1,histology_subtype2,histology_subtype3,site_subtype1,site_subtype2,site_subtype3,' +
-						'annovar_sj_gene,annovar_sj_class,annovar_sj_aachange,annovar_sj_filter_isoform,sample_name,' +
-						'chr,position,pmid,' +
-						'reference_allele,mutant_allele,mutation_cds,annovar_sj_cdna from cosmic_hg19 ' +
-						"where annovar_sj_filter_isoform='" +
-						k.toUpperCase() +
-						"'"
-					)
+					if (!q.isoform) return [null]
+					return [
+						`select primary_site,primary_histology,histology_subtype1,histology_subtype2,histology_subtype3,site_subtype1,site_subtype2,site_subtype3,
+						annovar_sj_gene,annovar_sj_class,annovar_sj_aachange,annovar_sj_filter_isoform,sample_name,
+						chr,position,pmid,
+						reference_allele,mutant_allele,mutation_cds,annovar_sj_cdna from cosmic_hg19
+						where annovar_sj_filter_isoform=?`,
+						q.isoform.toUpperCase()
+					]
 				},
 				tidy: r => {
 					const m = {
@@ -115,9 +111,10 @@ module.exports = function(common) {
 				dt: common.dtfusionrna,
 				genemcount: {
 					query: n => {
-						return (
-							"select genes,sample_name from cosmic_fusion where genes like '%" + n + "' or genes like '%" + n + ",%'"
-						)
+						return [
+							'select genes,sample_name from cosmic_fusion where genes like ? or genes like ?',
+							['%' + n, '%' + n + '%']
+						]
 					},
 					summary: (mlst, re) => {
 						for (const m of mlst) {
@@ -143,17 +140,10 @@ module.exports = function(common) {
 					}
 				},
 				makequery: q => {
-					const s = q.isoform
-					if (!s) return null
+					if (!q.isoform) return [null]
+					const s = q.isoform.toUpperCase()
 					const n = s.toLowerCase()
-					return (
-						'select * from cosmic_fusion ' +
-						"where isoforms like '%" +
-						n.toUpperCase() +
-						"' or isoforms like '%" +
-						n.toUpperCase() +
-						",%'"
-					)
+					return ['select * from cosmic_fusion where isoforms like ? or isoforms like ?', ['%' + n, '%' + n + '%']]
 				},
 				tidy: r => {
 					let fusion
