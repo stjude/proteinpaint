@@ -105,7 +105,7 @@ class TermSetting {
 	}
 }
 
-exports.termsettingInit = rx.getInitFxn(TermSetting)
+export const termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
@@ -321,7 +321,7 @@ function setInteractivity(self) {
 	}
 }
 
-function termsetting_fill_q(q, term) {
+export function termsetting_fill_q(q, term) {
 	// to-do: delete this code block when all term.is* has been removed from code
 	if (!term.type) {
 		term.type = term.iscategorical
@@ -386,7 +386,6 @@ function termsetting_fill_q(q, term) {
 	}
 	throw 'unknown term type'
 }
-exports.termsetting_fill_q = termsetting_fill_q
 
 function set_hiddenvalues(q, term) {
 	if (!q.hiddenValues) {

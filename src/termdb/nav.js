@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { searchInit } from './search'
-import { filterInit } from './filter3'
+import { filter3Init } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch3, Menu } from '../client'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
@@ -54,7 +54,7 @@ class TdbNav {
 					this.app.opts.search
 				)
 			),
-			filter: filterInit(
+			filter: filter3Init(
 				this.app,
 				{
 					holder: this.dom.subheader.filter.append('div'),

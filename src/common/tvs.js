@@ -48,7 +48,7 @@ class TVS {
 	}
 }
 
-exports.TVSInit = rx.getInitFxn(TVS)
+export const TVSInit = rx.getInitFxn(TVS)
 
 function setRenderers(self) {
 	self.updateUI = function() {

@@ -1,11 +1,15 @@
 *.swp
 .DS_Store
 /node_modules/
+*/*/node_modules/
 npm-debug.log
 dist/*
-wrappers/*
+*/*/dist/
 
 public/bin/*
+*/*/public/bin/*
+public/portal
+
 public/tmp/*
 public/data/*
 public/stage/*
@@ -62,3 +66,4 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
+wrappers/react/public/public

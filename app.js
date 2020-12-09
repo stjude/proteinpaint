@@ -145,6 +145,14 @@ if (serverconfig.jwt) {
 	})
 }
 
+// hardcoded basepath='/portal/' value, should be
+// defined later as serverconfig.basepath
+// -- not optimal since this redirect results in two HTTP requests
+// -- much better is if express.js simply rerouted within the same request
+app.get('/portal/:actualroute', (req, res) => {
+	res.redirect('/' + req.params.actualroute)
+})
+
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
@@ -9584,7 +9592,8 @@ async function pp_init() {
 
 			// FIXME document the purpose of being able to use override file
 			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name

@@ -14,7 +14,7 @@ otherwise, do:
 
 const cache = { serverData: {} }
 
-exports.getterm = async function(termid, dslabel = null, genome = null) {
+export async function getterm(termid, dslabel = null, genome = null) {
 	if (!termid) throw 'getterm: termid missing'
 	if (this && this.state && this.state.vocab) {
 		if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
@@ -31,7 +31,7 @@ exports.getterm = async function(termid, dslabel = null, genome = null) {
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
 // shared in client, server, and tape test
-exports.graphable = function(term) {
+export function graphable(term) {
 	if (!term) throw 'graphable: term is missing'
 	// term.isgenotype??
 	return graphableTypes.has(term.type)
