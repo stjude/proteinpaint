@@ -15,7 +15,7 @@ const serverconfigfile = (process.cwd() || '.') + '/serverconfig.json'
 const serverconfig =
 	(typeof __non_webpack_require__ == 'function' && __non_webpack_require__(serverconfigfile)) ||
 	require(serverconfigfile)
-Object.freeze(serverconfig)
+//Object.freeze(serverconfig)
 exports.serverconfig = serverconfig
 
 const tabix = serverconfig.tabix || 'tabix'
