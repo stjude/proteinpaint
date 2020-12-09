@@ -12,7 +12,7 @@ const valuePerSample = {
 
 const samplenamekey = 'sample_name'
 
-export default function(common) {
+module.exports = function(common) {
 	return {
 		genome: 'hg19',
 		isMds: true,
