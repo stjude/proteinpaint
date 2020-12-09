@@ -3,6 +3,15 @@ const got = require('got')
 
 /*
 GDC graphql API
+
+validate_variant2sample
+validate_query_snvindel_byrange
+validate_query_snvindel_byisoform
+init_projectsize
+validate_query_genecnv
+getSamples_gdcapi
+
+getheaders
 */
 
 export function validate_variant2sample(a) {
@@ -288,4 +297,34 @@ export async function getSamples_gdcapi(q, ds) {
 		samples.push(sample)
 	}
 	return samples
+}
+
+export async function get_cohortTotal(api, ds, q) {
+	// q is query parameter
+	if (!api.query) throw '.query missing for termid2totalsize'
+	if (!api.filters) throw '.filters missing for termid2totalsize'
+	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query: api.query, variables: api.filters(q) })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for onetimequery_projectsize'
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+	}
+	if (!Array.isArray(h)) throw api.keys.join('.') + ' not array'
+	const v2count = new Map()
+	for (const t of h) {
+		if (!t.key) throw 'key missing from one bucket'
+		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+		v2count.set(t.key, t.doc_count)
+	}
+	return v2count
 }

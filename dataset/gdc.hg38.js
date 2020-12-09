@@ -237,6 +237,83 @@ const variant2samples = {
 }
 
 /*
+getting total cohort sizes
+*/
+const project_size = {
+	query: ` query projectSize( $filters: FiltersArgument) {
+	viewer {
+		explore {
+			cases {
+				total: aggregations(filters: $filters) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+			}
+		}
+	}
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'project__project_id', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+	}
+}
+const disease_size = {
+	query: ` query projectSize( $filters: FiltersArgument) {
+	viewer {
+		explore {
+			cases {
+				total: aggregations(filters: $filters) {
+					disease_type {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+			}
+		}
+	}
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'disease_type', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+	}
+}
+
+/*
+to be removed
 one time query: will only run once and result is cached on serverside
 to retrieve total number of tumors per project
 the number will be displayed in both sunburst and singleton variant panel
@@ -245,11 +322,11 @@ must associate the "project" with project_id in sunburst
 for now this is only triggered in variant2samples query
 */
 const query_projectsize = `
-query projectSize( $ssmTested: FiltersArgument) {
+query projectSize( $filters: FiltersArgument) {
 	viewer {
 		explore {
 			cases {
-				total: aggregations(filters: $ssmTested) {
+				total: aggregations(filters: $filters) {
 					project__project_id {
 						buckets {
 							doc_count
@@ -262,7 +339,7 @@ query projectSize( $ssmTested: FiltersArgument) {
 	}
 }`
 const variables_projectsize = {
-	ssmTested: {
+	filters: {
 		op: 'and',
 		content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
 	}
@@ -745,7 +822,11 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		terms
+		terms,
+		termid2totalsize: {
+			project: { gdcapi: project_size },
+			disease: { gdcapi: disease_size }
+		}
 	},
 
 	variant2samples: {

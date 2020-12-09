@@ -86,6 +86,25 @@ function validate_termdb(ds) {
 		}
 		return null
 	}
+
+	if (tdb.termid2totalsize) {
+		for (const tid in tdb.termid2totalsize) {
+			const t = tdb.termid2totalsize[tid]
+			if (t.gdcapi) {
+				// validate
+			} else {
+				throw 'unknown method for term totalsize: ' + tid
+			}
+			// add getter
+			t.get = async p => {
+				// p is client query parameter (set_id, token)
+				if (t.gdcapi) {
+					return gdc.get_cohortTotal(t.gdcapi, ds, p)
+				}
+				throw 'unknown method for term totalsize: ' + tid
+			}
+		}
+	}
 }
 
 function validate_variant2samples(ds) {

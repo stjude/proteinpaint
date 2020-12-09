@@ -37,7 +37,11 @@ query CancerDistributionSsmTable_relayQuery(
 const variables = {
 	ssmTested: {
 		op: 'and',
-		content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+		content: [
+			{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }
+			// set_id also works
+			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72'] } }
+		]
 	}
 }
 const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
