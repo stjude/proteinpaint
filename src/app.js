@@ -43,14 +43,14 @@ launch_singlecell
 */
 
 
+const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
+
 const headtip=new client.Menu({padding:'0px',offsetX:0,offsetY:0})
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 
 export function runproteinpaint(arg) {
-	const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
-
 	const app = {
 		error0(m) {
 			client.sayerror(app.holder0, m)
