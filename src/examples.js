@@ -13,19 +13,20 @@ export async function init_examples(par) {
 	make_header(wrapper_div)
 	make_intro(wrapper_div)
 	const track_grid = make_main_track_grid(wrapper_div)
-	make_showHideBtn(wrapper_div)
+	const gbrowswer_col = make_gbrowser_col(track_grid)
+	const otherapp_col = make_otherapp_col(track_grid)
 
 	// tracks panel
-	track_grid.append('h5').html('Tracks')
-	const browserList = track_grid.append('ul').attr('class', 'track-list')
+	gbrowswer_col.append('h5').html('Tracks')
+	const browserList = gbrowswer_col.append('ul').attr('class', 'track-list')
 
 	// experimental tracks panel
-	track_grid.append('h5').html('Experimental Tracks')
-	const experimentalList = track_grid.append('ul').attr('class', 'track-list')
+	gbrowswer_col.append('h5').html('Experimental Tracks')
+	const experimentalList = gbrowswer_col.append('ul').attr('class', 'track-list')
 
 	// apps track panel
-	track_grid.append('h5').html('Other Apps')
-	const appList = track_grid.append('ul').attr('class', 'track-list')
+	// otherapp_col.append('h5').html('Other Apps')
+	const appList = otherapp_col.append('ul').attr('class', 'track-list')
 
 	const track_arg = {
 		tracks: re.examples,
@@ -55,14 +56,12 @@ function make_header(div) {
 		.style('background-image', 'linear-gradient(to bottom right, #1b2646, #324870)')
 		.style('display', 'grid')
 		.style('grid-template-columns', '3fr 1fr 1fr')
-		// .style('grid-template-rows', '1fr 1fr')
 		.style('grid-template-areas', '"htext contactBtn requestBtn" "htext searchBar searchBar"')
 		.style('gap', '20px')
 
 	const htext = header_div.append('div')
 	htext
 		.style('grid-area', 'htext')
-		// .style('grid-area', '1 / 1 / 2 / 1')
 		.style('top', '5%')
 		.style('float', 'left')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
@@ -111,31 +110,48 @@ function make_header(div) {
 
 	const searchBar_div = header_div.append('div')
 	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
+	make_searchbar(searchBar_div)
 
-	const searchBar = searchBar_div.append('div')
+	return header_div
+}
+
+function make_searchbar(div) {
+	const searchBar = div.append('div')
 	searchBar
 		.append('div')
 		.append('input')
 		.attr('type', 'text')
 		.attr('size', 55)
-		// .style('height', '24px')
-		// .style('width', '500px')
+		.attr('id', 'searchBar')
 		.style('border-radius', '3px')
 		.style('border', '1px solid #eaeaea')
 		.style('padding', '5px 10px')
 		.style('font-size', '12px')
 		.property('placeholder', 'Search tracks or features')
+		.on('keyup', async e => {
+			const searchInput = e.target.value.toLowerCase()
+			const filteredTracks = tracks.filter(track => {
+				let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
+					if (searchTermFound) {
+						return true
+					}
+					return searchTerm.toLowerCase().includes(searchInput)
+				}, false)
+				return searchTermFound || track.name.toLowerCase().includes(searchInput)
+			})
+			displayBrowserTracks(filteredTracks)
+			displayExperimentalTracks(filteredTracks)
+			displayAppTracks(filteredTracks)
+		})
+	return searchBar
 }
 
 function make_intro(div) {
-	const intro = div.append('div')
-	intro
-		.append('div')
-		.style('padding', '10px')
-		.style('display', 'block')
-		.attr('class', 'intro_div')
+	const intro_div = div.append('div')
+	intro_div.append('div').style('padding', '10px')
+	// .style('display', 'block')
 
-	const intro_header = intro.append('div')
+	const intro_header = intro_div.append('div')
 	intro_header
 		.append('div')
 		.style('margin', '10px')
@@ -146,13 +162,11 @@ function make_intro(div) {
 		.style('color', '#324870')
 		.text('Welcome to our Examples Page!')
 		.attr('class', 'intro_div')
-		.style('display', 'block')
+	// .style('display', 'block')
 
-	const lists = intro.append('div')
-	lists
-		.append('div')
-		.attr('class', 'intro_div')
-		.style('display', 'block').html(`
+	const lists = intro_div.append('div')
+	// .style('display', 'block')
+	lists.append('div').attr('class', 'intro_div').html(`
         <p>Please note the following:
             <ul>
                 <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
@@ -167,12 +181,7 @@ function make_intro(div) {
             </ul>
         </p>`)
 
-	make_showHideBtn(div)
-}
-
-function make_showHideBtn(div) {
 	const showHideBtn = div.append('div')
-	const intro = document.getElementsByClassName('intro_div')
 	showHideBtn
 		.append('button') //TODO renders but doesn't work
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
@@ -187,13 +196,41 @@ function make_showHideBtn(div) {
 		.style('margin-top', '10px')
 		.text('Show/Hide')
 		.on('click', () => {
-			if (intro.style('display') == 'block') {
-				intro.style('display', 'none')
+			if (lists.style('display') == 'none' && intro_header.style('display') == 'none') {
+				lists.style('display', 'block') && intro_header.style('display', 'block')
 			} else {
-				intro.style('display', 'none')
+				lists.style('display', 'none') && intro_header.style('display', 'none')
 			}
 		})
+
+	return [intro_header, lists, showHideBtn]
 }
+
+// function make_showHideBtn(div) {
+// 	const showHideBtn = div.append('div')
+// 	const intro = document.getElementsByClassName('intro_div')
+// 	showHideBtn
+// 		.append('button') //TODO renders but doesn't work
+// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+// 		.style('font-size', '11px')
+// 		.style('height', '30px')
+// 		.style('width', '80px')
+// 		.style('text-align', 'center')
+// 		.style('background-color', '#e6e7eb')
+// 		.style('border-radius', '8px')
+// 		.style('border', 'none')
+// 		.style('margin-left', '40px')
+// 		.style('margin-top', '10px')
+// 		.text('Show/Hide')
+// 		.on('click', () => {
+// 			if (intro.style('display') == 'none') {
+// 				intro.style('display', 'block')
+// 			} else {
+// 				intro.style('display', 'none')
+// 			}
+//         })
+//     return showHideBtn
+// }
 
 //Creates the two column outer grid
 function make_main_track_grid(div) {
@@ -202,7 +239,7 @@ function make_main_track_grid(div) {
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr)')
-		.style('grid-template-areas', '"gbrowser otherapp"')
+		.style('grid-template-areas', '"gbrowser otherapps"')
 		.style('gap', '10px')
 		.style('background-color', 'white')
 		.style('padding', '10px 20px')
@@ -212,17 +249,33 @@ function make_main_track_grid(div) {
 	return track_grid
 }
 
+function make_gbrowser_col(div) {
+	const gBrowserCol = div.append('div')
+	gBrowserCol
+		.style('grid-area', 'gbrowser')
+		.property('position', 'relative')
+		.style('background-color', 'white')
+		.style('border-radius', '20px')
+
+	return gBrowserCol
+}
+
+function make_otherapp_col(div) {
+	const otherAppsCol = div.append('div')
+	otherAppsCol
+		.style('grid-area', 'otherapps')
+		.property('position', 'relative')
+		.style('background-color', 'white')
+		.style('border-radius', '20px')
+
+	return otherAppsCol
+}
+
 /******Copied over js from here down - leave be until incorporated into working code*****/
 
-// const browserList = document.getElementById('browserList')
-// const experimentalList = document.getElementById('experimentalList')
-// const appList = document.getElementById('appList')
-// const searchBar = document.getElementById('searchBar')
-// let trackInfo = []
-
-// searchBar.addEventListener('keyup', e => {
+// searchBar.addEventListener('keyup', (e) => {
 // 	const searchInput = e.target.value.toLowerCase()
-// 	const filteredTracks = trackInfo.filter(track => {
+// 	const filteredTracks = tracks.filter(track => {
 // 		let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
 // 			if (searchTermFound) {
 // 				return true

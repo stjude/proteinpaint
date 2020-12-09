@@ -535,7 +535,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearan
 
 /* Example page style */
 
-.header {
+/* .header {
     padding: 10px;
     margin: 0px;
     height: 125px;
@@ -558,14 +558,14 @@ input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearan
     tab-size: 8;
     margin-left: 40px;
     color: white;
-}
+} */
 
 .tab {
     display: inline-block;
     margin-left: 40px
 }
 
-.contact-btn {
+/* .contact-btn {
     grid-area: contact-button;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: 14px;
@@ -592,7 +592,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearan
     border: 1px black;
     border-style: solid;
     margin: 10px;
-}
+} */
 
 #gpaint-btn:hover,
 
@@ -608,7 +608,7 @@ button:hover {
     border-style: solid;
 }
 
-#searchBarDiv {
+/* #searchBarDiv {
     grid-area: searchbar;
     position: relative;
 }
@@ -620,9 +620,9 @@ button:hover {
     border: 1px solid #eaeaea;
     padding: 5px 10px;
     font-size: 12px;
-}
+} */
 
-.intro {
+/* .intro {
     padding: 10px;
 }
 
@@ -643,9 +643,9 @@ button:hover {
     text-align: left;
     margin-left: 65px;
     margin-right: 40px;
-}
+} */
 
-#showHide {
+/* #showHide {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: 11px;
     height: 30px;
@@ -656,7 +656,7 @@ button:hover {
     border: none;
     margin-left: 40px;
     margin-top: 10px;
-}
+} */
 
 h1 {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
@@ -697,7 +697,7 @@ hr {
     margin-bottom: 3%;
 }
 
-.track-grid {
+/* .track-grid {
     background-color: white;
     padding: 10px 20px;
     display: grid;
@@ -706,7 +706,7 @@ hr {
     text-align: left;
     gap: 10px;
     margin: 15px;
-}
+} */
 
 .gbrowser-header,
 .app-header {
@@ -715,7 +715,7 @@ hr {
     padding: 10px;
 }
 
-.gbrowser-col {
+/* .gbrowser-col {
     grid-area: gbrowser;
     background-color: white;
     border-radius: 20px;
@@ -725,7 +725,7 @@ hr {
     grid-area: otherapps;
     background-color: white;
     border-radius: 20px;
-}
+} */
 
 .gpaint-card {
     background-color: white;
