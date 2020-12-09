@@ -7,7 +7,6 @@ GDC graphql API
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
-init_projectsize
 validate_query_genecnv
 getSamples_gdcapi
 
@@ -175,38 +174,6 @@ async function snvindel_byisoform_run(api, opts) {
 	return [...id2ssm.values()]
 }
 
-export async function init_projectsize(op, ds) {
-	if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
-	if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(op.gdcapi)
-	})
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for onetimequery_projectsize'
-	}
-	if (
-		!re.data ||
-		!re.data.viewer ||
-		!re.data.viewer.explore ||
-		!re.data.viewer.explore.cases ||
-		!re.data.viewer.explore.cases.total ||
-		!re.data.viewer.explore.cases.total.project__project_id ||
-		!re.data.viewer.explore.cases.total.project__project_id.buckets
-	)
-		throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-	if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-		throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-	for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-		if (!t.key) throw 'key missing from one bucket'
-		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-		op.results.set(t.key, t.doc_count)
-	}
-}
-
 export function validate_query_genecnv(api, ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
@@ -312,7 +279,7 @@ export async function get_cohortTotal(api, ds, q) {
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for onetimequery_projectsize'
+		throw 'invalid JSON from GDC for cohortTotal'
 	}
 	let h = re[api.keys[0]]
 	for (let i = 1; i < api.keys.length; i++) {

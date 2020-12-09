@@ -276,7 +276,7 @@ const project_size = {
 	}
 }
 const disease_size = {
-	query: ` query projectSize( $filters: FiltersArgument) {
+	query: ` query diseaseSize( $filters: FiltersArgument) {
 	viewer {
 		explore {
 			cases {
@@ -311,23 +311,13 @@ const disease_size = {
 		}
 	}
 }
-
-/*
-to be removed
-one time query: will only run once and result is cached on serverside
-to retrieve total number of tumors per project
-the number will be displayed in both sunburst and singleton variant panel
-must associate the "project" with project_id in sunburst
-
-for now this is only triggered in variant2samples query
-*/
-const query_projectsize = `
-query projectSize( $filters: FiltersArgument) {
+const site_size = {
+	query: ` query siteSize( $filters: FiltersArgument) {
 	viewer {
 		explore {
 			cases {
 				total: aggregations(filters: $filters) {
-					project__project_id {
+					primary_site {
 						buckets {
 							doc_count
 							key
@@ -337,11 +327,24 @@ query projectSize( $filters: FiltersArgument) {
 			}
 		}
 	}
-}`
-const variables_projectsize = {
-	filters: {
-		op: 'and',
-		content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
 	}
 }
 
@@ -799,11 +802,6 @@ const snvindel_attributes = [
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // XXX hardcoded to use .sample_id to dedup samples
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-const sampleSummaries = [
-	// for a group of samples that carry certain variants
-	{ label1: 'project', label2: 'disease' }
-	//{ label1: 'primary_site' }
-]
 
 module.exports = {
 	isMds3: true,
@@ -812,20 +810,14 @@ module.exports = {
 	snvindel_attributes,
 	apihost: 'https://api.gdc.cancer.gov/v0/graphql',
 
-	onetimequery_projectsize: {
-		gdcapi: {
-			query: query_projectsize,
-			variables: variables_projectsize
-		}
-	},
-
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
 		terms,
 		termid2totalsize: {
 			project: { gdcapi: project_size },
-			disease: { gdcapi: disease_size }
+			disease: { gdcapi: disease_size },
+			primary_site: { gdcapi: site_size }
 		}
 	},
 
@@ -850,7 +842,11 @@ module.exports = {
 	// this is meant for the leftside labels under tklabel
 	// should not be called sample summary but mclassSummary
 	sampleSummaries: {
-		lst: sampleSummaries
+		lst: [
+			// for a group of samples that carry certain variants
+			{ label1: 'project', label2: 'disease' },
+			{ label1: 'primary_site' }
+		]
 	},
 	// how to let gene-level gain/loss data shown as additional labels?
 

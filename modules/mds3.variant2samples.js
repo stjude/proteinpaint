@@ -63,7 +63,7 @@ async function make_sunburst(samples, ds, q) {
 		nodename2total = new Map() // k: node name, v: total
 		for (const termid of ds.variant2samples.sunburst_ids) {
 			if (!ds.termdb.termid2totalsize[termid]) continue
-			const v2c = await ds.termdb.termid2totalsize[termid].get(termid)
+			const v2c = await ds.termdb.termid2totalsize[termid].get(q)
 			for (const [v, c] of v2c) {
 				nodename2total.set(v.toLowerCase(), c)
 			}
