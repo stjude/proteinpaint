@@ -194,7 +194,7 @@ function make_intro(div) {
 
 	const showHideBtn = div.append('div')
 	showHideBtn
-		.append('button') //TODO renders but doesn't work
+		.append('button')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '11px')
 		.style('height', '30px')
@@ -205,6 +205,7 @@ function make_intro(div) {
 		.style('border', 'none')
 		.style('margin-left', '40px')
 		.style('margin-top', '10px')
+		.attr('id', 'showHide')
 		.text('Show/Hide')
 		.on('click', () => {
 			if (lists.style('display') == 'none' && intro_header.style('display') == 'none') {
@@ -221,9 +222,8 @@ function make_intro(div) {
 function make_main_track_grid(div) {
 	const track_grid = div.append('div')
 	track_grid
-		.append('div')
 		.style('display', 'grid')
-		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr)')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr))')
 		.style('grid-template-areas', '"gbrowser otherapps"')
 		.style('gap', '10px')
 		.style('background-color', 'white')

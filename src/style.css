@@ -541,11 +541,6 @@ input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearan
 }
 
 #gpaint-btn:hover,
-
-/* #doc-btn:hover,
-#url-btn:hover,
-#example-btn:hover, */
-
 #showHide:hover,
 button:hover {
     background-color: white;
@@ -593,16 +588,6 @@ hr {
     margin-bottom: 3%;
 }
 
-/* .track-grid {
-    background-color: white;
-    padding: 10px 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(425px, 1fr));
-    grid-template-areas: 'gbrowser otherapps';
-    text-align: left;
-    gap: 10px;
-    margin: 15px;
-} */
 
 .gbrowser-header,
 .app-header {
@@ -610,18 +595,6 @@ hr {
     background: radial-gradient( #1b2646, #324870);
     padding: 10px;
 }
-
-/* .gbrowser-col {
-    grid-area: gbrowser;
-    background-color: white;
-    border-radius: 20px;
-}
-
-.app-col {
-    grid-area: otherapps;
-    background-color: white;
-    border-radius: 20px;
-} */
 
 .gpaint-card {
     background-color: white;
