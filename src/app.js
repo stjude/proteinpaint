@@ -150,8 +150,8 @@ export function runproteinpaint(arg) {
 		if(arg.headerhtml) {
 			app.holder.append('div').html(arg.headerhtml)
 		}
-
-		app.holder0 = app.holder.append('div').style('margin','20px')
+    
+    app.holder0 = app.holder.append('div').style('margin','20px')
 
 		return parseembedthenurl(arg, app, selectgenome)
 	})
@@ -659,7 +659,7 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		loadstudycohort(
 			app.genomes,
 			arg.study,
-			app.holder,
+			app.holder0,
 			app.hostURL,
 			arg.jwt,
 			false, // no show
@@ -676,7 +676,7 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		obj.genome = app.genomes[gn]
 		obj.hostURL = app.hostURL
 		obj.jwt = arg.jwt
-		obj.holder = app.holder
+		obj.holder = app.holder0
 		bulkembed(obj)
 		return
 	}
@@ -766,7 +766,7 @@ function launchmdssamplescatterplot(arg, app) {
 		return
 	}
 	import('./mds.samplescatterplot').then(_=>{
-		_.init(arg, app.holder, app.debugmode)
+		_.init(arg, app.holder0, app.debugmode)
 	})
 }
 
@@ -800,7 +800,7 @@ function launchmdssurvivalplot(arg, app) {
 		}
 	}
 	import('./mds.survivalplot').then(_=>{
-		_.init(arg, app.holder, app.debugmode)
+		_.init(arg, app.holder0, app.debugmode)
 	})
 }
 
@@ -817,7 +817,7 @@ function launch_fimo ( arg, app ) {
 		return
 	}
 	arg.genome = genome
-	arg.div = holder
+	arg.div = app.holder0
 	import('./mds.fimo').then(_=>{
 		_.init( arg )
 	})
@@ -840,7 +840,7 @@ function launchhic(hic, app) {
 		return
 	}
 	hic.hostURL = app.hostURL
-	hic.holder = app.holder
+	hic.holder = app.holder0
 	import('./hic.straw').then(_=>{
 		_.hicparsefile(hic, app.debugmode)
 	})
@@ -859,7 +859,7 @@ function launchsamplematrix(cfg, app) {
 		return
 	}
 	cfg.hostURL = app.hostURL
-	cfg.holder = app.holder
+	cfg.holder = app.holder0
 	cfg.debugmode = app.debugmode
 	// dynamic import works with static values, not expressions
 	if (window.location.search.includes('smx=3')) {
@@ -897,7 +897,7 @@ function launchgeneview(arg, app) {
 		hostURL: app.hostURL,
 		query: arg.gene,
 		genome: app.genomes[arg.genome],
-		holder: app.holder,
+		holder: app.holder0,
 		variantPageCall_snv: app.variantPageCall_snv,
 		samplecart: app.samplecart,
 		debugmode: app.debugmode,
@@ -973,7 +973,7 @@ async function launchblock(arg, app) {
 		loadstudycohort(
 			app.genomes,
 			arg.study,
-			app.holder,
+			app.holder0,
 			app.hostURL,
 			arg.jwt,
 			true, // no show
@@ -1004,7 +1004,7 @@ async function launchblock(arg, app) {
 		genome: genomeobj,
 		hostURL: app.hostURL,
 		jwt: arg.jwt,
-		holder: app.holder,
+		holder: app.holder0,
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
 		debugmode: app.debugmode,
@@ -1148,7 +1148,7 @@ async function launchblock(arg, app) {
 function launchfusioneditor(arg, app) {
 	if( arg.fusioneditor.uionly ) {
 		// duplicate newpane3
-		const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
+		const inputdiv = app.holder0.append('div').style('margin', '40px 20px 20px 20px')
 		const p = inputdiv.append('p')
 		p.append('span').html('Genome&nbsp;')
 		const gselect = p.append('select').attr('title', 'Select a genome')
@@ -1156,8 +1156,8 @@ function launchfusioneditor(arg, app) {
 			gselect.append('option').text(n)
 		}
 		const filediv = inputdiv.append('div').style('margin', '20px 0px')
-		const saydiv = app.holder.append('div').style('margin', '10px 20px')
-		const visualdiv = app.holder.append('div').style('margin', '20px')
+		const saydiv = app.holder0.append('div').style('margin', '10px 20px')
+		const visualdiv = app.holder0.append('div').style('margin', '20px')
 		import('./svmr').then(p=>{
 			p.svmrui( [null, inputdiv, gselect.node(), filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt )
 		})
@@ -1173,7 +1173,7 @@ function launchfusioneditor(arg, app) {
 			arg.fusioneditor,
 			app.error0,
 			genomeobj,
-			app.holder,
+			app.holder0,
 			app.hostURL,
 			arg.jwt
 		)
@@ -1193,7 +1193,7 @@ function launchmavb(arg, app) {
 		p.mavbparseinput(
 			arg.mavolcanoplot,
 			app.error0,
-			app.holder,
+			app.holder0,
 			arg.jwt
 		)
 	})
@@ -1213,7 +1213,7 @@ function launch2dmaf(arg, app) {
 	import('./2dmaf').then(d2maf=>{
 		d2maf.d2mafparseinput(
 			arg.twodmaf,
-			app.holder
+			app.holder0
 		)
 	})
 }
@@ -1249,7 +1249,7 @@ async function launch_singlecell ( arg, app ) {
 		await client.add_scriptTag('/static/js/libs/stats.min.js')
 
 		const _ = await import('./singlecell')
-		await _.init( arg, app.holder )
+		await _.init( arg, app.holder0 )
 	}catch(e){
 		app.error0('Error launching single cell viewer: '+e)
 		if(e.stack) console.log(e.stack)
@@ -1261,14 +1261,14 @@ opts
 .state may be a partial or full instance of src/toy/toy.store defaultState
 */
 function launchtoy(opts, app) {
-	if (!opts.holder) opts.holder = app.holder
+	if (!opts.holder) opts.holder = app.holder0
 	import('./toy/toy.app').then(_=>{
 		_.appInit(null, opts)
 	})
 }
 
 function launchtermdb(opts, app) {
-	if (!opts.holder) opts.holder = app.holder
+	if (!opts.holder) opts.holder = app.holder0
 	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_=>{
 		_.appInit(null, opts)
@@ -1276,6 +1276,6 @@ function launchtermdb(opts, app) {
 }
 
 function launchxintest(opts, app) {
-	opts.holder = app.holder
+	opts.holder = app.holder0
 	import('./xin/app').then(_=> _.appInit(null,opts))
 }
