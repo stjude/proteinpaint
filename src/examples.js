@@ -16,6 +16,10 @@ export async function init_examples(par) {
 	const gbrowswer_col = make_gbrowser_col(track_grid)
 	const otherapp_col = make_otherapp_col(track_grid)
 
+	//genomepaint panel
+	gbrowswer_col.append('h5').html('GenomePaint')
+	make_gpaint_card(gbrowswer_col)
+
 	// tracks panel
 	gbrowswer_col.append('h5').html('Tracks')
 	const browserList = gbrowswer_col.append('ul').attr('class', 'track-list')
@@ -24,8 +28,7 @@ export async function init_examples(par) {
 	gbrowswer_col.append('h5').html('Experimental Tracks')
 	const experimentalList = gbrowswer_col.append('ul').attr('class', 'track-list')
 
-	// apps track panel
-	// otherapp_col.append('h5').html('Other Apps')
+	// otherapps track panel
 	const appList = otherapp_col.append('ul').attr('class', 'track-list')
 
 	const track_arg = {
@@ -146,10 +149,10 @@ function make_searchbar(div) {
 	return searchBar
 }
 
+//Creates intro header and paragraph with show/hide button above tracks
 function make_intro(div) {
 	const intro_div = div.append('div')
 	intro_div.append('div').style('padding', '10px')
-	// .style('display', 'block')
 
 	const intro_header = intro_div.append('div')
 	intro_header
@@ -162,24 +165,32 @@ function make_intro(div) {
 		.style('color', '#324870')
 		.text('Welcome to our Examples Page!')
 		.attr('class', 'intro_div')
-	// .style('display', 'block')
 
 	const lists = intro_div.append('div')
-	// .style('display', 'block')
-	lists.append('div').attr('class', 'intro_div').html(`
-        <p>Please note the following:
-            <ul>
-                <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
-                <li>Questions? Comments? Use the Contact Us button to email the ProteinPaint team.</li>
-            </ul>
-        </p>
-        <p>Links:
-            <ul>
-                <li>Example: Opens a new tab of an embedded runproteinpaint() call in an html file.</li>
-                <li>URL: Some tracks do not require creating a new html or json file. For these tracks, a parameterized URL accesses files from the hpc. The link opens a new tab with an example of a parameterized URL.</li>
-                <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
-            </ul>
-        </p>`)
+	lists
+		.append('div')
+		.attr('class', 'intro_div')
+		.style(
+			'font-family',
+			"'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif'"
+		)
+		.style('font-size', '14px')
+		.style('text-align', 'left')
+		.style('margin-left', '65px')
+		.style('margin-right', '40px').html(`
+            <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Please note the following:
+                <ul>
+                    <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
+                    <li>Questions? Comments? Use the Contact Us button to email the ProteinPaint team.</li>
+                </ul>
+            </p>
+            <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Links:
+                <ul>
+                    <li>Example: Opens a new tab of an embedded runproteinpaint() call in an html file.</li>
+                    <li>URL: Some tracks do not require creating a new html or json file. For these tracks, a parameterized URL accesses files from the hpc. The link opens a new tab with an example of a parameterized URL.</li>
+                    <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
+                </ul>
+            </p>`)
 
 	const showHideBtn = div.append('div')
 	showHideBtn
@@ -206,32 +217,6 @@ function make_intro(div) {
 	return [intro_header, lists, showHideBtn]
 }
 
-// function make_showHideBtn(div) {
-// 	const showHideBtn = div.append('div')
-// 	const intro = document.getElementsByClassName('intro_div')
-// 	showHideBtn
-// 		.append('button') //TODO renders but doesn't work
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '11px')
-// 		.style('height', '30px')
-// 		.style('width', '80px')
-// 		.style('text-align', 'center')
-// 		.style('background-color', '#e6e7eb')
-// 		.style('border-radius', '8px')
-// 		.style('border', 'none')
-// 		.style('margin-left', '40px')
-// 		.style('margin-top', '10px')
-// 		.text('Show/Hide')
-// 		.on('click', () => {
-// 			if (intro.style('display') == 'none') {
-// 				intro.style('display', 'block')
-// 			} else {
-// 				intro.style('display', 'none')
-// 			}
-//         })
-//     return showHideBtn
-// }
-
 //Creates the two column outer grid
 function make_main_track_grid(div) {
 	const track_grid = div.append('div')
@@ -249,6 +234,7 @@ function make_main_track_grid(div) {
 	return track_grid
 }
 
+//Creates the outer Genome Browser column
 function make_gbrowser_col(div) {
 	const gBrowserCol = div.append('div')
 	gBrowserCol
@@ -257,9 +243,56 @@ function make_gbrowser_col(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
+	make_gbrowser_header(gBrowserCol)
+
 	return gBrowserCol
 }
 
+function make_gbrowser_header(div) {
+	const gBrowserHeader = div.append('div')
+	gBrowserHeader
+		.append('div')
+		.style('padding', '10px')
+		.style('margin', '10px')
+		.style('color', 'white')
+		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+		.style('font-size', '20px')
+		.style('font-weight', '525')
+		.style('letter-spacing', '2px')
+		.style('text-align', 'center')
+		.style('background', 'radial-gradient( #1b2646, #324870)')
+		.style('border-radius', '4px')
+		.text('Genome Browser')
+}
+
+//Standalone card for GenomePaint
+function make_gpaint_card(div) {
+	const gpaint_card_div = div.append('div')
+	gpaint_card_div
+		.style('background-color', 'white')
+		.style('padding', '10px')
+		.style('margin', '5px')
+		.style('height', '125px')
+		.style('border-radius', '20px')
+		.style('border', '1px solid #D3D3D3')
+		.style('display', 'grid')
+		.style('width', 'minmax(320px, auto)')
+		.style('height', 'fit-content')
+		.style('grid-template-columns', '1fr 4fr')
+		.style('grid-template-areas', '"image link" "image citation"')
+		.style('align-items', 'center')
+		.style('justify-items', 'left')
+		.style('text-align', 'left')
+		.style('box-shadow', '0 1px 2px rgba(0, 0, 0, 0.1)')
+		.style('-webkit-transition', 'all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1)')
+		.style('transition', 'all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1)')
+		.html(`<a href=https://genomepaint.stjude.cloud target="_blank" class="gpaint-img"><img class="gpaint-img" src="https://pecan.stjude.cloud/static/examples/images/gpaint-square.png"></img>
+        </a>
+        <a href=https://ppr.stjude.org/?mdsjsonform=1 target="_blank" id="gpaint-link">Create a Custom Track</a>
+        <p id="gpaint-citation">Citation: Zhou et. al. Cancer Cell, in press</p>`)
+}
+
+//Creates the outer Other App column
 function make_otherapp_col(div) {
 	const otherAppsCol = div.append('div')
 	otherAppsCol
@@ -268,7 +301,26 @@ function make_otherapp_col(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
+	make_otherapp_header(otherAppsCol)
+
 	return otherAppsCol
+}
+
+function make_otherapp_header(div) {
+	const gOtherAppHeader = div.append('div')
+	gOtherAppHeader
+		.append('div')
+		.style('padding', '10px')
+		.style('margin', '10px')
+		.style('color', 'white')
+		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+		.style('font-size', '20px')
+		.style('font-weight', '525')
+		.style('letter-spacing', '2px')
+		.style('text-align', 'center')
+		.style('background', 'radial-gradient( #1b2646, #324870)')
+		.style('border-radius', '4px')
+		.text('Other Apps')
 }
 
 /******Copied over js from here down - leave be until incorporated into working code*****/
