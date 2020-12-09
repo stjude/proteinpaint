@@ -1,5 +1,4 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../common'
 import * as client from '../client'
 import { init as init_legend } from './legend'
 import { loadTk } from './tk'
@@ -95,7 +94,7 @@ function init_termdb(tk, block) {
 	const tdb = tk.mds.termdb
 	if (!tdb) return
 	tdb.getTermById = id => {
-		if (tdb.id2term) return tdb.id2term[id]
+		if (tdb.terms) return tdb.terms.find(i => i.id == id)
 		return null
 	}
 }
@@ -106,7 +105,7 @@ function mayaddGetter_variant2samples(tk, block) {
 	// native track, need to know what to do for custom track
 	tk.mds.variant2samples.get = async (tk0, mlst, querytype) => {
 		/*
-		support alternative methods
+		TODO support alternative data sources
 		where all data are hosted on client
 		*/
 		// hardcode to getsummary and using fixed levels
@@ -124,6 +123,8 @@ function mayaddGetter_variant2samples(tk, block) {
 		} else {
 			throw 'unknown variantkey for variant2samples'
 		}
+		if (tk.set_id) par.push('set_id=' + tk.set_id)
+		if (tk.token) par.push('token=' + tk.token)
 		return await client.dofetch2('mds3?' + par.join('&'))
 	}
 }

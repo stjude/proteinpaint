@@ -35,18 +35,20 @@ export function client_copy(ds) {
 	}
 	if (ds.termdb) {
 		ds2.termdb = {}
-		if (ds.termdb.id2term) {
+		if (ds.termdb.terms) {
 			// if okay to expose the whole vocabulary to client?
 			// if to keep vocabulary at backend
-			ds2.termdb.id2term = {}
-			for (const id in ds.termdb.id2term) {
-				const t = {}
-				for (const k in ds.termdb.id2term[id]) {
+			ds2.termdb.terms = []
+			for (const m of ds.termdb.terms) {
+				const n = {}
+				for (const k in m) {
 					if (k == 'get') continue
-					t[k] = ds.termdb.id2term[id][k]
+					n[k] = m[k]
 				}
-				ds2.termdb.id2term[id] = t
+				ds2.termdb.terms.push(n)
 			}
+		} else {
+			throw 'unknown vocab source'
 		}
 	}
 	if (ds.queries.snvindel) {
@@ -68,16 +70,22 @@ export function client_copy(ds) {
 function validate_termdb(ds) {
 	const tdb = ds.termdb
 	if (!tdb) return
-	if (tdb.id2term) {
+	if (tdb.terms) {
 		// the need for get function is only for gdc
-		for (const id in tdb.id2term) {
-			if (!tdb.id2term[id].get) throw '.get() missing from term: ' + id
-			if (typeof tdb.id2term[id].get != 'function') throw '.get() is not function from term: ' + id
+		for (const t of tdb.terms) {
+			if (!t.id) throw 'id missing from a term'
+			if (!t.get) throw '.get() missing from term: ' + t.id
+			if (typeof t.get != 'function') throw '.get() is not function from term: ' + t.id
 		}
 	} else {
 		throw 'unknown source of termdb vocabulary'
 	}
-	tdb.getTermById = id => tdb.id2term[id]
+	tdb.getTermById = id => {
+		if (tdb.terms) {
+			return tdb.terms.find(i => i.id == id)
+		}
+		return null
+	}
 }
 
 function validate_variant2samples(ds) {
@@ -98,7 +106,6 @@ function validate_variant2samples(ds) {
 	for (const id of vs.sunburst_ids) {
 		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 	}
-	vs.sunburst_ids = new Set(vs.sunburst_ids)
 	if (vs.gdcapi) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {

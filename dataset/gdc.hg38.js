@@ -588,8 +588,8 @@ const ssmCaseAttr = [
 hardcoding a flat list of terms here
 any possibility of dynamically querying terms from api??
 */
-const id2term = {
-	project: {
+const terms = [
+	{
 		name: 'Project',
 		id: 'project',
 		type: 'categorical',
@@ -599,26 +599,26 @@ const id2term = {
 			return null
 		}
 	},
-	disease: {
+	{
 		name: 'Disease',
 		id: 'disease',
 		type: 'categorical',
 		get: m => m.disease_type
 	},
-	primary_site: {
+	{
 		name: 'Primary site',
 		id: 'primary_site',
 		type: 'categorical',
 		get: m => m.primary_site
 	},
-	available_variation_data: {
+	{
 		name: 'Available variation data',
 		id: 'available_variation_data',
 		type: 'categorical',
 		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
 	},
-	state: { name: 'State', id: 'state', type: 'categorical', get: m => m.state },
-	gender: {
+	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	{
 		name: 'Gender',
 		id: 'gender',
 		type: 'categorical',
@@ -627,7 +627,7 @@ const id2term = {
 			return null
 		}
 	},
-	year_of_birth: {
+	{
 		name: 'Birth year',
 		id: 'year_of_birth',
 		type: 'integer',
@@ -636,7 +636,7 @@ const id2term = {
 			return null
 		}
 	},
-	race: {
+	{
 		name: 'Race',
 		id: 'race',
 		type: 'categorical',
@@ -645,7 +645,7 @@ const id2term = {
 			return null
 		}
 	},
-	ethnicity: {
+	{
 		name: 'Ethnicity',
 		id: 'ethnicity',
 		type: 'categorical',
@@ -654,7 +654,7 @@ const id2term = {
 			return null
 		}
 	}
-}
+]
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
@@ -745,7 +745,7 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		id2term
+		terms
 	},
 
 	variant2samples: {

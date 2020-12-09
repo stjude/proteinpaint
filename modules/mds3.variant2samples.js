@@ -58,7 +58,7 @@ function make_sunburst(samples, ds) {
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
-		ds.variant2samples.termidlst.map(i => {
+		ds.variant2samples.sunburst_ids.map(i => {
 			return { k: i }
 		})
 	)
