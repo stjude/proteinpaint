@@ -20,7 +20,6 @@ export async function init(ds, genome, _servconfig) {
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
-	await init_onetimequery_projectsize(ds)
 }
 
 export function client_copy(ds) {
@@ -85,6 +84,25 @@ function validate_termdb(ds) {
 			return tdb.terms.find(i => i.id == id)
 		}
 		return null
+	}
+
+	if (tdb.termid2totalsize) {
+		for (const tid in tdb.termid2totalsize) {
+			const t = tdb.termid2totalsize[tid]
+			if (t.gdcapi) {
+				// validate
+			} else {
+				throw 'unknown method for term totalsize: ' + tid
+			}
+			// add getter
+			t.get = async p => {
+				// p is client query parameter (set_id, token)
+				if (t.gdcapi) {
+					return gdc.get_cohortTotal(t.gdcapi, ds, p)
+				}
+				throw 'unknown method for term totalsize: ' + tid
+			}
+		}
 	}
 }
 
@@ -208,7 +226,7 @@ function validate_sampleSummaries(ds) {
 			}
 		}
 	}
-	ss.finalize = (labels, opts) => {
+	ss.finalize = (labels, opts, nodename2total) => {
 		// convert one "labels" map to list
 		const out = []
 		for (const [label1, L1] of labels) {
@@ -223,23 +241,25 @@ function validate_sampleSummaries(ds) {
 					mclasses: sort_mclass(o.mclasses)
 				}
 				// add cohort size, fix it so it can be applied to sub levels
-				if (
-					ds.onetimequery_projectsize &&
-					ds.onetimequery_projectsize.results &&
-					ds.onetimequery_projectsize.results.has(v1)
-				) {
-					L1o.cohortsize = ds.onetimequery_projectsize.results.get(v1)
+				if (nodename2total) {
+					const k = v1.toLowerCase()
+					if (nodename2total.has(k)) L1o.cohortsize = nodename2total.get(k)
 				}
 
 				strat.items.push(L1o)
 				if (o.label2) {
 					L1o.label2 = []
 					for (const [v2, oo] of o.label2) {
-						L1o.label2.push({
+						const L2o = {
 							label: v2,
 							samplecount: oo.sampleset.size,
 							mclasses: sort_mclass(oo.mclasses)
-						})
+						}
+						if (nodename2total) {
+							const k = v2.toLowerCase()
+							if (nodename2total.has(k)) L2o.cohortsize = nodename2total.get(k)
+						}
+						L1o.label2.push(L2o)
 					}
 					L1o.label2.sort((i, j) => j.samplecount - i.samplecount)
 				}
@@ -379,15 +399,4 @@ function validate_query_genecnv(ds, genome) {
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}
-}
-
-async function init_onetimequery_projectsize(ds) {
-	const op = ds.onetimequery_projectsize
-	if (!op) return
-	op.results = new Map()
-	if (op.gdcapi) {
-		await gdc.init_projectsize(op, ds)
-		return
-	}
-	throw 'unknown query method for onetimequery_projectsize'
 }
