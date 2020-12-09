@@ -30,7 +30,7 @@ async function do_query(req, genomes) {
 	const [e, tkfile, isurl] = app.fileurl(req)
 	if (e) throw e
 
-	let stackheight, stackspace, regionspace, width
+	let stackheight, stackspace, regionspace, width, fontsize
 	if (req.query.getdata) {
 		// no rendering, return list of parsed items
 		if (req.query.getBED) {
