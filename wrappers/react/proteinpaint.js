@@ -1,5 +1,6 @@
 import React from 'react'
 import { runproteinpaint } from '../../src/app'
+import { deepEqual } from '../../src/common/rx.core'
 
 export default class ProteinPaint extends React.Component {
 	constructor(props) {
@@ -8,21 +9,13 @@ export default class ProteinPaint extends React.Component {
 		this.ppHolderRef = React.createRef()
 	}
 	componentDidMount() {
-		const pp_holder = this.ppHolderRef.current
-		this.runpp(pp_holder)
+		this.runpp()
 	}
 	static getDerivedStateFromProps(props) {
 		return { data: JSON.parse(localStorage.getItem(props.dataKey)) }
 	}
-	shouldComponentUpdate(nextProps, nextState) {
-		return (
-			this.state.data.gene != nextState.data.gene || this.state.data.tracks[0].set_id != nextState.data.tracks[0].set_id
-		)
-	}
 	componentDidUpdate() {
-		const pp_holder = this.ppHolderRef.current
-		pp_holder.querySelector('.sja_root_holder').remove()
-		this.runpp(pp_holder)
+		this.runpp()
 	}
 	render() {
 		return (
@@ -31,9 +24,14 @@ export default class ProteinPaint extends React.Component {
 			</div>
 		)
 	}
-	runpp(holder) {
-		const ppdata = JSON.parse(JSON.stringify(this.state.data))
-		// console.log(29, ppdata)
-		runproteinpaint(Object.assign({ holder, noheader: true, nobox: true }, ppdata))
+	runpp() {
+		const data = JSON.parse(localStorage.getItem(this.props.dataKey))
+		if (deepEqual(data, this.data)) return
+		this.data = data
+		const pp_holder = this.ppHolderRef.current.querySelector('.sja_root_holder')
+		if (pp_holder) pp_holder.remove()
+		runproteinpaint(
+			Object.assign({ holder: this.ppHolderRef.current, noheader: true, nobox: true }, JSON.parse(JSON.stringify(data)))
+		)
 	}
 }
