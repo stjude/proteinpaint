@@ -3,7 +3,8 @@ import { dofetch2 } from './client'
 
 export async function init_examples(par) {
 	const { holder } = par
-	const re = await dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	// const re = await dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	const re = await loadJson()
 	if (re.error) {
 		holder.append('div').text(re.error)
 		return
@@ -24,7 +25,7 @@ export async function init_examples(par) {
 	make_gpaint_card(gbrowswer_col)
 
 	// tracks panel
-	//subgrid
+	// subgrid
 	gbrowswer_col
 		.append('h5')
 		.html('Tracks')
@@ -39,7 +40,7 @@ export async function init_examples(par) {
 		.style('border-radius', '8px')
 
 	// experimental tracks panel
-	//subgrid
+	// subgrid
 	gbrowswer_col
 		.append('h5')
 		.html('Experimental Tracks')
@@ -54,7 +55,7 @@ export async function init_examples(par) {
 		.style('border-radius', '8px')
 
 	// otherapps track panel
-	//subgrid
+	// subgrid
 	const appList = otherapp_col.append('ul')
 	appList
 		.attr('class', 'track-list')
@@ -144,17 +145,17 @@ function make_header(div, args) {
 		.style('margin', '10px')
 		.text('Contact Us')
 		.on('click', () => {
-			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from ppr Examples Page'
+			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from Examples Page'
 		})
 
 	const searchBar_div = header_div.append('div')
 	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
-	make_searchbar(searchBar_div, args)
+	make_searchbar(searchBar_div)
 
 	return [htext, request_btn, contact_btn, searchBar_div]
 }
 
-function make_searchbar(div, args) {
+function make_searchbar(div) {
 	const searchBar = div.append('div')
 	searchBar
 		.append('div')
@@ -168,9 +169,13 @@ function make_searchbar(div, args) {
 		.style('padding', '5px 10px')
 		.style('font-size', '12px')
 		.property('placeholder', 'Search tracks or features')
-		.on('keyup', e => {
-			const searchInput = e.target.value.toLowerCase()
-			const filteredTracks = args.tracks.filter(track => {
+		.on('keyup', async () => {
+			const data = await loadJson()
+			const searchInput = searchBar
+				.select('input')
+				.node()
+				.value.toLowerCase()
+			const filteredTracks = data.examples.filter(track => {
 				let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
 					if (searchTermFound) {
 						return true
@@ -187,7 +192,7 @@ function make_searchbar(div, args) {
 	return searchBar
 }
 
-//Creates intro header and paragraph with show/hide button above tracks
+//Creates intro header and paragraph with show/hide button before track grid
 function make_intro(div) {
 	const intro_div = div.append('div')
 	intro_div.append('div').style('padding', '10px')
@@ -303,6 +308,8 @@ function make_gbrowser_header(div) {
 		.style('background', 'radial-gradient( #1b2646, #324870)')
 		.style('border-radius', '4px')
 		.text('Genome Browser')
+
+	return gBrowserHeader
 }
 
 //Standalone card for GenomePaint
@@ -350,8 +357,8 @@ function make_otherapp_col(div) {
 }
 
 function make_otherapp_header(div) {
-	const gOtherAppHeader = div.append('div')
-	gOtherAppHeader
+	const otherAppHeader = div.append('div')
+	otherAppHeader
 		.append('div')
 		.style('padding', '10px')
 		.style('margin', '10px')
@@ -364,25 +371,14 @@ function make_otherapp_header(div) {
 		.style('background', 'radial-gradient( #1b2646, #324870)')
 		.style('border-radius', '4px')
 		.text('Other Apps')
+
+	return otherAppHeader
 }
 
-/******Copied over js from here down - leave be until incorporated into working code*****/
-
-// searchBar.addEventListener('keyup', (e) => {
-// 	const searchInput = e.target.value.toLowerCase()
-// 	const filteredTracks = tracks.filter(track => {
-// 		let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
-// 			if (searchTermFound) {
-// 				return true
-// 			}
-// 			return searchTerm.toLowerCase().includes(searchInput)
-// 		}, false)
-// 		return searchTermFound || track.name.toLowerCase().includes(searchInput)
-// 	})
-// 	displayBrowserTracks(filteredTracks)
-// 	displayExperimentalTracks(filteredTracks)
-// 	displayAppTracks(filteredTracks)
-// })
+async function loadJson() {
+	const json = dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	return json
+}
 
 async function loadTracks(args) {
 	try {
@@ -401,28 +397,28 @@ function displayBrowserTracks(tracks, holder) {
 			const subheading = `${track.subheading}`
 			if (app == 'Genome Browser' && subheading == 'Tracks') {
 				return `
-                    <li class="track">
-                    <h6>${track.name}</h6>
-                    ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
-                    ${
-											track.buttons.example
-												? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`
-												: `<span class="track-image"><img src="${track.image}"></img></span>`
-										}
-                    <div class="track-btns">
-                    ${
-											track.buttons.example
-												? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>`
-												: ''
-										}
-                    ${
-											track.buttons.url
-												? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
-												: ''
-										}
-                    ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-                    </div>
-                    </li>`
+                <li class="track">
+                <h6>${track.name}</h6>
+                ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+                ${
+									track.buttons.example
+										? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`
+										: `<span class="track-image"><img src="${track.image}"></img></span>`
+								}
+                <div class="track-btns">
+                ${
+									track.buttons.example
+										? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>`
+										: ''
+								}
+                ${
+									track.buttons.url
+										? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
+										: ''
+								}
+                ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
+                </div>
+                </li>`
 			}
 		})
 		.join('')
