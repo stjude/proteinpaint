@@ -1,7 +1,7 @@
 module.exports = {
 	target: 'web',
 	mode: 'development',
-	entry: './index.jsx',
+	entry: './proteinpaint.js',
 	output: {
 		path: __dirname + '/dist',
 		filename: 'proteinpaint.js',
