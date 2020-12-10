@@ -42,7 +42,8 @@ export default class App extends React.Component {
 			],
 			set_id: 'DDw3QnUB_tcD1Zw3Af72',
 			set_id_flag: false,
-			set_id_editing: false
+			set_id_editing: false,
+			lastUnrelatedUpdate: +new Date()
 		}
 		this.setidRef = React.createRef()
 		this.data = {
@@ -102,6 +103,10 @@ export default class App extends React.Component {
 				<div>
 					<ProteinPaint dataKey={this.state.dataKey} />
 				</div>
+				<div>
+					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
+					<button onClick={() => this.updateTime()}>Trigger Update</button>
+				</div>
 			</div>
 		)
 	}
@@ -116,6 +121,7 @@ export default class App extends React.Component {
 	ApplySet() {
 		if (this.state.set_id_flag) delete this.state.tracks[0].set_id
 		else this.state.tracks[0].set_id = 'set_id:' + this.state.set_id
+		this.save({ tracks: [this.state.tracks[0]] })
 		this.setState({ set_id_flag: !this.state.set_id_flag, tracks: [this.state.tracks[0]] })
 	}
 	editSetid() {
@@ -123,11 +129,15 @@ export default class App extends React.Component {
 	}
 	submitSetid() {
 		this.state.tracks[0].set_id = 'set_id:' + this.setidRef.current.value
+		this.save({ tracks: [this.state.tracks[0]] })
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,
 			tracks: [this.state.tracks[0]],
 			set_id: this.setidRef.current.value
 		})
+	}
+	updateTime() {
+		this.setState({ lastUnrelatedUpdate: +new Date() })
 	}
 }
