@@ -444,7 +444,7 @@ function findgenelst( app, str, genome, tip, jwt ) {
 			.text(name)
 			.on('click',()=>{
 				tip.hide()
-				findgene2paint(app, name, genome)
+				findgene2paint(app, name, genome, jwt)
 			})
 		}
 	})
@@ -595,7 +595,7 @@ async function parseembedthenurl(arg, app, selectgenome) {
 	after exhausting embedding options, try URL parameters
 
 	arg: embedding param
-	app: {holder}
+	app: {genomes, study, holder0, hostURL, debugmode, jwt?}
 	selectgenome: <select>
 
 	*/
@@ -1224,13 +1224,13 @@ function launch2dmaf(arg, app) {
 function launchjdv(arg, app) {
 	const genomeobj = app.genomes[arg.genome]
 	if(!genomeobj) {
-		client.sayerror(app.holder, 'Invalid genome: '+arg.genome)
+		app.error0('Invalid genome: '+arg.genome)
 		return
 	}
 	arg.hostURL = app.hostURL
 	arg.genome = genomeobj
 	import('./jdv').then(jdv=>{
-		jdv.jdvparseinput(arg, app.holder)
+		jdv.jdvparseinput(arg, app.holder0)
 	})
 }
 */
