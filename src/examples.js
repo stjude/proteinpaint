@@ -3,10 +3,8 @@ import { dofetch2 } from './client'
 
 export async function init_examples(par) {
 	const { holder } = par
-	// const re = await dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	const re = await loadJson()
 	let track_arg = {}
-	console.log(re)
 	if (re.error) {
 		holder.append('div').text(re.error)
 		return
@@ -75,7 +73,6 @@ export async function init_examples(par) {
 	}
 	make_header(header_div, track_arg)
 	await loadTracks(track_arg)
-	console.log(track_arg)
 }
 
 function make_examples_page(holder) {
@@ -109,16 +106,47 @@ function make_header(div, args) {
 		.style('font-weight', 'lighter')
 		.style('font-size', '30px')
 		.style('letter-spacing', '2.5px')
-		.style('text-align', 'left')
+		.style('align-items', 'left')
+		.style('justify-items', 'center')
 		.style('tab-size', '8')
 		.style('margin-left', '40px')
 		.style('color', 'white')
-		.html('GenomePaint, Genome Browser,<br>and Other App Examples') //TODO add in tab or new line?
+		.html('GenomePaint, Genome Browser,<br><span class="tab"><span>and Other App Examples') //TODO add in tab or new line?
 
-	const request_btn = header_div.append('div')
-	request_btn
-		.append('button')
+	const contact_btn = header_div.append('button')
+	contact_btn
+		.attr('class', 'contact-btn')
 		.style('grid-area', 'contactBtn')
+		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
+		.style('font-size', '14px')
+		.style('height', '30px')
+		.style('width', '220px')
+		.style('text-align', 'center')
+		.style('background-color', '#e6e7eb')
+		.style('border-radius', '8px')
+		.style('border', '1px solid black')
+		.style('margin', '10px')
+		.text('Contact Us')
+		.on('mouseover', () => {
+			contact_btn
+				.style('background-color', 'white')
+				.style('color', '#0d47ba')
+				.style('border', '1px solid #adb7c9')
+		})
+		.on('mouseleave', () => {
+			contact_btn
+				.style('background-color', '#e6e7eb')
+				.style('color', 'black')
+				.style('border', '1px solid black')
+		})
+		.on('click', () => {
+			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from Examples Page'
+		})
+
+	const request_btn = header_div.append('button')
+	request_btn
+		.attr('class', 'request-btn')
+		.style('grid-area', 'requestBtn')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '14px')
 		.style('height', '30px')
@@ -130,26 +158,20 @@ function make_header(div, args) {
 		.style('border-style', 'solid')
 		.style('margin', '10px')
 		.text('Request hpc:~/tp Access')
+		.on('mouseover', () => {
+			request_btn
+				.style('background-color', 'white')
+				.style('color', '#0d47ba')
+				.style('border', '1px solid #adb7c9')
+		})
+		.on('mouseleave', () => {
+			request_btn
+				.style('background-color', '#e6e7eb')
+				.style('color', 'black')
+				.style('border', '1px solid black')
+		})
 		.on('click', () => {
 			window.open('https://stjude.service-now.com/sn_portal', '_blank')
-		})
-
-	const contact_btn = header_div.append('div')
-	contact_btn
-		.append('button')
-		.style('grid-area', 'requestBtn')
-		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-		.style('font-size', '14px')
-		.style('height', '30px')
-		.style('width', '220px')
-		.style('text-align', 'center')
-		.style('background-color', '#e6e7eb')
-		.style('border-radius', '8px')
-		.style('border', '1px solid black')
-		.style('margin', '10px')
-		.text('Contact Us')
-		.on('click', () => {
-			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from Examples Page'
 		})
 
 	const searchBar_div = header_div.append('div')
@@ -225,25 +247,24 @@ function make_intro(div) {
 		)
 		.style('font-size', '14px')
 		.style('text-align', 'left')
-		.style('margin-left', '65px')
+		.style('margin-left', '40px')
 		.style('margin-right', '40px').html(`
             <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Please note the following:
-                <ul>
+                <ul style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; margin-left: 40px">
                     <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
                     <li>Questions? Comments? Use the Contact Us button to email the ProteinPaint team.</li>
                 </ul>
             </p>
             <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Links:
-                <ul>
+                <ul style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; margin-left: 40px">
                     <li>Example: Opens a new tab of an embedded runproteinpaint() call in an html file.</li>
                     <li>URL: Some tracks do not require creating a new html or json file. For these tracks, a parameterized URL accesses files from the hpc. The link opens a new tab with an example of a parameterized URL.</li>
                     <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
                 </ul>
             </p>`)
 
-	const showHideBtn = div.append('div')
+	const showHideBtn = div.append('button')
 	showHideBtn
-		.append('button')
 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
 		.style('font-size', '11px')
 		.style('height', '30px')
@@ -256,6 +277,18 @@ function make_intro(div) {
 		.style('margin-top', '10px')
 		.attr('id', 'showHide')
 		.text('Show/Hide')
+		.on('mouseover', () => {
+			showHideBtn
+				.style('background-color', 'white')
+				.style('color', '#0d47ba')
+				.style('border', '1px solid #adb7c9')
+		})
+		.on('mouseleave', () => {
+			showHideBtn
+				.style('background-color', '#e6e7eb')
+				.style('color', 'black')
+				.style('border', '1px solid black')
+		})
 		.on('click', () => {
 			if (lists.style('display') == 'none' && intro_header.style('display') == 'none') {
 				lists.style('display', 'block') && intro_header.style('display', 'block')
@@ -322,6 +355,11 @@ function make_gpaint_card(div) {
 	gpaint_card_div
 		.attr('class', 'gpaint-card')
 		.style('background-color', 'white')
+		.style(
+			'font-family',
+			"'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif"
+		)
+		.style('font-size', '14px')
 		.style('padding', '10px')
 		.style('margin', '5px')
 		.style('height', '125px')
