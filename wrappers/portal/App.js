@@ -13,6 +13,10 @@ const btn_style = {
 	margin: '2px 10px'
 }
 
+const align_top = {
+	verticalAlign: 'top'
+}
+
 const div_style = {
 	display: 'block',
 	padding: '2px 10px'
@@ -45,9 +49,12 @@ export default class App extends React.Component {
 			set_id: 'DDw3QnUB_tcD1Zw3Af72',
 			set_id_flag: false,
 			set_id_editing: false,
+			token_flag: false,
+			token_editing: true,
 			lastUnrelatedUpdate: +new Date()
 		}
 		this.setidRef = React.createRef()
+		this.tokenRef = React.createRef()
 		this.data = {
 			host: this.state.host,
 			basepath: this.state.basepath,
@@ -102,6 +109,39 @@ export default class App extends React.Component {
 						Submit
 					</button>
 				</div>
+				<div style={div_style}>
+					<input
+						type="checkbox"
+						style={align_top}
+						id={'token_switch'}
+						checked={this.state.token_flag}
+						onChange={() => this.ApplyToken()}
+					/>
+					<label style={align_top} htmlFor={'token_switch'}>
+						<span style={btn_style}>Apply token</span>
+					</label>
+					<textarea
+						ref={this.tokenRef}
+						rows="4"
+						cols="50"
+						disabled={!this.state.token_editing}
+						type="password"
+					></textarea>
+					<button
+						style={{ ...btn_style, ...align_top }}
+						onClick={() => this.editToken()}
+						disabled={this.state.token_editing}
+					>
+						Edit
+					</button>
+					<button
+						style={{ ...btn_style, ...align_top }}
+						onClick={() => this.submitToken()}
+						disabled={!this.state.token_editing}
+					>
+						Submit
+					</button>
+				</div>
 				<div>
 					<ProteinPaint dataKey={this.state.dataKey} />
 				</div>
@@ -138,6 +178,28 @@ export default class App extends React.Component {
 			tracks: [this.state.tracks[0]],
 			set_id: this.setidRef.current.value
 		})
+	}
+	submitToken() {
+		this.state.tracks[0].token = this.tokenRef.current.value
+		this.save({ tracks: [this.state.tracks[0]] })
+		this.setState({
+			token_flag: true,
+			token_editing: false,
+			tracks: [this.state.tracks[0]],
+			token: this.tokenRef.current.value
+		})
+		//replace actual token with password char
+		const token_len = this.state.tracks[0].token.length
+		this.tokenRef.current.value = '●'.repeat(token_len)
+	}
+	editToken() {
+		this.setState({ token_editing: !this.state.token_editing })
+	}
+	ApplyToken() {
+		if (this.state.token_flag) delete this.state.tracks[0].token
+		else this.state.tracks[0].token = this.state.token
+		this.save({ tracks: [this.state.tracks[0]] })
+		this.setState({ token_flag: !this.state.token_flag, tracks: [this.state.tracks[0]] })
 	}
 	updateTime() {
 		this.setState({ lastUnrelatedUpdate: +new Date() })
