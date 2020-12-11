@@ -11,7 +11,11 @@ gene view requires blockinit, which is async and do not return promise/block, th
 */
 
 export default async function blocklazyload(arg) {
-	return await import('./block').Block
+	if (!Block) {
+		const b = await import('./block')
+		Block = b.Block
+	}
+	return new Block(arg)
 
 	/*return new Promise( (resolve, reject) => {
 
