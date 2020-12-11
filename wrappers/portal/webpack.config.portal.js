@@ -1,11 +1,16 @@
+const fs = require('fs')
+const path = require('path')
+const MODULE_DIR = /(.*([\/\\]node_modules|\.\.)[\/\\](@[^\/\\]+[\/\\])?[^\/\\]+)([\/\\].*)?$/g
+
 module.exports = {
 	target: 'web',
 	mode: 'development',
-	entry: './index.js',
+	//entry: './index.js',
+	entry: './noreact.js',
 	output: {
 		path: __dirname + '/public/bin/',
 		filename: 'portal.js',
-		publicPath: '/bin/',
+		publicPath: '/portal/bin/',
 		jsonpFunction: 'ppJsonp',
 		libraryTarget: 'umd',
 		library: 'AReactApp'
@@ -28,13 +33,15 @@ module.exports = {
 				test: /.(js|jsx)$/,
 				use: [
 					{
-						loader: 'babel-loader',
-						options: {
-							presets: ['@babel/preset-react'],
-							plugins: ['syntax-dynamic-import']
-						}
+						loader: 'babel-loader'
 					}
 				]
+				/*include(filepath) {
+					if (filepath.split(/[/\\]/).indexOf('node_modules')===-1) return true;
+					let pkg, manifest = path.resolve(filepath.replace(MODULE_DIR, '$1'), 'package.json');
+					try { pkg = JSON.parse(fs.readFileSync(manifest)); } catch (e) {}
+					return !!(pkg.module || pkg['jsnext:main']);
+				}*/
 			}
 		]
 	},

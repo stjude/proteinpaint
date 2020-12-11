@@ -1,0 +1,40 @@
+<html>
+<head>
+	<title>a react-based portal</title>
+	<style>
+		.pp-page-banner {
+			text-align: center;
+	    font-size: 2em;
+	    margin: 0;
+	    padding: 20px;
+	    background-color: rgba(10,10,10,0.9);
+	    color: white;
+	    font-family: Menlo, Arial, helvetica;
+		}
+	</style>
+</head>
+<body>
+<h1 class='pp-page-banner'>a react-based portal</h1>
+<div id='aaa'></div>
+<script src='./bin/portal.js'></script>
+<script>
+	AReactApp.pp.runproteinpaint({
+		holder: document.getElementById('aaa'),
+		genome:'hg38',
+		//gene:'ENST00000389048',
+		//gene:'ENST00000269305',
+		gene:'ENST00000407796', // AKT1
+		nobox:true,
+
+		tracks:[
+
+			{
+				type:'mds3',
+				dslabel:'GDC',
+				// gdc customizations
+				//set_id: 'set_id:DDw3QnUB_tcD1Zw3Af72'
+			}
+		],
+	})
+</script>
+</body>

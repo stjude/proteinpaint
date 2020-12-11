@@ -4,9 +4,10 @@
   "description": "a React wrapper for Proteipaint",
   "main": "dist/proteinpaint.js",
   "browser": "dist/proteinpaint.js",
-  "module": "dist/proteinpaint.js",
+  "module": "dist/app.js",
   "scripts": {
-    "dev": "rm -rf dist/; webpack --config=./webpack.config.es6.js --env.NODE_ENV=development --watch --progress --colors",
+    "#dev": "rm -rf dist/; webpack --config=./webpack.config.es6.js --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "rm -rf dist/; rollup -c -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Xin Zhou",
@@ -25,6 +26,7 @@
     "@rollup/plugin-node-resolve": "^11.0.0",
     "babel-loader": "^8.2.2",
     "rollup-plugin-postcss": "^3.1.8",
+    "styled-jsx": "^3.3.2",
     "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12"
   }

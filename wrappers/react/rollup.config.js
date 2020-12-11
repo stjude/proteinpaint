@@ -7,66 +7,34 @@ import postcss from 'rollup-plugin-postcss'
 
 const production = !process.env.ROLLUP_WATCH
 
-export default [
-	// browser-friendly UMD build
-	/*{
-		input: 'index.js',
-		output: {
-			name: 'runproteinpaint',
-			file: pkg.browser,
-			format: 'umd',
-			inlineDynamicImports : true
-		},
-		plugins: [
-			resolve(),
-			commonjs({
-				include: /node_modules/,
-				extensions: ['.js'],
-				namedExports: {
-					'../../node_modules/debounce/index.js': ['debounce'],
-					//'../../node_modules/d3-beeswarm/index.js': ['beeswarm']
-				}
-			}),
-			postcss({plugins: []}), 
-			//production && terser()
-		]
-	},*/
+function onwarn(message, warn) {
+	if (message.code === 'CIRCULAR_DEPENDENCY') return
+	warn(message)
+}
 
-	// CommonJS (for Node) and ES module (for bundlers) build.
-	// (We could have three entries in the configuration array
-	// instead of two, but it's quicker to generate multiple
-	// builds from a single configuration where possible, using
-	// an array for the `output` option, where we can specify
-	// `file` and `format` for each target)
+export default [
 	{
-		input: 'index.js',
-		output: [
-			//{ file: pkg.main, format: 'cjs' },
-			//{ file: pkg.module, format: 'es' }
-			{ dir: 'public/bin', format: 'es' }
-		],
+		input: '../../src/app.js',
+		output: [{ dir: 'dist', format: 'es' }],
 		plugins: [
 			resolve({
-				browser: true,
-				//jsnext: true,
-				//main: true,
-				preferBuiltins: false,
-				moduleDirectories: ['./node_modules', '../../node_modules', './dist']
+				//browser: true,
+				jsnext: true,
+				main: true
+				//preferBuiltins: true,
+				//moduleDirectories: ['./node_modules', '../../node_modules']
 			}),
-
+			/*
 			babel({
 				babelHelpers: 'bundled'
 			}),
-
+*/
 			commonjs({
-				extensions: ['.js'],
-				//include: ['node_modules/**'],
-				namedExports: {
-					'../../node_modules/debounce/index.js': ['debounce']
-				}
+				extensions: ['.js']
 			}),
 
-			postcss({ plugins: [] })
-		]
+			postcss()
+		],
+		onwarn
 	}
 ]
