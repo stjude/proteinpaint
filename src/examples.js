@@ -5,6 +5,8 @@ export async function init_examples(par) {
 	const { holder } = par
 	// const re = await dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	const re = await loadJson()
+	let track_arg = {}
+	console.log(re)
 	if (re.error) {
 		holder.append('div').text(re.error)
 		return
@@ -65,13 +67,14 @@ export async function init_examples(par) {
 		.style('padding', '10px')
 		.style('border-radius', '8px')
 
-	const track_arg = {
+	track_arg = {
 		tracks: re.examples,
 		browserList,
 		experimentalList,
 		appList
 	}
 	await loadTracks(track_arg)
+	console.log(track_arg)
 }
 
 function make_examples_page(holder) {
