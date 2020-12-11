@@ -8943,7 +8943,7 @@ async function handle_vcf(req, res) {
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw e
-		const dir = isurl ? utils.cache_index(file, req.query.indexURL) : null
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
