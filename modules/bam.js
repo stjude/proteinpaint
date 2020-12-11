@@ -663,8 +663,11 @@ async function do_query(q, req) {
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-	await get_pileup(q, req, templates) // Run this function to get pilup plot data
-	result.pileup_data = q.pileup_data
+	if (!req.query.stackstart) {
+		// Check to see if this request is not to show partstack
+		await get_pileup(q, req, templates) // Run this function to get pilup plot data
+		result.pileup_data = q.pileup_data
+	}
 	return result
 }
 
