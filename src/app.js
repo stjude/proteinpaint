@@ -1188,7 +1188,7 @@ function launchmavb(arg, app) {
 		return
 	}
 	arg.mavolcanoplot.hostURL = app.hostURL
-	arg.mavolcanoplot.genomea = app.genomeobj
+	arg.mavolcanoplot.genome = genomeobj
 	import('./mavb').then(p=>{
 		p.mavbparseinput(
 			arg.mavolcanoplot,
