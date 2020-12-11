@@ -6,8 +6,8 @@
   "browser": "dist/proteinpaint.js",
   "module": "dist/app.js",
   "scripts": {
-    "#dev": "rm -rf dist/; webpack --config=./webpack.config.es6.js --env.NODE_ENV=development --watch --progress --colors",
-    "dev": "rm -rf dist/; rollup -c -w",
+    "dev": "rm -rf dist/; webpack --config=./webpack.config.es6.js --env.NODE_ENV=development --watch --progress --colors",
+    "roll": "rm -rf dist/; rollup -c -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Xin Zhou",

@@ -5,8 +5,8 @@ const MODULE_DIR = /(.*([\/\\]node_modules|\.\.)[\/\\](@[^\/\\]+[\/\\])?[^\/\\]+
 module.exports = {
 	target: 'web',
 	mode: 'development',
-	//entry: './index.js',
-	entry: './noreact.js',
+	entry: './index.js',
+	//entry: './noreact.js',
 	output: {
 		path: __dirname + '/public/bin/',
 		filename: 'portal.js',

@@ -15,6 +15,7 @@ function onwarn(message, warn) {
 export default [
 	{
 		input: '../../src/app.js',
+		// input: './index.jsx',
 		output: [{ dir: 'dist', format: 'es' }],
 		plugins: [
 			resolve({
