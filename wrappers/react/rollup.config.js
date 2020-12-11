@@ -1,8 +1,6 @@
 import pkg from './package.json'
 import resolve from '@rollup/plugin-node-resolve'
-import babel from '@rollup/plugin-babel'
 import commonjs from '@rollup/plugin-commonjs'
-//import { terser } from 'rollup-plugin-terser';
 import postcss from 'rollup-plugin-postcss'
 
 const production = !process.env.ROLLUP_WATCH
@@ -14,9 +12,10 @@ function onwarn(message, warn) {
 
 export default [
 	{
-		input: '../../src/app.js',
-		// input: './index.jsx',
+		//input: '../../src/app.js',
+		input: './proteinpaint.js',
 		output: [{ dir: 'dist', format: 'es' }],
+		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [
 			resolve({
 				//browser: true,
@@ -25,11 +24,7 @@ export default [
 				//preferBuiltins: true,
 				//moduleDirectories: ['./node_modules', '../../node_modules']
 			}),
-			/*
-			babel({
-				babelHelpers: 'bundled'
-			}),
-*/
+
 			commonjs({
 				extensions: ['.js']
 			}),

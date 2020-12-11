@@ -1,5 +1,7 @@
 import React from 'react'
-import ProteinPaint from 'pp-react'
+import getPpComponent from 'pp-react'
+
+const ProteinPaint = getPpComponent(React)
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
