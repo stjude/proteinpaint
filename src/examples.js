@@ -13,7 +13,7 @@ export async function init_examples(par) {
 	}
 
 	const wrapper_div = make_examples_page(holder)
-	make_header(wrapper_div, track_arg)
+	const header_div = wrapper_div.append('div')
 	make_intro(wrapper_div)
 	const track_grid = make_main_track_grid(wrapper_div)
 	const gbrowswer_col = make_gbrowser_col(track_grid)
@@ -73,6 +73,7 @@ export async function init_examples(par) {
 		experimentalList,
 		appList
 	}
+	make_header(header_div, track_arg)
 	await loadTracks(track_arg)
 	console.log(track_arg)
 }
@@ -153,12 +154,12 @@ function make_header(div, args) {
 
 	const searchBar_div = header_div.append('div')
 	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
-	make_searchbar(searchBar_div)
+	make_searchbar(searchBar_div, args)
 
 	return [htext, request_btn, contact_btn, searchBar_div]
 }
 
-function make_searchbar(div) {
+function make_searchbar(div, args) {
 	const searchBar = div.append('div')
 	searchBar
 		.append('div')
@@ -187,9 +188,9 @@ function make_searchbar(div) {
 				}, false)
 				return searchTermFound || track.name.toLowerCase().includes(searchInput)
 			})
-			displayBrowserTracks(filteredTracks)
-			displayExperimentalTracks(filteredTracks)
-			displayAppTracks(filteredTracks)
+			displayBrowserTracks(filteredTracks, args.browserList)
+			displayExperimentalTracks(filteredTracks, args.experimentalList)
+			displayAppTracks(filteredTracks, args.appList)
 		})
 
 	return searchBar
