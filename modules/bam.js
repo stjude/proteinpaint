@@ -460,7 +460,7 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 			}
 
 			for (let i = 0; i < segment.boxes.length; i++) {
-				if (segment.boxes[i].opr == 'X') {
+				if (segment.boxes[i].opr == 'X' || segment.boxes[i].opr == 'I') {
 					//console.log("segment.boxes[i]:",template.segment.boxes[i])
 					bp_iter = Number.parseInt(segment.boxes[i].start) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 					//console.log("r.start:",r.start)
