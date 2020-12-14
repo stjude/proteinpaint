@@ -86,6 +86,7 @@ class TdbStore {
 				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
 		}
 
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
@@ -156,6 +157,20 @@ class TdbStore {
 			}
 		}
 	}
+
+	adjustPlotCurrViews(plotConfig) {
+		if (!plotConfig) return
+		const currViews = plotConfig.settings.currViews
+		if (currViews.includes('table') && !plotConfig.term2) {
+			plotConfig.settings.currViews = ['barchart']
+		}
+		if (
+			currViews.includes('boxplot') &&
+			(!plotConfig.term2 || (plotConfig.term2.term.type !== 'integer' && plotConfig.term2.term.type !== 'float'))
+		) {
+			plotConfig.settings.currViews = ['barchart']
+		}
+	}
 }
 
 /*
@@ -173,6 +188,9 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+		for (const plotId in this.state.plots) {
+			this.adjustPlotCurrViews(this.state.plots[plotId])
+		}
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
@@ -219,6 +237,7 @@ TdbStore.prototype.actions = {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
 		}
+		this.adjustPlotCurrViews(plot)
 	},
 
 	filter_replace(action) {
@@ -239,7 +258,7 @@ TdbStore.prototype.actions = {
 	}
 }
 
-exports.storeInit = rx.getInitFxn(TdbStore)
+export const storeInit = rx.getInitFxn(TdbStore)
 
 function validatePlot(p, vocabApi) {
 	/*

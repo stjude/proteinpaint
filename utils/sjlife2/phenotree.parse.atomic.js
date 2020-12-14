@@ -1,5 +1,7 @@
-if (process.argv.length != 4) {
-	console.log('<phenotree> <matrix> output termjson to stdout, diagnostic tabular table to stderr')
+if (process.argv.length < 4) {
+	console.log(
+		'<phenotree> <matrix> <keep/termconfig, optional> output termjson to stdout, diagnostic tabular table to stderr'
+	)
 	process.exit()
 }
 
@@ -8,8 +10,9 @@ input files:
 
 1. phenotree dictionary
    this file no longer includes CHC terms, only categorical/numerical
-   CHC is dealt in validate.ctcae.js
-1. sample-by-term matrix, for all terms in phenotree
+   CHC will be processed in validate.ctcae.js
+2. sample-by-term matrix, for all terms in phenotree
+3. keep/termconfig, optional file of precoded configurations
 
 output:
 json object for all atomic terms
@@ -39,14 +42,18 @@ step 3:
 
 const file_phenotree = process.argv[2]
 const file_matrix = process.argv[3]
+const file_termconfig = process.argv[4]
 
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
 
 const bins = {
+	// temporary values
+	_n: 0, // count number of samples with a valid values
 	_min: null,
-	_max: null, // temporary values
+	_max: null,
+
 	default: {
 		type: 'regular',
 		bin_size: 5,
@@ -74,6 +81,10 @@ async function main() {
 
 	// step 3
 	step3_finalizeterms_diagnosticmsg(key2terms)
+
+	if (file_termconfig) {
+		step4_applyconfig(key2terms)
+	}
 
 	console.log(JSON.stringify(key2terms, null, 2))
 }
@@ -254,6 +265,8 @@ function step2_parsematrix(key2terms) {
 					}
 				}
 				const value = Number(str)
+				if (Number.isNaN(value)) throw 'invalid value for a numeric term (' + term.id + ') at line ' + (i + 1)
+				term.bins._n++
 				if (term.bins._min == null) {
 					term.bins._min = value
 					term.bins._max = value
@@ -345,10 +358,13 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			console.error(
 				'NUMERICAL\t' +
 					termID +
-					'\t' +
+					'\tn=' +
+					term.bins._n +
+					',min=' +
 					term.bins._min +
-					'\t' +
+					',max=' +
 					term.bins._max +
+					'\t' +
 					(term.values ? '\t' + Object.keys(term.values).join(',') : '')
 			)
 			// find bin size
@@ -357,7 +373,48 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
+			delete term.bins._n
 			continue
 		}
 	}
+}
+
+function step4_applyconfig(key2terms) {
+	for (const line of fs
+		.readFileSync(file_termconfig, { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const [id, configtype, str] = line.split('\t')
+		const term = key2terms[id]
+		if (!term) throw 'applyconfig: unknown term id: ' + id
+		const config = str2config(str)
+		if (configtype == 'bins') {
+			if (config.bin_size) {
+				const n = Number(config.bin_size)
+				if (Number.isNaN(n)) throw 'applyconfig: bin_size is not number for ' + id
+				term.bins.default.bin_size = n
+			}
+			if (config['first_bin.stop']) {
+				const n = Number(config['first_bin.stop'])
+				if (Number.isNaN(n)) throw 'applyconfig: first_bin.stop is not number for ' + id
+				term.bins.default.first_bin.stop = n
+			}
+			if (config['last_bin.start']) {
+				const n = Number(config['last_bin.start'])
+				if (Number.isNaN(n)) throw 'applyconfig: last_bin.start is not number for ' + id
+				if (!term.bins.default.last_bin) term.bins.default.last_bin = { stopunbounded: true }
+				term.bins.default.last_bin.start = n
+			}
+		} else {
+			throw 'applyconfig: unknown configtype: ' + configtype
+		}
+	}
+}
+function str2config(str) {
+	const config = {}
+	for (const s of str.split(';')) {
+		const [k, v] = s.split('=')
+		config[k] = v
+	}
+	return config
 }

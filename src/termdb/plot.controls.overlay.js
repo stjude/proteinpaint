@@ -37,7 +37,7 @@ class Overlay {
 	}
 	initPill() {
 		this.pill = termsettingInit({
-			vocabApi: this.app.vocab,
+			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
@@ -105,7 +105,7 @@ class Overlay {
 	}
 }
 
-exports.overlayInit = rx.getInitFxn(Overlay)
+export const overlayInit = rx.getInitFxn(Overlay)
 
 function setRenderers(self) {
 	self.initUI = function() {

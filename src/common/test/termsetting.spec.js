@@ -2,6 +2,7 @@ const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
 const vocabInit = require('../../termdb/vocabulary').vocabInit
+const vocabData = require('../../termdb/test/vocabData')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -36,7 +37,7 @@ function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
 
 	opts.pill = termsettingInit({
 		holder,
-		vocabApi: vocabInit(app, { state }),
+		//vocabApi: vocabInit(app, { state }),
 		vocab,
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
@@ -796,91 +797,13 @@ tape('Conditional term', async test => {
 })
 
 tape('Custom vocabulary', async test => {
-	const dummyTerm = {
-		id: 'dummy',
-		parent_id: 'a',
-		isleaf: true,
-		name: 'show_full_menu',
-		type: 'categorical',
-		values: {
-			cat1: { label: 'Cat 1' }
-		}
-	}
-	const vocab = {
-		terms: [
-			dummyTerm,
-			{
-				id: 'a',
-				name: 'AAA',
-				parent_id: null
-			},
-			{
-				id: 'b',
-				name: 'BBB',
-				parent_id: null
-			},
-			{
-				type: 'categorical',
-				id: 'c',
-				name: 'CCC',
-				parent_id: 'a',
-				isleaf: true,
-				groupsetting: {
-					disabled: true
-				}
-			},
-			{
-				type: 'integer',
-				id: 'd',
-				name: 'DDD',
-				parent_id: 'a',
-				isleaf: true,
-				bins: {
-					default: {
-						bin_size: 3,
-						stopinclusive: true,
-						first_bin: { startunbounded: true, stop: 2, stopinclusive: true }
-					}
-				}
-			},
-			{
-				type: 'condition',
-				id: 'e',
-				name: 'EEE',
-				parent_id: 'a',
-				isleaf: true,
-				groupsetting: {
-					disabled: true
-				}
-			},
-			{
-				type: 'categorical',
-				id: 'f',
-				name: 'FFF',
-				parent_id: 'b',
-				isleaf: true,
-				groupsetting: {
-					disabled: true
-				}
-			},
-			{
-				type: 'categorical',
-				id: 'g',
-				name: 'CCC',
-				parent_id: 'ab',
-				isleaf: true,
-				groupsetting: {
-					disabled: true
-				}
-			}
-		]
-	}
+	const vocab = vocabData.getExample()
 	const opts = getOpts(
 		{
 			showFullMenu: true,
 			tsData: {
-				term: dummyTerm,
-				disable_terms: ['dummy']
+				term: vocab.terms.find(d => d.id === 'c'),
+				disable_terms: ['c']
 			},
 			vocab
 		},
@@ -912,6 +835,37 @@ tape('Custom vocabulary', async test => {
 		vocab.terms.filter(d => d.parent_id === null).length,
 		'should display the correct number of custom root terms'
 	)
+
+	tipd
+		.selectAll('.termbtn')
+		.filter(d => d.id === 'a')
+		.node()
+		.click()
+	await sleep(200)
+	tipd
+		.selectAll('.sja_tree_click_term')
+		.filter(d => d.id === 'd')
+		.node()
+		.click()
+	await sleep(800)
+	const pilldiv1 = opts.holder.node().querySelector('.term_name_btn ')
+	test.equal(
+		pilldiv1.innerText,
+		'DDD',
+		`should change the termsetting pill label to '${vocab.terms.find(d => d.id === 'd').name}'`
+	)
+
+	pilldiv1.click()
+	await sleep(50)
+	const editBtn = tipd
+		.selectAll('.sja_menuoption')
+		.filter(function() {
+			return this.innerText.toLowerCase() == 'edit'
+		})
+		.node()
+		.click()
+
+	//test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()

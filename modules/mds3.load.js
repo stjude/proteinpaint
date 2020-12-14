@@ -54,7 +54,7 @@ module.exports = genomes => {
 	}
 }
 
-function make_totalcount(q, ds, result) {
+async function make_totalcount(q, ds, result) {
 	// total count for variant/sample prior to filtering
 
 	if (result.skewer) {
@@ -68,11 +68,29 @@ function make_totalcount(q, ds, result) {
 	}
 
 	if (q.samplesummary && ds.sampleSummaries) {
+		let nodename2total
+		if (ds.termdb.termid2totalsize) {
+			nodename2total = new Map() // k: node name, v: total
+			for (const l of ds.sampleSummaries.lst) {
+				if (!ds.termdb.termid2totalsize[l.label1]) continue
+				const v2c = await ds.termdb.termid2totalsize[l.label1].get(q)
+				for (const [v, c] of v2c) {
+					nodename2total.set(v.toLowerCase(), c)
+				}
+				if (l.label2) {
+					if (!ds.termdb.termid2totalsize[l.label2]) continue
+					const v2c = await ds.termdb.termid2totalsize[l.label2].get(q)
+					for (const [v, c] of v2c) {
+						nodename2total.set(v.toLowerCase(), c)
+					}
+				}
+			}
+		}
 		const labels = ds.sampleSummaries.makeholder(q)
 		const datalst = [result.skewer]
 		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
 		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.sampleSummaries = ds.sampleSummaries.finalize(labels, q)
+		result.sampleSummaries = ds.sampleSummaries.finalize(labels, q, nodename2total)
 	}
 }
 
@@ -178,7 +196,7 @@ async function load_driver(q, ds, result) {
 			}
 
 			filter_data(q, result)
-			make_totalcount(q, ds, result)
+			await make_totalcount(q, ds, result)
 
 			finalize_result(q, ds, result)
 		}

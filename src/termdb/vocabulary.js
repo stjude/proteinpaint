@@ -1,6 +1,7 @@
 import { dofetch3 } from '../client'
 import { getBarchartData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -140,7 +141,7 @@ class TermdbVocab {
 		}
 	}
 
-	async getDensityPlotData(term_id, num_obj) {
+	async getDensityPlotData(term_id, num_obj, filter) {
 		let density_q =
 			'/termdb?density=1' +
 			'&genome=' +
@@ -158,8 +159,12 @@ class TermdbVocab {
 			'&ypad=' +
 			num_obj.plot_size.ypad
 
-		if (this.state.termfilter && typeof this.state.termfilter.filter != 'undefined') {
-			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
+		// must use the filter as supplied from a tvs pill,
+		// since that filter excludes the tvs itself in order
+		// to show all available values for its term
+		if (filter) {
+			const filterRoot = getNormalRoot(filter)
+			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(filterRoot))
 		}
 		const density_data = await dofetch3(density_q)
 		if (density_data.error) throw density_data.error
@@ -184,6 +189,27 @@ class TermdbVocab {
 		if (!term) throw 'graphable: term is missing'
 		// term.isgenotype??
 		return graphableTypes.has(term.type)
+	}
+
+	async getCategories(term, filter, lst = null) {
+		const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}
 	}
 }
 
@@ -290,7 +316,30 @@ class FrontendVocab {
 		return { samplecount: 'TBD' }
 	}
 
-	async getDensityPlotData(term_id, num_obj) {
+	async getDensityPlotData(term_id, num_obj, filter) {
+		const countsByVal = new Map()
+		let minvalue,
+			maxvalue,
+			samplecount = 0
+		for (const sample in this.vocab.sampleannotation) {
+			if (!(term_id in this.vocab.sampleannotation[sample])) continue
+			const v = this.vocab.sampleannotation[sample][term_id]
+			samplecount += 1
+			if (minvalue === undefined || v < minvalue) minvalue = v
+			if (maxvalue === undefined || v > maxvalue) maxvalue = v
+			if (!countsByVal.has(v)) countsByVal.set(v, [v, 0])
+			countsByVal.get(v)[1] += 1
+		}
+
+		const density = [...countsByVal.values()]
+		return {
+			density,
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
+			minvalue,
+			maxvalue,
+			samplecount
+		}
+
 		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
 	}
 

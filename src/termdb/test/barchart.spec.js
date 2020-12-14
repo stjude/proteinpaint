@@ -20,6 +20,10 @@ const runpp = helpers.getRunPp('termdb', {
 	debug: 1
 })
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**************
  test sections
 ***************/
@@ -988,9 +992,9 @@ tape('numeric filter - only special value', function(test) {
 	function runNumericValueTests(plot) {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
-			.run(testNoBar, { wait: 300 })
-			.use(triggerHiddenLegendClick, { wait: 300 })
-			.to(testHasBar, { wait: 300 })
+			//.run(testNoBar, { wait: 300 })
+			//.use(triggerHiddenLegendClick, { wait: 300 })
+			.run(testHasBar, { wait: 300 })
 			.done(test)
 	}
 
@@ -1010,7 +1014,11 @@ tape('numeric filter - only special value', function(test) {
 	function testHasBar(plot) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 bar')
+		test.equal(
+			numBars,
+			1,
+			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank plot'
+		)
 	}
 })
 
@@ -1149,5 +1157,329 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numBars, 5, 'should have 2 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+})
+
+tape('max number of bins: exceeded', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							},
+							q: {
+								type: 'regular',
+								bin_size: 1000,
+								stopinclusive: true,
+								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+								numDecimals: 1,
+								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+								startinclusive: false
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should have 31 age bars')
+		triggerExceedMaxBin(plot)
+		await sleep(1000)
+		testExceedMaxBin(plot)
+		test.end()
+	}
+
+	function testBarCount(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should have 31 age bars')
+	}
+
+	function triggerExceedMaxBin(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'aaclassic_5',
+			config: {
+				term: {
+					id: 'aaclassic_5',
+					term: plot.Inner.config.term.term,
+					q: {
+						type: 'regular',
+						bin_size: 100,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+						numDecimals: 1,
+						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+						startinclusive: false
+					}
+				}
+			}
+		})
+	}
+
+	function testExceedMaxBin(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 31, 'should still have 31 age bars and not re-render on error')
+		const errorbar = plot.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
+		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
+	}
+})
+
+tape('no visible series data, no overlay', function(test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Platinum Agent',
+					'cisplateq_5'
+				],
+				visiblePlotIds: ['cisplateq_5'],
+				plots: {
+					cisplateq_5: {
+						term: {
+							id: 'cisplateq_5'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.use(triggerHideBar, { wait: 1000 })
+			.to(testEmptyChart, { wait: 100 })
+			.use(triggerUnhideBar, { wait: 1100 })
+			.to(testUnhiddenChart, { wait: 100 })
+			.done(test)
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
+		test.equal(
+			numBars,
+			1,
+			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'none',
+			'should hide the banner when at least one chart is visible'
+		)
+	}
+
+	function triggerHideBar(plot) {
+		barDiv
+			.node()
+			.querySelector('.bars-rowlabels text')
+			.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testEmptyChart(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'block',
+			'should display a banner when no charts are visible'
+		)
+		test.true(
+			plot.Inner.components.barchart.Inner.dom.banner.text().includes('No visible'),
+			'should label the banner with no visible data'
+		)
+	}
+
+	function triggerUnhideBar(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.node()
+			.querySelector('.legend-row')
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testUnhiddenChart(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
+		/*test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style("display"),
+			'none',
+			'should hide the banner when the chart is unhidden'
+		)*/
+	}
+})
+
+tape('all hidden + with overlay, legend click', function(test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Platinum Agent',
+					'cisplateq_5'
+				],
+				visiblePlotIds: ['cisplateq_5'],
+				plots: {
+					cisplateq_5: {
+						term: {
+							id: 'cisplateq_5'
+						},
+						term2: {
+							id: 'sex'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(plot) {
+		plot.on('postRender.test', null)
+
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.run(testBarCount)
+			.run(triggerBarClick)
+			.use(triggerMenuClick, { wait: 1100 })
+			.to(testRemovedOverlayByMenu, { wait: 100 })
+			.use(triggerUnhideOverlay, { wait: 1100 })
+			.to(testUnhiddenOverlay, { wait: 100 })
+			.use(triggerOverlayHideByLegendClick, { wait: 1000 })
+			.to(testhiddenOverlayByLegendClick, { wait: 100 })
+			.done(test)
+	}
+
+	let barDiv
+	function testBarCount(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(
+			numBars,
+			1,
+			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(
+			numOverlays,
+			2,
+			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+		)
+		test.equal(
+			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			'none',
+			'should hide the banner when at least one chart is visible'
+		)
+	}
+
+	let clickedData
+	function triggerBarClick(plot) {
+		const elem = barDiv
+			.node()
+			.querySelector('.bars-cell')
+			.querySelector('rect')
+		elem.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('Hide "Male"'))
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testRemovedOverlayByMenu(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
+	}
+
+	function triggerUnhideOverlay(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.select('.legend-row')
+			.node()
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testUnhiddenOverlay(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
+	}
+
+	function triggerOverlayHideByLegendClick(plot) {
+		plot.Inner.components.barchart.Inner.dom.legendDiv
+			.select('.legend-row')
+			.node()
+			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testhiddenOverlayByLegendClick(plot) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
 	}
 })

@@ -307,7 +307,9 @@ function renderBinLines(self, data) {
 	function dragend(b) {
 		const draggedX = mouse(this)[0]
 		const line =
-			b.index > 0 && draggedX <= lines[b.index - 1].scaledX
+			self.q.type == 'regular'
+				? select(this)
+				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
 				? select(this.previousSibling)
 				: b.index < lines.length - 1 && draggedX >= lines[b.index + 1].scaledX
 				? select(this.nextSibling)

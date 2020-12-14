@@ -117,7 +117,10 @@ function setOrientationOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-condition-unit',
 		holder: self.dom.inputTd,
-		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
+		options: [
+			{ label: 'Vertical', value: 'vertical' },
+			{ label: 'Horizontal', value: 'horizontal' }
+		],
 		listeners: {
 			input(d) {
 				opts.dispatch({
@@ -161,7 +164,11 @@ function setScaleOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-scale-unit',
 		holder: self.dom.inputTd,
-		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
+		options: [
+			{ label: 'Linear', value: 'abs' },
+			{ label: 'Log', value: 'log' },
+			{ label: 'Proportion', value: 'pct' }
+		],
 		listeners: {
 			input(d) {
 				opts.dispatch({
@@ -245,15 +252,20 @@ function setViewOpts(opts) {
 				? 'scatter'
 				: 'barchart'
 
+			const numericTypes = ['integer', 'float']
+
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
 				d.value == 'barchart'
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'boxplot' && plot.term2 && numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
-					: d.value == 'scatter' && plot.term.term.type == 'float' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'scatter' &&
+					  numericTypes.includes(plot.term.term.type) &&
+					  plot.term2 &&
+					  numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
 					: 'none'
 			)

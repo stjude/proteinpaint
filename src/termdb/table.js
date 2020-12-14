@@ -46,11 +46,16 @@ class TdbTable {
 			this.dom.div.style('display', 'none')
 			throw 'term2 is required for table view'
 		}
-		const [column_keys, rows] = this.processData(this.data)
-		this.render(column_keys, rows)
+		const [columns, rows] = this.processData(this.data)
+		this.render(columns, rows)
 	}
 
 	processData(data) {
+		const t2 = this.config.term2.term
+		const columns = data.refs.rows.map(key => {
+			const label = t2.values && key in t2.values ? t2.values[key].label : key
+			return { key, label }
+		})
 		const column_keys = data.refs.rows
 		const t1 = this.config.term.term
 		const rows = data.refs.cols.map(v1 => {
@@ -71,7 +76,7 @@ class TdbTable {
 							})
 			}
 		})
-		return [column_keys, rows]
+		return [columns, rows]
 	}
 }
 
@@ -106,7 +111,7 @@ function setInteractivity(self) {
 }
 
 function setRenderers(self) {
-	self.render = function render(column_keys, rows) {
+	self.render = function render(columns, rows) {
 		self.dom.div
 			.style('display', 'inline-block')
 			.selectAll('*')
@@ -129,16 +134,17 @@ function setRenderers(self) {
 
 		tr.append('td') // column 1
 		// print term2 values as rest of columns
-		for (const i of column_keys) {
+		for (const value of columns) {
+			const label = value.label
 			tr.append('th')
-				.text(i.length > 20 ? i.slice(0, 16) + '...' : i)
-				.attr('title', i)
+				.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
+				.attr('title', label)
 				.style('border', '1px solid black')
 				.style('padding', '3px')
 				.style('text-align', 'center')
 				.style('min-width', '80px')
 				.style('max-width', '150px')
-				.style('word-break', i.length > 12 ? 'break-word' : 'normal')
+				.style('word-break', label.length > 12 ? 'break-word' : 'normal')
 				.style('vertical-align', 'top')
 		}
 
@@ -155,6 +161,7 @@ function setRenderers(self) {
 				.style('word-break', t1v.label.length > 12 ? 'break-all' : 'normal')
 
 			// other columns
+			const column_keys = columns.map(d => d.key)
 			for (const t2label of column_keys) {
 				const td = tr
 					.append('td')

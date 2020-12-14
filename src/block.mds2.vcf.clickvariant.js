@@ -26,7 +26,8 @@ p{}
 		return
 	}
 
-	const pane = client.newpane({ x: p.left, y: p.top })
+	const $id = 'sja-pp-block-' + block.blockId + '-' + block.tklst.findIndex(t => t === tk) + '-vcf_clickvariant'
+	const pane = client.newpane({ x: p.left, y: p.top, $id })
 	pane.pane.style('line-height', 1.15)
 	pane.header.html(m.mname + ' <span style="font-size:.7em;">' + common.mclass[m.class].label + '</span>')
 

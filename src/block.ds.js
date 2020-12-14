@@ -3530,8 +3530,6 @@ export function mlst_pretreat(tk, block, originhidden) {
 					set.add(key)
 				}
 				itemcount = set.size
-			} else if (strat.byserver) {
-				itemcount = strat.servercount || 0
 			} else {
 				const set = new Set()
 				for (const m of usemlst) {

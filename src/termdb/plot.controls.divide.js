@@ -34,7 +34,7 @@ class Divide {
 	}
 	initPill() {
 		this.pill = termsettingInit({
-			vocabApi: this.app.vocab,
+			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
@@ -95,7 +95,7 @@ class Divide {
 	}
 }
 
-exports.divideInit = rx.getInitFxn(Divide)
+export const divideInit = rx.getInitFxn(Divide)
 
 function setRenderers(self) {
 	self.initUI = function() {

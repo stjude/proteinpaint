@@ -3,39 +3,94 @@
 /*
 query list of variants by isoform
 */
-const query_isoform2variants = `
-query Lolliplot_relayQuery(
-	$filters: FiltersArgument
-	$score: String
-) {
-	analysis {
-		protein_mutations {
-			data(first: 10000, score: $score, filters: $filters, fields: [
-				"ssm_id"
-				"start_position"
-				"reference_allele"
-				"tumor_allele"
-				"consequence.transcript.aa_change"
-				"consequence.transcript.consequence_type"
-				"consequence.transcript.transcript_id"
-				"consequence.transcript.annotation.vep_impact"
-				"consequence.transcript.annotation.polyphen_impact"
-				"consequence.transcript.annotation.polyphen_score"
-				"consequence.transcript.annotation.sift_impact"
-				"consequence.transcript.annotation.sift_score"
-				"occurrence.case.project.project_id"
-				"occurrence.case.primary_site"
-				"occurrence.case.disease_type"
-				"occurrence.case.case_id"
-			])
+const isoform2variants = [
+	{
+		endpoint: 'https://api.gdc.cancer.gov/ssms',
+		size: 100000,
+		fields: [
+			'ssm_id',
+			'chromosome',
+			'start_position',
+			'reference_allele',
+			'tumor_allele',
+			'consequence.transcript.transcript_id',
+			'consequence.transcript.consequence_type',
+			'consequence.transcript.aa_change'
+		],
+		filters: p => {
+			// p:{}
+			// .isoform
+			// .set_id
+			if (!p.isoform) throw '.isoform missing'
+			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			const f = {
+				op: 'and',
+				content: [
+					{
+						op: '=',
+						content: {
+							field: 'consequence.transcript.transcript_id',
+							value: [p.isoform]
+						}
+					}
+				]
+			}
+			if (p.set_id) {
+				if (typeof p.set_id != 'string') throw '.set_id value not string'
+				f.content.push({
+					op: 'in',
+					content: {
+						field: 'cases.case_id',
+						value: [p.set_id]
+					}
+				})
+			}
+			return f
+		}
+	},
+	{
+		endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+		size: 100000,
+		fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
+		filters: p => {
+			// p:{}
+			// .isoform
+			// .set_id
+			if (!p.isoform) throw '.isoform missing'
+			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			const f = {
+				op: 'and',
+				content: [
+					{
+						op: '=',
+						content: {
+							field: 'ssms.consequence.transcript.transcript_id',
+							value: [p.isoform]
+						}
+					}
+				]
+			}
+			if (p.set_id) {
+				if (typeof p.set_id != 'string') throw '.set_id value not string'
+				f.content.push({
+					op: 'in',
+					content: {
+						field: 'cases.case_id',
+						value: [p.set_id]
+					}
+				})
+			}
+			return f
 		}
 	}
-}`
+]
 
 /*
+not in use for the moment
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
+TODO convert to text output
 */
 const query_range2variants = `
 query GdcSsmByGene($filter: FiltersArgument) {
@@ -92,6 +147,33 @@ query GdcSsmByGene($filter: FiltersArgument) {
 		}
 	}
 }`
+function variables_range2variants(p) {
+	// p:{}
+	// .chr/start/stop
+	// .set_id
+	if (!p.chr) throw '.chr missing'
+	if (typeof p.chr != 'string') throw '.chr value not string'
+	if (!Number.isInteger(p.start)) throw '.start not integer'
+	if (!Number.isInteger(p.stop)) throw '.stop not integer'
+	const f = {
+		filter: {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'chromosome', value: [p.chr] } },
+				{ op: '>=', content: { field: 'start_position', value: [p.start] } },
+				{ op: '<=', content: { field: 'end_position', value: [p.stop] } }
+			]
+		}
+	}
+	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
+		f.filter.content.push({
+			op: 'in',
+			content: { field: 'cases.case_id', value: [p.set_id] }
+		})
+	}
+	return f
+}
 
 /*
 using one or multiple variants, get info about all tumors harbording them
@@ -101,50 +183,221 @@ and hiding the implementation details on server
 
 on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
 this happens for sunburst and itemtable
+
+query mode: samples/sunburst/summaries
+difference is how many sample attributes are included
+don't know a js method to alter the list of attributes in `case { }` part
+- samples
+  return entire list of attributes on the sample
+  use for returning list of samples, or summarizing all attributes
+- sunburst
+  only return subset of attributes selected for sunburst chart
 */
-const query_variant2samples = `
-query OneSsm($filter: FiltersArgument) {
-	explore {
-		ssms {
-			hits(first: 10000, filters: $filter) {
-				edges {
-					node {
-						occurrence {
-							hits {
-								edges {
-									node {
-										case {
-											project {
-												project_id
-											}
-											disease_type
-											primary_site
-											case_id
-										}
-									}
-								}
-							}
+const variant2samples = {
+	endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+	size: 100000,
+	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
+	fields_list: [
+		'case.project.project_id',
+		'case.case_id',
+		'case.disease_type',
+		'case.primary_site',
+		'case.available_variation_data',
+		'case.demographic.gender',
+		'case.demographic.year_of_birth',
+		'case.demographic.race',
+		'case.demographic.ethnicity'
+	],
+	filters: p => {
+		if (!p.ssm_id_lst) throw '.ssm_id_lst missing'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssm.ssm_id',
+						value: p.ssm_id_lst.split(',')
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		return f
+	}
+}
+
+/*
+getting total cohort sizes
+*/
+const project_size = {
+	query: ` query projectSize( $filters: FiltersArgument) {
+	viewer {
+		explore {
+			cases {
+				total: aggregations(filters: $filters) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
 						}
 					}
 				}
 			}
 		}
 	}
-}`
-
-/*
-one time query: will only run once and result is cached on serverside
-to retrieve total number of tumors per project
-the number will be displayed in both sunburst and singleton variant panel
-must associate the "project" with project_id in sunburst
-
-for now this is only triggered in variant2samples query
-*/
-const query_projectsize = `
-query projectSize( $ssmTested: FiltersArgument) {
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'project__project_id', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+	}
+}
+const disease_size = {
+	query: ` query diseaseSize( $filters: FiltersArgument) {
 	viewer {
 		explore {
 			cases {
+				total: aggregations(filters: $filters) {
+					disease_type {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+			}
+		}
+	}
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'disease_type', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+	}
+}
+const site_size = {
+	query: ` query siteSize( $filters: FiltersArgument) {
+	viewer {
+		explore {
+			cases {
+				total: aggregations(filters: $filters) {
+					primary_site {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+			}
+		}
+	}
+}`,
+	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
+	filters: p => {
+		const f = {
+			filters: {
+				op: 'and',
+				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+			}
+		}
+		if (p.set_id) {
+			f.filters.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+	}
+}
+
+const query_genecnv = `query CancerDistributionBarChart_relayQuery(
+	$caseAggsFilters: FiltersArgument
+	$ssmTested: FiltersArgument
+	$cnvGain: FiltersArgument
+	$cnvLoss: FiltersArgument
+	$cnvTested: FiltersArgument
+	$cnvTestedByGene: FiltersArgument
+	$cnvAll: FiltersArgument
+	$ssmFilters: FiltersArgument
+) {
+	viewer {
+		explore {
+			ssms {
+				hits(first: 0, filters: $ssmFilters) { total }
+			}
+			cases {
+				cnvAll: hits(filters: $cnvAll) { total }
+				cnvTestedByGene: hits(filters: $cnvTestedByGene) { total }
+				gain: aggregations(filters: $cnvGain) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				loss: aggregations(filters: $cnvLoss) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				cnvTotal: aggregations(filters: $cnvTested) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
+				filtered: aggregations(filters: $caseAggsFilters) {
+					project__project_id {
+						buckets {
+							doc_count
+							key
+						}
+					}
+				}
 				total: aggregations(filters: $ssmTested) {
 					project__project_id {
 						buckets {
@@ -158,29 +411,335 @@ query projectSize( $ssmTested: FiltersArgument) {
 	}
 }`
 
-//////////////// end of query strings ///////////////
+const variables_genecnv = {
+	caseAggsFilters: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			},
+			{
+				op: 'NOT',
+				content: {
+					field: 'cases.gene.ssm.observation.observation_id',
+					value: 'MISSING'
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	ssmTested: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			}
+		]
+	},
+	cnvGain: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Gain']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvLoss: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Loss']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvTested: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			}
+		]
+	},
+	cnvTestedByGene: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	cnvAll: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['cnv']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'cnvs.cnv_change',
+					value: ['Gain', 'Loss']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	},
+	ssmFilters: {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: 'cases.available_variation_data',
+					value: ['ssm']
+				}
+			},
+			{
+				op: 'in',
+				content: {
+					field: 'genes.gene_id'
+					// value=[gene] added here
+				}
+			}
+		]
+	}
+}
+
+///////////////////////////////// end of query strings ///////////////
+
+/* flat list of term objects, not hierarchical
+may make a central termdb (or in memory term list)
+and only include a list of term ids in variant2samples.terms[]
+*/
+const ssmCaseAttr = [
+	{
+		name: 'Project',
+		id: 'project',
+		type: 'categorical',
+		get: m => {
+			// the getter will not be passed to client
+			if (m.project) return m.project.project_id
+			return null
+		}
+	},
+	{
+		name: 'Disease',
+		id: 'disease',
+		type: 'categorical',
+		get: m => m.disease_type
+	},
+	{
+		name: 'Primary site',
+		id: 'primary_site',
+		type: 'categorical',
+		get: m => m.primary_site
+	},
+	{
+		name: 'Available variation data',
+		id: 'available_variation_data',
+		type: 'categorical',
+		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
+	},
+	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	/*
+	{
+		name: 'Tissue source site',
+		id: 'tissue_source_site',
+		type:'categorical',
+		get: m => {
+			if (m.tissue_source_site) return m.tissue_source_site.name
+			return null
+		}
+	},
+	*/
+	{
+		name: 'Gender',
+		id: 'gender',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.gender
+			return null
+		}
+	},
+	{
+		name: 'Birth year',
+		id: 'year_of_birth',
+		type: 'integer',
+		get: m => {
+			if (m.demographic) return m.demographic.year_of_birth
+			return null
+		}
+	},
+	{
+		name: 'Race',
+		id: 'race',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.race
+			return null
+		}
+	},
+	{
+		name: 'Ethnicity',
+		id: 'ethnicity',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.ethnicity
+			return null
+		}
+	}
+]
+/*
+hardcoding a flat list of terms here
+any possibility of dynamically querying terms from api??
+*/
+const terms = [
+	{
+		name: 'Project',
+		id: 'project',
+		type: 'categorical',
+		get: m => {
+			// the getter will not be passed to client
+			if (m.project) return m.project.project_id
+			return null
+		}
+	},
+	{
+		name: 'Disease',
+		id: 'disease',
+		type: 'categorical',
+		get: m => m.disease_type
+	},
+	{
+		name: 'Primary site',
+		id: 'primary_site',
+		type: 'categorical',
+		get: m => m.primary_site
+	},
+	{
+		name: 'Available variation data',
+		id: 'available_variation_data',
+		type: 'categorical',
+		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
+	},
+	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
+	{
+		name: 'Gender',
+		id: 'gender',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.gender
+			return null
+		}
+	},
+	{
+		name: 'Birth year',
+		id: 'year_of_birth',
+		type: 'integer',
+		get: m => {
+			if (m.demographic) return m.demographic.year_of_birth
+			return null
+		}
+	},
+	{
+		name: 'Race',
+		id: 'race',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.race
+			return null
+		}
+	},
+	{
+		name: 'Ethnicity',
+		id: 'ethnicity',
+		type: 'categorical',
+		get: m => {
+			if (m.demographic) return m.demographic.ethnicity
+			return null
+		}
+	}
+]
 
 const occurrence_key = 'total' // for the numeric axis showing occurrence
 
 /* this now applies not only to vcf track but also legacy ds
  */
-const vcfinfofilter = {
-	//setidx4numeric: 0,
-	setidx4occurrence: 0, // to set .occurrence on each variant
-	lst: [
-		{
-			name: 'Occurrence',
-			locusinfo: { key: occurrence_key },
-			numericfilter: [
-				{ side: '>', value: 1 },
-				{ side: '>', value: 5 },
-				{ side: '>', value: 10 },
-				{ side: '>', value: 20 },
-				{ side: '>', value: 100 }
-			]
-		}
-	]
-}
 
 // attributes to show for list of variants
 const snvindel_attributes = [
@@ -240,94 +799,92 @@ const snvindel_attributes = [
 	}
 ]
 
-const stratify = [
-	{ label: 'project', byserver: 1, keys: ['project', 'project_id'] },
-	{ label: 'disease', byserver: 1, keys: ['disease_type'] },
-	{ label: 'site', byserver: 1, keys: ['primary_site'] }
-]
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// XXX hardcoded to use .sample_id to dedup samples
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 module.exports = {
+	isMds3: true,
 	color: '#545454',
-	dsinfo: [
-		{ k: 'Source', v: '<a href=https://portal.gdc.cancer.gov/ target=_blank>NCI Genomic Data Commons</a>' },
-		{ k: 'Data type', v: 'SNV/Indel' },
-		{ k: 'Query method', v: 'GDC GraphQL API' }
-	],
 	genome: 'hg38',
-	vcfinfofilter,
 	snvindel_attributes,
-	stratify,
+	apihost: 'https://api.gdc.cancer.gov/v0/graphql',
 
-	onetimequery_projectsize: {
-		gdcgraphql: {
-			query: query_projectsize,
-			variables: {
-				ssmTested: {
-					op: 'and',
-					content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-				}
-			}
+	// termdb as a generic interface
+	// getters will be added to abstract the detailed implementations
+	termdb: {
+		terms,
+		termid2totalsize: {
+			project: { gdcapi: project_size },
+			disease: { gdcapi: disease_size },
+			primary_site: { gdcapi: site_size }
 		}
 	},
 
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
-		// required
-		levels: [
-			{
-				k: 'project', // attribute for stratinput
-				label: 'Project',
-				keys: ['project', 'project_id']
-			},
-			{
-				k: 'disease',
-				label: 'Disease',
-				keys: ['disease_type']
-			}
+		// list of terms to show as items in detailed info page
+		termidlst: [
+			'project',
+			'disease',
+			'primary_site',
+			'available_variation_data',
+			'state',
+			'gender',
+			'year_of_birth',
+			'race',
+			'ethnicity'
 		],
-		// the actual query method is using gdc api
-		gdcgraphql: {
-			query: query_variant2samples,
-			variables: {
-				filter: {
-					op: 'in',
-					content: {
-						field: 'ssm_id'
-					}
+		sunburst_ids: ['project', 'disease'], // term id
+		gdcapi: variant2samples
+	},
+
+	// this is meant for the leftside labels under tklabel
+	// should not be called sample summary but mclassSummary
+	sampleSummaries: {
+		lst: [
+			// for a group of samples that carry certain variants
+			{ label1: 'project', label2: 'disease' },
+			{ label1: 'primary_site' }
+		]
+	},
+	// how to let gene-level gain/loss data shown as additional labels?
+
+	queries: {
+		snvindel: {
+			forTrack: true,
+			byrange: {
+				gdcapi: {
+					query: query_range2variants,
+					variables: variables_range2variants
+				}
+			},
+			byisoform: {
+				gdcapi: { lst: isoform2variants }
+			},
+			occurrence_key
+		},
+		genecnv: {
+			gaincolor: '#c1433f',
+			losscolor: '#336cd5',
+			// gene-level cnv of gain/loss categories
+			// only produce project summary, not sample level query
+			byisoform: {
+				sqlquery_isoform2gene: {
+					statement: 'select gene from isoform2gene where isoform=?'
+				},
+				gdcapi: {
+					query: query_genecnv,
+					variables: variables_genecnv
 				}
 			}
 		}
-	},
-
-	queries: [
-		{
-			name: 'gdc',
-			gdcgraphql_snvindel: {
-				byrange: {
-					query: query_range2variants,
-					variables: {
-						filter: {
-							op: 'and',
-							content: [
-								{ op: 'in', content: { field: 'chromosome' } }, // to add "value" at runtime
-								{ op: '>=', content: { field: 'start_position' } },
-								{ op: '<=', content: { field: 'end_position' } }
-							]
-						}
-					}
-				},
-				byisoform: {
-					query: query_isoform2variants,
-					variables: {
-						filters: {
-							op: '=',
-							content: { field: 'consequence.transcript.transcript_id' }
-						},
-						score: 'occurrence.case.project.project_id'
-					}
-				},
-				occurrence_key
-			}
-		}
-	]
+		/*
+		svfusion: {
+		},
+		cnvpileup:{},
+		geneexpression: {
+		},
+		*/
+	}
 }

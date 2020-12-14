@@ -17,7 +17,7 @@ export function getCategoricalMethods(self) {
 	*************************************/
 
 	async function fillMenu(div, tvs) {
-		const data = await getCategories(tvs.term)
+		const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, [])
 		const sortedVals = data.lst.sort((a, b) => {
 			return b.samplecount - a.samplecount
 		})
@@ -50,25 +50,6 @@ export function getCategoricalMethods(self) {
 			})
 
 		const values_table = self.makeValueTable(div, tvs, sortedVals).node()
-	}
-
-	async function getCategories(term, lst = []) {
-		const args = [
-			'getcategories=1',
-			'genome=' + self.genome,
-			'dslabel=' + self.dslabel,
-			'tid=' + term.id,
-			'filter=' + encodeURIComponent(JSON.stringify(self.filter)),
-			...lst
-		]
-
-		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
-			if (data.error) throw data.error
-			return data
-		} catch (e) {
-			window.alert(e.message || e)
-		}
 	}
 }
 

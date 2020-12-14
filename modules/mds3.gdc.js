@@ -3,12 +3,18 @@ const got = require('got')
 
 /*
 GDC graphql API
+
+validate_variant2sample
+validate_query_snvindel_byrange
+validate_query_snvindel_byisoform
+validate_query_genecnv
+getSamples_gdcapi
+
+getheaders
 */
 
 export function validate_variant2sample(a) {
-	if (!a.query_list) throw '.query_list missing from variant2samples.gdcapi'
-	if (!a.query_sunburst) throw '.query_sunburst missing from variant2samples.gdcapi'
-	if (typeof a.variables != 'function') throw '.variant2samples.gdcapi.variables() not a function'
+	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
 export function validate_query_snvindel_byrange(a) {
@@ -47,13 +53,16 @@ export function validate_query_snvindel_byisoform(api, ds) {
 			snvindel_addclass(m, hit.consequence)
 			m.samples = []
 			for (const c of hit.cases) {
-				// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-				m.samples.push({
-					sample_id: c.case_id,
-					site: c.primary_site,
-					disease: c.disease_type,
-					project: c.project ? c.project.project_id : undefined
-				})
+				const sample = { sample_id: c.case_id }
+				if (ds.sampleSummaries) {
+					// At the snvindel query, each sample obj will only carry a subset of attributes
+					// as defined here, for producing sub-labels
+					for (const i of ds.sampleSummaries.lst) {
+						sample[i.label1] = ds.termdb.getTermById(i.label1).get(c)
+						if (i.label2) sample[i.label2] = ds.termdb.getTermById(i.label2).get(c)
+					}
+				}
+				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
@@ -99,11 +108,17 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
+function getheaders(q) {
+	// q is req.query{}
+	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (q.token) h['X-Auth-Token'] = q.token
+	return h
+}
+
 async function snvindel_byisoform_run(api, opts) {
 	// function may be shared
 	// query is ds.queries.snvindel
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (opts.token) headers['X-Auth-Token'] = opts.token
+	const headers = getheaders(opts)
 	const p1 = got(
 		api.lst[0].endpoint +
 			'?size=' +
@@ -157,38 +172,6 @@ async function snvindel_byisoform_run(api, opts) {
 		ssm.cases.push(h.case)
 	}
 	return [...id2ssm.values()]
-}
-
-export async function init_projectsize(op, ds) {
-	if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
-	if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(op.gdcapi)
-	})
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for onetimequery_projectsize'
-	}
-	if (
-		!re.data ||
-		!re.data.viewer ||
-		!re.data.viewer.explore ||
-		!re.data.viewer.explore.cases ||
-		!re.data.viewer.explore.cases.total ||
-		!re.data.viewer.explore.cases.total.project__project_id ||
-		!re.data.viewer.explore.cases.total.project__project_id.buckets
-	)
-		throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-	if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-		throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-	for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-		if (!t.key) throw 'key missing from one bucket'
-		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-		op.results.set(t.key, t.doc_count)
-	}
 }
 
 export function validate_query_genecnv(api, ds) {
@@ -251,48 +234,64 @@ export function validate_query_genecnv(api, ds) {
 
 export async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
-	const query = {
-		variables: ds.variant2samples.gdcapi.variables(q),
-		query: q.get == 'sunburst' ? ds.variant2samples.gdcapi.query_sunburst : ds.variant2samples.gdcapi.query_list // NOTE "sunburst" is type_sunburst
-	}
-
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(query)
-	})
+	const api = ds.variant2samples.gdcapi
+	const response = await got(
+		api.endpoint +
+			'?size=' +
+			api.size +
+			'&fields=' +
+			(q.get == 'sunburst' ? api.fields_sunburst : api.fields_list).join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.filters(q))),
+		{ method: 'GET', headers: getheaders(q) }
+	)
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
 		throw 'invalid JSON from GDC for variant2samples'
 	}
-	if (
-		!re.data ||
-		!re.data.explore ||
-		!re.data.explore.ssms ||
-		!re.data.explore.ssms.hits ||
-		!re.data.explore.ssms.hits.edges
-	)
-		throw 'data structure not data.explore.ssms.hits.edges[]'
-	if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 're.data.explore.ssms.hits.edges is not array'
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
 
 	const samples = []
-	for (const ssm of re.data.explore.ssms.hits.edges) {
-		if (!ssm.node || !ssm.node.occurrence || !ssm.node.occurrence.hits || !ssm.node.occurrence.hits.edges)
-			throw 'structure of an ssm is not node.occurrence.hits.edges'
-		if (!Array.isArray(ssm.node.occurrence.hits.edges)) throw 'ssm.node.occurrence.hits.edges is not array'
-		for (const sample of ssm.node.occurrence.hits.edges) {
-			if (!sample.node || !sample.node.case) throw 'structure of a case is not .node.case'
-			/* samplelist query will retrieve all terms
-			but sunburst will only retrieve a few attr
-			will simply iterate over all terms and missing ones will have undefined value
-			*/
-			const s = {}
-			for (const attr of ds.variant2samples.terms) {
-				s[attr.id] = attr.get(sample.node.case)
-			}
-			samples.push(s)
+	for (const s of re.data.hits) {
+		if (!s.case) throw '.case{} missing from a hit'
+		const sample = {}
+		for (const id of ds.variant2samples.termidlst) {
+			sample[id] = ds.termdb.getTermById(id).get(s.case)
 		}
+		samples.push(sample)
 	}
 	return samples
+}
+
+export async function get_cohortTotal(api, ds, q) {
+	// q is query parameter
+	if (!api.query) throw '.query missing for termid2totalsize'
+	if (!api.filters) throw '.filters missing for termid2totalsize'
+	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query: api.query, variables: api.filters(q) })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for cohortTotal'
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+	}
+	if (!Array.isArray(h)) throw api.keys.join('.') + ' not array'
+	const v2count = new Map()
+	for (const t of h) {
+		if (!t.key) throw 'key missing from one bucket'
+		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+		v2count.set(t.key, t.doc_count)
+	}
+	return v2count
 }
