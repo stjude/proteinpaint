@@ -127,14 +127,29 @@ export async function init(obj, holder, debugmode) {
 				}
 				const str = str0.toLowerCase()
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) != -1)
+					.filter(d => searchStr(d).indexOf(str) != -1)
 					.transition()
 					.attr('r', radius * 2)
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) == -1)
+					.filter(d => searchStr(d).indexOf(str) == -1)
 					.transition()
 					.attr('r', 1)
 			})
+
+		function searchStr(d) {
+			let vals = Object.values(d)
+
+			// if any value is of type 'object' add all keys of that object to vals
+			vals.forEach((v, i) => {
+				if (v && typeof v == 'object') {
+					vals = [...vals, ...Object.values(v)]
+					vals.splice(i, 1)
+				} else if (!v) vals.splice(i, 1)
+			})
+			vals.filter(i => i !== 'not available') //remove 'not availabe' values
+			const search_str = vals.join(' ').toLowerCase() // convert array to str
+			return search_str
+		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
 
