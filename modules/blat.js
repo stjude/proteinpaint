@@ -99,8 +99,8 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 					//console.log("soft_stops_array:",soft_stops_array)
 					h.query_insoftclip = false
 					for (let m = 0; m < soft_starts_array.length; m++) {
-						soft_start = soft_starts_array[m]
-						soft_stop = soft_stops_array[m]
+						const soft_start = soft_starts_array[m]
+						const soft_stop = soft_stops_array[m]
 						if (
 							parseInt(soft_start) <= parseInt(h.query_startpos) &&
 							parseInt(h.query_stoppos) <= parseInt(soft_stop)
