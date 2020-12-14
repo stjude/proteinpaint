@@ -13,7 +13,7 @@ function onwarn(message, warn) {
 export default [
 	{
 		//input: '../../src/app.js',
-		input: './proteinpaint.js',
+		input: './src/ProteinPaint.js',
 		output: [{ dir: 'dist', format: 'es' }],
 		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [

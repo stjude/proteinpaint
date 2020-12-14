@@ -1,7 +1,7 @@
 import React from 'react'
-import getPpComponent from 'pp-react'
+import { getGDCLolliplot } from 'pp-react'
 
-const ProteinPaint = getPpComponent(React)
+const ProteinPaint = getGDCLolliplot(React)
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
@@ -31,6 +31,8 @@ const genes = [
 export default class App extends React.Component {
 	constructor() {
 		super()
+		const params = getUrlParams()
+		console.log(params.set_id)
 		this.state = {
 			message,
 			dataKey: 'abc123',
@@ -38,20 +40,13 @@ export default class App extends React.Component {
 			basepath: '/',
 			genome: 'hg38',
 			gene: genes[0].name,
-			tracks: [
-				{
-					type: 'mds3',
-					dslabel: 'GDC'
-					// gdc customizations
-					//set_id: 'set_id:DDw3QnUB_tcD1Zw3Af72'
-				}
-			],
-			set_id: 'DDw3QnUB_tcD1Zw3Af72',
-			set_id_flag: false,
+			set_id: params.set_id ? params.set_id : 'DDw3QnUB_tcD1Zw3Af72',
+			set_id_flag: params.set_id != null, // false,
 			set_id_editing: false,
 			token_flag: false,
 			token_editing: true,
-			lastUnrelatedUpdate: +new Date()
+			lastUnrelatedUpdate: +new Date(),
+			token: null
 		}
 		this.setidRef = React.createRef()
 		this.tokenRef = React.createRef()
@@ -60,7 +55,7 @@ export default class App extends React.Component {
 			basepath: this.state.basepath,
 			genome: this.state.genome,
 			gene: genes.find(g => g.name == this.state.gene).transcript,
-			tracks: this.state.tracks
+			token: this.state.token
 		}
 		this.save()
 	}
@@ -161,47 +156,56 @@ export default class App extends React.Component {
 		this.setState({ gene })
 	}
 	ApplySet() {
-		if (this.state.set_id_flag) delete this.state.tracks[0].set_id
-		else this.state.tracks[0].set_id = 'set_id:' + this.state.set_id
-		this.save({ tracks: [this.state.tracks[0]] })
-		this.setState({ set_id_flag: !this.state.set_id_flag, tracks: [this.state.tracks[0]] })
+		const set_id_flag = !this.state.set_id_flag
+		if (!set_id_flag) window.history.replaceState(null, '', `/portal/`)
+		else window.history.replaceState(null, '', `/portal/?set_id=${this.state.set_id}`)
+		this.setState({ set_id_flag })
 	}
 	editSetid() {
 		this.setState({ set_id_editing: !this.state.set_id_editing })
 	}
 	submitSetid() {
-		this.state.tracks[0].set_id = 'set_id:' + this.setidRef.current.value
-		this.save({ tracks: [this.state.tracks[0]] })
+		const set_id = this.setidRef.current.value
+		window.history.replaceState(null, '', `/portal/?set_id=${set_id}`)
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,
-			tracks: [this.state.tracks[0]],
-			set_id: this.setidRef.current.value
+			set_id
 		})
 	}
 	submitToken() {
-		this.state.tracks[0].token = this.tokenRef.current.value
-		this.save({ tracks: [this.state.tracks[0]] })
+		const token = this.tokenRef.current.value
+		this.save({ token })
 		this.setState({
 			token_flag: true,
 			token_editing: false,
-			tracks: [this.state.tracks[0]],
-			token: this.tokenRef.current.value
+			token
 		})
 		//replace actual token with password char
-		const token_len = this.state.tracks[0].token.length
-		this.tokenRef.current.value = '●'.repeat(token_len)
+		this.tokenRef.current.value = '●'.repeat(token.length)
 	}
 	editToken() {
 		this.setState({ token_editing: !this.state.token_editing })
 	}
 	ApplyToken() {
-		if (this.state.token_flag) delete this.state.tracks[0].token
-		else this.state.tracks[0].token = this.state.token
-		this.save({ tracks: [this.state.tracks[0]] })
-		this.setState({ token_flag: !this.state.token_flag, tracks: [this.state.tracks[0]] })
+		const token_flag = !this.state.token_flag
+		const token = token_flag ? this.state.token : null
+		this.save({ token })
+		this.setState({ token_flag })
 	}
 	updateTime() {
 		this.setState({ lastUnrelatedUpdate: +new Date() })
 	}
+}
+
+function getUrlParams() {
+	const params = {}
+	window.location.search
+		.substr(1)
+		.split('&')
+		.forEach(kv => {
+			const [key, value] = kv.split('=')
+			params[key] = value
+		})
+	return params
 }
