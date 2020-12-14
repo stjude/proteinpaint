@@ -35,8 +35,8 @@ export function getLolliplotData() {
 	if (data.token) {
 		arg.tracks[0].token = data.token
 	}
-	if (params.set_id) {
-		arg.tracks[0].set_id = 'set_id:' + params.set_id
+	if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
+		arg.tracks[0].set_id = params.filters.content[0].content.value[0]
 	}
 
 	return arg

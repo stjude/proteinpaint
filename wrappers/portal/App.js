@@ -32,7 +32,9 @@ export default class App extends React.Component {
 	constructor() {
 		super()
 		const params = getUrlParams()
-		console.log(params.set_id)
+		let set_id
+		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:'))
+			set_id = params.filters.content[0].content.value[0].split(':').pop()
 		this.state = {
 			message,
 			dataKey: 'abc123',
@@ -40,8 +42,8 @@ export default class App extends React.Component {
 			basepath: '/',
 			genome: 'hg38',
 			gene: genes[0].name,
-			set_id: params.set_id ? params.set_id : 'DDw3QnUB_tcD1Zw3Af72',
-			set_id_flag: params.set_id != null, // false,
+			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',
+			set_id_flag: set_id != null, // false,
 			set_id_editing: false,
 			token_flag: false,
 			token_editing: true,
@@ -158,7 +160,10 @@ export default class App extends React.Component {
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
 		if (!set_id_flag) window.history.replaceState(null, '', `/portal/`)
-		else window.history.replaceState(null, '', `/portal/?set_id=${this.state.set_id}`)
+		else {
+			const encoded_filter = createUrlFilters(this.state.set_id)
+			window.history.replaceState(null, '', `/portal/?filters=${encoded_filter}`)
+		}
 		this.setState({ set_id_flag })
 	}
 	editSetid() {
@@ -207,5 +212,22 @@ function getUrlParams() {
 			const [key, value] = kv.split('=')
 			params[key] = value
 		})
+	if (params.filters) {
+		params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+	}
 	return params
+}
+
+function createUrlFilters(set_id) {
+	const filter_obj = {
+		op: 'AND',
+		content: [
+			{
+				content: { field: 'cases.case_id', value: ['set_id:' + set_id] },
+				op: 'IN'
+			}
+		]
+	}
+	const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
+	return encoded_filter
 }

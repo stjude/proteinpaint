@@ -40,6 +40,9 @@ export function getPpComponent(React) {
 					const [key, value] = kv.split('=')
 					params[key] = value
 				})
+			if (params.filters) {
+				params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+			}
 			return params
 		}
 	}
