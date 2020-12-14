@@ -55,7 +55,7 @@ function server_stat(name, g) {
 				.trim()
 				.split('\n')
 			let c = 0
-			for (line of lines) {
+			for (const line of lines) {
 				if (line.startsWith('blat requests')) c = line.split(' ')[2]
 			}
 			resolve(name + ' ON, ' + c + ' requests')
