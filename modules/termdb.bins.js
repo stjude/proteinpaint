@@ -271,7 +271,6 @@ export function get_bin_label(bin, binconfig) {
 	// label cannot be the same as unbounded bins
 	// otherwise, it can generate the same label ">15" for the last two bins (the last is stopunbounded)
 	if (Number.isInteger(bc.bin_size)) {
-		console.log('bin_size is integer')
 		// bin size is integer, make nicer label
 		if (bc.bin_size == 1 && Math.abs(bin.start - bin.stop) === 1) {
 			// bin size is 1; use just start value as label, not a range
