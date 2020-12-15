@@ -150,7 +150,6 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
 				if (genome.repeatmasker) {
-					//const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
 					await utils.get_lines_tabix(
 						[
 							path.join(serverconfig.tpmasterdir, genome.repeatmasker.dbfile),
