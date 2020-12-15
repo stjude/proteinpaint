@@ -38,7 +38,7 @@ function validate_obj(obj) {
 		if (!Array.isArray(obj.cells.categories)) throw '.cells.categories should be an array'
 		if (obj.cells.categories.length == 0) throw '.cells.categories[] is empty array'
 		for (const c of obj.cells.categories) {
-			if (!c.columnidx) throw 'columnidx missing from category ' + c
+			if (!Number.isInteger(c.columnidx)) throw 'columnidx missing from category ' + c
 			if (c.autocolor) {
 				c.autocolor = scaleOrdinal(schemeCategory20)
 			}
