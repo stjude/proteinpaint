@@ -149,79 +149,34 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_totallen = l[5] // This is actually the chromosome length
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
-				h.ref_in_repeat = '-' // Used in place of code from lines 153-167
-				//				if (genome.repeatmasker) {
-				//					const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
-				//					//console.log("outfile:",outfile)
-				//					//const outputstr = (await utils.read_file(outfile)).trim()
-				//					//console.log("outputstr:",outputstr)
-				//					//fs.unlink(outfile, () => {})
-				//					if (outputstr.length == 0) {
-				//						h.ref_in_repeat = '-'
-				//					} else {
-				//						const tabix_lines = outputstr.split('\n')
-				//						const columns = tabix_lines[0].split('\t') // Only selecting the first line for annotation when query spans two or more different repeats
-				//						const json_object = JSON.parse(columns[3])
-				//						h.ref_in_repeat = json_object.category
-				//					}
-				//				}
+				if (genome.repeatmasker) {
+					//const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
+					await utils.get_lines_tabix(
+						[
+							path.join(serverconfig.tpmasterdir, genome.repeatmasker.dbfile),
+							h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos
+						],
+						null,
+						line => {
+							//console.log(h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos)														 //console.log("line2:",line)
+
+							const columns = line.split('\t')
+							const json_object = JSON.parse(columns[3])
+							h.ref_in_repeat = json_object.category
+						}
+					)
+					if (h.ref_in_repeat == undefined) {
+						h.ref_in_repeat = '-'
+					}
+				}
 			}
 		}
 	}
-	//console.log(hits)
 	// Sorting alignments in descending order of score
 	hits.sort((a, b) => {
 		return b.score - a.score
 	})
 	return { hits }
-}
-
-function determine_repeat_in_ref(genome, ref_chr, ref_startpos, ref_stoppos) {
-	return new Promise((resolve, reject) => {
-		console.log(
-			tabix +
-				' -p bed ' +
-				serverconfig.tpmasterdir +
-				'/' +
-				genome.repeatmasker.dbfile +
-				' ' +
-				ref_chr +
-				':' +
-				ref_startpos +
-				'-' +
-				ref_stoppos
-		)
-		//console.log(ref_chr+":"+ref_startpos+"-"+ref_stoppos)
-
-		const ls = spawn(tabix, [
-			'-p',
-			'bed',
-			serverconfig.tpmasterdir + '/' + genome.repeatmasker.dbfile,
-			ref_chr + ':' + ref_startpos + '-' + ref_stoppos
-		])
-
-		//    ls.stdout.setEncoding('utf8')
-		ls.stdout.on('data', function(data) {
-			//Here is where the output goes
-			data = data.toString()
-			console.log('stdout: ' + data)
-			resolve(data)
-		})
-
-		ls.stderr.on('data', data => {
-			console.log(`stderr: ${data}`)
-		})
-
-		//    ls.on('error', (error) => {
-		//	    console.log(`error: ${error.message}`)
-		//	})
-
-		ls.on('close', code => {
-			console.log(`child process exited with code ${code}`)
-			resolve('')
-		})
-	})
-	//console.log("data:",data)
 }
 
 function run_blat(genome, infile) {
