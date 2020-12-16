@@ -43,6 +43,10 @@ export function getPpComponent(React) {
 			if (params.filters) {
 				params['filters'] = JSON.parse(decodeURIComponent(params.filters))
 			}
+			if (window.location.pathname) {
+				const url_split = window.location.pathname.split('/')
+				if (url_split[2] == 'genes') params['gene'] = url_split[3]
+			}
 			return params
 		}
 	}

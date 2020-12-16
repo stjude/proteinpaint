@@ -59,6 +59,7 @@ export default class App extends React.Component {
 			gene: genes.find(g => g.name == this.state.gene).transcript,
 			token: this.state.token
 		}
+		window.history.replaceState(null, '', `/portal/genes/${genes.find(g => g.name == this.state.gene).transcript}`)
 		this.save()
 	}
 	render() {
@@ -154,15 +155,18 @@ export default class App extends React.Component {
 		localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
 	changeGene(gene) {
-		this.save({ gene: genes.find(d => d.name == gene).transcript })
+		const transcript = genes.find(d => d.name == gene).transcript
+		if (this.state.set_id_flag) {
+			window.history.replaceState(null, '', `/portal/genes/${transcript}${window.location.search}`)
+		} else window.history.replaceState(null, '', `/portal/genes/${transcript}`)
 		this.setState({ gene })
 	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		if (!set_id_flag) window.history.replaceState(null, '', `/portal/`)
+		if (!set_id_flag) window.history.replaceState(null, '', window.location.pathname)
 		else {
 			const encoded_filter = createUrlFilters(this.state.set_id)
-			window.history.replaceState(null, '', `/portal/?filters=${encoded_filter}`)
+			window.history.replaceState(null, '', `${window.location.pathname}?filters=${encoded_filter}`)
 		}
 		this.setState({ set_id_flag })
 	}
@@ -171,7 +175,8 @@ export default class App extends React.Component {
 	}
 	submitSetid() {
 		const set_id = this.setidRef.current.value
-		window.history.replaceState(null, '', `/portal/?set_id=${set_id}`)
+		const encoded_filter = createUrlFilters(set_id)
+		window.history.replaceState(null, '', `/portal/?filters=${encoded_filter}`)
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,

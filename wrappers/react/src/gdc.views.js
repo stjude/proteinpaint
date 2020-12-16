@@ -38,6 +38,9 @@ export function getLolliplotData() {
 	if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
 		arg.tracks[0].set_id = params.filters.content[0].content.value[0]
 	}
+	if (params.gene) {
+		arg.gene = params.gene
+	}
 
 	return arg
 }
