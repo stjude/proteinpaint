@@ -1804,7 +1804,7 @@ m{}
 */
 	d.append('a')
 		.text(m.name)
-		.attr('href', 'http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs=' + m.name)
+		.attr('href', 'https://www.ncbi.nlm.nih.gov/snp/' + m.name)
 		.attr('target', '_blank')
 	d.append('div')
 		.attr('class', 'sja_tinylogo_body')

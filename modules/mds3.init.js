@@ -15,11 +15,11 @@ client_copy
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
+	validate_termdb(ds)
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
-	await init_onetimequery_projectsize(ds)
 }
 
 export function client_copy(ds) {
@@ -32,6 +32,24 @@ export function client_copy(ds) {
 		sampleSummaries: ds.sampleSummaries ? ds.sampleSummaries.lst : null,
 		queries: copy_queries(ds)
 	}
+	if (ds.termdb) {
+		ds2.termdb = {}
+		if (ds.termdb.terms) {
+			// if okay to expose the whole vocabulary to client?
+			// if to keep vocabulary at backend
+			ds2.termdb.terms = []
+			for (const m of ds.termdb.terms) {
+				const n = {}
+				for (const k in m) {
+					if (k == 'get') continue
+					n[k] = m[k]
+				}
+				ds2.termdb.terms.push(n)
+			}
+		} else {
+			throw 'unknown vocab source'
+		}
+	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
 	}
@@ -42,10 +60,50 @@ export function client_copy(ds) {
 	if (ds.variant2samples) {
 		ds2.variant2samples = {
 			variantkey: ds.variant2samples.variantkey,
-			terms: ds.variant2samples.terms
+			termidlst: ds.variant2samples.termidlst
 		}
 	}
 	return ds2
+}
+
+function validate_termdb(ds) {
+	const tdb = ds.termdb
+	if (!tdb) return
+	if (tdb.terms) {
+		// the need for get function is only for gdc
+		for (const t of tdb.terms) {
+			if (!t.id) throw 'id missing from a term'
+			if (!t.get) throw '.get() missing from term: ' + t.id
+			if (typeof t.get != 'function') throw '.get() is not function from term: ' + t.id
+		}
+	} else {
+		throw 'unknown source of termdb vocabulary'
+	}
+	tdb.getTermById = id => {
+		if (tdb.terms) {
+			return tdb.terms.find(i => i.id == id)
+		}
+		return null
+	}
+
+	if (tdb.termid2totalsize) {
+		for (const tid in tdb.termid2totalsize) {
+			const t = tdb.termid2totalsize[tid]
+			if (t.gdcapi) {
+				// validate
+			} else {
+				throw 'unknown method for term totalsize: ' + tid
+			}
+			// add getter
+			t.get = async p => {
+				// p is client query parameter (set_id, token)
+				if (t.gdcapi) {
+					return gdc.get_cohortTotal(t.gdcapi, ds, p)
+				}
+				throw 'unknown method for term totalsize: ' + tid
+			}
+		}
+	}
 }
 
 function validate_variant2samples(ds) {
@@ -53,22 +111,19 @@ function validate_variant2samples(ds) {
 	if (!vs) return
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (!vs.terms) throw '.terms[] missing from variant2samples'
-	if (!Array.isArray(vs.terms)) throw 'variant2samples.terms[] is not array'
-	if (vs.terms.length == 0) throw '.terms[] empty array from variant2samples'
-	for (const at of vs.terms) {
-		// each attr is a term, with a getter function
-		if (!at.name) throw '.name missing from an attribute term of variant2samples'
-		if (at.id == undefined) throw '.id missing from an attribute term of variant2samples' // allow id to be integer 0
-		if (typeof at.get != 'function') throw `.get() missing or not a function in attr "${at.id}" of variant2samples`
+	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
+	if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
+	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
+	if (!ds.termdb) throw 'ds.termdb missiing when variant2samples.termidlst is in use'
+	for (const id of vs.termidlst) {
+		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
 	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
 	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
 	for (const id of vs.sunburst_ids) {
-		if (!vs.terms.find(i => i.id == id)) throw `sunburst id "${id}" not found in variant2samples.terms`
+		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 	}
-	vs.sunburst_ids = new Set(vs.sunburst_ids)
 	if (vs.gdcapi) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
@@ -96,10 +151,15 @@ function copy_queries(ds) {
 function validate_sampleSummaries(ds) {
 	const ss = ds.sampleSummaries
 	if (!ss) return
+	if (!ds.termdb) throw 'ds.termdb missing while sampleSummary is in use'
 	if (!ss.lst) throw '.lst missing from sampleSummaries'
 	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries'
 	for (const i of ss.lst) {
 		if (!i.label1) throw '.label1 from one of sampleSummaries.lst'
+		if (!ds.termdb.getTermById(i.label1)) throw 'no term match with .label1: ' + i.label1
+		if (i.label2) {
+			if (!ds.termdb.getTermById(i.label2)) throw 'no term match with .label2: ' + i.label2
+		}
 	}
 	ss.makeholder = opts => {
 		const labels = new Map()
@@ -166,7 +226,7 @@ function validate_sampleSummaries(ds) {
 			}
 		}
 	}
-	ss.finalize = (labels, opts) => {
+	ss.finalize = (labels, opts, nodename2total) => {
 		// convert one "labels" map to list
 		const out = []
 		for (const [label1, L1] of labels) {
@@ -181,23 +241,25 @@ function validate_sampleSummaries(ds) {
 					mclasses: sort_mclass(o.mclasses)
 				}
 				// add cohort size, fix it so it can be applied to sub levels
-				if (
-					ds.onetimequery_projectsize &&
-					ds.onetimequery_projectsize.results &&
-					ds.onetimequery_projectsize.results.has(v1)
-				) {
-					L1o.cohortsize = ds.onetimequery_projectsize.results.get(v1)
+				if (nodename2total) {
+					const k = v1.toLowerCase()
+					if (nodename2total.has(k)) L1o.cohortsize = nodename2total.get(k)
 				}
 
 				strat.items.push(L1o)
 				if (o.label2) {
 					L1o.label2 = []
 					for (const [v2, oo] of o.label2) {
-						L1o.label2.push({
+						const L2o = {
 							label: v2,
 							samplecount: oo.sampleset.size,
 							mclasses: sort_mclass(oo.mclasses)
-						})
+						}
+						if (nodename2total) {
+							const k = v2.toLowerCase()
+							if (nodename2total.has(k)) L2o.cohortsize = nodename2total.get(k)
+						}
+						L1o.label2.push(L2o)
 					}
 					L1o.label2.sort((i, j) => j.samplecount - i.samplecount)
 				}
@@ -337,15 +399,4 @@ function validate_query_genecnv(ds, genome) {
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}
-}
-
-async function init_onetimequery_projectsize(ds) {
-	const op = ds.onetimequery_projectsize
-	if (!op) return
-	op.results = new Map()
-	if (op.gdcapi) {
-		await gdc.init_projectsize(op, ds)
-		return
-	}
-	throw 'unknown query method for onetimequery_projectsize'
 }

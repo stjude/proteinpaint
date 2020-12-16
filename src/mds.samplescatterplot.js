@@ -129,14 +129,35 @@ export async function init(obj, holder, debugmode) {
 				}
 				const str = str0.toLowerCase()
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) != -1)
+					.filter(d => searchStr(d, str))
 					.transition()
 					.attr('r', radius * 2)
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) == -1)
+					.filter(d => !searchStr(d, str))
 					.transition()
 					.attr('r', 1)
 			})
+
+		function searchStr(data, str) {
+			let found_flag = false
+			let vals = Object.values(data).filter(a => a != null && typeof a != 'number')
+			let new_vals = vals.filter(a => typeof a != 'object').map(x => x.toLowerCase())
+			new_vals.forEach(v => {
+				if (v.toLowerCase().includes(str)) return (found_flag = true)
+			})
+			// if any value is of type 'object', search for all values of the object
+			if (!found_flag) {
+				vals.forEach(v => {
+					if (v && typeof v == 'object') {
+						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						obj_vals.forEach(ov => {
+							if (ov.toLowerCase().includes(str)) return (found_flag = true)
+						})
+					}
+				})
+			}
+			return found_flag
+		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
 	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
@@ -437,7 +458,8 @@ function init_plot(obj) {
 
 	obj.dotselection = circles
 
-	let userdots, usercircles, userlabelg, userlabels
+	let userdots, usercircles, userlabelg, userlabels, userlabel_borders
+	const userlabel_grp = { userlabels, userlabel_borders }
 	if (obj.dots_user) {
 		userdots = dotg
 			.selectAll()
@@ -450,17 +472,45 @@ function init_plot(obj) {
 			.attr('fill', d => d.color)
 			.attr('r', radius)
 			.on('mouseover', d => {
-				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
+				Object.values(userlabel_grp).forEach(labels =>
+					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
+				)
 			})
 			.on('mouseout', d => {
-				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
+				obj.tip.hide()
+				Object.values(userlabel_grp).forEach(labels =>
+					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
+				)
 			})
 		userlabelg = dotg
 			.selectAll()
 			.data(obj.dots_user)
 			.enter()
 			.append('g')
-		userlabels = userlabelg
+
+		userlabel_grp.userlabel_borders = userlabelg
+			.append('text')
+			.attr('fill', '#fff')
+			.attr('font-size', fontsize)
+			.attr('stroke', 'white')
+			.attr('stroke-width', '3px')
+			.text(d => d.sample)
+			.attr('text-anchor', 'end')
+
+		userlabel_grp.userlabels = userlabelg
 			.append('text')
 			.attr('fill', d => d.color)
 			.attr('font-size', fontsize)
@@ -503,7 +553,7 @@ function init_plot(obj) {
 					.on('keyup', () => {
 						if (!client.keyupEnter()) return
 						const v = d3event.target.value
-						userlabels.filter(i => i.sample == d.sample).text(v)
+						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).text(v))
 						d.sample = v
 						obj.menu2.hide()
 					})
@@ -513,12 +563,12 @@ function init_plot(obj) {
 					.property('value', d.color)
 					.on('change', () => {
 						const v = d3event.target.value
-						userlabels.filter(i => i.sample == d.sample).attr('fill', v)
+						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).attr('fill', v))
 						usercircles.filter(i => i.sample == d.sample).attr('fill', v)
 						d.color = v
 					})
 			})
-		userlabels.append('title').text('Double-click to edit')
+		userlabel_grp.userlabels.append('title').text('Double-click to edit')
 	}
 
 	assign_color4dots(obj)
@@ -541,12 +591,14 @@ function init_plot(obj) {
 						y = new_yscale(d.y)
 					// check label width
 					let lw
-					userlabels
-						.filter(i => i.sample == d.sample)
-						.each(function() {
-							lw = this.getBBox().width
-						})
-						.attr('text-anchor', x + lw >= width ? 'end' : 'start')
+					Object.values(userlabel_grp).forEach(labels =>
+						labels
+							.filter(i => i.sample == d.sample)
+							.each(function() {
+								lw = this.getBBox().width
+							})
+							.attr('text-anchor', x + lw >= width ? 'end' : 'start')
+					)
 					return 'translate(' + x + ',' + y + ')'
 				})
 		}

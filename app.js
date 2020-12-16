@@ -145,6 +145,14 @@ if (serverconfig.jwt) {
 	})
 }
 
+// hardcoded basepath='/portal/' value, should be
+// defined later as serverconfig.basepath
+// -- not optimal since this redirect results in two HTTP requests
+// -- much better is if express.js simply rerouted within the same request
+app.get('/portal/:actualroute', (req, res) => {
+	res.redirect('/' + req.params.actualroute)
+})
+
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
@@ -1223,12 +1231,12 @@ async function handle_dsdata(req, res) {
 
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
-	const sqlstr = query.makequery(req.query)
+	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
 		return
 	}
-	const rows = ds.newconn.prepare(sqlstr).all()
+	const rows = ds.newconn.prepare(sqlstr).all(values)
 	let lst
 	if (query.tidy) {
 		lst = rows.map(i => query.tidy(i))
@@ -8935,7 +8943,7 @@ async function handle_vcf(req, res) {
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw e
-		const dir = isurl ? utils.cache_index(file, req.query.indexURL) : null
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
@@ -9584,7 +9592,8 @@ async function pp_init() {
 
 			// FIXME document the purpose of being able to use override file
 			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name

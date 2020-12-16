@@ -80,7 +80,7 @@ class Term1ui {
 	}
 }
 
-exports.term1uiInit = rx.getInitFxn(Term1ui)
+export const term1uiInit = rx.getInitFxn(Term1ui)
 
 function setRenderers(self) {
 	self.initUI = function() {

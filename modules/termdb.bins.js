@@ -1,6 +1,6 @@
-const d3format = require('d3-format')
+import * as d3format from 'd3-format'
 
-function validate_bins(binconfig) {
+export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
 
 	const bc = binconfig
@@ -107,9 +107,7 @@ function validate_bins(binconfig) {
 	}
 }
 
-exports.validate_bins = validate_bins
-
-function compute_bins(binconfig, summaryfxn) {
+export function compute_bins(binconfig, summaryfxn) {
 	/*
   Bins generator
   
@@ -238,25 +236,16 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			break
 		}
 	}
-	delete bc.numDecimals
 	delete bc.binLabelFormatter
 	return bins
 }
 
-exports.compute_bins = compute_bins
-
 function setNumDecimalsFormatter(bc) {
-	if (!bc.numDecimals) {
-		const decimals = ('' + bc.bin_size).split('.')[1] || (bc.first_bin && ('' + bc.first_bin.stop).split('.')[1])
-		bc.numDecimals = (decimals && decimals.length) || 0
-	}
-	if (!bc.binLabelFormatter) {
-		const formatterSymbol = bc.numDecimals ? 'f' : 'r'
-		bc.binLabelFormatter = d3format.format('.' + bc.numDecimals + formatterSymbol)
-	}
+	if (bc.binLabelFormatter) return
+	bc.binLabelFormatter = d3format.format('rounding' in bc ? bc.rounding : 'd')
 }
 
-function get_bin_label(bin, binconfig) {
+export function get_bin_label(bin, binconfig) {
 	/*
   Generate a numeric bin label given a bin configuration
 */
@@ -267,12 +256,14 @@ function get_bin_label(bin, binconfig) {
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
 		const oper = bin.stopinclusive ? '\u2264' : '<'
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
+		const v1 = bc.binLabelFormatter(bin.stop)
+		bin.stop = +v1
 		return oper + v1
 	}
 	if (bin.stopunbounded) {
 		const oper = bin.startinclusive ? '\u2265' : '>'
-		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+		const v0 = bc.binLabelFormatter(bin.start)
+		bin.start = +v0
 		return oper + v0
 	}
 
@@ -281,22 +272,19 @@ function get_bin_label(bin, binconfig) {
 	// otherwise, it can generate the same label ">15" for the last two bins (the last is stopunbounded)
 	if (Number.isInteger(bc.bin_size)) {
 		// bin size is integer, make nicer label
-		if (bc.bin_size == 1) {
+		if (bc.bin_size == 1 && Math.abs(bin.start - bin.stop) === 1) {
 			// bin size is 1; use just start value as label, not a range
-			return '' + bin.start //bc.binLabelFormatter(start)
+			return '' + bin.start
 		}
 		if (Number.isInteger(bin.start) || Number.isInteger(bin.stop)) {
-			// else if ('label_offset' in binconfig) {
-			// should change condition later to be detected via 'label_offset' in binconfig
-			// so that the label_offset may be applied to floats also
-			const label_offset = 1 // change to binconfig.label_offset later
+			const label_offset = 'label_offset' in binconfig ? binconfig.label_offset : 1
 			const min =
 				'start' in binconfig.first_bin
 					? binconfig.first_bin.start
 					: 'start_percentile' in binconfig.first_bin
 					? binconfig.results.summary['p' + binconfig.first_bin.start_percentile]
 					: binconfig.results.summary.min
-			const v0 = bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset // bin.start - 1 : bin.start
+			const v0 = bc.binLabelFormatter(bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset) // bin.start - 1 : bin.start
 			const max = !binconfig.last_bin
 				? binconfig.results.summary.max
 				: 'stop' in binconfig.last_bin
@@ -304,20 +292,12 @@ function get_bin_label(bin, binconfig) {
 				: 'stop_percentile' in binconfig.last_bin
 				? binconfig.results.summary['p' + binconfig.last_bin.stop_percentile]
 				: binconfig.results.summary.max
-			const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
-			if (v0 == v1) return v0.toString()
-			for (let i = 0; i < 10; i++) {
-				//const v0f = v0.toFixed(bc.numDecimals + i)
-				const v1f = v1.toFixed(bc.numDecimals + i)
-				if (+v1f > v0) return v0 + ' to ' + v1f
-			}
-			return v0 + ' to ' + v1
+			const v1 = bc.binLabelFormatter(bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset) // bin.stop - 1 : bin.stop
+			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
 		}
-		const oper0 = '' //bc.startinclusive ? "" : ">"
-		const oper1 = '' //bc.stopinclusive ? "" : "<"
-		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
-		return oper0 + v0 + ' to ' + oper1 + v1
+		const v0 = bc.binLabelFormatter(bin.start)
+		const v1 = bc.binLabelFormatter(bin.stop)
+		return v0 + ' to ' + v1
 	}
 
 	// bin size not integer
@@ -328,9 +308,7 @@ function get_bin_label(bin, binconfig) {
 	return oper0 + v0 + ' to ' + oper1 + v1
 }
 
-exports.get_bin_label = get_bin_label
-
-function target_percentiles(binconfig) {
+export function target_percentiles(binconfig) {
 	const percentiles = []
 	const f = binconfig.first_bin
 	if (f && isNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
@@ -340,8 +318,6 @@ function target_percentiles(binconfig) {
 	if (l && isNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
 	return percentiles
 }
-
-exports.target_percentiles = target_percentiles
 
 function isNumeric(n) {
 	return !isNaN(parseFloat(n)) && isFinite(n)

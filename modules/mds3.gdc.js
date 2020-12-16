@@ -3,6 +3,14 @@ const got = require('got')
 
 /*
 GDC graphql API
+
+validate_variant2sample
+validate_query_snvindel_byrange
+validate_query_snvindel_byisoform
+validate_query_genecnv
+getSamples_gdcapi
+
+getheaders
 */
 
 export function validate_variant2sample(a) {
@@ -45,13 +53,16 @@ export function validate_query_snvindel_byisoform(api, ds) {
 			snvindel_addclass(m, hit.consequence)
 			m.samples = []
 			for (const c of hit.cases) {
-				// site/disease/project corresponds to ds.sampleSummaries.lst[].label
-				m.samples.push({
-					sample_id: c.case_id,
-					site: c.primary_site,
-					disease: c.disease_type,
-					project: c.project ? c.project.project_id : undefined
-				})
+				const sample = { sample_id: c.case_id }
+				if (ds.sampleSummaries) {
+					// At the snvindel query, each sample obj will only carry a subset of attributes
+					// as defined here, for producing sub-labels
+					for (const i of ds.sampleSummaries.lst) {
+						sample[i.label1] = ds.termdb.getTermById(i.label1).get(c)
+						if (i.label2) sample[i.label2] = ds.termdb.getTermById(i.label2).get(c)
+					}
+				}
+				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
@@ -163,38 +174,6 @@ async function snvindel_byisoform_run(api, opts) {
 	return [...id2ssm.values()]
 }
 
-export async function init_projectsize(op, ds) {
-	if (!op.gdcapi.query) throw '.query missing for onetimequery_projectsize.gdcapi'
-	if (!op.gdcapi.variables) throw '.variables missing for onetimequery_projectsize.gdcapi'
-	const response = await got.post(ds.apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify(op.gdcapi)
-	})
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for onetimequery_projectsize'
-	}
-	if (
-		!re.data ||
-		!re.data.viewer ||
-		!re.data.viewer.explore ||
-		!re.data.viewer.explore.cases ||
-		!re.data.viewer.explore.cases.total ||
-		!re.data.viewer.explore.cases.total.project__project_id ||
-		!re.data.viewer.explore.cases.total.project__project_id.buckets
-	)
-		throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-	if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-		throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-	for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-		if (!t.key) throw 'key missing from one bucket'
-		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-		op.results.set(t.key, t.doc_count)
-	}
-}
-
 export function validate_query_genecnv(api, ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
@@ -279,10 +258,40 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
-		for (const attr of ds.variant2samples.terms) {
-			sample[attr.id] = attr.get(s.case)
+		for (const id of ds.variant2samples.termidlst) {
+			sample[id] = ds.termdb.getTermById(id).get(s.case)
 		}
 		samples.push(sample)
 	}
 	return samples
+}
+
+export async function get_cohortTotal(api, ds, q) {
+	// q is query parameter
+	if (!api.query) throw '.query missing for termid2totalsize'
+	if (!api.filters) throw '.filters missing for termid2totalsize'
+	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query: api.query, variables: api.filters(q) })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for cohortTotal'
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+	}
+	if (!Array.isArray(h)) throw api.keys.join('.') + ' not array'
+	const v2count = new Map()
+	for (const t of h) {
+		if (!t.key) throw 'key missing from one bucket'
+		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
+		v2count.set(t.key, t.doc_count)
+	}
+	return v2count
 }

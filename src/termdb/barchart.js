@@ -371,8 +371,9 @@ class TdbBarchart {
 				.sort(this.barSorter)
 
 			if (items.length) {
+				const name = t2 ? t1.term.name : 'Other categories'
 				legendGrps.push({
-					name: `<span style="${headingStyle}">` + t1.term.name + '</span>',
+					name: `<span style="${headingStyle}">${name}</span>`,
 					items
 				})
 			}

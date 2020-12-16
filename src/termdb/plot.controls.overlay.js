@@ -105,7 +105,7 @@ class Overlay {
 	}
 }
 
-exports.overlayInit = rx.getInitFxn(Overlay)
+export const overlayInit = rx.getInitFxn(Overlay)
 
 function setRenderers(self) {
 	self.initUI = function() {

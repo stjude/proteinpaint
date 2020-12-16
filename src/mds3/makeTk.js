@@ -1,5 +1,4 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../common'
 import * as client from '../client'
 import { init as init_legend } from './legend'
 import { loadTk } from './tk'
@@ -27,6 +26,8 @@ export async function makeTk(tk, block) {
 	get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
+
+	init_termdb(tk, block)
 
 	init_mclass(tk)
 
@@ -89,13 +90,22 @@ function get_ds(tk, block) {
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 
+function init_termdb(tk, block) {
+	const tdb = tk.mds.termdb
+	if (!tdb) return
+	tdb.getTermById = id => {
+		if (tdb.terms) return tdb.terms.find(i => i.id == id)
+		return null
+	}
+}
+
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
 	// native track, need to know what to do for custom track
 	tk.mds.variant2samples.get = async (tk0, mlst, querytype) => {
 		/*
-		support alternative methods
+		TODO support alternative data sources
 		where all data are hosted on client
 		*/
 		// hardcode to getsummary and using fixed levels
@@ -113,6 +123,8 @@ function mayaddGetter_variant2samples(tk, block) {
 		} else {
 			throw 'unknown variantkey for variant2samples'
 		}
+		if (tk.set_id) par.push('set_id=' + tk.set_id)
+		if (tk.token) par.push('token=' + tk.token)
 		return await client.dofetch2('mds3?' + par.join('&'))
 	}
 }

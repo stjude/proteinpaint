@@ -87,4 +87,4 @@ class TdbFilter {
 	}
 }
 
-exports.filterInit = rx.getInitFxn(TdbFilter)
+export const filter3Init = rx.getInitFxn(TdbFilter)

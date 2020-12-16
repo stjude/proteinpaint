@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { select, event } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag } from 'd3'
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
@@ -105,7 +105,7 @@ class TermSetting {
 	}
 }
 
-exports.termsettingInit = rx.getInitFxn(TermSetting)
+export const termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
@@ -321,7 +321,7 @@ function setInteractivity(self) {
 	}
 }
 
-function termsetting_fill_q(q, term) {
+export function termsetting_fill_q(q, term) {
 	// to-do: delete this code block when all term.is* has been removed from code
 	if (!term.type) {
 		term.type = term.iscategorical
@@ -386,7 +386,6 @@ function termsetting_fill_q(q, term) {
 	}
 	throw 'unknown term type'
 }
-exports.termsetting_fill_q = termsetting_fill_q
 
 function set_hiddenvalues(q, term) {
 	if (!q.hiddenValues) {

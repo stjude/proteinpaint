@@ -95,7 +95,7 @@ class Divide {
 	}
 }
 
-exports.divideInit = rx.getInitFxn(Divide)
+export const divideInit = rx.getInitFxn(Divide)
 
 function setRenderers(self) {
 	self.initUI = function() {
