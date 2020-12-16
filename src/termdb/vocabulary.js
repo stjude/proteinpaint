@@ -402,7 +402,8 @@ export function getVocabFromSamplesArray(samples) {
 					name: key,
 					parent_id: null,
 					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
-					values: {}
+					values: {},
+					isleaf: true
 				}
 			}
 			const t = terms[key]
