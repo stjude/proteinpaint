@@ -468,6 +468,10 @@ function renderLastBinInputs(self, tr) {
 		self.q.last_bin.start = +self.dom.last_start_input.property('value')
 		self.dom.last_start_input.restyle()
 		self.renderBinLines(self, self.q)
+		if (self.dom.last_radio_auto.property('checked')) {
+			delete self.q.last_bin.start
+			edit_div.style('display', 'none')
+		}
 	}
 
 	const origLastStart = self.q.last_bin ? self.q.last_bin.start : null

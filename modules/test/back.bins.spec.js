@@ -178,10 +178,28 @@ tape('get_bin_label()', function(test) {
 	const binconfig2 = {
 		bin_size: 1,
 		startinclusive: true,
-		first_bin: {}
+		first_bin: {},
+		results: {
+			summary: {
+				min: 0
+			}
+		}
 	}
-	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig2), '1', 'string label when bin_size=1')
+	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig2), '1', 'integer-rounded label when bin_size=1')
 
+	const binconfig3 = {
+		label_offset: 0.01,
+		rounding: '.1f',
+		bin_size: 3.0,
+		first_bin: {},
+		stopinclusive: true,
+		results: {
+			summary: {
+				min: 0
+			}
+		}
+	}
+	test.equal(b.get_bin_label({ start: 0.1, stop: 0.5 }, binconfig3), '0.1 to 0.5', 'label_offset=0.1')
 	test.end()
 })
 
@@ -290,7 +308,7 @@ tape('compute_bins() non-percentile', function(test) {
 			get_summary
 		),
 		[
-			{ startunbounded: undefined, start: 5, stop: 7, startinclusive: 1, stopinclusive: 0, label: 5 },
+			{ startunbounded: undefined, start: 5, stop: 7, startinclusive: 1, stopinclusive: 0, label: '5 to 6' },
 			{ startinclusive: 1, stopinclusive: 0, start: 7, stop: 8, label: 7 },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 9, label: 8 },
 			{ startinclusive: 1, stopinclusive: 0, start: 9, stop: 10, label: 9 },
@@ -406,6 +424,7 @@ tape('compute_bins() wgs_sample_age', function(test) {
 		type: 'regular',
 		bin_size: 13,
 		stopinclusive: true,
+		rounding: 'd',
 		first_bin: {
 			startunbounded: true,
 			stop,
@@ -416,8 +435,8 @@ tape('compute_bins() wgs_sample_age', function(test) {
 		return { vmin: 4, vmax: 66, max: 66, min: 4 }
 	})
 	test.equal(bins.length, 5, 'should create 5 bins')
-	test.equal(bins[0].label, '≤' + stop, 'should include the first bin stop value in the bin label')
-	test.equal(bins[4].label, '57.1834269032 to 66.0000000000', 'should include decimals in the last bin label')
+	test.equal(bins[0].label, '≤' + Math.round(stop), 'should include the rounded first bin stop value in the bin label')
+	test.equal(bins[4].label, '57 to 66', 'should include decimals in the last bin label')
 	test.end()
 })
 

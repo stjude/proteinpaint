@@ -13,7 +13,7 @@
     "public-stage": "./scripts/deploy.sh public-stage",
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
-    "test": "tape modules/test/*.spec.js && browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js -p [ split-require --out ./public/bin --public ./bin ] | tape-run",
+    "test": "npm run test-back && npm run test-front",
     "test-back": "tape -r babel-register modules/test/*.spec.js",
     "test-front": "browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js -p [ split-require --out ./public/bin --public ./bin ] | tape-run",
     "test-browser": "rm -f public/bin/bundle.*; watchify src/**/test/*.spec.js -p [ split-require --out ./public/bin --public ./bin ] -o public/bin/spec.bundle.js -v",

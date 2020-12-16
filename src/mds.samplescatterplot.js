@@ -127,14 +127,35 @@ export async function init(obj, holder, debugmode) {
 				}
 				const str = str0.toLowerCase()
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) != -1)
+					.filter(d => searchStr(d, str))
 					.transition()
 					.attr('r', radius * 2)
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) == -1)
+					.filter(d => !searchStr(d, str))
 					.transition()
 					.attr('r', 1)
 			})
+
+		function searchStr(data, str) {
+			let found_flag = false
+			let vals = Object.values(data).filter(a => a != null && typeof a != 'number')
+			let new_vals = vals.filter(a => typeof a != 'object').map(x => x.toLowerCase())
+			new_vals.forEach(v => {
+				if (v.toLowerCase().includes(str)) return (found_flag = true)
+			})
+			// if any value is of type 'object', search for all values of the object
+			if (!found_flag) {
+				vals.forEach(v => {
+					if (v && typeof v == 'object') {
+						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						obj_vals.forEach(ov => {
+							if (ov.toLowerCase().includes(str)) return (found_flag = true)
+						})
+					}
+				})
+			}
+			return found_flag
+		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
 
