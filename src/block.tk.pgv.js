@@ -229,7 +229,7 @@ function makeTk(tk, block) {
 		} else if (tk.categories) {
 			// no legend image, but categories
 			// so show categories
-			client.categories2legend(tk.categories, tk.td_legend)
+			client.category2legend(tk.categories, tk.td_legend)
 		}
 
 		if (tk.genevaluetklst) {

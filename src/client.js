@@ -1452,9 +1452,6 @@ export function category2legend(categories, holder) {
 	}
 }
 
-// support misspelled import
-export const categories2legend = category2legend
-
 export function bulk_badline(header, lines) {
 	const np = newpane({ x: 400, y: 60 })
 	np.body.style('margin', '20px 10px 10px 10px')
