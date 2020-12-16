@@ -6,6 +6,7 @@ import { select as d3select, selectAll as d3selectAll, event as d3event } from '
 import blocklazyload from './block.lazyload'
 import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
 import { filterInit } from './common/filter'
+import { getFilteredSamples } from '../modules/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /*
@@ -264,20 +265,24 @@ async function get_data(obj) {
 		}
 	}
 
-	const filterApi = filterInit({
-		btn: obj.filterDiv.append('div'),
-		btnLabel: 'Filter',
-		emptyLabel: '+New Filter',
-		holder: obj.filterDiv.append('div'),
-		vocab: getVocabFromSamplesArray(ad.samples),
-		//termdbConfig: opts.termdbConfig,
-		debug: true,
-		callback(d) {
-			console.log(d)
-		}
-	})
-
-	filterApi.main({ type: 'tvslst', join: '', lst: [] })
+	if (!obj.filterApi) {
+		obj.filterApi = filterInit({
+			btn: obj.filterDiv.append('div'),
+			btnLabel: 'Filter',
+			emptyLabel: '+New Filter',
+			holder: obj.filterDiv.append('div'),
+			vocab: getVocabFromSamplesArray(ad.samples),
+			//termdbConfig: opts.termdbConfig,
+			debug: true,
+			callback(filter) {
+				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
+				console.log(obj.filteredSamples)
+				// re-render scatterplot
+			}
+		})
+		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
+		obj.filteredSamples = [] // may be seeded from the initial render
+	}
 }
 
 function combine_clientserverdata(obj, data) {
