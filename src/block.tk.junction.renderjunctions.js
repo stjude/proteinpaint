@@ -6,7 +6,7 @@ import * as common from './common'
 import { legend_newrow } from './block.legend'
 import { modefold, moderaise, modesample } from './block.tk.junction'
 import { spliceeventanalyze, displayspliceevents } from './block.tk.junction.spliceevent'
-import * as beeswarm from 'd3-beeswarm'
+import { beeswarm } from 'd3-beeswarm'
 import getdefault_exonskipalt from './spliceevent.exonskip.getdefault'
 
 /*
