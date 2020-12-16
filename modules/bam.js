@@ -223,7 +223,6 @@ module.exports = genomes => {
 
 			const q = await get_q(genome, req)
 			res.send(await do_query(q, req))
-			//console.log("q:",q)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -388,7 +387,7 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 			bp_iter = Number.parseInt(segment.segstart) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 			let first_element_of_cigar = 1
 			for (const box of segment.boxes) {
-				if (box.opr == 'S') {
+				if (box.opr == 'S' || box.opr == 'I') {
 					// Checking to see if the first element of cigar is softclip or not
 					if (first_element_of_cigar == 1) {
 						bp_iter = bp_iter - Number.parseInt(box.len)
@@ -405,8 +404,14 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 						else {
 							if (!bplst[j].softclip) {
 								bplst[j].softclip = 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
 							} else {
 								bplst[j].softclip += 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
 							}
 
 							// Check to see if softclip is reference allele or not
@@ -415,40 +420,58 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 							if (box.s[j - bp_iter] == 'A') {
 								if (!bplst[j].softclipA) {
 									bplst[j].softclipA = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								} else {
 									bplst[j].softclipA += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								}
 							}
 
 							if (box.s[j - bp_iter] == 'T') {
 								if (!bplst[j].softclipT) {
 									bplst[j].softclipT = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								} else {
 									bplst[j].softclipT += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								}
 							}
 
 							if (box.s[j - bp_iter] == 'C') {
 								if (!bplst[j].softclipC) {
 									bplst[j].softclipC = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								} else {
 									bplst[j].softclipC += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								}
 							}
 
 							if (box.s[j - bp_iter] == 'G') {
 								if (!bplst[j].softclipG) {
 									bplst[j].softclipG = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								} else {
 									bplst[j].softclipG += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
 								}
 							}
-							//}
-							//}
-
-							//const softclip_seq=segment.seq.substring(box.cidx, box.cidx+box.len)
-							//                                                console.log("b.opr:",b.opr)
-							//                                                console.log("b.cidx:",b.cidx)
 						}
 					}
 					bp_iter += Number.parseInt(box.len)
@@ -460,7 +483,7 @@ function softclip_mismatch_pileup(r, templates, bplst) {
 			}
 
 			for (let i = 0; i < segment.boxes.length; i++) {
-				if (segment.boxes[i].opr == 'X' || segment.boxes[i].opr == 'I') {
+				if (segment.boxes[i].opr == 'X') {
 					//console.log("segment.boxes[i]:",template.segment.boxes[i])
 					bp_iter = Number.parseInt(segment.boxes[i].start) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 					//console.log("r.start:",r.start)
