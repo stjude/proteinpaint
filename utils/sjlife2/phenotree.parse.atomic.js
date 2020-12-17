@@ -72,11 +72,11 @@ const bins = {
 	default: {
 		type: 'regular',
 		bin_size: 5,
-		stopinclusive: true,
+		startinclusive: true,
 		first_bin: {
 			startunbounded: true,
-			stop: 5,
-			stopinclusive: true
+			stop: 5
+			//stopinclusive: true
 		}
 	}
 }
