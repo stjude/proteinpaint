@@ -1,4 +1,5 @@
-// quick treatment for terms like "Age at first occurrence, root canal", assuming years
+// quick treatment for terms like "Age at ....", assuming years
+//
 // does not apply to months
 
 if (process.argv.length != 4) {
@@ -17,6 +18,7 @@ for (const line of fs
 	console.log(line)
 	idset.add(line.split('\t')[0])
 }
+let count = 0
 for (const line of fs
 	.readFileSync(process.argv[2], { encoding: 'utf8' })
 	.trim()
@@ -25,7 +27,9 @@ for (const line of fs
 	const id = l[0]
 	if (idset.has(id)) continue
 	const name = l[1]
-	if (name.startsWith('Age at first ') || name.endsWith(' age')) {
+	if (name.startsWith('Age at ') || name.endsWith(' age')) {
 		console.log(id + '\tbins\tlabel_offset=1;bin_size=10;first_bin.stop=10;last_bin.start=50')
+		count++
 	}
 }
+console.error(count + ' age terms with fixed binning scheme')
