@@ -273,8 +273,8 @@ export function get_bin_label(bin, binconfig) {
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
-		const oper = bin.stopinclusive || (bin.startinclusive && label_offset) ? '≤' : '<' // \u2264
-		const v1 = bc.binLabelFormatter(bin.startinclusive && label_offset ? bin.stop - label_offset : bin.stop)
+		const oper = bin.stopinclusive ? '≤' : '<' // \u2264
+		const v1 = bc.binLabelFormatter(bin.stop) //bin.startinclusive && label_offset ? bin.stop - label_offset : bin.stop)
 		return oper + v1
 	}
 	if (bin.stopunbounded) {
