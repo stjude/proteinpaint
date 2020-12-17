@@ -276,8 +276,19 @@ async function get_data(obj) {
 			debug: true,
 			callback(filter) {
 				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
-				console.log(obj.filteredSamples)
 				// re-render scatterplot
+				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
+					obj.dotselection
+						.filter(d => obj.filteredSamples.has(d.sample))
+						.transition()
+						.attr('r', radius * 2)
+					obj.dotselection
+						.filter(d => !obj.filteredSamples.has(d.sample))
+						.transition()
+						.attr('r', 1)
+				} else {
+					obj.dotselection.transition().attr('r', radius)
+				}
 			}
 		})
 		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
