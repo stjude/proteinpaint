@@ -120,11 +120,103 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	test.end()
 })
 
-tape('get_bin_label()', function(test) {
+tape('get_bin_label(), label_offset>0', function(test) {
 	// test smaller helper functions first since they
 	// tend to get used in larger functions and the
 	// testing sequence would help isolate the cause(s)
 	// of multiple failing tests
+	const binconfig = {
+		bin_size: 3,
+		startinclusive: true,
+		first_bin: {},
+		label_offset: 1,
+		results: {
+			summary: {
+				min: 0
+			}
+		}
+	}
+	test.equal(b.get_bin_label({ startunbounded: 1, stop: 3 }, binconfig), '<3', 'startunbounded')
+
+	test.equal(
+		b.get_bin_label({ startunbounded: 1, stop: 3, stopinclusive: 1 }, binconfig),
+		'≤3',
+		'startunbounded + stopinclusive'
+	)
+
+	test.deepEqual(b.get_bin_label({ stopunbounded: 1, start: 30 }, binconfig), '>30', 'stopunbounded')
+
+	test.equal(
+		b.get_bin_label({ stopunbounded: 1, start: 25, startinclusive: 1 }, binconfig),
+		'≥25',
+		'stopunbounded + startinclusive'
+	)
+
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 5, startinclusive: 1 }, binconfig),
+		'1 to <5',
+		'startinclusive and not stopinclusive'
+	)
+
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 5, stopinclusive: 1, startinclusive: false }, binconfig),
+		'>1 to 5',
+		'not startinclusive but stopinclusive, so IGNORE label_offset'
+	)
+
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 5, stopinclusive: 1, startinclusive: 1 }, binconfig),
+		'1 to 5',
+		'both startinclusive and stopinclusive'
+	)
+
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 5 }, Object.assign({}, binconfig, { startinclusive: false })),
+		'>1 to <5',
+		'neither startinclusive nor stopinclusive'
+	)
+
+	const binconfig2 = {
+		bin_size: 1,
+		startinclusive: true,
+		label_offset: 1,
+		first_bin: {},
+		results: {
+			summary: {
+				min: 0
+			}
+		}
+	}
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 2 }, binconfig2),
+		'1',
+		'single-number label when label_offset == abs(start - stop)'
+	)
+
+	const binconfig3 = {
+		label_offset: 0.01,
+		rounding: '.1f',
+		bin_size: 3.0,
+		first_bin: {},
+		startinclusive: true,
+		results: {
+			summary: {
+				min: 0
+			}
+		}
+	}
+	test.equal(b.get_bin_label({ start: 0.1, stop: 0.5 }, binconfig3), '0.1 to 0.5', 'label_offset=0.1')
+
+	test.equal(
+		b.get_bin_label({ start: 30, stopunbounded: true, startinclusive: true }, binconfig),
+		'≥30',
+		'stopunbounded'
+	)
+
+	test.end()
+})
+
+tape('get_bin_label(), label_offset=0', function(test) {
 	const binconfig = {
 		bin_size: 3,
 		startinclusive: true,
@@ -153,31 +245,32 @@ tape('get_bin_label()', function(test) {
 
 	test.equal(
 		b.get_bin_label({ start: 1, stop: 5, startinclusive: 1 }, binconfig),
-		'1 to 4',
-		'integer start and stop, startinclusive and not stopinclusive'
+		'1 to <5',
+		'startinclusive (IGNORED) and not stopinclusive'
 	)
 
 	test.equal(
-		b.get_bin_label({ start: 1, stop: 5, stopinclusive: 1 }, binconfig),
-		'2 to 5',
-		'integer start and stop, not startinclusive but stopinclusive'
+		b.get_bin_label({ start: 1, stop: 5, stopinclusive: 1, startinclusive: false }, binconfig),
+		'>1 to 5',
+		'not startinclusive but stopinclusive, so IGNORE label_offset'
 	)
 
 	test.equal(
 		b.get_bin_label({ start: 1, stop: 5, stopinclusive: 1, startinclusive: 1 }, binconfig),
 		'1 to 5',
-		'integer start and stop, both startinclusive and stopinclusive'
+		'both startinclusive and stopinclusive'
 	)
 
 	test.equal(
-		b.get_bin_label({ start: 1, stop: 5 }, binconfig),
-		'2 to 4',
-		'integer start and stop, neither startinclusive nor stopinclusive'
+		b.get_bin_label({ start: 1, stop: 5 }, Object.assign({}, binconfig, { startinclusive: false })),
+		'>1 to <5',
+		'neither startinclusive nor stopinclusive'
 	)
 
 	const binconfig2 = {
 		bin_size: 1,
 		startinclusive: true,
+		label_offset: 1,
 		first_bin: {},
 		results: {
 			summary: {
@@ -185,21 +278,31 @@ tape('get_bin_label()', function(test) {
 			}
 		}
 	}
-	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig2), '1', 'integer-rounded label when bin_size=1')
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 2 }, binconfig2),
+		'1',
+		'single-number label when label_offset == abs(start - stop)'
+	)
 
 	const binconfig3 = {
-		label_offset: 0.01,
 		rounding: '.1f',
 		bin_size: 3.0,
 		first_bin: {},
-		stopinclusive: true,
+		startinclusive: true,
 		results: {
 			summary: {
 				min: 0
 			}
 		}
 	}
-	test.equal(b.get_bin_label({ start: 0.1, stop: 0.5 }, binconfig3), '0.1 to 0.5', 'label_offset=0.1')
+	test.equal(b.get_bin_label({ start: 0.1, stop: 0.5 }, binconfig3), '0.1 to <0.5', 'startinclusive IGNORED')
+
+	test.equal(
+		b.get_bin_label({ start: 30, stopunbounded: true, startinclusive: true }, binconfig),
+		'≥30',
+		'stopunbounded'
+	)
+
 	test.end()
 })
 
@@ -240,8 +343,6 @@ tape('compute_bins() unbounded', function(test) {
 		],
 		'should override start_percentile or start with startunbounded'
 	)
-
-	// stopunbounded
 
 	test.end()
 })

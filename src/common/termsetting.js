@@ -342,6 +342,11 @@ export function termsetting_fill_q(q, term) {
 			to be tested if can work with partially declared state
 			always copies from .bins.default
 			*/
+
+			// rounding and label_offset may have to defined separately within bins.default or bins.less,
+			// for now assume that the same values will apply to both bins.default and .less
+			if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
+			if (term.bins.label_offset) term.bins.default.label_offset = term.bins.label_offset
 			rx.copyMerge(q, term.bins.default)
 		}
 		set_hiddenvalues(q, term)
