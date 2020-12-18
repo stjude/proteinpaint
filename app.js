@@ -145,10 +145,14 @@ if (serverconfig.jwt) {
 	})
 }
 
-// hardcoded basepath='/portal/' value, should be
-// defined later as serverconfig.basepath
-// -- not optimal since this redirect results in two HTTP requests
-// -- much better is if express.js simply rerouted within the same request
+// hardcoded basepath='/portal/' value, should be defined later as serverconfig.basepath
+app.get('/portal/genes/:gene', async (req, res) => {
+	const file = path.join(process.cwd(), './public/portal/index.html')
+	res.header('Content-Type', 'text/html')
+	res.send(await fs.readFileSync(file))
+})
+// this redirect is not optimal since it results in two HTTP requests
+// -- much better if express.js simply rerouted within the same data request
 app.get('/portal/:actualroute', (req, res) => {
 	res.redirect('/' + req.params.actualroute)
 })

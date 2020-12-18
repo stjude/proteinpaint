@@ -45,7 +45,9 @@ export function getPpComponent(React) {
 			}
 			if (window.location.pathname) {
 				const url_split = window.location.pathname.split('/')
-				if (url_split[2] == 'genes') params['gene'] = url_split[3]
+				// do not hardcode the position of /genes/ in the pathname
+				const i = url_split.findIndex(d => d === 'genes')
+				if (i !== -1) params.gene = url_split[i + 1]
 			}
 			return params
 		}

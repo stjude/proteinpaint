@@ -33,15 +33,18 @@ export default class App extends React.Component {
 		super()
 		const params = getUrlParams()
 		let set_id
-		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:'))
+		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
 			set_id = params.filters.content[0].content.value[0].split(':').pop()
+		}
+		let gene = genes.find(g => g.transcript == params.gene)
+		if (!gene) gene = genes[0]
 		this.state = {
 			message,
 			dataKey: 'abc123',
 			host: 'http://localhost:3000',
 			basepath: '/',
 			genome: 'hg38',
-			gene: genes[0].name,
+			gene: gene.name,
 			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',
 			set_id_flag: set_id != null, // false,
 			set_id_editing: false,
@@ -56,10 +59,9 @@ export default class App extends React.Component {
 			host: this.state.host,
 			basepath: this.state.basepath,
 			genome: this.state.genome,
-			gene: genes.find(g => g.name == this.state.gene).transcript,
 			token: this.state.token
 		}
-		window.history.replaceState(null, '', `/portal/genes/${genes.find(g => g.name == this.state.gene).transcript}`)
+		window.history.replaceState(null, '', `/portal/genes/${gene.transcript}`)
 		this.save()
 	}
 	render() {
@@ -156,9 +158,8 @@ export default class App extends React.Component {
 	}
 	changeGene(gene) {
 		const transcript = genes.find(d => d.name == gene).transcript
-		if (this.state.set_id_flag) {
-			window.history.replaceState(null, '', `/portal/genes/${transcript}${window.location.search}`)
-		} else window.history.replaceState(null, '', `/portal/genes/${transcript}`)
+		const params = this.state.set_id_flag ? window.location.search : ''
+		window.history.replaceState(null, '', `/portal/genes/${transcript}${params}`)
 		this.setState({ gene })
 	}
 	ApplySet() {
@@ -219,6 +220,12 @@ function getUrlParams() {
 		})
 	if (params.filters) {
 		params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+	}
+	if (window.location.pathname) {
+		const url_split = window.location.pathname.split('/')
+		// do not hardcode the position of /genes/ in the pathname
+		const i = url_split.findIndex(d => d === 'genes')
+		if (i !== -1) params.gene = url_split[i + 1]
 	}
 	return params
 }
