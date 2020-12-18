@@ -259,7 +259,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
+	// console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -664,6 +664,7 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 				OR
 				(
 					b.unannotated=0 AND
+					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
 					(
 						b.startunbounded=1
 						OR v>b.start
