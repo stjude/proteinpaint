@@ -455,11 +455,25 @@ function init_plot(obj) {
 			.attr('fill', d => d.color)
 			.attr('r', radius)
 			.on('mouseover', d => {
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
 				)
 			})
 			.on('mouseout', d => {
+				obj.tip.hide()
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
 				)
@@ -487,10 +501,24 @@ function init_plot(obj) {
 			.on('mouseover', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
 				svg.style('cursor', 'move')
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
 			})
 			.on('mouseout', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
 				svg.style('cursor', 'auto')
+				obj.tip.hide()
 			})
 			.on('mousedown', d => {
 				d3event.preventDefault()

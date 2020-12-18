@@ -135,7 +135,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const summary = summaryfxn(percentiles)
 	if (!summary || typeof summary !== 'object') throw 'invalid returned value by summaryfxn'
 	bc.results = { summary }
-	setNumDecimalsFormatter(bc)
+	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
 
 	const orderedLabels = []
 	const min = bc.first_bin.startunbounded
@@ -240,9 +240,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	return bins
 }
 
-function setNumDecimalsFormatter(bc) {
-	if (bc.binLabelFormatter) return
-	bc.binLabelFormatter = d3format.format('rounding' in bc ? bc.rounding : 'd')
+function getNumDecimalsFormatter(bc) {
+	return d3format.format('rounding' in bc ? bc.rounding : 'd')
 }
 
 export function get_bin_label(bin, binconfig) {
@@ -250,62 +249,60 @@ export function get_bin_label(bin, binconfig) {
   Generate a numeric bin label given a bin configuration
 */
 	const bc = binconfig
-	setNumDecimalsFormatter(bc)
+	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
+	if (!bin.startunbounded && !bin.stopunbounded && !('startinclusive' in bin) && !('stopinclusive' in bin)) {
+		if (bc.startinclusive) bin.startinclusive = true
+		else if (bc.stopinclusive) bin.stopinclusive = true
+	}
+
+	const label_offset = 'label_offset' in bc ? bc.label_offset : 0
+	const min = !bc.first_bin
+		? bc.results.summary.min
+		: 'start' in bc.first_bin
+		? bc.first_bin.start
+		: 'start_percentile' in bc.first_bin
+		? bc.results.summary['p' + bc.first_bin.start_percentile]
+		: bc.results.summary.min
+	const max = !bc.last_bin
+		? bc.results.summary.max
+		: 'stop' in bc.last_bin
+		? bc.last_bin.stop
+		: 'stop_percentile' in bc.last_bin
+		? bc.results.summary['p' + bc.last_bin.stop_percentile]
+		: bc.results.summary.max
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
-		const oper = bin.stopinclusive ? '\u2264' : '<'
-		const v1 = bc.binLabelFormatter(bin.stop)
-		bin.stop = +v1
+		const oper = bin.stopinclusive ? '≤' : '<' // \u2264
+		const v1 = bc.binLabelFormatter(bin.stop) //bin.startinclusive && label_offset ? bin.stop - label_offset : bin.stop)
 		return oper + v1
 	}
 	if (bin.stopunbounded) {
-		const oper = bin.startinclusive ? '\u2265' : '>'
-		const v0 = bc.binLabelFormatter(bin.start)
-		bin.start = +v0
+		const oper = bin.startinclusive /*|| label_offset*/ ? '≥' : '>' // \u2265
+		const v0 = bc.binLabelFormatter(bin.start) //bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset)
 		return oper + v0
 	}
 
 	// two-sided bins
-	// label cannot be the same as unbounded bins
-	// otherwise, it can generate the same label ">15" for the last two bins (the last is stopunbounded)
-	if (Number.isInteger(bc.bin_size)) {
-		// bin size is integer, make nicer label
-		if (bc.bin_size == 1 && Math.abs(bin.start - bin.stop) === 1) {
-			// bin size is 1; use just start value as label, not a range
+	if (label_offset && bin.startinclusive && !bin.stopinclusive) {
+		if (Math.abs(bin.start - bin.stop) === label_offset) {
+			// make a simpler label when the range simply spans the bin_size
 			return '' + bin.start
-		}
-		if (Number.isInteger(bin.start) || Number.isInteger(bin.stop)) {
-			const label_offset = 'label_offset' in binconfig ? binconfig.label_offset : 1
-			const min =
-				'start' in binconfig.first_bin
-					? binconfig.first_bin.start
-					: 'start_percentile' in binconfig.first_bin
-					? binconfig.results.summary['p' + binconfig.first_bin.start_percentile]
-					: binconfig.results.summary.min
-			const v0 = bc.binLabelFormatter(bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset) // bin.start - 1 : bin.start
-			const max = !binconfig.last_bin
-				? binconfig.results.summary.max
-				: 'stop' in binconfig.last_bin
-				? binconfig.first_bin.stop
-				: 'stop_percentile' in binconfig.last_bin
-				? binconfig.results.summary['p' + binconfig.last_bin.stop_percentile]
-				: binconfig.results.summary.max
-			const v1 = bc.binLabelFormatter(bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset) // bin.stop - 1 : bin.stop
+		} else {
+			const v0 = bc.binLabelFormatter(bin.start)
+			const v1 = bc.binLabelFormatter(bin.stop - label_offset)
+			// ensure that last two bin labels make sense (the last is stopunbounded)
 			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
 		}
-		const v0 = bc.binLabelFormatter(bin.start)
-		const v1 = bc.binLabelFormatter(bin.stop)
-		return v0 + ' to ' + v1
+	} else {
+		// stop_inclusive || label_offset == 0
+		const oper0 = bin.startinclusive ? '' : '>'
+		const oper1 = bin.stopinclusive ? '' : '<'
+		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
+		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
+		return oper0 + v0 + ' to ' + oper1 + v1
 	}
-
-	// bin size not integer
-	const oper0 = bc.startinclusive || bin.startinclusive ? '≥' : '>'
-	const oper1 = bc.stopinclusive || bin.stopinclusive ? '≤' : '<'
-	const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
-	const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
-	return oper0 + v0 + ' to ' + oper1 + v1
 }
 
 export function target_percentiles(binconfig) {

@@ -11,6 +11,7 @@
 #node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annotation.admix.sjlife
 #node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 
+node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig > keep/termjson 2>diagnostic_messages.txt
 sh ~/proteinpaint/utils/sjlife2/phenotree.makeentiretree.sh
 node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
