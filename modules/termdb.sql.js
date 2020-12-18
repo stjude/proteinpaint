@@ -663,7 +663,7 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 				( b.unannotated=1 AND v=b.start )
 				OR
 				(
-					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
+					b.unannotated=0 AND
 					(
 						b.startunbounded=1
 						OR v>b.start
