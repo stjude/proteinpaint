@@ -198,6 +198,28 @@ class Filter {
 			return getNormalRoot(parentCopy)
 		}
 	}
+	getAdjustedRoot($id, join) {
+		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
+		if (join == 'and') {
+			return rootCopy
+		} else {
+			const parentCopy = findParent(rootCopy, $id)
+			if (!parentCopy) return { type: 'tvslst', in: true, join: 'and', lst: [] }
+			const i = parentCopy.lst.findIndex(f => f.$id === parentCopy.$id)
+			if (i == -1) return { type: 'tvslst', in: true, join: 'and', lst: [] }
+			parentCopy.lst.splice(i, 1)
+			const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
+			if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
+				return getNormalRoot({
+					type: 'tvslst',
+					join: 'and',
+					lst: [cohortFilter, parentCopy]
+				})
+			} else {
+				return getNormalRoot(parentCopy)
+			}
+		}
+	}
 	setVocabApi() {
 		if (!this.vocabApi) {
 			const app = {
@@ -779,6 +801,10 @@ function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
+		const rootFilterCopy = self.activeData
+			? self.getAdjustedRoot(self.activeData.filter.$id, d)
+			: JSON.parse(self.rawCopy)
+
 		const termdb = await import('../termdb/app')
 		termdb.appInit(null, {
 			holder: self.dom.termSrcDiv,
@@ -788,7 +814,7 @@ function setInteractivity(self) {
 				nav: {
 					header_mode: 'search_only'
 				},
-				termfilter: { filter: JSON.parse(self.rawCopy) }
+				termfilter: { filter: rootFilterCopy }
 			},
 			tree: {
 				disable_terms:
@@ -880,7 +906,7 @@ function setInteractivity(self) {
 				nav: {
 					header_mode: 'search_only'
 				},
-				termfilter: { filter: JSON.parse(self.rawCopy) }
+				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) }
 			},
 			tree: {
 				disable_terms:
