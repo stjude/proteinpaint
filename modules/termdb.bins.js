@@ -255,20 +255,21 @@ export function get_bin_label(bin, binconfig) {
 		else if (bc.stopinclusive) bin.stopinclusive = true
 	}
 
-	const label_offset = 'label_offset' in binconfig ? binconfig.label_offset : 0
-	const min =
-		'start' in binconfig.first_bin
-			? binconfig.first_bin.start
-			: 'start_percentile' in binconfig.first_bin
-			? binconfig.results.summary['p' + binconfig.first_bin.start_percentile]
-			: binconfig.results.summary.min
-	const max = !binconfig.last_bin
-		? binconfig.results.summary.max
-		: 'stop' in binconfig.last_bin
-		? binconfig.first_bin.stop
-		: 'stop_percentile' in binconfig.last_bin
-		? binconfig.results.summary['p' + binconfig.last_bin.stop_percentile]
-		: binconfig.results.summary.max
+	const label_offset = 'label_offset' in bc ? bc.label_offset : 0
+	const min = !bc.first_bin
+		? bc.results.summary.min
+		: 'start' in bc.first_bin
+		? bc.first_bin.start
+		: 'start_percentile' in bc.first_bin
+		? bc.results.summary['p' + bc.first_bin.start_percentile]
+		: bc.results.summary.min
+	const max = !bc.last_bin
+		? bc.results.summary.max
+		: 'stop' in bc.last_bin
+		? bc.last_bin.stop
+		: 'stop_percentile' in bc.last_bin
+		? bc.results.summary['p' + bc.last_bin.stop_percentile]
+		: bc.results.summary.max
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"

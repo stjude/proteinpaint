@@ -127,7 +127,7 @@ tape('default behavior', function(test) {
 	}
 })
 
-tape('column labels', function(test) {
+tape('column and row labels', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { terms: [] }
@@ -135,10 +135,10 @@ tape('column labels', function(test) {
 		termfilter,
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
-				visiblePlotIds: ['sex'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
+				visiblePlotIds: ['agedx'],
 				plots: {
-					sex: {
+					agedx: {
 						settings: { currViews: ['table'] },
 						term: { id: 'agedx' },
 						term2: { id: 'sex' }
@@ -164,7 +164,7 @@ tape('column labels', function(test) {
 					.node()
 					.querySelectorAll('th')
 			].map(elem => elem.innerText),
-			['Male', 'Female', '≤5', '6 to 10', '11 to 15', '16 to 20', '21 to 24'],
+			['Male', 'Female', '<5', '5 to 9', '10 to 14', '15 to 19', '20 to 23'],
 			'should use term.values{key: {label}} as column labels, if available'
 		)
 		test.end()

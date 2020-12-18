@@ -45,26 +45,27 @@ exports.termjson = {
 		unit: 'Years',
 		type: 'float',
 		bins: {
+			label_offset: 1,
 			default: {
+				label_offset: 1,
 				bin_size: 3,
-				stopinclusive: true,
+				startinclusive: true,
 				first_bin: {
 					startunbounded: true,
-					stop: 2,
-					stopinclusive: true
+					stop: 2
 				}
 			},
 			less: {
+				label_offset: 1,
 				bin_size: 5,
-				stopinclusive: true,
+				startinclusive: true,
 				first_bin: {
 					startunbounded: true,
-					stop: 5,
-					stopinclusive: true
+					stop: 5
 				},
 				last_bin: {
-					start: 15,
-					stopunbounded: true
+					stopunbounded: true,
+					start: 15
 				}
 			}
 		},
@@ -120,13 +121,13 @@ exports.termjson = {
 		unit: 'mg/m²',
 		type: 'float',
 		bins: {
+			label_offset: 1,
 			default: {
 				bin_size: 1000,
-				stopinclusive: true,
+				startinclusive: true,
 				first_bin: {
 					startunbounded: true,
-					stop: 2000,
-					stopinclusive: true
+					stop: 2000
 				},
 				last_bin: {
 					stopunbounded: true,

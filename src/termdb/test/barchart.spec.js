@@ -1164,7 +1164,7 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numBars, 2, 'should have 2 bars')
+		test.equal(numBars, 3, 'should have 3 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })
