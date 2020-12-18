@@ -97,11 +97,16 @@ export function sample_match_termvaluesetting(row, filter) {
 		}
 
 		// if one tvslst is matched with an "or" (Set UNION), then sample is okay
-		if (filter.join == 'or' && numberofmatchedterms) return true
+		if (filter.join == 'or') {
+			if (numberofmatchedterms && filter.in) return true
+			if (!numberofmatchedterms && !filter.in) return true
+		}
 	}
 
 	// for join="and" (Set intersection)
-	if (numberofmatchedterms == lst.length) return true
+	return filter.in == (numberofmatchedterms == lst.length)
+	// if (filter.in && numberofmatchedterms == lst.length) return true
+	// if (!filter.in && numberofmatchedterms != lst.length) return true
 }
 
 export function setDatasetAnnotations(item, ds = null) {
