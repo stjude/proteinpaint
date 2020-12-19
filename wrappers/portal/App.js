@@ -38,7 +38,7 @@ export default class App extends React.Component {
 		this.state = {
 			message,
 			dataKey: 'abc123',
-			host: 'http://localhost:3000',
+			host: localStorage.getItem('pphost') ? localStorage.getItem('pphost') : 'http://localhost:3000',
 			basepath: '/',
 			genome: 'hg38',
 			gene: genes[0].name,
