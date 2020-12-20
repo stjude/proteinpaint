@@ -122,7 +122,7 @@ if [[ -d tmpbuild && -f tmpbuild/$APP-$REV.tgz && $(grep -l "https://$HOSTNAME/b
 else 
 	rm -Rf tmpbuild
 	# remote repo not used, use local repo for now
-	mkdir tmpbuild
+	mkdir tmpbuild  # temporary empty workspace for checkedout commit
 	git archive HEAD | tar -x -C tmpbuild/
 
 	cd tmpbuild

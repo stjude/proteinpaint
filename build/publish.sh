@@ -45,7 +45,7 @@ fi
 # get commit sha1
 REV=$(git rev-parse --short HEAD)
 rm -Rf tmppack 
-mkdir tmppack # temporary workspace
+mkdir tmppack # temporary empty workspace for checkedout commit
 git archive HEAD | tar -x -C tmppack/
 #
 # to-do?
