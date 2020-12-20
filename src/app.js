@@ -161,8 +161,6 @@ export function runproteinpaint(arg) {
 	})
 }
 
-window.runproteinpaint = runproteinpaint
-
 function makeheader(app, obj, jwt) {
 	/*
 	app
