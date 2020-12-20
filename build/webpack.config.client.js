@@ -4,9 +4,9 @@ const path = require('path')
 module.exports = {
 	target: 'web',
 	mode: 'production', // default
-	entry: './src/app.js',
+	entry: path.join(__dirname, '/../src/app.js'),
 	output: {
-		path: __dirname + '/public/bin',
+		path: path.join(__dirname, '/../public/bin'),
 		filename: 'proteinpaint.js',
 		publicPath: '/bin/',
 		jsonpFunction: 'ppJsonp',
