@@ -1,7 +1,6 @@
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import * as client from './client'
 import {findgenemodel_bysymbol} from './gene'
-import 'normalize.css'
 import './style.css'
 import * as common from './common'
 import {bulkui,bulkembed} from './bulk.ui'

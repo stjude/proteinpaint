@@ -1,8 +1,10 @@
 import { runproteinpaint } from './app'
 import { deepEqual } from './common/rx.core'
-import { getLolliplotData } from './gdc/gdc.views'
+export { getLolliplotData } from './gdc/views'
 
-export function getPpReact(React, viewType) {
+export { runproteinpaint }
+
+export function getPpReact(React, dataFxn = null) {
 	class ProteinPaint extends React.Component {
 		constructor(props) {
 			super(props)
@@ -53,8 +55,10 @@ export function getPpReact(React, viewType) {
 		}
 	}
 
-	if (dataFxn == 'gdc-lolliplot') {
-		ProteinPaint.prototype.getData = getLolliplotData
+	if (typeof dataFxn == 'function') {
+		ProteinPaint.prototype.getData = dataFxn
+	} else {
+		throw 'The second argument to getPpReact must be a function that returns runproteinpaint() arguments'
 	}
 
 	return ProteinPaint

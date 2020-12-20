@@ -1,7 +1,7 @@
 import React from 'react'
-import { getGDCLolliplot } from 'pp-react'
+import { getPpReact, getLolliplotData } from '../../main'
 
-const ProteinPaint = getGDCLolliplot(React)
+const PpReact = getPpReact(React, getLolliplotData)
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
@@ -128,14 +128,14 @@ export default class App extends React.Component {
 						type="password"
 					></textarea>
 					<button
-						style={{ ...btn_style, ...align_top }}
+						style={Object.assign({}, btn_style, align_top)}
 						onClick={() => this.editToken()}
 						disabled={this.state.token_editing}
 					>
 						Edit
 					</button>
 					<button
-						style={{ ...btn_style, ...align_top }}
+						style={Object.assign({}, btn_style, align_top)}
 						onClick={() => this.submitToken()}
 						disabled={!this.state.token_editing}
 					>
@@ -143,7 +143,7 @@ export default class App extends React.Component {
 					</button>
 				</div>
 				<div>
-					<ProteinPaint dataKey={this.state.dataKey} />
+					<PpReact dataKey={this.state.dataKey} />
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
