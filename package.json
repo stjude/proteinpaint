@@ -10,6 +10,8 @@
     "start": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
     "server": "npm start",
     "build-server": "webpack --config=build/webpack.config.server.js --mode=production",
+    "rolldev": "rollup -c build/rollup.config.js -w",
+    "rollprod": "rollup -c build/rollup.config.js",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
     "ppr2": "sh ./scripts/deploy.ppr.sh http://localhost:3001",
@@ -51,6 +53,8 @@
   "author": "",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-cli": "^6.18.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.1",
@@ -65,6 +69,8 @@
     "electron-rebuild": "^1.8.8",
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
+    "rollup": "^2.35.1",
+    "rollup-plugin-postcss": "^3.1.8",
     "split-require": "^3.1.2",
     "style-loader": "^0.13.1",
     "tape": "^4.10.1",
@@ -102,6 +108,9 @@
     "node-fetch": "^2.6.1",
     "normalize.css": "^4.2.0",
     "partjson": "^0.58.1"
+  },
+  "peerDependencies": {
+    "react": "^17.0.1"
   },
   "repository": {
     "type": "git",

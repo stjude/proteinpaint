@@ -26,7 +26,7 @@ fi
 if [[ "$DEST" != "dry" && "$DEST" != "registry" && "$DEST" != "tgz"  ]]; then
 	echo "Usage:
 
-	./scripts/publish.sh [ "" | dry | registry | dry | tgz ]
+	./build/publish.sh [ "" | dry | registry | dry | tgz ]
 
 	- no argument defaults to dry
 	- dry: equivalent to 'npm publish --dry-run'
@@ -65,11 +65,14 @@ ln -s ../node_modules node_modules
 # BUILD
 ########
 
-# create webpack bundles
-echo -e "\nPacking the server bundle ...\n"
+# create bundles
+echo -e "\nBundling the server bin ...\n"
 npm run build-server
-echo -e "\nPacking the client bundle ...\n"
-npx webpack --config=scripts/webpack.config.build.js --env.url="__PP_URL__"
+echo -e "\nBundling the client bin ...\n"
+npx webpack --config=build/webpack.config.build.js --env.url="__PP_URL__"
+echo -e "\nPacking the client main ...\n"
+npx rollup -c ../build/rollup.config.js
+
 
 
 ##########

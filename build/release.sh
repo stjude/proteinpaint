@@ -9,7 +9,9 @@ PKGVER="stjude-proteinpaint-$TAG.tgz"
 
 if [[ ! -d tmppack || ! -f tmppack/$PKGVER ]]; then
 	# create the tarball as needed
-	. ./scripts/publish.sh tgz
+	. ./build/publish.sh tgz
+else 
+	echo "Reusing a previously built and matching package"
 fi
 
 cd ./tmppack
@@ -27,11 +29,15 @@ rm -rf gds
 mkdir gds
 mkdir gds/genome
 mkdir gds/dataset
-cp ../dataset/gdc.hg38.js gds/dataset/
-cp -r ../wrappers/portal/public gds/public
+cp ../../dataset/gdc.hg38.js gds/dataset/
+# the additional portal files are dev copies for demonstration only,
+# they are neither committed nor included in the package.json:files
 mkdir gds/public
+cp -r ../wrappers/portal/public gds/public
 mv gds/public/public gds/public/portal
 tar -czf gds.tgz gds 
+
+
 # 
 # requires these tunnel settings in ~/.ssh/config:
 # 
