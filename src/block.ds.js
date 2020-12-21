@@ -2194,7 +2194,6 @@ function dsqueryresult_geneexpression(data, tk, block) {
 		return
 	}
 	if (data.config.maf) {
-		console.log(data.config.maf)
 		try {
 			data.config.maf.get = eval('(' + data.config.maf.get + ')')
 		} catch (e) {
