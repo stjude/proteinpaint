@@ -1,5 +1,6 @@
 const fs = require('fs')
 const serverconfig = require('./serverconfig.json')
+const execSync = require('child_process').execSync
 
 // within the container, the Dockerfile uses
 // a pre-determined port and directories
@@ -13,3 +14,10 @@ Object.assign(serverconfig, {
 })
 
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig))
+
+const publicPath = serverconfig.URL ? serverconfig.URL : ''
+console.log(`Setting the dynamic bundle path to '${publicPath}'`)
+execSync(`mv ./public/bin/proteinpaint.js ./public/bin/proteinpaint-bkup.js`)
+execSync(
+	`sed 's%__PP_URL__/bin/%${publicPath}/bin/%' < ./public/bin/proteinpaint-bkup.js > ./public/bin/proteinpaint.js`
+)

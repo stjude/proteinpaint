@@ -36,28 +36,14 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
 	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary -P /home/root/pp/tools/
 
-WORKDIR /home/root/pp/app
-COPY package.json ./
+WORKDIR /home/root/app/pp
+ADD tmppack/package ./
 RUN npm install
-
-ADD build ./build
-COPY app.js ./
-COPY stjude-proteinpaint-1.7.0.tgz ./
-RUN tar -xzf stjude-proteinpaint-1.7.0.tgz --strip-components=1
-
-# customize by removing or removing files and directories
-RUN rm server.js
-RUN rm -r genome
-RUN rm -r dataset
-ADD src ./src
-ADD genome ./genome
-ADD dataset ./dataset
-ADD modules ./modules
-
 COPY serverconfig.json ./
 COPY build/set-container-config.js ./
 RUN node set-container-config
 
-RUN npx webpack --config=build/webpack.config.server.js --mode=development
+ADD genome ./genome
+ADD dataset ./dataset
 
 CMD [ "node", "server.js" ]

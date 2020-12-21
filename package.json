@@ -28,8 +28,7 @@
     "rollprod": "rm -rf dist && rollup -c build/rollup.config.js",
     "release-patch": "./build/release.sh patch",
     "release-minor": "./build/release.sh minor",
-    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1",
-    "dockdeps": "docker build --file ./build/Dockerfile --tag ppdeps:latest ."
+    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
   },
   "prettier": {
     "semi": false,
