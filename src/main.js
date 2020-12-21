@@ -1,10 +1,10 @@
 import { runproteinpaint } from './app'
 import { deepEqual } from './common/rx.core'
-export { getLolliplotData } from './gdc/views'
+export { getLolliplotTrack } from './gdc/views'
 
 export { runproteinpaint }
 
-export function getPpReact(React, dataFxn = null) {
+export function getPpReact(React, getTrack) {
 	class ProteinPaint extends React.Component {
 		constructor(props) {
 			super(props)
@@ -24,7 +24,7 @@ export function getPpReact(React, dataFxn = null) {
 			return React.createElement('div', { ref: 'ppHolderRef' }, '')
 		}
 		runpp() {
-			const data = this.getData()
+			const data = this.getTrack()
 			if (deepEqual(data, this.currentData)) return
 			this.currentData = data
 			const pp_holder = this.refs.ppHolderRef.querySelector('.sja_root_holder')
@@ -55,8 +55,8 @@ export function getPpReact(React, dataFxn = null) {
 		}
 	}
 
-	if (typeof dataFxn == 'function') {
-		ProteinPaint.prototype.getData = dataFxn
+	if (typeof getTrack == 'function') {
+		ProteinPaint.prototype.getTrack = getTrack
 	} else {
 		throw 'The second argument to getPpReact must be a function that returns runproteinpaint() arguments'
 	}

@@ -211,7 +211,7 @@ if (serverconfig.debugmode) {
 		res.send(await fs.readFileSync(file))
 	})
 	app.get('/portal/genes/:gene', async (req, res) => {
-		const file = path.join(process.cwd(), './public/portal/index.html')
+		const file = path.join(process.cwd(), './public/testrun.html')
 		res.header('Content-Type', 'text/html')
 		res.send(await fs.readFileSync(file))
 	})

@@ -1,7 +1,7 @@
 import React from 'react'
-import { getPpReact, getLolliplotData } from '../../main'
+import { getPpReact, getLolliplotTrack } from '../../main'
 
-const PpReact = getPpReact(React, getLolliplotData)
+const PpReact = getPpReact(React, getLolliplotTrack)
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
@@ -42,7 +42,7 @@ export default class App extends React.Component {
 			message,
 			dataKey: 'abc123',
 			host: localStorage.getItem('pphost') ? localStorage.getItem('pphost') : 'http://localhost:3000',
-			basepath: '/',
+			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
 			genome: 'hg38',
 			gene: gene.name,
 			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',

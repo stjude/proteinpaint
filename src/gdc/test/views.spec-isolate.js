@@ -25,6 +25,7 @@ tape('\n', test => {
 tape('lolliplot', async test => {
 	test.timeoutAfter(6000)
 	test.plan(1)
+	window.history.replaceState('', null, '/testrun.html')
 	const holder = select('body').append('div')
 	// give time for browserify split-require plugin to set the bin path
 	// before the App uses history.replaceState() to change the URL pathname
