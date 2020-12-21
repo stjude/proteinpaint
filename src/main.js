@@ -21,10 +21,13 @@ export function getPpReact(React, getTrack) {
 		}
 		render() {
 			// avoid jsx syntax to simplify bundling requirements
+			// since this is only a very minimal wrapper
 			return React.createElement('div', { ref: 'ppHolderRef' }, '')
 		}
 		runpp() {
 			const data = this.getTrack()
+			// do not cause unnecessary re-render if the track argument
+			// is the same as the last render
 			if (deepEqual(data, this.currentData)) return
 			this.currentData = data
 			const pp_holder = this.refs.ppHolderRef.querySelector('.sja_root_holder')

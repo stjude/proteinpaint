@@ -23,7 +23,7 @@ tape('\n', test => {
 })
 
 tape('lolliplot', async test => {
-	test.timeoutAfter(6000)
+	test.timeoutAfter(8000)
 	test.plan(1)
 	window.history.replaceState('', null, '/testrun.html')
 	const holder = select('body').append('div')
@@ -31,7 +31,7 @@ tape('lolliplot', async test => {
 	// before the App uses history.replaceState() to change the URL pathname
 	await sleep(100)
 	ReactDOM.render(<App />, holder.node())
-	await sleep(4000)
+	await sleep(5000)
 	const numCircles = 256
 	test.equal(
 		holder.selectAll('circle').size(),

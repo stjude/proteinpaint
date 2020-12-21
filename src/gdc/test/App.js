@@ -31,6 +31,8 @@ const genes = [
 export default class App extends React.Component {
 	constructor() {
 		super()
+		this.urlpathname = ''
+		this.urlparams = ''
 		const params = getUrlParams()
 		let set_id
 		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
@@ -43,7 +45,6 @@ export default class App extends React.Component {
 			dataKey: 'abc123',
 			host: localStorage.getItem('pphost') ? localStorage.getItem('pphost') : 'http://localhost:3000',
 			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
-			genome: 'hg38',
 			gene: gene.name,
 			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',
 			set_id_flag: set_id != null, // false,
@@ -58,7 +59,6 @@ export default class App extends React.Component {
 		this.data = {
 			host: this.state.host,
 			basepath: this.state.basepath,
-			genome: this.state.genome,
 			token: this.state.token
 		}
 		window.history.replaceState(null, '', `/portal/genes/${gene.transcript}`)
@@ -156,19 +156,19 @@ export default class App extends React.Component {
 		Object.assign(this.data, data)
 		localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
+	replaceURLHistory() {
+		window.history.replaceState(null, '', `${this.urlpathname}${this.urlparams}`)
+	}
 	changeGene(gene) {
 		const transcript = genes.find(d => d.name == gene).transcript
-		const params = this.state.set_id_flag ? window.location.search : ''
-		window.history.replaceState(null, '', `/portal/genes/${transcript}${params}`)
+		this.urlpathname = `/portal/genes/${transcript}`
+		this.replaceURLHistory()
 		this.setState({ gene })
 	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		if (!set_id_flag) window.history.replaceState(null, '', window.location.pathname)
-		else {
-			const encoded_filter = createUrlFilters(this.state.set_id)
-			window.history.replaceState(null, '', `${window.location.pathname}?filters=${encoded_filter}`)
-		}
+		this.urlparams = createUrlFilters(set_id_flag ? this.state.set_id : null)
+		this.replaceURLHistory()
 		this.setState({ set_id_flag })
 	}
 	editSetid() {
@@ -176,8 +176,8 @@ export default class App extends React.Component {
 	}
 	submitSetid() {
 		const set_id = this.setidRef.current.value
-		const encoded_filter = createUrlFilters(set_id)
-		window.history.replaceState(null, '', `/portal/?filters=${encoded_filter}`)
+		this.urlparams = createUrlFilters(set_id)
+		this.replaceURLHistory()
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,
@@ -205,6 +205,8 @@ export default class App extends React.Component {
 		this.setState({ token_flag })
 	}
 	updateTime() {
+		// simulate app state changes that should NOT cause
+		// the PpReact wrapper to re-render
 		this.setState({ lastUnrelatedUpdate: +new Date() })
 	}
 }
@@ -231,6 +233,7 @@ function getUrlParams() {
 }
 
 function createUrlFilters(set_id) {
+	if (!set_id) return ''
 	const filter_obj = {
 		op: 'AND',
 		content: [
@@ -241,5 +244,5 @@ function createUrlFilters(set_id) {
 		]
 	}
 	const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
-	return encoded_filter
+	return '?filters=' + encoded_filter
 }
