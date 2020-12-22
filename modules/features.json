@@ -9,7 +9,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/bigwig.html",
                 "url": "https://proteinpaint.stjude.org/?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9",
+                "tutorial": ""
             },
             "searchterms": ["coverage", "numeric"]
         },
@@ -20,9 +21,44 @@
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "buttons": {
-                "example": "https://ppr.stjude.org/examples/pgv.html",
+                "example": {
+                    "host":"https://proteinpaint.stjude.org",
+                    "holder": "document.getElementById('a')",
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome":"hg19",
+                    "nativetracks":"RefGene",
+                    "position":"chr14:24549316-24584223",
+                    "tracks":[
+                        {
+                            "type":"profilegenevalue",
+                            "genevaluetrack":{
+                                "file":"proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz"
+                            },
+                            "genevaluetype":"FPKM",
+                            "legendimg":{
+                                "file":"proteinpaint_demo/hg19/pgv/HMM.png",
+                                "width":400,
+                                "height":400
+                            },
+                            "name":"Demo chromHMM",
+                            "genevaluematchname":"sampleID",
+                            "tracks":[
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample1.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 1","sampleID":"101"},
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample2.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 2","sampleID":"102"},
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample3.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 3","sampleID":"103"},
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample4.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 4","sampleID":"104"},
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample5.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 5","sampleID":"105"},
+                            {"type":"bedj","file":"proteinpaint_demo/hg19/pgv/sample6.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Sample 6","sampleID":"106"}
+                            ]
+                        }
+	                ]
+                },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
+                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -35,7 +71,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/exprank.html",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -48,7 +85,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/hic.html",
                 "url": "https://ppr.stjude.org/?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
-                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
+                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -61,7 +99,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/bedj.html",
                 "url": "https://ppr.stjude.org/?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
-                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
+                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A ",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -74,7 +113,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/junction.html",
                 "url": "https://ppr.stjude.org/?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
-                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
+                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -87,7 +127,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/bigwig.stranded.html",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -100,7 +141,8 @@
             "buttons": {
                 "example": "",
                 "url": "https://ppr.stjude.org/?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
-                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
+                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -113,7 +155,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/aicheck.html",
                 "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
-                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -126,7 +169,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/clinvar.html",
                 "url": "https://ppr.stjude.org/?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
-                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
+                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -139,7 +183,8 @@
             "buttons": {
                 "example": "",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -152,7 +197,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/ase.html",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -165,7 +211,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/bam.html",
                 "url": "",
-                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0",
+                "tutorial": ""
             },
             "searchterms": ["BLAT"]
         },
@@ -178,7 +225,8 @@
             "buttons": {
                 "example": "",
                 "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
-                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
+                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -191,7 +239,8 @@
             "buttons": {
                 "example": "https://proteinpaint.stjude.org/FusionEditor/",
                 "url": "",
-                "doc": ""
+                "doc": "",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -204,7 +253,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/mavb.html",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
+                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -217,7 +267,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/examples/tsne.custom.html",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
+                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -230,7 +281,8 @@
             "buttons": {
                 "example": "",
                 "url": "https://ppr.stjude.org/?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
-                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit",
+                "tutorial": ""
             },
             "searchterms": []
         },
@@ -243,7 +295,8 @@
             "buttons": {
                 "example": "https://ppr.stjude.org/?study=ClinicalPilot ",
                 "url": "",
-                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
+                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing",
+                "tutorial": ""
             },
             "searchterms": ["heatmap", "heat map"]
         }
