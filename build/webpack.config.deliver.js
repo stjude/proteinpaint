@@ -1,6 +1,6 @@
 const webpack = require('webpack')
-const configfront = require('../webpack.config')
-const configback = require('../webpack.config.server')()
+const configfront = require('./webpack.config.client')
+const configback = require('./webpack.config.server')()
 const path = require('path')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 

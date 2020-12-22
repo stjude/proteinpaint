@@ -547,6 +547,7 @@ tape('Numerical term: integer custom bins', async test => {
 				bins: {
 					default: {
 						bin_size: 300,
+						label_offset: 1,
 						stopinclusive: true,
 						first_bin: { startunbounded: true, stop: 1990, stopinclusive: true }
 					}
@@ -577,7 +578,13 @@ tape('Numerical term: integer custom bins', async test => {
 						start: 1990
 						//label: '>1990'
 					}
-				]
+				],
+				results: {
+					summary: {
+						min: 1960,
+						max: 2011
+					}
+				}
 			}
 		}
 	})

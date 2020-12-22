@@ -101,11 +101,11 @@ tape('integer overlay', function(test) {
 	}
 
 	function testDisplayModeOptions(scatter) {
-		const viewTd = scatter.Inner.app.getComponents('tree.plots.aaclassic_5.controls.config').Inner.dom.viewTr.node()
-			.lastChild
-		const scatterOpt = [...viewTd.querySelectorAll('[name="pp-termdb-display-mode"]')].filter(
-			elem => elem.value === 'scatter'
-		)[0]
+		const controlsConfig = scatter.Inner.app.getComponents('tree.plots.aaclassic_5.controls.config').Inner
+		const viewTd = controlsConfig.dom.viewTr.node().lastChild
+		const scatterOpt = [
+			...viewTd.querySelectorAll(`[name="pp-termdb-display-mode-${controlsConfig.instanceNum}"]`)
+		].filter(elem => elem.value === 'scatter')[0]
 		if (!scatterOpt) test.fail('missing scatter option in display mode')
 		else {
 			test.equal(

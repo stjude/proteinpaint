@@ -38,6 +38,7 @@ module.exports = (q, res, ds) => {
 	// each row is {sample, value:STR}
 
 	const values = []
+	const distinctValues = new Set()
 	let minvalue = null,
 		maxvalue = null
 	for (const { value } of rows) {
@@ -51,7 +52,8 @@ module.exports = (q, res, ds) => {
 			continue
 		}
 		values.push(v)
-		if (minvalue == null) {
+		distinctValues.add(v)
+		if (minvalue === null) {
 			minvalue = maxvalue = v
 		} else {
 			minvalue = Math.min(minvalue, v)
@@ -64,7 +66,12 @@ module.exports = (q, res, ds) => {
 		.range([xpad, xpad + width])
 
 	const default_ticks_n = 40
-	const ticks_n = maxvalue - minvalue < default_ticks_n ? maxvalue - minvalue : default_ticks_n
+	const ticks_n =
+		term.type == 'integer' && maxvalue - minvalue < default_ticks_n
+			? maxvalue - minvalue
+			: term.type == 'float' && distinctValues.size < default_ticks_n
+			? distinctValues
+			: default_ticks_n
 	// kernal density replaced with histogram
 	// const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)
 	const density = get_histogram(xscale.ticks(ticks_n))(values)

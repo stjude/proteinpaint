@@ -161,6 +161,23 @@ export function getAppApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		destroy() {
+			for (const key in self.components) {
+				const component = self.components[key]
+				if (typeof component.destroy == 'function') {
+					component.destroy()
+				} else if (component.holder) {
+					component.holder.selectAll('*').remove()
+				}
+				delete self.components[key]
+			}
+			if (typeof self.destroy == 'function') self.destroy()
+			self.dom.holder.selectAll('*').remove()
+			for (const key in self.dom) {
+				delete self.dom[key]
+			}
+			delete self.store
 		}
 	}
 
@@ -215,6 +232,22 @@ export function getComponentApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		destroy() {
+			for (const key in self.components) {
+				const component = self.components[key]
+				if (typeof component.destroy == 'function') {
+					component.destroy()
+				} else if (component.holder) {
+					component.holder.selectAll('*').remove()
+				}
+				delete self.components[key]
+			}
+			if (typeof self.destroy == 'function') self.destroy()
+			self.dom.holder.selectAll('*').remove()
+			for (const key in self.dom) {
+				delete self.dom[key]
+			}
 		}
 	}
 	// must not freeze returned api, as getInitFxn() will add api.Inner
@@ -312,6 +345,12 @@ export class Bus {
 			}
 		}, wait)
 		return this
+	}
+
+	destroy() {
+		for (const key in this.events) {
+			delete this.events[key]
+		}
 	}
 }
 

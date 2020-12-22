@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { select, event } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag } from 'd3'
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
@@ -342,6 +342,11 @@ export function termsetting_fill_q(q, term) {
 			to be tested if can work with partially declared state
 			always copies from .bins.default
 			*/
+
+			// rounding and label_offset may have to defined separately within bins.default or bins.less,
+			// for now assume that the same values will apply to both bins.default and .less
+			if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
+			if (term.bins.label_offset) term.bins.default.label_offset = term.bins.label_offset
 			rx.copyMerge(q, term.bins.default)
 		}
 		set_hiddenvalues(q, term)

@@ -17,7 +17,7 @@ cp public/index.html deploys/deliver/proteinpaint/public/
 
 rm -rf deploys/deliver/proteinpaint/public/bin/*
 
-./node_modules/.bin/webpack --config=scripts/webpack.config.deliver.js --progress
+./node_modules/.bin/webpack --config=build/webpack.config.deliver.js --progress
 
 
 cd deploys/deliver/proteinpaint

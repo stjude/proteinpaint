@@ -582,88 +582,6 @@ const variables_genecnv = {
 
 ///////////////////////////////// end of query strings ///////////////
 
-/* flat list of term objects, not hierarchical
-may make a central termdb (or in memory term list)
-and only include a list of term ids in variant2samples.terms[]
-*/
-const ssmCaseAttr = [
-	{
-		name: 'Project',
-		id: 'project',
-		type: 'categorical',
-		get: m => {
-			// the getter will not be passed to client
-			if (m.project) return m.project.project_id
-			return null
-		}
-	},
-	{
-		name: 'Disease',
-		id: 'disease',
-		type: 'categorical',
-		get: m => m.disease_type
-	},
-	{
-		name: 'Primary site',
-		id: 'primary_site',
-		type: 'categorical',
-		get: m => m.primary_site
-	},
-	{
-		name: 'Available variation data',
-		id: 'available_variation_data',
-		type: 'categorical',
-		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
-	},
-	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
-	/*
-	{
-		name: 'Tissue source site',
-		id: 'tissue_source_site',
-		type:'categorical',
-		get: m => {
-			if (m.tissue_source_site) return m.tissue_source_site.name
-			return null
-		}
-	},
-	*/
-	{
-		name: 'Gender',
-		id: 'gender',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.gender
-			return null
-		}
-	},
-	{
-		name: 'Birth year',
-		id: 'year_of_birth',
-		type: 'integer',
-		get: m => {
-			if (m.demographic) return m.demographic.year_of_birth
-			return null
-		}
-	},
-	{
-		name: 'Race',
-		id: 'race',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.race
-			return null
-		}
-	},
-	{
-		name: 'Ethnicity',
-		id: 'ethnicity',
-		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.ethnicity
-			return null
-		}
-	}
-]
 /*
 hardcoding a flat list of terms here
 any possibility of dynamically querying terms from api??
@@ -692,13 +610,6 @@ const terms = [
 		get: m => m.primary_site
 	},
 	{
-		name: 'Available variation data',
-		id: 'available_variation_data',
-		type: 'categorical',
-		get: m => (m.available_variation_data ? m.available_variation_data.join(',') : '')
-	},
-	{ name: 'State', id: 'state', type: 'categorical', get: m => m.state },
-	{
 		name: 'Gender',
 		id: 'gender',
 		type: 'categorical',
@@ -735,8 +646,6 @@ const terms = [
 		}
 	}
 ]
-
-const occurrence_key = 'total' // for the numeric axis showing occurrence
 
 /* this now applies not only to vcf track but also legacy ds
  */
@@ -824,17 +733,7 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: [
-			'project',
-			'disease',
-			'primary_site',
-			'available_variation_data',
-			'state',
-			'gender',
-			'year_of_birth',
-			'race',
-			'ethnicity'
-		],
+		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
 		sunburst_ids: ['project', 'disease'], // term id
 		gdcapi: variant2samples
 	},
@@ -861,8 +760,7 @@ module.exports = {
 			},
 			byisoform: {
 				gdcapi: { lst: isoform2variants }
-			},
-			occurrence_key
+			}
 		},
 		genecnv: {
 			gaincolor: '#c1433f',

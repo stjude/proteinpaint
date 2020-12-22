@@ -127,28 +127,34 @@ export async function init(obj, holder, debugmode) {
 				}
 				const str = str0.toLowerCase()
 				obj.dotselection
-					.filter(d => searchStr(d).indexOf(str) != -1)
+					.filter(d => searchStr(d, str))
 					.transition()
 					.attr('r', radius * 2)
 				obj.dotselection
-					.filter(d => searchStr(d).indexOf(str) == -1)
+					.filter(d => !searchStr(d, str))
 					.transition()
 					.attr('r', 1)
 			})
 
-		function searchStr(d) {
-			let vals = Object.values(d)
-
-			// if any value is of type 'object' add all keys of that object to vals
-			vals.forEach((v, i) => {
-				if (v && typeof v == 'object') {
-					vals = [...vals, ...Object.values(v)]
-					vals.splice(i, 1)
-				} else if (!v) vals.splice(i, 1)
+		function searchStr(data, str) {
+			let found_flag = false
+			let vals = Object.values(data).filter(a => a != null && typeof a != 'number')
+			let new_vals = vals.filter(a => typeof a != 'object').map(x => x.toLowerCase())
+			new_vals.forEach(v => {
+				if (v.toLowerCase().includes(str)) return (found_flag = true)
 			})
-			vals.filter(i => i !== 'not available') //remove 'not availabe' values
-			const search_str = vals.join(' ').toLowerCase() // convert array to str
-			return search_str
+			// if any value is of type 'object', search for all values of the object
+			if (!found_flag) {
+				vals.forEach(v => {
+					if (v && typeof v == 'object') {
+						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						obj_vals.forEach(ov => {
+							if (ov.toLowerCase().includes(str)) return (found_flag = true)
+						})
+					}
+				})
+			}
+			return found_flag
 		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
@@ -449,11 +455,25 @@ function init_plot(obj) {
 			.attr('fill', d => d.color)
 			.attr('r', radius)
 			.on('mouseover', d => {
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
 				)
 			})
 			.on('mouseout', d => {
+				obj.tip.hide()
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
 				)
@@ -481,10 +501,24 @@ function init_plot(obj) {
 			.on('mouseover', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
 				svg.style('cursor', 'move')
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
 			})
 			.on('mouseout', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
 				svg.style('cursor', 'auto')
+				obj.tip.hide()
 			})
 			.on('mousedown', d => {
 				d3event.preventDefault()

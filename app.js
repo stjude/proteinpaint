@@ -145,14 +145,6 @@ if (serverconfig.jwt) {
 	})
 }
 
-// hardcoded basepath='/portal/' value, should be
-// defined later as serverconfig.basepath
-// -- not optimal since this redirect results in two HTTP requests
-// -- much better is if express.js simply rerouted within the same request
-app.get('/portal/:actualroute', (req, res) => {
-	res.redirect('/' + req.params.actualroute)
-})
-
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
 app.post('/genelookup', handle_genelookup)
@@ -208,6 +200,28 @@ app.post('/singlecell', singlecell.handle_singlecell_closure(genomes))
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
+
+if (serverconfig.debugmode) {
+	/* 
+		TODO: reorganize the loading of these tests to not clutter the app code
+	*/
+	app.get('/portal/genes/bin/:bundle', async (req, res) => {
+		const file = path.join(process.cwd(), `./public/bin/${req.params.bundle}`)
+		res.header('Content-Type', 'application/js')
+		res.send(await fs.readFileSync(file))
+	})
+	app.get('/portal/genes/:gene', async (req, res) => {
+		const file = path.join(process.cwd(), './public/testrun.html')
+		res.header('Content-Type', 'text/html')
+		res.send(await fs.readFileSync(file))
+	})
+	// this redirect is not optimal since it results in two HTTP requests
+	// -- much better if express.js simply rerouted within the same data request
+	app.all('/portal/:actualroute', (req, res) => {
+		console.log('test')
+		res.redirect('/' + req.params.actualroute)
+	})
+}
 
 /****
 	- validate and start the server

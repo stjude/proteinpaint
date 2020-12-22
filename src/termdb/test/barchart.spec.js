@@ -63,6 +63,7 @@ tape('single barchart, categorical bars', function(test) {
 		plot.on('postRender.test', null)
 		testBarCount(plot)
 		testAxisDimension(plot)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 
@@ -119,7 +120,7 @@ tape('single chart, with overlay', function(test) {
 	function runTests(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
 			.run(testBarCount)
 			.run(testOverlayOrder)
 			.done(test)
@@ -187,6 +188,7 @@ tape('multiple charts', function(test) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -232,6 +234,7 @@ tape('series visibility - q.hiddenValues', function(test) {
 			bar.settings.cols.length - bar.settings.exclude.cols.length,
 			'should render the correct number of visible bars'
 		)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -372,6 +375,7 @@ tape('series visibility - condition', function(test) {
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -434,6 +438,7 @@ tape('single barchart, filtered', function(test) {
 			'1',
 			'should show one bar series that matches filter value'
 		)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -867,6 +872,7 @@ tape('single chart, genotype overlay', function(test) {
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
 		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -946,6 +952,7 @@ tape('numeric exclude range', function(test) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 bar')
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1077,6 +1084,7 @@ tape('custom vocab: categorical terms with numeric filter', test => {
 	function runTests(plot) {
 		plot.on('postRender.test', null)
 		testBarCount(plot)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1147,6 +1155,7 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 	function runTests(plot) {
 		plot.on('postRender.test', null)
 		testBarCount(plot)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1155,7 +1164,7 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numBars, 5, 'should have 2 bars')
+		test.equal(numBars, 3, 'should have 3 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })
@@ -1210,6 +1219,7 @@ tape('max number of bins: exceeded', test => {
 		triggerExceedMaxBin(plot)
 		await sleep(1000)
 		testExceedMaxBin(plot)
+		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
 
