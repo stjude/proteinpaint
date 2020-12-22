@@ -278,9 +278,9 @@ async function get_data(obj) {
 				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
 				// re-render scatterplot
 				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
-					obj.dotselection.transition().attr('r', d => (obj.filteredSamples.has(d.sample) ? radius * 2 : 1))
+					obj.dotselection.transition().style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
 				} else {
-					obj.dotselection.transition().attr('r', radius)
+					obj.dotselection.transition().style('opacity', 1)
 				}
 			}
 		})
