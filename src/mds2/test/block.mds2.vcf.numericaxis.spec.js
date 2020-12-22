@@ -1,5 +1,7 @@
 'use strict'
 const tape = require('tape')
+const serverconfig = require('../../../serverconfig.json')
+const host = 'http://localhost:' + serverconfig.port
 
 /*************************
  reusable helper functions
@@ -28,8 +30,11 @@ tape('\n', function(test) {
 
 */
 tape('AF Test: term tree menu', async test => {
+	test.timeoutAfter(7000)
+
 	const holder = document.body.appendChild(document.createElement('div'))
 	const pp = await runproteinpaint({
+		host,
 		holder,
 		noheader: 1,
 

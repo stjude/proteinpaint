@@ -175,7 +175,16 @@ exports.rideInit = function(opts = {}) {
 			// in-browser behavior is "normal" when inspecting
 			// the displayed UI
 			if (opts.bus) self.resolved.then(() => opts.bus.on(opts.eventType, null))
-			self.resolved.then(() => test.end()).catch(console.log)
+			self.resolved
+				.then(() => {
+					test.end()
+					// remove all rendered elements when a test suite passes,
+					// to minimize have memory leaks
+					if (!opts.preserve && test._ok && opts.arg.Inner.app && typeof opts.arg.Inner.app.destroy == 'function') {
+						setTimeout(opts.arg.Inner.app.destroy, 1000)
+					}
+				})
+				.catch(console.log)
 			return rideApi
 		}
 	}

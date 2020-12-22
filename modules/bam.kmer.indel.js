@@ -1,4 +1,4 @@
-const jStat = require('jStat').jStat
+const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
@@ -25,30 +25,33 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
-	const leftflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
-	))
+	const leftflankseq = (
+		await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos)
+	)
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
-	const rightflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr +
-			':' +
-			(q.variant.pos + final_ref.length + 1) +
-			'-' +
-			(q.variant.pos + segbplen + final_ref.length + 1)
-	))
+	const rightflankseq = (
+		await utils.get_fasta(
+			q.genome,
+			q.variant.chr +
+				':' +
+				(q.variant.pos + final_ref.length + 1) +
+				'-' +
+				(q.variant.pos + segbplen + final_ref.length + 1)
+		)
+	)
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
-	const refseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
-	))
+	const refseq = (
+		await utils.get_fasta(
+			q.genome,
+			q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+		)
+	)
 		.split('\n')
 		.slice(1)
 		.join('')

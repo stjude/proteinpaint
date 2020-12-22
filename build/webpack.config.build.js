@@ -1,5 +1,5 @@
 const webpack = require('webpack')
-const config = require('../webpack.config')
+const config = require('./webpack.config.client')
 const path = require('path')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 

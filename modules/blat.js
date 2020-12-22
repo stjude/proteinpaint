@@ -99,8 +99,8 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 					//console.log("soft_stops_array:",soft_stops_array)
 					h.query_insoftclip = false
 					for (let m = 0; m < soft_starts_array.length; m++) {
-						soft_start = soft_starts_array[m]
-						soft_stop = soft_stops_array[m]
+						const soft_start = soft_starts_array[m]
+						const soft_stop = soft_stops_array[m]
 						if (
 							parseInt(soft_start) <= parseInt(h.query_startpos) &&
 							parseInt(h.query_stoppos) <= parseInt(soft_stop)
@@ -149,21 +149,22 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_totallen = l[5] // This is actually the chromosome length
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
-				if (genome.repeatmasker) {
-					const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
-					//console.log("outfile:",outfile)
-					//const outputstr = (await utils.read_file(outfile)).trim()
-					//console.log("outputstr:",outputstr)
-					//fs.unlink(outfile, () => {})
-					if (outputstr.length == 0) {
-						h.ref_in_repeat = '-'
-					} else {
-						const tabix_lines = outputstr.split('\n')
-						const columns = tabix_lines[0].split('\t') // Only selecting the first line for annotation when query spans two or more different repeats
-						const json_object = JSON.parse(columns[3])
-						h.ref_in_repeat = json_object.category
-					}
-				}
+				h.ref_in_repeat = '-' // Used in place of code from lines 153-167
+				//				if (genome.repeatmasker) {
+				//					const outputstr = await determine_repeat_in_ref(genome, h.ref_chr, h.ref_startpos, h.ref_stoppos) // Checking to see if the alignment lies within a repeat region
+				//					//console.log("outfile:",outfile)
+				//					//const outputstr = (await utils.read_file(outfile)).trim()
+				//					//console.log("outputstr:",outputstr)
+				//					//fs.unlink(outfile, () => {})
+				//					if (outputstr.length == 0) {
+				//						h.ref_in_repeat = '-'
+				//					} else {
+				//						const tabix_lines = outputstr.split('\n')
+				//						const columns = tabix_lines[0].split('\t') // Only selecting the first line for annotation when query spans two or more different repeats
+				//						const json_object = JSON.parse(columns[3])
+				//						h.ref_in_repeat = json_object.category
+				//					}
+				//				}
 			}
 		}
 	}

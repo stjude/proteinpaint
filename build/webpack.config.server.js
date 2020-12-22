@@ -1,14 +1,15 @@
 const nodeExternals = require('webpack-node-externals')
 const webpack = require('webpack')
+const path = require('path')
 
 module.exports = function(env = {}) {
 	return {
 		mode: env && env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'node',
 		externals: [nodeExternals({ allowlist: [/\/src\//] })],
-		entry: './app.js',
+		entry: path.join(__dirname, '../app.js'),
 		output: {
-			path: __dirname,
+			path: path.join(__dirname, '../'),
 			filename: 'server.js'
 		},
 		module: {
