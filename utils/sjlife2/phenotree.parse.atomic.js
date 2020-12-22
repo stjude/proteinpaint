@@ -393,7 +393,14 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			)
 			// find bin size
 			const range = term.bins._max - term.bins._min
-			term.bins.default.bin_size = Math.ceil(range / 5)
+			{
+				const bs = range / 5
+				if (bs > 1) {
+					term.bins.default.bin_size = Math.ceil(bs)
+				} else {
+					term.bins.default.bin_size = bs
+				}
+			}
 			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
