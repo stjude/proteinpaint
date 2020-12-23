@@ -1,7 +1,8 @@
+.env
 *.swp
 .DS_Store
-/node_modules/
-*/*/node_modules/
+/node_modules*/
+*/*/node_modules*/
 npm-debug.log
 dist/*
 */*/dist/
@@ -22,7 +23,6 @@ public/svcnv.html
 public/ALCL.html
 .htaccess
 public/builds/*
-public/no-babel-polyfill/*
 public/static/*.docx
 public/static/*.pdf
 public/rev.txt
