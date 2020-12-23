@@ -70,8 +70,8 @@ function validate_termdb(ds) {
 		// the need for get function is only for gdc
 		for (const t of tdb.terms) {
 			if (!t.id) throw 'id missing from a term'
-			if (!t.get) throw '.get() missing from term: ' + t.id
-			if (typeof t.get != 'function') throw '.get() is not function from term: ' + t.id
+			if (!t.fields) throw '.fields[] missing from a term'
+			if (!Array.isArray(t.fields)) throw '.fields[] not an array'
 		}
 	} else {
 		throw 'unknown source of termdb vocabulary'
@@ -94,7 +94,7 @@ function validate_termdb(ds) {
 			}
 			// add getter
 			t.get = async p => {
-				// p is client query parameter (set_id, token)
+				// p is client query parameter (set_id, parent project_id etc)
 				if (t.gdcapi) {
 					return gdc.get_cohortTotal(t.gdcapi, ds, p)
 				}
