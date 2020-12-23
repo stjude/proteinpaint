@@ -63,11 +63,10 @@ const readline = require('readline')
 const path = require('path')
 
 const bins = {
-	// temporary values
-	_n: 0, // count number of samples with a valid values
+	// temporary values; to be deleted after parsing matrix file
+	_values: [],
 	_min: null,
 	_max: null,
-	_subcohorts: {},
 
 	default: {
 		type: 'regular',
@@ -286,7 +285,7 @@ function step2_parsematrix(key2terms) {
 				}
 				const value = Number(str)
 				if (Number.isNaN(value)) throw 'invalid value for a numeric term (' + term.id + ') at line ' + (i + 1)
-				term.bins._n++
+				term.bins._values.push(value)
 				if (term.bins._min == null) {
 					term.bins._min = value
 					term.bins._max = value
@@ -378,11 +377,17 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				'NUMERICAL\t' +
 					termID +
 					'\tn=' +
-					term.bins._n +
+					term.bins._values.length +
 					',min=' +
 					term.bins._min +
 					',max=' +
 					term.bins._max +
+					',mean=' +
+					getMean(term.bins._values) +
+					',median=' +
+					getMedian(term.bins._values) +
+					',' +
+					getValuelst(term.bins._values) +
 					'\t' +
 					(term.values
 						? '\t' +
@@ -393,11 +398,18 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			)
 			// find bin size
 			const range = term.bins._max - term.bins._min
-			term.bins.default.bin_size = Math.ceil(range / 5)
+			{
+				const bs = range / 5
+				if (bs > 1) {
+					term.bins.default.bin_size = Math.ceil(bs)
+				} else {
+					term.bins.default.bin_size = bs
+				}
+			}
 			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
-			delete term.bins._n
+			delete term.bins._values
 			delete term._values_foundinmatrix
 			continue
 		}
@@ -452,4 +464,25 @@ function str2config(str) {
 		config[k] = v
 	}
 	return config
+}
+function getMean(lst) {
+	let t = 0
+	for (const v of lst) t += v
+	return t / lst.length
+}
+function getMedian(lst) {
+	lst.sort((a, b) => b - a)
+	return lst[Math.floor(lst.length / 2)]
+}
+function getValuelst(lst) {
+	// get number of distinct values; if less than 10, show the occurrence for each value
+	const v2c = new Map() // k: value, v: number of appearance
+	for (const v of lst) {
+		v2c.set(v, 1 + (v2c.get(v) || 0))
+	}
+	if (v2c.size > 10) return 'values=' + v2c.size
+	return [...v2c]
+		.sort((a, b) => b[1] - a[1])
+		.map(i => i[0] + '=' + i[1])
+		.join(',')
 }
