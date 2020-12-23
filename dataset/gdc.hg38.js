@@ -730,6 +730,9 @@ module.exports = {
 		}
 	},
 
+	/* hope this can be applied to all types of variants
+	but if it can only be applied to ssm, then it may be moved to queries.snvindel{}
+	*/
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
@@ -752,6 +755,10 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
+			url: {
+				base: 'https://portal.gdc.cancer.gov/ssms/',
+				key: 'ssm_id'
+			},
 			byrange: {
 				gdcapi: {
 					query: query_range2variants,

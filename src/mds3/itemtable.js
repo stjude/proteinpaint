@@ -120,7 +120,7 @@ function table_snvindel_onevariant(m, tk, block, table) {
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Mutation')
-		print_snvindel(m, td2)
+		print_snvindel(m, td2, tk)
 	}
 	{
 		const [td1, td2] = row_headervalue(table)
@@ -148,7 +148,7 @@ function table_snvindel_multivariant(mlst, tk, block, div) {
 		.style('opacity', 0.5)
 	for (const m of mlst) {
 		const tr = table.append('tr')
-		print_snvindel(m, tr.append('td').style('padding-right', '10px'))
+		print_snvindel(m, tr.append('td').style('padding-right', '10px'), tk)
 		const td2 = tr.append('td')
 		if (tk.mds.variant2samples) {
 			let first = true
@@ -187,10 +187,21 @@ function table_snvindel_multivariant(mlst, tk, block, div) {
 	}
 }
 
-function print_snvindel(m, d) {
-	d.append('span')
-		.style('font-size', '1.1em')
-		.text(m.mname) // do not .html() to prevent injection
+function print_snvindel(m, d, tk) {
+	{
+		const s = d.append('span').style('font-size', '1.1em')
+		if (tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
+			const a = s.append('a')
+			a.attr('href', tk.mds.queries.snvindel.url.base + m[tk.mds.queries.snvindel.url.key])
+			a.attr('target', '_blank')
+			a.append('span').html(
+				'<svg fill="currentColor" preserveAspectRatio="xMidYMid meet" height="1em" width="1em" viewBox="0 0 40 40" style="vertical-align: middle; margin-right: 0.5rem;"><g><path d="m31.4 20.7v7.2q0 2.6-1.9 4.5t-4.5 1.9h-18.6q-2.6 0-4.5-1.9t-1.9-4.5v-18.6q0-2.7 1.9-4.6t4.5-1.8h15.7q0.4 0 0.6 0.2t0.2 0.5v1.4q0 0.3-0.2 0.5t-0.6 0.2h-15.7q-1.4 0-2.5 1.1t-1 2.5v18.6q0 1.4 1 2.5t2.5 1h18.6q1.5 0 2.5-1t1.1-2.5v-7.2q0-0.3 0.2-0.5t0.5-0.2h1.4q0.3 0 0.5 0.2t0.2 0.5z m8.6-19.3v11.5q0 0.5-0.4 1t-1 0.4-1-0.4l-4-4-14.5 14.6q-0.2 0.2-0.5 0.2t-0.5-0.2l-2.6-2.6q-0.2-0.2-0.2-0.5t0.2-0.5l14.6-14.5-4-4q-0.4-0.4-0.4-1t0.4-1 1-0.4h11.5q0.6 0 1 0.4t0.4 1z"></path></g></svg>'
+			)
+			a.append('span').text(m.mname)
+		} else {
+			s.text(m.mname) // do not .html() to prevent injection
+		}
+	}
 	d.append('span')
 		.style('margin-left', '10px')
 		.style('color', common.mclass[m.class].color)

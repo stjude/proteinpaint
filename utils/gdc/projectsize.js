@@ -38,9 +38,13 @@ const variables = {
 	ssmTested: {
 		op: 'and',
 		content: [
-			{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }
+			{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } },
 			// set_id also works
 			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72'] } }
+			//////////////
+			// to filter by a project, use "cases.project.project_id"
+			{ op: 'in', content: { field: 'cases.project.project_id', value: ['TCGA-LUAD'] } }
+			//{ op: 'in', content: { field: 'cases.disease_type', value: ['Adenomas and Adenocarcinomas'] } }
 		]
 	}
 }

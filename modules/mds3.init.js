@@ -1,7 +1,4 @@
-const app = require('../app')
-const path = require('path')
-const fs = require('fs')
-const utils = require('./utils')
+// may load mds3.gdc.js conditionally? if .gdcapi{} is used anywhere in dataset??
 const gdc = require('./mds3.gdc')
 
 /*
@@ -10,8 +7,6 @@ init
 client_copy
 ********************** INTERNAL
 */
-
-//const serverconfig = utils.serverconfig
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
@@ -88,6 +83,7 @@ function validate_termdb(ds) {
 
 	if (tdb.termid2totalsize) {
 		for (const tid in tdb.termid2totalsize) {
+			if (!tdb.getTermById(tid)) throw 'unknown term id from termid2totalsize: ' + tid
 			const t = tdb.termid2totalsize[tid]
 			if (t.gdcapi) {
 				// validate
@@ -135,7 +131,8 @@ function copy_queries(ds) {
 	const copy = {}
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
-			forTrack: ds.queries.snvindel.forTrack
+			forTrack: ds.queries.snvindel.forTrack,
+			url: ds.queries.snvindel.url
 		}
 	}
 	if (ds.queries.genecnv) {
@@ -369,6 +366,10 @@ function sort_mclass(set) {
 function validate_query_snvindel(ds) {
 	const q = ds.queries.snvindel
 	if (!q) return
+	if (q.url) {
+		if (!q.url.base) throw '.snvindel.url.base missing'
+		if (!q.url.key) throw '.snvindel.url.key missing'
+	}
 	if (!q.byrange) throw '.byrange missing for queries.snvindel'
 	if (q.byrange.gdcapi) {
 		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi)
