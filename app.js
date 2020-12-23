@@ -108,6 +108,8 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
+const basepath = process.env.PP_BASEPATH || serverconfig.PP_BASEPATH || ''
+
 app.use(express.static(path.join(process.cwd(), './public')))
 app.use(compression())
 
@@ -145,81 +147,75 @@ if (serverconfig.jwt) {
 	})
 }
 
-app.post('/mdsjsonform', handle_mdsjsonform)
-app.get('/genomes', handle_genomes)
-app.post('/genelookup', handle_genelookup)
-app.post('/ntseq', handle_ntseq)
-app.post('/pdomain', handle_pdomain)
-app.get('/tkbedj', bedj_request_closure(genomes))
-app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
-app.get('/tkbam', bam_request_closure(genomes))
-app.get('/tkaicheck', aicheck_request_closure(genomes))
-app.get('/blat', blat_request_closure(genomes))
-app.get('/mds3', mds3_request_closure(genomes))
-app.get('/tkbampile', bampile_request)
-app.post('/snpbyname', handle_snpbyname)
-app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
+app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
+app.get(basepath + '/genomes', handle_genomes)
+app.post(basepath + '/genelookup', handle_genelookup)
+app.post(basepath + '/ntseq', handle_ntseq)
+app.post(basepath + '/pdomain', handle_pdomain)
+app.get(basepath + '/tkbedj', bedj_request_closure(genomes))
+app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get(basepath + '/tkbam', bam_request_closure(genomes))
+app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
+app.get(basepath + '/blat', blat_request_closure(genomes))
+app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.get(basepath + '/tkbampile', bampile_request)
+app.post(basepath + '/snpbyname', handle_snpbyname)
+app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
-app.post('/tkbigwig', handle_tkbigwig)
+app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
-app.get('/tabixheader', handle_tabixheader)
-app.post('/snp', handle_snpbycoord)
-app.get('/clinvarVCF', handle_clinvarVCF)
-app.post('/isoformlst', handle_isoformlst)
-app.post('/dbdata', handle_dbdata)
-app.post('/img', handle_img)
-app.post('/svmr', handle_svmr)
-app.post('/dsgenestat', handle_dsgenestat)
-app.post('/study', handle_study)
-app.post('/textfile', handle_textfile)
-app.post('/urltextfile', handle_urltextfile)
-app.get('/junction', junction_request) // legacy
-app.post('/mdsjunction', handle_mdsjunction)
-app.post('/mdscnv', handle_mdscnv)
-app.post('/mdssvcnv', handle_mdssvcnv)
-app.post('/mds2', mds2_load.handle_request(genomes))
-app.post('/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
-app.post('/mdsgeneboxplot', handle_mdsgeneboxplot)
-app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
+app.get(basepath + '/tabixheader', handle_tabixheader)
+app.post(basepath + '/snp', handle_snpbycoord)
+app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
+app.post(basepath + '/isoformlst', handle_isoformlst)
+app.post(basepath + '/dbdata', handle_dbdata)
+app.post(basepath + '/img', handle_img)
+app.post(basepath + '/svmr', handle_svmr)
+app.post(basepath + '/dsgenestat', handle_dsgenestat)
+app.post(basepath + '/study', handle_study)
+app.post(basepath + '/textfile', handle_textfile)
+app.post(basepath + '/urltextfile', handle_urltextfile)
+app.get(basepath + '/junction', junction_request) // legacy
+app.post(basepath + '/mdsjunction', handle_mdsjunction)
+app.post(basepath + '/mdscnv', handle_mdscnv)
+app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
+app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
+app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
+app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
 
-app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
+app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 
-app.get('/vcfheader', handle_vcfheader)
+app.get(basepath + '/vcfheader', handle_vcfheader)
 
-app.post('/translategm', handle_translategm)
-app.get('/hicstat', handle_hicstat)
-app.post('/hicdata', handle_hicdata)
-app.post('/samplematrix', handle_samplematrix)
-app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
-app.post('/mdssamplesignature', handle_mdssamplesignature)
-app.post('/mdssurvivalplot', handle_mdssurvivalplot)
-app.post('/fimo', fimo.handle_closure(genomes))
-app.get('/termdb', termdb.handle_request_closure(genomes))
-app.get('/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
-app.post('/singlecell', singlecell.handle_singlecell_closure(genomes))
-app.post('/isoformbycoord', handle_isoformbycoord)
-app.post('/ase', handle_ase)
-app.post('/bamnochr', handle_bamnochr)
+app.post(basepath + '/translategm', handle_translategm)
+app.get(basepath + '/hicstat', handle_hicstat)
+app.post(basepath + '/hicdata', handle_hicdata)
+app.post(basepath + '/samplematrix', handle_samplematrix)
+app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
+app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot)
+app.post(basepath + '/fimo', fimo.handle_closure(genomes))
+app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
+app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
+app.post(basepath + '/ase', handle_ase)
+app.post(basepath + '/bamnochr', handle_bamnochr)
 
 if (serverconfig.debugmode) {
 	/* 
 		TODO: reorganize the loading of these tests to not clutter the app code
 	*/
-	app.get('/portal/genes/bin/:bundle', async (req, res) => {
+	app.get(basepath + '/genes/bin/:bundle', async (req, res) => {
 		const file = path.join(process.cwd(), `./public/bin/${req.params.bundle}`)
 		res.header('Content-Type', 'application/js')
 		res.send(await fs.readFileSync(file))
 	})
-	app.get('/portal/genes/:gene', async (req, res) => {
+	app.get(basepath + '/genes/:gene', async (req, res) => {
 		const file = path.join(process.cwd(), './public/testrun.html')
 		res.header('Content-Type', 'text/html')
 		res.send(await fs.readFileSync(file))
-	})
-	// this redirect is not optimal since it results in two HTTP requests
-	// -- much better if express.js simply rerouted within the same data request
-	app.all('/portal/:actualroute', (req, res) => {
-		console.log('test')
-		res.redirect('/' + req.params.actualroute)
 	})
 }
 
@@ -9747,7 +9743,7 @@ function get_codedate() {
 		? './node_modules/@stjude/proteinpaint/'
 		: 'public/..'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
-	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
 }
 

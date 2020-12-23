@@ -45,6 +45,8 @@ export class App extends React.Component {
 			dataKey: 'abc123',
 			host: localStorage.getItem('pphost')
 				? localStorage.getItem('pphost')
+				: params.hosturl
+				? decodeURIComponent(params.hosturl)
 				: params.hostport
 				? `http://localhost:${params.hostport}`
 				: 'http://localhost:3000',

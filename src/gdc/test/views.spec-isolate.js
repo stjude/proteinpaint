@@ -27,6 +27,7 @@ tape('lolliplot', async test => {
 	test.plan(1)
 	const params = getUrlParams()
 	let p = '?'
+	if (params.hosturl) p += `hosturl=${params.hosturl}`
 	if (params.hostport) p += `hostport=${params.hostport}`
 	window.history.replaceState('', null, '/testrun.html' + p)
 	const holder = select('body').append('div')
