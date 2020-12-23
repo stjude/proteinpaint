@@ -43,26 +43,21 @@ export async function mlst2samplesummary(mlst, tk, block, table) {
 	try {
 		if (mlst.length == 1 && mlst[0].occurrence == 1) {
 			// one single sample, print details
-			const data = await tk.mds.variant2samples.get(tk, mlst, 'samples')
-			if (data.error) throw data.error
-			if (!data.data || !data.data[0]) throw 'result error'
+			const data = await tk.mds.variant2samples.get(tk, mlst, tk.mds.variant2samples.type_samples)
 			trtemp.remove()
-
 			for (const termid of tk.mds.variant2samples.termidlst) {
 				const term = tk.mds.termdb.getTermById(termid)
 				if (!term) throw 'unknown term id: ' + termid
 				const [td1, td2] = row_headervalue(table)
 				td1.text(term.name)
-				td2.text(data.data[0][termid])
+				td2.text(data[0][termid])
 			}
 			return
 		}
 		// multiple samples
-		const data = await tk.mds.variant2samples.get(tk, mlst, 'summary')
-		if (data.error) throw data.error
-		if (!data.data) throw 'result error'
+		const data = await tk.mds.variant2samples.get(tk, mlst, tk.mds.variant2samples.type_summary)
 		trtemp.remove()
-		for (const entry of data.data) {
+		for (const entry of data) {
 			const [td1, td2] = row_headervalue(table)
 			td1.text(entry.name)
 			if (entry.numbycategory) {

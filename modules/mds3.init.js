@@ -1,4 +1,3 @@
-// may load mds3.gdc.js conditionally? if .gdcapi{} is used anywhere in dataset??
 const gdc = require('./mds3.gdc')
 
 /*
@@ -55,7 +54,10 @@ export function client_copy(ds) {
 	if (ds.variant2samples) {
 		ds2.variant2samples = {
 			variantkey: ds.variant2samples.variantkey,
-			termidlst: ds.variant2samples.termidlst
+			termidlst: ds.variant2samples.termidlst,
+			type_samples: ds.variant2samples.type_samples,
+			type_summary: ds.variant2samples.type_summary,
+			type_sunburst: ds.variant2samples.type_sunburst
 		}
 	}
 	return ds2
@@ -105,6 +107,9 @@ function validate_termdb(ds) {
 function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
+	vs.type_samples = 'samples'
+	vs.type_sunburst = 'sunburst'
+	vs.type_summary = 'summary'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
 	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
@@ -148,6 +153,7 @@ function copy_queries(ds) {
 function validate_sampleSummaries(ds) {
 	const ss = ds.sampleSummaries
 	if (!ss) return
+
 	if (!ds.termdb) throw 'ds.termdb missing while sampleSummary is in use'
 	if (!ss.lst) throw '.lst missing from sampleSummaries'
 	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries'

@@ -13,9 +13,6 @@ client instructs if to return sample list or sunburst summary; server may deny t
 
 */
 
-const type_samples = 'samples'
-const type_sunburst = 'sunburst'
-const type_summary = 'summary'
 /*
 get types:
 - samples
@@ -33,9 +30,9 @@ module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
 
-	if (q.get == type_samples) return samples
-	if (q.get == type_sunburst) return make_sunburst(samples, ds, q)
-	if (q.get == type_summary) return make_summary(samples, ds)
+	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
+	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
 	throw 'unknown get type'
 }
 

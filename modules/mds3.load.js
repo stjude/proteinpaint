@@ -171,7 +171,7 @@ async function load_driver(q, ds, result) {
 	// what other loaders can be if not in ds.queries?
 
 	if (q.variant2samples) {
-		result.data = await variant2samples_getresult(q, ds)
+		result.variant2samples = await variant2samples_getresult(q, ds)
 		return
 	}
 
