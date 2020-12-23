@@ -34,12 +34,26 @@ set -e
 
 EXPOSED_PORT=3456
 
-docker run -d \
-	--name $CONTAINER_ID \
-	--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
-	--publish $HOSTPORT:$EXPOSED_PORT \
-	-e PP_PORT=$EXPOSED_PORT \
-	-e PP_CUSTOMER=gdc \
-	$IMAGE_NAME
+if [[ "$IMAGE_NAME" == *dev ]]; then 
+	echo "running the dev container ..."
+	cd tmppack/package/
+	docker run -d \
+		--name $CONTAINER_ID \
+		--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
+		--mount type=bind,source=${PWD},target=/home/root/pp/app,readonly \
+		--publish $HOSTPORT:$EXPOSED_PORT \
+		-e PP_PORT=$EXPOSED_PORT \
+		-e PP_CUSTOMER=gdc \
+		$IMAGE_NAME
+	cd ../..
 
-# docker attach $CONTAINER_ID
+else 
+	docker run -d \
+		--name $CONTAINER_ID \
+		--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
+		--publish $HOSTPORT:$EXPOSED_PORT \
+		-e PP_PORT=$EXPOSED_PORT \
+		-e PP_CUSTOMER=gdc \
+		$IMAGE_NAME
+
+fi

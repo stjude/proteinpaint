@@ -1,15 +1,12 @@
-const webpack=require('webpack')
-const config=require('./webpack.config.client')
-const _c=require('../serverconfig')
-const wpserver=require('./webpack.config.server')
+const serverconfig = require('../serverconfig')
+const webpack = require('webpack')
+const wpFront = require('./webpack.config.client')
+const wpBack = require('./webpack.config.server')
 const WebpackNotifierPlugin = require('webpack-notifier')
 
-config.mode = 'development'
-config.output.publicPath = (_c.host || 'http://localhost:3000') + '/bin/'
+wpFront.mode = 'development'
+wpFront.output.publicPath = (serverconfig.host || '') + '/bin/'
+wpFront.plugins = [new WebpackNotifierPlugin()]
 
-config.plugins=[
-	new WebpackNotifierPlugin()
-]
-
-module.exports=[wpserver, config]
-process.traceDeprecation=true
+module.exports = [wpBack, wpFront]
+process.traceDeprecation = true
