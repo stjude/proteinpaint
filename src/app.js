@@ -82,6 +82,19 @@ export function runproteinpaint(arg) {
 
 	if(arg.host) {
 		app.hostURL = arg.host
+	} else if (window.location.hostname == 'localhost') {
+		// easily switch server host for testing in developer machine,
+		// for example the rendered data from a docker container vs host machine
+		const urlp=parseurl.url2map()
+		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
+		else {
+			const hostname = urlp.get('hostname')
+			const hostport = urlp.get('hostport')
+			const prot = window.location.protocol + '//'
+			if (hostname && hostport) app.hostURL = prot  + hostname + ':' + hostport
+			else if (hostname) app.hostURL = prot + hostname
+			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport 
+		}
 	}
 
 	// store fetch parameters

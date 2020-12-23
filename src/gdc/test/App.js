@@ -28,7 +28,7 @@ const genes = [
 	{ name: 'ALK', transcript: 'ENST00000389048' }
 ]
 
-export default class App extends React.Component {
+export class App extends React.Component {
 	constructor() {
 		super()
 		this.urlpathname = ''
@@ -43,7 +43,11 @@ export default class App extends React.Component {
 		this.state = {
 			message,
 			dataKey: 'abc123',
-			host: localStorage.getItem('pphost') ? localStorage.getItem('pphost') : 'http://localhost:3000',
+			host: localStorage.getItem('pphost')
+				? localStorage.getItem('pphost')
+				: params.hostport
+				? `http://localhost:${params.hostport}`
+				: 'http://localhost:3000',
 			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
 			gene: gene.name,
 			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',
@@ -211,7 +215,7 @@ export default class App extends React.Component {
 	}
 }
 
-function getUrlParams() {
+export function getUrlParams() {
 	const params = {}
 	window.location.search
 		.substr(1)
