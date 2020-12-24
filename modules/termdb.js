@@ -51,6 +51,7 @@ export function handle_request_closure(genomes) {
 			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
+			if (q.getsamples) return trigger_getsamples(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -58,6 +59,18 @@ export function handle_request_closure(genomes) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+function trigger_getsamples(q, res, ds) {
+	// this may be potentially limited?
+	// ds may allow it as a whole
+	// individual term may allow getting from it
+	const lst = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
+	let samples = lst
+	if (ds.sampleidmap) {
+		samples = lst.map(i => ds.sampleidmap.get(i))
+	}
+	res.send({ samples })
 }
 
 function trigger_gettermdbconfig(res, tdb) {
