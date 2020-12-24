@@ -57,5 +57,5 @@ for (let i = 0; i < lines.length; i++) {
 	console.log(l.join('\t'))
 }
 if (missingsamples.size) {
-	console.error(missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
+	console.error(infile + ': ' + missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
 }
