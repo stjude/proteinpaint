@@ -11,6 +11,7 @@ export function getPpReact(React, getTrack) {
 			this.state = {}
 		}
 		componentDidMount() {
+			this.window = this.props.window ? this.props.window : window
 			this.runpp()
 		}
 		static getDerivedStateFromProps(props) {
@@ -37,8 +38,9 @@ export function getPpReact(React, getTrack) {
 			)
 		}
 		getUrlParams() {
+			const loc = this.window.location
 			const params = {}
-			window.location.search
+			loc.search
 				.substr(1)
 				.split('&')
 				.forEach(kv => {
@@ -48,8 +50,8 @@ export function getPpReact(React, getTrack) {
 			if (params.filters) {
 				params['filters'] = JSON.parse(decodeURIComponent(params.filters))
 			}
-			if (window.location.pathname) {
-				const url_split = window.location.pathname.split('/')
+			if (loc.pathname) {
+				const url_split = loc.pathname.split('/')
 				// do not hardcode the position of /genes/ in the pathname
 				const i = url_split.findIndex(d => d === 'genes')
 				if (i !== -1) params.gene = url_split[i + 1]

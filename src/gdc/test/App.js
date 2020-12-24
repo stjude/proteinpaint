@@ -29,20 +29,23 @@ const genes = [
 ]
 
 export class App extends React.Component {
-	constructor() {
-		super()
+	constructor(props) {
+		super(props)
+		this.window = this.props.window ? this.props.window : window
 		this.urlpathname = ''
 		this.urlparams = ''
-		const params = getUrlParams()
+		const params = this.getUrlParams()
 		let set_id
 		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
 			set_id = params.filters.content[0].content.value[0].split(':').pop()
 		}
 		let gene = genes.find(g => g.transcript == params.gene)
 		if (!gene) gene = genes[0]
+
+		const localStorage = this.window.localStorage
 		this.state = {
 			message,
-			dataKey: 'abc123',
+			dataKey: this.props.dataKey ? this.props.dataKey : Math.random(),
 			host: localStorage.getItem('pphost')
 				? localStorage.getItem('pphost')
 				: params.hosturl
@@ -67,7 +70,6 @@ export class App extends React.Component {
 			basepath: this.state.basepath,
 			token: this.state.token
 		}
-		window.history.replaceState(null, '', `/portal/genes/${gene.transcript}`)
 		this.save()
 	}
 	render() {
@@ -149,7 +151,7 @@ export class App extends React.Component {
 					</button>
 				</div>
 				<div>
-					<PpReact dataKey={this.state.dataKey} />
+					<PpReact dataKey={this.state.dataKey} window={this.window} />
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
@@ -160,10 +162,11 @@ export class App extends React.Component {
 	}
 	save(data = {}) {
 		Object.assign(this.data, data)
-		localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
+		this.window.localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
 	replaceURLHistory() {
-		window.history.replaceState(null, '', `${this.urlpathname}${this.urlparams}`)
+		this.window.location.pathname = this.urlpathname
+		this.window.location.search = this.urlparams
 	}
 	changeGene(gene) {
 		const transcript = genes.find(d => d.name == gene).transcript
@@ -215,27 +218,27 @@ export class App extends React.Component {
 		// the PpReact wrapper to re-render
 		this.setState({ lastUnrelatedUpdate: +new Date() })
 	}
-}
-
-export function getUrlParams() {
-	const params = {}
-	window.location.search
-		.substr(1)
-		.split('&')
-		.forEach(kv => {
-			const [key, value] = kv.split('=')
-			params[key] = value
-		})
-	if (params.filters) {
-		params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+	getUrlParams() {
+		const loc = this.window.location
+		const params = {}
+		loc.search
+			.substr(1)
+			.split('&')
+			.forEach(kv => {
+				const [key, value] = kv.split('=')
+				params[key] = value
+			})
+		if (params.filters) {
+			params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+		}
+		if (loc.pathname) {
+			const url_split = loc.pathname.split('/')
+			// do not hardcode the position of /genes/ in the pathname
+			const i = url_split.findIndex(d => d === 'genes')
+			if (i !== -1) params.gene = url_split[i + 1]
+		}
+		return params
 	}
-	if (window.location.pathname) {
-		const url_split = window.location.pathname.split('/')
-		// do not hardcode the position of /genes/ in the pathname
-		const i = url_split.findIndex(d => d === 'genes')
-		if (i !== -1) params.gene = url_split[i + 1]
-	}
-	return params
 }
 
 function createUrlFilters(set_id) {

@@ -11,8 +11,8 @@ export function getLolliplotTrack() {
 	// assume for now that host, basepath, and optional token
 	// are passed via localStorage
 	const data = this.props.dataKey // passed as props, <ProteinPaint dataKey='' />
-		? JSON.parse(localStorage.getItem(this.props.dataKey))
-		: { host: 'https://' + window.location.host, basepath: '' }
+		? JSON.parse(this.window.localStorage.getItem(this.props.dataKey))
+		: { host: 'https://' + this.window.location.host, basepath: '' }
 
 	const arg = {
 		host: data.host + data.basepath,
