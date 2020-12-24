@@ -1,5 +1,5 @@
 import { event } from 'd3-selection'
-import { Menu, newpane, get_one_genome } from '../client'
+import { Menu, newpane, get_one_genome, dofetch3, export_data } from '../client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId } from '../common/filter'
 
 export default function getHandlers(self) {
@@ -278,12 +278,20 @@ function handle_click(self) {
 		}
 	}
 
+	// list samples for a category
+	// this option is always added
+	options.push({
+		label: 'List samples',
+		callback: menuoption_listsamples
+	})
+
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
 		options.push({
 			label: 'Select to GenomePaint',
 			callback: menuoption_select_to_gp
 		})
 	}
+
 	// TODO: add to cart
 	//
 	// if (self.opts.bar_click_opts.includes('add_to_cart')) {
@@ -350,6 +358,30 @@ function wrapTvs(tvs) {
 }
 
 /* 			TODO: add to cart and gp          */
+
+function menuoption_listsamples(self, tvslst) {
+	const filterRoot = getNormalRoot(self.state.termfilter.filter)
+	const filterUiRoot = getFilterItemByTag(filterRoot, filterUiRoot)
+	if (filterUiRoot && filterUiRoot != filterRoot) delete filterUiRoot.tag
+	filterRoot.tag = 'filterUiRoot'
+	filterRoot.join = 'and'
+	for (const t of tvslst) {
+		filterRoot.lst.push(wrapTvs(t))
+	}
+	///////////// quick fix to delete term.values{} from stringified filter to reduce url length
+	for (const tvs of filterRoot.lst) {
+		if (tvs.tvs && tvs.tvs.term) delete tvs.tvs.term.values
+	}
+	const arg = [
+		'getsamples=1',
+		'genome=' + self.state.genome,
+		'dslabel=' + self.state.dslabel,
+		'filter=' + encodeURIComponent(JSON.stringify(filterRoot))
+	]
+	dofetch3('termdb?' + arg.join('&')).then(data => {
+		export_data(data.samples.length + ' samples', [{ text: data.samples.join('\n') }])
+	})
+}
 
 function menuoption_select_to_gp(self, tvslst) {
 	const lst = []
