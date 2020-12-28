@@ -290,7 +290,12 @@ export async function getSamples_gdcapi(q, ds) {
 
 /*
 works for ds.termdb.termid2totalsize{}
-q is query parameter, contains set_id, also parent project_id
+q is query parameter:
+.set_id
+.tid2value{}, k: term id, v: category value to be added to filter
+._combination
+	in the cross-tab computation e.g. Project+Disease, will need to attach _combination to returned data
+	so in Promise.all(), the result will be recognizable which project+disease combination it comes from
 */
 export async function get_cohortTotal(api, ds, q) {
 	if (!api.query) throw '.query missing for termid2totalsize'
@@ -318,5 +323,5 @@ export async function get_cohortTotal(api, ds, q) {
 		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
 		v2count.set(t.key, t.doc_count)
 	}
-	return v2count
+	return { v2count, combination: q._combination }
 }

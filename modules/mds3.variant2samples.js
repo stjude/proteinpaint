@@ -53,11 +53,14 @@ async function make_sunburst(samples, ds, q) {
 	if (!ds.variant2samples.sunburst_ids) throw 'sunburst_ids missing'
 	// use only suburst terms
 
+	// may get total cohort size for term categories when termdb.termid2totalsize is provided
+
 	/* total number of samples from the first term, as in variant2samples.sunburst_ids[0]
 	map, key: value/category of this term, value: number of samples
 	*/
 	let t1total
-	/* cross tab result for term pairs e.g.  sunburst_ids[1] against [0], and [2] against [0,1] etc
+
+	/* cross tab result for term pairs e.g. sunburst_ids[1] against [0], and [2] against [0,1] etc
 	array, ele: {}
 	.id0: id of first term
 	.v0: value/category of first term
@@ -75,7 +78,7 @@ async function make_sunburst(samples, ds, q) {
 		// get total for first term
 		{
 			const id = ds.variant2samples.sunburst_ids[0]
-			const v2c = await ds.termdb.termid2totalsize[id].get(q)
+			const v2c = (await ds.termdb.termid2totalsize[id].get(q)).v2count
 			t1total = new Map()
 			id2values.set(id, new Set())
 			// must convert to lower case due to issue with gdc
@@ -90,19 +93,21 @@ async function make_sunburst(samples, ds, q) {
 		for (let i = 1; i < ds.variant2samples.sunburst_ids.length; i++) {
 			// for each term from 2nd of sunburst_ids, compute crosstab with all previous terms
 			const thisid = ds.variant2samples.sunburst_ids[i]
-			const q2 = Object.assign({}, q)
+			if (!id2values.has(thisid)) id2values.set(thisid, new Set())
+
 			const combinations = get_priorcategories(id2values, ds.variant2samples.sunburst_ids, i)
+			const queries = [] // one promise for each combination
 			for (const combination of combinations) {
-				q2.tid2value = {}
+				const q2 = Object.assign({ tid2value: {} }, q)
 				q2.tid2value[combination.id0] = combination.v0
 				if (combination.id1) q2.tid2value[combination.id1] = combination.v1
 				if (combination.id2) q2.tid2value[combination.id2] = combination.v2
-				const v2c = await ds.termdb.termid2totalsize[thisid].get(q2)
-				//if(combination.v0=='tcga-coad') console.log(v2c)
-
-				if (!id2values.has(thisid)) id2values.set(thisid, new Set())
-
-				for (const [v, c] of v2c) {
+				q2._combination = combination
+				queries.push(ds.termdb.termid2totalsize[thisid].get(q2))
+			}
+			const lst = await Promise.all(queries)
+			for (const { v2count, combination } of lst) {
+				for (const [v, c] of v2count) {
 					const s = v.toLowerCase()
 					id2values.get(thisid).add(s)
 					const comb = Object.assign({}, combination)
@@ -123,6 +128,9 @@ async function make_sunburst(samples, ds, q) {
 		}
 	}
 
+	// FIXME do stratinput first. gdc-specific logic to go into a function addTotalcount2nodes()
+	// the function will be defined either in gdc or init
+
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
@@ -138,22 +146,25 @@ async function make_sunburst(samples, ds, q) {
 				// root
 				continue
 			}
+
+			const v0 = node.v0.toLowerCase()
 			if (!node.id1) {
 				// first level, not cross tab
-				node.cohortsize = t1total.get(node.v0.toLowerCase())
+				node.cohortsize = t1total.get(v0)
 				continue
 			}
 			if (!node.id2) {
 				// second level, use crosstabL1
-				const s = node.v1.toLowerCase()
-				const n = crosstabL1.find(i => i.v0 == node.v0.toLowerCase() && i.v1 == s)
+				const v1 = node.v1.toLowerCase()
+				const n = crosstabL1.find(i => i.v0 == v0 && i.v1 == v1)
 				if (n) node.cohortsize = n.count
 				continue
 			}
 			if (!node.id3) {
 				// third level, use crosstabL2
-				const s = node.v2.toLowerCase()
-				const n = crosstabL2.find(i => i.v0 == node.v0.toLowerCase() && i.v1 == node.v1.toLowerCase() && i.v2 == s)
+				const v1 = node.v1.toLowerCase()
+				const v2 = node.v2.toLowerCase()
+				const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
 				if (n) node.cohortsize = n.count
 			}
 		}

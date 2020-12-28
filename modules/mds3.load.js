@@ -73,13 +73,13 @@ async function make_totalcount(q, ds, result) {
 			nodename2total = new Map() // k: node name, v: total
 			for (const l of ds.sampleSummaries.lst) {
 				if (!ds.termdb.termid2totalsize[l.label1]) continue
-				const v2c = await ds.termdb.termid2totalsize[l.label1].get(q)
+				const v2c = (await ds.termdb.termid2totalsize[l.label1].get(q)).v2count
 				for (const [v, c] of v2c) {
 					nodename2total.set(v.toLowerCase(), c)
 				}
 				if (l.label2) {
 					if (!ds.termdb.termid2totalsize[l.label2]) continue
-					const v2c = await ds.termdb.termid2totalsize[l.label2].get(q)
+					const v2c = (await ds.termdb.termid2totalsize[l.label2].get(q)).v2count
 					for (const [v, c] of v2c) {
 						nodename2total.set(v.toLowerCase(), c)
 					}
