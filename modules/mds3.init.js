@@ -115,7 +115,7 @@ function validate_variant2samples(ds) {
 	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
 	if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
 	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
-	if (!ds.termdb) throw 'ds.termdb missiing when variant2samples.termidlst is in use'
+	if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
 	for (const id of vs.termidlst) {
 		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
@@ -129,6 +129,16 @@ function validate_variant2samples(ds) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
 		throw 'unknown query method of variant2samples'
+	}
+	if (ds.termdb.termid2totalsize) {
+		// has ways of querying total size, add the crosstab getter
+		vs.addCrosstabCount = async (nodes, q) => {
+			if (vs.gdcapi) {
+				await gdc.addCrosstabCount_tonodes(nodes, ds, q)
+			} else {
+				throw 'unknown way of doing crosstab'
+			}
+		}
 	}
 }
 
