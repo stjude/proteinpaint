@@ -5,6 +5,7 @@ const gdc = require('./mds3.gdc')
 init
 client_copy
 ********************** INTERNAL
+get_crosstabCombinations
 */
 
 export async function init(ds, genome, _servconfig) {
@@ -240,10 +241,20 @@ function validate_sampleSummaries(ds) {
 			}
 		}
 	}
-	ss.finalize = (labels, opts, nodename2total) => {
+	ss.finalize = async (labels, opts) => {
 		// convert one "labels" map to list
 		const out = []
 		for (const [label1, L1] of labels) {
+			let combinations
+			if (ds.termdb.termid2totalsize) {
+				const lev = ss.lst.find(i => i.label1 == label1)
+				if (lev) {
+					// should always be found
+					const terms = [lev.label1]
+					if (lev.label2) terms.push(lev.label2)
+					combinations = await get_crosstabCombinations(terms, ds, opts)
+				}
+			}
 			const strat = {
 				label: label1,
 				items: []
@@ -255,9 +266,10 @@ function validate_sampleSummaries(ds) {
 					mclasses: sort_mclass(o.mclasses)
 				}
 				// add cohort size, fix it so it can be applied to sub levels
-				if (nodename2total) {
+				if (combinations) {
 					const k = v1.toLowerCase()
-					if (nodename2total.has(k)) L1o.cohortsize = nodename2total.get(k)
+					const n = combinations.find(i => i.id1 == undefined && i.v0 == k)
+					if (n) L1o.cohortsize = n.count
 				}
 
 				strat.items.push(L1o)
@@ -269,9 +281,11 @@ function validate_sampleSummaries(ds) {
 							samplecount: oo.sampleset.size,
 							mclasses: sort_mclass(oo.mclasses)
 						}
-						if (nodename2total) {
+						if (combinations) {
+							const j = v1.toLowerCase()
 							const k = v2.toLowerCase()
-							if (nodename2total.has(k)) L2o.cohortsize = nodename2total.get(k)
+							const n = combinations.find(i => i.v0 == j && i.v1 == k)
+							if (n) L2o.cohortsize = n.count
 						}
 						L1o.label2.push(L2o)
 					}
