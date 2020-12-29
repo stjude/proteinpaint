@@ -10,7 +10,6 @@ validate_query_snvindel_byisoform
 validate_query_genecnv
 getSamples_gdcapi
 get_cohortTotal
-get_crosstabCombinations
 addCrosstabCount_tonodes
 
 getheaders
@@ -329,135 +328,7 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
-/*
-sunburst requires an array of multiple levels [project, disease, ...], with one term at each level
-to get disease total sizes per project, issue separate graphql queries on disease total with filter of project=xx for each
-essentially cross-tab two terms, for sunburst
-may generalize for 3 terms (3 layer sunburst)
-the procedural logic of cross-tabing Project+Disease may be specific to gdc, so the code here
-steps:
-1. given levels of sunburst [project, disease, ..], get size of each project without filtering
-2. for disease at level2, get disease size by filtering on each project
-3. for level 3 term, get category size by filtering on each project-disease combination
-4. apply the combination sizes to each node of sunburst
-*/
-export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
-	/*
-	parameters:
-	termidlst[]
-	- ordered array of term ids
-	- must always get category list from first term, as the list cannot be predetermined due to api and token permissions
-	- currently has up to three levels
-	ds{}
-	q{}
-	nodes[], optional
-	*/
-
-	if (termidlst.length == 0) throw 'zero terms for crosstab'
-	if (termidlst.length > 3) throw 'crosstab will not work with more than 3 levels'
-
-	// stores all combinations
-	// level 1: {count, id0, v0}
-	// level 2: {count, id0, v0, id1, v1}
-	// level 3: {count, id0, v0, id1, v1, id2, v2}
-	const combinations = []
-
-	// temporarily record categories for each term
-	// do not register list of categories in ds, as the list could be token-specific
-	// k: term id
-	// v: set of category labels
-	// if term id is not found, it will use all categories retrieved from api queries
-	const id2categories = new Map()
-	id2categories.set(termidlst[0], new Set())
-	if (termidlst[1]) id2categories.set(termidlst[1], new Set())
-	if (termidlst[2]) id2categories.set(termidlst[2], new Set())
-
-	let useall = true // to use all categories returned from api query
-	if (nodes) {
-		useall = false // only use a subset of categories existing in nodes[]
-		for (const n of nodes) {
-			if (n.id0) id2categories.get(n.id0).add(n.v0.toLowerCase())
-			if (n.id1 && termidlst[1]) id2categories.get(n.id1).add(n.v1.toLowerCase())
-			if (n.id2 && termidlst[2]) id2categories.get(n.id2).add(n.v2.toLowerCase())
-		}
-	}
-
-	// get term[0] category total, not dependent on other terms
-	const id0 = termidlst[0]
-	{
-		const v2c = (await ds.termdb.termid2totalsize[id0].get(q)).v2count
-		for (const [v, count] of v2c) {
-			const v0 = v.toLowerCase()
-			if (useall) {
-				id2categories.get(id0).add(v0)
-				combinations.push({ count, id0, v0 })
-			} else {
-				if (id2categories.get(id0).has(v0)) {
-					combinations.push({ count, id0, v0 })
-				}
-			}
-		}
-	}
-
-	// get term[1] category total, conditional on term1
-	const id1 = termidlst[1]
-	if (id1) {
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			const q2 = Object.assign({ tid2value: {} }, q)
-			q2.tid2value[id0] = v0
-			q2._combination = v0
-			promises.push(ds.termdb.termid2totalsize[id1].get(q2))
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v1 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id1).add(v1)
-					combinations.push({ count, id0, v0: combination, id1, v1 })
-				} else {
-					if (id2categories.get(id1).has(v1)) {
-						combinations.push({ count, id0, v0: combination, id1, v1 })
-					}
-				}
-			}
-		}
-	}
-
-	// get term[2] category total, conditional on term1+term2 combinations
-	const id2 = termidlst[2]
-	if (id2) {
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			for (const v1 of id2categories.get(id1)) {
-				const q2 = Object.assign({ tid2value: {} }, q)
-				q2.tid2value[id0] = v0
-				q2.tid2value[id1] = v1
-				q2._combination = { v0, v1 }
-				promises.push(ds.termdb.termid2totalsize[id2].get(q2))
-			}
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v2 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id2).add(v2)
-					combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-				} else {
-					if (id2categories.get(id2).has(v2)) {
-						combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-					}
-				}
-			}
-		}
-	}
-	return combinations
-}
-
-export async function addCrosstabCount_tonodes(nodes, ds, q) {
-	const combinations = await get_crosstabCombinations(ds.variant2samples.sunburst_ids, ds, q, nodes)
+export async function addCrosstabCount_tonodes(nodes, combinations) {
 	for (const node of nodes) {
 		if (!node.id0) continue // root
 
