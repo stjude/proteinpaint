@@ -8,6 +8,18 @@ const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
 
+/* test accessibility of serverconfig.tpmasterdir at two places.
+if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
+1. pp_init()
+   if dir is inaccessible, will not initiate and validate any genome/dataset
+   a server process will be launched hosting no genome/dataset,
+   allowing the service to respond to requests with a message (rather than a dead irresponsive url)
+2. handle_genomes()
+   if dir is inaccessbile, will return error
+   this can handle the case that dir becomes inaccessible *after* server launches
+   as genomes is the first thing most requests will query about, this may allow to return a helpful message for most of the cases
+*/
+
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
 }
@@ -323,8 +335,19 @@ async function handle_tabixheader(req, res) {
 	}
 }
 
-function handle_genomes(req, res) {
+async function handle_genomes(req, res) {
 	log(req)
+
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible
+		return error message as the service is out
+		*/
+		res.send({ error: 'Error with TP directory (' + e.code + ')' })
+		return
+	}
+
 	const hash = {}
 	if (req.query && req.query.genome) {
 		hash[req.query.genome] = clientcopy_genome(req.query.genome)
@@ -9316,6 +9339,16 @@ function parse_textfilewithheader(text) {
 /***************************   end of __util   **/
 
 async function pp_init() {
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible for some reason
+		do not validate any genome/dataset, allow the server process to boot
+		*/
+		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
+		return
+	}
+
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()

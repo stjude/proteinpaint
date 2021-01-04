@@ -202,7 +202,6 @@ const variant2samples = {
 		'case.case_id',
 		'case.disease_type',
 		'case.primary_site',
-		'case.available_variation_data',
 		'case.demographic.gender',
 		'case.demographic.year_of_birth',
 		'case.demographic.race',
@@ -239,6 +238,36 @@ const variant2samples = {
 /*
 getting total cohort sizes
 */
+function totalsize_filters(p) {
+	// same filter maker function is shared for all terms that need to get total size
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+		}
+	}
+	if (p.set_id) {
+		f.filters.content.push({
+			op: 'in',
+			content: {
+				field: 'cases.case_id',
+				value: [p.set_id]
+			}
+		})
+	}
+	if (p.tid2value) {
+		for (const tid in p.tid2value) {
+			const t = terms.find(i => i.id == tid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+				})
+			}
+		}
+	}
+	return f
+}
 const project_size = {
 	query: ` query projectSize( $filters: FiltersArgument) {
 	viewer {
@@ -257,23 +286,7 @@ const project_size = {
 	}
 }`,
 	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'project__project_id', 'buckets'],
-	filters: p => {
-		const f = {
-			filters: {
-				op: 'and',
-				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-			}
-		}
-		if (p.set_id) {
-			f.filters.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-	}
+	filters: totalsize_filters
 }
 const disease_size = {
 	query: ` query diseaseSize( $filters: FiltersArgument) {
@@ -293,23 +306,7 @@ const disease_size = {
 	}
 }`,
 	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'disease_type', 'buckets'],
-	filters: p => {
-		const f = {
-			filters: {
-				op: 'and',
-				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-			}
-		}
-		if (p.set_id) {
-			f.filters.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-	}
+	filters: totalsize_filters
 }
 const site_size = {
 	query: ` query siteSize( $filters: FiltersArgument) {
@@ -329,23 +326,7 @@ const site_size = {
 	}
 }`,
 	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
-	filters: p => {
-		const f = {
-			filters: {
-				op: 'and',
-				content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-			}
-		}
-		if (p.set_id) {
-			f.filters.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-	}
+	filters: totalsize_filters
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -591,59 +572,43 @@ const terms = [
 		name: 'Project',
 		id: 'project',
 		type: 'categorical',
-		get: m => {
-			// the getter will not be passed to client
-			if (m.project) return m.project.project_id
-			return null
-		}
+		fields: ['project', 'project_id']
 	},
 	{
 		name: 'Disease',
 		id: 'disease',
 		type: 'categorical',
-		get: m => m.disease_type
+		fields: ['disease_type']
 	},
 	{
 		name: 'Primary site',
 		id: 'primary_site',
 		type: 'categorical',
-		get: m => m.primary_site
+		fields: ['primary_site']
 	},
 	{
 		name: 'Gender',
 		id: 'gender',
 		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.gender
-			return null
-		}
+		fields: ['demographic', 'gender']
 	},
 	{
 		name: 'Birth year',
 		id: 'year_of_birth',
 		type: 'integer',
-		get: m => {
-			if (m.demographic) return m.demographic.year_of_birth
-			return null
-		}
+		fields: ['demographic', 'year_of_birth']
 	},
 	{
 		name: 'Race',
 		id: 'race',
 		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.race
-			return null
-		}
+		fields: ['demographic', 'race']
 	},
 	{
 		name: 'Ethnicity',
 		id: 'ethnicity',
 		type: 'categorical',
-		get: m => {
-			if (m.demographic) return m.demographic.ethnicity
-			return null
-		}
+		fields: ['demographic', 'ethnicity']
 	}
 ]
 
@@ -724,12 +689,16 @@ module.exports = {
 	termdb: {
 		terms,
 		termid2totalsize: {
+			// keys are term ids
 			project: { gdcapi: project_size },
 			disease: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
 		}
 	},
 
+	/* hope this can be applied to all types of variants
+	but if it can only be applied to ssm, then it may be moved to queries.snvindel{}
+	*/
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
@@ -752,6 +721,10 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
+			url: {
+				base: 'https://portal.gdc.cancer.gov/ssms/',
+				key: 'ssm_id'
+			},
 			byrange: {
 				gdcapi: {
 					query: query_range2variants,

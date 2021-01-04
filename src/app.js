@@ -1002,9 +1002,13 @@ async function launchblock(arg, app) {
 				continue
 			}
 			if(t.mdsjsonfile || t.mdsjsonurl){
-				const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl, holder)
-				arg.tracks = arg.tracks.filter(tk => tk != t )
-				arg.tracks.push(...tks)
+				try {
+					const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl)
+					arg.tracks = arg.tracks.filter(tk => tk != t )
+					arg.tracks.push(...tks)
+				}catch(e) {
+					client.sayerror(app.holder0,e.message || e)
+				}
 			}
 			t.iscustom=true
 		}

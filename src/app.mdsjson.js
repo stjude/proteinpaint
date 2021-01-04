@@ -8,7 +8,7 @@ get_json_tk
 get_scatterplot_data
 */
 
-export async function init_mdsjson(file_str, url_str, holder) {
+export async function init_mdsjson(file_str, url_str) {
 	let json_files = [],
 		json_urls = []
 
@@ -21,20 +21,12 @@ export async function init_mdsjson(file_str, url_str, holder) {
 	if (json_files.length) {
 		const json_url = undefined
 		for (const json_file of json_files) {
-			try {
-				tklst.push(await tklst_pipeline(json_file, json_url, holder))
-			} catch (e) {
-				client.sayerror(holder, e)
-			}
+			tklst.push(await tklst_pipeline(json_file, json_url))
 		}
 	} else if (json_urls.length) {
 		const json_file = undefined
 		for (const json_url of json_urls) {
-			try {
-				tklst.push(await tklst_pipeline(json_file, json_url, holder))
-			} catch (e) {
-				client.sayerror(holder, e)
-			}
+			tklst.push(await tklst_pipeline(json_file, json_url))
 		}
 	}
 

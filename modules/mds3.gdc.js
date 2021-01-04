@@ -9,6 +9,8 @@ validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 validate_query_genecnv
 getSamples_gdcapi
+get_cohortTotal
+addCrosstabCount_tonodes
 
 getheaders
 */
@@ -58,8 +60,24 @@ export function validate_query_snvindel_byisoform(api, ds) {
 					// At the snvindel query, each sample obj will only carry a subset of attributes
 					// as defined here, for producing sub-labels
 					for (const i of ds.sampleSummaries.lst) {
-						sample[i.label1] = ds.termdb.getTermById(i.label1).get(c)
-						if (i.label2) sample[i.label2] = ds.termdb.getTermById(i.label2).get(c)
+						{
+							const t = ds.termdb.getTermById(i.label1)
+							if (t) {
+								sample[i.label1] = c[t.fields[0]]
+								for (let j = 1; j < t.fields.length; j++) {
+									if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+								}
+							}
+						}
+						if (i.label2) {
+							const t = ds.termdb.getTermById(i.label2)
+							if (t) {
+								sample[i.label2] = c[t.fields[0]]
+								for (let j = 1; j < t.fields.length; j++) {
+									if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
+								}
+							}
+						}
 					}
 				}
 				m.samples.push(sample)
@@ -259,15 +277,29 @@ export async function getSamples_gdcapi(q, ds) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
 		for (const id of ds.variant2samples.termidlst) {
-			sample[id] = ds.termdb.getTermById(id).get(s.case)
+			const t = ds.termdb.getTermById(id)
+			if (t) {
+				sample[id] = s.case[t.fields[0]]
+				for (let j = 1; j < t.fields.length; j++) {
+					if (sample[id]) sample[id] = sample[id][t.fields[j]]
+				}
+			}
 		}
 		samples.push(sample)
 	}
 	return samples
 }
 
+/*
+works for ds.termdb.termid2totalsize{}
+q is query parameter:
+.set_id
+.tid2value{}, k: term id, v: category value to be added to filter
+._combination
+	in the cross-tab computation e.g. Project+Disease, will need to attach _combination to returned data
+	so in Promise.all(), the result can be traced back to a project+disease combination
+*/
 export async function get_cohortTotal(api, ds, q) {
-	// q is query parameter
 	if (!api.query) throw '.query missing for termid2totalsize'
 	if (!api.filters) throw '.filters missing for termid2totalsize'
 	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
@@ -293,5 +325,31 @@ export async function get_cohortTotal(api, ds, q) {
 		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
 		v2count.set(t.key, t.doc_count)
 	}
-	return v2count
+	return { v2count, combination: q._combination }
+}
+
+export async function addCrosstabCount_tonodes(nodes, combinations) {
+	for (const node of nodes) {
+		if (!node.id0) continue // root
+
+		const v0 = node.v0.toLowerCase()
+		if (!node.id1) {
+			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+		const v1 = node.v1.toLowerCase()
+		if (!node.id2) {
+			// second level, use crosstabL1
+			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+		const v2 = node.v2.toLowerCase()
+		if (!node.id3) {
+			// third level, use crosstabL2
+			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
+			if (n) node.cohortsize = n.count
+		}
+	}
 }
