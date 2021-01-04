@@ -372,7 +372,7 @@ export async function get_tklst(urlp, error_div, genomeobj) {
 	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
 		const url_str = urlp.get('mdsjsonurl')
 		const file_str = urlp.get('mdsjson')
-		const tks = await mdsjson.init_mdsjson(file_str, url_str, error_div)
+		const tks = await mdsjson.init_mdsjson(file_str, url_str)
 		tklst.push(...tks)
 	}
 
