@@ -13,7 +13,8 @@ import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 
-
+import { getPpReact, getLolliplotTrack } from './wrappers/PpReact'
+export { getPpReact, getLolliplotTrack }
 
 /*
 
@@ -172,6 +173,8 @@ export function runproteinpaint(arg) {
 		if(err.stack) console.log(err.stack)
 	})
 }
+
+runproteinpaint.wrappers = {getPpReact, getLolliplotTrack}
 
 function makeheader(app, obj, jwt) {
 	/*

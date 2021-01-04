@@ -16,6 +16,13 @@ export function getWindow(name, opts = {}) {
 			pathname: '',
 			search: '',
 			hash: ''
+		},
+		history: {
+			replaceState(a, b, c) {
+				const [pathname, params] = c.split('?')[0]
+				this.window.location.pathname = pathname
+				this.window.location.search = '?' + params
+			}
 		}
 	}
 

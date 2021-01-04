@@ -13,7 +13,7 @@ function onwarn(message, warn) {
 
 export default [
 	{
-		input: './src/main.js',
+		input: './src/app.js',
 		output: { dir: 'dist', format: 'es' },
 		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [

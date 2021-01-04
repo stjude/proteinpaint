@@ -1,7 +1,25 @@
-import React from 'react'
-import { getPpReact, getLolliplotTrack } from '../../main'
+<!DOCTYPE html>
+<html lang=en>
+<head>
+	 <meta charset="utf-8">
+	 <title>ProteinPaint</title>
+</head>
+<body>
 
-const PpReact = getPpReact(React, getLolliplotTrack)
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+<!--
+<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+-->
+<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+
+<div id=aaa style="margin:10px"></div>
+
+<script type='text/babel'>
+const PpReact = runproteinpaint.wrappers.getPpReact(React, runproteinpaint.wrappers.getLolliplotTrack)
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
@@ -28,7 +46,7 @@ const genes = [
 	{ name: 'ALK', transcript: 'ENST00000389048' }
 ]
 
-export class App extends React.Component {
+class App extends React.Component {
 	constructor(props) {
 		super(props)
 		this.window = this.props.window ? this.props.window : window
@@ -165,12 +183,11 @@ export class App extends React.Component {
 		this.window.localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
 	replaceURLHistory() {
-		this.window.location.pathname = this.urlpathname
-		this.window.location.search = this.urlparams
+		this.window.history.replaceState('', null, this.urlpathname + this.urlparams)
 	}
 	changeGene(gene) {
 		const transcript = genes.find(d => d.name == gene).transcript
-		this.urlpathname = `/portal/genes/${transcript}`
+		this.urlpathname = `/genes/${transcript}`
 		this.replaceURLHistory()
 		this.setState({ gene })
 	}
@@ -255,3 +272,15 @@ function createUrlFilters(set_id) {
 	const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
 	return '?filters=' + encoded_filter
 }
+
+window.onload = () => {
+	if (window.location.pathname == '/example.gdc.react.html') { // !window.location.search) {
+		window.history.replaceState('', null, '/genes/ENST00000407796')
+	}
+
+	ReactDOM.render(<App dataKey="abc123" window={window} />, document.querySelector('#aaa'))
+}
+</script>
+
+</body>
+</html>

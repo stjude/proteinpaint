@@ -225,7 +225,7 @@ if (serverconfig.debugmode) {
 		res.send(await fs.readFileSync(file))
 	})
 	app.get(basepath + '/genes/:gene', async (req, res) => {
-		const file = path.join(process.cwd(), './public/testrun.html')
+		const file = path.join(process.cwd(), './public/example.gdc.react.html')
 		res.header('Content-Type', 'text/html')
 		res.send(await fs.readFileSync(file))
 	})

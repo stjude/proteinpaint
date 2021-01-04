@@ -1,8 +1,6 @@
-import { runproteinpaint } from './app'
-import { deepEqual } from './common/rx.core'
-export { getLolliplotTrack } from './gdc/views'
-
-export { runproteinpaint }
+import { runproteinpaint } from '../app'
+import { deepEqual } from '../common/rx.core'
+export { getLolliplotTrack } from './views'
 
 export function getPpReact(React, getTrack) {
 	class ProteinPaint extends React.Component {
