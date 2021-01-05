@@ -216,45 +216,15 @@ app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 
-if (serverconfig.debugmode) {
-	/* 
-		TODO: reorganize the loading of these tests to not clutter the app code
-	*/
-	app.get(basepath + '/genes/bin/:bundle', async (req, res) => {
-		const file = path.join(process.cwd(), `./public/bin/${req.params.bundle}`)
-		res.header('Content-Type', 'application/js')
-		res.send(await fs.readFileSync(file))
-	})
-	app.get(basepath + '/genes/:gene', async (req, res) => {
-		const file = path.join(process.cwd(), './public/example.gdc.react.html')
-		res.header('Content-Type', 'text/html')
-		res.send(await fs.readFileSync(file))
-	})
-	app.get(basepath + '/wrappers/test/App.js', async (req, res) => {
-		const file = path.join(process.cwd(), `./src/wrappers/test/App.js`)
-		res.header('Content-Type', 'application/javascript')
-		const content = await fs.readFileSync(file, { encoding: 'utf8' })
-		const lines = content.split('\n')
-		let str = ''
-		// remove import lines
-		for (const line of lines) {
-			let l = line.trim()
-			if (!l.startsWith('import')) {
-				if (l.includes('getPpReact')) {
-					l = l.replace('getPpReact', 'runproteinpaint.wrappers.getPpReact')
-				}
-				if (l.includes('getLolliplotTrack')) {
-					l = l.replace('getLolliplotTrack', 'runproteinpaint.wrappers.getLolliplotTrack')
-				}
-
-				if (l.startsWith('export')) {
-					str += l.substr(l.search(' ')) + '\n'
-				} else {
-					str += l + '\n'
-				}
+const optionalRoutesDir = './modules/test/routes'
+if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
+	fs.readdir(optionalRoutesDir, (err, filenames) => {
+		for (const filename of filenames) {
+			if (filename.endsWith('.js')) {
+				const setRoutes = __non_webpack_require__(optionalRoutesDir + '/' + filename)
+				setRoutes(app, basepath)
 			}
 		}
-		res.send(str)
 	})
 }
 
