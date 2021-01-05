@@ -214,6 +214,7 @@ app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes)
 app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
+app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 
 if (serverconfig.debugmode) {
 	/* 
@@ -271,6 +272,21 @@ pp_init()
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
+
+function handle_gene2canonicalisoform(req, res) {
+	log(req)
+	try {
+		if (!req.query.gene) throw '.gene missing'
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'unknown genome'
+		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
@@ -9499,6 +9515,9 @@ async function pp_init() {
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
+		}
+		if (g.genedb.gene2canonicalisoform) {
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
 		}
 
 		for (const tk of g.tracks) {
