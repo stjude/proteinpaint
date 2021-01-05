@@ -5,7 +5,7 @@ const fakeWindows = {}
 export function getWindow(name, opts = {}) {
 	if (name in fakeWindows) return fakeWindows[name]
 
-	fakeWindows[name] = {
+	const fwin = {
 		localStorage: getStorage(),
 		sessionStorage: getStorage(),
 		location: {
@@ -19,15 +19,26 @@ export function getWindow(name, opts = {}) {
 		},
 		history: {
 			replaceState(a, b, c) {
-				const [pathname, params] = c.split('?')[0]
-				this.window.location.pathname = pathname
-				this.window.location.search = '?' + params
+				const [pathname, params] = c.split('?')
+				fwin.location.pathname = pathname
+				fwin.location.search = '?' + params
+				fwin.dom.addressbar.property('value', c)
 			}
+		},
+		dom: {
+			body: select('body').append('div')
 		}
 	}
 
+	fwin.dom.addressbar = fwin.dom.body
+		.append('input')
+		.style('width', '80%')
+		.style('margin', '20px 10px')
+		.style('background', '#ececec')
+	fwin.dom.holder = fwin.dom.body.append('div')
+
 	if (opts.location) {
-		const loc = fakeWindows[name].location
+		const loc = fwin.location
 		Object.assign(loc, opts.location)
 		if (opts.location.href) {
 			const [protocol, rest1] = opts.location.href.split('://')
@@ -51,6 +62,8 @@ export function getWindow(name, opts = {}) {
 		}
 	}
 
+	fwin.dom.addressbar.property('value', fwin.location.pathname + fwin.location.search + fwin.location.hash)
+	fakeWindows[name] = fwin
 	return fakeWindows[name]
 }
 
