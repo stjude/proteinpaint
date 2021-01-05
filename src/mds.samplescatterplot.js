@@ -278,9 +278,10 @@ async function get_data(obj) {
 				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
 				// re-render scatterplot
 				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
-					obj.dotselection.transition().style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
+					obj.dotselection.transition().attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+					// update_dotcolor_legend(obj)
 				} else {
-					obj.dotselection.transition().style('opacity', 1)
+					obj.dotselection.transition().attr('r', radius)
 				}
 			}
 		})
@@ -1097,6 +1098,10 @@ function legend_flatlist(obj) {
 			o.cell = cell
 		}
 	}
+}
+
+function update_dotcolor_legend(obj) {
+	//TODO: update legend table by filter
 }
 
 function click_dot(dot, obj) {
