@@ -31,7 +31,7 @@ export function getLolliplotTrack() {
 	// the set_id from within the URL "filter" parameter
 	const params = this.getUrlParams()
 	if (params.gene) {
-		arg.gene = params.gene
+		arg.gene2canonicalisoform = params.gene
 	}
 	if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
 		arg.tracks[0].set_id = params.filters.content[0].content.value[0]

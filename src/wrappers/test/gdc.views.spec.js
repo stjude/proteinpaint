@@ -26,7 +26,7 @@ tape('\n', test => {
 tape('lolliplot', async test => {
 	test.timeoutAfter(8000)
 	test.plan(1)
-	const windowObj = getWindow('test', { href: window.location.href, location: { pathname: '/genes/ENST00000407796' } })
+	const windowObj = getWindow('test', { href: window.location.href, location: { pathname: '/genes/ENSG00000142208' } })
 	const holder = windowObj.dom.holder
 	ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
 	await sleep(5000)

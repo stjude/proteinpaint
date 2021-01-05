@@ -23,9 +23,9 @@ const div_style = {
 }
 
 const genes = [
-	{ name: 'AKT1', transcript: 'ENST00000407796' },
-	{ name: 'TP53', transcript: 'ENST00000269305' },
-	{ name: 'ALK', transcript: 'ENST00000389048' }
+	{ name: 'AKT1', ensembl_id: 'ENSG00000142208' },
+	{ name: 'TP53', ensembl_id: 'ENSG00000141510' },
+	{ name: 'ALK', ensembl_id: 'ENSG00000171094' }
 ]
 
 export class App extends React.Component {
@@ -39,7 +39,7 @@ export class App extends React.Component {
 		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
 			set_id = params.filters.content[0].content.value[0].split(':').pop()
 		}
-		let gene = genes.find(g => g.transcript == params.gene)
+		let gene = genes.find(g => g.ensembl_id == params.gene)
 		if (!gene) gene = genes[0]
 
 		const localStorage = this.window.localStorage
@@ -55,7 +55,7 @@ export class App extends React.Component {
 				: 'http://localhost:3000',
 			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
 			gene: gene.name,
-			set_id: set_id ? set_id : 'DDw3QnUB_tcD1Zw3Af72',
+			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
 			set_id_flag: set_id != null, // false,
 			set_id_editing: false,
 			token_flag: false,
@@ -168,8 +168,8 @@ export class App extends React.Component {
 		this.window.history.replaceState('', null, this.urlpathname + this.urlparams)
 	}
 	changeGene(gene) {
-		const transcript = genes.find(d => d.name == gene).transcript
-		this.urlpathname = `/genes/${transcript}`
+		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
+		this.urlpathname = `/genes/${ensembl_id}`
 		this.replaceURLHistory()
 		this.setState({ gene })
 	}
