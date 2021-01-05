@@ -155,7 +155,7 @@ export function runproteinpaint(arg) {
 		return parseembedthenurl(arg, app, selectgenome)
 	})
 	.catch(err=>{
-		app.holder.text(err.message)
+		app.holder.text(err.message || err)
 		if(err.stack) console.log(err.stack)
 	})
 }
@@ -682,6 +682,13 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		// backward-compatible with old parameter name
 		arg.gene = arg.p
 		delete arg.p
+	}
+	if(arg.gene2canonicalisoform) {
+		if(!arg.genome) throw '.genome missing for gene2canonicalisoform'
+		const data = await client.dofetch2('gene2canonicalisoform?genome='+arg.genome+'&gene='+arg.gene2canonicalisoform)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no canonical isoform for given gene accession'
+		arg.gene = data.isoform
 	}
 	if(arg.gene) {
 		launchgeneview(arg, app)
