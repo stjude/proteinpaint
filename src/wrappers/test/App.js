@@ -32,7 +32,7 @@ export class App extends React.Component {
 	constructor(props) {
 		super(props)
 		this.window = this.props.window ? this.props.window : window
-		this.urlpathname = ''
+		this.urlpathname = this.window.location.pathname
 		this.urlparams = ''
 		const params = this.getUrlParams()
 		let set_id
