@@ -29,6 +29,16 @@ const genes = [
 	{ name: 'ALK', ensembl_id: 'ENSG00000171094' }
 ]
 
+const primary_sites = [{ name: 'brain' }, { name: 'kidney' }]
+
+const programs = [{ name: 'TCGA' }, { name: 'TARGET' }]
+
+const projects = [{ name: 'TCGA-BRCA' }, { name: 'TCGA-GBM' }]
+
+const disease_types = [{ name: 'gliomas' }, { name: 'plasma cell tumors' }]
+
+const sample_types = [{ name: 'primary tumor' }, { name: 'blood derived normal' }, { name: 'solid tissue normal' }]
+
 export class App extends React.Component {
 	constructor(props) {
 		super(props)
@@ -39,6 +49,7 @@ export class App extends React.Component {
 		this.urlsearch = this.window.location.search
 		this.urlhash = this.window.location.hash
 		this.urlparams = ''
+		this.filter_params = { set_id: null, primary_site: [] }
 		const params = this.getUrlParams()
 		let set_id
 		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
@@ -60,6 +71,8 @@ export class App extends React.Component {
 				: 'http://localhost:3000',
 			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
 			gene: gene.name,
+			primary_site: [],
+			// primary_site_flag: false,
 			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
 			set_id_flag: set_id != null, // false,
 			set_id_editing: false,
@@ -88,8 +101,10 @@ export class App extends React.Component {
 				<p>
 					... and API basepath is <i style={{ color: 'black' }}>{this.state.basepath}</i>
 				</p>
-				<p> Try some gene by clicking following buttons!</p>
-				<div style={{ display: 'block' }}>
+				<p> Try some parameters by clicking following buttons!</p>
+				{/* genes */}
+				<div style={div_style}>
+					<div style={{ display: 'inline-block' }}> Genes </div>
 					{genes.map((gene, index) => {
 						return (
 							<button
@@ -99,6 +114,22 @@ export class App extends React.Component {
 								disabled={this.state.gene === gene.name}
 							>
 								{gene.name}
+							</button>
+						)
+					})}
+				</div>
+				{/* primary sites */}
+				<div style={div_style}>
+					<div style={{ display: 'inline-block' }}> Primary Sites </div>
+					{primary_sites.map((site, index) => {
+						return (
+							<button
+								key={index}
+								style={btn_style}
+								onClick={() => this.changeSite(site.name)}
+								disabled={this.state.primary_site.includes(site.name)}
+							>
+								{site.name}
 							</button>
 						)
 					})}
@@ -175,13 +206,23 @@ export class App extends React.Component {
 	changeGene(gene) {
 		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
 		this.urlpathname = `/genes/${ensembl_id}`
-		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
+		this.filter_params.set_id = this.state.set_id_flag ? this.state.set_id : null
+		this.urlparams = this.createUrlFilters()
 		this.replaceURLHistory()
 		this.setState({ gene })
 	}
+	changeSite(site) {
+		// const primary_site_flag = !this.state.primary_site_flag
+		const sites = this.state.primary_site.length ? this.state.primary_site.push(site) : [site]
+		this.filter_params.primary_site = sites
+		this.urlparams = this.createUrlFilters()
+		this.replaceURLHistory()
+		this.setState({ primary_site: sites })
+	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		this.urlparams = this.createUrlFilters(set_id_flag ? this.state.set_id : null)
+		this.filter_params.set_id = set_id_flag ? this.state.set_id : null
+		this.urlparams = this.createUrlFilters()
 		this.replaceURLHistory()
 		this.setState({ set_id_flag })
 	}
@@ -190,7 +231,8 @@ export class App extends React.Component {
 	}
 	submitSetid() {
 		const set_id = this.setidRef.current.value
-		this.urlparams = this.createUrlFilters(set_id)
+		this.filter_params.set_id = set_id
+		this.urlparams = this.createUrlFilters()
 		this.replaceURLHistory()
 		this.setState({
 			set_id_flag: true,
@@ -244,16 +286,26 @@ export class App extends React.Component {
 		}
 		return params
 	}
-	createUrlFilters(set_id) {
-		if (!set_id) return this.urlsearch + this.urlhash
+	createUrlFilters() {
+		if (!this.filter_params.set_id && !this.filter_params.primary_site) return this.urlsearch + this.urlhash
+
 		const filter_obj = {
 			op: 'AND',
-			content: [
-				{
-					content: { field: 'cases.case_id', value: ['set_id:' + set_id] },
-					op: 'IN'
-				}
-			]
+			content: []
+		}
+
+		if (this.filter_params.set_id) {
+			filter_obj.content.push({
+				content: { field: 'cases.case_id', value: ['set_id:' + this.filter_params.set_id] },
+				op: 'IN'
+			})
+		}
+
+		if (this.filter_params.primary_site) {
+			filter_obj.content.push({
+				content: { field: 'cases.primary_site', value: this.filter_params.primary_site },
+				op: 'IN'
+			})
 		}
 		const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
 		return (this.urlsearch ? this.urlsearch + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
