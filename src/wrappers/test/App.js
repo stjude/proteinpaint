@@ -33,6 +33,10 @@ export class App extends React.Component {
 		super(props)
 		this.window = this.props.window ? this.props.window : window
 		this.urlpathname = this.window.location.pathname
+		// need to remember any existing URL search parameters and hash,
+		// to propagate along with any applicable filters
+		this.urlsearch = this.window.location.search
+		this.urlhash = this.window.location.hash
 		this.urlparams = ''
 		const params = this.getUrlParams()
 		let set_id
@@ -170,12 +174,13 @@ export class App extends React.Component {
 	changeGene(gene) {
 		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
 		this.urlpathname = `/genes/${ensembl_id}`
+		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
 		this.replaceURLHistory()
 		this.setState({ gene })
 	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		this.urlparams = createUrlFilters(set_id_flag ? this.state.set_id : null)
+		this.urlparams = this.createUrlFilters(set_id_flag ? this.state.set_id : null)
 		this.replaceURLHistory()
 		this.setState({ set_id_flag })
 	}
@@ -184,7 +189,7 @@ export class App extends React.Component {
 	}
 	submitSetid() {
 		const set_id = this.setidRef.current.value
-		this.urlparams = createUrlFilters(set_id)
+		this.urlparams = this.createUrlFilters(set_id)
 		this.replaceURLHistory()
 		this.setState({
 			set_id_flag: true,
@@ -238,19 +243,18 @@ export class App extends React.Component {
 		}
 		return params
 	}
-}
-
-function createUrlFilters(set_id) {
-	if (!set_id) return ''
-	const filter_obj = {
-		op: 'AND',
-		content: [
-			{
-				content: { field: 'cases.case_id', value: ['set_id:' + set_id] },
-				op: 'IN'
-			}
-		]
+	createUrlFilters(set_id) {
+		if (!set_id) return this.urlsearch + this.urlhash
+		const filter_obj = {
+			op: 'AND',
+			content: [
+				{
+					content: { field: 'cases.case_id', value: ['set_id:' + set_id] },
+					op: 'IN'
+				}
+			]
+		}
+		const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
+		return (this.urlsearch ? this.urlsearch + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
 	}
-	const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
-	return '?filters=' + encoded_filter
 }
