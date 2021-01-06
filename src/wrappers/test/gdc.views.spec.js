@@ -24,8 +24,8 @@ tape('\n', test => {
 })
 
 tape('lolliplot', async test => {
-	test.timeoutAfter(8000)
-	test.plan(1)
+	test.timeoutAfter(20000)
+	test.plan(3)
 	const windowObj = getWindow('test', { href: window.location.href, location: { pathname: '/genes/ENSG00000142208' } })
 	const holder = windowObj.dom.holder
 	ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
@@ -36,5 +36,29 @@ tape('lolliplot', async test => {
 		numCircles,
 		`should have ${numCircles} circles on initial load with gene='AKT1'`
 	)
+
+	// click set_id checkbox
+	const set_id_checkbox = holder.selectAll('#set_switch')
+	set_id_checkbox.node().click()
+	await sleep(4000)
+	const setCircles = 15
+	test.equal(
+		holder.selectAll('circle').size(),
+		setCircles,
+		`should have ${setCircles} circles after applying set_id filter`
+	)
+
+	// change gene
+	const btns = holder.node().querySelectorAll('button')
+	const alk_btn = btns[2]
+	alk_btn.click()
+	await sleep(4000)
+	const alkCircles = 37
+	test.equal(
+		holder.selectAll('circle').size(),
+		alkCircles,
+		`should have ${alkCircles} circles after changing gene to 'ALK'`
+	)
+
 	test.end()
 })
