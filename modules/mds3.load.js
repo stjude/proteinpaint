@@ -89,6 +89,10 @@ function init_q(query, genome) {
 			delete query.samplefiltertemp
 		}
 	}
+	if (query.filter0) {
+		// right now only from gdc
+		query.filter0 = JSON.parse(query.filter0)
+	}
 	return query
 }
 
