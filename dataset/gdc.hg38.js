@@ -45,6 +45,9 @@ const isoform2variants = [
 					}
 				})
 			}
+			if (p.filter0) {
+				f.content.push(p.filter0)
+			}
 			return f
 		}
 	},
@@ -79,6 +82,9 @@ const isoform2variants = [
 						value: [p.set_id]
 					}
 				})
+			}
+			if (p.filter0) {
+				f.content.push(p.filter0)
 			}
 			return f
 		}
@@ -231,6 +237,9 @@ const variant2samples = {
 				}
 			})
 		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
 		return f
 	}
 }
@@ -254,6 +263,9 @@ function totalsize_filters(p) {
 				value: [p.set_id]
 			}
 		})
+	}
+	if (p.filter0) {
+		f.filters.content.push(p.filter0)
 	}
 	if (p.tid2value) {
 		for (const tid in p.tid2value) {
