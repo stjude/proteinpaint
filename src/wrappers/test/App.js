@@ -23,6 +23,7 @@ const div_style = {
 }
 
 const genes = [
+	{ name: 'KRAS', ensembl_id: 'ENSG00000133703' },
 	{ name: 'AKT1', ensembl_id: 'ENSG00000142208' },
 	{ name: 'TP53', ensembl_id: 'ENSG00000141510' },
 	{ name: 'ALK', ensembl_id: 'ENSG00000171094' }

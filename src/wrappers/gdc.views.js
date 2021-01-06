@@ -33,8 +33,8 @@ export function getLolliplotTrack() {
 	if (params.gene) {
 		arg.gene2canonicalisoform = params.gene
 	}
-	if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
-		arg.tracks[0].set_id = params.filters.content[0].content.value[0]
+	if (params.filters) {
+		arg.tracks[0].filter0 = params.filters
 	}
 
 	return arg
