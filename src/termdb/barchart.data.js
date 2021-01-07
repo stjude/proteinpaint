@@ -224,7 +224,7 @@ function setDatasetAnnotations(item) {
 
 function getCategoricalIdVal(d, term) {
 	const id = 'id' in term ? d[term.id] : '-'
-	const value = 'id' in term ? '' + d[term.id] : undefined
+	const value = 'id' in term && isNumeric(d[term.id]) ? +d[term.id] : 0
 	return [[id], value]
 }
 
@@ -387,7 +387,6 @@ function boxplot_getvalue(lst) {
 }
 
 export function getCategoryData(q, data) {
-	console.log(q, data)
 	const pj = new Partjson({
 		data,
 		template: JSON.stringify({
@@ -399,7 +398,7 @@ export function getCategoryData(q, data) {
 				'&idVal.id': {
 					samplecount: '+1',
 					':__key': '&idVal.id',
-					':__label': '&idVal.value'
+					':__label': '&idVal.id'
 				}
 			}
 		}),
@@ -413,7 +412,6 @@ export function getCategoryData(q, data) {
 			}
 		}
 	})
-	console.log(415, pj.tree)
 	return { lst: Object.values(pj.tree.results) }
 }
 

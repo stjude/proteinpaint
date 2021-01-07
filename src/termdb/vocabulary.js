@@ -349,7 +349,6 @@ class FrontendVocab {
 	async getCategories(term, filter, lst = null) {
 		const q = { term, filter }
 		const data = getCategoryData(q, this.datarows)
-		console.log(data)
 		return data
 		/*const param = lst ? 'getcategories' : 'getnumericcategories'
 		const args = [
