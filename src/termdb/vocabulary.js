@@ -1,5 +1,5 @@
 import { dofetch3 } from '../client'
-import { getBarchartData } from './barchart.data'
+import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 
@@ -29,8 +29,6 @@ export function vocabInit(app, opts) {
 		return new TermdbVocab(app, opts)
 	} else if (!vocab.route && vocab.terms) {
 		return new FrontendVocab(app, opts)
-	} else {
-		//throw `unsupported vocab.route =='${vocab.route}'`
 	}
 }
 
@@ -231,7 +229,7 @@ class FrontendVocab {
 
 	main(vocab) {
 		if (vocab) Object.assign(this.vocab, vocab)
-		this.state = this.opts.state
+		this.state = this.app.getState()
 	}
 
 	getTermdbConfig() {
@@ -348,9 +346,95 @@ class FrontendVocab {
 		return this.vocab.terms.find(d => d.id == termid)
 	}
 
+	async getCategories(term, filter, lst = null) {
+		const q = { term, filter }
+		const data = getCategoryData(q, this.datarows)
+		console.log(data)
+		return data
+		/*const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}*/
+	}
+
 	graphable(term) {
 		if (!term) throw 'graphable: term is missing'
 		// term.isgenotype??
 		return graphableTypes.has(term.type)
+	}
+}
+
+export function getVocabFromSamplesArray(samples) {
+	const terms = {
+		__root: {
+			id: 'root',
+			name: 'root',
+			__tree_isroot: true
+		}
+	}
+	const sanno = {}
+	for (const a of samples) {
+		const s = a.sample
+		if (!sanno[s]) sanno[s] = {}
+		// in case a sample has more than one annotation object in the array
+		Object.assign(sanno[s], a.s)
+
+		// generate term definitions from
+		for (const key in a.s) {
+			const value = a.s[key]
+			if (!terms[key]) {
+				terms[key] = {
+					id: key,
+					name: key,
+					parent_id: null,
+					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					values: {},
+					isleaf: true
+				}
+			}
+			const t = terms[key]
+			if (t.type == 'categorical') {
+				t.groupsetting = { disabled: true }
+				if (!(value in t.values)) {
+					t.values[value] = { key: value, label: value }
+				}
+			} else {
+				if (!('min' in t) || value < t.min) t.min = value
+				if (!('max' in t) || value > t.max) t.max = value
+			}
+		}
+	}
+
+	for (const key in terms) {
+		const t = terms[key]
+		if (t.type !== 'categorical') {
+			const bin_size = (t.max - t.min) / 10
+			t.bins = {
+				default: {
+					bin_size,
+					stopinclusive: true,
+					first_bin: { startunbounded: true, stop: t.min + bin_size, stopinclusive: true }
+				}
+			}
+		}
+	}
+
+	return {
+		sampleannotation: sanno,
+		terms: Object.values(terms)
 	}
 }

@@ -5,6 +5,9 @@ import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
+import { filterInit } from './common/filter'
+import { getFilteredSamples } from '../modules/filter'
+import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /*
 obj:
@@ -158,9 +161,9 @@ export async function init(obj, holder, debugmode) {
 		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
-
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 	obj.scattersvg_buttons = scatterdiv.append('div')
@@ -260,6 +263,36 @@ async function get_data(obj) {
 			if (!d.color) d.color = userdotcolor
 			obj.dots_user.push(d)
 		}
+	}
+
+	if (!obj.filterApi) {
+		obj.filterApi = filterInit({
+			btn: obj.filterDiv.append('div'),
+			btnLabel: 'Filter',
+			emptyLabel: '+New Filter',
+			holder: obj.filterDiv.append('div'),
+			vocab: getVocabFromSamplesArray(ad.samples),
+			//termdbConfig: opts.termdbConfig,
+			debug: true,
+			callback(filter) {
+				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
+				// re-render scatterplot
+				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
+					obj.dotselection
+						.transition()
+						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
+					// update_dotcolor_legend(obj)
+				} else {
+					obj.dotselection
+						.transition()
+						.attr('r', radius)
+						.style('opacity', 1)
+				}
+			}
+		})
+		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
+		obj.filteredSamples = [] // may be seeded from the initial render
 	}
 }
 
@@ -1085,6 +1118,10 @@ function legend_flatlist(obj) {
 			o.cell = cell
 		}
 	}
+}
+
+function update_dotcolor_legend(obj) {
+	//TODO: update legend table by filter
 }
 
 function click_dot(dot, obj) {
