@@ -26,9 +26,13 @@ tape('\n', test => {
 tape('lolliplot', async test => {
 	test.timeoutAfter(30000)
 	test.plan(4)
-	const windowObj = getWindow('test', { href: window.location.href, location: { pathname: '/genes/ENSG00000142208' } })
+	const windowObj = getWindow('test', {
+		href: window.location.href,
+		location: { pathname: '/genes/ENSG00000142208' },
+		addressCallback: () => portal.resetParams()
+	})
 	const holder = windowObj.dom.holder
-	ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
+	const portal = ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
 	await sleep(5000)
 	const numCircles = 256
 	test.equal(
@@ -61,12 +65,15 @@ tape('lolliplot', async test => {
 	)
 
 	// apply filter
-	const textareas = holder.node().querySelectorAll('textarea')
-	const filter_txtarea = textareas[1]
-	filter_txtarea.innerText =
-		'%7B"op"%3A"and"%2C"content"%3A%5B%7B"op"%3A"in"%2C"content"%3A%7B"field"%3A"cases.project.project_id"%2C"value"%3A%5B"TCGA-GBM"%5D%7D%7D%5D%7D'
-	const submit_btn = btns[9]
-	submit_btn.click()
+	//const textareas = holder.node().querySelectorAll('textarea')
+	//const filter_txtarea = textareas[1]
+	//filter_txtarea.innerText =
+	const projectFilter = { op: 'and', content: [{ op: 'in', field: 'cases.project.project_id', value: 'TCGA-GBM' }] }
+	windowObj.dom.addressbar
+		.text(windowObj.location.pathname + `?filters=${encodeURIComponent(JSON.stringify(projectFilter))}`)
+		.on('change')()
+	//const submit_btn = btns[9]
+	//submit_btn.click()
 	await sleep(4000)
 	const filteredCircles = 51
 	test.equal(

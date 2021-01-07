@@ -29,20 +29,22 @@ const genes = [
 	{ name: 'ALK', ensembl_id: 'ENSG00000171094' }
 ]
 
+const gdcParamKeys = ['filters', 'genes']
+
 export class App extends React.Component {
 	constructor(props) {
 		super(props)
 		this.window = this.props.window ? this.props.window : window
 		this.urlpathname = this.window.location.pathname
-		// need to remember any existing URL search parameters and hash,
-		// to propagate along with any applicable filters
-		this.urlsearch = this.window.location.search
 		this.urlhash = this.window.location.hash
 		this.urlparams = ''
 		const params = this.getUrlParams()
+		this.setNonGdcParams(params)
+		this.filters = params.filters ? params.filters : ''
+		const set_filter = this.filters && this.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
 		let set_id
-		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
-			set_id = params.filters.content[0].content.value[0].split(':').pop()
+		if (params.filters && set_filter && set_filter.content.value[0].includes('set_id:')) {
+			set_id = set_filter.content.value[0].split(':').pop()
 		}
 		let gene = genes.find(g => g.ensembl_id == params.gene)
 		if (!gene) gene = genes[0]
@@ -65,16 +67,12 @@ export class App extends React.Component {
 			set_id_editing: false,
 			token_flag: false,
 			token_editing: true,
-			filter_url: null,
-			filter_flag: false,
-			filter_url_editing: true,
-			filter_json_editing: true,
+			filters: this.filters,
 			lastUnrelatedUpdate: +new Date(),
 			token: null
 		}
 		this.setidRef = React.createRef()
 		this.tokenRef = React.createRef()
-		this.filterUrlRef = React.createRef()
 		this.filterJsonRef = React.createRef()
 		this.data = {
 			host: this.state.host,
@@ -130,6 +128,17 @@ export class App extends React.Component {
 					</button>
 				</div>
 				<div style={div_style}>
+					<div style={{ display: 'inline-block' }}>
+						<div style={div_style}>Current filters (JSON)</div>
+						<textarea ref={this.filterJsonRef} rows="4" cols="50"></textarea>
+						<div style={Object.assign({}, div_style, { display: 'inline-block' }, align_top)}>
+							<button style={Object.assign({}, btn_style, align_top)} onClick={() => this.submitFilter()}>
+								Submit
+							</button>
+						</div>
+					</div>
+				</div>
+				<div style={div_style}>
 					<input
 						type="checkbox"
 						style={align_top}
@@ -162,66 +171,33 @@ export class App extends React.Component {
 						Submit
 					</button>
 				</div>
-				<div style={div_style}>
-					<input
-						type="checkbox"
-						style={align_top}
-						id={'filter_switch'}
-						checked={this.state.filter_flag}
-						onChange={() => this.ApplyFilter()}
-					/>
-					<label style={align_top} htmlFor={'filter_switch'}>
-						<span style={btn_style}>Apply filter</span>
-					</label>
-					<div style={{ display: 'inline-block' }}>
-						<div style={div_style}> as URL </div>
-						<textarea ref={this.filterUrlRef} rows="4" cols="50" disabled={!this.state.filter_url_editing}></textarea>
-						<button
-							style={Object.assign({}, btn_style, align_top)}
-							onClick={() => this.editUrlFilter()}
-							disabled={this.state.filter_url_editing}
-						>
-							Edit
-						</button>
-						<div style={div_style}>
-							{' '}
-							<u>OR</u> as JSON{' '}
-						</div>
-						<textarea ref={this.filterJsonRef} rows="4" cols="50" disabled={this.state.filter_json_editing}></textarea>
-						{/* <button
-							style={Object.assign({}, btn_style, align_top)}
-							onClick={() => this.editJsonFilter()}
-							disabled={!this.state.filter_json_editing}
-						>
-							Edit
-						</button> */}
-						<div style={div_style}>
-							<button
-								style={Object.assign({}, btn_style, align_top)}
-								onClick={() => this.submitFilter()}
-								disabled={!this.state.filter_url_editing}
-							>
-								Submit
-							</button>
-						</div>
-					</div>
-				</div>
 				<div>
 					<PpReact dataKey={this.state.dataKey} window={this.window} />
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
-					<button onClick={() => this.updateTime()}>Trigger Update</button>
+					<button onClick={() => this.updateTime()}>Trigger Unrelated Update</button>
 				</div>
 			</div>
 		)
+	}
+	componentDidMount() {
+		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
 	}
 	save(data = {}) {
 		Object.assign(this.data, data)
 		this.window.localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
+	setNonGdcParams(_params = null) {
+		const params = _params ? _params : this.getUrlParams()
+		// need to remember any existing URL search parameters and hash,
+		// to propagate along with any applicable filters
+		const nonGdcKeys = Object.keys(params).filter(key => !gdcParamKeys.includes(key))
+		this.nonGdcParams = !nonGdcKeys.length ? '' : '?' + nonGdcKeys.map(key => key + '=' + params[key]).join('&')
+	}
 	replaceURLHistory() {
 		this.window.history.replaceState('', null, this.urlpathname + this.urlparams)
+		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
 	}
 	changeGene(gene) {
 		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
@@ -250,23 +226,24 @@ export class App extends React.Component {
 		})
 	}
 	submitFilter() {
-		const filter_url = this.filterUrlRef.current.value
-		this.urlparams = (this.urlsearch ? this.urlsearch + '&' : '?') + 'filters=' + filter_url + this.urlhash
+		try {
+			this.filters = this.filterJsonRef.current.value ? JSON.parse(this.filterJsonRef.current.value) : ''
+		} catch (e) {
+			const message = 'invalid filter JSON: ' + e
+			alert(message)
+			throw message
+		}
+		this.urlparams =
+			(this.nonGdcParams ? this.nonGdcParams + '&' : '?') +
+			(this.filters ? 'filters=' + encodeURIComponent(JSON.stringify(this.filters)) : '')
 		this.replaceURLHistory()
-		this.filterJsonRef.current.value = decodeURIComponent(filter_url)
-		this.urlsearch = this.window.location.search
-		this.urlhash = this.window.location.hash
-		this.setState({
-			filter_flag: true,
-			filter_url_editing: false,
-			filter_url
-		})
+		this.setState({ filters: this.filters })
 	}
 	ApplyFilter() {
 		const filter_flag = !this.state.filter_flag
 		const filter_url = filter_flag ? this.state.filter_url : null
 		this.urlparams = filter_url
-			? (this.urlsearch ? this.urlsearch + '&' : '?') + 'filters=' + filter_url + this.urlhash
+			? (this.nonGdcParams ? this.nonGdcParams + '&' : '?') + 'filters=' + filter_url + this.urlhash
 			: ''
 		this.replaceURLHistory()
 		this.setState({ filter_flag })
@@ -302,13 +279,14 @@ export class App extends React.Component {
 	getUrlParams() {
 		const loc = this.window.location
 		const params = {}
-		loc.search
-			.substr(1)
-			.split('&')
-			.forEach(kv => {
-				const [key, value] = kv.split('=')
-				params[key] = value
-			})
+		if (loc.search.length)
+			loc.search
+				.substr(1)
+				.split('&')
+				.forEach(kv => {
+					const [key, value] = kv.split('=')
+					if (!gdcParamKeys.includes(key)) params[key] = value
+				})
 		if (params.filters) {
 			params['filters'] = JSON.parse(decodeURIComponent(params.filters))
 		}
@@ -321,19 +299,48 @@ export class App extends React.Component {
 		return params
 	}
 	createUrlFilters(set_id) {
-		if (!set_id) return this.urlsearch + this.urlhash
-
-		const filter_obj = {
-			op: 'AND',
-			content: [
-				{
-					content: { field: 'cases.case_id', value: ['set_id:' + set_id] },
-					op: 'IN'
-				}
-			]
+		if (!set_id && !this.filters) {
+			this.urlparams = null
+			return this.nonGdcParams + this.urlhash
 		}
 
-		const encoded_filter = encodeURIComponent(JSON.stringify(filter_obj))
-		return (this.urlsearch ? this.urlsearch + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
+		if (!this.filters) {
+			this.filters = {
+				op: 'AND',
+				content: []
+			}
+		}
+
+		let set_filter = this.filters.content.find(f => f.content && f.content.field == 'cases.case_id') //.includes('set_id:')
+		if (!set_id) {
+			if (set_filter) {
+				const i = this.filters.content.findIndex(f => f === set_filter)
+				this.filters.content.splice(i, 1)
+			}
+			if (!this.filters.content.length) {
+				this.filters = ''
+				return this.nonGdcParams + this.urlhash
+			}
+		}
+		if (!set_filter) {
+			set_filter = {
+				content: { field: 'cases.case_id', value: [] },
+				op: 'IN'
+			}
+			this.filters.content.push(set_filter)
+		}
+		set_filter.content.value = ['set_id:' + set_id]
+		const encoded_filter = encodeURIComponent(JSON.stringify(this.filters))
+		return (this.nonGdcParams ? this.nonGdcParams + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
+	}
+	resetParams() {
+		const params = this.getUrlParams()
+		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
+			this.set_id = params.filters.content[0].content.value[0].split(':').pop()
+		}
+		this.urlpathname = `/genes/${params.gene}`
+		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
+		this.filters = params.filters
+		this.setState({ gene: params.gene, set_id: this.set_id })
 	}
 }

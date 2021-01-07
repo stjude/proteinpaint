@@ -35,6 +35,7 @@ export function getWindow(name, opts = {}) {
 		.style('width', '80%')
 		.style('margin', '20px 10px')
 		.style('background', '#ececec')
+		.on('change', opts.addressCallback)
 	fwin.dom.holder = fwin.dom.body.append('div')
 
 	if (opts.location) {
