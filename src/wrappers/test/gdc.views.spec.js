@@ -24,8 +24,8 @@ tape('\n', test => {
 })
 
 tape('lolliplot', async test => {
-	test.timeoutAfter(20000)
-	test.plan(3)
+	test.timeoutAfter(30000)
+	test.plan(4)
 	const windowObj = getWindow('test', { href: window.location.href, location: { pathname: '/genes/ENSG00000142208' } })
 	const holder = windowObj.dom.holder
 	ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
@@ -50,7 +50,7 @@ tape('lolliplot', async test => {
 
 	// change gene
 	const btns = holder.node().querySelectorAll('button')
-	const alk_btn = btns[2]
+	const alk_btn = btns[3]
 	alk_btn.click()
 	await sleep(4000)
 	const alkCircles = 37
@@ -58,6 +58,21 @@ tape('lolliplot', async test => {
 		holder.selectAll('circle').size(),
 		alkCircles,
 		`should have ${alkCircles} circles after changing gene to 'ALK'`
+	)
+
+	// apply filter
+	const textareas = holder.node().querySelectorAll('textarea')
+	const filter_txtarea = textareas[1]
+	filter_txtarea.innerText =
+		'%7B"op"%3A"and"%2C"content"%3A%5B%7B"op"%3A"in"%2C"content"%3A%7B"field"%3A"cases.project.project_id"%2C"value"%3A%5B"TCGA-GBM"%5D%7D%7D%5D%7D'
+	const submit_btn = btns[9]
+	submit_btn.click()
+	await sleep(4000)
+	const filteredCircles = 51
+	test.equal(
+		holder.selectAll('circle').size(),
+		filteredCircles,
+		`should have ${filteredCircles} circles after applying filter`
 	)
 
 	test.end()
