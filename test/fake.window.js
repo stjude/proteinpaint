@@ -35,7 +35,12 @@ export function getWindow(name, opts = {}) {
 		.style('width', '80%')
 		.style('margin', '20px 10px')
 		.style('background', '#ececec')
-		.on('change', opts.addressCallback)
+		.on('change', () => {
+			const [pathname, params] = fwin.dom.addressbar.property('value').split('?')
+			fwin.location.pathname = pathname
+			fwin.location.search = '?' + params
+			if (typeof opts.addressCallback == 'function') opts.addressCallback()
+		})
 	fwin.dom.holder = fwin.dom.body.append('div')
 
 	if (opts.location) {

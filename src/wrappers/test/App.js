@@ -284,7 +284,7 @@ export class App extends React.Component {
 	getUrlParams() {
 		const loc = this.window.location
 		const params = {}
-		if (loc.search.length)
+		if (loc.search.length) {
 			loc.search
 				.substr(1)
 				.split('&')
@@ -292,6 +292,7 @@ export class App extends React.Component {
 					const [key, value] = kv.split('=')
 					if (gdcParamKeys.includes(key)) params[key] = value
 				})
+		}
 		if (params.filters) {
 			params['filters'] = JSON.parse(decodeURIComponent(params.filters))
 		}
@@ -338,14 +339,18 @@ export class App extends React.Component {
 		const encoded_filter = encodeURIComponent(JSON.stringify(this.filters))
 		return (this.nonGdcParams ? this.nonGdcParams + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
 	}
-	resetParams() {
+	resetParamsFromUrl() {
 		const params = this.getUrlParams()
-		if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
-			this.set_id = params.filters.content[0].content.value[0].split(':').pop()
+		if (params.filters) {
+			const set_filter = params.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
+			if (set_filter) {
+				this.set_id = set_filter.content.value[0].split(':').pop()
+			}
 		}
 		this.urlpathname = `/genes/${params.gene}`
 		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
 		this.filters = params.filters
+		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
 		this.setState({ gene: params.gene, set_id: this.set_id })
 	}
 }

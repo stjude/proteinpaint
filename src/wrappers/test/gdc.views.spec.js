@@ -29,7 +29,7 @@ tape('lolliplot', async test => {
 	const windowObj = getWindow('test', {
 		href: window.location.href,
 		location: { pathname: '/genes/ENSG00000142208' },
-		addressCallback: () => portal.resetParams()
+		addressCallback: () => portal.resetParamsFromUrl()
 	})
 	const holder = windowObj.dom.holder
 	const portal = ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
@@ -68,12 +68,13 @@ tape('lolliplot', async test => {
 	//const textareas = holder.node().querySelectorAll('textarea')
 	//const filter_txtarea = textareas[1]
 	//filter_txtarea.innerText =
-	const projectFilter = { op: 'and', content: [{ op: 'in', field: 'cases.project.project_id', value: 'TCGA-GBM' }] }
+	const projectFilter = {
+		op: 'AND',
+		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
+	}
 	windowObj.dom.addressbar
-		.text(windowObj.location.pathname + `?filters=${encodeURIComponent(JSON.stringify(projectFilter))}`)
+		.property('value', windowObj.location.pathname + `?filters=${encodeURIComponent(JSON.stringify(projectFilter))}`)
 		.on('change')()
-	//const submit_btn = btns[9]
-	//submit_btn.click()
 	await sleep(4000)
 	const filteredCircles = 51
 	test.equal(
