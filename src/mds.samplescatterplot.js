@@ -278,10 +278,16 @@ async function get_data(obj) {
 				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
 				// re-render scatterplot
 				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
-					obj.dotselection.transition().attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+					obj.dotselection
+						.transition()
+						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
 					// update_dotcolor_legend(obj)
 				} else {
-					obj.dotselection.transition().attr('r', radius)
+					obj.dotselection
+						.transition()
+						.attr('r', radius)
+						.style('opacity', 1)
 				}
 			}
 		})
