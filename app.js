@@ -159,6 +159,7 @@ if (serverconfig.jwt) {
 	})
 }
 
+app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)
