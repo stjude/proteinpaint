@@ -238,11 +238,11 @@ export class App extends React.Component {
 			(this.filters ? 'filters=' + encodeURIComponent(JSON.stringify(this.filters)) : '')
 		this.replaceURLHistory()
 		const set_filter = this.filters && this.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
-		let set_id
+		const newState = { filters: this.filters, set_id_flag: set_filter ? true : false }
 		if (set_filter && set_filter.content.value[0].includes('set_id:')) {
-			set_id = set_filter.content.value[0].split(':').pop()
+			newState.set_id = set_filter.content.value[0].split(':').pop()
 		}
-		this.setState({ filters: this.filters, set_id_flag: set_filter ? true : false, set_id })
+		this.setState(newState)
 	}
 	ApplyFilter() {
 		const filter_flag = !this.state.filter_flag
