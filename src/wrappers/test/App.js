@@ -29,7 +29,7 @@ const genes = [
 	{ name: 'ALK', ensembl_id: 'ENSG00000171094' }
 ]
 
-const gdcParamKeys = ['filters', 'genes']
+const gdcParamKeys = ['filters', 'gene']
 
 export class App extends React.Component {
 	constructor(props) {
@@ -237,7 +237,12 @@ export class App extends React.Component {
 			(this.nonGdcParams ? this.nonGdcParams + '&' : '?') +
 			(this.filters ? 'filters=' + encodeURIComponent(JSON.stringify(this.filters)) : '')
 		this.replaceURLHistory()
-		this.setState({ filters: this.filters })
+		const set_filter = this.filters && this.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
+		let set_id
+		if (set_filter && set_filter.content.value[0].includes('set_id:')) {
+			set_id = set_filter.content.value[0].split(':').pop()
+		}
+		this.setState({ filters: this.filters, set_id_flag: set_filter ? true : false, set_id })
 	}
 	ApplyFilter() {
 		const filter_flag = !this.state.filter_flag
@@ -285,7 +290,7 @@ export class App extends React.Component {
 				.split('&')
 				.forEach(kv => {
 					const [key, value] = kv.split('=')
-					if (!gdcParamKeys.includes(key)) params[key] = value
+					if (gdcParamKeys.includes(key)) params[key] = value
 				})
 		if (params.filters) {
 			params['filters'] = JSON.parse(decodeURIComponent(params.filters))
