@@ -282,13 +282,13 @@ async function get_data(obj) {
 						.transition()
 						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
 						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
-					// update_dotcolor_legend(obj)
 				} else {
 					obj.dotselection
 						.transition()
 						.attr('r', radius)
 						.style('opacity', 1)
 				}
+				update_dotcolor_legend(obj)
 			}
 		})
 		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
@@ -888,8 +888,12 @@ function legend_attr_levels(obj) {
 	// multiple ways to decide order of L1values
 	for (const L1value of get_itemOrderList(L1, obj)) {
 		const L1o = L1.v2c.get(L1value)
-		const L1div = scrolldiv.append('div').style('margin-top', '20px')
+		const L1div = scrolldiv
+			.append('div')
+			.style('margin-top', '20px')
+			.attr('class', 'sja_lb_div')
 		L1div.append('div')
+			.attr('class', 'sja_l1lb')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
 			.style('margin-top', '15px')
 
@@ -1121,7 +1125,39 @@ function legend_flatlist(obj) {
 }
 
 function update_dotcolor_legend(obj) {
-	//TODO: update legend table by filter
+	// update legend table by filter
+	const filterd_dots = obj.dots.filter(d => obj.filteredSamples.has(d.sample))
+	const attrs_list = Array.from(filterd_dots, d => d.s)
+
+	const key1 = obj.attr_levels[0].label || obj.attr_levels[0].key
+	const l1_labs = [...new Set(Array.from(attrs_list, a => a[key1]))]
+
+	const key2 = obj.attr_levels[1].label || obj.attr_levels[1].key
+	const l2_labs = [...new Set(Array.from(attrs_list, a => a[key2]))]
+
+	const legend_divs = obj.legendtable.node().querySelectorAll('.sja_lb_div')
+	for (const div1 of legend_divs) {
+		// render main labels for level1
+		const l1_label = d3select(div1)
+			.select('.sja_l1lb')
+			.node()
+			.innerText.split(/\s{2}n=/)[0]
+		if (!l1_labs.includes(l1_label)) d3select(div1).style('display', 'none')
+		else {
+			d3select(div1).style('display', 'block')
+			// render secondary labels for level2
+			const l2_divs = d3select(div1)
+				.node()
+				.querySelectorAll('.sja_clb')
+			for (const div2 of l2_divs) {
+				const clab = d3select(div2)
+					.node()
+					.querySelectorAll('div')[1]
+				if (!l2_labs.includes(clab.innerText)) d3select(div2).style('display', 'none')
+				else d3select(div2).style('display', 'inline-block')
+			}
+		}
+	}
 }
 
 function click_dot(dot, obj) {
