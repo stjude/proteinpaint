@@ -9427,6 +9427,9 @@ async function pp_init() {
 		if (g.nohicdomain) {
 			delete g2.hicdomain
 		}
+		if (g.no_gene2canonicalisoform) {
+			if (g2.genedb) delete g2.genedb.gene2canonicalisoform
+		}
 	}
 
 	if (serverconfig.defaultgenome) {
