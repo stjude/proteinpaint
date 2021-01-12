@@ -14,8 +14,8 @@ export async function init_examples(par) {
 	const header_div = wrapper_div.append('div')
 	make_intro(wrapper_div)
 	const track_grid = make_main_track_grid(wrapper_div)
-	const gbrowswer_col = make_gbrowser_col(track_grid)
-	const otherapp_col = make_otherapp_col(track_grid)
+	const gbrowswer_col = make_gBrowserCol(track_grid)
+	const otherapp_col = make_otherAppCol(track_grid)
 
 	// genomepaint panel
 	gbrowswer_col
@@ -71,6 +71,7 @@ export async function init_examples(par) {
 		experimentalList,
 		appList
 	}
+	console.log(track_arg)
 	make_header(header_div, track_arg)
 	await loadTracks(track_arg)
 }
@@ -317,7 +318,7 @@ function make_main_track_grid(div) {
 }
 
 //Creates the outer Genome Browser column
-function make_gbrowser_col(div) {
+function make_gBrowserCol(div) {
 	const gBrowserCol = div.append('div')
 	gBrowserCol
 		.style('grid-area', 'gbrowser')
@@ -325,12 +326,12 @@ function make_gbrowser_col(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
-	make_gbrowser_header(gBrowserCol)
+	make_gBrowserHeader(gBrowserCol)
 
 	return gBrowserCol
 }
 
-function make_gbrowser_header(div) {
+function make_gBrowserHeader(div) {
 	const gBrowserHeader = div.append('div')
 	gBrowserHeader
 		.append('div')
@@ -385,7 +386,7 @@ function make_gpaint_card(div) {
 }
 
 //Creates the outer Other App column
-function make_otherapp_col(div) {
+function make_otherAppCol(div) {
 	const otherAppsCol = div.append('div')
 	otherAppsCol
 		.style('grid-area', 'otherapps')
@@ -393,12 +394,12 @@ function make_otherapp_col(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
-	make_otherapp_header(otherAppsCol)
+	make_otherAppHeader(otherAppsCol)
 
 	return otherAppsCol
 }
 
-function make_otherapp_header(div) {
+function make_otherAppHeader(div) {
 	const otherAppHeader = div.append('div')
 	otherAppHeader
 		.append('div')
@@ -503,37 +504,90 @@ function displayExperimentalTracks(tracks, holder) {
 	holder.html(htmlString)
 }
 
-function displayAppTracks(tracks, holder) {
-	const htmlString = tracks
-		.map(track => {
-			const app = `${track.app}`
-			const subheading = `${track.subheading}`
-			if (app == 'Other Apps' && subheading == 'Tracks') {
-				return `
-                <li class="track">
-                <h6>${track.name}</h6>
-                ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
-                ${
-									track.buttons.example
-										? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`
-										: `<span class="track-image"><img src="${track.image}"></img></span>`
-								}
-                <div class="track-btns">
-                ${
-									track.buttons.example
-										? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>`
-										: ''
-								}
-                ${
-									track.buttons.url
-										? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
-										: ''
-								}
-                ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-                </div>
-                </li>`
-			}
-		})
-		.join('')
-	holder.html(htmlString)
+// function displayAppTracks(tracks, holder) {
+// 	const htmlString = tracks
+// 		.map(track => {
+// 			const app = `${track.app}`
+// 			const subheading = `${track.subheading}`
+// 			if (app == 'Other Apps' && subheading == 'Tracks') {
+// 				return `
+// 				<li class="track">
+//                 <h6>${track.name}</h6>
+//                 ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+//                 ${track.buttons.example ? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`: `<span class="track-image"><img src="${track.image}"></img></span>`}
+//                 <div class="track-btns">
+//                 ${track.buttons.example ? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>` : ''}
+//                 ${track.buttons.url ? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>` : ''}
+//                 ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
+//                 </div>
+//                 </li>`
+// 			}
+// 		})
+// 		.join('')
+// 	holder.html(htmlString)
+// }
+
+async function displayAppTracks(tracks, holder) {
+	const trackData = tracks.map(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Other Apps' && subheading == 'Tracks') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`
+                        <h6>${track.name}</h6>
+                        ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+                        <span class="track-image"><img src="${track.image}"></img></span>
+                        ${
+													track.buttons.url
+														? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
+														: ''
+												}
+                        ${
+													track.buttons.doc
+														? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>`
+														: ''
+												}
+                        </div>`
+				)
+				.on('click', () => {
+					;`${track.buttons.examples ? openNewTab : ''}`
+				})
+			return li
+		}
+		return trackData
+	})
+}
+
+async function openNewTab() {
+	const contents = `<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="utf-8">
+			</head>
+			<body>
+			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
+				<div class="header">
+					<h1 id="${track.name}">${track.name} Example</h1>
+				</div>
+				<div id="aaa"></div>
+			<script>
+				runproteinpaint({
+                    host: ${window.location.origin},
+                    holder: document.getElementById('aaa'),
+                    ${JSON.stringify(track.buttons.example)}
+                })
+			</script>
+			</body>
+			</html>`
+	const tab = window.open(`${track.name},name=${track.name} Example`)
+	const script = tab.document.createElement('script')
+	const tabName = `${track.name}`
+	script.type = 'text/javascript'
+	tab.document.write(contents)
+	tab.document.close()
+	setTimeout(function() {
+		tab.document.title = tabName
+	}, 500)
 }
