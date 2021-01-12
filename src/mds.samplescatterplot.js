@@ -5,6 +5,9 @@ import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
+import { filterInit } from './common/filter'
+import { getFilteredSamples } from '../modules/filter'
+import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /*
 obj:
@@ -158,9 +161,9 @@ export async function init(obj, holder, debugmode) {
 		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
-
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 	obj.scattersvg_buttons = scatterdiv.append('div')
@@ -260,6 +263,36 @@ async function get_data(obj) {
 			if (!d.color) d.color = userdotcolor
 			obj.dots_user.push(d)
 		}
+	}
+
+	if (!obj.filterApi) {
+		obj.filterApi = filterInit({
+			btn: obj.filterDiv.append('div'),
+			btnLabel: 'Filter',
+			emptyLabel: '+New Filter',
+			holder: obj.filterDiv.append('div'),
+			vocab: getVocabFromSamplesArray(ad.samples),
+			//termdbConfig: opts.termdbConfig,
+			debug: true,
+			callback(filter) {
+				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
+				// re-render scatterplot
+				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
+					obj.dotselection
+						.transition()
+						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
+				} else {
+					obj.dotselection
+						.transition()
+						.attr('r', radius)
+						.style('opacity', 1)
+				}
+				update_dotcolor_legend(obj)
+			}
+		})
+		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
+		obj.filteredSamples = [] // may be seeded from the initial render
 	}
 }
 
@@ -855,8 +888,12 @@ function legend_attr_levels(obj) {
 	// multiple ways to decide order of L1values
 	for (const L1value of get_itemOrderList(L1, obj)) {
 		const L1o = L1.v2c.get(L1value)
-		const L1div = scrolldiv.append('div').style('margin-top', '20px')
+		const L1div = scrolldiv
+			.append('div')
+			.style('margin-top', '20px')
+			.attr('class', 'sja_lb_div')
 		L1div.append('div')
+			.attr('class', 'sja_l1lb')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
 			.style('margin-top', '15px')
 
@@ -1083,6 +1120,42 @@ function legend_flatlist(obj) {
 				.style('color', o.color)
 				.text(o.name || value)
 			o.cell = cell
+		}
+	}
+}
+
+function update_dotcolor_legend(obj) {
+	// update legend table by filter
+	const filterd_dots = obj.dots.filter(d => obj.filteredSamples.has(d.sample))
+	const attrs_list = Array.from(filterd_dots, d => d.s)
+
+	const key1 = obj.attr_levels[0].label || obj.attr_levels[0].key
+	const l1_labs = [...new Set(Array.from(attrs_list, a => a[key1]))]
+
+	const key2 = obj.attr_levels[1].label || obj.attr_levels[1].key
+	const l2_labs = [...new Set(Array.from(attrs_list, a => a[key2]))]
+
+	const legend_divs = obj.legendtable.node().querySelectorAll('.sja_lb_div')
+	for (const div1 of legend_divs) {
+		// render main labels for level1
+		const l1_label = d3select(div1)
+			.select('.sja_l1lb')
+			.node()
+			.innerText.split(/\s{2}n=/)[0]
+		if (!l1_labs.includes(l1_label)) d3select(div1).style('display', 'none')
+		else {
+			d3select(div1).style('display', 'block')
+			// render secondary labels for level2
+			const l2_divs = d3select(div1)
+				.node()
+				.querySelectorAll('.sja_clb')
+			for (const div2 of l2_divs) {
+				const clab = d3select(div2)
+					.node()
+					.querySelectorAll('div')[1]
+				if (!l2_labs.includes(clab.innerText)) d3select(div2).style('display', 'none')
+				else d3select(div2).style('display', 'inline-block')
+			}
 		}
 	}
 }

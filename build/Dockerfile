@@ -36,14 +36,40 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
 	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary -P /home/root/pp/tools/
 
-WORKDIR /home/root/app/pp
-ADD tmppack/package ./
-RUN npm install
-COPY serverconfig.json ./
-COPY build/set-container-config.js ./
-RUN node set-container-config
 
+
+#####################
+
+FROM ppdeps AS dev
+
+WORKDIR /home/root/pp
+COPY package.json ./
+RUN npm install
+WORKDIR /home/root/pp/app
+ENTRYPOINT [ "../node_modules/nodemon/bin/nodemon.js", "server.js"]
+CMD ["--watch", "server.js", "--watch genome --watch dataset --watch serverconfig.json" ]
+
+
+#####################
+
+FROM ppdeps AS test
+
+CMD [ "npm", "run", "test-react" ]
+
+
+
+######################
+
+FROM ppdeps AS prod
+
+WORKDIR /home/root/pp/app
+ADD ./ ./
+RUN npm install --production
 ADD genome ./genome
 ADD dataset ./dataset
+COPY ./serverconfig.json ./
+COPY ./set-container-config.js ./
+RUN node set-container-config
+CMD [ "node", "bin.js" ]
 
-CMD [ "node", "server.js" ]
+

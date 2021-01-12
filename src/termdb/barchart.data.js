@@ -23,7 +23,7 @@ export function getBarchartData(_q, data0) {
 	if (!q.term2_q) q.term2_q = {}
 	if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 
-	const pj = getPj(q, data0)
+	const pj = getCharts(q, data0)
 	if (pj.tree.results) pj.tree.results.pjtime = pj.times
 	return pj.tree.results
 }
@@ -106,7 +106,7 @@ const templateBar = JSON.stringify({
 	}
 })
 
-function getPj(q, data) {
+function getCharts(q, data) {
 	/*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
@@ -222,9 +222,9 @@ function setDatasetAnnotations(item) {
 	}
 }
 
-function getCategoricalIdVal(d, term, q, rows) {
+function getCategoricalIdVal(d, term) {
 	const id = 'id' in term ? d[term.id] : '-'
-	const value = 'id' in term ? '' + d[term.id] : undefined
+	const value = 'id' in term && isNumeric(d[term.id]) ? +d[term.id] : 0
 	return [[id], value]
 }
 
@@ -384,6 +384,35 @@ function boxplot_getvalue(lst) {
 	}
 	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
+}
+
+export function getCategoryData(q, data) {
+	const pj = new Partjson({
+		data,
+		template: JSON.stringify({
+			'@before()': '=prep()',
+			'@join()': {
+				idVal: '=idVal()'
+			},
+			results: {
+				'&idVal.id': {
+					samplecount: '+1',
+					':__key': '&idVal.id',
+					':__label': '&idVal.id'
+				}
+			}
+		}),
+		'=': {
+			prep(row) {
+				return sample_match_termvaluesetting(row.data, q.filter)
+			},
+			idVal(row, context) {
+				const [id, value] = getCategoricalIdVal(row.data, q.term)
+				return { id: id[0], value }
+			}
+		}
+	})
+	return { lst: Object.values(pj.tree.results) }
 }
 
 function isNumeric(n) {

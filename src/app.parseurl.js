@@ -263,18 +263,7 @@ arg
 			if (lst.length) par.hlregions = lst
 		}
 
-		if (urlp.has('mds')) {
-			const tmp = urlp.get('mds').split(',')
-			if (tmp[0] && tmp[1]) {
-				par.datasetqueries = [{ dataset: tmp[0], querykey: tmp[1] }]
-				if (urlp.has('sample')) {
-					par.datasetqueries[0].singlesample = { name: urlp.get('sample') }
-					// quick fix!!
-					// tell  mds_load_query_bykey to load assay tracks in this context, but will not do so if launching sample view from main tk
-					par.datasetqueries[0].getsampletrackquickfix = true
-				}
-			}
-		}
+		par.datasetqueries = may_get_officialmds(urlp)
 
 		try {
 			par.tklst = await get_tklst(urlp, arg.holder, genomeobj)
@@ -293,49 +282,49 @@ arg
 		if (str.length == 0) {
 			return 'zero length query string'
 		}
-		let genomename
-		for (let n in arg.genomes) {
-			if (arg.genomes[n].isdefault) {
-				genomename = n
-				break
+		const par = {
+			hostURL: arg.hostURL,
+			query: str,
+			holder: arg.holder,
+			variantPageCall_snv: arg.variantPageCall_snv,
+			samplecart: arg.samplecart,
+			debugmode: arg.debugmode
+		}
+		{
+			let genomename
+			for (let n in arg.genomes) {
+				if (arg.genomes[n].isdefault) {
+					genomename = n
+					break
+				}
 			}
+			if (urlp.has('genome')) {
+				genomename = urlp.get('genome')
+			}
+			if (!genomename) return 'No genome, and none set as default'
+			par.genome = arg.genomes[genomename]
+			if (!par.genome) return 'invalid genome: ' + genomename
 		}
-		if (urlp.has('genome')) {
-			genomename = urlp.get('genome')
-		}
-		if (!genomename) return 'No genome, and none set as default'
-		const genomeobj = arg.genomes[genomename]
-		if (!genomeobj) return 'invalid genome: ' + genomename
 		let ds = null
 		if (urlp.has('dataset')) {
-			ds = urlp.get('dataset').split(',')
+			par.dataset = urlp.get('dataset').split(',')
 		}
-		let hlaa = null
 		if (urlp.has('hlaachange')) {
-			hlaa = new Map()
+			par.hlaachange = new Map()
 			for (const s of urlp.get('hlaachange').split(',')) {
-				hlaa.set(s, false)
+				par.hlaachange.set(s, false)
 			}
 		}
-		let tklst
+
 		try {
-			tklst = await get_tklst(urlp, arg.holder, genomeobj)
+			par.tklst = await get_tklst(urlp, arg.holder, par.genome)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
 		}
-		blockinit({
-			hostURL: arg.hostURL,
-			query: str,
-			genome: arg.genomes[genomename],
-			tklst,
-			holder: arg.holder,
-			dataset: ds,
-			hlaachange: hlaa,
-			variantPageCall_snv: arg.variantPageCall_snv,
-			samplecart: arg.samplecart,
-			debugmode: arg.debugmode
-		})
+
+		par.datasetqueries = may_get_officialmds(urlp)
+		blockinit(par)
 		return
 	}
 
@@ -353,6 +342,22 @@ arg
 			)
 		}
 	}
+}
+
+function may_get_officialmds(urlp) {
+	if (!urlp.has('mds')) return
+	const tmp = urlp.get('mds').split(',')
+	if (tmp[0] && tmp[1]) {
+		const dataset = { dataset: tmp[0], querykey: tmp[1] }
+		if (urlp.has('sample')) {
+			dataset.singlesample = { name: urlp.get('sample') }
+			// quick fix!!
+			// tell  mds_load_query_bykey to load assay tracks in this context, but will not do so if launching sample view from main tk
+			dataset.getsampletrackquickfix = true
+		}
+		return [dataset]
+	}
+	return
 }
 
 export async function get_tklst(urlp, error_div, genomeobj) {

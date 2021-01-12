@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const Partjson = require('partjson')
 const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
+const filterUtils = require('../filter')
 
 function barchart_data(q, data0) {
 	/*
@@ -179,7 +180,7 @@ function getPj(q, inReqs, data, tdb, ds) {
 				if (!context.self.values || !context.self.values.length) return
 				const values = context.self.values.filter(d => d !== null)
 				if (!values.length) return
-				values.sort((i, j) => i - j) //console.log(values.slice(0,5), values.slice(-5), context.self.values.sort((i,j)=> i - j ).slice(0,5))
+				values.sort((i, j) => i - j)
 				const stat = boxplot_getvalue(
 					values.map(v => {
 						return { value: +v }
@@ -260,9 +261,9 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 */
 	if (q.filter) {
 		if (!q.filter.join) q.filter.join = ''
-		setDatasetAnnotations(q.filter)
+		filterUtils.setDatasetAnnotations(q.filter, sjlife)
 		inReqs.filterFxn = row => {
-			return sample_match_termvaluesetting(row, q.filter)
+			return filterUtils.sample_match_termvaluesetting(row, q.filter)
 		}
 	}
 
@@ -299,19 +300,6 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 			set_condition_fxn(termid, term.values, tdb, inReq, i)
 		} else {
 			throw 'unable to handle request, unknown term type'
-		}
-	}
-}
-
-function setDatasetAnnotations(item) {
-	if (item.type == 'tvslst') {
-		for (const subitem of item.lst) {
-			setDatasetAnnotations(subitem)
-		}
-	} else {
-		sjlife.setAnnoByTermId(item.tvs.term.id)
-		if (item.tvs.term.type == 'categorical') {
-			item.tvs.valueset = new Set(item.tvs.values.map(i => i.key))
 		}
 	}
 }
@@ -364,7 +352,6 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 	inReq.joinFxns[termid] = row => {
 		const v = row[termid]
 		if (!isNumeric(v)) return
-		if (row.sample == 'SJL5117302') console.log(367, termid, row[termid])
 		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
 			return term.values[v].label
 		}
@@ -474,88 +461,6 @@ arguments:
 		}
 	}
 	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
-}
-
-function sample_match_termvaluesetting(row, filter) {
-	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
-	let numberofmatchedterms = 0
-
-	/* for AND, require all terms to match */
-	for (const item of lst) {
-		if (item.type == 'tvslst') {
-			if (sample_match_termvaluesetting(row, item)) {
-				numberofmatchedterms++
-			}
-		} else {
-			const t = item.tvs
-			const samplevalue = row[t.term.id]
-
-			let thistermmatch
-
-			if (t.term.type == 'categorical') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				thistermmatch = t.valueset.has(samplevalue)
-			} else if (t.term.type == 'integer' || t.term.type == 'float') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				for (const range of t.ranges) {
-					if ('value' in range) {
-						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)
-						if (thistermmatch) break
-					} else {
-						// actual range
-						if (t.term.values) {
-							const v = t.term.values[samplevalue.toString()]
-							if (v && v.uncomputable) {
-								continue
-							}
-						}
-						let left, right
-						if (range.startunbounded) {
-							left = true
-						} else if ('start' in range) {
-							if (range.startinclusive) {
-								left = samplevalue >= range.start
-							} else {
-								left = samplevalue > range.start
-							}
-						}
-						if (range.stopunbounded) {
-							right = true
-						} else if ('stop' in range) {
-							if (range.stopinclusive) {
-								right = samplevalue <= range.stop
-							} else {
-								right = samplevalue < range.stop
-							}
-						}
-						thistermmatch = left && right
-					}
-					if (thistermmatch) break
-				}
-			} else if (t.term.type == 'condition') {
-				const key = getPrecomputedKey(t)
-				const anno = samplevalue && samplevalue[key]
-				if (anno) {
-					thistermmatch = Array.isArray(anno)
-						? t.values.find(d => anno.includes(d.key))
-						: t.values.find(d => d.key == anno)
-				}
-			} else {
-				throw 'unknown term type'
-			}
-
-			if (t.isnot) {
-				thistermmatch = !thistermmatch
-			}
-			if (thistermmatch) numberofmatchedterms++
-		}
-
-		// if one tvslst is matched with an "or" (Set UNION), then sample is okay
-		if (filter.join == 'or' && numberofmatchedterms) return true
-	}
-
-	// for join="and" (Set intersection)
-	if (numberofmatchedterms == lst.length) return true
 }
 
 function boxplot_getvalue(lst) {

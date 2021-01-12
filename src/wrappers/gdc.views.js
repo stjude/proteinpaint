@@ -11,8 +11,8 @@ export function getLolliplotTrack() {
 	// assume for now that host, basepath, and optional token
 	// are passed via localStorage
 	const data = this.props.dataKey // passed as props, <ProteinPaint dataKey='' />
-		? JSON.parse(localStorage.getItem(this.props.dataKey))
-		: { host: 'https://' + window.location.host, basepath: '' }
+		? JSON.parse(this.window.localStorage.getItem(this.props.dataKey))
+		: { host: 'https://' + this.window.location.host, basepath: '' }
 
 	const arg = {
 		host: data.host + data.basepath,
@@ -31,10 +31,10 @@ export function getLolliplotTrack() {
 	// the set_id from within the URL "filter" parameter
 	const params = this.getUrlParams()
 	if (params.gene) {
-		arg.gene = params.gene
+		arg.gene2canonicalisoform = params.gene
 	}
-	if (params.filters && params.filters.content[0].content.value[0].includes('set_id:')) {
-		arg.tracks[0].set_id = params.filters.content[0].content.value[0]
+	if (params.filters) {
+		arg.tracks[0].filter0 = params.filters
 	}
 
 	return arg

@@ -120,6 +120,8 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
+const basepath = process.env.PP_BASEPATH || serverconfig.PP_BASEPATH || ''
+
 app.use(express.static(path.join(process.cwd(), './public')))
 app.use(compression())
 
@@ -157,6 +159,7 @@ if (serverconfig.jwt) {
 	})
 }
 
+<<<<<<< HEAD
 app.post('/examples', handle_examples)
 app.post('/mdsjsonform', handle_mdsjsonform)
 app.get('/genomes', handle_genomes)
@@ -233,6 +236,75 @@ if (serverconfig.debugmode) {
 	app.all('/portal/:actualroute', (req, res) => {
 		console.log('test')
 		res.redirect('/' + req.params.actualroute)
+=======
+app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
+app.get(basepath + '/genomes', handle_genomes)
+app.post(basepath + '/genelookup', handle_genelookup)
+app.post(basepath + '/ntseq', handle_ntseq)
+app.post(basepath + '/pdomain', handle_pdomain)
+app.get(basepath + '/tkbedj', bedj_request_closure(genomes))
+app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get(basepath + '/tkbam', bam_request_closure(genomes))
+app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
+app.get(basepath + '/blat', blat_request_closure(genomes))
+app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.get(basepath + '/tkbampile', bampile_request)
+app.post(basepath + '/snpbyname', handle_snpbyname)
+app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
+
+app.post(basepath + '/tkbigwig', handle_tkbigwig)
+
+app.get(basepath + '/tabixheader', handle_tabixheader)
+app.post(basepath + '/snp', handle_snpbycoord)
+app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
+app.post(basepath + '/isoformlst', handle_isoformlst)
+app.post(basepath + '/dbdata', handle_dbdata)
+app.post(basepath + '/img', handle_img)
+app.post(basepath + '/svmr', handle_svmr)
+app.post(basepath + '/dsgenestat', handle_dsgenestat)
+app.post(basepath + '/study', handle_study)
+app.post(basepath + '/textfile', handle_textfile)
+app.post(basepath + '/urltextfile', handle_urltextfile)
+app.get(basepath + '/junction', junction_request) // legacy
+app.post(basepath + '/mdsjunction', handle_mdsjunction)
+app.post(basepath + '/mdscnv', handle_mdscnv)
+app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
+app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
+app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
+app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
+
+app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
+
+app.get(basepath + '/vcfheader', handle_vcfheader)
+
+app.post(basepath + '/translategm', handle_translategm)
+app.get(basepath + '/hicstat', handle_hicstat)
+app.post(basepath + '/hicdata', handle_hicdata)
+app.post(basepath + '/samplematrix', handle_samplematrix)
+app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
+app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot)
+app.post(basepath + '/fimo', fimo.handle_closure(genomes))
+app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
+app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
+app.post(basepath + '/ase', handle_ase)
+app.post(basepath + '/bamnochr', handle_bamnochr)
+app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
+
+const optionalRoutesDir = './modules/test/routes'
+if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
+	fs.readdir(optionalRoutesDir, (err, filenames) => {
+		for (const filename of filenames) {
+			if (filename.endsWith('.js')) {
+				const setRoutes = __non_webpack_require__(optionalRoutesDir + '/' + filename)
+				setRoutes(app, basepath)
+			}
+		}
+>>>>>>> master
 	})
 }
 
@@ -277,6 +349,7 @@ pp_init()
 		process.exit(1)
 	})
 
+<<<<<<< HEAD
 async function serverconfig_init() {
 	let temp_serverconfig = {}
 
@@ -307,6 +380,21 @@ async function handle_examples(req, res) {
 		return
 	}
 	res.send({ error: 'Invalid request' })
+=======
+function handle_gene2canonicalisoform(req, res) {
+	log(req)
+	try {
+		if (!req.query.gene) throw '.gene missing'
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'unknown genome'
+		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+>>>>>>> master
 }
 
 async function handle_mdsjsonform(req, res) {
@@ -9458,6 +9546,9 @@ async function pp_init() {
 		if (g.nohicdomain) {
 			delete g2.hicdomain
 		}
+		if (g.no_gene2canonicalisoform) {
+			if (g2.genedb) delete g2.genedb.gene2canonicalisoform
+		}
 	}
 
 	if (serverconfig.defaultgenome) {
@@ -9543,6 +9634,9 @@ async function pp_init() {
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
+		}
+		if (g.genedb.gene2canonicalisoform) {
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
 		}
 
 		for (const tk of g.tracks) {
@@ -9822,7 +9916,7 @@ function get_codedate() {
 		? './node_modules/@stjude/proteinpaint/'
 		: 'public/..'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
-	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
 }
 

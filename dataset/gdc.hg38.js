@@ -3,9 +3,12 @@
 /*
 query list of variants by isoform
 */
+
+const GDCHOST = process.env.GDCHOST || 'https://api.gdc.cancer.gov'
+
 const isoform2variants = [
 	{
-		endpoint: 'https://api.gdc.cancer.gov/ssms',
+		endpoint: GDCHOST + '/ssms',
 		size: 100000,
 		fields: [
 			'ssm_id',
@@ -45,11 +48,14 @@ const isoform2variants = [
 					}
 				})
 			}
+			if (p.filter0) {
+				f.content.push(p.filter0)
+			}
 			return f
 		}
 	},
 	{
-		endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+		endpoint: GDCHOST + '/ssm_occurrences',
 		size: 100000,
 		fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
 		filters: p => {
@@ -79,6 +85,9 @@ const isoform2variants = [
 						value: [p.set_id]
 					}
 				})
+			}
+			if (p.filter0) {
+				f.content.push(p.filter0)
 			}
 			return f
 		}
@@ -194,7 +203,7 @@ don't know a js method to alter the list of attributes in `case { }` part
   only return subset of attributes selected for sunburst chart
 */
 const variant2samples = {
-	endpoint: 'https://api.gdc.cancer.gov/ssm_occurrences',
+	endpoint: GDCHOST + '/ssm_occurrences',
 	size: 100000,
 	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
 	fields_list: [
@@ -231,6 +240,9 @@ const variant2samples = {
 				}
 			})
 		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
 		return f
 	}
 }
@@ -254,6 +266,9 @@ function totalsize_filters(p) {
 				value: [p.set_id]
 			}
 		})
+	}
+	if (p.filter0) {
+		f.filters.content.push(p.filter0)
 	}
 	if (p.tid2value) {
 		for (const tid in p.tid2value) {
@@ -682,7 +697,7 @@ module.exports = {
 	color: '#545454',
 	genome: 'hg38',
 	snvindel_attributes,
-	apihost: 'https://api.gdc.cancer.gov/v0/graphql',
+	apihost: GDCHOST + '/v0/graphql',
 
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
