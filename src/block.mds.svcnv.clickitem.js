@@ -2684,13 +2684,6 @@ function mayaddtab_disco(tabs, p) {
 			const wait = client.tab_wait(div)
 			try {
 				const sjcharts = await getsjcharts()
-				const discoPromise = sjcharts.dtDisco({
-					holderSelector: div,
-					settings: {
-						showControls: false,
-						selectedSamples: []
-					}
-				})
 
 				const arg = {
 					genome: p.block.genome.name,
@@ -2728,7 +2721,14 @@ function mayaddtab_disco(tabs, p) {
 					}
 				}
 
-				discoPromise.then(renderer => renderer.main(disco_arg))
+				const renderer = await sjcharts.dtDisco({
+					holderSelector: div,
+					settings: {
+						showControls: false,
+						selectedSamples: []
+					}
+				})
+				renderer.main(disco_arg)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))

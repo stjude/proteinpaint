@@ -8,6 +8,7 @@ import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../modules/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
+import { getsjcharts } from './getsjcharts'
 
 /*
 obj:
@@ -1160,12 +1161,56 @@ function update_dotcolor_legend(obj) {
 	}
 }
 
+/*
+clicking a dot can have different behaviors based on config
+*/
 function click_dot(dot, obj) {
-	/*
-	clicking a dot to launch browser view of tracks from this sample
-	*/
-	if (!obj.dslabel) return
+	if (obj.dslabel) {
+		// to launch browser view of tracks from this sample
+		click_dot_mdsview(dot, obj)
+		return
+	}
+	if (obj.disco) {
+		click_dot_disco(dot, obj)
+		return
+	}
+}
+async function click_dot_disco(dot, obj) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text(dot.sample)
+	const wait = client.tab_wait(pane.body)
+	try {
+		const sjcharts = await getsjcharts()
+		const arg = {
+			genome: obj.disco.genome,
+			dslabel: obj.disco.dslabel,
+			querykey: obj.disco.querykey,
+			getsample4disco: dot.sample
+		}
+		const data = await client.dofetch('/mdssvcnv', arg)
+		if (data.error) throw data.error
+		if (!data.text) throw '.text missing'
 
+		const renderer = await sjcharts.dtDisco({
+			holderSelector: pane.body,
+			settings: {
+				showControls: false,
+				selectedSamples: []
+			}
+		})
+
+		const disco_arg = {
+			sampleName: dot.sample,
+			data: JSON.parse(data.text)
+		}
+		renderer.main(disco_arg)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+function click_dot_mdsview(dot, obj) {
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text(dot.sample)
 

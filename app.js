@@ -5508,7 +5508,9 @@ function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
 	if (!ds.singlesamplemutationjson)
 		return res.send({ error: 'singlesamplemutationjson not available for this dataset' })
 	const samplename = req.query.getsample4disco
-	const file = path.join(serverconfig.tpmasterdir, ds.singlesamplemutationjson.samples[samplename])
+	const f0 = ds.singlesamplemutationjson.samples[samplename]
+	if (!f0) return res.send({ error: 'no data' })
+	const file = path.join(serverconfig.tpmasterdir, f0)
 	fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
 		if (err) return res.send({ error: 'error getting data for this sample' })
 		res.send({ text: data })
