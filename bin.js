@@ -12,27 +12,34 @@ const pkg = require('./package.json')
 const fs = require('fs')
 const execSync = require('child_process').execSync
 const path = require('path')
-const serverconfig = require(path.join(process.cwd(), './serverconfig.json'))
+const serverconfig = require(path.join(process.cwd(), './modules/serverconfig.js'))
 
-// use the pp packages' public dir for index.html and /bin bundles
-const srcdir = pkg._where ? './node_modules/@stjude/proteinpaint' : __dirname
+if (serverconfig.backend_only) {
+	execSync(`rm -rf ./public`)
+} else if (!fs.existsSync('.git')) {
+	// do not do the following in a dev environment
 
-if (!fs.existsSync('public')) {
-	console.log('Creating a public folder ...')
-	execSync(`cp -r ${srcdir}/public .`)
-}
-// don't want to affect developer files
-if (pkg.shasum) {
+	// use the pp packages' public dir for index.html and /bin bundles
+	const srcdir = pkg._where ? './node_modules/@stjude/proteinpaint' : __dirname
+
+	if (!fs.existsSync('public')) {
+		console.log('Creating a public folder ...')
+		execSync(`cp -r ${srcdir}/public .`)
+	}
+
 	console.log('Replacing the public/bin bundles ...')
-	execSync(`rm -rf ./public/bin`)
-	execSync(`cp -r ${srcdir}/public/bin ./public`)
+
+	// in case of usage as a node_module, would need to copy
+	// the pp bin bundles from node_modules/@stjude/proteinpaint to the app directory
+	if (pkg._where) {
+		execSync(`rm -rf ./public/bin`)
+		execSync(`cp -r ${srcdir}/public/bin ./public`)
+	}
 
 	const publicPath = serverconfig.URL ? serverconfig.URL : ''
 	console.log(`Setting the dynamic bundle path to '${publicPath}'`)
-	execSync(`rm ./public/bin/proteinpaint.js`)
-	execSync(
-		`sed 's%__PP_URL__/bin/%${publicPath}/bin/%' < ${srcdir}/public/bin/proteinpaint.js > public/bin/proteinpaint.js`
-	)
+	execSync(`mv ./public/bin/proteinpaint.js ./public/bin/proteinpaint-bk.js`)
+	execSync(`sed 's%__PP_URL__/bin/%${publicPath}/bin/%' < ./public/bin/proteinpaint-bk.js > public/bin/proteinpaint.js`)
 }
 
 require('./server.js')

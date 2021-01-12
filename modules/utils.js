@@ -5,20 +5,9 @@ const fs = require('fs'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
 	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
-	bettersqlite = require('better-sqlite3')
+	bettersqlite = require('better-sqlite3'),
+	serverconfig = require('./serverconfig')
 
-// do not assume that serverconfig.json is in the same dir as server.js
-// for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || '.') + '/serverconfig.json'
-// when unit testing, __non_webpack_require might not be available
-// since a spec might be directly requiring an unpacked or unbundled module
-const serverconfig =
-	process.env.PP_CUSTOMER == 'gdc'
-		? getGDCconfig()
-		: (typeof __non_webpack_require__ == 'function' && __non_webpack_require__(serverconfigfile)) ||
-		  require(serverconfigfile)
-
-//Object.freeze(serverconfig)
 exports.serverconfig = serverconfig
 
 const tabix = serverconfig.tabix || 'tabix'
