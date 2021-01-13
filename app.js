@@ -252,9 +252,9 @@ pp_init()
 			return
 		}
 		/*
-        if(process.argv[2] == 'phewas-precompute') {
-        }
-        */
+		if(process.argv[2] == 'phewas-precompute') {
+		}
+		*/
 
 		const port = serverconfig.port || 3000
 		const server = app.listen(port)
@@ -262,46 +262,14 @@ pp_init()
 	})
 	.catch(err => {
 		/* when the app server is monitored by another process via the command line,
-        process.exit(1) is required to stop executiion flow with `set -e`
-        and thereby avoid unnecessary endless restarts of an invalid server
-        init with bad config, data, and/or code
-        */
+		process.exit(1) is required to stop executiion flow with `set -e`
+		and thereby avoid unnecessary endless restarts of an invalid server
+		init with bad config, data, and/or code
+		*/
 		if (err.stack) console.log(err.stack)
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
-
-async function serverconfig_init() {
-	let temp_serverconfig = {}
-
-	// copy serverconfig to temp_obj
-	for (let i in utils.serverconfig) {
-		temp_serverconfig[i] = utils.serverconfig[i]
-	}
-
-	// add examples json to temp_obj
-	const txt = await utils.read_file(utils.serverconfig.examplejson)
-	const json = JSON.parse(txt)
-	temp_serverconfig.examples = json.examples
-
-	// freeze serverconfig obj
-	const serverconfig_freeze = Object.freeze(temp_serverconfig)
-	return serverconfig_freeze
-}
-
-async function handle_examples(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
-	if (req.query) {
-		if (req.query.getexamplejson) {
-			res.send({ examples: serverconfig.examples })
-		} else {
-			res.send({ error: 'examples json file not defined' })
-		}
-		return
-	}
-	res.send({ error: 'Invalid request' })
-}
 
 function handle_gene2canonicalisoform(req, res) {
 	log(req)
@@ -316,6 +284,20 @@ function handle_gene2canonicalisoform(req, res) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
+}
+
+async function handle_examples(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
+	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (req.query) {
+		if (req.query.getexamplejson) {
+			res.send({ examples: serverconfig.examples })
+		} else {
+			res.send({ error: 'examples json file not defined' })
+		}
+		return
+	}
+	res.send({ error: 'Invalid request' })
 }
 
 async function handle_mdsjsonform(req, res) {
@@ -9818,7 +9800,6 @@ async function pp_init() {
 
 		delete g.rawdslst
 	}
-	serverconfig = await serverconfig_init()
 }
 
 function get_codedate() {
