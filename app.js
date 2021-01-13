@@ -159,85 +159,8 @@ if (serverconfig.jwt) {
 	})
 }
 
-<<<<<<< HEAD
-app.post('/examples', handle_examples)
-app.post('/mdsjsonform', handle_mdsjsonform)
-app.get('/genomes', handle_genomes)
-app.post('/genelookup', handle_genelookup)
-app.post('/ntseq', handle_ntseq)
-app.post('/pdomain', handle_pdomain)
-app.get('/tkbedj', bedj_request_closure(genomes))
-app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
-app.get('/tkbam', bam_request_closure(genomes))
-app.get('/tkaicheck', aicheck_request_closure(genomes))
-app.get('/blat', blat_request_closure(genomes))
-app.get('/mds3', mds3_request_closure(genomes))
-app.get('/tkbampile', bampile_request)
-app.post('/snpbyname', handle_snpbyname)
-app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
-
-app.post('/tkbigwig', handle_tkbigwig)
-
-app.get('/tabixheader', handle_tabixheader)
-app.post('/snp', handle_snpbycoord)
-app.get('/clinvarVCF', handle_clinvarVCF)
-app.post('/isoformlst', handle_isoformlst)
-app.post('/dbdata', handle_dbdata)
-app.post('/img', handle_img)
-app.post('/svmr', handle_svmr)
-app.post('/dsgenestat', handle_dsgenestat)
-app.post('/study', handle_study)
-app.post('/textfile', handle_textfile)
-app.post('/urltextfile', handle_urltextfile)
-app.get('/junction', junction_request) // legacy
-app.post('/mdsjunction', handle_mdsjunction)
-app.post('/mdscnv', handle_mdscnv)
-app.post('/mdssvcnv', handle_mdssvcnv)
-app.post('/mds2', mds2_load.handle_request(genomes))
-app.post('/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
-app.post('/mdsgeneboxplot', handle_mdsgeneboxplot)
-app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
-
-app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
-
-app.get('/vcfheader', handle_vcfheader)
-
-app.post('/translategm', handle_translategm)
-app.get('/hicstat', handle_hicstat)
-app.post('/hicdata', handle_hicdata)
-app.post('/samplematrix', handle_samplematrix)
-app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
-app.post('/mdssamplesignature', handle_mdssamplesignature)
-app.post('/mdssurvivalplot', handle_mdssurvivalplot)
-app.post('/fimo', fimo.handle_closure(genomes))
-app.get('/termdb', termdb.handle_request_closure(genomes))
-app.get('/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
-app.post('/singlecell', singlecell.handle_singlecell_closure(genomes))
-app.post('/isoformbycoord', handle_isoformbycoord)
-app.post('/ase', handle_ase)
-app.post('/bamnochr', handle_bamnochr)
-
-if (serverconfig.debugmode) {
-	/* 
-		TODO: reorganize the loading of these tests to not clutter the app code
-	*/
-	app.get('/portal/genes/bin/:bundle', async (req, res) => {
-		const file = path.join(process.cwd(), `./public/bin/${req.params.bundle}`)
-		res.header('Content-Type', 'application/js')
-		res.send(await fs.readFileSync(file))
-	})
-	app.get('/portal/genes/:gene', async (req, res) => {
-		const file = path.join(process.cwd(), './public/testrun.html')
-		res.header('Content-Type', 'text/html')
-		res.send(await fs.readFileSync(file))
-	})
-	// this redirect is not optimal since it results in two HTTP requests
-	// -- much better if express.js simply rerouted within the same data request
-	app.all('/portal/:actualroute', (req, res) => {
-		console.log('test')
-		res.redirect('/' + req.params.actualroute)
-=======
 app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)
@@ -304,7 +227,6 @@ if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
 				setRoutes(app, basepath)
 			}
 		}
->>>>>>> master
 	})
 }
 
@@ -349,7 +271,6 @@ pp_init()
 		process.exit(1)
 	})
 
-<<<<<<< HEAD
 async function serverconfig_init() {
 	let temp_serverconfig = {}
 
@@ -380,7 +301,8 @@ async function handle_examples(req, res) {
 		return
 	}
 	res.send({ error: 'Invalid request' })
-=======
+}
+
 function handle_gene2canonicalisoform(req, res) {
 	log(req)
 	try {
@@ -394,7 +316,6 @@ function handle_gene2canonicalisoform(req, res) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
->>>>>>> master
 }
 
 async function handle_mdsjsonform(req, res) {
