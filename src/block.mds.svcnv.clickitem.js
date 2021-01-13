@@ -2732,7 +2732,7 @@ function mayaddtab_disco(tabs, p) {
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
-				if (err.stack) console.log(err.stack)
+				if (e.stack) console.log(e.stack)
 			}
 		}
 	})
