@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 /*
-	This script launches the ProteinPaint server from
-	the command line. 
+	This script loads the server configuration, with
+	possible overrides applied at runtime. It then launches 
+	the ProteinPaint server from the command line. 
 	
 	$ npm install @stjude/proteinpaint
 	$ npx proteinpaint
@@ -12,7 +13,7 @@ const pkg = require('./package.json')
 const fs = require('fs')
 const execSync = require('child_process').execSync
 const path = require('path')
-const serverconfig = require(path.join(process.cwd(), './modules/serverconfig.js'))
+const serverconfig = require('./modules/serverconfig.js')
 
 if (serverconfig.backend_only) {
 	execSync(`rm -rf ./public`)
