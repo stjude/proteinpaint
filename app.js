@@ -292,6 +292,8 @@ async function handle_examples(req, res) {
 	if (req.query) {
 		if (req.query.getexamplejson) {
 			res.send({ examples: serverconfig.examples })
+			const tmp = serverconfig.examples
+			log(tmp)
 		} else {
 			res.send({ error: 'examples json file not defined' })
 		}
