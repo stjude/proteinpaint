@@ -8,6 +8,18 @@ const utils = require('./modules/utils')
 const serverconfig = utils.serverconfig
 exports.features = Object.freeze(serverconfig.features || {})
 
+/* test accessibility of serverconfig.tpmasterdir at two places.
+if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
+1. pp_init()
+   if dir is inaccessible, will not initiate and validate any genome/dataset
+   a server process will be launched hosting no genome/dataset,
+   allowing the service to respond to requests with a message (rather than a dead irresponsive url)
+2. handle_genomes()
+   if dir is inaccessbile, will return error
+   this can handle the case that dir becomes inaccessible *after* server launches
+   as genomes is the first thing most requests will query about, this may allow to return a helpful message for most of the cases
+*/
+
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
 }
@@ -108,6 +120,8 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
+const basepath = process.env.PP_BASEPATH || serverconfig.PP_BASEPATH || ''
+
 app.use(express.static(path.join(process.cwd(), './public')))
 app.use(compression())
 
@@ -145,81 +159,73 @@ if (serverconfig.jwt) {
 	})
 }
 
-app.post('/mdsjsonform', handle_mdsjsonform)
-app.get('/genomes', handle_genomes)
-app.post('/genelookup', handle_genelookup)
-app.post('/ntseq', handle_ntseq)
-app.post('/pdomain', handle_pdomain)
-app.get('/tkbedj', bedj_request_closure(genomes))
-app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
-app.get('/tkbam', bam_request_closure(genomes))
-app.get('/tkaicheck', aicheck_request_closure(genomes))
-app.get('/blat', blat_request_closure(genomes))
-app.get('/mds3', mds3_request_closure(genomes))
-app.get('/tkbampile', bampile_request)
-app.post('/snpbyname', handle_snpbyname)
-app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
+app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
+app.get(basepath + '/genomes', handle_genomes)
+app.post(basepath + '/genelookup', handle_genelookup)
+app.post(basepath + '/ntseq', handle_ntseq)
+app.post(basepath + '/pdomain', handle_pdomain)
+app.get(basepath + '/tkbedj', bedj_request_closure(genomes))
+app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get(basepath + '/tkbam', bam_request_closure(genomes))
+app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
+app.get(basepath + '/blat', blat_request_closure(genomes))
+app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.get(basepath + '/tkbampile', bampile_request)
+app.post(basepath + '/snpbyname', handle_snpbyname)
+app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
-app.post('/tkbigwig', handle_tkbigwig)
+app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
-app.get('/tabixheader', handle_tabixheader)
-app.post('/snp', handle_snpbycoord)
-app.get('/clinvarVCF', handle_clinvarVCF)
-app.post('/isoformlst', handle_isoformlst)
-app.post('/dbdata', handle_dbdata)
-app.post('/img', handle_img)
-app.post('/svmr', handle_svmr)
-app.post('/dsgenestat', handle_dsgenestat)
-app.post('/study', handle_study)
-app.post('/textfile', handle_textfile)
-app.post('/urltextfile', handle_urltextfile)
-app.get('/junction', junction_request) // legacy
-app.post('/mdsjunction', handle_mdsjunction)
-app.post('/mdscnv', handle_mdscnv)
-app.post('/mdssvcnv', handle_mdssvcnv)
-app.post('/mds2', mds2_load.handle_request(genomes))
-app.post('/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
-app.post('/mdsgeneboxplot', handle_mdsgeneboxplot)
-app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
+app.get(basepath + '/tabixheader', handle_tabixheader)
+app.post(basepath + '/snp', handle_snpbycoord)
+app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
+app.post(basepath + '/isoformlst', handle_isoformlst)
+app.post(basepath + '/dbdata', handle_dbdata)
+app.post(basepath + '/img', handle_img)
+app.post(basepath + '/svmr', handle_svmr)
+app.post(basepath + '/dsgenestat', handle_dsgenestat)
+app.post(basepath + '/study', handle_study)
+app.post(basepath + '/textfile', handle_textfile)
+app.post(basepath + '/urltextfile', handle_urltextfile)
+app.get(basepath + '/junction', junction_request) // legacy
+app.post(basepath + '/mdsjunction', handle_mdsjunction)
+app.post(basepath + '/mdscnv', handle_mdscnv)
+app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
+app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
+app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
+app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
 
-app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
+app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 
-app.get('/vcfheader', handle_vcfheader)
+app.get(basepath + '/vcfheader', handle_vcfheader)
 
-app.post('/translategm', handle_translategm)
-app.get('/hicstat', handle_hicstat)
-app.post('/hicdata', handle_hicdata)
-app.post('/samplematrix', handle_samplematrix)
-app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
-app.post('/mdssamplesignature', handle_mdssamplesignature)
-app.post('/mdssurvivalplot', handle_mdssurvivalplot)
-app.post('/fimo', fimo.handle_closure(genomes))
-app.get('/termdb', termdb.handle_request_closure(genomes))
-app.get('/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
-app.post('/singlecell', singlecell.handle_singlecell_closure(genomes))
-app.post('/isoformbycoord', handle_isoformbycoord)
-app.post('/ase', handle_ase)
-app.post('/bamnochr', handle_bamnochr)
+app.post(basepath + '/translategm', handle_translategm)
+app.get(basepath + '/hicstat', handle_hicstat)
+app.post(basepath + '/hicdata', handle_hicdata)
+app.post(basepath + '/samplematrix', handle_samplematrix)
+app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
+app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot)
+app.post(basepath + '/fimo', fimo.handle_closure(genomes))
+app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
+app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
+app.post(basepath + '/ase', handle_ase)
+app.post(basepath + '/bamnochr', handle_bamnochr)
+app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 
-if (serverconfig.debugmode) {
-	/* 
-		TODO: reorganize the loading of these tests to not clutter the app code
-	*/
-	app.get('/portal/genes/bin/:bundle', async (req, res) => {
-		const file = path.join(process.cwd(), `./public/bin/${req.params.bundle}`)
-		res.header('Content-Type', 'application/js')
-		res.send(await fs.readFileSync(file))
-	})
-	app.get('/portal/genes/:gene', async (req, res) => {
-		const file = path.join(process.cwd(), './public/testrun.html')
-		res.header('Content-Type', 'text/html')
-		res.send(await fs.readFileSync(file))
-	})
-	// this redirect is not optimal since it results in two HTTP requests
-	// -- much better if express.js simply rerouted within the same data request
-	app.all('/portal/:actualroute', (req, res) => {
-		console.log('test')
-		res.redirect('/' + req.params.actualroute)
+const optionalRoutesDir = './modules/test/routes'
+if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
+	fs.readdir(optionalRoutesDir, (err, filenames) => {
+		for (const filename of filenames) {
+			if (filename.endsWith('.js')) {
+				const setRoutes = __non_webpack_require__(optionalRoutesDir + '/' + filename)
+				setRoutes(app, basepath)
+			}
+		}
 	})
 }
 
@@ -263,6 +269,21 @@ pp_init()
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
+
+function handle_gene2canonicalisoform(req, res) {
+	log(req)
+	try {
+		if (!req.query.gene) throw '.gene missing'
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'unknown genome'
+		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
@@ -327,8 +348,19 @@ async function handle_tabixheader(req, res) {
 	}
 }
 
-function handle_genomes(req, res) {
+async function handle_genomes(req, res) {
 	log(req)
+
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible
+		return error message as the service is out
+		*/
+		res.send({ error: 'Error with TP directory (' + e.code + ')' })
+		return
+	}
+
 	const hash = {}
 	if (req.query && req.query.genome) {
 		hash[req.query.genome] = clientcopy_genome(req.query.genome)
@@ -2600,9 +2632,9 @@ async function handle_mdssvcnv(req, res) {
 	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
 
 	const result = {
-		samplegroups: samplegroups,
-		vcfrangelimit: vcfrangelimit,
-		data_vcf: data_vcf
+		samplegroups,
+		vcfrangelimit,
+		data_vcf
 	}
 
 	// QUICK FIX!!
@@ -3164,15 +3196,23 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 }
 
 function handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sample2obj) {
-	///////// assign expression rank for all samples listed in samplegroup
+	// assign expression rank for all samples listed in samplegroup
+	// no returned value
 	if (expressionrangelimit) {
 		// view range too big above limit set by official track, no checking expression
 		result.expressionrangelimit = expressionrangelimit
-	} else if (gene2sample2obj) {
+		return
+	}
+	if (gene2sample2obj) {
 		// report coordinates for each gene back to client
 		result.gene2coord = {}
 		for (const [n, g] of gene2sample2obj) {
 			result.gene2coord[n] = { chr: g.chr, start: g.start, stop: g.stop }
+		}
+
+		if (result.samplegroups.length == 0) {
+			// got no samples from dna query
+			return
 		}
 
 		if (result.getallsamples) {
@@ -5476,7 +5516,9 @@ function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
 	if (!ds.singlesamplemutationjson)
 		return res.send({ error: 'singlesamplemutationjson not available for this dataset' })
 	const samplename = req.query.getsample4disco
-	const file = path.join(serverconfig.tpmasterdir, ds.singlesamplemutationjson.samples[samplename])
+	const f0 = ds.singlesamplemutationjson.samples[samplename]
+	if (!f0) return res.send({ error: 'no data' })
+	const file = path.join(serverconfig.tpmasterdir, f0)
 	fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
 		if (err) return res.send({ error: 'error getting data for this sample' })
 		res.send({ text: data })
@@ -9320,6 +9362,16 @@ function parse_textfilewithheader(text) {
 /***************************   end of __util   **/
 
 async function pp_init() {
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible for some reason
+		do not validate any genome/dataset, allow the server process to boot
+		*/
+		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
+		return
+	}
+
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
@@ -9384,6 +9436,9 @@ async function pp_init() {
 		}
 		if (g.nohicdomain) {
 			delete g2.hicdomain
+		}
+		if (g.no_gene2canonicalisoform) {
+			if (g2.genedb) delete g2.genedb.gene2canonicalisoform
 		}
 	}
 
@@ -9470,6 +9525,9 @@ async function pp_init() {
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
+		}
+		if (g.genedb.gene2canonicalisoform) {
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
 		}
 
 		for (const tk of g.tracks) {
@@ -9747,7 +9805,7 @@ function get_codedate() {
 		? './node_modules/@stjude/proteinpaint/'
 		: 'public/..'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
-	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
 }
 

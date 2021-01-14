@@ -125,7 +125,11 @@ function mayaddGetter_variant2samples(tk, block) {
 		}
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
 		if (tk.token) par.push('token=' + tk.token)
-		return await client.dofetch2('mds3?' + par.join('&'))
+		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		const data = await client.dofetch2('mds3?' + par.join('&'))
+		if (data.error) throw data.error
+		if (!data.variant2samples) throw 'result error'
+		return data.variant2samples
 	}
 }
 

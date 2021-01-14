@@ -1,8 +1,5 @@
-import { runproteinpaint } from './app'
-import { deepEqual } from './common/rx.core'
-export { getLolliplotTrack } from './gdc/views'
-
-export { runproteinpaint }
+import { runproteinpaint } from '../app'
+export { getLolliplotTrack } from './gdc.views'
 
 export function getPpReact(React, getTrack) {
 	class ProteinPaint extends React.Component {
@@ -11,6 +8,7 @@ export function getPpReact(React, getTrack) {
 			this.state = {}
 		}
 		componentDidMount() {
+			this.window = this.props.window ? this.props.window : window
 			this.runpp()
 		}
 		static getDerivedStateFromProps(props) {
@@ -37,8 +35,9 @@ export function getPpReact(React, getTrack) {
 			)
 		}
 		getUrlParams() {
+			const loc = this.window.location
 			const params = {}
-			window.location.search
+			loc.search
 				.substr(1)
 				.split('&')
 				.forEach(kv => {
@@ -48,8 +47,8 @@ export function getPpReact(React, getTrack) {
 			if (params.filters) {
 				params['filters'] = JSON.parse(decodeURIComponent(params.filters))
 			}
-			if (window.location.pathname) {
-				const url_split = window.location.pathname.split('/')
+			if (loc.pathname) {
+				const url_split = loc.pathname.split('/')
 				// do not hardcode the position of /genes/ in the pathname
 				const i = url_split.findIndex(d => d === 'genes')
 				if (i !== -1) params.gene = url_split[i + 1]
@@ -65,4 +64,23 @@ export function getPpReact(React, getTrack) {
 	}
 
 	return ProteinPaint
+}
+
+function deepEqual(x, y) {
+	if (x === y) {
+		return true
+	} else if (typeof x == 'object' && x != null && (typeof y == 'object' && y != null)) {
+		if (Object.keys(x).length != Object.keys(y).length) {
+			return false
+		}
+
+		for (var prop in x) {
+			if (y.hasOwnProperty(prop)) {
+				if (!deepEqual(x[prop], y[prop])) return false
+			} else {
+				return false
+			}
+		}
+		return true
+	} else return false
 }

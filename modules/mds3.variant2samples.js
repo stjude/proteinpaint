@@ -13,9 +13,6 @@ client instructs if to return sample list or sunburst summary; server may deny t
 
 */
 
-const type_samples = 'samples'
-const type_sunburst = 'sunburst'
-const type_summary = 'summary'
 /*
 get types:
 - samples
@@ -33,9 +30,9 @@ module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
 
-	if (q.get == type_samples) return samples
-	if (q.get == type_sunburst) return make_sunburst(samples, ds, q)
-	if (q.get == type_summary) return make_summary(samples, ds)
+	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
+	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
 	throw 'unknown get type'
 }
 
@@ -56,20 +53,6 @@ async function make_sunburst(samples, ds, q) {
 	if (!ds.variant2samples.sunburst_ids) throw 'sunburst_ids missing'
 	// use only suburst terms
 
-	// XXX it's mixing values from multiple terms! to introduce term id to strat nodes
-	// setting string key to lower case so that "adenomas and adenocarcinomas" can equal to "Adenomas and Adenocarcinomas"
-	let nodename2total
-	if (ds.termdb.termid2totalsize) {
-		nodename2total = new Map() // k: node name, v: total
-		for (const termid of ds.variant2samples.sunburst_ids) {
-			if (!ds.termdb.termid2totalsize[termid]) continue
-			const v2c = await ds.termdb.termid2totalsize[termid].get(q)
-			for (const [v, c] of v2c) {
-				nodename2total.set(v.toLowerCase(), c)
-			}
-		}
-	}
-
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
@@ -79,17 +62,9 @@ async function make_sunburst(samples, ds, q) {
 	)
 	for (const node of nodes) {
 		delete node.lst
-		/********
-		CAUTION
-		must ensure that node.name is the key
-		add "cohortsize" to node
-		*/
-		if (nodename2total) {
-			const k = node.name.toLowerCase()
-			if (nodename2total.has(k)) {
-				node.cohortsize = nodename2total.get(k)
-			}
-		}
+	}
+	if (ds.variant2samples.addCrosstabCount) {
+		await ds.variant2samples.addCrosstabCount(nodes, q)
 	}
 	return nodes
 }

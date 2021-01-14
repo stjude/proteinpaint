@@ -68,29 +68,11 @@ async function make_totalcount(q, ds, result) {
 	}
 
 	if (q.samplesummary && ds.sampleSummaries) {
-		let nodename2total
-		if (ds.termdb.termid2totalsize) {
-			nodename2total = new Map() // k: node name, v: total
-			for (const l of ds.sampleSummaries.lst) {
-				if (!ds.termdb.termid2totalsize[l.label1]) continue
-				const v2c = await ds.termdb.termid2totalsize[l.label1].get(q)
-				for (const [v, c] of v2c) {
-					nodename2total.set(v.toLowerCase(), c)
-				}
-				if (l.label2) {
-					if (!ds.termdb.termid2totalsize[l.label2]) continue
-					const v2c = await ds.termdb.termid2totalsize[l.label2].get(q)
-					for (const [v, c] of v2c) {
-						nodename2total.set(v.toLowerCase(), c)
-					}
-				}
-			}
-		}
 		const labels = ds.sampleSummaries.makeholder(q)
 		const datalst = [result.skewer]
 		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
 		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.sampleSummaries = ds.sampleSummaries.finalize(labels, q, nodename2total)
+		result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
 	}
 }
 
@@ -106,6 +88,10 @@ function init_q(query, genome) {
 		} else {
 			delete query.samplefiltertemp
 		}
+	}
+	if (query.filter0) {
+		// right now only from gdc
+		query.filter0 = JSON.parse(query.filter0)
 	}
 	return query
 }
@@ -171,7 +157,7 @@ async function load_driver(q, ds, result) {
 	// what other loaders can be if not in ds.queries?
 
 	if (q.variant2samples) {
-		result.data = await variant2samples_getresult(q, ds)
+		result.variant2samples = await variant2samples_getresult(q, ds)
 		return
 	}
 

@@ -13,7 +13,8 @@ import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 
-
+import { getPpReact, getLolliplotTrack } from './wrappers/PpReact'
+export { getPpReact, getLolliplotTrack }
 
 /*
 
@@ -82,6 +83,19 @@ export function runproteinpaint(arg) {
 
 	if(arg.host) {
 		app.hostURL = arg.host
+	} else if (window.location.hostname == 'localhost') {
+		// easily switch server host for testing in developer machine,
+		// for example the rendered data from a docker container vs host machine
+		const urlp=parseurl.url2map()
+		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
+		else {
+			const hostname = urlp.get('hostname')
+			const hostport = urlp.get('hostport')
+			const prot = window.location.protocol + '//'
+			if (hostname && hostport) app.hostURL = prot  + hostname + ':' + hostport
+			else if (hostname) app.hostURL = prot + hostname
+			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport 
+		}
 	}
 
 	// store fetch parameters
@@ -155,10 +169,12 @@ export function runproteinpaint(arg) {
 		return parseembedthenurl(arg, app, selectgenome)
 	})
 	.catch(err=>{
-		app.holder.text(err.message)
+		app.holder.text(err.message || err)
 		if(err.stack) console.log(err.stack)
 	})
 }
+
+runproteinpaint.wrappers = {getPpReact, getLolliplotTrack}
 
 function makeheader(app, obj, jwt) {
 	/*
@@ -683,6 +699,13 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		arg.gene = arg.p
 		delete arg.p
 	}
+	if(arg.gene2canonicalisoform) {
+		if(!arg.genome) throw '.genome missing for gene2canonicalisoform'
+		const data = await client.dofetch2('gene2canonicalisoform?genome='+arg.genome+'&gene='+arg.gene2canonicalisoform)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no canonical isoform for given gene accession'
+		arg.gene = data.isoform
+	}
 	if(arg.gene) {
 		launchgeneview(arg, app)
 		return
@@ -989,9 +1012,13 @@ async function launchblock(arg, app) {
 				continue
 			}
 			if(t.mdsjsonfile || t.mdsjsonurl){
-				const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl, holder)
-				arg.tracks = arg.tracks.filter(tk => tk != t )
-				arg.tracks.push(...tks)
+				try {
+					const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl)
+					arg.tracks = arg.tracks.filter(tk => tk != t )
+					arg.tracks.push(...tks)
+				}catch(e) {
+					client.sayerror(app.holder0,e.message || e)
+				}
 			}
 			t.iscustom=true
 		}

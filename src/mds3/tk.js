@@ -107,6 +107,12 @@ export function get_parameter(tk, block) {
 			// quick fix!!!
 			par.push('set_id=' + tk.set_id)
 		}
+		if (tk.filter0) {
+			// expecting to be a simple filter such as
+			// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
+			// XXX any other possibilities from gdc portal
+			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		}
 		if (tk.token) {
 			// quick fix!!!
 			par.push('token=' + tk.token)

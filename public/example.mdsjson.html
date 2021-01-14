@@ -16,20 +16,14 @@ runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
+	noheader:1,
 	block:1,
 	genome:'hg19',
 	nativetracks:'refgene',
-	position:'chr7:55057680-55293447',
-	tracks:[
-		{
-			type:'mdssvcnv',
-			name:'custom mds',
-			file:'files/hg19/tcga/gbm.tcgaid/gbm.svcnv.hg19.gz',
-			checkexpressionrank:{file:'files/hg19/tcga/gbm.tcgaid/gbm.fpkm.hg19.gz'},
-			checkvcf:{file:'files/hg19/tcga/gbm.tcgaid/gbm.snvindel.vep.vcf.gz'},
-			getallsamples:true
-		},
-	],
+	position:'chr7:55074426-55285436',
+	tracks:[{
+		mdsjsonfile:'files/hg19/tcga/gbm.tcgaid/mds.json'
+	}]
 })
 </script>
 

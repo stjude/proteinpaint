@@ -3,7 +3,8 @@ module.exports = {
 	genomefile: 'genomes/hg38.gz',
 	genedb: {
 		dbfile: 'anno/genes.hg38.db',
-		hasalias: true
+		hasalias: true,
+		gene2canonicalisoform: true // see ./app.js
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',

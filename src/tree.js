@@ -32,7 +32,7 @@ export function stratinput(lst, levels) {
 		for (const [i, lev] of levels.entries()) {
 			const thisv = getkey(m, i, levels)
 			const pav = getkey(m, i - 1, levels)
-			if (!m[lev.k]) {
+			if (!(lev.k in m)) {
 				// stop at this level
 				// add count to prev level
 				if (i > 0) {
@@ -51,6 +51,18 @@ export function stratinput(lst, levels) {
 				if (lev.full) {
 					n.full = m[lev.full]
 				}
+
+				n.id0 = levels[0].k
+				n.v0 = m[levels[0].k]
+				if (i == 1) {
+					n.id1 = levels[1].k
+					n.v1 = m[levels[1].k]
+				}
+				if (i == 2) {
+					n.id2 = levels[2].k
+					n.v1 = m[levels[2].k]
+				}
+
 				nodes[thisv] = n
 			}
 			nodes[thisv].lst.push(m)
@@ -72,7 +84,13 @@ export function stratinput(lst, levels) {
 			lst: n.lst,
 			value: size[chid],
 			name: fields[fields.length - 1], // show this instead of chid
-			full: n.full
+			full: n.full,
+			id0: n.id0,
+			v0: n.v0,
+			id1: n.id1,
+			v1: n.v1,
+			id2: n.id2,
+			v2: n.v2
 		})
 	}
 	return nlst
