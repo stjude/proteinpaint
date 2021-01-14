@@ -35,20 +35,33 @@ if (fs.existsSync(serverconfigfile)) {
 /******************
 	APPLY OVERRIDES 
 ******************/
-if (process.env.PP_BASEPATH) {
-	serverconfig.basepath = process.env.PP_BASEPATH
+
+if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
+	serverconfig.allow_env_overrides = true
 }
 
-if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
-	// within the container, the Dockerfile uses a pre-determined port and filepaths
-	Object.assign(serverconfig, {
-		port: 3456,
-		tpmasterdir: '/home/root/pp/tp',
-		cachedir: '/home/root/pp/cache',
-		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-		hicstat: 'python3 /home/root/pp/tools/read_hic_header.py',
-		hicstraw: '/home/root/pp/tools/straw'
-	})
+if (serverconfig.allow_env_overrides) {
+	if (process.env.PP_URL) {
+		serverconfig.URL = process.env.URL
+	}
+
+	if (process.env.PP_BASEPATH) {
+		serverconfig.basepath = process.env.PP_BASEPATH
+	}
+
+	if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
+		// within the container, the Dockerfile uses a pre-determined port and filepaths
+		Object.assign(serverconfig, {
+			port: 3456,
+			tpmasterdir: '/home/root/pp/tp',
+			cachedir: '/home/root/pp/cache',
+			bigwigsummary: '/home/root/pp/tools/bigWigSummary',
+			hicstraw: '/home/root/pp/tools/straw'
+			// note that tabix, samtools, and similar binaries are
+			// saved in the usual */bin/ paths so locating them
+			// is not needed when calling via Node child_process.spawn() or exec()
+		})
+	}
 }
 
 //Object.freeze(serverconfig)
@@ -60,9 +73,9 @@ module.exports = serverconfig
 
 function getGDCconfig() {
 	return {
+		allow_env_overrides: true,
 		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
-		host: process.env.PP_HOST || '', // will be used for querying the server data
-		port: process.env.PP_PORT || 3000, // will be used to publish
+		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
 		genomes: [
 			{
 				name: 'hg38',

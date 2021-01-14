@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 
 /*
-	This script loads the server configuration, with
-	possible overrides applied at runtime. It then launches 
-	the ProteinPaint server from the command line. 
+	- This script loads the server configuration, with
+	possible overrides applied at runtime. 
+
+	- It may remove or add a public folder + bin files,
+	or change a bundle's publicPath for dynamically
+	loading code chunks, depending on the usage context. 
+
+	- It then launches the ProteinPaint server from the command line. 
+	
+	Usage:
 	
 	$ npm install @stjude/proteinpaint
 	$ npx proteinpaint

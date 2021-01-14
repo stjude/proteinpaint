@@ -397,29 +397,3 @@ exports.stripJsScript = function stripJsScript(text) {
     /gi                globally, case insensitive
 	*/
 }
-
-function getGDCconfig() {
-	return {
-		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
-		host: process.env.PP_HOST || '', // will be used for querying the server data
-		port: process.env.PP_PORT || 3000, // will be used to publish
-		genomes: [
-			{
-				name: 'hg38',
-				species: 'human',
-				file: './genome/hg38.js',
-				datasets: [
-					{
-						name: 'GDC',
-						jsfile: './dataset/gdc.hg38.js' // to-do: toggle between dev, prod versions
-					}
-				]
-			}
-		],
-		tpmasterdir: '/home/root/pp/tp',
-		cachedir: '/home/root/pp/cache',
-		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-		hicstat: 'python3 /home/root/pp/tools/read_hic_header.py',
-		hicstraw: '/home/root/pp/tools/straw'
-	}
-}
