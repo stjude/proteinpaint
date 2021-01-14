@@ -2,7 +2,7 @@ const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
-// const fs = require('fs')
+const fs = require('fs')
 
 export async function match_complexvariant(templates, q) {
 	// TODO
@@ -13,7 +13,7 @@ export async function match_complexvariant(templates, q) {
 	if (q.variant.ref != '-') {
 		final_ref = q.variant.ref
 	} else {
-		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2)))
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
 			.split('\n')
 			.slice(1)
 			.join('')
@@ -25,6 +25,14 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
+	console.log(
+		'q.variant.pos:',
+		q.variant.pos,
+		',segbplen:',
+		segbplen,
+		',variant:',
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+	)
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
@@ -65,6 +73,22 @@ export async function match_complexvariant(templates, q) {
 	const altseq = leftflankseq + altallele + rightflankseq
 
 	// console.log(refallele,altallele,refseq,altseq)
+
+	const file = fs.createWriteStream(
+		// Creating output for the rust implementation
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt + '.txt'
+	)
+	file.on('error', function(err) {
+		/* error handling */
+		console.log('Something not right with file creation')
+	})
+
+	file.write(refseq + '\n')
+	file.write(altseq + '\n')
+	for (const template of templates) {
+		file.write(template.segments[0].seq + '\n')
+	}
+	file.end()
 
 	//----------------------------------------------------------------------------
 
@@ -163,6 +187,7 @@ export async function match_complexvariant(templates, q) {
 	const alt_scores = []
 	let i = 0
 	for (const template of templates) {
+		// Looking at individual reads from here
 		const read_seq = template.segments[0].seq
 		// let cigar_seq = template.segments[0].cigarstr
 		const read_kmers = build_kmers(read_seq, kmer_length)
@@ -185,7 +210,7 @@ export async function match_complexvariant(templates, q) {
 		)
 		//console.log("ref comparison:",ref_comparison,"alt comparison:",alt_comparison)
 		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
-		const diff_score = alt_comparison - ref_comparison
+		const diff_score = alt_comparison - ref_comparison // Is the read more similar to reference sequence or alternate sequence
 		kmer_diff_scores.push(diff_score)
 		ref_comparisons.push(ref_comparison)
 		alt_comparisons.push(alt_comparison)
@@ -441,7 +466,7 @@ function jaccard_similarity_weights(
 		kmers1_weight += score * kmer1_freq
 	}
 	//console.log("kmers1_weight:",kmers1_weight," kmers2_weight", kmers2_weight," intersection weight:",intersection_weight)
-	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight)
+	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Outputting jaccard similarity
 }
 
 function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
