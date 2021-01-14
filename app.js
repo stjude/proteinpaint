@@ -2632,9 +2632,9 @@ async function handle_mdssvcnv(req, res) {
 	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
 
 	const result = {
-		samplegroups: samplegroups,
-		vcfrangelimit: vcfrangelimit,
-		data_vcf: data_vcf
+		samplegroups,
+		vcfrangelimit,
+		data_vcf
 	}
 
 	// QUICK FIX!!
@@ -3196,15 +3196,23 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 }
 
 function handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sample2obj) {
-	///////// assign expression rank for all samples listed in samplegroup
+	// assign expression rank for all samples listed in samplegroup
+	// no returned value
 	if (expressionrangelimit) {
 		// view range too big above limit set by official track, no checking expression
 		result.expressionrangelimit = expressionrangelimit
-	} else if (gene2sample2obj) {
+		return
+	}
+	if (gene2sample2obj) {
 		// report coordinates for each gene back to client
 		result.gene2coord = {}
 		for (const [n, g] of gene2sample2obj) {
 			result.gene2coord[n] = { chr: g.chr, start: g.start, stop: g.stop }
+		}
+
+		if (result.samplegroups.length == 0) {
+			// got no samples from dna query
+			return
 		}
 
 		if (result.getallsamples) {
