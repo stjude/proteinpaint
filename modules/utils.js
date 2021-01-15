@@ -5,20 +5,9 @@ const fs = require('fs'),
 	common = require('../src/common'),
 	vcf = require('../src/vcf'),
 	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
-	bettersqlite = require('better-sqlite3')
+	bettersqlite = require('better-sqlite3'),
+	serverconfig = require('./serverconfig')
 
-// do not assume that serverconfig.json is in the same dir as server.js
-// for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || '.') + '/serverconfig.json'
-// when unit testing, __non_webpack_require might not be available
-// since a spec might be directly requiring an unpacked or unbundled module
-const serverconfig =
-	process.env.PP_CUSTOMER == 'gdc'
-		? getGDCconfig()
-		: (typeof __non_webpack_require__ == 'function' && __non_webpack_require__(serverconfigfile)) ||
-		  require(serverconfigfile)
-
-//Object.freeze(serverconfig)
 exports.serverconfig = serverconfig
 
 const tabix = serverconfig.tabix || 'tabix'
@@ -407,30 +396,4 @@ exports.stripJsScript = function stripJsScript(text) {
 
     /gi                globally, case insensitive
 	*/
-}
-
-function getGDCconfig() {
-	return {
-		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
-		host: process.env.PP_HOST || '', // will be used for querying the server data
-		port: process.env.PP_PORT || 3000, // will be used to publish
-		genomes: [
-			{
-				name: 'hg38',
-				species: 'human',
-				file: './genome/hg38.js',
-				datasets: [
-					{
-						name: 'GDC',
-						jsfile: './dataset/gdc.hg38.js' // to-do: toggle between dev, prod versions
-					}
-				]
-			}
-		],
-		tpmasterdir: '/home/root/pp/tp',
-		cachedir: '/home/root/pp/cache',
-		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-		hicstat: 'python3 /home/root/pp/tools/read_hic_header.py',
-		hicstraw: '/home/root/pp/tools/straw'
-	}
 }

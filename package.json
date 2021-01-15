@@ -134,12 +134,14 @@
     "dist",
     "genome",
     "dataset/clinvar.*.js",
+    "dataset/gdc.hg38.js",
     "public/index.html",
     "public/rev.txt",
     "public/bin",
     "utils/*.R",
     "utils/install.pp.js",
-    "src/common.js"
+    "src/common.js",
+    "modules/serverconfig.js"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

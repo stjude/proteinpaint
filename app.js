@@ -4,8 +4,7 @@
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const utils = require('./modules/utils')
-const serverconfig = utils.serverconfig
+const serverconfig = require('./modules/serverconfig')
 exports.features = Object.freeze(serverconfig.features || {})
 
 /* test accessibility of serverconfig.tpmasterdir at two places.
@@ -46,6 +45,7 @@ const express = require('express'),
 	imagesize = require('image-size'),
 	readline = require('readline'),
 	jsonwebtoken = require('jsonwebtoken'),
+	utils = require('./modules/utils'),
 	common = require('./src/common'),
 	vcf = require('./src/vcf'),
 	bulk = require('./src/bulk'),
@@ -120,9 +120,11 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-const basepath = process.env.PP_BASEPATH || serverconfig.PP_BASEPATH || ''
+const basepath = serverconfig.PP_BASEPATH || ''
 
-app.use(express.static(path.join(process.cwd(), './public')))
+if (!utils.serverconfig.backend_only) {
+	app.use(express.static(path.join(process.cwd(), './public')))
+}
 app.use(compression())
 
 if (serverconfig.jwt) {
