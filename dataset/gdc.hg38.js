@@ -95,11 +95,9 @@ const isoform2variants = [
 ]
 
 /*
-not in use for the moment
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
-TODO convert to text output
 */
 const query_range2variants = `query range2variants($filters: FiltersArgument) {
   explore {
@@ -186,6 +184,18 @@ function variables_range2variants(p) {
 		f.filters.content.push(p.filter0)
 	}
 	return f
+}
+
+/*
+using one ssmid, get the full list of consequences
+*/
+const ssmid2csq = {
+	endpoint: GDC_HOST + '/ssms/',
+	fields: [
+		'consequence.transcript.transcript_id',
+		'consequence.transcript.consequence_type',
+		'consequence.transcript.aa_change'
+	]
 }
 
 /*
@@ -741,6 +751,7 @@ module.exports = {
 		snvindel: {
 			forTrack: true,
 			url: {
+				// for adding url link in variant panel
 				base: 'https://portal.gdc.cancer.gov/ssms/',
 				key: 'ssm_id'
 			},
@@ -752,6 +763,11 @@ module.exports = {
 			},
 			byisoform: {
 				gdcapi: { lst: isoform2variants }
+			},
+			m2csq: {
+				// may also support querying a vcf by chr.pos.ref.alt
+				by: 'ssm_id',
+				gdcapi: ssmid2csq
 			}
 		},
 		genecnv: {

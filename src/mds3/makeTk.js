@@ -33,6 +33,8 @@ export async function makeTk(tk, block) {
 
 	mayaddGetter_variant2samples(tk, block)
 
+	mayaddGetter_m2csq(tk, block)
+
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
 			g: tk.glider.append('g')
@@ -96,6 +98,19 @@ function init_termdb(tk, block) {
 	tdb.getTermById = id => {
 		if (tdb.terms) return tdb.terms.find(i => i.id == id)
 		return null
+	}
+}
+
+function mayaddGetter_m2csq(tk, block) {
+	if (!tk.mds.queries || !tk.mds.queries.snvindel || !tk.mds.queries.snvindel.m2csq) return
+	tk.mds.queries.snvindel.m2csq.get = async m => {
+		const lst = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'm2csq=1']
+		if (tk.mds.queries.snvindel.m2csq.by == 'ssm_id') {
+			lst.push('ssm_id=' + m.ssm_id)
+		} else {
+			return { error: 'unknown query method' }
+		}
+		return await client.dofetch2('mds3?' + lst.join('&'))
 	}
 }
 

@@ -11,6 +11,7 @@ validate_query_genecnv
 getSamples_gdcapi
 get_cohortTotal
 addCrosstabCount_tonodes
+validate_m2csq
 
 getheaders
 */
@@ -54,7 +55,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 				alt: h.node.tumor_allele,
 				samples: []
 			}
-			if (h.node.consequence) {
+			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
+				m.csqcount = h.node.consequence.hits.edges.length
 				let c
 				if (opts.isoform) c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
 				const c2 = c || h.node.consequence.hits.edges[0]
@@ -98,6 +100,7 @@ export function validate_query_snvindel_byisoform(api, ds) {
 				ref: hit.reference_allele,
 				alt: hit.tumor_allele,
 				isoform: opts.isoform,
+				csqcount: hit.csqcount,
 				// occurrence count will be overwritten after sample filtering
 				occurrence: hit.cases.length
 			}
@@ -225,6 +228,7 @@ async function snvindel_byisoform_run(api, opts) {
 	for (const h of re_ssms.data.hits) {
 		if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
+		h.csqcount = h.consequence.length
 		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
 		if (!consequence) {
 			// may alert??
@@ -403,5 +407,27 @@ export async function addCrosstabCount_tonodes(nodes, combinations) {
 			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
 			if (n) node.cohortsize = n.count
 		}
+	}
+}
+
+export function validate_m2csq(ds) {
+	const api = ds.queries.snvindel.m2csq.gdcapi
+	if (!api.endpoint) throw '.endpoint missing for queries.snvindel.m2csq.gdcapi'
+	if (!api.fields) throw '.fields[] missing for queries.snvindel.m2csq.gdcapi'
+	ds.queries.snvindel.m2csq.get = async q => {
+		// q is client request object
+		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+			method: 'GET',
+			headers: getheaders(q)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid json in response'
+		}
+		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
+		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
+		return re.data.consequence.map(i => i.transcript)
 	}
 }

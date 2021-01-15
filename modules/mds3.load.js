@@ -164,6 +164,15 @@ async function load_driver(q, ds, result) {
 		return
 	}
 
+	if (q.m2csq) {
+		if (ds.queries && ds.queries.snvindel && ds.queries.snvindel.m2csq) {
+			result.csq = await ds.queries.snvindel.m2csq.get(q)
+			return
+		} else {
+			throw 'm2csq not supported on this dataset'
+		}
+	}
+
 	if (q.forTrack) {
 		// to load things for block track
 

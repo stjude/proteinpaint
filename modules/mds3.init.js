@@ -151,6 +151,9 @@ function copy_queries(ds) {
 			forTrack: ds.queries.snvindel.forTrack,
 			url: ds.queries.snvindel.url
 		}
+		if (ds.queries.snvindel.m2csq) {
+			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
+		}
 	}
 	if (ds.queries.genecnv) {
 		copy.genecnv = {
@@ -413,6 +416,17 @@ function validate_query_snvindel(ds) {
 		gdc.validate_query_snvindel_byisoform(q.byisoform.gdcapi, ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
+	}
+
+	if (q.m2csq) {
+		if (!q.m2csq.by) throw '.by missing from queries.snvindel.m2csq'
+		if (q.m2csq.by != 'ssm_id') throw 'unknown value of queries.snvindel.m2csq.by' // add additional
+		if (q.m2csq.gdcapi) {
+			gdc.validate_m2csq(ds)
+			// added q.m2csq.get()
+		} else {
+			throw 'unknown query method for queries.snvindel.m2csq'
+		}
 	}
 }
 

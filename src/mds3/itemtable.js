@@ -114,6 +114,28 @@ async function table_snvindel(mlst, tk, block, div) {
 function table_snvindel_onevariant(m, tk, block, table) {
 	{
 		const [td1, td2] = row_headervalue(table)
+		td1.text('Consequence')
+		let printto = td2
+		if (tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
+			// click link to query for csq list
+			const tr = table.append('tr').style('display', 'none')
+			const td = tr.append('td').attr('colspan', 2)
+			printto = td2.append('a').on('click', async () => {
+				const data = await tk.mds.queries.snvindel.m2csq.get(m)
+				console.log(data)
+			})
+		}
+		printto.append('span').text(m.mname)
+		printto
+			.append('span')
+			.style('margin-left', '10px')
+			.style('color', common.mclass[m.class].color)
+			//.style('font-weight', 'bold')
+			.style('font-size', '.8em')
+			.text(common.mclass[m.class].label.toUpperCase())
+	}
+	{
+		const [td1, td2] = row_headervalue(table)
 		td1.text('Mutation')
 		print_snvindel(m, td2, tk)
 	}
