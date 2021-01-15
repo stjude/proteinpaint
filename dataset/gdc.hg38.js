@@ -4,11 +4,11 @@
 query list of variants by isoform
 */
 
-const GDCHOST = process.env.GDCHOST || 'https://api.gdc.cancer.gov'
+const GDC_HOST = process.env.GDC_HOST || 'https://api.gdc.cancer.gov'
 
 const isoform2variants = [
 	{
-		endpoint: GDCHOST + '/ssms',
+		endpoint: GDC_HOST + '/ssms',
 		size: 100000,
 		fields: [
 			'ssm_id',
@@ -55,7 +55,7 @@ const isoform2variants = [
 		}
 	},
 	{
-		endpoint: GDCHOST + '/ssm_occurrences',
+		endpoint: GDC_HOST + '/ssm_occurrences',
 		size: 100000,
 		fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
 		filters: p => {
@@ -101,85 +101,89 @@ does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
 TODO convert to text output
 */
-const query_range2variants = `
-query GdcSsmByGene($filter: FiltersArgument) {
-	explore {
-		ssms {
-			hits(first: 10000, filters: $filter) {
-				total
+const query_range2variants = `query range2variants($filters: FiltersArgument) {
+  explore {
+    ssms {
+      hits(first: 100000, filters: $filters) {
+        total
+        edges {
+          node {
+            ssm_id
+            chromosome
+            start_position
+            end_position
+            genomic_dna_change
+			reference_allele
+            tumor_allele
+            occurrence {
+              hits {
+                total
 				edges {
-					node {
-						ssm_id
-						chromosome
-						start_position
-						end_position
-						genomic_dna_change
-						reference_allele
-						tumor_allele
-						occurrence {
-							hits {
-								total
-								edges {
-									node {
-										case {
-											project {
-												project_id
-											}
-											disease_type
-											primary_site
-											# case_id
-										}
-									}
-								}
-							}
-						}
-						consequence{
-							hits{
-								total
-								edges{
-									node{
-										transcript{
-											transcript_id
-											aa_change
-											consequence_type
-											gene{
-												symbol
-											}
-										}
-									}
-								}
-							}
-						}
+				  node {
+				    case {
+					  case_id
+					  project {
+					    project_id
+					  }
+					  primary_site
+					  disease_type
 					}
+				  }
 				}
-			}
-		}
-	}
+              }
+            }
+			consequence{
+              hits{
+                total
+                edges{
+                  node{
+                    transcript{
+                      transcript_id
+					  aa_change
+					  consequence_type
+					  gene{
+					  	symbol
+					  }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }`
 function variables_range2variants(p) {
 	// p:{}
-	// .chr/start/stop
+	// .rglst[{chr/start/stop}]
 	// .set_id
-	if (!p.chr) throw '.chr missing'
-	if (typeof p.chr != 'string') throw '.chr value not string'
-	if (!Number.isInteger(p.start)) throw '.start not integer'
-	if (!Number.isInteger(p.stop)) throw '.stop not integer'
+	if (!p.rglst) throw '.rglst missing'
+	const r = p.rglst[0]
+	if (!r) throw '.rglst[0] missing'
+	if (typeof r.chr != 'string') throw '.rglst[0].chr not string'
+	if (!Number.isInteger(r.start)) throw '.rglst[0].start not integer'
+	if (!Number.isInteger(r.stop)) throw '.rglst[0].stop not integer'
 	const f = {
-		filter: {
+		filters: {
 			op: 'and',
 			content: [
-				{ op: '=', content: { field: 'chromosome', value: [p.chr] } },
-				{ op: '>=', content: { field: 'start_position', value: [p.start] } },
-				{ op: '<=', content: { field: 'end_position', value: [p.stop] } }
+				{ op: '=', content: { field: 'chromosome', value: [r.chr] } },
+				{ op: '>=', content: { field: 'start_position', value: [r.start] } },
+				{ op: '<=', content: { field: 'end_position', value: [r.stop] } }
 			]
 		}
 	}
 	if (p.set_id) {
 		if (typeof p.set_id != 'string') throw '.set_id value not string'
-		f.filter.content.push({
+		f.filters.content.push({
 			op: 'in',
 			content: { field: 'cases.case_id', value: [p.set_id] }
 		})
+	}
+	if (p.filter0) {
+		f.filters.content.push(p.filter0)
 	}
 	return f
 }
@@ -203,7 +207,7 @@ don't know a js method to alter the list of attributes in `case { }` part
   only return subset of attributes selected for sunburst chart
 */
 const variant2samples = {
-	endpoint: GDCHOST + '/ssm_occurrences',
+	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
 	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
 	fields_list: [
@@ -697,7 +701,7 @@ module.exports = {
 	color: '#545454',
 	genome: 'hg38',
 	snvindel_attributes,
-	apihost: GDCHOST + '/v0/graphql',
+	apihost: GDC_HOST + '/v0/graphql',
 
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations

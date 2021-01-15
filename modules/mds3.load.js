@@ -93,6 +93,9 @@ function init_q(query, genome) {
 		// right now only from gdc
 		query.filter0 = JSON.parse(query.filter0)
 	}
+	if (query.rglst) {
+		query.rglst = JSON.parse(query.rglst)
+	}
 	return query
 }
 
@@ -196,16 +199,26 @@ async function load_driver(q, ds, result) {
 
 async function query_snvindel(q, ds) {
 	if (q.isoform) {
+		if (q.genomic && ds.queries.snvindel.byrange) {
+			// in genomic mode, query supports byrange query
+			if (ds.queries.snvindel.byrange.gdcapi) {
+				return await ds.queries.snvindel.byrange.gdcapi.get(q)
+			}
+			throw 'unknown query method for snvindel.byisoform'
+		}
 		if (ds.queries.snvindel.byisoform.gdcapi) {
 			return await ds.queries.snvindel.byisoform.gdcapi.get(q)
 		}
 		throw 'unknown query method for snvindel.byisoform'
 	}
 	// if isoform not provided, must be by range. could be by other things?
-	if (ts.byrange.gdcapi) {
-		return await ds.queries.snvindel.byrange.gdcapi.get(q)
+	if (ds.queries.snvindel.byrange) {
+		if (ds.queries.snvindel.byrange.gdcapi) {
+			return await ds.queries.snvindel.byrange.gdcapi.get(q)
+		}
+		throw 'unknown query method for snvindel.byisoform'
 	}
-	throw 'unknown query method for snvindel.byrange'
+	throw 'unknown query method for snvindel'
 }
 
 async function query_genecnv(q, ds) {

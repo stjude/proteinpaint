@@ -38,8 +38,6 @@ const express = require('express'),
 	spawn = child_process.spawn,
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
-	d3color = require('d3-color'),
-	d3stratify = require('d3-hierarchy').stratify,
 	stratinput = require('./src/tree').stratinput,
 	bodyParser = require('body-parser'),
 	imagesize = require('image-size'),
@@ -120,9 +118,11 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-const basepath = process.env.PP_BASEPATH || serverconfig.PP_BASEPATH || ''
+const basepath = serverconfig.PP_BASEPATH || ''
 
-app.use(express.static(path.join(process.cwd(), './public')))
+if (!utils.serverconfig.backend_only) {
+	app.use(express.static(path.join(process.cwd(), './public')))
+}
 app.use(compression())
 
 if (serverconfig.jwt) {
