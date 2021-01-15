@@ -420,7 +420,7 @@ function make_otherAppHeader(div) {
 }
 
 async function loadJson() {
-	const json = await dofetch2('examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	const json = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	return json
 }
 

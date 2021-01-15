@@ -4,8 +4,7 @@
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const utils = require('./modules/utils')
-let serverconfig = utils.serverconfig
+const serverconfig = require('./modules/serverconfig')
 exports.features = Object.freeze(serverconfig.features || {})
 
 /* test accessibility of serverconfig.tpmasterdir at two places.
@@ -46,6 +45,7 @@ const express = require('express'),
 	imagesize = require('image-size'),
 	readline = require('readline'),
 	jsonwebtoken = require('jsonwebtoken'),
+	utils = require('./modules/utils'),
 	common = require('./src/common'),
 	vcf = require('./src/vcf'),
 	bulk = require('./src/bulk'),
@@ -292,8 +292,6 @@ async function handle_examples(req, res) {
 	if (req.query) {
 		if (req.query.getexamplejson) {
 			res.send({ examples: serverconfig.examples })
-			const tmp = serverconfig.examples
-			log(tmp)
 		} else {
 			res.send({ error: 'examples json file not defined' })
 		}

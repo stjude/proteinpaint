@@ -12,7 +12,7 @@ const pkg = require('./package.json')
 const fs = require('fs')
 const execSync = require('child_process').execSync
 const path = require('path')
-const serverconfig = require(path.join(process.cwd(), './serverconfig.json'))
+const serverconfig = require('./modules/serverconfig.js')
 
 // use the pp packages' public dir for index.html and /bin bundles
 const srcdir = pkg._where ? './node_modules/@stjude/proteinpaint' : __dirname
