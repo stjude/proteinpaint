@@ -19,11 +19,60 @@ export function validate_variant2sample(a) {
 	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
-export function validate_query_snvindel_byrange(a) {
-	if (!a.query) throw '.query missing for byrange.gdcapi'
-	if (typeof a.query != 'string') throw '.query not string in byrange.gdcapi'
-	if (typeof a.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
-	// TODO a.get()
+export function validate_query_snvindel_byrange(api, ds) {
+	if (!api.query) throw '.query missing for byrange.gdcapi'
+	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
+	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
+	api.get = async opts => {
+		const response = await got.post(ds.apihost, {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from GDC'
+		}
+		if (
+			!re.data ||
+			!re.data.explore ||
+			!re.data.explore.ssms ||
+			!re.data.explore.ssms.hits ||
+			!re.data.explore.ssms.hits.edges
+		)
+			throw 'returned structure not data.explore.ssms.hits.edges'
+		if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 'data.explore.ssms.hits.edges not array'
+		const mlst = []
+		for (const h of re.data.explore.ssms.hits.edges) {
+			const m = {
+				dt: common.dtsnvindel,
+				ssm_id: h.node.ssm_id,
+				chr: h.node.chromosome,
+				pos: h.node.start_position - 1,
+				ref: h.node.reference_allele,
+				alt: h.node.tumor_allele,
+				samples: []
+			}
+			if (h.node.consequence) {
+				let c
+				if (opts.isoform) c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
+				const c2 = c || h.node.consequence.hits.edges[0]
+				// c2: { node: {consequence} }
+				snvindel_addclass(m, c2.node)
+			}
+			if (h.node.occurrence.hits.edges) {
+				for (const c of h.node.occurrence.hits.edges) {
+					const cc = c.node.case
+					const sample = { case_id: cc.case_id }
+					fillSampleDetails(sample, cc, ds)
+					m.samples.push(sample)
+				}
+			}
+			mlst.push(m)
+		}
+		return mlst
+	}
 }
 
 export function validate_query_snvindel_byisoform(api, ds) {
@@ -56,35 +105,38 @@ export function validate_query_snvindel_byisoform(api, ds) {
 			m.samples = []
 			for (const c of hit.cases) {
 				const sample = { sample_id: c.case_id }
-				if (ds.sampleSummaries) {
-					// At the snvindel query, each sample obj will only carry a subset of attributes
-					// as defined here, for producing sub-labels
-					for (const i of ds.sampleSummaries.lst) {
-						{
-							const t = ds.termdb.getTermById(i.label1)
-							if (t) {
-								sample[i.label1] = c[t.fields[0]]
-								for (let j = 1; j < t.fields.length; j++) {
-									if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
-								}
-							}
-						}
-						if (i.label2) {
-							const t = ds.termdb.getTermById(i.label2)
-							if (t) {
-								sample[i.label2] = c[t.fields[0]]
-								for (let j = 1; j < t.fields.length; j++) {
-									if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
-								}
-							}
-						}
-					}
-				}
+				fillSampleDetails(sample, c, ds)
 				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
 		return mlst
+	}
+}
+
+function fillSampleDetails(sample, c, ds) {
+	if (!ds.sampleSummaries) return
+	// At the snvindel query, each sample obj will only carry a subset of attributes
+	// as defined here, for producing sub-labels
+	for (const i of ds.sampleSummaries.lst) {
+		{
+			const t = ds.termdb.getTermById(i.label1)
+			if (t) {
+				sample[i.label1] = c[t.fields[0]]
+				for (let j = 1; j < t.fields.length; j++) {
+					if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+				}
+			}
+		}
+		if (i.label2) {
+			const t = ds.termdb.getTermById(i.label2)
+			if (t) {
+				sample[i.label2] = c[t.fields[0]]
+				for (let j = 1; j < t.fields.length; j++) {
+					if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
+				}
+			}
+		}
 	}
 }
 

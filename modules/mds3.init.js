@@ -403,7 +403,7 @@ function validate_query_snvindel(ds) {
 	}
 	if (!q.byrange) throw '.byrange missing for queries.snvindel'
 	if (q.byrange.gdcapi) {
-		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi)
+		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi, ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byrange'
 	}
