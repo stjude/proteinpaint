@@ -1,13 +1,24 @@
-// rustc indel.rs && ./indel chr11.119155745.T.TTGACCTGG.txt 119155745 75 T
+// Syntax: rustc indel.rs && ./indel chr11.119155745.T.TTGACCTGG.txt 119155745 75 T
 
 use std::env;
 use std::fs;
+use std::cmp::Ordering;
 use std::collections::HashSet;
 //use std::path::Path;
+
+struct read_diff_scores {
+   groupID:usize,
+   value:f64
+}
 
 struct kmer_input {
    kmer_sequence:String,
    kmer_weight:f64
+}
+
+struct read_category {
+   category:String,
+   groupID:usize
 }
 
 fn main() {
@@ -68,20 +79,11 @@ fn main() {
     		weight_no_indel
     );
 
-//    let ref_comparison: f64 = jaccard_similarity_weights(
-//			kmers,
-//			&all_ref_kmers,
-//			&all_ref_kmers_nodups,
-//			&all_ref_kmers_seq_values_nodups,
-//			&ref_kmers_weight,
-//			&all_ref_counts
-//    );
-
     let mut kmer_diff_scores = Vec::<f64>::new();
     let mut alt_comparisons = Vec::<f64>::new();    
     let mut ref_comparisons = Vec::<f64>::new();
-    let mut ref_scores = Vec::<f64>::new();
-    let mut alt_scores = Vec::<f64>::new();
+    let mut ref_scores = Vec::<read_diff_scores>::new();
+    let mut alt_scores = Vec::<read_diff_scores>::new();
     let mut i:i64 = 0;
     println!("Number of reads:{}", lines.len()-2);
     for read in lines{ // Will multithread this loop in the future
@@ -90,11 +92,35 @@ fn main() {
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers,&all_ref_kmers,&all_ref_kmers_nodups,&all_ref_kmers_seq_values_nodups,&ref_kmers_weight,&all_ref_counts);
 	      let alt_comparison=jaccard_similarity_weights(&kmers,&all_alt_kmers,&all_alt_kmers_nodups,&all_alt_kmers_seq_values_nodups,&alt_kmers_weight,&all_alt_counts);
+	      let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+	      kmer_diff_scores.push(diff_score);
+	      ref_comparisons.push(ref_comparison);
+	      alt_comparisons.push(alt_comparison);
+	      let item = read_diff_scores{
+	         value:f64::from(diff_score),
+	         groupID:usize::from(i as usize -2) // The -2 has been added since the first two sequences in the file are reference and alternate     
+	      };
+	      if diff_score > 0.0 {
+		alt_scores.push(item)
+	      } else if diff_score <= 0.0 {
+		ref_scores.push(item)
+	      }	    
 	}    
         i+=1;
     }	
-	
-    
+
+    println!("ref_scores length:{}",ref_scores.len());
+    println!("alt_scores length:{}",alt_scores.len());
+
+    println!("Parsing ref scores");
+    if ref_scores.len() > 0 {
+      let ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
+    }
+
+    println!("Parsing alt scores");
+    if alt_scores.len() > 0 {
+      let alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
+    }    
 }
 
 fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64) -> (f64,Vec::<i64>,Vec::<String>,Vec<kmer_input>,Vec<kmer_input>)
@@ -228,8 +254,8 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
     let mut intersection = HashSet::new();
     //let mut intersection = kmers1_nodup.clone();
 
-    println!("Length of kmers1_nodup:{}",kmers1_nodup.len());
-    println!("Length of kmer2_seq_values_nodups:{}",kmer2_seq_values_nodups.len());
+    //println!("Length of kmers1_nodup:{}",kmers1_nodup.len());
+    //println!("Length of kmer2_seq_values_nodups:{}",kmer2_seq_values_nodups.len());
     
     for kmer in &kmers1_nodup{
        intersection.insert(kmer);
@@ -239,7 +265,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
        intersection.insert(kmer);
     }	
 
-    println!("Length of intersection:{}",intersection.len());
+    //println!("Length of intersection:{}",intersection.len());
  
     let mut kmer1_counts = Vec::<i64>::new();
     let mut kmers1_weight: f64 = 0.0;
@@ -262,7 +288,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
 
 	kmer1_counts.push(kmer_count);	
     }
-    println!("kmers1_weight:{}",kmers1_weight);
+    //println!("kmers1_weight:{}",kmers1_weight);
     
     let mut intersection_weight: f64 = 0.0;
     for kmer1 in intersection {
@@ -294,5 +320,25 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
           intersection_weight += score*(kmer2_freq as f64);
 	}    
     }
-    intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight)
+    intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Jaccard similarity
 }
+
+fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_slope: &f64)  { // -> Vec<read_category>
+    
+    //let mut a = Vec::<f64>::new();
+    //
+    //a.push(0.4);
+    //a.push(0.2);
+    //a.push(3.4);
+    //a.push(1.9);
+    //a.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+
+    // Sorting kmer_diff_scores
+    kmer_diff_scores.sort_by(|b, a| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
+    for item in kmer_diff_scores {
+	println!("Value:{}",item.value);
+	println!("groupID:{}",item.groupID);
+    }
+    
+    //let start_point: usize = kmer_diff_scores.len() as usize - 1;
+}    
