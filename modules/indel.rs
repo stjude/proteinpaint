@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 //use std::path::Path;
 
-struct read_diff_scores {
+pub struct read_diff_scores {
    groupID:usize,
    value:f64
 }
@@ -20,6 +20,20 @@ struct read_category {
    category:String,
    groupID:usize
 }
+
+
+fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
+    let val=item.value.to_owned();        
+    let gID=item.groupID.to_owned();
+
+    let read_val = read_diff_scores{
+	    value:f64::from(val),
+	    groupID:usize::from(gID)
+    };	
+    read_val	
+}
+
+
 
 fn main() {
     let args: Vec<String> = env::args().collect(); // Collecting arguments from commandline
@@ -323,22 +337,50 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
     intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Jaccard similarity
 }
 
-fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_slope: &f64)  { // -> Vec<read_category>
-    
-    //let mut a = Vec::<f64>::new();
-    //
-    //a.push(0.4);
-    //a.push(0.2);
-    //a.push(3.4);
-    //a.push(1.9);
-    //a.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_slope: &f64) -> Vec<read_category> {
 
     // Sorting kmer_diff_scores
     kmer_diff_scores.sort_by(|b, a| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
-    for item in kmer_diff_scores {
-	println!("Value:{}",item.value);
-	println!("groupID:{}",item.groupID);
+
+    let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new();
+    let mut kmer_diff_scores_sorted2 = Vec::<read_diff_scores>::new();    
+    for item in kmer_diff_scores { // Making multiple copyies of kmer_diff_scores for further use
+	//println!("Value:{}",item.value);
+	//println!("groupID:{}",item.groupID);
+	let item2:read_diff_scores = read_diff_scores_owned(item);
+	kmer_diff_scores_sorted.push(item2);
+	let item2:read_diff_scores = read_diff_scores_owned(item);
+        kmer_diff_scores_sorted2.push(item2);	
     }
-    
-    //let start_point: usize = kmer_diff_scores.len() as usize - 1;
+      
+    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted2.len();
+    let mut start_point: usize = kmer_diff_scores_length - 1;
+    let mut slope:f64 = 0.0;
+    let mut is_a_line = 1;
+    let mut indices = Vec::<read_category>::new();
+    let threshold_slope_clone: f64 = threshold_slope.to_owned();
+    if kmer_diff_scores_length > 1 {
+       for i in kmer_diff_scores_length..1 {
+	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
+	   if slope > threshold_slope_clone {
+              start_point=i as usize;
+	      println!("kmer_diff_scores_length>1,i:{}",i);  
+              is_a_line = 0;
+	      break; 
+	   }    
+       }	   
+    }
+    else {
+      println!("Number of reads too low to determine curvature of slope");       
+    }
+    if (is_a_line == 1) {
+	for i in 0..(kmer_diff_scores_length-1) {
+           let read_cat = read_category{
+	       category:String::from("refalt"),
+	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+           };
+	   indices.push(read_cat); 
+        }
+    }
+    indices
 }    
