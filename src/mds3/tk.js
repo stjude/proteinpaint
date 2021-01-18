@@ -164,7 +164,7 @@ function rangequery_rglst(tk, block, par) {
 		par.push('isoform=' + block.usegm.isoform)
 		if (block.gmmode == client.gmmode.genomic) {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			par.push('genomic=1')
+			par.push('atgenomic=1')
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)

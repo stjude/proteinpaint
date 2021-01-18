@@ -20,11 +20,12 @@ export function validate_variant2sample(a) {
 	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
-export function validate_query_snvindel_byrange(api, ds) {
+export function validate_query_snvindel_byrange(ds) {
+	const api = ds.queries.snvindel.byrange.gdcapi
 	if (!api.query) throw '.query missing for byrange.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
 	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
-	api.get = async opts => {
+	ds.queries.snvindel.byrange.get = async opts => {
 		const response = await got.post(ds.apihost, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
@@ -65,9 +66,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 			}
 			if (h.node.occurrence.hits.edges) {
 				for (const c of h.node.occurrence.hits.edges) {
-					const cc = c.node.case
-					const sample = { case_id: cc.case_id }
-					fillSampleDetails(sample, cc, ds)
+					const sample = makeSampleObj(c.node.case, ds)
+					sample.sample_id = c.node.case.case_id
 					m.samples.push(sample)
 				}
 			}
@@ -77,7 +77,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 	}
 }
 
-export function validate_query_snvindel_byisoform(api, ds) {
+export function validate_query_snvindel_byisoform(ds) {
+	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
 	if (api.lst.length != 2) throw 'api.lst is not array of length 2'
 	for (const a of api.lst) {
@@ -86,7 +87,7 @@ export function validate_query_snvindel_byisoform(api, ds) {
 		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
 		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
 	}
-	api.get = async opts => {
+	ds.queries.snvindel.byisoform.get = async opts => {
 		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
 		for (const hit of hits) {
@@ -107,8 +108,8 @@ export function validate_query_snvindel_byisoform(api, ds) {
 			snvindel_addclass(m, hit.consequence)
 			m.samples = []
 			for (const c of hit.cases) {
-				const sample = { sample_id: c.case_id }
-				fillSampleDetails(sample, c, ds)
+				const sample = makeSampleObj(c, ds)
+				sample.sample_id = c.case_id
 				m.samples.push(sample)
 			}
 			mlst.push(m)
@@ -117,30 +118,36 @@ export function validate_query_snvindel_byisoform(api, ds) {
 	}
 }
 
-function fillSampleDetails(sample, c, ds) {
-	if (!ds.sampleSummaries) return
-	// At the snvindel query, each sample obj will only carry a subset of attributes
-	// as defined here, for producing sub-labels
-	for (const i of ds.sampleSummaries.lst) {
-		{
-			const t = ds.termdb.getTermById(i.label1)
-			if (t) {
-				sample[i.label1] = c[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+function makeSampleObj(c, ds) {
+	// c: {project:{project_id}} as returned by api call
+	const sample = {}
+	if (ds.sampleSummaries) {
+		// At the snvindel query, each sample obj will only carry a subset of attributes
+		// as defined here, for producing sub-labels
+		for (const i of ds.sampleSummaries.lst) {
+			{
+				const t = ds.termdb.getTermById(i.label1)
+				if (t) {
+					sample[i.label1] = c[t.fields[0]]
+					for (let j = 1; j < t.fields.length; j++) {
+						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+					}
+				}
+			}
+			if (i.label2) {
+				const t = ds.termdb.getTermById(i.label2)
+				if (t) {
+					sample[i.label2] = c[t.fields[0]]
+					for (let j = 1; j < t.fields.length; j++) {
+						if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
+					}
 				}
 			}
 		}
-		if (i.label2) {
-			const t = ds.termdb.getTermById(i.label2)
-			if (t) {
-				sample[i.label2] = c[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
-				}
-			}
-		}
+	} else {
+		// alternative methods for building samples
 	}
+	return sample
 }
 
 function snvindel_addclass(m, consequence) {
@@ -248,12 +255,13 @@ async function snvindel_byisoform_run(api, opts) {
 	return [...id2ssm.values()]
 }
 
-export function validate_query_genecnv(api, ds) {
+export function validate_query_genecnv(ds) {
+	const api = ds.queries.genecnv.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
 	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
 	// validate variables
-	api.get = async (opts, name) => {
+	ds.queries.genecnv.byisoform.get = async (opts, name) => {
 		// following is project-summarized query
 		// should be replaced by sample-level queries
 		const variables = JSON.parse(JSON.stringify(api.variables))

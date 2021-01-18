@@ -406,14 +406,14 @@ function validate_query_snvindel(ds) {
 	}
 	if (!q.byrange) throw '.byrange missing for queries.snvindel'
 	if (q.byrange.gdcapi) {
-		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi, ds)
+		gdc.validate_query_snvindel_byrange(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byrange'
 	}
 
 	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_snvindel_byisoform(q.byisoform.gdcapi, ds)
+		gdc.validate_query_snvindel_byisoform(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
 	}
@@ -441,7 +441,7 @@ function validate_query_genecnv(ds, genome) {
 		q.byisoform.sqlquery_isoform2gene.query = genome.genedb.db.prepare(q.byisoform.sqlquery_isoform2gene.statement)
 	}
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_genecnv(q.byisoform.gdcapi, ds)
+		gdc.validate_query_genecnv(ds)
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}
