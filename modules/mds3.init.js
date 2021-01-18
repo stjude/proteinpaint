@@ -1,4 +1,5 @@
 const gdc = require('./mds3.gdc')
+const variant2samples_getresult = require('./mds3.variant2samples')
 
 /*
 ********************** EXPORTED
@@ -130,6 +131,9 @@ function validate_variant2samples(ds) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
 		throw 'unknown query method of variant2samples'
+	}
+	vs.get = async q => {
+		return await variant2samples_getresult(q, ds)
 	}
 	if (ds.termdb.termid2totalsize) {
 		// has ways of querying total size, add the crosstab getter

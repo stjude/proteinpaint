@@ -1,7 +1,6 @@
 const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
-const variant2samples_getresult = require('./mds3.variant2samples')
 const samplefilter = require('./mds3.samplefilter')
 
 /*
@@ -54,26 +53,24 @@ module.exports = genomes => {
 	}
 }
 
-async function make_totalcount(q, ds, result) {
-	// total count for variant/sample prior to filtering
-
-	if (result.skewer) {
-		const cc = new Map() // k: mclass, v: {}
-		for (const m of result.skewer) {
-			cc.set(m.class, 1 + (cc.get(m.class) || 0))
-		}
-		result.mclass2variantcount = [...cc].sort((i, j) => j[1] - i[1])
-		// should include cnv segment data here
-		// ??? if to include genecnv data here?
+function summarize_mclass(mlst) {
+	// should include cnv segment data here
+	// ??? if to include genecnv data here?
+	const cc = new Map() // k: mclass, v: {}
+	for (const m of mlst) {
+		cc.set(m.class, 1 + (cc.get(m.class) || 0))
 	}
+	return [...cc].sort((i, j) => j[1] - i[1])
+}
 
-	if (q.samplesummary && ds.sampleSummaries) {
-		const labels = ds.sampleSummaries.makeholder(q)
-		const datalst = [result.skewer]
-		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
-	}
+async function may_sampleSummary(q, ds, result) {
+	if (!q.samplesummary) return
+	if (!ds.sampleSummaries) throw 'sampleSummaries missing from ds'
+	const datalst = [result.skewer]
+	if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
+	const labels = ds.sampleSummaries.makeholder(q)
+	ds.sampleSummaries.summarize(labels, q, datalst)
+	result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
 }
 
 function init_q(query, genome) {
@@ -118,28 +115,6 @@ function finalize_result(q, ds, result) {
 			}
 		}
 	}
-	/*
-	if (result.samplesummary_showcount && result.samplesummary_totalcount) {
-		result.sampleSummaries = ds.sampleSummaries.mergeShowTotal(
-			result.samplesummary_totalcount,
-			result.samplesummary_showcount,
-			q
-		)
-		delete result.samplesummary_showcount
-		delete result.samplesummary_totalcount
-	}
-	if (result.mclass2countmap) {
-		result.mclass2variantcount = []
-		for (const [mclass, c] of result.mclass2countmap) {
-			c.class = mclass
-			c.hiddencount = c.totalcount - c.showcount
-			delete c.totalcount
-			result.mclass2variantcount.push(c)
-		}
-		delete result.mclass2countmap
-		result.mclass2variantcount.sort((i, j) => j.showcount - i.showcount)
-	}
-	*/
 }
 
 async function get_ds(q, genome) {
@@ -160,7 +135,8 @@ async function load_driver(q, ds, result) {
 	// what other loaders can be if not in ds.queries?
 
 	if (q.variant2samples) {
-		result.variant2samples = await variant2samples_getresult(q, ds)
+		if (!ds.variant2samples) throw 'not supported by server'
+		result.variant2samples = await ds.variant2samples.get(q)
 		return
 	}
 
@@ -194,7 +170,10 @@ async function load_driver(q, ds, result) {
 			}
 
 			filter_data(q, result)
-			await make_totalcount(q, ds, result)
+
+			result.mclass2variantcount = summarize_mclass(result.skewer)
+
+			await may_sampleSummary(q, ds, result)
 
 			finalize_result(q, ds, result)
 		}
@@ -270,22 +249,4 @@ function filter_data(q, result) {
 	if (result.genecnvAtsample) {
 	}
 	// other sample-level data types that need filtering
-}
-
-/////////////////////// not used
-
-function make_showcount(q, ds, result) {
-	// total count for variant/sample post filtering
-	if (result.skewer) {
-		for (const m of result.skewer) {
-			result.mclass2countmap.get(m.class).showcount++
-		}
-	}
-	if (q.samplesummary && ds.sampleSummaries) {
-		const labels = ds.sampleSummaries.makeholder(q)
-		const datalst = [result.skewer]
-		if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-		ds.sampleSummaries.summarize(labels, q, datalst)
-		result.samplesummary_showcount = labels
-	}
 }
