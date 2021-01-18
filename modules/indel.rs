@@ -349,11 +349,11 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
 	//println!("groupID:{}",item.groupID);
 	let item2:read_diff_scores = read_diff_scores_owned(item);
 	kmer_diff_scores_sorted.push(item2);
-	let item2:read_diff_scores = read_diff_scores_owned(item);
-        kmer_diff_scores_sorted2.push(item2);	
+	//let item2:read_diff_scores = read_diff_scores_owned(item);
+        //kmer_diff_scores_sorted2.push(item2);	
     }
       
-    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted2.len();
+    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
     let mut start_point: usize = kmer_diff_scores_length - 1;
     let mut slope:f64 = 0.0;
     let mut is_a_line = 1;
