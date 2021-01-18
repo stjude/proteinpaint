@@ -115,35 +115,97 @@ function table_snvindel_onevariant(m, tk, block, table) {
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Consequence')
-		let printto = td2
-		if (tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
-			// click link to query for csq list
-			const tr = table.append('tr').style('display', 'none')
-			const td = tr.append('td').attr('colspan', 2)
-			printto = td2.append('a').on('click', async () => {
-				const data = await tk.mds.queries.snvindel.m2csq.get(m)
-				console.log(data)
-			})
-		}
-		printto.append('span').text(m.mname)
-		printto
-			.append('span')
-			.style('margin-left', '10px')
-			.style('color', common.mclass[m.class].color)
-			//.style('font-weight', 'bold')
-			.style('font-size', '.8em')
-			.text(common.mclass[m.class].label.toUpperCase())
+		add_csqButton(m, tk, td2, table)
 	}
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Mutation')
-		print_snvindel(m, td2, tk)
+		print_snv(td2, m, tk)
 	}
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
+}
+
+function add_csqButton(m, tk, td, table) {
+	// m:
+	// tk:
+	// td: the <td> to show current csq label
+	// table: 2-col
+	if (tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
+		const a = td.append('a')
+		a.html(m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9660;')
+		// click link to query for csq list
+		const tr = table.append('tr').style('display', 'none')
+		const td2 = tr.append('td').attr('colspan', 2) // to show result of additional csq
+		let first = true
+		a.on('click', async () => {
+			if (tr.style('display') == 'none') {
+				tr.style('display', 'table-row')
+				a.html(
+					m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9650;'
+				)
+			} else {
+				tr.style('display', 'none')
+				a.html(
+					m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9660;'
+				)
+			}
+			if (!first) return
+			first = false
+			const wait = td2.append('div').text('Loading...')
+			try {
+				const data = await tk.mds.queries.snvindel.m2csq.get(m)
+				if (data.error) throw data.error
+				wait.remove()
+				const table = td2.append('table').style('margin-bottom', '10px')
+				const tr = table
+					.append('tr')
+					.style('font-size', '.7em')
+					.style('opacity', 0.5)
+				tr.append('td').text('AA change')
+				tr.append('td').text('Isoform')
+				tr.append('td').text('Consequence')
+				for (const d of data.csq) {
+					const tr = table.append('tr')
+					tr.append('td').text(d.aa_change)
+					tr.append('td').text(d.transcript_id)
+					tr.append('td').text(d.consequence_type)
+				}
+			} catch (e) {
+				wait.text(e.message || e)
+			}
+		})
+	} else {
+		// no showing additional csq
+		td.append('span').text(m.mname)
+		td.append('span')
+			.style('margin-left', '10px')
+			.style('color', common.mclass[m.class].color)
+			.style('font-size', '.8em')
+			.text(common.mclass[m.class].label.toUpperCase())
+	}
+}
+
+function print_snv(holder, m, tk) {
+	let printto = holder
+	if (tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
+		const a = holder.append('a')
+		a.attr('href', tk.mds.queries.snvindel.url.base + m[tk.mds.queries.snvindel.url.key])
+		a.attr('target', '_blank')
+		printto = a
+	}
+	printto.html(
+		m.chr +
+			':' +
+			(m.pos + 1) +
+			' <span style="font-size:.7em;opacity:.5">REF</span> ' +
+			m.ref +
+			' <span style="font-size:.7em;opacity:.5">ALT</span> ' +
+			m.alt
+	)
 }
 
 /* multiple variants, each with occurrence
@@ -163,9 +225,12 @@ function table_snvindel_multivariant(mlst, tk, block, div) {
 	tr.append('td')
 		.text('Occurrence')
 		.style('opacity', 0.5)
+	// one row for each variant
 	for (const m of mlst) {
 		const tr = table.append('tr')
-		print_snvindel(m, tr.append('td').style('padding-right', '10px'), tk)
+		const td1 = tr.append('td').style('padding-right', '10px')
+		add_csqButton(m, tk, td1.append('span').style('margin-right', '10px'), table)
+		print_snv(td1, m, tk)
 		const td2 = tr.append('td')
 		if (tk.mds.variant2samples) {
 			let first = true
