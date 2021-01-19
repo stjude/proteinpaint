@@ -322,7 +322,7 @@ export async function getSamples_gdcapi(q, ds) {
 			'?size=' +
 			api.size +
 			'&fields=' +
-			(q.get == 'sunburst' ? api.fields_sunburst : api.fields_list).join(',') +
+			(q.get == ds.variant2samples.type_sunburst ? api.fields_sunburst : api.fields_list).join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.filters(q))),
 		{ method: 'GET', headers: getheaders(q) }
@@ -340,6 +340,9 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
+		if (ds.variant2samples.sample_id_key) {
+			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		}
 		for (const id of ds.variant2samples.termidlst) {
 			const t = ds.termdb.getTermById(id)
 			if (t) {

@@ -219,7 +219,7 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
+	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
 	fields_list: [
 		'case.project.project_id',
 		'case.case_id',
@@ -744,6 +744,10 @@ module.exports = {
 		// list of terms to show as items in detailed info page
 		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
 		sunburst_ids: ['project', 'disease'], // term id
+		sample_id_key: 'case_id',
+		url: {
+			base: 'https://portal.gdc.cancer.gov/cases/'
+		},
 		gdcapi: variant2samples
 	},
 

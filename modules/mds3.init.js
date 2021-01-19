@@ -59,7 +59,8 @@ export function client_copy(ds) {
 			termidlst: ds.variant2samples.termidlst,
 			type_samples: ds.variant2samples.type_samples,
 			type_summary: ds.variant2samples.type_summary,
-			type_sunburst: ds.variant2samples.type_sunburst
+			type_sunburst: ds.variant2samples.type_sunburst,
+			url: ds.variant2samples.url
 		}
 	}
 	return ds2
@@ -145,6 +146,10 @@ function validate_variant2samples(ds) {
 				throw 'unknown way of doing crosstab'
 			}
 		}
+	}
+	if (vs.url) {
+		if (!vs.url.base) throw '.variant2samples.url.base missing'
+		if (!vs.sample_id_key) throw '.sample_id_key is missing while .variant2samples.url is used'
 	}
 }
 

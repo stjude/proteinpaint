@@ -62,6 +62,20 @@ export async function mlst2samplesummary(arg) {
 			arg.querytype = arg.tk.mds.variant2samples.type_samples
 			const data = await arg.tk.mds.variant2samples.get(arg)
 			trtemp.remove()
+			if (data[0].sample_id) {
+				// sample_id is hardcoded
+				const [td1, td2] = row_headervalue(table)
+				td1.text('Sample')
+				if (arg.tk.mds.variant2samples.url) {
+					const a = td2.append('a')
+					a.attr('href', arg.tk.mds.variant2samples.url.base + data[0].sample_id)
+					a.attr('target', '_blank')
+					a.text(data[0].sample_id)
+				} else {
+					td2.text(data[0].sample_id)
+				}
+			}
+
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const term = arg.tk.mds.termdb.getTermById(termid)
 				if (!term) throw 'unknown term id: ' + termid
