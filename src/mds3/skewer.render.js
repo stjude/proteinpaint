@@ -953,7 +953,7 @@ async function click_variants(d, tk, block, tippos) {
 		if (d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.mds.variant2samples.get(tk, d.mlst, tk.mds.variant2samples.type_sunburst)
+			const data = await tk.mds.variant2samples.get({ mlst: d.mlst, querytype: tk.mds.variant2samples.type_sunburst })
 			tk.glider.style('cursor', 'auto')
 			const arg = {
 				nodes: data,
@@ -966,7 +966,10 @@ async function click_variants(d, tk, block, tippos) {
 				pica: tk.pica,
 				chartlabel: d.mlst[0].mname + (d.mlst.length > 1 ? ' etc' : ''),
 				click_listbutton: (x, y) => {
-					variant_details(d.mlst, tk, block, tippos)
+					variant_details({ mlst: d.mlst, tk, block, tippos })
+				},
+				click_ring: d2 => {
+					console.log(d, d2)
 				}
 			}
 			if (d.aa) {
@@ -982,7 +985,7 @@ async function click_variants(d, tk, block, tippos) {
 			return
 		}
 		// no sunburst, no matter occurrence, show details
-		await variant_details(d.mlst, tk, block, tippos)
+		await variant_details({ mlst: d.mlst, tk, block, tippos })
 	} catch (e) {
 		block.error(e.message || e)
 		if (e.stack) console.log(e.stack)
@@ -993,22 +996,29 @@ async function click_variants(d, tk, block, tippos) {
 if items of mlst are of same type, show table view of the variant itself, plus the sample summary table
 if of multiple data types, do not show variant table view; only show the sample summary table
 should work with skewer and non-skewer data types
+arg{}
+.mlst[]
+.tk
+.block
+.tippos
+.tid2value{}
 */
-async function variant_details(mlst, tk, block, tippos) {
-	tk.itemtip.clear().show(tippos.left - 10, tippos.top - 10)
+async function variant_details(arg) {
+	arg.tk.itemtip.clear().show(arg.tippos.left - 10, arg.tippos.top - 10)
+	arg.div = arg.tk.itemtip.d
 	// count how many dt
 	const dtset = new Set()
-	for (const m of mlst) dtset.add(m.dt)
+	for (const m of arg.mlst) dtset.add(m.dt)
 	if (dtset.size > 1) {
 		// more than 1 data types, won't print detail table for each variant
-		if (tk.mds.variant2samples) {
+		if (arg.tk.mds.variant2samples) {
 			// show sample summary
-			await mlst2samplesummary(mlst, tk, block, tk.itemtip.d)
+			await mlst2samplesummary(arg)
 		} else {
-			console.log('no variant2samples, do not know what to show')
+			throw 'no variant2samples, do not know what to show'
 		}
 		return
 	}
 	// mlst are of one data type
-	await itemtable(mlst, tk, block, tk.itemtip.d)
+	await itemtable(arg)
 }
