@@ -291,7 +291,13 @@ async function handle_examples(req, res) {
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
 		if (req.query.getexamplejson) {
-			res.send({ examples: serverconfig.examples })
+			const txt = await utils.read_file(serverconfig.examplejson)
+			try {
+				const json = JSON.parse(txt)
+				res.send({ examples: json.examples })
+			} catch (e) {
+				res.send({ error: 'Invalid JSON' })
+			}
 		} else {
 			res.send({ error: 'examples json file not defined' })
 		}

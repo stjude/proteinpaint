@@ -71,7 +71,6 @@ export async function init_examples(par) {
 		experimentalList,
 		appList
 	}
-	console.log(track_arg)
 	make_header(header_div, track_arg)
 	await loadTracks(track_arg)
 	console.log(track_arg)
@@ -421,6 +420,7 @@ function make_otherAppHeader(div) {
 
 async function loadJson() {
 	const json = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	console.log(json)
 	return json
 }
 
@@ -503,13 +503,14 @@ async function loadTracks(args) {
 // }
 
 async function displayAppTracks(tracks, holder) {
-	const trackData = tracks
-		.forEach(track => {
-			const app = `${track.app}`
-			const subheading = `${track.subheading}`
-			if (app == 'Other Apps' && subheading == 'Tracks') {
-				const li = holder.append('li')
-				li.attr('class', 'track').html(`
+	const trackData = tracks.forEach(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Other Apps' && subheading == 'Tracks') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`
 						<h6>${track.name}</h6>
 						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
 						<span class="track-image"><img src="${track.image}"></img></span>
@@ -519,44 +520,46 @@ async function displayAppTracks(tracks, holder) {
 								: ''
 						}
 						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-						</div>`)
-				// .on('click', () => {
-				// 	;`${track.buttons.examples ? openNewTab : ''}`
-				// })
-				return li
-			}
-		})
-		.join('')
+						</div>`
+				)
+				.on('click', () => {
+					if (`${track.buttons.examples}`) {
+						openNewTab
+					}
+				})
+			return li
+		}
+	})
 }
 
-// async function openNewTab() {
-// 	const contents = `<!DOCTYPE html>
-// 			<html>
-// 			<head>
-// 				<meta charset="utf-8">
-// 			</head>
-// 			<body>
-// 			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
-// 				<div class="header">
-// 					<h1 id="${track.name}">${track.name} Example</h1>
-// 				</div>
-// 				<div id="aaa"></div>
-// 			<script>
-// 				runproteinpaint({
-//                     host: ${window.location.origin},
-//                     holder: document.getElementById('aaa'),
-//                     ${JSON.stringify(track.buttons.example)}
-//                 })
-// 			</script>
-// 			</body>
-// 			</html>`
-// 	const tab = window.open(`${track.name},name=${track.name} Example`)
-// 	const script = tab.document.createElement('script')
-// 	const tabName = `${track.name}`
-// 	script.type = 'text/javascript'
-// 	tab.document.write(contents)
-// 	tab.document.close()
-// 	setTimeout(function() {
-// 		tab.document.title = tabName
-// 	}, 500)
-// }
+async function openNewTab() {
+	const contents = `<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="utf-8">
+			</head>
+			<body>
+			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
+				<div class="header">
+					<h1 id="${track.name}">${track.name} Example</h1>
+				</div>
+				<div id="aaa"></div>
+			<script>
+				runproteinpaint({
+                    host: ${window.location.origin},
+                    holder: document.getElementById('aaa'),
+                    ${JSON.stringify(track.buttons.example)}
+                })
+			</script>
+			</body>
+			</html>`
+	const tab = window.open(`${track.name},name=${track.name} Example`)
+	const script = tab.document.createElement('script')
+	const tabName = `${track.name}`
+	script.type = 'text/javascript'
+	tab.document.write(contents)
+	tab.document.close()
+	setTimeout(function() {
+		tab.document.title = tabName
+	}, 500)
+}

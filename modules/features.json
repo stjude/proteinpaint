@@ -1,5 +1,34 @@
 {
-    "examples": [{
+    "examples": [
+        {
+            "name": "Kaplan-Meier plot",
+            "app": "GenomePaint",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "",
+            "buttons": {
+                "example": {},
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu",
+                "tutorial": ""
+            },
+            "searchterms": ["KM plot"]
+        },
+        {
+            "name": "Sample Matrix",
+            "app": "GenomePaint",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "",
+            "buttons": {
+                "example": {},
+                "url": "",
+                "doc": "",
+                "tutorial": ""
+            },
+            "searchterms": [""]
+        },
+        {
             "name": "BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -14,7 +43,7 @@
                     "genome": "hg19",
                     "position": "chr12:25334648-25426944",
                     "nativetracks": "RefGene",
-                    "tracks": [  
+                    "tracks": [
                         {
                         "type": "bigwig",
                         "url": "http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
@@ -116,7 +145,7 @@
                     "genome": "mm9",
                     "position": "chr7:13749862-20841903",
                     "nativetracks": "RefGene",
-                    "tracks": [  {
+                    "tracks": [{
                         "type": "hicstraw",
                         "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
                         "name": "Example Hi-C",
@@ -145,7 +174,7 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "tracks": [  {
+                    "tracks": [{
                         "type": "bedj",
                         "name": "gene track",
                         "file": "anno/gencode.v34.hg19.gz",
@@ -173,7 +202,7 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "tracks": [  {
+                    "tracks": [{
                         "type": "junction",
                         "file": "proteinpaint_demo/hg19/junction/junction_demo.gz",
                         "name": "RNA splice junction demo"
@@ -200,7 +229,7 @@
                     "genome": "hg19",
                     "position": "chr8:128597079-130293343",
                     "nativetracks": "RefGene",
-                    "tracks": [  {
+                    "tracks": [{
                         "name": "Stranded RNA-seq",
                         "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
                         "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
@@ -242,7 +271,7 @@
                     "genome": "hg19",
                     "position": "chr8:126890266-13279507",
                     "nativetracks": "RefGene",
-                    "tracks": [  {
+                    "tracks": [{
                         "type": "aicheck",
                         "file": "proteinpaint_demo/hg19/aicheck/file.gz",
                         "name": "Demo sample tumor allelic imbalance"
@@ -268,7 +297,7 @@
                     "noheader": 1,
                     "genome": "hg19",
                     "nativetracks": "RefGene",
-                    "tracks": [  {
+                    "tracks": [{
                         "type": "vcf",
                         "name": "Clinvar",
                         "file": "hg38/clinvar.hg38.vcf.gz",
@@ -494,7 +523,7 @@
                     "fusioneditor": { "uionly": true }
                 },
                 "url": "",
-                "doc": "",
+                "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit",
                 "tutorial": ""
             },
             "searchterms": []
@@ -505,8 +534,10 @@
             "subheading": "Tracks",
             "blurb": "",
             "image": "",
-            "buttons": {"url": "",
-                "doc": "",
+            "buttons": {
+                "example": {},
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13",
                 "tutorial": ""
             },
             "searchterms": []
@@ -968,7 +999,7 @@
             "image": "",
             "buttons": {
                 "example": {},
-                "url": "",
+                "url": "https://proteinpaint.stjude.org/F/human.temp.hic.html",
                 "doc": "",
                 "tutorial": ""
             },
@@ -983,7 +1014,7 @@
             "buttons": {
                 "example": {},
                 "url": "",
-                "doc": "",
+                "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit",
                 "tutorial": ""
             },
             "searchterms": []
