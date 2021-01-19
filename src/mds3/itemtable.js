@@ -57,7 +57,7 @@ export async function mlst2samplesummary(arg) {
 	const [tdtemp1, tdtemp2, trtemp] = row_headervalue(table)
 	tdtemp1.text('Loading...')
 	try {
-		if (arg.mlst.length == 1 && arg.mlst[0].occurrence == 1) {
+		if (arg.mlst.reduce((i, j) => i + j.occurrence, 0) == 1) {
 			// one single sample, print details
 			arg.querytype = arg.tk.mds.variant2samples.type_samples
 			const data = await arg.tk.mds.variant2samples.get(arg)
@@ -117,16 +117,9 @@ async function table_snvindel(arg) {
 			.style('margin-top', '20px')
 			.style('opacity', 0.4)
 			.style('font-size', '1.2em')
-		if (arg.mlst.length == 1) {
-			if (arg.mlst[0].occurrence == 1) {
-				heading.text('Information about this case')
-			} else {
-				heading.text('Summary of ' + arg.mlst[0].occurrence + ' cases')
-			}
-		} else {
-			heading.text(
-				`Summary of ${arg.mlst.reduce((i, j) => i + j.occurrence, 0)} cases harboring ${arg.mlst.length} variants`
-			)
+		{
+			const c = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+			heading.text(c == 1 ? 'Information about this case' : 'Summary of ' + c + ' cases')
 		}
 		await mlst2samplesummary(arg)
 	}
