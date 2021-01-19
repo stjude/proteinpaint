@@ -969,22 +969,43 @@ async function click_variants(d, tk, block, tippos) {
 					variant_details({ mlst: d.mlst, tk, block, tippos })
 				},
 				click_ring: d2 => {
+					/* hardcoded attributes from d2.data{}, due to how stratinput structures the data
+					.id0, v0 should exist for all levels
+					.id1, v1 should exist for 2nd and next levels... etc
+					add the key/values to tid2value{}
+					*/
+					tk.itemtip.clear().show(d3event.clientX - 10, d3event.clientY - 10)
 					const arg = {
 						mlst: d.mlst,
 						tk,
 						block,
-						tippos,
+						div: tk.itemtip.d,
 						tid2value: {}
 					}
-					/* hardcoded attributes from d2.data{}
-					due to how stratinput structures the data
-					.id0, v0 should exist for all levels
-					.id1, v1 should exist for 2nd and next levels... etc
-					*/
 					arg.tid2value[d2.data.id0] = d2.data.v0
 					if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
 					if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
-					variant_details(arg)
+
+					if (d2.value == 1) {
+						/*
+						this wedge has single sample, while d.mlst will have multiple.
+						unfortunately mlst2samplesummary will use occurrence sum to decide what type of data to request
+						(=1 for sample details, >1 for summary)
+						must change occurrence sum to 1 so mlst2samplesummary() will request single sample data
+						temp fix to create a mock arg.mlst[]
+						*/
+						arg.mlst = d.mlst.map(m => {
+							if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+								return { ssm_id: m.ssm_id, occurrence: 0 }
+							}
+							throw 'unknown variant2samples.variantkey'
+						})
+						arg.mlst[0].occurrence = 1
+					}
+					/* do not call variant_details() as no need to show info on variants
+					only need to show sample summary (or details about a single sample)
+					*/
+					mlst2samplesummary(arg)
 				}
 			}
 			if (d.aa) {
