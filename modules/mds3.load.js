@@ -90,9 +90,8 @@ function init_q(query, genome) {
 		// right now only from gdc
 		query.filter0 = JSON.parse(query.filter0)
 	}
-	if (query.rglst) {
-		query.rglst = JSON.parse(query.rglst)
-	}
+	if (query.rglst) query.rglst = JSON.parse(query.rglst)
+	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
 	return query
 }
 

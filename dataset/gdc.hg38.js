@@ -257,6 +257,17 @@ const variant2samples = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.tid2value) {
+			for (const tid in p.tid2value) {
+				const t = terms.find(i => i.id == tid)
+				if (t) {
+					f.content.push({
+						op: 'in',
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+					})
+				}
+			}
+		}
 		return f
 	}
 }

@@ -969,7 +969,22 @@ async function click_variants(d, tk, block, tippos) {
 					variant_details({ mlst: d.mlst, tk, block, tippos })
 				},
 				click_ring: d2 => {
-					console.log(d, d2)
+					const arg = {
+						mlst: d.mlst,
+						tk,
+						block,
+						tippos,
+						tid2value: {}
+					}
+					/* hardcoded attributes from d2.data{}
+					due to how stratinput structures the data
+					.id0, v0 should exist for all levels
+					.id1, v1 should exist for 2nd and next levels... etc
+					*/
+					arg.tid2value[d2.data.id0] = d2.data.v0
+					if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
+					if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
+					variant_details(arg)
 				}
 			}
 			if (d.aa) {
