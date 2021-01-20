@@ -401,14 +401,38 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
 	groupID:usize::from(start_point)
     };
 
-    let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.value as f64);
+    let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.value as f64); // m=(y2-y1)/(x2-x1)
 
-    let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line;
-    let mut distances_from_line = Vec::<f64>::new();
-    //for i in 0..start_point {
-    //   
-    //}
+    let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x 
+    let mut distances_from_line:f64 = 0.0;
+    let mut array_maximum:f64 = 0.0;
+    let mut index_array_maximum:usize = 0;
 	
+    for i in 0..start_point {
+	distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+        if (array_maximum>distances_from_line) {
+            array_maximum=distances_from_line;
+	    index_array_maximum=i;
+	}    
+    }
+
+    let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
+    for i in 0..kmer_diff_scores_length	{
+       if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
+          let read_cat = read_category{
+	       category:String::from("none"),
+	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+          };
+          indices.push(read_cat); 
+       }
+       else {
+          let read_cat = read_category{
+	       category:String::from("refalt"),
+	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+          };
+	  indices.push(read_cat); 
+       }	   
+    }	    
     }	
     indices
 }    
