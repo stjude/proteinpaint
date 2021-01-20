@@ -21,7 +21,6 @@ struct read_category {
    groupID:usize
 }
 
-
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let val=item.value.to_owned();        
     let gID=item.groupID.to_owned();
@@ -382,5 +381,34 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
 	   indices.push(read_cat); 
         }
     }
+    else {
+	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
+	for i in 0..start_point {
+	      let item = read_diff_scores{
+	         value:f64::from(kmer_diff_scores_sorted[i].value),
+	         groupID:usize::from(i)     
+	      };
+	      kmer_diff_scores_input.push(item);
+	}    
+    
+    let min_value=read_diff_scores{
+	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
+	groupID:usize::from(0 as usize)
+    };
+
+    let max_value=read_diff_scores{
+	value:f64::from(kmer_diff_scores_sorted[start_point].value),
+	groupID:usize::from(start_point)
+    };
+
+    let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.value as f64);
+
+    let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line;
+    let mut distances_from_line = Vec::<f64>::new();
+    //for i in 0..start_point {
+    //   
+    //}
+	
+    }	
     indices
 }    
