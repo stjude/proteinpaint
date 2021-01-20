@@ -964,7 +964,6 @@ async function click_variants(d, tk, block, tippos) {
 				svgheight: Number.parseFloat(block.svg.attr('height')),
 				g: tk.skewer.g.append('g'),
 				pica: tk.pica,
-				chartlabel: d.mlst[0].mname + (d.mlst.length > 1 ? ' etc' : ''),
 				click_listbutton: (x, y) => {
 					variant_details({ mlst: d.mlst, tk, block, tippos })
 				},
@@ -1015,6 +1014,12 @@ async function click_variants(d, tk, block, tippos) {
 				arg.cx = d.x
 				arg.cy = d.y + ((tk.aboveprotein ? 1 : -1) * tk.skewer.stem1) / 2
 				// not to show list button in sunburst in case mlst has different data types
+			}
+			if (d.mlst.length == 1) {
+				arg.chartlabel = d.mlst[0].mname
+			} else {
+				// multiple m, use mname of most recurrent variant
+				arg.chartlabel = d.mlst.reduce((i, j) => (j.occurrence > i.occurrence ? j : i)).mname + ' etc'
 			}
 			const _ = await import('../sunburst')
 			_.default(arg)
