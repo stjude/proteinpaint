@@ -509,16 +509,16 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		const max_value = [start_point, kmer_diff_scores[start_point].value]
 		console.log('max_value:', max_value)
 
-		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0])
+		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0]) // m=(y2-y1)/(x2-x1)
 		console.log('Slope of line:', slope_of_line)
-		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
+		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line // c=y-m*x
 
 		const distances_from_line = []
 		for (let i = 0; i < kmer_diff_scores_input.length; i++) {
 			distances_from_line.push(
 				Math.abs(slope_of_line * kmer_diff_scores_input[i][0] - kmer_diff_scores_input[i][1] + intercept_of_line) /
 					Math.sqrt(1 + slope_of_line * slope_of_line)
-			) // distance = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+			) // distance of a point from line = abs(a*x+b*y+c)/sqrt(a^2+b^2)
 		}
 		const array_maximum = Math.max(...distances_from_line)
 		// console.log("Array maximum:",array_maximum)
