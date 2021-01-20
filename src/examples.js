@@ -523,8 +523,8 @@ async function displayAppTracks(tracks, holder) {
 						</div>`
 				)
 				.on('click', () => {
-					if (`${track.buttons.examples}`) {
-						openNewTab
+					if (Object.entries(`${track.buttons.example}`).length != 0) {
+						openNewTab(track)
 					}
 				})
 			return li
@@ -532,23 +532,23 @@ async function displayAppTracks(tracks, holder) {
 	})
 }
 
-async function openNewTab() {
+async function openNewTab(track) {
 	const contents = `<!DOCTYPE html>
-			<html>
 			<head>
 				<meta charset="utf-8">
+				<title${track.name} Example</title>
 			</head>
 			<body>
 			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
 				<div class="header">
-					<h1 id="${track.name}">${track.name} Example</h1>
+					<h1 id="aaa">${track.name} Example</h1>
 				</div>
-				<div id="aaa"></div>
+				<div id="${track.name}" style="margin:20px"</div>
 			<script>
 				runproteinpaint({
-                    host: ${window.location.origin},
+                    host: '${window.location.origin}',
                     holder: document.getElementById('aaa'),
-                    ${JSON.stringify(track.buttons.example)}
+                    ${JSON.stringify(`${track.buttons.example}`)}
                 })
 			</script>
 			</body>

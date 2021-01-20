@@ -26,7 +26,7 @@
                 "doc": "",
                 "tutorial": ""
             },
-            "searchterms": [""]
+            "searchterms": []
         },
         {
             "name": "BigWig",
@@ -556,8 +556,8 @@
                         "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
                         "tracks": [{
                             "name": "Demo RNA-seq coverage",
-                            "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
-                            "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
+                            "strand1": { "file": "/Users/creilly/data/tp/proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
+                            "strand2": { "file": "/Users/creilly/data/tp/proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
                             "type": "bigwigstranded"
                         }]
                     }
