@@ -22,13 +22,15 @@ As needed, follow the [installation instructions](https://docs.google.com/docume
 
 `npm run dev` rebundles backend and frontend code
 
-`npm run server` restarts the proteinpaint server
+`npm start` restarts the proteinpaint server
 
 `npm test` tests both frontend and backend code
 
 `npm run test-browser` bundles the front-end spec files for use at localhost:[port]/testrun.html
 
 `./scripts/deploy.sh [env]` builds and deploys the bundled code
+
+`./build/target.sh dev` builds a Docker image and runs a containerized server, but using the public/bin bundles from `npm run dev`
 
 
 ## Release
