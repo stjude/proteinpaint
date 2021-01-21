@@ -35,4 +35,4 @@ As needed, follow the [installation instructions](https://docs.google.com/docume
 
 ## Build
 
-Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit#heading=h.yadk67y2jbx4).
+Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit?usp=sharing).
