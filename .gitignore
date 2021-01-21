@@ -68,5 +68,6 @@ p4/public/dev.html
 *.key
 *.pem
 *.csr
-
-
+*.ext
+*.crt
+.ssl
