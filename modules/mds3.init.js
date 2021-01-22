@@ -1,4 +1,5 @@
 const gdc = require('./mds3.gdc')
+const variant2samples_getresult = require('./mds3.variant2samples')
 
 /*
 ********************** EXPORTED
@@ -58,7 +59,8 @@ export function client_copy(ds) {
 			termidlst: ds.variant2samples.termidlst,
 			type_samples: ds.variant2samples.type_samples,
 			type_summary: ds.variant2samples.type_summary,
-			type_sunburst: ds.variant2samples.type_sunburst
+			type_sunburst: ds.variant2samples.type_sunburst,
+			url: ds.variant2samples.url
 		}
 	}
 	return ds2
@@ -131,6 +133,9 @@ function validate_variant2samples(ds) {
 	} else {
 		throw 'unknown query method of variant2samples'
 	}
+	vs.get = async q => {
+		return await variant2samples_getresult(q, ds)
+	}
 	if (ds.termdb.termid2totalsize) {
 		// has ways of querying total size, add the crosstab getter
 		vs.addCrosstabCount = async (nodes, q) => {
@@ -142,6 +147,10 @@ function validate_variant2samples(ds) {
 			}
 		}
 	}
+	if (vs.url) {
+		if (!vs.url.base) throw '.variant2samples.url.base missing'
+		if (!vs.sample_id_key) throw '.sample_id_key is missing while .variant2samples.url is used'
+	}
 }
 
 function copy_queries(ds) {
@@ -150,6 +159,9 @@ function copy_queries(ds) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
 			url: ds.queries.snvindel.url
+		}
+		if (ds.queries.snvindel.m2csq) {
+			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
 		}
 	}
 	if (ds.queries.genecnv) {
@@ -403,16 +415,27 @@ function validate_query_snvindel(ds) {
 	}
 	if (!q.byrange) throw '.byrange missing for queries.snvindel'
 	if (q.byrange.gdcapi) {
-		gdc.validate_query_snvindel_byrange(q.byrange.gdcapi, ds)
+		gdc.validate_query_snvindel_byrange(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byrange'
 	}
 
 	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_snvindel_byisoform(q.byisoform.gdcapi, ds)
+		gdc.validate_query_snvindel_byisoform(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
+	}
+
+	if (q.m2csq) {
+		if (!q.m2csq.by) throw '.by missing from queries.snvindel.m2csq'
+		if (q.m2csq.by != 'ssm_id') throw 'unknown value of queries.snvindel.m2csq.by' // add additional
+		if (q.m2csq.gdcapi) {
+			gdc.validate_m2csq(ds)
+			// added q.m2csq.get()
+		} else {
+			throw 'unknown query method for queries.snvindel.m2csq'
+		}
 	}
 }
 
@@ -427,7 +450,7 @@ function validate_query_genecnv(ds, genome) {
 		q.byisoform.sqlquery_isoform2gene.query = genome.genedb.db.prepare(q.byisoform.sqlquery_isoform2gene.statement)
 	}
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_genecnv(q.byisoform.gdcapi, ds)
+		gdc.validate_query_genecnv(ds)
 	} else {
 		throw 'unknown query method for queries.genecnv.byisoform'
 	}

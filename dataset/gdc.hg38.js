@@ -95,11 +95,9 @@ const isoform2variants = [
 ]
 
 /*
-not in use for the moment
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
-TODO convert to text output
 */
 const query_range2variants = `query range2variants($filters: FiltersArgument) {
   explore {
@@ -189,6 +187,18 @@ function variables_range2variants(p) {
 }
 
 /*
+using one ssmid, get the full list of consequences
+*/
+const ssmid2csq = {
+	endpoint: GDC_HOST + '/ssms/',
+	fields: [
+		'consequence.transcript.transcript_id',
+		'consequence.transcript.consequence_type',
+		'consequence.transcript.aa_change'
+	]
+}
+
+/*
 using one or multiple variants, get info about all tumors harbording them
 variant2samples intends to be a generic mechanism for fetching tumors harbording a variant
 same name attribute will be exposed to client (ds.variant2samples: true)
@@ -209,7 +219,7 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.disease_type'],
+	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
 	fields_list: [
 		'case.project.project_id',
 		'case.case_id',
@@ -246,6 +256,17 @@ const variant2samples = {
 		}
 		if (p.filter0) {
 			f.content.push(p.filter0)
+		}
+		if (p.tid2value) {
+			for (const tid in p.tid2value) {
+				const t = terms.find(i => i.id == tid)
+				if (t) {
+					f.content.push({
+						op: 'in',
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+					})
+				}
+			}
 		}
 		return f
 	}
@@ -723,6 +744,10 @@ module.exports = {
 		// list of terms to show as items in detailed info page
 		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
 		sunburst_ids: ['project', 'disease'], // term id
+		sample_id_key: 'case_id',
+		url: {
+			base: 'https://portal.gdc.cancer.gov/cases/'
+		},
 		gdcapi: variant2samples
 	},
 
@@ -741,6 +766,7 @@ module.exports = {
 		snvindel: {
 			forTrack: true,
 			url: {
+				// for adding url link in variant panel
 				base: 'https://portal.gdc.cancer.gov/ssms/',
 				key: 'ssm_id'
 			},
@@ -752,6 +778,11 @@ module.exports = {
 			},
 			byisoform: {
 				gdcapi: { lst: isoform2variants }
+			},
+			m2csq: {
+				// may also support querying a vcf by chr.pos.ref.alt
+				by: 'ssm_id',
+				gdcapi: ssmid2csq
 			}
 		},
 		genecnv: {

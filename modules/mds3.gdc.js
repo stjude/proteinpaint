@@ -11,6 +11,7 @@ validate_query_genecnv
 getSamples_gdcapi
 get_cohortTotal
 addCrosstabCount_tonodes
+validate_m2csq
 
 getheaders
 */
@@ -19,11 +20,12 @@ export function validate_variant2sample(a) {
 	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
-export function validate_query_snvindel_byrange(api, ds) {
+export function validate_query_snvindel_byrange(ds) {
+	const api = ds.queries.snvindel.byrange.gdcapi
 	if (!api.query) throw '.query missing for byrange.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
 	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
-	api.get = async opts => {
+	ds.queries.snvindel.byrange.get = async opts => {
 		const response = await got.post(ds.apihost, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
@@ -54,7 +56,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 				alt: h.node.tumor_allele,
 				samples: []
 			}
-			if (h.node.consequence) {
+			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
+				m.csqcount = h.node.consequence.hits.edges.length
 				let c
 				if (opts.isoform) c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
 				const c2 = c || h.node.consequence.hits.edges[0]
@@ -63,9 +66,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 			}
 			if (h.node.occurrence.hits.edges) {
 				for (const c of h.node.occurrence.hits.edges) {
-					const cc = c.node.case
-					const sample = { case_id: cc.case_id }
-					fillSampleDetails(sample, cc, ds)
+					const sample = makeSampleObj(c.node.case, ds)
+					sample.sample_id = c.node.case.case_id
 					m.samples.push(sample)
 				}
 			}
@@ -75,7 +77,8 @@ export function validate_query_snvindel_byrange(api, ds) {
 	}
 }
 
-export function validate_query_snvindel_byisoform(api, ds) {
+export function validate_query_snvindel_byisoform(ds) {
+	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
 	if (api.lst.length != 2) throw 'api.lst is not array of length 2'
 	for (const a of api.lst) {
@@ -84,7 +87,7 @@ export function validate_query_snvindel_byisoform(api, ds) {
 		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
 		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
 	}
-	api.get = async opts => {
+	ds.queries.snvindel.byisoform.get = async opts => {
 		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
 		for (const hit of hits) {
@@ -98,14 +101,15 @@ export function validate_query_snvindel_byisoform(api, ds) {
 				ref: hit.reference_allele,
 				alt: hit.tumor_allele,
 				isoform: opts.isoform,
+				csqcount: hit.csqcount,
 				// occurrence count will be overwritten after sample filtering
 				occurrence: hit.cases.length
 			}
 			snvindel_addclass(m, hit.consequence)
 			m.samples = []
 			for (const c of hit.cases) {
-				const sample = { sample_id: c.case_id }
-				fillSampleDetails(sample, c, ds)
+				const sample = makeSampleObj(c, ds)
+				sample.sample_id = c.case_id
 				m.samples.push(sample)
 			}
 			mlst.push(m)
@@ -114,30 +118,36 @@ export function validate_query_snvindel_byisoform(api, ds) {
 	}
 }
 
-function fillSampleDetails(sample, c, ds) {
-	if (!ds.sampleSummaries) return
-	// At the snvindel query, each sample obj will only carry a subset of attributes
-	// as defined here, for producing sub-labels
-	for (const i of ds.sampleSummaries.lst) {
-		{
-			const t = ds.termdb.getTermById(i.label1)
-			if (t) {
-				sample[i.label1] = c[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+function makeSampleObj(c, ds) {
+	// c: {project:{project_id}} as returned by api call
+	const sample = {}
+	if (ds.sampleSummaries) {
+		// At the snvindel query, each sample obj will only carry a subset of attributes
+		// as defined here, for producing sub-labels
+		for (const i of ds.sampleSummaries.lst) {
+			{
+				const t = ds.termdb.getTermById(i.label1)
+				if (t) {
+					sample[i.label1] = c[t.fields[0]]
+					for (let j = 1; j < t.fields.length; j++) {
+						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
+					}
+				}
+			}
+			if (i.label2) {
+				const t = ds.termdb.getTermById(i.label2)
+				if (t) {
+					sample[i.label2] = c[t.fields[0]]
+					for (let j = 1; j < t.fields.length; j++) {
+						if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
+					}
 				}
 			}
 		}
-		if (i.label2) {
-			const t = ds.termdb.getTermById(i.label2)
-			if (t) {
-				sample[i.label2] = c[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
-				}
-			}
-		}
+	} else {
+		// alternative methods for building samples
 	}
+	return sample
 }
 
 function snvindel_addclass(m, consequence) {
@@ -225,6 +235,7 @@ async function snvindel_byisoform_run(api, opts) {
 	for (const h of re_ssms.data.hits) {
 		if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
+		h.csqcount = h.consequence.length
 		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
 		if (!consequence) {
 			// may alert??
@@ -244,12 +255,13 @@ async function snvindel_byisoform_run(api, opts) {
 	return [...id2ssm.values()]
 }
 
-export function validate_query_genecnv(api, ds) {
+export function validate_query_genecnv(ds) {
+	const api = ds.queries.genecnv.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
 	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
 	// validate variables
-	api.get = async (opts, name) => {
+	ds.queries.genecnv.byisoform.get = async (opts, name) => {
 		// following is project-summarized query
 		// should be replaced by sample-level queries
 		const variables = JSON.parse(JSON.stringify(api.variables))
@@ -310,7 +322,7 @@ export async function getSamples_gdcapi(q, ds) {
 			'?size=' +
 			api.size +
 			'&fields=' +
-			(q.get == 'sunburst' ? api.fields_sunburst : api.fields_list).join(',') +
+			(q.get == ds.variant2samples.type_sunburst ? api.fields_sunburst : api.fields_list).join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.filters(q))),
 		{ method: 'GET', headers: getheaders(q) }
@@ -328,6 +340,9 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
+		if (ds.variant2samples.sample_id_key) {
+			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		}
 		for (const id of ds.variant2samples.termidlst) {
 			const t = ds.termdb.getTermById(id)
 			if (t) {
@@ -403,5 +418,27 @@ export async function addCrosstabCount_tonodes(nodes, combinations) {
 			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
 			if (n) node.cohortsize = n.count
 		}
+	}
+}
+
+export function validate_m2csq(ds) {
+	const api = ds.queries.snvindel.m2csq.gdcapi
+	if (!api.endpoint) throw '.endpoint missing for queries.snvindel.m2csq.gdcapi'
+	if (!api.fields) throw '.fields[] missing for queries.snvindel.m2csq.gdcapi'
+	ds.queries.snvindel.m2csq.get = async q => {
+		// q is client request object
+		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+			method: 'GET',
+			headers: getheaders(q)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid json in response'
+		}
+		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
+		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
+		return re.data.consequence.map(i => i.transcript)
 	}
 }
