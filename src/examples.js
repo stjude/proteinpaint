@@ -20,7 +20,7 @@ export async function init_examples(par) {
 	// genomepaint panel
 	gbrowswer_col
 		.append('h5')
-		.html('GenomePaint')
+		.html('GenomePaint') //TODO: ugly style. Need to change into something less '90s.
 		.append('hr')
 	make_gpaint_card(gbrowswer_col)
 
@@ -197,6 +197,7 @@ function make_searchbar(div, args) {
 		.style('font-size', '12px')
 		.property('placeholder', 'Search tracks or features')
 		.on('keyup', async () => {
+			//TODO add debounce after fix
 			const data = await loadJson()
 			const searchInput = searchBar
 				.select('input')
@@ -211,8 +212,8 @@ function make_searchbar(div, args) {
 				}, false)
 				return searchTermFound || track.name.toLowerCase().includes(searchInput)
 			})
-			displayBrowserTracks(filteredTracks, args.browserList)
-			displayExperimentalTracks(filteredTracks, args.experimentalList)
+			// displayBrowserTracks(filteredTracks, args.browserList)
+			// displayExperimentalTracks(filteredTracks, args.experimentalList)
 			displayAppTracks(filteredTracks, args.appList)
 		})
 
@@ -434,6 +435,10 @@ async function loadTracks(args) {
 	}
 }
 
+//TODO: revert back to btns for links.
+//TODO: White background images is visually problematic with white tiles. Discuss later? Maybe light grey gradient to tiles?
+//TODO: Add in tiles for GenomePaint to live under static, top tile
+
 // function displayBrowserTracks(tracks, holder) {
 // 	const htmlString = tracks
 // 		.map(track => {
@@ -503,14 +508,15 @@ async function loadTracks(args) {
 // }
 
 async function displayAppTracks(tracks, holder) {
-	const trackData = tracks.forEach(track => {
-		const app = `${track.app}`
-		const subheading = `${track.subheading}`
-		if (app == 'Other Apps' && subheading == 'Tracks') {
-			const li = holder.append('li')
-			li.attr('class', 'track')
-				.html(
-					`
+	const trackData = tracks
+		.filter(track => {
+			const app = `${track.app}`
+			const subheading = `${track.subheading}`
+			if (app == 'Other Apps' && subheading == 'Tracks') {
+				const li = holder.append('li')
+				li.attr('class', 'track')
+					.html(
+						`
 						<h6>${track.name}</h6>
 						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
 						<span class="track-image"><img src="${track.image}"></img></span>
@@ -521,34 +527,37 @@ async function displayAppTracks(tracks, holder) {
 						}
 						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
 						</div>`
-				)
-				.on('click', () => {
-					if (Object.entries(`${track.buttons.example}`).length != 0) {
-						openNewTab(track)
-					}
-				})
-			return li
-		}
-	})
+					)
+					.on('click', async () => {
+						if (track.buttons.example) {
+							openNewTab(track)
+						}
+					})
+				return li
+			}
+		})
+		.join('')
+	//Works but does not join into a list; return trackData, holder.html('trackData'), and trackData.append('holder') does not work. Downstream: search function no longer works as a result.
 }
 
 async function openNewTab(track) {
+	const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
 	const contents = `<!DOCTYPE html>
 			<head>
 				<meta charset="utf-8">
-				<title${track.name} Example</title>
 			</head>
 			<body>
 			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
 				<div class="header">
-					<h1 id="aaa">${track.name} Example</h1>
+					<h1 id="track-example-header">${track.name} Example</h1>
 				</div>
-				<div id="${track.name}" style="margin:20px"</div>
+				<div id="aaa" style="margin:20px"</div>
+				<script src="/examples.js"></script> <!--??? Not the right file path??? Does not load but maybe not needed?-->
 			<script>
 				runproteinpaint({
                     host: '${window.location.origin}',
                     holder: document.getElementById('aaa'),
-                    ${JSON.stringify(`${track.buttons.example}`)}
+                    ${strippedTrack}
                 })
 			</script>
 			</body>
