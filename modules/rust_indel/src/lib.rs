@@ -8,11 +8,6 @@ use serde::{Serialize, Deserialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-enum List {
-    cons(i64, Box<List>),
-    Nil,
-}
-
 pub struct read_diff_scores {
    groupID:usize,
    value:f64
@@ -117,20 +112,44 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     println!("ref_scores length:{}",ref_scores.len());
     println!("alt_scores length:{}",alt_scores.len());
 
+    let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
     if ref_scores.len() > 0 {
-      let ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
+      ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
 
+    let mut alt_indices = Vec::<read_category>::new();
     println!("Parsing alt scores");
     if alt_scores.len() > 0 {
       let alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }
-    let mut vec1:Vec<usize>=vec![1, 2, 3];
-    let mut vec2:Vec<String>=vec!["refalt".to_string(), "none".to_string(), "refalt".to_string()];
+
+    let mut output_cat = Vec::<String>::new();
+    let mut output_gID = Vec::<usize>::new();
+
+    for item in ref_indices {
+	if item.category == "refalt".to_string() {
+            output_cat.push("ref".to_string());		
+        }
+	else {
+            output_cat.push("none".to_string());
+	}    
+        output_gID.push(item.groupID);	    
+    }
+
+    for item in alt_indices {
+	if item.category == "refalt".to_string() {
+            output_cat.push("alt".to_string());		
+        }
+	else {
+            output_cat.push("none".to_string());
+	}    
+        output_gID.push(item.groupID);	    
+    }
+
     let item = output_structure{
-	category:vec2,
-	groupID:vec1
+	category:output_cat,
+	groupID:output_gID
     };
 
     JsValue::from_serde(&item).unwrap()
