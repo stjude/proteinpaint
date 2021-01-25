@@ -231,7 +231,7 @@ module.exports = genomes => {
 }
 
 async function get_pileup(q, req, templates) {
-	const pileup_height = 100
+	const pileup_height = 100 // should use q.pileupheight instead
 	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
 	const totalcolor = 'rgb(192,192,192)' //Ref-grey
@@ -242,7 +242,7 @@ async function get_pileup(q, req, templates) {
 	}
 	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
 
-	for (const r of q.regions) {
+	for (const [ridx, r] of q.regions.entries()) {
 		console.log('r.ntwidth:', r.ntwidth)
 		console.log('q.devicePixelRatio:', q.devicePixelRatio)
 		const bplst = await run_samtools_depth(q, r)
@@ -252,11 +252,13 @@ async function get_pileup(q, req, templates) {
 		//console.log("con_seq:",con_seq)
 		//console.log('ref_seq length:', ref_seq.length)
 
+		// must compute maxValue across all regions before plotting pileup for each region, in case of multi region track, this will fail
+
 		maxValue = Math.max(...bplst.map(i => i.total))
 		let y = 0
 		const sf = pileup_height / maxValue
 		let i = 0
-		softclip_mismatch_pileup(r, templates, bplst)
+		softclip_mismatch_pileup(ridx, r, templates, bplst)
 		if (r.ntwidth > zoom_cutoff) {
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
@@ -380,12 +382,19 @@ async function get_pileup(q, req, templates) {
 	q.pileup_data = pileup_data
 }
 
-function softclip_mismatch_pileup(r, templates, bplst) {
+function softclip_mismatch_pileup(ridx, r, templates, bplst) {
+	// for a region, use segments from this region to add mismatches to bplst depth
 	let bp_iter = 0
 	for (const template of templates) {
 		for (const segment of template.segments) {
+			if (segment.ridx != ridx || Math.max(segment.segstart, r.start) > Math.min(segment.segstop, r.stop)) {
+				// segment not in this region
+				continue
+			}
+			// no need to parseInt as these are already integers
 			bp_iter = Number.parseInt(segment.segstart) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
 			let first_element_of_cigar = 1
+			// i haven't reviewed logic below. if bplst[] contains bins, then here should update as well.
 			for (const box of segment.boxes) {
 				if (box.opr == 'S' || box.opr == 'I') {
 					// Checking to see if the first element of cigar is softclip or not
@@ -548,6 +557,10 @@ async function get_q(genome, req) {
 	}
 	if (isurl) {
 		q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
+	}
+	if (req.query.pileupheight) {
+		q.pileupheight = Number(req.query.pileupheight)
+		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
 		const t = req.query.variant.split('.')
@@ -752,7 +765,8 @@ function query_region(r, q) {
 }
 
 function run_samtools_depth(q, r) {
-	// function for creating the
+	// "samtools depth" returns single base depth
+	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3, then bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		console.log(
