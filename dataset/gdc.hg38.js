@@ -4,7 +4,7 @@
 query list of variants by isoform
 */
 
-const GDC_HOST = process.env.GDC_HOST || 'https://api.gdc.cancer.gov'
+const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 const isoform2variants = [
 	{
