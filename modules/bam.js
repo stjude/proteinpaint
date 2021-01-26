@@ -231,101 +231,101 @@ module.exports = genomes => {
 }
 
 async function get_pileup(q, req, templates) {
-	const pileup_height = 100 // should use q.pileupheight instead
 	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
-	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, pileup_height * q.devicePixelRatio)
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
 	const totalcolor = 'rgb(192,192,192)' //Ref-grey
 	const ctx = canvas.getContext('2d')
 	let maxValue = 0
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	//const pileup_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
+
+	// Computing maxValue from all regions
+	for (const [ridx, r] of q.regions.entries()) {
+		const bplst = await run_samtools_depth(q, r)
+		let max_value_region = Math.max(...bplst.map(i => i.total))
+		if (max_value_region > maxValue) {
+			maxValue = max_value_region
+		}
+	}
 
 	for (const [ridx, r] of q.regions.entries()) {
-		console.log('r.ntwidth:', r.ntwidth)
-		console.log('q.devicePixelRatio:', q.devicePixelRatio)
+		//console.log('r.ntwidth:', r.ntwidth)
+		//console.log('q.devicePixelRatio:', q.devicePixelRatio)
 		const bplst = await run_samtools_depth(q, r)
 		// each ele is {}
 		// .position
 		// .total/A/T/C/G/refskip
-		//console.log("con_seq:",con_seq)
-		//console.log('ref_seq length:', ref_seq.length)
 
-		// must compute maxValue across all regions before plotting pileup for each region, in case of multi region track, this will fail
-
-		maxValue = Math.max(...bplst.map(i => i.total))
 		let y = 0
-		const sf = pileup_height / maxValue
+		const sf = q.pileupheight / maxValue
 		let i = 0
-		softclip_mismatch_pileup(ridx, r, templates, bplst)
 		if (r.ntwidth > zoom_cutoff) {
+			softclip_mismatch_pileup(ridx, r, templates, bplst)
 			for (const bp of bplst) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
-				//y = (maxValue-bp.total)*sf
-				//y=maxValue*sf
 				y = 0
 				if (bp.A) {
 					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.A //'rgb(220,20,60)'
 					const h = bp.A * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.C) {
 					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.C //'rgb(0,100,0)'
 					const h = bp.C * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.G) {
 					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.G //'rgb(255,20,147)'
 					const h = bp.G * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.T) {
 					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.T //'rgb(0,0,255)'
 					const h = bp.T * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				// Rendering soft clips
 				//if (bp.softclip) {
 				//	ctx.fillStyle = 'rgb(70,130,180)'
 				//	const h = bp.softclip * sf
-				//	ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				//	ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 				//	y += h
 				//}
 
 				if (bp.softclipA) {
 					ctx.fillStyle = basecolor.basecolor.A
 					const h = bp.softclipA * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.softclipT) {
 					ctx.fillStyle = basecolor.basecolor.T
 					const h = bp.softclipT * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.softclipC) {
 					ctx.fillStyle = basecolor.basecolor.C
 					const h = bp.softclipC * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				if (bp.softclipG) {
 					ctx.fillStyle = basecolor.basecolor.G
 					const h = bp.softclipG * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 				// Rendering reference allele
 				{
 					ctx.fillStyle = 'rgb(192,192,192)'
 					const h = bp.ref * sf
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 				}
 				i += 1
 			}
@@ -362,20 +362,20 @@ async function get_pileup(q, req, templates) {
 				if (bp.softclip) {
 					ctx.fillStyle = 'rgb(70,130,180)'
 					const h = bp.softclip * sf
-					console.log('Hello')
-					ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+					console.log('Zoomed out')
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
 
 				ctx.fillStyle = 'rgb(192,192,192)'
 				const h = bp.total * sf
-				ctx.fillRect(x, pileup_height - y - h, r.ntwidth, h)
+				ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 			}
 		}
 	}
 	const pileup_data = {
 		width: q.canvaswidth,
-		height: pileup_height,
+		height: q.pileupheight,
 		maxValue: maxValue,
 		src: canvas.toDataURL()
 	}
@@ -385,6 +385,7 @@ async function get_pileup(q, req, templates) {
 function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 	// for a region, use segments from this region to add mismatches to bplst depth
 	let bp_iter = 0
+	console.log('bplst:', bplst)
 	for (const template of templates) {
 		for (const segment of template.segments) {
 			if (segment.ridx != ridx || Math.max(segment.segstart, r.start) > Math.min(segment.segstop, r.stop)) {
@@ -392,22 +393,22 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 				continue
 			}
 			// no need to parseInt as these are already integers
-			bp_iter = Number.parseInt(segment.segstart) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
+			bp_iter = segment.segstart - bplst[0].position - 1 // Records position in the view range
 			let first_element_of_cigar = 1
 			// i haven't reviewed logic below. if bplst[] contains bins, then here should update as well.
 			for (const box of segment.boxes) {
 				if (box.opr == 'S' || box.opr == 'I') {
 					// Checking to see if the first element of cigar is softclip or not
 					if (first_element_of_cigar == 1) {
-						bp_iter = bp_iter - Number.parseInt(box.len)
+						bp_iter = bp_iter - box.len
 						first_element_of_cigar = 0
 					}
 					// Calculating soft-clip pileup here
-					for (let j = bp_iter; j < Number.parseInt(box.len) + bp_iter; j++) {
+					for (let j = bp_iter; j < box.len + bp_iter; j++) {
 						if (j < 0) {
 							continue
 						} // When a read starts before the current view range
-						else if (j > Number.parseInt(r.stop) - Number.parseInt(bplst[0].position) - 2) {
+						else if (j > r.stop - bplst[0].position - 2) {
 							break
 						} // When a read extends beyond current view range
 						else {
@@ -483,10 +484,10 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 							}
 						}
 					}
-					bp_iter += Number.parseInt(box.len)
+					bp_iter += box.len
 					continue
 				} else {
-					bp_iter += Number.parseInt(box.len)
+					bp_iter += box.len
 					first_element_of_cigar = 0
 				}
 			}
@@ -494,10 +495,10 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 			for (let i = 0; i < segment.boxes.length; i++) {
 				if (segment.boxes[i].opr == 'X') {
 					//console.log("segment.boxes[i]:",template.segment.boxes[i])
-					bp_iter = Number.parseInt(segment.boxes[i].start) - Number.parseInt(bplst[0].position) - 1 // Records position in the view range
+					bp_iter = segment.boxes[i].start - bplst[0].position - 1 // Records position in the view range
 					//console.log("r.start:",r.start)
 					//console.log("bp_iter:",bp_iter)
-					if (bp_iter >= 0 && Number.parseInt(r.stop) - Number.parseInt(bplst[0].position) - 2 >= bp_iter) {
+					if (bp_iter >= 0 && r.stop - bplst[0].position - 2 >= bp_iter) {
 						// Checking to see if the variant is within the view range
 						if (segment.boxes[i].s == 'A') {
 							if (!bplst[bp_iter].A) {
