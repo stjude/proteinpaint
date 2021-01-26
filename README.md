@@ -10,19 +10,33 @@ Follow the [example project setup](https://github.com/stjude/pp-dist).
 
 ## Develop
 
-Clone this repository
+### Source Code 
 
 ```bash
-git clone git@github.com:stjude/proteinpaint.git
-cd proteinpaint
-npm run sethooks
+# St. Jude developers
+git clone git@github.com:stjude/proteinpaint.git 
+
+# GDC developers
+git clone git@github.com:NCI-GDC/proteinpaint.git
 ```
 
-As needed, follow the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit)
+### Installation
+
+Install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut) as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+
+Then
+```bash
+cd proteinpaint
+npm run sethooks
+# follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
+# to install system and application dependencies, then run of the scripts below
+```
+
+### Scripts
 
 `npm run dev` rebundles backend and frontend code
 
-`npm start` restarts the proteinpaint server
+`npm start` runs the proteinpaint server
 
 `npm test` tests both frontend and backend code
 

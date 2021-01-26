@@ -44,6 +44,7 @@ if [[ "$IMAGE_NAME" == *dev ]]; then
 		--publish $HOSTPORT:$EXPOSED_PORT \
 		-e PP_PORT=$EXPOSED_PORT \
 		-e PP_CUSTOMER=gdc \
+		-e PP_BACKEND_ONLY=false \
 		$IMAGE_NAME
 	cd ../..
 
@@ -54,6 +55,7 @@ else
 		--publish $HOSTPORT:$EXPOSED_PORT \
 		-e PP_PORT=$EXPOSED_PORT \
 		-e PP_CUSTOMER=gdc \
+		-e PP_BACKEND_ONLY=false \
 		$IMAGE_NAME
 
 fi

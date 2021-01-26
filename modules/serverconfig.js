@@ -71,6 +71,10 @@ if (serverconfig.allow_env_overrides) {
 			if (filename.endsWith('.crt')) serverconfig.ssl.cert = process.cwd() + '/.ssl/' + filename
 		}
 	}
+
+	if ('PP_BACKEND_ONLY' in process.env) {
+		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
+	}
 }
 
 //Object.freeze(serverconfig)
