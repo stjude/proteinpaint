@@ -26,6 +26,9 @@ if [[ "$TARGET" == "dev" ]]; then
 	cp ../serverconfig.json package/
 	cp -r ../dataset package
 	cp -r ../genome package
+	if [[ -d ../.ssl ]]; then
+		cp -r ../.ssl package
+	fi
 	cd package
 	docker build --file ../../build/Dockerfile --target $TARGET --tag ppdeps:$TARGET .
 	cd ../..

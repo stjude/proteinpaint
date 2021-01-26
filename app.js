@@ -258,8 +258,19 @@ pp_init()
 		*/
 
 		const port = serverconfig.port || 3000
-		const server = app.listen(port)
-		console.log('STANDBY AT PORT ' + port)
+		if (serverconfig.ssl) {
+			const options = {
+				key: fs.readFileSync(serverconfig.ssl.key),
+				cert: fs.readFileSync(serverconfig.ssl.cert)
+			}
+			const server = https.createServer(options, app)
+			server.listen(port, () => {
+				console.log('HTTPS STANDBY AT PORT ' + port)
+			})
+		} else {
+			const server = app.listen(port)
+			console.log('STANDBY AT PORT ' + port)
+		}
 	})
 	.catch(err => {
 		/* when the app server is monitored by another process via the command line,

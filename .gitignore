@@ -56,8 +56,6 @@ pp-server/*
 *.tgz
 *.min.js
 
-scripts/*.newdev.sh
-
 deploys/
 
 p4/node_modules/
@@ -66,4 +64,10 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
-wrappers/react/public/public
+
+*.key
+*.pem
+*.csr
+*.ext
+*.crt
+.ssl

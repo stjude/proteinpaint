@@ -62,6 +62,15 @@ if (serverconfig.allow_env_overrides) {
 			// is not needed when calling via Node child_process.spawn() or exec()
 		})
 	}
+
+	if (fs.existsSync('./.ssl') && !serverconfig.ssl) {
+		serverconfig.ssl = {}
+		const files = fs.readdirSync('./.ssl')
+		for (const filename of files) {
+			if (filename.endsWith('.key')) serverconfig.ssl.key = process.cwd() + '/.ssl/' + filename
+			if (filename.endsWith('.crt')) serverconfig.ssl.cert = process.cwd() + '/.ssl/' + filename
+		}
+	}
 }
 
 //Object.freeze(serverconfig)
