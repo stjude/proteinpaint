@@ -73,7 +73,7 @@ if (serverconfig.allow_env_overrides) {
 	}
 
 	if ('PP_BACKEND_ONLY' in process.env) {
-		serverconfig.backend_only = process.env.PP_BACKEND_ONLY
+		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
 }
 
