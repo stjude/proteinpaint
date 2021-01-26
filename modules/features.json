@@ -1,8 +1,9 @@
 {
     "examples": [{
             "name": "Kaplan-Meier plot",
-            "app": "GenomePaint",
-            "subheading": "Tracks",
+            "shorthand": "KM plot",
+            "app": "Genome Browser",
+            "subheading": "GenomePaint",
             "blurb": "",
             "image": "",
             "buttons": {
@@ -14,8 +15,9 @@
         },
         {
             "name": "Sample Matrix",
-            "app": "GenomePaint",
-            "subheading": "Tracks",
+            "shorthand": "Sample Matrix",
+            "app": "Genome Browser",
+            "subheading": "GenomePaint",
             "blurb": "",
             "image": "",
             "buttons": {
@@ -27,6 +29,7 @@
         },
         {
             "name": "BigWig",
+            "shorthand": "BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -57,6 +60,7 @@
         },
         {
             "name": "ChromHMM + gene expression, aka PGV",
+            "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -101,6 +105,7 @@
         },
         {
             "name": "Expression Rank",
+            "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -129,6 +134,7 @@
         },
         {
             "name": "Hi-C",
+            "shorthand": "Hi-C",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -160,6 +166,7 @@
         },
         {
             "name": "JSON BED",
+            "shorthand": "JSON BED",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -188,6 +195,7 @@
         },
         {
             "name": "Splice junction",
+            "shorthand": "Splice Junction",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -213,6 +221,7 @@
         },
         {
             "name": "Stranded BigWig",
+            "shorthand": "Stranded BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -241,6 +250,7 @@
         },
         {
             "name": "Track list and Facet table",
+            "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -254,6 +264,7 @@
         },
         {
             "name": "Tumor-normal DNA allelic imbalance, aka aicheck",
+            "shorthand": "AICheck",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -281,6 +292,7 @@
         },
         {
             "name": "VCF",
+            "shorthand": "VCF",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -358,6 +370,7 @@
         },
         {
             "name": "Viewing Pediatric and COSMIC mutations, aka Lollipop",
+            "shorthand": "Lollipop",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "",
@@ -370,7 +383,8 @@
             "searchterms": []
         },
         {
-            "name": "ASE track",
+            "name": "ASE",
+            "shorthand": "ASE",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
             "blurb": "",
@@ -466,6 +480,7 @@
         },
         {
             "name": "BAM",
+            "shorthand": "BAM",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
             "blurb": "",
@@ -493,6 +508,7 @@
         },
         {
             "name": "Bampile",
+            "shorthand": "Bampile",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
             "blurb": "",
@@ -506,6 +522,7 @@
         },
         {
             "name": "Use FusionEditor",
+            "shorthand": "Fusion Editor",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -524,6 +541,7 @@
         },
         {
             "name": "2dmaf",
+            "shorthand": "2dmaf",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -537,6 +555,7 @@
         },
         {
             "name": "Differential gene expression as MA and Volcano plots, with RNA-seq coverage",
+            "shorthand": "MA+Volcano",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -563,6 +582,7 @@
         },
         {
             "name": "FIMO motif analysis",
+            "shorthand": "FIMO",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -576,6 +596,7 @@
         },
         {
             "name": "Generic Scatterplot",
+            "shorthand": "Scatterplot",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -984,7 +1005,22 @@
             "searchterms": []
         },
         {
+            "name": "Heatmap",
+            "shorthand": "Heatmap",
+            "app": "Other Apps",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "",
+            "buttons": {
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit",
+                "tutorial": ""
+            },
+            "searchterms": []
+        },
+        {
             "name": "Hi-C whole-genome view",
+            "shorthand": "HiC whole genome",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -998,6 +1034,7 @@
         },
         {
             "name": "MAF-timeline",
+            "shorthand": "MAF",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -1011,6 +1048,7 @@
         },
         {
             "name": "Single Cell",
+            "shorthand": "Single Cell",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",
@@ -1024,6 +1062,7 @@
         },
         {
             "name": "Study View",
+            "shorthand": "Study View",
             "app": "Other Apps",
             "subheading": "Tracks",
             "blurb": "",

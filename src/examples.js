@@ -17,12 +17,27 @@ export async function init_examples(par) {
 	const gbrowswer_col = make_gBrowserCol(track_grid)
 	const otherapp_col = make_otherAppCol(track_grid)
 
-	// genomepaint panel
+	// // genomepaint panel
+	// gbrowswer_col
+	// 	.append('h5')
+	// 	.html('GenomePaint') //TODO: ugly style. Need to change into something less '90s.
+	// 	.append('hr')
+
+	// tracks panel
+	// subgrid
 	gbrowswer_col
 		.append('h5')
-		.html('GenomePaint') //TODO: ugly style. Need to change into something less '90s.
+		.html('GenomePaint')
 		.append('hr')
 	make_gpaint_card(gbrowswer_col)
+	const gpaintList = gbrowswer_col.append('ul')
+	gpaintList
+		.attr('class', 'track-list')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
+		.style('gap', '10px')
+		.style('padding', '10px')
+		.style('border-radius', '8px')
 
 	// tracks panel
 	// subgrid
@@ -67,6 +82,7 @@ export async function init_examples(par) {
 
 	track_arg = {
 		tracks: re.examples,
+		gpaintList,
 		browserList,
 		experimentalList,
 		appList
@@ -212,8 +228,9 @@ function make_searchbar(div, args) {
 				}, false)
 				return searchTermFound || track.name.toLowerCase().includes(searchInput)
 			})
-			// displayBrowserTracks(filteredTracks, args.browserList)
-			// displayExperimentalTracks(filteredTracks, args.experimentalList)
+			displayGPaintTracks(filteredTracks, args.gpaintList)
+			displayBrowserTracks(filteredTracks, args.browserList)
+			displayExperimentalTracks(filteredTracks, args.experimentalList)
 			displayAppTracks(filteredTracks, args.appList)
 		})
 
@@ -427,8 +444,9 @@ async function loadJson() {
 
 async function loadTracks(args) {
 	try {
-		// displayBrowserTracks(args.tracks, args.browserList)
-		// displayExperimentalTracks(args.tracks, args.experimentalList)
+		displayGPaintTracks(args.tracks, args.gpaintList)
+		displayBrowserTracks(args.tracks, args.browserList)
+		displayExperimentalTracks(args.tracks, args.experimentalList)
 		displayAppTracks(args.tracks, args.appList)
 	} catch (err) {
 		console.error(err)
@@ -437,87 +455,17 @@ async function loadTracks(args) {
 
 //TODO: revert back to btns for links.
 //TODO: White background images is visually problematic with white tiles. Discuss later? Maybe light grey gradient to tiles?
-//TODO: Add in tiles for GenomePaint to live under static, top tile
 
-// function displayBrowserTracks(tracks, holder) {
-// 	const htmlString = tracks
-// 		.map(track => {
-// 			const app = `${track.app}`
-// 			const subheading = `${track.subheading}`
-// 			if (app == 'Genome Browser' && subheading == 'Tracks') {
-// 				return `
-//                 <li class="track">
-//                 <h6>${track.name}</h6>
-//                 ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
-//                 ${track.buttons.example ? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>` : `<span class="track-image"><img src="${track.image}"></img></span>`}
-//                 <div class="track-btns">
-//                 ${track.buttons.example ? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>` : ''}
-//                 ${track.buttons.url ? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>` : ''}
-//                 ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-//                 </div>
-//                 </li>`}
-// 		})
-// 		.join('')
-
-// 	holder.html(htmlString)
-// }
-
-// function displayExperimentalTracks(tracks, holder) {
-// 	const htmlString = tracks
-// 		.map(track => {
-// 			const app = `${track.app}`
-// 			const subheading = `${track.subheading}`
-// 			if (app == 'Genome Browser' && subheading == 'Experimental Tracks') {
-// 				return `
-//                 <li class="track">
-//                 <h6>${track.name}</h6>
-//                 ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
-//                 ${track.buttons.example ? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>` : `<span class="track-image"><img src="${track.image}"></img></span>`}
-//                 <div class="track-btns">
-//                 ${track.buttons.example ? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>` : ''}
-//                 ${track.buttons.url ? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>` : ''}
-//                 ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-//                 </div>
-//                 </li>`}
-// 		})
-// 		.join('')
-// 	holder.html(htmlString)
-// }
-
-// function displayAppTracks(tracks, holder) {
-// 	const htmlString = tracks
-// 		.map(track => {
-// 			const app = `${track.app}`
-// 			const subheading = `${track.subheading}`
-// 			if (app == 'Other Apps' && subheading == 'Tracks') {
-// 				return `
-// 				<li class="track">
-//                 <h6>${track.name}</h6>
-//                 ${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
-//                 ${track.buttons.example ? `<a class="track-image" href="${track.buttons.example}" target="_blank"><img src="${track.image}"></img></a>`: `<span class="track-image"><img src="${track.image}"></img></span>`}
-//                 <div class="track-btns">
-//                 ${track.buttons.example ? `<a id="example-url" href="${track.buttons.example}" target="_blank">Example</a>` : ''}
-//                 ${track.buttons.url ? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>` : ''}
-//                 ${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
-//                 </div>
-//                 </li>`
-// 			}
-// 		})
-// 		.join('')
-// 	holder.html(htmlString)
-// }
-
-async function displayAppTracks(tracks, holder) {
-	const trackData = tracks
-		.filter(track => {
-			const app = `${track.app}`
-			const subheading = `${track.subheading}`
-			if (app == 'Other Apps' && subheading == 'Tracks') {
-				const li = holder.append('li')
-				li.attr('class', 'track')
-					.html(
-						`
-						<h6>${track.name}</h6>
+function displayGPaintTracks(tracks, holder) {
+	holder.selectAll('*').remove()
+	const trackData = tracks.filter(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Genome Browser' && subheading == 'GenomePaint') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`<h6>${track.name}</h6>
 						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						${
@@ -527,17 +475,105 @@ async function displayAppTracks(tracks, holder) {
 						}
 						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
 						</div>`
-					)
-					.on('click', async () => {
-						if (track.buttons.example) {
-							openNewTab(track)
+				)
+				.on('click', async () => {
+					if (track.buttons.example) {
+						openNewTab(track)
+					}
+				})
+			return JSON.stringify(li)
+		}
+	})
+}
+
+function displayBrowserTracks(tracks, holder) {
+	holder.selectAll('*').remove()
+	const trackData = tracks.filter(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Genome Browser' && subheading == 'Tracks') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`<h6>${track.name}</h6>
+						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+						<span class="track-image"><img src="${track.image}"></img></span>
+						${
+							track.buttons.url
+								? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
+								: ''
 						}
-					})
-				return li
-			}
-		})
-		.join('')
-	//Works but does not join into a list; return trackData, holder.html('trackData'), and trackData.append('holder') does not work. Downstream: search function no longer works as a result.
+						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
+						</div>`
+				)
+				.on('click', async () => {
+					if (track.buttons.example) {
+						openNewTab(track)
+					}
+				})
+			return JSON.stringify(li)
+		}
+	})
+}
+
+function displayExperimentalTracks(tracks, holder) {
+	holder.selectAll('*').remove()
+	const trackData = tracks.filter(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Genome Browser' && subheading == 'Experimental Tracks') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`<h6>${track.name}</h6>
+						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+						<span class="track-image"><img src="${track.image}"></img></span>
+						${
+							track.buttons.url
+								? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
+								: ''
+						}
+						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
+						</div>`
+				)
+				.on('click', async () => {
+					if (track.buttons.example) {
+						openNewTab(track)
+					}
+				})
+			return JSON.stringify(li)
+		}
+	})
+}
+
+async function displayAppTracks(tracks, holder) {
+	holder.selectAll('*').remove()
+	const trackData = tracks.filter(track => {
+		const app = `${track.app}`
+		const subheading = `${track.subheading}`
+		if (app == 'Other Apps' && subheading == 'Tracks') {
+			const li = holder.append('li')
+			li.attr('class', 'track')
+				.html(
+					`<h6>${track.name}</h6>
+						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+						<span class="track-image"><img src="${track.image}"></img></span>
+						${
+							track.buttons.url
+								? `<a class="url-tooltip-outer" id="url-url" href="${track.buttons.url}" target="_blank">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></a>`
+								: ''
+						}
+						${track.buttons.doc ? `<a id="doc-url" href="${track.buttons.doc}" target="_blank">Docs</a>` : ''}
+						</div>`
+				)
+				.on('click', async () => {
+					if (track.buttons.example) {
+						openNewTab(track)
+					}
+				})
+			return JSON.stringify(li)
+		}
+	})
 }
 
 async function openNewTab(track) {
@@ -562,9 +598,9 @@ async function openNewTab(track) {
 			</script>
 			</body>
 			</html>`
-	const tab = window.open(`${track.name},name=${track.name} Example`)
+	const tab = window.open(`${track.shorthand},name=${track.shorthand} Example`)
 	const script = tab.document.createElement('script')
-	const tabName = `${track.name}`
+	const tabName = `${track.shorthand}`
 	script.type = 'text/javascript'
 	tab.document.write(contents)
 	tab.document.close()
