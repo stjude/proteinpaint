@@ -4,6 +4,7 @@ import { App, getUrlParams } from './App'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
+import serverconfig from '../../../serverconfig.json'
 
 /*************************
  reusable helper functions
@@ -32,9 +33,12 @@ tape('lolliplot', async test => {
 		addressCallback: () => portal.resetParamsFromUrl()
 	})
 	const holder = windowObj.dom.holder
-	const portal = ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
+	const portal = ReactDOM.render(
+		<App basepath={`http://localhost:${serverconfig.port}`} window={windowObj} />,
+		holder.node()
+	)
 	await sleep(5500)
-	const numCircles = 506
+	const numCircles = 256
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,

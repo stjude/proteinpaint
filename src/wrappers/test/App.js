@@ -49,7 +49,7 @@ export class App extends React.Component {
 
 		this.state = {
 			message,
-			basepath: 'basepath' in this.props ? this.props.basepath : '',
+			basepath: 'basepath' in this.props ? this.props.basepath : '/auth/api/custom/proteinpaint',
 			gene: gene.name,
 			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
 			set_id_flag: set_id != null, // false,
