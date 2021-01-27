@@ -12,7 +12,6 @@ module.exports = function setRoutes(app, basepath) {
 	app.use(cookieParser())
 	app.use(basepath + '/mds3', (req, res, next) => {
 		if (req.cookies.gdcsessionid) {
-			console.log(14, 'has gdcsessionid', sessions[+req.cookies.gdcsessionid], sessions)
 			req.headers['X-Auth-Token'] = sessions[+req.cookies.gdcsessionid]
 		}
 		next()

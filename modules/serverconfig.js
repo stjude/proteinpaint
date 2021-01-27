@@ -40,6 +40,15 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 	serverconfig.allow_env_overrides = true
 }
 
+if (serverconfig.debugmode) {
+	const routeSetters = []
+	const files = ['./modules/test/routes/gdc.js']
+	for (const f of files) {
+		if (fs.existsSync(f)) routeSetters.push(f)
+	}
+	serverconfig.routeSetters = routeSetters
+}
+
 if (serverconfig.allow_env_overrides) {
 	if (process.env.PP_URL) {
 		serverconfig.URL = process.env.URL
