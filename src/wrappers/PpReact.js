@@ -88,4 +88,5 @@ function deepEqual(x, y) {
 	} else return false
 }
 
+export { getLolliplotTrack }
 export const PpLolliplot = getPpReact(getLolliplotTrack)

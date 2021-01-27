@@ -33,8 +33,8 @@ tape('lolliplot', async test => {
 	})
 	const holder = windowObj.dom.holder
 	const portal = ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
-	await sleep(5000)
-	const numCircles = 256
+	await sleep(5500)
+	const numCircles = 506
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,
@@ -65,9 +65,6 @@ tape('lolliplot', async test => {
 	)
 
 	// apply filter
-	//const textareas = holder.node().querySelectorAll('textarea')
-	//const filter_txtarea = textareas[1]
-	//filter_txtarea.innerText =
 	const projectFilter = {
 		op: 'AND',
 		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
@@ -82,6 +79,8 @@ tape('lolliplot', async test => {
 		filteredCircles,
 		`should have ${filteredCircles} circles after applying filter`
 	)
-
+	// currently unable to test using a token via the submit button,
+	// since it will reveal user specific token here, may
+	// need a testing-only generic token if possible
 	test.end()
 })
