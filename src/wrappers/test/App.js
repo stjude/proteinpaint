@@ -1,7 +1,5 @@
 import React from 'react'
-import { getPpReact, getLolliplotTrack } from '../PpReact'
-
-const PpReact = getPpReact(React, getLolliplotTrack)
+import { PpLolliplot } from '../PpReact'
 
 const message = 'This portal is using the pp-react wrapper to embed ProteinPaint.'
 const style = {
@@ -172,7 +170,7 @@ export class App extends React.Component {
 					</button>
 				</div>
 				<div>
-					<PpReact dataKey={this.state.dataKey} window={this.window} />
+					<PpLolliplot dataKey={this.state.dataKey} window={this.window} />
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
