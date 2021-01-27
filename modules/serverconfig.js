@@ -87,6 +87,7 @@ module.exports = serverconfig
 function getGDCconfig() {
 	return {
 		allow_env_overrides: true,
+		//basepath: '/auth/api/custom/pp',
 		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
 		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
 		genomes: [

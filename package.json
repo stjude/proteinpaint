@@ -101,6 +101,7 @@
     "canvas": "2.6.0",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
+    "cookie-parser": "^1.4.5",
     "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
     "d3-sankey": "^0.4.1",

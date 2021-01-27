@@ -47,18 +47,9 @@ export class App extends React.Component {
 		let gene = genes.find(g => g.ensembl_id == params.gene)
 		if (!gene) gene = genes[0]
 
-		const localStorage = this.window.localStorage
 		this.state = {
 			message,
-			dataKey: this.props.dataKey ? this.props.dataKey : Math.random(),
-			host: localStorage.getItem('pphost')
-				? localStorage.getItem('pphost')
-				: params.hosturl
-				? decodeURIComponent(params.hosturl)
-				: params.hostport
-				? `http://localhost:${params.hostport}`
-				: 'http://localhost:3000',
-			basepath: localStorage.getItem('ppbasepath') ? localStorage.getItem('ppbasepath') : '',
+			basepath: 'basepath' in this.props ? this.props.basepath : '',
 			gene: gene.name,
 			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
 			set_id_flag: set_id != null, // false,
@@ -72,12 +63,6 @@ export class App extends React.Component {
 		this.setidRef = React.createRef()
 		this.tokenRef = React.createRef()
 		this.filterJsonRef = React.createRef()
-		this.data = {
-			host: this.state.host,
-			basepath: this.state.basepath,
-			token: this.state.token
-		}
-		this.save()
 	}
 	render() {
 		return (
@@ -85,10 +70,7 @@ export class App extends React.Component {
 				{' '}
 				{this.state.message}
 				<p>
-					... hosted at <i style={{ color: 'black' }}>{this.state.host}</i>
-				</p>
-				<p>
-					... and API basepath is <i style={{ color: 'black' }}>{this.state.basepath}</i>
+					... the API basepath is <i style={{ color: 'black' }}>"{this.state.basepath}"</i>
 				</p>
 				<p> Try some genes by clicking following buttons!</p>
 				<div style={div_style}>
@@ -170,7 +152,7 @@ export class App extends React.Component {
 					</button>
 				</div>
 				<div>
-					<PpLolliplot dataKey={this.state.dataKey} window={this.window} />
+					<PpLolliplot basepath={this.state.basepath} loggedin={this.state.loggedin} window={this.window} />
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
@@ -181,10 +163,6 @@ export class App extends React.Component {
 	}
 	componentDidMount() {
 		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
-	}
-	save(data = {}) {
-		Object.assign(this.data, data)
-		this.window.localStorage.setItem(this.state.dataKey, JSON.stringify(this.data))
 	}
 	setNonGdcParams(_params = null) {
 		const params = _params ? _params : this.getUrlParams()
@@ -254,13 +232,20 @@ export class App extends React.Component {
 	editUrlFilter() {
 		this.setState({ filter_url_editing: !this.state.filter_url_editing })
 	}
-	submitToken() {
-		const token = this.tokenRef.current.value
-		this.save({ token })
+	async submitToken(tokenval = '', action = '') {
+		const token = tokenval ? tokenval : this.tokenRef.current.value
+		const response = await fetch('/gdc/ssid', {
+			method: 'POST',
+			body: JSON.stringify({ token, action })
+		})
+		if (!response || !response) {
+			console.error(response.body, response)
+		}
 		this.setState({
 			token_flag: true,
 			token_editing: false,
-			token
+			token,
+			loggedin: true
 		})
 		//replace actual token with password char
 		this.tokenRef.current.value = '●'.repeat(token.length)
@@ -268,11 +253,11 @@ export class App extends React.Component {
 	editToken() {
 		this.setState({ token_editing: !this.state.token_editing })
 	}
-	ApplyToken() {
+	async ApplyToken() {
 		const token_flag = !this.state.token_flag
 		const token = token_flag ? this.state.token : null
-		this.save({ token })
-		this.setState({ token_flag })
+		await this.submitToken(this.state.token, token_flag ? '' : 'delete')
+		this.setState({ token_flag, loggedin: token_flag })
 	}
 	updateTime() {
 		// simulate app state changes that should NOT cause

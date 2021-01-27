@@ -3,6 +3,8 @@ import { runproteinpaint } from '../app'
 import { getLolliplotTrack } from './gdc.views'
 
 export function getPpReact(getTrack) {
+	if (!React) return
+
 	class PpReact extends React.Component {
 		constructor(props) {
 			super(props)

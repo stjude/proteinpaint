@@ -38,6 +38,7 @@ module.exports = genomes => {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			const q = init_q(req.query, genome)
+			if (req.headers['X-Auth-Token']) q.token = req.headers['X-Auth-Token']
 			const ds = await get_ds(q, genome)
 
 			const result = init_result(q, ds)
