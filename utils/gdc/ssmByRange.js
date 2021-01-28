@@ -30,6 +30,7 @@ const query = `query PROJECTS_EDGES($filters: FiltersArgument) {
 				edges {
 				  node {
 				    case {
+					  case_id
 					  project {
 					    project_id
 					  }
@@ -68,7 +69,7 @@ const range = {
 	filters: {
 		op: 'and',
 		content: [
-			{ op: 'in', content: { field: 'chromosome', value: [chr] } },
+			{ op: '=', content: { field: 'chromosome', value: [chr] } },
 			{ op: '>=', content: { field: 'start_position', value: [start] } },
 			{ op: '<=', content: { field: 'end_position', value: [stop] } }
 			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72']}},
@@ -87,6 +88,7 @@ const range = {
 		})
 		const hits = JSON.parse(response.body).data.explore.ssms.hits.edges
 		console.log(hits.length, 'variants')
+		console.log(hits[0].node.occurrence.hits.edges[0])
 		for (const m of hits) {
 			console.log(
 				'\n' +

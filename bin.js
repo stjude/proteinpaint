@@ -24,6 +24,7 @@ const serverconfig = require('./modules/serverconfig.js')
 
 if (serverconfig.backend_only) {
 	execSync(`rm -rf ./public`)
+	execSync(`rm -rf ./dist`)
 } else if (!fs.existsSync('.git')) {
 	// do not do the following in a dev environment
 

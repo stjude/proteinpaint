@@ -19,6 +19,10 @@ module.exports = {
 		// e.g., window.runproteinpaint
 		libraryTarget: 'window'
 	},
+	externals: {
+		react: 'React',
+		'react-dom': 'ReactDOM'
+	},
 	module: {
 		rules: [
 			/*

@@ -63,7 +63,7 @@ ln -s ../node_modules node_modules
 # create bundles
 echo -e "\nBundling the server bin ...\n"
 npm run build-server
-echo -e "\nBundling the client bin ...\n"
+echo -e "\nBundling the client public/bin ...\n"
 npx webpack --config=build/webpack.config.build.js --env.url="__PP_URL__"
 echo -e "\nPacking the client main ...\n"
 npx rollup -c ../build/rollup.config.js

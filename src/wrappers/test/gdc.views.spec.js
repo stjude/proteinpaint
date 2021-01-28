@@ -4,6 +4,7 @@ import { App, getUrlParams } from './App'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
+import serverconfig from '../../../serverconfig.json'
 
 /*************************
  reusable helper functions
@@ -32,8 +33,11 @@ tape('lolliplot', async test => {
 		addressCallback: () => portal.resetParamsFromUrl()
 	})
 	const holder = windowObj.dom.holder
-	const portal = ReactDOM.render(<App dataKey="abc123" window={windowObj} />, holder.node())
-	await sleep(5000)
+	const portal = ReactDOM.render(
+		<App basepath={`http://localhost:${serverconfig.port}`} window={windowObj} />,
+		holder.node()
+	)
+	await sleep(5500)
 	const numCircles = 256
 	test.equal(
 		holder.selectAll('circle').size(),
@@ -65,9 +69,6 @@ tape('lolliplot', async test => {
 	)
 
 	// apply filter
-	//const textareas = holder.node().querySelectorAll('textarea')
-	//const filter_txtarea = textareas[1]
-	//filter_txtarea.innerText =
 	const projectFilter = {
 		op: 'AND',
 		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
@@ -82,6 +83,8 @@ tape('lolliplot', async test => {
 		filteredCircles,
 		`should have ${filteredCircles} circles after applying filter`
 	)
-
+	// currently unable to test using a token via the submit button,
+	// since it will reveal user specific token here, may
+	// need a testing-only generic token if possible
 	test.end()
 })

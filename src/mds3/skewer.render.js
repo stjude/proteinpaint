@@ -953,7 +953,7 @@ async function click_variants(d, tk, block, tippos) {
 		if (d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
 			// sunburst
 			tk.glider.style('cursor', 'wait')
-			const data = await tk.mds.variant2samples.get(tk, d.mlst, tk.mds.variant2samples.type_sunburst)
+			const data = await tk.mds.variant2samples.get({ mlst: d.mlst, querytype: tk.mds.variant2samples.type_sunburst })
 			tk.glider.style('cursor', 'auto')
 			const arg = {
 				nodes: data,
@@ -964,9 +964,47 @@ async function click_variants(d, tk, block, tippos) {
 				svgheight: Number.parseFloat(block.svg.attr('height')),
 				g: tk.skewer.g.append('g'),
 				pica: tk.pica,
-				chartlabel: d.mlst[0].mname + (d.mlst.length > 1 ? ' etc' : ''),
 				click_listbutton: (x, y) => {
-					variant_details(d.mlst, tk, block, tippos)
+					variant_details({ mlst: d.mlst, tk, block, tippos })
+				},
+				click_ring: d2 => {
+					/* hardcoded attributes from d2.data{}, due to how stratinput structures the data
+					.id0, v0 should exist for all levels
+					.id1, v1 should exist for 2nd and next levels... etc
+					add the key/values to tid2value{}
+					*/
+					tk.itemtip.clear().show(d3event.clientX - 10, d3event.clientY - 10)
+					const arg = {
+						mlst: d.mlst,
+						tk,
+						block,
+						div: tk.itemtip.d,
+						tid2value: {}
+					}
+					arg.tid2value[d2.data.id0] = d2.data.v0
+					if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
+					if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
+
+					if (d2.value == 1) {
+						/*
+						this wedge has single sample, while d.mlst will have multiple.
+						unfortunately mlst2samplesummary will use occurrence sum to decide what type of data to request
+						(=1 for sample details, >1 for summary)
+						must change occurrence sum to 1 so mlst2samplesummary() will request single sample data
+						temp fix to create a mock arg.mlst[]
+						*/
+						arg.mlst = d.mlst.map(m => {
+							if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+								return { ssm_id: m.ssm_id, occurrence: 0 }
+							}
+							throw 'unknown variant2samples.variantkey'
+						})
+						arg.mlst[0].occurrence = 1
+					}
+					/* do not call variant_details() as no need to show info on variants
+					only need to show sample summary (or details about a single sample)
+					*/
+					mlst2samplesummary(arg)
 				}
 			}
 			if (d.aa) {
@@ -977,12 +1015,18 @@ async function click_variants(d, tk, block, tippos) {
 				arg.cy = d.y + ((tk.aboveprotein ? 1 : -1) * tk.skewer.stem1) / 2
 				// not to show list button in sunburst in case mlst has different data types
 			}
+			if (d.mlst.length == 1) {
+				arg.chartlabel = d.mlst[0].mname
+			} else {
+				// multiple m, use mname of most recurrent variant
+				arg.chartlabel = d.mlst.reduce((i, j) => (j.occurrence > i.occurrence ? j : i)).mname + ' etc'
+			}
 			const _ = await import('../sunburst')
 			_.default(arg)
 			return
 		}
 		// no sunburst, no matter occurrence, show details
-		await variant_details(d.mlst, tk, block, tippos)
+		await variant_details({ mlst: d.mlst, tk, block, tippos })
 	} catch (e) {
 		block.error(e.message || e)
 		if (e.stack) console.log(e.stack)
@@ -993,22 +1037,29 @@ async function click_variants(d, tk, block, tippos) {
 if items of mlst are of same type, show table view of the variant itself, plus the sample summary table
 if of multiple data types, do not show variant table view; only show the sample summary table
 should work with skewer and non-skewer data types
+arg{}
+.mlst[]
+.tk
+.block
+.tippos
+.tid2value{}
 */
-async function variant_details(mlst, tk, block, tippos) {
-	tk.itemtip.clear().show(tippos.left - 10, tippos.top - 10)
+async function variant_details(arg) {
+	arg.tk.itemtip.clear().show(arg.tippos.left - 10, arg.tippos.top - 10)
+	arg.div = arg.tk.itemtip.d
 	// count how many dt
 	const dtset = new Set()
-	for (const m of mlst) dtset.add(m.dt)
+	for (const m of arg.mlst) dtset.add(m.dt)
 	if (dtset.size > 1) {
 		// more than 1 data types, won't print detail table for each variant
-		if (tk.mds.variant2samples) {
+		if (arg.tk.mds.variant2samples) {
 			// show sample summary
-			await mlst2samplesummary(mlst, tk, block, tk.itemtip.d)
+			await mlst2samplesummary(arg)
 		} else {
-			console.log('no variant2samples, do not know what to show')
+			throw 'no variant2samples, do not know what to show'
 		}
 		return
 	}
 	// mlst are of one data type
-	await itemtable(mlst, tk, block, tk.itemtip.d)
+	await itemtable(arg)
 }

@@ -40,6 +40,15 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 	serverconfig.allow_env_overrides = true
 }
 
+if (serverconfig.debugmode) {
+	const routeSetters = []
+	const files = ['./modules/test/routes/gdc.js']
+	for (const f of files) {
+		if (fs.existsSync(f)) routeSetters.push(f)
+	}
+	serverconfig.routeSetters = routeSetters
+}
+
 if (serverconfig.allow_env_overrides) {
 	if (process.env.PP_URL) {
 		serverconfig.URL = process.env.URL
@@ -62,6 +71,19 @@ if (serverconfig.allow_env_overrides) {
 			// is not needed when calling via Node child_process.spawn() or exec()
 		})
 	}
+
+	if (fs.existsSync('./.ssl') && !serverconfig.ssl) {
+		serverconfig.ssl = {}
+		const files = fs.readdirSync('./.ssl')
+		for (const filename of files) {
+			if (filename.endsWith('.key')) serverconfig.ssl.key = process.cwd() + '/.ssl/' + filename
+			if (filename.endsWith('.crt')) serverconfig.ssl.cert = process.cwd() + '/.ssl/' + filename
+		}
+	}
+
+	if ('PP_BACKEND_ONLY' in process.env) {
+		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
+	}
 }
 
 //Object.freeze(serverconfig)
@@ -74,6 +96,7 @@ module.exports = serverconfig
 function getGDCconfig() {
 	return {
 		allow_env_overrides: true,
+		basepath: process.env.PP_MODE && process.env.PP_MODE.startsWith('container') ? '/auth/api/custom/proteinpaint' : '',
 		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
 		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
 		genomes: [
