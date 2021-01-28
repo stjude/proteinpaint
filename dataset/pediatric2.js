@@ -71,8 +71,6 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/2014_RB' },
 			{ file: 'hg19/Pediatric/sampletable/2016_ALL' },
 			{ file: 'hg19/Pediatric/sampletable/2016_AML' },
-			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
-			{ file: 'hg19/Pediatric/sampletable/2020_panNBL' },
 			{ file: 'hg19/Pediatric/sampletable/pcgp.target.info' },
 			{ file: 'hg19/Pediatric/sampletable/fpkmOnly.samples' },
 			{ file: 'hg19/Pediatric/sampletable/target.samples' },
@@ -81,7 +79,11 @@ module.exports = {
 			{ file: 'hg19/Pediatric/sampletable/pedccl.celllines' },
 			{ file: 'hg19/Pediatric/sampletable/pcgp.telomerecall' },
 			{ file: 'hg19/Pediatric/sampletable/pediatric.sampletable' },
-			{ file: 'hg19/Pediatric/sampletable/2017xenografts.sampletable' }
+			{ file: 'hg19/Pediatric/sampletable/2017xenografts.sampletable' },
+			{ file: 'hg19/Pediatric/sampletable/2018_clinicalPilot' },
+			{ file: 'hg19/Pediatric/sampletable/g4k.sampletable' },
+			{ file: 'hg19/Pediatric/sampletable/2020_SCMC' },
+			{ file: 'hg19/Pediatric/sampletable/2020_panNBL' }
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds) => {

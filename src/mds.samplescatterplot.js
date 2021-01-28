@@ -408,8 +408,8 @@ function init_plot(obj) {
 		maxy = Math.max(maxy, d.y)
 	}
 
-	const xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
-	const yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
+	let xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
+	let yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
 
 	if (!obj.dimensions) obj.dimensions = {}
 	if (!('autoResize' in obj.dimensions)) obj.dimensions.autoResize = true
@@ -563,6 +563,8 @@ function init_plot(obj) {
 				const b = d3select(document.body)
 				const x = d3event.clientX
 				const y = d3event.clientY
+				xscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_xscale : obj.xscale
+				yscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_yscale : obj.yscale
 				// <g> is movable
 				const g = userlabelg.filter(i => i.sample == d.sample)
 				const [x1, y1] = g
