@@ -4,7 +4,6 @@ import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
 import url2map from './url2map'
-import { renderScatter } from './scatter'
 
 /*
 
@@ -137,10 +136,10 @@ async function getData(tk, block, additional = []) {
 	const lst = [
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
-		...additional,
-		'nucleotide_length=' + block.exonsf
+		'nucleotide_length=' + block.exonsf,
+		'pileupheight=' + tk.pileupheight,
+		...additional
 	]
-	console.log('lst:', lst)
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
@@ -177,14 +176,11 @@ or update existing groups, in which groupidx will be provided
 		updateExistingGroups(data, tk, block)
 	}
 
-	// Plotting pileup plot
-	if (!tk.dom.pileup_g.pilep_img) {
-		tk.dom.pileup_g.pilep_img = plot_pileup(data, tk, block)
-	} else {
-		tk.dom.pileup_g.pilep_img
+	if (data.pileup_data) {
+		tk.dom.pileup_img
 			.attr('xlink:href', data.pileup_data.src)
 			.attr('width', data.pileup_data.width)
-			.attr('height', data.pileup_data.height)
+			.attr('height', tk.pileupheight)
 	}
 
 	// Plotting the y-axis for the pileup plot
@@ -218,15 +214,6 @@ or update existing groups, in which groupidx will be provided
 		})
 	block.setllabel()
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
-}
-
-function plot_pileup(data, tk, block) {
-	const pileup_plot = tk.dom.pileup_g
-		.append('image')
-		.attr('xlink:href', data.pileup_data.src)
-		.attr('width', data.pileup_data.width)
-		.attr('height', data.pileup_data.height)
-	return pileup_plot
 }
 
 function may_render_variant(data, tk, block) {
@@ -400,6 +387,7 @@ function makeTk(tk, block) {
 		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
+	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
 
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
@@ -717,9 +705,10 @@ function configPanel(tk, block) {
 		tk.kmerScorePlotBtn
 			.append('button')
 			.html('Plot KMER scores')
-			.on('click', () => {
+			.on('click', async () => {
 				const scatterpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
-				renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
+				const _ = await import('./scatter')
+				_.renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
 			})
 	}
 

@@ -7,22 +7,23 @@
 	return runproteinpaint argument to render 
 	a lolliplot track
 */
+
+const basepath = '/auth/api/custom/proteinpaint'
+
 export function getLolliplotTrack() {
-	// assume for now that host, basepath, and optional token
-	// are passed via localStorage
-	const data = this.props.dataKey // passed as props, <ProteinPaint dataKey='' />
-		? JSON.parse(this.window.localStorage.getItem(this.props.dataKey))
-		: { host: 'https://' + this.window.location.host, basepath: '' }
+	// host in gdc is just a relative url path,
+	// using the same domain as the GDC portal where PP is embedded
+	const host = 'basepath' in this.props ? this.props.basepath : basepath
 
 	const arg = {
-		host: data.host + data.basepath,
+		host,
 		genome: 'hg38', // hardcoded for gdc
-		gene: data.gene,
+		//gene: data.gene,
+		loggedin: this.props.loggedin,
 		tracks: [
 			{
 				type: 'mds3',
-				dslabel: 'GDC',
-				token: data.token // may be empty (undefined, null)
+				dslabel: 'GDC'
 			}
 		]
 	}
