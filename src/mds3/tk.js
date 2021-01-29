@@ -13,6 +13,9 @@ import { make_leftlabels } from './leftlabel'
 loadTk
 get_parameter
 ********************** INTERNAL
+loadTk_finish_closure
+rangequery_rglst
+rangequery_add_variantfilters
 
 */
 
