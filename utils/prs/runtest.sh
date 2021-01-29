@@ -1,2 +1,8 @@
-../../node_modules/.bin/webpack --entry=./source.js --output-filename=bin.js --target=node --mode=development
-node dist/bin.js ~/data/tp/files/hg38/sjlife/vcf/vcf.gz ~/data/tp/files/hg38/sjlife/tmp/snps 10
+#!/bin/bash
+# 
+# Usage: ./utils/prs/runtest.sh 
+# run from proteinpaint project root in order for webpack to 
+# properly exclude the node_modules in "externals" array
+# 
+npx webpack --config=./utils/prs/webpack.config.prs.js
+node ./utils/prs/bin.js ~/gb/tp/files/hg38/sjlife/vcf/vcf.gz ~/gb/tp/files/hg38/sjlife/tmp/snps 10
