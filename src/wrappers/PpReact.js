@@ -1,8 +1,11 @@
+import React from 'react'
 import { runproteinpaint } from '../app'
-export { getLolliplotTrack } from './gdc.views'
+import { getLolliplotTrack } from './gdc.views'
 
-export function getPpReact(React, getTrack) {
-	class ProteinPaint extends React.Component {
+export function getPpReact(getTrack) {
+	if (!React) return
+
+	class PpReact extends React.Component {
 		constructor(props) {
 			super(props)
 			this.state = {}
@@ -58,12 +61,12 @@ export function getPpReact(React, getTrack) {
 	}
 
 	if (typeof getTrack == 'function') {
-		ProteinPaint.prototype.getTrack = getTrack
+		PpReact.prototype.getTrack = getTrack
 	} else {
 		throw 'The second argument to getPpReact must be a function that returns runproteinpaint() arguments'
 	}
-
-	return ProteinPaint
+	PpReact.React = React
+	return PpReact
 }
 
 function deepEqual(x, y) {
@@ -84,3 +87,6 @@ function deepEqual(x, y) {
 		return true
 	} else return false
 }
+
+export { getLolliplotTrack }
+export const PpLolliplot = getPpReact(getLolliplotTrack)

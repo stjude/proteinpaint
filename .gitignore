@@ -53,6 +53,7 @@ pp-server/*
 
 *-stash.js
 
+*.tar
 *.tgz
 *.min.js
 

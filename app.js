@@ -159,6 +159,9 @@ if (serverconfig.jwt) {
 	})
 }
 
+// has to set optional routes before app.get() or app.post()
+// otherwise next() may not be called for a middleware in the optional routes
+setOptionalRoutes()
 app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
@@ -218,18 +221,6 @@ app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 
-const optionalRoutesDir = './modules/test/routes'
-if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
-	fs.readdir(optionalRoutesDir, (err, filenames) => {
-		for (const filename of filenames) {
-			if (filename.endsWith('.js')) {
-				const setRoutes = __non_webpack_require__(optionalRoutesDir + '/' + filename)
-				setRoutes(app, basepath)
-			}
-		}
-	})
-}
-
 /****
 	- validate and start the server
 	This enables the coorect monitoring by the forever module. 
@@ -243,7 +234,6 @@ if (serverconfig.debugmode && fs.existsSync(optionalRoutesDir)) {
 	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
 	```
 ***/
-
 pp_init()
 	.then(() => {
 		// no error from server initiation
@@ -281,6 +271,17 @@ pp_init()
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
+
+function setOptionalRoutes() {
+	// routeSetters is an array of "filepath/name.js"
+	if (!serverconfig.routeSetters) return
+	for (const fname of serverconfig.routeSetters) {
+		if (fname.endsWith('.js')) {
+			const setRoutes = __non_webpack_require__(fname)
+			setRoutes(app, basepath)
+		}
+	}
+}
 
 function handle_gene2canonicalisoform(req, res) {
 	log(req)
