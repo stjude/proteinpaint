@@ -4,7 +4,7 @@
             "shorthand": "KM plot",
             "app": "Genome Browser",
             "subheading": "GenomePaint",
-            "blurb": "",
+            "blurb": "A method for determining which genomic feature leads to a clinical outcome",
             "image": "",
             "buttons": {
                 "url": "",
@@ -18,7 +18,7 @@
             "shorthand": "Sample Matrix",
             "app": "Genome Browser",
             "subheading": "GenomePaint",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
                 "url": "",
@@ -32,7 +32,7 @@
             "shorthand": "BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Depicts dense, continuous data in the Genome Browser as a graph",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "buttons": {
                 "example": {
@@ -63,7 +63,7 @@
             "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "A combination of genomic profiling results and gene-level numerical values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "buttons": {
                 "example": {
@@ -101,14 +101,14 @@
                 "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["profile gene value"]
         },
         {
             "name": "Expression Rank",
             "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Illustrates the gene expression rank in each sample, amongst all samples from the same cancer group",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "buttons": {
                 "example": {
@@ -137,7 +137,7 @@
             "shorthand": "Hi-C",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Displays chromatin conformation data for fast random access to contact matrix heatmaps",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "buttons": {
                 "example": {
@@ -169,7 +169,7 @@
             "shorthand": "JSON BED",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
             "buttons": {
                 "example": {
@@ -198,7 +198,7 @@
             "shorthand": "Splice Junction",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Represents RNA splice junction data from RNA-seq assays",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
                 "example": {
@@ -224,7 +224,7 @@
             "shorthand": "Stranded BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Shows stranded RNA-seq coverage data as a pair of bigWig tracks: forward strand on top and reverse strand on bottom",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
             "buttons": {
                 "example": {
@@ -253,7 +253,7 @@
             "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
                 "url": "https://ppr.stjude.org/?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
@@ -267,7 +267,7 @@
             "shorthand": "AICheck",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
             "buttons": {
                 "example": {
@@ -295,7 +295,7 @@
             "shorthand": "VCF",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
             "buttons": {
                 "example": {
@@ -373,7 +373,7 @@
             "shorthand": "Lollipop",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Loads both Pediatric and COSMIC datasets into an interactive lollipop graph",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "buttons": {
                 "url": "",
@@ -387,7 +387,7 @@
             "shorthand": "ASE",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "",
+            "blurb": "Carries out on-the-fly ASE analysis for a single sample",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "buttons": {
                 "example": {
@@ -483,7 +483,7 @@
             "shorthand": "BAM",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "",
+            "blurb": "Representation of nucleotide sequence alignments",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "buttons": {
                 "example": {
@@ -511,7 +511,7 @@
             "shorthand": "Bampile",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
                 "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
@@ -523,9 +523,9 @@
         {
             "name": "Use FusionEditor",
             "shorthand": "Fusion Editor",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Depicts a graphical representation of the fusions discovered in a sample",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
                 "example": {
@@ -540,11 +540,11 @@
             "searchterms": []
         },
         {
-            "name": "2dmaf",
-            "shorthand": "2dmaf",
-            "app": "Other Apps",
+            "name": "2DMAF",
+            "shorthand": "2DMAF",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Represents the clonal evolution of point mutations (SNV and indel) between diagnosis and relapse samples",
             "image": "",
             "buttons": {
                 "url": "",
@@ -556,9 +556,9 @@
         {
             "name": "Differential gene expression as MA and Volcano plots, with RNA-seq coverage",
             "shorthand": "MA+Volcano",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Describes the differential gene expression of transformed expression values along side the significance",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
                 "example": {
@@ -575,17 +575,17 @@
                     }
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing",
+                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["MA+Volcano"]
         },
         {
             "name": "FIMO motif analysis",
             "shorthand": "FIMO",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Predicts motif changes",
             "image": "",
             "buttons": {
                 "url": "",
@@ -597,9 +597,9 @@
         {
             "name": "Generic Scatterplot",
             "shorthand": "Scatterplot",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
                 "example": {
@@ -1007,9 +1007,9 @@
         {
             "name": "Heatmap",
             "shorthand": "Heatmap",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "Visualize cohort mutation data in the form of a gene-by-sample matrix",
             "image": "",
             "buttons": {
                 "url": "",
@@ -1021,9 +1021,9 @@
         {
             "name": "Hi-C whole-genome view",
             "shorthand": "HiC whole genome",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
                 "url": "https://proteinpaint.stjude.org/F/human.temp.hic.html",
@@ -1035,9 +1035,9 @@
         {
             "name": "MAF-timeline",
             "shorthand": "MAF",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
                 "url": "",
@@ -1049,9 +1049,9 @@
         {
             "name": "Single Cell",
             "shorthand": "Single Cell",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
                 "url": "https://ppr.stjude.org/?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
@@ -1063,9 +1063,9 @@
         {
             "name": "Study View",
             "shorthand": "Study View",
-            "app": "Other Apps",
+            "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "buttons": {
                 "url": "",
@@ -1073,6 +1073,20 @@
                 "tutorial": ""
             },
             "searchterms": ["heatmap", "heat map"]
+        },
+        {
+            "name": "termdb with custom vocabulary",
+            "shorthand": "termdb",
+            "app": "Apps",
+            "subheading": "Tracks",
+            "blurb": "TODO: Brief description of track or app",
+            "image": "",
+            "buttons": {
+                "url": "",
+                "doc": "",
+                "tutorial": ""
+            },
+            "searchterms": []
         }
     ]
 }
