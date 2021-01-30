@@ -243,17 +243,14 @@ async function get_pileup(q, req, templates) {
 	const bplst = new Array(q.regions.entries().length)
 	// Computing maxValue from all regions
 
-	let region_count = 0
 	for (const [ridx, r] of q.regions.entries()) {
-		bplst[region_count] = await run_samtools_depth(q, r)
-		let max_value_region = Math.max(...bplst[region_count].map(i => i.total))
+		bplst[ridx] = await run_samtools_depth(q, r)
+		let max_value_region = Math.max(...bplst[ridx].map(i => i.total))
 		if (max_value_region > maxValue) {
 			maxValue = max_value_region
 		}
-		region_count += 1
 	}
 
-	region_count = 0
 	for (const [ridx, r] of q.regions.entries()) {
 		//console.log('r.ntwidth:', r.ntwidth)
 		//console.log('q.devicePixelRatio:', q.devicePixelRatio)
@@ -264,10 +261,10 @@ async function get_pileup(q, req, templates) {
 		let y = 0
 		const sf = q.pileupheight / maxValue
 		let i = 0
-		console.log('bplst[region_count]:', bplst[region_count])
-		if (r.ntwidth > zoom_cutoff) {
-			softclip_mismatch_pileup(ridx, r, templates, bplst[region_count])
-			for (const bp of bplst[region_count]) {
+		if (r.ntwidth >= zoom_cutoff) {
+			// For deciding whether SNV/softclip pileup should be shown or not
+			softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
+			for (const bp of bplst[ridx]) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				y = 0
 				if (bp.A) {
@@ -335,39 +332,12 @@ async function get_pileup(q, req, templates) {
 				i += 1
 			}
 		} else {
-			if (r.ntwidth < 1) {
-				// Summarizing pileup when sufficiently zoomed out
-				const num_nucleotides = Math.round(1 / r.ntwidth)
-				const nucleotide_iteration = Math.floor(bplst[region_count].length / num_nucleotides)
-				const nucleotide_remainder = bplst[region_count].length % num_nucleotides
-				for (let i = 0; i < nucleotide_iteration; i++) {
-					const nucleotide_list = []
-					for (let j = 0; j < num_nucleotides; j++) {
-						nucleotide_list.push(bplst[region_count][i * num_nucleotides + j].total)
-					}
-					const nucleotide_mean = jStat.mean(nucleotide_list)
-					for (let j = 0; j < num_nucleotides; j++) {
-						bplst[region_count][i * num_nucleotides + j].total = nucleotide_mean
-					}
-				}
-				// Iterating through the remainder of base-pairs
-				const nucleotide_list = []
-				for (let j = 0; j < nucleotide_remainder; j++) {
-					nucleotide_list.push(bplst[region_count][i * num_nucleotides + j].total)
-				}
-				const nucleotide_mean = jStat.mean(nucleotide_list)
-				for (let j = 0; j < nucleotide_remainder; j++) {
-					bplst[region_count][i * num_nucleotides + j].total = nucleotide_mean
-				}
-			}
-
-			for (const bp of bplst[region_count]) {
+			for (const bp of bplst[ridx]) {
 				const x = (bp.position - r.start + 1) * r.ntwidth
 				y = 0
 				if (bp.softclip) {
 					ctx.fillStyle = 'rgb(70,130,180)'
 					const h = bp.softclip * sf
-					console.log('Zoomed out')
 					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 					y += h
 				}
@@ -377,7 +347,6 @@ async function get_pileup(q, req, templates) {
 				ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
 			}
 		}
-		region_count += 1
 	}
 	const pileup_data = {
 		width: q.canvaswidth,
@@ -805,7 +774,39 @@ function run_samtools_depth(q, r) {
 			bplst.push(bp)
 		})
 		rl.on('close', () => {
-			resolve(bplst)
+			if (r.ntwidth < 1) {
+				// Checking whether there are multiple nucleotides per pixel
+				const num_nucleotides = Math.round(1 / r.ntwidth) // Number of nucleotides per pixel
+				const nucleotide_iteration = Math.floor(bplst.length / num_nucleotides)
+				const nucleotide_remainder = bplst.length % num_nucleotides
+				const bplst_new = []
+				for (let i = 0; i < nucleotide_iteration; i++) {
+					const nucleotide_list = []
+					for (let j = 0; j < num_nucleotides; j++) {
+						nucleotide_list.push(bplst[i * num_nucleotides + j].total)
+					}
+					const bp = {
+						total: jStat.mean(nucleotide_list),
+						position: bplst[i * num_nucleotides].position
+					}
+					bplst_new.push(bp)
+				}
+				// Iterating through the remainder of base-pairs
+				if (nucleotide_remainder > 0) {
+					const nucleotide_list = []
+					for (let j = 0; j < nucleotide_remainder; j++) {
+						nucleotide_list.push(bplst[(nucleotide_iteration - 1) * num_nucleotides + j].total)
+					}
+					const bp = {
+						total: jStat.mean(nucleotide_list),
+						position: bplst[(nucleotide_iteration - 1) * num_nucleotides].position
+					}
+					bplst_new.push(bp)
+				}
+				resolve(bplst_new)
+			} else {
+				resolve(bplst)
+			}
 		})
 	})
 }
