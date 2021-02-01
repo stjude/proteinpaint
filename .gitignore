@@ -33,6 +33,7 @@ public/rev.txt
 /utils/findspliceevent/bin2.js
 /utils/findspliceevent/bin.js
 /utils/countbamallele.phased/bin*
+/utils/prs/bin.js
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 

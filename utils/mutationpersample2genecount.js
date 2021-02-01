@@ -3,6 +3,18 @@ if (process.argv.length != 4) {
 	process.exit()
 }
 
+/*
+accepts the "mutationpersample" directory with one JSON file for each sample in a mds dataset
+for each json file, compute the mutated genes and number of hits on each gene,
+output to a 3-column tabular table to load to a sql db
+
+snvindel: only genic mutations with given classes
+sv/fusion: coding genes
+cnv: focal <2mb with coding genes
+loh: not considered
+itd: coding genes
+*/
+
 const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
@@ -57,7 +69,7 @@ for (const file of glob.sync(path.join(in_dir, '*'))) {
 			}
 			const ca = hit_gene(item.chrA, item.posA, item.posA + 1)
 			const cb = hit_gene(item.chrB, item.posB, item.posB + 1)
-			for (const g of [...ca, ...cb]) {
+			for (const g of new Set([...ca, ...cb])) {
 				gene2count.set(g, 1 + (gene2count.get(g) || 0))
 			}
 			continue
@@ -80,7 +92,7 @@ for (const file of glob.sync(path.join(in_dir, '*'))) {
 				// low log2(ratio)
 				continue
 			}
-			const c = hit_gene(item.chr, item.start, item.stop)
+			const c = new Set(hit_gene(item.chr, item.start, item.stop))
 			for (const g of c) {
 				gene2count.set(g, 1 + (gene2count.get(g) || 0))
 			}

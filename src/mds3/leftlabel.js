@@ -5,6 +5,16 @@ import * as client from '../client'
 const labyspace = 5
 
 /*
+********************** EXPORTED
+make_leftlabels
+********************** INTERNAL
+makelabel
+menu_mclass
+stratifymenu_samplesummary
+stratifymenu_genecnv
+*/
+
+/*
 make left labels on main track render
 labels are based on server data
 TODO may not update every label when only updating certain sub track

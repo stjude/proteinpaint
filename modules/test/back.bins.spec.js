@@ -105,14 +105,20 @@ tape('compute_bins() error handling, type=custom', function(test) {
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3 }] },
+		{
+			type: 'custom',
+			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3 }]
+		},
 		'should throw on a custom last bin missing both .stopunbounded and .stop',
 		'the last bin must define either stopunbounded or stop'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 'abc' }] },
+		{
+			type: 'custom',
+			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 'abc' }]
+		},
 		'should throw on non-numeric stop for a bounded last bin',
 		'bin.stop must be numeric for a bounded last bin'
 	)

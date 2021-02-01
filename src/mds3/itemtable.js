@@ -276,17 +276,17 @@ function table_snvindel_multivariant({ mlst, tk, block, table }) {
 					if (!first) return
 					// load sample info
 					first = false
-					await mlst2samplesummary(
-						[m],
+					await mlst2samplesummary({
+						mlst: [m],
 						tk,
 						block,
-						tr2
+						div: tr2
 							.append('td')
 							.attr('colspan', columnnum)
 							.append('table')
 							.style('border', 'solid 1px #ccc')
 							.style('margin-left', '20px')
-					)
+					})
 				})
 			// hidden row to show sample details of this variant
 			const tr2 = table.append('tr').style('display', 'none')

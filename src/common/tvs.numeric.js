@@ -296,12 +296,12 @@ export function getNumericMethods(self) {
 				//update 'edit', 'apply' and 'reset' buttons based on brush change
 				brush.edit_btn.style(
 					'display',
-					!similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					!similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
 				brush.reset_btn.style(
 					'display',
-					similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 
 				// hide start and stop text and relation symbols if brush moved
@@ -640,7 +640,7 @@ export function getNumericMethods(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style(
 				'display',
-				self.tvs.ranges.length == 1 && (orig_range.start != '' && orig_range.stop != '') ? 'none' : 'inline-block'
+				self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
