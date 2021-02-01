@@ -3,13 +3,12 @@ const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
+const serverconfig = require('./serverconfig')
 
 /*
  ********************** EXPORTED
  ********************** INTERNAL
  */
-
-const serverconfig = utils.serverconfig
 
 module.exports = genomes => {
 	return async (req, res) => {

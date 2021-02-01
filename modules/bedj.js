@@ -5,8 +5,6 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const nt2aa = require('../src/common').nt2aa
 
-const serverconfig = utils.serverconfig
-
 /*
 should guard against file content error e.g. two tabs separating columns
 
