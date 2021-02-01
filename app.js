@@ -122,7 +122,7 @@ app.use(express.static(__dirname+'/public'))
 */
 const basepath = serverconfig.basepath || ''
 const staticDir = express.static(path.join(process.cwd(), './public'))
-if (!serverconfig.backend_only && fs.existsSync(staticDir)) {
+if (!serverconfig.backend_only) {
 	app.use(staticDir)
 }
 app.use(compression())
