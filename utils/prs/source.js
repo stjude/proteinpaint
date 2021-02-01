@@ -8,11 +8,11 @@ const snpfile = process.argv[3]
 const poolnumber = Number(process.argv[4])
 
 const fs = require('fs')
-const utils = require('../../modules/utils')
+const { get_header_tabix } = require('../../modules/tabix')
 const prs = require('../../modules/prs')
 
 ;(async () => {
-	const lines = await utils.get_header_tabix(vcffile)
+	const lines = await get_header_tabix(vcffile)
 	const samplenames = lines[lines.length - 1].split('\t').slice(9)
 	console.log(samplenames.length, 'samples')
 	const snps = []
