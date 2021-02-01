@@ -1,3 +1,8 @@
+/* to bundle, at pp root directory, do:
+$ npx webpack --config=utils/prs/webpack.config.prs.js
+
+will produce "utils/prs/bin.js"
+*/
 if (process.argv.length != 5) {
 	console.log('<full path to vcf.gz> <snp tab file: chr/pos/alt/ref/weight> <pool number> output to stdout')
 	process.exit()
