@@ -107,7 +107,7 @@ app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
-		// immutable response before expiration, client must revalidate after max-age
+		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
 		// a static file and not handled here with cache-control
 		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
@@ -118,10 +118,10 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-const basepath = serverconfig.PP_BASEPATH || ''
-
-if (!utils.serverconfig.backend_only) {
-	app.use(express.static(path.join(process.cwd(), './public')))
+const basepath = serverconfig.basepath || ''
+const staticDir = express.static(path.join(process.cwd(), './public'))
+if (!serverconfig.backend_only && fs.existsSync(staticDir)) {
+	app.use(staticDir)
 }
 app.use(compression())
 
@@ -9837,7 +9837,11 @@ function get_codedate() {
 		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
 	)
 	// if the pp binary did not start the process, assume that the
-	// server was called in the same directory as the public dir or symlink
+	// server was called in the same directory as the public dir or symlink;
+	// serverconfig.projectdir is an optional absolute path value to the
+	// consumer app directory that ran proteinpaint, since @stjude/proteinpaint
+	// may be installed as a global app and thus called from any folder with a
+	// valid serverconfig.json
 	const dirname = serverconfig.projectdir
 		? serverconfig.projectdir
 		: ppbin

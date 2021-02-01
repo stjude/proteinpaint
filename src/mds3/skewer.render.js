@@ -8,6 +8,24 @@ import { itemtable, mlst2samplesummary } from './itemtable'
 import * as common from '../common'
 import * as client from '../client'
 
+/*
+********************** EXPORTED
+skewer_make
+settle_glyph
+unfold_glyph
+fold_glyph
+getter_mcset_key
+********************** INTERNAL
+skewer_sety
+skewer_setstem
+settle_glyph
+unfold_update
+horiplace
+horiplace0
+click_variants
+variant_details
+*/
+
 const modefold = 0
 const modeshow = 1
 const middlealignshift = 0.3
