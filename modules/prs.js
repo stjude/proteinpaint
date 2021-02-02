@@ -4,6 +4,7 @@ const asyncPool = require('tiny-async-pool')
 /*
 arg{}:
 .poolnumber
+	max number of concurrency
 .vcffile: full path to file, compressed and indexed
 	FORMAT must have GT as first field
 	GT must be delimited by '/'
@@ -26,8 +27,8 @@ export async function compute(arg) {
 	for (const s of arg.snps) {
 		if (!s.chr) throw '.chr missing from a snp'
 		if (!Number.isInteger(s.pos)) throw '.pos not integer for a snp'
-		if (!s.ref) throw '.ref missing from a snp'
-		if (!s.alt) throw '.alt missing from a snp'
+		if (!s.refallele) throw '.refallele missing from a snp'
+		if (!s.effectallele) throw '.effectallele missing from a snp'
 		if (!Number.isFinite(s.weight)) throw '.weight not a number'
 	}
 	if (!Array.isArray(arg.samplenames)) throw '.samplenames[] missing'
@@ -42,12 +43,32 @@ export async function compute(arg) {
 
 function queryOneSNP(arg, samples) {
 	return async snp => {
+		//const alleles = new Set([snp.effectallele,snp.refallele])
+
 		return await get_lines_tabix(
-			[arg.vcffile, (arg.nochr ? snp.chr.replace('chr', '') : snp.chr) + ':' + snp.pos + '-' + (snp.pos + 1)],
+			[arg.vcffile, (arg.nochr ? snp.chr.replace('chr', '') : snp.chr) + ':' + snp.pos + '-' + snp.pos],
 			arg.dir,
 			line => {
 				const l = line.split('\t')
-				if (l[3] != snp.ref || l[4] != snp.alt) return
+				const allele0 = l[3],
+					allele1 = l[4]
+				/*
+				if(!alleles.has(allele0) || !alleles.has(allele1)) {
+					// not all alleles from this line match with snp
+					console.error('xx',l[0],l[1],allele0,allele1)
+					return
+				}
+				*/
+				let effectalleleidx
+				if (snp.effectallele == allele0) {
+					effectalleleidx = '0'
+				} else if (snp.effectallele == allele1) {
+					effectalleleidx = '1'
+				} else {
+					// for testing
+					console.error('nomatch', snp.chr + '.' + snp.pos + '.' + snp.effectallele + '.' + snp.refallele)
+					return
+				}
 				for (const [i, sample] of samples.entries()) {
 					const gt = l[i + 9].split(':')[0]
 					if (gt == '.') {
@@ -55,18 +76,10 @@ function queryOneSNP(arg, samples) {
 						continue
 					}
 					sample.snpcount++
+
 					const tmp = gt.split('/')
 					if (tmp.length != 2) continue
-					const sum = Number(tmp[0]) + Number(tmp[1])
-					if (sum == 0) {
-					} else if (sum == 1) {
-						sample.sum += snp.weight
-					} else if (sum == 2) {
-						sample.sum += snp.weight * 2
-					} else {
-						// sum is greater than 2, do not consider
-						// maybe case of multi alt allele in one line
-					}
+					sample.sum += snp.weight * ((tmp[0] == effectalleleidx ? 1 : 0) + (tmp[1] == effectalleleidx ? 1 : 0))
 				}
 			}
 		)
