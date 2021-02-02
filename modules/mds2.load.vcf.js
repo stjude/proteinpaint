@@ -24,7 +24,7 @@ parseline_AFtest
 		getallelecount_samplegroup_vcfline
 */
 
-const serverconfig = utils.serverconfig
+const serverconfig = require('./serverconfig')
 
 export async function handle_ssidbyonem(q, genome, ds, result) {
 	/*

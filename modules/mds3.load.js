@@ -28,8 +28,6 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
-//const serverconfig = utils.serverconfig
-
 module.exports = genomes => {
 	return async (req, res) => {
 		app.log(req)
@@ -38,6 +36,8 @@ module.exports = genomes => {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			const q = init_q(req.query, genome)
+			// ... comments
+			//
 			if (req.headers['X-Auth-Token']) q.token = req.headers['X-Auth-Token']
 			const ds = await get_ds(q, genome)
 

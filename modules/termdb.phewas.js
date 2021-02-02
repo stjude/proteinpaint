@@ -5,6 +5,7 @@ const termdbsql = require('./termdb.sql')
 const createCanvas = require('canvas').createCanvas
 const termdb = require('./termdb')
 const readline = require('readline')
+const serverconfig = require('./serverconfig')
 
 /*
 ********************** EXPORTED
@@ -21,8 +22,6 @@ get_samplefilter4termtype
 helper_rows2categories
 helper_conditiongroups2categories
 */
-
-const serverconfig = utils.serverconfig
 
 const minimum_total_sample = 10
 

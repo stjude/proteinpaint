@@ -3,8 +3,6 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const basecolor = require('../src/common').basecolor
 
-const serverconfig = utils.serverconfig
-
 module.exports = async (req, res) => {
 	app.log(req)
 	try {
