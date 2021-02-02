@@ -3,8 +3,7 @@ const fs = require('fs')
 const utils = require('./utils')
 const spawn = require('child_process').spawn
 const path = require('path')
-
-const serverconfig = utils.serverconfig
+const serverconfig = require('./serverconfig')
 const fimo = serverconfig.fimo || 'fimo'
 
 exports.handle_closure = genomes => {

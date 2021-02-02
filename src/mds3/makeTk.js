@@ -4,6 +4,20 @@ import { init as init_legend } from './legend'
 import { loadTk } from './tk'
 
 /*
+********************** EXPORTED
+makeTk
+********************** INTERNAL
+init_mclass
+get_ds
+init_termdb
+mayaddGetter_m2csq
+mayaddGetter_variant2samples
+parse_client_config
+configPanel
+_load
+*/
+
+/*
 TODO how to tell if tk.mds is a custom track
 
 common structure of tk.mds between official and custom

@@ -21,7 +21,7 @@ may_init_svcnv
 may_sum_samples
 */
 
-const serverconfig = utils.serverconfig
+const serverconfig = require('./serverconfig')
 
 export async function init_db(ds, genome) {
 	/* db should be required

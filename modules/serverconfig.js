@@ -103,7 +103,7 @@ function getGDCconfig() {
 			{
 				name: 'hg38',
 				species: 'human',
-				file: './genome/hg38.js',
+				file: './genome/hg38.gdc.js',
 				datasets: [
 					{
 						name: 'GDC',

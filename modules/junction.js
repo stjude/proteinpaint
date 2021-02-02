@@ -1,8 +1,6 @@
 const app = require('../app')
 const utils = require('./utils')
 
-const serverconfig = utils.serverconfig
-
 module.exports = async (req, res) => {
 	app.log(req)
 	try {

@@ -4,7 +4,7 @@ const fs = require('fs'),
 	utils = require('./utils'),
 	app = require('../app')
 
-const serverconfig = utils.serverconfig
+const serverconfig = require('./serverconfig')
 const tabix = serverconfig.tabix || 'tabix'
 const gfClient = serverconfig.gfClient || 'gfClient'
 const gfServer = serverconfig.gfServer || 'gfServer'
