@@ -13,6 +13,9 @@ import { make_leftlabels } from './leftlabel'
 loadTk
 get_parameter
 ********************** INTERNAL
+loadTk_finish_closure
+rangequery_rglst
+rangequery_add_variantfilters
 
 */
 
@@ -162,7 +165,10 @@ function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		// if any query may use
+		if (block.gmmode == client.gmmode.genomic) {
+			// TODO if can delete the isoform parameter to simply make the query by genomic pos
+			par.push('atgenomic=1')
+		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
 	}

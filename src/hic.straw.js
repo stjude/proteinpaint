@@ -340,7 +340,7 @@ export function hicparsestat(hic, txt) {
 
 /////////// __whole genome
 
-function init_wholegenome(hic) {
+async function init_wholegenome(hic) {
 	/*
 	launch wholegenome
 	*/
@@ -500,6 +500,17 @@ function init_wholegenome(hic) {
 	}
 
 	hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+
+	// after the ui is created, load data for each chr pair,
+	// await on each request to finish to avoid server lockup
+	for (let i = 0; i < manychr; i++) {
+		const lead = hic.chrlst[i]
+		for (let j = 0; j <= i; j++) {
+			const follow = hic.chrlst[j]
+			await getdata_leadfollow(hic, lead, follow)
+		}
+	}
+
 	return
 }
 
@@ -567,8 +578,6 @@ function makewholegenome_chrleadfollow(hic, lead, follow) {
 	} else {
 		obj.ctx2 = obj.ctx
 	}
-
-	getdata_leadfollow(hic, lead, follow)
 }
 
 function chrpair_mouseover(hic, img, x_chr, y_chr) {
@@ -587,7 +596,7 @@ function chrpair_mouseover(hic, img, x_chr, y_chr) {
 		.text(y_chr)
 }
 
-function getdata_leadfollow(hic, lead, follow) {
+async function getdata_leadfollow(hic, lead, follow) {
 	const binpx = hic.wholegenome.binpx
 	const resolution = hic.wholegenome.resolution
 	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
@@ -598,7 +607,6 @@ function getdata_leadfollow(hic, lead, follow) {
 	}
 
 	const arg = {
-		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
@@ -607,42 +615,36 @@ function getdata_leadfollow(hic, lead, follow) {
 		resolution: resolution
 	}
 
-	fetch(
-		new Request(hic.hostURL + '/hicdata', {
+	try {
+		const data = await client.dofetch2('/hicdata', {
 			method: 'POST',
 			body: JSON.stringify(arg)
 		})
-	)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			if (data.error) throw { message: lead + ' - ' + follow + ': ' + data.error }
-			if (!data.items || data.items.length == 0) {
-				return
-			}
-			for (const [plead, pfollow, v] of data.items) {
-				const leadpx = Math.floor(plead / resolution) * binpx
-				const followpx = Math.floor(pfollow / resolution) * binpx
+		if (data.error) throw lead + ' - ' + follow + ': ' + data.error
+		if (!data.items || data.items.length == 0) {
+			return
+		}
+		for (const [plead, pfollow, v] of data.items) {
+			const leadpx = Math.floor(plead / resolution) * binpx
+			const followpx = Math.floor(pfollow / resolution) * binpx
 
-				obj.data.push([leadpx, followpx, v])
+			obj.data.push([leadpx, followpx, v])
 
-				const p =
-					v >= hic.wholegenome.bpmaxv ? 0 : Math.floor((255 * (hic.wholegenome.bpmaxv - v)) / hic.wholegenome.bpmaxv)
-				obj.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-				obj.ctx.fillRect(followpx, leadpx, binpx, binpx)
-				obj.ctx2.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-				obj.ctx2.fillRect(leadpx, followpx, binpx, binpx)
-			}
-			obj.img.attr('xlink:href', obj.canvas.toDataURL())
-			if (obj.canvas2) {
-				obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
-			}
-		})
-		.catch(err => {
-			hic.error(err.message)
-			if (err.stack) console.log(err.stack)
-		})
+			const p =
+				v >= hic.wholegenome.bpmaxv ? 0 : Math.floor((255 * (hic.wholegenome.bpmaxv - v)) / hic.wholegenome.bpmaxv)
+			obj.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			obj.ctx.fillRect(followpx, leadpx, binpx, binpx)
+			obj.ctx2.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			obj.ctx2.fillRect(leadpx, followpx, binpx, binpx)
+		}
+		obj.img.attr('xlink:href', obj.canvas.toDataURL())
+		if (obj.canvas2) {
+			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+		}
+	} catch (e) {
+		hic.error(e.message || e)
+		if (e.stack) console.log(e.stack)
+	}
 }
 
 function makewholegenome_sv(hic) {
@@ -994,7 +996,7 @@ function getdata_chrpair(hic) {
 		})
 }
 
-function setnmeth(hic, nmeth) {
+async function setnmeth(hic, nmeth) {
 	/*
 	set normalization method from <select>
 	*/
@@ -1005,7 +1007,7 @@ function setnmeth(hic, nmeth) {
 			const lead = hic.chrlst[i]
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				getdata_leadfollow(hic, lead, follow)
+				await getdata_leadfollow(hic, lead, follow)
 			}
 		}
 		return

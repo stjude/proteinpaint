@@ -264,7 +264,10 @@ export function getNumericMethods(self) {
 		const minvalue = self.num_obj.density_data.minvalue
 
 		brush.d3brush = brushX()
-			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
+			.extent([
+				[plot_size.xpad, 0],
+				[plot_size.width - plot_size.xpad, plot_size.height]
+			])
 			.on('brush', function(d) {
 				const s = event.selection
 				if (!s) return // not an event triggered by brush dragging
@@ -296,12 +299,12 @@ export function getNumericMethods(self) {
 				//update 'edit', 'apply' and 'reset' buttons based on brush change
 				brush.edit_btn.style(
 					'display',
-					!similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					!similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
 				brush.reset_btn.style(
 					'display',
-					similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 
 				// hide start and stop text and relation symbols if brush moved
@@ -640,7 +643,7 @@ export function getNumericMethods(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style(
 				'display',
-				self.tvs.ranges.length == 1 && (orig_range.start != '' && orig_range.stop != '') ? 'none' : 'inline-block'
+				self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')

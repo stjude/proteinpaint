@@ -4,6 +4,20 @@ import { init as init_legend } from './legend'
 import { loadTk } from './tk'
 
 /*
+********************** EXPORTED
+makeTk
+********************** INTERNAL
+init_mclass
+get_ds
+init_termdb
+mayaddGetter_m2csq
+mayaddGetter_variant2samples
+parse_client_config
+configPanel
+_load
+*/
+
+/*
 TODO how to tell if tk.mds is a custom track
 
 common structure of tk.mds between official and custom
@@ -32,6 +46,8 @@ export async function makeTk(tk, block) {
 	init_mclass(tk)
 
 	mayaddGetter_variant2samples(tk, block)
+
+	mayaddGetter_m2csq(tk, block)
 
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
@@ -99,33 +115,47 @@ function init_termdb(tk, block) {
 	}
 }
 
+function mayaddGetter_m2csq(tk, block) {
+	if (!tk.mds.queries || !tk.mds.queries.snvindel || !tk.mds.queries.snvindel.m2csq) return
+	tk.mds.queries.snvindel.m2csq.get = async m => {
+		const lst = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'm2csq=1']
+		if (tk.mds.queries.snvindel.m2csq.by == 'ssm_id') {
+			lst.push('ssm_id=' + m.ssm_id)
+		} else {
+			return { error: 'unknown query method' }
+		}
+		return await client.dofetch2('mds3?' + lst.join('&'))
+	}
+}
+
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
 	// native track, need to know what to do for custom track
-	tk.mds.variant2samples.get = async (tk0, mlst, querytype) => {
-		/*
+	tk.mds.variant2samples.get = async arg => {
+		/* arg{}
+		.tk1
+		.querytype
+		.mlst
+		.tid2value{}
+
 		TODO support alternative data sources
 		where all data are hosted on client
 		*/
 		// hardcode to getsummary and using fixed levels
-		const par = [
-			'genome=' + block.genome.name,
-			'dslabel=' + tk.mds.label,
-			'variant2samples=1',
-			'get=' + querytype,
-			'samplefiltertemp=' + JSON.stringify(tk0.samplefiltertemp) // must use tk0 but not tk for this one
-		]
+		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
+		if (arg.tk1) par.push('samplefiltertemp=' + JSON.stringify(arg.tk1.samplefiltertemp)) // must use tk1 but not tk for this one
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
 			// in such case, need alternative query method
-			par.push('ssm_id_lst=' + mlst.map(i => i.ssm_id).join(','))
+			par.push('ssm_id_lst=' + arg.mlst.map(i => i.ssm_id).join(','))
 		} else {
 			throw 'unknown variantkey for variant2samples'
 		}
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
 		if (tk.token) par.push('token=' + tk.token)
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
 		const data = await client.dofetch2('mds3?' + par.join('&'))
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'

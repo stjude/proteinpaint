@@ -44,6 +44,12 @@ arg
 */
 	const urlp = url2map()
 
+	if (urlp.has('examples')) {
+		const _ = await import('./examples')
+		await _.init_examples(arg)
+		return
+	}
+
 	if (urlp.has('mdsjsonform')) {
 		const _ = await import('./mdsjsonform')
 		await _.init_mdsjsonform(arg)

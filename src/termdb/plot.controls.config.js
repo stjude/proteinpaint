@@ -129,7 +129,10 @@ function setOrientationOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-condition-unit-' + opts.instanceNum,
 		holder: self.dom.inputTd,
-		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
+		options: [
+			{ label: 'Vertical', value: 'vertical' },
+			{ label: 'Horizontal', value: 'horizontal' }
+		],
 		listeners: {
 			input(d) {
 				opts.dispatch({
@@ -173,7 +176,11 @@ function setScaleOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-scale-unit-' + opts.instanceNum,
 		holder: self.dom.inputTd,
-		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
+		options: [
+			{ label: 'Linear', value: 'abs' },
+			{ label: 'Log', value: 'log' },
+			{ label: 'Proportion', value: 'pct' }
+		],
 		listeners: {
 			input(d) {
 				opts.dispatch({

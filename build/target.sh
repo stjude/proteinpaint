@@ -23,9 +23,12 @@ if [[ "$TARGET" == "dev" ]]; then
 	npm pack
 	tar -xzf $PKGVER -C tmppack/
 	cd tmppack
-	cp ../serverconfig.json ../build/set-container-config.js package/
+	cp ../serverconfig.json package/
 	cp -r ../dataset package
 	cp -r ../genome package
+	if [[ -d ../.ssl ]]; then
+		cp -r ../.ssl package
+	fi
 	cd package
 	docker build --file ../../build/Dockerfile --target $TARGET --tag ppdeps:$TARGET .
 	cd ../..
@@ -37,7 +40,7 @@ elif [[ "$TARGET" == "test" ]]; then
 	echo "TODO: write a test target in Dockerfile"
 	exit 1
 
-elif [[ "$TARGET" == "prod" ]]; then
+elif [[ "$TARGET" == "prod" || "$TARGET" == "prod-bare" ]]; then
 	if [[ ! -d tmppack || ! -f tmppack/$PKGVER ]]; then
 		# create the tarball as needed
 		. ./build/publish.sh tgz
@@ -48,7 +51,11 @@ elif [[ "$TARGET" == "prod" ]]; then
 	cd ./tmppack
 	rm -rf package
 	tar -xzf $PKGVER
-	cp ../serverconfig.json ../build/set-container-config.js package/
+	
+	if [[ "$TARGET" != "prod-bare" ]]; then
+		cp ../serverconfig.json package/
+	fi 
+
 	cd package
 	docker build --file ../../build/Dockerfile --target $TARGET --tag ppdeps:$TARGET .
 	cd ../..

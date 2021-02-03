@@ -7,10 +7,10 @@ const fs = require('fs')
 
 const str2id = new Map()
 for (const line of fs
-	.readFileSync('samples.string2intID', { encoding: 'utf8' })
+	.readFileSync('samples.idmap', { encoding: 'utf8' })
 	.trim()
 	.split('\n')) {
-	const [s, i] = line.split('\t')
+	const [i, s] = line.split('\t')
 	str2id.set(s, i)
 }
 

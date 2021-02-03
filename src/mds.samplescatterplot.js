@@ -4,10 +4,11 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { zoom as d3zoom, zoomIdentity, zoomTransform } from 'd3'
+import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../modules/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
+import { getsjcharts } from './getsjcharts'
 
 /*
 obj:
@@ -407,8 +408,8 @@ function init_plot(obj) {
 		maxy = Math.max(maxy, d.y)
 	}
 
-	const xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
-	const yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
+	let xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
+	let yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
 
 	if (!obj.dimensions) obj.dimensions = {}
 	if (!('autoResize' in obj.dimensions)) obj.dimensions.autoResize = true
@@ -442,6 +443,7 @@ function init_plot(obj) {
 		.data(obj.dots)
 		.enter()
 		.append('g')
+		.attr('class', 'sample_dot')
 
 	const circles = dots
 		.append('circle')
@@ -475,13 +477,14 @@ function init_plot(obj) {
 	obj.dotselection = circles
 
 	let userdots, usercircles, userlabelg, userlabels, userlabel_borders
-	const userlabel_grp = { userlabels, userlabel_borders }
+	const userlabel_grp = (obj.userlabel_grp = { userlabels, userlabel_borders })
 	if (obj.dots_user) {
 		userdots = dotg
 			.selectAll()
 			.data(obj.dots_user)
 			.enter()
 			.append('g')
+			.attr('class', 'sample_dot')
 		usercircles = userdots
 			.append('circle')
 			.attr('stroke', 'none')
@@ -516,6 +519,7 @@ function init_plot(obj) {
 			.data(obj.dots_user)
 			.enter()
 			.append('g')
+			.attr('class', 'userlabelg')
 
 		userlabel_grp.userlabel_borders = userlabelg
 			.append('text')
@@ -559,6 +563,8 @@ function init_plot(obj) {
 				const b = d3select(document.body)
 				const x = d3event.clientX
 				const y = d3event.clientY
+				xscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_xscale : obj.xscale
+				yscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_yscale : obj.yscale
 				// <g> is movable
 				const g = userlabelg.filter(i => i.sample == d.sample)
 				const [x1, y1] = g
@@ -570,6 +576,8 @@ function init_plot(obj) {
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
+					d.x_ = xscale.invert(x1 + d3event.clientX - x)
+					d.y_ = yscale.invert(y1 + d3event.clientY - y)
 				})
 			})
 			.on('dblclick', d => {
@@ -617,8 +625,8 @@ function init_plot(obj) {
 			userlabelg
 				.transition() // smooth motion of the text label
 				.attr('transform', d => {
-					const x = new_xscale(d.x),
-						y = new_yscale(d.y)
+					const x = d.x_ ? new_xscale(d.x_) : new_xscale(d.x),
+						y = d.y_ ? new_yscale(d.y_) : new_yscale(d.y)
 					// check label width
 					let lw
 					Object.values(userlabel_grp).forEach(labels =>
@@ -786,8 +794,13 @@ function makeConfigPanel(obj) {
 			obj.new_xscale = d3event.transform.rescaleX(obj.xscale)
 			obj.new_yscale = d3event.transform.rescaleY(obj.yscale)
 			obj.zoomed_scale = d3event.transform.k
-			const dots = obj.dotg.selectAll('g')
+			const dots = obj.dotg.selectAll('.sample_dot')
 			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
+			const userlabelg = obj.dotg.selectAll('.userlabelg')
+			userlabelg.attr(
+				'transform',
+				d => 'translate(' + obj.new_xscale(d.x_ || d.x) + ',' + obj.new_yscale(d.y_ || d.y) + ')'
+			)
 		}
 
 		svg.call(zoom)
@@ -1160,12 +1173,56 @@ function update_dotcolor_legend(obj) {
 	}
 }
 
+/*
+clicking a dot can have different behaviors based on config
+*/
 function click_dot(dot, obj) {
-	/*
-	clicking a dot to launch browser view of tracks from this sample
-	*/
-	if (!obj.dslabel) return
+	if (obj.dslabel) {
+		// to launch browser view of tracks from this sample
+		click_dot_mdsview(dot, obj)
+		return
+	}
+	if (obj.disco) {
+		click_dot_disco(dot, obj)
+		return
+	}
+}
+async function click_dot_disco(dot, obj) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text(dot.sample)
+	const wait = client.tab_wait(pane.body)
+	try {
+		const sjcharts = await getsjcharts()
+		const arg = {
+			genome: obj.disco.genome,
+			dslabel: obj.disco.dslabel,
+			querykey: obj.disco.querykey,
+			getsample4disco: dot.sample
+		}
+		const data = await client.dofetch('/mdssvcnv', arg)
+		if (data.error) throw data.error
+		if (!data.text) throw '.text missing'
 
+		const renderer = await sjcharts.dtDisco({
+			holderSelector: pane.body,
+			settings: {
+				showControls: false,
+				selectedSamples: []
+			}
+		})
+
+		const disco_arg = {
+			sampleName: dot.sample,
+			data: JSON.parse(data.text)
+		}
+		renderer.main(disco_arg)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+function click_dot_mdsview(dot, obj) {
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text(dot.sample)
 

@@ -1350,7 +1350,13 @@ export function runtimeattr_snvindel(tk, mlst) {
 					lst.push({ label: 'Mutation', get: m => m.mname })
 					break
 				case 'ref':
-					lst.push({ label: 'Allele', lst: [{ label: 'Ref', get: m => m.ref }, { label: 'Alt', get: m => m.alt }] })
+					lst.push({
+						label: 'Allele',
+						lst: [
+							{ label: 'Ref', get: m => m.ref },
+							{ label: 'Alt', get: m => m.alt }
+						]
+					})
 					break
 				case 'pmid':
 					lst.push(caller_pmid())

@@ -33,6 +33,7 @@ public/rev.txt
 /utils/findspliceevent/bin2.js
 /utils/findspliceevent/bin.js
 /utils/countbamallele.phased/bin*
+/utils/prs/bin.js
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
@@ -53,10 +54,9 @@ pp-server/*
 
 *-stash.js
 
+*.tar
 *.tgz
 *.min.js
-
-scripts/*.newdev.sh
 
 deploys/
 
@@ -66,4 +66,10 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
-wrappers/react/public/public
+
+*.key
+*.pem
+*.csr
+*.ext
+*.crt
+.ssl

@@ -8,7 +8,7 @@ function handleChange(event, name) {
 	}
 }
 
-const names = ['server.js', 'src/common.js', 'genome', 'dataset']
+const names = ['server.js', 'src/common.js', 'genome', 'dataset', 'public']
 
 for (const name of names) {
 	watch(`./${name}`, handleChange)

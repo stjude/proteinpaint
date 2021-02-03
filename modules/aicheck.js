@@ -3,8 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
-
-const serverconfig = utils.serverconfig
+const serverconfig = require('./serverconfig')
 
 module.exports = genomes => {
 	return async (req, res) => {
