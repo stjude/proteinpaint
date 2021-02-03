@@ -181,6 +181,7 @@ function makeheader(app, obj, jwt) {
 	const padw='13px'
 	// head
 	const row = app.holder.append('div')
+	const app_row = app.holder.append('div')
 	const headbox=row.append('div')
 		.style('margin','10px')
 		.style('padding-right','10px')
@@ -306,24 +307,40 @@ function makeheader(app, obj, jwt) {
 				appmenu( app, headbox, selectgenome, jwt )
 			})
 	}else{
-		headbox.append('span')
-		.attr('class','sja_menuoption')
-		.style('padding',padw)
-		.style('border-radius','5px')
-		.text('Apps')
-		.on('click', async function(){
-			const p = d3event.target.getBoundingClientRect()
-			
-			const holder = headtip.clear()
-				.show(p.left-400,p.top+p.height+5)
-				.d
+		let app_btn_active = true
+
+		const app_holder = app_row
 				.append('div')
-				.style('padding','5px 20px')
+				.style('margin','10px')
+				.style('padding-right','10px')
+				.style('display', app_btn_active ? 'inline-block' : 'none')
+				.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
+				.style('border-radius','5px')
 				.style('width','85vw')
-			
+
+		async function load_app_div(){
 			const _ = await import('./examples')
-			await _.init_examples({holder})
-		})
+			await _.init_examples({holder: app_holder})
+		}
+
+		load_app_div()
+
+		const app_btn = headbox.append('span')
+			.attr('class','sja_menuoption')
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('padding',padw)
+			.style('border-radius','5px')
+			.text('Apps')
+			.on('click', () => {
+				// toggle button color and hide/show apps div 
+				app_btn_active = !app_btn_active
+				app_btn.transition().style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_holder
+					.style('display', app_btn_active ? 'none' : 'inline-block')
+					.transition()
+					.duration(500)
+					.style('display', app_btn_active ? 'inline-block' : 'none')
+			})
 	}	
 	
 	headbox.append('span').classed('sja_menuoption',true).style('padding',padw).style('border-radius','5px').text('Help').on('click',()=>{
