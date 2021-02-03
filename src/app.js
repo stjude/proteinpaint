@@ -159,10 +159,6 @@ export function runproteinpaint(arg) {
 			selectgenome = makeheader( app, data, arg.jwt )
 		}
 
-		if(arg.headerhtml) {
-			app.holder.append('div').html(arg.headerhtml)
-		}
-    
     app.holder0 = app.holder.append('div').style('margin','20px')
 
 		return parseembedthenurl(arg, app, selectgenome)
