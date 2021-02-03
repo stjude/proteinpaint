@@ -300,14 +300,36 @@ function makeheader(app, obj, jwt) {
 			.property('value',n)
 	}
 
-	headbox.append('span')
+	if(!obj.features.examples){
+		headbox.append('span')
+			.attr('class','sja_menuoption')
+			.style('padding',padw)
+			.style('border-radius','5px')
+			.text('Apps')
+			.on('click',()=>{
+				appmenu( app, headbox, selectgenome, jwt )
+			})
+	}else{
+		headbox.append('span')
 		.attr('class','sja_menuoption')
 		.style('padding',padw)
 		.style('border-radius','5px')
 		.text('Apps')
-		.on('click',()=>{
-			appmenu( app, headbox, selectgenome, jwt )
+		.on('click', async function(){
+			const p = d3event.target.getBoundingClientRect()
+			
+			const holder = headtip.clear()
+				.show(p.left-400,p.top+p.height+5)
+				.d
+				.append('div')
+				.style('padding','5px 20px')
+				.style('width','85vw')
+			
+			const _ = await import('./examples')
+			await _.init_examples({holder})
 		})
+	}	
+	
 	headbox.append('span').classed('sja_menuoption',true).style('padding',padw).style('border-radius','5px').text('Help').on('click',()=>{
 		const p=d3event.target.getBoundingClientRect()
 		const div=headtip.clear()
