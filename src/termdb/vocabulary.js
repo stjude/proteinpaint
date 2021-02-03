@@ -377,7 +377,7 @@ class FrontendVocab {
 	}
 }
 
-export function getVocabFromSamplesArray(samples) {
+export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 	const terms = {
 		__root: {
 			id: 'root',
@@ -396,9 +396,10 @@ export function getVocabFromSamplesArray(samples) {
 		for (const key in a.s) {
 			const value = a.s[key]
 			if (!terms[key]) {
+				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
 				terms[key] = {
 					id: key,
-					name: key,
+					name,
 					parent_id: null,
 					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
 					values: {},
