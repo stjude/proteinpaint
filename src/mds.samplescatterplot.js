@@ -272,7 +272,7 @@ async function get_data(obj) {
 			btnLabel: 'Filter',
 			emptyLabel: '+New Filter',
 			holder: obj.filterDiv.append('div'),
-			vocab: getVocabFromSamplesArray(ad.samples),
+			vocab: getVocabFromSamplesArray(ad),
 			//termdbConfig: opts.termdbConfig,
 			debug: true,
 			callback(filter) {
