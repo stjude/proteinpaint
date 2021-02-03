@@ -1,7 +1,10 @@
 node_modules
-.git
 package-lock.json
 *.tgz
 scripts
 tmpbuild
+tmppack
 p4
+
+# Exclude Dockerfile from context so changes don't bust the layer cache
+build/Dockerfile
