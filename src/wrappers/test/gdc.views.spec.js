@@ -38,7 +38,7 @@ tape('lolliplot', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 256
+	const numCircles = 274
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,
