@@ -101,103 +101,7 @@ function make_examples_page(holder) {
 		.style('padding', '10px')
 	return wrapper_div
 }
-
-// function make_header(div, args) {
-// 	const header_div = div.append('div')
-// 	header_div
-// 		.style('padding', '10px')
-// 		.style('margin', '0px')
-// 		.style('height', '125px')
-// 		.style('background-image', 'linear-gradient(to bottom right, #1b2646, #324870)')
-// 		.style('display', 'grid')
-// 		.style('grid-template-columns', '3fr 1fr 1fr')
-// 		.style('grid-template-areas', '"htext contactBtn requestBtn" "htext searchBar searchBar"')
-// 		.style('gap', '20px')
-
-// 	const htext = header_div.append('div')
-// 	htext
-// 		.style('grid-area', 'htext')
-// 		.style('top', '5%')
-// 		.style('float', 'left')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-weight', 'lighter')
-// 		.style('font-size', '30px')
-// 		.style('letter-spacing', '2.5px')
-// 		.style('align-items', 'left')
-// 		.style('justify-items', 'center')
-// 		.style('tab-size', '8')
-// 		.style('margin-left', '40px')
-// 		.style('color', 'white')
-// 		.html('GenomePaint, Genome Browser,<br><span class="tab"><span>and Other App Examples')
-
-// 	const contact_btn = header_div.append('button')
-// 	contact_btn
-// 		.attr('class', 'contact-btn')
-// 		.style('grid-area', 'contactBtn')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '14px')
-// 		.style('height', '30px')
-// 		.style('width', '220px')
-// 		.style('text-align', 'center')
-// 		.style('background-color', '#e6e7eb')
-// 		.style('border-radius', '8px')
-// 		.style('border', '1px solid black')
-// 		.style('margin', '10px')
-// 		.text('Contact Us')
-// 		.on('mouseover', () => {
-// 			contact_btn
-// 				.style('background-color', 'white')
-// 				.style('color', '#0d47ba')
-// 				.style('border', '1px solid #adb7c9')
-// 		})
-// 		.on('mouseleave', () => {
-// 			contact_btn
-// 				.style('background-color', '#e6e7eb')
-// 				.style('color', 'black')
-// 				.style('border', '1px solid black')
-// 		})
-// 		.on('click', () => {
-// 			window.location.href = 'mailto:PPTeam@STJUDE.ORG&subject=Inquiry from Examples Page'
-// 		})
-
-// 	const request_btn = header_div.append('button')
-// 	request_btn
-// 		.attr('class', 'request-btn')
-// 		.style('grid-area', 'requestBtn')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '14px')
-// 		.style('height', '30px')
-// 		.style('width', '220px')
-// 		.style('text-align', 'center')
-// 		.style('background-color', '#e6e7eb')
-// 		.style('border-radius', '8px')
-// 		.style('border', '1px black')
-// 		.style('border-style', 'solid')
-// 		.style('margin', '10px')
-// 		.text('Request hpc:~/tp Access')
-// 		.on('mouseover', () => {
-// 			request_btn
-// 				.style('background-color', 'white')
-// 				.style('color', '#0d47ba')
-// 				.style('border', '1px solid #adb7c9')
-// 		})
-// 		.on('mouseleave', () => {
-// 			request_btn
-// 				.style('background-color', '#e6e7eb')
-// 				.style('color', 'black')
-// 				.style('border', '1px solid black')
-// 		})
-// 		.on('click', () => {
-// 			window.open('https://stjude.service-now.com/sn_portal', '_blank')
-// 		})
-
-// 	const searchBar_div = header_div.append('div')
-// 	searchBar_div.style('grid-area', 'searchBar').property('position', 'relative')
-// 	make_searchbar(searchBar_div, args)
-
-// 	return [htext, request_btn, contact_btn, searchBar_div]
-// }
-
+//Makes search bar and functionality to search tracks
 function make_searchbar(div, args) {
 	const bar_div = div.append('div')
 	bar_div
@@ -244,88 +148,6 @@ function make_searchbar(div, args) {
 	return searchBar
 }
 
-//Creates intro header and paragraph with show/hide button before track grid
-// function make_intro(div) {
-// 	const intro_div = div.append('div')
-// 	intro_div.append('div').style('padding', '10px')
-
-// 	const intro_header = intro_div.append('div')
-// 	intro_header
-// 		.append('div')
-// 		.style('margin', '10px')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '20px')
-// 		.style('font-weight', '525')
-// 		.style('letter-spacing', '2px')
-// 		.style('text-align', 'center')
-// 		.style('border-radius', '4px')
-// 		.style('color', '#324870')
-// 		.text('Welcome to our Examples Page!')
-// 		.attr('class', 'intro_div')
-
-// 	const lists = intro_div.append('div')
-// 	lists
-// 		.append('div')
-// 		.attr('class', 'intro_div')
-// 		.style(
-// 			'font-family',
-// 			"'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif'"
-// 		)
-// 		.style('font-size', '14px')
-// 		.style('text-align', 'left')
-// 		.style('margin-left', '40px')
-// 		.style('margin-right', '40px').html(`
-//             <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Please note the following:
-//                 <ul style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; margin-left: 40px">
-//                     <li>To use your own files, you must have access to /research/rgs01/resgen/legacy/gb_customTracks/tp on the hpc. If you do not have access, click the button in the upper right-hand corner to request access in Service Now.</li>
-//                     <li>Questions? Comments? Use the Contact Us button to email the ProteinPaint team.</li>
-//                 </ul>
-//             </p>
-//             <p style="font-family: Verdana, Geneva, Tahoma, sans-serif;font-size: 16px; font-style: oblique; font-weight: 500;color: #324870">Links:
-//                 <ul style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; margin-left: 40px">
-//                     <li>Example: Opens a new tab of an embedded runproteinpaint() call in an html file.</li>
-//                     <li>URL: Some tracks do not require creating a new html or json file. For these tracks, a parameterized URL accesses files from the hpc. The link opens a new tab with an example of a parameterized URL.</li>
-//                     <li>Docs: Opens a new tab to the track's full documentation, such as: specifications and how to prepare data files for the tracks as well as the requirements for creating files for ProteinPaint. </li>
-//                 </ul>
-//             </p>`)
-
-// 	const showHideBtn = div.append('button')
-// 	showHideBtn
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '11px')
-// 		.style('height', '30px')
-// 		.style('width', '80px')
-// 		.style('text-align', 'center')
-// 		.style('background-color', '#e6e7eb')
-// 		.style('border-radius', '8px')
-// 		.style('border', 'none')
-// 		.style('margin-left', '40px')
-// 		.style('margin-top', '10px')
-// 		.attr('id', 'showHide')
-// 		.text('Show/Hide')
-// 		.on('mouseover', () => {
-// 			showHideBtn
-// 				.style('background-color', 'white')
-// 				.style('color', '#0d47ba')
-// 				.style('border', '1px solid #adb7c9')
-// 		})
-// 		.on('mouseleave', () => {
-// 			showHideBtn
-// 				.style('background-color', '#e6e7eb')
-// 				.style('color', 'black')
-// 				.style('border', '1px solid black')
-// 		})
-// 		.on('click', () => {
-// 			if (lists.style('display') == 'none' && intro_header.style('display') == 'none') {
-// 				lists.style('display', 'block') && intro_header.style('display', 'block')
-// 			} else {
-// 				lists.style('display', 'none') && intro_header.style('display', 'none')
-// 			}
-// 		})
-
-// 	return [intro_header, lists, showHideBtn]
-// }
-
 //Creates the two column outer grid
 function make_main_track_grid(div) {
 	const track_grid = div.append('div')
@@ -351,29 +173,8 @@ function make_gBrowserCol(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
-	// make_gBrowserHeader(gBrowserCol)
-
 	return gBrowserCol
 }
-
-// function make_gBrowserHeader(div) {
-// 	const gBrowserHeader = div.append('div')
-// 	gBrowserHeader
-// 		.append('div')
-// 		.style('padding', '10px')
-// 		.style('margin', '10px')
-// 		.style('color', 'white')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '20px')
-// 		.style('font-weight', '525')
-// 		.style('letter-spacing', '2px')
-// 		.style('text-align', 'center')
-// 		.style('background', 'radial-gradient( #1b2646, #324870)')
-// 		.style('border-radius', '4px')
-// 		.text('Genome Browser')
-
-// 	return gBrowserHeader
-// }
 
 //Standalone card for GenomePaint
 function make_gpaint_card(div) {
@@ -419,29 +220,8 @@ function make_appCol(div) {
 		.style('background-color', 'white')
 		.style('border-radius', '20px')
 
-	// make_otherAppHeader(otherAppsCol)
-
 	return otherAppsCol
 }
-
-// function make_otherAppHeader(div) {
-// 	const otherAppHeader = div.append('div')
-// 	otherAppHeader
-// 		.append('div')
-// 		.style('padding', '10px')
-// 		.style('margin', '10px')
-// 		.style('color', 'white')
-// 		.style('font-family', 'Verdana, Geneva, Tahoma, sans-serif')
-// 		.style('font-size', '20px')
-// 		.style('font-weight', '525')
-// 		.style('letter-spacing', '2px')
-// 		.style('text-align', 'center')
-// 		.style('background', 'radial-gradient( #1b2646, #324870)')
-// 		.style('border-radius', '4px')
-// 		.text('Other Apps')
-
-// 	return otherAppHeader
-// }
 
 async function loadJson() {
 	const json = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
@@ -460,6 +240,9 @@ async function loadTracks(args) {
 }
 //TODO: ?? Styling difference between clickable tiles and not clickable tiles (which ones have examples and which don't)??
 
+//For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
+
+//Displays tracks under the GenomePaint subheader.
 function displayGPaintTracks(tracks, holder) {
 	holder.selectAll('*').remove()
 	const trackData = tracks.filter(track => {
@@ -495,6 +278,7 @@ function displayGPaintTracks(tracks, holder) {
 	})
 }
 
+//Displays tracks under the Genome Browser subheader
 function displayBrowserTracks(tracks, holder) {
 	holder.selectAll('*').remove()
 	const trackData = tracks.filter(track => {
@@ -530,6 +314,7 @@ function displayBrowserTracks(tracks, holder) {
 	})
 }
 
+//Displays tracks under the Experimental Tracks subheader
 function displayExperimentalTracks(tracks, holder) {
 	holder.selectAll('*').remove()
 	const trackData = tracks.filter(track => {
@@ -565,6 +350,7 @@ function displayExperimentalTracks(tracks, holder) {
 	})
 }
 
+//Displays tracks under the Apps subheader
 async function displayAppTracks(tracks, holder) {
 	holder.selectAll('*').remove()
 	const trackData = tracks.filter(track => {
@@ -601,7 +387,8 @@ async function displayAppTracks(tracks, holder) {
 }
 
 //TODO: Change function to load into container once the cascading container design is figured out.
-
+//TODO: styling for the container
+//Opens example of app in landing page container
 async function openNewTab(track) {
 	const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
 	const contents = `<!DOCTYPE html>
@@ -610,11 +397,9 @@ async function openNewTab(track) {
 			</head>
 			<body>
 			<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
-				<div class="header">
-					<h1 id="track-example-header">${track.name} Example</h1>
+				<div id="aaa" style="margin:20px">
+				<h1 class="header" id="track-example-header">${track.name} Example</h1>
 				</div>
-				<div id="aaa" style="margin:20px"</div>
-				<script src="/examples.js"></script> <!--??? Not the right file path??? Does not load but maybe not needed?-->
 			<script>
 				runproteinpaint({
                     host: '${window.location.origin}',
