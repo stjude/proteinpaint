@@ -307,7 +307,8 @@ function makeheader(app, obj, jwt) {
 				appmenu( app, headbox, selectgenome, jwt )
 			})
 	}else{
-		let app_btn_active = true
+		// show 'apps' div only when url is barbone without any paramerters or example page
+		let app_btn_active = window.location.pathname == '/' ? true : false
 
 		const app_holder = app_row
 				.append('div')
@@ -680,6 +681,7 @@ async function parseembedthenurl(arg, app, selectgenome) {
 
 	if(arg.mdssamplescatterplot) {
 		if(arg.genome) arg.mdssamplescatterplot.genome = arg.genome
+		if(arg.hide_subtype_legend) arg.mdssamplescatterplot.hide_subtype_legend = arg.hide_subtype_legend
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
 		return
 	}
