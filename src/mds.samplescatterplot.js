@@ -876,7 +876,6 @@ level 1 is not colored
 level 2 is colored and based on sample_attributes[L2key].values{}
 */
 function legend_attr_levels(obj) {
-	console.log(obj)
 	const staydiv = obj.legendtable
 		.append('tr')
 		.append('td')

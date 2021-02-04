@@ -681,7 +681,6 @@ async function parseembedthenurl(arg, app, selectgenome) {
 
 	if(arg.mdssamplescatterplot) {
 		if(arg.genome) arg.mdssamplescatterplot.genome = arg.genome
-		if(arg.hide_subtype_legend) arg.mdssamplescatterplot.hide_subtype_legend = arg.hide_subtype_legend
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
 		return
 	}
