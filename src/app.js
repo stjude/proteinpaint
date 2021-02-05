@@ -185,7 +185,8 @@ function makeheader(app, obj, jwt) {
 	const headbox=row.append('div')
 		.style('margin','10px')
 		.style('padding-right','10px')
-		.style('display','inline-block')
+		.style('display','initial')
+		.style('padding', '15px 10px')
 		.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
 		.style('border-radius','5px')
 		.style('background-color','rgba('+color.r+','+color.g+','+color.b+',.1)')
@@ -312,7 +313,7 @@ function makeheader(app, obj, jwt) {
 
 		const app_holder = app_row
 				.append('div')
-				.style('margin','10px')
+				.style('margin','-2px 10px')
 				.style('padding-right','10px')
 				.style('display', app_btn_active ? 'inline-block' : 'none')
 				.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
@@ -330,14 +331,20 @@ function makeheader(app, obj, jwt) {
 			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			.style('padding',padw)
-			.style('border-radius','5px')
+			.style('display', 'inline-block')
+			.style('border-radius',app_btn_active ? '5px 5px 0 0' : '5px')
+			.style('height', app_btn_active ? '35px' : '17px')
 			.text('Apps')
 			.on('click', () => {
 				// toggle button color and hide/show apps div 
 				app_btn_active = !app_btn_active
-				app_btn.transition().style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_btn
+					.transition()
+					.duration(500)
+					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+					.style('border-radius',app_btn_active ? '5px 5px 0 0' : '5px')
+					.style('height', app_btn_active ? '35px' : '17px')
 				app_holder
-					.style('display', app_btn_active ? 'none' : 'inline-block')
 					.transition()
 					.duration(500)
 					.style('display', app_btn_active ? 'inline-block' : 'none')
