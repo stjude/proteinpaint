@@ -185,8 +185,7 @@ function makeheader(app, obj, jwt) {
 	const headbox=row.append('div')
 		.style('margin','10px')
 		.style('padding-right','10px')
-		.style('display','initial')
-		.style('padding', '15px 10px')
+		.style('display','inline-block')
 		.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
 		.style('border-radius','5px')
 		.style('background-color','rgba('+color.r+','+color.g+','+color.b+',.1)')
@@ -311,44 +310,56 @@ function makeheader(app, obj, jwt) {
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
 			? true : false
+		let apps_rendered = false 
 
 		const app_holder = app_row
 				.append('div')
-				.style('margin','-2px 10px')
+				.style('margin','10px')
 				.style('padding-right','10px')
 				.style('display', app_btn_active ? 'inline-block' : 'none')
-				.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
+				.style('background-color', '#f2f2f2')
 				.style('border-radius','5px')
 				.style('width','85vw')
 
 		async function load_app_div(){
+			if(apps_rendered) return
+			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({holder: app_holder})
 		}
 
-		load_app_div()
+		if(app_btn_active) load_app_div()
 
 		const app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
 			.style('padding',padw)
-			.style('display', 'inline-block')
-			.style('border-radius',app_btn_active ? '5px 5px 0 0' : '5px')
-			.style('height', app_btn_active ? '35px' : '17px')
+			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
 				// toggle button color and hide/show apps div 
 				app_btn_active = !app_btn_active
+				load_app_div()
+
 				app_btn
 					.transition()
 					.duration(500)
 					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-					.style('border-radius',app_btn_active ? '5px 5px 0 0' : '5px')
-					.style('height', app_btn_active ? '35px' : '17px')
+					.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+					.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+
 				app_holder
 					.transition()
 					.duration(500)
 					.style('display', app_btn_active ? 'inline-block' : 'none')
+			})
+			.on('mouseover', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+			})
+			.on('mouseout', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			})
 	}	
 	
