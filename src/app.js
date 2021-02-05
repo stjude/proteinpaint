@@ -309,7 +309,8 @@ function makeheader(app, obj, jwt) {
 			})
 	}else{
 		// show 'apps' div only when url is barbone without any paramerters or example page
-		let app_btn_active = window.location.pathname == '/' ? true : false
+		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
+			? true : false
 
 		const app_holder = app_row
 				.append('div')
