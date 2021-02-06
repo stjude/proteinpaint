@@ -8,6 +8,8 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
+const basecolor = require('../src/common')
+const jStat = require('jStat').jStat
 
 /*
 XXX quick fix to be removed/disabled later
@@ -206,7 +208,6 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 
 const serverconfig = require('./serverconfig')
 const samtools = serverconfig.samtools || 'samtools'
-const sambamba = serverconfig.sambamba || 'sambamba'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -221,9 +222,7 @@ module.exports = genomes => {
 			}
 
 			const q = await get_q(genome, req)
-			//get_coverage(q,req) // Run this function to get coverage/pilup plot data
-			res.send(await do_query(q))
-			//console.log("q:",q)
+			res.send(await do_query(q, req))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -231,107 +230,292 @@ module.exports = genomes => {
 	}
 }
 
-async function get_coverage(q, req) {
-	const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
-	const ref_seq = (await utils.get_fasta(
-		q.genome,
-		coverage_input.chr +
-			':' +
-			parseInt(coverage_input.start).toString() +
-			'-' +
-			parseInt(coverage_input.stop).toString()
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
+async function get_pileup(q, req, templates) {
+	const zoom_cutoff = 1 // Variable determining if alternate alleles should be displayed or not in pileup plot
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
+	const totalcolor = 'rgb(192,192,192)' //Ref-grey
+	const ctx = canvas.getContext('2d')
+	let maxValue = 0
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 
-	const coverage_plot_str = await run_sambamba(
-		q.file,
-		coverage_input.chr.replace('chr', ''),
-		coverage_input.start,
-		coverage_input.stop
-	)
-	//console.log('coverage_plot_str:', coverage_plot_str)
-	let total_cov = []
-	let As_cov = []
-	let Cs_cov = []
-	let Gs_cov = []
-	let Ts_cov = []
-	let ref_cov = []
-	let first_iter = 1
-	let consensus_seq = ''
-	let seq_iter = 0
-	for (const line of coverage_plot_str.split('\n')) {
-		if (first_iter == 1) {
-			first_iter = 0
-		} else if (line.length == 0) {
-			continue
-		} else {
-			const columns = line.split('\t')
-			total_cov.push(parseInt(columns[2]))
-			const max_value = Math.max(parseInt(columns[3]), parseInt(columns[4]), parseInt(columns[5]), parseInt(columns[6]))
-			if (max_value == parseInt(columns[3])) {
-				// Look into this
-				consensus_seq += 'A'
-			}
-			if (max_value == parseInt(columns[4])) {
-				consensus_seq += 'C'
-			}
-			if (max_value == parseInt(columns[5])) {
-				consensus_seq += 'G'
-			}
-			if (max_value == parseInt(columns[6])) {
-				consensus_seq += 'T'
-			}
+	const bplst = new Array(q.regions.entries().length)
+	// Computing maxValue from all regions
 
-			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
-			if (ref_seq[seq_iter] == 'A') {
-				As_cov.push(0)
-				ref_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter] == 'C') {
-				As_cov.push(parseInt(columns[3]))
-				ref_cov.push(parseInt(columns[4]))
-				Cs_cov.push(0)
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter] == 'G') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				ref_cov.push(parseInt(columns[5]))
-				Gs_cov.push(0)
-				Ts_cov.push(parseInt(columns[6]))
-			}
-			if (ref_seq[seq_iter] == 'T') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				ref_cov.push(parseInt(columns[6]))
-				Ts_cov.push(0)
-			}
-			seq_iter += 1
+	for (const [ridx, r] of q.regions.entries()) {
+		bplst[ridx] = await run_samtools_depth(q, r)
+		let max_value_region = Math.max(...bplst[ridx].map(i => i.total))
+		if (max_value_region > maxValue) {
+			maxValue = max_value_region
 		}
 	}
-	console.log('ref_seq:', ref_seq)
-	//console.log('ref_seq length:', ref_seq.length)
-	console.log('con_seq:', consensus_seq)
-	//console.log('consensus length:', consensus_seq.length)
 
-	const coverage_data = {
-		total_cov: total_cov,
-		As_cov: As_cov,
-		Cs_cov: Cs_cov,
-		Gs_cov: Gs_cov,
-		Ts_cov: Ts_cov,
-		ref_cov: ref_cov,
-		ref_seq: ref_seq
+	for (const [ridx, r] of q.regions.entries()) {
+		//console.log('r.ntwidth:', r.ntwidth)
+		//console.log('q.devicePixelRatio:', q.devicePixelRatio)
+		// each ele is {}
+		// .position
+		// .total/A/T/C/G/refskip
+
+		let y = 0
+		const sf = q.pileupheight / maxValue
+		let i = 0
+		if (r.ntwidth >= zoom_cutoff) {
+			// For deciding whether SNV/softclip pileup should be shown or not
+			softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
+			for (const bp of bplst[ridx]) {
+				const x = (bp.position - r.start + 1) * r.ntwidth
+				y = 0
+				if (bp.A) {
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.A //'rgb(220,20,60)'
+					const h = bp.A * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.C) {
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.C //'rgb(0,100,0)'
+					const h = bp.C * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.G) {
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.G //'rgb(255,20,147)'
+					const h = bp.G * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.T) {
+					ctx.fillStyle = 'rgb(220,20,60)' // basecolor.basecolor.T //'rgb(0,0,255)'
+					const h = bp.T * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				// Rendering soft clips
+				//if (bp.softclip) {
+				//	ctx.fillStyle = 'rgb(70,130,180)'
+				//	const h = bp.softclip * sf
+				//	ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+				//	y += h
+				//}
+
+				if (bp.softclipA) {
+					ctx.fillStyle = basecolor.basecolor.A
+					const h = bp.softclipA * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipT) {
+					ctx.fillStyle = basecolor.basecolor.T
+					const h = bp.softclipT * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipC) {
+					ctx.fillStyle = basecolor.basecolor.C
+					const h = bp.softclipC * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				if (bp.softclipG) {
+					ctx.fillStyle = basecolor.basecolor.G
+					const h = bp.softclipG * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+				// Rendering reference allele
+				{
+					ctx.fillStyle = 'rgb(192,192,192)'
+					const h = bp.ref * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+				}
+				i += 1
+			}
+		} else {
+			for (const bp of bplst[ridx]) {
+				const x = (bp.position - r.start + 1) * r.ntwidth
+				y = 0
+				if (bp.softclip) {
+					ctx.fillStyle = 'rgb(70,130,180)'
+					const h = bp.softclip * sf
+					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+					y += h
+				}
+
+				ctx.fillStyle = 'rgb(192,192,192)'
+				const h = bp.total * sf
+				ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+			}
+		}
 	}
-	q.coverage_data = coverage_data
+	const pileup_data = {
+		width: q.canvaswidth,
+		height: q.pileupheight,
+		maxValue: maxValue,
+		src: canvas.toDataURL()
+	}
+	q.pileup_data = pileup_data
+}
+
+function softclip_mismatch_pileup(ridx, r, templates, bplst) {
+	// for a region, use segments from this region to add mismatches to bplst depth
+	let bp_iter = 0
+	//console.log('bplst:', bplst)
+	for (const template of templates) {
+		for (const segment of template.segments) {
+			if (segment.ridx != ridx || Math.max(segment.segstart, r.start) > Math.min(segment.segstop, r.stop)) {
+				// segment not in this region
+				continue
+			}
+			// no need to parseInt as these are already integers
+			bp_iter = segment.segstart - bplst[0].position - 1 // Records position in the view range
+			let first_element_of_cigar = 1
+			// i haven't reviewed logic below. if bplst[] contains bins, then here should update as well.
+			for (const box of segment.boxes) {
+				if (box.opr == 'S' || box.opr == 'I') {
+					// Checking to see if the first element of cigar is softclip or not
+					if (first_element_of_cigar == 1) {
+						bp_iter = bp_iter - box.len
+						first_element_of_cigar = 0
+					}
+					// Calculating soft-clip pileup here
+					for (let j = bp_iter; j < box.len + bp_iter; j++) {
+						if (j < 0) {
+							continue
+						} // When a read starts before the current view range
+						else if (j > r.stop - bplst[0].position - 2) {
+							break
+						} // When a read extends beyond current view range
+						else {
+							if (!bplst[j].softclip) {
+								bplst[j].softclip = 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
+							} else {
+								bplst[j].softclip += 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
+							}
+
+							// Check to see if softclip is reference allele or not
+							//if (box.s) {
+							//if (refseq[j] != box.s[j - bp_iter]) {
+							if (box.s[j - bp_iter] == 'A') {
+								if (!bplst[j].softclipA) {
+									bplst[j].softclipA = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipA += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'T') {
+								if (!bplst[j].softclipT) {
+									bplst[j].softclipT = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipT += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'C') {
+								if (!bplst[j].softclipC) {
+									bplst[j].softclipC = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipC += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'G') {
+								if (!bplst[j].softclipG) {
+									bplst[j].softclipG = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipG += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+						}
+					}
+					bp_iter += box.len
+					continue
+				} else {
+					bp_iter += box.len
+					first_element_of_cigar = 0
+				}
+			}
+
+			for (let i = 0; i < segment.boxes.length; i++) {
+				if (segment.boxes[i].opr == 'X') {
+					//console.log("segment.boxes[i]:",template.segment.boxes[i])
+					bp_iter = segment.boxes[i].start - bplst[0].position - 1 // Records position in the view range
+					//console.log("r.start:",r.start)
+					//console.log("bp_iter:",bp_iter)
+					if (bp_iter >= 0 && r.stop - bplst[0].position - 2 >= bp_iter) {
+						// Checking to see if the variant is within the view range
+						if (segment.boxes[i].s == 'A') {
+							if (!bplst[bp_iter].A) {
+								bplst[bp_iter].A = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].A += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'T') {
+							if (!bplst[bp_iter].T) {
+								bplst[bp_iter].T = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].T += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'C') {
+							if (!bplst[bp_iter].C) {
+								bplst[bp_iter].C = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].C += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'G') {
+							if (!bplst[bp_iter].G) {
+								bplst[bp_iter].G = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].G += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 async function get_q(genome, req) {
@@ -349,6 +533,10 @@ async function get_q(genome, req) {
 	}
 	if (isurl) {
 		q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
+	}
+	if (req.query.pileupheight) {
+		q.pileupheight = Number(req.query.pileupheight)
+		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
 		const t = req.query.variant.split('.')
@@ -411,7 +599,7 @@ async function get_q(genome, req) {
 	return q
 }
 
-async function do_query(q) {
+async function do_query(q, req) {
 	await query_reads(q)
 	delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
@@ -487,7 +675,11 @@ async function do_query(q) {
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-	result.coverage_data = q.coverage_data
+	if (req.query.stackstart == undefined) {
+		// Check to see if this request is not to show partstack
+		await get_pileup(q, req, templates) // Run this function to get pilup plot data
+		result.pileup_data = q.pileup_data
+	}
 	return result
 }
 
@@ -509,7 +701,6 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
-		//const outfile = await create_coverage_plot(r, q)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -549,27 +740,73 @@ function query_region(r, q) {
 	})
 }
 
-function run_sambamba(bam_file, chr, start, stop) {
-	// function for creating the
+function run_samtools_depth(q, r) {
+	// "samtools depth" returns single base depth
+	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3, then bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
+	const bplst = []
 	return new Promise((resolve, reject) => {
-		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
-
-		const ls = spawn(sambamba, ['depth', 'base', bam_file, '-L', chr + ':' + start + '-' + stop])
-
-		ls.stdout.on('data', function(data) {
-			//Here is where the output goes
-			data = data.toString()
-			//console.log('stdout: ' + data)
-			resolve(data)
+		console.log(
+			'samtools depth ' +
+				(q.file || q.url) +
+				' -r ' +
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) +
+				':' +
+				r.start +
+				'-' +
+				r.stop
+		)
+		const ls = spawn(
+			samtools,
+			['depth', q.file || q.url, '-r', (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ls.stdout })
+		let first = true
+		let consensus_seq = ''
+		rl.on('line', line => {
+			//console.log(line)
+			const columns = line.split('\t')
+			const bp = {
+				total: Number.parseInt(columns[2]),
+				position: Number.parseInt(columns[1]) - 2,
+				ref: Number.parseInt(columns[2])
+			}
+			bplst.push(bp)
 		})
-
-		ls.stderr.on('data', data => {
-			console.log(`stderr: ${data}`)
-		})
-
-		ls.on('close', code => {
-			console.log(`child process exited with code ${code}`)
-			resolve('')
+		rl.on('close', () => {
+			if (r.ntwidth < 1) {
+				// Checking whether there are multiple nucleotides per pixel
+				const num_nucleotides = Math.round(1 / r.ntwidth) // Number of nucleotides per pixel
+				const nucleotide_iteration = Math.floor(bplst.length / num_nucleotides)
+				const nucleotide_remainder = bplst.length % num_nucleotides
+				const bplst_new = []
+				for (let i = 0; i < nucleotide_iteration; i++) {
+					const nucleotide_list = []
+					for (let j = 0; j < num_nucleotides; j++) {
+						nucleotide_list.push(bplst[i * num_nucleotides + j].total)
+					}
+					const bp = {
+						total: jStat.mean(nucleotide_list),
+						position: bplst[i * num_nucleotides].position
+					}
+					bplst_new.push(bp)
+				}
+				// Iterating through the remainder of base-pairs
+				if (nucleotide_remainder > 0) {
+					const nucleotide_list = []
+					for (let j = 0; j < nucleotide_remainder; j++) {
+						nucleotide_list.push(bplst[(nucleotide_iteration - 1) * num_nucleotides + j].total)
+					}
+					const bp = {
+						total: jStat.mean(nucleotide_list),
+						position: bplst[(nucleotide_iteration - 1) * num_nucleotides].position
+					}
+					bplst_new.push(bp)
+				}
+				resolve(bplst_new)
+			} else {
+				resolve(bplst)
+			}
 		})
 	})
 }
@@ -598,6 +835,7 @@ async function may_checkrefseq4mismatch(templates, q) {
 				}
 			}
 			if (mismatches.length) segment.boxes.push(...mismatches)
+			//console.log("segment.boxes:",segment.boxes)
 		}
 	}
 	// attr no longer needed
@@ -790,6 +1028,7 @@ may skip insertion if on screen width shorter than minimum width
 		return
 	}
 	const segstart = segstart_1based - 1
+	//console.log("segstart:",segstart," cigar:",cigarstr)
 
 	if (cigarstr == '*') {
 		return
@@ -1054,9 +1293,9 @@ at the end, set q.canvasheight
 					// insertion has been decided to be visible so always get seq
 					b.s = segment.seq.substr(b.cidx, b.len)
 				} else if (b.opr == 'X' || b.opr == 'S') {
-					if (r.to_printnt) {
-						b.s = segment.seq.substr(b.cidx, b.len)
-					}
+					//if (r.to_printnt) {
+					b.s = segment.seq.substr(b.cidx, b.len)
+					//}
 				}
 				delete b.cidx
 			}
@@ -1263,6 +1502,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
+	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P') continue // do not handle

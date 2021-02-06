@@ -10,10 +10,7 @@ module.exports = {
 			samplekey: 'bcr_patient_barcode'
 		},
 		sampleattribute: {
-			lst: [
-				{ k: 'race', label: 'Race' },
-				{ k: 'histologic_diagnosis', label: 'Histology' }
-			]
+			lst: [{ k: 'race', label: 'Race' }, { k: 'histologic_diagnosis', label: 'Histology' }]
 		},
 		fbarfg: '#9F80FF',
 		fbarbg: '#ECE5FF',

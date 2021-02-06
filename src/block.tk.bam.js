@@ -4,8 +4,6 @@ import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
 import url2map from './url2map'
-import { renderScatter } from './scatter'
-//import * as d3 from 'd3'
 
 /*
 
@@ -135,7 +133,13 @@ export async function loadTk(tk, block) {
 }
 
 async function getData(tk, block, additional = []) {
-	const lst = ['genome=' + block.genome.name, 'regions=' + JSON.stringify(tk.regions), ...additional]
+	const lst = [
+		'genome=' + block.genome.name,
+		'regions=' + JSON.stringify(tk.regions),
+		'nucleotide_length=' + block.exonsf,
+		'pileupheight=' + tk.pileupheight,
+		...additional
+	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
@@ -163,18 +167,35 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 	tk.nochr = data.nochr
-	console.log('data.groups', data.groups)
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			tk.groups.push(makeGroup(g, tk, block))
+			tk.groups.push(makeGroup(g, tk, block, data))
 		}
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
-	//plot_coverage(data, tk, block)
+
+	if (data.pileup_data) {
+		tk.dom.pileup_img
+			.attr('xlink:href', data.pileup_data.src)
+			.attr('width', data.pileup_data.width)
+			.attr('height', tk.pileupheight)
+	}
+
+	// Plotting the y-axis for the pileup plot
+	tk.dom.pileup_axis.selectAll('*').remove()
+	const scale = scaleLinear()
+		.domain([0, data.pileup_data.maxValue])
+		.range([data.pileup_data.height, 0])
+	client.axisstyle({
+		axis: tk.dom.pileup_axis.call(axisRight().scale(scale)),
+		color: 'black',
+		showline: true
+	})
+
 	may_render_variant(data, tk, block)
-	setTkHeight(tk)
+	setTkHeight(tk, data)
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
@@ -193,26 +214,6 @@ or update existing groups, in which groupidx will be provided
 		})
 	block.setllabel()
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
-}
-
-function plot_coverage(data, tk, block) {
-	//console.log("tk:",tk)
-	console.log('data:', data)
-	//	const coverage_plot = {
-	//		data: data,
-	//		dom: {
-	//			imgg: tk.glider.append('g'),
-	//			vslider: {
-	//				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
-	//			}
-	//		}
-	//	}
-	//        const coverage_stay=document.createElement('img')
-	//	coverage_plot.img_stay = tk.dom.vsliderg
-	//		.append('image')
-	//		.attr('xlink:href', "coverage_stay")
-	//		.attr('width', tk.dom.coverageplotwidth)
-	//		.attr('height', tk.dom.coverageplotheight)
 }
 
 function may_render_variant(data, tk, block) {
@@ -240,7 +241,7 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('rect')
 		.attr('x', x1)
-		.attr('y', 0)
+		.attr('y', data.pileup_data.height + 10) // This value pushes the variant bar downwards/upwards
 		.attr('width', x2 - x1)
 		.attr('height', tk.dom.variantrowheight - 2)
 
@@ -262,7 +263,7 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('text')
 		.attr('x', variant_start_text_pos)
-		.attr('y', 15)
+		.attr('y', data.pileup_data.height + 25)
 		.attr('dy', '.10em')
 		.text(variant_string)
 	// TODO show variant info alongside box
@@ -287,16 +288,16 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
-			.attr('y', 15)
+			.attr('y', data.pileup_data.height + 25)
 			.style('fill', 'red')
 			.attr('dy', '.10em')
 			.text(text_string)
 	}
 }
 
-function setTkHeight(tk) {
+function setTkHeight(tk, data) {
 	// call after any group is updated
-	let h = 0 //tk.dom.coverageplotheight
+	let h = data.pileup_data.height + 15 //tk.dom.pileupplotheight
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight
 	}
@@ -379,15 +380,19 @@ function makeTk(tk, block) {
 	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 	// <g> of each group is added dynamically to glider
+	tk.pileupheight = 100
+
 	tk.dom = {
+		pileup_g: tk.glider.append('g'),
+		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
+	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
+
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 20
-		tk.dom.coverageplotheight = 250
-		tk.dom.coverageplotwidth = 100
 	}
 	tk.asPaired = false
 
@@ -423,7 +428,7 @@ function may_addvariant(tk) {
 	}
 }
 
-function makeGroup(gd, tk, block) {
+function makeGroup(gd, tk, block, data) {
 	// make a group object using returned data for this group, and show tk image
 	const group = {
 		data: gd,
@@ -487,7 +492,7 @@ function makeGroup(gd, tk, block) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
-				enter_partstack(group, tk, block, my - group.data.messagerowheights)
+				enter_partstack(group, tk, block, my - group.data.messagerowheights, data)
 				return
 			}
 			if (!group.data.templatebox) return
@@ -544,7 +549,7 @@ function makeGroup(gd, tk, block) {
 			delete group.partstack
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
-			setTkHeight(tk)
+			setTkHeight(tk, data)
 			block.block_setheight()
 		})
 	group.dom.vslider.boxg = group.dom.vslider.g.append('g')
@@ -591,7 +596,7 @@ function makeGroup(gd, tk, block) {
 				])
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
-				setTkHeight(tk)
+				setTkHeight(tk, data)
 				block.tkcloakoff(tk, {})
 				block.block_setheight()
 			})
@@ -700,9 +705,10 @@ function configPanel(tk, block) {
 		tk.kmerScorePlotBtn
 			.append('button')
 			.html('Plot KMER scores')
-			.on('click', () => {
+			.on('click', async () => {
 				const scatterpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
-				renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
+				const _ = await import('./scatter')
+				_.renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
 			})
 	}
 
@@ -1007,7 +1013,7 @@ function show_blatresult2(hits, div, tk, block) {
 	}
 }
 
-async function enter_partstack(group, tk, block, y) {
+async function enter_partstack(group, tk, block, y, data) {
 	/* for a group, enter part stack mode rom full stack mode
 	will only update data and rendering of this group, but not other groups
 	*/
@@ -1041,7 +1047,7 @@ async function enter_partstack(group, tk, block, y) {
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 
-	setTkHeight(tk)
+	setTkHeight(tk, data)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
 }

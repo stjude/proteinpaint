@@ -2,7 +2,7 @@ const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
-// const fs = require('fs')
+const fs = require('fs')
 
 export async function match_complexvariant(templates, q) {
 	// TODO
@@ -13,7 +13,7 @@ export async function match_complexvariant(templates, q) {
 	if (q.variant.ref != '-') {
 		final_ref = q.variant.ref
 	} else {
-		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2)))
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
 			.split('\n')
 			.slice(1)
 			.join('')
@@ -25,33 +25,40 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
-	const leftflankseq = (
-		await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos)
+
+	console.log(
+		'q.variant.pos:',
+		q.variant.pos,
+		',segbplen:',
+		segbplen,
+		',variant:',
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
 	)
+	const leftflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
+	))
+
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
-	const rightflankseq = (
-		await utils.get_fasta(
-			q.genome,
-			q.variant.chr +
-				':' +
-				(q.variant.pos + final_ref.length + 1) +
-				'-' +
-				(q.variant.pos + segbplen + final_ref.length + 1)
-		)
-	)
+	const rightflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr +
+			':' +
+			(q.variant.pos + final_ref.length + 1) +
+			'-' +
+			(q.variant.pos + segbplen + final_ref.length + 1)
+	))
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
-	const refseq = (
-		await utils.get_fasta(
-			q.genome,
-			q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
-		)
-	)
+	const refseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+	))
 		.split('\n')
 		.slice(1)
 		.join('')
@@ -68,6 +75,22 @@ export async function match_complexvariant(templates, q) {
 	const altseq = leftflankseq + altallele + rightflankseq
 
 	// console.log(refallele,altallele,refseq,altseq)
+
+	const file = fs.createWriteStream(
+		// Creating output for the rust implementation
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt + '.txt'
+	)
+	file.on('error', function(err) {
+		/* error handling */
+		console.log('Something not right with file creation')
+	})
+
+	file.write(refseq + '\n')
+	file.write(altseq + '\n')
+	for (const template of templates) {
+		file.write(template.segments[0].seq + '\n')
+	}
+	file.end()
 
 	//----------------------------------------------------------------------------
 
@@ -166,6 +189,7 @@ export async function match_complexvariant(templates, q) {
 	const alt_scores = []
 	let i = 0
 	for (const template of templates) {
+		// Looking at individual reads from here
 		const read_seq = template.segments[0].seq
 		// let cigar_seq = template.segments[0].cigarstr
 		const read_kmers = build_kmers(read_seq, kmer_length)
@@ -188,7 +212,7 @@ export async function match_complexvariant(templates, q) {
 		)
 		//console.log("ref comparison:",ref_comparison,"alt comparison:",alt_comparison)
 		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
-		const diff_score = alt_comparison - ref_comparison
+		const diff_score = alt_comparison - ref_comparison // Is the read more similar to reference sequence or alternate sequence
 		kmer_diff_scores.push(diff_score)
 		ref_comparisons.push(ref_comparison)
 		alt_comparisons.push(alt_comparison)
@@ -217,7 +241,7 @@ export async function match_complexvariant(templates, q) {
 
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
-	let kmer_diff_scores_input = []
+	const kmer_diff_scores_input = []
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
@@ -316,7 +340,7 @@ function build_kmers(sequence, kmer_length) {
 	const num_iterations = sequence.length - kmer_length + 1
 	// console.log(sequence)
 
-	let kmers = []
+	const kmers = []
 	for (let i = 0; i < num_iterations; i++) {
 		const subseq = sequence.substr(i, kmer_length)
 		// console.log(i,kmer)
@@ -338,7 +362,7 @@ function build_kmers_refalt(
 ) {
 	const num_iterations = sequence.length - kmer_length + 1
 	// console.log(sequence)
-	let kmers = []
+	const kmers = []
 	let kmer_start = left_most_pos
 	let kmer_stop = kmer_start + kmer_length
 	for (let i = 0; i < num_iterations; i++) {
@@ -370,7 +394,7 @@ function build_kmers_refalt(
 	const kmers_nodup = Array.from(new Set([...kmers.map(x => x.sequence)]))
 	//console.log("kmers_nodup length:",kmers_nodup.length)
 
-	let kmers2 = []
+	const kmers2 = []
 	for (const kmer of kmers_nodup) {
 		// Calulating mean of scores for each kmer
 		const kmer_values = kmers.filter(i => i.sequence == kmer).map(x => x.value)
@@ -382,7 +406,7 @@ function build_kmers_refalt(
 		kmers2.push(input_items)
 	}
 
-	let kmers3 = []
+	const kmers3 = []
 	for (const kmer of kmers) {
 		const kmer_values = kmers2.filter(i => i.sequence == kmer.sequence).map(x => x.value)
 		const kmer_value = kmer_values[0]
@@ -444,7 +468,7 @@ function jaccard_similarity_weights(
 		kmers1_weight += score * kmer1_freq
 	}
 	//console.log("kmers1_weight:",kmers1_weight," kmers2_weight", kmers2_weight," intersection weight:",intersection_weight)
-	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight)
+	return intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Outputting jaccard similarity
 }
 
 function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
@@ -452,7 +476,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 	// console.log(kmer_diff_scores)
 
 	let start_point = kmer_diff_scores.length - 1
-	let indices = []
+	const indices = []
 	let slope = 0
 	let is_a_line = 1
 	if (kmer_diff_scores.length > 1) {
@@ -478,7 +502,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 	} else {
 		// The points are in the shape of a curve
 		console.log('start point:', start_point)
-		let kmer_diff_scores_input = []
+		const kmer_diff_scores_input = []
 		for (let i = 0; i <= start_point; i++) {
 			kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
 		}
@@ -487,16 +511,16 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		const max_value = [start_point, kmer_diff_scores[start_point].value]
 		console.log('max_value:', max_value)
 
-		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0])
+		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0]) // m=(y2-y1)/(x2-x1)
 		console.log('Slope of line:', slope_of_line)
-		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line
+		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line // c=y-m*x
 
-		let distances_from_line = []
+		const distances_from_line = []
 		for (let i = 0; i < kmer_diff_scores_input.length; i++) {
 			distances_from_line.push(
 				Math.abs(slope_of_line * kmer_diff_scores_input[i][0] - kmer_diff_scores_input[i][1] + intercept_of_line) /
 					Math.sqrt(1 + slope_of_line * slope_of_line)
-			) // distance = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+			) // distance of a point from line = abs(a*x+b*y+c)/sqrt(a^2+b^2)
 		}
 		const array_maximum = Math.max(...distances_from_line)
 		// console.log("Array maximum:",array_maximum)

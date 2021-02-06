@@ -652,11 +652,7 @@ function showgeneplot(tk, block, gene) {
 							}
 							const p = d3event.target.getBoundingClientRect()
 							tk.tktip.clear().show(p.left, p.top)
-							const lst = [
-								{ k: 'sample', v: t.name },
-								{ k: gvtk.multivaluekey, v: d.name },
-								{ k: 'value', v: d.value }
-							]
+							const lst = [{ k: 'sample', v: t.name }, { k: gvtk.multivaluekey, v: d.name }, { k: 'value', v: d.value }]
 							client.make_table_2col(tk.tktip.d, lst)
 						})
 						.on('mouseout', d => {
