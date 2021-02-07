@@ -2,7 +2,10 @@ const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
+const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
+
+export async function match_complexvariant_rust(templates, q) {}
 
 export async function match_complexvariant(templates, q) {
 	// TODO
