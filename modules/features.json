@@ -246,7 +246,7 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["bigwig stranded"]
         },
         {
             "name": "Track list and Facet table",
@@ -605,6 +605,7 @@
                 "example": {
                     "parseurl": true,
                     "nobox": 1,
+                    "noheader": 1,
                     "genome": "hg38",
                     "mdssamplescatterplot": {
                         "analysisdata": {
