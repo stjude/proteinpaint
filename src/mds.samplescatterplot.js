@@ -827,6 +827,7 @@ function makeConfigPanel(obj) {
 
 	const lasso_btn = obj.scattersvg_buttons
 		.append('div')
+		.style('display', obj.enable_lasso ? 'block' : 'none')
 		.style('padding', '2px 5px')
 		.style('margin-top', '5px')
 		.style('border', '1px solid #999')
