@@ -24,6 +24,11 @@ module.exports = {
 		file: 'hg19/Pediatric/tracktable/__table'
 	},
 
+	gene2mutcount: {
+		// to get list of most recurrently mutated genes from a set of samples
+		dbfile: 'hg19/Pediatric/genecount.db'
+	},
+
 	singlesamplemutationjson: {
 		file: 'hg19/Pediatric/mutationpersample/table'
 	},
