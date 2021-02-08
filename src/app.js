@@ -307,39 +307,59 @@ function makeheader(app, obj, jwt) {
 				appmenu( app, headbox, selectgenome, jwt )
 			})
 	}else{
-		let app_btn_active = true
+		// show 'apps' div only when url is barbone without any paramerters or example page
+		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
+			? true : false
+		let apps_rendered = false 
 
 		const app_holder = app_row
 				.append('div')
 				.style('margin','10px')
 				.style('padding-right','10px')
 				.style('display', app_btn_active ? 'inline-block' : 'none')
-				.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
+				.style('background-color', '#f2f2f2')
 				.style('border-radius','5px')
 				.style('width','85vw')
 
 		async function load_app_div(){
+			if(apps_rendered) return
+			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({holder: app_holder})
 		}
 
-		load_app_div()
+		if(app_btn_active) load_app_div()
 
 		const app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
 			.style('padding',padw)
-			.style('border-radius','5px')
+			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
 				// toggle button color and hide/show apps div 
 				app_btn_active = !app_btn_active
-				app_btn.transition().style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				load_app_div()
+
+				app_btn
+					.transition()
+					.duration(500)
+					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+					.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+					.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+
 				app_holder
-					.style('display', app_btn_active ? 'none' : 'inline-block')
 					.transition()
 					.duration(500)
 					.style('display', app_btn_active ? 'inline-block' : 'none')
+			})
+			.on('mouseover', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+			})
+			.on('mouseout', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			})
 	}	
 	

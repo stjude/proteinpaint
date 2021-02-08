@@ -931,68 +931,70 @@ function legend_attr_levels(obj) {
 					L2.v2c.get(v).label = d.s[L2.label]
 				}
 			}
-			for (const L2value of get_itemOrderList(L2, obj)) {
-				const L2o = L2.v2c.get(L2value)
-				const cell = L1div.append('div')
-					.style('display', 'inline-block')
-					.style('white-space', 'nowrap')
-					.attr('class', 'sja_clb')
-					.on('click', () => {
-						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+			if (!obj.hide_subtype_legend) {
+				for (const L2value of get_itemOrderList(L2, obj)) {
+					const L2o = L2.v2c.get(L2value)
+					const cell = L1div.append('div')
+						.style('display', 'inline-block')
+						.style('white-space', 'nowrap')
+						.attr('class', 'sja_clb')
+						.on('click', () => {
+							// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
 
-						if (L2o.selected) {
-							// already selected, turn off this category in legend
-							L2o.selected = false
-							cell.style('border', '')
+							if (L2o.selected) {
+								// already selected, turn off this category in legend
+								L2o.selected = false
+								cell.style('border', '')
 
+								let alloff = true
+								for (const k in L2values) {
+									if (L2values[k].selected) alloff = false
+								}
+								if (alloff) {
+									// all items are unselected, turn dots to default
+									obj.dotselection.transition().attr('r', radius)
+								} else {
+									// still other items selected, only turn dots of this category to tiny
+									obj.dotselection
+										.filter(d => d.s[L2.key] == L2value)
+										.transition()
+										.attr('r', radius_tiny)
+								}
+								return
+							}
+
+							// not yet, select this one
 							let alloff = true
 							for (const k in L2values) {
 								if (L2values[k].selected) alloff = false
 							}
+							L2o.selected = true
+							cell.style('border', 'solid 1px #858585')
 							if (alloff) {
-								// all items are unselected, turn dots to default
-								obj.dotselection.transition().attr('r', radius)
+								// none other groups selected so far, turn all the other groups tiny
+								obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : radius_tiny))
 							} else {
-								// still other items selected, only turn dots of this category to tiny
+								// some other groups are also highlighted, only turn this group big
 								obj.dotselection
 									.filter(d => d.s[L2.key] == L2value)
 									.transition()
-									.attr('r', radius_tiny)
+									.attr('r', radius)
 							}
-							return
-						}
-
-						// not yet, select this one
-						let alloff = true
-						for (const k in L2values) {
-							if (L2values[k].selected) alloff = false
-						}
-						L2o.selected = true
-						cell.style('border', 'solid 1px #858585')
-						if (alloff) {
-							// none other groups selected so far, turn all the other groups tiny
-							obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : radius_tiny))
-						} else {
-							// some other groups are also highlighted, only turn this group big
-							obj.dotselection
-								.filter(d => d.s[L2.key] == L2value)
-								.transition()
-								.attr('r', radius)
-						}
-					})
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.attr('class', 'sja_mcdot')
-					.style('background', L2o.color)
-					.style('margin-right', '3px')
-					.text(L2o.dots.length)
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('color', L2o.color)
-					.text(L2o.label || L2value)
-				L2o.cell = cell
+						})
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.attr('class', 'sja_mcdot')
+						.style('background', L2o.color)
+						.style('margin-right', '3px')
+						.text(L2o.dots.length)
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.style('color', L2o.color)
+						.text(L2o.label || L2value)
+					L2o.cell = cell
+				}
 			}
 			if (L2.unannotated) {
 				const d = L1div.append('div').style('margin-top', '20px')

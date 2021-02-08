@@ -10,6 +10,8 @@ There are 3 bash scripts in this directory, each for lifting over a specific ped
 
 The output of each script is a compressed hg38 pediatric file (.gz) and an indexed hg38 pediatric file (.gz.tbi).
 
+Each script depends on an hg19-to-hg38 liftover chain file. This file can be downloaded from the UCSC Genome Browser: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver (file: "hg19ToHg38.over.chain.gz"). Store the chain file in the same directory as the liftover scripts.
+
 The standard output and error of each script are stored in ".out" and ".err" files, respectively.
 
 

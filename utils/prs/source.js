@@ -56,6 +56,6 @@ if (idmapfile) {
 	const result = await prs.compute({ poolnumber, snps, vcffile, samplenames, nochr: true })
 	console.log('name\tCNT\tSCORESUM')
 	for (const s of result) {
-		console.log(`${s.name}\t${s.snpcount}\t${s.sum}`)
+		console.log(`${s.name}\t${s.effalecount}\t${s.sum}`)
 	}
 })()
