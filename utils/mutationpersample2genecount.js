@@ -67,7 +67,7 @@ for (const file of glob.sync(path.join(in_dir, '*'))) {
 			if (item.dt == 4) {
 				// cnv
 				if (!Number.isFinite(item.value)) throw 'cnv_no_value'
-				if (!item.chr || !item.start || !item.stop) throw 'cnv_no_chrpos'
+				if (!item.chr || !Number.isInteger(item.start) || !item.stop) throw 'cnv_no_chrpos'
 				if (item.stop - item.start >= 2000000) {
 					// bigger than 2mb
 					continue
