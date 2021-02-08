@@ -4,7 +4,9 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.hg38.db',
 		hasalias: true,
-		gene2canonicalisoform: true // see ./app.js
+		// requires the "gene2canonicalisoform" table in genes.db, for converting ENSG to canonical ENST
+		// keep this table for the convenience of browser testing when working on gdc features, so no need of switching to "hg38.gdc.js" and back
+		gene2canonicalisoform: true
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',

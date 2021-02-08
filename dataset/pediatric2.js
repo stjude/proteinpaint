@@ -407,7 +407,7 @@ module.exports = {
 			expressionrank_querykey: 'genefpkm',
 			vcf_querykey: 'snvindel',
 
-			multihidelabel_vcf: true,
+			multihidelabel_vcf: false,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true,
 
