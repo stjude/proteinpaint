@@ -165,6 +165,12 @@ exports.termjson = {
 	sex: {
 		id: 'sex',
 		name: 'Sex',
+		type: 'categorical',
 		iscategorical: true
+	},
+	'Age at genomic sample collection': {
+		id: 'Age at genomic sample collection',
+		name: 'Age at genomic sample collection',
+		type: 'categorical'
 	}
 }

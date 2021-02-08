@@ -3,8 +3,6 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const basecolor = require('../src/common').basecolor
 
-const serverconfig = utils.serverconfig
-
 module.exports = async (req, res) => {
 	app.log(req)
 	try {
@@ -38,7 +36,7 @@ module.exports = async (req, res) => {
 
 		let dir
 		if (isurl) {
-			dir = utils.cache_index(tkfile, req.query.indexURL)
+			dir = await utils.cache_index(tkfile, req.query.indexURL)
 		}
 
 		for (const r of rglst) {

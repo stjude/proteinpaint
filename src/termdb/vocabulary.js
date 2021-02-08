@@ -1,4 +1,9 @@
 import { dofetch3 } from '../client'
+import { getBarchartData, getCategoryData } from './barchart.data'
+import { termsetting_fill_q } from '../common/termsetting'
+import { getNormalRoot } from '../common/filter'
+
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
 export function vocabInit(app, opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -24,8 +29,6 @@ export function vocabInit(app, opts) {
 		return new TermdbVocab(app, opts)
 	} else if (!vocab.route && vocab.terms) {
 		return new FrontendVocab(app, opts)
-	} else {
-		//throw `unsupported vocab.route =='${vocab.route}'`
 	}
 }
 
@@ -136,7 +139,7 @@ class TermdbVocab {
 		}
 	}
 
-	async getDensityPlotData(term_id, num_obj) {
+	async getDensityPlotData(term_id, num_obj, filter) {
 		let density_q =
 			'/termdb?density=1' +
 			'&genome=' +
@@ -154,12 +157,57 @@ class TermdbVocab {
 			'&ypad=' +
 			num_obj.plot_size.ypad
 
-		if (this.state.termfilter && typeof this.state.termfilter.filter != 'undefined') {
-			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(this.state.termfilter.filter))
+		// must use the filter as supplied from a tvs pill,
+		// since that filter excludes the tvs itself in order
+		// to show all available values for its term
+		if (filter) {
+			const filterRoot = getNormalRoot(filter)
+			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(filterRoot))
 		}
 		const density_data = await dofetch3(density_q)
 		if (density_data.error) throw density_data.error
 		return density_data
+	}
+
+	async getterm(termid, dslabel = null, genome = null) {
+		if (!termid) throw 'getterm: termid missing'
+		if (this && this.state && this.state.vocab) {
+			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
+			if (this.state.vocab.genome) genome = this.state.vocab.genome
+		}
+		if (!dslabel) throw 'getterm: dslabel missing'
+		if (!genome) throw 'getterm: genome missing'
+		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
+		if (data.error) throw 'getterm: ' + data.error
+		if (!data.term) throw 'no term found for ' + termid
+		return data.term
+	}
+
+	graphable(term) {
+		if (!term) throw 'graphable: term is missing'
+		// term.isgenotype??
+		return graphableTypes.has(term.type)
+	}
+
+	async getCategories(term, filter, lst = null) {
+		const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}
 	}
 }
 
@@ -170,11 +218,18 @@ class FrontendVocab {
 	constructor(app, opts) {
 		this.app = app
 		this.opts = opts
+		this.state = opts.state
 		this.vocab = opts.state.vocab
+		this.datarows = []
+		if (opts.state.vocab.sampleannotation) {
+			const anno = opts.state.vocab.sampleannotation
+			Object.keys(anno).forEach(sample => this.datarows.push({ sample, data: anno[sample] }))
+		}
 	}
 
 	main(vocab) {
 		if (vocab) Object.assign(this.vocab, vocab)
+		this.state = this.app.getState()
 	}
 
 	getTermdbConfig() {
@@ -198,7 +253,25 @@ class FrontendVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		return { charts: [], refs: {} }
+		if (!(plotId in this.state.tree.plots)) {
+			const term = this.vocab.terms.find(t => t.id === plotId)
+			const q = {}
+			termsetting_fill_q(q, term)
+			this.state.tree.plots[plotId] = {
+				term: { term, q }
+			}
+		}
+		const config = this.state.tree.plots[plotId]
+		const q = {
+			term1: config.term ? config.term.term : {},
+			term1_q: config.term ? config.term.q : undefined,
+			term0: config.term0 ? config.term0.term : undefined,
+			term0_q: config.term0 ? config.term0.q : undefined,
+			term2: config.term2 ? config.term2.term : undefined,
+			term2_q: config.term2 ? config.term2.q : undefined,
+			filter: this.state.termfilter && this.state.termfilter.filter
+		}
+		return getBarchartData(q, this.datarows)
 	}
 
 	// from termdb/search
@@ -239,5 +312,129 @@ class FrontendVocab {
 			term.samplecount[cohortName] = Object.keys(this.vocab.sampleannotation).length
 		}
 		return { samplecount: 'TBD' }
+	}
+
+	async getDensityPlotData(term_id, num_obj, filter) {
+		const countsByVal = new Map()
+		let minvalue,
+			maxvalue,
+			samplecount = 0
+		for (const sample in this.vocab.sampleannotation) {
+			if (!(term_id in this.vocab.sampleannotation[sample])) continue
+			const v = this.vocab.sampleannotation[sample][term_id]
+			samplecount += 1
+			if (minvalue === undefined || v < minvalue) minvalue = v
+			if (maxvalue === undefined || v > maxvalue) maxvalue = v
+			if (!countsByVal.has(v)) countsByVal.set(v, [v, 0])
+			countsByVal.get(v)[1] += 1
+		}
+
+		const density = [...countsByVal.values()]
+		return {
+			density,
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
+			minvalue,
+			maxvalue,
+			samplecount
+		}
+
+		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
+	}
+
+	async getterm(termid) {
+		if (!termid) throw 'getterm: termid missing'
+		return this.vocab.terms.find(d => d.id == termid)
+	}
+
+	async getCategories(term, filter, lst = null) {
+		const q = { term, filter }
+		const data = getCategoryData(q, this.datarows)
+		return data
+		/*const param = lst ? 'getcategories' : 'getnumericcategories'
+		const args = [
+			`${param}=1`,
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(filter))
+		]
+
+		if (lst && lst.length) args.push(...lst)
+
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return lst ? data : data.lst
+		} catch (e) {
+			window.alert(e.message || e)
+		}*/
+	}
+
+	graphable(term) {
+		if (!term) throw 'graphable: term is missing'
+		// term.isgenotype??
+		return graphableTypes.has(term.type)
+	}
+}
+
+export function getVocabFromSamplesArray({ samples, sample_attributes }) {
+	const terms = {
+		__root: {
+			id: 'root',
+			name: 'root',
+			__tree_isroot: true
+		}
+	}
+	const sanno = {}
+	for (const a of samples) {
+		const s = a.sample
+		if (!sanno[s]) sanno[s] = {}
+		// in case a sample has more than one annotation object in the array
+		Object.assign(sanno[s], a.s)
+
+		// generate term definitions from
+		for (const key in a.s) {
+			const value = a.s[key]
+			if (!terms[key]) {
+				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
+				terms[key] = {
+					id: key,
+					name,
+					parent_id: null,
+					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					values: {},
+					isleaf: true
+				}
+			}
+			const t = terms[key]
+			if (t.type == 'categorical') {
+				t.groupsetting = { disabled: true }
+				if (!(value in t.values)) {
+					t.values[value] = { key: value, label: value }
+				}
+			} else {
+				if (!('min' in t) || value < t.min) t.min = value
+				if (!('max' in t) || value > t.max) t.max = value
+			}
+		}
+	}
+
+	for (const key in terms) {
+		const t = terms[key]
+		if (t.type !== 'categorical') {
+			const bin_size = (t.max - t.min) / 10
+			t.bins = {
+				default: {
+					bin_size,
+					stopinclusive: true,
+					first_bin: { startunbounded: true, stop: t.min + bin_size, stopinclusive: true }
+				}
+			}
+		}
+	}
+
+	return {
+		sampleannotation: sanno,
+		terms: Object.values(terms)
 	}
 }

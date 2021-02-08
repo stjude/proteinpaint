@@ -5,8 +5,6 @@ import * as common from './common'
 import blockinit from './block.init'
 import tp_getgeneexpression from './tp.gene.geneexpression'
 
-let plot_barplot
-
 export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 	if (!ds2clst) return null
 	const hostURL = host || ''
@@ -390,20 +388,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 						})
 					}
 					const pos = d3event.target.getBoundingClientRect()
-					new Promise((a, j) => {
-						if (plot_barplot) return a()
-						require.ensure([], () => {
-							plot_barplot = require('./plot.barplot').default
-							a()
-						})
-					}).then(() => {
-						plot_barplot(
-							bars,
-							'#76B38C',
-							'Number of samples' + (usenoncoding ? '' : ', excluding noncoding mutations'),
-							pos
-						)
-					})
+					barplot(bars, '#76B38C', 'Number of samples' + (usenoncoding ? '' : ', excluding noncoding mutations'), pos)
 				})
 		}
 		// option row6
@@ -438,20 +423,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 						})
 					}
 					const pos = d3event.target.getBoundingClientRect()
-					new Promise((a, j) => {
-						if (plot_barplot) return a()
-						require.ensure([], () => {
-							plot_barplot = require('./plot.barplot').default
-							a()
-						})
-					}).then(() => {
-						plot_barplot(
-							bars,
-							'#76B38C',
-							'Mutation burden' + (usenoncoding ? '' : ', excluding noncoding mutations'),
-							pos
-						)
-					})
+					barplot(bars, '#76B38C', 'Mutation burden' + (usenoncoding ? '' : ', excluding noncoding mutations'), pos)
 				})
 		}
 	}
@@ -987,4 +959,9 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 			})
 		}
 	}
+}
+
+async function barplot(bars, color, label, pos) {
+	const barplot = await import('./plot.barplot')
+	return barplot.default(bars, color, label, pos)
 }

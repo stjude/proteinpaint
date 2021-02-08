@@ -89,7 +89,7 @@ tape('empty cohort, then selected', function(test) {
 			.rideInit({ arg: nav, bus: nav, eventType: 'postRender.test' })
 			.run(testPreCohortSelection)
 			.use(triggerCohortSelection)
-			.to(testPostCohortSelection, 100)
+			.to(testPostCohortSelection, 200)
 			.use(triggerTabFold)
 			.to(testTabFold, 100)
 			.use(triggerTabUnfold)
@@ -119,6 +119,11 @@ tape('empty cohort, then selected', function(test) {
 			'transparent',
 			'should highlight the active cohort tab'
 		)
+		const cohortLabelTd = tds._groups[0][3]
+		test.equal(cohortLabelTd.innerText, 'NONE', `should display NONE for active cohort`)
+
+		const cohortSampleCountTd = tds._groups[0][6]
+		test.equal(cohortSampleCountTd.innerText, '', `should hide the cohort sample count when there is no active cohort`)
 	}
 
 	function triggerCohortSelection(nav) {
@@ -149,6 +154,12 @@ tape('empty cohort, then selected', function(test) {
 			'transparent',
 			'should highlight the active tab'
 		)
+		const cohortLabelTd = tds._groups[0][3]
+		test.equal(cohortLabelTd.innerText, nav.Inner.activeCohortName, `should display the activeCohortName`)
+
+		const cohortSampleCountTd = tds._groups[0][6]
+		const n = 4528
+		test.equal(cohortSampleCountTd.innerText, `n=${n}`, `should display a cohort sample count of n=${n}`)
 	}
 
 	function triggerTabFold(nav) {
@@ -215,7 +226,7 @@ tape('empty cohort, then selected', function(test) {
 	}
 })
 
-tape('filter subheader', async function(test) {
+tape('filter subheader and tab', async function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -271,6 +282,13 @@ tape('filter subheader', async function(test) {
 			1,
 			'should add blue pill'
 		)
+
+		const itemCountTd = tds._groups[0][4]
+		test.equal(itemCountTd.innerText, '1', 'should indicate a filter item count of 1')
+
+		const sampleCountTd = tds._groups[0][7]
+		const n = 2149
+		test.equal(sampleCountTd.innerText, `n=${n}`, 'should display the correct filtered sample count')
 	}
 })
 

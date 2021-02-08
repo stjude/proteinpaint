@@ -9,50 +9,38 @@ exported functions
 
 */
 
-exports.defaultcolor = '#8AB1D4'
+export const defaultcolor = '#8AB1D4'
 
-exports.exoncolor = '#4F8053'
+export const exoncolor = '#4F8053'
 
 // something that has something to do with coding gene reading frame
-const IN_frame = true
-const OUT_frame = false
-exports.IN_frame = IN_frame
-exports.OUT_frame = OUT_frame
+export const IN_frame = true
+export const OUT_frame = false
 
-const dtsnvindel = 1,
-	dtfusionrna = 2,
-	dtgeneexpression = 3,
-	dtcnv = 4,
-	dtsv = 5,
-	dtitd = 6,
-	dtdel = 7,
-	dtnloss = 8,
-	dtcloss = 9,
-	dtloh = 10 // to be used in svcnv track
+export const dtsnvindel = 1
+export const dtfusionrna = 2
+export const dtgeneexpression = 3
+export const dtcnv = 4
+export const dtsv = 5
+export const dtitd = 6
+export const dtdel = 7
+export const dtnloss = 8
+export const dtcloss = 9
+export const dtloh = 10 // to be used in svcnv track
 
-const h = {}
-h[dtsnvindel] = 'SNV/indel'
-h[dtfusionrna] = 'Fusion RNA'
-h[dtcnv] = 'CNV'
-h[dtsv] = 'SV'
-h[dtitd] = 'ITD'
-h[dtdel] = 'Deletion'
-h[dtnloss] = 'N-loss'
-h[dtcloss] = 'C-loss'
-h[dtloh] = 'LOH'
-exports.dt2label = h
-exports.dtsnvindel = dtsnvindel
-exports.dtfusionrna = dtfusionrna
-exports.dtsv = dtsv
-exports.dtgeneexpression = dtgeneexpression
-exports.dtcnv = dtcnv
-exports.dtitd = dtitd
-exports.dtdel = dtdel
-exports.dtnloss = dtnloss
-exports.dtcloss = dtcloss
-exports.dtloh = dtloh
+export const dt2label = {
+	[dtsnvindel]: 'SNV/indel',
+	[dtfusionrna]: 'Fusion RNA',
+	[dtcnv]: 'CNV',
+	[dtsv]: 'SV',
+	[dtitd]: 'ITD',
+	[dtdel]: 'Deletion',
+	[dtnloss]: 'N-loss',
+	[dtcloss]: 'C-loss',
+	[dtloh]: 'LOH'
+}
 
-const mclass = {
+export const mclass = {
 	M: {
 		label: 'MISSENSE',
 		color: '#3987CC',
@@ -105,75 +93,72 @@ const mclass = {
 	},
 	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' }
 }
-var mclassitd = 'ITD'
+export const mclassitd = 'ITD'
 mclass[mclassitd] = {
 	label: 'ITD',
 	color: '#ff70ff',
 	dt: dtitd,
 	desc: 'In-frame internal tandem duplication.'
 }
-exports.mclassitd = mclassitd
-var mclassdel = 'DEL'
+
+export const mclassdel = 'DEL'
 mclass[mclassdel] = {
 	label: 'DELETION, intragenic',
 	color: '#858585',
 	dt: dtdel,
 	desc: 'Intragenic deletion.'
 }
-exports.mclassdel = mclassdel
 
-var mclassnloss = 'NLOSS'
+export const mclassnloss = 'NLOSS'
 mclass[mclassnloss] = {
 	label: 'N-terminus loss',
 	color: '#545454',
 	dt: dtnloss,
 	desc: 'N-terminus loss due to translocation'
 }
-exports.mclassnloss = mclassnloss
-var mclasscloss = 'CLOSS'
+
+export const mclasscloss = 'CLOSS'
 mclass[mclasscloss] = {
 	label: 'C-terminus loss',
 	color: '#545454',
 	dt: dtcloss,
 	desc: 'C-terminus loss due to translocation'
 }
-exports.mclasscloss = mclasscloss
 
-var mclassutr3 = 'Utr3'
+export const mclassutr3 = 'Utr3'
 mclass[mclassutr3] = {
 	label: 'UTR_3',
 	color: '#998199',
 	dt: dtsnvindel,
 	desc: "A variant in the 3' untranslated region."
 }
-exports.mclassutr3 = mclassutr3
-var mclassutr5 = 'Utr5'
+
+export const mclassutr5 = 'Utr5'
 mclass[mclassutr5] = {
 	label: 'UTR_5',
 	color: '#819981',
 	dt: dtsnvindel,
 	desc: "A variant in the 5' untranslated region."
 }
-exports.mclassutr5 = mclassutr5
-var mclassnonstandard = 'X'
+
+export const mclassnonstandard = 'X'
 mclass[mclassnonstandard] = {
 	label: 'NONSTANDARD',
 	color: 'black',
 	dt: dtsnvindel,
 	desc: 'A mutation class that either does not match our notation, or is unspecified.'
 }
-exports.mclassnonstandard = mclassnonstandard
-var mclassnoncoding = 'noncoding'
+
+export const mclassnoncoding = 'noncoding'
 mclass[mclassnoncoding] = {
 	label: 'NONCODING',
 	color: 'black',
 	dt: dtsnvindel,
 	desc: 'Noncoding mutation.'
 }
-exports.mclassnoncoding = mclassnoncoding
 // done point mutations
 
-exports.mclasstester = function(s) {
+export function mclasstester(s) {
 	switch (s.toLowerCase()) {
 		case 'missense_mutation':
 			return 'M'
@@ -208,8 +193,7 @@ exports.mclasstester = function(s) {
 	}
 }
 
-var mclassfusionrna = 'Fuserna'
-exports.mclassfusionrna = mclassfusionrna
+export const mclassfusionrna = 'Fuserna'
 mclass[mclassfusionrna] = {
 	label: 'Fusion transcript',
 	color: '#545454',
@@ -219,8 +203,7 @@ mclass[mclassfusionrna] = {
 		'<span style="font-size:150%">&#9680;</span> - 3\' end of the break point is fused to the 5\' end of another break point in a different gene.<br>' +
 		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.'
 }
-var mclasssv = 'SV'
-exports.mclasssv = mclasssv
+export const mclasssv = 'SV'
 mclass[mclasssv] = {
 	label: 'Structural variation',
 	color: '#858585',
@@ -228,34 +211,30 @@ mclass[mclasssv] = {
 	desc: 'Structural variation detected in genomic DNA.'
 }
 
-const mclasscnvgain = 'CNV_amp'
-exports.mclasscnvgain = mclasscnvgain
+export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = { label: 'Copy number gain', color: '#e9a3c9', dt: dtcnv, desc: 'Copy number gain' }
-const mclasscnvloss = 'CNV_loss'
-exports.mclasscnvloss = mclasscnvloss
+
+export const mclasscnvloss = 'CNV_loss'
 mclass[mclasscnvloss] = { label: 'Copy number loss', color: '#a1d76a', dt: dtcnv, desc: 'Copy number loss' }
-const mclasscnvloh = 'CNV_loh'
-exports.mclasscnvloh = mclasscnvloh
+
+export const mclasscnvloh = 'CNV_loh'
 mclass[mclasscnvloh] = { label: 'LOH', color: '#12EDFC', dt: dtcnv, desc: 'Loss of heterozygosity' }
 
 // for VCF
-const mclasssnv = 'snv'
-exports.mclasssnv = mclasssnv
+export const mclasssnv = 'snv'
 mclass[mclasssnv] = { label: 'SNV', color: '#5781FF', dt: dtsnvindel, desc: 'Single nucleotide variation' }
-const mclassmnv = 'mnv'
-exports.mclassmnv = mclassmnv
+
+export const mclassmnv = 'mnv'
 mclass[mclassmnv] = { label: 'MNV', color: '#6378B8', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
-const mclassinsertion = 'insertion'
-exports.mclassinsertion = mclassinsertion
+
+export const mclassinsertion = 'insertion'
 mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#ED5C66', dt: dtsnvindel, desc: 'Sequence insertion' }
-const mclassdeletion = 'deletion'
-exports.mclassdeletion = mclassdeletion
+
+export const mclassdeletion = 'deletion'
 mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#F0B11F', dt: dtsnvindel, desc: 'Sequence deletion' }
 // TODO complex indel
 
-exports.mclass = mclass
-
-var vepinfo = function(s) {
+export const vepinfo = function(s) {
 	const l = s.toLowerCase().split(',')
 	let rank = 1
 	if (l.indexOf('transcript_ablation') != -1) {
@@ -347,27 +326,26 @@ var vepinfo = function(s) {
 	return [dtsnvindel, mclassnonstandard, rank]
 }
 
-exports.vepinfo = vepinfo
-
 // m orgin
-
-const germlinelegend =
+export const germlinelegend =
 	'<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle><path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="#858585" stroke="none"></path>'
-const morigin = {}
-const moriginsomatic = 'S'
+
+export const morigin = {}
+
+export const moriginsomatic = 'S'
 morigin[moriginsomatic] = {
 	label: 'Somatic',
 	desc: 'A variant found only in a tumor sample. The proportion is indicated by lack of any arc.',
 	legend: '<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>'
 }
-const morigingermline = 'G'
+export const morigingermline = 'G'
 morigin[morigingermline] = {
 	label: 'Germline',
 	desc:
 		'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
 	legend: germlinelegend
 }
-const moriginrelapse = 'R'
+export const moriginrelapse = 'R'
 morigin[moriginrelapse] = {
 	label: 'Relapse',
 	desc:
@@ -375,27 +353,21 @@ morigin[moriginrelapse] = {
 	legend:
 		'<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle><path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="none" stroke="#858585"></path>'
 }
-const morigingermlinepathogenic = 'GP'
+export const morigingermlinepathogenic = 'GP'
 morigin[morigingermlinepathogenic] = {
 	label: 'Germline pathogenic',
 	desc: 'A constitutional variant with pathogenic allele.',
 	legend: germlinelegend
 }
-const morigingermlinenonpathogenic = 'GNP'
+export const morigingermlinenonpathogenic = 'GNP'
 morigin[morigingermlinenonpathogenic] = {
 	label: 'Germline non-pathogenic',
 	desc: 'A constitutional variant with non-pathogenic allele.',
 	legend: germlinelegend,
 	hidden: true
 }
-exports.morigingermline = morigingermline
-exports.morigingermlinenonpathogenic = morigingermlinenonpathogenic
-exports.morigingermlinepathogenic = morigingermlinepathogenic
-exports.moriginrelapse = moriginrelapse
-exports.moriginsomatic = moriginsomatic
-exports.morigin = morigin
 
-const tkt = {
+export const tkt = {
 	usegm: 'usegm',
 	ds: 'dataset',
 	bigwig: 'bigwig',
@@ -419,9 +391,8 @@ const tkt = {
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam'
 }
-exports.tkt = tkt
 
-exports.validtkt = function(what) {
+export function validtkt(what) {
 	for (const k in tkt) {
 		if (what == tkt[k]) {
 			return true
@@ -435,7 +406,7 @@ member track types from mdsvcf
 to get rid of hardcoded strings
 in future may include MAF format files
 */
-exports.mdsvcftype = {
+export const mdsvcftype = {
 	vcf: 'vcf'
 }
 
@@ -444,14 +415,14 @@ for custom mdssvcnv track
 or general track
 to avoid using hard-coded string
 */
-exports.custommdstktype = {
+export const custommdstktype = {
 	vcf: 'vcf',
 	svcnvitd: 'svcnvitd',
 	geneexpression: 'geneexpression'
 }
 
 // codons that are not here are stop codon!!
-var codon = {
+export const codon = {
 	GCT: 'A',
 	GCC: 'A',
 	GCA: 'A',
@@ -514,11 +485,10 @@ var codon = {
 	GTA: 'V',
 	GTG: 'V'
 }
-exports.codon = codon
-const codon_stop = '*'
-exports.codon_stop = codon_stop
 
-function nt2aa(gm) {
+export const codon_stop = '*'
+
+export function nt2aa(gm) {
 	// must convert genome seq to upper case!!!
 	if (!gm.genomicseq) return undefined
 	const enlst = []
@@ -541,9 +511,8 @@ function nt2aa(gm) {
 	gm.cdseq = nt
 	return pep.join('')
 }
-exports.nt2aa = nt2aa
 
-exports.bplen = function(len) {
+export function bplen(len) {
 	if (len >= 1000000000) return (len / 1000000000).toFixed(1) + ' Gb'
 	if (len >= 10000000) return Math.ceil(len / 1000000) + ' Mb'
 	if (len >= 1000000) return (len / 1000000).toFixed(1) + ' Mb'
@@ -552,14 +521,14 @@ exports.bplen = function(len) {
 	return len + ' bp'
 }
 
-exports.basecolor = {
+export const basecolor = {
 	A: '#ca0020',
 	T: '#f4a582',
 	C: '#92c5de',
 	G: '#0571b0'
 }
 
-function basecompliment(nt) {
+export function basecompliment(nt) {
 	switch (nt) {
 		case 'A':
 			return 'T'
@@ -581,18 +550,16 @@ function basecompliment(nt) {
 			return nt
 	}
 }
-exports.basecompliment = basecompliment
 
-function reversecompliment(s) {
+export function reversecompliment(s) {
 	const tmp = []
 	for (let i = s.length - 1; i >= 0; i--) {
 		tmp.push(basecompliment(s[i]))
 	}
 	return tmp.join('')
 }
-exports.reversecompliment = reversecompliment
 
-exports.spliceeventchangegmexon = function(gm, evt) {
+export function spliceeventchangegmexon(gm, evt) {
 	/*
 	alter gm.coding[], by exon-skip/alt events
 	for frame checking
@@ -652,7 +619,7 @@ exports.spliceeventchangegmexon = function(gm, evt) {
 	return gm2
 }
 
-exports.fasta2gmframecheck = function(gm, str) {
+export function fasta2gmframecheck(gm, str) {
 	/*
 	gm{}
 		.chr
@@ -680,7 +647,7 @@ exports.fasta2gmframecheck = function(gm, str) {
 	return thisframe
 }
 
-exports.validate_vcfinfofilter = function(obj) {
+export function validate_vcfinfofilter(obj) {
 	/*
 	validate vcfinfofilter as from embedding api or dataset
 	*/
@@ -748,7 +715,7 @@ exports.validate_vcfinfofilter = function(obj) {
 	}
 }
 
-exports.contigNameNoChr = function(genome, chrlst) {
+export function contigNameNoChr(genome, chrlst) {
 	/*
 	FIXME hard-coded for human genome styled chromosome names
 	*/
@@ -766,7 +733,7 @@ exports.contigNameNoChr = function(genome, chrlst) {
 	}
 	return false
 }
-exports.contigNameNoChr2 = function(genome, chrlst) {
+export function contigNameNoChr2(genome, chrlst) {
 	// returns number of matching chr names that either includes "chr" or not
 	// for detecting if chrlst entirely mismatch with what's in the genome build
 	// TODO replace contigNameNoChr
@@ -791,7 +758,7 @@ exports.contigNameNoChr2 = function(genome, chrlst) {
 	return [nochrcount, haschrcount]
 }
 
-exports.getMax_byiqr = function(lst, novaluemax) {
+export function getMax_byiqr(lst, novaluemax) {
 	/*
 	lst: array of numbers
 	novaluemax: when lst is empty, return this value
@@ -806,7 +773,7 @@ exports.getMax_byiqr = function(lst, novaluemax) {
 	return Math.min(q2 + (q2 - q1) * 1.5, max)
 }
 
-exports.alleleInGenotypeStr = function(genotype, allele) {
+export function alleleInGenotypeStr(genotype, allele) {
 	if (!genotype) return false
 	if (genotype.indexOf('/') != -1) {
 		return genotype.split('/').indexOf(allele) != -1
@@ -814,16 +781,15 @@ exports.alleleInGenotypeStr = function(genotype, allele) {
 	return genotype.split('|').indexOf(allele) != -1
 }
 
-const gmmode = {
+export const gmmode = {
 	genomic: 'genomic',
 	splicingrna: 'splicing RNA', // if just 1 exon, use "RNA" as label
 	exononly: 'exon only',
 	protein: 'protein',
 	gmsum: 'aggregated exons'
 }
-exports.gmmode = gmmode
 
-exports.vcfcopymclass = function(m, block) {
+export function vcfcopymclass(m, block) {
 	if (m.csq) {
 		// there could be many annotations, the first one not always desirable
 		// choose *colorful* annotation based on _csqrank
@@ -927,11 +893,11 @@ exports.vcfcopymclass = function(m, block) {
 used in:
 	mdssvcnv track, mutation attributes, items that are not annotated by an attribute for showing in legend, and server-side filtering
 */
-exports.not_annotated = 'Unannotated'
+export const not_annotated = 'Unannotated'
 
 // kernal density estimator as from https://www.d3-graph-gallery.com/graph/density_basic.html
 
-exports.kernelDensityEstimator = (kernel, X) => {
+export function kernelDensityEstimator(kernel, X) {
 	return function(V) {
 		return X.map(x => {
 			return [x, V.map(v => kernel(x - v)).reduce((i, j) => i + j, 0) / V.length]
@@ -939,7 +905,7 @@ exports.kernelDensityEstimator = (kernel, X) => {
 	}
 }
 
-exports.kernelEpanechnikov = k => {
+export function kernelEpanechnikov(k) {
 	return function(v) {
 		return Math.abs((v /= k)) <= 1 ? (0.75 * (1 - v * v)) / k : 0
 	}

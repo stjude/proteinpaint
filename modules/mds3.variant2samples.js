@@ -13,9 +13,6 @@ client instructs if to return sample list or sunburst summary; server may deny t
 
 */
 
-const type_samples = 'samples'
-const type_sunburst = 'sunburst'
-const type_summary = 'summary'
 /*
 get types:
 - samples
@@ -33,9 +30,9 @@ module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
 
-	if (q.get == type_samples) return samples
-	if (q.get == type_sunburst) return make_sunburst(samples, ds)
-	if (q.get == type_summary) return make_summary(samples, ds)
+	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
+	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
 	throw 'unknown get type'
 }
 
@@ -52,37 +49,31 @@ async function get_samples(q, ds) {
 	return samples
 }
 
-function make_sunburst(samples, ds) {
+async function make_sunburst(samples, ds, q) {
 	if (!ds.variant2samples.sunburst_ids) throw 'sunburst_ids missing'
 	// use only suburst terms
+
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
-		ds.variant2samples.terms
-			.filter(i => ds.variant2samples.sunburst_ids.has(i.id))
-			.map(i => {
-				return { k: i.id }
-			})
+		ds.variant2samples.sunburst_ids.map(i => {
+			return { k: i }
+		})
 	)
 	for (const node of nodes) {
 		delete node.lst
-		if (ds.onetimequery_projectsize) {
-			/********
-			CAUTION
-			must ensure that node.name is the key
-			add "cohortsize" to node
-			*/
-			if (ds.onetimequery_projectsize.results.has(node.name)) {
-				node.cohortsize = ds.onetimequery_projectsize.results.get(node.name)
-			}
-		}
+	}
+	if (ds.variant2samples.addCrosstabCount) {
+		await ds.variant2samples.addCrosstabCount(nodes, q)
 	}
 	return nodes
 }
 
 function make_summary(samples, ds) {
 	const entries = []
-	for (const term of ds.variant2samples.terms) {
+	for (const termid of ds.variant2samples.termidlst) {
+		const term = ds.termdb.getTermById(termid)
+		if (!term) continue
 		// may skip a term
 		if (term.type == 'categorical') {
 			const cat2count = new Map()

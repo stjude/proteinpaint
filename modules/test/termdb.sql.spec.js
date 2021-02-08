@@ -93,17 +93,20 @@ tape('filters applied to categorical term', function(test) {
 								type: 'float',
 								// must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
 								values: {
+									'0': { label: 'not treated', uncomputable: true },
 									'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 									'-9999': { label: 'Unknown treatment record', uncomputable: true }
 								}
 							},
-							ranges: [{ 
-								startunbounded: true, 
-								stop: 1000, 
-								stopinclusive: true,
-								label:"≤1000",
-								name:"≤1000"
-							}], // range includes special values and should be excluded
+							ranges: [
+								{
+									startunbounded: true,
+									stop: 1000,
+									stopinclusive: true,
+									label: '≤1000',
+									name: '≤1000'
+								}
+							], // range includes special values and should be excluded
 							isnot: false
 						}
 					}
@@ -601,7 +604,7 @@ tape('numerical term1', function(test) {
 tape('leaf condition term1', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(11)
-	
+
 	compareResponseData(
 		test,
 		{

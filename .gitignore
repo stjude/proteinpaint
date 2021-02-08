@@ -1,10 +1,17 @@
+.env
 *.swp
 .DS_Store
-/node_modules/
+/node_modules*/
+*/*/node_modules*/
 npm-debug.log
 dist/*
+*/*/dist/
 
 public/bin/*
+*/*/public/bin/*
+public/portal
+*/*/public/public
+
 public/tmp/*
 public/data/*
 public/stage/*
@@ -17,7 +24,6 @@ public/svcnv.html
 public/ALCL.html
 .htaccess
 public/builds/*
-public/no-babel-polyfill/*
 public/static/*.docx
 public/static/*.pdf
 public/rev.txt
@@ -28,6 +34,7 @@ public/rev.txt
 /utils/findspliceevent/bin2.js
 /utils/findspliceevent/bin.js
 /utils/countbamallele.phased/bin*
+/utils/prs/bin.js
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
@@ -48,10 +55,9 @@ pp-server/*
 
 *-stash.js
 
+*.tar
 *.tgz
 *.min.js
-
-scripts/*.newdev.sh
 
 deploys/
 
@@ -61,3 +67,10 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
+
+*.key
+*.pem
+*.csr
+*.ext
+*.crt
+.ssl

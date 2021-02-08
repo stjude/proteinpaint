@@ -5,8 +5,6 @@ const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const nt2aa = require('../src/common').nt2aa
 
-const serverconfig = utils.serverconfig
-
 /*
 should guard against file content error e.g. two tabs separating columns
 
@@ -30,7 +28,7 @@ async function do_query(req, genomes) {
 	const [e, tkfile, isurl] = app.fileurl(req)
 	if (e) throw e
 
-	let stackheight, stackspace, regionspace, width
+	let stackheight, stackspace, regionspace, width, fontsize
 	if (req.query.getdata) {
 		// no rendering, return list of parsed items
 		if (req.query.getBED) {

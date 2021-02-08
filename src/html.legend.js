@@ -126,7 +126,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('border', d.border ? d.border : '1px solid ' + color)
 				.style('border-radius', d.shape == 'circle' ? '6px' : '')
 				.style('background-color', d.shape == 'circle' ? '' : color)
-				.style('cursor', d.isHidden ? 'pointer' : 'default')
+				.style('cursor', 'isHidden' in d ? 'pointer' : 'default')
 				.style('color', d.textColor ? d.textColor : '#fff')
 				.style('font-size', '10px')
 				.style('vertical-align', d.inset ? 'top' : '')

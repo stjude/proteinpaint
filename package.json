@@ -1,31 +1,33 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.5.4",
+  "version": "1.7.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "index.js",
+  "main": "dist/app.js",
+  "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "rm -rf public/bin;webpack --config=build/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
+    "start": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
+    "server": "npm start",
+    "build-server": "webpack --config=build/webpack.config.server.js --mode=production",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
     "ppr2": "sh ./scripts/deploy.ppr.sh http://localhost:3001",
     "ppc": "sh ./scripts/deploy.ppc.sh",
-    "public-stage": "./scripts/deploy.sh public-stage",
-    "public-prod": "./scripts/deploy.sh public-prod",
-    "old-prod": "./scripts/deploy.sh old-prod",
-    "test": "tape modules/test/*.spec.js && browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
-    "test-back": "tape modules/test/*.spec.js",
-    "test-front": "browserify test/init.js public/bin/proteinpaint.js src/**/test/*.spec.js | tape-run",
-    "test-browser": "watchify src/**/test/*.spec.js -o public/bin/spec.bundle.js -v",
-    "test-browser-umd": "watchify -t [ babelify --presets [ env ] --plugins [ transform-es2015-modules-umd ] ] src/**/test/*.spec.js -o public/bin/spec.bundle.js -v",
+    "public-prod": "./build/deploy.sh public-prod",
+    "test": "npm run test-back && npm run test-front",
+    "test-back": "tape -r babel-register modules/test/*.spec.js",
+    "test-front": "browserify test/init.js public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
+    "test-browser": "rm -f public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] -o public/bin/spec.bundle.js -v",
     "test-response": "nodemon modules/test/test.server.js --watch modules",
+    "test-gdc": "browserify test/init.js public/bin/proteinpaint.js src/wrappers/test/gdc*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
     "deliver": "sh utils/deliver.sh",
-    "server": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
-    "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
-    "release-patch": "./scripts/release.sh patch",
-    "release-minor": "./scripts/release.sh minor",
+    "rolldev": "rm -rf dist && rollup -c build/rollup.config.js -w",
+    "rollprod": "rm -rf dist && rollup -c build/rollup.config.js",
+    "release-patch": "./build/release.sh patch",
+    "release-minor": "./build/release.sh minor",
     "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
   },
   "prettier": {
@@ -37,10 +39,14 @@
   "browserify": {
     "transform": [
       [
+        "browserify-css"
+      ],
+      [
         "babelify",
         {
           "presets": [
-            "es2015"
+            "es2015",
+            "react"
           ],
           "plugins": [
             "dynamic-import-split-require"
@@ -52,6 +58,8 @@
   "author": "",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-cli": "^6.18.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.1",
@@ -59,13 +67,21 @@
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.18.0",
+    "babel-preset-react": "^6.24.1",
     "babel-runtime": "^6.18.0",
     "babelify": "^8.0.0",
+    "browserify-css": "^0.15.0",
     "css-loader": "^0.23.1",
     "deep-object-diff": "^1.1.0",
     "electron-rebuild": "^1.8.8",
+    "node-watch": "^0.7.1",
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "rollup": "^2.35.1",
+    "rollup-plugin-postcss": "^3.1.8",
+    "rollup-plugin-terser": "^7.0.2",
     "split-require": "^3.1.2",
     "style-loader": "^0.13.1",
     "tape": "^4.10.1",
@@ -74,19 +90,19 @@
     "uglify-js": "^3.4.6",
     "uglifyjs-webpack-plugin": "^1.2.7",
     "watchify": "^3.11.1",
-    "webpack": "^4.27.1",
-    "webpack-cli": "^3.1.2",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
     "webpack-node-externals": "^1.7.2",
     "webpack-notifier": "^1.7.0"
   },
   "dependencies": {
     "async": "^2.6.0",
-    "babel-polyfill": "^6.9.1",
     "better-sqlite3": "^5.4.3",
     "body-parser": "^1.15.2",
     "canvas": "2.6.0",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
+    "cookie-parser": "^1.4.5",
     "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
     "d3-sankey": "^0.4.1",
@@ -102,7 +118,11 @@
     "loader-utils": "^0.2.17",
     "node-fetch": "^2.6.1",
     "normalize.css": "^4.2.0",
-    "partjson": "^0.58.1"
+    "partjson": "^0.58.1",
+    "tiny-async-pool": "^1.2.0"
+  },
+  "peerDependencies": {
+    "react": "^17.0.1"
   },
   "repository": {
     "type": "git",
@@ -112,17 +132,19 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "server.js",
     "bin.js",
-    "index.js",
+    "server.js",
+    "dist",
     "genome",
     "dataset/clinvar.*.js",
+    "dataset/gdc.hg38.js",
     "public/index.html",
     "public/rev.txt",
     "public/bin",
     "utils/*.R",
     "utils/install.pp.js",
-    "src/common.js"
+    "src/common.js",
+    "modules/serverconfig.js"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

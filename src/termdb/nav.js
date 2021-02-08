@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { searchInit } from './search'
-import { filterInit } from './filter3'
+import { filter3Init } from './filter3'
 import { select } from 'd3-selection'
 import { dofetch3, Menu } from '../client'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
@@ -54,7 +54,7 @@ class TdbNav {
 					this.app.opts.search
 				)
 			),
-			filter: filterInit(
+			filter: filter3Init(
 				this.app,
 				{
 					holder: this.dom.subheader.filter.append('div'),
@@ -102,17 +102,19 @@ class TdbNav {
 		//this.hideSubheader = false
 
 		if (this.state.nav.header_mode === 'with_tabs') {
-			const promises = []
-			if (!(this.activeCohortName in this.samplecounts))
-				promises.push(this.app.vocabApi.getCohortSampleCount(this.activeCohortName))
+			if (!(this.activeCohortName in this.samplecounts)) {
+				this.samplecounts[this.activeCohortName] = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+			}
 			if (!(this.filterJSON in this.samplecounts)) {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
 					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
 				} else {
-					promises.push(this.app.vocabApi.getFilteredSampleCount(this.activeCohortName, this.filterJSON))
+					this.samplecounts[this.filterJSON] = await this.app.vocabApi.getFilteredSampleCount(
+						this.activeCohortName,
+						this.filterJSON
+					)
 				}
 			}
-			if (promises.length) await Promise.all(promises)
 		}
 		this.updateUI()
 	}
@@ -236,7 +238,7 @@ function setRenderers(self) {
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
 				if (d.colNum === 0) {
-					if (self.activeCohortName in self.samplecounts) {
+					if (self.activeCohortName && self.activeCohortName in self.samplecounts) {
 						return d.key == 'top'
 							? this.innerHTML
 							: d.key == 'mid'

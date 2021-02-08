@@ -12,34 +12,6 @@ sunburst.js to replace sun1
 export default async function(occurrence, mlst, cx, cy, tk, block) {
 	if (tk.ds) {
 		// legacy ds
-		// give priority to the relatively new method of ds.variant2samples
-		if (tk.ds.variant2samples) {
-			tk.glider.style('cursor', 'wait')
-			const data = await tk.ds.variant2samples.get(mlst)
-			tk.glider.style('cursor', 'auto')
-			if (data.error) {
-				block.error(data.error)
-				return true
-			}
-			const _ = await import('./sunburst')
-			_.default({
-				occurrence,
-				boxyoff: tk.yoff,
-				boxheight: tk.height,
-				boxwidth: block.width,
-				svgheight: Number.parseFloat(block.svg.attr('height')),
-				g: tk.glider.append('g'),
-				pica: tk.pica,
-				cx,
-				cy,
-				nodes: data.nodes,
-				chartlabel: mlst[0].mname,
-				click_listbutton: (x, y) => {
-					itemtable({ x, y, mlst, tk, block, pane: true })
-				}
-			})
-			return true
-		}
 		if (tk.ds.cohort) {
 			// legacy cohort config on legacy ds
 			let showsunburst = false

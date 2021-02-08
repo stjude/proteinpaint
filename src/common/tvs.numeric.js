@@ -63,25 +63,12 @@ export function getNumericMethods(self) {
 			ypad: 20
 		}
 
-		self.num_obj.density_data = await client.dofetch3(
-			'/termdb?density=1' +
-				'&genome=' +
-				self.opts.genome +
-				'&dslabel=' +
-				self.opts.dslabel +
-				'&termid=' +
-				tvs.term.id +
-				'&width=' +
-				self.num_obj.plot_size.width +
-				'&height=' +
-				self.num_obj.plot_size.height +
-				'&xpad=' +
-				self.num_obj.plot_size.xpad +
-				'&ypad=' +
-				self.num_obj.plot_size.ypad +
-				'&filter=' +
-				encodeURIComponent(JSON.stringify(self.filter))
-		)
+		try {
+			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
+		} catch (err) {
+			console.log(err)
+		}
+
 		if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
 		makeDensityPlot(self.num_obj.density_data)
@@ -98,21 +85,6 @@ export function getNumericMethods(self) {
 		addRangeTable()
 		self.num_obj.brushes.forEach(brush => brush.init())
 		await showCheckList_numeric(tvs, div)
-	}
-
-	async function getCategories(termid) {
-		// get number of samples for each category of a numeric term
-		const args = [
-			'getnumericcategories=1',
-			'genome=' + self.genome,
-			'dslabel=' + self.dslabel,
-			'tid=' + termid,
-			'filter=' + encodeURIComponent(JSON.stringify(self.filter))
-		]
-		// may add filter
-		const data = await client.dofetch3('termdb?' + args.join('&'))
-		if (data.error) throw data.error
-		return data.lst
 	}
 
 	function makeDensityPlot(data) {
@@ -324,12 +296,12 @@ export function getNumericMethods(self) {
 				//update 'edit', 'apply' and 'reset' buttons based on brush change
 				brush.edit_btn.style(
 					'display',
-					!similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					!similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 				brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
 				brush.reset_btn.style(
 					'display',
-					similarRanges || (a_range.start === '' || a_range.stop === '') ? 'none' : 'inline-block'
+					similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 				)
 
 				// hide start and stop text and relation symbols if brush moved
@@ -558,7 +530,7 @@ export function getNumericMethods(self) {
 				if (!client.keyupEnter()) return
 				brush.stop_input.property('disabled', true)
 				try {
-					if (brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
+					if (+brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
 					update_input()
 				} catch (e) {
 					window.alert(e)
@@ -668,7 +640,7 @@ export function getNumericMethods(self) {
 			.attr('class', 'sja_filter_tag_btn delete_btn')
 			.style(
 				'display',
-				self.tvs.ranges.length == 1 && (orig_range.start != '' && orig_range.stop != '') ? 'none' : 'inline-block'
+				self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
 			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
@@ -787,7 +759,7 @@ export function getNumericMethods(self) {
 			return
 		}
 		// numerical checkbox for unannotated cats
-		const unannotated_cats = await getCategories(tvs.term.id)
+		const unannotated_cats = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
 
 		for (const [index, cat] of unannotated_cats.entries()) {
 			cat.label = tvs.term.values[cat.value].label

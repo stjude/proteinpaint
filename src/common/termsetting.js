@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { select, event } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag, transform } from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag } from 'd3'
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
@@ -105,10 +105,14 @@ class TermSetting {
 	}
 }
 
-exports.termsettingInit = rx.getInitFxn(TermSetting)
+export const termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		if (self.opts.$id) {
+			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
+		}
+
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
@@ -248,7 +252,7 @@ function setInteractivity(self) {
 
 	self.showTree = async holder => {
 		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
-		const termdb = await require('../termdb/app')
+		const termdb = await import('../termdb/app')
 		termdb.appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
@@ -291,12 +295,7 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('edit')
+			.text('Edit')
 			.on('click', () => {
 				self.dom.tip.clear()
 				self.showEditMenu(self.dom.tip.d)
@@ -305,11 +304,6 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
 			.text('Replace')
 			.on('click', () => {
 				self.dom.tip.clear()
@@ -319,11 +313,6 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'block')
-			.style('padding', '7px 15px')
-			.style('margin', '2px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
 			.text('Remove')
 			.on('click', () => {
 				self.dom.tip.hide()
@@ -332,7 +321,7 @@ function setInteractivity(self) {
 	}
 }
 
-function termsetting_fill_q(q, term) {
+export function termsetting_fill_q(q, term) {
 	// to-do: delete this code block when all term.is* has been removed from code
 	if (!term.type) {
 		term.type = term.iscategorical
@@ -353,6 +342,11 @@ function termsetting_fill_q(q, term) {
 			to be tested if can work with partially declared state
 			always copies from .bins.default
 			*/
+
+			// rounding and label_offset may have to defined separately within bins.default or bins.less,
+			// for now assume that the same values will apply to both bins.default and .less
+			if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
+			if (term.bins.label_offset) term.bins.default.label_offset = term.bins.label_offset
 			rx.copyMerge(q, term.bins.default)
 		}
 		set_hiddenvalues(q, term)
@@ -397,7 +391,6 @@ function termsetting_fill_q(q, term) {
 	}
 	throw 'unknown term type'
 }
-exports.termsetting_fill_q = termsetting_fill_q
 
 function set_hiddenvalues(q, term) {
 	if (!q.hiddenValues) {

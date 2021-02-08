@@ -91,7 +91,7 @@ class TdbApp {
 	}
 }
 
-exports.appInit = rx.getInitFxn(TdbApp)
+export const appInit = rx.getInitFxn(TdbApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {
@@ -107,32 +107,4 @@ function setInteractivity(self) {
 	}
 
 	self.showTermSrc = showTermSrc
-}
-
-export function showTermSrc({
-	srctype,
-	holder,
-	genome,
-	dslabel,
-	activeCohort,
-	filter,
-	clicked_terms,
-	select_callback
-}) {
-	exports.appInit(null, {
-		holder,
-		state: {
-			genome,
-			dslabel,
-			activeCohort,
-			nav: {
-				header_mode: 'search_only'
-			},
-			termfilter: { filter }
-		},
-		tree: { disable_terms: clicked_terms },
-		barchart: {
-			bar_click_override: select_callback
-		}
-	})
 }

@@ -13,6 +13,9 @@ import { make_leftlabels } from './leftlabel'
 loadTk
 get_parameter
 ********************** INTERNAL
+loadTk_finish_closure
+rangequery_rglst
+rangequery_add_variantfilters
 
 */
 
@@ -107,6 +110,16 @@ export function get_parameter(tk, block) {
 			// quick fix!!!
 			par.push('set_id=' + tk.set_id)
 		}
+		if (tk.filter0) {
+			// expecting to be a simple filter such as
+			// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
+			// XXX any other possibilities from gdc portal
+			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		}
+		if (tk.token) {
+			// quick fix!!!
+			par.push('token=' + tk.token)
+		}
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform
@@ -152,7 +165,10 @@ function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		// if any query may use
+		if (block.gmmode == client.gmmode.genomic) {
+			// TODO if can delete the isoform parameter to simply make the query by genomic pos
+			par.push('atgenomic=1')
+		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
 	}

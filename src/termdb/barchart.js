@@ -8,7 +8,6 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { to_svg } from '../client'
-import { set_hiddenvalues } from '../common/termsetting'
 
 const colors = {
 	c10: scaleOrdinal(schemeCategory10),
@@ -24,6 +23,13 @@ class TdbBarchart {
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,
+			banner: opts.holder
+				.append('div')
+				.style('display', 'none')
+				.style('text-align', 'center')
+				.style('padding', '24px')
+				.style('font-size', '16px')
+				.style('color', '#aaa'),
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
@@ -66,9 +72,9 @@ class TdbBarchart {
 			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config: {
-				term: config.term,
-				term0: config.term0,
-				term2: config.term2,
+				term: JSON.parse(JSON.stringify(config.term)),
+				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
+				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
 				settings: {
 					common: config.settings.common,
 					barchart: config.settings.barchart
@@ -87,6 +93,11 @@ class TdbBarchart {
 		if (data) this.currServerData = data
 		this.config = this.state.config
 		if (!this.setVisibility()) return
+		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
+			for (const q of this.currServerData.refs.q) {
+				if (q.error) throw q.error //console.log(89, data.refs.q)
+			}
+		}
 		this.updateSettings(this.config)
 		this.chartsData = this.processData(this.currServerData)
 		this.render()
@@ -117,7 +128,8 @@ class TdbBarchart {
 			rowspace: config.settings.common.barspace
 		}
 
-		this.initExclude()
+		this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
+		this.setExclude(this.config.term, this.config.term2)
 		Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {}, {
 			exclude: this.settings.exclude
 		})
@@ -131,8 +143,48 @@ class TdbBarchart {
 		}
 	}
 
-	initExclude() {
-		const term = this.config.term
+	mayResetHidden(term, term2, term0) {
+		const combinedTermIds = (term && term.id) + ';;' + (term2 && term2.id) + ';;' + (term0 && term0.id)
+		if (combinedTermIds === this.currCombinedTermIds) return
+		// only reset hidden if terms have changed
+		for (const chart of this.currServerData.charts) {
+			if (term.q && term.q.hiddenValues) {
+				this.mayEditHiddenValues(term, chart.serieses.length, 'term')
+			}
+			if (term2 && term2.q && term2.q.hiddenValues) {
+				for (const series of chart.serieses) {
+					this.mayEditHiddenValues(term2, series.data.length, 'term2')
+				}
+			}
+		}
+		this.currCombinedTermIds = combinedTermIds
+	}
+
+	mayEditHiddenValues(term, numAvailable, termNum) {
+		const numHidden = Object.keys(term.q.hiddenValues).filter(key => term.q.hiddenValues[key]).length
+		if (numHidden < numAvailable) return
+		/*
+			if all the serieses are assigned to be hidden on first render,
+			show the usually hidden values instead to avoid confusion
+			with an empty plot
+		*/
+		for (const key in term.q.hiddenValues) {
+			if (!term.q.hiddenValues[key]) return
+			delete term.q.hiddenValues[key]
+		}
+		// since config.[term | term2 | term0] are copies of appState,
+		// must save the changes to q.hiddenValues in the stored state
+		// for consistent behavior in later app.dispatch or barchart updates
+		this.app.save({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				[termNum]: term
+			}
+		})
+	}
+
+	setExclude(term, term2) {
 		// a non-numeric term.id is used directly as seriesId or dataId
 		const getHiddenId = id =>
 			term.term.type == 'categorical'
@@ -144,10 +196,9 @@ class TdbBarchart {
 				: id
 
 		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
-			.filter(id => id in term.q.hiddenValues)
+			.filter(id => term.q.hiddenValues[id])
 			.map(getHiddenId)
 
-		const term2 = this.config.term2
 		this.settings.exclude.rows =
 			!term2 || !term2.q || !term2.q.hiddenValues
 				? []
@@ -288,6 +339,7 @@ class TdbBarchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
+		const headingStyle = 'color: #aaa; font-weight: 400'
 		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
@@ -319,8 +371,9 @@ class TdbBarchart {
 				.sort(this.barSorter)
 
 			if (items.length) {
+				const name = t2 ? t1.term.name : 'Other categories'
 				legendGrps.push({
-					name: 'Hidden ' + t1.term.name + ' value',
+					name: `<span style="${headingStyle}">${name}</span>`,
 					items
 				})
 			}
@@ -335,7 +388,8 @@ class TdbBarchart {
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t2.term.name + (value_by_label ? ', ' + value_by_label : ''),
+				name:
+					`<span style="${headingStyle}">` + t2.term.name + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
@@ -371,6 +425,18 @@ function setRenderers(self) {
 
 		self.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
 		self.legendRenderer(self.getLegendGrps())
+
+		if (!self.visibleCharts.length) {
+			const clickLegendMessage =
+				self.settings.exclude.cols.length || self.settings.exclude.rows.length
+					? `<br/><span>click on a legend label below to display the barchart</span>`
+					: ''
+			self.dom.banner
+				.html(`<span>No visible barchart data to render</span>${clickLegendMessage}`)
+				.style('display', 'block')
+		} else {
+			self.dom.banner.text('').style('display', 'none')
+		}
 	}
 
 	self.exitChart = function(chart) {

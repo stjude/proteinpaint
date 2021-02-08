@@ -2,7 +2,7 @@
  Init Factory
 *************/
 
-function getInitFxn(_Class_) {
+export function getInitFxn(_Class_) {
 	/*
 		arg: 
 		= opts{} for an App constructor
@@ -44,18 +44,15 @@ function getInitFxn(_Class_) {
 			self.bus = new Bus(self.api, self.eventTypes, callbacks)
 		}
 		if (self.bus) self.bus.emit('postInit')
-
 		return api
 	}
 }
-
-exports.getInitFxn = getInitFxn
 
 /****************
   API Generators
 *****************/
 
-function getStoreApi(self) {
+export function getStoreApi(self) {
 	const api = {
 		async write(action) {
 			// avoid calls to inherited methods
@@ -82,9 +79,7 @@ function getStoreApi(self) {
 	return api
 }
 
-exports.getStoreApi = getStoreApi
-
-function getAppApi(self) {
+export function getAppApi(self) {
 	if (!('type' in self)) {
 		throw `The component's this.type must be set before calling this.getAppApi(this).`
 	}
@@ -166,6 +161,23 @@ function getAppApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		destroy() {
+			for (const key in self.components) {
+				const component = self.components[key]
+				if (typeof component.destroy == 'function') {
+					component.destroy()
+				} else if (component.holder) {
+					component.holder.selectAll('*').remove()
+				}
+				delete self.components[key]
+			}
+			if (typeof self.destroy == 'function') self.destroy()
+			self.dom.holder.selectAll('*').remove()
+			for (const key in self.dom) {
+				delete self.dom[key]
+			}
+			delete self.store
 		}
 	}
 
@@ -178,9 +190,7 @@ function getAppApi(self) {
 	return api
 }
 
-exports.getAppApi = getAppApi
-
-function getComponentApi(self) {
+export function getComponentApi(self) {
 	if (!('type' in self)) {
 		throw `The component's type must be set before calling this.getComponentApi(this).`
 	}
@@ -222,13 +232,27 @@ function getComponentApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		destroy() {
+			for (const key in self.components) {
+				const component = self.components[key]
+				if (typeof component.destroy == 'function') {
+					component.destroy()
+				} else if (component.holder) {
+					component.holder.selectAll('*').remove()
+				}
+				delete self.components[key]
+			}
+			if (typeof self.destroy == 'function') self.destroy()
+			self.dom.holder.selectAll('*').remove()
+			for (const key in self.dom) {
+				delete self.dom[key]
+			}
 		}
 	}
 	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }
-
-exports.getComponentApi = getComponentApi
 
 /**************
 Utility Classes
@@ -241,7 +265,7 @@ Utility Classes
 	component.api.on() method.
 */
 
-class Bus {
+export class Bus {
 	constructor(api, eventTypes, callbacks) {
 		/*
 			api{} 
@@ -316,14 +340,19 @@ class Bus {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
 					this.events[type](arg || this.defaultArg)
+					if (eventType == 'postInit') delete this.events[type]
 				}
 			}
 		}, wait)
 		return this
 	}
-}
 
-exports.Bus = Bus
+	destroy() {
+		for (const key in this.events) {
+			delete this.events[key]
+		}
+	}
+}
 
 /******************
   Detached Helpers
@@ -350,7 +379,7 @@ exports.Bus = Bus
 // Component Helpers
 // -----------------
 
-async function notifyComponents(components, current, data = null) {
+export async function notifyComponents(components, current, data = null) {
 	if (!components) return // allow component-less app
 	const called = []
 	for (const name in components) {
@@ -370,12 +399,10 @@ async function notifyComponents(components, current, data = null) {
 	return Promise.all(called)
 }
 
-exports.notifyComponents = notifyComponents
-
 // access the api of an indirectly connected component,
 // for example to subscribe an .on(event, listener) to
 // the event bus of a distant component
-function getComponents(components, dotSepNames) {
+export function getComponents(components, dotSepNames) {
 	if (!dotSepNames) return Object.assign({}, components)
 	// string-based convenient accessor,
 	// so instead of
@@ -398,8 +425,6 @@ function getComponents(components, dotSepNames) {
 	}
 	return component
 }
-
-exports.getComponents = getComponents
 
 // Store Helpers
 // -------------
@@ -424,7 +449,7 @@ exports.getComponents = getComponents
 	  at the root level
 	- see core.spec test for copyMerge details
 */
-function copyMerge(base, ...args) {
+export function copyMerge(base, ...args) {
 	const replaceKeyVals = []
 	if (Array.isArray(args[args.length - 1])) {
 		replaceKeyVals.push(...args.pop())
@@ -448,9 +473,7 @@ function copyMerge(base, ...args) {
 	return target
 }
 
-exports.copyMerge = copyMerge
-
-function fromJson(objStr) {
+export function fromJson(objStr) {
 	// this method should not be reused when there is
 	// a need to recover any Set or Map values, instead
 	// declare a class specific fromJson() method that has
@@ -462,9 +485,7 @@ function fromJson(objStr) {
 	return JSON.parse(objStr)
 }
 
-exports.fromJson = fromJson
-
-function toJson(obj = null) {
+export function toJson(obj = null) {
 	// this method should not be reused when there is
 	// a need to stringify any Set or Map values,
 	// instead declare a class specific toJson() method
@@ -473,21 +494,17 @@ function toJson(obj = null) {
 	return JSON.stringify(obj ? obj : this.state)
 }
 
-exports.toJson = toJson
-
-function deepFreeze(obj) {
+export function deepFreeze(obj) {
 	Object.freeze(obj)
 	for (const key in obj) {
 		if (typeof obj == 'object') deepFreeze(obj[key])
 	}
 }
 
-exports.deepFreeze = deepFreeze
-
 // Match Helpers
 // -----------
 
-function matchAction(action, against, sub) {
+export function matchAction(action, against, sub) {
 	//console.log(action, against)
 	// if string matches are specified, start with
 	// matched == false, otherwise start as true
@@ -509,12 +526,10 @@ function matchAction(action, against, sub) {
 	return matched
 }
 
-exports.matchAction = matchAction
-
-function deepEqual(x, y) {
+export function deepEqual(x, y) {
 	if (x === y) {
 		return true
-	} else if (typeof x == 'object' && x != null && (typeof y == 'object' && y != null)) {
+	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
 		if (Object.keys(x).length != Object.keys(y).length) {
 			return false
 		}
@@ -529,5 +544,3 @@ function deepEqual(x, y) {
 		return true
 	} else return false
 }
-
-exports.deepEqual = deepEqual

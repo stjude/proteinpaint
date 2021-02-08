@@ -4,20 +4,32 @@ import { term1uiInit } from './plot.controls.term1'
 import { divideInit } from './plot.controls.divide'
 import { initRadioInputs } from '../common/dom'
 
+// to be used for assigning unique
+// radio button names by object instance
+// otherwise termdp app popups
+let instanceNum = 0
+
 class TdbConfigUiInit {
 	constructor(app, opts) {
 		this.type = 'controlsConfig'
 		this.opts = opts
 		this.id = opts.id
 		this.app = app
+		this.instanceNum = instanceNum++
 		setInteractivity(this)
 
 		const dispatch = app.dispatch
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug }),
-			orientation: setOrientationOpts({ holder: this.dom.orientationTr, dispatch, id: this.id, debug }),
+			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug, instanceNum: this.instanceNum }),
+			orientation: setOrientationOpts({
+				holder: this.dom.orientationTr,
+				dispatch,
+				id: this.id,
+				debug,
+				instanceNum: this.instanceNum
+			}),
 			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug })
 		}
 		this.components = {
@@ -115,7 +127,7 @@ function setOrientationOpts(opts) {
 	}
 
 	self.radio = initRadioInputs({
-		name: 'pp-termdb-condition-unit',
+		name: 'pp-termdb-condition-unit-' + opts.instanceNum,
 		holder: self.dom.inputTd,
 		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
 		listeners: {
@@ -159,7 +171,7 @@ function setScaleOpts(opts) {
 	}
 
 	self.radio = initRadioInputs({
-		name: 'pp-termdb-scale-unit',
+		name: 'pp-termdb-scale-unit-' + opts.instanceNum,
 		holder: self.dom.inputTd,
 		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
 		listeners: {
@@ -212,7 +224,7 @@ function setViewOpts(opts) {
 	}
 
 	self.radio = initRadioInputs({
-		name: 'pp-termdb-display-mode', // elemName
+		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
 		holder: self.dom.inputTd,
 		options: [
 			{ label: 'Barchart', value: 'barchart' },
@@ -245,15 +257,20 @@ function setViewOpts(opts) {
 				? 'scatter'
 				: 'barchart'
 
+			const numericTypes = ['integer', 'float']
+
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
 				d.value == 'barchart'
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'boxplot' && plot.term2 && numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
-					: d.value == 'scatter' && plot.term.term.type == 'float' && plot.term2 && plot.term2.term.type == 'float'
+					: d.value == 'scatter' &&
+					  numericTypes.includes(plot.term.term.type) &&
+					  plot.term2 &&
+					  numericTypes.includes(plot.term2.term.type)
 					? 'inline-block'
 					: 'none'
 			)

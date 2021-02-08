@@ -7,10 +7,10 @@ const fs = require('fs')
 
 const str2id = new Map()
 for (const line of fs
-	.readFileSync('samples.string2intID', { encoding: 'utf8' })
+	.readFileSync('samples.idmap', { encoding: 'utf8' })
 	.trim()
 	.split('\n')) {
-	const [s, i] = line.split('\t')
+	const [i, s] = line.split('\t')
 	str2id.set(s, i)
 }
 
@@ -57,5 +57,5 @@ for (let i = 0; i < lines.length; i++) {
 	console.log(l.join('\t'))
 }
 if (missingsamples.size) {
-	console.error(missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
+	console.error(infile + ': ' + missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
 }

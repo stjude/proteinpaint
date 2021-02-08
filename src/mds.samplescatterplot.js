@@ -5,7 +5,11 @@ import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
-import { zoom as d3zoom, zoomIdentity } from 'd3'
+import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
+import { filterInit } from './common/filter'
+import { getFilteredSamples } from '../modules/filter'
+import { getVocabFromSamplesArray } from './termdb/vocabulary'
+import { getsjcharts } from './getsjcharts'
 
 /*
 obj:
@@ -128,19 +132,40 @@ export async function init(obj, holder, debugmode) {
 				}
 				const str = str0.toLowerCase()
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) != -1)
+					.filter(d => searchStr(d, str))
 					.transition()
 					.attr('r', radius * 2)
 				obj.dotselection
-					.filter(d => d.sample.toLowerCase().indexOf(str) == -1)
+					.filter(d => !searchStr(d, str))
 					.transition()
 					.attr('r', 1)
 			})
+
+		function searchStr(data, str) {
+			let found_flag = false
+			let vals = Object.values(data).filter(a => a != null && typeof a != 'number')
+			let new_vals = vals.filter(a => typeof a != 'object').map(x => x.toLowerCase())
+			new_vals.forEach(v => {
+				if (v.toLowerCase().includes(str)) return (found_flag = true)
+			})
+			// if any value is of type 'object', search for all values of the object
+			if (!found_flag) {
+				vals.forEach(v => {
+					if (v && typeof v == 'object') {
+						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						obj_vals.forEach(ov => {
+							if (ov.toLowerCase().includes(str)) return (found_flag = true)
+						})
+					}
+				})
+			}
+			return found_flag
+		}
 	}
 	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
-
 	obj.scattersvg = scatterdiv.append('svg')
 	obj.scattersvg_resizehandle = scatterdiv.append('div')
 	obj.scattersvg_buttons = scatterdiv.append('div')
@@ -240,6 +265,36 @@ async function get_data(obj) {
 			if (!d.color) d.color = userdotcolor
 			obj.dots_user.push(d)
 		}
+	}
+
+	if (!obj.filterApi) {
+		obj.filterApi = filterInit({
+			btn: obj.filterDiv.append('div'),
+			btnLabel: 'Filter',
+			emptyLabel: '+New Filter',
+			holder: obj.filterDiv.append('div'),
+			vocab: getVocabFromSamplesArray(ad),
+			//termdbConfig: opts.termdbConfig,
+			debug: true,
+			callback(filter) {
+				obj.filteredSamples = getFilteredSamples(ad.samples, filter)
+				// re-render scatterplot
+				if (obj.dotselection._groups[0].length != obj.filteredSamples.size) {
+					obj.dotselection
+						.transition()
+						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
+						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
+				} else {
+					obj.dotselection
+						.transition()
+						.attr('r', radius)
+						.style('opacity', 1)
+				}
+				update_dotcolor_legend(obj)
+			}
+		})
+		obj.filterApi.main({ type: 'tvslst', join: '', lst: [] })
+		obj.filteredSamples = [] // may be seeded from the initial render
 	}
 }
 
@@ -354,19 +409,28 @@ function init_plot(obj) {
 		maxy = Math.max(maxy, d.y)
 	}
 
-	const xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
-	const yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
+	let xscale = (obj.xscale = scaleLinear().domain([minx, maxx]))
+	let yscale = (obj.yscale = scaleLinear().domain([miny, maxy]))
 
 	if (!obj.dimensions) obj.dimensions = {}
-	let currBbox
+	if (!('autoResize' in obj.dimensions)) obj.dimensions.autoResize = true
+	if (!('minWidth' in obj.dimensions)) obj.dimensions.minWidth = 300
+	if (!('minHeight' in obj.dimensions)) obj.dimensions.minHeight = 300
 
+	let currBbox // to be used for maintaining chart height:width ratio when resizing based on div size
+	const estlegendwidth = 250 // estimated legend width to the right side of the chart
+	const bbox = rootholder.getBoundingClientRect()
 	let toppad = 30,
 		bottompad = 50,
 		leftpad = 100,
 		rightpad = 30,
 		vpad = 20,
-		width = obj.dimensions.width ? obj.dimensions.width : 800, // make automatic
-		height = obj.dimensions.height ? obj.dimensions.height : 800,
+		width = obj.dimensions.width
+			? obj.dimensions.width
+			: Math.max(obj.dimensions.minWidth, 0.75 * (bbox.width - estlegendwidth)),
+		height = obj.dimensions.height
+			? obj.dimensions.height
+			: Math.max(obj.dimensions.minHeight, Math.min(1.2 * width, 0.5 * bbox.height)),
 		fontsize = 18
 
 	const svg = obj.scattersvg
@@ -380,6 +444,7 @@ function init_plot(obj) {
 		.data(obj.dots)
 		.enter()
 		.append('g')
+		.attr('class', 'sample_dot')
 
 	const circles = dots
 		.append('circle')
@@ -412,30 +477,61 @@ function init_plot(obj) {
 
 	obj.dotselection = circles
 
-	let userdots, usercircles, userlabelg, userlabels
+	let userdots, usercircles, userlabelg, userlabels, userlabel_borders
+	const userlabel_grp = (obj.userlabel_grp = { userlabels, userlabel_borders })
 	if (obj.dots_user) {
 		userdots = dotg
 			.selectAll()
 			.data(obj.dots_user)
 			.enter()
 			.append('g')
+			.attr('class', 'sample_dot')
 		usercircles = userdots
 			.append('circle')
 			.attr('stroke', 'none')
 			.attr('fill', d => d.color)
 			.attr('r', radius)
 			.on('mouseover', d => {
-				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
+				Object.values(userlabel_grp).forEach(labels =>
+					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
+				)
 			})
 			.on('mouseout', d => {
-				userlabels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
+				obj.tip.hide()
+				Object.values(userlabel_grp).forEach(labels =>
+					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
+				)
 			})
 		userlabelg = dotg
 			.selectAll()
 			.data(obj.dots_user)
 			.enter()
 			.append('g')
-		userlabels = userlabelg
+			.attr('class', 'userlabelg')
+
+		userlabel_grp.userlabel_borders = userlabelg
+			.append('text')
+			.attr('fill', '#fff')
+			.attr('font-size', fontsize)
+			.attr('stroke', 'white')
+			.attr('stroke-width', '3px')
+			.text(d => d.sample)
+			.attr('text-anchor', 'end')
+
+		userlabel_grp.userlabels = userlabelg
 			.append('text')
 			.attr('fill', d => d.color)
 			.attr('font-size', fontsize)
@@ -443,10 +539,24 @@ function init_plot(obj) {
 			.on('mouseover', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
 				svg.style('cursor', 'move')
+				const lst = [{ k: 'Sample', v: d.sample }]
+				if (obj.sample_attributes) {
+					for (const attrkey in obj.sample_attributes) {
+						const attr = obj.sample_attributes[attrkey]
+						if (d[attrkey])
+							lst.push({
+								k: attr.label,
+								v: d[attrkey]
+							})
+					}
+				}
+				client.make_table_2col(obj.tip.clear().d, lst)
+				obj.tip.show(d3event.clientX, d3event.clientY)
 			})
 			.on('mouseout', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
 				svg.style('cursor', 'auto')
+				obj.tip.hide()
 			})
 			.on('mousedown', d => {
 				d3event.preventDefault()
@@ -454,6 +564,8 @@ function init_plot(obj) {
 				const b = d3select(document.body)
 				const x = d3event.clientX
 				const y = d3event.clientY
+				xscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_xscale : obj.xscale
+				yscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_yscale : obj.yscale
 				// <g> is movable
 				const g = userlabelg.filter(i => i.sample == d.sample)
 				const [x1, y1] = g
@@ -465,6 +577,8 @@ function init_plot(obj) {
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
+					d.x_ = xscale.invert(x1 + d3event.clientX - x)
+					d.y_ = yscale.invert(y1 + d3event.clientY - y)
 				})
 			})
 			.on('dblclick', d => {
@@ -478,7 +592,7 @@ function init_plot(obj) {
 					.on('keyup', () => {
 						if (!client.keyupEnter()) return
 						const v = d3event.target.value
-						userlabels.filter(i => i.sample == d.sample).text(v)
+						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).text(v))
 						d.sample = v
 						obj.menu2.hide()
 					})
@@ -488,12 +602,12 @@ function init_plot(obj) {
 					.property('value', d.color)
 					.on('change', () => {
 						const v = d3event.target.value
-						userlabels.filter(i => i.sample == d.sample).attr('fill', v)
+						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).attr('fill', v))
 						usercircles.filter(i => i.sample == d.sample).attr('fill', v)
 						d.color = v
 					})
 			})
-		userlabels.append('title').text('Double-click to edit')
+		userlabel_grp.userlabels.append('title').text('Double-click to edit')
 	}
 
 	assign_color4dots(obj)
@@ -512,16 +626,18 @@ function init_plot(obj) {
 			userlabelg
 				.transition() // smooth motion of the text label
 				.attr('transform', d => {
-					const x = new_xscale(d.x),
-						y = new_yscale(d.y)
+					const x = d.x_ ? new_xscale(d.x_) : new_xscale(d.x),
+						y = d.y_ ? new_yscale(d.y_) : new_yscale(d.y)
 					// check label width
 					let lw
-					userlabels
-						.filter(i => i.sample == d.sample)
-						.each(function() {
-							lw = this.getBBox().width
-						})
-						.attr('text-anchor', x + lw >= width ? 'end' : 'start')
+					Object.values(userlabel_grp).forEach(labels =>
+						labels
+							.filter(i => i.sample == d.sample)
+							.each(function() {
+								lw = this.getBBox().width
+							})
+							.attr('text-anchor', x + lw >= width ? 'end' : 'start')
+					)
 					return 'translate(' + x + ',' + y + ')'
 				})
 		}
@@ -681,8 +797,13 @@ function makeConfigPanel(obj) {
 			obj.new_xscale = d3event.transform.rescaleX(obj.xscale)
 			obj.new_yscale = d3event.transform.rescaleY(obj.yscale)
 			obj.zoomed_scale = d3event.transform.k
-			const dots = obj.dotg.selectAll('g')
+			const dots = obj.dotg.selectAll('.sample_dot')
 			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
+			const userlabelg = obj.dotg.selectAll('.userlabelg')
+			userlabelg.attr(
+				'transform',
+				d => 'translate(' + obj.new_xscale(d.x_ || d.x) + ',' + obj.new_yscale(d.y_ || d.y) + ')'
+			)
 		}
 
 		if (obj.zoom_active) svg.call(zoom)
@@ -841,8 +962,12 @@ function legend_attr_levels(obj) {
 	// multiple ways to decide order of L1values
 	for (const L1value of get_itemOrderList(L1, obj)) {
 		const L1o = L1.v2c.get(L1value)
-		const L1div = scrolldiv.append('div').style('margin-top', '20px')
+		const L1div = scrolldiv
+			.append('div')
+			.style('margin-top', '20px')
+			.attr('class', 'sja_lb_div')
 		L1div.append('div')
+			.attr('class', 'sja_l1lb')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
 			.style('margin-top', '15px')
 
@@ -867,68 +992,70 @@ function legend_attr_levels(obj) {
 					L2.v2c.get(v).label = d.s[L2.label]
 				}
 			}
-			for (const L2value of get_itemOrderList(L2, obj)) {
-				const L2o = L2.v2c.get(L2value)
-				const cell = L1div.append('div')
-					.style('display', 'inline-block')
-					.style('white-space', 'nowrap')
-					.attr('class', 'sja_clb')
-					.on('click', () => {
-						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+			if (!obj.hide_subtype_legend) {
+				for (const L2value of get_itemOrderList(L2, obj)) {
+					const L2o = L2.v2c.get(L2value)
+					const cell = L1div.append('div')
+						.style('display', 'inline-block')
+						.style('white-space', 'nowrap')
+						.attr('class', 'sja_clb')
+						.on('click', () => {
+							// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
 
-						if (L2o.selected) {
-							// already selected, turn off this category in legend
-							L2o.selected = false
-							cell.style('border', '')
+							if (L2o.selected) {
+								// already selected, turn off this category in legend
+								L2o.selected = false
+								cell.style('border', '')
 
+								let alloff = true
+								for (const k in L2values) {
+									if (L2values[k].selected) alloff = false
+								}
+								if (alloff) {
+									// all items are unselected, turn dots to default
+									obj.dotselection.transition().attr('r', radius)
+								} else {
+									// still other items selected, only turn dots of this category to tiny
+									obj.dotselection
+										.filter(d => d.s[L2.key] == L2value)
+										.transition()
+										.attr('r', radius_tiny)
+								}
+								return
+							}
+
+							// not yet, select this one
 							let alloff = true
 							for (const k in L2values) {
 								if (L2values[k].selected) alloff = false
 							}
+							L2o.selected = true
+							cell.style('border', 'solid 1px #858585')
 							if (alloff) {
-								// all items are unselected, turn dots to default
-								obj.dotselection.transition().attr('r', radius)
+								// none other groups selected so far, turn all the other groups tiny
+								obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : radius_tiny))
 							} else {
-								// still other items selected, only turn dots of this category to tiny
+								// some other groups are also highlighted, only turn this group big
 								obj.dotselection
 									.filter(d => d.s[L2.key] == L2value)
 									.transition()
-									.attr('r', radius_tiny)
+									.attr('r', radius)
 							}
-							return
-						}
-
-						// not yet, select this one
-						let alloff = true
-						for (const k in L2values) {
-							if (L2values[k].selected) alloff = false
-						}
-						L2o.selected = true
-						cell.style('border', 'solid 1px #858585')
-						if (alloff) {
-							// none other groups selected so far, turn all the other groups tiny
-							obj.dotselection.transition().attr('r', d => (d.s[L2.key] == L2value ? radius : radius_tiny))
-						} else {
-							// some other groups are also highlighted, only turn this group big
-							obj.dotselection
-								.filter(d => d.s[L2.key] == L2value)
-								.transition()
-								.attr('r', radius)
-						}
-					})
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.attr('class', 'sja_mcdot')
-					.style('background', L2o.color)
-					.style('margin-right', '3px')
-					.text(L2o.dots.length)
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('color', L2o.color)
-					.text(L2o.label || L2value)
-				L2o.cell = cell
+						})
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.attr('class', 'sja_mcdot')
+						.style('background', L2o.color)
+						.style('margin-right', '3px')
+						.text(L2o.dots.length)
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.style('color', L2o.color)
+						.text(L2o.label || L2value)
+					L2o.cell = cell
+				}
 			}
 			if (L2.unannotated) {
 				const d = L1div.append('div').style('margin-top', '20px')
@@ -1073,12 +1200,92 @@ function legend_flatlist(obj) {
 	}
 }
 
-function click_dot(dot, obj) {
-	/*
-	clicking a dot to launch browser view of tracks from this sample
-	*/
-	if (!obj.dslabel) return
+function update_dotcolor_legend(obj) {
+	// update legend table by filter
+	const filterd_dots = obj.dots.filter(d => obj.filteredSamples.has(d.sample))
+	const attrs_list = Array.from(filterd_dots, d => d.s)
 
+	const key1 = obj.attr_levels[0].label || obj.attr_levels[0].key
+	const l1_labs = [...new Set(Array.from(attrs_list, a => a[key1]))]
+
+	const key2 = obj.attr_levels[1].label || obj.attr_levels[1].key
+	const l2_labs = [...new Set(Array.from(attrs_list, a => a[key2]))]
+
+	const legend_divs = obj.legendtable.node().querySelectorAll('.sja_lb_div')
+	for (const div1 of legend_divs) {
+		// render main labels for level1
+		const l1_label = d3select(div1)
+			.select('.sja_l1lb')
+			.node()
+			.innerText.split(/\s{2}n=/)[0]
+		if (!l1_labs.includes(l1_label)) d3select(div1).style('display', 'none')
+		else {
+			d3select(div1).style('display', 'block')
+			// render secondary labels for level2
+			const l2_divs = d3select(div1)
+				.node()
+				.querySelectorAll('.sja_clb')
+			for (const div2 of l2_divs) {
+				const clab = d3select(div2)
+					.node()
+					.querySelectorAll('div')[1]
+				if (!l2_labs.includes(clab.innerText)) d3select(div2).style('display', 'none')
+				else d3select(div2).style('display', 'inline-block')
+			}
+		}
+	}
+}
+
+/*
+clicking a dot can have different behaviors based on config
+*/
+function click_dot(dot, obj) {
+	if (obj.dslabel) {
+		// to launch browser view of tracks from this sample
+		click_dot_mdsview(dot, obj)
+		return
+	}
+	if (obj.disco) {
+		click_dot_disco(dot, obj)
+		return
+	}
+}
+async function click_dot_disco(dot, obj) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text(dot.sample)
+	const wait = client.tab_wait(pane.body)
+	try {
+		const sjcharts = await getsjcharts()
+		const arg = {
+			genome: obj.disco.genome,
+			dslabel: obj.disco.dslabel,
+			querykey: obj.disco.querykey,
+			getsample4disco: dot.sample
+		}
+		const data = await client.dofetch('/mdssvcnv', arg)
+		if (data.error) throw data.error
+		if (!data.text) throw '.text missing'
+
+		const renderer = await sjcharts.dtDisco({
+			holderSelector: pane.body,
+			settings: {
+				showControls: false,
+				selectedSamples: []
+			}
+		})
+
+		const disco_arg = {
+			sampleName: dot.sample,
+			data: JSON.parse(data.text)
+		}
+		renderer.main(disco_arg)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+function click_dot_mdsview(dot, obj) {
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text(dot.sample)
 

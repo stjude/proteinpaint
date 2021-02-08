@@ -1,0 +1,13 @@
+#!/usr/bin/env groovy
+
+library identifier: "jenkins-lib@feat/GDCDEVOPS-737-calculate-tags-branch"
+dockerPipeline {
+    // This repo doesn't use Gitflow, so don't try to parse tag names,
+    // and definitely don't create tags automatically.
+    tagSource = "branch"
+    pushTagsBranches = "match_nothing"
+
+    // Skip tests for now.
+    // TODO Setup docker-compose file for this purpose.
+    testBranches = "match_nothing"
+}

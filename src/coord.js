@@ -1,4 +1,4 @@
-function invalidcoord(thisgenome, chrom, start, stop) {
+export function invalidcoord(thisgenome, chrom, start, stop) {
 	if (!thisgenome) return 'no genome'
 	if (!chrom) return 'no chr name'
 	const chr = thisgenome.chrlookup[chrom.toUpperCase()]
@@ -10,9 +10,8 @@ function invalidcoord(thisgenome, chrom, start, stop) {
 	if (start > stop) return 'Start position is greater than stop'
 	return false
 }
-exports.invalidcoord = invalidcoord
 
-exports.string2pos = function(s, genome, donotextend) {
+export function string2pos(s, genome, donotextend) {
 	s = s.replace(/,/g, '')
 	const chr = genome.chrlookup[s.toUpperCase()]
 	if (chr) {
@@ -96,7 +95,7 @@ exports.string2pos = function(s, genome, donotextend) {
 	return null
 }
 
-exports.string2snp = function(genome, str, hostURL, jwt) {
+export function string2snp(genome, str, hostURL, jwt) {
 	return fetch(
 		new Request(hostURL + '/snpbyname', {
 			method: 'POST',
@@ -121,7 +120,7 @@ exports.string2snp = function(genome, str, hostURL, jwt) {
 		})
 }
 
-exports.genomic2gm = function(pos, gm, tempoff = 0) {
+export function genomic2gm(pos, gm, tempoff = 0) {
 	/*
 	pos: 0-based
 	tempoff is a quick fix in order to move the imprecise 'intronic' breakpoints of cicero into exon
@@ -295,7 +294,7 @@ exports.genomic2gm = function(pos, gm, tempoff = 0) {
 	return cd
 }
 
-exports.aa2gmcoord = function(aa, gm) {
+export function aa2gmcoord(aa, gm) {
 	// same as rna2gmcoord
 	if (!Number.isInteger(aa)) return null
 	if (!gm.coding) return null
@@ -314,7 +313,7 @@ exports.aa2gmcoord = function(aa, gm) {
 	return gm.codingstart
 }
 
-exports.rna2gmcoord = function(pos, gm) {
+export function rna2gmcoord(pos, gm) {
 	// it should only be used for case where only rnapos is given, no gm pos
 	// unreliable to convert genomic pos to rna pos, then convert back to genomic pos
 	if (!Number.isFinite(pos)) return null

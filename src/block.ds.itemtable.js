@@ -82,7 +82,7 @@ export function itemtable(arg) {
 
 	/**** a very quick fix!
 	in any type of variant, only set this when mlst is just one variant with occurrence=1
-	so that variant2samples can append rows to it
+	so that variant2samples can append rows to it (not in use)
 	*/
 	delete tk.__singlevariant_table
 
@@ -120,7 +120,6 @@ export function itemtable(arg) {
 		}
 	}
 
-	handle_variant2samples(mlst, holder, tk, block)
 	handle_samplecart(mlst, holder, tk, block)
 }
 
@@ -1351,7 +1350,10 @@ export function runtimeattr_snvindel(tk, mlst) {
 					lst.push({ label: 'Mutation', get: m => m.mname })
 					break
 				case 'ref':
-					lst.push({ label: 'Allele', lst: [{ label: 'Ref', get: m => m.ref }, { label: 'Alt', get: m => m.alt }] })
+					lst.push({
+						label: 'Allele',
+						lst: [{ label: 'Ref', get: m => m.ref }, { label: 'Alt', get: m => m.alt }]
+					})
 					break
 				case 'pmid':
 					lst.push(caller_pmid())
@@ -1869,7 +1871,7 @@ function caller_pmid(m) {
 				return ''
 			}
 			if (typeof m.pmid == 'number') {
-				return '<a target=_blank href=http://www.ncbi.nlm.nih.gov/pubmed/' + m.pmid + '>' + m.pmid + '</a>'
+				return '<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '>' + m.pmid + '</a>'
 			}
 			const lst = m.pmid.split(',')
 			const out = []
@@ -1879,7 +1881,7 @@ function caller_pmid(m) {
 				if (Number.isNaN(j)) {
 					out.push(i)
 				} else {
-					out.push('<a target=_blank href=http://www.ncbi.nlm.nih.gov/pubmed/' + i + '>' + i + '</a>')
+					out.push('<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + i + '>' + i + '</a>')
 				}
 			}
 			return out.join(' ')
@@ -2903,51 +2905,4 @@ function handle_samplecart(mlst, holder, tk, block) {
 			.style('margin-left', '10px')
 			.append('div')
 	})
-}
-
-async function handle_variant2samples(mlst, holder, tk, block) {
-	if (mlst.length > 30) return // should disable this at the "To table" option
-	if (!tk.ds || !tk.ds.variant2samples) return
-	// if custom data on client, and also has ds.variant2samples, may need to escape it
-
-	const div = holder.append('div').style('margin', '20px')
-	const wait = div.append('div').text('Loading...')
-	try {
-		const data = await tk.ds.variant2samples.get(mlst)
-		if (data.error) throw data.error
-		wait.remove()
-		const table = div.append('table')
-
-		const root = stratify()(data.nodes)
-		root.sum(i => i.value)
-		root.sort((a, b) => b.value - a.value)
-		root.eachBefore(node => {
-			if (!node.parent) return
-			// one tr per node
-			const tr = table.append('tr')
-			if (node.depth > 1) {
-				tr.style('font-size', '.8em')
-			}
-
-			// 1 - node name
-			const td1 = tr
-				.append('td')
-				.style('padding-left', (node.depth - 1) * 15 + 'px')
-				.text(node.data.name)
-			// may add level-specific link based on .variant2samples.levels
-
-			// 2 - frequency, always show but optional fill
-			const td2 = tr.append('td')
-			if (node.data.cohortsize) {
-				client.fillbar(td2, { f: node.value / node.data.cohortsize })
-			}
-
-			// 3 - count
-			const td3 = tr.append('td')
-			td3.text(node.value + (node.data.cohortsize ? '/' + node.data.cohortsize : ''))
-		})
-	} catch (e) {
-		wait.text('Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
 }

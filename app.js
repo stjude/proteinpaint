@@ -4,9 +4,20 @@
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const utils = require('./modules/utils')
-const serverconfig = utils.serverconfig
+const serverconfig = require('./modules/serverconfig')
 exports.features = Object.freeze(serverconfig.features || {})
+
+/* test accessibility of serverconfig.tpmasterdir at two places.
+if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
+1. pp_init()
+   if dir is inaccessible, will not initiate and validate any genome/dataset
+   a server process will be launched hosting no genome/dataset,
+   allowing the service to respond to requests with a message (rather than a dead irresponsive url)
+2. handle_genomes()
+   if dir is inaccessbile, will return error
+   this can handle the case that dir becomes inaccessible *after* server launches
+   as genomes is the first thing most requests will query about, this may allow to return a helpful message for most of the cases
+*/
 
 const tabixnoterror = s => {
 	return s.startsWith('[M::test_and_fetch]')
@@ -27,13 +38,12 @@ const express = require('express'),
 	spawn = child_process.spawn,
 	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
-	d3color = require('d3-color'),
-	d3stratify = require('d3-hierarchy').stratify,
 	stratinput = require('./src/tree').stratinput,
 	bodyParser = require('body-parser'),
 	imagesize = require('image-size'),
 	readline = require('readline'),
 	jsonwebtoken = require('jsonwebtoken'),
+	utils = require('./modules/utils'),
 	common = require('./src/common'),
 	vcf = require('./src/vcf'),
 	bulk = require('./src/bulk'),
@@ -44,6 +54,8 @@ const express = require('express'),
 	bulksv = require('./src/bulk.sv'),
 	bulksvjson = require('./src/bulk.svjson'),
 	bulktrunc = require('./src/bulk.trunc'),
+	d3color = require('d3-color'),
+	d3stratify = require('d3-hierarchy').stratify,
 	d3scale = require('d3-scale'),
 	d3dsv = require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
@@ -63,7 +75,6 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	variant2samples_closure = require('./modules/variant2samples'),
 	do_hicstat = require('./modules/hicstat').do_hicstat
 
 /*
@@ -78,8 +89,8 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 let codedate, // date for code files last updated
 	launchdate // server launch date
 /*
-this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
-*/
+    this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
+    */
 const infoFilter_unannotated = 'Unannotated'
 
 const app = express()
@@ -98,7 +109,7 @@ app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
-		// immutable response before expiration, client must revalidate after max-age
+		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
 		// a static file and not handled here with cache-control
 		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
@@ -109,7 +120,11 @@ app.use((req, res, next) => {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
-app.use(express.static(path.join(process.cwd(), './public')))
+const basepath = serverconfig.basepath || ''
+const staticDir = express.static(path.join(process.cwd(), './public'))
+if (!serverconfig.backend_only) {
+	app.use(staticDir)
+}
 app.use(compression())
 
 if (serverconfig.jwt) {
@@ -146,63 +161,67 @@ if (serverconfig.jwt) {
 	})
 }
 
-app.post('/mdsjsonform', handle_mdsjsonform)
-app.get('/genomes', handle_genomes)
-app.post('/genelookup', handle_genelookup)
-app.post('/ntseq', handle_ntseq)
-app.post('/pdomain', handle_pdomain)
-app.get('/tkbedj', bedj_request_closure(genomes))
-app.post('/tkbedgraphdot', bedgraphdot_request_closure(genomes))
-app.get('/tkbam', bam_request_closure(genomes))
-app.get('/tkaicheck', aicheck_request_closure(genomes))
-app.get('/blat', blat_request_closure(genomes))
-app.get('/mds3', mds3_request_closure(genomes))
-app.get('/variant2samples', variant2samples_closure(genomes))
-app.get('/dsvariantsummary', handle_dsvariantsummary)
-app.get('/tkbampile', bampile_request)
-app.post('/snpbyname', handle_snpbyname)
-app.post('/dsdata', handle_dsdata) // old official ds, replace by mds
+// has to set optional routes before app.get() or app.post()
+// otherwise next() may not be called for a middleware in the optional routes
+setOptionalRoutes()
+app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.post(basepath + '/examples', handle_examples)
+app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
+app.get(basepath + '/genomes', handle_genomes)
+app.post(basepath + '/genelookup', handle_genelookup)
+app.post(basepath + '/ntseq', handle_ntseq)
+app.post(basepath + '/pdomain', handle_pdomain)
+app.get(basepath + '/tkbedj', bedj_request_closure(genomes))
+app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
+app.get(basepath + '/tkbam', bam_request_closure(genomes))
+app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
+app.get(basepath + '/blat', blat_request_closure(genomes))
+app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.get(basepath + '/tkbampile', bampile_request)
+app.post(basepath + '/snpbyname', handle_snpbyname)
+app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
-app.post('/tkbigwig', handle_tkbigwig)
+app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
-app.get('/tabixheader', handle_tabixheader)
-app.post('/snp', handle_snpbycoord)
-app.post('/clinvarVCF', handle_clinvarVCF)
-app.post('/isoformlst', handle_isoformlst)
-app.post('/dbdata', handle_dbdata)
-app.post('/img', handle_img)
-app.post('/svmr', handle_svmr)
-app.post('/dsgenestat', handle_dsgenestat)
-app.post('/study', handle_study)
-app.post('/textfile', handle_textfile)
-app.post('/urltextfile', handle_urltextfile)
-app.get('/junction', junction_request) // legacy
-app.post('/mdsjunction', handle_mdsjunction)
-app.post('/mdscnv', handle_mdscnv)
-app.post('/mdssvcnv', handle_mdssvcnv)
-app.post('/mds2', mds2_load.handle_request(genomes))
-app.post('/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
-app.post('/mdsgeneboxplot', handle_mdsgeneboxplot)
-app.post('/mdsgenevalueonesample', handle_mdsgenevalueonesample)
+app.get(basepath + '/tabixheader', handle_tabixheader)
+app.post(basepath + '/snp', handle_snpbycoord)
+app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
+app.post(basepath + '/isoformlst', handle_isoformlst)
+app.post(basepath + '/dbdata', handle_dbdata)
+app.post(basepath + '/img', handle_img)
+app.post(basepath + '/svmr', handle_svmr)
+app.post(basepath + '/dsgenestat', handle_dsgenestat)
+app.post(basepath + '/study', handle_study)
+app.post(basepath + '/textfile', handle_textfile)
+app.post(basepath + '/urltextfile', handle_urltextfile)
+app.get(basepath + '/junction', junction_request) // legacy
+app.post(basepath + '/mdsjunction', handle_mdsjunction)
+app.post(basepath + '/mdscnv', handle_mdscnv)
+app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
+app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
+app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
+app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
 
-app.post('/vcf', handle_vcf) // for old ds/vcf and old junction
+app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 
-app.get('/vcfheader', handle_vcfheader)
+app.get(basepath + '/vcfheader', handle_vcfheader)
 
-app.post('/translategm', handle_translategm)
-app.get('/hicstat', handle_hicstat)
-app.post('/hicdata', handle_hicdata)
-app.post('/samplematrix', handle_samplematrix)
-app.get('/mdssamplescatterplot', handle_mdssamplescatterplot)
-app.post('/mdssamplesignature', handle_mdssamplesignature)
-app.post('/mdssurvivalplot', handle_mdssurvivalplot)
-app.post('/fimo', fimo.handle_closure(genomes))
-app.get('/termdb', termdb.handle_request_closure(genomes))
-app.get('/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
-app.post('/singlecell', singlecell.handle_singlecell_closure(genomes))
-app.post('/isoformbycoord', handle_isoformbycoord)
-app.post('/ase', handle_ase)
-app.post('/bamnochr', handle_bamnochr)
+app.post(basepath + '/translategm', handle_translategm)
+app.get(basepath + '/hicstat', handle_hicstat)
+app.post(basepath + '/hicdata', handle_hicdata)
+app.post(basepath + '/samplematrix', handle_samplematrix)
+app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
+app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
+app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot)
+app.post(basepath + '/fimo', fimo.handle_closure(genomes))
+app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
+app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
+app.post(basepath + '/ase', handle_ase)
+app.post(basepath + '/bamnochr', handle_bamnochr)
+app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 
 /****
 	- validate and start the server
@@ -217,7 +236,6 @@ app.post('/bamnochr', handle_bamnochr)
 	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
 	```
 ***/
-
 pp_init()
 	.then(() => {
 		// no error from server initiation
@@ -231,8 +249,19 @@ pp_init()
 		*/
 
 		const port = serverconfig.port || 3000
-		const server = app.listen(port)
-		console.log('STANDBY AT PORT ' + port)
+		if (serverconfig.ssl) {
+			const options = {
+				key: fs.readFileSync(serverconfig.ssl.key),
+				cert: fs.readFileSync(serverconfig.ssl.cert)
+			}
+			const server = https.createServer(options, app)
+			server.listen(port, () => {
+				console.log('HTTPS STANDBY AT PORT ' + port)
+			})
+		} else {
+			const server = app.listen(port)
+			console.log('STANDBY AT PORT ' + port)
+		}
 	})
 	.catch(err => {
 		/* when the app server is monitored by another process via the command line,
@@ -244,6 +273,52 @@ pp_init()
 		console.error('\n!!!\n' + err + '\n\n')
 		process.exit(1)
 	})
+
+function setOptionalRoutes() {
+	// routeSetters is an array of "filepath/name.js"
+	if (!serverconfig.routeSetters) return
+	for (const fname of serverconfig.routeSetters) {
+		if (fname.endsWith('.js')) {
+			const setRoutes = __non_webpack_require__(fname)
+			setRoutes(app, basepath)
+		}
+	}
+}
+
+function handle_gene2canonicalisoform(req, res) {
+	log(req)
+	try {
+		if (!req.query.gene) throw '.gene missing'
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'unknown genome'
+		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
+		res.send(data)
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function handle_examples(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
+	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (req.query) {
+		if (req.query.getexamplejson) {
+			const txt = await utils.read_file(serverconfig.examplejson)
+			try {
+				const json = JSON.parse(txt)
+				res.send({ examples: json.examples })
+			} catch (e) {
+				res.send({ error: 'Invalid JSON' })
+			}
+		} else {
+			res.send({ error: 'examples json file not defined' })
+		}
+		return
+	}
+	res.send({ error: 'Invalid request' })
+}
 
 async function handle_mdsjsonform(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
@@ -270,6 +345,7 @@ async function handle_mdsjsonform(req, res) {
 	// no other trigger, return empty obj to allow client to test if feature is enabled on server
 	res.send({})
 }
+
 function maymakefolder() {
 	const p = path.join(serverconfig.cachedir, 'mdsjsonform')
 	return new Promise((resolve, reject) => {
@@ -308,8 +384,19 @@ async function handle_tabixheader(req, res) {
 	}
 }
 
-function handle_genomes(req, res) {
+async function handle_genomes(req, res) {
 	log(req)
+
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible
+		return error message as the service is out
+		*/
+		res.send({ error: 'Error with TP directory (' + e.code + ')' })
+		return
+	}
+
 	const hash = {}
 	if (req.query && req.query.genome) {
 		hash[req.query.genome] = clientcopy_genome(req.query.genome)
@@ -333,6 +420,7 @@ function handle_genomes(req, res) {
 		features: exports.features
 	})
 }
+
 function clientcopy_genome(genomename) {
 	const g = genomes[genomename]
 	const g2 = {
@@ -405,12 +493,6 @@ function clientcopy_genome(genomename) {
 		}
 		if (ds.snvindel_legend) {
 			ds2.snvindel_legend = ds.snvindel_legend
-		}
-		if (ds.variant2samples) {
-			ds2.variant2samples = {
-				variantkey: ds.variant2samples.variantkey,
-				levels: ds.variant2samples.levels
-			}
 		}
 		const vcfinfo = {}
 		let hasvcf = false
@@ -499,9 +581,9 @@ function mds_clientcopy(ds) {
 
 		if (ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
 			/*
-			.attributes.lst[] are not released to client
-			default hidden attributes from sample annotation, tell client
-			*/
+            .attributes.lst[] are not released to client
+            default hidden attributes from sample annotation, tell client
+            */
 			ds2.cohortHiddenAttr = ds.cohort.attributes.defaulthidden
 		}
 
@@ -1122,153 +1204,61 @@ function handle_snpbycoord(req, res) {
 	res.send({ results: hits })
 }
 
-function handle_clinvarVCF(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
+async function handle_clinvarVCF(req, res) {
+	log(req)
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'unknown genome'
 		if (!g.clinvarVCF) throw 'no clinvar for this genome'
-
-		const ps = spawn(tabix, [
-			g.clinvarVCF.file,
-			(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) +
-				':' +
-				req.query.pos +
-				'-' +
-				(req.query.pos + 1)
-		])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.on('close', () => {
-			const str = out.join('').trim()
-			if (!str) {
-				res.send({})
-				return
-			}
-			for (const line of str.split('\n')) {
+		const pos = Number(req.query.pos)
+		if (!Number.isInteger(pos)) throw 'pos is not integer'
+		if (pos < 0) throw 'pos is not positive integer'
+		if (!req.query.chr) throw 'chr missing'
+		{
+			const c = g.chrlookup[req.query.chr.toUpperCase()]
+			if (!c) throw 'invalid chr'
+			if (pos > c.len) throw 'pos out of bound'
+		}
+		let m
+		await utils.get_lines_tabix(
+			[
+				g.clinvarVCF.file,
+				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
+			],
+			null,
+			line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
-				for (const m of mlst) {
-					if (m.pos == req.query.pos && m.ref == req.query.ref && m.alt == req.query.alt) {
+				for (const m0 of mlst) {
+					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
 						// match
-						const k = m.info[g.clinvarVCF.infokey]
-						const v = g.clinvarVCF.categories[k]
-						res.send({
-							hit: {
-								id: m.vcf_ID,
-								value: v ? v.label : k,
-								bg: v ? v.color : '#858585',
-								textcolor: v && v.textcolor ? v.textcolor : 'black'
-							}
-						})
-						return
+						m = m0
 					}
 				}
 			}
-			res.send({})
+		)
+		if (!m) return res.send({})
+		const k = m.info[g.clinvarVCF.infokey]
+		const v = g.clinvarVCF.categories[k]
+		res.send({
+			hit: {
+				id: m.vcf_ID,
+				value: v ? v.label : k,
+				bg: v ? v.color : '#858585',
+				textcolor: v && v.textcolor ? v.textcolor : 'black'
+			}
 		})
 	} catch (e) {
-		res.send({ error: e.message || e })
-	}
-}
-
-async function handle_dsvariantsummary(req, res) {
-	log(req)
-	try {
-		const genome = genomes[req.query.genome]
-		if (!genome) throw 'invalid genome'
-		const ds = genome.datasets[req.query.dsname]
-		if (!ds) throw 'dataset not found'
-		if (!ds.stratify) throw 'stratify not supported on this dataset'
-		const strat = ds.stratify.find(i => i.label == req.query.stratify)
-		if (!strat) throw 'unknown stratify method'
-
-		const item2mclass = new Map()
-		// k: item name/key
-		// v: Map
-		//    k: mclass
-		//    v: set of case id
-		if (ds.queries) {
-			await handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass)
-		} else {
-			throw 'unknown query method'
-		}
-		const items = []
-		for (const [itemname, m2c] of item2mclass) {
-			const item = {
-				name: itemname,
-				count: 0,
-				m2c: []
-			}
-			for (const [mclass, s] of m2c) {
-				item.count += s.size
-				item.m2c.push([mclass, s.size])
-			}
-			item.m2c.sort((a, b) => b[1] - a[1])
-			if (ds.onetimequery_projectsize) {
-				if (ds.onetimequery_projectsize.results.has(itemname)) {
-					item.cohortsize = ds.onetimequery_projectsize.results.get(itemname)
-				}
-			}
-			items.push(item)
-		}
-		items.sort((a, b) => b.count - a.count)
-		res.send({ items })
-	} catch (e) {
-		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-}
-
-async function handle_dsvariantsummary_dsqueries(req, ds, strat, item2mclass) {
-	for (const query of ds.queries) {
-		if (query.gdcgraphql_snvindel) {
-			// duplicate code with handle_dsdata_gdcgraphql_snvindel_isoform2variants
-			const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
-			for (const hit of hits) {
-				if (!hit._source) throw '._source{} missing from one of re.hits[]'
-				if (!hit._source.consequence) continue
-				const ts = hit._source.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
-				// get mclass of this variant
-				let mclass
-				if (ts && ts.transcript.consequence_type) {
-					const [dt, _mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
-					mclass = _mclass
-				}
-				if (!mclass) continue
-				// for each occurrence, add to counter
-				if (!hit._source.occurrence) continue
-				if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
-				for (const acase of hit._source.occurrence) {
-					if (!acase.case) throw '.case{} missing from a case'
-					let stratvalue = acase.case
-					for (const key of strat.keys) {
-						stratvalue = stratvalue[key]
-					}
-					if (stratvalue) {
-						// has a valid item for this strat category
-						if (!item2mclass.has(stratvalue)) item2mclass.set(stratvalue, new Map())
-						if (!item2mclass.get(stratvalue).has(mclass)) item2mclass.get(stratvalue).set(mclass, new Set())
-						item2mclass
-							.get(stratvalue)
-							.get(mclass)
-							.add(acase.case.case_id)
-						//const c = item2mclass.get(stratvalue)
-						//c.set(mclass, 1 + (c.get(mclass) || 0))
-					}
-				}
-			}
-		}
-	}
-	return item2mclass
 }
 
 async function handle_dsdata(req, res) {
 	/*
-	poor mechanism, only for old-style official dataset
+    poor mechanism, only for old-style official dataset
 
-	to be totally replaced by mds, which can identify queries in a mds by querykeys
-	*/
+    to be totally replaced by mds, which can identify queries in a mds by querykeys
+    */
 
 	if (reqbodyisinvalidjson(req, res)) return
 	try {
@@ -1277,19 +1267,14 @@ async function handle_dsdata(req, res) {
 		const ds = genomes[req.query.genome].datasets[req.query.dsname]
 		if (!ds) throw 'invalid dsname'
 
-		/**** for now, process this query here
-		as the /dsdata query will always run before sunburst or stratify queries that rely on project total size
-		***/
-		await may_onetimequery_projectsize(ds)
-
 		const data = []
 
 		for (const query of ds.queries) {
 			if (req.query.expressiononly && !query.isgeneexpression) {
 				/*
-				expression data only
-				TODO mds should know exactly which data type to query, or which vending button to use
-				*/
+                expression data only
+                TODO mds should know exactly which data type to query, or which vending button to use
+                */
 				continue
 			}
 			if (req.query.noexpression && query.isgeneexpression) {
@@ -1299,9 +1284,9 @@ async function handle_dsdata(req, res) {
 
 			if (query.dsblocktracklst) {
 				/*
-				do not load any tracks here yet
-				TODO should allow loading some/all, when epaint is not there
-				*/
+                do not load any tracks here yet
+                TODO should allow loading some/all, when epaint is not there
+                */
 				continue
 			}
 
@@ -1317,11 +1302,6 @@ async function handle_dsdata(req, res) {
 				continue
 			}
 
-			if (query.gdcgraphql_snvindel) {
-				const d = await handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req)
-				data.push(d)
-				continue
-			}
 			throw 'unknow type from one of ds.queries[]'
 		}
 
@@ -1332,195 +1312,14 @@ async function handle_dsdata(req, res) {
 	}
 }
 
-async function handle_dsdata_gdcgraphql_snvindel_isoform2variants(ds, query, req) {
-	// query variants by isoforms
-	try {
-		const hits = await gdcgraphql_snvindel_byisoform(query, req.query.isoform)
-		const lst = [] // parse snv/indels into this list
-		for (const hit of hits) {
-			if (!hit._source) throw '._source{} missing from one of re.hits[]'
-			if (!hit._source.ssm_id) throw 'hit._source.ssm_id missing'
-			if (!Number.isInteger(hit._source.start_position)) throw 'hit._source.start_position is not integer'
-			const m = {
-				ssm_id: hit._source.ssm_id,
-				dt: common.dtsnvindel,
-				chr: req.query.range.chr,
-				pos: hit._source.start_position - 1,
-				ref: hit._source.reference_allele,
-				alt: hit._source.tumor_allele,
-				isoform: req.query.isoform,
-				info: {}
-			}
-
-			// sneaky, implies that .occurrence_key is required here
-			m.info[query.gdcgraphql_snvindel.occurrence_key] = hit._score
-
-			gdcgraphql_snvindel_addclass(m, hit._source.consequence)
-			lst.push(m)
-		}
-		const data = { lst }
-		if (ds.stratify) {
-			data.stratifycount = gdcgraphql_snvindel_stratifycount(ds, hits)
-		}
-		return data
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		throw e.message || e
-	}
-}
-
-async function gdcgraphql_snvindel_byisoform(query, isoform) {
-	// used in two placed
-	const variables = JSON.parse(JSON.stringify(query.gdcgraphql_snvindel.byisoform.variables))
-	variables.filters.content.value = [isoform]
-	const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			query: query.gdcgraphql_snvindel.byisoform.query,
-			variables
-		})
-	})
-	let re
-	try {
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'structure is not .data.analysis.protein_mutations.data'
-		re = JSON.parse(tmp.data.analysis.protein_mutations.data)
-	} catch (e) {
-		throw 'invalid JSON returned by GDC'
-	}
-	if (!re.hits) throw 'data.analysis.protein_mutations.data.hits missing'
-	if (!Array.isArray(re.hits)) throw 'data.analysis.protein_mutations.data.hits[] is not array'
-	return re.hits
-}
-
-function gdcgraphql_snvindel_addclass(m, consequence) {
-	if (consequence) {
-		// [ { transcript } ]
-		const ts = consequence.find(i => i.transcript.transcript_id == m.isoform)
-		if (ts && ts.transcript.consequence_type) {
-			const [dt, mclass, rank] = common.vepinfo(ts.transcript.consequence_type)
-			m.class = mclass
-			m.mname = ts.transcript.aa_change // may be null!
-
-			// hardcoded logic: { vep_impact, sift_impact, polyphen_impact, polyphen_score, sift_score}
-			if (ts.transcript.annotation) {
-				for (const k in ts.transcript.annotation) {
-					m.info[k] = ts.transcript.annotation[k]
-				}
-			}
-		}
-	}
-
-	if (!m.mname) {
-		m.mname = m.ref + '>' + m.alt
-	}
-
-	if (!m.class) {
-		if (common.basecolor[m.ref] && common.basecolor[m.alt]) {
-			m.class = common.mclasssnv
-		} else {
-			if (m.ref == '-') {
-				m.class = common.mclassinsertion
-			} else if (m.alt == '-') {
-				m.class = common.mclassdeletion
-			} else {
-				m.class = common.mclassmnv
-			}
-		}
-	}
-}
-
-function gdcgraphql_snvindel_stratifycount(ds, hits) {
-	/*
-variants returned from query should include occurrence
-from occurrence count the number of unique project/disease/site,
-hardcoded logic only for gdc!!!
-*/
-
-	const label2set = new Map()
-	// k: stratify label, v: Set() of items from this category
-	for (const s of ds.stratify) {
-		label2set.set(s.label, new Set())
-	}
-	for (const hit of hits) {
-		if (!hit._source.occurrence) continue
-		if (!Array.isArray(hit._source.occurrence)) throw '.occurrence[] is not array for a hit'
-		for (const acase of hit._source.occurrence) {
-			if (!acase.case) throw '.case{} missing from a case'
-			for (const strat of ds.stratify) {
-				let stratvalue = acase.case
-				for (const key of strat.keys) {
-					stratvalue = stratvalue[key]
-				}
-				if (stratvalue) {
-					label2set.get(strat.label).add(stratvalue)
-				}
-			}
-		}
-	}
-	const labelcount = []
-	for (const [lab, s] of label2set) {
-		labelcount.push([lab, s.size])
-	}
-	return labelcount
-}
-
-async function may_onetimequery_projectsize(ds) {
-	if (!ds.onetimequery_projectsize) return
-	if (ds.onetimequery_projectsize.results) {
-		// already got result
-		return
-	}
-	// do the one time query
-	if (ds.onetimequery_projectsize.gdcgraphql) {
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(ds.onetimequery_projectsize.gdcgraphql)
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC for onetimequery_projectsize'
-		}
-		if (
-			!re.data ||
-			!re.data.viewer ||
-			!re.data.viewer.explore ||
-			!re.data.viewer.explore.cases ||
-			!re.data.viewer.explore.cases.total ||
-			!re.data.viewer.explore.cases.total.project__project_id ||
-			!re.data.viewer.explore.cases.total.project__project_id.buckets
-		)
-			throw 'data structure not data.viewer.explore.cases.total.project__project_id.buckets'
-		if (!Array.isArray(re.data.viewer.explore.cases.total.project__project_id.buckets))
-			throw 'data.viewer.explore.cases.total.project__project_id.buckets not array'
-
-		ds.onetimequery_projectsize.results = new Map()
-		for (const t of re.data.viewer.explore.cases.total.project__project_id.buckets) {
-			if (!t.key) throw 'key missing from one bucket'
-			if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-			ds.onetimequery_projectsize.results.set(t.key, t.doc_count)
-		}
-		return
-	}
-	throw 'unknown query method for onetimequery_projectsize'
-}
-
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
-	const sqlstr = query.makequery(req.query)
+	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
 		return
 	}
-	const rows = ds.newconn.prepare(sqlstr).all()
+	const rows = ds.newconn.prepare(sqlstr).all(values)
 	let lst
 	if (query.tidy) {
 		lst = rows.map(i => query.tidy(i))
@@ -1534,13 +1333,13 @@ function handle_dsdata_makequery(ds, query, req) {
 		result.config = query.config
 
 		/*
-			loading of junction track as a dependent of epaint
-			attach junction track info in this result, for making the junction button in epaint
-			await user to click that button
+        	loading of junction track as a dependent of epaint
+        	attach junction track info in this result, for making the junction button in epaint
+        	await user to click that button
 
-			replace-by-mds
+        	replace-by-mds
 
-			*/
+        	*/
 
 		for (const q2 of ds.queries) {
 			if (!q2.dsblocktracklst) continue
@@ -1853,6 +1652,7 @@ function handle_dsgenestat(req, res) {
 		if (!q.genemcount) continue
 		tasks.push(next => {
 			var idx = 0
+
 			function run() {
 				if (idx == qlst2.length) {
 					next(null)
@@ -1901,10 +1701,10 @@ function handle_dsgenestat(req, res) {
 				class2[n] = genedata[i].class[n]
 			}
 			/*
-			if(!usesilent) {
-				delete class2['S']
-			}
-			*/
+            if(!usesilent) {
+            	delete class2['S']
+            }
+            */
 			result[i].class = class2
 		}
 		res.send({ result: result, totalsample: dsc.samplecount })
@@ -2234,14 +2034,14 @@ function handle_study(req, res) {
 
 function handle_textfile(req, res) {
 	/*
-	load a server hosted text file
-	argument is json object
-	.file
-		path from <TP>
-	.from
-	.to
-		optional, if present, will get range [from to] 1-based, else will get the entire file
-	*/
+    load a server hosted text file
+    argument is json object
+    .file
+    	path from <TP>
+    .from
+    .to
+    	optional, if present, will get range [from to] 1-based, else will get the entire file
+    */
 	if (reqbodyisinvalidjson(req, res)) return
 	if (!req.query.file) return res.send({ error: 'no file' })
 	if (illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
@@ -2319,20 +2119,20 @@ function mds_query_arg_check(q) {
 
 function handle_mdscnv(req, res) {
 	/*
-	get all cnv in view range, make stats for:
-		- sample annotation
+    get all cnv in view range, make stats for:
+    	- sample annotation
 
 
-	****** filter attributes (added by addFilterToLoadParam)
+    ****** filter attributes (added by addFilterToLoadParam)
 
-	.cohortHiddenAttr (for dropping sample by annotation)
-		.key
-			.value
+    .cohortHiddenAttr (for dropping sample by annotation)
+    	.key
+    		.value
 
 
-	******* routes
+    ******* routes
 
-	*/
+    */
 
 	if (reqbodyisinvalidjson(req, res)) return
 
@@ -2384,8 +2184,8 @@ function handle_mdscnv(req, res) {
 			})
 
 			/* r.width (# of pixels) is number of bins in this region
-			bin resolution is # of bp per bin
-			*/
+            bin resolution is # of bp per bin
+            */
 			const binresolution = (r.stop - r.start) / r.width
 
 			// cumulative value per pixel, for this region
@@ -2423,9 +2223,9 @@ function handle_mdscnv(req, res) {
 
 					if (req.query.cohortOnlyAttr && ds.cohort && ds.cohort.annotation) {
 						/*
-						from subtrack, will only use samples for one attribute (from hierarchies)
-						cannot refer ds.cohort.attributes
-						*/
+                        from subtrack, will only use samples for one attribute (from hierarchies)
+                        cannot refer ds.cohort.attributes
+                        */
 						let keep = false // if match with any in cohortOnlyAttr, will keep the sample
 						for (const attrkey in req.query.cohortOnlyAttr) {
 							const value = anno[attrkey]
@@ -2630,24 +2430,24 @@ function handle_mdscnv(req, res) {
 
 async function handle_mdssvcnv(req, res) {
 	/*
-	cnv & vcf & expression rank done in one query
-		- get all cnv/loh in view range:
-			- filtering
-			- group events by sample
-			- group samples by hierarchy, for client rendering
+    cnv & vcf & expression rank done in one query
+    	- get all cnv/loh in view range:
+    		- filtering
+    		- group events by sample
+    		- group samples by hierarchy, for client rendering
 
-		- if to make expression rank:
-			- expression file for official or custom
-			- calculate expression rank for genes in each sample
+    	- if to make expression rank:
+    		- expression file for official or custom
+    		- calculate expression rank for genes in each sample
 
-	vcf matrix and ase computation
+    vcf matrix and ase computation
 
-	****** filter attributes (added by addFilterToLoadParam)
+    ****** filter attributes (added by addFilterToLoadParam)
 
-	.singlesample
-	.showonlycnvwithsv
+    .singlesample
+    .showonlycnvwithsv
 
-	*/
+    */
 
 	if (reqbodyisinvalidjson(req, res)) return
 
@@ -2732,8 +2532,8 @@ async function handle_mdssvcnv(req, res) {
 	}
 
 	/*******
-	TODO rewrite: helper func return {} attached with all possible filters
-	***/
+    TODO rewrite: helper func return {} attached with all possible filters
+    ***/
 
 	// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
 	let hiddendt
@@ -2742,9 +2542,9 @@ async function handle_mdssvcnv(req, res) {
 	}
 
 	/*
-	multi: mutation attributes selected to be hidden from client
-	terms defined in ds.mutationAttribute
-	*/
+    multi: mutation attributes selected to be hidden from client
+    terms defined in ds.mutationAttribute
+    */
 	let hiddenmattr
 	if (req.query.hiddenmattr) {
 		hiddenmattr = {}
@@ -2754,8 +2554,8 @@ async function handle_mdssvcnv(req, res) {
 	}
 
 	/*
-	multi: vcf info field allele-level
-	*/
+    multi: vcf info field allele-level
+    */
 	let filteralleleattr
 	if (req.query.filteralleleattr) {
 		filteralleleattr = {}
@@ -2787,9 +2587,9 @@ async function handle_mdssvcnv(req, res) {
 	// TODO terms from locusAttribute
 
 	/*
-	multi: sample attributes selected to be hidden from client
-	as defined in ds.cohort.sampleAttribute
-	*/
+    multi: sample attributes selected to be hidden from client
+    as defined in ds.cohort.sampleAttribute
+    */
 	let hiddensampleattr
 	if (req.query.hiddensampleattr) {
 		hiddensampleattr = {}
@@ -2841,17 +2641,17 @@ async function handle_mdssvcnv(req, res) {
 	const sample2item = mdssvcnv_do_sample2item(data_cnv)
 
 	/*
-	if(req.query.showonlycnvwithsv) {
-		mdssvcnv_do_showonlycnvwithsv(sample2item)
-	}
-	*/
+    if(req.query.showonlycnvwithsv) {
+    	mdssvcnv_do_showonlycnvwithsv(sample2item)
+    }
+    */
 
 	if (req.query.singlesample) {
 		/*
-		exit
-		single sample does not include expression
-		but will include vcf
-		*/
+        exit
+        single sample does not include expression
+        but will include vcf
+        */
 		const result = {
 			lst: sample2item.get(req.query.singlesample)
 		}
@@ -2870,9 +2670,9 @@ async function handle_mdssvcnv(req, res) {
 	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
 
 	const result = {
-		samplegroups: samplegroups,
-		vcfrangelimit: vcfrangelimit,
-		data_vcf: data_vcf
+		samplegroups,
+		vcfrangelimit,
+		data_vcf
 	}
 
 	// QUICK FIX!!
@@ -2938,10 +2738,10 @@ async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
 
 async function handle_mdssvcnv_rnabam(region, genome, dsquery, result) {
 	/*
-	runs on a vcf matrix, and one rna bam file for each sample
-	hardcoded to query first region
-	irrelevant to samplegroup from svcnv query
-	*/
+    runs on a vcf matrix, and one rna bam file for each sample
+    hardcoded to query first region
+    irrelevant to samplegroup from svcnv query
+    */
 
 	if (!dsquery.checkvcf) return
 	if (region.stop - region.start >= 500000) {
@@ -2970,8 +2770,8 @@ async function handle_mdssvcnv_rnabam(region, genome, dsquery, result) {
 
 async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, result) {
 	/* actually do
-	works for normal query and adding fixed gene in expression column
-	*/
+    works for normal query and adding fixed gene in expression column
+    */
 
 	const snps = await handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop)
 	const testlines = []
@@ -3093,10 +2893,10 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 
 function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
 	/* get # of reads for single-end sequencing over exons
-	.exonunion[
-		[ start, stop ], e2, ...
-	]
-	*/
+    .exonunion[
+    	[ start, stop ], e2, ...
+    ]
+    */
 	return new Promise((resolve, reject) => {
 		const args = ['view', '-c', '-M', bam.url || bam.file]
 		for (const e of gene.exonunion) {
@@ -3242,8 +3042,8 @@ function handle_mdssvcnv_rnabam_pileup(bam, snps, chr, arg) {
 
 async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 	/*
-	hardcoded to query first vcf track
-	*/
+    hardcoded to query first vcf track
+    */
 
 	const x = dsquery.checkvcf.tracks[0]
 	const vobj = {
@@ -3329,12 +3129,12 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 		}
 	} else if (ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
 		/**** group samples by predefined annotation attributes
-		only for official ds
+        only for official ds
 
-		when vcf data is present, must include them samples in the grouping too, but not the variants
+        when vcf data is present, must include them samples in the grouping too, but not the variants
 
-		expression samples don't participate in grouping
-		*/
+        expression samples don't participate in grouping
+        */
 
 		const key2group = new Map()
 		// k: group name string
@@ -3434,15 +3234,23 @@ function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2ite
 }
 
 function handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sample2obj) {
-	///////// assign expression rank for all samples listed in samplegroup
+	// assign expression rank for all samples listed in samplegroup
+	// no returned value
 	if (expressionrangelimit) {
 		// view range too big above limit set by official track, no checking expression
 		result.expressionrangelimit = expressionrangelimit
-	} else if (gene2sample2obj) {
+		return
+	}
+	if (gene2sample2obj) {
 		// report coordinates for each gene back to client
 		result.gene2coord = {}
 		for (const [n, g] of gene2sample2obj) {
 			result.gene2coord[n] = { chr: g.chr, start: g.start, stop: g.stop }
+		}
+
+		if (result.samplegroups.length == 0) {
+			// got no samples from dna query
+			return
 		}
 
 		if (result.getallsamples) {
@@ -3473,8 +3281,8 @@ function handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sampl
 				for (const [sample, obj] of tmp.samples) {
 					if (g.attributes && ds.cohort && ds.cohort.annotation) {
 						/*
-						a group from official track could still be unannotated, skip them
-						*/
+                        a group from official track could still be unannotated, skip them
+                        */
 						const anno = ds.cohort.annotation[sample]
 						if (!anno) continue
 						let annomatch = true
@@ -4033,11 +3841,11 @@ bad repetition
 
 					if (hiddensampleattr && ds.cohort && ds.cohort.annotation) {
 						/*
-						drop sample by annotation
-						FIXME this is not efficient
-						ideally should identify samples from this vcf file to be dropped, the column # of them
-						after querying the vcf file, cut these columns away
-						*/
+                        drop sample by annotation
+                        FIXME this is not efficient
+                        ideally should identify samples from this vcf file to be dropped, the column # of them
+                        after querying the vcf file, cut these columns away
+                        */
 						const samplesnothidden = []
 						for (const s of m.sampledata) {
 							const sanno = ds.cohort.annotation[s.sampleobj.name]
@@ -4375,23 +4183,23 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 
 function mdssvcnv_do_sample2item(data_cnv) {
 	/*
-	transform data_cnv[] to sample2item
+    transform data_cnv[] to sample2item
 
-	to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
-	k: sample
-	v: list of sv, cnv, loh
+    to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
+    k: sample
+    v: list of sv, cnv, loh
 
-	do not include snvindel from vcf
-	the current data_vcf is variant-2-sample
-	if snvindel is spread across samples, the variant annotation must be duplicated too
-	just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
+    do not include snvindel from vcf
+    the current data_vcf is variant-2-sample
+    if snvindel is spread across samples, the variant annotation must be duplicated too
+    just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
 
-	yet further complexity due to the need of grouping samples by server-side annotation
-	which will require vcf samples all to be included in samplegroups
+    yet further complexity due to the need of grouping samples by server-side annotation
+    which will require vcf samples all to be included in samplegroups
 
-	expression rank will be assigned to samples in all groups
-	for vcf samples to get expression rank, it also require them to be grouped!
-	*/
+    expression rank will be assigned to samples in all groups
+    for vcf samples to get expression rank, it also require them to be grouped!
+    */
 	const sample2item = new Map()
 
 	for (const tmp of data_cnv) {
@@ -4528,9 +4336,9 @@ only keep loh with no overlap with cnv
 
 function mdssvcnv_customtk_altersg_server(result, gene2sample2obj) {
 	/*
-	call this when there is vcf file for custom track
-	will add all expression samples to sg
-	*/
+    call this when there is vcf file for custom track
+    will add all expression samples to sg
+    */
 	const allsamplenames = new Set()
 	for (const [gene, tmp] of gene2sample2obj) {
 		for (const [sample, o] of tmp.samples) {
@@ -4563,9 +4371,9 @@ function mdssvcnv_customtk_altersg_server(result, gene2sample2obj) {
 
 function mdssvcnv_grouper(samplename, items, key2group, headlesssamples, ds, dsquery) {
 	/*
-	helper function, used by both cnv and vcf
-	to identify which group a sample is from, insert the group, then insert the sample
-	*/
+    helper function, used by both cnv and vcf
+    to identify which group a sample is from, insert the group, then insert the sample
+    */
 
 	const sanno = ds.cohort.annotation[samplename]
 	if (!sanno) {
@@ -4602,10 +4410,10 @@ function mdssvcnv_grouper(samplename, items, key2group, headlesssamples, ds, dsq
 
 	if (!key2group.has(groupname)) {
 		/*
-		a new group
-		need to get available full name for each attribute value for showing on client
-		if attr.full is not available, just use key value
-		*/
+        a new group
+        need to get available full name for each attribute value for showing on client
+        if attr.full is not available, just use key value
+        */
 		const attributes = []
 		for (const attr of dsquery.groupsamplebyattr.attrlst) {
 			const v = sanno[attr.k]
@@ -4872,10 +4680,10 @@ function handle_ase_definerange(q, genes) {
 
 function handle_ase_generesult(snps, genes, q) {
 	/*
-	snps
-	genes
-	k: symbol, v: {start,stop}
-	*/
+    snps
+    genes
+    k: symbol, v: {start,stop}
+    */
 	const out = []
 	for (const [symbol, gene] of genes) {
 		out.push(gene)
@@ -4918,8 +4726,8 @@ function handle_ase_generesult(snps, genes, q) {
 
 function handle_ase_bamcoverage1stpass(q, start, stop) {
 	/*
-	1st pass: get max
-	*/
+    1st pass: get max
+    */
 	let m = 0
 	return new Promise((resolve, reject) => {
 		const sp = spawn(
@@ -4950,8 +4758,8 @@ function handle_ase_bamcoverage1stpass(q, start, stop) {
 
 function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 	/*
-	2nd pass: plot coverage bar at each covered bp
-	*/
+    2nd pass: plot coverage bar at each covered bp
+    */
 
 	// snps default to be no coverage in rna
 	// for those in viewrange and covered in rna, record bar h
@@ -5177,14 +4985,14 @@ q {}
 					ctx.closePath()
 				} else {
 					/*
-					// not het, do not plot for now, should make it optional on UI
-					ctx.strokeStyle = '#ccc'
-					ctx.beginPath()
-					ctx.moveTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad)
-					ctx.lineTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad + h)
-					ctx.stroke()
-					ctx.closePath()
-					*/
+                    // not het, do not plot for now, should make it optional on UI
+                    ctx.strokeStyle = '#ccc'
+                    ctx.beginPath()
+                    ctx.moveTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad)
+                    ctx.lineTo(m.__x + binpxw / 2, q.rnabarheight + q.barypad + h)
+                    ctx.stroke()
+                    ctx.closePath()
+                    */
 				}
 				delete m.__x
 			}
@@ -5266,15 +5074,15 @@ async function handle_ase_prepfiles(q, genome) {
 
 async function handle_ase_getsnps(q, genome, genes, searchstart, searchstop) {
 	/*
-	get all for showing in cov plot
-	q:
-	.checkrnabam{}
-	.samplename
-	.vcffile
-	.vcfurl
-	.vcfindexURL
-	.chr
-	*/
+    get all for showing in cov plot
+    q:
+    .checkrnabam{}
+    .samplename
+    .vcffile
+    .vcfurl
+    .vcfindexURL
+    .chr
+    */
 	const mlines = await tabix_getvcfmeta(q.vcffile || q.vcfurl, q.vcfurl_dir)
 
 	const [info, format, samples, err] = vcf.vcfparsemeta(mlines)
@@ -5327,9 +5135,9 @@ async function handle_ase_getsnps(q, genome, genes, searchstart, searchstop) {
 
 function handle_ase_hetsnp4sample(m, samplename, arg) {
 	/*
-	cutoff values in arg{} must have all been validated
-	always return a snp
-	*/
+    cutoff values in arg{} must have all been validated
+    always return a snp
+    */
 
 	const sobj = m.sampledata.find(i => i.sampleobj.name == samplename)
 	if (!sobj) return
@@ -5508,18 +5316,18 @@ function get_rank_from_sortedarray(v, lst) {
 
 function handle_mdsexpressionrank(req, res) {
 	/*
-	for a given sample, check expression rank of its gene expression as compared with its cohort
-	similar task done in svcnv
+    for a given sample, check expression rank of its gene expression as compared with its cohort
+    similar task done in svcnv
 
-	where is the data?
-	- custom file
-	- official ds, a query of flag isgenenumeric
+    where is the data?
+    - custom file
+    - official ds, a query of flag isgenenumeric
 
-	sample: req.query.sample
-	range: req.query.coord
-	cohort: for official, defined by req.query.attributes
-	        for custom, will use all available samples other than this one
-	*/
+    sample: req.query.sample
+    range: req.query.coord
+    cohort: for official, defined by req.query.attributes
+            for custom, will use all available samples other than this one
+    */
 	if (reqbodyisinvalidjson(req, res)) return
 
 	let gn,
@@ -5620,10 +5428,10 @@ function handle_mdsexpressionrank(req, res) {
 
 								// additional stats about gene expression
 								/* XXX OHE!!
-								if (j.outlier) {
-									gene2value.get(j.gene).outlier = j.outlier
-								}
-								*/
+                                if (j.outlier) {
+                                	gene2value.get(j.gene).outlier = j.outlier
+                                }
+                                */
 								if (j.ase) {
 									gene2value.get(j.gene).ase = j.ase
 								}
@@ -5709,9 +5517,9 @@ function handle_mdsexpressionrank(req, res) {
 
 function mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery) {
 	/*
-	getting track for single sample from server config
-	only for official dataset
-	*/
+    getting track for single sample from server config
+    only for official dataset
+    */
 	const samplename = req.query.gettrack4singlesample
 	if (req.query.iscustom) {
 		// not supported
@@ -5739,14 +5547,16 @@ function mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery) {
 
 function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
 	/*
-	a text file for a single sample
-	only for official dataset
-	*/
+    a text file for a single sample
+    only for official dataset
+    */
 	if (req.query.iscustom) return res.send({ error: 'not for custom track' })
 	if (!ds.singlesamplemutationjson)
 		return res.send({ error: 'singlesamplemutationjson not available for this dataset' })
 	const samplename = req.query.getsample4disco
-	const file = path.join(serverconfig.tpmasterdir, ds.singlesamplemutationjson.samples[samplename])
+	const f0 = ds.singlesamplemutationjson.samples[samplename]
+	if (!f0) return res.send({ error: 'no data' })
+	const file = path.join(serverconfig.tpmasterdir, f0)
 	fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
 		if (err) return res.send({ error: 'error getting data for this sample' })
 		res.send({ text: data })
@@ -5755,13 +5565,13 @@ function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
 
 async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 	/*
-	get expression data for a gene
+    get expression data for a gene
 
-	gene name up/lower case confusion here
-	- query name
-	- gene name in fpkm file
-	- in rnabam mode, gene name in gene track
-	*/
+    gene name up/lower case confusion here
+    - query name
+    - gene name in fpkm file
+    - in rnabam mode, gene name in gene track
+    */
 
 	try {
 		const q = req.query.getexpression4gene
@@ -5839,12 +5649,12 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 
 function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	/*
-	values: [ {sample, value, ase, outlier } ]
-	for each value, convert to rank
+    values: [ {sample, value, ase, outlier } ]
+    for each value, convert to rank
 
-	if native, may group samples by attr
-	otherwise, use all samples as a group
-	*/
+    if native, may group samples by attr
+    otherwise, use all samples as a group
+    */
 
 	const sample2rank = {}
 
@@ -5892,9 +5702,9 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 
 function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
 	/*
-	find sample names by matching with input string
-	only for official dataset
-	*/
+    find sample names by matching with input string
+    only for official dataset
+    */
 	if (req.query.iscustom) {
 		// not supported
 		return res.send({ error: 'cannot search sample by name in custom track' })
@@ -6625,8 +6435,8 @@ or, export all samples from a group
 
 function boxplot_getvalue(lst) {
 	/* ascending order
-	each element: {value}
-	*/
+    each element: {value}
+    */
 	const l = lst.length
 	if (l < 5) {
 		// less than 5 items, won't make boxplot
@@ -6638,54 +6448,54 @@ function boxplot_getvalue(lst) {
 	const p05 = lst[Math.floor(l * 0.05)].value
 	const p95 = lst[Math.floor(l * 0.95)].value
 	const p01 = lst[Math.floor(l * 0.01)].value
-	const iqr = (p75 - p25) * 1.5
+	const iqr = p75 - p25
 
 	let w1, w2
 	if (iqr == 0) {
 		w1 = 0
 		w2 = 0
 	} else {
-		const i = lst.findIndex(i => i.value > p25 - iqr)
+		const i = lst.findIndex(i => i.value > p25 - iqr * 1.5)
 		w1 = lst[i == -1 ? 0 : i].value
-		const j = lst.findIndex(i => i.value > p75 + iqr)
+		const j = lst.findIndex(i => i.value > p75 + iqr * 1.5)
 		w2 = lst[j == -1 ? l - 1 : j - 1].value
 	}
-	const out = lst.filter(i => i.value < p25 - iqr || i.value > p75 + iqr)
+	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 exports.boxplot_getvalue = boxplot_getvalue
 
 async function handle_mdsjunction(req, res) {
 	/*
-	get all junctions in view range, make stats for:
-		- sample annotation
+    get all junctions in view range, make stats for:
+    	- sample annotation
 
-	column 5 type is not used
-	splice events are annotated to both junctions and samples
+    column 5 type is not used
+    splice events are annotated to both junctions and samples
 
 
 
-	****** filter attributes (added by addFilterToLoadParam)
+    ****** filter attributes (added by addFilterToLoadParam)
 
-	.cohortHiddenAttr (for dropping sample by annotation)
-		.key
-			.value
-	.infoFilter  (for dropping junction by type or event type)
-		.type
-			contains:
-				canonical
-				exon skip / alt use
-				a5ss, a3ss
-				Unannotated
-	.spliceEventPercentage (for dropping sample by percentage cutoff of certain splice event types)
-		k: event.attrValue (event type code)
-		v: cutoff {side,value}
+    .cohortHiddenAttr (for dropping sample by annotation)
+    	.key
+    		.value
+    .infoFilter  (for dropping junction by type or event type)
+    	.type
+    		contains:
+    			canonical
+    			exon skip / alt use
+    			a5ss, a3ss
+    			Unannotated
+    .spliceEventPercentage (for dropping sample by percentage cutoff of certain splice event types)
+    	k: event.attrValue (event type code)
+    	v: cutoff {side,value}
 
-	******* routes
-		* get details on specific junction
-		* get median read count for A junctions by the same set of samples of junction B (passing filters)
+    ******* routes
+    	* get details on specific junction
+    	* get median read count for A junctions by the same set of samples of junction B (passing filters)
 
-	*/
+    */
 
 	try {
 		req.query = JSON.parse(req.body)
@@ -6744,13 +6554,13 @@ async function handle_mdsjunction(req, res) {
 
 function handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom, sample2client }) {
 	/*
-	run after URL index cached
+    run after URL index cached
 
-	gn: genome object
-	ds: dataset object
-	dsquery: query object
+    gn: genome object
+    ds: dataset object
+    dsquery: query object
 
-	*/
+    */
 
 	if (req.query.junction) {
 		///// route
@@ -6821,8 +6631,8 @@ function handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom, sample
 				junctiontotalnumber++
 
 				/*
-				info.type is hardcoded
-				*/
+                info.type is hardcoded
+                */
 				const j = {
 					chr: r.chr,
 					start: start,
@@ -7000,16 +6810,16 @@ function handle_mdsjunction_actual({ req, res, gn, ds, dsquery, iscustom, sample
 
 function mds_tkquery_parse_permanentHierarchy(query, ds) {
 	/*
-	only for subtrack of mds
-	a permanent restrain using one sample attribute from a hierarchy
-		.hierarchyname
-		.levelidx
-		.valuekey
+    only for subtrack of mds
+    a permanent restrain using one sample attribute from a hierarchy
+    	.hierarchyname
+    	.levelidx
+    	.valuekey
 
-	will set cohortOnlyAttr{}, all the rest of samples are not used
-	note: cohortOnlyAttr supports multiple attribute keys & multi-value for each attribute, for hierarchy-subtrack it's using just one attribute and one value
+    will set cohortOnlyAttr{}, all the rest of samples are not used
+    note: cohortOnlyAttr supports multiple attribute keys & multi-value for each attribute, for hierarchy-subtrack it's using just one attribute and one value
 
-	*/
+    */
 	if (!ds.cohort) return '.cohort missing from ds'
 	if (!ds.cohort.hierarchies) return '.hierarchies missing from ds.cohort'
 	if (!ds.cohort.hierarchies.lst) return '.hierarchies.lst[] missing from ds.cohort'
@@ -7029,49 +6839,49 @@ function mds_tkquery_parse_permanentHierarchy(query, ds) {
 
 function mds_tkquery_samplesummary(ds, dsquery, samples) {
 	/*
-	mds tk query resulted in a bunch of samples showing data in view range
-	now to make cohort annotation summary for these samples, pass to client for making legend
+    mds tk query resulted in a bunch of samples showing data in view range
+    now to make cohort annotation summary for these samples, pass to client for making legend
 
-	summarizes for:
-		ds.cohort.attributes
-		ds.cohort.hierarchies
+    summarizes for:
+    	ds.cohort.attributes
+    	ds.cohort.hierarchies
 
-	also incorporates total counts for each category of attributes/hierarchies which was summarized before
+    also incorporates total counts for each category of attributes/hierarchies which was summarized before
 
-	for junction:
-		only needs to count # of samples for each category
+    for junction:
+    	only needs to count # of samples for each category
 
-	for cnv:
-		need to report two number of samples: gain & loss
-		but the input is the union of gain/loss samples, no identification of gain/loss
-		in that case, need to report the actual list of sample names for each category, but rather just the number
-		so that later can use that list to get gain/loss number for each category
+    for cnv:
+    	need to report two number of samples: gain & loss
+    	but the input is the union of gain/loss samples, no identification of gain/loss
+    	in that case, need to report the actual list of sample names for each category, but rather just the number
+    	so that later can use that list to get gain/loss number for each category
 
-	thus, will report sample sets for each category
+    thus, will report sample sets for each category
 
-	returned data:
-		attributeSummary [ attr ]
-			.key
-			.label
-			.values [ value ]
-				.name
-				.label, color, desc (depends on ds config)
-				.sampleset  Set
-				.totalCount
+    returned data:
+    	attributeSummary [ attr ]
+    		.key
+    		.label
+    		.values [ value ]
+    			.name
+    			.label, color, desc (depends on ds config)
+    			.sampleset  Set
+    			.totalCount
 
-		hierarchySummary {}
-			k: hierarchy.name
-			v: [ node ]
-				.id
-				.name
-				.label
-				.depth
-				.isleaf
-				.sampleset  Set
-				.totalCount
-			root node is useless, it's depth=0 and won't have sampleset
+    	hierarchySummary {}
+    		k: hierarchy.name
+    		v: [ node ]
+    			.id
+    			.name
+    			.label
+    			.depth
+    			.isleaf
+    			.sampleset  Set
+    			.totalCount
+    		root node is useless, it's depth=0 and won't have sampleset
 
-	*/
+    */
 
 	if (!ds.cohort || !ds.cohort.annotation || samples.length == 0) return [null, null]
 
@@ -7103,8 +6913,8 @@ function mds_tkquery_samplesummary(ds, dsquery, samples) {
 			if (attr.isNumeric) {
 				attr2.isNumeric = true
 				/*
-				TODO numeric
-				*/
+                    TODO numeric
+                    */
 				continue
 			}
 
@@ -7190,16 +7000,16 @@ function mds_tkquery_samplesummary(ds, dsquery, samples) {
 
 function filtersamples4onejunction(jd, reqquery, ds, dsquery, iscustom) {
 	/*
-	jd:
-		.events{}
-		.samples[]
+    jd:
+    	.events{}
+    	.samples[]
 
-	for one mds junction, get its samples passing filters
-	- sample annotation
-	- event percentage cutoff
+    for one mds junction, get its samples passing filters
+    - sample annotation
+    - event percentage cutoff
 
-	for each sample, append .anno if it has annotation
-	*/
+    for each sample, append .anno if it has annotation
+    */
 	const passfiltersamples = [] // for this junction, all samples passing filters
 
 	for (const sample of jd.samples) {
@@ -7229,9 +7039,9 @@ function filtersamples4onejunction(jd, reqquery, ds, dsquery, iscustom) {
 
 			if (reqquery.cohortOnlyAttr && ds.cohort && ds.cohort.annotation) {
 				/*
-				from subtrack, will only use samples for one attribute (from hierarchies)
-				cannot refer ds.cohort.attributes
-				*/
+                from subtrack, will only use samples for one attribute (from hierarchies)
+                cannot refer ds.cohort.attributes
+                */
 				if (!anno) {
 					continue
 				}
@@ -7432,9 +7242,9 @@ function handle_mdsjunction_singlejunction(req, res, ds, dsquery) {
 function handle_mdsjunction_AreadcountbyB(reqquery, res, ds, dsquery) {
 	/* get median read count for A junctions by the same set of samples of junction B
 
-	A & B share chr, get max start/stop range to make 1 single query
+    A & B share chr, get max start/stop range to make 1 single query
 
-	*/
+    */
 	let start = reqquery.junctionB.start
 	let stop = reqquery.junctionB.stop
 	reqquery.junctionAposlst.forEach(i => {
@@ -7741,6 +7551,7 @@ function handle_mdssurvivalplot_pvalue_write1(lines) {
 		})
 	})
 }
+
 function handle_mdssurvivalplot_pvalue_write2(datafile) {
 	const scriptfile = path.join(serverconfig.cachedir, Math.random().toString()) + '.R'
 	const outfile = scriptfile + '.out'
@@ -7759,6 +7570,7 @@ function handle_mdssurvivalplot_pvalue_write2(datafile) {
 		})
 	})
 }
+
 function handle_mdssurvivalplot_pvalue_test(scriptfile) {
 	return new Promise((resolve, reject) => {
 		const sp = spawn('Rscript', [scriptfile])
@@ -7783,12 +7595,12 @@ plottype{}
 */
 	if (q.samplerule.mutated_sets) {
 		/*
-		each set
-		{
-			name:STR,
-			samplenames:[ name ]
-		}
-		*/
+        each set
+        {
+        	name:STR,
+        	samplenames:[ name ]
+        }
+        */
 		const nomutsampleset = new Set(samples.map(i => i.name)) // to remove mutated samples leaving only unmutated ones
 		const sets = q.samplerule.mutated_sets.reduce((sets, s) => {
 			const thisset = new Set(s.samplenames)
@@ -8267,12 +8079,12 @@ async function mds_genenumeric_querygene(query, dir, chr, start, stop, gene) {
 
 function handle_mdssurvivalplot_plot(s) {
 	/*
-	.name
-	.lst[]
-		{name, serialtime, censored}
+    .name
+    .lst[]
+    	{name, serialtime, censored}
 
-	hardcoded integer 0/1 value for censored
-	*/
+    hardcoded integer 0/1 value for censored
+    */
 	s.lst.sort((a, b) => a.serialtime - b.serialtime)
 
 	let thistotal = s.lst.length
@@ -8405,10 +8217,10 @@ function isoformbycoord_tabix(genome, chr, pos) {
 
 function handle_samplematrix(req, res) {
 	/*
-	fetch values for a set of features, over a common set of samples
-	for singular feature, the datatype & file format is implied
-	for feature spanning multiple data types, will need to query multiple data tracks, each track must be identified with "type" e.g. common.tkt.mdsvcf
-	*/
+    fetch values for a set of features, over a common set of samples
+    for singular feature, the datatype & file format is implied
+    for feature spanning multiple data types, will need to query multiple data tracks, each track must be identified with "type" e.g. common.tkt.mdsvcf
+    */
 
 	if (reqbodyisinvalidjson(req, res)) return
 
@@ -9025,13 +8837,13 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 
 function samplematrix_task_ismutation(feature, ds, dsquerylst, usesampleset) {
 	/*
-	load mutation of any type:
-		snvindel from vcf file
-		cnv/loh/sv/fusion/itd from svcnv file
+    load mutation of any type:
+    	snvindel from vcf file
+    	cnv/loh/sv/fusion/itd from svcnv file
 
-	no expression data here
+    no expression data here
 
-	*/
+    */
 	if (!feature.chr) return ['chr missing']
 	if (!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if (feature.stop - feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -9071,8 +8883,8 @@ function samplematrix_task_ismutation(feature, ds, dsquerylst, usesampleset) {
 
 function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 	/*
-	if is custom, will pass the lines to client for processing
-	*/
+    if is custom, will pass the lines to client for processing
+    */
 	if (!dsquery.tracks) return 'tracks[] missing from dsquery'
 	if (!feature.chr) return ['chr missing']
 	if (!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
@@ -9227,7 +9039,7 @@ async function handle_vcf(req, res) {
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw e
-		const dir = isurl ? utils.cache_index(file, req.query.indexURL) : null
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
@@ -9339,6 +9151,7 @@ function makeyscale() {
 	var barheight = 50,
 		minv = 0,
 		maxv = 100
+
 	function yscale(v) {
 		var usebaseline = false
 		var baseliney = 0
@@ -9381,6 +9194,7 @@ exports.makeyscale = makeyscale
 
 function parse_header_variantgene(line) {
 	var lst = line.toLowerCase().split('\t')
+
 	function htry() {
 		for (var i = 0; i < arguments.length; i++) {
 			var j = lst.indexOf(arguments[i])
@@ -9558,14 +9372,14 @@ function downloadFile(url, tofile, cb) {
 
 function parse_textfilewithheader(text) {
 	/*
-	for sample annotation file, first line is header, skip lines start with #
-	parse each line as an item
-	*/
+    for sample annotation file, first line is header, skip lines start with #
+    parse each line as an item
+    */
 	const lines = text.split(/\r?\n/)
 	/*
-	if(lines.length<=1) return ['no content']
-	if(lines[0] == '') return ['empty header line']
-	*/
+        if(lines.length<=1) return ['no content']
+        if(lines[0] == '') return ['empty header line']
+        */
 
 	// allow empty file
 	if (lines.length <= 1 || !lines[0]) return [null, []]
@@ -9590,6 +9404,16 @@ function parse_textfilewithheader(text) {
 /***************************   end of __util   **/
 
 async function pp_init() {
+	try {
+		await fs.promises.stat(serverconfig.tpmasterdir)
+	} catch (e) {
+		/* dir is inaccessible for some reason
+		do not validate any genome/dataset, allow the server process to boot
+		*/
+		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
+		return
+	}
+
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
@@ -9655,6 +9479,9 @@ async function pp_init() {
 		if (g.nohicdomain) {
 			delete g2.hicdomain
 		}
+		if (g.no_gene2canonicalisoform) {
+			if (g2.genedb) delete g2.genedb.gene2canonicalisoform
+		}
 	}
 
 	if (serverconfig.defaultgenome) {
@@ -9702,6 +9529,11 @@ async function pp_init() {
 			g.majorchr = hash
 			g.majorchrorder = chrorder
 		}
+		g.chrlookup = {}
+		// k: uppercase chr, v: {name:str, len:int, major:bool}
+		for (const n in g.majorchr) {
+			g.chrlookup[n.toUpperCase()] = { name: n, len: g.majorchr[n], major: true }
+		}
 		if (g.minorchr) {
 			if (typeof g.minorchr == 'string') {
 				const lst = g.minorchr.trim().split(/[\s\t\n]+/)
@@ -9712,6 +9544,9 @@ async function pp_init() {
 					hash[lst[i]] = c
 				}
 				g.minorchr = hash
+			}
+			for (const n in g.minorchr) {
+				g.chrlookup[n.toUpperCase()] = { name: n, len: g.minorchr[n] }
 			}
 		}
 
@@ -9732,6 +9567,9 @@ async function pp_init() {
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
+		}
+		if (g.genedb.gene2canonicalisoform) {
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
 		}
 
 		for (const tk of g.tracks) {
@@ -9865,8 +9703,11 @@ async function pp_init() {
 			if (!d.name) throw 'a nameless dataset from ' + genomename
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
+
+			// FIXME document the purpose of being able to use override file
 			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
+			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
@@ -9990,6 +9831,7 @@ async function pp_init() {
 		delete g.rawdslst
 	}
 }
+
 function get_codedate() {
 	// detect if proteinpaint was called from outside the
 	// project directory that installed it as an npm dependency
@@ -9997,7 +9839,11 @@ function get_codedate() {
 		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
 	)
 	// if the pp binary did not start the process, assume that the
-	// server was called in the same directory as the public dir or symlink
+	// server was called in the same directory as the public dir or symlink;
+	// serverconfig.projectdir is an optional absolute path value to the
+	// consumer app directory that ran proteinpaint, since @stjude/proteinpaint
+	// may be installed as a global app and thus called from any folder with a
+	// valid serverconfig.json
 	const dirname = serverconfig.projectdir
 		? serverconfig.projectdir
 		: ppbin
@@ -10006,7 +9852,7 @@ function get_codedate() {
 		? './node_modules/@stjude/proteinpaint/'
 		: 'public/..'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
-	const date2 = fs.statSync('public/bin/proteinpaint.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
 }
 
@@ -10017,11 +9863,11 @@ function legacyds_init_one_query(q, ds, genome) {
 
 	if (q.dsblocktracklst) {
 		/*
-		not sure if still in use!
+        not sure if still in use!
 
-		one or more block track available from this query
-		quick-fix for cohort junction, replace-by-mds
-		*/
+        one or more block track available from this query
+        quick-fix for cohort junction, replace-by-mds
+        */
 		if (!Array.isArray(q.dsblocktracklst)) return 'dsblocktracklst not an array in ' + ds.label
 		for (const tk of q.dsblocktracklst) {
 			if (!tk.type) return 'missing type for a blocktrack of ' + ds.label
@@ -10084,11 +9930,6 @@ function legacyds_init_one_query(q, ds, genome) {
 		return
 	}
 
-	if (q.gdcgraphql_snvindel) {
-		// TODO validate when it's settled
-		return
-	}
-
 	return 'do not know how to parse query: ' + q.name
 }
 
@@ -10096,10 +9937,10 @@ function legacyds_init_one_query(q, ds, genome) {
 
 async function mds_init(ds, genome, _servconfig) {
 	/*
-	ds: loaded from datasets/what.js
-	genome: obj {}
-	_servconfig: the entry in "datasets" array from serverconfig.json
-	*/
+    ds: loaded from datasets/what.js
+    genome: obj {}
+    _servconfig: the entry in "datasets" array from serverconfig.json
+    */
 
 	mds2_init.server_updateAttr(ds, _servconfig)
 
@@ -10196,11 +10037,11 @@ async function mds_init(ds, genome, _servconfig) {
 
 	if (ds.cohort && ds.cohort.files) {
 		/*
-		*********** legacy mds *************
+        *********** legacy mds *************
 
-		following all loads sample attributes from text files
-		and store in ds.cohort.annotation
-		*/
+        following all loads sample attributes from text files
+        and store in ds.cohort.annotation
+        */
 
 		if (!Array.isArray(ds.cohort.files)) throw '.cohort.files is not array'
 
@@ -10469,12 +10310,12 @@ async function mds_init(ds, genome, _servconfig) {
 
 	if (ds.mutationAttribute) {
 		/*
-		mutation-level attributes
-		for items in svcnv track:
-			.mattr{}
-		for vcf:
-			FORMAT
-		*/
+        mutation-level attributes
+        for items in svcnv track:
+        	.mattr{}
+        for vcf:
+        	FORMAT
+        */
 		if (!ds.mutationAttribute.attributes) throw 'attributes{} missing from mutationAttribute'
 		for (const key in ds.mutationAttribute.attributes) {
 			const a = ds.mutationAttribute.attributes[key]
@@ -10496,8 +10337,8 @@ async function mds_init(ds, genome, _servconfig) {
 
 	if (ds.alleleAttribute) {
 		/*
-		vcf info field, allele-level
-		*/
+        vcf info field, allele-level
+        */
 		if (!ds.alleleAttribute.attributes) throw 'attributes{} missing from alleleAttribute'
 		for (const key in ds.alleleAttribute.attributes) {
 			const a = ds.alleleAttribute.attributes[key]
@@ -10516,8 +10357,8 @@ async function mds_init(ds, genome, _servconfig) {
 
 	if (ds.locusAttribute) {
 		/*
-		vcf info field, locus-level
-		*/
+        vcf info field, locus-level
+        */
 		if (!ds.locusAttribute.attributes) throw 'attributes{} missing from locusAttribute'
 		for (const key in ds.locusAttribute.attributes) {
 			const a = ds.locusAttribute.attributes[key]
@@ -10767,13 +10608,13 @@ function mds_init_mdsjunction(query, ds, genome) {
 
 function mds_query_attrsum4samples(samples, ds) {
 	/*
-	summarizes a group of samples by list of attributes in ds.cohort.attributes.lst[]
+    summarizes a group of samples by list of attributes in ds.cohort.attributes.lst[]
 
-	a query from mds has total list of samples, e.g. samples in mdsjunction represent those with RNA-seq
-	for these samples, will sum up .totalCount for cohort annotation attributes/values (by ds.cohort.attributes)
-	rather than computing .totalCount over all samples of the ds.cohort, so as to limit to relevant assays
-	so on cohortFilter legend it will only show totalCount from those samples with RNA-seq etc
-	*/
+    a query from mds has total list of samples, e.g. samples in mdsjunction represent those with RNA-seq
+    for these samples, will sum up .totalCount for cohort annotation attributes/values (by ds.cohort.attributes)
+    rather than computing .totalCount over all samples of the ds.cohort, so as to limit to relevant assays
+    so on cohortFilter legend it will only show totalCount from those samples with RNA-seq etc
+    */
 	if (!ds.cohort || !ds.cohort.annotation || !ds.cohort.attributes || !samples) return
 
 	const result = {}
@@ -10807,13 +10648,13 @@ function mds_query_attrsum4samples(samples, ds) {
 
 function mds_query_hierarchy4samples(samples, ds) {
 	/*
-	given a list of sample names, generate hierarchy summary
+    given a list of sample names, generate hierarchy summary
 
-		key: hierarchy path (HM...BALL...ERG)
-		value: number of samples
+    	key: hierarchy path (HM...BALL...ERG)
+    	value: number of samples
 
-	works for both initializing the sample sets from each ds query, and also for samples in view range in real-time track query
-	*/
+    works for both initializing the sample sets from each ds query, and also for samples in view range in real-time track query
+    */
 	if (!ds.cohort || !ds.cohort.annotation || !ds.cohort.hierarchies || samples.length == 0) return
 	const lst = []
 	for (const n of samples) {
@@ -10945,15 +10786,15 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		}
 
 		/*
-		// not used at the moment
-		query.attributeSummary = mds_query_attrsum4samples(query.samples, ds)
-		query.hierarchySummary = mds_query_hierarchy4samples(query.samples,ds)
-		for(const hierarchyname in query.hierarchySummary) {
-			let levelcount=0
-			for(const k in query.hierarchySummary[ hierarchyname ]) levelcount++
-			console.log(levelcount+' '+hierarchyname+' hierarchy levels for '+query.name)
-		}
-		*/
+        // not used at the moment
+        query.attributeSummary = mds_query_attrsum4samples(query.samples, ds)
+        query.hierarchySummary = mds_query_hierarchy4samples(query.samples,ds)
+        for(const hierarchyname in query.hierarchySummary) {
+        	let levelcount=0
+        	for(const k in query.hierarchySummary[ hierarchyname ]) levelcount++
+        	console.log(levelcount+' '+hierarchyname+' hierarchy levels for '+query.name)
+        }
+        */
 	}
 
 	{
@@ -11062,17 +10903,17 @@ function mds_init_genenumeric(query, ds, genome) {
 
 function mds_init_mdsvcf(query, ds, genome) {
 	/*
-	mixture of snv/indel (vcf), ITD, and others
-	that are not either cnv or sv
-	has member tracks, each track of one type of data
-	*/
+    mixture of snv/indel (vcf), ITD, and others
+    that are not either cnv or sv
+    has member tracks, each track of one type of data
+    */
 
 	if (!query.tracks) return 'tracks[] missing'
 	if (!Array.isArray(query.tracks)) return 'tracks should be array'
 
 	/*
-	info from all member tracks are merged, this requires the same info shared across multiple tracks must be identical
-	*/
+    info from all member tracks are merged, this requires the same info shared across multiple tracks must be identical
+    */
 	query.info = {}
 
 	for (const tk of query.tracks) {
@@ -11113,10 +10954,10 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 		if (ds.cohort && ds.cohort.annotation) {
 			/*
-			ds.cohort.annotation is sample-level, e.g. tumor
-			if vcf encodes germline stuff on person, or need some kind of sample name conversion,
-			need to identify such in this track
-			*/
+            ds.cohort.annotation is sample-level, e.g. tumor
+            if vcf encodes germline stuff on person, or need some kind of sample name conversion,
+            need to identify such in this track
+            */
 			const notannotated = []
 			for (const s of tk.samples) {
 				if (!ds.cohort.annotation[s.name]) {

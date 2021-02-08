@@ -99,7 +99,7 @@ exports.rideInit = function(opts = {}) {
 		The exported rideInit() test helper function tries to 
 		reliably sequence UI tests using chained Promises, with
 		each Promise either (a) riding on an event bus (such as
-		tree postRender), or (b) riding just on just the Promise
+		tree postRender), or (b) riding just on the Promise
 		chain itself (without using an event bus). 
 
 		The idea is to minimize the dependency on less reliable,
@@ -125,20 +125,9 @@ exports.rideInit = function(opts = {}) {
 	const rideApi = {
 		// ride on the default event bus
 
-		/*
-			temporary second argument flexibility to support legacy test code
-			while also enabling the new usage pattern where, moving forward,
-			the second argument should always be sub{} (never a function)
-		*/
-		to(callback, afterOrSub = null, _sub = {}) {
+		to(callback, sub = {}) {
 			/*
 			callback()
-
-			afterOrSub: // temporary flexibility to support legacy code
-			- optional, either 
-			  trigger function to call before callback
-			  - OR -
-			  sub{}
 
 			sub {}
 			- optional substitute values when attaching
@@ -147,11 +136,7 @@ exports.rideInit = function(opts = {}) {
 			  as listed for the rideInit() opts{} argument
 
 		*/
-			const after = typeof afterOrSub === 'function' ? afterOrSub : null
-
-			const sub = typeof afterOrSub === 'function' ? _sub : afterOrSub ? afterOrSub : {}
-
-			self.addToThen(callback, Object.assign({}, opts, sub), after)
+			self.addToThen(callback, Object.assign({}, opts, sub))
 			return rideApi
 		},
 
@@ -190,7 +175,16 @@ exports.rideInit = function(opts = {}) {
 			// in-browser behavior is "normal" when inspecting
 			// the displayed UI
 			if (opts.bus) self.resolved.then(() => opts.bus.on(opts.eventType, null))
-			self.resolved.then(() => test.end()).catch(console.log)
+			self.resolved
+				.then(() => {
+					test.end()
+					// remove all rendered elements when a test suite passes,
+					// to minimize have memory leaks
+					if (!opts.preserve && test._ok && opts.arg.Inner.app && typeof opts.arg.Inner.app.destroy == 'function') {
+						setTimeout(opts.arg.Inner.app.destroy, 1000)
+					}
+				})
+				.catch(console.log)
 			return rideApi
 		}
 	}
@@ -223,79 +217,18 @@ class Ride {
 		}
 	}
 
-	/*
-		temporarily allow third argument to support legacy test code
-	*/
-	addToThen(callback, opts, after) {
-		if (!after) {
-			if (opts.wait) {
-				this.resolved = this.resolved.then(triggerFxn => {
-					return new Promise((resolve, reject) => {
-						opts.bus.on(opts.eventType, () => {
-							setTimeout(() => {
-								opts.bus.on(opts.eventType, null)
-								callback(opts.arg)
-								resolve()
-							}, opts.wait)
-						})
-						if (typeof triggerFxn == 'function') triggerFxn()
-					})
+	addToThen(callback, opts) {
+		this.resolved = this.resolved.then(async triggerFxn => {
+			opts.bus.on(opts.eventType, null)
+			return new Promise(async (resolve, reject) => {
+				opts.bus.on(opts.eventType, async () => {
+					await sleep(opts.wait)
+					callback(opts.arg)
+					resolve()
 				})
-			} else {
-				this.resolved = this.resolved.then(triggerFxn => {
-					return new Promise((resolve, reject) => {
-						opts.bus.on(opts.eventType, () => {
-							opts.bus.on(opts.eventType, null)
-							callback(opts.arg)
-							resolve()
-						})
-						if (typeof triggerFxn == 'function') triggerFxn()
-					})
-				})
-			}
-			return
-		} else if (!opts.bus) {
-			/* 
-			will delete the conditions below once the revised implementation is verified
-		*/
-			// equivalent to addToRun() method
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					if (typeof after == 'function') after(opts.arg)
-					setTimeout(
-						() => {
-							callback(opts.arg)
-							resolve()
-						},
-						!opts.wait || isNaN(opts.wait) ? 0 : +opts.wait
-					)
-				})
+				if (triggerFxn) await triggerFxn()
 			})
-		} else if (opts.wait) {
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					opts.bus.on(opts.eventType, () => {
-						setTimeout(() => {
-							opts.bus.on(opts.eventType, null)
-							callback(opts.arg)
-							resolve()
-						}, opts.wait)
-					})
-					if (typeof after == 'function') after(opts.arg)
-				})
-			})
-		} else {
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					opts.bus.on(opts.eventType, () => {
-						opts.bus.on(opts.eventType, null)
-						callback(opts.arg)
-						resolve()
-					})
-					if (typeof after == 'function') after(opts.arg)
-				})
-			})
-		}
+		})
 	}
 
 	// prepare a trigger function for use in the pattern
@@ -304,63 +237,23 @@ class Ride {
 	// .use() enables setting a different opts.arg to be used for triggerFxn
 	//
 	addUseThen(triggerFxn, opts) {
-		this.resolved = this.resolved.then(() => {
+		//Promise(resolve => setTimeout(resolve, ms))
+		this.resolved = this.resolved.then(async prevTriggerFxn => {
+			if (typeof prevTriggerFxn == 'function') await prevTriggerFxn()
 			// supply a trigger function as argument to the next .then()
-			return () => {
-				setTimeout(
-					() => {
-						triggerFxn(opts.arg)
-					},
-					isNaN(opts.wait) ? 0 : opts.wait
-				)
-			}
+			await sleep(isNaN(opts.wait) ? 0 : opts.wait)
+			return () => triggerFxn(opts.arg)
 		})
 	}
 
 	addRunThen(callback, after, opts) {
-		if (typeof after == 'number') {
-			this.resolved = this.resolved.then(() => {
-				return new Promise((resolve, reject) => {
-					setTimeout(() => {
-						callback(opts.arg)
-						resolve()
-					}, after)
-				})
-			})
-		} else {
-			this.resolved = this.resolved.then(() => {
-				callback(opts.arg)
-			})
-		}
+		this.resolved = this.resolved.then(async () => {
+			await sleep(typeof after == 'number' ? after : 0)
+			callback(opts.arg)
+		})
 	}
 }
 
-/*
-let visualCheckIsActive = false
-exports.visualCheck = function renderingTest() {
-	if (visualCheckIsActive) return
-	visualCheckIsActive = true
-	const d3s = require('d3-selection')
-	const d3t = require('d3-transition')
-	
-	const v= {i:0, j:0}
-	for(const k in v) {
-		const div = d3s.select('body')
-			.append('div')
-			.attr('class', 'test-div')
-			.style('position','fixed')
-			.style('height', '50px')
-			.style('top', k=='i' ? '50px' : '70px')
-			.style('font-size', '36px')
-			.style('color','#f00')
-			.style('background', k=='i' ? '#ccc' : '#3f3f3f')
-			.style('z-index', 100)
-		
-		setInterval(()=>div
-			.text(v[k]+=1)
-			.transition()
-			.duration(200)
-			.style('width', (k=='i' && v[k]%2 == 0) || (k=='j' && v[k]%2 != 0) ? '500px' : '100px'), 500)
-	}
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
-*/

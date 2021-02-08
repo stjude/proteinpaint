@@ -1,4 +1,4 @@
-const jStat = require('jStat').jStat
+const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')

@@ -122,6 +122,9 @@ function normalizeCharts(data, comparedRefs = null) {
 		if (summary.boxplot.sd) {
 			summary.boxplot.sd = summary.boxplot.sd.toPrecision(8)
 		}
+		for (const key of Object.keys(summary.boxplot)) {
+			if (key.startsWith('p')) summary.boxplot[key] = summary.boxplot[key].toPrecision(8)
+		}
 	}
 	for (const chart of summary.charts) {
 		for (const series of chart.serieses) {

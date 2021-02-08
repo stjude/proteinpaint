@@ -1,5 +1,7 @@
-if (process.argv.length != 4) {
-	console.log('<phenotree> <matrix> output termjson to stdout, diagnostic tabular table to stderr')
+if (process.argv.length < 4) {
+	console.log(
+		'<phenotree> <matrix> <keep/termconfig, optional> <subcohort column idx in matrix> output two files: keep/termjson, diagnostic_messages.txt'
+	)
 	process.exit()
 }
 
@@ -8,18 +10,25 @@ input files:
 
 1. phenotree dictionary
    this file no longer includes CHC terms, only categorical/numerical
-   CHC is dealt in validate.ctcae.js
-1. sample-by-term matrix, for all terms in phenotree
+   CHC will be processed in validate.ctcae.js
+2. sample-by-term matrix, for all terms in phenotree
+3. keep/termconfig, optional file of precoded configurations
+4. subcohort column idx in "matrix" file
+   if this is given, will summarize term values by sub-cohorts
+   otherwise, will summarize by the entire cohort
+
 
 output:
-json object for all atomic terms
+1. json object for all atomic terms
+2. diagnostic messages
 
 step 1:
 	go over phenotree to initialize json backbone of categorical and numeric terms
 	for categorical terms:
 		if have predefined categories:
 			populate .values{} with categories
-			runtime SET ._values_foundinmatrix, for identifying items from .values not showing up in matrix
+			runtime MAP ._values_foundinmatrix, for identifying items from .values not showing up in matrix
+				k: value, v: number of samples
 			runtime SET ._values_newinmatrix, for matrix values not in .values
 		else:
 			runtime SET ._set  to receive categories from matrix
@@ -27,7 +36,8 @@ step 1:
 		runtime .bins._min, .bins._max to get range
 		if have predefined categories:
 			populate .values{} with categories
-			runtime SET ._values_foundinmatrix
+			runtime MAP ._values_foundinmatrix
+				k: value, v: number of samples
 step 2:
 	go over each matrix file to fill in runtime holders
 step 3:
@@ -39,22 +49,33 @@ step 3:
 
 const file_phenotree = process.argv[2]
 const file_matrix = process.argv[3]
+const file_termconfig = process.argv[4]
+const subcohort_columnidx_str = process.argv[5]
+
+let subcohort_columnidx
+if (subcohort_columnidx_str) {
+	subcohort_columnidx = Number(subcohort_columnidx_str)
+	if (Number.isNaN(subcohort_columnidx) || subcohort_columnidx < 0) throw 'invalid subcohort_columnidx'
+}
 
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
 
 const bins = {
+	// temporary values; to be deleted after parsing matrix file
+	_values: [],
 	_min: null,
-	_max: null, // temporary values
+	_max: null,
+
 	default: {
 		type: 'regular',
 		bin_size: 5,
-		stopinclusive: true,
+		startinclusive: true,
 		first_bin: {
 			startunbounded: true,
-			stop: 5,
-			stopinclusive: true
+			stop: 5
+			//stopinclusive: true
 		}
 	}
 }
@@ -75,10 +96,19 @@ async function main() {
 	// step 3
 	step3_finalizeterms_diagnosticmsg(key2terms)
 
-	console.log(JSON.stringify(key2terms, null, 2))
+	if (file_termconfig) {
+		step4_applyconfig(key2terms)
+	}
+
+	fs.writeFileSync('keep/termjson', JSON.stringify(key2terms, null, 2))
 }
 
 ///////////////////// helpers
+
+function step0_matrix2subcohort() {
+	const idx = Number(subcohort_columnidx)
+	if (Number.isNaN(idx) || idx < 0) throw 'subcohort_columnidx is not integer'
+}
 
 function step1_parsephenotree() {
 	const key2terms = {}
@@ -170,9 +200,6 @@ function parseconfig(str) {
 			}
 		}
 
-		// for all above cases, will have these two
-		term._values_foundinmatrix = new Set()
-
 		for (let i = 1; i < l.length; i++) {
 			const field = l[i].trim()
 			if (field == '') continue
@@ -192,6 +219,9 @@ function parseconfig(str) {
 			}
 		}
 	}
+
+	// for all above cases, will have these two
+	term._values_foundinmatrix = new Map()
 
 	if (term.type == 'categorical') {
 		term.groupsetting = { inuse: false }
@@ -237,7 +267,7 @@ function step2_parsematrix(key2terms) {
 						// to compare against .values
 						if (term.values[str]) {
 							// found
-							term._values_foundinmatrix.add(str)
+							term._values_foundinmatrix.set(str, 1 + (term._values_foundinmatrix.get(str) || 0))
 						} else {
 							term._values_newinmatrix.add(str)
 						}
@@ -249,11 +279,13 @@ function step2_parsematrix(key2terms) {
 					// has special categories
 					if (term.values[str]) {
 						// found; do not consider for range
-						term._values_foundinmatrix.add(str)
+						term._values_foundinmatrix.set(str, 1 + (term._values_foundinmatrix.get(str) || 0))
 						continue
 					}
 				}
 				const value = Number(str)
+				if (Number.isNaN(value)) throw 'invalid value for a numeric term (' + term.id + ') at line ' + (i + 1)
+				term.bins._values.push(value)
 				if (term.bins._min == null) {
 					term.bins._min = value
 					term.bins._max = value
@@ -265,7 +297,7 @@ function step2_parsematrix(key2terms) {
 		})
 		rl.on('close', () => {
 			if (header_notermmatch.size) {
-				console.error('matrix header not defined in phenotree: ' + [...header_notermmatch].join(', '))
+				console.log('matrix header fields not defined in phenotree: ' + [...header_notermmatch].join(', '))
 			}
 			resolve()
 		})
@@ -276,7 +308,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 	// finalize terms and print diagnostic messages to stderr
 
 	// diagnostic message is a tabular table and has a header
-	console.error('Type\tVariable_ID\tMin/message\tMax\tHidden_categories\tVisible_categories')
+	const lines = ['Type\tVariable_ID\tMin/message\tMax\tHidden_categories\tVisible_categories']
 
 	for (const termID in key2terms) {
 		const term = key2terms[termID]
@@ -284,7 +316,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 		if (term.type == 'categorical') {
 			if (term._set) {
 				if (term._set.size == 0) {
-					console.error('ERR\t' + termID + '\tno categories specified in phenotree and not loaded in matrix')
+					lines.push('ERR\t' + termID + '\tno categories specified in phenotree and not loaded in matrix')
 					continue
 				}
 				for (const s of term._set) {
@@ -295,16 +327,15 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				// has predefined categories in .values
 				for (const k in term.values) {
 					if (!term._values_foundinmatrix.has(k)) {
-						console.error('ERR\t' + termID + '\tcategory not found in matrix: ' + k)
+						lines.push('!CATEGORICAL\t' + termID + '\tcategory not found in matrix: ' + k)
 					}
 				}
 				if (term._values_newinmatrix.size) {
 					for (const k of term._values_newinmatrix) {
-						console.error('ERR\t' + termID + '\tcategory not declared in phenotree: ' + k)
+						lines.push('!CATEGORICAL\t' + termID + '\tcategory not declared in phenotree: ' + k)
 						term.values[k] = { label: k }
 					}
 				}
-				delete term._values_foundinmatrix
 				delete term._values_newinmatrix
 			}
 
@@ -318,10 +349,11 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			const uncomputable = [],
 				computable = []
 			for (const k in term.values) {
-				if (term.values[k].uncomputable) uncomputable.push(k)
-				else computable.push(k)
+				if (term.values[k].uncomputable) uncomputable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
+				else computable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
 			}
-			console.error('CATEGORICAL\t' + termID + '\t\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
+			lines.push('CATEGORICAL\t' + termID + '\t\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
+			delete term._values_foundinmatrix
 			continue
 		}
 
@@ -332,32 +364,125 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				// has special categories, do the same validation
 				for (const k in term.values) {
 					if (!term._values_foundinmatrix.has(k)) {
-						console.error('ERR\t' + termID + '\tcategory not found in matrix: ' + k)
+						lines.push('!NUMERICAL\t' + termID + '\tcategory not found in matrix: ' + k)
 					}
 				}
-				delete term._values_foundinmatrix
 			}
 			if (!('_min' in term.bins)) throw '.bins._min missing'
 			if (term.bins._min == term.bins._max) {
-				console.error('ERR\t' + termID + '\tno numeric data in matrix')
+				lines.push('ERR\t' + termID + '\tno numeric data in matrix')
 				continue
 			}
-			console.error(
+			lines.push(
 				'NUMERICAL\t' +
 					termID +
-					'\t' +
+					'\tn=' +
+					term.bins._values.length +
+					',min=' +
 					term.bins._min +
-					'\t' +
+					',max=' +
 					term.bins._max +
-					(term.values ? '\t' + Object.keys(term.values).join(',') : '')
+					',mean=' +
+					getMean(term.bins._values) +
+					',median=' +
+					getMedian(term.bins._values) +
+					',' +
+					getValuelst(term.bins._values) +
+					'\t' +
+					(term.values
+						? '\t' +
+						  Object.keys(term.values)
+								.map(i => i + '=' + (term._values_foundinmatrix.get(i) || 0))
+								.join(',')
+						: '')
 			)
 			// find bin size
 			const range = term.bins._max - term.bins._min
-			term.bins.default.bin_size = Math.ceil(range / 5)
+			{
+				const bs = range / 5
+				if (bs > 1) {
+					term.bins.default.bin_size = Math.ceil(bs)
+				} else {
+					term.bins.default.bin_size = bs
+				}
+			}
 			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
+			delete term.bins._values
+			delete term._values_foundinmatrix
 			continue
 		}
 	}
+	fs.writeFileSync('diagnostic_messages.txt', lines.join('\n') + '\n')
+}
+
+function step4_applyconfig(key2terms) {
+	for (const line of fs
+		.readFileSync(file_termconfig, { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		if (!line) continue
+		const [id, configtype, str] = line.split('\t')
+		const term = key2terms[id]
+		if (!term) throw 'termconfig: unknown term id: ' + id
+		const config = str2config(str)
+		if (configtype == 'bins') {
+			if (config.label_offset) {
+				const n = Number(config.label_offset)
+				if (Number.isNaN(n)) throw 'termconfig: label_offset is not number for ' + id
+				term.bins.label_offset = n
+			}
+			if (config.rounding) {
+				term.bins.rounding = config.rounding
+			}
+			if (config.bin_size) {
+				const n = Number(config.bin_size)
+				if (Number.isNaN(n)) throw 'termconfig: bin_size is not number for ' + id
+				term.bins.default.bin_size = n
+			}
+			if (config['first_bin.stop']) {
+				const n = Number(config['first_bin.stop'])
+				if (Number.isNaN(n)) throw 'termconfig: first_bin.stop is not number for ' + id
+				term.bins.default.first_bin.stop = n
+			}
+			if (config['last_bin.start']) {
+				const n = Number(config['last_bin.start'])
+				if (Number.isNaN(n)) throw 'termconfig: last_bin.start is not number for ' + id
+				if (!term.bins.default.last_bin) term.bins.default.last_bin = { stopunbounded: true }
+				term.bins.default.last_bin.start = n
+			}
+		} else {
+			throw 'termconfig: unknown configtype: ' + configtype
+		}
+	}
+}
+function str2config(str) {
+	const config = {}
+	for (const s of str.split(';')) {
+		const [k, v] = s.split('=')
+		config[k] = v
+	}
+	return config
+}
+function getMean(lst) {
+	let t = 0
+	for (const v of lst) t += v
+	return t / lst.length
+}
+function getMedian(lst) {
+	lst.sort((a, b) => b - a)
+	return lst[Math.floor(lst.length / 2)]
+}
+function getValuelst(lst) {
+	// get number of distinct values; if less than 10, show the occurrence for each value
+	const v2c = new Map() // k: value, v: number of appearance
+	for (const v of lst) {
+		v2c.set(v, 1 + (v2c.get(v) || 0))
+	}
+	if (v2c.size > 10) return 'values=' + v2c.size
+	return [...v2c]
+		.sort((a, b) => b[1] - a[1])
+		.map(i => i[0] + '=' + i[1])
+		.join(',')
 }

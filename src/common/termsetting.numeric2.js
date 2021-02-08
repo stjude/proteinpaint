@@ -38,10 +38,10 @@ export async function setNumericMethods(self) {
 			// check if termsettingInit() was called outside of termdb/app
 			// in which case it will not have an opts.vocabApi
 			if (!self.opts.vocabApi) {
-				const vocabulary = await require('../termdb/vocabulary')
+				const vocabulary = await import('../termdb/vocabulary')
 				self.opts.vocabApi = vocabulary.vocabInit(null, { state: { vocab: self.opts.vocab } })
 			}
-			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj)
+			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
 			//console.log(38, self.num_obj.density_data)
 		} catch (err) {
 			console.log(err)
@@ -468,6 +468,10 @@ function renderLastBinInputs(self, tr) {
 		self.q.last_bin.start = +self.dom.last_start_input.property('value')
 		self.dom.last_start_input.restyle()
 		self.renderBinLines(self, self.q)
+		if (self.dom.last_radio_auto.property('checked')) {
+			delete self.q.last_bin.start
+			edit_div.style('display', 'none')
+		}
 	}
 
 	const origLastStart = self.q.last_bin ? self.q.last_bin.start : null
