@@ -7,4 +7,4 @@ tmppack
 p4
 
 # Exclude Dockerfile from context so changes don't bust the layer cache
-build/Dockerfile
+build/Dockerfile*
