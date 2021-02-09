@@ -1,3 +1,5 @@
+const serverconfig = require('../modules/serverconfig')
+
 module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
@@ -5,8 +7,9 @@ module.exports = {
 		dbfile: 'anno/genes.hg38.db',
 		hasalias: true,
 		// requires the "gene2canonicalisoform" table in genes.db, for converting ENSG to canonical ENST
-		// keep this table for the convenience of browser testing when working on gdc features, so no need of switching to "hg38.gdc.js" and back
-		gene2canonicalisoform: true
+		// in debugmode, keep this table for the convenience of browser testing when working on gdc features,
+		// so no need of switching to "hg38.gdc.js" and back
+		gene2canonicalisoform: serverconfig.debugmode
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
