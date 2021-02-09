@@ -558,6 +558,9 @@ function mds_clientcopy(ds) {
 	if (ds.singlesamplemutationjson) {
 		ds2.singlesamplemutationjson = 1
 	}
+	if (ds.gene2mutcount) {
+		ds2.gene2mutcount = true
+	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
 	}
