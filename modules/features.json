@@ -40,7 +40,7 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg19",
+                    "genome": "hg38",
                     "position": "chr12:25334648-25426944",
                     "nativetracks": "RefGene",
                     "tracks": [
@@ -49,8 +49,8 @@
                         "url": "http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
                         "name": "UCSC phyloP 100ways",
                         "height": 100
-                        }
-                    ]
+                    }
+                ]
                 },
                 "url": "https://proteinpaint.stjude.org/?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9",
@@ -246,7 +246,7 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["bigwig stranded"]
         },
         {
             "name": "Track list and Facet table",
@@ -605,6 +605,7 @@
                 "example": {
                     "parseurl": true,
                     "nobox": 1,
+                    "noheader": 1,
                     "genome": "hg38",
                     "mdssamplescatterplot": {
                         "analysisdata": {
