@@ -264,10 +264,7 @@ export function getNumericMethods(self) {
 		const minvalue = self.num_obj.density_data.minvalue
 
 		brush.d3brush = brushX()
-			.extent([
-				[plot_size.xpad, 0],
-				[plot_size.width - plot_size.xpad, plot_size.height]
-			])
+			.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
 			.on('brush', function(d) {
 				const s = event.selection
 				if (!s) return // not an event triggered by brush dragging

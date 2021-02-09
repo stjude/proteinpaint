@@ -23,10 +23,7 @@ module.exports = function(common) {
 		color: '#074987',
 		dbfile: 'anno/db/genie.ped.hg19.db',
 		cohort: {
-			levels: [
-				{ label: 'Cancer', k: 'CANCER_TYPE' },
-				{ label: 'Subtype', k: 'CANCER_TYPE_DETAILED' }
-			]
+			levels: [{ label: 'Cancer', k: 'CANCER_TYPE' }, { label: 'Subtype', k: 'CANCER_TYPE_DETAILED' }]
 		},
 		stratify: [
 			{

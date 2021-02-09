@@ -256,7 +256,8 @@ function validate_input(doms) {
 	const obj = {
 		type: tkt.mdssvcnv,
 		isdense: doms.isdense,
-		isfull: doms.isfull
+		isfull: doms.isfull,
+		getallsamples: doms.getallsamples
 	}
 	{
 		const n = doms.genome.node()
