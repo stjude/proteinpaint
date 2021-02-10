@@ -804,8 +804,8 @@ hr {
 
 .gpaint-img {
     grid-area: image;
-    width: 125px;
-    height: 125px;
+    width: 75px;
+    height: 75px;
     align-self: center;
     justify-self: center;
 }
@@ -851,7 +851,7 @@ hr {
     padding: 10px;
     display: grid;
     grid-template-columns: 1fr 5fr;
-    grid-template-areas: 'image name' 'image blurb' 'image buttons';
+    grid-template-areas: 'image name' 'image buttons';
     gap: 5px;
     align-items: center;
     justify-items: left;
@@ -889,8 +889,8 @@ hr {
 
 .track-image {
     grid-area: image;
-    width: 125px;
-    height: 125px;
+    width: 75px;
+    height: 75px;
     align-self: center;
     justify-self: center;
 }
@@ -903,23 +903,27 @@ hr {
     border-radius: 3px;
 }
 
-.track>h6 {
+.track-name {
     grid-area: name;
+}
+
+.track>h6 {
     text-align: left;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 16px;
+    font-size: 13.5px;
     font-weight: 500;
-    margin: 10px;
+    /* margin: 10px; */
 }
 
 #track-blurb {
-    grid-area: blurb;
+    /* grid-area: blurb; */
+    display: inline;
     text-align: left;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 300;
     /* font-style: oblique; */
-    margin: 10px;
+    margin: 0px;
     color: #403f3f;
 }
 

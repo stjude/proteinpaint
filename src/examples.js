@@ -39,7 +39,7 @@ export async function init_examples(par) {
 	// subgrid
 	gbrowswer_col
 		.append('h5')
-		.html('Tracks')
+		.html('Genome Browser Tracks')
 		.append('hr')
 	const browserList = gbrowswer_col.append('ul')
 	browserList
@@ -235,13 +235,17 @@ function displayGPaintTracks(tracks, holder) {
 			const li = holder.append('li')
 			li.attr('class', 'track')
 				.html(
-					`<h6>${track.name}</h6>
-						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+					`
+						${
+							track.blurb
+								? `<h6 class="track-name">${track.name},</h6><p class="track-name" id="track-blurb"> ${track.blurb}</p>`
+								: `<h6 class="track-name">${track.name}</h6>`
+						}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
 						${
 							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
 								: ''
 						}
 						${
@@ -271,13 +275,13 @@ function displayBrowserTracks(tracks, holder) {
 			const li = holder.append('li')
 			li.attr('class', 'track')
 				.html(
-					`<h6>${track.name}</h6>
-						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+					`
+					${track.blurb ? `<h6>${track.name},</h6><p id="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
 						${
 							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
 								: ''
 						}
 						${
@@ -307,13 +311,13 @@ function displayExperimentalTracks(tracks, holder) {
 			const li = holder.append('li')
 			li.attr('class', 'track')
 				.html(
-					`<h6>${track.name}</h6>
-						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+					`
+					${track.blurb ? `<h6>${track.name},</h6><p id="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
 						${
 							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
 								: ''
 						}
 						${
@@ -343,13 +347,13 @@ async function displayAppTracks(tracks, holder) {
 			const li = holder.append('li')
 			li.attr('class', 'track')
 				.html(
-					`<h6>${track.name}</h6>
-						${track.blurb ? `<p id="track-blurb">${track.blurb}</p>` : ''}
+					`
+					${track.blurb ? `<h6>${track.name},</h6><p class="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
 						${
 							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
 								: ''
 						}
 						${
