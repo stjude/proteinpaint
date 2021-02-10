@@ -190,14 +190,14 @@ function setResolution(tk, block) {
 
 			// fetch fragments for each region
 			for (const r of regions) {
-				const lst = [
-					'getdata=1',
-					'getBED=1',
-					'file=' + tk.hic.enzymefile,
-					'rglst=' + JSON.stringify([{ chr: r.chr, start: r.start, stop: r.stop }])
-				]
+				const arg = {
+					getdata: 1,
+					getBED: 1,
+					file: tk.hic.enzymefile,
+					rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
+				}
 				tasks.push(
-					client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+					client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 						if (data.error) throw data.error
 						if (!data.items) throw '.items[] missing at mapping coord to fragment index'
 
@@ -248,14 +248,14 @@ function mayLoadDomainoverlay(tk, block) {
 		// fetch domains for each region
 		const tasks = []
 		for (const r of tk.regions) {
-			const lst = ['getdata=1', 'getBED=1', 'rglst=' + JSON.stringify([{ chr: r.chr, start: r.start, stop: r.stop }])]
+			const arg = { getdata: 1, getBED: 1, rglst: [{ chr: r.chr, start: r.start, stop: r.stop }] }
 			if (tk.domainoverlay.file) {
-				lst.push('file=' + tk.domainoverlay.file)
+				arg.file = tk.domainoverlay.file
 			} else {
-				lst.push('url=' + tk.domainoverlay.url)
+				arg.url = tk.domainoverlay.url
 			}
 			tasks.push(
-				client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+				client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 					if (data.error) throw data.error
 					if (!data.items || data.items.length == 0) return
 					r.domainlst = data.items
@@ -316,24 +316,21 @@ function bedfile_load(tk, block) {
 	/*
 	at end, set tk.data[]
 	*/
-	const lst = [
-		'getdata=1',
-		'getBED=1',
-		'rglst=' +
-			JSON.stringify(
-				tk.regions.map(i => {
-					return { chr: i.chr, start: i.start, stop: i.stop }
-				})
-			)
-	]
+	const arg = {
+		getdata: 1,
+		getBED: 1,
+		rglst: tk.regions.map(i => {
+			return { chr: i.chr, start: i.start, stop: i.stop }
+		})
+	}
 	if (tk.bedfile) {
-		lst.push('file=' + tk.bedfile)
+		arg.file = tk.bedfile
 	} else {
-		lst.push('url=' + tk.bedurl)
-		if (tk.bedindexURL) lst.push('indexURL=' + tk.bedindexURL)
+		arg.url = tk.bedurl
+		if (tk.bedindexURL) arg.indexURL = tk.bedindexURL
 	}
 
-	return client.dofetch2('tkbedj?' + lst.join('&')).then(data => {
+	return client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 		if (data.error) throw data.error
 		tk.data = []
 		if (!data.items) {
