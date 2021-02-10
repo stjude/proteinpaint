@@ -1385,7 +1385,7 @@ function lasso_select(obj, dots) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.text('Recurrently mutated genes')
-			.on('click', () => click_mutated_genes(obj, samples))
+			.on('click', async () => await click_mutated_genes(obj, samples))
 
 		obj.menu.d
 			.append('div')
@@ -1452,8 +1452,7 @@ function lasso_select(obj, dots) {
 async function click_mutated_genes(obj, samples) {
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text('Recurrently Mutated Genes')
-	pane.body.text('Work in progress..')
-	// const wait = client.tab_wait(pane.body)
+	const wait = client.tab_wait(pane.body)
 
 	try {
 		const arg = {
@@ -1461,17 +1460,16 @@ async function click_mutated_genes(obj, samples) {
 			dslabel: obj.disco.dslabel,
 			samples: samples
 		}
-		//TODO: request gene count to server
-		// const data = await client.dofetch('/mdsgenecount', JSON.stringify(arg))
-		// const data = await client.dofetch2('mdsgenecount', {
-		// 	method: 'POST',
-		// 	body: JSON.stringify({arg})
-		// })
-		// if (data.error) throw data.error
-		// if (!data.text) throw '.text missing'
+		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		if (!data.out) throw '.out missing'
 
-		// console.log(data.text)
-		// wait.remove()
+		console.log(data)
+		pane.body
+			.append('div')
+			.style('margin', '5px')
+			.text('Gene: ' + data.out.gene + ' Count: ' + data.out.count)
+		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)

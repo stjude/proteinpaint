@@ -198,7 +198,7 @@ app.get(basepath + '/junction', junction_request) // legacy
 app.post(basepath + '/mdsjunction', handle_mdsjunction)
 app.post(basepath + '/mdscnv', handle_mdscnv)
 app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
-app.get(basepath + '/mdsgenecount', handle_mdsgenecount)
+app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
 app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
 app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
 app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
@@ -2433,6 +2433,7 @@ function handle_mdscnv(req, res) {
 }
 
 async function handle_mdsgenecount(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
 	log(req)
 	try {
 		const genome = genomes[req.query.genome]
@@ -2445,7 +2446,8 @@ async function handle_mdsgenecount(req, res) {
 		const query = `WITH
 	filtered AS (
 		SELECT * FROM genecount
-		WHERE sample IN (${req.query.samples
+		WHERE sample IN (${JSON.stringify(req.query.samples)
+			.replace(/[[\]\"]/g, '')
 			.split(',')
 			.map(i => "'" + i + "'")
 			.join(',')})
