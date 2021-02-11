@@ -164,7 +164,26 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.get(basepath + '/healthcheck', async (req, res) => {
+	try {
+		const w = child_process
+			.execSync('w | head -n1')
+			.toString()
+			.trim()
+			.split(' ')
+			.slice(-3)
+			.map(d => +d)
+		const rs =
+			child_process
+				.execSync('ps aux | grep rsync -w')
+				.toString()
+				.trim()
+				.split('\n').length - 1
+		res.send({ status: 'ok', w, rs })
+	} catch (e) {
+		throw e
+	}
+})
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
