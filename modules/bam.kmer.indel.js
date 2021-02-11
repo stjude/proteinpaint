@@ -97,10 +97,6 @@ export async function match_complexvariant_rust(templates, q) {
 		sequences += template.segments[0].seq + '\n'
 	}
 
-	console.log('sequences:', sequences)
-	console.log('q.variant.pos:', q.variant.pos)
-	console.log('segbplen:', segbplen)
-	console.log('refallele:', refallele)
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
 		BigInt(q.variant.pos),
@@ -111,7 +107,71 @@ export async function match_complexvariant_rust(templates, q) {
 		weight_indel,
 		threshold_slope
 	) // Invoking wasm function
-	console.log('rust_output:', rust_output)
+	//console.log('rust_output:', rust_output)
+
+	let index = 0
+	const type2group = bamcommon.make_type2group(q)
+	const kmer_diff_scores_input = []
+	for (let i = 0; i < rust_output.category.length; i++) {
+		if (rust_output.category[i] == 'ref') {
+			if (type2group[bamcommon.type_supportref]) {
+				index = rust_output.groupID[i]
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				type2group[bamcommon.type_supportref].templates.push(templates[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'ref'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		} else if (rust_output.category[i] == 'alt') {
+			if (type2group[bamcommon.type_supportalt]) {
+				index = rust_output.groupID[i]
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				type2group[bamcommon.type_supportalt].templates.push(templates[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'alt'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		} else if (rust_output.category[i] == 'none') {
+			if (type2group[bamcommon.type_supportno]) {
+				index = rust_output.groupID[i]
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				type2group[bamcommon.type_supportno].templates.push(templates[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'none'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		}
+	}
+	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
+	// console.log('Final array for plotting:', kmer_diff_scores_input)
+	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
+
+	q.kmer_diff_scores_asc = kmer_diff_scores_input
+
+	const groups = []
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		g.messagerows.push({
+			h: 15,
+			t:
+				g.templates.length +
+				' reads supporting ' +
+				(k == bamcommon.type_supportref
+					? 'reference allele'
+					: k == bamcommon.type_supportalt
+					? 'mutant allele'
+					: 'neither reference or mutant alleles')
+		})
+		groups.push(g)
+	}
+	return { groups, refalleleerror }
 }
 
 export async function match_complexvariant(templates, q) {

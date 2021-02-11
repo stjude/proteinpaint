@@ -1,5 +1,4 @@
 // Syntax: wasm-pack build --target nodejs
-
 // Passing vector using webassembly: https://stackoverflow.com/questions/50220966/how-to-use-vectors-of-c-stl-with-webassembly
 
 use wasm_bindgen::prelude::*;
@@ -7,6 +6,8 @@ use wasm_bindgen::JsValue;
 use serde::{Serialize, Deserialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use web_sys::console;
+
 
 pub struct read_diff_scores {
    groupID:usize,
@@ -26,7 +27,8 @@ struct read_category {
 #[derive(Serialize, Deserialize)]
 pub struct output_structure {
     category:Vec<String>,
-    groupID:Vec<usize>
+    groupID:Vec<usize>,
+    kmer_diff_scores:Vec<f64>	
 }    
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
@@ -43,13 +45,19 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 #[wasm_bindgen]
 pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen: i64, refallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
+    //panic!("crash and burn");
     println!("variant_pos:{}", variant_pos);
-    println!("segbplen:{}", segbplen);    
+    println!("segbplen:{}", segbplen);
+
+    //console::log_1(&"Hello using web-sys".into());
+    //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
+    //console::log_2(&"sequences:".into(), &sequences.into());
+    
     
     let lines: Vec<&str> = sequences.split("\n").collect();
     //let lines = lines.unwrap();    
     
-    //println!("{:?}", lines);
+    println!("{:?}", lines);
     println!("{}", lines[0]);
 
     let left_most_pos = variant_pos - segbplen;
@@ -57,8 +65,8 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     
     let kmers = build_kmers(lines[0].to_string(), kmer_length);
     println!("kmers:{}",kmers[4]);
-
-
+    
+    
     let (ref_kmers_weight, all_ref_counts, all_ref_kmers_seq_values_nodups, all_ref_kmers_nodups, all_ref_kmers) = build_kmers_refalt(
     		lines[0].to_string(),
     		kmer_length,
@@ -68,7 +76,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		weight_indel,
     		weight_no_indel
     );
-
+    
     let (alt_kmers_weight,all_alt_counts, all_alt_kmers_seq_values_nodups, all_alt_kmers_nodups, all_alt_kmers) = build_kmers_refalt(
     		lines[1].to_string(),
     		kmer_length,
@@ -78,7 +86,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		weight_indel,
     		weight_no_indel
     );
-
+    
     let mut kmer_diff_scores = Vec::<f64>::new();
     let mut alt_comparisons = Vec::<f64>::new();    
     let mut ref_comparisons = Vec::<f64>::new();
@@ -87,71 +95,73 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     let mut i:i64 = 0;
     println!("Number of reads:{}", lines.len()-2);
     for read in lines{ // Will multithread this loop in the future
-	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
+    	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
               let kmers = build_kmers(read.to_string(), kmer_length);
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers,&all_ref_kmers,&all_ref_kmers_nodups,&all_ref_kmers_seq_values_nodups,&ref_kmers_weight,&all_ref_counts);
-	      let alt_comparison=jaccard_similarity_weights(&kmers,&all_alt_kmers,&all_alt_kmers_nodups,&all_alt_kmers_seq_values_nodups,&alt_kmers_weight,&all_alt_counts);
-	      let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-	      kmer_diff_scores.push(diff_score);
-	      ref_comparisons.push(ref_comparison);
-	      alt_comparisons.push(alt_comparison);
-	      let item = read_diff_scores{
-	         value:f64::from(diff_score),
-	         groupID:usize::from(i as usize -2) // The -2 has been added since the first two sequences in the file are reference and alternate     
-	      };
-	      if diff_score > 0.0 {
-		alt_scores.push(item)
-	      } else if diff_score <= 0.0 {
-		ref_scores.push(item)
-	      }	    
-	}    
+    	      let alt_comparison=jaccard_similarity_weights(&kmers,&all_alt_kmers,&all_alt_kmers_nodups,&all_alt_kmers_seq_values_nodups,&alt_kmers_weight,&all_alt_counts);
+    	      let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+    	      kmer_diff_scores.push(diff_score);
+    	      ref_comparisons.push(ref_comparison);
+    	      alt_comparisons.push(alt_comparison);
+    	      let item = read_diff_scores{
+    	         value:f64::from(diff_score),
+    	         groupID:usize::from(i as usize -2) // The -2 has been added since the first two sequences in the file are reference and alternate     
+    	      };
+    	      if diff_score > 0.0 {
+    		alt_scores.push(item)
+    	      } else if diff_score <= 0.0 {
+    		ref_scores.push(item)
+    	      }	    
+    	}    
         i+=1;
     }	
-
+    
     println!("ref_scores length:{}",ref_scores.len());
     println!("alt_scores length:{}",alt_scores.len());
-
+    
     let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
     if ref_scores.len() > 0 {
       ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
-
+    
     let mut alt_indices = Vec::<read_category>::new();
     println!("Parsing alt scores");
     if alt_scores.len() > 0 {
       let alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }
-
+    
     let mut output_cat = Vec::<String>::new();
     let mut output_gID = Vec::<usize>::new();
-
+    
     for item in ref_indices {
-	if item.category == "refalt".to_string() {
+    	if item.category == "refalt".to_string() {
             output_cat.push("ref".to_string());		
         }
-	else {
+    	else {
             output_cat.push("none".to_string());
-	}    
+    	}    
         output_gID.push(item.groupID);	    
     }
-
+    
     for item in alt_indices {
-	if item.category == "refalt".to_string() {
+    	if item.category == "refalt".to_string() {
             output_cat.push("alt".to_string());		
         }
-	else {
+    	else {
             output_cat.push("none".to_string());
-	}    
+    	}    
         output_gID.push(item.groupID);	    
     }
-
+    //println!("{}", output_cat[0]);
+    //console::log_2(&"output_cat[0]:".into(), &output_cat[0].to_string().into());
     let item = output_structure{
-	category:output_cat,
-	groupID:output_gID
+    	category:output_cat,
+    	groupID:output_gID,
+	kmer_diff_scores:kmer_diff_scores
     };
-
+    
     JsValue::from_serde(&item).unwrap()
 }
 

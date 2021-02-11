@@ -2,8 +2,8 @@ let imports = {}
 imports['__wbindgen_placeholder__'] = module.exports
 let wasm
 //const { TextDecoder, TextEncoder } = require(String.raw`util`);
-const TextEncoder = require('util').TextEncoder // Changed manually
-const TextDecoder = require('util').TextDecoder
+const TextEncoder = require('util').TextEncoder //Changed manually
+const TextDecoder = require('util').TextDecoder //Changed manually
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true })
 
@@ -169,7 +169,10 @@ module.exports.__wbindgen_json_parse = function(arg0, arg1) {
 	return addHeapObject(ret)
 }
 
-//const path = require('path').join(__dirname, 'rust_indel_bg.wasm');
+module.exports.__wbindgen_throw = function(arg0, arg1) {
+	throw new Error(getStringFromWasm0(arg0, arg1))
+}
+
 const path = require('path').join('modules/rust_indel/pkg', 'rust_indel_bg.wasm')
 const bytes = require('fs').readFileSync(path)
 
