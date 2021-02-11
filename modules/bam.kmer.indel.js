@@ -5,7 +5,114 @@ const bamcommon = require('./bam.common')
 const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 
-export async function match_complexvariant_rust(templates, q) {}
+export async function match_complexvariant_rust(templates, q) {
+	const segbplen = templates[0].segments[0].seq.length
+	// need to verify if the retrieved sequence is showing 1bp offset or not
+	let final_ref = ''
+	if (q.variant.ref != '-') {
+		final_ref = q.variant.ref
+	} else {
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+	}
+	let final_alt = ''
+	if (q.variant.alt != '-') {
+		final_alt = q.variant.alt
+	} else {
+		final_alt = ''
+	}
+
+	console.log(
+		'q.variant.pos:',
+		q.variant.pos,
+		',segbplen:',
+		segbplen,
+		',variant:',
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+	)
+	const leftflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
+	))
+
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const rightflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr +
+			':' +
+			(q.variant.pos + final_ref.length + 1) +
+			'-' +
+			(q.variant.pos + segbplen + final_ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const refseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+
+	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	console.log('refSeq', refseq)
+	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+
+	const refallele = final_ref.toUpperCase()
+	const altallele = final_alt.toUpperCase()
+
+	//const refseq = leftflankseq + refallele + rightflankseq
+	const altseq = leftflankseq + altallele + rightflankseq
+
+	// console.log(refallele,altallele,refseq,altseq)
+
+	//----------------------------------------------------------------------------
+	// IMPORTANT PARAMETERS
+	const kmer_length = 6 // length of kmer
+	const weight_no_indel = 0.1 // Weight when base not inside the indel
+	const weight_indel = 10 // Weight when base is inside the indel
+	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	//----------------------------------------------------------------------------
+
+	// Checking to see if reference allele is correct or not
+	let refalleleerror = false
+	if (refseq.toUpperCase().localeCompare((leftflankseq + refallele + rightflankseq).toUpperCase()) != 0) {
+		//console.log('Reference allele is not correct')
+		refalleleerror = true
+	}
+
+	let sequences = ''
+	sequences += refseq + '\n'
+	sequences += altseq + '\n'
+	for (const template of templates) {
+		sequences += template.segments[0].seq + '\n'
+	}
+
+	console.log('sequences:', sequences)
+	console.log('q.variant.pos:', q.variant.pos)
+	console.log('segbplen:', segbplen)
+	console.log('refallele:', refallele)
+	const rust_output = await rust_match_complexvariant_indel(
+		sequences,
+		BigInt(q.variant.pos),
+		BigInt(segbplen),
+		refallele,
+		BigInt(kmer_length),
+		weight_no_indel,
+		weight_indel,
+		threshold_slope
+	) // Invoking wasm function
+	console.log('rust_output:', rust_output)
+}
 
 export async function match_complexvariant(templates, q) {
 	// TODO
