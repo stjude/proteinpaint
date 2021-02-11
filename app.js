@@ -2457,7 +2457,7 @@ async function handle_mdsgenecount(req, res) {
 	GROUP BY gene
 	ORDER BY count DESC
 	LIMIT 20`
-		const out = ds.gene2mutcount.db.prepare(query).get()
+		const out = ds.gene2mutcount.db.prepare(query).all()
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })

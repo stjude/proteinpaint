@@ -1385,7 +1385,10 @@ function lasso_select(obj, dots) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.text('Recurrently mutated genes')
-			.on('click', async () => await click_mutated_genes(obj, samples))
+			.on('click', async () => {
+				obj.menu.hide()
+				await click_mutated_genes(obj, samples)
+			})
 
 		obj.menu.d
 			.append('div')
@@ -1464,16 +1467,35 @@ async function click_mutated_genes(obj, samples) {
 		if (data.error) throw data.error
 		if (!data.out) throw '.out missing'
 
-		console.log(data)
-		pane.body
-			.append('div')
-			.style('margin', '5px')
-			.text('Gene: ' + data.out.gene + ' Count: ' + data.out.count)
+		make_gene_count_table(data.out, pane.body)
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
+}
+
+function make_gene_count_table(data, holder) {
+	const table = holder.append('table')
+	const htr = table.append('tr')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Gene')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Count')
+
+	data.forEach(g => {
+		const tr = table.append('tr')
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.gene)
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.count)
+	})
 }
 
 function launch_singlesample(p) {
