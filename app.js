@@ -172,7 +172,7 @@ app.get(basepath + '/healthcheck', async (req, res) => {
 			.trim()
 			.split(' ')
 			.slice(-3)
-			.map(d => +d)
+			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
 		const rs =
 			child_process
 				.execSync('ps aux | grep rsync -w')
