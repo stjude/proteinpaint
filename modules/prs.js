@@ -17,7 +17,7 @@ arg{}:
 	alternatively, it could be a list of array index from vcf header
 
 returns a "samples" array, each ele:
-{ name, sum, snpcount }
+{ name, sum, effalecount}
 */
 export async function compute(arg) {
 	if (!Number.isInteger(arg.poolnumber)) throw '.poolnumber missing'
@@ -35,7 +35,7 @@ export async function compute(arg) {
 
 	// convert each sample name to a result object in a new list
 	const samples = arg.samplenames.map(i => {
-		return { name: i, sum: 0, snpcount: 0 }
+		return { name: i, sum: 0, effalecount: 0 }
 	})
 	await asyncPool(arg.poolnumber, arg.snps, queryOneSNP(arg, samples))
 	return samples
@@ -75,11 +75,12 @@ function queryOneSNP(arg, samples) {
 						// XXX missing GT hardcoded to be '.'
 						continue
 					}
-					sample.snpcount++
 
 					const tmp = gt.split('/')
 					if (tmp.length != 2) continue
-					sample.sum += snp.weight * ((tmp[0] == effectalleleidx ? 1 : 0) + (tmp[1] == effectalleleidx ? 1 : 0))
+					const effale = (tmp[0] == effectalleleidx ? 1 : 0) + (tmp[1] == effectalleleidx ? 1 : 0)
+					sample.effalecount += effale
+					sample.sum += snp.weight * effale
 				}
 			}
 		)

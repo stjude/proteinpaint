@@ -7,9 +7,52 @@ set -e
 # all built artifacts are traceable to a git commit.
 #
 
+
+usage() {
+	echo "Usage:
+
+	./build/publish.sh [-b] [-f] [ \"\" | dry | registry | dry | tgz ]
+
+	-b packs backend code
+	-f packs frontend code
+	- defaults to packing both backend and frontend
+
+	- no argument defaults to dry
+	- dry: equivalent to 'npm publish --dry-run'
+	- registry: equivalent to 'npm publish'
+	- tgz: equivalent to 'npm pack'
+	"
+}
+
+
 ###############
 # ARGUMENTS
 ###############
+
+while getopts "bfh" opt; do
+	case "${opt}" in
+	b)
+		PACK_BACKEND=1
+		;;
+	f)
+		PACK_FRONTEND=1
+		;;
+	h)
+		usage
+		exit 1
+		;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+
+# default to packing both backend and frontend unless either is specified
+if [[ "$PACK_BACKEND" != 1 && "$PACK_FRONTEND" != 1 ]]; then
+	PACK_BACKEND=1
+	PACK_FRONTEND=1
+fi
+
 
 # default to deploying to ppdev
 if (($# == 0)); then
@@ -19,17 +62,10 @@ elif (($# == 1)); then
 fi
 
 if [[ "$DEST" != "dry" && "$DEST" != "registry" && "$DEST" != "tgz"  ]]; then
-	echo "Usage:
-
-	./build/publish.sh [ "" | dry | registry | dry | tgz ]
-
-	- no argument defaults to dry
-	- dry: equivalent to 'npm publish --dry-run'
-	- registry: equivalent to 'npm publish'
-	- tgz: equivalent to 'npm pack'
-	"
+	usage
 	exit 1
 fi
+
 
 #############################
 # EXTRACT FROM COMMIT
@@ -61,12 +97,18 @@ ln -s ../node_modules node_modules
 ########
 
 # create bundles
-echo -e "\nBundling the server bin ...\n"
-npm run build-server
-echo -e "\nBundling the client public/bin ...\n"
-npx webpack --config=build/webpack.config.build.js --env.url="__PP_URL__"
-echo -e "\nPacking the client main ...\n"
-npx rollup -c ../build/rollup.config.js
+
+if [[ "$PACK_BACKEND" == 1 ]]; then
+	echo -e "\nBundling the server bin ...\n"
+	npm run build-server
+fi
+
+if [[ "$PACK_FRONTEND" == 1 ]]; then
+	echo -e "\nBundling the client bin ...\n"
+	npx webpack --config=build/webpack.config.build.js --env.url="__PP_URL__"
+	echo -e "\nPacking the client main ...\n"
+	npx rollup -c ../build/rollup.config.js
+fi
 
 ##########
 # PACK
@@ -75,12 +117,12 @@ npx rollup -c ../build/rollup.config.js
 npm pack
 # delete everything in temp folder except the tar gz file
 find . -type f ! -name '*.tgz' -delete
-find . -type d -delete
 rm -rf node_modules public scripts
+find . -type d -delete
 
 # get the current tag
-TAG=$(node -p "require('../package.json').version")
+TAG="$(node -p "require('../package.json').version")"
 # we will look for the tarball of the current package version
-PKGVER=stjude-proteinpaint-$TAG.tgz
-tar -xzf $PKGVER
+PKGVER="stjude-proteinpaint-$TAG.tgz"
+tar -xzf "$PKGVER"
 cd ../..

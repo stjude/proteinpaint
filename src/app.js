@@ -159,10 +159,6 @@ export function runproteinpaint(arg) {
 			selectgenome = makeheader( app, data, arg.jwt )
 		}
 
-		if(arg.headerhtml) {
-			app.holder.append('div').html(arg.headerhtml)
-		}
-    
     app.holder0 = app.holder.append('div').style('margin','20px')
 
 		return parseembedthenurl(arg, app, selectgenome)
@@ -185,6 +181,7 @@ function makeheader(app, obj, jwt) {
 	const padw='13px'
 	// head
 	const row = app.holder.append('div')
+	const app_row = app.holder.append('div')
 	const headbox=row.append('div')
 		.style('margin','10px')
 		.style('padding-right','10px')
@@ -300,14 +297,72 @@ function makeheader(app, obj, jwt) {
 			.property('value',n)
 	}
 
-	headbox.append('span')
-		.attr('class','sja_menuoption')
-		.style('padding',padw)
-		.style('border-radius','5px')
-		.text('Apps')
-		.on('click',()=>{
-			appmenu( app, headbox, selectgenome, jwt )
-		})
+	if(!obj.features.examples){
+		headbox.append('span')
+			.attr('class','sja_menuoption')
+			.style('padding',padw)
+			.style('border-radius','5px')
+			.text('Apps')
+			.on('click',()=>{
+				appmenu( app, headbox, selectgenome, jwt )
+			})
+	}else{
+		// show 'apps' div only when url is barbone without any paramerters or example page
+		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
+			? true : false
+		let apps_rendered = false 
+
+		const app_holder = app_row
+				.append('div')
+				.style('margin','10px')
+				.style('padding-right','10px')
+				.style('display', app_btn_active ? 'inline-block' : 'none')
+				.style('background-color', '#f2f2f2')
+				.style('border-radius','5px')
+				.style('width','85vw')
+
+		async function load_app_div(){
+			if(apps_rendered) return
+			apps_rendered = true
+			const _ = await import('./examples')
+			await _.init_examples({holder: app_holder})
+		}
+
+		if(app_btn_active) load_app_div()
+
+		const app_btn = headbox.append('span')
+			.attr('class','sja_menuoption')
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('padding',padw)
+			.style('border-radius', '5px')
+			.text('Apps')
+			.on('click', () => {
+				// toggle button color and hide/show apps div 
+				app_btn_active = !app_btn_active
+				load_app_div()
+
+				app_btn
+					.transition()
+					.duration(500)
+					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+					.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+					.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+
+				app_holder
+					.transition()
+					.duration(500)
+					.style('display', app_btn_active ? 'inline-block' : 'none')
+			})
+			.on('mouseover', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+			})
+			.on('mouseout', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			})
+	}	
+	
 	headbox.append('span').classed('sja_menuoption',true).style('padding',padw).style('border-radius','5px').text('Help').on('click',()=>{
 		const p=d3event.target.getBoundingClientRect()
 		const div=headtip.clear()
