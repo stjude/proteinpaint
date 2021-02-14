@@ -3,7 +3,6 @@ import { event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import * as expressionstat from './block.mds.expressionstat'
-//import {format} from 'd3-format'
 
 /*
 sloppy design!!!
@@ -49,7 +48,7 @@ const label_sv = 'SV'
 const label_ase = 'Allele-specific expression'
 const label_outlier = 'Outlier expression'
 
-export function init(p) {
+export async function init(p) {
 	if (!p.genome) return alert('cannot initiate plot: genome missing')
 
 	const plot = p
@@ -389,6 +388,12 @@ export function init(p) {
 	*/
 	plot.buttonholder_boxplot = buttonrow.append('span')
 	plot.buttonholder_sampleexpdata = buttonrow.append('span')
+	buttonrow
+		.append('button')
+		.text('SVG')
+		.on('click', () => {
+			client.to_svg(plot.svg.node(), 'Expression')
+		})
 
 	plot.svg = plot.holder.append('svg')
 	const axisg = plot.svg.append('g')
@@ -422,10 +427,7 @@ export function init(p) {
 		}
 
 		client.axisstyle({
-			axis: axisg.transition().call(
-				axisTop().scale(scale0)
-				//.ticks(8,format('d'))
-			),
+			axis: axisg.transition().call(axisTop().scale(scale0)),
 			showline: 1
 		})
 
@@ -536,10 +538,15 @@ export function init(p) {
 		plot.svg.attr('width', labwidth + lablspace + axisw + axispad2 + rightwidth).attr('height', axisheight + y + 30)
 	}
 
-	loadplot(plot)
+	try {
+		await loadplot(plot)
+	} catch (e) {
+		client.sayerror(plot.errdiv, 'Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
 }
 
-function loadplot(plot) {
+async function loadplot(plot) {
 	const arg = {
 		genome: plot.genome.name,
 		gene: plot.gene,
@@ -568,41 +575,151 @@ function loadplot(plot) {
 		.attr('x', plot.svg.attr('width') / 2)
 		.attr('y', plot.svg.attr('height') / 2)
 
-	client
-		.dofetch('mdsgeneboxplot', arg)
-		.then(data => {
-			if (data.error) throw { message: data.error }
+	const data = await client.dofetch('mdsgeneboxplot', arg)
+	if (data.error) throw data.error
 
-			// must clear g0 since may be adding/removing boxplots
-			plot.g0.selectAll('*').remove()
+	// must clear g0 since may be adding/removing boxplots
+	plot.g0.selectAll('*').remove()
 
-			plot.axislabel = plot.g0
+	plot.axislabel = plot.g0
+		.append('text')
+		.attr('font-size', 14)
+		.attr('font-family', client.font)
+		.attr('text-anchor', 'middle')
+		.attr('y', -25)
+		.text(plot.gene + ' ' + plot.gecfg.datatype)
+
+	plot.data = data
+
+	const color0 = 'green'
+	// gecfg.itemcolor
+
+	if (data.lst) {
+		/* all samples are in one group
+	no boxplot; show waterfall plot
+	*/
+
+		addbutton_showdata_fromlst(plot)
+
+		for (const d of data.lst) {
+			d.circle = plot.g0
+				.append('circle')
+				.attr('fill', 'white')
+				.attr('fill-opacity', 0)
+				.attr('stroke', color0)
+				.attr('stroke-opacity', 0.8)
+				.on('mouseover', () => {
+					plot.tip
+						.clear()
+						.d.append('div')
+						.style('margin', '10px')
+						.html(d.sample + '<br>' + d.value)
+					plot.tip.show(d3event.clientX, d3event.clientY)
+				})
+				.on('mouseout', () => plot.tip.hide())
+
+			if (plot.clicksample) {
+				d.circle.on('click', () => {
+					plot.clicksample(d, null, plot)
+				})
+			}
+		}
+	} else {
+		/* samples in groups
+	one boxplot per group
+	*/
+
+		addbutton_boxplotstats(plot)
+		addbutton_showdata_newquery(plot)
+
+		for (const [i, g] of data.groups.entries()) {
+			g.g = plot.g0.append('g')
+			if (i % 2 == 0) {
+				g.bg = g.g.append('rect').attr('fill', '#f5f5f5')
+			}
+
+			g.label = g.g
 				.append('text')
-				.attr('font-size', 14)
 				.attr('font-family', client.font)
-				.attr('text-anchor', 'middle')
-				.attr('y', -25)
-				.text(plot.gene + ' ' + plot.gecfg.datatype)
+				.attr('text-anchor', 'end')
+				.attr('dominant-baseline', 'central')
+				.attr('class', 'sja_clbtext')
+				.text(g.name)
+				.on('click', () => {
+					// click a group label to show rope plot for this group alone
+					init2(Math.max(100, d3event.clientX - 100), Math.max(100, d3event.clientY - 100), plot, g)
+				})
 
-			plot.data = data
+			if (g.attributes) {
+				g.label
+					.on('mouseover', () => {
+						plot.tip.clear().show(d3event.clientX, d3event.clientY)
+						const d = plot.tip.d.append('div').style('margin', '10px')
+						for (const a of g.attributes) {
+							d.append('div').html(
+								a.kvalue + (a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">' + a.fullvalue + '</span>' : '')
+							)
+						}
+					})
+					.on('mouseout', () => {
+						plot.tip.hide()
+					})
+			}
 
-			const color0 = 'green'
-			// gecfg.itemcolor
+			for (const bp of g.boxplots) {
+				let color
 
-			if (data.lst) {
-				/* all samples are in one group
-			no boxplot; show waterfall plot
-			*/
+				if (bp.iscnvgain) {
+					color = plot.color.cnvgain
+					bp.label = g.g.append('text').text('CNV gain (' + bp.samplecount + ')')
+				} else if (bp.iscnvloss) {
+					color = plot.color.cnvloss
+					bp.label = g.g.append('text').text('CNV loss (' + bp.samplecount + ')')
+				} else if (bp.issv) {
+					color = 'black'
+					bp.label = g.g.append('text').text('SV (' + bp.samplecount + ')')
+				} else {
+					color = color0
+				}
 
-				addbutton_showdata_fromlst(plot)
+				if (bp.label) {
+					bp.label
+						.attr('fill', color)
+						.attr('font-family', client.font)
+						.attr('dominant-baseline', 'central')
+				}
 
-				for (const d of data.lst) {
-					d.circle = plot.g0
+				if (bp.w1 != undefined) {
+					// has valid values for boxplot, could be missing
+					bp.hline = g.g
+						.append('line')
+						.attr('stroke', color)
+						.attr('shape-rendering', 'crispEdges')
+					bp.linew1 = g.g
+						.append('line')
+						.attr('stroke', color)
+						.attr('shape-rendering', 'crispEdges')
+					bp.linew2 = g.g
+						.append('line')
+						.attr('stroke', color)
+						.attr('shape-rendering', 'crispEdges')
+					bp.box = g.g
+						.append('rect')
+						.attr('fill', 'white')
+						.attr('stroke', color)
+						.attr('shape-rendering', 'crispEdges')
+					bp.linep50 = g.g
+						.append('line')
+						.attr('stroke', color)
+						.attr('shape-rendering', 'crispEdges')
+				}
+				// outliers
+				for (const d of bp.out) {
+					d.circle = g.g
 						.append('circle')
+						.attr('stroke', color)
 						.attr('fill', 'white')
 						.attr('fill-opacity', 0)
-						.attr('stroke', color0)
-						.attr('stroke-opacity', 0.8)
 						.on('mouseover', () => {
 							plot.tip
 								.clear()
@@ -611,153 +728,35 @@ function loadplot(plot) {
 								.html(d.sample + '<br>' + d.value)
 							plot.tip.show(d3event.clientX, d3event.clientY)
 						})
-						.on('mouseout', () => plot.tip.hide())
+						.on('mouseout', () => {
+							plot.tip.hide()
+						})
 
 					if (plot.clicksample) {
 						d.circle.on('click', () => {
-							plot.clicksample(d, null, plot)
+							plot.clicksample(d, g, plot)
 						})
 					}
 				}
-			} else {
-				/* samples in groups
-			one boxplot per group
-			*/
-
-				addbutton_boxplotstats(plot)
-				addbutton_showdata_newquery(plot)
-
-				for (const [i, g] of data.groups.entries()) {
-					g.g = plot.g0.append('g')
-					if (i % 2 == 0) {
-						g.bg = g.g.append('rect').attr('fill', '#f5f5f5')
-					}
-
-					g.label = g.g
-						.append('text')
-						.attr('font-family', client.font)
-						.attr('text-anchor', 'end')
-						.attr('dominant-baseline', 'central')
-						.attr('class', 'sja_clbtext')
-						.text(g.name)
-						.on('click', () => {
-							// click a group label to show rope plot for this group alone
-							init2(Math.max(100, d3event.clientX - 100), Math.max(100, d3event.clientY - 100), plot, g)
-						})
-
-					if (g.attributes) {
-						g.label
-							.on('mouseover', () => {
-								plot.tip.clear().show(d3event.clientX, d3event.clientY)
-								const d = plot.tip.d.append('div').style('margin', '10px')
-								for (const a of g.attributes) {
-									d.append('div').html(
-										a.kvalue +
-											(a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">' + a.fullvalue + '</span>' : '')
-									)
-								}
-							})
-							.on('mouseout', () => {
-								plot.tip.hide()
-							})
-					}
-
-					for (const bp of g.boxplots) {
-						let color
-
-						if (bp.iscnvgain) {
-							color = plot.color.cnvgain
-							bp.label = g.g.append('text').text('CNV gain (' + bp.samplecount + ')')
-						} else if (bp.iscnvloss) {
-							color = plot.color.cnvloss
-							bp.label = g.g.append('text').text('CNV loss (' + bp.samplecount + ')')
-						} else if (bp.issv) {
-							color = 'black'
-							bp.label = g.g.append('text').text('SV (' + bp.samplecount + ')')
-						} else {
-							color = color0
-						}
-
-						if (bp.label) {
-							bp.label
-								.attr('fill', color)
-								.attr('font-family', client.font)
-								.attr('dominant-baseline', 'central')
-						}
-
-						if (bp.w1 != undefined) {
-							// has valid values for boxplot, could be missing
-							bp.hline = g.g
-								.append('line')
-								.attr('stroke', color)
-								.attr('shape-rendering', 'crispEdges')
-							bp.linew1 = g.g
-								.append('line')
-								.attr('stroke', color)
-								.attr('shape-rendering', 'crispEdges')
-							bp.linew2 = g.g
-								.append('line')
-								.attr('stroke', color)
-								.attr('shape-rendering', 'crispEdges')
-							bp.box = g.g
-								.append('rect')
-								.attr('fill', 'white')
-								.attr('stroke', color)
-								.attr('shape-rendering', 'crispEdges')
-							bp.linep50 = g.g
-								.append('line')
-								.attr('stroke', color)
-								.attr('shape-rendering', 'crispEdges')
-						}
-						// outliers
-						for (const d of bp.out) {
-							d.circle = g.g
-								.append('circle')
-								.attr('stroke', color)
-								.attr('fill', 'white')
-								.attr('fill-opacity', 0)
-								.on('mouseover', () => {
-									plot.tip
-										.clear()
-										.d.append('div')
-										.style('margin', '10px')
-										.html(d.sample + '<br>' + d.value)
-									plot.tip.show(d3event.clientX, d3event.clientY)
-								})
-								.on('mouseout', () => {
-									plot.tip.hide()
-								})
-
-							if (plot.clicksample) {
-								d.circle.on('click', () => {
-									plot.clicksample(d, g, plot)
-								})
-							}
-						}
-					}
-				}
 			}
-			if (plot.sample) {
-				plot.sample.g = plot.g0.append('g')
-				plot.sample.svgtext = plot.sample.g
-					.append('text')
-					.text(plot.sample.name)
-					.attr('font-family', client.font)
-					.attr('font-size', 12)
-					.attr('text-anchor', 'middle')
-					.attr('dominant-baseline', 'hanging')
-					.attr('fill', 'blue')
-				plot.sample.line = plot.sample.g
-					.append('line')
-					.attr('shape-rendering', 'crispEdges')
-					.attr('stroke', 'blue')
-			}
-			plot.place()
-		})
-		.catch(err => {
-			client.sayerror(plot.errdiv, 'Error: ' + err.message)
-			if (err.stack) console.log(err.stack)
-		})
+		}
+	}
+	if (plot.sample) {
+		plot.sample.g = plot.g0.append('g')
+		plot.sample.svgtext = plot.sample.g
+			.append('text')
+			.text(plot.sample.name)
+			.attr('font-family', client.font)
+			.attr('font-size', 12)
+			.attr('text-anchor', 'middle')
+			.attr('dominant-baseline', 'hanging')
+			.attr('fill', 'blue')
+		plot.sample.line = plot.sample.g
+			.append('line')
+			.attr('shape-rendering', 'crispEdges')
+			.attr('stroke', 'blue')
+	}
+	plot.place()
 }
 
 function addbutton_boxplotstats(plot) {
@@ -1072,7 +1071,6 @@ function init2(x, y, plot, group) {
 				axisTop()
 					.scale(scale0)
 					.tickSize(axisticksize)
-				//.ticks(4,format('d'))
 			),
 			showline: 1
 		})
