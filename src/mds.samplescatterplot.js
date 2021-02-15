@@ -1272,6 +1272,9 @@ async function click_dot_disco(dot, obj) {
 			settings: {
 				showControls: false,
 				selectedSamples: []
+			},
+			callbacks: {
+				geneLabelClick: 'quickfix' // should be a function
 			}
 		})
 
