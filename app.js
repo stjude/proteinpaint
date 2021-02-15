@@ -2477,6 +2477,22 @@ async function handle_mdsgenecount(req, res) {
 	ORDER BY count DESC
 	LIMIT 20`
 		const out = ds.gene2mutcount.db.prepare(query).all()
+		out.forEach(g => {
+			const isoforms = genome.genedb.getjsonbyname.all(g.gene)
+			let starts = [],
+				stops = [],
+				chrs = []
+			isoforms.forEach(i => {
+				starts.push(JSON.parse(i.genemodel).start)
+				stops.push(JSON.parse(i.genemodel).stop)
+				chrs.push(JSON.parse(i.genemodel).chr)
+			})
+			g.start = Math.min(...starts)
+			g.stop = Math.max(...stops)
+			const chr = [...new Set(chrs)]
+			if (chr.length == 1) g.chr = chr[0]
+			else g.chr = chr.join()
+		})
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })
