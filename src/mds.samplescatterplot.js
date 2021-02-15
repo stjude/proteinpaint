@@ -97,7 +97,7 @@ export async function init(obj, holder, debugmode) {
 		window.obj = obj
 	}
 
-	obj.menu = new client.Menu({ padding: '5px' })
+	obj.menu = new client.Menu({ padding: '2px' })
 	obj.menu2 = new client.Menu({ padding: '10px' })
 	obj.tip = new client.Menu({ padding: '5px' })
 
@@ -1351,6 +1351,14 @@ function lasso_select(obj, dots) {
 		if (!obj.lasso_active) return
 
 		const unselected_dots = svg.selectAll('.possible').size()
+
+		const selected_samples = svg
+			.selectAll('.possible')
+			.data()
+			.map(d => d.sample)
+		if (selected_samples.length) show_lasso_menu(selected_samples)
+		else obj.menu.hide()
+
 		// Reset the color of all dots
 		lasso
 			.items()
@@ -1368,6 +1376,42 @@ function lasso_select(obj, dots) {
 			.notSelectedItems()
 			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
+	}
+
+	function show_lasso_menu(samples) {
+		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Recurrently mutated genes')
+			.on('click', async () => {
+				obj.menu.hide()
+				await click_mutated_genes(obj, samples)
+			})
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Cancel')
+			.on('click', () => {
+				// Reset all dots
+				lasso
+					.items()
+					.classed('not_possible', false)
+					.classed('possible', false)
+					.attr('r', radius)
+					.style('fill-opacity', '1')
+
+				obj.menu.hide()
+			})
+
+		obj.menu.d
+			.append('div')
+			.style('padding', '10px')
+			.style('font-size', '.8em')
+			.style('width', '150px')
+			.text(samples.length + ' samples selected')
 	}
 
 	if (obj.lasso_active) {
@@ -1398,8 +1442,6 @@ function lasso_select(obj, dots) {
 			.style('fill', 'none')
 			.style('stroke-dasharray', '4,4')
 
-		// console.log(las.select('.loop_close'))
-
 		las
 			.select('.origin')
 			.style('fill', '#3399FF')
@@ -1408,6 +1450,52 @@ function lasso_select(obj, dots) {
 		svg.selectAll('.lasso').remove()
 		svg.on('mousedown.drag', null)
 	}
+}
+
+async function click_mutated_genes(obj, samples) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text('Recurrently Mutated Genes')
+	const wait = client.tab_wait(pane.body)
+
+	try {
+		const arg = {
+			genome: obj.disco.genome,
+			dslabel: obj.disco.dslabel,
+			samples: samples
+		}
+		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		if (!data.out) throw '.out missing'
+
+		make_gene_count_table(data.out, pane.body)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+function make_gene_count_table(data, holder) {
+	const table = holder.append('table')
+	const htr = table.append('tr')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Gene')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Count')
+
+	data.forEach(g => {
+		const tr = table.append('tr')
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.gene)
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.count)
+	})
 }
 
 function launch_singlesample(p) {
