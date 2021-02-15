@@ -79,6 +79,9 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 custom vcf handling:
 	multi-sample
 	single-sample
+
+!!!!!!!!!!!Task-specific temporary fixes!!!!!!!!!!!
+maysortsamplesingroupbydt
 */
 
 const labyspace = 5

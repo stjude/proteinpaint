@@ -3157,7 +3157,10 @@ async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset) {
 	// multi sample
 
-	mdssvcnv_do_copyneutralloh(sample2item)
+	if (dsquery.hideLOHwithCNVoverlap) {
+		// XXX this should be a query parameter instead, so this behavior is controllable on frontend
+		mdssvcnv_do_copyneutralloh(sample2item)
+	}
 
 	// group sample by available attributes
 	const samplegroups = []
@@ -4361,6 +4364,8 @@ function mdssvcnv_do_copyneutralloh(sample2item) {
 	/*
 decide what's copy neutral loh
 only keep loh with no overlap with cnv
+
+quick fix: only do this filter when hideLOHwithCNVoverlap is true on the server-side mdssvcnv query object
 */
 	for (const [sample, lst] of sample2item) {
 		// put cnv and loh into respective maps, keyed by chr
@@ -8892,7 +8897,10 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 						if (!sample2item.has(i.sample)) sample2item.set(i.sample, [])
 						sample2item.get(i.sample).push(i)
 					}
-					mdssvcnv_do_copyneutralloh(sample2item)
+
+					if (dsquery.hideLOHwithCNVoverlap) {
+						mdssvcnv_do_copyneutralloh(sample2item)
+					}
 
 					const newlst = []
 					for (const [n, lst] of sample2item) {
