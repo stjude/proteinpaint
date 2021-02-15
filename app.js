@@ -5393,6 +5393,8 @@ function handle_mdsexpressionrank(req, res) {
 	Promise.resolve()
 		.then(() => {
 			if (!req.query.rglst) throw 'rglst missing'
+			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
+				throw 'Zoom under 10 Mb to view expression rank'
 			if (!req.query.sample) throw 'sample missing'
 
 			if (req.query.iscustom) {
