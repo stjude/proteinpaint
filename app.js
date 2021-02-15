@@ -2475,9 +2475,10 @@ async function handle_mdsgenecount(req, res) {
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT 20`
-		const out = ds.gene2mutcount.db.prepare(query).all()
-		out.forEach(g => {
+	LIMIT 10`
+		const out = {}
+		out.genes = ds.gene2mutcount.db.prepare(query).all()
+		out.genes.forEach(g => {
 			const isoforms = genome.genedb.getjsonbyname.all(g.gene)
 			let starts = [],
 				stops = [],
@@ -2493,6 +2494,8 @@ async function handle_mdsgenecount(req, res) {
 			if (chr.length == 1) g.chr = chr[0]
 			else g.chr = chr.join()
 		})
+		out.genome = genome
+		out.genome.name = req.query.genome
 		res.send({ out })
 	} catch (e) {
 		res.send({ error: e.message || e })

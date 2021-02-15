@@ -1467,7 +1467,8 @@ async function click_mutated_genes(obj, samples) {
 		if (data.error) throw data.error
 		if (!data.out) throw '.out missing'
 
-		make_gene_count_table(data.out, pane.body)
+		// make_gene_count_table(data.out, pane.body)
+		make_sample_matrix({ obj, data: data.out, samples, holder: pane.body })
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
@@ -1475,7 +1476,40 @@ async function click_mutated_genes(obj, samples) {
 	}
 }
 
+function make_sample_matrix(args) {
+	const { obj, data, samples, holder } = args
+	const features = []
+	data.genes.forEach(g => {
+		if (g.start && g.stop)
+			features.push({
+				ismutation: 1,
+				genename: g.gene,
+				label: g.gene,
+				querykeylst: ['svcnv', 'snvindel'],
+				width: 50,
+				position: g.chr + ':' + g.start + '-' + g.stop
+			})
+	})
+	const arg = {
+		genome: data.genome,
+		dslabel: obj.disco.dslabel,
+		features: features,
+		hostURL: sessionStorage.getItem('hostURL') || '',
+		// limitsamplebyeitherannotation,
+		limitbysamplesetgroup: { samples },
+		jwt: sessionStorage.getItem('jwt') || '',
+		holder: holder.append('div').style('margin', '20px')
+	}
+
+	import('./samplematrix').then(_ => {
+		const m = new _.Samplematrix(arg)
+		m._pane = holder
+		// tk.samplematrices.push(m)
+	})
+}
+
 function make_gene_count_table(data, holder) {
+	console.log(data)
 	const table = holder.append('table')
 	const htr = table.append('tr')
 	htr
