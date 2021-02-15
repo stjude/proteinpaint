@@ -236,11 +236,11 @@ function displayGPaintTracks(tracks, holder) {
 			li.attr('class', 'track')
 				.html(
 					`
-						${
-							track.blurb
-								? `<h6 class="track-name">${track.name},</h6><p class="track-name" id="track-blurb"> ${track.blurb}</p>`
-								: `<h6 class="track-name">${track.name}</h6>`
-						}
+							${
+								track.blurb
+									? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
+									: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+							}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
 						${
@@ -276,20 +276,24 @@ function displayBrowserTracks(tracks, holder) {
 			li.attr('class', 'track')
 				.html(
 					`
-					${track.blurb ? `<h6>${track.name},</h6><p id="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
-						<span class="track-image"><img src="${track.image}"></img></span>
-						<div class="track-btns">
-						${
-							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
-								: ''
-						}
-						${
-							track.buttons.doc
-								? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-								: ''
-						}
-						</div>`
+					${
+						track.blurb
+							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
+							: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+					}
+					<span class="track-image"><img src="${track.image}"></img></span>
+					<div class="track-btns">
+					${
+						track.buttons.url
+							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+							: ''
+					}
+					${
+						track.buttons.doc
+							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+							: ''
+					}
+					</div>`
 				)
 				.on('click', async () => {
 					if (track.buttons.example) {
@@ -312,20 +316,24 @@ function displayExperimentalTracks(tracks, holder) {
 			li.attr('class', 'track')
 				.html(
 					`
-					${track.blurb ? `<h6>${track.name},</h6><p id="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
-						<span class="track-image"><img src="${track.image}"></img></span>
-						<div class="track-btns">
-						${
-							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
-								: ''
-						}
-						${
-							track.buttons.doc
-								? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-								: ''
-						}
-						</div>`
+					${
+						track.blurb
+							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
+							: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+					}
+					<span class="track-image"><img src="${track.image}"></img></span>
+					<div class="track-btns">
+					${
+						track.buttons.url
+							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+							: ''
+					}
+					${
+						track.buttons.doc
+							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+							: ''
+					}
+					</div>`
 				)
 				.on('click', async () => {
 					if (track.buttons.example) {
@@ -348,20 +356,24 @@ async function displayAppTracks(tracks, holder) {
 			li.attr('class', 'track')
 				.html(
 					`
-					${track.blurb ? `<h6>${track.name},</h6><p class="track-blurb"> ${track.blurb}</p>` : `<h6>${track.name}</h6>`}
-						<span class="track-image"><img src="${track.image}"></img></span>
-						<div class="track-btns">
-						${
-							track.buttons.url
-								? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
-								: ''
-						}
-						${
-							track.buttons.doc
-								? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-								: ''
-						}
-						</div>`
+					${
+						track.blurb
+							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
+							: `<div class="track-h"><h6>${track.name}</h6></div>`
+					}
+					<span class="track-image"><img src="${track.image}"></img></span>
+					<div class="track-btns">
+					${
+						track.buttons.url
+							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+							: ''
+					}
+					${
+						track.buttons.doc
+							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+							: ''
+					}
+					</div>`
 				)
 				.on('click', async () => {
 					if (track.buttons.example) {

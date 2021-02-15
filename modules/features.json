@@ -61,7 +61,7 @@
             "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "gene profiling results & gene-level values",
+            "blurb": "profiling results & gene-level values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "buttons": {
                 "example": {
@@ -99,7 +99,7 @@
                 "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit",
                 "tutorial": ""
             },
-            "searchterms": ["profile gene value"]
+            "searchterms": ["profile gene value", "pgv"]
         },
         {
             "name": "Expression Rank",
@@ -247,25 +247,25 @@
             "searchterms": ["bigwig stranded"]
         },
         {
-            "name": "Track list and Facet table",
+            "name": "Track list & Facet table",
             "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
-                "url": "https://ppr.stjude.org/?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
+                "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6",
                 "tutorial": ""
             },
             "searchterms": []
         },
         {
-            "name": "Allelic imbalance, aka aicheck",
+            "name": "Allelic imbalance",
             "shorthand": "AICheck",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "aicheck",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
             "buttons": {
                 "example": {
@@ -286,7 +286,7 @@
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["aicheck"]
         },
         {
             "name": "VCF",
