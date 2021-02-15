@@ -14,6 +14,7 @@ const fields = [
 	'case.project.project_id',
 	'case.case_id',
 	'case.primary_site',
+	'case.disease_type',
 	'case.available_variation_data',
 	'case.state',
 	'case.demographic.gender',
@@ -30,15 +31,15 @@ if (p.set_id) {
 	filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
 }
 
+const url =
+	'https://api.gdc.cancer.gov/ssm_occurrences?size=1000000&fields=' +
+	fields.join(',') +
+	'&filters=' +
+	encodeURIComponent(JSON.stringify(filters))
+console.log(url)
 ;(async () => {
 	try {
-		const tmp = await got(
-			'https://api.gdc.cancer.gov/ssm_occurrences?size=1000000&fields=' +
-				fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(filters)),
-			{ method: 'GET', headers }
-		)
+		const tmp = await got(url, { method: 'GET', headers })
 
 		const re = JSON.parse(tmp.body)
 		for (const h of re.data.hits) {

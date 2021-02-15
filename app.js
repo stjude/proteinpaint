@@ -164,7 +164,26 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.get(basepath + '/healthcheck', async (req, res) => {
+	try {
+		const w = child_process
+			.execSync('w | head -n1')
+			.toString()
+			.trim()
+			.split(' ')
+			.slice(-3)
+			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+		const rs =
+			child_process
+				.execSync('ps aux | grep rsync -w')
+				.toString()
+				.trim()
+				.split('\n').length - 1
+		res.send({ status: 'ok', w, rs })
+	} catch (e) {
+		throw e
+	}
+})
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -198,6 +217,7 @@ app.get(basepath + '/junction', junction_request) // legacy
 app.post(basepath + '/mdsjunction', handle_mdsjunction)
 app.post(basepath + '/mdscnv', handle_mdscnv)
 app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
 app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
 app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
 app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
@@ -556,6 +576,9 @@ function mds_clientcopy(ds) {
 
 	if (ds.singlesamplemutationjson) {
 		ds2.singlesamplemutationjson = 1
+	}
+	if (ds.gene2mutcount) {
+		ds2.gene2mutcount = true
 	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
@@ -2428,6 +2451,38 @@ function handle_mdscnv(req, res) {
 		})
 }
 
+async function handle_mdsgenecount(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
+	log(req)
+	try {
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'invalid genome'
+		if (!genome.datasets) throw 'no datasets from genome'
+		const ds = genome.datasets[req.query.dslabel]
+		if (!ds) throw 'invalid dataset'
+		if (!ds.gene2mutcount) throw 'not supported on this dataset'
+		if (!req.query.samples) throw '.samples missing'
+		const query = `WITH
+	filtered AS (
+		SELECT * FROM genecount
+		WHERE sample IN (${JSON.stringify(req.query.samples)
+			.replace(/[[\]\"]/g, '')
+			.split(',')
+			.map(i => "'" + i + "'")
+			.join(',')})
+	)
+	SELECT gene, SUM(count) AS count
+	FROM filtered
+	GROUP BY gene
+	ORDER BY count DESC
+	LIMIT 20`
+		const out = ds.gene2mutcount.db.prepare(query).all()
+		res.send({ out })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
 async function handle_mdssvcnv(req, res) {
 	/*
     cnv & vcf & expression rank done in one query
@@ -9694,7 +9749,6 @@ async function pp_init() {
 	*/
 
 		g.datasets = {}
-		const promises = []
 		for (const d of g.rawdslst) {
 			/*
 		for each raw dataset
@@ -9957,6 +10011,16 @@ async function mds_init(ds, genome, _servconfig) {
 			ds.assayAvailability.samples.set(sample, JSON.parse(t))
 		}
 		console.log(ds.assayAvailability.samples.size + ' samples with assay availability (' + ds.label + ')')
+	}
+
+	if (ds.gene2mutcount) {
+		if (!ds.gene2mutcount.dbfile) throw '.gene2mutcount.dbfile missing'
+		try {
+			ds.gene2mutcount.db = utils.connect_db(ds.gene2mutcount.dbfile)
+			console.log('DB connected for ' + ds.label + ': ' + ds.gene2mutcount.dbfile)
+		} catch (e) {
+			throw 'Error connecting db at ds.gene2mutcount.dbfile'
+		}
 	}
 
 	if (ds.sampleAssayTrack) {

@@ -1344,9 +1344,17 @@ function gvtklabelclick(gvtk, tk, block) {
 						return -1
 					}
 					if (va == undefined) return 1
-					return b.gvtkattr.get(gvtk.name).value - a.gvtkattr.get(gvtk.name).value
+					return vb - va
 				})
+				/* poor fix
+				after having changed gene, then sort tracks on the new gene,
+				calling render_tk() will cause the tk.__usegene to change to first gene in tk.geneset
+				so must record current gene
+				and call render_tk() again to revert the change
+				*/
+				const currentgene = tk.__usegene
 				render_tk(tk, block)
+				showgeneplot(tk, block, currentgene)
 				tk.tkconfigtip.hide()
 			})
 	}

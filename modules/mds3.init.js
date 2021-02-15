@@ -501,11 +501,31 @@ async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 
 	let useall = true // to use all categories returned from api query
 	if (nodes) {
-		useall = false // only use a subset of categories existing in nodes[]
+		// only use a subset of categories existing in nodes[]
+		// at kras g12d, may get a node such as:
+		// {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
+		// with v1 missing, unknown reason
+		useall = false
 		for (const n of nodes) {
-			if (n.id0) id2categories.get(n.id0).add(n.v0.toLowerCase())
-			if (n.id1 && termidlst[1]) id2categories.get(n.id1).add(n.v1.toLowerCase())
-			if (n.id2 && termidlst[2]) id2categories.get(n.id2).add(n.v2.toLowerCase())
+			if (n.id0) {
+				if (!n.v0) {
+					continue
+				}
+				id2categories.get(n.id0).add(n.v0.toLowerCase())
+			}
+			if (n.id1 && termidlst[1]) {
+				if (!n.v1) {
+					// see above comments
+					continue
+				}
+				id2categories.get(n.id1).add(n.v1.toLowerCase())
+			}
+			if (n.id2 && termidlst[2]) {
+				if (!n.v2) {
+					continue
+				}
+				id2categories.get(n.id2).add(n.v2.toLowerCase())
+			}
 		}
 	}
 
