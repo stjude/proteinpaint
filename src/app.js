@@ -965,15 +965,18 @@ async function launchgeneview(arg, app) {
 		for(const t of arg.tracks) {
 			t.iscustom=true
 		}
-		// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
-		if(arg.tkjsonfile) {
-			const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
-			const lst = await parseurl.get_tklst(urlp, genomeobj)
-			for(const i of lst) {
-				arg.tracks.push(i)
-			}
+	}
+
+	// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+	if(arg.tkjsonfile) {
+		if(!arg.tracks) arg.tracks=[]
+		const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+		const lst = await parseurl.get_tklst(urlp, genomeobj)
+		for(const i of lst) {
+			arg.tracks.push(i)
 		}
 	}
+
 	const pa={
 		jwt: arg.jwt,
 		hostURL: app.hostURL,
@@ -1084,14 +1087,15 @@ async function launchblock(arg, app) {
 			}
 			t.iscustom=true
 		}
+	}
 
-		// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
-		if(arg.tkjsonfile) {
-			const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
-			const lst = await parseurl.get_tklst(urlp, genomeobj)
-			for(const i of lst) {
-				arg.tracks.push(i)
-			}
+	// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+	if(arg.tkjsonfile) {
+		if(!arg.tracks) arg.tracks=[]
+		const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+		const lst = await parseurl.get_tklst(urlp, genomeobj)
+		for(const i of lst) {
+			arg.tracks.push(i)
 		}
 	}
 
