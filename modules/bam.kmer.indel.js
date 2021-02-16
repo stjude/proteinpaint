@@ -195,7 +195,6 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
-<<<<<<< HEAD
 
 	console.log(
 		'q.variant.pos:',
@@ -205,16 +204,11 @@ export async function match_complexvariant(templates, q) {
 		',variant:',
 		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
 	)
-=======
->>>>>>> master
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
 	))
-<<<<<<< HEAD
 
-=======
->>>>>>> master
 		.split('\n')
 		.slice(1)
 		.join('')
