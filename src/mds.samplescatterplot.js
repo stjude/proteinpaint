@@ -1288,13 +1288,15 @@ async function click_dot_disco(dot, obj) {
 							discoHolder.style('display', 'block')
 						})
 					window.runproteinpaint({
-						host: 'https://ppr.stjude.org',
+						// replace 'localhost' only when testing in dev machine only
+						// since ppr will have all the required data for tracks
+						host: window.location.hostname == 'localhost' ? 'https://ppr.stjude.org' : '',
 						noheader: true,
 						holder: div.append('div').node(),
 						parseurl: true,
 						nobox: 1,
 						block: 1,
-						genome: 'hg19', // obj.disco.genome,
+						genome: obj.disco.genome,
 						nativetracks: 'refgene',
 						position: d.position,
 						datasetqueries: [
