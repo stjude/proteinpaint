@@ -239,6 +239,8 @@ module.exports = function(common) {
 				type: common.tkt.mdssvcnv,
 				file: 'hg38/Pediatric/pediatric.svcnv.hg38.gz',
 
+				hideLOHwithCNVoverlap: true,
+
 				// cnv
 				valueCutoff: 0.2,
 				bplengthUpperLimit: 2000000, // limit cnv length to focal events

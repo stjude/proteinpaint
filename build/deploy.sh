@@ -153,6 +153,7 @@ else
 	mkdir $APP/public
 	mkdir $APP/src
 	mkdir $APP/utils
+	mkdir $APP/modules
 
 	npm run build-server
 	mv server.js $APP/
@@ -162,6 +163,7 @@ else
 	mv dataset $APP/
 	mv utils/*.R $APP/utils/
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
+	mv modules/serverconfig.js $APP/modules
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html

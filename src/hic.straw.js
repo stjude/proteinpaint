@@ -1485,14 +1485,13 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 			hic.detailview.frag = {}
 
 			// query fragment index for x
-			const lst = [
-				'getdata=1',
-				'getBED=1',
-				'file=' + hic.enzymefile,
-				'rglst=' + JSON.stringify([{ chr: chrx, start: xstart, stop: xstop }])
-			]
-
-			return client.dofetch2('tkbedj?' + lst.join('&'))
+			const arg = {
+				getdata: 1,
+				getBED: 1,
+				file: hic.enzymefile,
+				rglst: [{ chr: chrx, start: xstart, stop: xstop }]
+			}
+			return client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
 		})
 
 		.then(xfragment => {
@@ -1516,13 +1515,13 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 			hic.detailview.frag.xstopfrag = stop
 
 			// query fragment index for y
-			const lst = [
-				'getdata=1',
-				'getBED=1',
-				'file=' + hic.enzymefile,
-				'rglst=' + JSON.stringify([{ chr: chry, start: ystart, stop: ystop }])
-			]
-			return client.dofetch2('tkbedj?' + lst.join('&'))
+			const arg = {
+				getdata: 1,
+				getBED: 1,
+				file: hic.enzymefile,
+				rglst: [{ chr: chry, start: ystart, stop: ystop }]
+			}
+			return client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
 		})
 
 		.then(yfragment => {

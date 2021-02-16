@@ -14,7 +14,7 @@ genome=? is only required for gene tracks that will be translated, otherwise not
 
 module.exports = genomes => {
 	return async (req, res) => {
-		app.log(req)
+		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			res.send(await do_query(req, genomes))
 		} catch (e) {
@@ -61,7 +61,7 @@ async function do_query(req, genomes) {
 	}
 
 	if (!req.query.rglst) throw 'no rglst[]'
-	req.query.rglst = JSON.parse(req.query.rglst)
+	//req.query.rglst = JSON.parse(req.query.rglst)
 	if (!Array.isArray(req.query.rglst)) throw 'rglst is not an array'
 	if (req.query.rglst.length == 0) throw 'empty rglst'
 	for (const r of req.query.rglst) {
@@ -74,10 +74,10 @@ async function do_query(req, genomes) {
 	}
 
 	const color = req.query.color || '#3D7A4B'
-	const flag_gm = req.query.gmregion ? JSON.parse(req.query.gmregion) : null
+	const flag_gm = req.query.gmregion || null
 	const gmisoform = req.query.isoform
 	const flag_onerow = req.query.onerow
-	const categories = req.query.categories ? JSON.parse(req.query.categories) : null
+	const categories = req.query.categories || null
 	const __isgene = req.query.__isgene
 
 	let dir

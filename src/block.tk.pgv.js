@@ -345,7 +345,7 @@ export function loadTk(tk, block) {
 			if (tk.categories) {
 				arg.categories = tk.categories
 			}
-			const task = client.dofetch2('tkbedj?' + arg2lst(arg)).then(data => {
+			const task = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 				if (data.error) {
 					throw data.error
 				}
@@ -415,8 +415,8 @@ export function loadTk(tk, block) {
 
 		for (const gvtk of tk.genevaluetklst) {
 			const arg = block.tkarg_bedj(gvtk)
-			//const req = new Request(block.hostURL + '/bedjdata', { method: 'POST', body: JSON.stringify(arg) })
-			const task = client.dofetch2('tkbedj?getdata=1&' + arg2lst(arg)).then(data => {
+			arg.getdata = 1
+			const task = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 				if (data.error) throw data.error
 				if (data.items && data.items.length > 0) {
 					for (const i of data.items) {
@@ -1344,9 +1344,17 @@ function gvtklabelclick(gvtk, tk, block) {
 						return -1
 					}
 					if (va == undefined) return 1
-					return b.gvtkattr.get(gvtk.name).value - a.gvtkattr.get(gvtk.name).value
+					return vb - va
 				})
+				/* poor fix
+				after having changed gene, then sort tracks on the new gene,
+				calling render_tk() will cause the tk.__usegene to change to first gene in tk.geneset
+				so must record current gene
+				and call render_tk() again to revert the change
+				*/
+				const currentgene = tk.__usegene
 				render_tk(tk, block)
+				showgeneplot(tk, block, currentgene)
 				tk.tkconfigtip.hide()
 			})
 	}
@@ -1354,13 +1362,4 @@ function gvtklabelclick(gvtk, tk, block) {
 	if (gvtk.multivaluekey) {
 		// to show sample by value type matrix?
 	}
-}
-
-function arg2lst(a) {
-	const lst = []
-	for (const k in a) {
-		const v = a[k]
-		lst.push(k + '=' + encodeURIComponent(typeof v == 'object' ? JSON.stringify(v) : v))
-	}
-	return lst.join('&')
 }

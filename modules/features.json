@@ -4,7 +4,7 @@
             "shorthand": "KM plot",
             "app": "Genome Browser",
             "subheading": "GenomePaint",
-            "blurb": "A method for determining which genomic feature leads to a clinical outcome",
+            "blurb": "genomic feature analysis",
             "image": "",
             "buttons": {
                 "url": "",
@@ -32,7 +32,7 @@
             "shorthand": "BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Depicts dense, continuous data in the Genome Browser as a graph",
+            "blurb": "dense, continuous data in the Genome Browser",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "buttons": {
                 "example": {
@@ -40,30 +40,28 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg19",
+                    "genome": "hg38",
                     "position": "chr12:25334648-25426944",
                     "nativetracks": "RefGene",
-                    "tracks": [
-                        {
+                    "tracks": [{
                         "type": "bigwig",
                         "url": "http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
                         "name": "UCSC phyloP 100ways",
                         "height": 100
-                        }
-                    ]
+                    }]
                 },
-                "url": "https://proteinpaint.stjude.org/?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
+                "url": "?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9",
                 "tutorial": ""
             },
             "searchterms": ["coverage", "numeric"]
         },
         {
-            "name": "ChromHMM + gene expression, aka PGV",
+            "name": "Profile Gene Valve",
             "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "A combination of genomic profiling results and gene-level numerical values",
+            "blurb": "gene profiling results & gene-level values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "buttons": {
                 "example": {
@@ -108,7 +106,7 @@
             "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Illustrates the gene expression rank in each sample, amongst all samples from the same cancer group",
+            "blurb": "expression rank for each sample, against all samples in the same group",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "buttons": {
                 "example": {
@@ -137,7 +135,7 @@
             "shorthand": "Hi-C",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Displays chromatin conformation data for fast random access to contact matrix heatmaps",
+            "blurb": "chromatin conformation capture",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "buttons": {
                 "example": {
@@ -158,7 +156,7 @@
                         "enzyme": "MboI"
                     }]
                 },
-                "url": "https://ppr.stjude.org/?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
+                "url": "?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit",
                 "tutorial": ""
             },
@@ -187,7 +185,7 @@
                         "color": "teal"
                     }]
                 },
-                "url": "https://ppr.stjude.org/?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
+                "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
                 "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A ",
                 "tutorial": ""
             },
@@ -198,7 +196,7 @@
             "shorthand": "Splice Junction",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Represents RNA splice junction data from RNA-seq assays",
+            "blurb": "RNA splice junction data",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
                 "example": {
@@ -213,7 +211,7 @@
                         "name": "RNA splice junction demo"
                     }]
                 },
-                "url": "https://ppr.stjude.org/?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
+                "url": "?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
                 "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit",
                 "tutorial": ""
             },
@@ -224,7 +222,7 @@
             "shorthand": "Stranded BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Shows stranded RNA-seq coverage data as a pair of bigWig tracks: forward strand on top and reverse strand on bottom",
+            "blurb": "RNA-seq coverage data in forward strand & reverse strand",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
             "buttons": {
                 "example": {
@@ -246,7 +244,7 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["bigwig stranded"]
         },
         {
             "name": "Track list and Facet table",
@@ -263,7 +261,7 @@
             "searchterms": []
         },
         {
-            "name": "Tumor-normal DNA allelic imbalance, aka aicheck",
+            "name": "Allelic imbalance, aka aicheck",
             "shorthand": "AICheck",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -284,7 +282,7 @@
                         "name": "Demo sample tumor allelic imbalance"
                     }]
                 },
-                "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
+                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII",
                 "tutorial": ""
             },
@@ -362,18 +360,18 @@
                         }
                     }]
                 },
-                "url": "https://ppr.stjude.org/?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
+                "url": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
                 "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw",
                 "tutorial": ""
             },
             "searchterms": []
         },
         {
-            "name": "Viewing Pediatric and COSMIC mutations, aka Lollipop",
+            "name": "Lollipop",
             "shorthand": "Lollipop",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "Loads both Pediatric and COSMIC datasets into an interactive lollipop graph",
+            "blurb": "lollipop view of Pediatric and COSMIC datasets",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "buttons": {
                 "url": "",
@@ -387,7 +385,7 @@
             "shorthand": "ASE",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "Carries out on-the-fly ASE analysis for a single sample",
+            "blurb": "on-the-fly ASE analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "buttons": {
                 "example": {
@@ -483,7 +481,7 @@
             "shorthand": "BAM",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "Representation of nucleotide sequence alignments",
+            "blurb": "nucleotide sequence alignments",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "buttons": {
                 "example": {
@@ -514,7 +512,7 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
-                "url": "https://ppr.stjude.org/?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
+                "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
                 "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M",
                 "tutorial": ""
             },
@@ -525,7 +523,7 @@
             "shorthand": "Fusion Editor",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Depicts a graphical representation of the fusions discovered in a sample",
+            "blurb": "fusions discovered in a sample",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
                 "example": {
@@ -544,7 +542,7 @@
             "shorthand": "2DMAF",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Represents the clonal evolution of point mutations (SNV and indel) between diagnosis and relapse samples",
+            "blurb": "SNV and indel mutations",
             "image": "",
             "buttons": {
                 "url": "",
@@ -554,11 +552,11 @@
             "searchterms": []
         },
         {
-            "name": "Differential gene expression as MA and Volcano plots, with RNA-seq coverage",
+            "name": "MA+Volcano plots",
             "shorthand": "MA+Volcano",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Describes the differential gene expression of transformed expression values along side the significance",
+            "blurb": "gene expression along side significance",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
                 "example": {
@@ -595,7 +593,7 @@
             "searchterms": []
         },
         {
-            "name": "Generic Scatterplot",
+            "name": "Scatterplot",
             "shorthand": "Scatterplot",
             "app": "Apps",
             "subheading": "Tracks",
@@ -605,6 +603,7 @@
                 "example": {
                     "parseurl": true,
                     "nobox": 1,
+                    "noheader": 1,
                     "genome": "hg38",
                     "mdssamplescatterplot": {
                         "analysisdata": {
@@ -1009,7 +1008,7 @@
             "shorthand": "Heatmap",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Visualize cohort mutation data in the form of a gene-by-sample matrix",
+            "blurb": "Mutation data in a gene-by-sample matrix",
             "image": "",
             "buttons": {
                 "url": "",
@@ -1026,7 +1025,7 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
-                "url": "https://proteinpaint.stjude.org/F/human.temp.hic.html",
+                "url": "/F/human.temp.hic.html",
                 "doc": "",
                 "tutorial": ""
             },
@@ -1054,7 +1053,7 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
-                "url": "https://ppr.stjude.org/?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
+                "url": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit",
                 "tutorial": ""
             },

@@ -4,6 +4,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
+import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
 import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../modules/filter'
@@ -96,7 +97,7 @@ export async function init(obj, holder, debugmode) {
 		window.obj = obj
 	}
 
-	obj.menu = new client.Menu({ padding: '5px' })
+	obj.menu = new client.Menu({ padding: '2px' })
 	obj.menu2 = new client.Menu({ padding: '10px' })
 	obj.tip = new client.Menu({ padding: '5px' })
 
@@ -784,6 +785,8 @@ function makeConfigPanel(obj) {
 			.style('background-color', obj.zoom_active ? '#eee' : '#fff')
 			.style('font-weight', obj.zoom_active ? '400' : '300')
 
+		lasso_btn.style('pointer-events', obj.zoom_active ? 'none' : 'auto')
+
 		zoom_menu.style('display', obj.zoom_active ? 'block' : 'none')
 
 		const zoom = d3zoom()
@@ -803,7 +806,8 @@ function makeConfigPanel(obj) {
 			)
 		}
 
-		svg.call(zoom)
+		if (obj.zoom_active) svg.call(zoom)
+		else svg.on('.zoom', null)
 
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 1.5)
@@ -819,6 +823,64 @@ function makeConfigPanel(obj) {
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
 		})
+	}
+
+	const lasso_btn = obj.scattersvg_buttons
+		.append('div')
+		.style('display', obj.enable_lasso ? 'block' : 'none')
+		.style('padding', '2px 5px')
+		.style('margin-top', '5px')
+		.style('border', '1px solid #999')
+		.style('color', '#999')
+		.style('background-color', '#fff')
+		.style('cursor', 'pointer')
+		.style('font-weight', '300')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.text('Lasso select')
+		.on('click', lassoToggle)
+
+	const lasso_menu = obj.scattersvg_buttons
+		.append('div')
+		.style('margin-top', '2px')
+		.style('padding', '2px 5px')
+		.style('border-radius', '5px')
+		.style('text-align', 'center')
+		.style('display', obj.lasso_active ? 'block' : 'none')
+		.style('background-color', '#ddd')
+
+	const lasso_div = lasso_menu.append('div').style('margin', '5px 2px')
+
+	lasso_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '80%')
+		.text('Lasso usage')
+
+	lasso_div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '2px')
+		.style('font-size', '70%')
+		.html(
+			'<p style="margin:1px;">Mouse click </br>+ Mouse move <br>' +
+				'TIP: Release the mouse <br> when desired dots <br> are selected, without <br>closing the loop. </p>'
+		)
+
+	function lassoToggle() {
+		const dots = obj.dotg.selectAll('g')
+		obj.lasso_active = obj.lasso_active ? false : true
+		zoom_btn.style('pointer-events', obj.lasso_active ? 'none' : 'auto')
+		lasso_menu.style('display', obj.lasso_active ? 'block' : 'none')
+
+		lasso_btn
+			.style('border', obj.lasso_active ? '2px solid #000' : '1px solid #999')
+			.style('color', obj.lasso_active ? '#000' : '#999')
+			.style('background-color', obj.lasso_active ? '#eee' : '#fff')
+			.style('font-weight', obj.lasso_active ? '400' : '300')
+
+		lasso_select(obj, dots)
 	}
 }
 
@@ -1205,11 +1267,48 @@ async function click_dot_disco(dot, obj) {
 		if (data.error) throw data.error
 		if (!data.text) throw '.text missing'
 
+		const discoHolder = pane.body.append('div')
 		const renderer = await sjcharts.dtDisco({
-			holderSelector: pane.body,
+			holderSelector: discoHolder,
 			settings: {
 				showControls: false,
 				selectedSamples: []
+			},
+			callbacks: {
+				geneLabelClick: d => {
+					discoHolder.style('display', 'none')
+					const div = pane.body.append('div')
+					div
+						.append('button')
+						.text('<< go back')
+						.style('margin', '5px')
+						.style('padding', '3px')
+						.on('click', () => {
+							div.remove()
+							discoHolder.style('display', 'block')
+						})
+					window.runproteinpaint({
+						// replace 'localhost' only when testing in dev machine only
+						// since ppr will have all the required data for tracks
+						host: window.location.hostname == 'localhost' ? 'https://ppr.stjude.org' : '',
+						noheader: true,
+						holder: div.append('div').node(),
+						parseurl: true,
+						nobox: 1,
+						block: 1,
+						genome: obj.disco.genome,
+						nativetracks: 'refgene',
+						position: d.position,
+						datasetqueries: [
+							{
+								dataset: obj.disco.dslabel,
+								querykey: 'svcnv',
+								singlesample: { name: dot.sample },
+								getsampletrackquickfix: true
+							}
+						]
+					})
+				}
 			}
 		})
 
@@ -1250,6 +1349,224 @@ function click_dot_mdsview(dot, obj) {
 				holder: pane.body
 			})
 		})
+}
+
+function lasso_select(obj, dots) {
+	const svg = obj.scattersvg
+	let lasso
+
+	// Lasso functions
+	function lasso_start() {
+		if (!obj.lasso_active) return
+		lasso
+			.items()
+			.attr('r', 2)
+			.style('fill-opacity', '.5')
+			.classed('not_possible', true)
+			.classed('selected', false)
+	}
+
+	function lasso_draw() {
+		if (!obj.lasso_active) return
+		// Style the possible dots
+		lasso
+			.possibleItems()
+			.attr('r', radius)
+			.style('fill-opacity', '1')
+			.classed('not_possible', false)
+			.classed('possible', true)
+
+		// Style the not possible dot
+		// lasso.notPossibleItems()
+		// 	.attr('r',2)
+		// 	.style('fill-opacity','.5')
+		// 	.classed('not_possible',true)
+		// 	.classed('possible',false)
+	}
+
+	function lasso_end() {
+		if (!obj.lasso_active) return
+
+		const unselected_dots = svg.selectAll('.possible').size()
+
+		const selected_samples = svg
+			.selectAll('.possible')
+			.data()
+			.map(d => d.sample)
+		if (selected_samples.length) show_lasso_menu(selected_samples)
+		else obj.menu.hide()
+
+		// Reset the color of all dots
+		lasso
+			.items()
+			.classed('not_possible', false)
+			.classed('possible', false)
+
+		// Style the selected dots
+		lasso
+			.selectedItems()
+			.attr('r', radius)
+			.style('fill-opacity', '0.8')
+
+		// Reset the style of the not selected dots
+		lasso
+			.notSelectedItems()
+			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
+			.style('fill-opacity', '1')
+	}
+
+	function show_lasso_menu(samples) {
+		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Recurrently mutated genes')
+			.on('click', async () => {
+				obj.menu.hide()
+				await click_mutated_genes(obj, samples)
+			})
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Cancel')
+			.on('click', () => {
+				// Reset all dots
+				lasso
+					.items()
+					.classed('not_possible', false)
+					.classed('possible', false)
+					.attr('r', radius)
+					.style('fill-opacity', '1')
+
+				obj.menu.hide()
+			})
+
+		obj.menu.d
+			.append('div')
+			.style('padding', '10px')
+			.style('font-size', '.8em')
+			.style('width', '150px')
+			.text(samples.length + ' samples selected')
+	}
+
+	if (obj.lasso_active) {
+		lasso = d3lasso()
+			.closePathSelect(true)
+			.closePathDistance(100)
+			.items(dots.selectAll('circle'))
+			.targetArea(svg)
+
+		lasso
+			.on('start', lasso_start)
+			.on('draw', lasso_draw)
+			.on('end', lasso_end)
+
+		svg.call(lasso)
+
+		const las = svg.select('.lasso')
+
+		las
+			.select('path')
+			.style('stroke', '#505050')
+			.style('stroke-width', '2px')
+
+		las.select('.drawn').style('fill-opacity', '.05')
+
+		las
+			.select('.loop_close')
+			.style('fill', 'none')
+			.style('stroke-dasharray', '4,4')
+
+		las
+			.select('.origin')
+			.style('fill', '#3399FF')
+			.style('fill-opacity', '.5')
+	} else {
+		svg.selectAll('.lasso').remove()
+		svg.on('mousedown.drag', null)
+	}
+}
+
+async function click_mutated_genes(obj, samples) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text('Recurrently Mutated Genes')
+	const wait = client.tab_wait(pane.body)
+
+	try {
+		const arg = {
+			genome: obj.disco.genome,
+			dslabel: obj.disco.dslabel,
+			samples: samples
+		}
+		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		if (!data.out) throw '.out missing'
+
+		// make_gene_count_table(data.out, pane.body)
+		make_sample_matrix({ obj, data: data.out, samples, holder: pane.body })
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+function make_sample_matrix(args) {
+	const { obj, data, samples, holder } = args
+	const features = []
+	data.genes.forEach(g => {
+		if (g.start && g.stop)
+			features.push({
+				ismutation: 1,
+				genename: g.gene,
+				label: g.gene,
+				querykeylst: ['svcnv', 'snvindel'],
+				width: 50,
+				position: g.chr + ':' + g.start + '-' + g.stop
+			})
+	})
+	const arg = {
+		genome: data.genome,
+		dslabel: obj.disco.dslabel,
+		features: features,
+		hostURL: sessionStorage.getItem('hostURL') || '',
+		// limitsamplebyeitherannotation,
+		limitbysamplesetgroup: { samples },
+		jwt: sessionStorage.getItem('jwt') || '',
+		holder: holder.append('div').style('margin', '20px')
+	}
+
+	import('./samplematrix').then(_ => {
+		const m = new _.Samplematrix(arg)
+		m._pane = holder
+		// tk.samplematrices.push(m)
+	})
+}
+
+function make_gene_count_table(data, holder) {
+	console.log(data)
+	const table = holder.append('table')
+	const htr = table.append('tr')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Gene')
+	htr
+		.append('th')
+		.style('padding', '2px 10px')
+		.text('Count')
+
+	data.forEach(g => {
+		const tr = table.append('tr')
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.gene)
+		tr.append('td')
+			.style('padding', '2px 10px')
+			.text(g.count)
+	})
 }
 
 function launch_singlesample(p) {

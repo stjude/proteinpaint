@@ -24,6 +24,11 @@ module.exports = {
 		file: 'hg19/Pediatric/tracktable/__table'
 	},
 
+	gene2mutcount: {
+		// to get list of most recurrently mutated genes from a set of samples
+		dbfile: 'hg19/Pediatric/genecount.db'
+	},
+
 	singlesamplemutationjson: {
 		file: 'hg19/Pediatric/mutationpersample/table'
 	},
@@ -364,25 +369,22 @@ module.exports = {
 		}
 	},
 
-	/************* not ready to migrate to general track yet
-	key2generalTracks:{
-		pedmut: {
-			label:'Pediatric cancer mutation',
-			querykeys: [
-				{key:'svcnv'},
-				{key:'snvindel'},
-				{key:'genefpkm'}
-			]
-		}
-	},
-	*/
-
 	queries: {
 		svcnv: {
 			name: 'Pediatric tumor mutation',
 			istrack: true,
 			type: 'mdssvcnv',
 			file: 'hg19/Pediatric/pediatric.svcnv.hg19.gz',
+
+			/*
+			this is to hide loh events which overlap with cnv events
+			this is due to the fact that many such cnv-overlapping events existing in this pediatric dataset
+			and jinghui wants them to be hidden
+			so only to show copy-neutral loh
+
+			TODO enable as client-side option
+			*/
+			hideLOHwithCNVoverlap: true,
 
 			// cnv
 			valueCutoff: 0.2,
@@ -407,7 +409,7 @@ module.exports = {
 			expressionrank_querykey: 'genefpkm',
 			vcf_querykey: 'snvindel',
 
-			multihidelabel_vcf: true,
+			multihidelabel_vcf: false,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true,
 
