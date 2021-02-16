@@ -413,34 +413,6 @@ export async function match_complexvariant(templates, q) {
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
 
-	//for (const item of ref_indices) {
-	//		if (type2group[bamcommon.type_supportref]) {
-	//			index = item[0]
-	//			templates[index].__tempscore =
-	//				alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportref].templates.push(templates[index])
-	//			const input_items = {
-	//				value: kmer_diff_scores[index],
-	//				groupID: 'ref'
-	//			}
-	//			kmer_diff_scores_input.push(input_items)
-	//		}
-	//}
-	//
-	//for (const item of alt_indices) {
-	//		if (type2group[bamcommon.type_supportref]) {
-	//			index = item[0]
-	//			templates[index].__tempscore =
-	//				alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportref].templates.push(templates[index])
-	//			const input_items = {
-	//				value: kmer_diff_scores[index],
-	//				groupID: 'ref'
-	//			}
-	//			kmer_diff_scores_input.push(input_items)
-	//		}
-	//}
-
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
