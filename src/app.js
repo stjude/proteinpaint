@@ -537,7 +537,7 @@ async function findgene2paint( app, str, genomename, jwt ) {
 
 	// may yield tklst from url parameters
 	const urlp=parseurl.url2map()
-	const tklst = await parseurl.get_tklst(urlp)
+	const tklst = await parseurl.get_tklst(urlp, g)
 
 	const pos=string2pos(str,g)
 	if(pos) {
@@ -956,7 +956,7 @@ function launchsamplematrix(cfg, app) {
 
 
 
-function launchgeneview(arg, app) {
+async function launchgeneview(arg, app) {
 	if(!arg.genome) {
 		app.error0('Cannot embed: must specify reference genome')
 		return
@@ -964,6 +964,14 @@ function launchgeneview(arg, app) {
 	if(arg.tracks) {
 		for(const t of arg.tracks) {
 			t.iscustom=true
+		}
+		// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+		if(arg.tkjsonfile) {
+			const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+			const lst = await parseurl.get_tklst(urlp, genomeobj)
+			for(const i of lst) {
+				arg.tracks.push(i)
+			}
 		}
 	}
 	const pa={
@@ -1075,6 +1083,15 @@ async function launchblock(arg, app) {
 				}
 			}
 			t.iscustom=true
+		}
+
+		// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+		if(arg.tkjsonfile) {
+			const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+			const lst = await parseurl.get_tklst(urlp, genomeobj)
+			for(const i of lst) {
+				arg.tracks.push(i)
+			}
 		}
 	}
 

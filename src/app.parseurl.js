@@ -266,7 +266,7 @@ arg
 		par.datasetqueries = may_get_officialmds(urlp)
 
 		try {
-			par.tklst = await get_tklst(urlp, arg.holder, genomeobj)
+			par.tklst = await get_tklst(urlp, genomeobj)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -317,7 +317,7 @@ arg
 		}
 
 		try {
-			par.tklst = await get_tklst(urlp, arg.holder, par.genome)
+			par.tklst = await get_tklst(urlp, par.genome)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -360,7 +360,7 @@ function may_get_officialmds(urlp) {
 	return
 }
 
-export async function get_tklst(urlp, error_div, genomeobj) {
+export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
 	if (urlp.has('mdsjsoncache')) {
