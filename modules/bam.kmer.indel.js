@@ -116,7 +116,7 @@ export async function match_complexvariant_rust(templates, q) {
 		if (rust_output.category[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
+				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -127,7 +127,7 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
+				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
