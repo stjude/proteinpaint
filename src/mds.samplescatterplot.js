@@ -1298,7 +1298,7 @@ async function click_dot_disco(dot, obj) {
 						block: 1,
 						genome: obj.disco.genome,
 						nativetracks: 'refgene',
-						position: d.position,
+						positionbygene: d.gene,
 						datasetqueries: [
 							{
 								dataset: obj.disco.dslabel,
