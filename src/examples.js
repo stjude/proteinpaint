@@ -9,7 +9,7 @@ export async function init_examples(par) {
 		holder
 			.append('div')
 			.text(re.error)
-			.style('background-color', '#f2f2f2')
+			.style('background-color', '#f5f5f5')
 		return
 	}
 	const wrapper_div = make_examples_page(holder)
@@ -98,7 +98,7 @@ function make_examples_page(holder) {
 		.style('margins', '5px')
 		.style('position', 'relative')
 		.style('padding', '10px')
-		.style('background-color', '#f2f2f2')
+		.style('background-color', '#f5f5f5')
 	return wrapper_div
 }
 //Makes search bar and functionality to search tracks
@@ -109,7 +109,7 @@ function make_searchbar(div, args) {
 		.style('flex-direction', 'column')
 		.style('align-items', 'center')
 		.style('justify-content', 'center')
-		.style('background-color', '#f2f2f2')
+		.style('background-color', '#f5f5f5')
 	const searchBar = bar_div.append('div')
 	searchBar
 		.append('div')
@@ -157,7 +157,7 @@ function make_main_track_grid(div) {
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr))')
 		.style('grid-template-areas', '"gbrowser otherapps"')
 		.style('gap', '10px')
-		.style('background-color', '#f2f2f2')
+		.style('background-color', '#f5f5f5')
 		.style('padding', '10px 20px')
 		.style('text-align', 'left')
 
@@ -170,7 +170,7 @@ function make_gBrowserCol(div) {
 	gBrowserCol
 		.style('grid-area', 'gbrowser')
 		.property('position', 'relative')
-		.style('background-color', '#f2f2f2')
+		.style('background-color', '#f5f5f5')
 
 	return gBrowserCol
 }
@@ -201,7 +201,7 @@ function make_appCol(div) {
 	otherAppsCol
 		.style('grid-area', 'otherapps')
 		.property('position', 'relative')
-		.style('background-color', '#f2f2f2')
+		.style('background-color', '#f5f5f5')
 
 	return otherAppsCol
 }
@@ -238,8 +238,8 @@ function displayGPaintTracks(tracks, holder) {
 					`
 							${
 								track.blurb
-									? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
-									: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+									? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
+									: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 							}
 						<span class="track-image"><img src="${track.image}"></img></span>
 						<div class="track-btns">
@@ -278,8 +278,8 @@ function displayBrowserTracks(tracks, holder) {
 					`
 					${
 						track.blurb
-							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
-							: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+							? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
+							: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 					}
 					<span class="track-image"><img src="${track.image}"></img></span>
 					<div class="track-btns">
@@ -318,8 +318,8 @@ function displayExperimentalTracks(tracks, holder) {
 					`
 					${
 						track.blurb
-							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
-							: `<div class="track-h"><span style="font-size:13.5px;font-weight:500;">${track.name}</span></div>`
+							? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
+							: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 					}
 					<span class="track-image"><img src="${track.image}"></img></span>
 					<div class="track-btns">
@@ -358,8 +358,8 @@ async function displayAppTracks(tracks, holder) {
 					`
 					${
 						track.blurb
-							? `<div class="track-h" id="theader"><span style="font-size:13.5px;font-weight:500;">${track.name},</span><span id="track-blurb"> ${track.blurb}</span></div>`
-							: `<div class="track-h"><h6>${track.name}</h6></div>`
+							? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
+							: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 					}
 					<span class="track-image"><img src="${track.image}"></img></span>
 					<div class="track-btns">

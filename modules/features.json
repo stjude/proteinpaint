@@ -106,7 +106,7 @@
             "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "expression rank for each sample, against all samples in the same group",
+            "blurb": "for each sample, against all samples in the same group",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "buttons": {
                 "example": {
@@ -543,13 +543,21 @@
             "app": "Apps",
             "subheading": "Tracks",
             "blurb": "SNV and indel mutations",
-            "image": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
+                "example": {
+                    "genome": "hg19",
+                    "twodmaf": {
+                        "genome": "hg19",
+                        "datasetname": "2DMAF Demo",
+                        "input": "proteinpaint_demo/hg19/2dmaf/2dmaf.txt"
+                    }
+                },
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["2dmaf"]
         },
         {
             "name": "MA+Volcano plots",
@@ -583,7 +591,7 @@
             "shorthand": "FIMO",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Predicts motif changes",
+            "blurb": "predicts motif changes",
             "image": "",
             "buttons": {
                 "url": "",
@@ -1008,8 +1016,8 @@
             "shorthand": "Heatmap",
             "app": "Apps",
             "subheading": "Tracks",
-            "blurb": "Mutation data in a gene-by-sample matrix",
-            "image": "",
+            "blurb": "mutation data in a gene-by-sample matrix",
+            "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "buttons": {
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit",
@@ -1037,7 +1045,7 @@
             "app": "Apps",
             "subheading": "Tracks",
             "blurb": "TODO: Brief description of track or app",
-            "image": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "buttons": {
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit",

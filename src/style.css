@@ -795,7 +795,6 @@ hr {
     grid-template-columns: 1fr 4fr;
     grid-template-areas: 'image header' 'image link' 'image citation';
     gap: 5px;
-    /* width: minmax(320px, auto); */
     height: fit-content;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -804,8 +803,8 @@ hr {
 
 .gpaint-img {
     grid-area: image;
-    width: 75px;
-    height: 75px;
+    width: 90px;
+    height: 90px;
     align-self: center;
     justify-self: center;
 }
@@ -822,13 +821,14 @@ hr {
     grid-area: header;
     text-align: left;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 16px;
+    font-size: 14.5px;
     font-weight: 500;
     margin: 10px;
 }
 
 #gpaint-link {
     grid-area: link;
+    font-size: 12px;
     margin-left: 10px;
     align-self: left;
     justify-self: left;
@@ -838,7 +838,7 @@ hr {
     grid-area: citation;
     text-align: left;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 300;
     font-style: oblique;
     margin: 10px;
@@ -912,7 +912,7 @@ hr {
 }
 
 #track-blurb {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 300;
     font-style: oblique;
     color: #403f3f;
@@ -925,7 +925,7 @@ hr {
     margin: 10px 10px 10px 20px;
     text-align: center;
     color: black;
-    background-color: #edebeb;
+    background-color: #e6f0f5;
     align-content: center;
     justify-content: center;
     border-radius: 8px;
