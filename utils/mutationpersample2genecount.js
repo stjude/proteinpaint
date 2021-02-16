@@ -25,11 +25,6 @@ const genefile = process.argv[3]
 
 const snvindel_useclass = new Set(['M', 'F', 'N', 'D', 'I', 'P', 'L', 'Utr3', 'Utr5'])
 
-let snv_no_class = 0,
-	sv_no_chr = 0,
-	cnv_no_value = 0,
-	cnv_no_chr = 0
-
 for (const file of glob.sync(path.join(in_dir, '*'))) {
 	// json file is named by the sample
 	const samplename = path.basename(file)
@@ -44,70 +39,63 @@ for (const file of glob.sync(path.join(in_dir, '*'))) {
 	if (!Array.isArray(json)) throw 'json content is not array: ' + file
 	const gene2count = new Map()
 	for (const item of json) {
-		if (item.dt == 1) {
-			// snvindel
-			if (!item.gene) {
-				// mutation is not inside a gene
+		try {
+			if (item.dt == 1) {
+				// snvindel
+				if (!item.gene) {
+					// mutation is not inside a gene
+					continue
+				}
+				if (!item.class) throw 'snv_no_class'
+				if (!snvindel_useclass.has(item.class)) {
+					// excluded class
+					continue
+				}
+				gene2count.set(item.gene, 1 + (gene2count.get(item.gene) || 0))
 				continue
 			}
-			if (!item.class) {
-				snv_no_class++
+			if (item.dt == 2 || item.dt == 5) {
+				// fusion, sv
+				if (!item.chrA || !item.posA || !item.chrB || !item.posB) throw 'svfusion_no_chrpos'
+				const ca = hit_gene(item.chrA, item.posA, item.posA + 1)
+				const cb = hit_gene(item.chrB, item.posB, item.posB + 1)
+				for (const g of new Set([...ca, ...cb])) {
+					gene2count.set(g, 1 + (gene2count.get(g) || 0))
+				}
 				continue
 			}
-			if (!snvindel_useclass.has(item.class)) {
-				// excluded class
+			if (item.dt == 4) {
+				// cnv
+				if (!Number.isFinite(item.value)) throw 'cnv_no_value'
+				if (!item.chr || !Number.isInteger(item.start) || !item.stop) throw 'cnv_no_chrpos'
+				if (item.stop - item.start >= 2000000) {
+					// bigger than 2mb
+					continue
+				}
+				if (Math.abs(item.value) <= 0.2) {
+					// low log2(ratio)
+					continue
+				}
+				const c = new Set(hit_gene(item.chr, item.start, item.stop))
+				for (const g of c) {
+					gene2count.set(g, 1 + (gene2count.get(g) || 0))
+				}
 				continue
 			}
-			gene2count.set(item.gene, 1 + (gene2count.get(item.gene) || 0))
-			continue
-		}
-		if (item.dt == 2 || item.dt == 5) {
-			// fusion, sv
-			if (!item.chrA || !item.posA || !item.chrB || !item.posB) {
-				sv_no_chr++
+			if (item.dt == 6) {
+				// itd
+				if (!item.gene) throw 'itd_no_gene'
+				gene2count.set(item.gene, 1 + (gene2count.get(item.gene) || 0))
 				continue
 			}
-			const ca = hit_gene(item.chrA, item.posA, item.posA + 1)
-			const cb = hit_gene(item.chrB, item.posB, item.posB + 1)
-			for (const g of new Set([...ca, ...cb])) {
-				gene2count.set(g, 1 + (gene2count.get(g) || 0))
-			}
-			continue
-		}
-		if (item.dt == 4) {
-			// cnv
-			if (!Number.isFinite(item.value)) {
-				cnv_no_value++
-				continue
-			}
-			if (!item.chr || !item.start || !item.stop) {
-				cnv_no_chr++
-				continue
-			}
-			if (item.stop - item.start >= 2000000) {
-				// bigger than 2mb
-				continue
-			}
-			if (Math.abs(item.value) <= 0.2) {
-				// low log2(ratio)
-				continue
-			}
-			const c = new Set(hit_gene(item.chr, item.start, item.stop))
-			for (const g of c) {
-				gene2count.set(g, 1 + (gene2count.get(g) || 0))
-			}
-			continue
+		} catch (e) {
+			console.error(e + ' ' + JSON.stringify(item) + ' ' + samplename)
 		}
 	}
 	for (const [gene, count] of gene2count) {
 		console.log(samplename + '\t' + gene + '\t' + count)
 	}
 }
-
-if (snv_no_class) console.error('SNV no class: ' + snv_no_class)
-if (sv_no_chr) console.error('SV no chr/pos: ' + sv_no_chr)
-if (cnv_no_value) console.error('CNV no value: ' + cnv_no_value)
-if (cnv_no_chr) console.error('CNV no chr/start/stop: ' + cnv_no_chr)
 
 function hit_gene(chr, start, stop) {
 	const re = exec(`tabix ${genefile} ${chr}:${start}-${stop}`, { encoding: 'utf8' }).trim()

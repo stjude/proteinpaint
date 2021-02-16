@@ -399,10 +399,18 @@ export async function addCrosstabCount_tonodes(nodes, combinations) {
 	for (const node of nodes) {
 		if (!node.id0) continue // root
 
+		if (!node.v0) {
+			continue
+		}
 		const v0 = node.v0.toLowerCase()
 		if (!node.id1) {
 			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
 			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v1) {
+			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
 			continue
 		}
 		const v1 = node.v1.toLowerCase()
@@ -410,6 +418,10 @@ export async function addCrosstabCount_tonodes(nodes, combinations) {
 			// second level, use crosstabL1
 			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
 			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v2) {
 			continue
 		}
 		const v2 = node.v2.toLowerCase()

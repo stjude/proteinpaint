@@ -79,6 +79,9 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 custom vcf handling:
 	multi-sample
 	single-sample
+
+!!!!!!!!!!!Task-specific temporary fixes!!!!!!!!!!!
+maysortsamplesingroupbydt
 */
 
 const labyspace = 5
@@ -450,14 +453,14 @@ function addLoadParameter(par, tk) {
 	// cnv
 	if (tk.sampleset) par.sampleset = tk.sampleset
 	if (tk.valueCutoff) par.valueCutoff = tk.valueCutoff
-	if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
+	if (Number.isInteger(tk.bplengthUpperLimit)) par.bplengthUpperLimit = tk.bplengthUpperLimit
 	if (tk.showonlycnvwithsv) par.showonlycnvwithsv = 1
 	par.hide_cnvgain = tk.hide_cnvgain
 	par.hide_cnvloss = tk.hide_cnvloss
 
 	// loh
 	if (tk.segmeanValueCutoff) par.segmeanValueCutoff = tk.segmeanValueCutoff
-	if (tk.lohLengthUpperLimit) par.lohLengthUpperLimit = tk.lohLengthUpperLimit
+	if (Number.isInteger(tk.lohLengthUpperLimit)) par.lohLengthUpperLimit = tk.lohLengthUpperLimit
 
 	if (tk.singlesample) {
 		// single sample
@@ -2896,9 +2899,10 @@ for both multi- and single-sample
 		}
 		if (!tk.legheight) tk.legheight = 40
 		if (!tk.discradius) tk.discradius = 8
-		if (!tk.bplengthUpperLimit) tk.bplengthUpperLimit = 2000000
 		if (!tk.valueCutoff) tk.valueCutoff = 0.2
-		if (!tk.lohLengthUpperLimit) tk.lohLengthUpperLimit = 2000000
+		// length limit could be 0
+		if (!Number.isInteger(tk.bplengthUpperLimit)) tk.bplengthUpperLimit = 2000000
+		if (!Number.isInteger(tk.lohLengthUpperLimit)) tk.lohLengthUpperLimit = 2000000
 		if (!tk.segmeanValueCutoff) tk.segmeanValueCutoff = 0.1
 
 		if (tk.fixname) {
