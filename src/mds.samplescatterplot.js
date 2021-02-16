@@ -1267,14 +1267,46 @@ async function click_dot_disco(dot, obj) {
 		if (data.error) throw data.error
 		if (!data.text) throw '.text missing'
 
+		const discoHolder = pane.body.append('div')
 		const renderer = await sjcharts.dtDisco({
-			holderSelector: pane.body,
+			holderSelector: discoHolder,
 			settings: {
 				showControls: false,
 				selectedSamples: []
 			},
 			callbacks: {
-				geneLabelClick: 'quickfix' // should be a function
+				geneLabelClick: d => {
+					discoHolder.style('display', 'none')
+					const div = pane.body.append('div')
+					div
+						.append('button')
+						.text('<< go back')
+						.style('margin', '5px')
+						.style('padding', '3px')
+						.on('click', () => {
+							div.remove()
+							discoHolder.style('display', 'block')
+						})
+					window.runproteinpaint({
+						host: 'https://ppr.stjude.org',
+						noheader: true,
+						holder: div.append('div').node(),
+						parseurl: true,
+						nobox: 1,
+						block: 1,
+						genome: 'hg19', // obj.disco.genome,
+						nativetracks: 'refgene',
+						position: d.position,
+						datasetqueries: [
+							{
+								dataset: obj.disco.dslabel,
+								querykey: 'svcnv',
+								singlesample: { name: dot.sample },
+								getsampletrackquickfix: true
+							}
+						]
+					})
+				}
 			}
 		})
 
