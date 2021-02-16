@@ -258,7 +258,6 @@ async function get_pileup(q, req, templates) {
 		// each ele is {}
 		// .position
 		// .total/A/T/C/G/refskip
-
 		let y = 0
 		const sf = q.pileupheight / maxValue
 		let i = 0
