@@ -1,4 +1,4 @@
-// Syntax: wasm-pack build --target nodejs
+// Syntax for testing wasm implementation: cd .. && wasm-pack build --target nodejs && node pkg/wasmtest.js
 // Passing vector using webassembly: https://stackoverflow.com/questions/50220966/how-to-use-vectors-of-c-stl-with-webassembly
 
 use wasm_bindgen::prelude::*;
@@ -45,10 +45,6 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 #[wasm_bindgen]
 pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen: i64, refallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
-    //panic!("crash and burn");
-    println!("variant_pos:{}", variant_pos);
-    println!("segbplen:{}", segbplen);
-
     //console::log_1(&"Hello using web-sys".into());
     //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
     //console::log_2(&"sequences:".into(), &sequences.into());
@@ -93,7 +89,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     let mut ref_scores = Vec::<read_diff_scores>::new();
     let mut alt_scores = Vec::<read_diff_scores>::new();
     let mut i:i64 = 0;
-    println!("Number of reads:{}", lines.len()-2);
+    console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
     for read in lines{ // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
               let kmers = build_kmers(read.to_string(), kmer_length);
@@ -116,21 +112,23 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     	}    
         i+=1;
     }	
-    
-    println!("ref_scores length:{}",ref_scores.len());
-    println!("alt_scores length:{}",alt_scores.len());
+
+    console::log_2(&"ref_scores length (from Rust):".into(), &ref_scores.len().to_string().into());
+    console::log_2(&"alt_scores length (from Rust):".into(), &alt_scores.len().to_string().into());
     
     let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
     if ref_scores.len() > 0 {
       ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
+    console::log_2(&"ref_indices length (from Rust):".into(), &ref_indices.len().to_string().into());
     
     let mut alt_indices = Vec::<read_category>::new();
     println!("Parsing alt scores");
     if alt_scores.len() > 0 {
-      let alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
+      alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }
+    console::log_2(&"alt_indices length (from Rust):".into(), &alt_indices.len().to_string().into());
     
     let mut output_cat = Vec::<String>::new();
     let mut output_gID = Vec::<usize>::new();
@@ -371,54 +369,55 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     kmer_diff_scores.sort_by(|b, a| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
 
     let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new();
-    let mut kmer_diff_scores_sorted2 = Vec::<read_diff_scores>::new();    
     for item in kmer_diff_scores { // Making multiple copyies of kmer_diff_scores for further use
 	//println!("Value:{}",item.value);
 	//println!("groupID:{}",item.groupID);
 	let item2:read_diff_scores = read_diff_scores_owned(item);
 	kmer_diff_scores_sorted.push(item2);
 	//let item2:read_diff_scores = read_diff_scores_owned(item);
-        //kmer_diff_scores_sorted2.push(item2);	
     }
       
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
+    //console::log_2(&"kmer_diff_scores_length:".into(), &kmer_diff_scores_length.to_string().into());
     let mut start_point: usize = kmer_diff_scores_length - 1;
     let mut slope:f64 = 0.0;
     let mut is_a_line = 1;
     let mut indices = Vec::<read_category>::new();
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
     if kmer_diff_scores_length > 1 {
-       for i in kmer_diff_scores_length..1 {
+       for i in (1..kmer_diff_scores_length).rev() {
 	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
+	   //console::log_2(&"slope:".into(),&slope.to_string().into());
+	   //console::log_2(&"i:".into(),&i.to_string().into());
 	   if slope > threshold_slope_clone {
               start_point=i as usize;
-	      println!("kmer_diff_scores_length>1,i:{}",i);  
               is_a_line = 0;
 	      break; 
 	   }    
        }	   
     }
     else {
-      println!("Number of reads too low to determine curvature of slope");       
+      console::log_1(&"Number of reads too low to determine curvature of slope".into());       
     }
     if (is_a_line == 1) {
-	for i in 0..(kmer_diff_scores_length-1) {
+	for i in 0..kmer_diff_scores_length { 
            let read_cat = read_category{
 	       category:String::from("refalt"),
 	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
            };
-	   indices.push(read_cat); 
+	   indices.push(read_cat);
+	   //console::log_2(&"i inline:".into(),&i.to_string().into()); 
         }
     }
     else {
-	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
-	for i in 0..start_point {
-	      let item = read_diff_scores{
-	         value:f64::from(kmer_diff_scores_sorted[i].value),
-	         groupID:usize::from(i)     
-	      };
-	      kmer_diff_scores_input.push(item);
-	}    
+    	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
+    	for i in 0..start_point {
+    	      let item = read_diff_scores{
+    	         value:f64::from(kmer_diff_scores_sorted[i].value),
+    	         groupID:usize::from(i)     
+    	      };
+    	      kmer_diff_scores_input.push(item);
+    	}    
     
         let min_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
@@ -436,7 +435,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         let mut distances_from_line:f64 = 0.0;
         let mut array_maximum:f64 = 0.0;
         let mut index_array_maximum:usize = 0;
-	
+    	
         for i in 0..start_point {
         	distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
             if (array_maximum>distances_from_line) {
@@ -444,7 +443,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	    index_array_maximum=i;
         	}    
         }
-
+    
         let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
         for i in 0..kmer_diff_scores_length	{
            if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
@@ -462,6 +461,6 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	  indices.push(read_cat); 
            }	   
         }	    
-    }	
+    }
     indices
 }

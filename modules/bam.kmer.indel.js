@@ -96,7 +96,7 @@ export async function match_complexvariant_rust(templates, q) {
 	for (const template of templates) {
 		sequences += template.segments[0].seq + '\n'
 	}
-
+	//console.log("sequences:",sequences)
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
 		BigInt(q.variant.pos),
@@ -107,7 +107,7 @@ export async function match_complexvariant_rust(templates, q) {
 		weight_indel,
 		threshold_slope
 	) // Invoking wasm function
-	//console.log('rust_output:', rust_output)
+	console.log('rust_output:', rust_output.groupID.length)
 
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
@@ -116,7 +116,7 @@ export async function match_complexvariant_rust(templates, q) {
 		if (rust_output.category[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -127,7 +127,7 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -138,7 +138,7 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toString()
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -412,6 +412,35 @@ export async function match_complexvariant(templates, q) {
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
+
+	//for (const item of ref_indices) {
+	//		if (type2group[bamcommon.type_supportref]) {
+	//			index = item[0]
+	//			templates[index].__tempscore =
+	//				alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+	//			type2group[bamcommon.type_supportref].templates.push(templates[index])
+	//			const input_items = {
+	//				value: kmer_diff_scores[index],
+	//				groupID: 'ref'
+	//			}
+	//			kmer_diff_scores_input.push(input_items)
+	//		}
+	//}
+	//
+	//for (const item of alt_indices) {
+	//		if (type2group[bamcommon.type_supportref]) {
+	//			index = item[0]
+	//			templates[index].__tempscore =
+	//				alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+	//			type2group[bamcommon.type_supportref].templates.push(templates[index])
+	//			const input_items = {
+	//				value: kmer_diff_scores[index],
+	//				groupID: 'ref'
+	//			}
+	//			kmer_diff_scores_input.push(input_items)
+	//		}
+	//}
+
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
@@ -503,6 +532,7 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
+	console.log('groups:', groups[0])
 	return { groups, refalleleerror }
 }
 
