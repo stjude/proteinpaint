@@ -384,10 +384,11 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     let mut is_a_line = 1;
     let mut indices = Vec::<read_category>::new();
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
+    console::log_2(&"threshold_slope_clone:".into(),&threshold_slope_clone.to_string().into());
     if kmer_diff_scores_length > 1 {
        for i in (1..kmer_diff_scores_length).rev() {
 	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
-	   //console::log_2(&"slope:".into(),&slope.to_string().into());
+	   console::log_2(&"slope:".into(),&slope.to_string().into());
 	   //console::log_2(&"i:".into(),&i.to_string().into());
 	   if slope > threshold_slope_clone {
               start_point=i as usize;
@@ -417,7 +418,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	         groupID:usize::from(i)     
     	      };
     	      kmer_diff_scores_input.push(item);
-    	}    
+    	}
+	console::log_1(&"Hello:".into());
     
         let min_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
@@ -429,7 +431,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	groupID:usize::from(start_point)
         };
         
-        let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.value as f64); // m=(y2-y1)/(x2-x1)
+        let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)
         
         let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x 
         let mut distances_from_line:f64 = 0.0;
@@ -443,8 +445,9 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	    index_array_maximum=i;
         	}    
         }
-    
+	
         let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
+	console::log_2(&"score_cutoff (from Rust):".into(),&score_cutoff.to_string().into());
         for i in 0..kmer_diff_scores_length	{
            if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
               let read_cat = read_category{
