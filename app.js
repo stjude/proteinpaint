@@ -3507,10 +3507,14 @@ async function handle_mdssvcnv_vcf(
 		}
 	}
 
+	// query cohort vcf files for both cohort and sample view
+	// TODO separate range limits, above 1mb, do not show noncoding ones; above 3mb, do not show coding ones
+	// also show alert message on client
+
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 1000000
+		viewrangeupperlimit = 2000000
 	}
 
 	if (req.query.singlesample) {
@@ -3766,7 +3770,7 @@ async function handle_mdssvcnv_vcf(
 	}
 
 	return Promise.all(tracktasks).then(vcffiles => {
-		// snv/indel/itd data aggregated from multiple tracks
+		// snv/indel data aggregated from multiple tracks
 		const mmerge = []
 
 		for (const eachvcf of vcffiles) {
