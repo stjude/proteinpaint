@@ -102,6 +102,7 @@ export async function match_complexvariant_rust(templates, q) {
 		BigInt(q.variant.pos),
 		BigInt(segbplen),
 		refallele,
+		altallele,
 		BigInt(kmer_length),
 		weight_no_indel,
 		weight_indel,

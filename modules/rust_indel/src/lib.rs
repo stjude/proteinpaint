@@ -43,7 +43,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 }
 
 #[wasm_bindgen]
-pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen: i64, refallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
+pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
     //console::log_1(&"Hello using web-sys".into());
     //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
@@ -58,6 +58,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
 
     let left_most_pos = variant_pos - segbplen;
     let ref_length: i64 = refallele.len() as i64;
+    let alt_length: i64 = altallele.len() as i64;    
     
     let kmers = build_kmers(lines[0].to_string(), kmer_length);
     
@@ -76,7 +77,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		kmer_length,
     		left_most_pos,
     		variant_pos,
-    		variant_pos + ref_length,
+    		variant_pos + alt_length,
     		weight_indel,
     		weight_no_indel
     );
