@@ -60,8 +60,6 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     let ref_length: i64 = refallele.len() as i64;
     
     let kmers = build_kmers(lines[0].to_string(), kmer_length);
-    println!("kmers:{}",kmers[4]);
-    
     
     let (ref_kmers_weight, all_ref_counts, all_ref_kmers_seq_values_nodups, all_ref_kmers_nodups, all_ref_kmers) = build_kmers_refalt(
     		lines[0].to_string(),
@@ -71,7 +69,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		variant_pos + ref_length,
     		weight_indel,
     		weight_no_indel
-    );
+    );	
     
     let (alt_kmers_weight,all_alt_counts, all_alt_kmers_seq_values_nodups, all_alt_kmers_nodups, all_alt_kmers) = build_kmers_refalt(
     		lines[1].to_string(),
@@ -165,10 +163,6 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
 
 fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64) -> (f64,Vec::<i64>,Vec::<String>,Vec<kmer_input>,Vec<kmer_input>)
 {
-    //println!("segbplen:{}", sequence);
-    //println!("variant_pos in function:{}", indel_start);
-    //println!("weight_indel in function:{}", weight_indel);
-
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();    
     let mut kmers = Vec::<kmer_input>::new();
@@ -190,7 +184,7 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 	}
 	let mut kmer_score:f64 = 0.0;
 	for _k in kmer_start..kmer_stop {
-	    if indel_start <= (j as i64) && (j as i64) < indel_stop {
+	    if indel_start <= (_k as i64) && (_k as i64) < indel_stop {
 		// Determining if nucleotide is within indel or not
 		kmer_score += weight_indel;
 	    }
@@ -366,7 +360,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
 fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_slope: &f64) -> Vec<read_category> {
 
     // Sorting kmer_diff_scores
-    kmer_diff_scores.sort_by(|b, a| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
+    kmer_diff_scores.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
 
     let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new();
     for item in kmer_diff_scores { // Making multiple copyies of kmer_diff_scores for further use
@@ -379,16 +373,16 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
       
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
     //console::log_2(&"kmer_diff_scores_length:".into(), &kmer_diff_scores_length.to_string().into());
+    
     let mut start_point: usize = kmer_diff_scores_length - 1;
     let mut slope:f64 = 0.0;
     let mut is_a_line = 1;
     let mut indices = Vec::<read_category>::new();
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
-    console::log_2(&"threshold_slope_clone:".into(),&threshold_slope_clone.to_string().into());
     if kmer_diff_scores_length > 1 {
        for i in (1..kmer_diff_scores_length).rev() {
 	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
-	   console::log_2(&"slope:".into(),&slope.to_string().into());
+	   //console::log_2(&"slope:".into(),&slope.to_string().into());
 	   //console::log_2(&"i:".into(),&i.to_string().into());
 	   if slope > threshold_slope_clone {
               start_point=i as usize;
@@ -411,6 +405,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         }
     }
     else {
+	console::log_2(&"start_point:".into(),&start_point.to_string().into());
     	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
     	for i in 0..start_point {
     	      let item = read_diff_scores{
@@ -419,7 +414,6 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	      };
     	      kmer_diff_scores_input.push(item);
     	}
-	console::log_1(&"Hello:".into());
     
         let min_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
@@ -430,22 +424,20 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	value:f64::from(kmer_diff_scores_sorted[start_point].value),
         	groupID:usize::from(start_point)
         };
-        
-        let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)
-        
+	
+        let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)        
         let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x 
         let mut distances_from_line:f64 = 0.0;
         let mut array_maximum:f64 = 0.0;
         let mut index_array_maximum:usize = 0;
     	
-        for i in 0..start_point {
-        	distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
-            if (array_maximum>distances_from_line) {
+        for i in 0..kmer_diff_scores_input.len() {
+            distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+            if (array_maximum<distances_from_line) {
                 array_maximum=distances_from_line;
         	    index_array_maximum=i;
         	}    
         }
-	
         let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
 	console::log_2(&"score_cutoff (from Rust):".into(),&score_cutoff.to_string().into());
         for i in 0..kmer_diff_scores_length	{
@@ -461,7 +453,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	       category:String::from("refalt"),
         	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
               };
-        	  indices.push(read_cat); 
+              indices.push(read_cat); 
            }	   
         }	    
     }
