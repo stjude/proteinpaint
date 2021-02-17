@@ -2476,27 +2476,36 @@ async function handle_mdsgenecount(req, res) {
 	GROUP BY gene
 	ORDER BY count DESC
 	LIMIT 10`
-		const out = {}
-		out.genes = ds.gene2mutcount.db.prepare(query).all()
-		out.genes.forEach(g => {
-			const isoforms = genome.genedb.getjsonbyname.all(g.gene)
-			let starts = [],
-				stops = [],
-				chrs = []
-			isoforms.forEach(i => {
-				starts.push(JSON.parse(i.genemodel).start)
-				stops.push(JSON.parse(i.genemodel).stop)
-				chrs.push(JSON.parse(i.genemodel).chr)
+		const genes = ds.gene2mutcount.db.prepare(query).all()
+		for (const gene of genes) {
+			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
+			const defaultisoform = isoforms.find(i => i.isdefault)
+			if (defaultisoform) {
+				const j = JSON.parse(defaultisoform.genemodel)
+				gene.chr = j.chr
+				gene.start = j.start
+				gene.stop = j.stop
+				continue
+			}
+			// no default isoform
+			// just try to use coordinate of the first isoform that's on major chr
+			const lst = isoforms.map(i => JSON.parse(i.genemodel))
+			const isoform = lst.find(i => {
+				const c = genome.chrlookup[i.chr.toUpperCase()]
+				if (c && c.major) return i
 			})
-			g.start = Math.min(...starts)
-			g.stop = Math.max(...stops)
-			const chr = [...new Set(chrs)]
-			if (chr.length == 1) g.chr = chr[0]
-			else g.chr = chr.join()
-		})
-		out.genome = genome
-		out.genome.name = req.query.genome
-		res.send({ out })
+			if (isoform) {
+				gene.chr = isoform.chr
+				gene.start = isoform.start
+				gene.stop = isoform.stop
+				continue
+			}
+			// no isoform on major chr, just use first isoform
+			gene.chr = lst[0].chr
+			gene.start = lst[0].start
+			gene.stop = lst[0].stop
+		}
+		res.send({ genes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)

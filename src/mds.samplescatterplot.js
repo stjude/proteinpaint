@@ -79,6 +79,13 @@ click_dot
 launch_singlesample
 
 
+FIXME
+obj.disco{ genome } is a quick fix and should not be used when hg38 pediatric is ready,
+so that disco will not use a different genome as obj
+
+also to rename obj.disco to obj.mds to indicate that the plot is coupled to a mds dataset
+allow showing disco by clicking dot if mutpersample is enabled on that mds daataset
+and allow lasso to samplematrix
 */
 
 const radius = 3
@@ -1258,7 +1265,7 @@ async function click_dot_disco(dot, obj) {
 	try {
 		const sjcharts = await getsjcharts()
 		const arg = {
-			genome: obj.disco.genome,
+			genome: obj.disco.genome.name,
 			dslabel: obj.disco.dslabel,
 			querykey: obj.disco.querykey,
 			getsample4disco: dot.sample
@@ -1296,7 +1303,7 @@ async function click_dot_disco(dot, obj) {
 						parseurl: true,
 						nobox: 1,
 						block: 1,
-						genome: obj.disco.genome,
+						genome: obj.disco.genome.name,
 						nativetracks: 'refgene',
 						positionbygene: d.gene,
 						datasetqueries: [
@@ -1496,16 +1503,16 @@ async function click_mutated_genes(obj, samples) {
 
 	try {
 		const arg = {
-			genome: obj.disco.genome,
+			genome: obj.disco.genome.name,
 			dslabel: obj.disco.dslabel,
-			samples: samples
+			samples
 		}
 		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
 		if (data.error) throw data.error
-		if (!data.out) throw '.out missing'
+		if (!data.genes) throw '.genes missing'
+		console.log(data.genes)
 
-		// make_gene_count_table(data.out, pane.body)
-		make_sample_matrix({ obj, data: data.out, samples, holder: pane.body })
+		make_sample_matrix({ obj, genes: data.genes, samples, holder: pane.body })
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
@@ -1514,25 +1521,22 @@ async function click_mutated_genes(obj, samples) {
 }
 
 function make_sample_matrix(args) {
-	const { obj, data, samples, holder } = args
-	const features = []
-	data.genes.forEach(g => {
-		if (g.start && g.stop)
-			features.push({
-				ismutation: 1,
-				genename: g.gene,
-				label: g.gene,
-				querykeylst: ['svcnv', 'snvindel'],
-				width: 50,
-				position: g.chr + ':' + g.start + '-' + g.stop
-			})
-	})
+	const { obj, genes, samples, holder } = args
+	// convert genes to features
+	for (const g of genes) {
+		delete g.count
+		g.ismutation = true
+		g.genename = g.gene
+		g.label = g.gene
+		delete g.gene
+		g.querykeylst = ['svcnv', 'snvindel'] // FIXME hardcoded
+		g.width = 50
+	}
 	const arg = {
-		genome: data.genome,
+		genome: obj.disco.genome,
 		dslabel: obj.disco.dslabel,
-		features: features,
+		features: genes,
 		hostURL: sessionStorage.getItem('hostURL') || '',
-		// limitsamplebyeitherannotation,
 		limitbysamplesetgroup: { samples },
 		jwt: sessionStorage.getItem('jwt') || '',
 		holder: holder.append('div').style('margin', '20px')
@@ -1541,31 +1545,6 @@ function make_sample_matrix(args) {
 	import('./samplematrix').then(_ => {
 		const m = new _.Samplematrix(arg)
 		m._pane = holder
-		// tk.samplematrices.push(m)
-	})
-}
-
-function make_gene_count_table(data, holder) {
-	console.log(data)
-	const table = holder.append('table')
-	const htr = table.append('tr')
-	htr
-		.append('th')
-		.style('padding', '2px 10px')
-		.text('Gene')
-	htr
-		.append('th')
-		.style('padding', '2px 10px')
-		.text('Count')
-
-	data.forEach(g => {
-		const tr = table.append('tr')
-		tr.append('td')
-			.style('padding', '2px 10px')
-			.text(g.gene)
-		tr.append('td')
-			.style('padding', '2px 10px')
-			.text(g.count)
 	})
 }
 
