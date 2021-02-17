@@ -1282,39 +1282,11 @@ async function click_dot_disco(dot, obj) {
 				selectedSamples: []
 			},
 			callbacks: {
-				geneLabelClick: d => {
-					discoHolder.style('display', 'none')
-					const div = pane.body.append('div')
-					div
-						.append('button')
-						.text('<< go back')
-						.style('margin', '5px')
-						.style('padding', '3px')
-						.on('click', () => {
-							div.remove()
-							discoHolder.style('display', 'block')
-						})
-					window.runproteinpaint({
-						// replace 'localhost' only when testing in dev machine only
-						// since ppr will have all the required data for tracks
-						host: window.location.hostname == 'localhost' ? 'https://ppr.stjude.org' : '',
-						noheader: true,
-						holder: div.append('div').node(),
-						parseurl: true,
-						nobox: 1,
-						block: 1,
-						genome: obj.disco.genome.name,
-						nativetracks: 'refgene',
-						positionbygene: d.gene,
-						datasetqueries: [
-							{
-								dataset: obj.disco.dslabel,
-								querykey: 'svcnv',
-								singlesample: { name: dot.sample },
-								getsampletrackquickfix: true
-							}
-						]
-					})
+				geneLabelClick: {
+					type: 'genomepaint',
+					genome: obj.disco.genome.name,
+					dslabel: obj.disco.dslabel,
+					sample: dot.sample
 				}
 			}
 		})
