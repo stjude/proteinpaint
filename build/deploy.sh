@@ -128,6 +128,19 @@ else
 	exit 1
 fi
 
+##############################################
+# Do NOT redeploy a build that is already
+# available in the remote host machine
+##############################################
+
+if [[ $(ssh $USERatREMOTE "cd /opt/app/pp; ./helpers/recent.sh" | grep -l $REV) != "" ]]; then
+	echo -e "\n"
+	echo -e "Version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
+	echo -e "You can reactivate that build using './helpers/revert.sh $REV' from $REMOTEHOST:$REMOTEDIR."
+	echo -e "\n"
+	exit 1
+fi
+
 #################################
 # EXTRACT AND BUILD FROM COMMIT
 #################################
@@ -199,27 +212,25 @@ echo "Transferring build to $USERatREMOTE"
 scp $APP-$REV.tgz $USERatREMOTE:~
 ssh -t $USERatREMOTE "
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/available/
-	rm -rf 
-	mv -f $REMOTEDIR/available/$APP $REMOTEDIR/available/$APP-$REV
-	# rm ~/$APP-$REV.tgz
-
-	cp -r $REMOTEDIR/active/node_modules $REMOTEDIR/available/$APP-$REV
-	cp $REMOTEDIR/active/serverconfig.json $REMOTEDIR/available/$APP-$REV/
-	cp -Rn $REMOTEDIR/active/public/ $REMOTEDIR/available/$APP-$REV/
-	cp -Rn $REMOTEDIR/active/dataset/ $REMOTEDIR/available/$APP-$REV/
-	cp $REMOTEDIR/active/public/rev.txt $REMOTEDIR/available/$APP-$REV/public/prev.txt
-
-	chmod -R 755 $REMOTEDIR/$APP-$REV
-	
-	ln -sfn /opt/app/pecan/portal/www/sjcharts/public $REMOTEDIR/available/$APP-$REV/public/sjcharts
-	ln -sfn $REMOTEDIR/available/$APP-$REV/public/bin $REMOTEDIR/available/$APP-$REV/public/no-babel-polyfill
+	rm ~/$APP-$REV.tgz
 
 	cd $REMOTEDIR
+	mv -f available/$APP available/$APP-$REV
+	cp -r active/node_modules available/$APP-$REV
+	cp active/serverconfig.json available/$APP-$REV/
+	cp active/public/ available/$APP-$REV/
+	cp -Rn active/dataset/ available/$APP-$REV/
+	cp active/public/rev.txt available/$APP-$REV/public/prev.txt
+	cp available/$APP-$REV/public/rev.txt active/public/next.txt
+	echo $REV >> history.txt
+	chmod -R 755 available/$APP-$REV
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
+	ln -sfn available/$APP-$REV/public/bin available/$APP-$REV/public/no-babel-polyfill
+
 	ln -sfn available/$APP-$REV active
 	./proteinpaint_run_node.sh
 	cd available
 	../purge.sh \"pp-*\"
-	cd ..
 "
 
 #############

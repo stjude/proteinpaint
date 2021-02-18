@@ -14,7 +14,7 @@ elif (($# == 2)); then
 	PATTERN=$1
 	MAXRETAINED=$2
 else
-	echo "Usage: ./purge.sh PATTERN [MAXRETAINED]"
+	echo "Usage: [path]/purge.sh PATTERN [MAXRETAINED]"
 	echo "PATTERN glob pattern to match directory names that can be deleted"
 	echo "MAXRETAINED (optional) maximum number of directories to retain"
 	exit 1
