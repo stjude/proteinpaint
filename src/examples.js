@@ -21,6 +21,9 @@ export async function init_examples(par) {
 	// genomepaint panel
 	// subgrid
 	// top card followed by additional tiles
+	gbrowswer_col.append('div')
+	launch_gBrowser_btn(gbrowswer_col)
+
 	gbrowswer_col
 		.append('h5')
 		.html('GenomePaint')
@@ -173,6 +176,12 @@ function make_gBrowserCol(div) {
 		.style('background-color', '#f5f5f5')
 
 	return gBrowserCol
+}
+
+//Creates the launch genome browser button
+function launch_gBrowser_btn(div) {
+	const launch_btn = div.append('div')
+	launch_btn.append('button').text('Launch Genome Browser')
 }
 
 //Standalone card for GenomePaint
