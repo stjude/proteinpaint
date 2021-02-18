@@ -151,6 +151,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     	}    
         output_gID.push(item.groupID);	    
     }
+    kmer_diff_scores.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
     //println!("{}", output_cat[0]);
     //console::log_2(&"output_cat[0]:".into(), &output_cat[0].to_string().into());
     let item = output_structure{
