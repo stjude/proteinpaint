@@ -1,4 +1,4 @@
-// Syntax: rustc indel.rs && ./indel chr11.119155745.T.TTGACCTGG.txt 119155745 75 T
+// Syntax: rustc indel.rs && ./indel chr1.241661226.A.ATTT.txt 241661226 142 A ATTT 6 0.1 10 0.1
 
 use std::env;
 use std::fs;
@@ -32,8 +32,6 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     read_val	
 }
 
-
-
 fn main() {
     let args: Vec<String> = env::args().collect(); // Collecting arguments from commandline
     let filename = &args[1];
@@ -46,7 +44,12 @@ fn main() {
     let variant_pos = &args[2].parse::<i64>().unwrap();
     let segbplen = &args[3].parse::<i64>().unwrap();
     let refallele = &args[4];
-
+    let altallele = &args[5];
+    let kmer_length = &args[6].parse::<i64>().unwrap();
+    let weight_no_indel = &args[7].parse::<f64>().unwrap();
+    let weight_indel = &args[8].parse::<f64>().unwrap();
+    let threshold_slope = &args[9].parse::<f64>().unwrap();
+    
     println!("variant_pos:{}", variant_pos);
     println!("segbplen:{}", segbplen);    
     
@@ -55,41 +58,29 @@ fn main() {
     
     //println!("{:?}", lines);
     println!("{}", lines[0]);
-    
-    //----------------------------------------------------------------------------
-    
-    // IMPORTANT PARAMETERS
-    const kmer_length: i64 = 6; // length of kmer
-    const weight_no_indel:f64 = 0.1; // Weight when base not inside the indel
-    const weight_indel:f64 = 10.0; // Weight when base is inside the indel
-    const threshold_slope:f64 = 0.1; // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
-    //----------------------------------------------------------------------------
 
     let left_most_pos = variant_pos - segbplen;
     let ref_length: i64 = refallele.len() as i64;
-    
-    let kmers = build_kmers(lines[0].to_string(), kmer_length);
-    println!("kmers:{}",kmers[4]);
-
+    let alt_length: i64 = altallele.len() as i64;
 
     let (ref_kmers_weight,all_ref_counts, all_ref_kmers_seq_values_nodups, all_ref_kmers_nodups, all_ref_kmers) = build_kmers_refalt(
     		lines[0].to_string(),
-    		kmer_length,
+    		*kmer_length,
     		left_most_pos,
     		*variant_pos,
     		*variant_pos + ref_length,
-    		weight_indel,
-    		weight_no_indel
+    		*weight_indel,
+    		*weight_no_indel
     );
 
     let (alt_kmers_weight,all_alt_counts, all_alt_kmers_seq_values_nodups, all_alt_kmers_nodups, all_alt_kmers) = build_kmers_refalt(
     		lines[1].to_string(),
-    		kmer_length,
+    		*kmer_length,
     		left_most_pos,
     		*variant_pos,
-    		*variant_pos + ref_length,
-    		weight_indel,
-    		weight_no_indel
+    		*variant_pos + alt_length,
+    		*weight_indel,
+    		*weight_no_indel
     );
 
     let mut kmer_diff_scores = Vec::<f64>::new();
@@ -101,7 +92,7 @@ fn main() {
     println!("Number of reads:{}", lines.len()-2);
     for read in lines{ // Will multithread this loop in the future
 	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-              let kmers = build_kmers(read.to_string(), kmer_length);
+              let kmers = build_kmers(read.to_string(), *kmer_length);
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers,&all_ref_kmers,&all_ref_kmers_nodups,&all_ref_kmers_seq_values_nodups,&ref_kmers_weight,&all_ref_counts);
 	      let alt_comparison=jaccard_similarity_weights(&kmers,&all_alt_kmers,&all_alt_kmers_nodups,&all_alt_kmers_seq_values_nodups,&alt_kmers_weight,&all_alt_counts);
@@ -125,23 +116,47 @@ fn main() {
     println!("ref_scores length:{}",ref_scores.len());
     println!("alt_scores length:{}",alt_scores.len());
 
+    let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
     if ref_scores.len() > 0 {
-      let ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
+      ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
 
+    let mut alt_indices = Vec::<read_category>::new();    
     println!("Parsing alt scores");
     if alt_scores.len() > 0 {
-      let alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
+      alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }    
-}
+
+    let mut output_cat = Vec::<String>::new();
+    let mut output_gID = Vec::<usize>::new();
+    
+    for item in ref_indices {
+    	if item.category == "refalt".to_string() {
+            output_cat.push("ref".to_string());		
+        }
+    	else {
+            output_cat.push("none".to_string());
+    	}    
+        output_gID.push(item.groupID);	    
+    }
+    
+    for item in alt_indices {
+    	if item.category == "refalt".to_string() {
+            output_cat.push("alt".to_string());		
+        }
+    	else {
+            output_cat.push("none".to_string());
+    	}    
+        output_gID.push(item.groupID);	    
+    }
+    kmer_diff_scores.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
+    //println!("{}", output_cat[0]);
+
+}    
 
 fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64) -> (f64,Vec::<i64>,Vec::<String>,Vec<kmer_input>,Vec<kmer_input>)
 {
-    //println!("segbplen:{}", sequence);
-    //println!("variant_pos in function:{}", indel_start);
-    //println!("weight_indel in function:{}", weight_indel);
-
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();    
     let mut kmers = Vec::<kmer_input>::new();
@@ -163,7 +178,7 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 	}
 	let mut kmer_score:f64 = 0.0;
 	for _k in kmer_start..kmer_stop {
-	    if indel_start <= (j as i64) && (j as i64) < indel_stop {
+	    if indel_start <= (_k as i64) && (_k as i64) < indel_stop {
 		// Determining if nucleotide is within indel or not
 		kmer_score += weight_indel;
 	    }
@@ -234,7 +249,7 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 	}	
     }
     (total_kmers_weight,kmer_counts,kmers_nodup2,kmers2,kmers3)
-}    
+}
 
 // Multithread this function in the future
 fn build_kmers(sequence: String, kmer_length: i64) -> Vec::<String>  {
@@ -339,100 +354,102 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
 fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_slope: &f64) -> Vec<read_category> {
 
     // Sorting kmer_diff_scores
-    kmer_diff_scores.sort_by(|b, a| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
+    kmer_diff_scores.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
 
     let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new();
-    let mut kmer_diff_scores_sorted2 = Vec::<read_diff_scores>::new();    
     for item in kmer_diff_scores { // Making multiple copyies of kmer_diff_scores for further use
 	//println!("Value:{}",item.value);
 	//println!("groupID:{}",item.groupID);
 	let item2:read_diff_scores = read_diff_scores_owned(item);
 	kmer_diff_scores_sorted.push(item2);
 	//let item2:read_diff_scores = read_diff_scores_owned(item);
-        //kmer_diff_scores_sorted2.push(item2);	
     }
       
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
+    //console::log_2(&"kmer_diff_scores_length:".into(), &kmer_diff_scores_length.to_string().into());
+    
     let mut start_point: usize = kmer_diff_scores_length - 1;
     let mut slope:f64 = 0.0;
     let mut is_a_line = 1;
     let mut indices = Vec::<read_category>::new();
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
     if kmer_diff_scores_length > 1 {
-       for i in kmer_diff_scores_length..1 {
+       for i in (1..kmer_diff_scores_length).rev() {
 	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
+	   //console::log_2(&"slope:".into(),&slope.to_string().into());
+	   //console::log_2(&"i:".into(),&i.to_string().into());
 	   if slope > threshold_slope_clone {
               start_point=i as usize;
-	      println!("kmer_diff_scores_length>1,i:{}",i);  
               is_a_line = 0;
 	      break; 
 	   }    
        }	   
     }
     else {
-      println!("Number of reads too low to determine curvature of slope");       
+	println!("Number of reads too low to determine curvature of slope");
     }
     if (is_a_line == 1) {
-	for i in 0..(kmer_diff_scores_length-1) {
+	for i in 0..kmer_diff_scores_length { 
            let read_cat = read_category{
 	       category:String::from("refalt"),
 	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
            };
-	   indices.push(read_cat); 
+	   indices.push(read_cat);
+	   //console::log_2(&"i inline:".into(),&i.to_string().into()); 
         }
     }
     else {
-	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
-	for i in 0..start_point {
-	      let item = read_diff_scores{
-	         value:f64::from(kmer_diff_scores_sorted[i].value),
-	         groupID:usize::from(i)     
-	      };
-	      kmer_diff_scores_input.push(item);
-	}    
+	println!("start_point:{}", start_point);    
+    	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
+    	for i in 0..start_point {
+    	      let item = read_diff_scores{
+    	         value:f64::from(kmer_diff_scores_sorted[i].value),
+    	         groupID:usize::from(i)     
+    	      };
+    	      kmer_diff_scores_input.push(item);
+    	}
     
-    let min_value=read_diff_scores{
-	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
-	groupID:usize::from(0 as usize)
-    };
-
-    let max_value=read_diff_scores{
-	value:f64::from(kmer_diff_scores_sorted[start_point].value),
-	groupID:usize::from(start_point)
-    };
-
-    let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.value as f64); // m=(y2-y1)/(x2-x1)
-
-    let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x 
-    let mut distances_from_line:f64 = 0.0;
-    let mut array_maximum:f64 = 0.0;
-    let mut index_array_maximum:usize = 0;
+        let min_value=read_diff_scores{
+        	value:f64::from(kmer_diff_scores_sorted[0 as usize].value),
+        	groupID:usize::from(0 as usize)
+        };
+        
+        let max_value=read_diff_scores{
+        	value:f64::from(kmer_diff_scores_sorted[start_point].value),
+        	groupID:usize::from(start_point)
+        };
 	
-    for i in 0..start_point {
-	distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
-        if (array_maximum>distances_from_line) {
-            array_maximum=distances_from_line;
-	    index_array_maximum=i;
-	}    
+        let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)        
+        let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x 
+        let mut distances_from_line:f64 = 0.0;
+        let mut array_maximum:f64 = 0.0;
+        let mut index_array_maximum:usize = 0;
+    	
+        for i in 0..kmer_diff_scores_input.len() {
+            distances_from_line=(slope_of_line * kmer_diff_scores_input[i].groupID as f64 - kmer_diff_scores_input[i].value + intercept_of_line).abs()/(1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
+            if (array_maximum<distances_from_line) {
+                array_maximum=distances_from_line;
+        	    index_array_maximum=i;
+        	}    
+        }
+        let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
+	println!("score_cutoff (from Rust):{}", score_cutoff);
+        for i in 0..kmer_diff_scores_length	{
+           if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
+              let read_cat = read_category{
+        	       category:String::from("none"),
+        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+              };
+              indices.push(read_cat); 
+           }
+           else {
+              let read_cat = read_category{
+        	       category:String::from("refalt"),
+        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+              };
+              indices.push(read_cat); 
+           }	   
+        }	    
     }
-
-    let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
-    for i in 0..kmer_diff_scores_length	{
-       if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
-          let read_cat = read_category{
-	       category:String::from("none"),
-	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
-          };
-          indices.push(read_cat); 
-       }
-       else {
-          let read_cat = read_category{
-	       category:String::from("refalt"),
-	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
-          };
-	  indices.push(read_cat); 
-       }	   
-    }	    
-    }	
     indices
-}    
+}   
