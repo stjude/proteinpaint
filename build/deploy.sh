@@ -57,7 +57,7 @@ fi
 # CONTEXTUAL CONFIG
 #####################
 
-APP=es6_proteinpaint # might be overridden below
+APP=pp # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 
@@ -103,6 +103,22 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
   # ProxyCommand  ssh gnomeuser@svldtemp01.stjude.org nc %h %p 2> /dev/null
   #
 	USERatREMOTE=prp1 
+	REMOTEDIR=/opt/app/pp
+	HOSTNAME=proteinpaint.stjude.org
+	SUBDOMAIN=proteinpaint
+
+elif [[ "$ENV" == "pp-ict" ]]; then
+	DEPLOYER=genomeuser
+	REMOTEHOST=pp-ict.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
+	REMOTEDIR=/opt/app/pp
+	HOSTNAME=proteinpaint.stjude.org
+	SUBDOMAIN=proteinpaint
+
+elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
+	DEPLOYER=genomeuser
+	REMOTEHOST=ppc.stjude.org
+	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
@@ -164,6 +180,7 @@ else
 	mv utils/*.R $APP/utils/
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
 	mv modules/serverconfig.js $APP/modules
+	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
 		cp public/pecan.html $APP/public/index.html
@@ -171,11 +188,7 @@ else
 		cp public/index.html $APP/public/index.html
 	fi
 
-	# tar inside the dir in order to not create
-	# a root directory in tarball
-	cd $APP
-	tar -czf ../$APP-$REV.tgz .
-	cd ..
+	tar -czf $APP-$REV.tgz $APP
 fi
 
 ##########
@@ -185,28 +198,28 @@ fi
 echo "Transferring build to $USERatREMOTE"
 scp $APP-$REV.tgz $USERatREMOTE:~
 ssh -t $USERatREMOTE "
-	rm -Rf $REMOTEDIR/$APP-new
-	mkdir $REMOTEDIR/$APP-new
-	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
-	rm ~/$APP-$REV.tgz
+	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/available/
+	rm -rf 
+	mv -f $REMOTEDIR/available/$APP $REMOTEDIR/available/$APP-$REV
+	# rm ~/$APP-$REV.tgz
 
-	cp -r $REMOTEDIR/$APP/node_modules $REMOTEDIR/$APP-new/
-	cp $REMOTEDIR/$APP/serverconfig.json $REMOTEDIR/$APP-new/
-	cp -Rn $REMOTEDIR/$APP/public/ $REMOTEDIR/$APP-new/
-	cp -Rn $REMOTEDIR/$APP/dataset/ $REMOTEDIR/$APP-new/
+	cp -r $REMOTEDIR/active/node_modules $REMOTEDIR/available/$APP-$REV
+	cp $REMOTEDIR/active/serverconfig.json $REMOTEDIR/available/$APP-$REV/
+	cp -Rn $REMOTEDIR/active/public/ $REMOTEDIR/available/$APP-$REV/
+	cp -Rn $REMOTEDIR/active/dataset/ $REMOTEDIR/available/$APP-$REV/
+	cp $REMOTEDIR/active/public/rev.txt $REMOTEDIR/available/$APP-$REV/public/prev.txt
 
-	rm -Rf $REMOTEDIR/$APP-prev
-	mv $REMOTEDIR/$APP $REMOTEDIR/$APP-prev
-	mv $REMOTEDIR/$APP-new $REMOTEDIR/$APP
-	chmod -R 755 $REMOTEDIR/$APP
+	chmod -R 755 $REMOTEDIR/$APP-$REV
+	
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public $REMOTEDIR/available/$APP-$REV/public/sjcharts
+	ln -sfn $REMOTEDIR/available/$APP-$REV/public/bin $REMOTEDIR/available/$APP-$REV/public/no-babel-polyfill
 
-	ln -s /opt/app/pecan/portal/www/sjcharts/public $REMOTEDIR/$APP/public/sjcharts
-	ln -s $REMOTEDIR/$APP/public/bin $REMOTEDIR/$APP/public/no-babel-polyfill
-
-	cd $REMOTEDIR/$APP/
-	../proteinpaint_run_node.sh
-
-	echo \"$ENV $REV $(date)\" > $REMOTEDIR/$APP/public/rev.txt
+	cd $REMOTEDIR
+	ln -sfn available/$APP-$REV active
+	./proteinpaint_run_node.sh
+	cd available
+	../purge.sh \"pp-*\"
+	cd ..
 "
 
 #############
@@ -214,4 +227,4 @@ ssh -t $USERatREMOTE "
 #############
 
 cd ..
-rm -rf tmpbuild
+# rm -rf tmpbuild
