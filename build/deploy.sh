@@ -107,21 +107,21 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 
-elif [[ "$ENV" == "pp-ict" ]]; then
+elif [[ "$ENV" == "pp-ict" || "$ENV" == "pp-int-test" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-ict.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
-	HOSTNAME=proteinpaint.stjude.org
-	SUBDOMAIN=proteinpaint
+	HOSTNAME=pp-int-test.stjude.org
+	SUBDOMAIN=pp-int-test
 
 elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=ppc.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
-	HOSTNAME=proteinpaint.stjude.org
-	SUBDOMAIN=proteinpaint
+	HOSTNAME=ppc.stjude.org
+	SUBDOMAIN=ppc
 
 else
 	echo "Environment='$ENV' is not supported"
@@ -218,7 +218,7 @@ ssh -t $USERatREMOTE "
 	mv -f available/$APP available/$APP-$REV
 	cp -r active/node_modules available/$APP-$REV
 	cp active/serverconfig.json available/$APP-$REV/
-	cp active/public/ available/$APP-$REV/
+	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
 	cp active/public/rev.txt available/$APP-$REV/public/prev.txt
 	cp available/$APP-$REV/public/rev.txt active/public/next.txt

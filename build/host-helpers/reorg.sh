@@ -13,6 +13,8 @@ if [[ ! -d available ]]; then
 	mkdir available
 fi
 
+touch history.txt
+
 if [[ -d es6_proteinpaint-prev ]]; then
 	REV=$(cat es6_proteinpaint-prev/public/rev.txt | cut -d' ' -f 2)
 	if [[ ! -d "available/pp-$REV" ]]; then
@@ -38,6 +40,3 @@ if [[ -d es6_proteinpaint ]]; then
 		echo $(cat active/public/rev.txt) >> history.txt
 	fi
 fi
-
-mv proteinpaint_run_node.sh proteinpaint_run_node.sh.bk
-sed "s%/es6_proteinpaint%/active%" < proteinpaint_run_node.sh.bk > proteinpaint_run_node.sh
