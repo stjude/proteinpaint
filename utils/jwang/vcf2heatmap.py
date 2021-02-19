@@ -10,6 +10,8 @@ __copyrith__ = "Copyright 2021.02.19, St.Jude"
 import argparse
 import sys,re,os
 import subprocess as sp
+import gzip
+import urllib.request
 
 parser = argparse.ArgumentParser(description='build heatmap snvindel file from VEP annotated vcf files')
 parser.add_argument('-v','--vcfList',help='vcf file list')
@@ -25,6 +27,15 @@ Filter = args.filter
 if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
+
+#Download http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz for transcript filtering
+url = 'http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz'
+urllib.request.urlretrieve(url,'knownCanonical.txt.gz')
+transFile = gzip.open('knownCanonical.txt.gz')
+#cononTrans (known canonical transcripts)
+canonTrans = [x.decode('utf-8').split('\t')[4].strip().split('.')[0] for x in transFile]
+transFile.close()
+os.remove('knownCanonical.txt.gz')
 
 FILES = [x.strip() for x in open(args.vcfList)]
 OUT_FILE = open(args.OUTPUT,'w')
@@ -97,6 +108,9 @@ def VEPCON2ANNOC(conseqen):
 def GETCLASS(chrom,pos,ref,alt,sample,isoAnno,refFieIdx):
         ANNOLIST = []
         for iso in isoAnno:
+                #include canonical transcripts only
+                if iso not in canonTrans:
+                        continue
                 # ['C', 'intron_variant', 'MODIFIER', '', 'ENSESTG00000013524', 'Transcript', 'ENSESTT00000033865', 'protein_coding', '', '2/2', 'ENSESTT00000033865.1:c.-39-78G>C', '', '', '', '', '', '', '', '', '1', '', '', '', '']
                 vepAnnoL = isoAnno[iso][0].strip().split('|')
                 conseTem = vepAnnoL[refFieIdx['Consequence']]
@@ -171,7 +185,8 @@ for f in FILES:
                 VEPANNOL = VEPANNO.strip().split(',')
                 VAR_iso_ANNO = VARISOANNO_EXT(VEPANNOL)
                 outList = GETCLASS(CHROM,POS,REF,ALT,sample,VAR_iso_ANNO,ReqFieldIdx)
-
+                if not outList:
+                        continue
                 #class filtering
                 if Filter:
                         outList = [e for e in outList if not e[5] in ['noncoding','intron']]
