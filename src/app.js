@@ -319,7 +319,7 @@ function makeheader(app, obj, jwt) {
 				.style('display', app_btn_active ? 'inline-block' : 'none')
 				.style('background-color', '#f2f2f2')
 				.style('border-radius','5px')
-				.style('width','85vw')
+				.style('width','95vw')
 
 		async function load_app_div(){
 			if(apps_rendered) return

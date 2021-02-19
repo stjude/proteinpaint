@@ -803,8 +803,8 @@ hr {
 
 .gpaint-img {
     grid-area: image;
-    width: 90px;
-    height: 90px;
+    width: 75px;
+    height: 75px;
     align-self: center;
     justify-self: center;
 }
@@ -848,7 +848,7 @@ hr {
 .track {
     background-color: white;
     border-radius: 5px;
-    padding: 10px;
+    padding: 10px 5px 10px 5px;
     display: grid;
     grid-template-columns: 1fr 5fr;
     grid-template-areas: 'image header' 'image buttons';
@@ -889,8 +889,8 @@ hr {
 
 .track-image {
     grid-area: image;
-    width: 90px;
-    height: 90px;
+    width: 75px;
+    height: 75px;
     align-self: center;
     justify-self: center;
 }
@@ -922,16 +922,17 @@ hr {
     grid-area: buttons;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    margin: 10px 10px 10px 20px;
+    margin: 0px 0px 0px 20px;
     text-align: center;
+    font-size: 12px;
     color: black;
     background-color: #e6f0f5;
     align-content: center;
     justify-content: center;
     border-radius: 8px;
     border-style: none;
-    width: 45px;
-    height: 35px;
+    width: 40px;
+    height: 30px;
 }
 
 .url-tooltip-outer {
