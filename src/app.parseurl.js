@@ -674,6 +674,8 @@ export async function get_tklst(urlp, genomeobj) {
 			.forEach(t => {
 				t.singlesample = { name: urlp.get('sample') }
 				t.getsampletrackquickfix = true
+				// XXX this doesn't work to load assay tracks for a custom mds, can only load for official mds
+				// for both custom and official, the expression rank track is not loaded.
 			})
 	}
 	return tklst
