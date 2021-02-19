@@ -656,5 +656,15 @@ export async function get_tklst(urlp, genomeobj) {
 	for (const t of tklst) {
 		t.iscustom = true
 	}
+
+	// quick fix: if isdense is defined in url parameter, turn all mds tracks to dense
+	if (urlp.has('isdense')) {
+		tklst
+			.filter(t => t.type == client.tkt.mdssvcnv)
+			.forEach(t => {
+				t.isdense = true
+				t.isfull = false
+			})
+	}
 	return tklst
 }
