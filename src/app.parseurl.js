@@ -673,6 +673,7 @@ export async function get_tklst(urlp, genomeobj) {
 			.filter(t => t.type == client.tkt.mdssvcnv)
 			.forEach(t => {
 				t.singlesample = { name: urlp.get('sample') }
+				t.getsampletrackquickfix = true
 			})
 	}
 	return tklst
