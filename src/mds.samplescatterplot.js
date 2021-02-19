@@ -1496,7 +1496,6 @@ function make_sample_matrix(args) {
 	const { obj, genes, samples, holder } = args
 	// convert genes to features
 	for (const g of genes) {
-		delete g.count
 		g.ismutation = true
 		g.genename = g.gene
 		g.label = g.gene

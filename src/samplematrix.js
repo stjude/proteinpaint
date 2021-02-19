@@ -1134,7 +1134,7 @@ sort samples by f.issampleattribute
 					.attr('font-size', Math.min(16, feature.width - 2)) // font size should not get crazy big
 					.attr('dominant-baseline', 'central')
 					.attr('transform', 'rotate(-90)')
-					.text(feature.label)
+					.text(feature.label + (feature.count ? ' (' + feature.count + ')' : ''))
 					.each(function() {
 						featurenamemaxwidth = Math.max(featurenamemaxwidth, this.getBBox().width)
 					})
