@@ -135,8 +135,8 @@ fi
 
 if [[ $(ssh $USERatREMOTE "cd /opt/app/pp; ./helpers/recent.sh" | grep -l $REV) != "" ]]; then
 	echo -e "\n"
-	echo -e "Version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
-	echo -e "You can reactivate that build using './helpers/revert.sh $REV' from $REMOTEHOST:$REMOTEDIR."
+	echo -e "Build version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
+	echo -e "You can reactivate it using './helpers/revert.sh $REV' from $REMOTEHOST:$REMOTEDIR."
 	echo -e "\n"
 	exit 1
 fi
@@ -230,7 +230,7 @@ ssh -t $USERatREMOTE "
 	ln -sfn available/$APP-$REV active
 	./proteinpaint_run_node.sh
 	cd available
-	../purge.sh \"pp-*\"
+	../helpers/purge.sh \"pp-*\"
 "
 
 #############

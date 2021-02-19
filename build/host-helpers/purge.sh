@@ -9,25 +9,24 @@ set -e
 
 if (($# == 1)); then
 	PATTERN=$1
-	MAXRETAINED=5
+	MAXRETAINED=7
 elif (($# == 2)); then
 	PATTERN=$1
 	MAXRETAINED=$2
 else
-	echo "Usage: [path]/purge.sh PATTERN [MAXRETAINED]"
-	echo "PATTERN glob pattern to match directory names that can be deleted"
+	echo "Usage: ./helpers/purge.sh PATTERN [MAXRETAINED]"
+	echo "PATTERN quoted glob pattern to match directory names that can be deleted"
 	echo "MAXRETAINED (optional) maximum number of directories to retain"
 	exit 1
 fi
 
-NUMMATCHEDDIRS=$(find . -maxdepth 1 -type d -name "$PATTERN" | wc -l)
+NUMMATCHEDDIRS=$(./helpers/recent.sh | wc -l)
 
 if (($NUMMATCHEDDIRS < $MAXRETAINED + 1)); then
 	echo "No directories purged: counted $NUMMATCHEDDIRS matching directories, $MAXRETAINED allowed"
 	exit 1
 fi
 
-IFS= read -r -d $'\0' line < <(find . -maxdepth 1 -type d -name "$PATTERN" -printf '%T@ %p\0' 2>/dev/null | sort -z -n)
-oldestdir="${line#* }"
+oldestdir="pp-$(./helpers/recent.sh | tail -n1)"
 echo "deleting $oldestdir"
 rm -rf $oldestdir

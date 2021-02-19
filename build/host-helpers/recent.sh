@@ -16,6 +16,10 @@ recent=$(cat $dir/public/rev.txt | cut -d' ' -f 2)
 while [[ -f $dir/public/prev.txt ]];
 do
 	REV=$(cat $dir/public/prev.txt | cut -d' ' -f 2)
+	if [[ $recent == *"$REV"* ]]; then
+		echo "Circular version sequence detected for '$REV'"
+	  exit 1
+	fi
 	recent="$recent\n$REV"
 	dir=available/pp-$REV
 done
