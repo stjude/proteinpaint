@@ -4,6 +4,7 @@ use std::env;
 use std::fs;
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::time::{SystemTime};
 //use std::path::Path;
 
 pub struct read_diff_scores {
@@ -33,6 +34,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 }
 
 fn main() {
+    let start_time = SystemTime::now();
     let args: Vec<String> = env::args().collect(); // Collecting arguments from commandline
     let filename = &args[1];
     let path: String = "../".to_string();
@@ -82,6 +84,9 @@ fn main() {
     		*weight_indel,
     		*weight_no_indel
     );
+    let build_kmers_time = SystemTime::now();
+    let build_kmers_net_time = build_kmers_time.duration_since(start_time);
+    println!("Time for building kmers {}ms", build_kmers_net_time.unwrap_or_default().as_millis());
 
     let mut kmer_diff_scores = Vec::<f64>::new();
     let mut alt_comparisons = Vec::<f64>::new();    
@@ -113,6 +118,10 @@ fn main() {
         i+=1;
     }	
 
+    let comparisons_time = SystemTime::now();
+    let comparisons_net_time = comparisons_time.duration_since(build_kmers_time);
+    println!("Time for comparing reads {}ms", comparisons_net_time.unwrap_or_default().as_millis());
+    
     println!("ref_scores length:{}",ref_scores.len());
     println!("alt_scores length:{}",alt_scores.len());
 
@@ -152,6 +161,9 @@ fn main() {
     }
     kmer_diff_scores.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
     //println!("{}", output_cat[0]);
+    let final_time = SystemTime::now();
+    let final_net_time = final_time.duration_since(comparisons_time);
+    println!("Time for classifying reads {}ms", final_net_time.unwrap_or_default().as_millis());
 
 }    
 
