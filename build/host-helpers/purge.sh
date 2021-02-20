@@ -7,14 +7,14 @@ set -e
 # in an SJ host: `scp purge.sh host:/opt/app/pp/`
 #######################################
 
+MAXRETAINED=7
 if (($# == 1)); then
 	PATTERN=$1
-	MAXRETAINED=7
 elif (($# == 2)); then
 	PATTERN=$1
 	MAXRETAINED=$2
 else
-	echo "Usage: ./helpers/purge.sh PATTERN [MAXRETAINED]"
+	echo "Usage: ./helpers/purge.sh PATTERN [MAXRETAINED=$MAXRETAINED]"
 	echo "PATTERN quoted glob pattern to match directory names that can be deleted"
 	echo "MAXRETAINED (optional) maximum number of directories to retain"
 	exit 1
