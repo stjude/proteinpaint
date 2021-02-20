@@ -6,7 +6,7 @@ REV=$(cat active/public/rev.txt | cut -d' ' -f 2)
 if [[ "$EVENT" == "deployed" ]]; then
   # if a revision has been recorded as being deployed previously,
   # it is considered a re-activation and not another deployment
-	if [[ $(cat deployments.txt | grep -l "$REV") != "" ]]; then
+	if [[ "$(grep -l "$REV" deployments.txt)" == "" ]]; then
 		echo "$(cat active/public/rev.txt)" >> deployments.txt
 	fi
 fi

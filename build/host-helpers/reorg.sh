@@ -17,12 +17,6 @@ if [[ ! -d erased ]]; then
 	mkdir erased
 fi
 
-if [[ ! -f history.txt ]]; then
-	# touch history.txt
-fi
-# cp history.txt deployments.txt
-# touch events.txt
-
 if [[ -d es6_proteinpaint-prev ]]; then
 	rev=$(cat es6_proteinpaint-prev/public/rev.txt | cut -d' ' -f 2)
 	if [[ ! -d "available/pp-$rev" ]]; then
@@ -41,4 +35,4 @@ fi
 
 rm -rf available/pp-*/public/prev.txt
 rm -rf available/pp-*/public/next.txt
-cp -f helpers/proteinpaint_run_node.sh .
+# cp -f helpers/proteinpaint_run_node.sh .
