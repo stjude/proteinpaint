@@ -6,7 +6,7 @@
 ####################################
 
 recent=""
-FILE=history.txt
+FILE=deployments.txt
 
 while IFS="" read -r p || [ -n "$p" ]
 do

@@ -44,7 +44,7 @@ elif [[ "$dir" == "" ]]; then
 		echo "There is no available N$S deployment from the active version."
 		exit 1
 	fi
-	rev="$(echo -e "$RECENT" | tail -n$T history.txt | head -n1 | cut -d' ' -f 2)"
+	rev="$(echo -e "$RECENT" | tail -n$T deployments.txt | head -n1 | cut -d' ' -f 2)"
 	dir="available/pp-$rev"
 fi
 

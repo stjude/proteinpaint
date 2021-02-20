@@ -26,4 +26,4 @@ mkdir $logdir
 
 cd ..
 echo "RESTARTED"
-
+./record.sh restart 

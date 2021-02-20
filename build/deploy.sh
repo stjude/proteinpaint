@@ -221,12 +221,12 @@ ssh -t $USERatREMOTE "
 	cp active/serverconfig.json available/$APP-$REV/
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
-	echo $REV >> history.txt
 	chmod -R 755 available/$APP-$REV
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	ln -sfn available/$APP-$REV/public/bin available/$APP-$REV/public/no-babel-polyfill
 
 	ln -sfn available/$APP-$REV active
+	./record.sh deployed
 	./proteinpaint_run_node.sh
 	cd available
 	../helpers/purge.sh \"pp-*\"
