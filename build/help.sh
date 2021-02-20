@@ -17,4 +17,4 @@ TASK=$2
 
 rsync -a --delete ./build/host-helpers/ $REMOTE:/opt/app/pp/helpers
 
-ssh "$REMOTE" "cd /opt/app/pp; bash -s " -- < ./build/host-helpers/$TASK.sh "${@:3}" 
+ssh "$REMOTE" "cd /opt/app/pp; chmod -R 755 helpers; bash -s " -- < ./build/host-helpers/$TASK.sh "${@:3}" 

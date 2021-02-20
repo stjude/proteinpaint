@@ -19,6 +19,6 @@ elif [[ "$dir" == "available/pp-$ACTIVEREV" ]]; then
 	exit 1
 else
 	echo "activating $dir"
-	ls -sfn $dir active
+	ln -sfn $dir active
 	./proteinpaint_run_node.sh
 fi

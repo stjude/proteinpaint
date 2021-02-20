@@ -226,7 +226,7 @@ ssh -t $USERatREMOTE "
 	ln -sfn available/$APP-$REV/public/bin available/$APP-$REV/public/no-babel-polyfill
 
 	ln -sfn available/$APP-$REV active
-	./record.sh deployed
+	./helpers/record.sh deployed
 	./proteinpaint_run_node.sh
 	cd available
 	../helpers/purge.sh \"pp-*\"

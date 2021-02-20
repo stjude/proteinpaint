@@ -18,10 +18,10 @@ if [[ ! -d erased ]]; then
 fi
 
 if [[ ! -f history.txt ]]; then
-	touch history.txt
+	# touch history.txt
 fi
-cp history.txt deployments.txt
-touch events.txt
+# cp history.txt deployments.txt
+# touch events.txt
 
 if [[ -d es6_proteinpaint-prev ]]; then
 	rev=$(cat es6_proteinpaint-prev/public/rev.txt | cut -d' ' -f 2)
@@ -42,4 +42,3 @@ fi
 rm -rf available/pp-*/public/prev.txt
 rm -rf available/pp-*/public/next.txt
 cp -f helpers/proteinpaint_run_node.sh .
-chmod 755 proteinpaint_run_node.sh

@@ -3,7 +3,7 @@
 EVENT=$1
 REV=$(cat active/public/rev.txt | cut -d' ' -f 2)
 
-if [[ "$EVENT" == "deployed" ]]
+if [[ "$EVENT" == "deployed" ]]; then
   # if a revision has been recorded as being deployed previously,
   # it is considered a re-activation and not another deployment
 	if [[ $(cat deployments.txt | grep -l "$REV") != "" ]]; then
