@@ -11,7 +11,6 @@ import argparse
 import sys,re,os
 import subprocess as sp
 import gzip
-import urllib.request
 
 parser = argparse.ArgumentParser(description='build heatmap snvindel file from VEP annotated vcf files')
 parser.add_argument('-v','--vcfList',help='vcf file list')
@@ -27,15 +26,6 @@ Filter = args.filter
 if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
-
-#Download http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz for transcript filtering
-url = 'http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz'
-urllib.request.urlretrieve(url,'knownCanonical.txt.gz')
-transFile = gzip.open('knownCanonical.txt.gz')
-#cononTrans (known canonical transcripts)
-canonTrans = [x.decode('utf-8').split('\t')[4].strip().split('.')[0] for x in transFile]
-transFile.close()
-os.remove('knownCanonical.txt.gz')
 
 FILES = [x.strip() for x in open(args.vcfList)]
 OUT_FILE = open(args.OUTPUT,'w')
@@ -161,8 +151,25 @@ def VEPANNOPRIO(annoList):
 
 
 
-
-
+#check if knownCanonical.txt and knownToRefSeq.txt exists
+#Canonical ensembl and refseq ID for transcript ID filtering
+if os.path.isfile('knownCanonical.txt') and os.path.isfile('knownToRefSeq.txt'):
+	#cononTrans (known canonical transcripts)
+	canonTrans = [x.split('\t')[4].strip().split('.')[0] for x in open('knownCanonical.txt')]
+	#refseq
+	ensembl2refseq = {}
+	knownToRefSeqFile = open('knownToRefSeq.txt')
+	for line in knownToRefSeqFile:
+		L = line.strip().split('\t')
+		ensembl2refseq[L[0].split('.')[0]] = L[1]
+	knownToRefSeqFile.close()
+	canonTrans.extend([ensembl2refseq[e] for e in canonTrans if e in ensembl2refseq])
+	
+else:
+	print('Please Download and Extract the following files:')
+	print('http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz')
+	print('http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownToRefSeq.txt.gz')
+	sys.exit(1)
 
 ### screen all vcf file
 for f in FILES:
