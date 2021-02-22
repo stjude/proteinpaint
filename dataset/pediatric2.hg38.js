@@ -1,15 +1,3 @@
-const valuePerSample = {
-	key: 'percentage',
-	label: 'Percentage',
-	cutoffValueLst: [
-		{ side: '>', value: 5, label: '>5%' },
-		{ side: '>', value: 10, label: '>10%' },
-		{ side: '>', value: 20, label: '>20%' },
-		{ side: '>', value: 30, label: '>30%' },
-		{ side: '>', value: 40, label: '>40%' }
-	]
-}
-
 const samplenamekey = 'sample_name'
 
 module.exports = function(common) {
@@ -17,8 +5,17 @@ module.exports = function(common) {
 		genome: 'hg38',
 		isMds: true,
 		version: {
-			label: 'Release v1',
-			link: 'https://genomepaint.stjude.cloud/release/v1/'
+			label: 'Release v2',
+			link: 'https://genomepaint.stjude.cloud/release/v2/'
+		},
+
+		gene2mutcount: {
+			// to get list of most recurrently mutated genes from a set of samples
+			dbfile: 'hg38/Pediatric/genecount.db'
+		},
+
+		singlesamplemutationjson: {
+			file: 'hg38/Pediatric/mutationpersample/table'
 		},
 
 		about: [
@@ -238,6 +235,8 @@ module.exports = function(common) {
 				istrack: true,
 				type: common.tkt.mdssvcnv,
 				file: 'hg38/Pediatric/pediatric.svcnv.hg38.gz',
+
+				hideLOHwithCNVoverlap: true,
 
 				// cnv
 				valueCutoff: 0.2,

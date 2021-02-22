@@ -1,1 +1,0 @@
-../build/deploy.sh

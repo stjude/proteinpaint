@@ -2476,9 +2476,37 @@ async function handle_mdsgenecount(req, res) {
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT 20`
-		const out = ds.gene2mutcount.db.prepare(query).all()
-		res.send({ out })
+	LIMIT 10`
+		const genes = ds.gene2mutcount.db.prepare(query).all()
+		for (const gene of genes) {
+			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
+			const defaultisoform = isoforms.find(i => i.isdefault)
+			if (defaultisoform) {
+				const j = JSON.parse(defaultisoform.genemodel)
+				gene.chr = j.chr
+				gene.start = j.start
+				gene.stop = j.stop
+				continue
+			}
+			// no default isoform
+			// just try to use coordinate of the first isoform that's on major chr
+			const lst = isoforms.map(i => JSON.parse(i.genemodel))
+			const isoform = lst.find(i => {
+				const c = genome.chrlookup[i.chr.toUpperCase()]
+				if (c && c.major) return i
+			})
+			if (isoform) {
+				gene.chr = isoform.chr
+				gene.start = isoform.start
+				gene.stop = isoform.stop
+				continue
+			}
+			// no isoform on major chr, just use first isoform
+			gene.chr = lst[0].chr
+			gene.start = lst[0].start
+			gene.stop = lst[0].stop
+		}
+		res.send({ genes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -3139,7 +3167,10 @@ async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset) {
 	// multi sample
 
-	mdssvcnv_do_copyneutralloh(sample2item)
+	if (dsquery.hideLOHwithCNVoverlap) {
+		// XXX this should be a query parameter instead, so this behavior is controllable on frontend
+		mdssvcnv_do_copyneutralloh(sample2item)
+	}
 
 	// group sample by available attributes
 	const samplegroups = []
@@ -3477,10 +3508,14 @@ async function handle_mdssvcnv_vcf(
 		}
 	}
 
+	// query cohort vcf files for both cohort and sample view
+	// TODO separate range limits, above 1mb, do not show noncoding ones; above 3mb, do not show coding ones
+	// also show alert message on client
+
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 1000000
+		viewrangeupperlimit = 2000000
 	}
 
 	if (req.query.singlesample) {
@@ -3736,7 +3771,7 @@ async function handle_mdssvcnv_vcf(
 	}
 
 	return Promise.all(tracktasks).then(vcffiles => {
-		// snv/indel/itd data aggregated from multiple tracks
+		// snv/indel data aggregated from multiple tracks
 		const mmerge = []
 
 		for (const eachvcf of vcffiles) {
@@ -4343,6 +4378,8 @@ function mdssvcnv_do_copyneutralloh(sample2item) {
 	/*
 decide what's copy neutral loh
 only keep loh with no overlap with cnv
+
+quick fix: only do this filter when hideLOHwithCNVoverlap is true on the server-side mdssvcnv query object
 */
 	for (const [sample, lst] of sample2item) {
 		// put cnv and loh into respective maps, keyed by chr
@@ -5394,6 +5431,8 @@ function handle_mdsexpressionrank(req, res) {
 	Promise.resolve()
 		.then(() => {
 			if (!req.query.rglst) throw 'rglst missing'
+			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
+				throw 'Zoom in below 10 Mb to show expression rank'
 			if (!req.query.sample) throw 'sample missing'
 
 			if (req.query.iscustom) {
@@ -8872,7 +8911,10 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 						if (!sample2item.has(i.sample)) sample2item.set(i.sample, [])
 						sample2item.get(i.sample).push(i)
 					}
-					mdssvcnv_do_copyneutralloh(sample2item)
+
+					if (dsquery.hideLOHwithCNVoverlap) {
+						mdssvcnv_do_copyneutralloh(sample2item)
+					}
 
 					const newlst = []
 					for (const [n, lst] of sample2item) {
