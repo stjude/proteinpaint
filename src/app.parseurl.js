@@ -657,13 +657,25 @@ export async function get_tklst(urlp, genomeobj) {
 		t.iscustom = true
 	}
 
-	// quick fix: if isdense is defined in url parameter, turn all mds tracks to dense
+	// quick fix to modify behaviors of mds tracks collected through parameters
+	// if isdense=1, turn to dense
+	// if sample=..., change to a single sample track
 	if (urlp.has('isdense')) {
 		tklst
 			.filter(t => t.type == client.tkt.mdssvcnv)
 			.forEach(t => {
 				t.isdense = true
 				t.isfull = false
+			})
+	}
+	if (urlp.has('sample')) {
+		tklst
+			.filter(t => t.type == client.tkt.mdssvcnv)
+			.forEach(t => {
+				t.singlesample = { name: urlp.get('sample') }
+				t.getsampletrackquickfix = true
+				// XXX this doesn't work to load assay tracks for a custom mds, can only load for official mds
+				// for both custom and official, the expression rank track is not loaded.
 			})
 	}
 	return tklst

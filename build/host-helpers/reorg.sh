@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-##########################
+##################################
 # Reorganize the PP host
-# app directory structure  
-##########################
+# /opt/app/pp directory structure  
+##################################
 
 set -e
 ln -sfn /opt/data/pp/pp-log log
@@ -13,30 +13,26 @@ if [[ ! -d available ]]; then
 	mkdir available
 fi
 
-touch history.txt
+if [[ ! -d erased ]]; then
+	mkdir erased
+fi
 
 if [[ -d es6_proteinpaint-prev ]]; then
-	REV=$(cat es6_proteinpaint-prev/public/rev.txt | cut -d' ' -f 2)
-	if [[ ! -d "available/pp-$REV" ]]; then
-		mv es6_proteinpaint-prev available/pp-$REV
-		ln -s available/pp-$REV previous
-	fi
-	if [[ $(grep -l "$REV" history.txt) != "" ]]; then
-		echo $(cat previous/public/rev.txt) >> history.txt
+	rev=$(cat es6_proteinpaint-prev/public/rev.txt | cut -d' ' -f 2)
+	if [[ ! -d "available/pp-$rev" ]]; then
+		mv es6_proteinpaint-prev available/pp-$rev
+		ln -s available/pp-$rev previous
 	fi
 fi
 
 if [[ -d es6_proteinpaint ]]; then
-	REV=$(cat es6_proteinpaint/public/rev.txt | cut -d' ' -f 2)
-	if [[ ! -d "available/pp-$REV" ]]; then
-		mv es6_proteinpaint available/pp-$REV
-		ln -sfn available/pp-$REV active
-		if [[ -d previous ]]; then
-			cp previous/public/rev.txt active/public/prev.txt
-			cp active/public/rev.txt previous/public/next.txt
-		fi
-	fi
-	if [[ $(grep -l "$REV" history.txt) != "" ]]; then
-		echo $(cat active/public/rev.txt) >> history.txt
+	rev=$(cat es6_proteinpaint/public/rev.txt | cut -d' ' -f 2)
+	if [[ ! -d "available/pp-$rev" ]]; then
+		mv es6_proteinpaint available/pp-$rev
+		ln -sfn available/pp-$rev active
 	fi
 fi
+
+rm -rf available/pp-*/public/prev.txt
+rm -rf available/pp-*/public/next.txt
+# cp -f helpers/proteinpaint_run_node.sh .

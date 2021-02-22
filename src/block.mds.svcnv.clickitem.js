@@ -2722,6 +2722,8 @@ function mayaddtab_disco(tabs, p) {
 				}
 
 				const renderer = await sjcharts.dtDisco({
+					chromosomeType: p.block.genome.name,
+					majorchr: p.block.genome.majorchr,
 					holderSelector: div,
 					settings: {
 						showControls: false,
