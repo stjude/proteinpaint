@@ -156,7 +156,7 @@ for (const file of glob.sync(path.join(in_dir, '*'))) {
 				`${g.sv}\t${g.fusion}\t${g.itd}\t` +
 				`${g.cnv_1mb_01}\t${g.cnv_1mb_02}\t${g.cnv_1mb_03}\t` +
 				`${g.cnv_2mb_01}\t${g.cnv_2mb_02}\t${g.cnv_2mb_03}\t` +
-				`${g.cnv_4mb_01}\t${g.cnv_4mb_02}\t${g.cnv_4mb_03}\t`
+				`${g.cnv_4mb_01}\t${g.cnv_4mb_02}\t${g.cnv_4mb_03}`
 		)
 	}
 }
