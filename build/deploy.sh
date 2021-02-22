@@ -223,7 +223,7 @@ ssh -t $USERatREMOTE "
 	cp -Rn active/dataset/ available/$APP-$REV/
 	chmod -R 755 available/$APP-$REV
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
-	ln -sfn available/$APP-$REV/public/bin available/$APP-$REV/public/no-babel-polyfill
+	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
 
 	ln -sfn available/$APP-$REV active
 	./helpers/record.sh deployed
