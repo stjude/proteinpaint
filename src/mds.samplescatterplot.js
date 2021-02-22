@@ -1277,6 +1277,8 @@ async function click_dot_disco(dot, obj) {
 		const discoHolder = pane.body.append('div')
 		const renderer = await sjcharts.dtDisco({
 			holderSelector: discoHolder,
+			chromosomeType: obj.disco.genome.name,
+			majorchr: obj.disco.genome.majorchr,
 			settings: {
 				showControls: false,
 				selectedSamples: []

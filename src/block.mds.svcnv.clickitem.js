@@ -2728,6 +2728,14 @@ function mayaddtab_disco(tabs, p) {
 					settings: {
 						showControls: false,
 						selectedSamples: []
+					},
+					callbacks: {
+						geneLabelClick: {
+							type: 'genomepaint',
+							genome: p.block.genome.name,
+							dslabel: p.tk.mds.label,
+							sample: p.sample.samplename
+						}
 					}
 				})
 				renderer.main(disco_arg)
