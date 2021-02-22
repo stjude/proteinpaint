@@ -58,18 +58,27 @@ Promise.all(promises).then(() => {
 function get_effalefreq(l, EAidx) {
 	let eacount = 0,
 		total = 0,
-		missing = 0
+		missing = 0,
+		href = 0, // for hwe
+		het = 0,
+		halt = 0
 	for (let i = 4; i < l.length; i++) {
-		if (l[i] == missinggt) {
+		const gt = l[i]
+		if (gt == missinggt) {
 			missing++
 			continue
 		}
-		const [a, b] = l[i].split('/')
+
+		if (gt == '0/0') href++
+		else if (gt == '1/1') halt++
+		else het++
+
+		const [a, b] = gt.split('/')
 		if (a == EAidx) eacount++
 		if (b == EAidx) eacount++
 		total += 2
 	}
-	return [missing / (l.length - 1), eacount / total]
+	return [missing / (l.length - 1), eacount / total, href, het, halt]
 }
 function get_effectaleidx(effale, ref, alt) {
 	// assuming alt is only one allele, and is not comma-joined multiple alternative alleles
@@ -127,6 +136,27 @@ function parse_snpfile() {
 	}
 	return [chr2tmpsnpfile, pos2snp]
 }
+
+function get_hwe(href, het, halt) {
+	const infile = Math.random().toString()
+	const outfile = Math.random().toString()
+	fs.writeFileSync(infile, href + '\t' + het + '\t' + halt)
+	return new Promise((resolve, reject) => {
+		const sp = spawn('Rscript', ['hwe.R', infile, outfile])
+		sp.on('close', c => {
+			const text = fs.readFileSync(outfile, { encoding: 'utf8' })
+			fs.unlink(infile, () => {})
+			fs.unlink(outfile, () => {})
+			resolve(
+				text
+					.trim()
+					.split('\n')
+					.map(Number)
+			)
+		})
+	})
+}
+
 function run_bcftools(chr, tmpsnpfile) {
 	return new Promise((resolve, reject) => {
 		const sp = spawn('bcftools', [
@@ -140,7 +170,7 @@ function run_bcftools(chr, tmpsnpfile) {
 			path.join(vcfdir, 'chr' + chr, chr + '.vcf.gz')
 		])
 		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', line => {
+		rl.on('line', async line => {
 			const l = line.trim().split(' ')
 			if (l.length != samples.length + 4) throw 'field length mismatch: ' + l.length + ' ' + samples.length
 			// chr, pos, ref, alt, GT...
@@ -159,9 +189,7 @@ function run_bcftools(chr, tmpsnpfile) {
 
 			// now EAidx is string '0', '1' etc
 
-			// TODO HWE test p-value filter
-
-			const [missingcallrate, effectallelefrequency] = get_effalefreq(l, EAidx)
+			const [missingcallrate, effectallelefrequency, href, het, halt] = get_effalefreq(l, EAidx)
 			if (missingcallrate >= 0.1) {
 				console.error('skip missing callrate', l[0] + ':' + l[1])
 				return
@@ -170,6 +198,13 @@ function run_bcftools(chr, tmpsnpfile) {
 				console.error('skip low freq', l[0] + ':' + l[1])
 				return
 			}
+
+			const hwepv = (await get_hwe(href, het, halt))[0]
+			if (hwepv <= 1e-6) {
+				console.error('hwe', l[0] + ':' + l[1])
+				return
+			}
+
 			// for each sample
 			for (let i = 4; i < l.length; i++) {
 				const sample = samples[i - 4]
