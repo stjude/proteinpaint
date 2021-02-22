@@ -17,16 +17,11 @@ module.exports = {
 	isMds: true,
 	version: {
 		label: 'Release v1',
-		link: 'https://genomepaint.stjude.cloud/release/v1/'
+		link: 'https://genomepaint.stjude.cloud/release/v2/'
 	},
 
 	sampleAssayTrack: {
 		file: 'hg19/Pediatric/tracktable/__table'
-	},
-
-	gene2mutcount: {
-		// to get list of most recurrently mutated genes from a set of samples
-		dbfile: 'hg19/Pediatric/genecount.db'
 	},
 
 	singlesamplemutationjson: {
@@ -498,22 +493,22 @@ module.exports = {
 							exonskip: {
 								label: 'Exon skipping',
 								color: '#D14747',
-								valuePerSample: valuePerSample
+								valuePerSample
 							},
 							exonaltuse: {
 								label: 'Exon alternative usage',
 								color: '#E69525',
-								valuePerSample: valuePerSample
+								valuePerSample
 							},
 							a5ss: {
 								label: "Alternative 5' splice site",
 								color: '#476CD1',
-								valuePerSample: valuePerSample
+								valuePerSample
 							},
 							a3ss: {
 								label: "Alternative 3' splice site",
 								color: '#47B582',
-								valuePerSample: valuePerSample
+								valuePerSample
 							},
 							Unannotated: {
 								label: 'Not annotated',
