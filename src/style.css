@@ -787,7 +787,8 @@ hr {
     margin-bottom: 0px;
 }
 
-.gpaint-card {
+
+/* .gpaint-card {
     background-color: white;
     border-radius: 5px;
     padding: 10px;
@@ -799,9 +800,10 @@ hr {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
+} */
 
-.gpaint-img {
+
+/* .gpaint-img {
     grid-area: image;
     width: 75px;
     height: 75px;
@@ -832,9 +834,10 @@ hr {
     margin-left: 10px;
     align-self: left;
     justify-self: left;
-}
+} */
 
-#gpaint-citation {
+
+/* #gpaint-citation {
     grid-area: citation;
     text-align: left;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
@@ -843,7 +846,7 @@ hr {
     font-style: oblique;
     margin: 10px;
     color: #403f3f;
-}
+} */
 
 .track {
     background-color: white;
@@ -860,7 +863,9 @@ hr {
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.gpaint-card::after,
+
+/* .gpaint-card::after, */
+
 .track::after {
     content: "";
     border-radius: 8px;
@@ -876,13 +881,17 @@ hr {
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.gpaint-card:hover,
+
+/* .gpaint-card:hover, */
+
 .track:hover {
     -webkit-transform: scale(1, 1);
     transform: scale(1, 1);
 }
 
-.gpaint-card:hover::after,
+
+/* .gpaint-card:hover::after, */
+
 .track:hover::after {
     opacity: 1;
 }

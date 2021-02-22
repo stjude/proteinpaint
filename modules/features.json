@@ -1,5 +1,19 @@
 {
     "examples": [{
+            "name": "<a href=https://ppr.stjude.org/?mdsjsonform=1 target='_blank'>Create a Custom Track</a>",
+            "shorthand": "GenomePaint",
+            "app": "Genome Browser",
+            "subheading": "GenomePaint",
+            "blurb": "customize a GenomePaint track<br><br><a href=https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank'>Link to paper</a>",
+            "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "",
+                "tutorial": ""
+            },
+            "searchterms": ["GenomePaint"]
+        },
+        {
             "name": "Kaplan-Meier plot",
             "shorthand": "KM plot",
             "app": "Genome Browser",
@@ -19,7 +33,7 @@
             "app": "Genome Browser",
             "subheading": "GenomePaint",
             "blurb": "TODO: Brief description of track or app",
-            "image": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
             "buttons": {
                 "url": "",
                 "doc": "",
@@ -1031,7 +1045,7 @@
             "app": "Apps",
             "subheading": "Tracks",
             "blurb": "TODO: Brief description of track or app",
-            "image": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
             "buttons": {
                 "url": "/F/human.temp.hic.html",
                 "doc": "",
