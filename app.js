@@ -164,7 +164,26 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-app.get(basepath + '/healthcheck', (req, res) => res.send({ status: 'ok' }))
+app.get(basepath + '/healthcheck', async (req, res) => {
+	try {
+		const w = child_process
+			.execSync('w | head -n1')
+			.toString()
+			.trim()
+			.split(' ')
+			.slice(-3)
+			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+		const rs =
+			child_process
+				.execSync('ps aux | grep rsync -w')
+				.toString()
+				.trim()
+				.split('\n').length - 1
+		res.send({ status: 'ok', w, rs })
+	} catch (e) {
+		throw e
+	}
+})
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -198,6 +217,7 @@ app.get(basepath + '/junction', junction_request) // legacy
 app.post(basepath + '/mdsjunction', handle_mdsjunction)
 app.post(basepath + '/mdscnv', handle_mdscnv)
 app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
 app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
 app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
 app.post(basepath + '/mdsgeneboxplot', handle_mdsgeneboxplot)
@@ -556,6 +576,9 @@ function mds_clientcopy(ds) {
 
 	if (ds.singlesamplemutationjson) {
 		ds2.singlesamplemutationjson = 1
+	}
+	if (ds.gene2mutcount) {
+		ds2.gene2mutcount = true
 	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
@@ -2428,6 +2451,66 @@ function handle_mdscnv(req, res) {
 		})
 }
 
+async function handle_mdsgenecount(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
+	log(req)
+	try {
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'invalid genome'
+		if (!genome.datasets) throw 'no datasets from genome'
+		const ds = genome.datasets[req.query.dslabel]
+		if (!ds) throw 'invalid dataset'
+		if (!ds.gene2mutcount) throw 'not supported on this dataset'
+		if (!req.query.samples) throw '.samples missing'
+		const query = `WITH
+	filtered AS (
+		SELECT * FROM genecount
+		WHERE sample IN (${JSON.stringify(req.query.samples)
+			.replace(/[[\]\"]/g, '')
+			.split(',')
+			.map(i => "'" + i + "'")
+			.join(',')})
+	)
+	SELECT gene, SUM(total) AS count
+	FROM filtered
+	GROUP BY gene
+	ORDER BY count DESC
+	LIMIT 10`
+		const genes = ds.gene2mutcount.db.prepare(query).all()
+		for (const gene of genes) {
+			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
+			const defaultisoform = isoforms.find(i => i.isdefault)
+			if (defaultisoform) {
+				const j = JSON.parse(defaultisoform.genemodel)
+				gene.chr = j.chr
+				gene.start = j.start
+				gene.stop = j.stop
+				continue
+			}
+			// no default isoform
+			// just try to use coordinate of the first isoform that's on major chr
+			const lst = isoforms.map(i => JSON.parse(i.genemodel))
+			const isoform = lst.find(i => {
+				const c = genome.chrlookup[i.chr.toUpperCase()]
+				if (c && c.major) return i
+			})
+			if (isoform) {
+				gene.chr = isoform.chr
+				gene.start = isoform.start
+				gene.stop = isoform.stop
+				continue
+			}
+			// no isoform on major chr, just use first isoform
+			gene.chr = lst[0].chr
+			gene.start = lst[0].start
+			gene.stop = lst[0].stop
+		}
+		res.send({ genes })
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
 async function handle_mdssvcnv(req, res) {
 	/*
     cnv & vcf & expression rank done in one query
@@ -3083,7 +3166,10 @@ async function handle_mdssvcnv_rnabam_getsnp(dsquery, chr, start, stop) {
 function handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset) {
 	// multi sample
 
-	mdssvcnv_do_copyneutralloh(sample2item)
+	if (dsquery.hideLOHwithCNVoverlap) {
+		// XXX this should be a query parameter instead, so this behavior is controllable on frontend
+		mdssvcnv_do_copyneutralloh(sample2item)
+	}
 
 	// group sample by available attributes
 	const samplegroups = []
@@ -3421,10 +3507,14 @@ async function handle_mdssvcnv_vcf(
 		}
 	}
 
+	// query cohort vcf files for both cohort and sample view
+	// TODO separate range limits, above 1mb, do not show noncoding ones; above 3mb, do not show coding ones
+	// also show alert message on client
+
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 1000000
+		viewrangeupperlimit = 2000000
 	}
 
 	if (req.query.singlesample) {
@@ -3680,7 +3770,7 @@ async function handle_mdssvcnv_vcf(
 	}
 
 	return Promise.all(tracktasks).then(vcffiles => {
-		// snv/indel/itd data aggregated from multiple tracks
+		// snv/indel data aggregated from multiple tracks
 		const mmerge = []
 
 		for (const eachvcf of vcffiles) {
@@ -4287,6 +4377,8 @@ function mdssvcnv_do_copyneutralloh(sample2item) {
 	/*
 decide what's copy neutral loh
 only keep loh with no overlap with cnv
+
+quick fix: only do this filter when hideLOHwithCNVoverlap is true on the server-side mdssvcnv query object
 */
 	for (const [sample, lst] of sample2item) {
 		// put cnv and loh into respective maps, keyed by chr
@@ -5338,6 +5430,8 @@ function handle_mdsexpressionrank(req, res) {
 	Promise.resolve()
 		.then(() => {
 			if (!req.query.rglst) throw 'rglst missing'
+			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
+				throw 'Zoom in below 10 Mb to show expression rank'
 			if (!req.query.sample) throw 'sample missing'
 
 			if (req.query.iscustom) {
@@ -8816,7 +8910,10 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 						if (!sample2item.has(i.sample)) sample2item.set(i.sample, [])
 						sample2item.get(i.sample).push(i)
 					}
-					mdssvcnv_do_copyneutralloh(sample2item)
+
+					if (dsquery.hideLOHwithCNVoverlap) {
+						mdssvcnv_do_copyneutralloh(sample2item)
+					}
 
 					const newlst = []
 					for (const [n, lst] of sample2item) {
@@ -9694,7 +9791,6 @@ async function pp_init() {
 	*/
 
 		g.datasets = {}
-		const promises = []
 		for (const d of g.rawdslst) {
 			/*
 		for each raw dataset
@@ -9957,6 +10053,16 @@ async function mds_init(ds, genome, _servconfig) {
 			ds.assayAvailability.samples.set(sample, JSON.parse(t))
 		}
 		console.log(ds.assayAvailability.samples.size + ' samples with assay availability (' + ds.label + ')')
+	}
+
+	if (ds.gene2mutcount) {
+		if (!ds.gene2mutcount.dbfile) throw '.gene2mutcount.dbfile missing'
+		try {
+			ds.gene2mutcount.db = utils.connect_db(ds.gene2mutcount.dbfile)
+			console.log('DB connected for ' + ds.label + ': ' + ds.gene2mutcount.dbfile)
+		} catch (e) {
+			throw 'Error connecting db at ds.gene2mutcount.dbfile'
+		}
 	}
 
 	if (ds.sampleAssayTrack) {

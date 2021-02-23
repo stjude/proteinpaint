@@ -3,7 +3,7 @@ const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
 
 /*
-from one or more variants, get list of samples harbording any of the variants
+from one or more variants, get list of samples harboring any of the variants
 
 always require a ds found at genome.datasets{}
 ds type agnostic (legacy/mds/mds2)

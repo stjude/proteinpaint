@@ -79,6 +79,13 @@ click_dot
 launch_singlesample
 
 
+FIXME
+obj.disco{ genome } is a quick fix and should not be used when hg38 pediatric is ready,
+so that disco will not use a different genome as obj
+
+also to rename obj.disco to obj.mds to indicate that the plot is coupled to a mds dataset
+allow showing disco by clicking dot if mutpersample is enabled on that mds daataset
+and allow lasso to samplematrix
 */
 
 const radius = 3
@@ -97,7 +104,7 @@ export async function init(obj, holder, debugmode) {
 		window.obj = obj
 	}
 
-	obj.menu = new client.Menu({ padding: '5px' })
+	obj.menu = new client.Menu({ padding: '2px' })
 	obj.menu2 = new client.Menu({ padding: '10px' })
 	obj.tip = new client.Menu({ padding: '5px' })
 
@@ -1258,7 +1265,7 @@ async function click_dot_disco(dot, obj) {
 	try {
 		const sjcharts = await getsjcharts()
 		const arg = {
-			genome: obj.disco.genome,
+			genome: obj.genome.name,
 			dslabel: obj.disco.dslabel,
 			querykey: obj.disco.querykey,
 			getsample4disco: dot.sample
@@ -1267,11 +1274,22 @@ async function click_dot_disco(dot, obj) {
 		if (data.error) throw data.error
 		if (!data.text) throw '.text missing'
 
+		const discoHolder = pane.body.append('div')
 		const renderer = await sjcharts.dtDisco({
-			holderSelector: pane.body,
+			holderSelector: discoHolder,
+			chromosomeType: obj.genome.name,
+			majorchr: obj.genome.majorchr,
 			settings: {
 				showControls: false,
 				selectedSamples: []
+			},
+			callbacks: {
+				geneLabelClick: {
+					type: 'genomepaint',
+					genome: obj.genome.name,
+					dslabel: obj.disco.dslabel,
+					sample: dot.sample
+				}
 			}
 		})
 
@@ -1351,6 +1369,14 @@ function lasso_select(obj, dots) {
 		if (!obj.lasso_active) return
 
 		const unselected_dots = svg.selectAll('.possible').size()
+
+		const selected_samples = svg
+			.selectAll('.possible')
+			.data()
+			.map(d => d.sample)
+		if (selected_samples.length) show_lasso_menu(selected_samples)
+		else obj.menu.hide()
+
 		// Reset the color of all dots
 		lasso
 			.items()
@@ -1368,6 +1394,42 @@ function lasso_select(obj, dots) {
 			.notSelectedItems()
 			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
+	}
+
+	function show_lasso_menu(samples) {
+		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Recurrently mutated genes')
+			.on('click', async () => {
+				obj.menu.hide()
+				await click_mutated_genes(obj, samples)
+			})
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Cancel')
+			.on('click', () => {
+				// Reset all dots
+				lasso
+					.items()
+					.classed('not_possible', false)
+					.classed('possible', false)
+					.attr('r', radius)
+					.style('fill-opacity', '1')
+
+				obj.menu.hide()
+			})
+
+		obj.menu.d
+			.append('div')
+			.style('padding', '10px')
+			.style('font-size', '.8em')
+			.style('width', '150px')
+			.text(samples.length + ' samples selected')
 	}
 
 	if (obj.lasso_active) {
@@ -1398,8 +1460,6 @@ function lasso_select(obj, dots) {
 			.style('fill', 'none')
 			.style('stroke-dasharray', '4,4')
 
-		// console.log(las.select('.loop_close'))
-
 		las
 			.select('.origin')
 			.style('fill', '#3399FF')
@@ -1408,6 +1468,58 @@ function lasso_select(obj, dots) {
 		svg.selectAll('.lasso').remove()
 		svg.on('mousedown.drag', null)
 	}
+}
+
+async function click_mutated_genes(obj, samples) {
+	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	pane.header.text('Recurrently Mutated Genes')
+	const wait = client.tab_wait(pane.body)
+
+	try {
+		const arg = {
+			genome: obj.genome.name,
+			dslabel: obj.disco.dslabel,
+			samples
+		}
+		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		if (!data.genes) throw '.genes missing'
+		console.log(data.genes)
+
+		make_sample_matrix({ obj, genes: data.genes, samples, holder: pane.body })
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+function make_sample_matrix(args) {
+	const { obj, genes, samples, holder } = args
+	// convert genes to features
+	for (const g of genes) {
+		delete g.count
+		g.ismutation = true
+		g.genename = g.gene
+		g.label = g.gene
+		delete g.gene
+		g.querykeylst = ['svcnv', 'snvindel'] // FIXME hardcoded
+		g.width = 50
+	}
+	const arg = {
+		genome: obj.genome,
+		dslabel: obj.disco.dslabel,
+		features: genes,
+		hostURL: sessionStorage.getItem('hostURL') || '',
+		limitbysamplesetgroup: { samples },
+		jwt: sessionStorage.getItem('jwt') || '',
+		holder: holder.append('div').style('margin', '20px')
+	}
+
+	import('./samplematrix').then(_ => {
+		const m = new _.Samplematrix(arg)
+		m._pane = holder
+	})
 }
 
 function launch_singlesample(p) {

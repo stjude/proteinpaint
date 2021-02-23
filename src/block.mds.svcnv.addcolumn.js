@@ -38,8 +38,6 @@ column could be gene expression rank and sample attribute
 
 */
 
-//const fpkmbarcolor='#40859C'
-
 export function render_multi_genebar(tk, block) {
 	/*
 	multi-sample

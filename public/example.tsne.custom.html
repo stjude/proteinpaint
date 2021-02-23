@@ -24,9 +24,12 @@ runproteinpaint({
 	nobox:1,
 	genome:'hg38',
 	mdssamplescatterplot:{
+		enable_lasso:true,
+
+		// FIXME to rename "disco" to "mds" later
 		disco:{
-			genome:'hg19',
-			dslabel:'Pediatric2',
+			// using the same genome build as obj.genome
+			dslabel:'Pediatric',
 			querykey:'svcnv',
 		},
 		analysisdata:{
