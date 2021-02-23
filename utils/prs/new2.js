@@ -1,10 +1,17 @@
 /*
 this is a test script!
 
-1. runs "bcftools query" for each chr separately
-   requires the "vcf2/" folder, in which files are stored as "chrN/N.vcf.gz"
-2. using a subset of samples
-   has to convert sample names to id for querying vcf, then back to report result
+0. get list of samples matching with vcf header
+   divides snps by chr/chunk
+   store all snps into pos2snp{ key: snp{} } and collect bcftools query data for each snp
+1. for each chr/chunk, write snps to a temp file
+   1. run bcftools using chunk.gz and temp snp file
+   2. for each snp hit
+      1. filter by MAF and callrate
+	  2. collect pq and gt into pos2snp{}
+2. do hwe test for all snps passing MAF and callrate filter
+   obtain snps passing hwe filter
+3. cumulate scores for samples
 */
 
 if (process.argv.length != 6) {
@@ -26,23 +33,61 @@ const spawn = require('child_process').spawn
 const readline = require('readline')
 const path = require('path')
 
+////////////////////////////////////////////
+// 0. get list of samples to be used to run bcftools
 const sample2id = get_idmap()
 const samplenames = get_samples()
-const sampleids = samplenames.map(i => sample2id.get(i))
+const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools query
+
+////////////////////////////////////////////
+// 1. break snps by chr/chunk and write to temp files
 const [chr2tmpsnpfile, pos2snp] = parse_snpfile()
 // k: chr.pos, v: {effallele, ref, weight}
+// after bcftools, add following to v{} about this snp
 
-// collect results
-const samples = samplenames.map(i => {
-	return { name: i, sum: 0, effcount: 0 }
-})
-
+////////////////////////////////////////////
+// 2. for each chunk, run bcftools and filter by maf/callrate
+// good snps passing freq/geno filter in the bcftools query
+const snparray = []
 const promises = []
 for (const [chr, tmpsnpfile] of chr2tmpsnpfile) {
 	promises.push(run_bcftools(chr, tmpsnpfile))
 }
 
-Promise.all(promises).then(() => {
+;(async () => {
+	await Promise.all(promises)
+	// all snps passing maf/callrate filters are in snparray[]
+
+	////////////////////////////////////////////
+	// 3. compute hwe pvalue for each snp
+	const hwepvalues = await get_hwe(snparray.map(i => i.hweline))
+
+	////////////////////////////////////////////
+	// 4. cumulate score for each sample and output
+	const samples = samplenames.map(i => {
+		return { name: i, sum: 0, effcount: 0 }
+	})
+	for (const [i, snp] of snparray.entries()) {
+		if (hwepvalues[i] <= 1e-6) {
+			console.error('hwe skip', hwepvalues[i])
+			continue
+		}
+
+		for (const [j, gt] of snp.gtlst.entries()) {
+			const sample = samples[j]
+			if (gt == missinggt) {
+				sample.sum += 2 * snp.effectallelefrequency * snp.weight
+				continue
+			}
+			const [a, b] = gt.split('/')
+			let count = 0
+			if (a == snp.EAidx) count++
+			if (b == snp.EAidx) count++
+			sample.effcount += count
+			sample.sum += snp.weight * count
+		}
+	}
+
 	// output
 	console.log('sample\tCNT\tsum')
 	for (const s of samples) {
@@ -51,7 +96,7 @@ Promise.all(promises).then(() => {
 	for (const t of chr2tmpsnpfile.values()) {
 		fs.unlink(t, () => {})
 	}
-})
+})()
 
 ////////////////////////
 
@@ -121,6 +166,9 @@ function parse_snpfile() {
 			effallele = l[2],
 			ref = l[3],
 			weight = Number(l[4])
+
+		//if(chr!='17') continue // xxxxxxxxxxx for testing on local computer with just one vcf file
+
 		if (Number.isNaN(weight)) throw 'invalid weight for a snp'
 
 		if (!chr2snp.has(chr)) chr2snp.set(chr, [])
@@ -137,22 +185,21 @@ function parse_snpfile() {
 	return [chr2tmpsnpfile, pos2snp]
 }
 
-function get_hwe(href, het, halt) {
+function get_hwe(lines) {
 	const infile = Math.random().toString()
-	const outfile = Math.random().toString()
-	fs.writeFileSync(infile, href + '\t' + het + '\t' + halt)
+	fs.writeFileSync(infile, lines.join('\n') + '\n')
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['hwe.R', infile, outfile])
+		const sp = spawn('Rscript', ['hwe.R', infile])
+		const out = [],
+			out2 = []
+		sp.stdout.on('data', d => out.push(d))
+		sp.stderr.on('data', d => out2.push(d))
 		sp.on('close', c => {
-			const text = fs.readFileSync(outfile, { encoding: 'utf8' })
 			fs.unlink(infile, () => {})
-			fs.unlink(outfile, () => {})
-			resolve(
-				text
-					.trim()
-					.split('\n')
-					.map(Number)
-			)
+			const e = out2.join('')
+			if (e) reject(e)
+			const text = out.join('').trim()
+			resolve(text.split('\n').map(i => Number(i.split(' ')[1])))
 		})
 	})
 }
@@ -167,6 +214,7 @@ function run_bcftools(chr, tmpsnpfile) {
 			'%CHROM %POS %REF %ALT [%GT ]\\n',
 			'-s',
 			sampleids.join(','),
+			//path.join(vcfdir,'vcf.gz') // xxxxxxxxxxxx
 			path.join(vcfdir, 'chr' + chr, chr + '.vcf.gz')
 		])
 		const rl = readline.createInterface({ input: sp.stdout })
@@ -199,26 +247,11 @@ function run_bcftools(chr, tmpsnpfile) {
 				return
 			}
 
-			const hwepv = (await get_hwe(href, het, halt))[0]
-			if (hwepv <= 1e-6) {
-				console.error('hwe', l[0] + ':' + l[1])
-				return
-			}
-
-			// for each sample
-			for (let i = 4; i < l.length; i++) {
-				const sample = samples[i - 4]
-				if (l[i] == missinggt) {
-					sample.sum += 2 * effectallelefrequency * snp.weight
-					continue
-				}
-				const [a, b] = l[i].split('/')
-				let count = 0
-				if (a == EAidx) count++
-				if (b == EAidx) count++
-				sample.effcount += count
-				sample.sum += snp.weight * count
-			}
+			snp.EAidx = EAidx
+			snp.effectallelefrequency = effectallelefrequency
+			snp.hweline = href + '\t' + het + '\t' + halt
+			snp.gtlst = l.slice(4)
+			snparray.push(snp)
 		})
 		const err = []
 		sp.stderr.on('data', d => err.push(d))
