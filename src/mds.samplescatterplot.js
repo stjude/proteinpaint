@@ -1484,7 +1484,6 @@ async function click_mutated_genes(obj, samples) {
 		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
 		if (data.error) throw data.error
 		if (!data.genes) throw '.genes missing'
-		console.log(data.genes)
 
 		make_sample_matrix({ obj, genes: data.genes, samples, holder: pane.body })
 		wait.remove()
@@ -1503,12 +1502,13 @@ function make_sample_matrix(args) {
 		g.label = g.gene
 		delete g.gene
 		g.querykeylst = ['svcnv', 'snvindel'] // FIXME hardcoded
-		g.width = 50
+		obj.features_on_rows ? (g.height = 50) : (g.width = 50)
 	}
 	const arg = {
 		genome: obj.genome,
 		dslabel: obj.disco.dslabel,
 		features: genes,
+		features_on_rows: obj.features_on_rows,
 		hostURL: sessionStorage.getItem('hostURL') || '',
 		limitbysamplesetgroup: { samples },
 		jwt: sessionStorage.getItem('jwt') || '',

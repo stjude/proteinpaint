@@ -346,7 +346,7 @@ export class Samplematrix {
 					*/
 					f.coordscale = scaleLinear()
 						.domain([f.start, f.stop])
-						.range([0, f.width])
+						.range([0, this.features_on_rows ? f.height : f.width])
 				})
 			}
 
@@ -377,7 +377,7 @@ export class Samplematrix {
 					*/
 					f.coordscale = scaleLinear()
 						.domain([f.start, f.stop])
-						.range([0, f.width])
+						.range([0, this.features_on_rows ? f.height : f.width])
 				})
 			}
 
@@ -518,7 +518,7 @@ export class Samplematrix {
 					*/
 					f.coordscale = scaleLinear()
 						.domain([f.start, f.stop])
-						.range([0, f.width])
+						.range([0, this.features_on_rows ? f.height : f.width])
 				})
 			}
 
@@ -537,7 +537,8 @@ export class Samplematrix {
 					f.values = {}
 				}
 				f.assignmissingcolor = scaleOrdinal(schemeCategory10)
-				if (!f.width) f.width = 20
+				if (!f.width && !this.features_on_rows) f.width = 20
+				else if (!f.height && this.features_on_rows) f.height = 50
 
 				tr.append('td')
 					.text(f.label)
@@ -1054,7 +1055,8 @@ sort samples by f.issampleattribute
 		this.samples = []
 
 		for (const [n, sample] of name2sample) {
-			sample.height = uniformheight
+			if (!this.features_on_rows) sample.height = uniformheight
+			else sample.width = uniformheight
 			sample.name = n
 			this.samples.push(sample)
 		}
@@ -1070,104 +1072,101 @@ sort samples by f.issampleattribute
 
 		this.sortsamplesbyfeatures()
 
-		////// rows, g and label
+		const rows_lst = this.features_on_rows ? this.features : this.samples
+		const cols_lst = this.features_on_rows ? this.samples : this.features
 
-		let samplenamemaxwidth = 0
+		// samples as rows (only labels)
+		let y = 0,
+			samplenamemaxwidth = 0
+		for (const r of rows_lst) {
+			r.g = svgg.append('g').attr('transform', 'translate(0,' + y + ')')
+			y += r.height + this.rowspace
 
-		{
-			let y = 0
-			for (const sample of this.samples) {
-				sample.g = svgg.append('g').attr('transform', 'translate(0,' + y + ')')
-				y += sample.height + this.rowspace
-
-				if (sample.height >= minheight2showname) {
-					sample.g
-						.append('text')
-						.attr('font-family', client.font)
-						.attr('font-size', sample.height - 2)
-						.attr('text-anchor', 'end')
-						.attr('dominant-baseline', 'central')
-						.attr('x', -this.rowlabspace - this.rowlabticksize)
-						.attr('y', sample.height / 2)
-						.text(sample.name)
-						.each(function() {
-							samplenamemaxwidth = Math.max(samplenamemaxwidth, this.getBBox().width)
-						})
-						.attr('class', 'sja_clbtext')
-						.on('mouseover', () => {
-							this.showTip_sample(sample)
-						})
-						.on('mouseout', () => {
-							this.tip.hide()
-						})
-					sample.g
-						.append('line')
-						.attr('x1', -this.rowlabticksize)
-						.attr('y1', sample.height / 2)
-						.attr('y2', sample.height / 2)
-						.attr('stroke', 'black')
-						.attr('shape-rendering', 'crispEdges')
-				}
-
-				// may plot additional things in sample.g for decoration
-			}
-		}
-
-		///// columns, label only
-
-		let featurenamemaxwidth = 0
-
-		{
-			let x = 0
-			for (const feature of this.features) {
-				const g = svgg
-					.append('g')
-					.attr(
-						'transform',
-						'translate(' + (x + feature.width / 2) + ',-' + (this.collabspace + this.collabticksize) + ')'
-					) // feature.g shift to center
-				x += feature.width + this.colspace
-
-				const label = g
+			if (r.height >= minheight2showname) {
+				r.g
 					.append('text')
 					.attr('font-family', client.font)
-					.attr('font-size', Math.min(16, feature.width - 2)) // font size should not get crazy big
+					.attr('font-size', 16)
+					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
-					.attr('transform', 'rotate(-90)')
-					.text(feature.label + (feature.count ? ' (' + feature.count + ')' : ''))
+					.attr('x', -this.rowlabspace - this.rowlabticksize)
+					.attr('y', r.height / 2)
+					.text(this.features_on_rows ? r.label + (r.count ? ' (' + r.count + ')' : '') : r.name)
 					.each(function() {
-						featurenamemaxwidth = Math.max(featurenamemaxwidth, this.getBBox().width)
+						samplenamemaxwidth = Math.max(samplenamemaxwidth, this.getBBox().width)
 					})
-					//.attr('class','sja_clbtext')
+					.attr('class', 'sja_clbtext')
 					.on('mouseover', () => {
-						this.showTip_feature(feature)
+						this.features_on_rows ? this.showTip_feature(r) : this.showTip_sample(r)
 					})
 					.on('mouseout', () => {
 						this.tip.hide()
 					})
 					.on('click', () => {
-						this.showMenu_feature(feature)
+						if (this.features_on_rows) this.showMenu_feature(r)
 					})
-
-				if (feature.isgenevalue) {
-					label.attr('fill', feature.color)
-				}
-
-				g.append('line')
-					.attr('y1', this.collabspace)
-					.attr('y2', this.collabspace + this.collabticksize)
+				r.g
+					.append('line')
+					.attr('x1', -this.rowlabticksize)
+					.attr('y1', r.height / 2)
+					.attr('y2', r.height / 2)
 					.attr('stroke', 'black')
 					.attr('shape-rendering', 'crispEdges')
 			}
+
+			// may plot additional things in sample.g for decoration
+		}
+
+		// features as columns (only labels)
+		let x = 0,
+			featurenamemaxwidth = 0
+		for (const c of cols_lst) {
+			const g = svgg
+				.append('g')
+				.attr('transform', 'translate(' + (x + c.width / 2) + ',-' + (this.collabspace + this.collabticksize) + ')') // feature.g shift to center
+			x += c.width + this.colspace
+
+			const label = g
+				.append('text')
+				.attr('font-family', client.font)
+				.attr('font-size', Math.min(16, c.width - 2)) // font size should not get crazy big
+				.attr('dominant-baseline', 'central')
+				.attr('transform', 'rotate(-90)')
+				.text(this.features_on_rows ? c.name : c.label + (c.count ? ' (' + c.count + ')' : ''))
+				.each(function() {
+					featurenamemaxwidth = Math.max(featurenamemaxwidth, this.getBBox().width)
+				})
+				//.attr('class','sja_clbtext')
+				.on('mouseover', () => {
+					this.features_on_rows ? this.showTip_sample(c) : this.showTip_feature(c)
+				})
+				.on('mouseout', () => {
+					this.tip.hide()
+				})
+				.on('click', () => {
+					if (!this.features_on_rows) this.showMenu_feature(c)
+				})
+
+			if (c.isgenevalue) {
+				label.attr('fill', c.color)
+			}
+
+			g.append('line')
+				.attr('y1', this.collabspace)
+				.attr('y2', this.collabspace + this.collabticksize)
+				.attr('stroke', 'black')
+				.attr('shape-rendering', 'crispEdges')
 		}
 
 		// cells
-		for (const sample of this.samples) {
+		for (const r of rows_lst) {
 			let x = 0
-			for (const feature of this.features) {
-				const cell = sample.g.append('g').attr('transform', 'translate(' + x + ',0)')
+			for (const c of cols_lst) {
+				const sample = this.features_on_rows ? c : r
+				const feature = this.features_on_rows ? r : c
+				const cell = r.g.append('g').attr('transform', 'translate(' + x + ',0)')
 
-				x += feature.width + this.colspace
+				x += c.width + this.colspace
 
 				if (feature.isgenevalue) {
 					this.drawCell_isgenevalue(sample, feature, cell)
@@ -1207,30 +1206,32 @@ sort samples by f.issampleattribute
 				samplenamemaxwidth +
 					this.rowlabspace +
 					this.rowlabticksize +
-					this.features.reduce((i, j) => i + j.width, 0) +
-					this.features.length * this.colspace
+					cols_lst.reduce((i, j) => i + j.width, 0) +
+					cols_lst.length * this.colspace
 			)
 			.attr(
 				'height',
 				featurenamemaxwidth +
 					this.collabspace +
 					this.collabticksize +
-					this.samples.reduce((i, j) => i + j.height, 0) +
-					this.samples.length * this.rowspace
+					rows_lst.reduce((i, j) => i + j.height, 0) +
+					rows_lst.length * this.rowspace
 			)
 	}
 
 	drawCell_isgenevalue(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const item = feature.items.find(i => i.sample == sample.name)
 		if (!item) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 
 		const rect = g
 			.append('rect')
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('fill', feature.color)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
@@ -1253,9 +1254,11 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_iscnv(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const items = feature.items.filter(i => i.sample == sample.name)
 		if (items.length == 0) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 		for (const item of items) {
@@ -1272,8 +1275,8 @@ sort samples by f.issampleattribute
 		g.append('rect')
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
@@ -1291,18 +1294,21 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_isloh(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const items = feature.items.filter(i => i.sample == sample.name)
 		if (items.length == 0) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 		for (const item of items) {
 			const x1 = feature.coordscale(Math.max(feature.start, item.start))
 			const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
 			g.append('rect')
-				.attr('x', x1)
-				.attr('width', Math.max(1, x2 - x1))
-				.attr('height', sample.height)
+				.attr('x', this.features_on_rows ? 0 : x1)
+				.attr('y', this.features_on_rows ? x1 : 0)
+				.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
+				.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 				.attr('fill', feature.color)
 				.attr('fill-opacity', (item.segmean - feature.minvalue) / feature.maxvalue)
 				.attr('shape-rendering', 'crispEdges')
@@ -1310,8 +1316,8 @@ sort samples by f.issampleattribute
 		g.append('rect')
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
@@ -1329,10 +1335,12 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_isvcf(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const mlst = getitemforsample_vcf(feature, sample)
 
 		if (mlst.length == 0) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 
@@ -1343,22 +1351,23 @@ sort samples by f.issampleattribute
 			}
 			class2count.set(m.class, class2count.get(m.class) + 1)
 		}
-		let x = 0
+		let start = 0
 		for (const [cname, count] of class2count) {
-			const span = (count / mlst.length) * feature.width
+			const span = (count / mlst.length) * this.features_on_rows ? height : width
 			g.append('rect')
-				.attr('x', x)
-				.attr('width', span)
-				.attr('height', sample.height)
+				.attr('x', this.features_on_rows ? 0 : start)
+				.attr('y', this.features_on_rows ? start : 0)
+				.attr('width', this.features_on_rows ? width : span)
+				.attr('height', this.features_on_rows ? span : height)
 				.attr('fill', common.mclass[cname].color)
 				.attr('shape-rendering', 'crispEdges')
-			x += span
+			start += span
 		}
 		g.append('rect')
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
@@ -1376,14 +1385,16 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_isitd(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const item = feature.items.find(i => i.sample == sample.name)
 		if (!item) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 		g.append('rect')
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('fill', feature.color)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
@@ -1402,14 +1413,16 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_issampleattribute(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const item = feature.items.find(i => i.sample == sample.name)
 		if (!item) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 		g.append('rect')
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('fill', feature.values[item.value].color)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
@@ -1428,14 +1441,16 @@ sort samples by f.issampleattribute
 	}
 
 	drawCell_issvfusion(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const item = feature.items.find(i => i.sample == sample.name)
 		if (!item) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 		g.append('rect')
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('fill', feature.color)
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
@@ -1463,13 +1478,15 @@ sort samples by f.issampleattribute
 		*/
 
 		const [cnv, loh, itd, sv, fusion, snvindel] = getitemforsample_compound(feature, sample)
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		/*
 		returns array for each data type
 		if multiple items in an array, only use information from first item to draw!!
 		*/
 
 		if (cnv.length + loh.length + itd.length + sv.length + fusion.length + snvindel.length == 0) {
-			drawEmptycell(sample, feature, g)
+			this.drawEmptycell(sample, feature, g)
 			return
 		}
 
@@ -1482,7 +1499,7 @@ sort samples by f.issampleattribute
 			// not
 		} else {
 			// if height is too thin
-			if (sample.height <= 4) {
+			if (height <= 4) {
 				is_symbolic = true
 			}
 		}
@@ -1497,9 +1514,10 @@ sort samples by f.issampleattribute
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
 					g.append('rect')
-						.attr('x', x1)
-						.attr('width', Math.max(1, x2 - x1))
-						.attr('height', sample.height)
+						.attr('x', this.features_on_rows ? 0 : x1)
+						.attr('y', this.features_on_rows ? x1 : 0)
+						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
+						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', feature.loh.color)
 						.attr('fill-opacity', (item.segmean - feature.loh.minvalue) / (feature.loh.maxvalue - feature.loh.minvalue))
 						.attr('shape-rendering', 'crispEdges')
@@ -1511,9 +1529,10 @@ sort samples by f.issampleattribute
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
 					g.append('rect')
-						.attr('x', x1)
-						.attr('width', Math.max(1, x2 - x1))
-						.attr('height', sample.height)
+						.attr('x', this.features_on_rows ? 0 : x1)
+						.attr('y', this.features_on_rows ? x1 : 0)
+						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
+						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', item.value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss)
 						.attr('fill-opacity', Math.abs(item.value) / feature.cnv.maxabslogratio)
 						.attr('shape-rendering', 'crispEdges')
@@ -1524,9 +1543,10 @@ sort samples by f.issampleattribute
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
 					g.append('rect')
-						.attr('x', x1)
-						.attr('width', Math.max(1, x2 - x1))
-						.attr('height', sample.height)
+						.attr('x', this.features_on_rows ? 0 : x1)
+						.attr('y', this.features_on_rows ? x1 : 0)
+						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
+						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', feature.itd.color)
 						.attr('shape-rendering', 'crispEdges')
 				}
@@ -1534,18 +1554,18 @@ sort samples by f.issampleattribute
 			if (sv.length) {
 				// sv as feature-less circle
 				g.append('circle')
-					.attr('cx', feature.width / 2)
-					.attr('cy', sample.height / 2)
-					.attr('r', Math.min(feature.width, sample.height) / 2)
+					.attr('cx', width / 2)
+					.attr('cy', height / 2)
+					.attr('r', Math.min(width, height) / 2)
 					.attr('stroke', feature.sv.color)
 					.attr('fill', 'none')
 			}
 			if (fusion.length) {
 				// fusion as feature-less circle
 				g.append('circle')
-					.attr('cx', feature.width / 2)
-					.attr('cy', sample.height / 2)
-					.attr('r', Math.min(feature.width, sample.height) / 2)
+					.attr('cx', width / 2)
+					.attr('cy', height / 2)
+					.attr('r', Math.min(width, height) / 2)
 					.attr('stroke', feature.fusion.color)
 					.attr('fill', 'none')
 			}
@@ -1557,9 +1577,9 @@ sort samples by f.issampleattribute
 				if multiple variants, may use class of highest rank
 				*/
 				const m = snvindel[0]
-				const g2 = g.append('g').attr('transform', 'translate(' + feature.width / 2 + ',' + sample.height / 2 + ')')
+				const g2 = g.append('g').attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')')
 				const color = common.mclass[m.m.class].color
-				const w = Math.min(feature.width, sample.height) / 2
+				const w = Math.min(width, height) / 2
 				g2.append('line')
 					.attr('x1', -w)
 					.attr('x2', w)
@@ -1591,8 +1611,8 @@ sort samples by f.issampleattribute
 
 		// cover
 		g.append('rect')
-			.attr('width', feature.width)
-			.attr('height', sample.height)
+			.attr('width', width)
+			.attr('height', height)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
 			.attr('stroke', '#ccc')
@@ -1616,6 +1636,8 @@ sort samples by f.issampleattribute
 		symbolic rep
 		must have data
 		*/
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
 		const lst = []
 		if (cnv.length) {
 			for (const i of cnv) {
@@ -1657,18 +1679,19 @@ sort samples by f.issampleattribute
 				lst.push({ color: common.mclass[i.m.class].color })
 			}
 		}
-		const w = feature.width / lst.length
-		let x = 0
+		const f_len = this.features_on_rows ? height / lst.length : width / lst.length
+		let f_start = 0
 		for (const i of lst) {
 			const r = g
 				.append('rect')
-				.attr('x', x)
-				.attr('width', w)
-				.attr('height', sample.height)
+				.attr('x', this.features_on_rows ? 0 : f_start)
+				.attr('y', this.features_on_rows ? f_start : 0)
+				.attr('width', this.features_on_rows ? width : f_len)
+				.attr('height', this.features_on_rows ? f_len : height)
 				.attr('fill', i.color)
 				.attr('shape-rendering', 'crispEdges')
 			if (i.opacity) r.attr('opacity', i.opacity)
-			x += w
+			f_start += f_len
 		}
 	}
 
@@ -2354,15 +2377,16 @@ sort samples by f.issampleattribute
 		})
 	}
 
+	drawEmptycell(sample, feature, g) {
+		const height = this.features_on_rows ? feature.height : sample.height
+		const width = this.features_on_rows ? sample.width : feature.width
+		if (height < 5) return
+		g.append('line')
+			.attr('x2', width)
+			.attr('y2', height)
+			.attr('stroke', '#ededed')
+	}
 	// end of class
-}
-
-function drawEmptycell(sample, feature, g) {
-	if (sample.height < 5) return
-	g.append('line')
-		.attr('x2', feature.width)
-		.attr('y2', sample.height)
-		.attr('stroke', '#ededed')
 }
 
 function feature2arg(f) {
