@@ -266,7 +266,7 @@ arg
 		par.datasetqueries = may_get_officialmds(urlp)
 
 		try {
-			par.tklst = await get_tklst(urlp, arg.holder, genomeobj)
+			par.tklst = await get_tklst(urlp, genomeobj)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -317,7 +317,7 @@ arg
 		}
 
 		try {
-			par.tklst = await get_tklst(urlp, arg.holder, par.genome)
+			par.tklst = await get_tklst(urlp, par.genome)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return e.message || e
@@ -360,7 +360,7 @@ function may_get_officialmds(urlp) {
 	return
 }
 
-export async function get_tklst(urlp, error_div, genomeobj) {
+export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
 	if (urlp.has('mdsjsoncache')) {
@@ -655,6 +655,28 @@ export async function get_tklst(urlp, error_div, genomeobj) {
 	}
 	for (const t of tklst) {
 		t.iscustom = true
+	}
+
+	// quick fix to modify behaviors of mds tracks collected through parameters
+	// if isdense=1, turn to dense
+	// if sample=..., change to a single sample track
+	if (urlp.has('isdense')) {
+		tklst
+			.filter(t => t.type == client.tkt.mdssvcnv)
+			.forEach(t => {
+				t.isdense = true
+				t.isfull = false
+			})
+	}
+	if (urlp.has('sample')) {
+		tklst
+			.filter(t => t.type == client.tkt.mdssvcnv)
+			.forEach(t => {
+				t.singlesample = { name: urlp.get('sample') }
+				t.getsampletrackquickfix = true
+				// XXX this doesn't work to load assay tracks for a custom mds, can only load for official mds
+				// for both custom and official, the expression rank track is not loaded.
+			})
 	}
 	return tklst
 }

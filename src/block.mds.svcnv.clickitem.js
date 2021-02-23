@@ -2722,10 +2722,20 @@ function mayaddtab_disco(tabs, p) {
 				}
 
 				const renderer = await sjcharts.dtDisco({
+					chromosomeType: p.block.genome.name,
+					majorchr: p.block.genome.majorchr,
 					holderSelector: div,
 					settings: {
 						showControls: false,
 						selectedSamples: []
+					},
+					callbacks: {
+						geneLabelClick: {
+							type: 'genomepaint',
+							genome: p.block.genome.name,
+							dslabel: p.tk.mds.label,
+							sample: p.sample.samplename
+						}
 					}
 				})
 				renderer.main(disco_arg)

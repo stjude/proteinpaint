@@ -2471,32 +2471,41 @@ async function handle_mdsgenecount(req, res) {
 			.map(i => "'" + i + "'")
 			.join(',')})
 	)
-	SELECT gene, SUM(count) AS count
+	SELECT gene, SUM(total) AS count
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
 	LIMIT 10`
-		const out = {}
-		out.genes = ds.gene2mutcount.db.prepare(query).all()
-		out.genes.forEach(g => {
-			const isoforms = genome.genedb.getjsonbyname.all(g.gene)
-			let starts = [],
-				stops = [],
-				chrs = []
-			isoforms.forEach(i => {
-				starts.push(JSON.parse(i.genemodel).start)
-				stops.push(JSON.parse(i.genemodel).stop)
-				chrs.push(JSON.parse(i.genemodel).chr)
+		const genes = ds.gene2mutcount.db.prepare(query).all()
+		for (const gene of genes) {
+			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
+			const defaultisoform = isoforms.find(i => i.isdefault)
+			if (defaultisoform) {
+				const j = JSON.parse(defaultisoform.genemodel)
+				gene.chr = j.chr
+				gene.start = j.start
+				gene.stop = j.stop
+				continue
+			}
+			// no default isoform
+			// just try to use coordinate of the first isoform that's on major chr
+			const lst = isoforms.map(i => JSON.parse(i.genemodel))
+			const isoform = lst.find(i => {
+				const c = genome.chrlookup[i.chr.toUpperCase()]
+				if (c && c.major) return i
 			})
-			g.start = Math.min(...starts)
-			g.stop = Math.max(...stops)
-			const chr = [...new Set(chrs)]
-			if (chr.length == 1) g.chr = chr[0]
-			else g.chr = chr.join()
-		})
-		out.genome = genome
-		out.genome.name = req.query.genome
-		res.send({ out })
+			if (isoform) {
+				gene.chr = isoform.chr
+				gene.start = isoform.start
+				gene.stop = isoform.stop
+				continue
+			}
+			// no isoform on major chr, just use first isoform
+			gene.chr = lst[0].chr
+			gene.start = lst[0].start
+			gene.stop = lst[0].stop
+		}
+		res.send({ genes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -3498,10 +3507,14 @@ async function handle_mdssvcnv_vcf(
 		}
 	}
 
+	// query cohort vcf files for both cohort and sample view
+	// TODO separate range limits, above 1mb, do not show noncoding ones; above 3mb, do not show coding ones
+	// also show alert message on client
+
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 1000000
+		viewrangeupperlimit = 2000000
 	}
 
 	if (req.query.singlesample) {
@@ -3757,7 +3770,7 @@ async function handle_mdssvcnv_vcf(
 	}
 
 	return Promise.all(tracktasks).then(vcffiles => {
-		// snv/indel/itd data aggregated from multiple tracks
+		// snv/indel data aggregated from multiple tracks
 		const mmerge = []
 
 		for (const eachvcf of vcffiles) {

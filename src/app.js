@@ -537,7 +537,7 @@ async function findgene2paint( app, str, genomename, jwt ) {
 
 	// may yield tklst from url parameters
 	const urlp=parseurl.url2map()
-	const tklst = await parseurl.get_tklst(urlp)
+	const tklst = await parseurl.get_tklst(urlp, g)
 
 	const pos=string2pos(str,g)
 	if(pos) {
@@ -839,6 +839,14 @@ function launchmdssamplescatterplot(arg, app) {
 		app.error0('neither .dataset or .analysisdata is given')
 		return
 	}
+
+	// XXX quick fix! DELETE following 5 lines when hg38 pediatric mds is ready
+	// so that disco will not use a separate genome as arg.genome
+	if(arg.disco && arg.disco.genome) {
+		const g = app.genomes[arg.disco.genome]
+		if(!g) app.error0('invalid genome for disco.genome')
+		arg.disco.genome = g
+	}
 	import('./mds.samplescatterplot').then(_=>{
 		_.init(arg, app.holder0, app.debugmode)
 	})
@@ -956,7 +964,7 @@ function launchsamplematrix(cfg, app) {
 
 
 
-function launchgeneview(arg, app) {
+async function launchgeneview(arg, app) {
 	if(!arg.genome) {
 		app.error0('Cannot embed: must specify reference genome')
 		return
@@ -966,6 +974,17 @@ function launchgeneview(arg, app) {
 			t.iscustom=true
 		}
 	}
+
+	// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+	if(arg.tkjsonfile) {
+		if(!arg.tracks) arg.tracks=[]
+		const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+		const lst = await parseurl.get_tklst(urlp, genomeobj)
+		for(const i of lst) {
+			arg.tracks.push(i)
+		}
+	}
+
 	const pa={
 		jwt: arg.jwt,
 		hostURL: app.hostURL,
@@ -1075,6 +1094,16 @@ async function launchblock(arg, app) {
 				}
 			}
 			t.iscustom=true
+		}
+	}
+
+	// when "tkjsonfile" is defined, load all tracks as defined in the json file into tracks[]
+	if(arg.tkjsonfile) {
+		if(!arg.tracks) arg.tracks=[]
+		const urlp = new Map([['tkjsonfile',arg.tkjsonfile]])
+		const lst = await parseurl.get_tklst(urlp, genomeobj)
+		for(const i of lst) {
+			arg.tracks.push(i)
 		}
 	}
 
