@@ -1477,7 +1477,7 @@ async function click_mutated_genes(obj, samples) {
 
 	try {
 		const arg = {
-			genome: obj.disco.genome.name,
+			genome: obj.genome.name,
 			dslabel: obj.disco.dslabel,
 			samples
 		}
@@ -1507,7 +1507,7 @@ function make_sample_matrix(args) {
 		g.width = 50
 	}
 	const arg = {
-		genome: obj.disco.genome,
+		genome: obj.genome,
 		dslabel: obj.disco.dslabel,
 		features: genes,
 		hostURL: sessionStorage.getItem('hostURL') || '',
