@@ -2472,7 +2472,7 @@ async function handle_mdsgenecount(req, res) {
 			.map(i => "'" + i + "'")
 			.join(',')})
 	)
-	SELECT gene, SUM(count) AS count
+	SELECT gene, SUM(total) AS count
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC

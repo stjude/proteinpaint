@@ -228,8 +228,7 @@ ssh -t $USERatREMOTE "
 	ln -sfn available/$APP-$REV active
 	./helpers/record.sh deployed
 	./proteinpaint_run_node.sh
-	cd available
-	../helpers/purge.sh \"pp-*\"
+	./helpers/purge.sh \"pp-*\"
 "
 
 #############
