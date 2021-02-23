@@ -174,7 +174,7 @@
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit",
                 "tutorial": ""
             },
-            "searchterms": ["hic", "hicstraw"]
+            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation"]
         },
         {
             "name": "JSON BED",
@@ -1037,7 +1037,7 @@
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["heat map", "ribbon", "disco", "gene network"]
         },
         {
             "name": "Hi-C whole-genome view",
@@ -1051,7 +1051,7 @@
                 "doc": "",
                 "tutorial": ""
             },
-            "searchterms": ["hic"]
+            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
             "name": "MAF-timeline",
@@ -1079,7 +1079,7 @@
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },
         {
             "name": "Study View",
@@ -1093,7 +1093,7 @@
                 "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing",
                 "tutorial": ""
             },
-            "searchterms": ["heatmap", "heat map"]
+            "searchterms": ["heatmap", "heat map", "ribbon", "disco", "gene network"]
         },
         {
             "name": "termdb with custom vocabulary",
@@ -1107,7 +1107,7 @@
                 "doc": "",
                 "tutorial": ""
             },
-            "searchterms": []
+            "searchterms": ["clinical", "dictionary"]
         }
     ]
 }

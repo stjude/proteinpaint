@@ -772,7 +772,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
 h5 {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 500;
-    font-size: 20px;
+    font-size: 17px;
     text-align: left;
     color: #324870;
     margin: 10px 10px 0px 10px;
@@ -797,6 +797,13 @@ hr {
     gap: 5px;
     align-items: center;
     justify-items: left;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.gbrowser-btn>button {
+    border-radius: 5px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -877,11 +884,13 @@ hr {
     height: 30px;
 }
 
+.gbrowser-btn,
 .url-tooltip-outer {
     position: relative;
     display: inline-block;
 }
 
+.gbrowser-btn .launch-btn_tooltip,
 .url-tooltip-outer .url-tooltip-span {
     visibility: hidden;
     width: 120px;
@@ -897,6 +906,7 @@ hr {
     margin-left: -60px;
 }
 
+.gbrowser-btn .launch-btn_tooltip::after,
 .url-tooltip-outer .url-tooltip-span::after {
     content: "";
     position: absolute;
@@ -908,6 +918,7 @@ hr {
     border-color: #f2f0f0 transparent transparent transparent;
 }
 
+.gbrowser-btn:hover .launch-btn_tooltip,
 .url-tooltip-outer:hover .url-tooltip-span {
     visibility: visible;
 }

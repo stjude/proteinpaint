@@ -15,20 +15,28 @@ export async function init_examples(par) {
 	const wrapper_div = make_examples_page(holder)
 	const searchbar_div = wrapper_div.append('div')
 	const track_grid = make_main_track_grid(wrapper_div)
-	const gbrowswer_col = make_gBrowserCol(track_grid)
+	const gbrowser_col = make_gBrowserCol(track_grid)
 	const app_col = make_appCol(track_grid)
 
 	// genomepaint panel
 	// subgrid
 	// top card followed by additional tiles
-	gbrowswer_col.append('div')
-	launch_gBrowser_btn(gbrowswer_col)
+	gbrowser_col
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('justify-content', 'center')
+	// .style('flex-direction', 'column')
+	// const gb_btn_div = gbrowser_col.append('span')
+	// gb_btn_div
+	// .style('margin', '20px, 10px, 10px, 10px')
+	launch_gBrowser_btn(gbrowser_col)
 
-	gbrowswer_col
+	gbrowser_col
 		.append('h5')
 		.html('GenomePaint')
 		.append('hr')
-	const gpaintList = gbrowswer_col.append('ul')
+	const gpaintList = gbrowser_col.append('ul')
 	gpaintList
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
@@ -38,11 +46,11 @@ export async function init_examples(par) {
 
 	// tracks panel
 	// subgrid
-	gbrowswer_col
+	gbrowser_col
 		.append('h5')
 		.html('Genome Browser Tracks')
 		.append('hr')
-	const browserList = gbrowswer_col.append('ul')
+	const browserList = gbrowser_col.append('ul')
 	browserList
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
@@ -52,11 +60,11 @@ export async function init_examples(par) {
 
 	// experimental tracks panel
 	// subgrid
-	gbrowswer_col
+	gbrowser_col
 		.append('h5')
 		.html('Experimental Tracks')
 		.append('hr')
-	const experimentalList = gbrowswer_col.append('ul')
+	const experimentalList = gbrowser_col.append('ul')
 	experimentalList
 		.attr('class', 'track-list')
 		.style('display', 'grid')
@@ -101,7 +109,7 @@ function make_examples_page(holder) {
 	return wrapper_div
 }
 //Makes search bar and functionality to search tracks
-function make_searchbar(div, args, re) {
+function make_searchbar(div, args) {
 	const bar_div = div.append('div')
 	bar_div
 		.style('display', 'flex')
@@ -123,13 +131,12 @@ function make_searchbar(div, args, re) {
 		.on(
 			'keyup',
 			debounce(async () => {
-				const data = re
-				// const data = await loadJson()
+				const data = args.tracks
 				const searchInput = searchBar
 					.select('input')
 					.node()
 					.value.toLowerCase()
-				const filteredTracks = data.examples.filter(track => {
+				const filteredTracks = data.filter(track => {
 					let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
 						if (searchTermFound) {
 							return true
@@ -176,22 +183,30 @@ function make_gBrowserCol(div) {
 }
 
 //Creates the launch genome browser button
-// function launch_gBrowser_btn(div) {
-//     const launch_btn_div = div.append('div')
-//     launch_btn_div
-//         .style('display', 'grid')
-//         .style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
-//     const launch_btn = launch_btn_div.append('div')
-//     launch_btn
-//         .append('button')
-//         .attr('class', 'gbrowser-btn')
-//         .style('border-radius', '3px')
-//         .style('border', 'none')
-//         .style('background-color', 'white')
-//         // .style('height', '45px')
-//         // .style('width', 'minmax(320px, auto)')
-//         .text('Launch Genome Browser')
-// }
+function launch_gBrowser_btn(div) {
+	const launch_btn = div.append('div')
+	launch_btn
+		.append('button')
+		.attr('class', 'gbrowser-btn')
+		.style('height', '75px')
+		.style('width', '100%')
+		.style('border-radius', '3px')
+		.style('border', 'none')
+		.style('background-color', 'white')
+		.style('text-align', 'center')
+		.style('font-size', '14.5px')
+		.style(
+			'font-family',
+			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
+		)
+		.text('Launch Genome Browser')
+		.append('span')
+		.attr('class', 'launch-btn_tooltip')
+		.style('font-size', '11px')
+		.text('Change the genome from the header dropdown')
+
+	return launch_btn
+}
 
 //Creates the outer Other App column
 function make_appCol(div) {
