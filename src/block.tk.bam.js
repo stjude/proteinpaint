@@ -6,7 +6,6 @@ import { make_radios } from './dom'
 import url2map from './url2map'
 
 /*
-
 important: tk.uninitialized will be deleted by getData at the first launch
 to tell backend to provide color scale
 
@@ -15,7 +14,8 @@ tk can predefine if bam file has chr or not
 tk.groups[]
 tk.variants[ {} ]
 	.chr/pos/ref/alt
-
+tk.pileupheight
+tk.pileupbottompad
 group {}
 .data{}
 	.templatebox[] // optional
@@ -35,6 +35,7 @@ group {}
 		.boxy
 	.variantg <g>
 	.variantrowheight
+	.variantrowbottompad
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -167,6 +168,34 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 	tk.nochr = data.nochr
+
+	if (data.pileup_data) {
+		// update the pileup image
+		tk.dom.pileup_shown = true // to tell setTkHeight() that pileup is shown
+		tk.dom.pileup_img
+			.attr('xlink:href', data.pileup_data.src)
+			.attr('width', data.pileup_data.width)
+			.attr('height', tk.pileupheight)
+		// update axis
+		tk.dom.pileup_axis.selectAll('*').remove()
+		const scale = scaleLinear()
+			.domain([0, data.pileup_data.maxValue])
+			.range([tk.pileupheight, 0])
+		client.axisstyle({
+			axis: tk.dom.pileup_axis.call(
+				axisRight()
+					.scale(scale)
+					.ticks(5)
+			), // at most 5 ticks
+			color: 'black',
+			showline: true
+		})
+	} else {
+		tk.dom.pileup_shown = false
+	}
+
+	may_render_variant(data, tk, block)
+
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
@@ -176,31 +205,13 @@ or update existing groups, in which groupidx will be provided
 		updateExistingGroups(data, tk, block)
 	}
 
-	if (data.pileup_data) {
-		tk.dom.pileup_img
-			.attr('xlink:href', data.pileup_data.src)
-			.attr('width', data.pileup_data.width)
-			.attr('height', tk.pileupheight)
-	}
-
-	// Plotting the y-axis for the pileup plot
-	tk.dom.pileup_axis.selectAll('*').remove()
-	const scale = scaleLinear()
-		.domain([0, data.pileup_data.maxValue])
-		.range([data.pileup_data.height, 0])
-	client.axisstyle({
-		axis: tk.dom.pileup_axis.call(axisRight().scale(scale)),
-		color: 'black',
-		showline: true
-	})
-
-	may_render_variant(data, tk, block)
 	setTkHeight(tk, data)
+
 	tk.tklabel.each(function() {
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
-	let countr = 0,
-		countt = 0
+	let countr = 0, // #read
+		countt = 0 // #templates
 	for (const g of tk.groups) {
 		countr += g.data.count.r
 		if (tk.asPaired) {
@@ -219,6 +230,7 @@ or update existing groups, in which groupidx will be provided
 function may_render_variant(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.variantg, indicate location and status of the variant
+	// TODO show variant info alongside box, when box is wide enough, show
 	if (!tk.dom.variantg) return
 	tk.dom.variantg.selectAll('*').remove()
 	let x1, x2 // on screen pixel start/stop of the variant box
@@ -235,21 +247,22 @@ function may_render_variant(data, tk, block) {
 		}
 	}
 	if (x1 >= block.width || x2 <= 0) {
-		// variant is out of range
+		// variant is out of range, do not show
 		return
 	}
+
+	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+
+	// will render variant in a row
 	tk.dom.variantg
 		.append('rect')
 		.attr('x', x1)
-		.attr('y', data.pileup_data.height + 10) // This value pushes the variant bar downwards/upwards
+		.attr('y', yoff)
 		.attr('width', x2 - x1)
 		.attr('height', tk.dom.variantrowheight - 2)
 
 	const variant_string =
 		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
-	//        console.log("Length of variant string:",variant_string.length)
-	//        console.log("x1:",x1)
-	//        console.log("x2:",x2)
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -263,10 +276,10 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('text')
 		.attr('x', variant_start_text_pos)
-		.attr('y', data.pileup_data.height + 25)
-		.attr('dy', '.10em')
+		.attr('y', yoff + tk.dom.variantrowheight)
+		//.attr('dy', '.10em')
+		.attr('font-size', tk.dom.variantrowheight)
 		.text(variant_string)
-	// TODO show variant info alongside box
 
 	if (data.refalleleerror == true) {
 		const text_string = 'Incorrect reference allele'
@@ -288,18 +301,20 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
-			.attr('y', data.pileup_data.height + 25)
+			.attr('y', yoff + tk.dom.variantrowheight + tk.dom.variantrowbottompad)
 			.style('fill', 'red')
-			.attr('dy', '.10em')
+			//.attr('dy', '.10em')
+			.attr('font-size', tk.dom.variantrowheight)
 			.text(text_string)
 	}
 }
 
 function setTkHeight(tk, data) {
 	// call after any group is updated
-	let h = data.pileup_data.height + 15 //tk.dom.pileupplotheight
+	let h = 0
+	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
 	if (tk.dom.variantg) {
-		h += tk.dom.variantrowheight
+		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
@@ -381,6 +396,7 @@ function makeTk(tk, block) {
 	tk.readpane.pane.style('display', 'none')
 	// <g> of each group is added dynamically to glider
 	tk.pileupheight = 100
+	tk.pileupbottompad = 6
 
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
@@ -392,7 +408,8 @@ function makeTk(tk, block) {
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
 		tk.dom.variantg = tk.glider.append('g')
-		tk.dom.variantrowheight = 20
+		tk.dom.variantrowheight = 15
+		tk.dom.variantrowbottompad = 5
 	}
 	tk.asPaired = false
 
