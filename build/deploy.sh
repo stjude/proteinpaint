@@ -133,10 +133,11 @@ fi
 # available in the remote host machine
 ##############################################
 
-if [[ $(ssh $USERatREMOTE "cd /opt/app/pp; ./helpers/recent.sh" | grep -l $REV) != "" ]]; then
+RECENT=$(./build/help.sh $USERatREMOTE recent)
+if [[ $(echo -e "$RECENT" | grep -l $REV) != "" ]]; then
 	echo -e "\n"
 	echo -e "Build version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
-	echo -e "You can reactivate it using './helpers/revert.sh $REV' from $REMOTEHOST:$REMOTEDIR."
+	echo -e "You can activate it using './build/help.sh activate $REV' from $REMOTEHOST:$REMOTEDIR."
 	echo -e "\n"
 	exit 1
 fi
@@ -220,17 +221,14 @@ ssh -t $USERatREMOTE "
 	cp active/serverconfig.json available/$APP-$REV/
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
-	cp active/public/rev.txt available/$APP-$REV/public/prev.txt
-	cp available/$APP-$REV/public/rev.txt active/public/next.txt
-	echo $REV >> history.txt
 	chmod -R 755 available/$APP-$REV
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
-	ln -sfn available/$APP-$REV/public/bin available/$APP-$REV/public/no-babel-polyfill
+	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
 
 	ln -sfn available/$APP-$REV active
+	./helpers/record.sh deployed
 	./proteinpaint_run_node.sh
-	cd available
-	../helpers/purge.sh \"pp-*\"
+	./helpers/purge.sh \"pp-*\"
 "
 
 #############

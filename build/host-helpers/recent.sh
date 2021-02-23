@@ -1,26 +1,23 @@
 #!/bin/bash
 
+####################################
 # get the list of available builds
 # in descending order of deployment
+####################################
 
-dir=active
+recent=""
+FILE=deployments.txt
 
-while [[ -f $dir/public/next.txt ]];
+while IFS="" read -r p || [ -n "$p" ]
 do
-	REV=$(cat $dir/public/next.txt | cut -d' ' -f 2)
-	dir=available/pp-$REV
-done
+  rev=$(echo "$p" | cut -d' ' -f 2)
+  if [[ -d available/pp-$rev ]]; then
+  	if [[ "$recent" == "" ]]; then 
+  		recent="$rev"
+  	elif [[ "$recent" != *"$rev"* ]]; then
+  		recent="$rev\n$recent"
+  	fi
+  fi
+done < "$FILE"
 
-recent=$(cat $dir/public/rev.txt | cut -d' ' -f 2)
-
-while [[ -f $dir/public/prev.txt ]];
-do
-	REV=$(cat $dir/public/prev.txt | cut -d' ' -f 2)
-	if [[ $recent == *"$REV"* ]]; then
-		echo "Circular version sequence detected for '$REV'"
-	  exit 1
-	fi
-	recent="$recent\n$REV"
-	dir=available/pp-$REV
-done
 echo -e $recent
