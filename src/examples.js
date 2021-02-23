@@ -13,7 +13,6 @@ export async function init_examples(par) {
 		return
 	}
 	const wrapper_div = make_examples_page(holder)
-	// const app_div = xx
 	const searchbar_div = wrapper_div.append('div')
 	const track_grid = make_main_track_grid(wrapper_div)
 	const gbrowswer_col = make_gBrowserCol(track_grid)
@@ -29,10 +28,8 @@ export async function init_examples(par) {
 		.append('h5')
 		.html('GenomePaint')
 		.append('hr')
-	// make_gpaint_card(gbrowswer_col)
 	const gpaintList = gbrowswer_col.append('ul')
 	gpaintList
-		.attr('class', 'track-list')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
@@ -47,7 +44,6 @@ export async function init_examples(par) {
 		.append('hr')
 	const browserList = gbrowswer_col.append('ul')
 	browserList
-		.attr('class', 'track-list')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
@@ -77,7 +73,6 @@ export async function init_examples(par) {
 		.append('hr')
 	const appList = app_col.append('ul')
 	appList
-		.attr('class', 'track-list')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
@@ -106,7 +101,7 @@ function make_examples_page(holder) {
 	return wrapper_div
 }
 //Makes search bar and functionality to search tracks
-function make_searchbar(div, args) {
+function make_searchbar(div, args, re) {
 	const bar_div = div.append('div')
 	bar_div
 		.style('display', 'flex')
@@ -128,7 +123,8 @@ function make_searchbar(div, args) {
 		.on(
 			'keyup',
 			debounce(async () => {
-				const data = await loadJson()
+				const data = re
+				// const data = await loadJson()
 				const searchInput = searchBar
 					.select('input')
 					.node()
@@ -180,29 +176,21 @@ function make_gBrowserCol(div) {
 }
 
 //Creates the launch genome browser button
-function launch_gBrowser_btn(div) {
-	const launch_btn = div.append('div')
-	launch_btn.append('button').text('Launch Genome Browser')
-}
-
-//Standalone card for GenomePaint
-// function make_gpaint_card(div) {
-// 	const gpaint_card_div = div.append('div')
-// 	gpaint_card_div
-// 		.attr('class', 'gpaint-card')
-// 		.style('background-color', 'white')
-// 		.style(
-// 			'font-family',
-// 			"'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif"
-// 		)
-// 		.style('margin', '25px 10px -15px 10px')
-// 		.html(`<a href=https://genomepaint.stjude.cloud target="_blank" class="gpaint-img"><img src="https://pecan.stjude.cloud/static/examples/images/gpaint-square.png"></img>
-// 		</a>
-// 		<h6 id="gpaint-header">GenomePaint</h6>
-//         <a href=https://ppr.stjude.org/?mdsjsonform=1 target="_blank" id="gpaint-link">Create a Custom Track</a>
-//         <p id="gpaint-citation"><a href=https://pubmed.ncbi.nlm.nih.gov/33434514/ target="_blank">Link to paper</a></p>`)
-
-// 	return gpaint_card_div
+// function launch_gBrowser_btn(div) {
+//     const launch_btn_div = div.append('div')
+//     launch_btn_div
+//         .style('display', 'grid')
+//         .style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
+//     const launch_btn = launch_btn_div.append('div')
+//     launch_btn
+//         .append('button')
+//         .attr('class', 'gbrowser-btn')
+//         .style('border-radius', '3px')
+//         .style('border', 'none')
+//         .style('background-color', 'white')
+//         // .style('height', '45px')
+//         // .style('width', 'minmax(320px, auto)')
+//         .text('Launch Genome Browser')
 // }
 
 //Creates the outer Other App column
