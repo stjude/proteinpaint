@@ -1265,7 +1265,7 @@ async function click_dot_disco(dot, obj) {
 	try {
 		const sjcharts = await getsjcharts()
 		const arg = {
-			genome: obj.disco.genome.name,
+			genome: obj.genome.name,
 			dslabel: obj.disco.dslabel,
 			querykey: obj.disco.querykey,
 			getsample4disco: dot.sample
@@ -1277,8 +1277,8 @@ async function click_dot_disco(dot, obj) {
 		const discoHolder = pane.body.append('div')
 		const renderer = await sjcharts.dtDisco({
 			holderSelector: discoHolder,
-			chromosomeType: obj.disco.genome.name,
-			majorchr: obj.disco.genome.majorchr,
+			chromosomeType: obj.genome.name,
+			majorchr: obj.genome.majorchr,
 			settings: {
 				showControls: false,
 				selectedSamples: []
@@ -1286,7 +1286,7 @@ async function click_dot_disco(dot, obj) {
 			callbacks: {
 				geneLabelClick: {
 					type: 'genomepaint',
-					genome: obj.disco.genome.name,
+					genome: obj.genome.name,
 					dslabel: obj.disco.dslabel,
 					sample: dot.sample
 				}
