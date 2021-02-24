@@ -14,8 +14,9 @@ import json
 
 parser = argparse.ArgumentParser(description='refSeq CDD annotation. Default species: Homo_sapiens')
 parser.add_argument('-p','--path',help='The path to refseq protein database downloaded from NCBI')
-parser.add_argument('-s','--species',help="Latin name of organism you are working on, \
-										There should be a '_' between Latin name, like Homo_sapiens",default='Homo_sapiens')
+parser.add_argument('-s','--species',help="Species name. Current supported species: human,mouse,zebrafish",default='human')
+parser.add_argument('--isoform',help="prefered isoform list",default=None)
+parser.add_argument('--cddid',help='Include domain without cdd id',action='store_true')
 
 args = parser.parse_args()
 
@@ -33,7 +34,8 @@ else:
 
 
 #Define functions
-#extract all annotation content for each protein ID 
+#extract all annotation content for each protein ID
+#extract species info 
 def GETPCON():
 	con = ''
 	CHE = True
@@ -45,7 +47,12 @@ def GETPCON():
 			CHE = False
 		else:
 			con += ' ' + newline
-	return con
+	#extract species info
+	spe = re.search('DEFINITION.*\[(.*?)\]\.\s*?ACCESSION',con,re.S).group(1)
+	speL = [x.strip() for x in re.split('\s',spe) if x.strip()]
+	spe = ' '.join(speL)
+	return con,spe
+
 
 #find RNA acc
 def FINDRNAID(c):
@@ -57,7 +64,7 @@ def FINDRNAID(c):
 
 #Generate all region and site domain info
 
-def GETDOMAIN(annocontext):
+def GETDOMAIN(transid,annocontext):
 	annocontext = re.search('FEATURES[\s\S]*',annocontext).group(0).strip().split('\n')
 	alldomain = {'region':set(),'region_nocdd':set(),'site':set(),'site_nocdd':set()}
 	#extract all regions and sites and 
@@ -65,7 +72,7 @@ def GETDOMAIN(annocontext):
 	#
 	domainidx = [i for i,x in enumerate(annocontext) if x.strip().startswith('Region') or x.strip().startswith('Site')]
 	for i in domainidx:
-		domain_cor,domain_dic = GETDOMAININFO(i,annocontext)
+		domain_cor,domain_dic = GETDOMAININFO(i,annocontext,transid)
 		if 'note' not in domain_dic:
 			continue
 		if 'experiment' not in domain_dic and 'db_xref' not in domain_dic:
@@ -73,7 +80,12 @@ def GETDOMAIN(annocontext):
 		if 'region_name' not in domain_dic and 'site_type' not in domain_dic:
 			continue
 		cate,dset = DOMAININFO(domain_cor,domain_dic)
+		#if args.cddid and (cate == 'region_nocdd' or cate == 'site_nocdd'):
+		#	continue
 		alldomain[cate].update(dset)
+	if args.cddid:
+		alldomain.pop('region_nocdd')
+		alldomain.pop('site_nocdd')
 	return alldomain
 
 ##used in GETDOMAIN
@@ -165,18 +177,20 @@ def GET_evi(line): #Get evidence
 
 ##used in function GETDOMAIN
 #return list of coordinate and the dictionary of fetures
-def GETDOMAININFO(idx,contextlist):
+def GETDOMAININFO(idx,contextlist,tid):
 	#coordinate is a list structure with a list of start and stop aa site
-	COR = GETCOR(idx, contextlist)
+	COR,EXTIDX = GETCOR(idx, contextlist)
 	#annotation information is a dictionary data structure with one or all of the following terms as keys and the detail of each term as value
 	#(region_name,site_type,experiment,note,db_xref)
-	ANNOINFO = GETFETURECONT(idx,contextlist)
+	ANNOINFO = GETFETURECONT(idx,contextlist,tid,EXTIDX)
 	return COR,ANNOINFO
 
 
 ###used in GETDOMAININFO to get coordinate list
 def GETCOR(i,c):
+#return extidx to facilitate GETFETURECONT
 	cor = []
+	extidx = 0
 	regionSite = c[i]
 	if 'Region' in regionSite:
 		if '..' in regionSite:
@@ -186,9 +200,10 @@ def GETCOR(i,c):
 			cor.append('@'.join([regcor]*2))
 	elif re.search("Site\s+order\(.*",regionSite):
 		if not regionSite.endswith(')'):
-			for a in c[i+1:]:
+			for i,a in enumerate(c[i+1:]):
 				regionSite += a.strip()
 				if a.strip().endswith(')'):
+					extidx = i+1
 					break
 		COORD = re.search("Site\s+order\((.*)\)",regionSite).groups()[0].split(',')
 		N = [cor.append('@'.join([x,x])) if '..' not in x else cor.append(x.replace('..','@')) for x in COORD]
@@ -198,13 +213,13 @@ def GETCOR(i,c):
 		else:
 			COORD = re.search("Site\s+(\d+)",regionSite).groups()[0]
 			cor.append('@'.join([COORD]*2))
-	return cor
+	return cor,extidx
 ###used in GETDOMAININFO to get content of region_name, experiment, note, db_xref.
-def GETFETURECONT(i,c):
+def GETFETURECONT(i,c,tid,extidx):
 	feturedic = {}
 	k = ''
 	v = ''
-	for f in c[i+1:]:
+	for f in c[i+1+extidx:]:
 		f = f.strip()
 		if not k and v:
 			break
@@ -218,17 +233,22 @@ def GETFETURECONT(i,c):
 				v += ' '+f[1:]
 				continue
 			if k and v:
-				if v.endswith('"'):
-					feturedic.update({k:v})
-					k = ''
-					v = ''
-				else:
-					print("No double quotes for key: "+k, file=sys.stderr)
-					sys.exit(1)
+				if not v.endswith('"'):
+					v += '"'
+					#print("No double quotes for key: "+k, file=sys.stderr)
+					#print('Add the missed double quotes in the file: '+Pfile)
+					#print('TranscriptID: '+tid)
+				feturedic.update({k:v})
+				k = ''
+				v = ''
 			if f.startswith('Region') or f.startswith('Site') or f.startswith('CDS'):
 				break
 			elif f.startswith('/'):
-				k,v = re.search('/(.*?)=(".*)',f).groups()
+				if '="' in f:
+					k,v = re.search('/(.*?)=(".*)',f).groups()
+				else:
+					k,v = re.search('/(.*?)=(.*)',f).groups()
+					v = '"' + v
 				if v.endswith('"'):
 					feturedic.update({k:v})
 					k = ''
@@ -245,12 +265,16 @@ def GETFETURECONT(i,c):
 
 
 
-#Define GLOBAL var
 
 ##protein ID
 PID = '' 
 ##Domain dic data structure
 DOMAIN = {'region':{},'region_nocdd':{},'site':{},'site_nocdd':{}}
+## species info
+ORG2LATIN = {"human":"Homo sapiens",
+		"mouse":"Mus musculus",
+		"zebrafish":"Danio rerio"}
+ORG = ORG2LATIN[args.species]
 
 #Extract CDD info for both region and site
 for Pfile in os.listdir(PATH):
@@ -267,12 +291,15 @@ for Pfile in os.listdir(PATH):
 			#DEFINITION  CD300c molecule-like isoform 2 precursor [Homo sapiens].
 			#ACCESSION   NP_001311005 XP_005257965 XP_005276682
 			#DBSOURCE    REFSEQ: accession NM_001324076.1
-			annotation_context = GETPCON()
+			annotation_context,SPE = GETPCON()
+			#continue if species name not match
+			if not SPE or SPE != ORG:
+				continue
 			#GET mRNA refseq accession ID
 			mRNA_acc = FINDRNAID(annotation_context)
 			if not mRNA_acc:
 				continue
-			RTDOMAIN = GETDOMAIN(annotation_context)
+			RTDOMAIN = GETDOMAIN(mRNA_acc,annotation_context)
 			if not RTDOMAIN:
 				continue
 			for c in RTDOMAIN:
@@ -287,11 +314,11 @@ for Pfile in os.listdir(PATH):
 
 #When a site locate within a region and have same cdd id with this region, the site will be removed
 #only apply to sites with cdd id
-REG_DIC = {}
+REG_DIC = {} #{mrnaID: [['473-525', '8-250', '298-338'], ['CDD:212757', 'CDD:153342', 'CDD:294066']]}
 for mid in DOMAIN['region']:
 	rang = []
 	cdid = []
-	for ele in DOMAIN['region'][mid]:
+	for ele in DOMAIN['region'][mid]: #ele: 'SH3_Nostrin@Src homology 3 domain of Nitric Oxide Synthase TRaffic INducer@473@525@Curated_at_NCBI:cd11823@CDD:212757'
 		tem_li = ele.split('@')
 		rang.append('-'.join(map(str,tem_li[2:4])))
 		cdid.append(tem_li[-1])
@@ -307,6 +334,7 @@ for smid in DOMAIN['site']:
 			tem_lis = sele.split('@')
 			for R_ran in range(len(REG_DIC[smid][0])):
 				RRLIS = REG_DIC[smid][0][R_ran].split('-')
+				#test if a site is located within a region and has same cdd id with the region
 				if int(tem_lis[2]) >= int(RRLIS[0]) and int(tem_lis[3]) <= int(RRLIS[1]) and tem_lis[-1] == REG_DIC[smid][1][R_ran]:
 					tem_lis.pop()
 					continue
@@ -327,41 +355,44 @@ for d in DOMAIN:
 			FDIC[mid].update(DOMAIN[d][mid])
 
 #protein domain from manually curated in Computational Biology Department from St. JUDE
-if os.path.isfile('protein_manuallyCurated.json'):
-	modifh = open('protein_manuallyCurated.json')
-else:
-	print('Missed manually curated protein domain file "protein_manuallyCurated.json"',file=sys.stderr)
-	sys.exit(1)
-MODIDATA = {}
-for line in modifh:
-	L = line.strip().split('\t')
-	if L[0] in MODIDATA:
-		MODIDATA[L[0]].append(L[1])
+#only apply to human
+if args.species == 'human':
+	if os.path.isfile('protein_manuallyCurated.json'):
+		modifh = open('protein_manuallyCurated.json')
 	else:
-		MODIDATA[L[0]] = [L[1]]
-modifh.close()
+		print('Missed manually curated protein domain file "protein_manuallyCurated.json"',file=sys.stderr)
+		sys.exit(1)
+	MODIDATA = {}
+	for line in modifh:
+		L = line.strip().split('\t')
+		if L[0] in MODIDATA:
+			MODIDATA[L[0]].append(L[1])
+		else:
+			MODIDATA[L[0]] = [L[1]]
+	modifh.close()
 
 #ISO list selected for the final proteindomain.json file
-if os.path.isfile('ISOLIST'):
-	ISOLIST = {x.strip() for x in open('ISOLIST')}
+if args.isoform:
+	ISOLIST = {x.strip() for x in open(args.isoform)}
 else:
-	CKISO = input('You want the all isoforms from NCBI into your final CDD proteindomain json file? y for yes!\n')
-	if CKISO == 'y':
-		ISOLIST = False
-	else:
-		print('Please provide your prefered isoform accession ID file with one id each row...',file=sys.stderr)
-		sys.exit(1)
+	#CKISO = input('You want the all isoforms from NCBI into your final CDD proteindomain json file? y for yes!\n')
+	#if CKISO == 'y':
+	ISOLIST = False
+	#else:
+	#	print('Please provide your prefered isoform accession ID file with one id each row...',file=sys.stderr)
+	#	sys.exit(1)
 
 #OUTPUT formated data
 FINAL_OUT = open(args.species+"_CDD.Json",'w')
 for mid in FDIC:
 	if ISOLIST and mid not in ISOLIST: #select prefered isoform
 		continue
-	if mid in MODIDATA: #output manually curated protein domain
-		for m in MODIDATA[mid]:
-			FINAL_OUT.write('\t'.join([mid,m])+'\n')
-	if mid == 'NM_006206':
-		continue
+	if args.species == 'human':
+		if mid in MODIDATA: #output manually curated protein domain
+			for m in MODIDATA[mid]:
+				FINAL_OUT.write('\t'.join([mid,m])+'\n')
+		if mid == 'NM_006206':
+			continue
 	for i in FDIC[mid]:
 		indiv_cdd = i.split('@')
 		outdic = {'name':indiv_cdd[0],'description':indiv_cdd[1],'start':int(indiv_cdd[2]),'stop':int(indiv_cdd[3])}
@@ -384,7 +415,6 @@ for mid in FDIC:
 			continue
 			
 FINAL_OUT.close()
-
 
 
 

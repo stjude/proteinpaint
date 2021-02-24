@@ -1,11 +1,14 @@
 #1. protein_manuallyCurated:
 	manually curated protein domain. some of them already included in Homo_sapiens_CDD.Json, while some of them need to be combined with Homo_sapiens_CDD.Json to generate final protein db.
 
-#2. NM_006206_proteindomain
-	protein domains from this file should be present in the final protein db. All domain from NCBI for this gene should be removed before adding this data.
+#2. NM_006060_proteindomain 
+	protein domains from Mullighan
 
 #3. protein_manuallyCurated.json
-	json format file including both file above
+	manually curated domain
+	NM_00620 All domain from NCBI for this transcript should be removed. Only manually curated domain would be added for this transcript.
+
 #4. generate proteindomain.db
 	generate proteindomain.db by simply running NCBI_CDD.sh under this folder 
 
+#5. support human, zebrafish and mouse
