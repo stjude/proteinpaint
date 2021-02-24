@@ -11,4 +11,10 @@
 #4. generate proteindomain.db
 	generate proteindomain.db by simply running NCBI_CDD.sh under this folder 
 
-#5. support human, zebrafish and mouse
+#5. Domain tables for Ensembl genes are not provided. There are two ways to get the tables:
+	ensembl_CDD_<species>.gz, ensembl_Pfam_<species>.gz, ensembl_smart_<species>.gz and ensembl_tigrfam_<species>.gz
+	Domain tables should include 4 columns: transcript stable ID, gene name, domain ID, domain start and domain end.
+	1. manually download them from http://useast.ensembl.org/biomart/martview/0b33cafdaebd19673cc93f70f64b6ccd
+	2. run ensembl_download.py to download domain tables. python package 'pybiomart' is required. 
+
+#6. support human, zebrafish and mouse
