@@ -21,6 +21,7 @@ if len(sys.argv) == 1:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('table',help='domain tables downloaded from ensembl biomart',nargs='+')
+parser.add_argument('-s','--species',help='species name. support human,zebrafish and mouse')
 args = parser.parse_args()
 
 
@@ -37,15 +38,18 @@ def CDDDIC(filename):
 			Describ = re.search('(.*?)[.,:]',L[3]).group(1)
 		else:
 			Describ = L[3]
+		Describ = Describ.replace('\\','')
+		Describ = Describ.replace('"','')
 		if L[1] not in DOMAIN:
 			DOMAIN[L[1]] = [L[0],L[2],Describ]
 		else:
 			print('Duplicated DOMAIN ID: '+L[1],file=sys.stderr)
-			sys.exit(1)
+			continue
+			#sys.exit(1)
 	fh.close()
 	return DOMAIN
 def GERJS(h,l):
-	DJS = {'start':int(L[3]),'stop':int(L[4])}
+	DJS = {'start':int(float(l[3])),'stop':int(float(l[4]))}
 	k = l[2]
 	if 'Pfam ID' in h:
 		k = 'pfam'+l[2][2:]
@@ -73,7 +77,7 @@ CDD_ID_Detail = CDDDIC('cddid.tbl')
 
 ########
 #generate CDD.json file for sqlite3 db
-OUT = open('Ensembl_domain.json','w')
+OUT = open('Ensembl_domain_'+args.species+'.json','w')
 for table in CDDTable:
 	if table.endswith('.gz'):
 		fh = gzip.open(table)

@@ -1,8 +1,0 @@
-NM_006206	{"name":"Ig-like C2-type 1","start":24,"stop":113,"color":"yellow","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
-NM_006206	{"name":"Ig-like C2-type 2","start":117,"stop":201,"color":"#e8e6a4","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
-NM_006206	{"name":"Ig-like C2-type 3","start":202,"stop":306,"color":"#ffd553","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
-NM_006206	{"name":"Ig-like C2-type 4","start":319,"stop":410,"color":"#ffb06d","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
-NM_006206	{"name":"Ig-like C2-type 5","start":414,"stop":517,"color":"#e9c198","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
-NM_006206	{"name":"Transmembrane domain","start":529,"stop":549,"color":"#59915B","url":"http://www.uniprot.org/uniprot/P16234#family_and_doma"}
-NM_006206	{"name":"Juxtamembrane domain","start":550,"stop":593,"color":"#A3825B","url":"http://clincancerres.aacrjournals.org/content/19/24/6935#F1"}
-NM_006206	{"name":"Protein kinase","start":593,"stop":954,"color":"#90C3D4","url":"http://www.uniprot.org/uniprot/P16234#family_and_domains"}
