@@ -2660,37 +2660,88 @@ function init_controlui(o) {
 		.style('border-bottom', 'solid 1px #ededed')
 		.style('display', 'none')
 
-	// symbolic mutation
+	// symbolic mutation options
 	const row = generalconfig.append('div').style('margin', '5px')
-	const row2 = generalconfig.append('div').style('margin', '5px')
-	row.append('span').html('Show all mutation features as symbolic&nbsp;&nbsp;')
-
 	row
-		.append('button')
-		.text('Yes')
-		.on('click', () => {
-			o.ismutation_allsymbolic = true
-			delete o.ismutation_allnotsymbolic
-			o.draw_matrix()
-		})
+		.append('div')
+		.style('vertical-align', 'top')
+		.style('display', 'inline-block')
+		.html('Show features as &nbsp;&nbsp;')
 
-	row
-		.append('button')
-		.text('No')
-		.on('click', () => {
-			delete o.ismutation_allsymbolic
-			o.ismutation_allnotsymbolic = true
-			o.draw_matrix()
-		})
+	const opts_div = row.append('div').style('display', 'inline-block')
+
+	const mutation_opts = [
+		{ value: 'symbol', text: 'CNV on genomic location, others as symbol' },
+		{ value: 'proportion', text: 'All features as porportion' }
+	]
+
+	mutation_opts.forEach(opt => {
+		const opt_div = opts_div.append('div')
+
+		opt_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', opt.value)
+			.attr('name', 'mutaion_display')
+			.attr('value', opt.value)
+			.property(
+				'checked',
+				opt.value == 'symbol' && o.ismutation_allsymbolic === undefined && o.ismutation_allnotsymbolic === undefined
+					? 1
+					: opt.value == 'symbol' && o.ismutation_allnotsymbolic
+					? 1
+					: opt.value == 'proportion' && o.ismutation_allsymbolic
+					? 1
+					: 0
+			)
+			.on('change', function() {
+				if (opt.value == 'symbol' && o.ismutation_allnotsymbolic) return
+				else if (opt.value == 'proportion' && o.ismutation_allsymbolic) return
+				else if (opt.value == 'symbol') {
+					delete o.ismutation_allsymbolic
+					o.ismutation_allnotsymbolic = true
+				} else if (opt.value == 'proportion') {
+					o.ismutation_allsymbolic = true
+					delete o.ismutation_allnotsymbolic
+				} else {
+					return
+				}
+				o.draw_matrix()
+			})
+
+		opt_div
+			.append('label')
+			.attr('for', opt.value)
+			.text(opt.text)
+	})
+
+	// row
+	// 	.append('button')
+	// 	.text('Yes')
+	// 	.on('click', () => {
+	// 		o.ismutation_allsymbolic = true
+	// 		delete o.ismutation_allnotsymbolic
+	// 		o.draw_matrix()
+	// 	})
+
+	// row
+	// 	.append('button')
+	// 	.text('No')
+	// 	.on('click', () => {
+	// 		delete o.ismutation_allsymbolic
+	// 		o.ismutation_allnotsymbolic = true
+	// 		o.draw_matrix()
+	// 	})
 
 	// matrix layout options
+	const row2 = generalconfig.append('div').style('margin', '5px')
 	row2
 		.append('div')
 		.style('vertical-align', 'top')
 		.style('display', 'inline-block')
-		.html('Layout of Matrix')
+		.html('Layout of Matrix &nbsp;&nbsp;')
 
-	const opts_div = row2.append('div').style('display', 'inline-block')
+	const opts_div2 = row2.append('div').style('display', 'inline-block')
 
 	const layout_opts = [
 		{ value: 'f_vs_s', text: 'Features Vs. Samples' },
@@ -2698,7 +2749,7 @@ function init_controlui(o) {
 	]
 
 	layout_opts.forEach(opt => {
-		const opt_div = opts_div.append('div')
+		const opt_div = opts_div2.append('div')
 
 		opt_div
 			.append('input')
