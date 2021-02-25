@@ -95,9 +95,8 @@ export function may_render_skewer(data, tk, block) {
 	variants loaded for this track
 	*/
 
-	if (tk.hlaachange || tk.hlvariants) {
+	if (tk.hlaachange || tk.hlssmid) {
 		/*
-		FIXME legacy code, have not been tested
 		for any variants to be highlighted, expanded and fold all the others
 		*/
 		const fold = []
@@ -129,23 +128,16 @@ export function may_render_skewer(data, tk, block) {
 			}
 			delete tk.hlaachange
 		}
-
-		if (tk.hlvariants) {
-			// is array
-			const hlkeys = {}
-			for (const m of tk.hlvariants) {
-				hlkeys[m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt] = 1
-			}
-
+		if (tk.hlssmid) {
+			// is map
 			for (const d of tk.skewer.data) {
 				let has = false
 				for (const g of d.groups) {
-					if (has) {
-						break
-					}
 					for (const m of g.mlst) {
-						if (hlkeys[m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt]) {
+						// harcoded key of "ssm_id"!!!
+						if (tk.hlssmid.has(m.ssm_id)) {
 							has = true
+							tk.hlssmid.delete(m.ssm_id)
 							break
 						}
 					}
@@ -156,6 +148,7 @@ export function may_render_skewer(data, tk, block) {
 					fold.push(d)
 				}
 			}
+			delete tk.hlssmid
 		}
 
 		fold_glyph(fold, tk)
