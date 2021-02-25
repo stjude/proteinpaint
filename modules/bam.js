@@ -97,7 +97,7 @@ segment {}
 
 box {}
 .opr
-.start // absolute bp
+.start // absolute bp, 0-based
 .len   // #bp
 .cidx  // start position in sequence/qual string
 .s (read sequence) FIXME only keep box.s if sequence will be rendered
@@ -233,8 +233,20 @@ module.exports = genomes => {
 	}
 }
 
+/*
+at r.ntwidth>=1:
+	get depth at each bp and plot one bar for each bp;
+	bplst[] is constructed directly according to the "samtools depth" output
+	non-covered basepairs will not show up in bplst
+	thus the genomic positions in the array may be *discontinuous*
+	and must use coordinate direct match to find in bplst but not "bp seek"
+at r.ntwidth<1:
+	bin the basepairs under a pixel and plot mean value, one bar for each pixel
+	bplst[] is constructed by "bp seek"
+	will introduce undefined elements for uncovered regions!!
+	must test if bplst[?] is valid before using
+*/
 async function plot_pileup(q, templates) {
-	// hardcoded cutoff when r.ntwidth<1, means one pixel covers multiple bps, will bin the depth
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	if (q.devicePixelRatio > 1) {
@@ -242,100 +254,67 @@ async function plot_pileup(q, templates) {
 	}
 
 	const bplst = []
-	// array of array, stores depth for each region, each ele is { .position, .total/A/T/C/G/refskip }
+	// array of array, stores depth for each region, each ele is { .position, .total/A/T/C/G }
 	let maxValue = 0 // max depth from all regions
 
 	for (const [ridx, r] of q.regions.entries()) {
 		bplst[ridx] = await run_samtools_depth(q, r)
-		maxValue = Math.max(maxValue, ...bplst[ridx].map(i => i.total))
+		const lst = []
+		for (const b of bplst[ridx]) {
+			if (b) lst.push(b.total)
+		}
+		maxValue = Math.max(maxValue, ...lst)
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
 		const sf = q.pileupheight / maxValue
-		if (r.ntwidth >= 1) {
-			// zoomed in for multiple pixel per bp, will overlay mismatch; softclip is treated as mismatch
 
-			softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
+		softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
 
-			for (const bp of bplst[ridx]) {
-				const x = (bp.position - r.start) * r.ntwidth
+		for (const bp of bplst[ridx]) {
+			if (!bp) continue // gap from zoomed out mode
 
-				// total coverage of this bp
-				{
-					ctx.fillStyle = pileup_totalcolor
-					const h = bp.total * sf
-					ctx.fillRect(x, q.pileupheight - h, r.ntwidth, h)
-				}
+			const x0 = (bp.position - r.start) * r.ntwidth
+			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-				let y = 0 // cumulate bar height of mismatch bp
-				if (bp.A) {
-					ctx.fillStyle = basecolor.A
-					const h = bp.A * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.C) {
-					ctx.fillStyle = basecolor.C
-					const h = bp.C * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.G) {
-					ctx.fillStyle = basecolor.G
-					const h = bp.G * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.T) {
-					ctx.fillStyle = basecolor.T
-					const h = bp.T * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
+			const barwidth = Math.max(1, r.ntwidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
 
-				/*
-				if (bp.softclipA) {
-					ctx.fillStyle = basecolor.A
-					const h = bp.softclipA * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.softclipT) {
-					ctx.fillStyle = basecolor.T
-					const h = bp.softclipT * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.softclipC) {
-					ctx.fillStyle = basecolor.C
-					const h = bp.softclipC * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				if (bp.softclipG) {
-					ctx.fillStyle = basecolor.G
-					const h = bp.softclipG * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
-				*/
-			}
-		} else {
-			// zoomed out for multiple bp per pixel, do not overlay mismatch
-			for (const bp of bplst[ridx]) {
-				const x = (bp.position - r.start + 1) * r.ntwidth
-				let y = 0
-
+			// total coverage of this bp
+			{
 				ctx.fillStyle = pileup_totalcolor
 				const h = bp.total * sf
-				ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
+				ctx.fillRect(x, q.pileupheight - h, barwidth, h)
+			}
 
-				if (bp.softclip) {
-					ctx.fillStyle = 'rgb(70,130,180)'
-					const h = bp.softclip * sf
-					ctx.fillRect(x, q.pileupheight - y - h, r.ntwidth, h)
-					y += h
-				}
+			let y = 0 // cumulate bar height of mismatch bp
+			if (bp.A) {
+				ctx.fillStyle = basecolor.A
+				const h = bp.A * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
+			}
+			if (bp.C) {
+				ctx.fillStyle = basecolor.C
+				const h = bp.C * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
+			}
+			if (bp.G) {
+				ctx.fillStyle = basecolor.G
+				const h = bp.G * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
+			}
+			if (bp.T) {
+				ctx.fillStyle = basecolor.T
+				const h = bp.T * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
+			}
+			if (bp.softclip) {
+				ctx.fillStyle = softclipbg_hq
+				const h = bp.softclip * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
 			}
 		}
 	}
@@ -356,13 +335,34 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 				continue
 			}
 			for (const box of segment.boxes) {
-				if (box.opr == 'S' || box.opr == 'X') {
-					for (let boxsi = 0; boxsi < box.s.length; boxsi++) {
-						const bpidx = box.start + boxsi - bplst[0].position
-						const bpitem = bplst[bpidx]
-						if (!bpitem) continue // bpidx index out of view range
-						const nt = box.s[boxsi]
-						bpitem[nt] = 1 + (bpitem[nt] || 0)
+				if (r.ntwidth >= 1) {
+					// zoomed in, plot softclip/mismatch as basepairs
+					if ((box.opr == 'S' || box.opr == 'X') && box.s) {
+						for (let boxsi = 0; boxsi < box.s.length; boxsi++) {
+							const bpposition = box.start + boxsi
+							const bpitem = bplst.find(i => i.position == bpposition)
+							// each item of bplst is one basepair
+							// must directly match box bp position with bplst[].position
+							// as bplst[] may be discontinuous, cannot use bpposition-bplst[0].position to get its array index
+							if (!bpitem) continue // bpposition out of view range
+							const nt = box.s[boxsi]
+							bpitem[nt] = 1 + (bpitem[nt] || 0)
+						}
+					}
+				} else {
+					// zoomed out, plot only softclip
+					if (box.opr == 'S') {
+						// for the stretch of softclip, apply count to bplst
+						const clipstartidx = Math.floor((box.start - r.start) * r.ntwidth)
+						const clipstopidx = Math.floor((box.start + box.len - r.start) * r.ntwidth)
+						for (let i = clipstartidx; i <= clipstopidx; i++) {
+							const bpitem = bplst[i]
+							if (!bpitem) {
+								// should not happen
+								continue
+							}
+							bpitem.softclip = 1 + (bpitem.softclip || 0)
+						}
 					}
 				}
 			}
@@ -756,43 +756,48 @@ function run_samtools_depth(q, r) {
 	return new Promise((resolve, reject) => {
 		const ls = spawn(
 			samtools,
-			['depth', q.file || q.url, '-r', (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			[
+				'depth',
+				q.file || q.url,
+				'-r',
+				// must use r.start+1 to query bam
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop
+			],
 			{ cwd: q.dir }
 		)
 		const rl = readline.createInterface({ input: ls.stdout })
 		rl.on('line', line => {
-			const columns = line.split('\t')
-			const total = Number.parseInt(columns[2])
-			const bp = {
-				position: Number.parseInt(columns[1]) - 1, // change to 0-based
-				total
-			}
-			bplst.push(bp)
-		})
-		rl.on('close', () => {
+			const l = line.split('\t')
+			const position = Number.parseInt(l[1]) - 1
+			const depth = Number.parseInt(l[2])
 			if (r.ntwidth >= 1) {
-				// one bp has one or more pixels, return per bp depth
-				resolve(bplst)
+				// zoomed in, one element per basepair
+				bplst.push({ position, total: depth })
 				return
 			}
-			// zoomed out with one pixel covering multiple nucleotides
-			// iterate through pixels to compute mean of bp depth under that pixel
-			const ntperpx = 1 / r.ntwidth // Number of nucleotides per pixel
-			const bplst_new = [] // store mean depth per pixel
-			for (let pixel = 0; pixel < r.width; pixel++) {
-				let sumdepth = 0 // sum of depth for bp under this pixel
-				const startnt = Math.floor(pixel * ntperpx)
-				for (let i = startnt; i < startnt + ntperpx; i++) {
-					if (bplst[i]) sumdepth += bplst[i].total
-					// may be out of bound
+			// zoomed out, sum all basepairs covered by each pixel
+			const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
+			if (!bplst[bpidx]) {
+				bplst[bpidx] = {
+					position,
+					sum: 0,
+					count: 0
 				}
-				const px = {
-					total: sumdepth / ntperpx,
-					position: bplst[Math.min(bplst.length - 1, startnt)].position
-				}
-				bplst_new.push(px)
 			}
-			resolve(bplst_new)
+			bplst[bpidx].sum += depth
+			bplst[bpidx].count++
+		})
+		rl.on('close', () => {
+			if (r.ntwidth < 1) {
+				// get average for each bin
+				for (const b of bplst) {
+					if (!b) continue // could be undefined elements (gaps)
+					b.total = b.sum / b.count
+					delete b.sum
+					delete b.count
+				}
+			}
+			resolve(bplst)
 		})
 	})
 }
@@ -1015,7 +1020,6 @@ may skip insertion if on screen width shorter than minimum width
 		return
 	}
 	const segstart = segstart_1based - 1
-	//console.log("segstart:",segstart," cigar:",cigarstr)
 
 	if (cigarstr == '*') {
 		return
