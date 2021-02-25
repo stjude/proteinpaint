@@ -196,6 +196,8 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
+<<<<<<< HEAD
+
 	console.log(
 		'q.variant.pos:',
 		q.variant.pos,
