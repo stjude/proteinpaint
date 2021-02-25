@@ -8,6 +8,8 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const bamcommon = require('./bam.common')
+const basecolor = require('../src/common').basecolor
+const serverconfig = require('./serverconfig')
 
 /*
 XXX quick fix to be removed/disabled later
@@ -35,7 +37,7 @@ XXX quick fix to be removed/disabled later
 when client zooms into one read group, server needs to know which group it is and only generate that group
 
 *********************** new q{}
-.grouptype, .partstack{}
+.grouptype, .partstack{} // having partstack indicates it's in the partstack mode
 .genome
 .devicePixelRatio
 .asPaired
@@ -95,10 +97,10 @@ segment {}
 
 box {}
 .opr
-.start // absolute bp
+.start // absolute bp, 0-based
 .len   // #bp
 .cidx  // start position in sequence/qual string
-.s (read sequence)
+.s (read sequence) FIXME only keep box.s if sequence will be rendered
 .qual[]
 
 
@@ -131,6 +133,9 @@ do_query
 		plot_template
 			plot_segment
 		plot_insertions
+	plot_pileup
+		run_samtools_depth
+		softclip_mismatch_pileup
 */
 
 // match box color, for single read and normal read pairs
@@ -177,6 +182,7 @@ const deletion_linecolor = 'red'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
+const pileup_totalcolor = '#e0e0e0'
 
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
@@ -204,9 +210,7 @@ const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
-const serverconfig = require('./serverconfig')
 const samtools = serverconfig.samtools || 'samtools'
-const sambamba = serverconfig.sambamba || 'sambamba'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -221,9 +225,7 @@ module.exports = genomes => {
 			}
 
 			const q = await get_q(genome, req)
-			//get_coverage(q,req) // Run this function to get coverage/pilup plot data
 			res.send(await do_query(q))
-			//console.log("q:",q)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -231,107 +233,298 @@ module.exports = genomes => {
 	}
 }
 
-async function get_coverage(q, req) {
-	const coverage_input = JSON.parse(req.query.regions.replace('[', '').replace(']', ''))
-	const ref_seq = (await utils.get_fasta(
-		q.genome,
-		coverage_input.chr +
-			':' +
-			parseInt(coverage_input.start).toString() +
-			'-' +
-			parseInt(coverage_input.stop).toString()
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
+/*
+at r.ntwidth>=1:
+	get depth at each bp and plot one bar for each bp;
+	bplst[] is constructed directly according to the "samtools depth" output
+	non-covered basepairs will not show up in bplst
+	thus the genomic positions in the array may be *discontinuous*
+	and must use coordinate direct match to find in bplst but not "bp seek"
+at r.ntwidth<1:
+	bin the basepairs under a pixel and plot mean value, one bar for each pixel
+	bplst[] is constructed by "bp seek"
+	will introduce undefined elements for uncovered regions!!
+	must test if bplst[?] is valid before using
+*/
+async function plot_pileup(q, templates) {
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 
-	const coverage_plot_str = await run_sambamba(
-		q.file,
-		coverage_input.chr.replace('chr', ''),
-		coverage_input.start,
-		coverage_input.stop
-	)
-	//console.log('coverage_plot_str:', coverage_plot_str)
-	let total_cov = []
-	let As_cov = []
-	let Cs_cov = []
-	let Gs_cov = []
-	let Ts_cov = []
-	let ref_cov = []
-	let first_iter = 1
-	let consensus_seq = ''
-	let seq_iter = 0
-	for (const line of coverage_plot_str.split('\n')) {
-		if (first_iter == 1) {
-			first_iter = 0
-		} else if (line.length == 0) {
-			continue
-		} else {
-			const columns = line.split('\t')
-			total_cov.push(parseInt(columns[2]))
-			const max_value = Math.max(parseInt(columns[3]), parseInt(columns[4]), parseInt(columns[5]), parseInt(columns[6]))
-			if (max_value == parseInt(columns[3])) {
-				// Look into this
-				consensus_seq += 'A'
-			}
-			if (max_value == parseInt(columns[4])) {
-				consensus_seq += 'C'
-			}
-			if (max_value == parseInt(columns[5])) {
-				consensus_seq += 'G'
-			}
-			if (max_value == parseInt(columns[6])) {
-				consensus_seq += 'T'
+	const bplst = []
+	// array of array, stores depth for each region, each ele is { .position, .total/A/T/C/G }
+	let maxValue = 0 // max depth from all regions
+
+	for (const [ridx, r] of q.regions.entries()) {
+		bplst[ridx] = await run_samtools_depth(q, r)
+		const lst = []
+		for (const b of bplst[ridx]) {
+			if (b) lst.push(b.total)
+		}
+		maxValue = Math.max(maxValue, ...lst)
+	}
+
+	for (const [ridx, r] of q.regions.entries()) {
+		const sf = q.pileupheight / maxValue
+
+		softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
+
+		for (const bp of bplst[ridx]) {
+			if (!bp) continue // gap from zoomed out mode
+
+			const x0 = (bp.position - r.start) * r.ntwidth
+			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
+
+			const barwidth = Math.max(1, r.ntwidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
+
+			// total coverage of this bp
+			{
+				ctx.fillStyle = pileup_totalcolor
+				const h = bp.total * sf
+				ctx.fillRect(x, q.pileupheight - h, barwidth, h)
 			}
 
-			// Determining ref allele and adding nucleotide depth to ref allele and to other alternate allele nucleotides
-			if (ref_seq[seq_iter] == 'A') {
-				As_cov.push(0)
-				ref_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
+			let y = 0 // cumulate bar height of mismatch bp
+			if (bp.A) {
+				ctx.fillStyle = basecolor.A
+				const h = bp.A * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
 			}
-			if (ref_seq[seq_iter] == 'C') {
-				As_cov.push(parseInt(columns[3]))
-				ref_cov.push(parseInt(columns[4]))
-				Cs_cov.push(0)
-				Gs_cov.push(parseInt(columns[5]))
-				Ts_cov.push(parseInt(columns[6]))
+			if (bp.C) {
+				ctx.fillStyle = basecolor.C
+				const h = bp.C * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
 			}
-			if (ref_seq[seq_iter] == 'G') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				ref_cov.push(parseInt(columns[5]))
-				Gs_cov.push(0)
-				Ts_cov.push(parseInt(columns[6]))
+			if (bp.G) {
+				ctx.fillStyle = basecolor.G
+				const h = bp.G * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
 			}
-			if (ref_seq[seq_iter] == 'T') {
-				As_cov.push(parseInt(columns[3]))
-				Cs_cov.push(parseInt(columns[4]))
-				Gs_cov.push(parseInt(columns[5]))
-				ref_cov.push(parseInt(columns[6]))
-				Ts_cov.push(0)
+			if (bp.T) {
+				ctx.fillStyle = basecolor.T
+				const h = bp.T * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+				y += h
 			}
-			seq_iter += 1
+			if (bp.softclip) {
+				ctx.fillStyle = softclipbg_hq
+				const h = bp.softclip * sf
+				ctx.fillRect(x, q.pileupheight - y - h, barwidth, h)
+			}
 		}
 	}
-	console.log('ref_seq:', ref_seq)
-	//console.log('ref_seq length:', ref_seq.length)
-	console.log('con_seq:', consensus_seq)
-	//console.log('consensus length:', consensus_seq.length)
-
-	const coverage_data = {
-		total_cov: total_cov,
-		As_cov: As_cov,
-		Cs_cov: Cs_cov,
-		Gs_cov: Gs_cov,
-		Ts_cov: Ts_cov,
-		ref_cov: ref_cov,
-		ref_seq: ref_seq
+	return {
+		width: q.canvaswidth,
+		maxValue,
+		src: canvas.toDataURL()
 	}
-	q.coverage_data = coverage_data
+}
+
+function softclip_mismatch_pileup(ridx, r, templates, bplst) {
+	// for a region, use segments from this region to add mismatches to bplst depth
+	// only work for per bp depth, not binned depth
+	for (const template of templates) {
+		for (const segment of template.segments) {
+			if (segment.ridx != ridx || Math.max(segment.segstart, r.start) > Math.min(segment.segstop, r.stop)) {
+				// segment not in this region
+				continue
+			}
+			for (const box of segment.boxes) {
+				if (r.ntwidth >= 1) {
+					// zoomed in, plot softclip/mismatch as basepairs
+					if ((box.opr == 'S' || box.opr == 'X') && box.s) {
+						for (let boxsi = 0; boxsi < box.s.length; boxsi++) {
+							const bpposition = box.start + boxsi
+							const bpitem = bplst.find(i => i.position == bpposition)
+							// each item of bplst is one basepair
+							// must directly match box bp position with bplst[].position
+							// as bplst[] may be discontinuous, cannot use bpposition-bplst[0].position to get its array index
+							if (!bpitem) continue // bpposition out of view range
+							const nt = box.s[boxsi]
+							bpitem[nt] = 1 + (bpitem[nt] || 0)
+						}
+					}
+				} else {
+					// zoomed out, plot only softclip
+					if (box.opr == 'S') {
+						// for the stretch of softclip, apply count to bplst
+						const clipstartidx = Math.floor((box.start - r.start) * r.ntwidth)
+						const clipstopidx = Math.floor((box.start + box.len - r.start) * r.ntwidth)
+						for (let i = clipstartidx; i <= clipstopidx; i++) {
+							const bpitem = bplst[i]
+							if (!bpitem) {
+								// should not happen
+								continue
+							}
+							bpitem.softclip = 1 + (bpitem.softclip || 0)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
+	// for a region, use segments from this region to add mismatches to bplst depth
+	// only work for per bp depth, not binned depth
+	let bp_iter = 0
+	for (const template of templates) {
+		for (const segment of template.segments) {
+			if (segment.ridx != ridx || Math.max(segment.segstart, r.start) > Math.min(segment.segstop, r.stop)) {
+				// segment not in this region
+				continue
+			}
+			bp_iter = segment.segstart - bplst[0].position - 1 // Records position in the view range
+			let first_element_of_cigar = 1
+			// i haven't reviewed logic below. if bplst[] contains bins, then here should update as well.
+			for (const box of segment.boxes) {
+				if (box.opr == 'S' || box.opr == 'I') {
+					// Checking to see if the first element of cigar is softclip or not
+					if (first_element_of_cigar == 1) {
+						bp_iter = bp_iter - box.len
+						first_element_of_cigar = 0
+					}
+					// Calculating soft-clip pileup here
+					for (let j = bp_iter; j < box.len + bp_iter; j++) {
+						if (j < 0) {
+							continue
+						} // When a read starts before the current view range
+						else if (j > r.stop - bplst[0].position - 2) {
+							break
+						} // When a read extends beyond current view range
+						else {
+							if (!bplst[j].softclip) {
+								bplst[j].softclip = 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
+							} else {
+								bplst[j].softclip += 1
+								if (box.opr == 'I') {
+									bplst[j].ref = bplst[j].ref - 1
+								}
+							}
+
+							// Check to see if softclip is reference allele or not
+							if (box.s[j - bp_iter] == 'A') {
+								if (!bplst[j].softclipA) {
+									bplst[j].softclipA = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipA += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'T') {
+								if (!bplst[j].softclipT) {
+									bplst[j].softclipT = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipT += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'C') {
+								if (!bplst[j].softclipC) {
+									bplst[j].softclipC = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipC += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+
+							if (box.s[j - bp_iter] == 'G') {
+								if (!bplst[j].softclipG) {
+									bplst[j].softclipG = 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								} else {
+									bplst[j].softclipG += 1
+									if (box.opr == 'I') {
+										bplst[j].ref = bplst[j].ref - 1
+									}
+								}
+							}
+						}
+					}
+					bp_iter += box.len
+					continue
+				} else {
+					bp_iter += box.len
+					first_element_of_cigar = 0
+				}
+			}
+
+			for (let i = 0; i < segment.boxes.length; i++) {
+				if (segment.boxes[i].opr == 'X') {
+					//console.log("segment.boxes[i]:",template.segment.boxes[i])
+					bp_iter = segment.boxes[i].start - bplst[0].position - 1 // Records position in the view range
+					//console.log("r.start:",r.start)
+					//console.log("bp_iter:",bp_iter)
+					if (bp_iter >= 0 && r.stop - bplst[0].position - 2 >= bp_iter) {
+						// Checking to see if the variant is within the view range
+						if (segment.boxes[i].s == 'A') {
+							if (!bplst[bp_iter].A) {
+								bplst[bp_iter].A = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].A += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'T') {
+							if (!bplst[bp_iter].T) {
+								bplst[bp_iter].T = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].T += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'C') {
+							if (!bplst[bp_iter].C) {
+								bplst[bp_iter].C = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].C += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+						if (segment.boxes[i].s == 'G') {
+							if (!bplst[bp_iter].G) {
+								bplst[bp_iter].G = 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							} else {
+								bplst[bp_iter].G += 1
+								bplst[bp_iter].ref = bplst[bp_iter].ref - 1
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 async function get_q(genome, req) {
@@ -349,6 +542,10 @@ async function get_q(genome, req) {
 	}
 	if (isurl) {
 		q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
+	}
+	if (req.query.pileupheight) {
+		q.pileupheight = Number(req.query.pileupheight)
+		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
 		const t = req.query.variant.split('.')
@@ -483,11 +680,14 @@ async function do_query(q) {
 		result.groups.push(gr)
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
-	//if (app.features.bamScoreJsPlot) result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-	result.coverage_data = q.coverage_data
+	if (!q.partstack) {
+		// not in partstack mode, will do pileup plot
+		if (!q.pileupheight) throw 'pileupheight missing'
+		result.pileup_data = await plot_pileup(q, templates)
+	}
 	return result
 }
 
@@ -509,7 +709,6 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		await query_region(r, q)
-		//const outfile = await create_coverage_plot(r, q)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -549,27 +748,56 @@ function query_region(r, q) {
 	})
 }
 
-function run_sambamba(bam_file, chr, start, stop) {
-	// function for creating the
+function run_samtools_depth(q, r) {
+	// "samtools depth" returns single base depth
+	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
+	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
+	const bplst = []
 	return new Promise((resolve, reject) => {
-		console.log('sambamba depth base ' + bam_file + ' -L ' + chr + ':' + start + '-' + stop)
-
-		const ls = spawn(sambamba, ['depth', 'base', bam_file, '-L', chr + ':' + start + '-' + stop])
-
-		ls.stdout.on('data', function(data) {
-			//Here is where the output goes
-			data = data.toString()
-			//console.log('stdout: ' + data)
-			resolve(data)
+		const ls = spawn(
+			samtools,
+			[
+				'depth',
+				q.file || q.url,
+				'-r',
+				// must use r.start+1 to query bam
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ls.stdout })
+		rl.on('line', line => {
+			const l = line.split('\t')
+			const position = Number.parseInt(l[1]) - 1
+			const depth = Number.parseInt(l[2])
+			if (r.ntwidth >= 1) {
+				// zoomed in, one element per basepair
+				bplst.push({ position, total: depth })
+				return
+			}
+			// zoomed out, sum all basepairs covered by each pixel
+			const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
+			if (!bplst[bpidx]) {
+				bplst[bpidx] = {
+					position,
+					sum: 0,
+					count: 0
+				}
+			}
+			bplst[bpidx].sum += depth
+			bplst[bpidx].count++
 		})
-
-		ls.stderr.on('data', data => {
-			console.log(`stderr: ${data}`)
-		})
-
-		ls.on('close', code => {
-			console.log(`child process exited with code ${code}`)
-			resolve('')
+		rl.on('close', () => {
+			if (r.ntwidth < 1) {
+				// get average for each bin
+				for (const b of bplst) {
+					if (!b) continue // could be undefined elements (gaps)
+					b.total = b.sum / b.count
+					delete b.sum
+					delete b.count
+				}
+			}
+			resolve(bplst)
 		})
 	})
 }
@@ -577,6 +805,7 @@ function run_sambamba(bam_file, chr, start, stop) {
 async function may_checkrefseq4mismatch(templates, q) {
 	// requires ntwidth
 	// read quality is not parsed yet, so need to set cidx for mismatch box so its quality can be added later
+	// FIXME call this after poststack_adjustq(), as then the to_printnt flags will be set and will know if to attach b.s
 	for (const r of q.regions) {
 		if (r.lines.length > 0 && r.ntwidth >= minntwidth_findmismatch) {
 			r.to_checkmismatch = true
@@ -593,8 +822,9 @@ async function may_checkrefseq4mismatch(templates, q) {
 					continue
 				}
 				if (b.opr == 'M') {
+					// FIXME only attach b.s if r.to_printnt is true; need to wait for further fix
 					b.s = segment.seq.substr(b.cidx, b.len)
-					check_mismatch(mismatches, r, b)
+					check_mismatch(mismatches, r, b, b.s)
 				}
 			}
 			if (mismatches.length) segment.boxes.push(...mismatches)
@@ -1054,9 +1284,9 @@ at the end, set q.canvasheight
 					// insertion has been decided to be visible so always get seq
 					b.s = segment.seq.substr(b.cidx, b.len)
 				} else if (b.opr == 'X' || b.opr == 'S') {
-					if (r.to_printnt) {
-						b.s = segment.seq.substr(b.cidx, b.len)
-					}
+					//if (r.to_printnt) {
+					b.s = segment.seq.substr(b.cidx, b.len)
+					//}
 				}
 				delete b.cidx
 			}
@@ -1154,13 +1384,14 @@ function segmentstop(boxes) {
 	return Math.max(...boxes.map(i => i.start + i.len))
 }
 
-function check_mismatch(lst, r, box) {
-	for (let i = 0; i < box.s.length; i++) {
+function check_mismatch(lst, r, box, boxseq) {
+	// only work on M box
+	for (let i = 0; i < boxseq.length; i++) {
 		if (box.start + i < r.start || box.start + i > r.stop) {
 			// to skip bases beyond view range
 			continue
 		}
-		const readnt = box.s[i]
+		const readnt = boxseq[i]
 		const refnt = r.referenceseq[box.start + i - r.start]
 		if (refnt != readnt.toUpperCase()) {
 			const b = {
@@ -1263,6 +1494,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
+	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P') continue // do not handle

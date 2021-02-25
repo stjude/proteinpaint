@@ -2,6 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
 import { init as init_legend } from './legend'
 import { loadTk } from './tk'
+import url2map from '../url2map'
 
 /*
 ********************** EXPORTED
@@ -72,6 +73,26 @@ export async function makeTk(tk, block) {
 	})
 
 	init_legend(tk, block)
+
+	if (tk.hlaachange) {
+		// comma-separated names
+		tk.hlaachange = new Set(tk.hlaachange.split(','))
+	}
+	if (tk.hlssmid) {
+		tk.hlssmid = new Set(tk.hlssmid.split(','))
+	}
+
+	// parse url parameters applicable to this track
+	// may inhibit this through some settings
+	{
+		const urlp = url2map()
+		if (urlp.has('hlaachange')) {
+			tk.hlaachange = new Set(urlp.get('hlaachange').split(','))
+		}
+		if (urlp.has('hlssmid')) {
+			tk.hlssmid = new Set(urlp.get('hlssmid').split(','))
+		}
+	}
 }
 
 function init_mclass(tk) {

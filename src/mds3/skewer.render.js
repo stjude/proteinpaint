@@ -234,10 +234,12 @@ export function skewer_make(tk, block) {
 			unfold_update(tk, block)
 		})
 
+	// special effect for highlighted variants
 	if (tk.hlaachange) {
-		// special effect for highlighted variants
-		//const big=1.3
 		textlab.filter(d => tk.hlaachange.has(d.mlst[0].mname)).classed('sja_pulse', true)
+	}
+	if (tk.hlssmid) {
+		textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
 	}
 
 	// skewer width
