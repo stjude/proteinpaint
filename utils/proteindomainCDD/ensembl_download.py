@@ -27,18 +27,18 @@ dataset = Dataset(name=dataset_name,host='http://www.ensembl.org')
 
 #CDD
 M = dataset.query(attributes=['ensembl_transcript_id','external_gene_name','cdd','cdd_start','cdd_end'])
-M.to_csv('ensembl_CDD'+args.species+'.gz',index=False,compression='gzip',sep='\t')
+M.to_csv('ensembl_CDD_'+args.species+'.gz',index=False,compression='gzip',sep='\t')
 
 #pfam
 M = dataset.query(attributes=['ensembl_transcript_id','external_gene_name','pfam','pfam_start','pfam_end'])
-M.to_csv('ensembl_Pfam'+args.species+'.gz',index=False,compression='gzip',sep='\t')
+M.to_csv('ensembl_Pfam_'+args.species+'.gz',index=False,compression='gzip',sep='\t')
 
 #smart
 M = dataset.query(attributes=['ensembl_transcript_id','external_gene_name','smart','smart_start','smart_end'])
-M.to_csv('ensembl_smart'+args.species+'.gz',index=False,compression='gzip',sep='\t')
+M.to_csv('ensembl_smart_'+args.species+'.gz',index=False,compression='gzip',sep='\t')
 
 #tigrfam
 M = dataset.query(attributes=['ensembl_transcript_id','external_gene_name','tigrfam','tigrfam_start','tigrfam_end'])
-M.to_csv('ensembl_tigrfam'+args.species+'.gz',index=False,compression='gzip',sep='\t')
+M.to_csv('ensembl_tigrfam_'+args.species+'.gz',index=False,compression='gzip',sep='\t')
 
 
