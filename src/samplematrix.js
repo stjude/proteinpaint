@@ -187,6 +187,8 @@ export class Samplematrix {
 				if (!Array.isArray(this.features)) throw 'features must be an array'
 
 				const featuretasks = []
+				if (this.features[0].height) this.ori_feature_height = this.features[0].height
+				if (this.features[0].width) this.ori_feature_width = this.features[0].width
 				for (const f of this.features) {
 					featuretasks.push(this.validate_feature(f))
 				}
@@ -755,14 +757,14 @@ export class Samplematrix {
 			h.selectAll('*').remove()
 
 			if (f.isgenevalue) {
-				h.append('span').text(f.scale.minv)
+				h.append('span').text(f.scale.minv.toFixed(3))
 				h.append('div')
 					.style('margin', '2px 10px')
 					.style('display', 'inline-block')
 					.style('width', '100px')
 					.style('height', '15px')
 					.style('background', 'linear-gradient( to right, white, ' + f.color + ')')
-				h.append('span').text(f.scale.maxv)
+				h.append('span').text(f.scale.maxv.toFixed(3))
 				continue
 			}
 
@@ -771,26 +773,26 @@ export class Samplematrix {
 					'Gain <span style="background:' +
 						f.colorgain +
 						';color:white;padding:1px 5px">' +
-						f.maxabslogratio +
+						f.maxabslogratio.toFixed(3) +
 						'</span> &nbsp; ' +
 						'Loss <span style="background:' +
 						f.colorloss +
 						';color:white;padding:1px 5px">-' +
-						f.maxabslogratio +
+						f.maxabslogratio.toFixed(3) +
 						'</span>'
 				)
 				continue
 			}
 
 			if (f.isloh) {
-				h.append('span').text(f.minvalue)
+				h.append('span').text(f.minvalue.toFixed(3))
 				h.append('div')
 					.style('margin', '2px 10px')
 					.style('display', 'inline-block')
 					.style('width', '100px')
 					.style('height', '15px')
 					.style('background', 'linear-gradient( to right, white, ' + f.color + ')')
-				h.append('span').text(f.maxvalue)
+				h.append('span').text(f.maxvalue.toFixed(3))
 				continue
 			}
 
@@ -921,19 +923,19 @@ export class Samplematrix {
 							'CNV gain <span style="background:' +
 								f.cnv.colorgain +
 								';color:white;padding:1px 5px">' +
-								f.cnv.maxabslogratio +
+								f.cnv.maxabslogratio.toFixed(3) +
 								'</span> &nbsp; ' +
 								'CNV loss <span style="background:' +
 								f.cnv.colorloss +
 								';color:white;padding:1px 5px">-' +
-								f.cnv.maxabslogratio +
+								f.cnv.maxabslogratio.toFixed(3) +
 								'</span>'
 						)
 				}
 
 				if (f.loh.maxvalue != undefined) {
 					const row = h.append('div').style('margin-bottom', '5px')
-					row.append('span').text('LOH seg.mean: ' + f.loh.minvalue)
+					row.append('span').text('LOH seg.mean: ' + f.loh.minvalue.toFixed(3))
 					row
 						.append('div')
 						.style('margin', '2px 10px')
@@ -941,7 +943,7 @@ export class Samplematrix {
 						.style('width', '100px')
 						.style('height', '15px')
 						.style('background', 'linear-gradient( to right, white, ' + f.loh.color + ')')
-					row.append('span').text(f.loh.maxvalue)
+					row.append('span').text(f.loh.maxvalue.toFixed(3))
 				}
 				continue
 			}
@@ -2658,27 +2660,74 @@ function init_controlui(o) {
 		.style('border-bottom', 'solid 1px #ededed')
 		.style('display', 'none')
 
-	{
-		// symbolic mutation
-		const row = generalconfig.append('div').style('margin', '5px')
-		row.append('span').html('Show all mutation features as symbolic&nbsp;&nbsp;')
-		row
-			.append('button')
-			.text('Yes')
-			.on('click', () => {
-				o.ismutation_allsymbolic = true
-				delete o.ismutation_allnotsymbolic
+	// symbolic mutation
+	const row = generalconfig.append('div').style('margin', '5px')
+	const row2 = generalconfig.append('div').style('margin', '5px')
+	row.append('span').html('Show all mutation features as symbolic&nbsp;&nbsp;')
+
+	row
+		.append('button')
+		.text('Yes')
+		.on('click', () => {
+			o.ismutation_allsymbolic = true
+			delete o.ismutation_allnotsymbolic
+			o.draw_matrix()
+		})
+
+	row
+		.append('button')
+		.text('No')
+		.on('click', () => {
+			delete o.ismutation_allsymbolic
+			o.ismutation_allnotsymbolic = true
+			o.draw_matrix()
+		})
+
+	// matrix layout options
+	row2
+		.append('div')
+		.style('vertical-align', 'top')
+		.style('display', 'inline-block')
+		.html('Layout of Matrix')
+
+	const opts_div = row2.append('div').style('display', 'inline-block')
+
+	const layout_opts = [
+		{ value: 'f_vs_s', text: 'Features Vs. Samples' },
+		{ value: 's_vs_f', text: 'Samples Vs. Features' }
+	]
+
+	layout_opts.forEach(opt => {
+		const opt_div = opts_div.append('div')
+
+		opt_div
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', opt.value)
+			.attr('name', 'layout')
+			.attr('value', opt.value)
+			.property(
+				'checked',
+				opt.value == 'f_vs_s' && o.features_on_rows ? 1 : opt.value == 's_vs_f' && !o.features_on_rows ? 1 : 0
+			)
+			.on('change', function() {
+				if (opt.value == 'f_vs_s' && o.features_on_rows) return
+				else if (opt.value == 's_vs_f' && !o.features_on_rows) return
+				else if (opt.value == 'f_vs_s') {
+					o.features_on_rows = true
+					if (o.ori_feature_width) o.features.forEach(f => (f.height = o.ori_feature_width))
+				} else {
+					o.features_on_rows = false
+					if (o.ori_feature_height) o.features.forEach(f => (f.width = o.ori_feature_height))
+				}
 				o.draw_matrix()
 			})
-		row
-			.append('button')
-			.text('No')
-			.on('click', () => {
-				delete o.ismutation_allsymbolic
-				o.ismutation_allnotsymbolic = true
-				o.draw_matrix()
-			})
-	}
+
+		opt_div
+			.append('label')
+			.attr('for', opt.value)
+			.text(opt.text)
+	})
 
 	// data
 	buttonrow

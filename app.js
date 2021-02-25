@@ -2464,7 +2464,7 @@ async function handle_mdsgenecount(req, res) {
 		if (!req.query.samples) throw '.samples missing'
 		const query = `WITH
 	filtered AS (
-		SELECT * FROM genecount
+		SELECT gene, snv_mfndi + snv_splice + snv_utr + sv + fusion + itd + cnv_2mb_01 AS total FROM genecount
 		WHERE sample IN (${JSON.stringify(req.query.samples)
 			.replace(/[[\]\"]/g, '')
 			.split(',')
