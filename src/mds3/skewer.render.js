@@ -236,10 +236,22 @@ export function skewer_make(tk, block) {
 
 	// special effect for highlighted variants
 	if (tk.hlaachange) {
+		// pulsating label
 		textlab.filter(d => tk.hlaachange.has(d.mlst[0].mname)).classed('sja_pulse', true)
 	}
 	if (tk.hlssmid) {
-		textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
+		// add red box
+		//textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
+		discg
+			.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id)))
+			.append('rect')
+			.attr('x', d => -d.radius)
+			.attr('y', d => -d.radius)
+			.attr('width', d => d.radius * 2)
+			.attr('height', d => d.radius * 2)
+			.attr('stroke', 'red')
+			.attr('stroke-width', 1.5)
+			.attr('fill', 'none')
 	}
 
 	// skewer width
