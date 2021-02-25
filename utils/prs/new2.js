@@ -199,12 +199,15 @@ function get_hwe(lines) {
 			const e = out2.join('')
 			if (e) reject(e)
 			const text = out.join('').trim()
-			resolve(text.split('\n').map(i => Number(i.split(' ')[1])))
+			resolve(text.split('\n').map(Number))
 		})
 	})
 }
 
 function run_bcftools(chr, tmpsnpfile) {
+	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.vcf.gz')
+	fs.statSync(vcffile)
+
 	return new Promise((resolve, reject) => {
 		const sp = spawn('bcftools', [
 			'query',
@@ -215,12 +218,11 @@ function run_bcftools(chr, tmpsnpfile) {
 			'-s',
 			sampleids.join(','),
 			//path.join(vcfdir,'vcf.gz') // xxxxxxxxxxxx
-			path.join(vcfdir, 'chr' + chr, chr + '.vcf.gz')
+			vcffile
 		])
 		const rl = readline.createInterface({ input: sp.stdout })
 		rl.on('line', async line => {
 			const l = line.trim().split(' ')
-			if (l.length != samples.length + 4) throw 'field length mismatch: ' + l.length + ' ' + samples.length
 			// chr, pos, ref, alt, GT...
 			const snp = pos2snp.get(l[0] + '.' + l[1])
 			if (!snp) {
