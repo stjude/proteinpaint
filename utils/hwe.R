@@ -9,7 +9,7 @@ dat <- read.table(infile,sep="\t",header=F,quote="")
 
 for (i in 1:nrow(dat)) {
 	x <- hwexact( dat[i,1], dat[i,2], dat[i,3] )
-	print(x)
+	cat(x, "\n")
 	#out <- rbind(out,x)
 }
 
