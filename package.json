@@ -10,7 +10,7 @@
     "ppr": "./build/deploy.sh ppr",
     "start": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
     "server": "npm start",
-    "build-server": "webpack --config=build/webpack.config.server.js --mode=production",
+    "build-server": "webpack --config=build/webpack.config.server.js --env production",
     "test": "npm run test-back && npm run test-front",
     "test-back": "tape -r babel-register modules/test/*.spec.js",
     "test-front": "browserify test/init.js public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",

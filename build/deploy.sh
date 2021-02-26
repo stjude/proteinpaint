@@ -178,8 +178,8 @@ else
 	mkdir $APP/utils
 	mkdir $APP/modules
 
-	npx webpack --config=build/webpack.config.server.js --mode=$WPSERVERMODE
-	mv server.js $APP/
+	npx webpack --config=build/webpack.config.server.js --env $WPSERVERMODE
+	mv server.js* $APP/
 	mv package.json $APP/
 	mv public/bin $APP/public/bin
 	mv genome $APP/
@@ -197,7 +197,7 @@ else
 
 	tar -czf $APP-$REV.tgz $APP
 fi
-
+exit 1
 ##########
 # DEPLOY
 ##########
