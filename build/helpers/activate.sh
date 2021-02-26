@@ -16,7 +16,7 @@ if [[ "$dir" == "active" ]]; then
 	exit 1
 elif [[ "$dir" == "available/pp-$ACTIVEREV" ]]; then
 	echo "The matching version '$dir' is already active."
-	exit 1
+	exit 0
 else
 	echo "activating $dir"
 	ln -sfn $dir active
