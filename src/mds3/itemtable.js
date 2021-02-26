@@ -1,4 +1,5 @@
 import * as common from '../common'
+import { to_textfile } from '../client'
 
 /*
 ********************** EXPORTED
@@ -53,6 +54,8 @@ arg{}
 .tid2value
 */
 export async function mlst2samplesummary(arg) {
+	const downloadlinkdiv = arg.div.append('div') // temporary fix!!
+
 	const table = arg.div.append('table') // 2 columns: 1. field name, 2. field content
 	const [tdtemp1, tdtemp2, trtemp] = row_headervalue(table)
 	tdtemp1.text('Loading...')
@@ -103,6 +106,24 @@ export async function mlst2samplesummary(arg) {
 					tr.append('td').text(category)
 				}
 			}
+		}
+
+		/////// temporary fix! add link at table top to download summaries
+		{
+			const lines = []
+			for (const entry of data) {
+				if (entry.numbycategory) {
+					for (const [category, count] of entry.numbycategory) {
+						lines.push(entry.name + '\t' + category + '\t' + count)
+					}
+				}
+			}
+			downloadlinkdiv
+				.style('margin', '10px 0px')
+				.append('a')
+				.text('DOWNLOAD SUMMARY')
+				.style('font-size', '.9em')
+				.on('click', () => to_textfile('Summary', lines.join('\n')))
 		}
 	} catch (e) {
 		tdtemp1.text(e.message || e)
