@@ -197,7 +197,7 @@ else
 
 	tar -czf $APP-$REV.tgz $APP
 fi
-exit 1
+
 ##########
 # DEPLOY
 ##########
