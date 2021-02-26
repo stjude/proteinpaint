@@ -135,7 +135,7 @@ do_query
 		plot_insertions
 	plot_pileup
 		run_samtools_depth
-		softclip_mismatch_pileup
+		collect_softclipmismatch2pileup
 */
 
 // match box color, for single read and normal read pairs
@@ -259,6 +259,8 @@ async function plot_pileup(q, templates) {
 
 	for (const [ridx, r] of q.regions.entries()) {
 		bplst[ridx] = await run_samtools_depth(q, r)
+		// collect softclip/mismatch into bplst, will increase .total
+		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
 		const lst = []
 		for (const b of bplst[ridx]) {
 			if (b) lst.push(b.total)
@@ -268,8 +270,6 @@ async function plot_pileup(q, templates) {
 
 	for (const [ridx, r] of q.regions.entries()) {
 		const sf = q.pileupheight / maxValue
-
-		softclip_mismatch_pileup(ridx, r, templates, bplst[ridx])
 
 		for (const bp of bplst[ridx]) {
 			if (!bp) continue // gap from zoomed out mode
@@ -325,7 +325,7 @@ async function plot_pileup(q, templates) {
 	}
 }
 
-function softclip_mismatch_pileup(ridx, r, templates, bplst) {
+function collect_softclipmismatch2pileup(ridx, r, templates, bplst) {
 	// for a region, use segments from this region to add mismatches to bplst depth
 	// only work for per bp depth, not binned depth
 	for (const template of templates) {
@@ -344,15 +344,23 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 							// each item of bplst is one basepair
 							// must directly match box bp position with bplst[].position
 							// as bplst[] may be discontinuous, cannot use bpposition-bplst[0].position to get its array index
-							if (!bpitem) continue // bpposition out of view range
+							if (!bpitem) {
+								// bpposition out of view range
+								continue
+							}
 							const nt = box.s[boxsi]
 							bpitem[nt] = 1 + (bpitem[nt] || 0)
+							if (box.opr == 'S') {
+								// samtools depth does not include softclip, need to add to total
+								bpitem.total++
+							}
 						}
 					}
 				} else {
 					// zoomed out, plot only softclip
 					if (box.opr == 'S') {
 						// for the stretch of softclip, apply count to bplst
+						// use softclip start/stop coordinate to infer array index in bplst
 						const clipstartidx = Math.floor((box.start - r.start) * r.ntwidth)
 						const clipstopidx = Math.floor((box.start + box.len - r.start) * r.ntwidth)
 						for (let i = clipstartidx; i <= clipstopidx; i++) {
@@ -362,6 +370,7 @@ function softclip_mismatch_pileup(ridx, r, templates, bplst) {
 								continue
 							}
 							bpitem.softclip = 1 + (bpitem.softclip || 0)
+							bpitem.total++ // increment total, same as above
 						}
 					}
 				}
@@ -768,7 +777,7 @@ function run_samtools_depth(q, r) {
 		const rl = readline.createInterface({ input: ls.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
-			const position = Number.parseInt(l[1]) - 1
+			const position = Number.parseInt(l[1]) - 1 // change to 0-based
 			const depth = Number.parseInt(l[2])
 			if (r.ntwidth >= 1) {
 				// zoomed in, one element per basepair
@@ -780,8 +789,8 @@ function run_samtools_depth(q, r) {
 			if (!bplst[bpidx]) {
 				bplst[bpidx] = {
 					position,
-					sum: 0,
-					count: 0
+					sum: 0, // temp
+					count: 0 // temp
 				}
 			}
 			bplst[bpidx].sum += depth
