@@ -14,9 +14,6 @@ export function getPpReact(getTrack) {
 			this.window = this.props.window ? this.props.window : window
 			this.runpp()
 		}
-		static getDerivedStateFromProps(props) {
-			return { data: JSON.parse(localStorage.getItem(props.dataKey)) }
-		}
 		componentDidUpdate() {
 			this.runpp()
 		}
