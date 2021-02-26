@@ -164,26 +164,7 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-app.get(basepath + '/healthcheck', async (req, res) => {
-	try {
-		const w = child_process
-			.execSync('w | head -n1')
-			.toString()
-			.trim()
-			.split(' ')
-			.slice(-3)
-			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
-		const rs =
-			child_process
-				.execSync('ps aux | grep rsync -w')
-				.toString()
-				.trim()
-				.split('\n').length - 1
-		res.send({ status: 'ok', w, rs })
-	} catch (e) {
-		throw e
-	}
-})
+app.get(basepath + '/healthcheck', handle_healthcheck)
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -302,6 +283,38 @@ function setOptionalRoutes() {
 			const setRoutes = __non_webpack_require__(fname)
 			setRoutes(app, basepath)
 		}
+	}
+}
+
+async function handle_healthcheck(req, res) {
+	try {
+		const health = { status: 'ok' }
+		health.w = child_process
+			.execSync('w | head -n1')
+			.toString()
+			.trim()
+			.split(' ')
+			.slice(-3)
+			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+
+		health.rs =
+			child_process
+				.execSync('ps aux | grep rsync -w')
+				.toString()
+				.trim()
+				.split('\n').length - 1
+
+		if (fs.existsSync('./public/rev.txt')) {
+			health.version = child_process
+				.execSync(`cat ./public/rev.txt`)
+				.toString()
+				.trim()
+				.split(' ')[1]
+		}
+
+		res.send(health)
+	} catch (e) {
+		throw { error: e }
 	}
 }
 
