@@ -6,7 +6,7 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "rm -rf public/bin;webpack --config=build/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "rm -rf public/bin;webpack --config=build/webpack.config.dev.js  --env development --watch --progress --colors",
     "ppr": "./build/deploy.sh ppr",
     "start": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
     "server": "npm start",
