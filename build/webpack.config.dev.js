@@ -4,6 +4,7 @@ const wpFront = require('./webpack.config.client')
 const wpBack = require('./webpack.config.server')
 const WebpackNotifierPlugin = require('webpack-notifier')
 
+wpBack.mode = 'development'
 wpFront.mode = 'development'
 wpFront.output.publicPath = (serverconfig.host || '') + '/bin/'
 wpFront.plugins = [new WebpackNotifierPlugin()]

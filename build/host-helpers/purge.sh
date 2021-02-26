@@ -26,7 +26,7 @@ NUMMATCHEDDIRS=$(./helpers/recent.sh | wc -l)
 
 if (($NUMMATCHEDDIRS < $MAXRETAINED + 1)); then
 	echo "No deployed builds purged: counted $NUMMATCHEDDIRS matching directories, $MAXRETAINED allowed"
-	exit 1
+	exit 0
 fi
 
 oldestdir="pp-$(./helpers/recent.sh | tail -n1)"
