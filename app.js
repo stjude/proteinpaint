@@ -579,6 +579,7 @@ function mds_clientcopy(ds) {
 	}
 	if (ds.gene2mutcount) {
 		ds2.gene2mutcount = true
+		ds2.mutCountType = ds.gene2mutcount.mutationTypes
 	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
@@ -2462,9 +2463,12 @@ async function handle_mdsgenecount(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.gene2mutcount) throw 'not supported on this dataset'
 		if (!req.query.samples) throw '.samples missing'
+		let mutation_count_str
+		if (req.query.selectedMutTypes) mutation_count_str = req.query.selectedMutTypes.join('+')
+		else mutation_count_str = 'total'
 		const query = `WITH
 	filtered AS (
-		SELECT gene, snv_mfndi + snv_splice + snv_utr + sv + fusion + itd + cnv_2mb_01 AS total FROM genecount
+		SELECT gene, ${mutation_count_str} AS total FROM genecount
 		WHERE sample IN (${JSON.stringify(req.query.samples)
 			.replace(/[[\]\"]/g, '')
 			.split(',')

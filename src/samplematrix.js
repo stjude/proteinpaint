@@ -90,7 +90,8 @@ export class Samplematrix {
 				.style('margin-bottom', '20px')
 				.html(this.header)
 		}
-
+		this.wait_div = this.holder.append('div')
+		this.wait_div.style('display', 'block').text('Loading...')
 		this.svg = this.holder.append('svg')
 
 		this.validate_config()
@@ -609,6 +610,7 @@ export class Samplematrix {
 
 			this.draw_matrix()
 			this.make_legend()
+			this.wait_div.style('display', 'none')
 		})
 	}
 

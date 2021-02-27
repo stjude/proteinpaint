@@ -1474,23 +1474,152 @@ async function click_mutated_genes(obj, samples) {
 	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	pane.header.text('Recurrently Mutated Genes')
 	const wait = client.tab_wait(pane.body)
+	const mutation_type_div = pane.body.append('div')
+	const selectedMutTypes = init_mutation_type_control(obj, mutation_type_div)
 
 	try {
 		const arg = {
 			genome: obj.genome.name,
 			dslabel: obj.disco.dslabel,
-			samples
+			samples,
+			selectedMutTypes
 		}
 		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
 		if (data.error) throw data.error
 		if (!data.genes) throw '.genes missing'
-
 		make_sample_matrix({ obj, genes: data.genes, samples, holder: pane.body })
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
+}
+
+function init_mutation_type_control(obj, holder) {
+	let mutTypes = [],
+		selectedTypes = []
+	const ds = obj.genome.datasets[obj.disco.dslabel]
+	if (ds.mutCountType) {
+		mutTypes = ds.mutCountType
+		const cnv_types = mutTypes.filter(m => m.db_col.includes('cnv'))
+		const non_cnv_types = mutTypes.filter(m => !m.db_col.includes('cnv'))
+
+		const buttonrow = holder.append('div').style('margin', '5px 20px')
+		const folderdiv = holder
+			.append('div')
+			.style('margin', '5px 20px')
+			.style('padding', '5px')
+			.style('border-top', 'solid 1px #ededed')
+			.style('border-bottom', 'solid 1px #ededed')
+			.style('background-color', '#FCFBF7')
+
+		// legend
+		buttonrow
+			.append('span')
+			.style('margin-right', '20px')
+			.style('font-size', '.8em')
+			.text('SAMPLE MATRIX SETTINGS')
+			.attr('class', 'sja_clbtext')
+			.on('click', () => {
+				if (folderdiv.style('display') == 'none') {
+					client.appear(folderdiv)
+				} else {
+					client.disappear(folderdiv)
+				}
+			})
+
+		non_cnv_types.forEach(type => {
+			const opt_div = folderdiv.append('div')
+
+			opt_div
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('id', type.db_col)
+				.attr('name', 'mut_type')
+				.attr('value', type.db_col)
+				.property('checked', type.default)
+
+			opt_div
+				.append('label')
+				.attr('for', type.db_col)
+				.text(type.label)
+		})
+
+		const cnv_checkbox = folderdiv
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('id', 'cnv')
+			.attr('name', 'noncnv')
+			.attr('value', 'cnv')
+			.property('checked', cnv_types.filter(t => t.default).length ? true : false)
+			.on('change', () => {
+				if (cnv_checkbox.node().checked) {
+					size_select.property('disabled', false)
+					ratio_select.property('disabled', false)
+				} else {
+					size_select.property('disabled', true)
+					ratio_select.property('disabled', true)
+				}
+			})
+
+		folderdiv
+			.append('label')
+			.attr('for', 'cnv')
+			.text('CNV')
+
+		const cnv_options_div = folderdiv
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '5px')
+
+		const cnv_size_cutoff = [...new Set(cnv_types.map(t => t.sizecutoff))]
+		const cnv_ratio_cutoff = [...new Set(cnv_types.map(t => t.log2cutoff))]
+
+		cnv_options_div
+			.append('label')
+			.attr('for', 'cnv_size')
+			.style('margin', '2px 10px')
+			.text('Size cutoff')
+
+		const size_select = cnv_options_div
+			.append('select')
+			.attr('name', 'cnv_size')
+			.attr('id', 'cnv_size')
+
+		cnv_size_cutoff.forEach(size => {
+			size_select
+				.append('option')
+				.attr('value', size)
+				.text(size)
+		})
+
+		cnv_options_div
+			.append('label')
+			.attr('for', 'log2_ratio')
+			.style('margin', '2px 10px')
+			.text('log2 Ratio cutoff')
+
+		const ratio_select = cnv_options_div
+			.append('select')
+			.attr('name', 'log2_ratio')
+			.attr('id', 'log2_ratio')
+
+		cnv_ratio_cutoff.forEach(ratio => {
+			ratio_select
+				.append('option')
+				.attr('value', ratio.toFixed(1))
+				.text(ratio.toFixed(1))
+		})
+
+		folderdiv
+			.append('button')
+			.style('margin', '10px')
+			.style('padding', '3px 10px')
+			.text('Apply')
+
+		selectedTypes = mutTypes.filter(t => t.default).map(t => t.db_col)
+	} else selectedTypes = ['total']
+	return selectedTypes
 }
 
 function make_sample_matrix(args) {
