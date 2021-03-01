@@ -361,6 +361,7 @@ function collect_softclipmismatch2pileup(ridx, r, templates, bplst) {
 					if (box.opr == 'S') {
 						// for the stretch of softclip, apply count to bplst
 						// use softclip start/stop coordinate to infer array index in bplst
+						// don't require box.s
 						const clipstartidx = Math.floor((box.start - r.start) * r.ntwidth)
 						const clipstopidx = Math.floor((box.start + box.len - r.start) * r.ntwidth)
 						for (let i = clipstartidx; i <= clipstopidx; i++) {
@@ -767,10 +768,12 @@ function run_samtools_depth(q, r) {
 			samtools,
 			[
 				'depth',
-				q.file || q.url,
 				'-r',
 				// must use r.start+1 to query bam
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+				'-g',
+				'DUP',
+				q.file || q.url
 			],
 			{ cwd: q.dir }
 		)
