@@ -55,7 +55,7 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
     let mut l:usize = 0;
     let mut r:usize = kmers_dup.len()-1;
     let mut m:usize = 0;
-    console::log_2(&"r:".into(),&r.to_string().into());
+    //console::log_2(&"r:".into(),&r.to_string().into());
     //let mut n:usize = 0;
     while (l <= r) {
         m = l + ((r-l)/2);
@@ -65,8 +65,8 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 	//else {
          // n=m;
 	//}
-	console::log_2(&"kmers_dup[m]:".into(),&kmers_dup[m].to_string().into());
-	console::log_6(&"l:".to_string().into(), &l.to_string().into(),&"m:".to_string().into(), &m.to_string().into(),&"r:".to_string().into(), &r.to_string().into());
+	//console::log_2(&"kmers_dup[m]:".into(),&kmers_dup[m].to_string().into());
+	//console::log_6(&"l:".to_string().into(), &l.to_string().into(),&"m:".to_string().into(), &m.to_string().into(),&"r:".to_string().into(), &r.to_string().into());
 	//println!("l:{},m:{},r:{}",l,m,r);
 	// Check if x is present at mid
 	if (y == &kmers_dup[m]) {
@@ -77,19 +77,53 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 	
 	// If x is greater, ignore left half
 	else if (y > &kmers_dup[m]) {
-	    console::log_2(&"l:".into(),&l.to_string().into());
+	    //console::log_2(&"l:".into(),&l.to_string().into());
 	    l = m + 1;
 	} 
 	// If x is smaller, ignore right half 
 	else {
-	    console::log_2(&"r:".into(),&r.to_string().into());
+	    //console::log_2(&"r:".into(),&r.to_string().into());
+	    if m == 0 as usize {
+              break;
+            } 			    
 	    r=m-1;
 	}
 	//if r==0 as usize {break;}
 	//console::log_2(&"r:".into(),&r.to_string().into());
     }
-    console::log_2(&"index:".into(), &index.to_string().into());
+    //console::log_2(&"index:".into(), &index.to_string().into());
     index    
+}
+
+fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
+    let orig_index: i64 = binary_search(kmers,y);
+    let mut kmer_count: usize = 0;
+    let mut indexes_vec = Vec::<usize>::new();
+    let x:String = y.to_owned();
+    if orig_index != -1 as i64 {
+	indexes_vec.push(orig_index as usize);
+	let mut index: usize = orig_index as usize;
+	while (index > 0) {
+            if (kmers[index-1]==x) {
+		index=index-1;
+		indexes_vec.push(index);
+	    }
+	    else {
+                break; 
+            }	    
+	}
+	index=orig_index as usize;
+	while (index < (kmers.len() - 1)) {
+            if (kmers[index+1]==x) {
+		index=index+1;
+		indexes_vec.push(index);
+	    }
+	    else {
+                break; 
+            }            
+	}    
+    }
+    indexes_vec
 }
 
 #[wasm_bindgen]
@@ -323,7 +357,8 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
     // Getting unique read kmers
     let mut kmers1_nodup = kmers1.clone();
     kmers1_nodup.sort();
-    kmers1_nodup.dedup();  
+    let kmers1_sorted = kmers1_nodup.clone();
+    kmers1_nodup.dedup();
 
     // Finding common kmers between read and ref/alt
     let mut intersection = HashSet::new();
@@ -348,30 +383,26 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
     for kmer1 in &kmers1_nodup {
 	let mut kmer_count: i64 = 0;
 	let mut score: f64 = 0.0;
-	for kmer2 in kmers1 { // Binary search should not be used here since it cannot handle duplicate entries
-            if kmer1==kmer2 {
-		kmer_count+=1;
-            } 	
-	}
+	kmer_count=binary_search_repeat(&kmers1_sorted,&kmer1).len() as i64;
+	//for kmer2 in &kmers1_sorted { // Binary search should not be used here since it cannot handle duplicate entries
+        //    if kmer1==kmer2 {
+	//	kmer_count+=1;
+        //    } 	
+	//}
 	//console::log_1(&kmer1.into());
 	//if (binary_search(&kmers1,&kmer1) != -1 as i64) {
         //  kmer_count+=1;
 	//}    
 
-	
-	for kmer2 in kmers2_nodups {
-        //    if kmer1==&kmer2.kmer_sequence {
-	//	score=kmer2.kmer_weight;
-	//	continue;
-            //    }
-	    console::log_1(&kmer2.into());    
-	}
-	console::log_2(&"kmer1:".into(),&kmer1.into());
 	index=binary_search(&kmers2_nodups,&kmer1);
-	console::log_3(&"Checking binary_search (from Rust):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
-	score=kmers2_data[index as usize].kmer_weight;
-	kmers1_weight += (kmer_count as f64)*score;
-
+	if index == -1 as i64 {
+          score=0.0;
+	}
+	else {
+	  //console::log_3(&"Checking binary_search (from Rust):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+	  score=kmers2_data[index as usize].kmer_weight;
+	  kmers1_weight += (kmer_count as f64)*score;
+	}    
 	kmer1_counts.push(kmer_count);	
     }
     //println!("kmers1_weight:{}",kmers1_weight);
@@ -389,10 +420,15 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //    }
 	//    j+=1;
 	//}
+        //console::log_2(&"Intersection kmer1:".into(),&kmer1.into());
         index=binary_search(&kmers2_nodups,&kmer1);
-	score=kmers2_data[index as usize].kmer_weight;
-	kmer2_freq=kmers2_data[index as usize].kmer_count;
-	
+	if index != -1 as i64 {
+	  score=kmers2_data[index as usize].kmer_weight;
+	  kmer2_freq=kmers2_data[index as usize].kmer_count;
+	}
+	else {
+          score=0.0;
+	}    
 	//j=0;
 	//for kmer2 in &kmers1_nodup {
         //    if kmer1==kmer2 {
@@ -401,9 +437,12 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //    }
 	//    j+=1;
 	//}
+	//console::log_2(&"Intersection kmer2:".into(),&kmer1.into());	
         index=binary_search(&kmers1_nodup,&kmer1);
-	kmer1_freq=kmer1_counts[index as usize];
-	
+	//console::log_2(&"Index:".into(),&index.to_string().into());
+	if index != -1 as i64 {
+	   kmer1_freq=kmer1_counts[index as usize];
+	}
 	if kmer1_freq <= kmer2_freq {
           intersection_weight += score*(kmer1_freq as f64);
 	}
