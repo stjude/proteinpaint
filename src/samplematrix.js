@@ -67,6 +67,7 @@ export class Samplematrix {
 		this.tip = new client.Menu({ padding: '0px', hideXmute: 1, hideYmute: 1 })
 		this.menu = new client.Menu({ padding: '0px' })
 		this.errdiv = this.holder.append('div')
+		console.log(this)
 
 		if (!this.iscustom) {
 			// official dataset
@@ -2746,8 +2747,8 @@ function init_controlui(o) {
 	const opts_div2 = row2.append('div').style('display', 'inline-block')
 
 	const layout_opts = [
-		{ value: 'f_vs_s', text: 'Features Vs. Samples' },
-		{ value: 's_vs_f', text: 'Samples Vs. Features' }
+		{ value: 'gene_on_row', text: 'Genes as Rows' },
+		{ value: 'sam_on_row', text: 'Samples as Rows' }
 	]
 
 	layout_opts.forEach(opt => {
@@ -2761,12 +2762,12 @@ function init_controlui(o) {
 			.attr('value', opt.value)
 			.property(
 				'checked',
-				opt.value == 'f_vs_s' && o.features_on_rows ? 1 : opt.value == 's_vs_f' && !o.features_on_rows ? 1 : 0
+				opt.value == 'gene_on_row' && o.features_on_rows ? 1 : opt.value == 'sam_on_row' && !o.features_on_rows ? 1 : 0
 			)
 			.on('change', function() {
-				if (opt.value == 'f_vs_s' && o.features_on_rows) return
-				else if (opt.value == 's_vs_f' && !o.features_on_rows) return
-				else if (opt.value == 'f_vs_s') {
+				if (opt.value == 'gene_on_row' && o.features_on_rows) return
+				else if (opt.value == 'sam_on_row' && !o.features_on_rows) return
+				else if (opt.value == 'gene_on_row') {
 					o.features_on_rows = true
 					if (o.ori_feature_width) o.features.forEach(f => (f.height = o.ori_feature_width))
 				} else {

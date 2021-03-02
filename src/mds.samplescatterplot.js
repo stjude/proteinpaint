@@ -1470,88 +1470,105 @@ function lasso_select(obj, dots) {
 	}
 }
 
-async function click_mutated_genes(obj, samples) {
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
-	pane.header.text('Recurrently Mutated Genes')
-	const wait = client.tab_wait(pane.body)
-	const mutation_type_div = pane.body.append('div')
-	const selectedMutTypes = init_mutation_type_control(obj, mutation_type_div)
-
-	try {
-		const arg = {
-			genome: obj.genome.name,
-			dslabel: obj.disco.dslabel,
-			samples,
-			selectedMutTypes
-		}
-		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
-		if (data.error) throw data.error
-		if (!data.genes) throw '.genes missing'
-		make_sample_matrix({ obj, genes: data.genes, samples, holder: pane.body })
-		wait.remove()
-	} catch (e) {
-		wait.text('Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
+function click_mutated_genes(obj, samples) {
+	obj.pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	obj.pane.header.text('Recurrently Mutated Genes')
+	obj.pane.wait = client.tab_wait(obj.pane.body)
+	obj.pane.matrix_criteria_div = obj.pane.body.append('div')
+	obj.pane.sample_matrix_div = obj.pane.body.append('div')
+	init_mutation_type_control(obj, samples)
 }
 
-function init_mutation_type_control(obj, holder) {
+function init_mutation_type_control(obj, samples) {
 	let mutTypes = [],
-		selectedTypes = []
+		defaultTypes = [],
+		selectedTypes = [],
+		selected_cnv,
+		nGenes = 15
+
+	const holder = obj.pane.matrix_criteria_div
 	const ds = obj.genome.datasets[obj.disco.dslabel]
 	if (ds.mutCountType) {
 		mutTypes = ds.mutCountType
-		const cnv_types = mutTypes.filter(m => m.db_col.includes('cnv'))
+
 		const non_cnv_types = mutTypes.filter(m => !m.db_col.includes('cnv'))
+		const cnv_types = mutTypes.filter(m => m.db_col.includes('cnv'))
+		const default_cnv = cnv_types.find(t => t.default)
+		selected_cnv = default_cnv
+
+		defaultTypes = mutTypes.filter(t => t.default).map(t => t.db_col)
+		selectedTypes = [...defaultTypes]
 
 		const buttonrow = holder.append('div').style('margin', '5px 20px')
-		const folderdiv = holder
+		const criteria_div = holder
 			.append('div')
 			.style('margin', '5px 20px')
 			.style('padding', '5px')
 			.style('border-top', 'solid 1px #ededed')
 			.style('border-bottom', 'solid 1px #ededed')
 			.style('background-color', '#FCFBF7')
+			.style('font-size', '.8em')
 
-		// legend
+		// button to toggle criteria div
 		buttonrow
 			.append('span')
 			.style('margin-right', '20px')
 			.style('font-size', '.8em')
-			.text('SAMPLE MATRIX SETTINGS')
+			.text('MUTATION COUNT & NO. OF GENE CRITERIA')
 			.attr('class', 'sja_clbtext')
 			.on('click', () => {
-				if (folderdiv.style('display') == 'none') {
-					client.appear(folderdiv)
+				if (criteria_div.style('display') == 'none') {
+					client.appear(criteria_div)
 				} else {
-					client.disappear(folderdiv)
+					client.disappear(criteria_div)
 				}
 			})
 
-		non_cnv_types.forEach(type => {
-			const opt_div = folderdiv.append('div')
+		// mutation type selection
+		const mut_div = criteria_div.append('div')
+		const mut_label_div = mut_div
+			.append('div')
+			.style('display', 'table-cell')
+			.style('width', '110px')
 
-			opt_div
+		mut_label_div
+			.append('div')
+			.text('Mutation Types')
+			.style('padding-right', '15px')
+
+		const mut_types_div = mut_div
+			.append('div')
+			.style('display', 'table-cell')
+			.style('border-left', 'solid 1px #ededed')
+
+		non_cnv_types.forEach(type => {
+			const checkbox = mut_types_div
 				.append('input')
 				.attr('type', 'checkbox')
-				.attr('id', type.db_col)
 				.attr('name', 'mut_type')
 				.attr('value', type.db_col)
 				.property('checked', type.default)
 
-			opt_div
+			checkbox.on('change', () => {
+				if (checkbox.node().checked) {
+					selectedTypes.push(checkbox.node().value)
+				} else {
+					selectedTypes = selectedTypes.filter(t => t !== checkbox.node().value)
+				}
+			})
+
+			mut_types_div
 				.append('label')
 				.attr('for', type.db_col)
-				.text(type.label)
+				.html(type.label + '</br>')
 		})
 
-		const cnv_checkbox = folderdiv
+		const cnv_checkbox = mut_types_div
 			.append('input')
 			.attr('type', 'checkbox')
-			.attr('id', 'cnv')
 			.attr('name', 'noncnv')
 			.attr('value', 'cnv')
-			.property('checked', cnv_types.filter(t => t.default).length ? true : false)
+			.property('checked', default_cnv ? true : false)
 			.on('change', () => {
 				if (cnv_checkbox.node().checked) {
 					size_select.property('disabled', false)
@@ -1562,15 +1579,15 @@ function init_mutation_type_control(obj, holder) {
 				}
 			})
 
-		folderdiv
+		mut_types_div
 			.append('label')
 			.attr('for', 'cnv')
 			.text('CNV')
 
-		const cnv_options_div = folderdiv
+		const cnv_options_div = mut_types_div
 			.append('div')
 			.style('display', 'block')
-			.style('padding', '5px')
+			.style('padding', '3px 15px')
 
 		const cnv_size_cutoff = [...new Set(cnv_types.map(t => t.sizecutoff))]
 		const cnv_ratio_cutoff = [...new Set(cnv_types.map(t => t.log2cutoff))]
@@ -1581,10 +1598,7 @@ function init_mutation_type_control(obj, holder) {
 			.style('margin', '2px 10px')
 			.text('Size cutoff')
 
-		const size_select = cnv_options_div
-			.append('select')
-			.attr('name', 'cnv_size')
-			.attr('id', 'cnv_size')
+		const size_select = cnv_options_div.append('select').attr('name', 'cnv_size')
 
 		cnv_size_cutoff.forEach(size => {
 			size_select
@@ -1593,16 +1607,15 @@ function init_mutation_type_control(obj, holder) {
 				.text(size)
 		})
 
+		size_select.property('selectedIndex', default_cnv.sizecutoff == '1Mb' ? 0 : default_cnv.sizecutoff == '2Mb' ? 1 : 2)
+
 		cnv_options_div
 			.append('label')
 			.attr('for', 'log2_ratio')
 			.style('margin', '2px 10px')
 			.text('log2 Ratio cutoff')
 
-		const ratio_select = cnv_options_div
-			.append('select')
-			.attr('name', 'log2_ratio')
-			.attr('id', 'log2_ratio')
+		const ratio_select = cnv_options_div.append('select').attr('name', 'log2_ratio')
 
 		cnv_ratio_cutoff.forEach(ratio => {
 			ratio_select
@@ -1611,19 +1624,90 @@ function init_mutation_type_control(obj, holder) {
 				.text(ratio.toFixed(1))
 		})
 
-		folderdiv
+		ratio_select.property('selectedIndex', default_cnv.log2cutoff == 1 ? 0 : default_cnv.log2cutoff == 2 ? 1 : 2)
+
+		// gene # selection for sample matrix
+		const gene_div = criteria_div.append('div').style('padding-top', '10px')
+		const gene_label_div = gene_div
+			.append('div')
+			.style('display', 'table-cell')
+			.style('width', '110px')
+
+		gene_label_div
+			.append('div')
+			.text('No. of Genes')
+			.style('padding-right', '15px')
+
+		const gene_n_select_div = gene_div
+			.append('div')
+			.style('display', 'table-cell')
+			.style('padding', '3px')
+			.style('border-left', 'solid 1px #ededed')
+
+		const gene_n = [10, 15, 20, 30, 40]
+
+		const gene_n_select = gene_n_select_div.append('select').attr('name', 'gene_n')
+
+		gene_n.forEach(n => {
+			gene_n_select
+				.append('option')
+				.attr('value', n)
+				.text(n)
+		})
+
+		gene_n_select.property('selectedIndex', gene_n.findIndex(n => n == nGenes))
+
+		const calc_btn = criteria_div
 			.append('button')
 			.style('margin', '10px')
 			.style('padding', '3px 10px')
-			.text('Apply')
+			// .property('disabled', selectedTypes.every(e => defaultTypes ? true : false)
+			.text('Calculate')
+			.on('click', () => {
+				const checked_boxes = mut_types_div.node().querySelectorAll('input:checked')
+				selectedTypes = []
+				checked_boxes.forEach(checkbox => {
+					if (checkbox.value !== 'cnv' && !selectedTypes.includes(checkbox.value)) selectedTypes.push(checkbox.value)
+					else if (checkbox.value == 'cnv') {
+						const selected_size = size_select.node().value
+						const selected_ratio = ratio_select.node().value
+						selected_cnv = cnv_types.find(t => t.sizecutoff == selected_size && t.log2cutoff == selected_ratio)
+						selectedTypes.push(selected_cnv.db_col)
+					}
+				})
+				nGenes = gene_n_select.node().value
+				get_mutation_count_data(obj, samples, selectedTypes, nGenes)
+				defaultTypes = [...selectedTypes]
+			})
+	} else defaultTypes = ['total']
 
-		selectedTypes = mutTypes.filter(t => t.default).map(t => t.db_col)
-	} else selectedTypes = ['total']
-	return selectedTypes
+	get_mutation_count_data(obj, samples, defaultTypes, nGenes)
+}
+
+async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
+	try {
+		const arg = {
+			genome: obj.genome.name,
+			dslabel: obj.disco.dslabel,
+			samples,
+			selectedMutTypes,
+			nGenes
+		}
+		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		if (!data.genes) throw '.genes missing'
+		make_sample_matrix({ obj, genes: data.genes, samples, holder: obj.pane.body })
+		obj.pane.wait.remove()
+	} catch (e) {
+		obj.pane.wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
 }
 
 function make_sample_matrix(args) {
-	const { obj, genes, samples, holder } = args
+	const { obj, genes, samples } = args
+	const holder = obj.pane.sample_matrix_div
+	holder.selectAll('*').remove()
 	// convert genes to features
 	for (const g of genes) {
 		g.ismutation = true
@@ -1638,6 +1722,7 @@ function make_sample_matrix(args) {
 		dslabel: obj.disco.dslabel,
 		features: genes,
 		features_on_rows: obj.features_on_rows,
+		ismutation_allsymbolic: true,
 		hostURL: sessionStorage.getItem('hostURL') || '',
 		limitbysamplesetgroup: { samples },
 		jwt: sessionStorage.getItem('jwt') || '',

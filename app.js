@@ -2463,9 +2463,11 @@ async function handle_mdsgenecount(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.gene2mutcount) throw 'not supported on this dataset'
 		if (!req.query.samples) throw '.samples missing'
-		let mutation_count_str
+		let mutation_count_str, n_gene
 		if (req.query.selectedMutTypes) mutation_count_str = req.query.selectedMutTypes.join('+')
 		else mutation_count_str = 'total'
+		if (req.query.nGenes) n_gene = req.query.nGenes
+		else n_gene = 15
 		const query = `WITH
 	filtered AS (
 		SELECT gene, ${mutation_count_str} AS total FROM genecount
@@ -2479,7 +2481,7 @@ async function handle_mdsgenecount(req, res) {
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT 10`
+	LIMIT ${n_gene}`
 		const genes = ds.gene2mutcount.db.prepare(query).all()
 		for (const gene of genes) {
 			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}

@@ -15,7 +15,7 @@ module.exports = function(common) {
 			mutationTypes: [
 				{ db_col: 'snv_mfndi', label: 'Missense + Frameshift + Nonsense + Deletion + Insertion ', default: 1 },
 				{ db_col: 'snv_splice', label: 'Splice', default: 1 },
-				{ db_col: 'snv_utr', label: 'UTR', default: 1 },
+				{ db_col: 'snv_utr', label: "3' & 5' UTR", default: 1 },
 				{ db_col: 'snv_s', label: 'Silent', default: 0 },
 				{ db_col: 'sv', label: 'SV', default: 1 },
 				{ db_col: 'fusion', label: 'Fusion', default: 1 },
@@ -26,9 +26,9 @@ module.exports = function(common) {
 				{ db_col: 'cnv_2mb_01', label: 'CNV 2Mb log2 1.0', sizecutoff: '2Mb', log2cutoff: 1, default: 1 },
 				{ db_col: 'cnv_2mb_02', label: 'CNV 2Mb log2 2.0', sizecutoff: '2Mb', log2cutoff: 2, default: 0 },
 				{ db_col: 'cnv_2mb_03', label: 'CNV 2Mb log2 3.0', sizecutoff: '2Mb', log2cutoff: 3, default: 0 },
-				{ db_col: 'cnv_4mb_01', label: 'CNV 4Mb log2 1.0', sizecutoff: '3Mb', log2cutoff: 1, default: 0 },
-				{ db_col: 'cnv_4mb_02', label: 'CNV 4Mb log2 2.0', sizecutoff: '3Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_4mb_03', label: 'CNV 4Mb log2 3.0', sizecutoff: '3Mb', log2cutoff: 3, default: 0 }
+				{ db_col: 'cnv_4mb_01', label: 'CNV 4Mb log2 1.0', sizecutoff: '4Mb', log2cutoff: 1, default: 0 },
+				{ db_col: 'cnv_4mb_02', label: 'CNV 4Mb log2 2.0', sizecutoff: '4Mb', log2cutoff: 2, default: 0 },
+				{ db_col: 'cnv_4mb_03', label: 'CNV 4Mb log2 3.0', sizecutoff: '4Mb', log2cutoff: 3, default: 0 }
 			]
 		},
 
