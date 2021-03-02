@@ -9004,7 +9004,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 	if (!dsquery.tracks) return 'tracks[] missing from dsquery'
 	if (!feature.chr) return ['chr missing']
 	if (!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
-	if (feature.stop - feature.start > 2000000) return ['look range too big (>2Mb)']
+	if (feature.stop - feature.start > 3000000) return ['look range too big (>3Mb)']
 
 	const tasks = []
 
