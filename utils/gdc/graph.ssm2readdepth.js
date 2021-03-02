@@ -5,7 +5,7 @@ for (let i = 2; i < process.argv.length; i++) {
 	const [k, v] = process.argv[i].split('=')
 	arg[k] = v
 }
-const query = `query ssm_count($filters: FiltersArgument) {
+const query = `query ssm_count($filters: FiltersArgument, $filters2: FiltersArgument) {
   explore {
     ssms {
       hits(filters: $filters) {
@@ -19,7 +19,7 @@ const query = `query ssm_count($filters: FiltersArgument) {
                     case {
                       case_id
                       observations {
-                        hits {
+                        hits(filters: $filters2) {
                           edges {
                             node {
                               read_depth {
@@ -57,14 +57,12 @@ const variables = {
 					field: 'ssms.ssm_id',
 					value: [arg.ssmid ? path.basename(arg.ssmid) : '883d6564-b868-589a-9908-25b76b9f434c']
 				}
-				// TP53 R175L
-			},
-			{
-				// this filter may actually filter out ssm that has mutect2 call, but will not restrict output to only mutect2
-				op: '=',
-				content: { field: 'ssms.occurrence.cases.observation.variant_calling.variant_caller', value: ['mutect2'] }
 			}
 		]
+	},
+	filters2: {
+		op: '=',
+		content: { field: 'occurrence.case.observation.variant_calling.variant_caller', value: ['mutect2'] }
 	}
 }
 if (arg.caseid) {
