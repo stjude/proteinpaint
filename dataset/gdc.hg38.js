@@ -6,93 +6,94 @@ query list of variants by isoform
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
-const isoform2variants = [
-	{
-		endpoint: GDC_HOST + '/ssms',
-		size: 100000,
-		fields: [
-			'ssm_id',
-			'chromosome',
-			'start_position',
-			'reference_allele',
-			'tumor_allele',
-			'consequence.transcript.transcript_id',
-			'consequence.transcript.consequence_type',
-			'consequence.transcript.aa_change'
-		],
-		filters: p => {
-			// p:{}
-			// .isoform
-			// .set_id
-			if (!p.isoform) throw '.isoform missing'
-			if (typeof p.isoform != 'string') throw '.isoform value not string'
-			const f = {
-				op: 'and',
-				content: [
-					{
-						op: '=',
-						content: {
-							field: 'consequence.transcript.transcript_id',
-							value: [p.isoform]
-						}
-					}
-				]
-			}
-			if (p.set_id) {
-				if (typeof p.set_id != 'string') throw '.set_id value not string'
-				f.content.push({
-					op: 'in',
+// REST: get list of ssm with consequence, no case info
+const isoform2ssm_getvariant = {
+	endpoint: GDC_HOST + '/ssms',
+	size: 100000,
+	fields: [
+		'ssm_id',
+		'chromosome',
+		'start_position',
+		'reference_allele',
+		'tumor_allele',
+		'consequence.transcript.transcript_id',
+		'consequence.transcript.consequence_type',
+		'consequence.transcript.aa_change'
+	],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
 					content: {
-						field: 'cases.case_id',
-						value: [p.set_id]
+						field: 'consequence.transcript.transcript_id',
+						value: [p.isoform]
 					}
-				})
-			}
-			if (p.filter0) {
-				f.content.push(p.filter0)
-			}
-			return f
+				}
+			]
 		}
-	},
-	{
-		endpoint: GDC_HOST + '/ssm_occurrences',
-		size: 100000,
-		fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
-		filters: p => {
-			// p:{}
-			// .isoform
-			// .set_id
-			if (!p.isoform) throw '.isoform missing'
-			if (typeof p.isoform != 'string') throw '.isoform value not string'
-			const f = {
-				op: 'and',
-				content: [
-					{
-						op: '=',
-						content: {
-							field: 'ssms.consequence.transcript.transcript_id',
-							value: [p.isoform]
-						}
-					}
-				]
-			}
-			if (p.set_id) {
-				if (typeof p.set_id != 'string') throw '.set_id value not string'
-				f.content.push({
-					op: 'in',
-					content: {
-						field: 'cases.case_id',
-						value: [p.set_id]
-					}
-				})
-			}
-			if (p.filter0) {
-				f.content.push(p.filter0)
-			}
-			return f
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
 		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
 	}
-]
+}
+
+// REST: get case details for each ssm, no variant-level info
+const isoform2ssm_getcase = {
+	endpoint: GDC_HOST + '/ssm_occurrences',
+	size: 100000,
+	fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
 
 /*
 query list of variants by genomic range (of a gene/transcript)
@@ -777,7 +778,7 @@ module.exports = {
 				}
 			},
 			byisoform: {
-				gdcapi: { lst: isoform2variants }
+				gdcapi: { lst: [isoform2ssm_getvariant, isoform2ssm_getcase] }
 			},
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt

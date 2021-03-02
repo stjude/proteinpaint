@@ -44,6 +44,9 @@ function query_ssms() {
 	const fields = [
 		'ssm_id',
 		'chromosome',
+		'start_position',
+		'reference_allele',
+		'tumor_allele',
 		'consequence.transcript.transcript_id',
 		'consequence.transcript.aa_change',
 		'consequence.transcript.consequence_type'
@@ -64,7 +67,7 @@ function query_ssms() {
 	)
 }
 function query_cases() {
-	const fields = ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site']
+	const fields = ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type']
 	const filters = {
 		op: 'and',
 		content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
