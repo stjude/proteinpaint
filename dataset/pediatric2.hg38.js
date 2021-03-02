@@ -24,15 +24,15 @@ module.exports = function(common) {
 				{ db_col: 'sv', label: 'SV', default: 1 },
 				{ db_col: 'fusion', label: 'Fusion', default: 1 },
 				{ db_col: 'itd', label: 'ITD', default: 1 },
-				{ db_col: 'cnv_1mb_01', sizecutoff: '1Mb', log2cutoff: 1, default: 0 },
-				{ db_col: 'cnv_1mb_02', sizecutoff: '1Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_1mb_03', sizecutoff: '1Mb', log2cutoff: 3, default: 0 },
-				{ db_col: 'cnv_2mb_01', sizecutoff: '2Mb', log2cutoff: 1, default: 1 },
-				{ db_col: 'cnv_2mb_02', sizecutoff: '2Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_2mb_03', sizecutoff: '2Mb', log2cutoff: 3, default: 0 },
-				{ db_col: 'cnv_4mb_01', sizecutoff: '4Mb', log2cutoff: 1, default: 0 },
-				{ db_col: 'cnv_4mb_02', sizecutoff: '4Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_4mb_03', sizecutoff: '4Mb', log2cutoff: 3, default: 0 }
+				{ db_col: 'cnv_1mb_01', sizecutoff: '1Mb', log2cutoff: 0.1, default: 0 },
+				{ db_col: 'cnv_1mb_02', sizecutoff: '1Mb', log2cutoff: 0.2, default: 0 },
+				{ db_col: 'cnv_1mb_03', sizecutoff: '1Mb', log2cutoff: 0.3, default: 0 },
+				{ db_col: 'cnv_2mb_01', sizecutoff: '2Mb', log2cutoff: 0.1, default: 1 },
+				{ db_col: 'cnv_2mb_02', sizecutoff: '2Mb', log2cutoff: 0.2, default: 0 },
+				{ db_col: 'cnv_2mb_03', sizecutoff: '2Mb', log2cutoff: 0.3, default: 0 },
+				{ db_col: 'cnv_4mb_01', sizecutoff: '4Mb', log2cutoff: 0.1, default: 0 },
+				{ db_col: 'cnv_4mb_02', sizecutoff: '4Mb', log2cutoff: 0.2, default: 0 },
+				{ db_col: 'cnv_4mb_03', sizecutoff: '4Mb', log2cutoff: 0.3, default: 0 }
 			]
 		},
 

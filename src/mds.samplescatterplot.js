@@ -1613,7 +1613,7 @@ function init_mutation_type_control(obj, samples) {
 			.append('label')
 			.attr('for', 'log2_ratio')
 			.style('margin', '2px 10px')
-			.text('log2 Ratio cutoff')
+			.text('log2(ratio) cutoff')
 
 		const ratio_select = cnv_options_div.append('select').attr('name', 'log2_ratio')
 
@@ -1624,7 +1624,7 @@ function init_mutation_type_control(obj, samples) {
 				.text(ratio.toFixed(1))
 		})
 
-		ratio_select.property('selectedIndex', default_cnv.log2cutoff == 1 ? 0 : default_cnv.log2cutoff == 2 ? 1 : 2)
+		ratio_select.property('selectedIndex', default_cnv.log2cutoff == 0.1 ? 0 : default_cnv.log2cutoff == 0.2 ? 1 : 2)
 
 		// gene # selection for sample matrix
 		const gene_div = criteria_div.append('div').style('padding-top', '10px')
