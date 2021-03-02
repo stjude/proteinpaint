@@ -19,6 +19,11 @@ struct kmer_input {
    kmer_weight:f64
 }
 
+struct kmer_data {
+   kmer_count:i64,
+   kmer_weight:f64
+}
+
 struct read_category {
    category:String,
    groupID:usize
@@ -42,6 +47,51 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     read_val	
 }
 
+fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
+    let kmers_dup = kmers.clone();
+    //let x:String = y.to_owned();
+    //println!("Search string:{}",&x);
+    let mut index: i64 = -1;    
+    let mut l:usize = 0;
+    let mut r:usize = kmers_dup.len()-1;
+    let mut m:usize = 0;
+    console::log_2(&"r:".into(),&r.to_string().into());
+    //let mut n:usize = 0;
+    while (l <= r) {
+        m = l + ((r-l)/2);
+	//if (m>=kmers_dup.len()){
+        //  n=kmers_dup.len()-1;
+	//}
+	//else {
+         // n=m;
+	//}
+	console::log_2(&"kmers_dup[m]:".into(),&kmers_dup[m].to_string().into());
+	console::log_6(&"l:".to_string().into(), &l.to_string().into(),&"m:".to_string().into(), &m.to_string().into(),&"r:".to_string().into(), &r.to_string().into());
+	//println!("l:{},m:{},r:{}",l,m,r);
+	// Check if x is present at mid
+	if (y == &kmers_dup[m]) {
+	    index = m as i64;
+            break;
+	}
+        //else if m==0 as usize {break;}
+	
+	// If x is greater, ignore left half
+	else if (y > &kmers_dup[m]) {
+	    console::log_2(&"l:".into(),&l.to_string().into());
+	    l = m + 1;
+	} 
+	// If x is smaller, ignore right half 
+	else {
+	    console::log_2(&"r:".into(),&r.to_string().into());
+	    r=m-1;
+	}
+	//if r==0 as usize {break;}
+	//console::log_2(&"r:".into(),&r.to_string().into());
+    }
+    console::log_2(&"index:".into(), &index.to_string().into());
+    index    
+}
+
 #[wasm_bindgen]
 pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
@@ -62,7 +112,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     
     let kmers = build_kmers(lines[0].to_string(), kmer_length);
     
-    let (ref_kmers_weight, all_ref_counts, all_ref_kmers_seq_values_nodups, all_ref_kmers_nodups, all_ref_kmers) = build_kmers_refalt(
+    let (ref_kmers_weight, ref_kmers_nodups, ref_kmers_data) = build_kmers_refalt(
     		lines[0].to_string(),
     		kmer_length,
     		left_most_pos,
@@ -72,7 +122,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		weight_no_indel
     );	
     
-    let (alt_kmers_weight,all_alt_counts, all_alt_kmers_seq_values_nodups, all_alt_kmers_nodups, all_alt_kmers) = build_kmers_refalt(
+    let (alt_kmers_weight, alt_kmers_nodups, alt_kmers_data) = build_kmers_refalt(
     		lines[1].to_string(),
     		kmer_length,
     		left_most_pos,
@@ -93,8 +143,8 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
               let kmers = build_kmers(read.to_string(), kmer_length);
               //println!("kmers:{}",kmers.len());
-              let ref_comparison=jaccard_similarity_weights(&kmers,&all_ref_kmers,&all_ref_kmers_nodups,&all_ref_kmers_seq_values_nodups,&ref_kmers_weight,&all_ref_counts);
-    	      let alt_comparison=jaccard_similarity_weights(&kmers,&all_alt_kmers,&all_alt_kmers_nodups,&all_alt_kmers_seq_values_nodups,&alt_kmers_weight,&all_alt_counts);
+              let ref_comparison=jaccard_similarity_weights(&kmers, &ref_kmers_nodups, &ref_kmers_data, ref_kmers_weight);
+    	      let alt_comparison=jaccard_similarity_weights(&kmers, &alt_kmers_nodups, &alt_kmers_data, alt_kmers_weight);
     	      let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
     	      kmer_diff_scores.push(diff_score);
     	      ref_comparisons.push(ref_comparison);
@@ -163,25 +213,20 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     JsValue::from_serde(&item).unwrap()
 }
 
-fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64) -> (f64,Vec::<i64>,Vec::<String>,Vec<kmer_input>,Vec<kmer_input>)
+fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64) -> (f64,Vec::<String>,Vec::<kmer_data>)
 {
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();    
-    let mut kmers = Vec::<kmer_input>::new();
+    let mut kmers = Vec::<kmer_input>::new();  
     let mut kmers_nodup = Vec::<String>::new();
-    let mut kmers_nodup2 = Vec::<String>::new();    
     let mut kmer_start = left_most_pos;
     let mut kmer_stop = kmer_start + kmer_length;
     for i in 0..num_iterations {
 	#[derive(Copy, Clone)]
 	let mut subseq = String::new();
-	let mut subseq2 = String::new();
-	let mut subseq3 = String::new();
 	let mut j=i as usize;	
 	for _k in 0..kmer_length {
             subseq+=&sequence_vector[j].to_string();
-	    subseq2+=&sequence_vector[j].to_string();
-	    subseq3+=&sequence_vector[j].to_string();	    
 	    j+=1;
 	}
 	let mut kmer_score:f64 = 0.0;
@@ -194,10 +239,9 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 		kmer_score += weight_no_indel;
 	    }           
 	}
-	kmers_nodup.push(subseq2);
-	kmers_nodup2.push(subseq3);	
+	kmers_nodup.push(subseq.to_owned());
 	let kmer_weight = kmer_input{
-	    kmer_sequence:String::from(subseq),
+	    kmer_sequence:String::from(subseq.to_owned()),
 	    kmer_weight:f64::from(kmer_score)
 	};
 	kmers.push(kmer_weight);	
@@ -208,56 +252,51 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
     // Getting unique kmers
     kmers_nodup.sort();
     kmers_nodup.dedup();
-
-    kmers_nodup2.sort();
-    kmers_nodup2.dedup();    
     //println!("Number of kmers after:{}", kmers_nodup.len());
 
     //println!("Total number of kmers:{}",kmers.len());
     
-    let mut kmers2 = Vec::<kmer_input>::new();
-    let mut kmer_counts = Vec::<i64>::new();
+    let mut kmers_data = Vec::<kmer_data>::new();
     let mut total_kmers_weight:f64 = 0.0;
-    let mut i:usize = 0;    
-    for kmer1 in kmers_nodup {
+    for kmer1 in &kmers_nodup {
 	let mut kmer_values = Vec::<f64>::new();
 	let mut kmer_count = 0;
 	for kmer2 in &kmers {
-            if kmer1==kmer2.kmer_sequence {
+            if kmer1.to_owned()==kmer2.kmer_sequence {
 		kmer_values.push(kmer2.kmer_weight);
 		kmer_count+=1;
             } 		
 	}
-	kmer_counts.push(kmer_count);
 	
 	let sum: f64 = kmer_values.iter().sum();
-	let kmer_weight = kmer_input{
-	    kmer_sequence:String::from(kmer1),
-	    kmer_weight:f64::from(sum as f64 / kmer_values.len() as f64) // Calculating mean
-	};
         //println!("i:{}", i);
         //println!("kmer:{}", kmer_weight.kmer_sequence);	
         total_kmers_weight += (kmer_count as f64)*(sum as f64 / kmer_values.len() as f64);	
-	kmers2.push(kmer_weight);
-	i+=1;
+	let kmer_weight:f64 = sum as f64 / kmer_values.len() as f64; // Calculating mean
+	let kmer_data_struct = kmer_data{
+	    kmer_count:i64::from(kmer_count),
+	    kmer_weight:f64::from(kmer_weight)
+	};	
+        kmers_data.push(kmer_data_struct);
     }
     
-    let mut kmers3 = Vec::<kmer_input>::new();
-    for kmer1 in kmers {
-	for kmer2 in &kmers2 {
-            if kmer1.kmer_sequence==kmer2.kmer_sequence {
-	      let kmer_weight = kmer_input{
-	         kmer_sequence:String::from(kmer1.kmer_sequence),
-	         kmer_weight:f64::from(kmer2.kmer_weight)     
-	      };
-	
-	      kmers3.push(kmer_weight);	
-	      break;	
-            }
-	}	
-    }
-    (total_kmers_weight,kmer_counts,kmers_nodup2,kmers2,kmers3)
-}    
+    //let mut kmers_unique = Vec::<String>::new();
+    //let mut kmers_repeat = Vec::<String>::new();
+    //for kmer1 in kmers {
+    //	for kmer2 in &kmers2 {
+    //        if kmer1.kmer_sequence==kmer2.kmer_sequence {
+    //	      let kmer_weight = kmer_input{
+    //	         kmer_sequence:String::from(kmer1.kmer_sequence),
+    //	         kmer_weight:f64::from(kmer2.kmer_weight)     
+    //	      };
+    //	
+    //	      kmers3.push(kmer_weight);	
+    //	      break;	
+    //        }
+    //	}	
+    //}
+    (total_kmers_weight,kmers_nodup,kmers_data)
+}
 
 // Multithread this function in the future
 fn build_kmers(sequence: String, kmer_length: i64) -> Vec::<String>  {
@@ -280,7 +319,7 @@ fn build_kmers(sequence: String, kmer_length: i64) -> Vec::<String>  {
     kmers
 }
 
-fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, kmers2_nodups: &Vec<kmer_input>, kmer2_seq_values_nodups: &Vec<String>, kmers2_weight: &f64, kmer2_counts: &Vec<i64>) -> f64 {
+fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>, kmers2_data: &Vec<kmer_data>, kmers2_weight: f64) -> f64 {
     // Getting unique read kmers
     let mut kmers1_nodup = kmers1.clone();
     kmers1_nodup.sort();
@@ -297,7 +336,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
        intersection.insert(kmer);
     }
     
-    for kmer in kmer2_seq_values_nodups{
+    for kmer in kmers2_nodups{
        intersection.insert(kmer);
     }	
 
@@ -305,21 +344,32 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
  
     let mut kmer1_counts = Vec::<i64>::new();
     let mut kmers1_weight: f64 = 0.0;
+    let mut index: i64 = 0;
     for kmer1 in &kmers1_nodup {
 	let mut kmer_count: i64 = 0;
 	let mut score: f64 = 0.0;
-	for kmer2 in kmers1 {
+	for kmer2 in kmers1 { // Binary search should not be used here since it cannot handle duplicate entries
             if kmer1==kmer2 {
 		kmer_count+=1;
-            } 		
-	}	
+            } 	
+	}
+	//console::log_1(&kmer1.into());
+	//if (binary_search(&kmers1,&kmer1) != -1 as i64) {
+        //  kmer_count+=1;
+	//}    
+
 	
 	for kmer2 in kmers2_nodups {
-            if kmer1==&kmer2.kmer_sequence {
-		score=kmer2.kmer_weight;
-		continue;
-            }
+        //    if kmer1==&kmer2.kmer_sequence {
+	//	score=kmer2.kmer_weight;
+	//	continue;
+            //    }
+	    console::log_1(&kmer2.into());    
 	}
+	console::log_2(&"kmer1:".into(),&kmer1.into());
+	index=binary_search(&kmers2_nodups,&kmer1);
+	console::log_3(&"Checking binary_search (from Rust):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+	score=kmers2_data[index as usize].kmer_weight;
 	kmers1_weight += (kmer_count as f64)*score;
 
 	kmer1_counts.push(kmer_count);	
@@ -328,27 +378,32 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2: &Vec<kmer_input>, km
     
     let mut intersection_weight: f64 = 0.0;
     for kmer1 in intersection {
-	let mut j: usize = 0;
 	let mut score: f64 = 0.0;
 	let mut kmer1_freq: i64 = 0;
 	let mut kmer2_freq: i64 = 0;
-	for kmer2 in kmers2_nodups {
-            if kmer1==&kmer2.kmer_sequence {
-		score=kmer2.kmer_weight;
-		kmer2_freq=kmer2_counts[j];
-		continue;
-            }
-	    j+=1;
-	}
-
-	j=0;
-	for kmer2 in &kmers1_nodup {
-            if kmer1==kmer2 {
-		kmer1_freq=kmer1_counts[j];
-		continue;
-            }
-	    j+=1;
-	}
+	//for kmer2 in kmers2_nodups {
+        //    if kmer1==&kmer2.kmer_sequence {
+	//	score=kmer2.kmer_weight;
+	//	kmer2_freq=kmer2_counts[j];
+	//	continue;
+        //    }
+	//    j+=1;
+	//}
+        index=binary_search(&kmers2_nodups,&kmer1);
+	score=kmers2_data[index as usize].kmer_weight;
+	kmer2_freq=kmers2_data[index as usize].kmer_count;
+	
+	//j=0;
+	//for kmer2 in &kmers1_nodup {
+        //    if kmer1==kmer2 {
+	//	kmer1_freq=kmer1_counts[j];
+	//	continue;
+        //    }
+	//    j+=1;
+	//}
+        index=binary_search(&kmers1_nodup,&kmer1);
+	kmer1_freq=kmer1_counts[index as usize];
+	
 	if kmer1_freq <= kmer2_freq {
           intersection_weight += score*(kmer1_freq as f64);
 	}
