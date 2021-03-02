@@ -13,22 +13,26 @@ module.exports = function(common) {
 			// to get list of most recurrently mutated genes from a set of samples
 			dbfile: 'hg38/Pediatric/genecount.db',
 			mutationTypes: [
-				{ db_col: 'snv_mfndi', label: 'Missense + Frameshift + Nonsense + Deletion + Insertion ', default: 1 },
-				{ db_col: 'snv_splice', label: 'Splice', default: 1 },
-				{ db_col: 'snv_utr', label: "3' & 5' UTR", default: 1 },
-				{ db_col: 'snv_s', label: 'Silent', default: 0 },
+				{
+					db_col: 'snv_mfndi',
+					label: 'Missense, frameshift, nonsense, in-frame insertion and deletion mutations',
+					default: 1
+				},
+				{ db_col: 'snv_splice', label: 'Splice site and splice region mutations', default: 1 },
+				{ db_col: 'snv_utr', label: "5' and 3' UTR mutations", default: 1 },
+				{ db_col: 'snv_s', label: 'Silent mutations', default: 0 },
 				{ db_col: 'sv', label: 'SV', default: 1 },
 				{ db_col: 'fusion', label: 'Fusion', default: 1 },
 				{ db_col: 'itd', label: 'ITD', default: 1 },
-				{ db_col: 'cnv_1mb_01', label: 'CNV 1Mb log2 1.0', sizecutoff: '1Mb', log2cutoff: 1, default: 0 },
-				{ db_col: 'cnv_1mb_02', label: 'CNV 1Mb log2 2.0', sizecutoff: '1Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_1mb_03', label: 'CNV 1Mb log2 3.0', sizecutoff: '1Mb', log2cutoff: 3, default: 0 },
-				{ db_col: 'cnv_2mb_01', label: 'CNV 2Mb log2 1.0', sizecutoff: '2Mb', log2cutoff: 1, default: 1 },
-				{ db_col: 'cnv_2mb_02', label: 'CNV 2Mb log2 2.0', sizecutoff: '2Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_2mb_03', label: 'CNV 2Mb log2 3.0', sizecutoff: '2Mb', log2cutoff: 3, default: 0 },
-				{ db_col: 'cnv_4mb_01', label: 'CNV 4Mb log2 1.0', sizecutoff: '4Mb', log2cutoff: 1, default: 0 },
-				{ db_col: 'cnv_4mb_02', label: 'CNV 4Mb log2 2.0', sizecutoff: '4Mb', log2cutoff: 2, default: 0 },
-				{ db_col: 'cnv_4mb_03', label: 'CNV 4Mb log2 3.0', sizecutoff: '4Mb', log2cutoff: 3, default: 0 }
+				{ db_col: 'cnv_1mb_01', sizecutoff: '1Mb', log2cutoff: 1, default: 0 },
+				{ db_col: 'cnv_1mb_02', sizecutoff: '1Mb', log2cutoff: 2, default: 0 },
+				{ db_col: 'cnv_1mb_03', sizecutoff: '1Mb', log2cutoff: 3, default: 0 },
+				{ db_col: 'cnv_2mb_01', sizecutoff: '2Mb', log2cutoff: 1, default: 1 },
+				{ db_col: 'cnv_2mb_02', sizecutoff: '2Mb', log2cutoff: 2, default: 0 },
+				{ db_col: 'cnv_2mb_03', sizecutoff: '2Mb', log2cutoff: 3, default: 0 },
+				{ db_col: 'cnv_4mb_01', sizecutoff: '4Mb', log2cutoff: 1, default: 0 },
+				{ db_col: 'cnv_4mb_02', sizecutoff: '4Mb', log2cutoff: 2, default: 0 },
+				{ db_col: 'cnv_4mb_03', sizecutoff: '4Mb', log2cutoff: 3, default: 0 }
 			]
 		},
 

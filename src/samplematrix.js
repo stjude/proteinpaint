@@ -67,7 +67,6 @@ export class Samplematrix {
 		this.tip = new client.Menu({ padding: '0px', hideXmute: 1, hideYmute: 1 })
 		this.menu = new client.Menu({ padding: '0px' })
 		this.errdiv = this.holder.append('div')
-		console.log(this)
 
 		if (!this.iscustom) {
 			// official dataset
