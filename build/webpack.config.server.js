@@ -2,9 +2,9 @@ const nodeExternals = require('webpack-node-externals')
 const webpack = require('webpack')
 const path = require('path')
 
-module.exports = function(env = {}) {
+module.exports = function(env = 'production') {
 	return {
-		mode: env && env.NODE_ENV ? env.NODE_ENV : 'production',
+		mode: env,
 		target: 'node',
 		externals: [nodeExternals({ allowlist: [/\/src\//] })],
 		entry: path.join(__dirname, '../app.js'),
@@ -24,6 +24,7 @@ module.exports = function(env = {}) {
 					]
 				}
 			]
-		}
+		},
+		devtool: env == 'development' ? 'source-map' : ''
 	}
 }
