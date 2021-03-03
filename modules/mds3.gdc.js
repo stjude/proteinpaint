@@ -314,15 +314,25 @@ export function validate_query_genecnv(ds) {
 	}
 }
 
+// for variant2samples query
 export async function getSamples_gdcapi(q, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
+	const fields =
+		q.get == ds.variant2samples.type_sunburst
+			? api.fields_sunburst
+			: q.get == ds.variant2samples.type_summary
+			? api.fields_summary
+			: q.get == ds.variant2samples.type_samples
+			? api.fields_samples
+			: null
+	if (!fields) throw 'invalid get type of q.get'
 	const response = await got(
 		api.endpoint +
 			'?size=' +
 			api.size +
 			'&fields=' +
-			(q.get == ds.variant2samples.type_sunburst ? api.fields_sunburst : api.fields_list).join(',') +
+			fields.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.filters(q))),
 		{ method: 'GET', headers: getheaders(q) }
@@ -352,9 +362,26 @@ export async function getSamples_gdcapi(q, ds) {
 				}
 			}
 		}
+		/////////////////// hardcoded logic to use .observation
+		// FIXME apply a generalized mechanism to record read depth (or just use sampledata.read_depth{})
+		may_add_readdepth(s.case, sample)
+		///////////////////
 		samples.push(sample)
 	}
 	return samples
+}
+
+function may_add_readdepth(acase, sample) {
+	if (!acase.observation) return
+	sample.read_depth = [] // each ele {altT, totalT, totalG, caller}
+	for (const o of acase.observation) {
+		sample.read_depth.push({
+			caller: o.variant_calling.variant_caller,
+			altT: o.read_depth.t_alt_count,
+			totalT: o.read_depth.t_depth,
+			totalG: o.read_depth.n_depth
+		})
+	}
 }
 
 /*
