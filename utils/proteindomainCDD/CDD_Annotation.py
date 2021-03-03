@@ -11,6 +11,7 @@ __copyrigth__ = "Copyright 2020, St.Jude"
 import re,os,gzip,sys
 import argparse
 import json
+import nameConvert
 
 parser = argparse.ArgumentParser(description='refSeq CDD annotation. Default species: Homo_sapiens')
 parser.add_argument('-p','--path',help='The path to refseq protein database downloaded from NCBI')
@@ -271,10 +272,11 @@ PID = ''
 ##Domain dic data structure
 DOMAIN = {'region':{},'region_nocdd':{},'site':{},'site_nocdd':{}}
 ## species info
-ORG2LATIN = {"human":"Homo sapiens",
-		"mouse":"Mus musculus",
-		"zebrafish":"Danio rerio"}
-ORG = ORG2LATIN[args.species]
+ORG = nameConvert.GETLATIN(args.species)
+if not ORG:
+	print(args.species + 'is not supported yet!')
+	print('Species supported: '+', '.join(nameConvert.SUPSPE()))
+	sys.exit(1)
 
 #Extract CDD info for both region and site
 for Pfile in os.listdir(PATH):

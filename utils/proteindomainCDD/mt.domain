@@ -1,0 +1,51 @@
+mt	{"name": "D-loop", "description": "D-loop", "start": 1, "stop": 192}
+mt	{"name": "D-loop", "description": "D-loop", "start": 5342, "stop": 5523}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 193, "stop": 215}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 534, "stop": 556}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1077, "stop": 1101}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1421, "stop": 1443}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1443, "stop": 1466}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1468, "stop": 1489}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1838, "stop": 1859}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1863, "stop": 1885}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1886, "stop": 1909}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1921, "stop": 1942}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 1942, "stop": 1963}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 2482, "stop": 2504}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 2506, "stop": 2528}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 2765, "stop": 2788}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 3331, "stop": 3352}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 3469, "stop": 3489}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 4046, "stop": 4068}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 4069, "stop": 4088}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 4089, "stop": 4112}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 4892, "stop": 4914}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 5296, "stop": 5317}
+mt	{"name": "TRNAs", "description": "TRNAs", "start": 5319, "stop": 5341}
+mt	{"name": "RRNAs", "description": "RRNAs", "start": 216, "stop": 533}
+mt	{"name": "RRNAs", "description": "RRNAs", "start": 557, "stop": 1076}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 1103, "stop": 1420}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 1490, "stop": 1837}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 3353, "stop": 3468}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 3490, "stop": 3588}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 3587, "stop": 4045}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 4113, "stop": 4716}
+mt	{"name": "Complex 1", "description": "Complex 1", "start": 4717, "stop": 4891}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1102, "stop": 1102}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1467, "stop": 1467}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1860, "stop": 1862}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1886, "stop": 1885}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1910, "stop": 1920}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 1964, "stop": 1967}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 2505, "stop": 2505}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 2757, "stop": 2764}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 2789, "stop": 2788}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 4915, "stop": 4915}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 5318, "stop": 5318}
+mt	{"name": "Intergenic/noncoding", "description": "Intergenic/noncoding", "start": 5342, "stop": 5341}
+mt	{"name": "Complex 4", "description": "Complex 4", "start": 1968, "stop": 2481}
+mt	{"name": "Complex 4", "description": "Complex 4", "start": 2529, "stop": 2756}
+mt	{"name": "Complex 4", "description": "Complex 4", "start": 3069, "stop": 3330}
+mt	{"name": "Complex 5", "description": "Complex 5", "start": 2789, "stop": 2857}
+mt	{"name": "Complex 5", "description": "Complex 5", "start": 2843, "stop": 3069}
+mt	{"name": "Complex 3", "description": "Complex 3", "start": 4916, "stop": 5295}
