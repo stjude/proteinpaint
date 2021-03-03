@@ -2,26 +2,22 @@
 
 import argparse,sys
 from pybiomart import *
+import nameConvert
 
 parser = argparse.ArgumentParser(description='Download domain info for ensembl gene')
 parser.add_argument('-s','--species',help="Species name. Current supported species: human,mouse,zebrafish")
 
 args = parser.parse_args()
 
-dataset_name_dic = {"human":"hsapiens_gene_ensembl",
-		"zebrafish":"drerio_gene_ensembl",
-		"mouse":"mmusculus_gene_ensembl"
-}
-
 if len(sys.argv) <= 1:
 	parser.print_help()
 	sys.exit(1)
-elif args.species not in dataset_name_dic:
-	print(args.species + ' is not supported yet!')
-	parser.print_help()
-	sys.exit(1)
 
-dataset_name = dataset_name_dic[args.species]
+dataset_name = nameConvert.GETDAT(args.species)
+if not dataset_name:
+	print(args.species + ' is not supported yet!')
+	print('Species supported: '+', '.join(nameConvert.SUPSPE()))
+	sys.exit(1)
 
 dataset = Dataset(name=dataset_name,host='http://www.ensembl.org')
 
