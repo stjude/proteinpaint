@@ -241,10 +241,8 @@ const variant2samples = {
 		'case.demographic.race',
 		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
-		'case.observation.read_depth.t_ref_count',
 		'case.observation.read_depth.t_depth',
-		'case.observation.read_depth.n_depth',
-		'case.observation.variant_calling.variant_caller'
+		'case.observation.read_depth.n_depth'
 	],
 	filters: p => {
 		if (!p.ssm_id_lst) throw '.ssm_id_lst missing'

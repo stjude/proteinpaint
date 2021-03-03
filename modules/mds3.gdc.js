@@ -373,14 +373,14 @@ export async function getSamples_gdcapi(q, ds) {
 
 function may_add_readdepth(acase, sample) {
 	if (!acase.observation) return
-	sample.read_depth = [] // each ele {altT, totalT, totalG, caller}
-	for (const o of acase.observation) {
-		sample.read_depth.push({
-			caller: o.variant_calling.variant_caller,
-			altT: o.read_depth.t_alt_count,
-			totalT: o.read_depth.t_depth,
-			totalG: o.read_depth.n_depth
-		})
+	// per Zhenyu, the ensemble workflow unifies the depth from all callers, can display just the first
+	const dat = acase.observation[0]
+	if (!dat) return
+	if (!dat.read_depth) return
+	sample.read_depth = {
+		altTumor: dat.read_depth.t_alt_count,
+		totalTumor: dat.read_depth.t_depth,
+		totalNormal: dat.read_depth.n_depth
 	}
 }
 
