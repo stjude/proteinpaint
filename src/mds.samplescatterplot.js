@@ -1542,11 +1542,14 @@ function init_mutation_type_control(obj, samples) {
 			.style('border-left', 'solid 1px #ededed')
 
 		non_cnv_types.forEach(type => {
-			const checkbox = mut_types_div
+			const m_div = mut_types_div.append('div')
+			const checkbox = m_div
 				.append('input')
 				.attr('type', 'checkbox')
 				.attr('name', 'mut_type')
 				.attr('value', type.db_col)
+				.style('margin', '3px')
+				.style('margin-left', '4px')
 				.property('checked', type.default)
 
 			checkbox.on('change', () => {
@@ -1557,10 +1560,10 @@ function init_mutation_type_control(obj, samples) {
 				}
 			})
 
-			mut_types_div
+			m_div
 				.append('label')
 				.attr('for', type.db_col)
-				.html(type.label + '</br>')
+				.html(type.label)
 		})
 
 		const cnv_checkbox = mut_types_div
@@ -1696,6 +1699,11 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 		const data = await client.dofetch2('mdsgenecount', { method: 'POST', body: JSON.stringify(arg) })
 		if (data.error) throw data.error
 		if (!data.genes) throw '.genes missing'
+		if (!data.genes.length) {
+			obj.pane.wait.html('Not enought data to retrive any genes with mutations. </br> HINT: Select more samples.')
+			obj.pane.matrix_criteria_div.style('display', 'none')
+			return
+		}
 		make_sample_matrix({ obj, genes: data.genes, samples, holder: obj.pane.body })
 		obj.pane.wait.remove()
 	} catch (e) {
