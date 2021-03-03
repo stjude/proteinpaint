@@ -1,4 +1,4 @@
-// Syntax for testing wasm implementation: cd .. && wasm-pack build --target nodejs && node pkg/wasmtest.js
+// Syntax for testing wasm implementation: cd .. && wasm-pack build --target nodejs && time node pkg/wasmtest.js
 // Passing vector using webassembly: https://stackoverflow.com/questions/50220966/how-to-use-vectors-of-c-stl-with-webassembly
 
 use wasm_bindgen::prelude::*;
@@ -48,7 +48,8 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 }
 
 fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
-    let kmers_dup = kmers.clone();
+    let kmers_dup = &kmers[..];
+    //let kmers_dup = kmers.clone();
     //let x:String = y.to_owned();
     //println!("Search string:{}",&x);
     let mut index: i64 = -1;    
@@ -154,7 +155,13 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		variant_pos + ref_length,
     		weight_indel,
     		weight_no_indel
-    );	
+    );
+    let mut iter_check: usize = 0;
+    while (iter_check < ref_kmers_nodups.len()) {
+	console::log_6(&"sequence:".into(), &ref_kmers_nodups[iter_check].to_string().into(), &"kmer_count:".into(), &ref_kmers_data[iter_check].kmer_count.to_string().into(),&"kmer_weight:".into(), &ref_kmers_data[iter_check].kmer_weight.to_string().into());
+	iter_check+=1;
+    }
+    console::log_2(&"total_ref_weights:".into(), &ref_kmers_weight.to_string().into());
     
     let (alt_kmers_weight, alt_kmers_nodups, alt_kmers_data) = build_kmers_refalt(
     		lines[1].to_string(),
@@ -399,9 +406,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
           score=0.0;
 	}
 	else {
-	  if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-              console::log_3(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
-          }		
+	  //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
+          //    console::log_3(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          //}		
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmers1_weight += (kmer_count as f64)*score;
 	}    
@@ -425,9 +432,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //console::log_2(&"Intersection kmer1:".into(),&kmer1.into());
         index=binary_search(&kmers2_nodups,&kmer1);
 	if index != -1 as i64 {
-	  if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-              console::log_3(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
-          }  
+	  //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
+          //    console::log_3(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          //}  
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmer2_freq=kmers2_data[index as usize].kmer_count;
 	}
@@ -446,9 +453,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         index=binary_search(&kmers1_nodup,&kmer1);
 	//console::log_2(&"Index:".into(),&index.to_string().into());
 	if index != -1 as i64 {
-	   if (kmer1!=&kmers1_nodup[index as usize].to_string()) {
-              console::log_3(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
-           }		    
+	   //if (kmer1!=&kmers1_nodup[index as usize].to_string()) {
+           //   console::log_3(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
+           //}		    
 	   kmer1_freq=kmer1_counts[index as usize];
 	}
 	if kmer1_freq <= kmer2_freq {
