@@ -399,7 +399,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
           score=0.0;
 	}
 	else {
-	  //console::log_3(&"Checking binary_search (from Rust):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+	  if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
+              console::log_3(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          }		
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmers1_weight += (kmer_count as f64)*score;
 	}    
@@ -423,6 +425,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //console::log_2(&"Intersection kmer1:".into(),&kmer1.into());
         index=binary_search(&kmers2_nodups,&kmer1);
 	if index != -1 as i64 {
+	  if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
+              console::log_3(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          }  
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmer2_freq=kmers2_data[index as usize].kmer_count;
 	}
@@ -441,6 +446,9 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         index=binary_search(&kmers1_nodup,&kmer1);
 	//console::log_2(&"Index:".into(),&index.to_string().into());
 	if index != -1 as i64 {
+	   if (kmer1!=&kmers1_nodup[index as usize].to_string()) {
+              console::log_3(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
+           }		    
 	   kmer1_freq=kmer1_counts[index as usize];
 	}
 	if kmer1_freq <= kmer2_freq {
