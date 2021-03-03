@@ -6,7 +6,7 @@ query list of variants by isoform
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
-// REST: get list of ssm with consequence, no case info
+// REST: get list of ssm with consequence, no case info and occurrence
 const isoform2ssm_getvariant = {
 	endpoint: GDC_HOST + '/ssms',
 	size: 100000,
@@ -221,7 +221,7 @@ const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
 	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
-	fields_list: [
+	fields_summary: [
 		'case.project.project_id',
 		'case.case_id',
 		'case.disease_type',
@@ -230,6 +230,21 @@ const variant2samples = {
 		'case.demographic.year_of_birth',
 		'case.demographic.race',
 		'case.demographic.ethnicity'
+	],
+	fields_samples: [
+		'case.project.project_id',
+		'case.case_id',
+		'case.disease_type',
+		'case.primary_site',
+		'case.demographic.gender',
+		'case.demographic.year_of_birth',
+		'case.demographic.race',
+		'case.demographic.ethnicity',
+		'case.observation.read_depth.t_alt_count',
+		'case.observation.read_depth.t_ref_count',
+		'case.observation.read_depth.t_depth',
+		'case.observation.read_depth.n_depth',
+		'case.observation.variant_calling.variant_caller'
 	],
 	filters: p => {
 		if (!p.ssm_id_lst) throw '.ssm_id_lst missing'

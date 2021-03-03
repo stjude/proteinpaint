@@ -1,5 +1,5 @@
 import * as common from '../common'
-import { to_textfile } from '../client'
+import { to_textfile, fillbar } from '../client'
 
 /*
 ********************** EXPORTED
@@ -54,7 +54,8 @@ arg{}
 .tid2value
 */
 export async function mlst2samplesummary(arg) {
-	const downloadlinkdiv = arg.div.append('div') // temporary fix!!
+	// quick fix!! when showing multi-sample summary, Lou wanted a *download* link, show at this top div
+	const downloadlinkdiv = arg.div.append('div')
 
 	const table = arg.div.append('table') // 2 columns: 1. field name, 2. field content
 	const [tdtemp1, tdtemp2, trtemp] = row_headervalue(table)
@@ -65,17 +66,18 @@ export async function mlst2samplesummary(arg) {
 			arg.querytype = arg.tk.mds.variant2samples.type_samples
 			const data = await arg.tk.mds.variant2samples.get(arg)
 			trtemp.remove()
-			if (data[0].sample_id) {
+			const sampledata = data[0] // must have just one sample
+			if (sampledata.sample_id) {
 				// sample_id is hardcoded
 				const [td1, td2] = row_headervalue(table)
 				td1.text('Sample')
 				if (arg.tk.mds.variant2samples.url) {
 					const a = td2.append('a')
-					a.attr('href', arg.tk.mds.variant2samples.url.base + data[0].sample_id)
+					a.attr('href', arg.tk.mds.variant2samples.url.base + sampledata.sample_id)
 					a.attr('target', '_blank')
-					a.text(data[0].sample_id)
+					a.text(sampledata.sample_id)
 				} else {
-					td2.text(data[0].sample_id)
+					td2.text(sampledata.sample_id)
 				}
 			}
 
@@ -84,7 +86,48 @@ export async function mlst2samplesummary(arg) {
 				if (!term) throw 'unknown term id: ' + termid
 				const [td1, td2] = row_headervalue(table)
 				td1.text(term.name)
-				td2.text(data[0][termid])
+				td2.text(sampledata[termid])
+			}
+
+			/////////////
+			// hardcoded logic to represent read depth using gdc data
+			if (sampledata.read_depth) {
+				// need to support other configurations for read_depth data
+				const [td1, td2] = row_headervalue(table)
+				/*
+				td1.text('Tumor read depth')
+				fillbar(td2, {f:sampledata.read_depth.t_alt_count / sampledata.read_depth.t_depth})
+				td2.append('span').text(sampledata.read_depth.t_alt_count+' / '+sampledata.read_depth.t_depth).style('margin','0px 10px')
+				td2.append('span').text('ALT / TOTAL').style('font-size','.7em').style('opacity',.5)
+				const [td3, td4] = row_headervalue(table)
+				td3.text('Germline read depth')
+				td4.text(sampledata.read_depth.n_depth)
+				*/
+				td1.text('Read depth')
+				const table2 = td2.append('table')
+				const tr = table2.append('tr')
+				tr.style('font-size', '.7em').style('opacity', 0.5)
+				tr.append('td').text('Tumor')
+				tr.append('td').text('Germline')
+				tr.append('td').text('Caller')
+				for (const d of sampledata.read_depth) {
+					const tr = table2.append('tr')
+					const td1 = tr.append('td')
+					fillbar(td1, { f: d.altT / d.totalT })
+					td1
+						.append('span')
+						.text(d.altT + ' / ' + d.totalT)
+						.style('margin', '0px 10px')
+					td1
+						.append('span')
+						.text('ALT / TOTAL')
+						.style('font-size', '.7em')
+						.style('opacity', 0.5)
+					tr.append('td').text(d.totalG)
+					tr.append('td')
+						.text(d.caller)
+						.style('opacity', 0.5)
+				}
 			}
 			return
 		}
