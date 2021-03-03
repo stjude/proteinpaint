@@ -2,9 +2,13 @@ import { dofetch2 } from './client'
 import { debounce } from 'debounce'
 
 export async function init_examples(par) {
+	// can be just init() to simplify and unify coding style across pp
 	const { holder } = par
-	const re = await loadJson()
-	let track_arg = {}
+	// see comment at loadJson()
+	// const re = await loadJson()
+	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	// let track_arg = {}
+	// track_arg is not changed so it can be const and can be defined when initiated
 	if (re.error) {
 		holder
 			.append('div')
@@ -15,11 +19,12 @@ export async function init_examples(par) {
 	const wrapper_div = make_examples_page(holder)
 	const searchbar_div = wrapper_div.append('div')
 	const track_grid = make_main_track_grid(wrapper_div)
-	const gbrowser_col = make_gBrowserCol(track_grid)
-	const app_col = make_appCol(track_grid)
+	// these both can be initiead with single function
+	// const gbrowser_col = make_gBrowserCol(track_grid)
+	// const app_col = make_appCol(track_grid)
+	const gbrowser_col = make_col(track_grid, 'gbrowser')
+	const app_col = make_col(track_grid, 'otherapps')
 
-	// genomepaint panel
-	// subgrid
 	// top card followed by additional tiles
 	gbrowser_col
 		.append('div')
@@ -32,6 +37,12 @@ export async function init_examples(par) {
 	// .style('margin', '20px, 10px, 10px, 10px')
 	launch_gBrowser_btn(gbrowser_col)
 
+	// genomepaint panel
+	// subgrid
+	/* folllowing 4 snippets have repeated code with just h5 change, 
+	can be function like make_col() 
+	e.g. const gpaintList = make_list(gbrowser_col, 'GenomePaint')  
+	p.s. good code practice is to minimze code repeating :) */
 	gbrowser_col
 		.append('h5')
 		.html('GenomePaint')
@@ -42,7 +53,7 @@ export async function init_examples(par) {
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
 		.style('padding', '10px')
-		.style('border-radius', '8px')
+		.style('border-radius', '8px') // not needed
 
 	// tracks panel
 	// subgrid
@@ -87,7 +98,7 @@ export async function init_examples(par) {
 		.style('padding', '10px')
 		.style('border-radius', '8px')
 
-	track_arg = {
+	const track_arg = {
 		tracks: re.examples,
 		gpaintList,
 		browserList,
@@ -145,10 +156,12 @@ function make_searchbar(div, args) {
 					}, false)
 					return searchTermFound || track.name.toLowerCase().includes(searchInput)
 				})
-				displayGPaintTracks(filteredTracks, args.gpaintList)
-				displayBrowserTracks(filteredTracks, args.browserList)
-				displayExperimentalTracks(filteredTracks, args.experimentalList)
-				displayAppTracks(filteredTracks, args.appList)
+				await loadTracks(args, filteredTracks)
+				// used loadTracks() instead of following 4 lines
+				// displayGPaintTracks(filteredTracks, args.gpaintList)
+				// displayBrowserTracks(filteredTracks, args.browserList)
+				// displayExperimentalTracks(filteredTracks, args.experimentalList)
+				// displayAppTracks(filteredTracks, args.appList)
 			}),
 			700
 		)
@@ -182,10 +195,21 @@ function make_gBrowserCol(div) {
 	return gBrowserCol
 }
 
+function make_col(div, area_name) {
+	const col = div.append('div')
+	col
+		.style('grid-area', area_name)
+		.property('position', 'relative')
+		.style('background-color', '#f5f5f5')
+
+	return col
+}
+
 //Creates the launch genome browser button
 function launch_gBrowser_btn(div) {
-	const launch_btn = div.append('div')
-	launch_btn
+	const launch_btn_div = div.append('div')
+
+	const launch_btn = launch_btn_div
 		.append('button')
 		.attr('class', 'gbrowser-btn')
 		.style('height', '75px')
@@ -200,6 +224,9 @@ function launch_gBrowser_btn(div) {
 			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
 		)
 		.text('Launch Genome Browser')
+	// .on('click',() => {}) TODO: Add click behavior
+
+	launch_btn
 		.append('span')
 		.attr('class', 'launch-btn_tooltip')
 		.style('font-size', '11px')
@@ -219,17 +246,35 @@ function make_appCol(div) {
 	return otherAppsCol
 }
 
+// this 1 line can be added to init_example()
 async function loadJson() {
 	const json = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	return json
 }
 
-async function loadTracks(args) {
+async function loadTracks(args, filteredTracks) {
+	const GPaintTracks = (filteredTracks || args.tracks).filter(
+		track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
+	)
+	const BrowserTracks = (filteredTracks || args.tracks).filter(
+		track => track.app == 'Genome Browser' && track.subheading == 'Tracks'
+	)
+	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
+		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
+	)
+	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Tracks')
+
+	// added extra arg filteredTracks, which will be undefined when page load but will be present when searched
 	try {
-		displayGPaintTracks(args.tracks, args.gpaintList)
-		displayBrowserTracks(args.tracks, args.browserList)
-		displayExperimentalTracks(args.tracks, args.experimentalList)
-		displayAppTracks(args.tracks, args.appList)
+		// use single function to display all tracks
+		displayTracks(GPaintTracks, args.gpaintList)
+		displayTracks(BrowserTracks, args.browserList)
+		displayTracks(ExperimentalTracks, args.experimentalList)
+		displayTracks(AppTracks, args.appList)
+		// displayGPaintTracks(filteredTracks || args.tracks, args.gpaintList)
+		// displayBrowserTracks(filteredTracks || args.tracks, args.browserList)
+		// displayExperimentalTracks(filteredTracks || args.tracks, args.experimentalList)
+		// displayAppTracks(filteredTracks || args.tracks, args.appList)
 	} catch (err) {
 		console.error(err)
 	}
@@ -239,6 +284,42 @@ async function loadTracks(args) {
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
 //Displays tracks under the GenomePaint subheader.
+
+function displayTracks(tracks, holder) {
+	holder.selectAll('*').remove()
+	tracks.forEach(track => {
+		const li = holder.append('li')
+		li.attr('class', 'track')
+			.html(
+				`
+						${
+							track.blurb
+								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
+								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
+						}
+					<span class="track-image"><img src="${track.image}"></img></span>
+					<div class="track-btns">
+					${
+						track.buttons.url
+							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+							: ''
+					}
+					${
+						track.buttons.doc
+							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+							: ''
+					}
+					</div>`
+			)
+			.on('click', async () => {
+				if (track.buttons.example) {
+					openExample(track, holder)
+				}
+			})
+		return JSON.stringify(li)
+	})
+}
+
 function displayGPaintTracks(tracks, holder) {
 	holder.selectAll('*').remove()
 	const trackData = tracks.filter(track => {
@@ -281,7 +362,7 @@ function displayGPaintTracks(tracks, holder) {
 //Displays tracks under the Genome Browser subheader
 function displayBrowserTracks(tracks, holder) {
 	holder.selectAll('*').remove()
-	const trackData = tracks.filter(track => {
+	tracks.filter(track => {
 		const app = `${track.app}`
 		const subheading = `${track.subheading}`
 		if (app == 'Genome Browser' && subheading == 'Tracks') {
