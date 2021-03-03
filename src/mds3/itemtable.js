@@ -92,17 +92,28 @@ export async function mlst2samplesummary(arg) {
 			/////////////
 			// hardcoded logic to represent read depth using gdc data
 			if (sampledata.read_depth) {
-				// need to support other configurations for read_depth data
+				// to support other configurations of read depth
 				const [td1, td2] = row_headervalue(table)
+				td1.text('DNA read depth')
+				fillbar(td2, { f: sampledata.read_depth.altTumor / sampledata.read_depth.totalTumor })
+				td2
+					.append('span')
+					.text(sampledata.read_depth.altTumor + ' / ' + sampledata.read_depth.totalTumor)
+					.style('margin', '0px 10px')
+				td2
+					.append('span')
+					.text('ALT / TOTAL IN TUMOR')
+					.style('font-size', '.7em')
+					.style('opacity', 0.5)
+				const d = td2.append('div') // next row to show normal total
+				d.append('span')
+					.text(sampledata.read_depth.totalNormal)
+					.style('margin-right', '10px')
+				d.append('span')
+					.text('TOTAL DEPTH IN NORMAL')
+					.style('font-size', '.7em')
+					.style('opacity', 0.5)
 				/*
-				td1.text('Tumor read depth')
-				fillbar(td2, {f:sampledata.read_depth.t_alt_count / sampledata.read_depth.t_depth})
-				td2.append('span').text(sampledata.read_depth.t_alt_count+' / '+sampledata.read_depth.t_depth).style('margin','0px 10px')
-				td2.append('span').text('ALT / TOTAL').style('font-size','.7em').style('opacity',.5)
-				const [td3, td4] = row_headervalue(table)
-				td3.text('Germline read depth')
-				td4.text(sampledata.read_depth.n_depth)
-				*/
 				td1.text('Read depth')
 				const table2 = td2.append('table')
 				const tr = table2.append('tr')
@@ -128,6 +139,7 @@ export async function mlst2samplesummary(arg) {
 						.text(d.caller)
 						.style('opacity', 0.5)
 				}
+				*/
 			}
 			return
 		}
