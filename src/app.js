@@ -278,6 +278,11 @@ function makeheader(app, obj, jwt) {
 		.on('keyup', ()=>{
 			if(client.keyupEnter()) entersearch()
 			else debouncer()
+			app_btn_active = false
+			if(app_holder !== undefined){
+				app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+				app_btn_toggle()
+			}	
 		})
 	input.node().focus()
 
@@ -296,9 +301,9 @@ function makeheader(app, obj, jwt) {
 			.text(app.genomes[n].species+' '+n)
 			.property('value',n)
 	}
-
+	let app_btn, app_btn_active, app_holder
 	if(!obj.features.examples){
-		headbox.append('span')
+		app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('padding',padw)
 			.style('border-radius','5px')
@@ -308,11 +313,11 @@ function makeheader(app, obj, jwt) {
 			})
 	}else{
 		// show 'apps' div only when url is barbone without any paramerters or example page
-		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
+		app_btn_active = window.location.pathname == '/' && !window.location.search.length 
 			? true : false
 		let apps_rendered = false 
 
-		const app_holder = app_row
+		app_holder = app_row
 				.append('div')
 				.style('margin','10px')
 				.style('padding-right','10px')
@@ -330,7 +335,7 @@ function makeheader(app, obj, jwt) {
 
 		if(app_btn_active) load_app_div()
 
-		const app_btn = headbox.append('span')
+		app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
@@ -342,13 +347,7 @@ function makeheader(app, obj, jwt) {
 				// toggle button color and hide/show apps div 
 				app_btn_active = !app_btn_active
 				load_app_div()
-
-				app_btn
-					.transition()
-					.duration(500)
-					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-					.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
-					.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+				app_btn_toggle()
 
 				app_holder
 					.transition()
@@ -361,7 +360,16 @@ function makeheader(app, obj, jwt) {
 			.on('mouseout', () => {
 				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			})
-	}	
+	}
+	
+	function app_btn_toggle(){
+		app_btn
+			.transition()
+			.duration(500)
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+	}
 	
 	headbox.append('span').classed('sja_menuoption',true).style('padding',padw).style('border-radius','5px').text('Help').on('click',()=>{
 		const p=d3event.target.getBoundingClientRect()
