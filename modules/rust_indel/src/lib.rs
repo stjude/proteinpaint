@@ -101,11 +101,12 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
     let mut kmer_count: usize = 0;
     let mut indexes_vec = Vec::<usize>::new();
     let x:String = y.to_owned();
+    let kmers_dup = &kmers[..];
     if orig_index != -1 as i64 {
 	indexes_vec.push(orig_index as usize);
 	let mut index: usize = orig_index as usize;
 	while (index > 0) {
-            if (kmers[index-1]==x) {
+            if (kmers_dup[index-1]==x) {
 		index=index-1;
 		indexes_vec.push(index);
 	    }
@@ -114,8 +115,8 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
             }	    
 	}
 	index=orig_index as usize;
-	while (index < (kmers.len() - 1)) {
-            if (kmers[index+1]==x) {
+	while (index < (kmers_dup.len() - 1)) {
+            if (kmers_dup[index+1]==x) {
 		index=index+1;
 		indexes_vec.push(index);
 	    }
