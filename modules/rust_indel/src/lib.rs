@@ -340,6 +340,7 @@ fn build_kmers(sequence: String, kmer_length: i64) -> Vec::<String>  {
     let sequence_vector: Vec<_> = sequence.chars().collect();    
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let mut kmers = Vec::<String>::new();
+    kmers.reserve(200);
     for i in 0..num_iterations {
 	//println!("{}", i);
 	let mut subseq = String::new();
@@ -351,6 +352,7 @@ fn build_kmers(sequence: String, kmer_length: i64) -> Vec::<String>  {
 	kmers.push(subseq);
 	//println!("subseq:{}", subseq);
     }
+    kmers.shrink_to_fit();
     //println!("kmers:{}",kmers[10]);
     kmers
 }
@@ -380,6 +382,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
     //println!("Length of intersection:{}",intersection.len());
  
     let mut kmer1_counts = Vec::<i64>::new();
+    kmer1_counts.reserve(250);
     let mut kmers1_weight: f64 = 0.0;
     let mut index: i64 = 0;
     for kmer1 in &kmers1_nodup {
@@ -409,6 +412,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
 	}    
 	kmer1_counts.push(kmer_count);	
     }
+    kmer1_counts.shrink_to_fit();
     //println!("kmers1_weight:{}",kmers1_weight);
     
     let mut intersection_weight: f64 = 0.0;
