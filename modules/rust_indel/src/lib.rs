@@ -157,12 +157,6 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     		weight_indel,
     		weight_no_indel
     );
-    let mut iter_check: usize = 0;
-    while (iter_check < ref_kmers_nodups.len()) {
-	console::log_6(&"sequence:".into(), &ref_kmers_nodups[iter_check].to_string().into(), &"kmer_count:".into(), &ref_kmers_data[iter_check].kmer_count.to_string().into(),&"kmer_weight:".into(), &ref_kmers_data[iter_check].kmer_weight.to_string().into());
-	iter_check+=1;
-    }
-    console::log_2(&"total_ref_weights:".into(), &ref_kmers_weight.to_string().into());
     
     let (alt_kmers_weight, alt_kmers_nodups, alt_kmers_data) = build_kmers_refalt(
     		lines[1].to_string(),
