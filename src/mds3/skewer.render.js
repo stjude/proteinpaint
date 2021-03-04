@@ -1017,24 +1017,21 @@ async function click_variants(d, tk, block, tippos) {
 					if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
 					if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
 
-					if (d2.value == 1) {
-						/*
-						this wedge has single sample, while d.mlst will have multiple.
-						unfortunately mlst2samplesummary will use occurrence sum to decide what type of data to request
-						(=1 for sample details, >1 for summary)
-						must change occurrence sum to 1 so mlst2samplesummary() will request single sample data
-						temp fix to create a mock arg.mlst[]
-						*/
-						arg.mlst = d.mlst.map(m => {
-							if (tk.mds.variant2samples.variantkey == 'ssm_id') {
-								return { ssm_id: m.ssm_id, occurrence: 0 }
-							}
-							throw 'unknown variant2samples.variantkey'
-						})
-						arg.mlst[0].occurrence = 1
-					}
+					/*
+					TEMP FIX to create a mock arg.mlst[]
+					this wedge has less samples than d.mlst will have multiple.
+					as mlst2samplesummary uses occurrence sum to decide what type of data to request
+					must change occurrence sum to d2.value so mlst2samplesummary() can function based on sum of this wedge
+					*/
+					arg.mlst = d.mlst.map(m => {
+						if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+							return { ssm_id: m.ssm_id, occurrence: 0 }
+						}
+						throw 'unknown variant2samples.variantkey'
+					})
+					arg.mlst[0].occurrence = d2.value
 					/* do not call variant_details() as no need to show info on variants
-					only need to show sample summary (or details about a single sample)
+					only need to show sample display
 					*/
 					mlst2samplesummary(arg)
 				}
