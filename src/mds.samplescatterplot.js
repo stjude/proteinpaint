@@ -77,15 +77,6 @@ init_plot()
 assign_color4dots
 click_dot
 launch_singlesample
-
-
-FIXME
-obj.disco{ genome } is a quick fix and should not be used when hg38 pediatric is ready,
-so that disco will not use a different genome as obj
-
-also to rename obj.disco to obj.mds to indicate that the plot is coupled to a mds dataset
-allow showing disco by clicking dot if mutpersample is enabled on that mds daataset
-and allow lasso to samplematrix
 */
 
 const radius = 3
@@ -1253,7 +1244,7 @@ function click_dot(dot, obj) {
 		click_dot_mdsview(dot, obj)
 		return
 	}
-	if (obj.disco) {
+	if (obj.mds) {
 		click_dot_disco(dot, obj)
 		return
 	}
@@ -1266,8 +1257,8 @@ async function click_dot_disco(dot, obj) {
 		const sjcharts = await getsjcharts()
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.disco.dslabel,
-			querykey: obj.disco.querykey,
+			dslabel: obj.mds.dslabel,
+			querykey: obj.mds.querykey,
 			getsample4disco: dot.sample
 		}
 		const data = await client.dofetch('/mdssvcnv', arg)
@@ -1287,7 +1278,7 @@ async function click_dot_disco(dot, obj) {
 				geneLabelClick: {
 					type: 'genomepaint',
 					genome: obj.genome.name,
-					dslabel: obj.disco.dslabel,
+					dslabel: obj.mds.dslabel,
 					sample: dot.sample
 				}
 			}
@@ -1487,7 +1478,7 @@ function init_mutation_type_control(obj, samples) {
 		nGenes = 15
 
 	const holder = obj.pane.matrix_criteria_div
-	const ds = obj.genome.datasets[obj.disco.dslabel]
+	const ds = obj.genome.datasets[obj.mds.dslabel]
 	if (ds.mutCountType) {
 		mutTypes = ds.mutCountType
 
@@ -1571,6 +1562,8 @@ function init_mutation_type_control(obj, samples) {
 			.attr('type', 'checkbox')
 			.attr('name', 'noncnv')
 			.attr('value', 'cnv')
+			.style('margin', '3px')
+			.style('margin-left', '4px')
 			.property('checked', default_cnv ? true : false)
 			.on('change', () => {
 				if (cnv_checkbox.node().checked) {
@@ -1691,7 +1684,7 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 	try {
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.disco.dslabel,
+			dslabel: obj.mds.dslabel,
 			samples,
 			selectedMutTypes,
 			nGenes
@@ -1700,7 +1693,7 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 		if (data.error) throw data.error
 		if (!data.genes) throw '.genes missing'
 		if (!data.genes.length) {
-			obj.pane.wait.html('Not enought data to retrive any genes with mutations. </br> HINT: Select more samples.')
+			obj.pane.wait.html('No gene retrived with mutations.')
 			obj.pane.matrix_criteria_div.style('display', 'none')
 			return
 		}
@@ -1727,7 +1720,7 @@ function make_sample_matrix(args) {
 	}
 	const arg = {
 		genome: obj.genome,
-		dslabel: obj.disco.dslabel,
+		dslabel: obj.mds.dslabel,
 		features: genes,
 		features_on_rows: obj.features_on_rows,
 		ismutation_allsymbolic: true,
