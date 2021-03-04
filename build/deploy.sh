@@ -110,7 +110,7 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 
-elif [[ "$ENV" == "pp-ict" || "$ENV" == "pp-int-test" ]]; then
+elif [[ "$ENV" == "pp-ict" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-ict.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
@@ -178,7 +178,7 @@ else
 	mkdir $APP/utils
 	mkdir $APP/modules
 
-	npx webpack --config=build/webpack.config.server.js --env $WPSERVERMODE
+	npx webpack --config=build/webpack.config.server.js --env.NODE_ENV=$WPSERVERMODE
 	mv server.js* $APP/
 	mv package.json $APP/
 	mv public/bin $APP/public/bin

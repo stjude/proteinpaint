@@ -592,6 +592,7 @@ function mds_clientcopy(ds) {
 	}
 	if (ds.gene2mutcount) {
 		ds2.gene2mutcount = true
+		ds2.mutCountType = ds.gene2mutcount.mutationTypes
 	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
@@ -2475,9 +2476,14 @@ async function handle_mdsgenecount(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.gene2mutcount) throw 'not supported on this dataset'
 		if (!req.query.samples) throw '.samples missing'
+		let mutation_count_str, n_gene
+		if (req.query.selectedMutTypes) mutation_count_str = req.query.selectedMutTypes.join('+')
+		else mutation_count_str = 'total'
+		if (req.query.nGenes) n_gene = req.query.nGenes
+		else n_gene = 15
 		const query = `WITH
 	filtered AS (
-		SELECT * FROM genecount
+		SELECT gene, ${mutation_count_str} AS total FROM genecount
 		WHERE sample IN (${JSON.stringify(req.query.samples)
 			.replace(/[[\]\"]/g, '')
 			.split(',')
@@ -2488,7 +2494,7 @@ async function handle_mdsgenecount(req, res) {
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT 10`
+	LIMIT ${n_gene}`
 		const genes = ds.gene2mutcount.db.prepare(query).all()
 		for (const gene of genes) {
 			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
@@ -8998,7 +9004,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 	if (!dsquery.tracks) return 'tracks[] missing from dsquery'
 	if (!feature.chr) return ['chr missing']
 	if (!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
-	if (feature.stop - feature.start > 2000000) return ['look range too big (>2Mb)']
+	if (feature.stop - feature.start > 3000000) return ['look range too big (>3Mb)']
 
 	const tasks = []
 
