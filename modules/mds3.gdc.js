@@ -377,7 +377,7 @@ function may_add_readdepth(acase, sample) {
 	const dat = acase.observation[0]
 	if (!dat) return
 	if (!dat.read_depth) return
-	sample.read_depth = {
+	sample.ssm_read_depth = {
 		altTumor: dat.read_depth.t_alt_count,
 		totalTumor: dat.read_depth.t_depth,
 		totalNormal: dat.read_depth.n_depth
