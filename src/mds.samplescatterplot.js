@@ -1411,6 +1411,20 @@ function lasso_select(obj, dots) {
 		obj.menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.text('Metadata of Samples')
+			.on('click', async () => {
+				obj.menu.hide()
+				const arg = {
+					samples,
+					sample_attributes: obj.sample_attributes,
+					sample2dot: obj.sample2dot
+				}
+				printData(arg)
+			})
+
+		obj.menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
 			.text('Cancel')
 			.on('click', () => {
 				// Reset all dots
@@ -1468,6 +1482,29 @@ function lasso_select(obj, dots) {
 		svg.selectAll('.lasso').remove()
 		svg.on('mousedown.drag', null)
 	}
+}
+
+function printData(obj) {
+	const { samples, sample_attributes, sample2dot } = obj
+
+	// create header labels
+	const label_keys = Object.keys(sample_attributes)
+	let labels = label_keys.map(k => (sample_attributes[k].label ? sample_attributes[k].label : k))
+	labels.unshift('Sample')
+	const labels_str = labels.join('\t')
+	const lst = [labels_str]
+
+	// create rows for each sample
+	for (const s of samples) {
+		if (sample2dot.get(s).s) {
+			let sample_row = []
+			sample_row.push(s)
+			for (const k of label_keys) sample_row.push(sample2dot.get(s).s[k])
+			lst.push(sample_row.join('\t'))
+		}
+	}
+	// create container with raw data
+	client.export_data('Metadata of selected samples', [{ text: lst.join('\n') }])
 }
 
 function click_mutated_genes(obj, samples) {

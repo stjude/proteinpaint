@@ -2499,6 +2499,7 @@ async function handle_mdsgenecount(req, res) {
 			const re = genome.genedb.getCoordByGene.get(gene.gene)
 			if (!re) continue
 			re.gene = gene.gene
+			re.count = gene.count
 			delete re.name
 			validgenes.push(re)
 		}
