@@ -876,8 +876,8 @@ async function divide_reads_togroups(templates, q) {
 		// if snv, simple match; otherwise complex match
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
+		return await rust_match_complexvariant(templates, q)
 		//return await match_complexvariant(templates, q)
-		return await match_complexvariant(templates, q)
 	}
 	if (q.sv) {
 		return match_sv(templates, q)

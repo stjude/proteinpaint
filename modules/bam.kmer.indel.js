@@ -97,6 +97,7 @@ export async function match_complexvariant_rust(templates, q) {
 		sequences += template.segments[0].seq + '\n'
 	}
 	//console.log("sequences:",sequences)
+	//console.log("segbplen:",segbplen)
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
 		BigInt(q.variant.pos),

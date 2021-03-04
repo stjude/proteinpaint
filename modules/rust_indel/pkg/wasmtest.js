@@ -10,12 +10,12 @@ const weight_indel = 10 // Weight when base is inside the indel
 const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 //----------------------------------------------------------------------------
 
-const sequences = fs.readFileSync('../../../chr1.241661226.A.ATTT.txt').toString()
+const sequences = fs.readFileSync('/Users/rpaul1/proteinpaint/chr1.241661226.A.ATTT.txt').toString()
 
 const refallele = 'A'
 const altallele = 'ATTT'
 const variant_pos = 241661227
-const segbplen = 100
+const segbplen = 142
 //console.log("sequences:",sequences)
 //console.log("segbplen:",segbplen)
 //console.log("refallele:",refallele)

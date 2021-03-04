@@ -36,6 +36,22 @@ function addHeapObject(obj) {
 	return idx
 }
 
+function getObject(idx) {
+	return heap[idx]
+}
+
+function dropObject(idx) {
+	if (idx < 36) return
+	heap[idx] = heap_next
+	heap_next = idx
+}
+
+function takeObject(idx) {
+	const ret = getObject(idx)
+	dropObject(idx)
+	return ret
+}
+
 let WASM_VECTOR_LEN = 0
 
 let cachedTextEncoder = new TextEncoder('utf-8')
@@ -96,27 +112,12 @@ function passStringToWasm0(arg, malloc, realloc) {
 const u32CvtShim = new Uint32Array(2)
 
 const int64CvtShim = new BigInt64Array(u32CvtShim.buffer)
-
-function getObject(idx) {
-	return heap[idx]
-}
-
-function dropObject(idx) {
-	if (idx < 36) return
-	heap[idx] = heap_next
-	heap_next = idx
-}
-
-function takeObject(idx) {
-	const ret = getObject(idx)
-	dropObject(idx)
-	return ret
-}
 /**
  * @param {string} sequences
  * @param {BigInt} variant_pos
  * @param {BigInt} segbplen
  * @param {string} refallele
+ * @param {string} altallele
  * @param {BigInt} kmer_length
  * @param {number} weight_no_indel
  * @param {number} weight_indel
@@ -128,6 +129,7 @@ module.exports.match_complex_variant_rust = function(
 	variant_pos,
 	segbplen,
 	refallele,
+	altallele,
 	kmer_length,
 	weight_no_indel,
 	weight_indel,
@@ -143,9 +145,11 @@ module.exports.match_complex_variant_rust = function(
 	const high2 = u32CvtShim[1]
 	var ptr3 = passStringToWasm0(refallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
 	var len3 = WASM_VECTOR_LEN
+	var ptr4 = passStringToWasm0(altallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	var len4 = WASM_VECTOR_LEN
 	int64CvtShim[0] = kmer_length
-	const low4 = u32CvtShim[0]
-	const high4 = u32CvtShim[1]
+	const low5 = u32CvtShim[0]
+	const high5 = u32CvtShim[1]
 	var ret = wasm.match_complex_variant_rust(
 		ptr0,
 		len0,
@@ -155,8 +159,10 @@ module.exports.match_complex_variant_rust = function(
 		high2,
 		ptr3,
 		len3,
-		low4,
-		high4,
+		ptr4,
+		len4,
+		low5,
+		high5,
 		weight_no_indel,
 		weight_indel,
 		threshold_slope
@@ -164,9 +170,34 @@ module.exports.match_complex_variant_rust = function(
 	return takeObject(ret)
 }
 
+module.exports.__wbindgen_string_new = function(arg0, arg1) {
+	var ret = getStringFromWasm0(arg0, arg1)
+	return addHeapObject(ret)
+}
+
+module.exports.__wbindgen_object_drop_ref = function(arg0) {
+	takeObject(arg0)
+}
+
 module.exports.__wbindgen_json_parse = function(arg0, arg1) {
 	var ret = JSON.parse(getStringFromWasm0(arg0, arg1))
 	return addHeapObject(ret)
+}
+
+module.exports.__wbg_log_2e875b1d2f6f87ac = function(arg0) {
+	console.log(getObject(arg0))
+}
+
+module.exports.__wbg_log_13fd5f3b2bfccacd = function(arg0, arg1) {
+	console.log(getObject(arg0), getObject(arg1))
+}
+
+module.exports.__wbg_log_d9c364594c4b1fa0 = function(arg0, arg1, arg2) {
+	console.log(getObject(arg0), getObject(arg1), getObject(arg2))
+}
+
+module.exports.__wbg_log_ed116918a3a4989d = function(arg0, arg1, arg2, arg3, arg4, arg5) {
+	console.log(getObject(arg0), getObject(arg1), getObject(arg2), getObject(arg3), getObject(arg4), getObject(arg5))
 }
 
 module.exports.__wbindgen_throw = function(arg0, arg1) {
