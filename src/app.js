@@ -840,13 +840,6 @@ function launchmdssamplescatterplot(arg, app) {
 		return
 	}
 
-	// XXX quick fix! DELETE following 5 lines when hg38 pediatric mds is ready
-	// so that disco will not use a separate genome as arg.genome
-	if(arg.disco && arg.disco.genome) {
-		const g = app.genomes[arg.disco.genome]
-		if(!g) app.error0('invalid genome for disco.genome')
-		arg.disco.genome = g
-	}
 	import('./mds.samplescatterplot').then(_=>{
 		_.init(arg, app.holder0, app.debugmode)
 	})
