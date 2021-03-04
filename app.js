@@ -2496,35 +2496,15 @@ async function handle_mdsgenecount(req, res) {
 	ORDER BY count DESC
 	LIMIT ${n_gene}`
 		const genes = ds.gene2mutcount.db.prepare(query).all()
+		const validgenes = []
 		for (const gene of genes) {
-			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
-			const defaultisoform = isoforms.find(i => i.isdefault)
-			if (defaultisoform) {
-				const j = JSON.parse(defaultisoform.genemodel)
-				gene.chr = j.chr
-				gene.start = j.start
-				gene.stop = j.stop
-				continue
-			}
-			// no default isoform
-			// just try to use coordinate of the first isoform that's on major chr
-			const lst = isoforms.map(i => JSON.parse(i.genemodel))
-			const isoform = lst.find(i => {
-				const c = genome.chrlookup[i.chr.toUpperCase()]
-				if (c && c.major) return i
-			})
-			if (isoform) {
-				gene.chr = isoform.chr
-				gene.start = isoform.start
-				gene.stop = isoform.stop
-				continue
-			}
-			// no isoform on major chr, just use first isoform
-			gene.chr = lst[0].chr
-			gene.start = lst[0].start
-			gene.stop = lst[0].stop
+			const re = genome.genedb.getCoordByGene.get(gene.gene)
+			if (!re) continue
+			re.gene = gene.gene
+			delete re.name
+			validgenes.push(re)
 		}
-		res.send({ genes })
+		res.send({ genes: validgenes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -9682,6 +9662,10 @@ async function pp_init() {
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
+			}
+			if (g.genedb.gene2coord) {
+				// this table will become available to all genomes
+				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
 		}
 		if (g.genedb.gene2canonicalisoform) {
