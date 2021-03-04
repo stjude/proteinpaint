@@ -9,8 +9,8 @@ module.exports = function(env = {}) {
 		// see https://v4.webpack.js.org/configuration/mode/
 		//
 		// note that webpack applies commonly used plugins
-		// by environment, such as the terser plugin to
-		// minify production code, so there are less
+		// by mode, such as the terser plugin to
+		// minify production bundles, so there are less
 		// manual configuration settings needed here
 		//
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',

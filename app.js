@@ -1,5 +1,3 @@
-// JUMP __MDS __util __rank __smat
-
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
