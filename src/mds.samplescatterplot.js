@@ -831,7 +831,7 @@ function makeConfigPanel(obj) {
 
 	const lasso_btn = obj.scattersvg_buttons
 		.append('div')
-		.style('display', obj.enable_lasso ? 'block' : 'none')
+		.style('display', 'block')
 		.style('padding', '2px 5px')
 		.style('margin-top', '5px')
 		.style('border', '1px solid #999')
@@ -1394,16 +1394,19 @@ function lasso_select(obj, dots) {
 	}
 
 	function show_lasso_menu(samples) {
+		const ds = obj.genome.datasets[obj.mds.dslabel]
 		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
 
-		obj.menu.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text('Recurrently mutated genes')
-			.on('click', async () => {
-				obj.menu.hide()
-				await click_mutated_genes(obj, samples)
-			})
+		if (ds.gene2mutcount) {
+			obj.menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Recurrently mutated genes')
+				.on('click', async () => {
+					obj.menu.hide()
+					await click_mutated_genes(obj, samples)
+				})
+		}
 
 		obj.menu.d
 			.append('div')
