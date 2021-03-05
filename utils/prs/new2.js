@@ -14,7 +14,7 @@ this is a test script!
 3. cumulate scores for samples
 */
 
-if (process.argv.length != 6) {
+if (process.argv.length < 6) {
 	console.log(
 		"<vcf2/> <snp file: chr/pos/effallele/ref/weight> <sample file, cindy's output> <sample.idmap> output to stdout"
 	)
@@ -39,28 +39,40 @@ const sample2id = get_idmap()
 const samplenames = get_samples()
 const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools query
 
-////////////////////////////////////////////
-// 1. break snps by chr/chunk and write to temp files
-const [chr2tmpsnpfile, pos2snp] = parse_snpfile()
-// k: chr.pos, v: {effallele, ref, weight}
-// after bcftools, add following to v{} about this snp
-
-////////////////////////////////////////////
-// 2. for each chunk, run bcftools and filter by maf/callrate
-// good snps passing freq/geno filter in the bcftools query
-const snparray = []
-const promises = []
-for (const [chr, tmpsnpfile] of chr2tmpsnpfile) {
-	promises.push(run_bcftools(chr, tmpsnpfile))
-}
-
 ;(async () => {
-	await Promise.all(promises)
+	////////////////////////////////////////////
+	// 1. break snps by chr/chunk and write to temp files
+	const [chr2tmpsnpfile, pos2snp] = await parse_snpfile()
+	// k: chr.pos, v: {effallele, ref, weight}
+	// after bcftools, add following to v{} about this snp
+
+	////////////////////////////////////////////
+	// 2. for each chunk, run bcftools and filter by maf/callrate
+	// good snps passing freq/geno filter in the bcftools query
+	const snparray = []
+	const promises = []
+
+	{
+		const t1 = new Date()
+		for (const [chr, tmpsnpfile] of chr2tmpsnpfile) {
+			promises.push(run_bcftools(chr, tmpsnpfile, snparray, pos2snp))
+		}
+		await Promise.all(promises)
+		const t2 = new Date()
+		console.error('TIME: bcftools: ' + (t2 - t1))
+	}
+
 	// all snps passing maf/callrate filters are in snparray[]
 
 	////////////////////////////////////////////
 	// 3. compute hwe pvalue for each snp
-	const hwepvalues = await get_hwe(snparray.map(i => i.hweline))
+	let hwepvalues
+	{
+		const t1 = new Date()
+		hwepvalues = await get_hwe(snparray.map(i => i.hweline))
+		const t2 = new Date()
+		console.error('TIME: hwe: ' + (t2 - t1))
+	}
 
 	////////////////////////////////////////////
 	// 4. cumulate score for each sample and output
@@ -154,35 +166,55 @@ function get_samples() {
 	return lst
 }
 function parse_snpfile() {
+	/*
+1	chr_hg38	chr1
+2	bp_hg38_0	100315612
+3	bp_hg38_1	100315613
+4	variant	chr1:100781169:C:T
+5	chr_hg19	1
+6	bp_hg19	100781169
+7	effect_allele	C
+8	ref_allele	T
+9	effect_weight	0.0031
+
+1 chr
+2 1-pos
+3 eff ale
+4 other ale
+5 weight
+
+*/
 	const chr2snp = new Map() // k: chr, v: list of snp position
 	const pos2snp = new Map() // k: "chr:pos", v: {effallele, ref, weight}
-	for (const line of fs
-		.readFileSync(snpfile, { encoding: 'utf8' })
-		.trim()
-		.split('\n')) {
-		const l = line.split('\t')
-		const chr = l[0],
-			pos = l[1],
-			effallele = l[2],
-			ref = l[3],
-			weight = Number(l[4])
+	return new Promise((resolve, reject) => {
+		const rl = readline.createInterface({ input: fs.createReadStream(snpfile) })
+		rl.on('line', line => {
+			const l = line.split('\t')
+			const chr = l[0],
+				pos = l[1], // 1-based, for use in bcftools
+				effallele = l[2],
+				ref = l[3],
+				weight = Number(l[4])
 
-		//if(chr!='17') continue // xxxxxxxxxxx for testing on local computer with just one vcf file
+			//if(chr!='17') continue // xxxxxxxxxxx for testing on local computer with just one vcf file
 
-		if (Number.isNaN(weight)) throw 'invalid weight for a snp'
+			if (Number.isNaN(weight)) throw 'invalid weight for a snp'
 
-		if (!chr2snp.has(chr)) chr2snp.set(chr, [])
-		chr2snp.get(chr).push(chr + '\t' + pos)
+			if (!chr2snp.has(chr)) chr2snp.set(chr, [])
+			chr2snp.get(chr).push(chr + '\t' + pos)
 
-		pos2snp.set(chr + '.' + pos, { effallele, ref, weight })
-	}
-	const chr2tmpsnpfile = new Map() // k: chr, v: tmp file name
-	for (const [chr, lst] of chr2snp) {
-		const fn = Math.random().toString()
-		fs.writeFileSync(fn, lst.join('\n'))
-		chr2tmpsnpfile.set(chr, fn)
-	}
-	return [chr2tmpsnpfile, pos2snp]
+			pos2snp.set(chr + '.' + pos, { effallele, ref, weight })
+		})
+		rl.on('close', () => {
+			const chr2tmpsnpfile = new Map() // k: chr, v: tmp file name
+			for (const [chr, lst] of chr2snp) {
+				const fn = Math.random().toString()
+				fs.writeFileSync(fn, lst.join('\n'))
+				chr2tmpsnpfile.set(chr, fn)
+			}
+			resolve([chr2tmpsnpfile, pos2snp])
+		})
+	})
 }
 
 function get_hwe(lines) {
@@ -204,9 +236,17 @@ function get_hwe(lines) {
 	})
 }
 
-function run_bcftools(chr, tmpsnpfile) {
-	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.vcf.gz')
-	fs.statSync(vcffile)
+function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
+	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.vcf.gz')
+	try {
+		fs.statSync(vcffile)
+	} catch (e) {
+		// file missing
+		return
+	}
+
+	// test step to compare with cindy's PGS000015_chr10.weights files
+	const compsnps = load_cindy_weight(chr)
 
 	return new Promise((resolve, reject) => {
 		const sp = spawn('bcftools', [
@@ -229,6 +269,7 @@ function run_bcftools(chr, tmpsnpfile) {
 				console.error('no match for a line: ' + l.slice(0, 4).join(' '))
 				return
 			}
+
 			// get allele idx for effect allele based on vcf ref/alt
 			const [EAidx, otherallele] = get_effectaleidx(snp.effallele, l[2], l[3])
 			if (EAidx == -1 || otherallele != snp.ref) {
@@ -237,17 +278,23 @@ function run_bcftools(chr, tmpsnpfile) {
 				return
 			}
 
+			const cindysnp = compsnps.get('chr' + l[0] + '.' + l[1])
+			if (cindysnp) cindysnp.count++
+
 			// now EAidx is string '0', '1' etc
 
 			const [missingcallrate, effectallelefrequency, href, het, halt] = get_effalefreq(l, EAidx)
 			if (missingcallrate >= 0.1) {
 				console.error('skip missing callrate', l[0] + ':' + l[1])
+				if (cindysnp) cindysnp.callrate = true
 				return
 			}
 			if (effectallelefrequency <= 0.01) {
 				console.error('skip low freq', l[0] + ':' + l[1])
+				if (cindysnp) cindysnp.eaf = true
 				return
 			}
+			if (cindysnp) cindysnp.inuse = true
 
 			snp.EAidx = EAidx
 			snp.effectallelefrequency = effectallelefrequency
@@ -258,9 +305,57 @@ function run_bcftools(chr, tmpsnpfile) {
 		const err = []
 		sp.stderr.on('data', d => err.push(d))
 		sp.on('close', () => {
+			fs.unlink(tmpsnpfile, () => {})
+
+			write_cindysnp(chr, compsnps)
+
 			const e = err.join('')
 			if (e) reject(e)
 			resolve()
 		})
 	})
+}
+
+function load_cindy_weight(chr) {
+	const snps = new Map() // key: chr.pos, v: { originalline }
+	for (const line of fs
+		.readFileSync('PGS000015_chr' + chr + '.weights', { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const snp = line.split('\t')[0]
+		const l = snp.split(':')
+		snps.set(l[0] + '.' + l[1], { originalline: snp, count: 0 })
+	}
+	return snps
+}
+
+function write_cindysnp(chr, snps) {
+	const totalcount = snps.size
+
+	let countge1 = 0,
+		inuse = 0,
+		callrate = [],
+		eaf = [],
+		notused = []
+	for (const [snp, v] of snps) {
+		if (v.count > 1) countge1++
+		if (v.callrate) callrate.push(v.originalline)
+		if (v.eaf) eaf.push(v.originalline)
+
+		if (v.inuse) inuse++
+		else notused.push(v.originalline)
+	}
+
+	console.error(
+		'compare chr' +
+			chr +
+			': ' +
+			'total=' +
+			totalcount +
+			' inuse=' +
+			inuse +
+			(callrate.length ? ' callrate=' + callrate.join(',') : '') +
+			(eaf.length ? ' eaf=' + eaf.join(',') : '') +
+			(notused.length ? ' notused=' + notused.join(',') : '')
+	)
 }
