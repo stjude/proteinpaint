@@ -2587,20 +2587,27 @@ async function handle_mdssvcnv(req, res) {
 		}
 	} else {
 		// is native track
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check(req.query)
-		if (err) return res.send({ error: err })
-		gn = gn1
-		ds = ds1
-		dsquery = dsquery1
+
+		gn = genomes[req.query.genome]
+		if (!gn) return res.send({ error: 'invalid genome' })
+		if (!gn.datasets) return res.send({ error: 'genome is not equipped with datasets' })
+		ds = gn.datasets[req.query.dslabel]
+		if (!ds) return res.send({ error: 'invalid dslabel' })
+
+		//////////// exits that only requires ds but not dsquery
+		if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds)
+		if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, ds)
+		if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, ds)
+		if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, ds)
+
+		if (!ds.queries) return res.send({ error: 'dataset is not equipped with queries' })
+		dsquery = ds.queries[req.query.querykey]
+		if (!dsquery) return res.send({ error: 'invalid querykey' })
 	}
 
-	///////////////// exits
-	if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery)
-	if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery)
-	if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery)
+	///////////////// exits that require dsquery (svcnv)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
-	if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery)
 
 	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
@@ -2774,7 +2781,7 @@ async function handle_mdssvcnv(req, res) {
 	res.send(result)
 }
 
-async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
+async function mdssvcnv_exit_assaymap(req, res, ds) {
 	try {
 		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
 		const skip_termids = new Set(req.query.skip_termids || [])
@@ -5607,7 +5614,7 @@ function handle_mdsexpressionrank(req, res) {
 		})
 }
 
-function mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_gettrack4singlesample(req, res, ds) {
 	/*
     getting track for single sample from server config
     only for official dataset
@@ -5637,7 +5644,7 @@ function mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery) {
 	res.send(vcfq.singlesamples ? { yes: 1 } : { no: 1 })
 }
 
-function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_getsample4disco(req, res, gn, ds) {
 	/*
     a text file for a single sample
     only for official dataset
@@ -5792,7 +5799,7 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	return sample2rank
 }
 
-function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_findsamplename(req, res, ds) {
 	/*
     find sample names by matching with input string
     only for official dataset
