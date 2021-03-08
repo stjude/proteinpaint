@@ -222,11 +222,11 @@ async function get_data(obj) {
 	}
 	///////////////////// client data /////////////////////
 	const ad = obj.analysisdata
-	// convert obj.disco to obj.mds for backward compatibity
-	if (obj.disco) {
-		obj.mds = {}
-		obj.mds.dslabel = obj.disco.dslabel
-		obj.mds.querykey = obj.disco.querykey
+	if (obj.mds) {
+		obj.mds = obj.genome.datasets[obj.mds.dslabel]
+	} else if (obj.disco) {
+		// convert obj.disco to obj.mds for backward compatibity
+		obj.mds = obj.genome.datasets[obj.disco.dslabel]
 	}
 	if (!ad) throw 'both .analysisdata{} and .dslabel are missing'
 	if (ad.samples) {
@@ -1411,7 +1411,7 @@ function lasso_select(obj, dots) {
 		obj.menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text('Metadata of Samples')
+			.text('List samples')
 			.on('click', async () => {
 				obj.menu.hide()
 				const arg = {
@@ -1504,7 +1504,7 @@ function printData(obj) {
 		}
 	}
 	// create container with raw data
-	client.export_data('Metadata of selected samples', [{ text: lst.join('\n') }])
+	client.export_data('List of selected samples', [{ text: lst.join('\n') }])
 }
 
 function click_mutated_genes(obj, samples) {
