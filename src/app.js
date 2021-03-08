@@ -302,15 +302,21 @@ function makeheader(app, obj, jwt) {
 			.property('value',n)
 	}
 	let app_btn, app_btn_active, app_holder
+	let gen_value = selectgenome.property('value')
+	console.log(gen_value)
+
 	if(!obj.features.examples){
 		app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('padding',padw)
 			.style('border-radius','5px')
 			.text('Apps')
-			.on('click',()=>{
-				appmenu( app, headbox, selectgenome, jwt )
-			})
+
+			//**** .onclick no longer necessary?? */
+
+			// .on('click',()=>{
+			// 	appmenu( app, headbox, selectgenome, jwt )
+			// })
 	}else{
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length 
@@ -330,7 +336,7 @@ function makeheader(app, obj, jwt) {
 			if(apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({holder: app_holder})
+			await _.init_examples({ holder: app_holder, genome: gen_value })
 		}
 
 		if(app_btn_active) load_app_div()
@@ -388,107 +394,116 @@ function makeheader(app, obj, jwt) {
 	return selectgenome
 }
 
-
-
-
-function appmenu( app, headbox, selectgenome, jwt ) {
-	/*
-	headbox
-	selectgenome: <select>
-	*/
-
-	const p=d3event.target.getBoundingClientRect()
-	headtip.clear().show(p.left-50,p.top+p.height+5)
-	{
-		const ss=selectgenome.node()
-		const genomename= ss.options[ss.selectedIndex].value
-		const g = app.genomes[genomename]
-		if(!g) {
-			alert('Invalid genome name: '+genomename)
-			return
-		}
-		headtip.d.append('div').attr('class','sja_menuoption').text(genomename+' genome browser').style('padding','20px').on('click',()=>{
-			// showing default-looking browser
-			headtip.hide()
-			const p=headbox.node().getBoundingClientRect()
-			const pane=client.newpane({x:p.left,y:p.top+p.height+10})
-			pane.header.text(genomename+' genome browser')
-
-			const par = {
-				hostURL: app.hostURL,
-				jwt: jwt,
-				holder: pane.body,
-				genome: g,
-				chr: g.defaultcoord.chr,
-				start: g.defaultcoord.start,
-				stop: g.defaultcoord.stop,
-				nobox:true,
-				tklst:[],
-				debugmode: app.debugmode,
-			}
-			client.first_genetrack_tolist( g, par.tklst )
-
-			import('./block').then(b=>new b.Block( par ))
-		})
+function genomeBrowser_btn (app, div, selectgenome, jwt) {
+	const ss=selectgenome.node()
+	const genomename= ss.options[ss.selectedIndex].value
+	const g = app.genomes[genomename]
+	if(!g) {
+		alert('Invalid genome name: '+ genomename)
+		return
 	}
-	headtip.d.append('div').attr('class','sja_menuoption').text('Load mutations from text files').style('padding','20px').on('click',()=>{
-		headtip.hide()
-		bulkui(p.left-100,p.top+p.height+5, app.genomes, app.hostURL, jwt)
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('View a study').style('padding','20px').on('click',()=>{
-		headtip.hide()
-		studyui(app, p.left-100,p.top+p.height+5,app.genomes, app.hostURL, jwt)
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('Fusion editor').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		const lst = client.newpane3(100, 100, app.genomes)
-		// [0] is pane{}
-		lst[0].header.text('Fusion Editor')
-		lst[0].body.style('margin','10px')
-		const wait = lst[0].body.append('div').text('Loading...').style('margin','10px')
-		import('./svmr').then(p=>{
-			wait.remove()
-			p.svmrui( lst, app.genomes, app.hostURL, jwt)
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('Junction-by-sample matrix display').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./block.tk.junction.textmatrixui').then(p=>{
-			p.default(app.genomes, app.hostURL, jwt)
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('Differential gene expression viewer').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./mavb').then(p=>{
-			p.mavbui(app.genomes, app.hostURL, jwt)
-			return
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('MAF timeline plot').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./maftimeline').then(p=>{
-			p.default(app.genomes)
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('2DMAF plot').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./2dmaf').then(p=>{
-			p.d2mafui(app.genomes)
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('Mutation burden & spectrum').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./spectrum').then(p=>{
-			p.default(app.genomes)
-		})
-	})
-	headtip.d.append('div').attr('class','sja_menuoption').text('Expression to PCA map').style('padding-left','20px').on('click',()=>{
-		headtip.hide()
-		import('./e2pca').then(p=>{
-			p.e2pca_inputui(app.hostURL, jwt)
-		})
-	})
 }
+
+//**** appmenu function no longer necessary?? */
+
+// function appmenu( app, headbox, selectgenome, jwt ) {
+// 	/*
+// 	headbox
+// 	selectgenome: <select>
+// 	*/
+
+// 	const p=d3event.target.getBoundingClientRect()
+// 	headtip.clear().show(p.left-50,p.top+p.height+5)
+	// {
+	// 	const ss=selectgenome.node()
+	// 	const genomename= ss.options[ss.selectedIndex].value
+	// 	const g = app.genomes[genomename]
+	// 	if(!g) {
+	// 		alert('Invalid genome name: '+genomename)
+	// 		return
+	// 	}
+	// 	headtip.d.append('div').attr('class','sja_menuoption').text(genomename+' genome browser').style('padding','20px').on('click',()=>{
+	// 		// showing default-looking browser
+	// 		headtip.hide()
+	// 		const p=headbox.node().getBoundingClientRect()
+	// 		const pane=client.newpane({x:p.left,y:p.top+p.height+10})
+	// 		pane.header.text(genomename+' genome browser')
+
+	// 		const par = {
+	// 			hostURL: app.hostURL,
+	// 			jwt: jwt,
+	// 			holder: pane.body,
+	// 			genome: g,
+	// 			chr: g.defaultcoord.chr,
+	// 			start: g.defaultcoord.start,
+	// 			stop: g.defaultcoord.stop,
+	// 			nobox:true,
+	// 			tklst:[],
+	// 			debugmode: app.debugmode,
+	// 		}
+	// 		client.first_genetrack_tolist( g, par.tklst )
+
+	// 		import('./block').then(b=>new b.Block( par ))
+	// 	})
+	// }
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Load mutations from text files').style('padding','20px').on('click',()=>{
+// 		headtip.hide()
+// 		bulkui(p.left-100,p.top+p.height+5, app.genomes, app.hostURL, jwt)
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('View a study').style('padding','20px').on('click',()=>{
+// 		headtip.hide()
+// 		studyui(app, p.left-100,p.top+p.height+5,app.genomes, app.hostURL, jwt)
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Fusion editor').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		const lst = client.newpane3(100, 100, app.genomes)
+// 		// [0] is pane{}
+// 		lst[0].header.text('Fusion Editor')
+// 		lst[0].body.style('margin','10px')
+// 		const wait = lst[0].body.append('div').text('Loading...').style('margin','10px')
+// 		import('./svmr').then(p=>{
+// 			wait.remove()
+// 			p.svmrui( lst, app.genomes, app.hostURL, jwt)
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Junction-by-sample matrix display').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./block.tk.junction.textmatrixui').then(p=>{
+// 			p.default(app.genomes, app.hostURL, jwt)
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Differential gene expression viewer').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./mavb').then(p=>{
+// 			p.mavbui(app.genomes, app.hostURL, jwt)
+// 			return
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('MAF timeline plot').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./maftimeline').then(p=>{
+// 			p.default(app.genomes)
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('2DMAF plot').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./2dmaf').then(p=>{
+// 			p.d2mafui(app.genomes)
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Mutation burden & spectrum').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./spectrum').then(p=>{
+// 			p.default(app.genomes)
+// 		})
+// 	})
+// 	headtip.d.append('div').attr('class','sja_menuoption').text('Expression to PCA map').style('padding-left','20px').on('click',()=>{
+// 		headtip.hide()
+// 		import('./e2pca').then(p=>{
+// 			p.e2pca_inputui(app.hostURL, jwt)
+// 		})
+// 	})
+// }
 
 
 

@@ -2,7 +2,7 @@ import { dofetch2 } from './client'
 import { debounce } from 'debounce'
 
 export async function init_examples(par) {
-	const { holder } = par
+	const { holder, genome } = par
 	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	if (re.error) {
 		holder
@@ -15,21 +15,14 @@ export async function init_examples(par) {
 	const track_grid = make_main_track_grid(wrapper_div)
 	const gbrowser_col = make_col(track_grid, 'gbrowser')
 	const app_col = make_col(track_grid, 'otherapps')
+
+	// top of genome browser column followed by subheaders
+	launch_gBrowser_btn(gbrowser_col, genome)
+
+	// top of apps column followed by subheader
 	const searchbar_div = app_col.append('div')
 
-	// top card followed by additional tiles
-	gbrowser_col
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-	// .style('flex-direction', 'column')
-	// const gb_btn_div = gbrowser_col.append('span')
-	// gb_btn_div
-	// .style('margin', '20px, 10px, 10px, 10px')
-	launch_gBrowser_btn(gbrowser_col)
-
-	// subgrids
+	// subheaders
 	const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
@@ -58,13 +51,15 @@ function make_examples_page(holder) {
 }
 //Makes search bar and functionality to search tracks
 function make_searchbar(div, args) {
-	const bar_div = div.append('div')
-	bar_div
-		.style('display', 'flex')
-		.style('flex-direction', 'column')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-		.style('background-color', '#f5f5f5')
+	const bar_div = make_top_fnDiv(div)
+
+	// const bar_div = div.append('div')
+	// bar_div
+	// 	.style('display', 'flex')
+	// 	.style('flex-direction', 'column')
+	// 	.style('align-items', 'center')
+	// 	.style('justify-content', 'center')
+	// 	.style('background-color', '#f5f5f5')
 	const searchBar = bar_div.append('div')
 	searchBar
 		.append('div')
@@ -143,15 +138,30 @@ function make_subheader_contents(div, sub_name) {
 	return list
 }
 
+//Preserves alignment for search bar and launch button whilst aligning the first subheaders in each col
+function make_top_fnDiv(div) {
+	const top = div.append('div')
+	top
+		.style('display', 'flex')
+		.style('flex-direction', 'column')
+		.style('align-items', 'center')
+		.style('justify-content', 'center')
+		.style('background-color', '#f5f5f5')
+		.style('height', '75px')
+		.style('width', '550px')
+
+	return top
+}
+
 //Creates the launch genome browser button
-function launch_gBrowser_btn(div) {
-	const launch_btn_div = div.append('div')
+function launch_gBrowser_btn(div, genome) {
+	const launch_btn_div = make_top_fnDiv(div)
 
 	const launch_btn = launch_btn_div
 		.append('button')
 		.attr('class', 'gbrowser-btn')
 		.style('height', '75px')
-		.style('width', '100%')
+		.style('width', '50%')
 		.style('border-radius', '3px')
 		.style('border', 'none')
 		.style('background-color', 'white')
@@ -161,12 +171,12 @@ function launch_gBrowser_btn(div) {
 			'font-family',
 			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
 		)
-		.text('Launch Genome Browser')
+		.text('Launch ' + genome + ' Genome Browser')
 	// .on('click',() => {}) TODO: Add click behavior
 
 	launch_btn
 		.append('span')
-		.attr('class', 'launch-btn_tooltip')
+		.attr('class', 'launch-btn-tooltip')
 		.style('font-size', '11px')
 		.text('Change the genome from the header dropdown')
 
