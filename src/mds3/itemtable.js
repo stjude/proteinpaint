@@ -120,9 +120,15 @@ async function make_multiSampleTable(arg) {
 			if (sample.sample_id) {
 				if (arg.tk.mds.variant2samples.url) {
 					const a = td.append('a')
-					a.attr('href', arg.tk.mds.variant2samples.url.base + sample.sample_id)
+					a.attr(
+						'href',
+						arg.tk.mds.variant2samples.url.base +
+							(arg.tk.mds.variant2samples.url.namekey
+								? sample[arg.tk.mds.variant2samples.url.namekey]
+								: sample.sample_id)
+					)
 					a.attr('target', '_blank')
-					a.text(sample.sample_id.length > 15 ? sample.sample_id.substring(0, 10) + '...' : sample.sample_id)
+					a.text(sample.sample_id)
 				} else {
 					td.text(sample.sample_id)
 				}
@@ -158,7 +164,13 @@ async function make_singleSampleTable(arg, table) {
 		td1.text('Sample')
 		if (arg.tk.mds.variant2samples.url) {
 			const a = td2.append('a')
-			a.attr('href', arg.tk.mds.variant2samples.url.base + sampledata.sample_id)
+			a.attr(
+				'href',
+				arg.tk.mds.variant2samples.url.base +
+					(arg.tk.mds.variant2samples.url.namekey
+						? sampledata[arg.tk.mds.variant2samples.url.namekey]
+						: sampledata.sample_id)
+			)
 			a.attr('target', '_blank')
 			a.text(sampledata.sample_id)
 		} else {

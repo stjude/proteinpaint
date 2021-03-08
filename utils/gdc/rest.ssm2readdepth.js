@@ -16,7 +16,8 @@ const fields = [
 	'case.observation.variant_calling.variant_caller',
 	'case.observation.validation.tumor_validation_allele1',
 	'case.observation.validation.tumor_validation_allele2',
-	'case.observation.validation.validation_method'
+	'case.observation.validation.validation_method',
+	'case.observation.sample.tumor_sample_barcode'
 ]
 
 const filters = {
@@ -60,7 +61,8 @@ const filters = {
 					'normal',
 					d.n_depth,
 					observe.variant_calling.variant_caller,
-					observe.validation
+					observe.validation,
+					observe.sample.tumor_sample_barcode
 				)
 			}
 		}

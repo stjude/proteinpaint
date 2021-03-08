@@ -352,7 +352,17 @@ export async function getSamples_gdcapi(q, ds) {
 		const sample = {}
 		if (ds.variant2samples.sample_id_key) {
 			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		} else if (ds.variant2samples.sample_id_getter) {
+			sample.sample_id = ds.variant2samples.sample_id_getter(s.case)
 		}
+
+		/* gdc-specific logic
+		through tumor_sample_barcode, "TCGA-F4-6805" names are set as .sample_id for display
+		however case uuid is still needed to build the url link to a case
+		thus the hardcoded logic to provide the case_id as "case_uuid" to client side
+		*/
+		sample.case_uuid = s.case.case_id
+
 		for (const id of ds.variant2samples.termidlst) {
 			const t = ds.termdb.getTermById(id)
 			if (t) {
