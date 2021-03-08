@@ -222,11 +222,13 @@ async function get_data(obj) {
 	}
 	///////////////////// client data /////////////////////
 	const ad = obj.analysisdata
-	if (obj.mds) {
-		obj.mds = obj.genome.datasets[obj.mds.dslabel]
-	} else if (obj.disco) {
+	if (obj.disco || ad.disco) {
+		// some old external mdsjson files have analysisdata.disco
 		// convert obj.disco to obj.mds for backward compatibity
-		obj.mds = obj.genome.datasets[obj.disco.dslabel]
+		const disco = obj.disco || ad.disco
+		obj.mds = obj.genome.datasets[disco.dslabel]
+	} else {
+		obj.mds = obj.genome.datasets[obj.mds.dslabel]
 	}
 	if (!ad) throw 'both .analysisdata{} and .dslabel are missing'
 	if (ad.samples) {
@@ -1263,7 +1265,7 @@ async function click_dot_disco(dot, obj) {
 		const sjcharts = await getsjcharts()
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.mds.dslabel,
+			dslabel: obj.mds.label,
 			querykey: obj.mds.querykey,
 			getsample4disco: dot.sample
 		}
@@ -1284,7 +1286,7 @@ async function click_dot_disco(dot, obj) {
 				geneLabelClick: {
 					type: 'genomepaint',
 					genome: obj.genome.name,
-					dslabel: obj.mds.dslabel,
+					dslabel: obj.mds.label,
 					sample: dot.sample
 				}
 			}
@@ -1394,10 +1396,9 @@ function lasso_select(obj, dots) {
 	}
 
 	function show_lasso_menu(samples) {
-		const ds = obj.genome.datasets[obj.mds.dslabel]
 		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
 
-		if (ds.gene2mutcount) {
+		if (obj.mds.gene2mutcount) {
 			obj.menu.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
@@ -1524,9 +1525,8 @@ function init_mutation_type_control(obj, samples) {
 		nGenes = 15
 
 	const holder = obj.pane.matrix_criteria_div
-	const ds = obj.genome.datasets[obj.mds.dslabel]
-	if (ds.mutCountType) {
-		mutTypes = ds.mutCountType
+	if (obj.mds.mutCountType) {
+		mutTypes = obj.mds.mutCountType
 
 		const non_cnv_types = mutTypes.filter(m => !m.db_col.includes('cnv'))
 		const cnv_types = mutTypes.filter(m => m.db_col.includes('cnv'))
@@ -1730,7 +1730,7 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 	try {
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.mds.dslabel,
+			dslabel: obj.mds.label,
 			samples,
 			selectedMutTypes,
 			nGenes
@@ -1766,7 +1766,7 @@ function make_sample_matrix(args) {
 	}
 	const arg = {
 		genome: obj.genome,
-		dslabel: obj.mds.dslabel,
+		dslabel: obj.mds.label,
 		features: genes,
 		features_on_rows: obj.features_on_rows,
 		ismutation_allsymbolic: true,
