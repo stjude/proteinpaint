@@ -227,7 +227,7 @@ async function get_data(obj) {
 		// convert obj.disco to obj.mds for backward compatibity
 		const disco = obj.disco || ad.disco
 		obj.mds = obj.genome.datasets[disco.dslabel]
-	} else {
+	} else if (obj.mds) {
 		obj.mds = obj.genome.datasets[obj.mds.dslabel]
 	}
 	if (!ad) throw 'both .analysisdata{} and .dslabel are missing'
@@ -1398,7 +1398,7 @@ function lasso_select(obj, dots) {
 	function show_lasso_menu(samples) {
 		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
 
-		if (obj.mds.gene2mutcount) {
+		if (obj.mds && obj.mds.gene2mutcount) {
 			obj.menu.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
