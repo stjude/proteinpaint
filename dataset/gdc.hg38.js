@@ -242,7 +242,8 @@ const variant2samples = {
 		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
 		'case.observation.read_depth.t_depth',
-		'case.observation.read_depth.n_depth'
+		'case.observation.read_depth.n_depth',
+		'case.observation.sample.tumor_sample_barcode'
 	],
 	filters: p => {
 		if (!p.ssm_id_lst) throw '.ssm_id_lst missing'
@@ -758,9 +759,24 @@ module.exports = {
 		// list of terms to show as items in detailed info page
 		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
 		sunburst_ids: ['project', 'disease'], // term id
-		sample_id_key: 'case_id',
+
+		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
+		//sample_id_key: 'case_id',
+		sample_id_getter: d => {
+			if (d.observation && d.observation[0].sample && d.observation[0].sample.tumor_sample_barcode) {
+				return d.observation[0].sample.tumor_sample_barcode
+					.split('-')
+					.slice(0, 3)
+					.join('-')
+			}
+			return ''
+		},
+
 		url: {
-			base: 'https://portal.gdc.cancer.gov/cases/'
+			base: 'https://portal.gdc.cancer.gov/cases/',
+			// if "namekey" is provided, use the given key to obtain sample name to append to url
+			// if missing, will require sample_id_key
+			namekey: 'case_uuid'
 		},
 		gdcapi: variant2samples
 	},
