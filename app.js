@@ -1,5 +1,3 @@
-// JUMP __MDS __util __rank __smat
-
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
@@ -164,26 +162,7 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-app.get(basepath + '/healthcheck', async (req, res) => {
-	try {
-		const w = child_process
-			.execSync('w | head -n1')
-			.toString()
-			.trim()
-			.split(' ')
-			.slice(-3)
-			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
-		const rs =
-			child_process
-				.execSync('ps aux | grep rsync -w')
-				.toString()
-				.trim()
-				.split('\n').length - 1
-		res.send({ status: 'ok', w, rs })
-	} catch (e) {
-		throw e
-	}
-})
+app.get(basepath + '/healthcheck', handle_healthcheck)
 app.post(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -302,6 +281,38 @@ function setOptionalRoutes() {
 			const setRoutes = __non_webpack_require__(fname)
 			setRoutes(app, basepath)
 		}
+	}
+}
+
+async function handle_healthcheck(req, res) {
+	try {
+		const health = { status: 'ok' }
+		health.w = child_process
+			.execSync('w | head -n1')
+			.toString()
+			.trim()
+			.split(' ')
+			.slice(-3)
+			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+
+		health.rs =
+			child_process
+				.execSync('ps aux | grep rsync -w')
+				.toString()
+				.trim()
+				.split('\n').length - 1
+
+		if (fs.existsSync('./public/rev.txt')) {
+			health.version = child_process
+				.execSync(`cat ./public/rev.txt`)
+				.toString()
+				.trim()
+				.split(' ')[1]
+		}
+
+		res.send(health)
+	} catch (e) {
+		throw { error: e }
 	}
 }
 
@@ -580,6 +591,7 @@ function mds_clientcopy(ds) {
 	}
 	if (ds.gene2mutcount) {
 		ds2.gene2mutcount = true
+		ds2.mutCountType = ds.gene2mutcount.mutationTypes
 	}
 	if (ds.assayAvailability) {
 		ds2.assayAvailability = 1
@@ -2463,9 +2475,14 @@ async function handle_mdsgenecount(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.gene2mutcount) throw 'not supported on this dataset'
 		if (!req.query.samples) throw '.samples missing'
+		let mutation_count_str, n_gene
+		if (req.query.selectedMutTypes) mutation_count_str = req.query.selectedMutTypes.join('+')
+		else mutation_count_str = 'total'
+		if (req.query.nGenes) n_gene = req.query.nGenes
+		else n_gene = 15
 		const query = `WITH
 	filtered AS (
-		SELECT * FROM genecount
+		SELECT gene, ${mutation_count_str} AS total FROM genecount
 		WHERE sample IN (${JSON.stringify(req.query.samples)
 			.replace(/[[\]\"]/g, '')
 			.split(',')
@@ -2476,37 +2493,18 @@ async function handle_mdsgenecount(req, res) {
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT 10`
+	LIMIT ${n_gene}`
 		const genes = ds.gene2mutcount.db.prepare(query).all()
+		const validgenes = []
 		for (const gene of genes) {
-			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
-			const defaultisoform = isoforms.find(i => i.isdefault)
-			if (defaultisoform) {
-				const j = JSON.parse(defaultisoform.genemodel)
-				gene.chr = j.chr
-				gene.start = j.start
-				gene.stop = j.stop
-				continue
-			}
-			// no default isoform
-			// just try to use coordinate of the first isoform that's on major chr
-			const lst = isoforms.map(i => JSON.parse(i.genemodel))
-			const isoform = lst.find(i => {
-				const c = genome.chrlookup[i.chr.toUpperCase()]
-				if (c && c.major) return i
-			})
-			if (isoform) {
-				gene.chr = isoform.chr
-				gene.start = isoform.start
-				gene.stop = isoform.stop
-				continue
-			}
-			// no isoform on major chr, just use first isoform
-			gene.chr = lst[0].chr
-			gene.start = lst[0].start
-			gene.stop = lst[0].stop
+			const re = genome.genedb.getCoordByGene.get(gene.gene)
+			if (!re) continue
+			re.gene = gene.gene
+			re.count = gene.count
+			delete re.name
+			validgenes.push(re)
 		}
-		res.send({ genes })
+		res.send({ genes: validgenes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -2590,20 +2588,27 @@ async function handle_mdssvcnv(req, res) {
 		}
 	} else {
 		// is native track
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check(req.query)
-		if (err) return res.send({ error: err })
-		gn = gn1
-		ds = ds1
-		dsquery = dsquery1
+
+		gn = genomes[req.query.genome]
+		if (!gn) return res.send({ error: 'invalid genome' })
+		if (!gn.datasets) return res.send({ error: 'genome is not equipped with datasets' })
+		ds = gn.datasets[req.query.dslabel]
+		if (!ds) return res.send({ error: 'invalid dslabel' })
+
+		//////////// exits that only requires ds but not dsquery
+		if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds)
+		if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, ds)
+		if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, ds)
+		if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, ds)
+
+		if (!ds.queries) return res.send({ error: 'dataset is not equipped with queries' })
+		dsquery = ds.queries[req.query.querykey]
+		if (!dsquery) return res.send({ error: 'invalid querykey' })
 	}
 
-	///////////////// exits
-	if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery)
-	if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery)
-	if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery)
+	///////////////// exits that require dsquery (svcnv)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
-	if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery)
 
 	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
@@ -2777,7 +2782,7 @@ async function handle_mdssvcnv(req, res) {
 	res.send(result)
 }
 
-async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
+async function mdssvcnv_exit_assaymap(req, res, ds) {
 	try {
 		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
 		const skip_termids = new Set(req.query.skip_termids || [])
@@ -5610,7 +5615,7 @@ function handle_mdsexpressionrank(req, res) {
 		})
 }
 
-function mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_gettrack4singlesample(req, res, ds) {
 	/*
     getting track for single sample from server config
     only for official dataset
@@ -5640,7 +5645,7 @@ function mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery) {
 	res.send(vcfq.singlesamples ? { yes: 1 } : { no: 1 })
 }
 
-function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_getsample4disco(req, res, gn, ds) {
 	/*
     a text file for a single sample
     only for official dataset
@@ -5795,7 +5800,7 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	return sample2rank
 }
 
-function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_findsamplename(req, res, ds) {
 	/*
     find sample names by matching with input string
     only for official dataset
@@ -8986,7 +8991,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 	if (!dsquery.tracks) return 'tracks[] missing from dsquery'
 	if (!feature.chr) return ['chr missing']
 	if (!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
-	if (feature.stop - feature.start > 2000000) return ['look range too big (>2Mb)']
+	if (feature.stop - feature.start > 3000000) return ['look range too big (>3Mb)']
 
 	const tasks = []
 
@@ -9664,6 +9669,10 @@ async function pp_init() {
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
+			}
+			if (g.genedb.gene2coord) {
+				// this table will become available to all genomes
+				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
 		}
 		if (g.genedb.gene2canonicalisoform) {

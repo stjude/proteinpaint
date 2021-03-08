@@ -46,7 +46,7 @@ cairo-*/*
 canvas/*
 pixman-*/*
 serverconfig.json
-server.js
+server.js*
 setup/*gz*
 setup/*
 tmpbuild/*

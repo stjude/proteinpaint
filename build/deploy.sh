@@ -60,6 +60,9 @@ fi
 APP=pp # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
+WPSERVERMODE=production
+WPSERVERDEVTOOL=''
+WPCLIENTDEVTOOL=''
 
 if [[ "$ENV" == "pp-irt" || "$ENV" == "pp-int-test" ]]; then
 	DEPLOYER=genomeuser
@@ -68,6 +71,9 @@ if [[ "$ENV" == "pp-irt" || "$ENV" == "pp-int-test" ]]; then
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=pp-int-test.stjude.org
 	SUBDOMAIN=pp-int-test
+	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
@@ -76,6 +82,9 @@ elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" ||
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=ppr.stjude.org
 	SUBDOMAIN=ppr
+	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
@@ -84,16 +93,19 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=pp-test.stjude.org
 	SUBDOMAIN=pp-test
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "prp1" || "$ENV" == "pecan" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pp-prp1" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
+	WPSERVERDEVTOOL='source-map'
 
-elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" || "$ENV" == "prp1" ]]; then
 	# 
 	# requires these tunnel settings in ~/.ssh/config:
 	# 
@@ -106,14 +118,18 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
+	WPSERVERDEVTOOL='source-map'
 
-elif [[ "$ENV" == "pp-ict" || "$ENV" == "pp-int-test" ]]; then
+elif [[ "$ENV" == "pp-ict" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-ict.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=pp-int-test.stjude.org
 	SUBDOMAIN=pp-int-test
+	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
 	DEPLOYER=genomeuser
@@ -122,6 +138,8 @@ elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=ppc.stjude.org
 	SUBDOMAIN=ppc
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 else
 	echo "Environment='$ENV' is not supported"
@@ -163,19 +181,11 @@ else
 	# npm update
 
 	# create webpack bundle
-	echo "Packing bundle ..."
-	if [[ "$ENV" == "ppdev" ]]; then
-		# option to simply reuse and deploy live bundled code.
-		# This is slightly better than deploy.ppr.sh in that 
-		# committed code is used except for the live bundle.
-		# To force rebundle from committed code, 
-		# use "internal-prod" instead of "ppdev" environment
-		mkdir public/bin
-		cp ../public/bin/* public/bin
-		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
-	else 
-		npx webpack --config=build/webpack.config.build.js --env.url=https://$HOSTNAME
-	fi
+	echo "Packing frontend bundles ..."
+	npx webpack --config=build/webpack.config.client.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+
+	echo "Packing backend bundle ..."
+	npx webpack --config=build/webpack.config.server.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
 
 	# create dirs to put extracted files
 	rm -rf $APP
@@ -185,8 +195,7 @@ else
 	mkdir $APP/utils
 	mkdir $APP/modules
 
-	npm run build-server
-	mv server.js $APP/
+	mv server.js* $APP/
 	mv package.json $APP/
 	mv public/bin $APP/public/bin
 	mv genome $APP/
@@ -237,3 +246,4 @@ ssh -t $USERatREMOTE "
 
 cd ..
 # rm -rf tmpbuild
+exit 0

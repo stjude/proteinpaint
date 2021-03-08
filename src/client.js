@@ -1327,6 +1327,16 @@ export function to_svg(svg, name, opts = {}) {
 	a.click()
 }
 
+export function to_textfile(filename, text) {
+	const a = document.createElement('a')
+	a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
+	a.setAttribute('download', filename)
+	a.style.display = 'none'
+	document.body.appendChild(a)
+	a.click()
+	document.body.removeChild(a)
+}
+
 export function filetypeselect(holder) {
 	const s = holder.append('select')
 	s.append('option').text('SNV and indel') // 0

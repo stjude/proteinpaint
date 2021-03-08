@@ -183,7 +183,8 @@ arg
 			if (e.stack) console.log(e.stack)
 			return e.message || e
 		}
-
+		// if genome is defined in url, pass it to samplescatterplot
+		plot_data.mdssamplescatterplot.genome = genome
 		await import('./mds.samplescatterplot').then(_ => {
 			_.init(plot_data.mdssamplescatterplot, arg.holder, false)
 		})
