@@ -760,6 +760,30 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		if(!data.isoform) throw 'no canonical isoform for given gene accession'
 		arg.gene = data.isoform
 	}
+	if(arg.mds3_ssm2canonicalisoform) {
+		/* logic specific for mds3 gdc dataset
+		given a ssm id, retrieve the canonical isoform and launch gene view with it
+		*/
+		if(!arg.genome) throw '.genome missing'
+		if(!arg.mds3_ssm2canonicalisoform.ssm_id) throw '.ssm_id missing from mds3_ssm2canonicalisoform'
+		if(!arg.mds3_ssm2canonicalisoform.dslabel) throw '.dslabel missing from mds3_ssm2canonicalisoform'
+		const data=await client.dofetch2('mds3?'
+			+'genome='+arg.genome
+			+'&dslabel='+arg.mds3_ssm2canonicalisoform.dslabel
+			+'&ssm2canonicalisoform=1'
+			+'&ssm_id='+arg.mds3_ssm2canonicalisoform.ssm_id
+		)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no isoform found for given ssm_id'
+		arg.gene = data.isoform
+		// will also highlight this ssm
+		if(arg.tracks) {
+			const tk = arg.tracks.find(i=>i.dslabel==arg.mds3_ssm2canonicalisoform.dslabel)
+			if(tk) {
+				tk.hlssmid = arg.mds3_ssm2canonicalisoform.ssm_id
+			}
+		}
+	}
 	if(arg.gene) {
 		launchgeneview(arg, app)
 		return

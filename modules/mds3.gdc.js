@@ -16,6 +16,29 @@ validate_m2csq
 getheaders
 */
 
+export async function validate_ssm2canonicalisoform(api) {
+	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
+	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
+	api.get = async q => {
+		// q is client request object
+		if (!q.ssm_id) throw '.ssm_id missing'
+		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+			method: 'GET',
+			headers: getheaders(q)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid json in response'
+		}
+		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
+		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
+		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
+		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
+	}
+}
+
 export function validate_variant2sample(a) {
 	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }

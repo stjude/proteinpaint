@@ -616,6 +616,14 @@ const variables_genecnv = {
 	}
 }
 
+/* not part of generic mds3 dataset
+to map a SSM id to a canonical ENST name
+*/
+const ssm2canonicalisoform = {
+	endpoint: GDC_HOST + '/ssms/',
+	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
+}
+
 ///////////////////////////////// end of query strings ///////////////
 
 /*
@@ -750,6 +758,8 @@ module.exports = {
 			primary_site: { gdcapi: site_size }
 		}
 	},
+
+	ssm2canonicalisoform,
 
 	/* hope this can be applied to all types of variants
 	but if it can only be applied to ssm, then it may be moved to queries.snvindel{}
