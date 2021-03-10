@@ -29,12 +29,11 @@ const express = require('express'),
 	fs = require('fs'),
 	path = require('path'),
 	got = require('got'),
-	async = require('async'),
+	async = require('async'), // where this is used?
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
-	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	stratinput = require('./src/tree').stratinput,
 	bodyParser = require('body-parser'),
@@ -73,7 +72,8 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	do_hicstat = require('./modules/hicstat').do_hicstat
+	do_hicstat = require('./modules/hicstat').do_hicstat,
+	phewas = require('./modules/termdb.phewas')
 
 /*
 valuable globals
@@ -242,10 +242,18 @@ pp_init()
 			console.log('\nValidation succeeded. You may now run the server.\n')
 			return
 		}
-		/*
-		if(process.argv[2] == 'phewas-precompute') {
+
+		if (process.argv[2] == 'phewas-precompute') {
+			// argv[3] is genome, argv[4] is dslabel
+			const gn = process.argv[3],
+				dslabel = process.argv[4]
+			const genome = genomes[gn]
+			if (!genome) throw 'invalid genome name: ' + gn
+			const ds = genome.datasets[dslabel]
+			if (!ds) throw 'invalid dataset: ' + dslabel
+			phewas.do_precompute(ds)
+			return
 		}
-		*/
 
 		const port = serverconfig.port || 3000
 		if (serverconfig.ssl) {
