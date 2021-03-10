@@ -663,7 +663,7 @@ const aliquot2sample = {
 		}
 	},
 	get: async (aliquotid, headers) => {
-		const response = await got.post('https://api.gdc.cancer.gov/v0/graphql', {
+		const response = await got.post(GDC_HOST + '/v0/graphql', {
 			headers,
 			body: JSON.stringify({ query: aliquot2sample.query, variables: aliquot2sample.variables(aliquotid) })
 		})
