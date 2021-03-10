@@ -2,7 +2,190 @@ const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
+const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
+
+export async function match_complexvariant_rust(q, templates_info, sequence_reads) {
+	//const segbplen = templates[0].segments[0].seq.length
+	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
+	// need to verify if the retrieved sequence is showing 1bp offset or not
+	let final_ref = ''
+	if (q.variant.ref != '-') {
+		final_ref = q.variant.ref
+	} else {
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+	}
+	let final_alt = ''
+	if (q.variant.alt != '-') {
+		final_alt = q.variant.alt
+	} else {
+		final_alt = ''
+	}
+
+	console.log(
+		'q.variant.pos:',
+		q.variant.pos,
+		',segbplen:',
+		segbplen,
+		',variant:',
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+	)
+	const leftflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
+	))
+
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const rightflankseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr +
+			':' +
+			(q.variant.pos + final_ref.length + 1) +
+			'-' +
+			(q.variant.pos + segbplen + final_ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+	const refseq = (await utils.get_fasta(
+		q.genome,
+		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+	))
+		.split('\n')
+		.slice(1)
+		.join('')
+		.toUpperCase()
+
+	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	console.log('refSeq', refseq)
+	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+
+	const refallele = final_ref.toUpperCase()
+	const altallele = final_alt.toUpperCase()
+
+	//const refseq = leftflankseq + refallele + rightflankseq
+	const altseq = leftflankseq + altallele + rightflankseq
+
+	// console.log(refallele,altallele,refseq,altseq)
+
+	//----------------------------------------------------------------------------
+	// IMPORTANT PARAMETERS
+	const kmer_length = 6 // length of kmer
+	const weight_no_indel = 0.1 // Weight when base not inside the indel
+	const weight_indel = 10 // Weight when base is inside the indel
+	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	//----------------------------------------------------------------------------
+
+	// Checking to see if reference allele is correct or not
+	let refalleleerror = false
+	if (refseq.toUpperCase().localeCompare((leftflankseq + refallele + rightflankseq).toUpperCase()) != 0) {
+		//console.log('Reference allele is not correct')
+		refalleleerror = true
+	}
+
+	let sequences = ''
+	sequences += refseq + '\n'
+	sequences += altseq + '\n'
+	sequences += sequence_reads
+	//        const templates_info = []
+	//        //for (const template of templates) {
+	//        for (const line of q.regions[0].lines) { // q.regions[0] may need to be modified
+	//
+	//	        templates_info.push(line)
+	//		sequences += sequence + '\n'
+	//	}
+	//console.log("sequences:",sequences)
+	//console.log("segbplen:",segbplen)
+	const rust_output = await rust_match_complexvariant_indel(
+		sequences,
+		BigInt(q.variant.pos),
+		BigInt(segbplen),
+		refallele,
+		altallele,
+		BigInt(kmer_length),
+		weight_no_indel,
+		weight_indel,
+		threshold_slope
+	) // Invoking wasm function
+	console.log('rust_output:', rust_output.groupID.length)
+
+	let index = 0
+	const type2group = bamcommon.make_type2group(q)
+	const kmer_diff_scores_input = []
+	const kmer_scores = []
+	for (let i = 0; i < rust_output.category.length; i++) {
+		if (rust_output.category[i] == 'ref') {
+			if (type2group[bamcommon.type_supportref]) {
+				index = rust_output.groupID[i]
+				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'ref'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		} else if (rust_output.category[i] == 'alt') {
+			if (type2group[bamcommon.type_supportalt]) {
+				index = rust_output.groupID[i]
+				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'alt'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		} else if (rust_output.category[i] == 'none') {
+			if (type2group[bamcommon.type_supportno]) {
+				index = rust_output.groupID[i]
+				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
+				const input_items = {
+					value: rust_output.kmer_diff_scores[i],
+					groupID: 'none'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
+		}
+	}
+	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
+	// console.log('Final array for plotting:', kmer_diff_scores_input)
+	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
+
+	q.kmer_diff_scores_asc = kmer_diff_scores_input
+	q.regions[0].kmer_scores = kmer_scores
+
+	const groups = []
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		g.messagerows.push({
+			h: 15,
+			t:
+				g.templates.length +
+				' reads supporting ' +
+				(k == bamcommon.type_supportref
+					? 'reference allele'
+					: k == bamcommon.type_supportalt
+					? 'mutant allele'
+					: 'neither reference or mutant alleles')
+		})
+		groups.push(g)
+	}
+	return { groups, refalleleerror }
+}
 
 export async function match_complexvariant(templates, q) {
 	// TODO
@@ -25,10 +208,20 @@ export async function match_complexvariant(templates, q) {
 	} else {
 		final_alt = ''
 	}
+
+	console.log(
+		'q.variant.pos:',
+		q.variant.pos,
+		',segbplen:',
+		segbplen,
+		',variant:',
+		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+	)
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
 	))
+
 		.split('\n')
 		.slice(1)
 		.join('')
@@ -232,6 +425,7 @@ export async function match_complexvariant(templates, q) {
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
+
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
@@ -323,6 +517,7 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
+	console.log('groups:', groups[0])
 	return { groups, refalleleerror }
 }
 
