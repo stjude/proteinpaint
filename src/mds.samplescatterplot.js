@@ -1770,6 +1770,7 @@ function make_sample_matrix(args) {
 		features: genes,
 		features_on_rows: obj.features_on_rows,
 		ismutation_allsymbolic: true,
+		use_global_cnvloh_cutoff: true,
 		hostURL: sessionStorage.getItem('hostURL') || '',
 		limitbysamplesetgroup: { samples },
 		jwt: sessionStorage.getItem('jwt') || '',
