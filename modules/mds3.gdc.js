@@ -350,6 +350,9 @@ export async function getSamples_gdcapi(q, ds) {
 			? api.fields_samples
 			: null
 	if (!fields) throw 'invalid get type of q.get'
+
+	const headers = getheaders(q) // will be reused below
+
 	const response = await got(
 		api.endpoint +
 			'?size=' +
@@ -358,7 +361,7 @@ export async function getSamples_gdcapi(q, ds) {
 			fields.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.filters(q))),
-		{ method: 'GET', headers: getheaders(q) }
+		{ method: 'GET', headers }
 	)
 	let re
 	try {
@@ -373,10 +376,14 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
+
+		// get printable sample id
 		if (ds.variant2samples.sample_id_key) {
 			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
 		} else if (ds.variant2samples.sample_id_getter) {
-			sample.sample_id = ds.variant2samples.sample_id_getter(s.case)
+			// must pass request header to getter in case requesting a controlled sample via a user token
+			// this is gdc-specific logic and should not impact generic mds3
+			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
 		}
 
 		/* gdc-specific logic
