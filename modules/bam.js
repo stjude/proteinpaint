@@ -988,6 +988,7 @@ function get_templates(q, group) {
 				lst.push({
 					x1: segment.x1,
 					x2: segment.x2,
+					__tempscore: segment.tempscore,
 					segments: [segment]
 				})
 			}
@@ -1013,6 +1014,7 @@ function get_templates(q, group) {
 				qname2template.set(segment.qname, {
 					x1: segment.x1,
 					x2: segment.x2,
+					__tempscore: segment.tempscore,
 					segments: [segment]
 				})
 			}
@@ -1034,6 +1036,7 @@ only gather boxes in view range, with sequence start (cidx) for finalizing later
 may skip insertion if on screen width shorter than minimum width
 */
 	const l = line.trim().split('\t')
+	console.log('l:', l)
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1048,6 +1051,7 @@ may skip insertion if on screen width shorter than minimum width
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
+	const tempscore = l[l.length - 1]
 
 	if (flag & 0x4) {
 		//console.log('unmapped')
@@ -1195,7 +1199,8 @@ may skip insertion if on screen width shorter than minimum width
 		qual,
 		cigarstr,
 		tlen,
-		flag
+		flag,
+		tempscore
 	}
 	if (flag & 0x40) {
 		segment.isfirst = true
