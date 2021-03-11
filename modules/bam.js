@@ -7,7 +7,7 @@ const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
-const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
+//const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
 const basecolor = require('../src/common').basecolor
 const serverconfig = require('./serverconfig')
@@ -905,8 +905,8 @@ async function divide_reads_togroups(q) {
 		// if snv, simple match; otherwise complex match
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
-		return await rust_match_complexvariant(q, templates_info, sequence_reads)
-		//return await match_complexvariant(templates, q)
+		//return await rust_match_complexvariant(q, templates_info, sequence_reads)
+		return await match_complexvariant(q, templates_info, sequence_reads)
 	}
 	if (q.sv) {
 		return match_sv(templates, q)

@@ -2,7 +2,7 @@ const jStat = require('jstat').jStat
 const features = require('../app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
-const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
+//const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 
 export async function match_complexvariant_rust(q, templates_info, sequence_reads) {
@@ -187,10 +187,11 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 	return { groups, refalleleerror }
 }
 
-export async function match_complexvariant(templates, q) {
+export async function match_complexvariant(q, templates_info, sequence_reads) {
 	// TODO
 	// get flanking sequence, suppose that segments are of same length, use segment length
-	const segbplen = templates[0].segments[0].seq.length
+	//const segbplen = templates[0].segments[0].seq.length
+	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
 	// need to verify if the retrieved sequence is showing 1bp offset or not
 	let final_ref = ''
 	if (q.variant.ref != '-') {
@@ -270,8 +271,8 @@ export async function match_complexvariant(templates, q) {
 
 	file.write(refseq + '\n')
 	file.write(altseq + '\n')
-	for (const template of templates) {
-		file.write(template.segments[0].seq + '\n')
+	for (const sequence of sequence_reads) {
+		file.write(sequence + '\n')
 	}
 	file.end()
 
@@ -371,45 +372,45 @@ export async function match_complexvariant(templates, q) {
 	const ref_scores = []
 	const alt_scores = []
 	let i = 0
-	for (const template of templates) {
-		// Looking at individual reads from here
-		const read_seq = template.segments[0].seq
-		// let cigar_seq = template.segments[0].cigarstr
-		const read_kmers = build_kmers(read_seq, kmer_length)
-		//const ref_comparison = jaccard_similarity(read_kmers, ref_kmers, ref_kmers_nodups)
-		const ref_comparison = jaccard_similarity_weights(
-			read_kmers,
-			all_ref_kmers,
-			all_ref_kmers_nodups,
-			all_ref_kmers_seq_values_nodups,
-			ref_kmers_weight,
-			all_ref_counts
-		)
-		const alt_comparison = jaccard_similarity_weights(
-			read_kmers,
-			all_alt_kmers,
-			all_alt_kmers_nodups,
-			all_alt_kmers_seq_values_nodups,
-			alt_kmers_weight,
-			all_alt_counts
-		)
-		//console.log("ref comparison:",ref_comparison,"alt comparison:",alt_comparison)
-		// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
-		const diff_score = alt_comparison - ref_comparison // Is the read more similar to reference sequence or alternate sequence
-		kmer_diff_scores.push(diff_score)
-		ref_comparisons.push(ref_comparison)
-		alt_comparisons.push(alt_comparison)
-		const item = {
-			value: Math.abs(diff_score),
-			groupID: i
+	const sequence_list = sequence_reads.split('\n')
+	for (const read_seq of sequence_list) {
+		if (read_seq.length > 0) {
+			// let cigar_seq = template.segments[0].cigarstr
+			const read_kmers = build_kmers(read_seq, kmer_length)
+			//const ref_comparison = jaccard_similarity(read_kmers, ref_kmers, ref_kmers_nodups)
+			const ref_comparison = jaccard_similarity_weights(
+				read_kmers,
+				all_ref_kmers,
+				all_ref_kmers_nodups,
+				all_ref_kmers_seq_values_nodups,
+				ref_kmers_weight,
+				all_ref_counts
+			)
+			const alt_comparison = jaccard_similarity_weights(
+				read_kmers,
+				all_alt_kmers,
+				all_alt_kmers_nodups,
+				all_alt_kmers_seq_values_nodups,
+				alt_kmers_weight,
+				all_alt_counts
+			)
+			//console.log("ref comparison:",ref_comparison,"alt comparison:",alt_comparison)
+			// console.log("Iteration:",k,read_seq,cigar_seq,ref_comparison,alt_comparison,read_seq.length,refseq.length,altseq.length,read_kmers.length,ref_kmers.length,alt_kmers.length)
+			const diff_score = alt_comparison - ref_comparison // Is the read more similar to reference sequence or alternate sequence
+			kmer_diff_scores.push(diff_score)
+			ref_comparisons.push(ref_comparison)
+			alt_comparisons.push(alt_comparison)
+			const item = {
+				value: Math.abs(diff_score),
+				groupID: i
+			}
+			if (diff_score > 0) {
+				alt_scores.push(item)
+			} else if (diff_score <= 0) {
+				ref_scores.push(item)
+			}
+			i++
 		}
-		if (diff_score > 0) {
-			alt_scores.push(item)
-		} else if (diff_score <= 0) {
-			ref_scores.push(item)
-		}
-
-		i++
 	}
 
 	console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
@@ -430,9 +431,9 @@ export async function match_complexvariant(templates, q) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
-				templates[index].__tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportref].templates.push(templates[index])
+				//console.log("templates_info[index]:",templates_info[index])
+				//templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
 					groupID: 'ref'
@@ -442,9 +443,9 @@ export async function match_complexvariant(templates, q) {
 		} else if (item[1] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
-				templates[index].__tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[index])
+				//console.log("templates_info[index]:",templates_info[index])
+				//templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
 					groupID: 'none'
@@ -458,9 +459,9 @@ export async function match_complexvariant(templates, q) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
-				templates[index].__tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportalt].templates.push(templates[index])
+				//console.log("templates_info[index]:",templates_info[index])
+				//templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
 					groupID: 'alt'
@@ -470,10 +471,10 @@ export async function match_complexvariant(templates, q) {
 		} else if (item[1] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
-				templates[index].__tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//console.log("templates_info[index]:",templates_info[index])
+				//templates[index].__tempscore = alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
-				type2group[bamcommon.type_supportno].templates.push(templates[index])
+				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
 					groupID: 'none'
@@ -517,7 +518,6 @@ export async function match_complexvariant(templates, q) {
 		})
 		groups.push(g)
 	}
-	console.log('groups:', groups[0])
 	return { groups, refalleleerror }
 }
 
