@@ -17,15 +17,12 @@
 
 <div id=aaa style="margin:10px"></div>
 
-<script src='/wrappers/test/App.js' type='text/babel'></script>
+<script src='/wrappers/test/AppProps.js' type='text/babel'></script>
 <script>
 
 </script>
 <script type='text/babel'>
-if (window.location.pathname == '/example.gdc.react.html') {
-	window.history.pushState('', null, '/genes/ENSG00000133703' + window.location.search + window.location.hash)
-}
-ReactDOM.render(<App basepath='' window={window} />, document.querySelector('#aaa'))
+ReactDOM.render(<AppProps basepath='' geneId='ENSG00000133703' />, document.querySelector('#aaa'))
 </script>
 </body>
 </html>

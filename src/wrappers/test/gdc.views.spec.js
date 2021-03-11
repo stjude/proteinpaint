@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { App, getUrlParams } from './App'
+import { AppUrl } from './AppUrl'
+import { AppProps } from './AppProps'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
@@ -20,11 +21,10 @@ function sleep(ms) {
 
 tape('\n', test => {
 	test.pass('-***- gdc/views.js -***-')
-	select('#pp-test-runner-banner').text('$ npm run test-react')
 	test.end()
 })
 
-tape('lolliplot', async test => {
+tape('lolliplot using URL', async test => {
 	test.timeoutAfter(30000)
 	test.plan(4)
 	const windowObj = getWindow('test', {
@@ -34,7 +34,7 @@ tape('lolliplot', async test => {
 	})
 	const holder = windowObj.dom.holder
 	const portal = ReactDOM.render(
-		<App basepath={`http://localhost:${serverconfig.port}`} window={windowObj} />,
+		<AppUrl basepath={`http://localhost:${serverconfig.port}`} window={windowObj} />,
 		holder.node()
 	)
 	await sleep(5500)
@@ -76,6 +76,64 @@ tape('lolliplot', async test => {
 	windowObj.dom.addressbar
 		.property('value', windowObj.location.pathname + `?filters=${encodeURIComponent(JSON.stringify(projectFilter))}`)
 		.on('change')()
+	await sleep(4000)
+	const filteredCircles = 51
+	test.equal(
+		holder.selectAll('circle').size(),
+		filteredCircles,
+		`should have ${filteredCircles} circles after applying filter`
+	)
+	// currently unable to test using a token via the submit button,
+	// since it will reveal user specific token here, may
+	// need a testing-only generic token if possible
+	test.end()
+})
+
+tape('lolliplot using props', async test => {
+	test.timeoutAfter(30000)
+	test.plan(4)
+	const holder = select('body').append('div')
+	const portal = ReactDOM.render(
+		<AppProps basepath={`http://localhost:${serverconfig.port}`} geneId="ENSG00000142208" />,
+		holder.node()
+	)
+	await sleep(5500)
+	const numCircles = 274
+	test.equal(
+		holder.selectAll('circle').size(),
+		numCircles,
+		`should have ${numCircles} circles on initial load with gene='AKT1'`
+	)
+
+	// click set_id checkbox
+	const set_id_checkbox = holder.selectAll('#set_switch')
+	set_id_checkbox.node().click()
+	await sleep(4000)
+	const setCircles = 15
+	test.equal(
+		holder.selectAll('circle').size(),
+		setCircles,
+		`should have ${setCircles} circles after applying set_id filter`
+	)
+
+	// change gene
+	const btns = holder.node().querySelectorAll('button')
+	const alk_btn = btns[3]
+	alk_btn.click()
+	await sleep(4000)
+	const alkCircles = 37
+	test.equal(
+		holder.selectAll('circle').size(),
+		alkCircles,
+		`should have ${alkCircles} circles after changing gene to 'ALK'`
+	)
+
+	// apply filter
+	const filters = {
+		op: 'AND',
+		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
+	}
+	portal.setState({ filters })
 	await sleep(4000)
 	const filteredCircles = 51
 	test.equal(
