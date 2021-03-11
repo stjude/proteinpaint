@@ -663,10 +663,6 @@ async function do_query(q) {
 
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
-
-		// Determine if partstack, if yes determine which reads are currently being viewed
-		may_trimstacks(group, templates, q)
-
 		stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		finalize_templates(group, templates, q) // set .canvasheight
@@ -1277,7 +1273,7 @@ function stack_templates(group, q, templates) {
 		}
 		template.y = stackidx
 	}
-	//may_trimstacks(group, q)
+	may_trimstacks(group, templates, q)
 }
 
 function may_trimstacks(group, templates, q) {
