@@ -1,3 +1,5 @@
+const got = require('got')
+
 ////////////////////////// list of query strings
 
 /*
@@ -616,6 +618,75 @@ const variables_genecnv = {
 	}
 }
 
+/* not part of generic mds3 dataset
+to map a SSM id to a canonical ENST name
+*/
+const ssm2canonicalisoform = {
+	endpoint: GDC_HOST + '/ssms/',
+	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
+}
+
+// gdc-specific logic, for converting aliquot id to sample id
+// per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
+const aliquot2sample = {
+	query: `query barcode($filters: FiltersArgument) {
+	  repository {
+		cases {
+		  hits(first: 10, filters: $filters) {
+			edges {
+			  node {
+				samples {
+				  hits (first: 10, filters: $filters) {
+					edges {
+					  node {
+						submitter_id
+					  }
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		}
+	  }
+	}`,
+	variables: aliquotid => {
+		return {
+			filters: {
+				op: '=',
+				content: {
+					// one aliquot id will match with one sample id
+					field: 'samples.portions.analytes.aliquots.submitter_id',
+					value: aliquotid
+				}
+			}
+		}
+	},
+	get: async (aliquotid, headers) => {
+		const response = await got.post(GDC_HOST + '/v0/graphql', {
+			headers,
+			body: JSON.stringify({ query: aliquot2sample.query, variables: aliquot2sample.variables(aliquotid) })
+		})
+		const d = JSON.parse(response.body)
+		if (
+			!d.data ||
+			!d.data.repository ||
+			!d.data.repository.cases ||
+			!d.data.repository.cases.hits ||
+			!d.data.repository.cases.hits.edges
+		)
+			throw 'structure not data.repository.cases.hits.edges'
+		const acase = d.data.repository.cases.hits.edges[0]
+		if (!acase) throw 'data.repository.cases.hits.edges[0] missing'
+		if (!acase.node || !acase.node.samples || !acase.node.samples.hits || !acase.node.samples.hits.edges)
+			throw 'case not .node.samples.hits.edges'
+		const sample = acase.node.samples.hits.edges[0]
+		if (!sample) throw 'acase.node.samples.hits.edges[0] missing'
+		if (!sample.node || !sample.node.submitter_id) throw 'a sample is not node.submitter_id'
+		return sample.node.submitter_id
+	}
+}
+
 ///////////////////////////////// end of query strings ///////////////
 
 /*
@@ -751,6 +822,8 @@ module.exports = {
 		}
 	},
 
+	ssm2canonicalisoform,
+
 	/* hope this can be applied to all types of variants
 	but if it can only be applied to ssm, then it may be moved to queries.snvindel{}
 	*/
@@ -762,12 +835,11 @@ module.exports = {
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
-		sample_id_getter: d => {
+		sample_id_getter: async (d, headers) => {
+			// the getter is a dataset-specific, generic feature, so it should be defined here
+			// passing in headers is a gdc-specific logic for controlled data
 			if (d.observation && d.observation[0].sample && d.observation[0].sample.tumor_sample_barcode) {
-				return d.observation[0].sample.tumor_sample_barcode
-					.split('-')
-					.slice(0, 3)
-					.join('-')
+				return await aliquot2sample.get(d.observation[0].sample.tumor_sample_barcode, headers)
 			}
 			return ''
 		},

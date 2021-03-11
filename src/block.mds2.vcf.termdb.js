@@ -181,8 +181,11 @@ function make_phewas_ui(obj, div, tk) {
 			.style('opacity', 0.5)
 
 		filterInit({
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
+			vocab: {
+				route: 'termdb',
+				genome: obj.genome.name,
+				dslabel: obj.mds.label
+			},
 			holder: obj.dom.row_filter
 				.append('div')
 				.style('display', 'inline-block')
@@ -479,8 +482,11 @@ official track only
 	}
 	const opt = {
 		state: {
-			dslabel: tk.mds.label,
-			genome: block.genome.name,
+			vocab: {
+				route: 'termdb',
+				dslabel: tk.mds.label,
+				genome: block.genome.name
+			},
 			nav: {
 				header_mode: 'with_cohortHtmlSelect'
 			},
