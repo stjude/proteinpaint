@@ -61,6 +61,8 @@ APP=pp # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=git@github.com:stjude/proteinpaint.git
 WPSERVERMODE=production
+WPSERVERDEVTOOL=''
+WPCLIENTDEVTOOL=''
 
 if [[ "$ENV" == "pp-irt" || "$ENV" == "pp-int-test" ]]; then
 	DEPLOYER=genomeuser
@@ -70,6 +72,8 @@ if [[ "$ENV" == "pp-irt" || "$ENV" == "pp-int-test" ]]; then
 	HOSTNAME=pp-int-test.stjude.org
 	SUBDOMAIN=pp-int-test
 	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
@@ -79,6 +83,8 @@ elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" ||
 	HOSTNAME=ppr.stjude.org
 	SUBDOMAIN=ppr
 	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
@@ -87,16 +93,19 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=pp-test.stjude.org
 	SUBDOMAIN=pp-test
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "prp1" || "$ENV" == "pecan" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pp-prp1" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	USERatREMOTE=$DEPLOYER@$REMOTEHOST
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
+	WPSERVERDEVTOOL='source-map'
 
-elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
+elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" || "$ENV" == "prp1" ]]; then
 	# 
 	# requires these tunnel settings in ~/.ssh/config:
 	# 
@@ -109,6 +118,7 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" ]]; then
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
+	WPSERVERDEVTOOL='source-map'
 
 elif [[ "$ENV" == "pp-ict" ]]; then
 	DEPLOYER=genomeuser
@@ -118,6 +128,8 @@ elif [[ "$ENV" == "pp-ict" ]]; then
 	HOSTNAME=pp-int-test.stjude.org
 	SUBDOMAIN=pp-int-test
 	WPSERVERMODE=development
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
 	DEPLOYER=genomeuser
@@ -126,6 +138,8 @@ elif [[ "$ENV" == "pp-icp" || "$ENV" == "ppc" ]]; then
 	REMOTEDIR=/opt/app/pp
 	HOSTNAME=ppc.stjude.org
 	SUBDOMAIN=ppc
+	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL='source-map'
 
 else
 	echo "Environment='$ENV' is not supported"
@@ -167,8 +181,11 @@ else
 	# npm update
 
 	# create webpack bundle
-	echo "Packing bundle ..."
-	npx webpack --config=build/webpack.config.build.js --env.url=https://$HOSTNAME
+	echo "Packing frontend bundles ..."
+	npx webpack --config=build/webpack.config.client.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+
+	echo "Packing backend bundle ..."
+	npx webpack --config=build/webpack.config.server.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
 
 	# create dirs to put extracted files
 	rm -rf $APP
@@ -178,7 +195,6 @@ else
 	mkdir $APP/utils
 	mkdir $APP/modules
 
-	npx webpack --config=build/webpack.config.server.js --env.NODE_ENV=$WPSERVERMODE
 	mv server.js* $APP/
 	mv package.json $APP/
 	mv public/bin $APP/public/bin

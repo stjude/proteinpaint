@@ -16,6 +16,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
+	validate_ssm2canonicalisoform(ds)
 }
 
 export function client_copy(ds) {
@@ -149,7 +150,15 @@ function validate_variant2samples(ds) {
 	}
 	if (vs.url) {
 		if (!vs.url.base) throw '.variant2samples.url.base missing'
-		if (!vs.sample_id_key) throw '.sample_id_key is missing while .variant2samples.url is used'
+
+		if (vs.sample_id_key) {
+			// has a way to get sample name
+		} else if (vs.sample_id_getter) {
+			if (typeof vs.sample_id_getter != 'function') throw '.sample_id_getter is not function'
+			// has a way to get sample name
+		} else {
+			throw 'both .sample_id_key and .sample_id_getter are missing while .variant2samples.url is used'
+		}
 	}
 }
 
@@ -601,4 +610,10 @@ async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+function validate_ssm2canonicalisoform(ds) {
+	// gdc-specific logic
+	if (!ds.ssm2canonicalisoform) return
+	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
 }

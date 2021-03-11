@@ -16,6 +16,29 @@ validate_m2csq
 getheaders
 */
 
+export async function validate_ssm2canonicalisoform(api) {
+	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
+	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
+	api.get = async q => {
+		// q is client request object
+		if (!q.ssm_id) throw '.ssm_id missing'
+		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+			method: 'GET',
+			headers: getheaders(q)
+		})
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid json in response'
+		}
+		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
+		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
+		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
+		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
+	}
+}
+
 export function validate_variant2sample(a) {
 	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
@@ -327,6 +350,9 @@ export async function getSamples_gdcapi(q, ds) {
 			? api.fields_samples
 			: null
 	if (!fields) throw 'invalid get type of q.get'
+
+	const headers = getheaders(q) // will be reused below
+
 	const response = await got(
 		api.endpoint +
 			'?size=' +
@@ -335,7 +361,7 @@ export async function getSamples_gdcapi(q, ds) {
 			fields.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.filters(q))),
-		{ method: 'GET', headers: getheaders(q) }
+		{ method: 'GET', headers }
 	)
 	let re
 	try {
@@ -350,9 +376,23 @@ export async function getSamples_gdcapi(q, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
 		const sample = {}
+
+		// get printable sample id
 		if (ds.variant2samples.sample_id_key) {
 			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		} else if (ds.variant2samples.sample_id_getter) {
+			// must pass request header to getter in case requesting a controlled sample via a user token
+			// this is gdc-specific logic and should not impact generic mds3
+			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
 		}
+
+		/* gdc-specific logic
+		through tumor_sample_barcode, "TCGA-F4-6805" names are set as .sample_id for display
+		however case uuid is still needed to build the url link to a case
+		thus the hardcoded logic to provide the case_id as "case_uuid" to client side
+		*/
+		sample.case_uuid = s.case.case_id
+
 		for (const id of ds.variant2samples.termidlst) {
 			const t = ds.termdb.getTermById(id)
 			if (t) {

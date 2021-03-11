@@ -32,6 +32,7 @@ const fs = require('fs')
 const spawn = require('child_process').spawn
 const readline = require('readline')
 const path = require('path')
+const asyncPool = require('tiny-async-pool')
 
 ////////////////////////////////////////////
 // 0. get list of samples to be used to run bcftools
@@ -39,12 +40,18 @@ const sample2id = get_idmap()
 const samplenames = get_samples()
 const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools query
 
+////////////////////////////////////////////
+// 0.1 parse chunk index
+const chr2allchunks = parse_chunk_index()
+
 ;(async () => {
 	////////////////////////////////////////////
 	// 1. break snps by chr/chunk and write to temp files
-	const [chr2tmpsnpfile, pos2snp] = await parse_snpfile()
+	//const [chr2tmpsnpfile, pos2snp] = await parse_snpfile()
 	// k: chr.pos, v: {effallele, ref, weight}
 	// after bcftools, add following to v{} about this snp
+
+	const [mappedchunks, pos2snp] = await parse_snpfile_2chunk()
 
 	////////////////////////////////////////////
 	// 2. for each chunk, run bcftools and filter by maf/callrate
@@ -54,10 +61,7 @@ const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools 
 
 	{
 		const t1 = new Date()
-		for (const [chr, tmpsnpfile] of chr2tmpsnpfile) {
-			promises.push(run_bcftools(chr, tmpsnpfile, snparray, pos2snp))
-		}
-		await Promise.all(promises)
+		await asyncPool(10, mappedchunks, run_bcftools(snparray, pos2snp))
 		const t2 = new Date()
 		console.error('TIME: bcftools: ' + (t2 - t1))
 	}
@@ -105,8 +109,8 @@ const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools 
 	for (const s of samples) {
 		console.log(s.name + '\t' + s.effcount + '\t' + s.sum)
 	}
-	for (const t of chr2tmpsnpfile.values()) {
-		fs.unlink(t, () => {})
+	for (const t of mappedchunks) {
+		fs.unlink(t.tmpsnpfile, () => {})
 	}
 })()
 
@@ -165,6 +169,59 @@ function get_samples() {
 	}
 	return lst
 }
+
+function parse_snpfile_2chunk() {
+	/*
+1 chr
+2 1-pos
+3 eff ale
+4 other ale
+5 weight
+*/
+	const pos2snp = new Map() // k: "chr:pos", v: {effallele, ref, weight}
+	return new Promise((resolve, reject) => {
+		const rl = readline.createInterface({ input: fs.createReadStream(snpfile) })
+		rl.on('line', line => {
+			const l = line.split('\t')
+			const chr = l[0],
+				pos = l[1], // 1-based, for use in bcftools
+				effallele = l[2],
+				ref = l[3],
+				weight = Number(l[4])
+			if (Number.isNaN(weight)) throw 'invalid weight for a snp'
+			pos2snp.set(chr + '.' + pos, { effallele, ref, weight })
+
+			if (!chr2allchunks.has(chr)) throw 'chr ' + chr + ' missing from chunk index'
+			for (const chunk of chr2allchunks.get(chr)) {
+				if (chunk.stop >= pos) {
+					chunk.snps.push(chr + '\t' + pos)
+					return
+				}
+			}
+			throw 'no chunk for a snp: ' + chr + ':' + pos
+		})
+		rl.on('close', () => {
+			const mappedchunks = []
+			for (const [chr, chunks] of chr2allchunks) {
+				for (const chunk of chunks) {
+					if (chunk.snps.length == 0) continue
+					const fn = Math.random().toString()
+					fs.writeFileSync(fn, chunk.snps.join('\n'))
+					mappedchunks.push({
+						chr,
+						chunkvcffile: path.join(
+							vcfdir,
+							'chr' + chr + '/chunk/vcfchunk.chr' + chr + '.' + chunk.idx + '.final.vcf.gz'
+						),
+						tmpsnpfile: fn
+					})
+				}
+			}
+			resolve([mappedchunks, pos2snp])
+		})
+	})
+}
+
 function parse_snpfile() {
 	/*
 1	chr_hg38	chr1
@@ -206,11 +263,11 @@ function parse_snpfile() {
 			pos2snp.set(chr + '.' + pos, { effallele, ref, weight })
 		})
 		rl.on('close', () => {
-			const chr2tmpsnpfile = new Map() // k: chr, v: tmp file name
+			const chr2tmpsnpfile = []
 			for (const [chr, lst] of chr2snp) {
 				const fn = Math.random().toString()
 				fs.writeFileSync(fn, lst.join('\n'))
-				chr2tmpsnpfile.set(chr, fn)
+				chr2tmpsnpfile.push({ chr, tmpsnpfile: fn })
 			}
 			resolve([chr2tmpsnpfile, pos2snp])
 		})
@@ -236,84 +293,85 @@ function get_hwe(lines) {
 	})
 }
 
-function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
-	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.vcf.gz')
-	try {
-		fs.statSync(vcffile)
-	} catch (e) {
-		// file missing
-		return
+// function generator for async pool, take one chr object and return a promise
+function run_bcftools(snparray, pos2snp) {
+	return ({ chr, chunkvcffile, tmpsnpfile }) => {
+		try {
+			fs.statSync(chunkvcffile)
+		} catch (e) {
+			// file missing
+			return
+		}
+
+		// test step to compare with cindy's PGS000015_chr10.weights files
+		//const compsnps = load_cindy_weight(chr)
+
+		return new Promise((resolve, reject) => {
+			const sp = spawn('bcftools', [
+				'query',
+				'-R',
+				tmpsnpfile,
+				'-f',
+				'%CHROM %POS %REF %ALT [%GT ]\\n',
+				'-s',
+				sampleids.join(','),
+				chunkvcffile
+			])
+			const rl = readline.createInterface({ input: sp.stdout })
+			rl.on('line', async line => {
+				const l = line.trim().split(' ')
+				// chr, pos, ref, alt, GT...
+				const snp = pos2snp.get(l[0] + '.' + l[1])
+				if (!snp) {
+					console.error('no match for a line: ' + l.slice(0, 4).join(' '))
+					return
+				}
+
+				// get allele idx for effect allele based on vcf ref/alt
+				const [EAidx, otherallele] = get_effectaleidx(snp.effallele, l[2], l[3])
+				if (EAidx == -1 || otherallele != snp.ref) {
+					// pair of alleles from vcf line does not match snp
+					console.error(`at ${l[0]}:${l[1]} expecting eff:${snp.effallele} ref:${snp.ref}, got ${l[2]}>${l[3]}`)
+					return
+				}
+
+				//const cindysnp = compsnps.get('chr' + l[0] + '.' + l[1])
+				//if (cindysnp) cindysnp.count++
+
+				// now EAidx is string '0', '1' etc
+
+				const [missingcallrate, effectallelefrequency, href, het, halt] = get_effalefreq(l, EAidx)
+				if (missingcallrate >= 0.1) {
+					console.error('skip missing callrate', l[0] + ':' + l[1])
+					//if (cindysnp) cindysnp.callrate = true
+					return
+				}
+				if (effectallelefrequency <= 0.01) {
+					console.error('skip low freq', l[0] + ':' + l[1])
+					//if (cindysnp) cindysnp.eaf = true
+					return
+				}
+				//if (cindysnp) cindysnp.inuse = true
+
+				snp.EAidx = EAidx
+				snp.effectallelefrequency = effectallelefrequency
+				snp.hweline = href + '\t' + het + '\t' + halt
+				snp.gtlst = l.slice(4)
+				snparray.push(snp)
+			})
+			const err = []
+			sp.stderr.on('data', d => err.push(d))
+			sp.on('close', () => {
+				fs.unlink(tmpsnpfile, () => {})
+
+				//write_cindysnp(chr, compsnps)
+
+				const e = err.join('')
+				if (e) reject(e)
+				resolve()
+			})
+		})
 	}
-
-	// test step to compare with cindy's PGS000015_chr10.weights files
-	const compsnps = load_cindy_weight(chr)
-
-	return new Promise((resolve, reject) => {
-		const sp = spawn('bcftools', [
-			'query',
-			'-R',
-			tmpsnpfile,
-			'-f',
-			'%CHROM %POS %REF %ALT [%GT ]\\n',
-			'-s',
-			sampleids.join(','),
-			//path.join(vcfdir,'vcf.gz') // xxxxxxxxxxxx
-			vcffile
-		])
-		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', async line => {
-			const l = line.trim().split(' ')
-			// chr, pos, ref, alt, GT...
-			const snp = pos2snp.get(l[0] + '.' + l[1])
-			if (!snp) {
-				console.error('no match for a line: ' + l.slice(0, 4).join(' '))
-				return
-			}
-
-			// get allele idx for effect allele based on vcf ref/alt
-			const [EAidx, otherallele] = get_effectaleidx(snp.effallele, l[2], l[3])
-			if (EAidx == -1 || otherallele != snp.ref) {
-				// pair of alleles from vcf line does not match snp
-				console.error(`at ${l[0]}:${l[1]} expecting eff:${snp.effallele} ref:${snp.ref}, got ${l[2]}>${l[3]}`)
-				return
-			}
-
-			const cindysnp = compsnps.get('chr' + l[0] + '.' + l[1])
-			if (cindysnp) cindysnp.count++
-
-			// now EAidx is string '0', '1' etc
-
-			const [missingcallrate, effectallelefrequency, href, het, halt] = get_effalefreq(l, EAidx)
-			if (missingcallrate >= 0.1) {
-				console.error('skip missing callrate', l[0] + ':' + l[1])
-				if (cindysnp) cindysnp.callrate = true
-				return
-			}
-			if (effectallelefrequency <= 0.01) {
-				console.error('skip low freq', l[0] + ':' + l[1])
-				if (cindysnp) cindysnp.eaf = true
-				return
-			}
-			if (cindysnp) cindysnp.inuse = true
-
-			snp.EAidx = EAidx
-			snp.effectallelefrequency = effectallelefrequency
-			snp.hweline = href + '\t' + het + '\t' + halt
-			snp.gtlst = l.slice(4)
-			snparray.push(snp)
-		})
-		const err = []
-		sp.stderr.on('data', d => err.push(d))
-		sp.on('close', () => {
-			fs.unlink(tmpsnpfile, () => {})
-
-			write_cindysnp(chr, compsnps)
-
-			const e = err.join('')
-			if (e) reject(e)
-			resolve()
-		})
-	})
 }
 
 function load_cindy_weight(chr) {
@@ -358,4 +416,49 @@ function write_cindysnp(chr, snps) {
 			(eaf.length ? ' eaf=' + eaf.join(',') : '') +
 			(notused.length ? ' notused=' + notused.join(',') : '')
 	)
+}
+
+function parse_chunk_index() {
+	const chrlst = [
+		'1',
+		'2',
+		'3',
+		'4',
+		'5',
+		'6',
+		'7',
+		'8',
+		'9',
+		'10',
+		'11',
+		'12',
+		'13',
+		'14',
+		'15',
+		'16',
+		'17',
+		'18',
+		'19',
+		'20',
+		'21',
+		'22'
+	]
+	const chr2allchunks = new Map()
+	// k: chr
+	// v: [ {start,stop,idx, snps} ]
+	for (const chr of chrlst) {
+		chr2allchunks.set(chr, [])
+		let idx = 1
+		for (const line of fs
+			.readFileSync(path.join(vcfdir, 'chr' + chr, 'chunk', 'chr' + chr + '_indexes.txt'), { encoding: 'utf8' })
+			.trim()
+			.split('\n')) {
+			const l = line.split('\t')
+			const start = Number(l[1])
+			const stop = Number(l[2])
+			chr2allchunks.get(chr).push({ start, stop, idx, snps: [] })
+			idx++
+		}
+	}
+	return chr2allchunks
 }
