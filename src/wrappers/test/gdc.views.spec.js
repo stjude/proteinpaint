@@ -90,8 +90,8 @@ tape('lolliplot using URL', async test => {
 })
 
 tape('lolliplot using props', async test => {
-	test.timeoutAfter(30000)
-	test.plan(4)
+	test.timeoutAfter(35000)
+	test.plan(5)
 	const holder = select('body').append('div')
 	const portal = ReactDOM.render(
 		<AppProps basepath={`http://localhost:${serverconfig.port}`} geneId="ENSG00000142208" />,
@@ -141,8 +141,39 @@ tape('lolliplot using props', async test => {
 		filteredCircles,
 		`should have ${filteredCircles} circles after applying filter`
 	)
-	// currently unable to test using a token via the submit button,
-	// since it will reveal user specific token here, may
-	// need a testing-only generic token if possible
+
+	const disc = holder
+		.selectAll('.sja_aa_disckick')
+		.filter(d => d.occurrence == 1)
+		.node()
+	disc.dispatchEvent(new Event('click'))
+	await sleep(2000)
+	const mname = disc.__data__.mlst && disc.__data__.mlst[0].mname
+	const tdspans = [...document.querySelectorAll('.sja_menu_div table tr td span')].filter(
+		elem => mname && elem.innerHTML == mname
+	)
+	const menudiv = tdspans.length ? tdspans[0].parentNode.parentNode.parentNode.parentNode : null
+	test.equal(
+		menudiv &&
+			[...menudiv.querySelectorAll('table a')].filter(elem =>
+				elem.href.startsWith('https://portal.gdc.cancer.gov/cases/')
+			).length,
+		1,
+		`should display a link to aliquot data when the corresponding disc and table entry is clicked`
+	)
+	test.end()
+})
+
+tape('lolliplot with ssm_id', async test => {
+	test.timeoutAfter(30000)
+	test.plan(1)
+	const holder = select('body').append('div')
+	const portal = ReactDOM.render(
+		<AppProps basepath={`http://localhost:${serverconfig.port}`} ssm_id="4fb37566-16d1-5697-9732-27c359828bc7" />,
+		holder.node()
+	)
+	await sleep(4000)
+	test.equal(holder.selectAll('.sja_aa_discg rect').size(), 1, `should highlight the matching circle for props.ssm_id'`)
+
 	test.end()
 })

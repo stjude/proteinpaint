@@ -39,13 +39,13 @@ export class AppProps extends React.Component {
 				? set_filter.content.value[0].split(':').pop()
 				: 'J4BW1HYBmqgBSxEihjaC'
 		let gene = genes.find(g => g.ensembl_id == this.props.geneId)
-		if (!gene) gene = genes[0]
+		if (!gene) gene = this.props.ssm_id ? null : genes[0]
 
 		this.state = {
 			message,
 			basepath: 'basepath' in this.props ? this.props.basepath : '/auth/api/custom/proteinpaint',
-			gene: gene.name,
-			geneId: gene.ensembl_id,
+			gene: gene && gene.name,
+			geneId: gene && gene.ensembl_id,
 			set_id,
 			set_id_flag: false,
 			set_id_editing: false,
@@ -53,7 +53,8 @@ export class AppProps extends React.Component {
 			token_editing: true,
 			filters: this.filters,
 			lastUnrelatedUpdate: +new Date(),
-			token: null
+			token: null,
+			ssm_id: this.props.ssm_id
 		}
 		this.setidRef = React.createRef()
 		this.tokenRef = React.createRef()
@@ -153,6 +154,7 @@ export class AppProps extends React.Component {
 						basepath={this.state.basepath}
 						geneId={this.state.geneId}
 						filters={this.state.filters}
+						ssm_id={this.state.ssm_id}
 					/>
 				</div>
 				<div>

@@ -42,5 +42,12 @@ export function getLolliplotTrack() {
 		arg.tracks[0].filter0 = params.filters
 	}
 
+	if (this.props.ssm_id) {
+		arg.mds3_ssm2canonicalisoform = {
+			dslabel: 'GDC',
+			ssm_id: this.props.ssm_id
+		}
+	}
+
 	return arg
 }
