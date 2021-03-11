@@ -120,13 +120,11 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
-	const kmer_scores = []
 	for (let i = 0; i < rust_output.category.length; i++) {
 		if (rust_output.category[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = rust_output.groupID[i]
-				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
-				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -137,8 +135,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		} else if (rust_output.category[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = rust_output.groupID[i]
-				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
-				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -149,8 +146,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		} else if (rust_output.category[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = rust_output.groupID[i]
-				//templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
-				kmer_scores.push(rust_output.kmer_diff_scores[index].toFixed(4).toString())
+				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -165,7 +161,6 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
 
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
-	q.regions[0].kmer_scores = kmer_scores
 
 	const groups = []
 	for (const k in type2group) {
