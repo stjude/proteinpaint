@@ -16,6 +16,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_sampleSummaries(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
+	validate_ssm2canonicalisoform(ds)
 }
 
 export function client_copy(ds) {
@@ -609,4 +610,10 @@ async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+function validate_ssm2canonicalisoform(ds) {
+	// gdc-specific logic
+	if (!ds.ssm2canonicalisoform) return
+	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
 }

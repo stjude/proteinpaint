@@ -22,7 +22,7 @@ export function make_lasso() {
 		// add an origin node
 		const origin_node = g.append('circle').attr('class', 'origin')
 
-		let tpath,  // The transformed lasso path for rendering
+		let tpath, // The transformed lasso path for rendering
 			origin, // The lasso origin for calculations
 			torigin, // The transformed lasso origin for rendering
 			drawnCoords // Store off coordinates drawn

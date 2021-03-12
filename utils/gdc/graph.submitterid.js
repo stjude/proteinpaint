@@ -31,13 +31,14 @@ const variables = {
 	filters: {
 		op: '=',
 		content: {
-			/*
-			//aliquot submitter id
+			// one aliquot id will match with one sample id
 			field: 'samples.portions.analytes.aliquots.submitter_id',
-			value: arg.id || 'TCGA-F4-6805-01A-11D-1835-10'
-			*/
+			value: arg.id || ['TCGA-F4-6805-01A-11D-1835-10', 'MMRF_2428_1_BM_CD138pos_T1_KHS5U_L11231']
+			/*
+			// one case id can match with multiple samples
 			field: 'cases.case_id',
 			value: arg.id || 'e76258b7-e13a-4b05-855b-d792701ffba1'
+			*/
 		}
 	}
 }

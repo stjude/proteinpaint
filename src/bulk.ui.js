@@ -591,6 +591,16 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+				if (mset.snvindel_url) {
+					tasks.push(
+						client.dofetch2('urltextfile', { url: mset.snvindel_url }).then(data => {
+							if (data.error) throw { message: 'cannot get snvindel file from url' }
+							const e = parse_snvindel(data.text, flag)
+							if (e) throw { message: 'error with snvindel file: ' + e }
+						})
+					)
+				}
+
 				if (mset.cnv) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',

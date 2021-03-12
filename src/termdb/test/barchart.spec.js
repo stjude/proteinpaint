@@ -871,7 +871,7 @@ tape('single chart, genotype overlay', function(test) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
+		test.equal(numOverlays, 67, 'should have a total of 67 overlays')
 		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
