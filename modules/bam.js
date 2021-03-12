@@ -653,7 +653,7 @@ async function do_query(q) {
 		})
 	}
 
-	const templates_total = []
+	let templates_total = []
 	for (const group of q.groups) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
@@ -698,13 +698,12 @@ async function do_query(q) {
 		if (q.asPaired) gr.count.t = templates.length // group.templates
 		gr.src = canvas.toDataURL()
 		result.groups.push(gr)
-		templates_total.concat(templates)
+		templates_total = [...templates_total, ...templates]
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
-
 	if (!q.partstack) {
 		// not in partstack mode, will do pileup plot
 		if (!q.pileupheight) throw 'pileupheight missing'
