@@ -34,6 +34,11 @@ export function getPpReact(getTrack) {
 				Object.assign({ holder: this.refs.ppHolderRef, noheader: true, nobox: true }, JSON.parse(JSON.stringify(data)))
 			)
 		}
+		/* 
+			TODO: delete getUrlParams() once all 
+		  required input are passed via props 
+		  by the gdc portal app
+		*/
 		getUrlParams() {
 			const loc = this.window.location
 			const params = {}

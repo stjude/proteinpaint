@@ -1,5 +1,3 @@
-// JUMP __MDS __util __rank __smat
-
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
@@ -31,12 +29,11 @@ const express = require('express'),
 	fs = require('fs'),
 	path = require('path'),
 	got = require('got'),
-	async = require('async'),
+	async = require('async'), // where this is used?
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
-	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	stratinput = require('./src/tree').stratinput,
 	bodyParser = require('body-parser'),
@@ -75,7 +72,8 @@ const express = require('express'),
 	singlecell = require('./modules/singlecell'),
 	fimo = require('./modules/fimo'),
 	draw_partition = require('./modules/partitionmatrix').draw_partition,
-	do_hicstat = require('./modules/hicstat').do_hicstat
+	do_hicstat = require('./modules/hicstat').do_hicstat,
+	phewas = require('./modules/termdb.phewas')
 
 /*
 valuable globals
@@ -244,10 +242,18 @@ pp_init()
 			console.log('\nValidation succeeded. You may now run the server.\n')
 			return
 		}
-		/*
-		if(process.argv[2] == 'phewas-precompute') {
+
+		if (process.argv[2] == 'phewas-precompute') {
+			// argv[3] is genome, argv[4] is dslabel
+			const gn = process.argv[3],
+				dslabel = process.argv[4]
+			const genome = genomes[gn]
+			if (!genome) throw 'invalid genome name: ' + gn
+			const ds = genome.datasets[dslabel]
+			if (!ds) throw 'invalid dataset: ' + dslabel
+			phewas.do_precompute(ds)
+			return
 		}
-		*/
 
 		const port = serverconfig.port || 3000
 		if (serverconfig.ssl) {
@@ -2496,35 +2502,16 @@ async function handle_mdsgenecount(req, res) {
 	ORDER BY count DESC
 	LIMIT ${n_gene}`
 		const genes = ds.gene2mutcount.db.prepare(query).all()
+		const validgenes = []
 		for (const gene of genes) {
-			const isoforms = genome.genedb.getjsonbyname.all(gene.gene) // {isdefault, genemodel}
-			const defaultisoform = isoforms.find(i => i.isdefault)
-			if (defaultisoform) {
-				const j = JSON.parse(defaultisoform.genemodel)
-				gene.chr = j.chr
-				gene.start = j.start
-				gene.stop = j.stop
-				continue
-			}
-			// no default isoform
-			// just try to use coordinate of the first isoform that's on major chr
-			const lst = isoforms.map(i => JSON.parse(i.genemodel))
-			const isoform = lst.find(i => {
-				const c = genome.chrlookup[i.chr.toUpperCase()]
-				if (c && c.major) return i
-			})
-			if (isoform) {
-				gene.chr = isoform.chr
-				gene.start = isoform.start
-				gene.stop = isoform.stop
-				continue
-			}
-			// no isoform on major chr, just use first isoform
-			gene.chr = lst[0].chr
-			gene.start = lst[0].start
-			gene.stop = lst[0].stop
+			const re = genome.genedb.getCoordByGene.get(gene.gene)
+			if (!re) continue
+			re.gene = gene.gene
+			re.count = gene.count
+			delete re.name
+			validgenes.push(re)
 		}
-		res.send({ genes })
+		res.send({ genes: validgenes })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -2608,20 +2595,27 @@ async function handle_mdssvcnv(req, res) {
 		}
 	} else {
 		// is native track
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check(req.query)
-		if (err) return res.send({ error: err })
-		gn = gn1
-		ds = ds1
-		dsquery = dsquery1
+
+		gn = genomes[req.query.genome]
+		if (!gn) return res.send({ error: 'invalid genome' })
+		if (!gn.datasets) return res.send({ error: 'genome is not equipped with datasets' })
+		ds = gn.datasets[req.query.dslabel]
+		if (!ds) return res.send({ error: 'invalid dslabel' })
+
+		//////////// exits that only requires ds but not dsquery
+		if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds)
+		if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, ds)
+		if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, ds)
+		if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, ds)
+
+		if (!ds.queries) return res.send({ error: 'dataset is not equipped with queries' })
+		dsquery = ds.queries[req.query.querykey]
+		if (!dsquery) return res.send({ error: 'invalid querykey' })
 	}
 
-	///////////////// exits
-	if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery)
-	if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery)
-	if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery)
+	///////////////// exits that require dsquery (svcnv)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
-	if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery)
 
 	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
@@ -2795,7 +2789,7 @@ async function handle_mdssvcnv(req, res) {
 	res.send(result)
 }
 
-async function mdssvcnv_exit_assaymap(req, res, gn, ds, dsquery) {
+async function mdssvcnv_exit_assaymap(req, res, ds) {
 	try {
 		if (!ds.assayAvailability) throw 'assay availability not enabled for this dataset'
 		const skip_termids = new Set(req.query.skip_termids || [])
@@ -5628,7 +5622,7 @@ function handle_mdsexpressionrank(req, res) {
 		})
 }
 
-function mdssvcnv_exit_gettrack4singlesample(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_gettrack4singlesample(req, res, ds) {
 	/*
     getting track for single sample from server config
     only for official dataset
@@ -5658,7 +5652,7 @@ function mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery) {
 	res.send(vcfq.singlesamples ? { yes: 1 } : { no: 1 })
 }
 
-function mdssvcnv_exit_getsample4disco(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_getsample4disco(req, res, gn, ds) {
 	/*
     a text file for a single sample
     only for official dataset
@@ -5813,7 +5807,7 @@ function mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values) {
 	return sample2rank
 }
 
-function mdssvcnv_exit_findsamplename(req, res, gn, ds, dsquery) {
+function mdssvcnv_exit_findsamplename(req, res, ds) {
 	/*
     find sample names by matching with input string
     only for official dataset
@@ -9682,6 +9676,10 @@ async function pp_init() {
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
 			if (g.genedb.hasalias) {
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
+			}
+			if (g.genedb.gene2coord) {
+				// this table will become available to all genomes
+				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
 		}
 		if (g.genedb.gene2canonicalisoform) {

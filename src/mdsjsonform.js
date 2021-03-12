@@ -38,7 +38,6 @@ export async function init_mdsjsonform(par) {
 	make_assaytracks(wrapper_div, doms)
 	window.doms = doms
 	make_buttons(form_div, doms)
-	console.log(doms)
 }
 
 function make_header(holder) {

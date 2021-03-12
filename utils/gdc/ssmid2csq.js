@@ -2,6 +2,7 @@ const got = require('got')
 
 const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 const fields = [
+	'consequence.transcript.is_canonical',
 	'consequence.transcript.transcript_id',
 	'consequence.transcript.aa_change',
 	'consequence.transcript.consequence_type'
@@ -13,5 +14,5 @@ const fields = [
 		{ method: 'GET', headers }
 	)
 	const re = JSON.parse(response.body)
-	console.log(JSON.stringify(re))
+	console.log(JSON.stringify(re, null, 2))
 })()

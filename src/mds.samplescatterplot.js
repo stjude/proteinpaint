@@ -77,15 +77,6 @@ init_plot()
 assign_color4dots
 click_dot
 launch_singlesample
-
-
-FIXME
-obj.disco{ genome } is a quick fix and should not be used when hg38 pediatric is ready,
-so that disco will not use a different genome as obj
-
-also to rename obj.disco to obj.mds to indicate that the plot is coupled to a mds dataset
-allow showing disco by clicking dot if mutpersample is enabled on that mds daataset
-and allow lasso to samplematrix
 */
 
 const radius = 3
@@ -231,6 +222,14 @@ async function get_data(obj) {
 	}
 	///////////////////// client data /////////////////////
 	const ad = obj.analysisdata
+	if (obj.disco || ad.disco) {
+		// some old external mdsjson files have analysisdata.disco
+		// convert obj.disco to obj.mds for backward compatibity
+		const disco = obj.disco || ad.disco
+		obj.mds = obj.genome.datasets[disco.dslabel]
+	} else if (obj.mds) {
+		obj.mds = obj.genome.datasets[obj.mds.dslabel]
+	}
 	if (!ad) throw 'both .analysisdata{} and .dslabel are missing'
 	if (ad.samples) {
 		// list
@@ -834,7 +833,7 @@ function makeConfigPanel(obj) {
 
 	const lasso_btn = obj.scattersvg_buttons
 		.append('div')
-		.style('display', obj.enable_lasso ? 'block' : 'none')
+		.style('display', 'block')
 		.style('padding', '2px 5px')
 		.style('margin-top', '5px')
 		.style('border', '1px solid #999')
@@ -1253,7 +1252,7 @@ function click_dot(dot, obj) {
 		click_dot_mdsview(dot, obj)
 		return
 	}
-	if (obj.disco) {
+	if (obj.mds) {
 		click_dot_disco(dot, obj)
 		return
 	}
@@ -1266,8 +1265,8 @@ async function click_dot_disco(dot, obj) {
 		const sjcharts = await getsjcharts()
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.disco.dslabel,
-			querykey: obj.disco.querykey,
+			dslabel: obj.mds.label,
+			querykey: obj.mds.querykey,
 			getsample4disco: dot.sample
 		}
 		const data = await client.dofetch('/mdssvcnv', arg)
@@ -1287,7 +1286,7 @@ async function click_dot_disco(dot, obj) {
 				geneLabelClick: {
 					type: 'genomepaint',
 					genome: obj.genome.name,
-					dslabel: obj.disco.dslabel,
+					dslabel: obj.mds.label,
 					sample: dot.sample
 				}
 			}
@@ -1399,13 +1398,29 @@ function lasso_select(obj, dots) {
 	function show_lasso_menu(samples) {
 		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
 
+		if (obj.mds && obj.mds.gene2mutcount) {
+			obj.menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Recurrently mutated genes')
+				.on('click', async () => {
+					obj.menu.hide()
+					await click_mutated_genes(obj, samples)
+				})
+		}
+
 		obj.menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text('Recurrently mutated genes')
+			.text('List samples')
 			.on('click', async () => {
 				obj.menu.hide()
-				await click_mutated_genes(obj, samples)
+				const arg = {
+					samples,
+					sample_attributes: obj.sample_attributes,
+					sample2dot: obj.sample2dot
+				}
+				printData(arg)
 			})
 
 		obj.menu.d
@@ -1470,6 +1485,29 @@ function lasso_select(obj, dots) {
 	}
 }
 
+function printData(obj) {
+	const { samples, sample_attributes, sample2dot } = obj
+
+	// create header labels
+	const label_keys = Object.keys(sample_attributes)
+	let labels = label_keys.map(k => (sample_attributes[k].label ? sample_attributes[k].label : k))
+	labels.unshift('Sample')
+	const labels_str = labels.join('\t')
+	const lst = [labels_str]
+
+	// create rows for each sample
+	for (const s of samples) {
+		if (sample2dot.get(s).s) {
+			let sample_row = []
+			sample_row.push(s)
+			for (const k of label_keys) sample_row.push(sample2dot.get(s).s[k])
+			lst.push(sample_row.join('\t'))
+		}
+	}
+	// create container with raw data
+	client.export_data('List of selected samples', [{ text: lst.join('\n') }])
+}
+
 function click_mutated_genes(obj, samples) {
 	obj.pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
 	obj.pane.header.text('Recurrently Mutated Genes')
@@ -1487,9 +1525,8 @@ function init_mutation_type_control(obj, samples) {
 		nGenes = 15
 
 	const holder = obj.pane.matrix_criteria_div
-	const ds = obj.genome.datasets[obj.disco.dslabel]
-	if (ds.mutCountType) {
-		mutTypes = ds.mutCountType
+	if (obj.mds.mutCountType) {
+		mutTypes = obj.mds.mutCountType
 
 		const non_cnv_types = mutTypes.filter(m => !m.db_col.includes('cnv'))
 		const cnv_types = mutTypes.filter(m => m.db_col.includes('cnv'))
@@ -1571,6 +1608,8 @@ function init_mutation_type_control(obj, samples) {
 			.attr('type', 'checkbox')
 			.attr('name', 'noncnv')
 			.attr('value', 'cnv')
+			.style('margin', '3px')
+			.style('margin-left', '4px')
 			.property('checked', default_cnv ? true : false)
 			.on('change', () => {
 				if (cnv_checkbox.node().checked) {
@@ -1691,7 +1730,7 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 	try {
 		const arg = {
 			genome: obj.genome.name,
-			dslabel: obj.disco.dslabel,
+			dslabel: obj.mds.label,
 			samples,
 			selectedMutTypes,
 			nGenes
@@ -1700,7 +1739,7 @@ async function get_mutation_count_data(obj, samples, selectedMutTypes, nGenes) {
 		if (data.error) throw data.error
 		if (!data.genes) throw '.genes missing'
 		if (!data.genes.length) {
-			obj.pane.wait.html('Not enought data to retrive any genes with mutations. </br> HINT: Select more samples.')
+			obj.pane.wait.html('No gene retrived with mutations.')
 			obj.pane.matrix_criteria_div.style('display', 'none')
 			return
 		}
@@ -1727,7 +1766,7 @@ function make_sample_matrix(args) {
 	}
 	const arg = {
 		genome: obj.genome,
-		dslabel: obj.disco.dslabel,
+		dslabel: obj.mds.label,
 		features: genes,
 		features_on_rows: obj.features_on_rows,
 		ismutation_allsymbolic: true,

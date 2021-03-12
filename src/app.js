@@ -748,22 +748,11 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		return
 	}
 
-	if(arg.p) {
-		// backward-compatible with old parameter name
-		arg.gene = arg.p
-		delete arg.p
-	}
-	if(arg.gene2canonicalisoform) {
-		if(!arg.genome) throw '.genome missing for gene2canonicalisoform'
-		const data = await client.dofetch2('gene2canonicalisoform?genome='+arg.genome+'&gene='+arg.gene2canonicalisoform)
-		if(data.error) throw data.error
-		if(!data.isoform) throw 'no canonical isoform for given gene accession'
-		arg.gene = data.isoform
-	}
-	if(arg.gene) {
-		launchgeneview(arg, app)
+	if(await may_launchGeneView(arg, app)) {
+		// gene view launched
 		return
 	}
+
 
 	if(arg.fusioneditor) {
 		launchfusioneditor(arg, app)
@@ -812,6 +801,52 @@ async function parseembedthenurl(arg, app, selectgenome) {
 }
 
 
+async function may_launchGeneView(arg,app) {
+	// arg.gene is required to launch gene view
+	// arg.gene may come from different places
+	if(arg.p) {
+		// backward-compatible with old parameter name
+		arg.gene = arg.p
+		delete arg.p
+	}
+	if(arg.gene2canonicalisoform) {
+		if(!arg.genome) throw '.genome missing for gene2canonicalisoform'
+		const data = await client.dofetch2('gene2canonicalisoform?genome='+arg.genome+'&gene='+arg.gene2canonicalisoform)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no canonical isoform for given gene accession'
+		arg.gene = data.isoform
+	}
+	if(arg.mds3_ssm2canonicalisoform) {
+		/* logic specific for mds3 gdc dataset
+		given a ssm id, retrieve the canonical isoform and launch gene view with it
+		*/
+		if(!arg.genome) throw '.genome missing'
+		if(!arg.mds3_ssm2canonicalisoform.ssm_id) throw '.ssm_id missing from mds3_ssm2canonicalisoform'
+		if(!arg.mds3_ssm2canonicalisoform.dslabel) throw '.dslabel missing from mds3_ssm2canonicalisoform'
+		const data=await client.dofetch2('mds3?'
+			+'genome='+arg.genome
+			+'&dslabel='+arg.mds3_ssm2canonicalisoform.dslabel
+			+'&ssm2canonicalisoform=1'
+			+'&ssm_id='+arg.mds3_ssm2canonicalisoform.ssm_id
+		)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no isoform found for given ssm_id'
+		arg.gene = data.isoform
+		// will also highlight this ssm
+		if(arg.tracks) {
+			const tk = arg.tracks.find(i=>i.dslabel==arg.mds3_ssm2canonicalisoform.dslabel)
+			if(tk) {
+				tk.hlssmid = arg.mds3_ssm2canonicalisoform.ssm_id
+			}
+		}
+	}
+	if(arg.gene) {
+		launchgeneview(arg, app)
+		return true
+	}
+	return false
+}
+
 
 
 function launchmdssamplescatterplot(arg, app) {
@@ -840,13 +875,6 @@ function launchmdssamplescatterplot(arg, app) {
 		return
 	}
 
-	// XXX quick fix! DELETE following 5 lines when hg38 pediatric mds is ready
-	// so that disco will not use a separate genome as arg.genome
-	if(arg.disco && arg.disco.genome) {
-		const g = app.genomes[arg.disco.genome]
-		if(!g) app.error0('invalid genome for disco.genome')
-		arg.disco.genome = g
-	}
 	import('./mds.samplescatterplot').then(_=>{
 		_.init(arg, app.holder0, app.debugmode)
 	})

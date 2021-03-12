@@ -13,7 +13,11 @@ const fields = [
 	'case.observation.read_depth.t_ref_count',
 	'case.observation.read_depth.t_depth',
 	'case.observation.read_depth.n_depth',
-	'case.observation.variant_calling.variant_caller'
+	'case.observation.variant_calling.variant_caller',
+	'case.observation.validation.tumor_validation_allele1',
+	'case.observation.validation.tumor_validation_allele2',
+	'case.observation.validation.validation_method',
+	'case.observation.sample.tumor_sample_barcode'
 ]
 
 const filters = {
@@ -56,7 +60,9 @@ const filters = {
 					d.t_depth,
 					'normal',
 					d.n_depth,
-					observe.variant_calling.variant_caller
+					observe.variant_calling.variant_caller,
+					observe.validation,
+					observe.sample.tumor_sample_barcode
 				)
 			}
 		}

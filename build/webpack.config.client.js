@@ -1,59 +1,74 @@
-const webpack = require('webpack')
+const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
 
-module.exports = {
-	target: 'web',
-	mode: 'production', // default
-	entry: path.join(__dirname, '/../src/app.js'),
-	output: {
-		path: path.join(__dirname, '/../public/bin'),
-		filename: 'proteinpaint.js',
-		publicPath: '/bin/',
-		jsonpFunction: 'ppJsonp',
-		// the library name exposed by this bundle
-		library: 'runproteinpaint',
-		// the exported value from the entry point file
-		// here the runproteinpaint() function will be used as exported by ./src/app.js
-		libraryExport: 'runproteinpaint',
-		// the target context to which the library is 'attached' or assigned
-		// e.g., window.runproteinpaint
-		libraryTarget: 'window'
-	},
-	externals: {
-		react: 'React',
-		'react-dom': 'ReactDOM'
-	},
-	module: {
-		rules: [
-			/*
-		{
-			test:/\.js$/,
-			exclude:/node_modules/,
-			loader:'babel-loader',
-		},
-		*/
-			{
-				test: /\.css$/,
-				use: [
-					{
-						loader: 'style-loader'
-					},
-					{
-						loader: 'css-loader'
-					}
-				]
-			},
+module.exports = function(env = {}) {
+	const publicPath = (env.url || '') + '/bin/'
+	const outputPath = __dirname + '/../public/bin'
 
+	const config = {
+		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
+		target: 'web',
+		entry: path.join(__dirname, '/../src/app.js'),
+		output: {
+			path: outputPath,
+			publicPath,
+			filename: 'proteinpaint.js',
+			jsonpFunction: 'ppJsonp',
+			// the library name exposed by this bundle
+			library: 'runproteinpaint',
+			// the exported value from the entry point file
+			// here the runproteinpaint() function will be used as exported by ./src/app.js
+			libraryExport: 'runproteinpaint',
+			// the target context to which the library is 'attached' or assigned
+			// e.g., window.runproteinpaint
+			libraryTarget: 'window'
+		},
+		externals: {
+			react: 'React',
+			'react-dom': 'ReactDOM'
+		},
+		module: {
+			rules: [
+				/*
 			{
-				test: /\.js$/,
-				use: [
-					{
-						loader: 'babel-loader',
-						options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
-					}
-				]
-			}
-		]
-	},
-	devtool: 'source-map'
+				test:/\.js$/,
+				exclude:/node_modules/,
+				loader:'babel-loader',
+			},
+			*/
+				{
+					test: /\.css$/,
+					use: [
+						{
+							loader: 'style-loader'
+						},
+						{
+							loader: 'css-loader'
+						}
+					]
+				},
+
+				{
+					test: /\.js$/,
+					use: [
+						{
+							loader: 'babel-loader',
+							options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
+						}
+					]
+				}
+			]
+		},
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
+	}
+
+	if (env.NODE_ENV == 'development') {
+		config.plugins = [new WebpackNotifierPlugin()]
+	} else if (!env.url || !env.url.startsWith('proteinpaint')) {
+		// do not minify
+		if (!config.optimization) config.optimization = {}
+		config.optimization.minimizer = []
+	}
+
+	return config
 }
