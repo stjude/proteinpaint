@@ -975,6 +975,10 @@ function match_sv(templates, q) {
 function get_templates(q, group) {
 	// parse reads from all regions
 	// returns an array of templates, no matter if paired or not
+	let is_variant = 0
+	if (q.variant) {
+		is_variant = 1
+	}
 	if (!q.asPaired) {
 		// pretends single reads as templates
 		const lst = []
@@ -983,7 +987,7 @@ function get_templates(q, group) {
 			const r = q.regions[i]
 			//for (const line of r.lines) {
 			for (const line of group.templates) {
-				const segment = parse_one_segment(line, r, i)
+				const segment = parse_one_segment(is_variant, line, r, i)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1003,7 +1007,7 @@ function get_templates(q, group) {
 		const r = q.regions[i]
 		//for (const line of r.lines) {
 		for (const line of group.templates) {
-			const segment = parse_one_segment(line, r, i)
+			const segment = parse_one_segment(is_variant, line, r, i)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1023,7 +1027,7 @@ function get_templates(q, group) {
 	return [...qname2template.values()]
 }
 
-function parse_one_segment(line, r, ridx, keepallboxes) {
+function parse_one_segment(is_variant, line, r, ridx, keepallboxes) {
 	/*
 do not do:
   parse seq
@@ -1050,7 +1054,11 @@ may skip insertion if on screen width shorter than minimum width
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
-	const tempscore = l[l.length - 1]
+
+	let tempscore = ''
+	if (is_variant == 1) {
+		tempscore = l[l.length - 1]
+	}
 
 	if (flag & 0x4) {
 		//console.log('unmapped')
@@ -1879,7 +1887,8 @@ async function query_oneread(req, r) {
 		)
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment(line, r, null, true)
+			const is_variant = 0
+			const s = parse_one_segment(is_variant, line, r, null, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {
