@@ -659,11 +659,11 @@ async function do_query(q) {
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 
 		// parse reads and cigar
-		const templates = get_templates(q, group)
+		let templates = get_templates(q, group)
 
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
-		stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		finalize_templates(group, templates, q) // set .canvasheight
 
@@ -684,6 +684,7 @@ async function do_query(q) {
 		if (q.devicePixelRatio > 1) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
+
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 
@@ -1276,11 +1277,12 @@ function stack_templates(group, q, templates) {
 		}
 		template.y = stackidx
 	}
-	may_trimstacks(group, templates, q)
+	templates = may_trimstacks(group, templates, q)
+	return templates
 }
 
 function may_trimstacks(group, templates, q) {
-	if (!group.partstack) return
+	if (!group.partstack) return templates
 	// should be a positive integer
 	const lst = templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
 	lst.forEach(i => (i.y -= group.partstack.start))
@@ -1291,6 +1293,7 @@ function may_trimstacks(group, templates, q) {
 		group.stacks.push(0)
 	}
 	group.returntemplatebox = [] // always set this
+	return templates
 }
 
 async function get_refseq(g, coord) {
