@@ -24,9 +24,18 @@ const defaults = {
 			css: {
 				selector: 'text',
 				key: 'font-size',
-				value: '12px'
+				value: '11px'
 			}
 		},
+		/*{
+			type: 'restyle',
+			applyTo: 'all', // or just the minColliders
+			css: {
+				selector: 'text',
+				key: 'y',
+				value: '10'
+			}
+		},*/
 		{
 			type: 'restyle',
 			css: {
@@ -41,9 +50,12 @@ const defaults = {
 export async function uncollide(labels, _opts = {}) {
 	const opts = Object.assign({}, defaults, _opts) //; console.log(opts)
 	if (!opts.steps || !opts.steps.length) return
+	if (!opts.svg) opts.svg = labels.node().closest('svg')
 	await sleep(opts.waitTime)
+	opts.svgBox = opts.svg.getBoundingClientRect()
 	const boxes = getBoxes(labels, opts)
 	const minNonZeroCollisions = trackCollisions(boxes)
+	window.boxes = boxes
 	if (minNonZeroCollisions) {
 		const step = opts.steps.shift()
 		const adjustees = step.applyTo == 'all' ? boxes : boxes.filter(b => b.collisions.length === minNonZeroCollisions)
@@ -53,6 +65,7 @@ export async function uncollide(labels, _opts = {}) {
 			}
 		}
 		if (opts.steps.length) setTimeout(() => uncollide(labels, opts), 0)
+		else boxes.forEach(showBox)
 	}
 }
 
@@ -60,27 +73,19 @@ function getBoxes(labels, opts) {
 	const boxes = []
 	labels.each(function(data) {
 		const elem = this
-		const bbox = elem.getBBox()
-		const matrix = elem.transform.baseVal.getItem(0).matrix
+		const bbox = elem.getBoundingClientRect()
 		const box = {
 			elem,
 			label: select(elem),
-			x1: matrix.e - bbox.width,
-			x2: matrix.e,
-			y1: matrix.f - bbox.height,
-			y2: matrix.f
+			x1: bbox.x - opts.svgBox.x,
+			x2: bbox.x - opts.svgBox.x + bbox.width,
+			y1: bbox.y - opts.svgBox.y,
+			y2: bbox.y - opts.svgBox.y + bbox.height,
+			width: bbox.width,
+			height: bbox.height
 		}
 		if (opts.nameKey) box.name = data[opts.nameKey]
 		boxes.push(box)
-
-		select(elem.parentNode)
-			.append('rect')
-			.attr('x', box.x1)
-			.attr('y', box.y1)
-			.attr('width', box.width)
-			.attr('height', box.height)
-			.style('stroke', 'blue')
-			.style('fill', 'transparent')
 	})
 	return boxes
 }
@@ -88,18 +93,27 @@ function getBoxes(labels, opts) {
 function trackCollisions(boxes) {
 	let minNonZeroCollisions = 0
 	for (const box of boxes) {
-		const nonZeroCollisions = trackOverlaps(box, boxes, box.x1, box.x2, box.y1, box.y2)
+		const nonZeroCollisions = trackOverlaps(box, boxes)
 		if (minNonZeroCollisions === 0 || nonZeroCollisions < minNonZeroCollisions) {
 			minNonZeroCollisions = nonZeroCollisions
 		}
 	}
+	boxes.sort(sortBoxes)
 	return minNonZeroCollisions
 }
 
-function trackOverlaps(box, boxes, x1, x2, y1, y2) {
+function sortBoxes(a, b) {
+	return a.collisions.length - b.collisions.length
+}
+
+function trackOverlaps(box, boxes) {
 	box.collisions = []
 	box.corners = {}
 	box.overlapSum = 0
+	const x1 = box.x1,
+		x2 = box.x2
+	const y1 = box.y1,
+		y2 = box.y2
 	for (const b of boxes) {
 		if (b === box) continue
 		if (x1 < b.x1 && b.x1 < x2) {
@@ -139,46 +153,26 @@ function trackOverlaps(box, boxes, x1, x2, y1, y2) {
 	return box.collisions.length
 }
 
-function getAdjustee(minColliders) {
-	let minNonZeroCorners = 0
-	for (const m of minColliders) {
-		const n = Object.keys(m.corners).length
-		if (n && (minNonZeroCorners === 0 || n < minNonZeroCorners)) {
-			minNonZeroCorners = n
-		}
-	}
-	const adjustees = minColliders.filter(m => Object.keys(m.corners).length === minNonZeroCorners)
-	if (adjustees.length == 1) return adjustees[0]
-	// prefer to move a NW collider
-	if (Array.isArray(step.applyTo)) {
-		let filtered = adjustees
-		for (const target of step.applyTo) {
-			if (corners.includes(target)) {
-				filtered = adju
-			}
-		}
-	}
-}
-
 async function restyle(box, step, boxes, opts) {
 	const preAdjustedVal = new Map()
 	box.label.selectAll(step.css.selector).each(function(d) {
 		const s = select(this)
-		preAdjustedVal.set(this, s.style(step.css.key))
-		s.style(step.css.key, step.css.value)
+		preAdjustedVal.set(this, s.attr(step.css.key))
+		s.attr(step.css.key, step.css.value)
 	})
-	if (step.applyTo === 'all') return
 	await sleep(opts.waitTime)
-	const copy = Object.assign({}, box)
 	const adjustedBox = getBoxes(box.label, opts)[0]
-	trackOverlaps(adjustedBox, [adjustedBox, ...boxes.slice(1)], box.x1, box.x2, box.y1, box.y2)
-	if (!adjustedBox || adjustedBox.collisions.length >= box.collisions.length) {
-		//console.log(164, adjustedBox, box)
+	trackOverlaps(adjustedBox, [adjustedBox, ...boxes.slice(1)])
+	if (step.applyTo != 'all' && (!adjustedBox || adjustedBox.collisions.length > box.collisions.length)) {
 		if (adjustedBox.overlapSum > box.overlapSum) {
 			box.label.selectAll(step.css.selector).each(function(d) {
 				select(this).style(step.css.key, preAdjustedVal.get(this))
 			})
+		} else {
+			Object.assign(box, adjustedBox)
 		}
+	} else {
+		Object.assign(box, adjustedBox)
 	}
 }
 
@@ -186,37 +180,16 @@ function move(boxes) {}
 
 const adjusters = { restyle, move }
 
-/*
-function getCorners(boxes) {
-	const corners = {}
-	for(const box of boxes) {
-		if (!('x1' in corners) || corners.x1 > box.x1) {
-			corners.x1 = box.x1
-		}
-		if (!('x2' in corners) || corners.x2 < box.x2) {
-			corners.x2 = box.x2
-		}
-		if (!('y1' in corners) || corners.y1 > box.y1) {
-			corners.y1 = box.y1
-		}
-		if (!('y2' in corners) || corners.y2 < box.y2) {
-			corners.y2 = box.y2
-		}
-	}
-	
-	const width = corners.x2 - corners.x1
-	const height = corners.y2 - corners.y1
-	const rect = select(boxes[0].elem.parentNode)
+function showBox(box) {
+	const rect = select(box.elem.closest('svg'))
 		.append('rect')
-		.attr('x', corners.x1)
-		.attr('y', corners.y1)
-		.attr('width', width)
-		.attr('height', height)
-		.style('stroke', 'red')
+		.attr('x', box.x1)
+		.attr('y', box.y1)
+		.attr('width', box.width)
+		.attr('height', box.height)
+		.style('stroke', 'blue')
 		.style('fill', 'transparent')
-	return corners
 }
-*/
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
