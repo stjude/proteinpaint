@@ -59,7 +59,7 @@ CMD ["--watch", "server.js", "--watch genome --watch dataset --watch serverconfi
 
 ######################
 
-# Similar to pppack, but pack only the backend code.
+# Separate build stage for packing backend code.
 FROM ppdeps AS pppack-backend
 
 # Install dependencies to get webpack and other packing tools.
