@@ -1,41 +1,44 @@
 import { select, selectAll } from 'd3-selection'
 
-const defaults = {
-	waitTime: 0,
-	pad: 5,
-	nameKey: '',
-	steps: [
-		{
-			type: 'restyle',
-			applyTo: 'all', // or just the minColliders
-			css: {
-				selector: 'text',
-				key: 'font-size',
-				value: '11px'
-			}
-		},
-		/*{
-			type: 'restyle',
-			css: {
-				selector: 'text',
-				key: 'text-anchor',
-				value: 'start'
-			}
-		},*/
-		{
-			type: 'move',
-			css: {
-				selector: 'text'
+function getDefaults(opts) {
+	const defaults = {
+		waitTime: 0,
+		pad: 5,
+		nameKey: '',
+		steps: [
+			{
+				type: 'restyle',
+				applyTo: 'all', // or just the minColliders
+				css: {
+					selector: 'text',
+					key: 'font-size',
+					value: '11px'
+				}
 			},
-			boxSorter: (a, b) => {
-				if (a.x1 > b.x1) return -1
-				if (b.x1 > a.x1) return 1
-				if (a.y1 > b.y1) return -1
-				if (b.y1 > a.y1) return 1
-				return 0
+			/*{
+				type: 'restyle',
+				css: {
+					selector: 'text',
+					key: 'text-anchor',
+					value: 'start'
+				}
+			},*/
+			{
+				type: 'move',
+				css: {
+					selector: 'text'
+				},
+				boxSorter: (a, b) => {
+					if (a.x1 > b.x1) return -1
+					if (b.x1 > a.x1) return 1
+					if (a.y1 > b.y1) return -1
+					if (b.y1 > a.y1) return 1
+					return 0
+				}
 			}
-		}
-	]
+		]
+	}
+	return Object.assign(defaults, opts)
 }
 
 /*
@@ -54,7 +57,7 @@ const defaults = {
 */
 
 export async function uncollide(labels, _opts = {}) {
-	const opts = Object.assign({}, defaults, _opts)
+	const opts = getDefaults(_opts)
 	if (!opts.steps || !opts.steps.length) return
 	if (!opts.svg) opts.svg = labels.node().closest('svg')
 	await sleep(opts.waitTime)
@@ -157,21 +160,21 @@ function trackOverlaps(box, boxes) {
 		} else {
 			if (b.x1 <= x1 && x2 <= b.x2) {
 				// this box' corners are both inside the other box
-				if (b.x1 < x1 && x1 < b.x2) {
+				if (b.x1 <= x1 && x1 <= b.x2) {
 					const dx = b.x2 - x1
 					if (!('x' in box.maxOverlaps) || box.maxOverlaps.x.val < dx) box.maxOverlaps.x = { val: dx, dir: 'w' }
-					if (b.y1 < y1 && y1 < b.y2) {
-						box.maxFree.n = 0
-						box.maxFree.w = 0
+					if (b.y1 <= y1 && y1 <= b.y2) {
+						//box.maxFree.n = 0
+						//box.maxFree.w = 0
 						if (!box.corners.nw) box.corners.nw = { against: [], sum: 0 }
 						box.corners.nw.against.push(b.name)
 						const dy = b.y2 - y1
 						box.corners.nw.sum += dx * dy
 						if (!('y' in box.maxOverlaps) || box.maxOverlaps.y.val < dy) box.maxOverlaps.y = { val: dy, dir: 'n' }
 					}
-					if (b.y1 < y2 && y2 < b.y2) {
-						box.maxFree.s = 0
-						box.maxFree.w = 0
+					if (b.y1 <= y2 && y2 <= b.y2) {
+						//box.maxFree.s = 0
+						//box.maxFree.w = 0
 						if (!box.corners.sw) box.corners.sw = { against: [], sum: 0 }
 						box.corners.sw.against.push(b.name)
 						const dy = y2 - b.y1
@@ -179,21 +182,21 @@ function trackOverlaps(box, boxes) {
 						if (!('y' in box.maxOverlaps) || box.maxOverlaps.y.val < dy) box.maxOverlaps.y = { val: dy, dir: 's' }
 					}
 				}
-				if (b.x1 < x2 && x2 < b.x2) {
+				if (b.x1 <= x2 && x2 <= b.x2) {
 					const dx = x2 - b.x1
 					if (!('x' in box.maxOverlaps) || box.maxOverlaps.x.val < dx) box.maxOverlaps.x = { val: dx, dir: 'e' }
-					if (b.y1 < y1 && y1 < b.y2) {
-						box.maxFree.n = 0
-						box.maxFree.e = 0
+					if (b.y1 <= y1 && y1 <= b.y2) {
+						//box.maxFree.n = 0
+						//box.maxFree.e = 0
 						if (!box.corners.ne) box.corners.ne = { against: [], sum: 0, dx: 0, dy: 0 }
 						box.corners.ne.against.push(b.name)
 						const dy = b.y2 - y1
 						box.corners.ne.sum += dx * dy
 						if (!('y' in box.maxOverlaps) || box.maxOverlaps.y.val < dy) box.maxOverlaps.y = { val: dy, dir: 'n' }
 					}
-					if (b.y1 < y2 && y2 < b.y2) {
-						box.maxFree.s = 0
-						box.maxFree.e = 0
+					if (b.y1 <= y2 && y2 <= b.y2) {
+						//box.maxFree.s = 0
+						//box.maxFree.e = 0
 						if (!box.corners.se) box.corners.se = { against: [], sum: 0 }
 						box.corners.se.against.push(b.name)
 						const dy = y2 - b.y1
@@ -202,22 +205,22 @@ function trackOverlaps(box, boxes) {
 					}
 				}
 			} else {
-				if (x1 < b.x1 && b.x1 < x2) {
+				if (x1 <= b.x1 && b.x1 <= x2) {
 					// the other box' corner is inside this box
 					const dx = x2 - b.x1
 					if (!('x' in box.maxOverlaps) || box.maxOverlaps.x.val < dx) box.maxOverlaps.x = { val: dx, dir: 'e' }
-					if (y1 < b.y1 && b.y1 < y2) {
-						box.maxFree.s = 0
-						box.maxFree.e = 0
+					if (y1 <= b.y1 && b.y1 <= y2) {
+						//box.maxFree.s = 0
+						//box.maxFree.e = 0
 						if (!box.corners.se) box.corners.se = { against: [], sum: 0 }
 						box.corners.se.against.push(b.name)
 						const dy = y2 - b.y1
 						box.corners.se.sum += dx * dy
 						if (!('y' in box.maxOverlaps) || box.maxOverlaps.y.val < dy) box.maxOverlaps.y = { val: dy, dir: 's' }
 					}
-					if (y1 < b.y2 && b.y2 < y2) {
-						box.maxFree.n = 0
-						box.maxFree.e = 0
+					if (y1 <= b.y2 && b.y2 <= y2) {
+						//box.maxFree.n = 0
+						//box.maxFree.e = 0
 						if (!box.corners.ne) box.corners.ne = { against: [], sum: 0 }
 						box.corners.ne.against.push(b.name)
 						const dy = b.y2 - y1
@@ -230,8 +233,8 @@ function trackOverlaps(box, boxes) {
 					const dx = b.x2 - x1
 					if (!('x' in box.maxOverlaps) || box.maxOverlaps.x.val < dx) box.maxOverlaps.x = { val: dx, dir: 'w' }
 					if (y1 < b.y1 && b.y1 < y2) {
-						box.maxFree.s = 0
-						box.maxFree.w = 0
+						//box.maxFree.s = 0
+						//box.maxFree.w = 0
 						if (!box.corners.sw) box.corners.sw = { against: [], sum: 0 }
 						box.corners.sw.against.push(b.name)
 						const dy = y2 - b.y1
@@ -239,8 +242,8 @@ function trackOverlaps(box, boxes) {
 						if (!('y' in box.maxOverlaps) || box.maxOverlaps.y.val < dy) box.maxOverlaps.y = { val: dy, dir: 's' }
 					}
 					if (y1 < b.y2 && b.y2 < y2) {
-						box.maxFree.n = 0
-						box.maxFree.w = 0
+						//box.maxFree.n = 0
+						//box.maxFree.w = 0
 						if (!box.corners.nw) box.corners.nw = { against: [], sum: 0 }
 						box.corners.nw.against.push(b.name)
 						const dy = b.y2 - y1
@@ -259,7 +262,7 @@ function trackOverlaps(box, boxes) {
 			}
 		}
 	}
-	// console.log(261, box.name, Object.values(box.maxFree), box.collisions && box.collisions.length)
+	// console.log(261, box.name, 'free=', Object.values(box.maxFree), 'collisions=', box.collisions && box.collisions.length)
 	return box.collisions.length
 }
 
@@ -321,7 +324,7 @@ async function restyle(box, step, boxes, opts) {
 
 async function move(box, step, boxes, opts) {
 	const freeDirections = Object.keys(box.maxFree).filter(dir => box.maxFree[dir] > 0)
-	// console.log(322, 'freeDirections', box.name, freeDirections)
+	//console.log(327, 'freeDirections', box.name, freeDirections)
 	if (!freeDirections.length) return
 
 	const preAdjustedVal = new Map()
