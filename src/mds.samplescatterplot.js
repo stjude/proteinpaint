@@ -10,6 +10,7 @@ import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../modules/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
 import { getsjcharts } from './getsjcharts'
+import { uncollide } from './common/uncollide'
 
 /*
 obj:
@@ -630,7 +631,7 @@ function init_plot(obj) {
 		if (userdots) {
 			userdots.attr('transform', d => 'translate(' + new_xscale(d.x) + ',' + new_yscale(d.y) + ')')
 			userlabelg
-				.transition() // smooth motion of the text label
+				//.transition() // smooth motion of the text label
 				.attr('transform', d => {
 					const x = d.x_ ? new_xscale(d.x_) : new_xscale(d.x),
 						y = d.y_ ? new_yscale(d.y_) : new_yscale(d.y)
@@ -649,6 +650,9 @@ function init_plot(obj) {
 		}
 		//circles.attr('r',radius)
 		currBbox = rootholder.getBoundingClientRect()
+		if (obj.userlabel_grp) {
+			uncollide(userlabelg, { waitTime: 0, nameKey: 'sample' })
+		}
 	}
 	resize()
 
