@@ -89,7 +89,11 @@ tape('\n', test => {
 tape('longer se/shorter nw collision', async test => {
 	const x = 0.3 * side,
 		y = 0.5 * side
-	const data = [{ label: 'aaabbbcccddd', x, y }, { label: 'xxxyyyzzz', x: x + 5, y: y + 5 }]
+	const data = [
+		{ label: 'aaabbbcccddd', x, y },
+		{ label: 'xxxyyyzzz', x: x + 5, y: y + 5 }
+		//{ label: 'qqqrrrsss', x: x + 35, y: y + 50 }
+	]
 	const dom = render(data)
 	test.equal(dom.holder.selectAll('text').size(), data.length, 'must start with the correct number of labels')
 	//await sleep(200)
