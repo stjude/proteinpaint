@@ -172,23 +172,23 @@ export class Samplematrix {
 					}
 					this.showlegend_limitsample()
 				}
-				if (this.use_global_cnvloh_cutoff) {
-					const cnv_tr = this.legendtable.append('tr')
-					cnv_tr
-						.append('td')
-						.style('opacity', 0.5)
-						.style('text-align', 'right')
-						.text('CNV cutoff')
-					this.legendtable.cnv_td = cnv_tr.append('td')
 
-					const loh_tr = this.legendtable.append('tr')
-					loh_tr
-						.append('td')
-						.style('opacity', 0.5)
-						.style('text-align', 'right')
-						.text('LOH cutoff')
-					this.legendtable.loh_td = loh_tr.append('td')
-				}
+				const cnv_tr = this.legendtable.append('tr')
+				cnv_tr
+					.append('td')
+					.style('opacity', 0.5)
+					.style('text-align', 'right')
+					.text('CNV cutoff')
+				this.legendtable.cnv_td = cnv_tr.append('td')
+
+				const loh_tr = this.legendtable.append('tr')
+				loh_tr
+					.append('td')
+					.style('opacity', 0.5)
+					.style('text-align', 'right')
+					.text('LOH cutoff')
+				this.legendtable.loh_td = loh_tr.append('td')
+				
 				if (this.limitbysamplesetgroup) {
 					if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
 				}
@@ -949,35 +949,6 @@ export class Samplematrix {
 						cell.append('span').text('Fusion')
 					}
 				}
-				if (f.cnv.maxabslogratio != undefined && !this.use_global_cnvloh_cutoff) {
-					h.append('div')
-						.style('margin-bottom', '5px')
-						.html(
-							'CNV gain <span style="background:' +
-								f.cnv.colorgain +
-								';color:white;padding:1px 5px">' +
-								f.cnv.maxabslogratio.toFixed(3) +
-								'</span> &nbsp; ' +
-								'CNV loss <span style="background:' +
-								f.cnv.colorloss +
-								';color:white;padding:1px 5px">-' +
-								f.cnv.maxabslogratio.toFixed(3) +
-								'</span>'
-						)
-				}
-
-				if (f.loh.maxvalue != undefined && !this.use_global_cnvloh_cutoff) {
-					const row = h.append('div').style('margin-bottom', '5px')
-					row.append('span').text('LOH seg.mean: ' + f.loh.minvalue.toFixed(3))
-					row
-						.append('div')
-						.style('margin', '2px 10px')
-						.style('display', 'inline-block')
-						.style('width', '100px')
-						.style('height', '15px')
-						.style('background', 'linear-gradient( to right, white, ' + f.loh.color + ')')
-					row.append('span').text(f.loh.maxvalue.toFixed(3))
-				}
 				continue
 			}
 
@@ -1012,7 +983,7 @@ sort samples by f.issampleattribute
 			throw 'unknown feature type in making legend'
 		}
 
-		if (this.use_global_cnvloh_cutoff) this.makeGlobalCnvLohLegend()
+		this.makeGlobalCnvLohLegend()
 	}
 
 	makeGlobalCnvLohLegend() {
@@ -1024,10 +995,10 @@ sort samples by f.issampleattribute
 		]
 
 		// store original values to diplay or hide 'Reset' button
-		const min_cnv_orig = this.min_cnv
-		const max_cnv_orig = this.max_cnv
-		const min_loh_orig = this.min_loh
-		const max_loh_orig = this.max_loh
+		const min_cnv_orig = parseFloat(this.min_cnv.toFixed(3))
+		const max_cnv_orig = parseFloat(this.max_cnv.toFixed(3))
+		const min_loh_orig = parseFloat(this.min_loh.toFixed(3))
+		const max_loh_orig = parseFloat(this.max_loh.toFixed(3))
 		let changed_flag = false
 
 		// create row for each lengend_data type
@@ -1100,8 +1071,8 @@ sort samples by f.issampleattribute
 						this.max_cnv = max_cutoff = upper_range_input.property('value')
 						if (this.min_cnv != min_cnv_orig || this.max_cnv != max_cnv_orig) changed_flag = true
 					} else {
-						this.min_loh = min_cutoff = lower_range_input.property('value')
-						this.max_loh = max_cutoff = upper_range_input.property('value')
+						this.min_loh = min_cutoff = parseFloat(lower_range_input.property('value'))
+						this.max_loh = max_cutoff = parseFloat(upper_range_input.property('value'))
 						if (this.min_loh != min_loh_orig || this.max_loh != max_loh_orig) changed_flag = true
 					}
 					lower_range_txt.style('display', 'inline-block').text(parseFloat(min_cutoff).toFixed(3))
@@ -1426,7 +1397,7 @@ sort samples by f.issampleattribute
 		for (const item of items) {
 			const x1 = feature.coordscale(Math.max(feature.start, item.start))
 			const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
-			const maxabslogratio = this.use_global_cnvloh_cutoff ? this.max_cnv : feature.cnv.maxabslogratio
+			const maxabslogratio = this.max_cnv
 			g.append('rect')
 				.attr('x', x1)
 				.attr('width', Math.max(1, x2 - x1))
@@ -1467,17 +1438,14 @@ sort samples by f.issampleattribute
 		for (const item of items) {
 			const x1 = feature.coordscale(Math.max(feature.start, item.start))
 			const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
-			const loh_range = this.use_global_cnvloh_cutoff
-				? this.max_loh - this.min_loh
-				: feature.maxvalue - feature.minvalue
-			const loh_min = this.use_global_cnvloh_cutoff ? this.min_loh : feature.minvalue
+			const loh_range = this.max_loh - this.min_loh
 			g.append('rect')
 				.attr('x', this.features_on_rows ? 0 : x1)
 				.attr('y', this.features_on_rows ? x1 : 0)
 				.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 				.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 				.attr('fill', feature.color)
-				.attr('fill-opacity', (item.segmean - loh_min) / loh_range)
+				.attr('fill-opacity', (item.segmean - this.min_loh) / loh_range)
 				.attr('shape-rendering', 'crispEdges')
 		}
 		g.append('rect')
@@ -1680,17 +1648,14 @@ sort samples by f.issampleattribute
 				for (const item of loh) {
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
-					const loh_range = this.use_global_cnvloh_cutoff
-						? this.max_loh - this.min_loh
-						: feature.loh.maxvalue - feature.loh.minvalue
-					const loh_min = this.use_global_cnvloh_cutoff ? this.min_loh : feature.loh.minvalue
+					const loh_range = this.max_loh - this.min_loh
 					g.append('rect')
 						.attr('x', this.features_on_rows ? 0 : x1)
 						.attr('y', this.features_on_rows ? x1 : 0)
 						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', feature.loh.color)
-						.attr('fill-opacity', (item.segmean - loh_min) / loh_range)
+						.attr('fill-opacity', (item.segmean - this.min_loh) / loh_range)
 						.attr('shape-rendering', 'crispEdges')
 				}
 			}
@@ -1699,12 +1664,7 @@ sort samples by f.issampleattribute
 				for (const item of cnv) {
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
-					const maxabslogratio =
-						this.use_global_cnvloh_cutoff && item.value > 0
-							? this.max_cnv
-							: this.use_global_cnvloh_cutoff && item.value < 0
-							? this.min_cnv
-							: feature.cnv.maxabslogratio
+					const maxabslogratio = item.value > 0 ? this.max_cnv : this.min_cnv
 					g.append('rect')
 						.attr('x', this.features_on_rows ? 0 : x1)
 						.attr('y', this.features_on_rows ? x1 : 0)
@@ -1815,19 +1775,11 @@ sort samples by f.issampleattribute
 		*/
 		const height = this.features_on_rows ? feature.height : sample.height
 		const width = this.features_on_rows ? sample.width : feature.width
-		const loh_range = this.use_global_cnvloh_cutoff
-			? this.max_loh - this.min_loh
-			: feature.loh.maxvalue - feature.loh.minvalue
-		const loh_min = this.use_global_cnvloh_cutoff ? this.min_loh : feature.loh.minvalue
+		const loh_range = this.max_loh - this.min_loh
 		const lst = []
 		if (cnv.length) {
 			for (const i of cnv) {
-				const maxabslogratio =
-					this.use_global_cnvloh_cutoff && i.value > 0
-						? this.max_cnv
-						: this.use_global_cnvloh_cutoff && i.value < 0
-						? this.min_cnv
-						: feature.cnv.maxabslogratio
+				const maxabslogratio = i.value > 0 ? this.max_cnv : this.min_cnv
 				let k
 				if (i.value > 0) {
 					k = { color: feature.cnv.colorgain }
@@ -1842,7 +1794,7 @@ sort samples by f.issampleattribute
 			for (const i of loh) {
 				lst.push({
 					color: feature.loh.color,
-					opacity: (i.segmean - loh_min) / loh_range
+					opacity: (i.segmean - this.min_loh) / loh_range
 				})
 			}
 		}
