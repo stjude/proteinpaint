@@ -1,4 +1,4 @@
-import { select } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 
 /*
 	1. for each element, get the elements collide with it
@@ -14,7 +14,7 @@ import { select } from 'd3-selection'
 */
 
 const defaults = {
-	waitTime: 0,
+	waitTime: 200,
 	pad: 5,
 	nameKey: '',
 	steps: [
@@ -27,15 +27,6 @@ const defaults = {
 				value: '11px'
 			}
 		},
-		/*{
-			type: 'restyle',
-			applyTo: 'all', // or just the minColliders
-			css: {
-				selector: 'text',
-				key: 'y',
-				value: '10'
-			}
-		},*/
 		{
 			type: 'restyle',
 			css: {
@@ -48,7 +39,7 @@ const defaults = {
 }
 
 export async function uncollide(labels, _opts = {}) {
-	const opts = Object.assign({}, defaults, _opts) //; console.log(opts)
+	const opts = Object.assign({}, defaults, _opts)
 	if (!opts.steps || !opts.steps.length) return
 	if (!opts.svg) opts.svg = labels.node().closest('svg')
 	await sleep(opts.waitTime)
@@ -60,13 +51,14 @@ export async function uncollide(labels, _opts = {}) {
 		const step = opts.steps.shift()
 		const adjustees = step.applyTo == 'all' ? boxes : boxes.filter(b => b.collisions.length === minNonZeroCollisions)
 		if (adjustees.length) {
-			for (const adj of adjustees) {
-				await adjusters[step.type](adj, step, boxes, opts)
+			for (const box of adjustees) {
+				trackOverlaps(box, boxes.filter(b => b != box))
+				await adjusters[step.type](box, step, boxes, opts)
 			}
 		}
 		if (opts.steps.length) setTimeout(() => uncollide(labels, opts), 0)
 		else boxes.forEach(showBox)
-	}
+	} else boxes.forEach(showBox)
 }
 
 function getBoxes(labels, opts) {
@@ -93,7 +85,7 @@ function getBoxes(labels, opts) {
 function trackCollisions(boxes) {
 	let minNonZeroCollisions = 0
 	for (const box of boxes) {
-		const nonZeroCollisions = trackOverlaps(box, boxes)
+		const nonZeroCollisions = trackOverlaps(box, boxes.filter(b => b != box))
 		if (minNonZeroCollisions === 0 || nonZeroCollisions < minNonZeroCollisions) {
 			minNonZeroCollisions = nonZeroCollisions
 		}
@@ -116,32 +108,64 @@ function trackOverlaps(box, boxes) {
 		y2 = box.y2
 	for (const b of boxes) {
 		if (b === box) continue
+
+		// the other box' corner is inside this box
 		if (x1 < b.x1 && b.x1 < x2) {
-			const dx = b.x1 - x1
+			const dx = x2 - b.x1
 			if (y1 < b.y1 && b.y1 < y2) {
-				if (!box.corners.nw) box.corners.nw = { against: [], sum: 0 }
-				box.corners.nw.against.push(b)
-				box.corners.nw.sum += dx + y2 - b.y1 // perimeter instead of area
+				if (!box.corners.se) box.corners.se = { against: [], sum: 0, dx: 0, dy: 0 }
+				box.corners.se.against.push(b)
+				box.corners.se.sum += dx * (y2 - b.y1)
 			}
 			if (y1 < b.y2 && b.y2 < y2) {
-				if (!box.corners.sw) box.corners.sw = { against: [], sum: 0 }
-				box.corners.sw.against.push(b)
-				box.corners.sw.sum += dx + b.y2 - y1 // perimeter instead of area
+				if (!box.corners.ne) box.corners.ne = { against: [], sum: 0 }
+				box.corners.ne.against.push(b)
+				box.corners.ne.sum += dx * (b.y2 - y1)
 			}
 		}
+		// the other box' corner is inside this box
 		if (x1 < b.x2 && b.x2 < x2) {
 			const dx = b.x2 - x1
 			if (y1 < b.y1 && b.y1 < y2) {
-				if (!box.corners.ne) box.corners.ne = { against: [], sum: 0 }
-				box.corners.ne.against.push(b)
-				box.corners.ne.sum += dx + y2 - b.y1 // perimeter instead of area
+				if (!box.corners.sw) box.corners.sw = { against: [], sum: 0 }
+				box.corners.sw.against.push(b)
+				box.corners.sw.sum += dx * (y2 - b.y1)
 			}
 			if (y1 < b.y2 && b.y2 < y2) {
-				if (!box.corners.se) box.corners.se = { against: [], sum: 0 }
-				box.corners.se.against.push(b)
-				box.corners.se.sum += dx + b.y2 - y1 // perimeter instead of area
+				if (!box.corners.nw) box.corners.nw = { against: [], sum: 0 }
+				box.corners.nw.against.push(b)
+				box.corners.nw.sum += dx * (b.y2 - y1)
 			}
 		}
+
+		// this box' corner is inside the other box
+		if (b.x1 < x1 && x1 < b.x2) {
+			const dx = b.x2 - x1
+			if (b.y1 < y1 && y1 < b.y2) {
+				if (!box.corners.nw) box.corners.nw = { against: [], sum: 0, dx: 0, dy: 0 }
+				box.corners.nw.against.push(b)
+				box.corners.nw.sum += dx * (b.y2 - y1)
+			}
+			if (b.y1 < y2 && y2 < b.y2) {
+				if (!box.corners.sw) box.corners.sw = { against: [], sum: 0 }
+				box.corners.sw.against.push(b)
+				box.corners.sw.sum += dx * (y2 - b.y1)
+			}
+		}
+		if (b.x1 < x2 && x2 < b.x2) {
+			const dx = x2 - b.x1
+			if (b.y1 < y1 && y1 < b.y2) {
+				if (!box.corners.ne) box.corners.ne = { against: [], sum: 0, dx: 0, dy: 0 }
+				box.corners.ne.against.push(b)
+				box.corners.ne.sum += dx * (b.y2 - y1)
+			}
+			if (b.y1 < y2 && y2 < b.y2) {
+				if (!box.corners.se) box.corners.se = { against: [], sum: 0 }
+				box.corners.se.against.push(b)
+				box.corners.se.sum += dx * (y2 - b.y1)
+			}
+		}
+
 		const corners = Object.keys(box.corners)
 		if (corners.length) {
 			box.collisions.push({ box: b, corners })
@@ -162,17 +186,19 @@ async function restyle(box, step, boxes, opts) {
 	})
 	await sleep(opts.waitTime)
 	const adjustedBox = getBoxes(box.label, opts)[0]
-	trackOverlaps(adjustedBox, [adjustedBox, ...boxes.slice(1)])
-	if (step.applyTo != 'all' && (!adjustedBox || adjustedBox.collisions.length > box.collisions.length)) {
-		if (adjustedBox.overlapSum > box.overlapSum) {
+	const i = boxes.indexOf(box)
+	trackOverlaps(adjustedBox, boxes.filter(b => b != box))
+	if (step.applyTo == 'all') {
+		Object.assign(box, adjustedBox)
+	} else {
+		if (adjustedBox.overlapSum >= box.overlapSum) {
+			console.log(177, 'revert')
 			box.label.selectAll(step.css.selector).each(function(d) {
 				select(this).style(step.css.key, preAdjustedVal.get(this))
 			})
 		} else {
 			Object.assign(box, adjustedBox)
 		}
-	} else {
-		Object.assign(box, adjustedBox)
 	}
 }
 
@@ -189,6 +215,18 @@ function showBox(box) {
 		.attr('height', box.height)
 		.style('stroke', 'blue')
 		.style('fill', 'transparent')
+}
+
+function resetBoxes(boxes, opts) {
+	boxes.forEach(function(box) {
+		const bbox = box.elem.getBoundingClientRect()
+		box.x1 = bbox.x - opts.svgBox.x
+		box.x2 = bbox.x - opts.svgBox.x + bbox.width
+		box.y1 = bbox.y - opts.svgBox.y
+		box.y2 = bbox.y - opts.svgBox.y + bbox.height
+		box.width = bbox.width
+		box.height = bbox.height
+	})
 }
 
 function sleep(ms) {

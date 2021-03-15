@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const uncollide = require('../uncollide')
+const uncollide = require('../uncollide').uncollide
 
 /*************************
  reusable helper functions
@@ -38,39 +38,43 @@ function render(data) {
 		.attr('cx', d => d.x)
 		.attr('cy', d => d.y)
 
+	const svgBox = svg.node().getBoundingClientRect()
+
 	const labels = svg
 		.selectAll('g')
 		.data(data)
 		.enter()
 		.append('g')
-		.each(function(d) {
-			const g = d3s.select(this).attr('transform', `translate(${d.x},${d.y})`)
-			g.append('text')
-				//.attr('x', d.x)
-				//.attr('y', d.y)
-				.attr('font-size', fontSize)
-				.attr('text-anchor', 'start')
-				.text(d.label)
-			showBox(svg, g)
-		})
+
+	labels.each(function(d) {
+		const g = d3s.select(this).attr('transform', `translate(${d.x},${d.y})`)
+		g.append('text')
+			//.attr('x', d.x)
+			//.attr('y', d.y)
+			.attr('font-size', fontSize)
+			.attr('text-anchor', 'end')
+			.text(d.label)
+		//showBox(svg, svgBox, g)
+	})
 
 	return { holder, svg, labels }
 }
 
-function showBox(svg, g) {
-	const d = g.datum()
+function showBox(svg, svgBox, g) {
 	const b = g.node().getBoundingClientRect()
-	const s = svg.node().getBoundingClientRect()
-	//const m = g.node().getCTM(); console.log(b, m)
 	svg
 		.append('rect')
-		.attr('x', b.x - s.x)
-		.attr('y', b.y - s.y)
+		.attr('x', b.x - svgBox.x)
+		.attr('y', b.y - svgBox.y)
 		.attr('width', b.width)
 		.attr('height', b.height)
 		.attr('stroke', '#ccc')
 		.attr('stroke-width', '1px')
 		.attr('fill', 'transparent')
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**************
@@ -82,11 +86,13 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('test', test => {
+tape('longer se/shorter nw collision', async test => {
 	const x = 0.3 * side,
 		y = 0.5 * side
-	const data = [{ label: 'aaabbbcccddd', x, y }, { label: 'xxxyyyzzz', x: x + 20, y: y + 20 }]
+	const data = [{ label: 'aaabbbcccddd', x, y }, { label: 'xxxyyyzzz', x: x + 5, y: y + 5 }]
 	const dom = render(data)
 	test.equal(dom.holder.selectAll('text').size(), data.length, 'must start with the correct number of labels')
+	//await sleep(200)
+	await uncollide(dom.labels, { nameKey: 'label' })
 	test.end()
 })
