@@ -54,13 +54,14 @@ function render(data) {
 			.attr('font-size', fontSize)
 			.attr('text-anchor', 'end')
 			.text(d.label)
-		//showBox(svg, svgBox, g)
+		showBox(svg, svgBox, g)
 	})
 
 	return { holder, svg, labels }
 }
 
 function showBox(svg, svgBox, g) {
+	return
 	const b = g.node().getBoundingClientRect()
 	svg
 		.append('rect')
@@ -86,17 +87,51 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('longer se/shorter nw collision', async test => {
+tape('default options', async test => {
 	const x = 0.3 * side,
 		y = 0.5 * side
 	const data = [
-		{ label: 'aaabbbcccddd', x, y },
-		{ label: 'xxxyyyzzz', x: x + 5, y: y + 5 }
-		//{ label: 'qqqrrrsss', x: x + 35, y: y + 50 }
+		{ label: 'aaabbbcccdddeeefff', x, y },
+		{ label: 'xxxyyyzzz', x: x + 5, y: y + 5 },
+		{ label: 'qqqrrrsss', x: x + 35, y: y + 50 }
 	]
 	const dom = render(data)
 	test.equal(dom.holder.selectAll('text').size(), data.length, 'must start with the correct number of labels')
-	//await sleep(200)
 	await uncollide(dom.labels, { nameKey: 'label' })
+	await sleep(100)
+	const adjFontSize = '11px'
+	test.equal(
+		dom.labels
+			.filter(function() {
+				return (
+					d3s
+						.select(this)
+						.select('text')
+						.attr('font-size') === adjFontSize
+				)
+			})
+			.size(),
+		3,
+		`should adjust all text font-size to ${adjFontSize}`
+	)
+	const text0 = dom.labels.filter(d => d.label === data[0].label).select('text')
+	const xy0 = [0, 0]
+	test.deepEqual(
+		[+text0.attr('x'), +text0.attr('y')],
+		xy0,
+		`should NOT move the first label: [x,y] = [${xy0.join(',')}]`
+	)
+
+	const text1 = dom.labels.filter(d => d.label === data[1].label).select('text')
+	const xy1 = [0, 8]
+	test.deepEqual([+text1.attr('x'), +text1.attr('y')], xy1, `should move the first label, [x,y]: [${xy1.join(',')}]`)
+
+	const text2 = dom.labels.filter(d => d.label === data[2].label).select('text')
+	const xy2 = [0, 0]
+	test.deepEqual(
+		[+text2.attr('x'), +text2.attr('y')],
+		xy2,
+		`should NOT move the first label to [x,y]: [${xy2.join(',')}]`
+	)
 	test.end()
 })
