@@ -771,7 +771,8 @@ group.width reflects number of categories and is always bigger than label font s
 		toppad = Number(q.toppad),
 		bottompad = Number(q.bottompad),
 		dotcolor = 'black',
-		columnbgcolor = '#FDFEE2'
+		columnbgcolor = '#FDFEE2',
+		devicePixelRatio = Number(q.devicePixelRatio)
 
 	// defines dot density for groups with many dots
 	// groups with fewer dots will have fixed width and lower varying density
@@ -793,11 +794,15 @@ group.width reflects number of categories and is always bigger than label font s
 		x += g.width
 	}
 	const canvaswidth = leftpad + x + rightpad
-	canvas.width = canvaswidth
+	canvas.width = canvaswidth * devicePixelRatio
 
 	// set canvas height by max length of group label
 	const canvasheight = toppad + axisheight + bottompad
-	canvas.height = canvasheight
+	canvas.height = canvasheight * devicePixelRatio
+
+	if (devicePixelRatio > 1) {
+		ctx.scale(devicePixelRatio, devicePixelRatio)
+	}
 
 	///////// plot bg
 	x = 0
