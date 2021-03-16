@@ -13,6 +13,7 @@ function render(data) {
 	const holder = d3s
 		.select('body')
 		.append('div')
+		.style('display', 'inline-block')
 		.style('margin', '10px')
 
 	const svg = holder
@@ -100,7 +101,7 @@ tape('default options', async test => {
 	test.equal(dom.holder.selectAll('text').size(), data.length, 'must start with the correct number of labels')
 	await uncollide(dom.labels, { nameKey: 'label' })
 	await sleep(100)
-	const adjFontSize = '11px'
+	const adjFontSize = '12px'
 	test.equal(
 		dom.labels
 			.filter(function() {
@@ -124,7 +125,7 @@ tape('default options', async test => {
 	)
 
 	const text1 = dom.labels.filter(d => d.label === data[1].label).select('text')
-	const xy1 = [0, 8]
+	const xy1 = [0, 9]
 	test.deepEqual([+text1.attr('x'), +text1.attr('y')], xy1, `should move the second label, [x,y]: [${xy1.join(',')}]`)
 
 	const text2 = dom.labels.filter(d => d.label === data[2].label).select('text')
@@ -148,7 +149,7 @@ tape('overlapping points', async test => {
 	const dom = render(data)
 	await uncollide(dom.labels, { nameKey: 'label' })
 	await sleep(300)
-	const adjFontSize = '11px'
+	const adjFontSize = '12px'
 	test.equal(
 		dom.labels
 			.filter(function() {
@@ -172,7 +173,7 @@ tape('overlapping points', async test => {
 	)
 
 	const text1 = dom.labels.filter(d => d.label === data[1].label).select('text')
-	const xy1 = [0, 13]
+	const xy1 = [0, 14]
 	test.deepEqual([+text1.attr('x'), +text1.attr('y')], xy1, `should move the second label, [x,y]: [${xy1.join(',')}]`)
 
 	const text2 = dom.labels.filter(d => d.label === data[2].label).select('text')
@@ -181,6 +182,42 @@ tape('overlapping points', async test => {
 		[+text2.attr('x'), +text2.attr('y')],
 		xy2,
 		`should NOT move the first label to [x,y]: [${xy2.join(',')}]`
+	)
+	test.end()
+})
+
+tape.skip('svg overflow', async test => {
+	const x = 0.3 * side,
+		y = 0.5 * side
+	const data = [
+		{ label: 'ggghhhiiijjjklmnopqrstuvwxyz', x, y },
+		{ label: 'xxxyyyzzz', x: x + 5, y: y - 5 },
+		{ label: 'qqqrrrsss', x: x + 35, y: y + 50 }
+	]
+	const dom = render(data)
+	await uncollide(dom.labels, { nameKey: 'label' })
+	await sleep(300)
+	const adjFontSize = '12px'
+	test.equal(
+		dom.labels
+			.filter(function() {
+				return (
+					d3s
+						.select(this)
+						.select('text')
+						.attr('font-size') === adjFontSize
+				)
+			})
+			.size(),
+		data.length,
+		`should adjust all text font-size to ${adjFontSize}`
+	)
+	const text0 = dom.labels.filter(d => d.label === data[0].label).select('text')
+	const xy0 = [0, 0]
+	test.deepEqual(
+		[+text0.attr('x'), +text0.attr('y')],
+		xy0,
+		`should NOT move the first label: [x,y] = [${xy0.join(',')}]`
 	)
 	test.end()
 })
