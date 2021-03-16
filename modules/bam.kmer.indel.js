@@ -5,7 +5,7 @@ const bamcommon = require('./bam.common')
 //const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 
-export async function match_complexvariant_rust(q, templates_info, sequence_reads) {
+export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
 	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
 	// need to verify if the retrieved sequence is showing 1bp offset or not
@@ -91,6 +91,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		refalleleerror = true
 	}
 
+	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
 	let sequences = ''
 	sequences += refseq + '\n'
 	sequences += altseq + '\n'
@@ -124,7 +125,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		if (rust_output.category[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = rust_output.groupID[i]
-				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -135,7 +136,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		} else if (rust_output.category[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = rust_output.groupID[i]
-				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -146,7 +147,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 		} else if (rust_output.category[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = rust_output.groupID[i]
-				templates_info[index] += '\t' + rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -182,7 +183,7 @@ export async function match_complexvariant_rust(q, templates_info, sequence_read
 	return { groups, refalleleerror }
 }
 
-export async function match_complexvariant(q, templates_info, sequence_reads) {
+export async function match_complexvariant(q, templates_info) {
 	// TODO
 	// get flanking sequence, suppose that segments are of same length, use segment length
 	//const segbplen = templates[0].segments[0].seq.length
@@ -255,21 +256,21 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 
 	// console.log(refallele,altallele,refseq,altseq)
 
-	const file = fs.createWriteStream(
-		// Creating output for the rust implementation
-		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt + '.txt'
-	)
-	file.on('error', function(err) {
-		/* error handling */
-		console.log('Something not right with file creation')
-	})
-
-	file.write(refseq + '\n')
-	file.write(altseq + '\n')
-	for (const sequence of sequence_reads) {
-		file.write(sequence + '\n')
-	}
-	file.end()
+	//const file = fs.createWriteStream(
+	//	// Creating output for the rust implementation
+	//	q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt + '.txt'
+	//)
+	//file.on('error', function(err) {
+	//	/* error handling */
+	//	console.log('Something not right with file creation')
+	//})
+	//
+	//file.write(refseq + '\n')
+	//file.write(altseq + '\n')
+	//for (const sequence of sequence_reads) {
+	//	file.write(sequence + '\n')
+	//}
+	//file.end()
 
 	//----------------------------------------------------------------------------
 
@@ -367,7 +368,7 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 	const ref_scores = []
 	const alt_scores = []
 	let i = 0
-	const sequence_list = sequence_reads.split('\n')
+	const sequence_list = templates_info.map(i => i.sam_info.split('\t')[9])
 	for (const read_seq of sequence_list) {
 		if (read_seq.length > 0) {
 			// let cigar_seq = template.segments[0].cigarstr
@@ -427,8 +428,8 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index] +=
-					'\t' + alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				templates_info[index].tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -440,8 +441,8 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index] +=
-					'\t' + alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				templates_info[index].tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -457,8 +458,8 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index] +=
-					'\t' + alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				templates_info[index].tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -470,8 +471,8 @@ export async function match_complexvariant(q, templates_info, sequence_reads) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index] +=
-					'\t' + alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				templates_info[index].tempscore =
+					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {

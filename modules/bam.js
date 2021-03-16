@@ -660,11 +660,10 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
-
-		// read quality is not parsed yet
-		await may_checkrefseq4mismatch(templates, q)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
+		// read quality is not parsed yet
+		await may_checkrefseq4mismatch(templates, q)
 		finalize_templates(group, templates, q) // set .canvasheight
 
 		// result obj of this group
@@ -871,17 +870,8 @@ return {}
   .refalleleerror
 */
 async function divide_reads_togroups(q) {
-	// templates
-	const templates_info = []
-	let sequence_reads = ''
-	//for (const template of templates) {
-	for (const line of q.regions[0].lines) {
-		// q.regions[0] may need to be modified
-		templates_info.push(line)
-		const sequence = line.split('\t')[9]
-		sequence_reads += sequence + '\n'
-	}
 	//if (templates.length == 0) {
+	const templates_info = []
 	if (q.regions[0].lines.length == 0) {
 		// no reads at all, return empty group
 		return {
@@ -901,8 +891,15 @@ async function divide_reads_togroups(q) {
 		// if snv, simple match; otherwise complex match
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
-		//return await rust_match_complexvariant(q, templates_info, sequence_reads)
-		return await match_complexvariant(q, templates_info, sequence_reads)
+		//for (const template of templates) {
+		if (q.regions.length == 1) {
+			for (const line of q.regions[0].lines) {
+				// q.regions[0] may need to be modified
+				templates_info.push({ sam_info: line, tempscore: '' })
+			}
+			//return await rust_match_complexvariant(q, templates_info)
+			return await match_complexvariant(q, templates_info)
+		}
 	}
 	if (q.sv) {
 		return match_sv(templates, q)
@@ -975,10 +972,6 @@ function match_sv(templates, q) {
 function get_templates(q, group) {
 	// parse reads from all regions
 	// returns an array of templates, no matter if paired or not
-	let is_variant = 0
-	if (q.variant) {
-		is_variant = 1
-	}
 	if (!q.asPaired) {
 		// pretends single reads as templates
 		const lst = []
@@ -987,7 +980,7 @@ function get_templates(q, group) {
 			const r = q.regions[i]
 			//for (const line of r.lines) {
 			for (const line of group.templates) {
-				const segment = parse_one_segment(is_variant, line, r, i)
+				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1007,7 +1000,7 @@ function get_templates(q, group) {
 		const r = q.regions[i]
 		//for (const line of r.lines) {
 		for (const line of group.templates) {
-			const segment = parse_one_segment(is_variant, line, r, i)
+			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1027,7 +1020,7 @@ function get_templates(q, group) {
 	return [...qname2template.values()]
 }
 
-function parse_one_segment(is_variant, line, r, ridx, keepallboxes) {
+function parse_one_segment(line, r, ridx, keepallboxes) {
 	/*
 do not do:
   parse seq
@@ -1039,7 +1032,7 @@ only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
 */
-	const l = line.trim().split('\t')
+	const l = line.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1055,10 +1048,7 @@ may skip insertion if on screen width shorter than minimum width
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
-	let tempscore = ''
-	if (is_variant == 1) {
-		tempscore = l[l.length - 1]
-	}
+	let tempscore = line.tempscore
 
 	if (flag & 0x4) {
 		//console.log('unmapped')
@@ -1887,8 +1877,7 @@ async function query_oneread(req, r) {
 		)
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const is_variant = 0
-			const s = parse_one_segment(is_variant, line, r, null, true)
+			const s = parse_one_segment({ seq_info: line, tempscore: '' }, r, null, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {
