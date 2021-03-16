@@ -593,7 +593,7 @@ export function bulkembed(arg) {
 				}
 				if (mset.snvindel_url) {
 					tasks.push(
-						client.dofetch2('urltextfile', { url: mset.snvindel_url }).then(data => {
+						client.dofetch('urltextfile', { url: mset.snvindel_url }).then(data => {
 							if (data.error) throw { message: 'cannot get snvindel file from url' }
 							const e = parse_snvindel(data.text, flag)
 							if (e) throw { message: 'error with snvindel file: ' + e }
