@@ -17,7 +17,7 @@ export async function init_examples(par) {
 	const app_col = make_col(track_grid, 'otherapps')
 
 	// top of genome browser column followed by subheaders
-	launch_gBrowser_btn(gbrowser_col, genome)
+	await launch_gBrowser_btn(gbrowser_col, genome)
 
 	// top of apps column followed by subheader
 	const searchbar_div = app_col.append('div')
@@ -48,52 +48,6 @@ function make_examples_page(holder) {
 		.style('padding', '10px')
 		.style('background-color', '#f5f5f5')
 	return wrapper_div
-}
-//Makes search bar and functionality to search tracks
-function make_searchbar(div, args) {
-	const bar_div = make_top_fnDiv(div)
-
-	// const bar_div = div.append('div')
-	// bar_div
-	// 	.style('display', 'flex')
-	// 	.style('flex-direction', 'column')
-	// 	.style('align-items', 'center')
-	// 	.style('justify-content', 'center')
-	// 	.style('background-color', '#f5f5f5')
-	const searchBar = bar_div.append('div')
-	searchBar
-		.append('div')
-		.append('input')
-		.attr('type', 'text')
-		.style('width', '500px')
-		.style('height', '24px')
-		.style('border-radius', '3px')
-		.style('border', '2px solid #dbdbdb')
-		.style('font-size', '12px')
-		.property('placeholder', 'Search apps, tracks, or features')
-		.on(
-			'keyup',
-			debounce(async () => {
-				const data = args.tracks
-				const searchInput = searchBar
-					.select('input')
-					.node()
-					.value.toLowerCase()
-				const filteredTracks = data.filter(track => {
-					let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
-						if (searchTermFound) {
-							return true
-						}
-						return searchTerm.toLowerCase().includes(searchInput)
-					}, false)
-					return searchTermFound || track.name.toLowerCase().includes(searchInput)
-				})
-				await loadTracks(args, filteredTracks)
-			}),
-			700
-		)
-
-	return searchBar
 }
 
 //Creates the two column outer grid
@@ -154,14 +108,15 @@ function make_top_fnDiv(div) {
 }
 
 //Creates the launch genome browser button
-function launch_gBrowser_btn(div, genome) {
+async function launch_gBrowser_btn(div, genome) {
+	div.selectAll('*').remove()
 	const launch_btn_div = make_top_fnDiv(div)
 
 	const launch_btn = launch_btn_div
 		.append('button')
 		.attr('class', 'gbrowser-btn')
-		.style('height', '75px')
-		.style('width', '50%')
+		.style('height', '60px')
+		.style('width', '55%')
 		.style('border-radius', '3px')
 		.style('border', 'none')
 		.style('background-color', 'white')
@@ -181,6 +136,46 @@ function launch_gBrowser_btn(div, genome) {
 		.text('Change the genome from the header dropdown')
 
 	return launch_btn
+}
+
+//Makes search bar and functionality to search tracks
+function make_searchbar(div, args) {
+	const bar_div = make_top_fnDiv(div)
+
+	const searchBar = bar_div.append('div')
+	searchBar
+		.append('div')
+		.append('input')
+		.attr('type', 'text')
+		.style('width', '500px')
+		.style('height', '24px')
+		.style('border-radius', '3px')
+		.style('border', '2px solid #dbdbdb')
+		.style('font-size', '12px')
+		.property('placeholder', 'Search apps, tracks, or features')
+		.on(
+			'keyup',
+			debounce(async () => {
+				const data = args.tracks
+				const searchInput = searchBar
+					.select('input')
+					.node()
+					.value.toLowerCase()
+				const filteredTracks = data.filter(track => {
+					let searchTermFound = (track.searchterms || []).reduce((searchTermFound, searchTerm) => {
+						if (searchTermFound) {
+							return true
+						}
+						return searchTerm.toLowerCase().includes(searchInput)
+					}, false)
+					return searchTermFound || track.name.toLowerCase().includes(searchInput)
+				})
+				await loadTracks(args, filteredTracks)
+			}),
+			700
+		)
+
+	return searchBar
 }
 
 async function loadTracks(args, filteredTracks) {
