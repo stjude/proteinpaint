@@ -186,7 +186,7 @@ tape('overlapping points', async test => {
 	test.end()
 })
 
-tape.skip('svg overflow', async test => {
+tape.only('svg overflow', async test => {
 	const x = 0.3 * side,
 		y = 0.5 * side
 	const data = [
@@ -213,11 +213,7 @@ tape.skip('svg overflow', async test => {
 		`should adjust all text font-size to ${adjFontSize}`
 	)
 	const text0 = dom.labels.filter(d => d.label === data[0].label).select('text')
-	const xy0 = [0, 0]
-	test.deepEqual(
-		[+text0.attr('x'), +text0.attr('y')],
-		xy0,
-		`should NOT move the first label: [x,y] = [${xy0.join(',')}]`
-	)
+	const xy0 = [49.078125, 0]
+	test.deepEqual([+text0.attr('x'), +text0.attr('y')], xy0, `should move the first label: [x,y] = [${xy0.join(',')}]`)
 	test.end()
 })
