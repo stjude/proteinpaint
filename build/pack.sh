@@ -104,9 +104,9 @@ if [[ "$PACK_BACKEND" == 1 ]]; then
 fi
 
 if [[ "$PACK_FRONTEND" == 1 ]]; then
-	echo -e "\nBundling the client bin ...\n"
-	npx webpack --config=build/webpack.config.build.js --env.url="__PP_URL__"
-	echo -e "\nPacking the client main ...\n"
+	echo -e "\nBundling the client browser bin ...\n"
+	npx webpack --config=build/webpack.config.client.js --env.url="__PP_URL__"
+	echo -e "\nPacking the client module main ...\n"
 	npx rollup -c ../build/rollup.config.js
 fi
 
