@@ -1031,7 +1031,7 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
-*/
+	*/
 	const l = line.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
@@ -1877,7 +1877,7 @@ async function query_oneread(req, r) {
 		)
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment({ seq_info: line, tempscore: '' }, r, null, true)
+			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {
