@@ -4,7 +4,6 @@ module.exports = function(common) {
 	return {
 		genome: 'hg38',
 		isMds: true,
-		/*
 		gene2mutcount: {
 			// to get list of most recurrently mutated genes from a set of samples
 			dbfile: 'hg38/Pediatric/sjcloud.sub/G4K/genecount.db',
@@ -31,7 +30,6 @@ module.exports = function(common) {
 				{ db_col: 'cnv_4mb_03', sizecutoff: '4Mb', log2cutoff: 0.3, default: 0 }
 			]
 		},
-		*/
 
 		singlesamplemutationjson: {
 			file: 'hg38/Pediatric/sjcloud.sub/G4K/mutationpersample/table'
