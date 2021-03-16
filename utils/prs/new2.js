@@ -237,9 +237,9 @@ function get_hwe(lines) {
 }
 
 function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
-	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.vcf.gz')
+	const bcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.noINFO.bcf')
 	try {
-		fs.statSync(vcffile)
+		fs.statSync(bcffile)
 	} catch (e) {
 		// file missing
 		return
@@ -257,8 +257,7 @@ function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
 			'%CHROM %POS %REF %ALT [%GT ]\\n',
 			'-s',
 			sampleids.join(','),
-			//path.join(vcfdir,'vcf.gz') // xxxxxxxxxxxx
-			vcffile
+			bcffile
 		])
 		const rl = readline.createInterface({ input: sp.stdout })
 		rl.on('line', async line => {
