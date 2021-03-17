@@ -17,9 +17,10 @@ export async function init_examples(par) {
 	const app_col = make_col(track_grid, 'otherapps')
 
 	// top of genome browser column followed by subheaders
-	await launch_gBrowser_btn(gbrowser_col, genome)
+	// await launch_gBrowser_btn(gbrowser_col, genome)
 
 	// top of apps column followed by subheader
+	const holddiv = make_top_fnDiv(gbrowser_col)
 	const searchbar_div = app_col.append('div')
 
 	// subheaders
@@ -101,48 +102,49 @@ function make_top_fnDiv(div) {
 		.style('align-items', 'center')
 		.style('justify-content', 'center')
 		.style('background-color', '#f5f5f5')
-		.style('height', '75px')
+		.style('height', '50px')
 		.style('width', '550px')
 
 	return top
 }
 
-//Creates the launch genome browser button
-async function launch_gBrowser_btn(div, genome) {
-	div.selectAll('*').remove()
-	const launch_btn_div = make_top_fnDiv(div)
+// //Creates the launch genome browser button
+// async function launch_gBrowser_btn(div, genome) {
+// 	div.selectAll('*').remove()
+// 	const launch_btn_div = make_top_fnDiv(div)
 
-	const launch_btn = launch_btn_div
-		.append('button')
-		.attr('class', 'gbrowser-btn')
-		.style('height', '60px')
-		.style('width', '55%')
-		.style('border-radius', '3px')
-		.style('border', 'none')
-		.style('background-color', 'white')
-		.style('text-align', 'center')
-		.style('font-size', '14.5px')
-		.style(
-			'font-family',
-			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
-		)
-		.text('Launch ' + genome + ' Genome Browser')
-	// .on('click',() => {}) TODO: Add click behavior
+// 	const launch_btn = launch_btn_div
+// 		.append('button')
+// 		.attr('class', 'gbrowser-btn')
+// 		.style('height', '60px')
+// 		.style('width', '55%')
+// 		.style('border-radius', '3px')
+// 		.style('border', 'none')
+// 		.style('background-color', 'white')
+// 		.style('text-align', 'center')
+// 		.style('font-size', '14.5px')
+// 		.style(
+// 			'font-family',
+// 			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
+// 		)
+// 		.text('Launch ' + genome + ' Genome Browser')
+// 	// .on('click',() => {}) TODO: Add click behavior
 
-	launch_btn
-		.append('span')
-		.attr('class', 'launch-btn-tooltip')
-		.style('font-size', '11px')
-		.text('Change the genome from the header dropdown')
+// 	launch_btn
+// 		.append('span')
+// 		.attr('class', 'launch-btn-tooltip')
+// 		.style('font-size', '11px')
+// 		.text('Change the genome from the header dropdown')
 
-	return launch_btn
-}
+// 	return launch_btn
+// }
 
 //Makes search bar and functionality to search tracks
 function make_searchbar(div, args) {
 	const bar_div = make_top_fnDiv(div)
 
 	const searchBar = bar_div.append('div')
+	// const searchBar = div.append('div')
 	searchBar
 		.append('div')
 		.append('input')
@@ -188,7 +190,7 @@ async function loadTracks(args, filteredTracks) {
 	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
 		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
 	)
-	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Tracks')
+	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
 
 	try {
 		displayTracks(GPaintTracks, args.gpaintList)

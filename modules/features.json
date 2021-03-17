@@ -8,8 +8,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
             "buttons": {
                 "url": "",
-                "doc": "",
-                "tutorial": ""
+                "doc": ""
             },
             "searchterms": ["GenomePaint"]
         },
@@ -22,8 +21,7 @@
             "image": "",
             "buttons": {
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu"
             },
             "searchterms": ["KM plot"]
         },
@@ -36,10 +34,36 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
             "buttons": {
                 "url": "",
-                "doc": "",
-                "tutorial": ""
+                "doc": ""
             },
             "searchterms": []
+        },
+        {
+            "name": "Allelic Imbalance",
+            "shorthand": "AICheck",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "aka aicheck",
+            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
+            "buttons": {
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr8:126890266-13279507",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "type": "aicheck",
+                        "file": "proteinpaint_demo/hg19/aicheck/file.gz",
+                        "name": "Demo sample tumor allelic imbalance"
+                    }]
+                },
+                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
+                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+            },
+            "searchterms": ["aicheck", "tumor", "normal"]
         },
         {
             "name": "BigWig",
@@ -65,13 +89,12 @@
                     }]
                 },
                 "url": "?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
             },
             "searchterms": ["coverage", "numeric"]
         },
         {
-            "name": "Profile Gene Valve",
+            "name": "Profile Gene Value",
             "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -110,10 +133,9 @@
                     }]
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
             },
-            "searchterms": ["profile gene value", "pgv"]
+            "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
         },
         {
             "name": "Expression Rank",
@@ -139,8 +161,7 @@
                     }]
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
             },
             "searchterms": []
         },
@@ -171,8 +192,7 @@
                     }]
                 },
                 "url": "?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
-                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
             },
             "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation"]
         },
@@ -200,8 +220,20 @@
                     }]
                 },
                 "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
-                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A ",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Lollipop",
+            "shorthand": "Lollipop",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "lollipop view of Pediatric and COSMIC datasets",
+            "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
             },
             "searchterms": []
         },
@@ -226,8 +258,7 @@
                     }]
                 },
                 "url": "?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
-                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
             },
             "searchterms": []
         },
@@ -255,8 +286,7 @@
                     }]
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
             },
             "searchterms": ["bigwig stranded"]
         },
@@ -269,38 +299,9 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
                 "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
-                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
             },
             "searchterms": []
-        },
-        {
-            "name": "Allelic imbalance",
-            "shorthand": "AICheck",
-            "app": "Genome Browser",
-            "subheading": "Tracks",
-            "blurb": "aicheck",
-            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
-            "buttons": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr8:126890266-13279507",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "aicheck",
-                        "file": "proteinpaint_demo/hg19/aicheck/file.gz",
-                        "name": "Demo sample tumor allelic imbalance"
-                    }]
-                },
-                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
-                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII",
-                "tutorial": ""
-            },
-            "searchterms": ["aicheck"]
         },
         {
             "name": "VCF",
@@ -384,22 +385,7 @@
                     }]
                 },
                 "url": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
-                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw",
-                "tutorial": ""
-            },
-            "searchterms": []
-        },
-        {
-            "name": "Lollipop",
-            "shorthand": "Lollipop",
-            "app": "Genome Browser",
-            "subheading": "Tracks",
-            "blurb": "lollipop view of Pediatric and COSMIC datasets",
-            "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
-            "buttons": {
-                "url": "",
-                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
             },
             "searchterms": []
         },
@@ -494,10 +480,9 @@
                     }]
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
             },
-            "searchterms": []
+            "searchterms": ["Allele-specific gene expression"]
         },
         {
             "name": "BAM",
@@ -522,8 +507,7 @@
                     }]
                 },
                 "url": "",
-                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0",
-                "tutorial": ""
+                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "searchterms": ["BLAT"]
         },
@@ -536,8 +520,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
                 "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
-                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
             },
             "searchterms": []
         },
@@ -545,7 +528,7 @@
             "name": "Use FusionEditor",
             "shorthand": "Fusion Editor",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "fusions discovered in a sample",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
@@ -555,8 +538,7 @@
                     "fusioneditor": { "uionly": true }
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
             },
             "searchterms": []
         },
@@ -564,7 +546,7 @@
             "name": "2DMAF",
             "shorthand": "2DMAF",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "SNV and indel mutations",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
@@ -577,16 +559,54 @@
                     }
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
             },
             "searchterms": ["2dmaf"]
+        },
+        {
+            "name": "FIMO motif analysis",
+            "shorthand": "FIMO",
+            "app": "Apps",
+            "subheading": "Apps",
+            "blurb": "predicts motif changes",
+            "image": "",
+            "buttons": {
+                "url": "",
+                "doc": ""
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Heatmap",
+            "shorthand": "Heatmap",
+            "app": "Apps",
+            "subheading": "Apps",
+            "blurb": "mutation data in a gene-by-sample matrix",
+            "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
+            },
+            "searchterms": ["heat map", "ribbon", "disco", "gene network"]
+        },
+        {
+            "name": "Hi-C whole-genome view",
+            "shorthand": "HiC whole genome",
+            "app": "Apps",
+            "subheading": "Apps",
+            "blurb": "TODO: Brief description of track or app",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
+            "buttons": {
+                "url": "/F/human.temp.hic.html",
+                "doc": ""
+            },
+            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
             "name": "MA+Volcano plots",
             "shorthand": "MA+Volcano",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "gene expression along side significance",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
@@ -604,30 +624,28 @@
                     }
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
             },
-            "searchterms": ["MA+Volcano"]
+            "searchterms": ["MA+Volcano", "differential gene expression", "RNAseq coverage"]
         },
         {
-            "name": "FIMO motif analysis",
-            "shorthand": "FIMO",
+            "name": "MAF-timeline",
+            "shorthand": "MAF",
             "app": "Apps",
-            "subheading": "Tracks",
-            "blurb": "predicts motif changes",
-            "image": "",
+            "subheading": "Apps",
+            "blurb": "Mutant allele fraction timeline chart by date",
+            "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "buttons": {
                 "url": "",
-                "doc": "",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
             },
-            "searchterms": []
+            "searchterms": ["mutant allele fraction", "snv", "snv4"]
         },
         {
             "name": "Scatterplot",
             "shorthand": "Scatterplot",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
@@ -1834,64 +1852,20 @@
                     }
                 },
                 "url": "",
-                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
             },
-            "searchterms": ["tSNE", "disco"]
-        },
-        {
-            "name": "Heatmap",
-            "shorthand": "Heatmap",
-            "app": "Apps",
-            "subheading": "Tracks",
-            "blurb": "mutation data in a gene-by-sample matrix",
-            "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
-            "buttons": {
-                "url": "",
-                "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit",
-                "tutorial": ""
-            },
-            "searchterms": ["heat map", "ribbon", "disco", "gene network"]
-        },
-        {
-            "name": "Hi-C whole-genome view",
-            "shorthand": "HiC whole genome",
-            "app": "Apps",
-            "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
-            "buttons": {
-                "url": "/F/human.temp.hic.html",
-                "doc": "",
-                "tutorial": ""
-            },
-            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
-        },
-        {
-            "name": "MAF-timeline",
-            "shorthand": "MAF",
-            "app": "Apps",
-            "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
-            "buttons": {
-                "url": "",
-                "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit",
-                "tutorial": ""
-            },
-            "searchterms": []
+            "searchterms": ["tSNE", "lasso"]
         },
         {
             "name": "Single Cell",
             "shorthand": "Single Cell",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
                 "url": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
-                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },
@@ -1899,27 +1873,25 @@
             "name": "Study View",
             "shorthand": "Study View",
             "app": "Apps",
-            "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
+            "subheading": "Apps",
+            "blurb": "multiple visualizations of gene by grouped individuals study data",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "buttons": {
                 "url": "",
-                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing",
-                "tutorial": ""
+                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
             },
-            "searchterms": ["heatmap", "heat map", "ribbon", "disco", "gene network"]
+            "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
         },
         {
             "name": "termdb with custom vocabulary",
             "shorthand": "termdb",
             "app": "Apps",
-            "subheading": "Tracks",
+            "subheading": "Apps",
             "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
                 "url": "",
-                "doc": "",
-                "tutorial": ""
+                "doc": ""
             },
             "searchterms": ["clinical", "dictionary"]
         }
