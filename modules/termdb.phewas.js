@@ -198,9 +198,12 @@ function get_phewas_tests(filter, ds, sample2gt, het0, href0, halt0) {
 	return tests
 }
 
-export async function do_precompute(q, res, ds) {
-	/*
+/*
 for precomputing
+after bundling, run following command:
+
+$ node server phewas-precompute hg38 SJLife
+
 programmatically generate list of samples for each category of a term
 as well as list of control samples for condition terms
 
@@ -211,25 +214,24 @@ use get_rows()
 
 will automatically restrict to only those samples in the vcf file
 */
-	if (!serverconfig.debugmode) throw 'precomputing is not allowed: not a dev server'
+export async function do_precompute(ds) {
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if (!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
 	if (ds.cohort.termdb.selectCohort) {
-		precompute_withCohortSelection(q, res, ds)
+		precompute_withCohortSelection(ds)
 	} else {
-		await precompute_noCohortSelection(q, res, ds)
+		precompute_noCohortSelection(ds)
 	}
 }
 
-function precompute_withCohortSelection(q, res, ds) {
+function precompute_withCohortSelection(ds) {
 	const subcohortTermtype2samples = may_subcohortTermtype2samples(ds)
 	// optional; same structure as ds.cohort.termdb.phewas.precompute_subcohort2totalsamples
 
 	const term2cohort = get_term2cohort(ds)
 
-	const filename = Math.random().toString()
-	const fwrite = fs.createWriteStream(path.join(serverconfig.cachedir, filename))
+	const fwrite = fs.createWriteStream('category2vcfsample')
 	const emptyterms = []
 
 	for (const { group_name, term } of ds.cohort.termdb.q.getAlltermsbyorder()) {
@@ -321,13 +323,12 @@ function precompute_withCohortSelection(q, res, ds) {
 		}
 	}
 
-	if (emptyterms.length) {
-		console.log(emptyterms.length + ' empty terms:')
-		console.log(emptyterms.join('\n'))
-	}
-
 	fwrite.end(() => {
-		res.send({ filename })
+		console.log('Phewas precompute result written to file "category2vcfsample".')
+		if (emptyterms.length) {
+			console.log(emptyterms.length + ' empty terms:')
+			console.log(emptyterms.join('\n'))
+		}
 	})
 }
 
@@ -458,7 +459,7 @@ function get_term2cohort(ds) {
 	return t2s
 }
 
-async function precompute_noCohortSelection(q, res, ds) {
+function precompute_noCohortSelection(ds) {
 	/* need to test if it really work for a datasset without cohort selection
 	 */
 
@@ -541,8 +542,8 @@ async function precompute_noCohortSelection(q, res, ds) {
 		}
 	}
 
-	const filename = await utils.write_tmpfile(rows.join('\n'))
-	res.send({ filename })
+	fs.writeFileSync('category2vcfsample', rows.join('\n'))
+	console.log('Phewas precompute result written to file "category2vcfsample".')
 }
 
 function getquerylst4term(term, ds, term2cohort) {
@@ -770,7 +771,8 @@ group.width reflects number of categories and is always bigger than label font s
 		toppad = Number(q.toppad),
 		bottompad = Number(q.bottompad),
 		dotcolor = 'black',
-		columnbgcolor = '#FDFEE2'
+		columnbgcolor = '#FDFEE2',
+		devicePixelRatio = Number(q.devicePixelRatio)
 
 	// defines dot density for groups with many dots
 	// groups with fewer dots will have fixed width and lower varying density
@@ -792,11 +794,15 @@ group.width reflects number of categories and is always bigger than label font s
 		x += g.width
 	}
 	const canvaswidth = leftpad + x + rightpad
-	canvas.width = canvaswidth
+	canvas.width = canvaswidth * devicePixelRatio
 
 	// set canvas height by max length of group label
 	const canvasheight = toppad + axisheight + bottompad
-	canvas.height = canvasheight
+	canvas.height = canvasheight * devicePixelRatio
+
+	if (devicePixelRatio > 1) {
+		ctx.scale(devicePixelRatio, devicePixelRatio)
+	}
 
 	///////// plot bg
 	x = 0

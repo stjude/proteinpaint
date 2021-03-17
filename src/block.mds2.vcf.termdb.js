@@ -49,19 +49,10 @@ official track only
 	// sample session id
 	const { ssid, groups } = await get_ssid_by_onevcfm(m, tk.mds.label, block.genome.name)
 
-	const h = client.may_get_locationsearch()
 	const div = plotdiv.append('div')
 	const wait = div.append('div')
 
 	try {
-		if (h && h.has('precompute')) {
-			const arg = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'phewas=1&precompute=1']
-			const data = await client.dofetch2('/termdb?' + arg.join('&'))
-			if (data.error) throw data.error
-			wait.text(data.filename)
-			return
-		}
-
 		// the run object
 		const obj = {
 			ssid,
@@ -135,7 +126,8 @@ function get_args(obj) {
 		'leftpad=' + obj.svg.leftpad,
 		'rightpad=' + obj.svg.rightpad,
 		'toppad=' + obj.svg.toppad,
-		'bottompad=' + obj.svg.bottompad
+		'bottompad=' + obj.svg.bottompad,
+		'devicePixelRatio=' + (window.devicePixelRatio > 1 ? window.devicePixelRatio : 1)
 	]
 	if (obj.termfilter.filter) lst.push('filter=' + encodeURIComponent(JSON.stringify(obj.termfilter.filter)))
 	return lst
@@ -181,8 +173,11 @@ function make_phewas_ui(obj, div, tk) {
 			.style('opacity', 0.5)
 
 		filterInit({
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
+			vocab: {
+				route: 'termdb',
+				genome: obj.genome.name,
+				dslabel: obj.mds.label
+			},
 			holder: obj.dom.row_filter
 				.append('div')
 				.style('display', 'inline-block')
@@ -479,8 +474,11 @@ official track only
 	}
 	const opt = {
 		state: {
-			dslabel: tk.mds.label,
-			genome: block.genome.name,
+			vocab: {
+				route: 'termdb',
+				dslabel: tk.mds.label,
+				genome: block.genome.name
+			},
 			nav: {
 				header_mode: 'with_cohortHtmlSelect'
 			},

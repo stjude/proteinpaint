@@ -688,161 +688,196 @@ function studyui(app, x, y) {
 
 
 async function parseembedthenurl(arg, app, selectgenome) {
-    /*
-    first, try to parse any embedding parameters
-    quit in case of any blocking things
-    after exhausting embedding options, try URL parameters
+	/*
+	first, try to parse any embedding parameters
+	quit in case of any blocking things
+	after exhausting embedding options, try URL parameters
 
-    arg: embedding param
-    app: {genomes, study, holder0, hostURL, debugmode, jwt?}
-    selectgenome: <select>
+	arg: embedding param
+	app: {genomes, study, holder0, hostURL, debugmode, jwt?}
+	selectgenome: <select>
 
-    */
+	*/
 
-    if (arg.genome && selectgenome) {
-        // embedding argument specified genome, so flip the <select>
-        for (let i = 0; i < selectgenome.node().childNodes.length; i++) {
-            if (selectgenome.node().childNodes[i].value == arg.genome) {
-                selectgenome.property('selectedIndex', i)
-                break
-            }
-        }
-    }
-    if (arg.xintest) {
-        // a shortcut to xin's experiments and not to be used in prod
-        launchxintest(arg.xintest, app)
-        return
-    }
+	if(arg.genome && selectgenome) {
+		// embedding argument specified genome, so flip the <select>
+		for(let i=0; i<selectgenome.node().childNodes.length; i++) {
+			if(selectgenome.node().childNodes[i].value == arg.genome) {
+				selectgenome.property('selectedIndex',i)
+				break
+			}
+		}
+	}
+	if( arg.xintest) {
+		// a shortcut to xin's experiments and not to be used in prod
+		launchxintest(arg.xintest, app)
+		return
+	}
 
-    if (arg.singlecell) {
-        launch_singlecell(arg.singlecell, app)
-        return
-    }
+	if(arg.singlecell) {
+		launch_singlecell( arg.singlecell, app )
+		return
+	}
 
-    if (arg.fimo) {
-        launch_fimo(arg.fimo, app)
-        return
-    }
+	if(arg.fimo) {
+		launch_fimo( arg.fimo, app)
+		return
+	}
 
-    if (arg.mdssurvivalplot) {
-        if (arg.genome) arg.mdssurvivalplot.genome = arg.genome
-        launchmdssurvivalplot(arg.mdssurvivalplot, app)
-        return
-    }
+	if(arg.mdssurvivalplot) {
+		if(arg.genome) arg.mdssurvivalplot.genome = arg.genome
+		launchmdssurvivalplot(arg.mdssurvivalplot, app)
+		return
+	}
 
-    if (arg.mdssamplescatterplot) {
-        if (arg.genome) arg.mdssamplescatterplot.genome = arg.genome
-        launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
-        return
-    }
+	if(arg.mdssamplescatterplot) {
+		if(arg.genome) arg.mdssamplescatterplot.genome = arg.genome
+		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
+		return
+	}
 
-    if (arg.samplematrix) {
-        arg.samplematrix.jwt = arg.jwt
-        launchsamplematrix(arg.samplematrix, app)
-        return
-    }
+	if(arg.samplematrix) {
+		arg.samplematrix.jwt = arg.jwt
+		launchsamplematrix( arg.samplematrix, app )
+		return
+	}
 
-    if (arg.hic) {
-        arg.hic.jwt = arg.jwt
-        launchhic(arg.hic, app)
-        return
-    }
+	if(arg.hic) {
+		arg.hic.jwt = arg.jwt
+		launchhic( arg.hic, app )
+		return
+	}
 
-    if (arg.block) {
-        // load this before study / studyview
-        return launchblock(arg, app)
-    }
+	if(arg.block) {
+		// load this before study / studyview
+		return launchblock(arg, app)
+	}
 
-    if (arg.study) {
-        // launch study-view through name of server-side configuration file (study.json)
-        loadstudycohort(
-            app.genomes,
-            arg.study,
-            app.holder0,
-            app.hostURL,
-            arg.jwt,
-            false, // no show
-            app.debugmode
-        )
-        return
-    }
+	if(arg.study) {
+		// launch study-view through name of server-side configuration file (study.json)
+		loadstudycohort(
+			app.genomes,
+			arg.study,
+			app.holder0,
+			app.hostURL,
+			arg.jwt,
+			false, // no show
+			app.debugmode
+		)
+		return
+	}
 
-    if (arg.studyview) {
-        // launch study-view through an object
-        const obj = arg.studyview
-        obj.hostURL = arg.host
-        const gn = obj.genome || arg.genome
-        obj.genome = app.genomes[gn]
-        obj.hostURL = app.hostURL
-        obj.jwt = arg.jwt
-        obj.holder = app.holder0
-        bulkembed(obj)
-        return
-    }
+	if(arg.studyview) {
+		// launch study-view through an object
+		const obj = arg.studyview
+		obj.hostURL = arg.host
+		const gn = obj.genome || arg.genome
+		obj.genome = app.genomes[gn]
+		obj.hostURL = app.hostURL
+		obj.jwt = arg.jwt
+		obj.holder = app.holder0
+		bulkembed(obj)
+		return
+	}
 
-    if (arg.p) {
-        // backward-compatible with old parameter name
-        arg.gene = arg.p
-        delete arg.p
-    }
-    if (arg.gene2canonicalisoform) {
-        if (!arg.genome) throw '.genome missing for gene2canonicalisoform'
-        const data = await client.dofetch2('gene2canonicalisoform?genome=' + arg.genome + '&gene=' + arg.gene2canonicalisoform)
-        if (data.error) throw data.error
-        if (!data.isoform) throw 'no canonical isoform for given gene accession'
-        arg.gene = data.isoform
-    }
-    if (arg.gene) {
-        launchgeneview(arg, app)
-        return
-    }
+	if(await may_launchGeneView(arg, app)) {
+		// gene view launched
+		return
+	}
 
-    if (arg.fusioneditor) {
-        launchfusioneditor(arg, app)
-        return
-    }
 
-    if (arg.mavolcanoplot) {
-        launchmavb(arg, app)
-        return
-    }
+	if(arg.fusioneditor) {
+		launchfusioneditor(arg, app)
+		return
+	}
 
-    if (arg.twodmaf) {
-        launch2dmaf(arg, app)
-        return
-    }
+	if(arg.mavolcanoplot) {
+		launchmavb(arg, app)
+		return
+	}
 
-    if (arg.parseurl && location.search.length) {
-        /*
-        since jwt token is only passed from arg of runpp()
-        so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
-        */
-        const err = await parseurl.parse({
-            genomes: app.genomes,
-            hostURL: app.hostURL,
-            variantPageCall_snv: app.variantPageCall_snv,
-            samplecart: app.samplecart,
-            holder: app.holder,
-            selectgenome: selectgenome,
-            debugmode: app.debugmode
-        })
-        if (err) {
-            app.error0(err)
-        }
-    }
+	if(arg.twodmaf) {
+		launch2dmaf(arg, app)
+		return
+	}
 
-    if (arg.project) {
-        bulkui(0, 0, app.genomes, app.hostURL)
-    }
+	if(arg.parseurl && location.search.length) {
+		/*
+		since jwt token is only passed from arg of runpp()
+		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
+		*/
+		const err = await parseurl.parse({
+			genomes: app.genomes,
+			hostURL: app.hostURL,
+			variantPageCall_snv: app.variantPageCall_snv,
+			samplecart: app.samplecart,
+			holder: app.holder,
+			selectgenome: selectgenome,
+			debugmode: app.debugmode
+		})
+		if(err) {
+			app.error0(err)
+		}
+	}
 
-    if (arg.toy) {
-        launchtoy(arg.toy, app)
-    }
-    if (arg.termdb) {
-        launchtermdb(arg.termdb, app)
-    }
+	if (arg.project) {
+		bulkui(0,0, app.genomes, app.hostURL)
+	}
+
+	if (arg.toy) {
+		launchtoy(arg.toy, app)
+	}
+	if (arg.termdb) {
+		launchtermdb(arg.termdb, app)
+	}
 }
 
+
+async function may_launchGeneView(arg,app) {
+	// arg.gene is required to launch gene view
+	// arg.gene may come from different places
+	if(arg.p) {
+		// backward-compatible with old parameter name
+		arg.gene = arg.p
+		delete arg.p
+	}
+	if(arg.gene2canonicalisoform) {
+		if(!arg.genome) throw '.genome missing for gene2canonicalisoform'
+		const data = await client.dofetch2('gene2canonicalisoform?genome='+arg.genome+'&gene='+arg.gene2canonicalisoform)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no canonical isoform for given gene accession'
+		arg.gene = data.isoform
+	}
+	if(arg.mds3_ssm2canonicalisoform) {
+		/* logic specific for mds3 gdc dataset
+		given a ssm id, retrieve the canonical isoform and launch gene view with it
+		*/
+		if(!arg.genome) throw '.genome missing'
+		if(!arg.mds3_ssm2canonicalisoform.ssm_id) throw '.ssm_id missing from mds3_ssm2canonicalisoform'
+		if(!arg.mds3_ssm2canonicalisoform.dslabel) throw '.dslabel missing from mds3_ssm2canonicalisoform'
+		const data=await client.dofetch2('mds3?'
+			+'genome='+arg.genome
+			+'&dslabel='+arg.mds3_ssm2canonicalisoform.dslabel
+			+'&ssm2canonicalisoform=1'
+			+'&ssm_id='+arg.mds3_ssm2canonicalisoform.ssm_id
+		)
+		if(data.error) throw data.error
+		if(!data.isoform) throw 'no isoform found for given ssm_id'
+		arg.gene = data.isoform
+		// will also highlight this ssm
+		if(arg.tracks) {
+			const tk = arg.tracks.find(i=>i.dslabel==arg.mds3_ssm2canonicalisoform.dslabel)
+			if(tk) {
+				tk.hlssmid = arg.mds3_ssm2canonicalisoform.ssm_id
+			}
+		}
+	}
+	if(arg.gene) {
+		launchgeneview(arg, app)
+		return true
+	}
+	return false
+}
 
 
 

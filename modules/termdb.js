@@ -42,10 +42,9 @@ export function handle_request_closure(genomes) {
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
-				if (q.precompute) return await phewas.do_precompute(q, res, ds)
 				if (q.update) return await phewas.update_image(q, res)
 				if (q.getgroup) return await phewas.getgroup(q, res)
-				return await phewas.trigger(q, res, ds) // also does precompute
+				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
 			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)

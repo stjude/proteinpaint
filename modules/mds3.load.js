@@ -36,9 +36,12 @@ module.exports = genomes => {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			const q = init_q(req.query, genome)
-			// ... comments
-			//
-			if (req.headers['X-Auth-Token']) q.token = req.headers['X-Auth-Token']
+
+			// user token may be provided from request header, the logic could be specific to gdc or another dataset
+			if (req.headers['X-Auth-Token']) {
+				q.token = req.headers['X-Auth-Token']
+			}
+
 			const ds = await get_ds(q, genome)
 
 			const result = init_result(q, ds)
@@ -127,12 +130,20 @@ async function get_ds(q, genome) {
 	// make a custom ds
 	throw 'custom ds todo'
 	const ds = {}
+	// may cache index files from url, thus the await
 	return ds
 }
 
 async function load_driver(q, ds, result) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
+
+	if (q.ssm2canonicalisoform) {
+		// gdc-specific logic
+		if (!ds.ssm2canonicalisoform) throw 'ssm2canonicalisoform not supported on this dataset'
+		result.isoform = await ds.ssm2canonicalisoform.get(q)
+		return
+	}
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
