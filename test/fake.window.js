@@ -2,6 +2,14 @@ import { select } from 'd3-selection'
 
 const fakeWindows = {}
 
+/*
+	Simulate a browser window, in order to avoid
+	conflicts when testing URL path/route-based
+	component tests, where changing the actual 
+	browser window's URL or storage items 
+	during a test will affect unrelated test specs 
+	that also use the URL or storage items
+*/
 export function getWindow(name, opts = {}) {
 	if (name in fakeWindows) return fakeWindows[name]
 

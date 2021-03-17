@@ -237,16 +237,16 @@ function get_hwe(lines) {
 }
 
 function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
-	const vcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.vcf.gz')
+	const bcffile = path.join(vcfdir, 'chr' + chr, chr + '.noAD.noINFO.bcf')
 	try {
-		fs.statSync(vcffile)
+		fs.statSync(bcffile)
 	} catch (e) {
 		// file missing
 		return
 	}
 
 	// test step to compare with cindy's PGS000015_chr10.weights files
-	const compsnps = load_cindy_weight(chr)
+	//const compsnps = load_cindy_weight(chr)
 
 	return new Promise((resolve, reject) => {
 		const sp = spawn('bcftools', [
@@ -257,8 +257,7 @@ function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
 			'%CHROM %POS %REF %ALT [%GT ]\\n',
 			'-s',
 			sampleids.join(','),
-			//path.join(vcfdir,'vcf.gz') // xxxxxxxxxxxx
-			vcffile
+			bcffile
 		])
 		const rl = readline.createInterface({ input: sp.stdout })
 		rl.on('line', async line => {
@@ -278,23 +277,23 @@ function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
 				return
 			}
 
-			const cindysnp = compsnps.get('chr' + l[0] + '.' + l[1])
-			if (cindysnp) cindysnp.count++
+			//const cindysnp = compsnps.get('chr' + l[0] + '.' + l[1])
+			//if (cindysnp) cindysnp.count++
 
 			// now EAidx is string '0', '1' etc
 
 			const [missingcallrate, effectallelefrequency, href, het, halt] = get_effalefreq(l, EAidx)
 			if (missingcallrate >= 0.1) {
 				console.error('skip missing callrate', l[0] + ':' + l[1])
-				if (cindysnp) cindysnp.callrate = true
+				//if (cindysnp) cindysnp.callrate = true
 				return
 			}
 			if (effectallelefrequency <= 0.01) {
 				console.error('skip low freq', l[0] + ':' + l[1])
-				if (cindysnp) cindysnp.eaf = true
+				//if (cindysnp) cindysnp.eaf = true
 				return
 			}
-			if (cindysnp) cindysnp.inuse = true
+			//if (cindysnp) cindysnp.inuse = true
 
 			snp.EAidx = EAidx
 			snp.effectallelefrequency = effectallelefrequency
@@ -307,7 +306,7 @@ function run_bcftools(chr, tmpsnpfile, snparray, pos2snp) {
 		sp.on('close', () => {
 			fs.unlink(tmpsnpfile, () => {})
 
-			write_cindysnp(chr, compsnps)
+			//write_cindysnp(chr, compsnps)
 
 			const e = err.join('')
 			if (e) reject(e)

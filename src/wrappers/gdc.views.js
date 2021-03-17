@@ -19,7 +19,6 @@ export function getLolliplotTrack() {
 		host,
 		genome: 'hg38', // hardcoded for gdc
 		//gene: data.gene,
-		loggedin: this.props.loggedin,
 		tracks: [
 			{
 				type: 'mds3',
@@ -31,11 +30,23 @@ export function getLolliplotTrack() {
 	// get the gene transcript from the URL pathname and
 	// the set_id from within the URL "filter" parameter
 	const params = this.getUrlParams()
-	if (params.gene) {
+	if (this.props.geneId) {
+		arg.gene2canonicalisoform = this.props.geneId
+	} else if (params.gene) {
 		arg.gene2canonicalisoform = params.gene
 	}
-	if (params.filters) {
+
+	if (this.props.filters) {
+		arg.tracks[0].filter0 = this.props.filters
+	} else if (params.filters) {
 		arg.tracks[0].filter0 = params.filters
+	}
+
+	if (this.props.ssm_id) {
+		arg.mds3_ssm2canonicalisoform = {
+			dslabel: 'GDC',
+			ssm_id: this.props.ssm_id
+		}
 	}
 
 	return arg

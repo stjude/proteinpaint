@@ -29,39 +29,36 @@ const genes = [
 
 const gdcParamKeys = ['filters', 'gene']
 
-export class App extends React.Component {
+export class AppProps extends React.Component {
 	constructor(props) {
 		super(props)
-		this.window = this.props.window ? this.props.window : window
-		this.urlpathname = this.window.location.pathname
-		this.urlhash = this.window.location.hash
-		this.urlparams = ''
-		const params = this.getUrlParams()
-		this.setNonGdcParams(params)
-		this.filters = params.filters ? params.filters : ''
+		this.filters = this.props.filters ? this.props.filters : null
 		const set_filter = this.filters && this.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
-		let set_id
-		if (params.filters && set_filter && set_filter.content.value[0].includes('set_id:')) {
-			set_id = set_filter.content.value[0].split(':').pop()
-		}
-		let gene = genes.find(g => g.ensembl_id == params.gene)
-		if (!gene) gene = genes[0]
+		const set_id =
+			set_filter && set_filter.content.value[0].includes('set_id:')
+				? set_filter.content.value[0].split(':').pop()
+				: 'J4BW1HYBmqgBSxEihjaC'
+		let gene = genes.find(g => g.ensembl_id == this.props.geneId)
+		if (!gene) gene = this.props.ssm_id ? null : genes[0]
 
 		this.state = {
 			message,
 			basepath: 'basepath' in this.props ? this.props.basepath : '/auth/api/custom/proteinpaint',
-			gene: gene.name,
-			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
-			set_id_flag: set_id != null, // false,
+			gene: gene && gene.name,
+			geneId: gene && gene.ensembl_id,
+			set_id,
+			set_id_flag: false,
 			set_id_editing: false,
 			token_flag: false,
 			token_editing: true,
 			filters: this.filters,
 			lastUnrelatedUpdate: +new Date(),
-			token: null
+			token: null,
+			ssm_id: this.props.ssm_id
 		}
 		this.setidRef = React.createRef()
 		this.tokenRef = React.createRef()
+		this.ppRef = React.createRef()
 		this.filterJsonRef = React.createRef()
 	}
 	render() {
@@ -152,7 +149,13 @@ export class App extends React.Component {
 					</button>
 				</div>
 				<div>
-					<PpLolliplot basepath={this.state.basepath} loggedin={this.state.loggedin} window={this.window} />
+					<PpLolliplot
+						ref={this.ppRef}
+						basepath={this.state.basepath}
+						geneId={this.state.geneId}
+						filters={this.state.filters}
+						ssm_id={this.state.ssm_id}
+					/>
 				</div>
 				<div>
 					<span>Last unrelated update: {this.state.lastUnrelatedUpdate} </span>
@@ -164,41 +167,27 @@ export class App extends React.Component {
 	componentDidMount() {
 		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
 	}
-	setNonGdcParams(_params = null) {
-		const params = _params ? _params : this.getUrlParams()
-		// need to remember any existing URL search parameters and hash,
-		// to propagate along with any applicable filters
-		const nonGdcKeys = Object.keys(params).filter(key => !gdcParamKeys.includes(key))
-		this.nonGdcParams = !nonGdcKeys.length ? '' : '?' + nonGdcKeys.map(key => key + '=' + params[key]).join('&')
-	}
-	replaceURLHistory() {
-		this.window.history.replaceState('', null, this.urlpathname + this.urlparams)
-		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
-	}
 	changeGene(gene) {
 		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
-		this.urlpathname = `/genes/${ensembl_id}`
-		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
-		this.replaceURLHistory()
-		this.setState({ gene })
+		this.setState({ geneId: ensembl_id })
 	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		this.urlparams = this.createUrlFilters(set_id_flag ? this.state.set_id : null)
-		this.replaceURLHistory()
-		this.setState({ set_id_flag })
+		this.setFilters(this.state.set_id)
+		this.setState({ filters: this.filters, set_id_flag, set_id_editing: true })
 	}
 	editSetid() {
 		this.setState({ set_id_editing: !this.state.set_id_editing })
 	}
 	submitSetid() {
+		console.log(178, 'submitSetid')
 		const set_id = this.setidRef.current.value
-		this.urlparams = this.createUrlFilters(set_id)
-		this.replaceURLHistory()
+		setFilters(set_id)
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,
-			set_id
+			set_id,
+			filters: this.filters
 		})
 	}
 	submitFilter() {
@@ -209,10 +198,6 @@ export class App extends React.Component {
 			alert(message)
 			throw message
 		}
-		this.urlparams =
-			(this.nonGdcParams ? this.nonGdcParams + '&' : '?') +
-			(this.filters ? 'filters=' + encodeURIComponent(JSON.stringify(this.filters)) : '')
-		this.replaceURLHistory()
 		const set_filter = this.filters && this.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
 		const newState = { filters: this.filters, set_id_flag: set_filter ? true : false }
 		if (set_filter && set_filter.content.value[0].includes('set_id:')) {
@@ -223,14 +208,10 @@ export class App extends React.Component {
 	ApplyFilter() {
 		const filter_flag = !this.state.filter_flag
 		const filter_url = filter_flag ? this.state.filter_url : null
-		this.urlparams = filter_url
-			? (this.nonGdcParams ? this.nonGdcParams + '&' : '?') + 'filters=' + filter_url + this.urlhash
-			: ''
-		this.replaceURLHistory()
 		this.setState({ filter_flag })
 	}
-	editUrlFilter() {
-		this.setState({ filter_url_editing: !this.state.filter_url_editing })
+	editFilter() {
+		this.setState({ filter_editing: !this.state.filter_editing })
 	}
 	async submitToken(tokenval = '', action = '') {
 		const token = tokenval ? tokenval : this.tokenRef.current.value
@@ -244,8 +225,7 @@ export class App extends React.Component {
 		this.setState({
 			token_flag: true,
 			token_editing: false,
-			token,
-			loggedin: true
+			token
 		})
 		//replace actual token with password char
 		this.tokenRef.current.value = '●'.repeat(token.length)
@@ -257,7 +237,6 @@ export class App extends React.Component {
 		const token_flag = !this.state.token_flag
 		const token = token_flag ? this.state.token : null
 		await this.submitToken(this.state.token, token_flag ? '' : 'delete')
-		this.setState({ token_flag, loggedin: token_flag })
 	}
 	updateTime() {
 		// simulate app state changes that should NOT cause
@@ -265,40 +244,16 @@ export class App extends React.Component {
 		this.setState({ lastUnrelatedUpdate: +new Date() })
 	}
 	getUrlParams() {
-		const loc = this.window.location
-		const params = {}
-		if (loc.search.length) {
-			loc.search
-				.substr(1)
-				.split('&')
-				.forEach(kv => {
-					const [key, value] = kv.split('=')
-					if (gdcParamKeys.includes(key)) params[key] = value
-				})
-		}
-		if (params.filters) {
-			params['filters'] = JSON.parse(decodeURIComponent(params.filters))
-		}
-		if (loc.pathname) {
-			const url_split = loc.pathname.split('/')
-			// do not hardcode the position of /genes/ in the pathname
-			const i = url_split.findIndex(d => d === 'genes')
-			if (i !== -1) params.gene = url_split[i + 1]
-		}
-		return params
+		return {}
 	}
-	createUrlFilters(set_id) {
-		if (!set_id && !this.filters) {
-			this.urlparams = null
-			return this.nonGdcParams + this.urlhash
-		}
-
+	setFilters(set_id) {
 		if (!this.filters) {
 			this.filters = {
 				op: 'AND',
 				content: []
 			}
 		}
+		if (!set_id) return
 
 		let set_filter = this.filters.content.find(f => f.content && f.content.field == 'cases.case_id') //.includes('set_id:')
 		if (!set_id) {
@@ -319,21 +274,5 @@ export class App extends React.Component {
 			this.filters.content.push(set_filter)
 		}
 		set_filter.content.value = ['set_id:' + set_id]
-		const encoded_filter = encodeURIComponent(JSON.stringify(this.filters))
-		return (this.nonGdcParams ? this.nonGdcParams + '&' : '?') + 'filters=' + encoded_filter + this.urlhash
-	}
-	resetParamsFromUrl() {
-		const params = this.getUrlParams()
-		if (params.filters) {
-			const set_filter = params.filters.content.find(f => f.content && f.content.field == 'cases.case_id')
-			if (set_filter) {
-				this.set_id = set_filter.content.value[0].split(':').pop()
-			}
-		}
-		this.urlpathname = `/genes/${params.gene}`
-		this.urlparams = this.createUrlFilters(this.state.set_id_flag ? this.state.set_id : null)
-		this.filters = params.filters
-		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
-		this.setState({ gene: params.gene, set_id: this.set_id })
 	}
 }
