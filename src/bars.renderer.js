@@ -204,7 +204,7 @@ export default function barsRenderer(barsapp, holder) {
 			() => {
 				const extraPad = 20 // hardcode
 				const currBox = mainG.node().getBBox()
-				const bbox = currBox.width && currBox.height ? currBox : prevBox
+				const bbox = !prevBox || currBox.width ? currBox : prevBox
 				prevBox = bbox
 				svg
 					.transition()

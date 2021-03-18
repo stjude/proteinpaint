@@ -1493,7 +1493,7 @@ tape('all hidden + with overlay, legend click', function(test) {
 	}
 })
 
-tape.only('unhidden chart and legend', test => {
+tape('unhidden chart and legend', test => {
 	test.timeoutAfter(8000)
 
 	runpp({
@@ -1544,10 +1544,10 @@ tape.only('unhidden chart and legend', test => {
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
 			.run(testVisibleChart)
-			.run(triggerHideChart, 100)
-			.run(testHiddenChart, 100)
-			.run(triggerShowChart, 200)
-			.run(testReshownChart, 200)
+			.run(triggerHideChart, 300)
+			.run(testHiddenChart, 300)
+			.run(triggerShowChart, 300)
+			.run(testReshownChart, 300)
 			.done(test)
 	}
 
