@@ -26,7 +26,8 @@ struct kmer_data {
 
 struct read_category {
    category:String,
-   groupID:usize
+   groupID:usize,
+   diff_score:f64 
 }
 
 #[derive(Serialize, Deserialize)]
@@ -174,6 +175,7 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     let mut ref_scores = Vec::<read_diff_scores>::new();
     let mut alt_scores = Vec::<read_diff_scores>::new();
     let mut i:i64 = 0;
+    let num_of_reads:f64 = (lines.len()-2) as f64;
     console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
     for read in lines{ // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
@@ -204,20 +206,24 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
     if ref_scores.len() > 0 {
-      ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
+	//ref_indices = determine_maxima_alt(&mut ref_scores, &(&threshold_slope*num_of_reads));
+	ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
     console::log_2(&"ref_indices length (from Rust):".into(), &ref_indices.len().to_string().into());
     
     let mut alt_indices = Vec::<read_category>::new();
     println!("Parsing alt scores");
     if alt_scores.len() > 0 {
-      alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
+	//alt_indices = determine_maxima_alt(&mut alt_scores, &(&threshold_slope*num_of_reads));
+	alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }
     console::log_2(&"alt_indices length (from Rust):".into(), &alt_indices.len().to_string().into());
     
     let mut output_cat = Vec::<String>::new();
     let mut output_gID = Vec::<usize>::new();
-    
+    let mut output_diff_scores = Vec::<f64>::new();    
+
+    console::log_1(&"Hello:".into());
     for item in ref_indices {
     	if item.category == "refalt".to_string() {
             output_cat.push("ref".to_string());		
@@ -225,7 +231,9 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     	else {
             output_cat.push("none".to_string());
     	}    
-        output_gID.push(item.groupID);	    
+        output_gID.push(item.groupID);
+	output_diff_scores.push(item.diff_score);
+	//console::log_2(&"Ref scores:".into(), &item.diff_score.to_string().into());
     }
     
     for item in alt_indices {
@@ -235,15 +243,18 @@ pub fn match_complex_variant_rust(sequences: String, variant_pos: i64, segbplen:
     	else {
             output_cat.push("none".to_string());
     	}    
-        output_gID.push(item.groupID);	    
+        output_gID.push(item.groupID);
+	output_diff_scores.push(item.diff_score);
+	//console::log_2(&"Alt scores:".into(), &item.diff_score.to_string().into());
     }
-    kmer_diff_scores.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
+    //kmer_diff_scores.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
     //println!("{}", output_cat[0]);
     //console::log_2(&"output_cat[0]:".into(), &output_cat[0].to_string().into());
+    
     let item = output_structure{
     	category:output_cat,
     	groupID:output_gID,
-	kmer_diff_scores:kmer_diff_scores
+	kmer_diff_scores:output_diff_scores
     };
     
     JsValue::from_serde(&item).unwrap()
@@ -508,7 +519,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
 	for i in 0..kmer_diff_scores_length { 
            let read_cat = read_category{
 	       category:String::from("refalt"),
-	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
+	       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
            };
 	   indices.push(read_cat);
 	   //console::log_2(&"i inline:".into(),&i.to_string().into()); 
@@ -554,14 +566,16 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
            if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
               let read_cat = read_category{
         	       category:String::from("none"),
-        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
+		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
               };
               indices.push(read_cat); 
            }
            else {
               let read_cat = read_category{
         	       category:String::from("refalt"),
-        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID)
+        	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
+		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
               };
               indices.push(read_cat); 
            }	   

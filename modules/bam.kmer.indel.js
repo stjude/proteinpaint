@@ -80,6 +80,7 @@ export async function match_complexvariant_rust(templates, q) {
 	const kmer_length = 6 // length of kmer
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
+	//const threshold_slope = 0.0005
 	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	//----------------------------------------------------------------------------
 
@@ -111,6 +112,10 @@ export async function match_complexvariant_rust(templates, q) {
 	) // Invoking wasm function
 	console.log('rust_output:', rust_output.groupID.length)
 
+	//    for (let i=0; i < rust_output.category.length; i++) {
+	//            console.log("Category:",rust_output.category[i]," Diff score:",rust_output.kmer_diff_scores[i])
+	//	}
+
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
@@ -118,7 +123,8 @@ export async function match_complexvariant_rust(templates, q) {
 		if (rust_output.category[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				//console.log("ref:",rust_output.kmer_diff_scores[index].toFixed(4))
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -129,7 +135,8 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = rust_output.groupID[i]
-				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				//console.log("alt:",rust_output.kmer_diff_scores[index].toFixed(4))
+				templates[index].__tempscore = rust_output.kmer_diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates[index])
 				const input_items = {
 					value: rust_output.kmer_diff_scores[i],
@@ -140,6 +147,7 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = rust_output.groupID[i]
+				console.log('none:', rust_output.kmer_diff_scores[i].toFixed(4))
 				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates[index])
 				const input_items = {
