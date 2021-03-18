@@ -1538,9 +1538,7 @@ tape('unhidden chart and legend', test => {
 		}
 	})
 
-	let barDiv
 	async function runTests(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
 			.run(testVisibleChart)
@@ -1590,5 +1588,90 @@ tape('unhidden chart and legend', test => {
 			+plot.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
 			'should not have a small barchart svg when reshowing a plot, not overlap with legend'
 		)
+	}
+})
+
+tape('customized bins', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.run(triggerCustomBins, 400)
+			.run(triggerSearch, 300)
+			.run(testReversion, 1000)
+			.done(test)
+	}
+
+	const q1 = {
+		type: 'regular',
+		bin_size: 10000,
+		stopinclusive: true,
+		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+		numDecimals: 1,
+		last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+		startinclusive: false
+	}
+
+	function triggerCustomBins(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'aaclassic_5',
+			config: {
+				term: {
+					id: 'aaclassic_5',
+					term: plot.Inner.config.term.term,
+					q: q1
+				}
+			}
+		})
+	}
+
+	async function triggerSearch(plot) {
+		const dom = plot.Inner.app.getComponents('nav.search').Inner.dom
+		dom.input.property('value', 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)')
+		dom.input.on('input')()
+		await sleep(500)
+		dom.holder
+			.select('.sja_menuoption')
+			.node()
+			.dispatchEvent(new Event('click'))
+	}
+
+	function testReversion(plot) {
+		test.deepEqual(plot.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
 	}
 })
