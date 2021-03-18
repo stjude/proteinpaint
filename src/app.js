@@ -289,6 +289,8 @@ function makeheader(app, obj, jwt) {
         })
     input.node().focus()
 
+    let genome_browser_btn
+
     const selectgenome = headbox.append('div')
         .style('display', 'inline-block')
         .style('padding', padw)
@@ -303,8 +305,46 @@ function makeheader(app, obj, jwt) {
             .property('value', n)
     }
 
-	const ss = selectgenome.node()
-    const app_gene = ss.options[ss.selectedIndex].value
+    const ss = selectgenome.node()
+    const genomename = ss.options[ss.selectedIndex].value
+
+    genome_browser_btn = headbox.append('span')
+        .attr('class', 'sja_menuoption')
+        .attr('id', 'gb_btn')
+        .style('padding', padw)
+        .style('border-radius', '5px')
+        .text(genomename + ' Genome Browser')
+        .on('click', ()=>{
+            app_btn_active = false
+            if (app_holder !== undefined) {
+                app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+                app_btn_toggle()
+            }
+            const g = app.genomes[genomename]
+            if(!g) {
+                alert('Invalid genome name: '+genomename)
+                return
+            }
+            const p=headbox.node().getBoundingClientRect()
+            const pane=client.newpane({x:p.left,y:p.top+p.height+10})
+            pane.header.text(genomename+' genome browser')
+
+            const par = {
+                hostURL: app.hostURL,
+                jwt: jwt,
+                holder: pane.body,
+                genome: g,
+                chr: g.defaultcoord.chr,
+                start: g.defaultcoord.start,
+                stop: g.defaultcoord.stop,
+                nobox:true,
+                tklst:[],
+                debugmode: app.debugmode,
+            }
+            client.first_genetrack_tolist( g, par.tklst )
+
+            import('./block').then(b=>new b.Block( par ))
+	    })
 
     let app_btn, app_btn_active, app_holder
 
@@ -314,12 +354,6 @@ function makeheader(app, obj, jwt) {
             .style('padding', padw)
             .style('border-radius', '5px')
             .text('Apps')
-
-        //**** .onclick no longer necessary?? */
-
-        // .on('click',()=>{
-        // 	appmenu( app, headbox, selectgenome, jwt )
-        // })
     } else {
         // show 'apps' div only when url is barbone without any paramerters or example page
         app_btn_active = window.location.pathname == '/' && !window.location.search.length ?
@@ -340,8 +374,7 @@ function makeheader(app, obj, jwt) {
             apps_rendered = true
             const _ = await
             import ('./examples')
-			// const app_gene = await launch_apps( app, headbox, selectgenome )
-            await _.init_examples({ holder: app_holder, genome: app_gene })
+            await _.init_examples({ holder: app_holder })
         }
 
         if (app_btn_active) load_app_div()
@@ -398,19 +431,6 @@ function makeheader(app, obj, jwt) {
 
     return selectgenome
 }
-
-// async function launch_apps(app, headbox, selectgenome) {
-// 	const ss = selectgenome.node()
-//     const app_gene = ss.options[ss.selectedIndex].value
-
-// 	console.log(app_gene)
-// 	return app_gene
-
-	// const g = app.genomes[app_gene]
-
-	// console.log(g)
-	// return g
-// }
 
 //**** appmenu function no longer necessary?? */
 
