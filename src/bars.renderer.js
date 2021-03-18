@@ -108,6 +108,7 @@ export default function barsRenderer(barsapp, holder) {
 	let defaults //will have key values in init
 	let currserieses = []
 	let unstackedBarsPanes
+	let prevBox
 
 	function main(_chart, _unstackedBarsPanes) {
 		let prevOrientation = hm.orientation
@@ -202,12 +203,13 @@ export default function barsRenderer(barsapp, holder) {
 		setTimeout(
 			() => {
 				const extraPad = 20 // hardcode
-				const bbox = mainG.node().getBBox()
-				main.adjustedSvgw = bbox.width + extraPad
+				const currBox = mainG.node().getBBox()
+				const bbox = currBox.width && currBox.height ? currBox : prevBox
+				prevBox = bbox
 				svg
 					.transition()
-					.duration(100)
-					.attr('width', main.adjustedSvgw)
+					.duration(currBox.width ? 100 : 0)
+					.attr('width', bbox.width + extraPad)
 					.attr('height', bbox.height + extraPad)
 
 				if (hm.orientation == 'vertical') {
@@ -216,7 +218,7 @@ export default function barsRenderer(barsapp, holder) {
 					const xoffset = Math.max(-cbox.x, -ytbox.x, -bbox.x)
 					mainG
 						.transition()
-						.duration(100)
+						.duration(currBox.width ? 100 : 0)
 						.attr('transform', 'translate(' + xoffset + ',' + -extraPad + ')')
 				} else {
 					const rbox = rowlabels.node().getBBox()
@@ -224,7 +226,7 @@ export default function barsRenderer(barsapp, holder) {
 					const xtbox = xTitle.node().getBBox()
 					mainG
 						.transition()
-						.duration(100)
+						.duration(currBox.width ? 100 : 0)
 						.attr('transform', 'translate(' + Math.max(-rbox.x, -ytbox.x) + ',' + -xtbox.y + ')')
 				}
 			},
