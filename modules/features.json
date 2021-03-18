@@ -23,7 +23,7 @@
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu"
             },
-            "searchterms": ["KM plot"]
+            "searchterms": ["KM plot", "GenomePaint"]
         },
         {
             "name": "Sample Matrix",
@@ -36,7 +36,7 @@
                 "url": "",
                 "doc": ""
             },
-            "searchterms": []
+            "searchterms": ["GenomePaint"]
         },
         {
             "name": "Allelic Imbalance",
@@ -63,7 +63,7 @@
                 "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
             },
-            "searchterms": ["aicheck", "tumor", "normal"]
+            "searchterms": ["aicheck", "tumor", "normal", "DNA"]
         },
         {
             "name": "BigWig",
@@ -229,7 +229,7 @@
             "shorthand": "Lollipop",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "lollipop view of Pediatric and COSMIC datasets",
+            "blurb": " lollipop view of Pediatric & COSMIC datasets",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "buttons": {
                 "url": "",
@@ -242,7 +242,7 @@
             "shorthand": "Splice Junction",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "RNA splice junction data",
+            "blurb": " RNA splice junction data",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
                 "example": {
@@ -295,7 +295,7 @@
             "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": " array of tracks & facet tables",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
                 "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
@@ -308,7 +308,7 @@
             "shorthand": "VCF",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": " view variants in a lollipop chart",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
             "buttons": {
                 "example": {
@@ -387,7 +387,7 @@
                 "url": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
                 "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
             },
-            "searchterms": []
+            "searchterms": ["variant call", "lollipop", "populationfrequencyfilter", "population frequency filter"]
         },
         {
             "name": "ASE",
@@ -547,7 +547,7 @@
             "shorthand": "2DMAF",
             "app": "Apps",
             "subheading": "Apps",
-            "blurb": "SNV and indel mutations",
+            "blurb": "SNV & indel mutations between diagnosis & relapse samples",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
                 "example": {
@@ -561,7 +561,7 @@
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
             },
-            "searchterms": ["2dmaf"]
+            "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
         },
         {
             "name": "FIMO motif analysis",
@@ -587,7 +587,7 @@
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
             },
-            "searchterms": ["heat map", "ribbon", "disco", "gene network"]
+            "searchterms": ["heat map"]
         },
         {
             "name": "Hi-C whole-genome view",
@@ -626,7 +626,7 @@
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
             },
-            "searchterms": ["MA+Volcano", "differential gene expression", "RNAseq coverage"]
+            "searchterms": ["differential gene expression", "RNAseq coverage"]
         },
         {
             "name": "MAF-timeline",
@@ -646,7 +646,7 @@
             "shorthand": "Scatterplot",
             "app": "Apps",
             "subheading": "Apps",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "t-SNE scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
                 "example": {
@@ -1874,7 +1874,7 @@
             "shorthand": "Study View",
             "app": "Apps",
             "subheading": "Apps",
-            "blurb": "multiple visualizations of gene by grouped individuals study data",
+            "blurb": "multiple views options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "buttons": {
                 "url": "",
