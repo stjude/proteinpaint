@@ -66,7 +66,7 @@ class TdbBarchart {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('barchart'),
+			isVisible: config.settings.currViews.includes('barchart') && appState.tree.visiblePlotIds.includes(this.id),
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
@@ -95,7 +95,7 @@ class TdbBarchart {
 		if (!this.setVisibility()) return
 		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
 			for (const q of this.currServerData.refs.q) {
-				if (q.error) throw q.error //console.log(89, data.refs.q)
+				if (q.error) throw q.error
 			}
 		}
 		this.updateSettings(this.config)

@@ -1214,8 +1214,7 @@ tape('max number of bins: exceeded', test => {
 	let barDiv
 	async function runTests(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 31, 'should have 31 age bars')
+		testBarCount(plot)
 		triggerExceedMaxBin(plot)
 		await sleep(1000)
 		testExceedMaxBin(plot)
@@ -1364,7 +1363,7 @@ tape('no visible series data, no overlay', function(test) {
 })
 
 tape('all hidden + with overlay, legend click', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(9000)
 
 	runpp({
 		state: {
@@ -1491,5 +1490,105 @@ tape('all hidden + with overlay, legend click', function(test) {
 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
+	}
+})
+
+tape('unhidden chart and legend', test => {
+	test.timeoutAfter(8000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							},
+							q: {
+								type: 'regular',
+								bin_size: 10000,
+								stopinclusive: true,
+								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+								numDecimals: 1,
+								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+								startinclusive: false
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.run(testVisibleChart)
+			.run(triggerHideChart, 300)
+			.run(testHiddenChart, 300)
+			.run(triggerShowChart, 300)
+			.run(testReshownChart, 300)
+			.done(test)
+	}
+
+	function testVisibleChart(plot) {
+		test.notEqual(
+			plot.Inner.dom.holder.node().style.display,
+			'none',
+			'should start with both visible and not overlapping'
+		)
+	}
+
+	function triggerHideChart(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_hide',
+			id: 'aaclassic_5'
+		})
+	}
+
+	function testHiddenChart(plot) {
+		test.equal(plot.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
+	}
+
+	function triggerShowChart(plot) {
+		// issue to fix: clicking the view button will cause the stat table
+		// to overlap from the bottom of the chart
+		plot.Inner.dom.holder
+			.node()
+			.parentNode.querySelector('.termview')
+			.click()
+
+		// same result when using dispatch
+		/*plot.Inner.app.dispatch({
+			type: 'plot_show',
+			id: 'aaclassic_5'
+		})*/
+	}
+
+	function testReshownChart(plot) {
+		test.true(
+			+plot.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
+			'should not have a small barchart svg when reshowing a plot, not overlap with legend'
+		)
 	}
 })
