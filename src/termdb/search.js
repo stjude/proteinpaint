@@ -159,7 +159,8 @@ function setRenderers(self) {
 								expandedTermIds,
 								visiblePlotIds: [term.id],
 								plots: {
-									[term.id]: term.id in plots ? plots[term.id] : plotConfig({ term })
+									[term.id]:
+										term.id in plots ? JSON.parse(JSON.stringify(plots[term.id])) : plotConfig({ term: { term } })
 								}
 							}
 						}
