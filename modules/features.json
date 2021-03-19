@@ -528,7 +528,7 @@
             "name": "Use FusionEditor",
             "shorthand": "Fusion Editor",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "fusions discovered in a sample",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
@@ -546,7 +546,7 @@
             "name": "2DMAF",
             "shorthand": "2DMAF",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "SNV & indel mutations between diagnosis & relapse samples",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
@@ -567,7 +567,7 @@
             "name": "FIMO motif analysis",
             "shorthand": "FIMO",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "predicts motif changes",
             "image": "",
             "buttons": {
@@ -580,7 +580,7 @@
             "name": "Heatmap",
             "shorthand": "Heatmap",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "mutation data in a gene-by-sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "buttons": {
@@ -590,23 +590,10 @@
             "searchterms": ["heat map"]
         },
         {
-            "name": "Hi-C whole-genome view",
-            "shorthand": "HiC whole genome",
-            "app": "Apps",
-            "subheading": "Apps",
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
-            "buttons": {
-                "url": "/F/human.temp.hic.html",
-                "doc": ""
-            },
-            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
-        },
-        {
             "name": "MA+Volcano plots",
             "shorthand": "MA+Volcano",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "gene expression along side significance",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
@@ -632,7 +619,7 @@
             "name": "MAF-timeline",
             "shorthand": "MAF",
             "app": "Apps",
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "buttons": {
@@ -640,6 +627,58 @@
                 "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
             },
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
+        },
+        {
+            "name": "Mutation Burden & Spectrum",
+            "shorthand": "",
+            "app": "Apps",
+            "subheading": "Launch App",
+            "blurb": "TODO: Brief description of track or app",
+            "image": "",
+            "buttons": {
+                "url": "",
+                "doc": ""
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Splice Junction by Sample Matrix",
+            "shorthand": "",
+            "app": "Apps",
+            "subheading": "Launch App",
+            "blurb": "TODO: Brief description of track or app",
+            "image": "",
+            "buttons": {
+                "url": "",
+                "doc": ""
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Study View",
+            "shorthand": "Study View",
+            "app": "Apps",
+            "subheading": "Launch App",
+            "blurb": "multiple views options for genes by sample matrix",
+            "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
+            },
+            "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
+        },
+        {
+            "name": "Hi-C whole-genome view",
+            "shorthand": "HiC whole genome",
+            "app": "Apps",
+            "subheading": "Apps",
+            "blurb": "TODO: Brief description of track or app",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
+            "buttons": {
+                "url": "/F/human.temp.hic.html",
+                "doc": ""
+            },
+            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
             "name": "Scatterplot",
@@ -1868,19 +1907,6 @@
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
-        },
-        {
-            "name": "Study View",
-            "shorthand": "Study View",
-            "app": "Apps",
-            "subheading": "Apps",
-            "blurb": "multiple views options for genes by sample matrix",
-            "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
-            "buttons": {
-                "url": "",
-                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
-            },
-            "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
         },
         {
             "name": "termdb with custom vocabulary",

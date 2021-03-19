@@ -16,9 +16,6 @@ export async function init_examples(par) {
 	const gbrowser_col = make_col(track_grid, 'gbrowser')
 	const app_col = make_col(track_grid, 'otherapps')
 
-	// top of genome browser column followed by subheaders
-	// await launch_gBrowser_btn(gbrowser_col, genome)
-
 	// top of apps column followed by subheader
 	const holddiv = make_top_fnDiv(gbrowser_col)
 	const searchbar_div = app_col.append('div')
@@ -27,6 +24,7 @@ export async function init_examples(par) {
 	const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
+	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const appList = make_subheader_contents(app_col, 'Apps')
 
 	const track_arg = {
@@ -34,6 +32,7 @@ export async function init_examples(par) {
 		gpaintList,
 		browserList,
 		experimentalList,
+		launchList,
 		appList
 	}
 	make_searchbar(searchbar_div, track_arg)
@@ -108,37 +107,6 @@ function make_top_fnDiv(div) {
 	return top
 }
 
-// //Creates the launch genome browser button
-// async function launch_gBrowser_btn(div, genome) {
-// 	div.selectAll('*').remove()
-// 	const launch_btn_div = make_top_fnDiv(div)
-
-// 	const launch_btn = launch_btn_div
-// 		.append('button')
-// 		.attr('class', 'gbrowser-btn')
-// 		.style('height', '60px')
-// 		.style('width', '55%')
-// 		.style('border-radius', '3px')
-// 		.style('border', 'none')
-// 		.style('background-color', 'white')
-// 		.style('text-align', 'center')
-// 		.style('font-size', '14.5px')
-// 		.style(
-// 			'font-family',
-// 			'"Lucida Sans", "Lucida Sans Regular", "Lucida Grande", "Lucida Sans Unicode", Geneva, Verdana, sans-serif'
-// 		)
-// 		.text('Launch ' + genome + ' Genome Browser')
-// 	// .on('click',() => {}) TODO: Add click behavior
-
-// 	launch_btn
-// 		.append('span')
-// 		.attr('class', 'launch-btn-tooltip')
-// 		.style('font-size', '11px')
-// 		.text('Change the genome from the header dropdown')
-
-// 	return launch_btn
-// }
-
 //Makes search bar and functionality to search tracks
 function make_searchbar(div, args) {
 	const bar_div = make_top_fnDiv(div)
@@ -189,12 +157,16 @@ async function loadTracks(args, filteredTracks) {
 	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
 		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
 	)
+	const LaunchApps = (filteredTracks || args.tracks).filter(
+		track => track.app == 'Apps' && track.subheading == 'Launch App'
+	)
 	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
 
 	try {
 		displayTracks(GPaintTracks, args.gpaintList)
 		displayTracks(BrowserTracks, args.browserList)
 		displayTracks(ExperimentalTracks, args.experimentalList)
+		displayTracks(LaunchApps, args.launchList)
 		displayTracks(AppTracks, args.appList)
 	} catch (err) {
 		console.error(err)

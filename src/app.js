@@ -297,7 +297,7 @@ function makeheader(app, obj, jwt) {
         .attr('title', 'Select a genome')
         .style('margin', '1px 20px 1px 10px')
         .on('change', () => {
-            gb_btn()
+            gb_btn(gb_div)
         })
     for (const n in app.genomes) {
         selectgenome.append('option')
@@ -305,13 +305,17 @@ function makeheader(app, obj, jwt) {
             .text(app.genomes[n].species + ' ' + n)
             .property('value', n)
     }
+    //Holds element in a consistent location
+    const gb_div = headbox.append('span')
+    gb_btn(gb_div)
 
-    function gb_btn(){
-        headbox.selectAll('#genome_btn').remove()
+    //Launch genome browser button in headbox
+    async function gb_btn(div){
+        div.selectAll('#genome_btn').remove()
         const ss = selectgenome.node()
         const genomename = ss.options[ss.selectedIndex].value
 
-        const genome_browser_btn = headbox.append('span')
+        const genome_browser_btn = div
             .attr('class', 'sja_menuoption')
             .attr('id', 'genome_btn')
             .style('padding', padw)
@@ -328,7 +332,8 @@ function makeheader(app, obj, jwt) {
                     alert('Invalid genome name: '+genomename)
                     return
                 }
-                const p=headbox.node().getBoundingClientRect()
+                //TODO change from pop out pane to new div in the page
+                const p=div.node().getBoundingClientRect()
                 const pane=client.newpane({x:p.left,y:p.top+p.height+10})
                 pane.header.text(genomename+' genome browser')
 
@@ -350,8 +355,6 @@ function makeheader(app, obj, jwt) {
             })
         return genome_browser_btn
     }
-
-    gb_btn()
 
     let app_btn, app_btn_active, app_holder
 
