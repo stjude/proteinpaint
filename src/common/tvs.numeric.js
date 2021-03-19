@@ -877,8 +877,14 @@ function get_pill_label(tvs) {
 
 function format_val_text(range) {
 	let range_txt
-	const x = '<span style="font-family:Times;font-style:italic;font-size:0.9em;">x</span>'
-	if (range.startunbounded) {
+	const x = '<span style="font-family:Times;font-style:italic;font-size:1em; vertical-align:top">x</span>'
+	if (range.startunbounded && range.stopunbounded) {
+		console.log(881)
+		const inf = (sign = '') =>
+			`<span style='vertical-align: middle; font-size:1.1em; line-height: 0.9em'>${sign}∞</span>`
+		const lt = `<span style='vertical-align: top; font-size: 0.9em'>&lt;</span>`
+		range_txt = `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
+	} else if (range.startunbounded) {
 		range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
 	} else if (range.stopunbounded) {
 		range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
