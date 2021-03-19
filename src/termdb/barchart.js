@@ -186,25 +186,32 @@ class TdbBarchart {
 
 	setExclude(term, term2) {
 		// a non-numeric term.id is used directly as seriesId or dataId
-		const getHiddenId = id =>
-			term.term.type == 'categorical'
-				? id
-				: this.settings.cols && this.settings.cols.includes(term.term.id)
-				? id
-				: term.term.values && id in term.term.values && 'label' in term.term.values[id]
-				? term.term.values[id].label
-				: id
-
 		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
 			.filter(id => term.q.hiddenValues[id])
-			.map(getHiddenId)
+			.map(id =>
+				term.term.type == 'categorical'
+					? id
+					: this.settings.cols && this.settings.cols.includes(term.term.id)
+					? id
+					: term.term.values && id in term.term.values && 'label' in term.term.values[id]
+					? term.term.values[id].label
+					: id
+			)
 
 		this.settings.exclude.rows =
 			!term2 || !term2.q || !term2.q.hiddenValues
 				? []
 				: Object.keys(term2.q.hiddenValues)
 						.filter(id => term2.q.hiddenValues[id])
-						.map(getHiddenId)
+						.map(id =>
+							term2.term.type == 'categorical'
+								? id
+								: this.settings.cols && this.settings.cols.includes(term.term.id)
+								? id
+								: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
+								? term2.term.values[id].label
+								: id
+						)
 	}
 
 	processData(chartsData) {

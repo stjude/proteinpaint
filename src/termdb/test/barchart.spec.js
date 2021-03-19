@@ -84,11 +84,15 @@ tape('single barchart, categorical bars', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(5000)
+	test.plan(4)
 	const termfilter = { filter: [] }
 	runpp({
 		state: {
 			termfilter,
+			nav: {
+				header_mode: 'search_only'
+			},
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],
@@ -117,13 +121,28 @@ tape('single chart, with overlay', function(test) {
 	})
 
 	let barDiv
-	function runTests(plot) {
+	async function runTests(plot) {
+		plot.on('postRender.test', null)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		helpers
+		/*helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
 			.run(testBarCount)
 			.run(testOverlayOrder)
-			.done(test)
+			.run(triggerUncomputableOverlay, 200)
+			.run(clickLegendToHideOverlay, 1000)
+			.run(testHiddenOverlayData, 2000)
+			.done(test)*/
+
+		testBarCount(plot)
+		await sleep(100)
+		testOverlayOrder(plot)
+		await sleep(1000)
+		triggerUncomputableOverlay(plot)
+		await sleep(1000)
+		clickLegendToHideOverlay(plot)
+		await sleep(1200)
+		testHiddenOverlayData(plot)
+		test.end()
 	}
 
 	function testBarCount(plot) {
@@ -149,6 +168,37 @@ tape('single chart, with overlay', function(test) {
 				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
 		})
 		test.true(overlay_ordered, 'overlays order is same as legend')
+	}
+
+	function triggerUncomputableOverlay(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'diaggrp',
+			config: {
+				term2: {
+					id: 'aaclassic_5',
+					term: termjson['aaclassic_5'],
+					q: termjson['aaclassic_5'].bins.default
+				}
+			}
+		})
+	}
+
+	async function clickLegendToHideOverlay(plot) {
+		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+		const item = legendDiv
+			.selectAll('.legend-row')
+			.filter(d => d.dataId == 'unknown exposure')
+			.node()
+		item.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	async function testHiddenOverlayData(plot) {
+		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+		const item = legendDiv.selectAll('.legend-row').filter(function(d) {
+			return +this.style.opacity < 1 && d.dataId == 'unknown exposure'
+		})
+		test.equal(item.size(), 1, 'should hide a clicked uncomputable overlay legend')
 	}
 })
 
