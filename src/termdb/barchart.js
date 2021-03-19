@@ -281,7 +281,7 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = t2 && t2.term.type == 'condition' ? '' : `, n=${series.visibleTotal}`
+				const ntotal = `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -387,11 +387,11 @@ class TdbBarchart {
 		}
 		if (s.rows /*&& s.rows.length > 1*/ && !s.hidelegend && t2 && this.term2toColor) {
 			const value_by_label =
-				t2.term.type != 'condition' || !t2.term.q
+				t2.term.type != 'condition' || !t2.q
 					? ''
-					: t2.term.q.value_by_max_grade
+					: t2.q.value_by_max_grade
 					? 'max. grade'
-					: t2.term.q.value_by_most_recent
+					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
 			legendGrps.push({
