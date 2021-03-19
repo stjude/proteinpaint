@@ -206,7 +206,7 @@ class TdbBarchart {
 						.map(id =>
 							term2.term.type == 'categorical'
 								? id
-								: this.settings.cols && this.settings.cols.includes(term.term.id)
+								: this.settings.cols && this.settings.cols.includes(term2.term.id)
 								? id
 								: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
 								? term2.term.values[id].label
