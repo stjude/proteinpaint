@@ -102,7 +102,7 @@ function make_top_fnDiv(div) {
 		.style('align-items', 'center')
 		.style('justify-content', 'center')
 		.style('background-color', '#f5f5f5')
-		.style('height', '50px')
+		.style('height', '35px')
 		.style('width', '550px')
 
 	return top
@@ -144,12 +144,11 @@ function make_searchbar(div, args) {
 	const bar_div = make_top_fnDiv(div)
 
 	const searchBar = bar_div.append('div')
-	// const searchBar = div.append('div')
 	searchBar
 		.append('div')
 		.append('input')
 		.attr('type', 'text')
-		.style('width', '500px')
+		.style('width', '300px')
 		.style('height', '24px')
 		.style('border-radius', '3px')
 		.style('border', '2px solid #dbdbdb')

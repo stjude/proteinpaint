@@ -289,8 +289,6 @@ function makeheader(app, obj, jwt) {
         })
     input.node().focus()
 
-    let genome_browser_btn
-
     const selectgenome = headbox.append('div')
         .style('display', 'inline-block')
         .style('padding', padw)
@@ -298,6 +296,9 @@ function makeheader(app, obj, jwt) {
         .append('select')
         .attr('title', 'Select a genome')
         .style('margin', '1px 20px 1px 10px')
+        .on('change', () => {
+            gb_btn()
+        })
     for (const n in app.genomes) {
         selectgenome.append('option')
             .attr('n', n)
@@ -305,46 +306,52 @@ function makeheader(app, obj, jwt) {
             .property('value', n)
     }
 
-    const ss = selectgenome.node()
-    const genomename = ss.options[ss.selectedIndex].value
+    function gb_btn(){
+        headbox.selectAll('#genome_btn').remove()
+        const ss = selectgenome.node()
+        const genomename = ss.options[ss.selectedIndex].value
 
-    genome_browser_btn = headbox.append('span')
-        .attr('class', 'sja_menuoption')
-        .attr('id', 'gb_btn')
-        .style('padding', padw)
-        .style('border-radius', '5px')
-        .text(genomename + ' Genome Browser')
-        .on('click', ()=>{
-            app_btn_active = false
-            if (app_holder !== undefined) {
-                app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-                app_btn_toggle()
-            }
-            const g = app.genomes[genomename]
-            if(!g) {
-                alert('Invalid genome name: '+genomename)
-                return
-            }
-            const p=headbox.node().getBoundingClientRect()
-            const pane=client.newpane({x:p.left,y:p.top+p.height+10})
-            pane.header.text(genomename+' genome browser')
+        const genome_browser_btn = headbox.append('span')
+            .attr('class', 'sja_menuoption')
+            .attr('id', 'genome_btn')
+            .style('padding', padw)
+            .style('border-radius', '5px')
+            .text(genomename + ' Genome Browser')
+            .on('click', ()=>{
+                app_btn_active = false
+                if (app_holder !== undefined) {
+                    app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+                    app_btn_toggle()
+                }
+                const g = app.genomes[genomename]
+                if(!g) {
+                    alert('Invalid genome name: '+genomename)
+                    return
+                }
+                const p=headbox.node().getBoundingClientRect()
+                const pane=client.newpane({x:p.left,y:p.top+p.height+10})
+                pane.header.text(genomename+' genome browser')
 
-            const par = {
-                hostURL: app.hostURL,
-                jwt: jwt,
-                holder: pane.body,
-                genome: g,
-                chr: g.defaultcoord.chr,
-                start: g.defaultcoord.start,
-                stop: g.defaultcoord.stop,
-                nobox:true,
-                tklst:[],
-                debugmode: app.debugmode,
-            }
-            client.first_genetrack_tolist( g, par.tklst )
+                const par = {
+                    hostURL: app.hostURL,
+                    jwt: jwt,
+                    holder: pane.body,
+                    genome: g,
+                    chr: g.defaultcoord.chr,
+                    start: g.defaultcoord.start,
+                    stop: g.defaultcoord.stop,
+                    nobox:true,
+                    tklst:[],
+                    debugmode: app.debugmode,
+                }
+                client.first_genetrack_tolist( g, par.tklst )
 
-            import('./block').then(b=>new b.Block( par ))
-	    })
+                import('./block').then(b=>new b.Block( par ))
+            })
+        return genome_browser_btn
+    }
+
+    gb_btn()
 
     let app_btn, app_btn_active, app_holder
 
