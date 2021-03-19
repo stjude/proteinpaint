@@ -98,6 +98,7 @@ class TdbBarchart {
 				if (q.error) throw q.error
 			}
 		}
+		this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 		this.updateSettings(this.config)
 		this.chartsData = this.processData(this.currServerData)
 		this.render()
