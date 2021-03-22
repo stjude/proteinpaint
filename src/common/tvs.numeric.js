@@ -557,8 +557,8 @@ export function getNumericMethods(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = Number(brush.start_input.node().value)
-			new_range.stop = Number(brush.stop_input.node().value)
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value): minvalue
+			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
 			// brush.range = new_range
