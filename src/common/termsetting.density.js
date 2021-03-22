@@ -314,6 +314,7 @@ function renderBinLines(self, data) {
 				: b.index < lines.length - 1 && draggedX >= lines[b.index + 1].scaledX
 				? select(this.nextSibling)
 				: select(this)
+		console.log(select(this).datum(), draggedX)
 		const d = line.datum()
 
 		d.scaledX = d.draggedX
