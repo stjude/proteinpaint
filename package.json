@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -18,7 +18,7 @@
     "test-front": "browserify test/init.js public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
     "test-browser": "rm -f public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] -o public/bin/spec.bundle.js -v",
     "test-response": "nodemon modules/test/test.server.js --watch modules",
-    "test-gdc": "browserify test/init.js public/bin/proteinpaint.js src/wrappers/test/gdc*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
+    "test-gdc": "browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
     "deliver": "sh utils/deliver.sh",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
