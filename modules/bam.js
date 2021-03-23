@@ -872,6 +872,10 @@ return {}
 async function divide_reads_togroups(q) {
 	//if (templates.length == 0) {
 	const templates_info = []
+	for (const line of q.regions[0].lines) {
+		// q.regions[0] may need to be modified
+		templates_info.push({ sam_info: line, tempscore: '' })
+	}
 	if (q.regions[0].lines.length == 0) {
 		// no reads at all, return empty group
 		return {
@@ -893,10 +897,6 @@ async function divide_reads_togroups(q) {
 		//if (lst) return { groups: lst }
 		//for (const template of templates) {
 		if (q.regions.length == 1) {
-			for (const line of q.regions[0].lines) {
-				// q.regions[0] may need to be modified
-				templates_info.push({ sam_info: line, tempscore: '' })
-			}
 			//return await rust_match_complexvariant(q, templates_info)
 			return await match_complexvariant(q, templates_info)
 		}
