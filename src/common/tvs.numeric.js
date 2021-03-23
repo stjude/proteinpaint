@@ -557,8 +557,8 @@ export function getNumericMethods(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = Number(brush.start_input.node().value)
-			new_range.stop = Number(brush.stop_input.node().value)
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value): minvalue
+			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
 			// brush.range = new_range
@@ -877,8 +877,13 @@ function get_pill_label(tvs) {
 
 function format_val_text(range) {
 	let range_txt
-	const x = '<span style="font-family:Times;font-style:italic;font-size:0.9em;">x</span>'
-	if (range.startunbounded) {
+	const x = '<span style="font-family:Times;font-style:italic;font-size:1em; vertical-align:top">x</span>'
+	if (range.startunbounded && range.stopunbounded) {
+		const inf = (sign = '') =>
+			`<span style='vertical-align: middle; font-size:1.1em; line-height: 0.9em'>${sign}∞</span>`
+		const lt = `<span style='vertical-align: top; font-size: 0.9em'>&lt;</span>`
+		range_txt = `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
+	} else if (range.startunbounded) {
 		range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
 	} else if (range.stopunbounded) {
 		range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start

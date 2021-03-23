@@ -154,7 +154,7 @@ so here need to allow both string and number as range.value
 				values.push(range.stop)
 			}
 			const negator = tvs.isnot ? 'NOT ' : ''
-			rangeclauses.push(negator + '(' + lst.join(' AND ') + ')')
+			if (lst.length) rangeclauses.push(negator + '(' + lst.join(' AND ') + ')')
 		}
 	}
 
@@ -166,10 +166,7 @@ so here need to allow both string and number as range.value
 			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && Number(range.value) == key))
 		if (excludevalues.length) values.push(...excludevalues)
 	}
-
 	const combinedClauses = rangeclauses.join(' OR ')
-	const subclause = `( ${combinedClauses} )`
-
 	return {
 		CTEs: [
 			`
@@ -177,7 +174,7 @@ so here need to allow both string and number as range.value
 				SELECT sample
 				FROM annotations
 				WHERE term_id = ?
-				AND ${subclause}
+				${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 				${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}
 			)`
 		],

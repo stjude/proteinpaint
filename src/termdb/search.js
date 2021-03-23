@@ -51,7 +51,8 @@ class TermSearch {
 							.slice()
 							.sort()
 							.join(','),
-			expandedTermIds: appState.tree.expandedTermIds
+			expandedTermIds: appState.tree.expandedTermIds,
+			plots: appState.tree.plots
 		}
 	}
 
@@ -149,7 +150,7 @@ function setRenderers(self) {
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)
 				}
-
+				const plots = self.app.getState().tree.plots
 				if (graphable(term)) {
 					self.app.dispatch({
 						type: 'app_refresh',
@@ -158,7 +159,8 @@ function setRenderers(self) {
 								expandedTermIds,
 								visiblePlotIds: [term.id],
 								plots: {
-									[term.id]: plotConfig({ term: { term } })
+									[term.id]:
+										term.id in plots ? JSON.parse(JSON.stringify(plots[term.id])) : plotConfig({ term: { term } })
 								}
 							}
 						}

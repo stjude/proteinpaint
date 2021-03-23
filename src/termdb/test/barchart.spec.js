@@ -84,11 +84,15 @@ tape('single barchart, categorical bars', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(5000)
+	test.plan(4)
 	const termfilter = { filter: [] }
 	runpp({
 		state: {
 			termfilter,
+			nav: {
+				header_mode: 'search_only'
+			},
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],
@@ -117,13 +121,28 @@ tape('single chart, with overlay', function(test) {
 	})
 
 	let barDiv
-	function runTests(plot) {
+	async function runTests(plot) {
+		plot.on('postRender.test', null)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		helpers
+		/*helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
 			.run(testBarCount)
 			.run(testOverlayOrder)
-			.done(test)
+			.run(triggerUncomputableOverlay, 200)
+			.run(clickLegendToHideOverlay, 1000)
+			.run(testHiddenOverlayData, 2000)
+			.done(test)*/
+
+		testBarCount(plot)
+		await sleep(100)
+		testOverlayOrder(plot)
+		await sleep(1000)
+		triggerUncomputableOverlay(plot)
+		await sleep(1000)
+		clickLegendToHideOverlay(plot)
+		await sleep(1200)
+		testHiddenOverlayData(plot)
+		test.end()
 	}
 
 	function testBarCount(plot) {
@@ -149,6 +168,37 @@ tape('single chart, with overlay', function(test) {
 				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
 		})
 		test.true(overlay_ordered, 'overlays order is same as legend')
+	}
+
+	function triggerUncomputableOverlay(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'diaggrp',
+			config: {
+				term2: {
+					id: 'aaclassic_5',
+					term: termjson['aaclassic_5'],
+					q: termjson['aaclassic_5'].bins.default
+				}
+			}
+		})
+	}
+
+	async function clickLegendToHideOverlay(plot) {
+		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+		const item = legendDiv
+			.selectAll('.legend-row')
+			.filter(d => d.dataId == 'unknown exposure')
+			.node()
+		item.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	async function testHiddenOverlayData(plot) {
+		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+		const item = legendDiv.selectAll('.legend-row').filter(function(d) {
+			return +this.style.opacity < 1 && d.dataId == 'unknown exposure'
+		})
+		test.equal(item.size(), 1, 'should hide a clicked uncomputable overlay legend')
 	}
 })
 
@@ -1214,8 +1264,7 @@ tape('max number of bins: exceeded', test => {
 	let barDiv
 	async function runTests(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 31, 'should have 31 age bars')
+		testBarCount(plot)
 		triggerExceedMaxBin(plot)
 		await sleep(1000)
 		testExceedMaxBin(plot)
@@ -1364,7 +1413,7 @@ tape('no visible series data, no overlay', function(test) {
 })
 
 tape('all hidden + with overlay, legend click', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(9000)
 
 	runpp({
 		state: {
@@ -1491,5 +1540,188 @@ tape('all hidden + with overlay, legend click', function(test) {
 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
+	}
+})
+
+tape('unhidden chart and legend', test => {
+	test.timeoutAfter(8000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							},
+							q: {
+								type: 'regular',
+								bin_size: 10000,
+								stopinclusive: true,
+								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+								numDecimals: 1,
+								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+								startinclusive: false
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.run(testVisibleChart)
+			.run(triggerHideChart, 300)
+			.run(testHiddenChart, 300)
+			.run(triggerShowChart, 300)
+			.run(testReshownChart, 300)
+			.done(test)
+	}
+
+	function testVisibleChart(plot) {
+		test.notEqual(
+			plot.Inner.dom.holder.node().style.display,
+			'none',
+			'should start with both visible and not overlapping'
+		)
+	}
+
+	function triggerHideChart(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_hide',
+			id: 'aaclassic_5'
+		})
+	}
+
+	function testHiddenChart(plot) {
+		test.equal(plot.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
+	}
+
+	function triggerShowChart(plot) {
+		// issue to fix: clicking the view button will cause the stat table
+		// to overlap from the bottom of the chart
+		plot.Inner.dom.holder
+			.node()
+			.parentNode.querySelector('.termview')
+			.click()
+
+		// same result when using dispatch
+		/*plot.Inner.app.dispatch({
+			type: 'plot_show',
+			id: 'aaclassic_5'
+		})*/
+	}
+
+	function testReshownChart(plot) {
+		test.true(
+			+plot.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
+			'should not have a small barchart svg when reshowing a plot, not overlap with legend'
+		)
+	}
+})
+
+tape('customized bins', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy',
+					'Alkylating Agents',
+					'aaclassic_5'
+				],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: {
+							term: {
+								id: 'aaclassic_5'
+							}
+						}
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(plot) {
+		helpers
+			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.run(triggerCustomBins, 400)
+			.run(triggerSearch, 300)
+			.run(testReversion, 1000)
+			.done(test)
+	}
+
+	const q1 = {
+		type: 'regular',
+		bin_size: 10000,
+		stopinclusive: true,
+		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+		numDecimals: 1,
+		last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+		startinclusive: false
+	}
+
+	function triggerCustomBins(plot) {
+		plot.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: 'aaclassic_5',
+			config: {
+				term: {
+					id: 'aaclassic_5',
+					term: plot.Inner.config.term.term,
+					q: q1
+				}
+			}
+		})
+	}
+
+	async function triggerSearch(plot) {
+		const dom = plot.Inner.app.getComponents('nav.search').Inner.dom
+		dom.input.property('value', 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)')
+		dom.input.on('input')()
+		await sleep(500)
+		dom.holder
+			.select('.sja_menuoption')
+			.node()
+			.dispatchEvent(new Event('click'))
+	}
+
+	function testReversion(plot) {
+		test.deepEqual(plot.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
 	}
 })
