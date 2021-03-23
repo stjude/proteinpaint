@@ -873,6 +873,7 @@ async function divide_reads_togroups(q) {
 	//if (templates.length == 0) {
 	const templates_info = []
 	for (const line of q.regions[0].lines) {
+		// FIXME to support multi-region
 		// q.regions[0] may need to be modified
 		templates_info.push({ sam_info: line, tempscore: '' })
 	}
