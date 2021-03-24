@@ -44,6 +44,8 @@ module.exports = genomes => {
 
 			const ds = await get_ds(q, genome)
 
+			may_validate_filter0(q, ds)
+
 			const result = init_result(q, ds)
 
 			await load_driver(q, ds, result)
@@ -78,6 +80,7 @@ async function may_sampleSummary(q, ds, result) {
 }
 
 function init_q(query, genome) {
+	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
@@ -89,10 +92,6 @@ function init_q(query, genome) {
 		} else {
 			delete query.samplefiltertemp
 		}
-	}
-	if (query.filter0) {
-		// right now only from gdc
-		query.filter0 = JSON.parse(query.filter0)
 	}
 	if (query.rglst) query.rglst = JSON.parse(query.rglst)
 	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
@@ -260,4 +259,16 @@ function filter_data(q, result) {
 	if (result.genecnvAtsample) {
 	}
 	// other sample-level data types that need filtering
+}
+
+/* may validate q.filter0
+the validation function is defined in ds
+cannot do it in init_q() as ds is not available
+this ensures filter0 and its validation is generic and not specific to gdc
+*/
+function may_validate_filter0(q, ds) {
+	if (q.filter0) {
+		const f = JSON.parse(q.filter0)
+		q.filter0 = ds.validate_filter0(f)
+	}
 }
