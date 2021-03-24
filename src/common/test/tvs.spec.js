@@ -330,8 +330,8 @@ tape('tvs: Numerical', async test => {
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split(' ')[5]
-			.split('<')[0],
+			.innerText.split(' ')
+			.pop(),
 		String(opts.filterData.lst[0].tvs.ranges[0].stop),
 		'should change range from the menu'
 	)
@@ -750,5 +750,52 @@ tape('tvs: Cohort + Numerical', async test => {
 
 	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
 	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
+	test.end()
+})
+
+tape('tvs: unbounded range', async test => {
+	const filterData = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'yeardx',
+						name: 'Year of Diagnosis',
+						unit: 'year',
+						type: 'float',
+						values: {}
+					},
+					ranges: [{ startunbounded: true, stopunbounded: true }]
+				}
+			}
+		]
+	}
+	const opts = getOpts({ filterData })
+	await opts.filter.main(opts.filterData)
+	await sleep(200)
+
+	// remember the density data for comparison later
+	/*const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
+
+	opts.filter.Inner.opts.activeCohort = 1
+	const selectElem = opts.filter.Inner.dom.holder.select('select')
+	selectElem
+		.property('value', 1)
+		.on('change')
+		.call(selectElem.node())
+	await sleep(400)
+	// trigger fill-in of pill.num_obj.density_data
+	pill.click()
+	editOpt.node().click()
+	await sleep(400)
+
+	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data*/
+	const valLabel = opts.holder.select('.tvs_pill .value_btn').text()
+	console.log(valLabel)
+	test.equal(valLabel, '﹣∞ < x < ﹢∞', 'should show an unbounded range label in the blue pill')
 	test.end()
 })

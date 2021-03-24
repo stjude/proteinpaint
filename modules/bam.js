@@ -7,6 +7,7 @@ const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
+//const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
 const basecolor = require('../src/common').basecolor
 const serverconfig = require('./serverconfig')
@@ -624,10 +625,10 @@ async function do_query(q) {
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
 
 	// parse reads and cigar
-	const templates = get_templates(q)
+	//const templates = get_templates(q)
 	// if zoomed in, will check reference for mismatch, so that templates can be divided by snv
 	// read quality is not parsed yet
-	await may_checkrefseq4mismatch(templates, q)
+	//await may_checkrefseq4mismatch(templates, q)
 
 	const result = {
 		nochr: q.nochr,
@@ -640,7 +641,7 @@ async function do_query(q) {
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 
 	{
-		const out = await divide_reads_togroups(templates, q)
+		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
@@ -651,12 +652,19 @@ async function do_query(q) {
 			t: 'No reads in view range.'
 		})
 	}
+
+	let templates_total = []
 	for (const group of q.groups) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
-		stack_templates(group, q) // add .stacks[], .returntemplatebox[]
+
+		// parse reads and cigar
+		let templates = get_templates(q, group)
+		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
-		finalize_templates(group, q) // set .canvasheight
+		// read quality is not parsed yet
+		await may_checkrefseq4mismatch(templates, q)
+		finalize_templates(group, templates, q) // set .canvasheight
 
 		// result obj of this group
 		const gr = {
@@ -667,7 +675,7 @@ async function do_query(q) {
 			stackcount: group.stacks.length,
 			allowpartstack: group.allowpartstack,
 			templatebox: group.returntemplatebox,
-			count: { r: group.templates.reduce((i, j) => i + j.segments.length, 0) }
+			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) } // group.templates
 		}
 
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
@@ -675,19 +683,22 @@ async function do_query(q) {
 		if (q.devicePixelRatio > 1) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
+
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 
 		gr.messagerowheights = plot_messagerows(ctx, group, q)
 
-		for (const template of group.templates) {
+		for (const template of templates) {
+			// group.templates
 			plot_template(ctx, template, group, q)
 		}
-		plot_insertions(ctx, group, q, gr.messagerowheights)
+		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
 
-		if (q.asPaired) gr.count.t = group.templates.length
+		if (q.asPaired) gr.count.t = templates.length // group.templates
 		gr.src = canvas.toDataURL()
 		result.groups.push(gr)
+		templates_total = [...templates_total, ...templates]
 	}
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	if (q.kmer_diff_scores_asc) {
@@ -696,7 +707,7 @@ async function do_query(q) {
 	if (!q.partstack) {
 		// not in partstack mode, will do pileup plot
 		if (!q.pileupheight) throw 'pileupheight missing'
-		result.pileup_data = await plot_pileup(q, templates)
+		result.pileup_data = await plot_pileup(q, templates_total)
 	}
 	return result
 }
@@ -858,15 +869,22 @@ return {}
   .groups[]
   .refalleleerror
 */
-async function divide_reads_togroups(templates, q) {
-	if (templates.length == 0) {
+async function divide_reads_togroups(q) {
+	//if (templates.length == 0) {
+	const templates_info = []
+	for (const line of q.regions[0].lines) {
+		// FIXME to support multi-region
+		// q.regions[0] may need to be modified
+		templates_info.push({ sam_info: line, tempscore: '' })
+	}
+	if (q.regions[0].lines.length == 0) {
 		// no reads at all, return empty group
 		return {
 			groups: [
 				{
 					type: bamcommon.type_all,
 					regions: bamcommon.duplicateRegions(q.regions),
-					templates,
+					templates: templates_info,
 					messagerows: [],
 					partstack: q.partstack
 				}
@@ -878,7 +896,11 @@ async function divide_reads_togroups(templates, q) {
 		// if snv, simple match; otherwise complex match
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
-		return await match_complexvariant(templates, q)
+		//for (const template of templates) {
+		if (q.regions.length == 1) {
+			//return await rust_match_complexvariant(q, templates_info)
+			return await match_complexvariant(q, templates_info)
+		}
 	}
 	if (q.sv) {
 		return match_sv(templates, q)
@@ -890,7 +912,7 @@ async function divide_reads_togroups(templates, q) {
 			{
 				type: bamcommon.type_all,
 				regions: bamcommon.duplicateRegions(q.regions),
-				templates,
+				templates: templates_info,
 				messagerows: [],
 				partstack: q.partstack
 			}
@@ -948,7 +970,7 @@ function match_sv(templates, q) {
 	// TODO templates may not be all in one array?
 }
 
-function get_templates(q) {
+function get_templates(q, group) {
 	// parse reads from all regions
 	// returns an array of templates, no matter if paired or not
 	if (!q.asPaired) {
@@ -957,12 +979,14 @@ function get_templates(q) {
 		// to account for reads spanning between multiple regions, may use qname2read = new Map()
 		for (let i = 0; i < q.regions.length; i++) {
 			const r = q.regions[i]
-			for (const line of r.lines) {
+			//for (const line of r.lines) {
+			for (const line of group.templates) {
 				const segment = parse_one_segment(line, r, i)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
 					x2: segment.x2,
+					__tempscore: segment.tempscore,
 					segments: [segment]
 				})
 			}
@@ -975,7 +999,8 @@ function get_templates(q) {
 	// value: template, a list of segments
 	for (let i = 0; i < q.regions.length; i++) {
 		const r = q.regions[i]
-		for (const line of r.lines) {
+		//for (const line of r.lines) {
+		for (const line of group.templates) {
 			const segment = parse_one_segment(line, r, i)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
@@ -987,6 +1012,7 @@ function get_templates(q) {
 				qname2template.set(segment.qname, {
 					x1: segment.x1,
 					x2: segment.x2,
+					__tempscore: segment.tempscore,
 					segments: [segment]
 				})
 			}
@@ -1006,8 +1032,8 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
-*/
-	const l = line.trim().split('\t')
+	*/
+	const l = line.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1022,6 +1048,8 @@ may skip insertion if on screen width shorter than minimum width
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
+
+	let tempscore = line.tempscore
 
 	if (flag & 0x4) {
 		//console.log('unmapped')
@@ -1169,7 +1197,8 @@ may skip insertion if on screen width shorter than minimum width
 		qual,
 		cigarstr,
 		tlen,
-		flag
+		flag,
+		tempscore
 	}
 	if (flag & 0x40) {
 		segment.isfirst = true
@@ -1224,14 +1253,15 @@ function getstacksizebystacks(numofstacks, q) {
 	return [a, 0]
 }
 
-function stack_templates(group, q) {
+function stack_templates(group, q, templates) {
 	// stack by on screen x1 x2 position of each template, only set stack idx to each template
 	// actual y position will be set later after stackheight is determined
 	// adds q.stacks[]
 	// stacking code not reusable for the special spacing calculation
-	group.templates.sort((i, j) => i.x1 - j.x1)
+	templates.sort((i, j) => i.x1 - j.x1) //group.templates
 	group.stacks = [] // each value is screen pixel pos of each stack
-	for (const template of group.templates) {
+	for (const template of templates) {
+		// group.templates
 		let stackidx = null
 		for (let i = 0; i < group.stacks.length; i++) {
 			if (group.stacks[i] + q.stacksegspacing < template.x1) {
@@ -1246,20 +1276,23 @@ function stack_templates(group, q) {
 		}
 		template.y = stackidx
 	}
-	may_trimstacks(group, q)
+	templates = may_trimstacks(group, templates, q)
+	return templates
 }
 
-function may_trimstacks(group, q) {
-	if (!group.partstack) return
+function may_trimstacks(group, templates, q) {
+	if (!group.partstack) return templates
 	// should be a positive integer
-	const lst = group.templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop)
+	const lst = templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
 	lst.forEach(i => (i.y -= group.partstack.start))
-	group.templates = lst
+	//group.templates = lst
+	templates = lst
 	group.stacks = []
 	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
 		group.stacks.push(0)
 	}
 	group.returntemplatebox = [] // always set this
+	return templates
 }
 
 async function get_refseq(g, coord) {
@@ -1269,7 +1302,7 @@ async function get_refseq(g, coord) {
 	return l.join('').toUpperCase()
 }
 
-function finalize_templates(group, q) {
+function finalize_templates(group, templates, q) {
 	/*
 for each template:
 	for each box:
@@ -1278,9 +1311,10 @@ for each template:
 		add sequence
 		add quality
 at the end, set q.canvasheight
-*/
-	const stacky = get_stacky(group, q)
-	for (const template of group.templates) {
+	*/
+	const stacky = get_stacky(group, templates, q)
+	for (const template of templates) {
+		// group.templates
 		template.y = stacky[template.y]
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
@@ -1329,14 +1363,15 @@ function plot_messagerows(ctx, group, q) {
 	return y
 }
 
-function get_stacky(group, q) {
+function get_stacky(group, templates, q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
 	for (let i = 0; i < group.stacks.length; i++) stackrowheight.push(group.stackheight)
 	overlapRP_setflag(group, q)
 	if (group.overlapRP_multirows) {
 		// expand row height for stacks with overlapping read pairs
-		for (const template of group.templates) {
+		for (const template of templates) {
+			//group.templates
 			if (template.segments.length <= 1) continue
 			template.height = getrowheight_template_overlapread(template, group.stackheight)
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
@@ -1653,7 +1688,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	}
 }
 
-function plot_insertions(ctx, group, q, messagerowheights) {
+function plot_insertions(ctx, group, q, templates, messagerowheights) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
@@ -1665,7 +1700,8 @@ if b.qual is available, set text color based on it
 		// before plotting any insertions, to better identify insertions (also white)
 		// find out all insertion positions
 		const xpos = new Set()
-		for (const template of group.templates) {
+		for (const template of templates) {
+			// group.templates
 			for (const segment of template.segments) {
 				if (segment.ridx != ridx) continue
 				const insertions = segment.boxes.filter(i => i.opr == 'I')
@@ -1685,7 +1721,8 @@ if b.qual is available, set text color based on it
 		}
 	}
 
-	for (const template of group.templates) {
+	for (const template of templates) {
+		//group.templates
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
 			const insertions = segment.boxes.filter(i => i.opr == 'I')
@@ -1841,7 +1878,7 @@ async function query_oneread(req, r) {
 		)
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment(line, r, null, true)
+			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {

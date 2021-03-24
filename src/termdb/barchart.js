@@ -66,7 +66,7 @@ class TdbBarchart {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('barchart'),
+			isVisible: config.settings.currViews.includes('barchart') && appState.tree.visiblePlotIds.includes(this.id),
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
@@ -95,7 +95,7 @@ class TdbBarchart {
 		if (!this.setVisibility()) return
 		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
 			for (const q of this.currServerData.refs.q) {
-				if (q.error) throw q.error //console.log(89, data.refs.q)
+				if (q.error) throw q.error
 			}
 		}
 		this.updateSettings(this.config)
@@ -186,25 +186,32 @@ class TdbBarchart {
 
 	setExclude(term, term2) {
 		// a non-numeric term.id is used directly as seriesId or dataId
-		const getHiddenId = id =>
-			term.term.type == 'categorical'
-				? id
-				: this.settings.cols && this.settings.cols.includes(term.term.id)
-				? id
-				: term.term.values && id in term.term.values && 'label' in term.term.values[id]
-				? term.term.values[id].label
-				: id
-
 		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
 			.filter(id => term.q.hiddenValues[id])
-			.map(getHiddenId)
+			.map(id =>
+				term.term.type == 'categorical'
+					? id
+					: this.settings.cols && this.settings.cols.includes(term.term.id)
+					? id
+					: term.term.values && id in term.term.values && 'label' in term.term.values[id]
+					? term.term.values[id].label
+					: id
+			)
 
 		this.settings.exclude.rows =
 			!term2 || !term2.q || !term2.q.hiddenValues
 				? []
 				: Object.keys(term2.q.hiddenValues)
 						.filter(id => term2.q.hiddenValues[id])
-						.map(getHiddenId)
+						.map(id =>
+							term2.term.type == 'categorical'
+								? id
+								: this.settings.cols && this.settings.cols.includes(term2.term.id)
+								? id
+								: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
+								? term2.term.values[id].label
+								: id
+						)
 	}
 
 	processData(chartsData) {
@@ -274,7 +281,7 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = t2 && t2.term.type == 'condition' ? '' : `, n=${series.visibleTotal}`
+				const ntotal = (t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade) ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -380,11 +387,11 @@ class TdbBarchart {
 		}
 		if (s.rows /*&& s.rows.length > 1*/ && !s.hidelegend && t2 && this.term2toColor) {
 			const value_by_label =
-				t2.term.type != 'condition' || !t2.term.q
+				t2.term.type != 'condition' || !t2.q
 					? ''
-					: t2.term.q.value_by_max_grade
+					: t2.q.value_by_max_grade
 					? 'max. grade'
-					: t2.term.q.value_by_most_recent
+					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
 			legendGrps.push({

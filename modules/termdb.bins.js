@@ -256,6 +256,11 @@ export function get_bin_label(bin, binconfig) {
 	}
 
 	const label_offset = 'label_offset' in bc ? bc.label_offset : 0
+	/*
+	  NOTE: The first_bin and last_bin are assigned in compute_bins,
+	  so these min and max values are not needed for generating
+	  labels. Will keep this code here for now for reference.
+
 	const min = !bc.first_bin
 		? bc.results.summary.min
 		: 'start' in bc.first_bin
@@ -270,6 +275,7 @@ export function get_bin_label(bin, binconfig) {
 		: 'stop_percentile' in bc.last_bin
 		? bc.results.summary['p' + bc.last_bin.stop_percentile]
 		: bc.results.summary.max
+	*/
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"

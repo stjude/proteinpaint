@@ -551,7 +551,10 @@ function setRenderers(self) {
 					const i = filter.lst.indexOf(item)
 					if (i == -1) return
 					tvs.isnot = self.dom.isNotInput.property('checked')
-					filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
+					// if tvs already present in the filterCopy just replace it rather than adding new one
+					const item_i = filterCopy.lst.findIndex(t => t.$id == item.$id)
+					if (item_i == -1) filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
+					else filterCopy.lst[item_i].tvs = tvs
 					self.refresh(filterUiRoot)
 				}
 			})
