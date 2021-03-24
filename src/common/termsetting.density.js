@@ -1,4 +1,4 @@
-import { select, mouse, pointer, event } from 'd3-selection'
+import { select, mouse } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
 import { get_bin_label } from '../../modules/termdb.bins'
 
