@@ -282,10 +282,7 @@ function makeheader(app, obj, jwt) {
             if (client.keyupEnter()) entersearch()
             else debouncer()
             app_btn_active = false
-            if (app_holder !== undefined) {
-                app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-                app_btn_toggle()
-            }
+            apps_off()
         })
     input.node().focus()
 
@@ -297,7 +294,7 @@ function makeheader(app, obj, jwt) {
         .attr('title', 'Select a genome')
         .style('margin', '1px 20px 1px 10px')
         .on('change', () => {
-            gb_btn(gb_div)
+            make_genome_browser_btn(gb_div)
         })
     for (const n in app.genomes) {
         selectgenome.append('option')
@@ -307,10 +304,10 @@ function makeheader(app, obj, jwt) {
     }
     //Holds element in a consistent location
     const gb_div = headbox.append('span')
-    gb_btn(gb_div)
+    make_genome_browser_btn(gb_div)
 
     //Launch genome browser button in headbox
-    async function gb_btn(div){
+    async function make_genome_browser_btn(div){
         div.selectAll('#genome_btn').remove()
         const ss = selectgenome.node()
         const genomename = ss.options[ss.selectedIndex].value
@@ -322,11 +319,7 @@ function makeheader(app, obj, jwt) {
             .style('border-radius', '5px')
             .text(genomename + ' Genome Browser')
             .on('click', ()=>{
-                app_btn_active = false
-                if (app_holder !== undefined) {
-                    app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-                    app_btn_toggle()
-                }
+                apps_off()
                 const g = app.genomes[genomename]
                 if(!g) {
                     alert('Invalid genome name: '+genomename)
@@ -356,6 +349,17 @@ function makeheader(app, obj, jwt) {
         return genome_browser_btn
     }
 
+    //Hides app_div and toggles app_btn off
+    function apps_off(){
+        app_btn_active = false
+            if (app_holder !== undefined) {
+                app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+                app_btn_toggle()
+            }
+    }
+
+    launchApps()
+
     let app_btn, app_btn_active, app_holder
 
     if (!obj.features.examples) {
@@ -384,7 +388,7 @@ function makeheader(app, obj, jwt) {
             apps_rendered = true
             const _ = await
             import ('./examples')
-            await _.init_examples({ holder: app_holder })
+            await _.init_examples({ holder: app_holder, new_div: app.holder })
         }
 
         if (app_btn_active) load_app_div()
@@ -442,7 +446,27 @@ function makeheader(app, obj, jwt) {
     return selectgenome
 }
 
-//**** appmenu function no longer necessary?? */
+async function launchApps(app){
+    const new_div = app.holder.append('div')
+    new_div
+    .style('margin', '10px')
+    .style('padding-right', '10px')
+    .style('border-radius', '5px')
+    .style('width', '95vw')
+    //     {
+    //         if (track.name == "Use FusionEditor") {
+    //             const lst = client.newpane3(100, 100, app.genomes)
+    //             lst[0].header.text('Fusion Editor')
+    //             lst[0].body.style('margin','10px')
+    //             const wait = lst[0].body.append('div').text('Loading...').style('margin','10px')
+    //             import('./svmr').then(p=>{
+    //                 wait.remove()
+    //                 p.svmrui( lst, app.genomes, app.hostURL, jwt)
+    //             })
+    //     }
+    // }
+    return new_div
+}
 
 // function appmenu( app, headbox, selectgenome, jwt ) {
 	// /*

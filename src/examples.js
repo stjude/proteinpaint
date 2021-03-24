@@ -2,7 +2,7 @@ import { dofetch2 } from './client'
 import { debounce } from 'debounce'
 
 export async function init_examples(par) {
-	const { holder, genome } = par
+	const { holder, new_div } = par
 	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	if (re.error) {
 		holder
@@ -213,22 +213,26 @@ function displayTracks(tracks, holder) {
 
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track, holder) {
-	holder.selectAll('*').remove()
-	const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
-	const contents = `<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
-				<div id="aaa" style="margin:20px">
-				<button type="submit" onclick="window.open('${window.location.origin}', '_self')">Go Back</button>
-				<h2 class="header" id="track-example-header">${track.name} Example</h2>
-				</div>
-			<script>
-				runproteinpaint({
-                    host: '${window.location.origin}',
-                    holder: document.getElementById('aaa'),
-                    ${strippedTrack}
-                })
-			</script>`
-	holder.append('div').html(contents)
+async function openExample(track, new_div) {
+	new_div.selectAll('*').remove()
+
+	// const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
+	
+	// const contents = `<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
+	// 			<div id="aaa" style="margin:20px">
+	// 			<button type="submit" onclick="window.open('${window.location.origin}', '_self')">Go Back</button>
+	// 			<h2 class="header" id="track-example-header">${track.name} Example</h2>
+	// 			</div>
+	// 		<script>
+	// 			runproteinpaint({
+    //                 host: '${window.location.origin}',
+    //                 holder: document.getElementById('aaa'),
+    //                 ${strippedTrack}
+    //             })
+	// 		</script>`
+	// new_div.append('div').html(contents)
+	new_div.append('div').text("This Worked")
+
 
 	// const tab = window.open('${window.location.origin}','_self')
 	// const tab = window.open(`${track.shorthand},name=${track.shorthand} Example`)
