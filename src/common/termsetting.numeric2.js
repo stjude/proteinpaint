@@ -506,6 +506,7 @@ function renderCustomBinInputs(self) {
 		.html('Bin Label')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
+
 	self.dom.customBinBoundaryInput = tr
 		.append('td')
 		.append('textarea')
@@ -526,9 +527,27 @@ function renderCustomBinInputs(self) {
 
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
-		self.q.lst = self.processCustomBinInputs()
+		const data = self.processCustomBinInputs()
+		// update self.q.lst and render bin lines only if bin boundry changed
+		if (binsChanged(data, self.q.lst)) {
+			self.q.lst = data
+			self.renderBinLines(self, self.q)
+		}
 		renderBoundaryInputDivs(self, self.q.lst)
-		self.renderBinLines(self, self.q)
+	}
+
+	function binsChanged(data, qlst) {
+		let changed = false
+		if (data.length != qlst.length) changed = true
+		else {
+			qlst.forEach((bin, i) => {
+				Object.keys(bin).forEach(k => {
+					if (bin[k] && bin[k] != qlst[i][k]) changed = true
+					return changed
+				})
+			})
+		}
+		return changed
 	}
 
 	self.dom.customBinLabelTd = tr.append('td')
