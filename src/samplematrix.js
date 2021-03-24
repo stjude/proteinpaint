@@ -188,7 +188,7 @@ export class Samplematrix {
 					.style('text-align', 'right')
 					.text('LOH cutoff')
 				this.legendtable.loh_td = loh_tr.append('td')
-				
+
 				if (this.limitbysamplesetgroup) {
 					if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
 				}
@@ -1219,7 +1219,7 @@ sort samples by f.issampleattribute
 				r.g
 					.append('text')
 					.attr('font-family', client.font)
-					.attr('font-size', 16)
+					.attr('font-size', Math.min(16, r.height))
 					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
 					.attr('x', -this.rowlabspace - this.rowlabticksize)
