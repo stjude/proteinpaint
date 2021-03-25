@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')

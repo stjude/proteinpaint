@@ -6,6 +6,7 @@
 npm-debug.log
 dist/*
 */*/dist/
+*/*/*/dist/
 
 public/bin/*
 */*/public/bin/*

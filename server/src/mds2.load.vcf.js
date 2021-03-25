@@ -2,8 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const spawn = require('child_process').spawn
 const utils = require('./utils')
-const vcf = require('../src/vcf')
-const common = require('../src/common')
+const vcf = require('../../shared/src/vcf')
+const common = require('../../shared/src/common')
 const termdbsql = require('./termdb.sql')
 
 /*

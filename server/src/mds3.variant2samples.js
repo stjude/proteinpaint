@@ -1,4 +1,4 @@
-const { stratinput } = require('../src/tree')
+const { stratinput } = require('../../shared/src/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
 

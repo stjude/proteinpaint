@@ -1,7 +1,7 @@
-const app = require('../app')
+const app = require('./app')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
-const basecolor = require('../src/common').basecolor
+const basecolor = require('../../shared/src/common').basecolor
 
 module.exports = async (req, res) => {
 	app.log(req)

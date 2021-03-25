@@ -1,4 +1,4 @@
-const common = require('../src/common')
+const common = require('../../shared/src/common')
 const got = require('got')
 
 /*

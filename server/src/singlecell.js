@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
@@ -6,7 +6,7 @@ const d3scale = require('d3-scale')
 const d3color = require('d3-color')
 const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
-//const common = require('../src/common')
+//const common = require('../../shared/src/common')
 
 /*
 ********************** EXPORTED

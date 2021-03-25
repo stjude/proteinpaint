@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const binsmodule = require('./termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const connect_db = require('./utils').connect_db

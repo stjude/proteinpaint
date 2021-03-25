@@ -2,7 +2,7 @@ const fs = require('fs'),
 	path = require('path'),
 	spawn = require('child_process').spawn,
 	utils = require('./utils'),
-	app = require('../app')
+	app = require('./app')
 
 const serverconfig = require('./serverconfig')
 const tabix = serverconfig.tabix || 'tabix'

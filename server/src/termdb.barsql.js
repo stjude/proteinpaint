@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('partjson')

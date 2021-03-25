@@ -1,4 +1,4 @@
-const serverconfig = require('../modules/serverconfig')
+const serverconfig = require('../src/serverconfig')
 
 module.exports = {
 	species: 'human',

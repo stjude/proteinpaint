@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const utils = require('./utils')
 
 module.exports = async (req, res) => {

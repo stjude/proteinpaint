@@ -1,4 +1,4 @@
-const app = require('../app')
+const app = require('./app')
 const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
@@ -9,7 +9,7 @@ const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 //const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
-const basecolor = require('../src/common').basecolor
+const basecolor = require('../../shared/src/common').basecolor
 const serverconfig = require('./serverconfig')
 
 /*

@@ -3,7 +3,7 @@ const path = require('path')
 const spawn = require('child_process').spawn
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
-const bplen = require('../src/common').bplen
+const bplen = require('../../shared/src/common').bplen
 
 /*
 ********************** EXPORTED
