@@ -1,5 +1,5 @@
 const app = require('./app')
-const binsmodule = require('./termdb.bins')
+const binsmodule = require('../../shared/src/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const connect_db = require('./utils').connect_db
 

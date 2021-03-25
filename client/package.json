@@ -6,33 +6,7 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "cd server && ln -sf ../serverconfig.json && npm run dev",
-    "start": "cd server && npm start",
-    "dev14": "npm run dev -- --env.devtool=source-map",
-    "start14": "nodemon --enable-source-maps server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
-    "server": "npm start",
-    "ppr": "./build/deploy.sh ppr",
-    "build-server": "webpack --config=build/webpack.config.server.js --env.NODE_ENV=production",
-    "test": "npm run test-back && npm run test-front",
-    "test-back": "tape -r babel-register modules/test/*.spec.js",
-    "test-front": "browserify test/init.js public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
-    "test-browser": "rm -f public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] -o public/bin/spec.bundle.js -v",
-    "test-response": "nodemon modules/test/test.server.js --watch modules",
-    "test-gdc": "rm -f public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
-    "deliver": "sh utils/deliver.sh",
-    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
-    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
-    "rolldev": "rm -rf dist && rollup -c build/rollup.config.js -w",
-    "rollprod": "rm -rf dist && rollup -c build/rollup.config.js",
-    "release-patch": "./build/release.sh patch",
-    "release-minor": "./build/release.sh minor",
-    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
-  },
-  "prettier": {
-    "semi": false,
-    "useTabs": true,
-    "printWidth": 120,
-    "singleQuote": true
+    "dev": "rm -rf public/bin && ../node_modules/.bin/webpack --env.NODE_ENV=development --watch --progress --colors"
   },
   "browserify": {
     "transform": [
@@ -89,6 +63,7 @@
     "webpack-notifier": "^1.7.0"
   },
   "dependencies": {
+    "async": "^2.6.0",
     "colorbrewer": "^1.0.0",
     "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
@@ -96,8 +71,7 @@
     "debounce": "^1.2.0",
     "jstat": "^1.9.3",
     "lazy": "^1.0.11",
-    "loader-utils": "^0.2.17",
-    "partjson": "^0.58.1"
+    "loader-utils": "^0.2.17"
   },
   "peerDependencies": {
     "react": "^17.0.1"
@@ -110,19 +84,10 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "bin.js",
-    "server.js",
     "dist",
-    "genome",
-    "dataset/clinvar.*.js",
-    "dataset/gdc.hg38.js",
     "public/index.html",
     "public/rev.txt",
-    "public/bin",
-    "utils/*.R",
-    "utils/install.pp.js",
-    "src/common.js",
-    "modules/serverconfig.js"
+    "public/bin"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

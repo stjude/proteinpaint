@@ -7,26 +7,7 @@
   "bin": "bin.js",
   "scripts": {
     "dev": "../node_modules/.bin/webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
-    "start": "ln -sfn ../public && nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test"
-  },
-  "browserify": {
-    "transform": [
-      [
-        "browserify-css"
-      ],
-      [
-        "babelify",
-        {
-          "presets": [
-            "es2015",
-            "react"
-          ],
-          "plugins": [
-            "dynamic-import-split-require"
-          ]
-        }
-      ]
-    ]
+    "start": "ln -sfn ../public && ../node_modules/.bin/nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -68,7 +49,6 @@
   "files": [
     "bin.js",
     "server.js",
-    "dist",
     "genome",
     "dataset/clinvar.*.js",
     "dataset/gdc.hg38.js",
