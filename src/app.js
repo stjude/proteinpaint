@@ -453,18 +453,7 @@ async function launchApps(app){
     .style('padding-right', '10px')
     .style('border-radius', '5px')
     .style('width', '95vw')
-    //     {
-    //         if (track.name == "Use FusionEditor") {
-    //             const lst = client.newpane3(100, 100, app.genomes)
-    //             lst[0].header.text('Fusion Editor')
-    //             lst[0].body.style('margin','10px')
-    //             const wait = lst[0].body.append('div').text('Loading...').style('margin','10px')
-    //             import('./svmr').then(p=>{
-    //                 wait.remove()
-    //                 p.svmrui( lst, app.genomes, app.hostURL, jwt)
-    //             })
-    //     }
-    // }
+
     return new_div
 }
 
