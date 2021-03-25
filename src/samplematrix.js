@@ -172,6 +172,23 @@ export class Samplematrix {
 					}
 					this.showlegend_limitsample()
 				}
+
+				const cnv_tr = this.legendtable.append('tr')
+				cnv_tr
+					.append('td')
+					.style('opacity', 0.5)
+					.style('text-align', 'right')
+					.text('CNV cutoff')
+				this.legendtable.cnv_td = cnv_tr.append('td')
+
+				const loh_tr = this.legendtable.append('tr')
+				loh_tr
+					.append('td')
+					.style('opacity', 0.5)
+					.style('text-align', 'right')
+					.text('LOH cutoff')
+				this.legendtable.loh_td = loh_tr.append('td')
+
 				if (this.limitbysamplesetgroup) {
 					if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
 				}
@@ -561,6 +578,10 @@ export class Samplematrix {
 		/*
 		TODO server-side clustering on select features to determine sample hierarchy
 		*/
+		this.max_cnv = 0
+		this.min_cnv = 0
+		this.max_loh = 0
+		this.min_loh = 0
 
 		const arg = {
 			genome: this.genome.name,
@@ -677,6 +698,7 @@ export class Samplematrix {
 			const gmax = common.getMax_byiqr(gain, 0)
 			const lmax = common.getMax_byiqr(loss, 0)
 			f.maxabslogratio = Math.max(gmax, lmax)
+			if (f.maxabslogratio > this.max_cnv) this.max_cnv = f.maxabslogratio
 			return
 		}
 
@@ -684,6 +706,7 @@ export class Samplematrix {
 			const values = f.items.map(i => i.segmean)
 			f.minvalue = 0
 			f.maxvalue = Math.max(...values)
+			if (f.maxvalue > this.max_loh) this.max_loh = f.maxvalue
 			return
 		}
 
@@ -722,11 +745,19 @@ export class Samplematrix {
 				const gmax = common.getMax_byiqr(cnvgain, 0)
 				const lmax = common.getMax_byiqr(cnvloss, 0)
 				f.cnv.maxabslogratio = Math.max(gmax, lmax)
+				if (f.cnv.maxabslogratio > this.max_cnv) {
+					this.max_cnv = f.cnv.maxabslogratio
+					this.min_cnv = -f.cnv.maxabslogratio
+					this.cnv_colorloss = f.cnv.colorloss
+					this.cnv_colorgain = f.cnv.colorgain
+				}
 			}
 
 			if (lohmax) {
 				f.loh.minvalue = 0
 				f.loh.maxvalue = lohmax
+				if (f.loh.maxvalue > this.max_loh) this.max_loh = f.loh.maxvalue
+				this.loh_color = f.loh.color
 			}
 			return
 		}
@@ -918,35 +949,6 @@ export class Samplematrix {
 						cell.append('span').text('Fusion')
 					}
 				}
-				if (f.cnv.maxabslogratio != undefined) {
-					h.append('div')
-						.style('margin-bottom', '5px')
-						.html(
-							'CNV gain <span style="background:' +
-								f.cnv.colorgain +
-								';color:white;padding:1px 5px">' +
-								f.cnv.maxabslogratio.toFixed(3) +
-								'</span> &nbsp; ' +
-								'CNV loss <span style="background:' +
-								f.cnv.colorloss +
-								';color:white;padding:1px 5px">-' +
-								f.cnv.maxabslogratio.toFixed(3) +
-								'</span>'
-						)
-				}
-
-				if (f.loh.maxvalue != undefined) {
-					const row = h.append('div').style('margin-bottom', '5px')
-					row.append('span').text('LOH seg.mean: ' + f.loh.minvalue.toFixed(3))
-					row
-						.append('div')
-						.style('margin', '2px 10px')
-						.style('display', 'inline-block')
-						.style('width', '100px')
-						.style('height', '15px')
-						.style('background', 'linear-gradient( to right, white, ' + f.loh.color + ')')
-					row.append('span').text(f.loh.maxvalue.toFixed(3))
-				}
 				continue
 			}
 
@@ -980,6 +982,133 @@ sort samples by f.issampleattribute
 			// __newattr
 			throw 'unknown feature type in making legend'
 		}
+
+		this.makeGlobalCnvLohLegend()
+	}
+
+	makeGlobalCnvLohLegend() {
+		// Global legend for entities in this array, rightnow only CNV and LOH supported,
+		// other types can be added as required
+		const legend_data = [
+			{ type: 'cnv', legend_label: 'CNV log2(ratio): ' },
+			{ type: 'loh', legend_label: 'LOH seg.mean: ' }
+		]
+
+		// store original values to diplay or hide 'Reset' button
+		const min_cnv_orig = parseFloat(this.min_cnv.toFixed(3))
+		const max_cnv_orig = parseFloat(this.max_cnv.toFixed(3))
+		const min_loh_orig = parseFloat(this.min_loh.toFixed(3))
+		const max_loh_orig = parseFloat(this.max_loh.toFixed(3))
+		let changed_flag = false
+
+		// create row for each lengend_data type
+		legend_data.forEach(data => {
+			let min_cutoff = data.type == 'cnv' ? this.min_cnv : this.min_loh
+			let max_cutoff = data.type == 'cnv' ? this.max_cnv : this.max_loh
+
+			const td = data.type == 'cnv' ? this.legendtable.cnv_td : this.legendtable.loh_td
+			const row = td.append('div').style('margin-bottom', '5px')
+			row.append('span').text(data.legend_label)
+			const lower_range_txt = row.append('span').text(min_cutoff.toFixed(3))
+			const lower_range_input = row
+				.append('input')
+				.attr('type', 'text')
+				.attr('size', 8)
+				.style('display', 'none')
+				.property('value', min_cutoff.toFixed(3))
+			if (data.type == 'cnv') {
+				row
+					.append('div')
+					.style('margin', '4px 0 1px 10px')
+					.style('display', 'inline-block')
+					.style('width', '50px')
+					.style('height', '15px')
+					.style('background', 'linear-gradient( to right,' + this.cnv_colorloss + ',white)')
+			}
+			row
+				.append('div')
+				.style('margin', '4px 10px 1px 10px')
+				.style('margin-left', data.type == 'cnv' ? '0' : '10px')
+				.style('display', 'inline-block')
+				.style('width', data.type == 'cnv' ? '50px' : '100px')
+				.style('height', '15px')
+				.style(
+					'background',
+					'linear-gradient( to right, white, ' + (data.type == 'cnv' ? this.cnv_colorgain : this.loh_color) + ')'
+				)
+			const upper_range_txt = row.append('span').text(max_cutoff.toFixed(3))
+			const upper_range_input = row
+				.append('input')
+				.attr('type', 'text')
+				.attr('size', 8)
+				.style('display', 'none')
+				.property('value', max_cutoff.toFixed(3))
+
+			const edit_btn = row
+				.append('button')
+				.style('margin', '2px 5px')
+				.style('padding', '3px 10px')
+				.text('Edit')
+				.on('click', () => {
+					lower_range_txt.style('display', 'none')
+					upper_range_txt.style('display', 'none')
+					lower_range_input.style('display', 'inline-block')
+					upper_range_input.style('display', 'inline-block')
+
+					edit_btn.style('display', 'none')
+					submit_btn.style('display', 'inline-block')
+				})
+
+			const submit_btn = row
+				.append('button')
+				.style('display', 'none')
+				.style('margin', '2px 5px')
+				.style('padding', '3px 10px')
+				.text('Submit')
+				.on('click', () => {
+					if (data.type == 'cnv') {
+						this.min_cnv = min_cutoff = lower_range_input.property('value')
+						this.max_cnv = max_cutoff = upper_range_input.property('value')
+						if (this.min_cnv != min_cnv_orig || this.max_cnv != max_cnv_orig) changed_flag = true
+					} else {
+						this.min_loh = min_cutoff = parseFloat(lower_range_input.property('value'))
+						this.max_loh = max_cutoff = parseFloat(upper_range_input.property('value'))
+						if (this.min_loh != min_loh_orig || this.max_loh != max_loh_orig) changed_flag = true
+					}
+					lower_range_txt.style('display', 'inline-block').text(parseFloat(min_cutoff).toFixed(3))
+					upper_range_txt.style('display', 'inline-block').text(parseFloat(max_cutoff).toFixed(3))
+					lower_range_input.style('display', 'none')
+					upper_range_input.style('display', 'none')
+					edit_btn.style('display', 'inline-block')
+					submit_btn.style('display', 'none')
+					reset_btn.style('display', changed_flag ? 'inline-block' : 'none')
+					this.draw_matrix()
+				})
+
+			const reset_btn = row
+				.append('button')
+				.style('display', 'none')
+				.style('margin', '2px 5px')
+				.style('padding', '3px 10px')
+				.text('Reset')
+				.on('click', () => {
+					if (data.type == 'cnv') {
+						this.min_cnv = min_cutoff = min_cnv_orig
+						this.max_cnv = max_cutoff = max_cnv_orig
+					} else {
+						this.min_loh = min_cutoff = min_loh_orig
+						this.max_loh = max_cutoff = max_loh_orig
+					}
+					lower_range_txt.text(parseFloat(min_cutoff).toFixed(3))
+					upper_range_txt.text(parseFloat(max_cutoff).toFixed(3))
+					lower_range_input.property('value', parseFloat(min_cutoff).toFixed(3))
+					upper_range_input.property('value', parseFloat(max_cutoff).toFixed(3))
+					reset_btn.style('display', 'none')
+					changed_flag = false
+					this.draw_matrix()
+				})
+			reset_btn.style('display', 'none')
+		})
 	}
 
 	gatherSamplesFromFeatureData() {
@@ -1090,7 +1219,7 @@ sort samples by f.issampleattribute
 				r.g
 					.append('text')
 					.attr('font-family', client.font)
-					.attr('font-size', 16)
+					.attr('font-size', Math.min(16, r.height))
 					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
 					.attr('x', -this.rowlabspace - this.rowlabticksize)
@@ -1268,12 +1397,13 @@ sort samples by f.issampleattribute
 		for (const item of items) {
 			const x1 = feature.coordscale(Math.max(feature.start, item.start))
 			const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
+			const maxabslogratio = this.max_cnv
 			g.append('rect')
 				.attr('x', x1)
 				.attr('width', Math.max(1, x2 - x1))
 				.attr('height', sample.height)
 				.attr('fill', item.value > 0 ? feature.colorgain : feature.colorloss)
-				.attr('fill-opacity', Math.abs(item.value) / feature.maxabslogratio)
+				.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
 				.attr('shape-rendering', 'crispEdges')
 		}
 		g.append('rect')
@@ -1308,13 +1438,14 @@ sort samples by f.issampleattribute
 		for (const item of items) {
 			const x1 = feature.coordscale(Math.max(feature.start, item.start))
 			const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
+			const loh_range = this.max_loh - this.min_loh
 			g.append('rect')
 				.attr('x', this.features_on_rows ? 0 : x1)
 				.attr('y', this.features_on_rows ? x1 : 0)
 				.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 				.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 				.attr('fill', feature.color)
-				.attr('fill-opacity', (item.segmean - feature.minvalue) / feature.maxvalue)
+				.attr('fill-opacity', (item.segmean - this.min_loh) / loh_range)
 				.attr('shape-rendering', 'crispEdges')
 		}
 		g.append('rect')
@@ -1517,13 +1648,14 @@ sort samples by f.issampleattribute
 				for (const item of loh) {
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
+					const loh_range = this.max_loh - this.min_loh
 					g.append('rect')
 						.attr('x', this.features_on_rows ? 0 : x1)
 						.attr('y', this.features_on_rows ? x1 : 0)
 						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', feature.loh.color)
-						.attr('fill-opacity', (item.segmean - feature.loh.minvalue) / (feature.loh.maxvalue - feature.loh.minvalue))
+						.attr('fill-opacity', (item.segmean - this.min_loh) / loh_range)
 						.attr('shape-rendering', 'crispEdges')
 				}
 			}
@@ -1532,13 +1664,14 @@ sort samples by f.issampleattribute
 				for (const item of cnv) {
 					const x1 = feature.coordscale(Math.max(feature.start, item.start))
 					const x2 = feature.coordscale(Math.min(feature.stop, item.stop))
+					const maxabslogratio = item.value > 0 ? this.max_cnv : this.min_cnv
 					g.append('rect')
 						.attr('x', this.features_on_rows ? 0 : x1)
 						.attr('y', this.features_on_rows ? x1 : 0)
 						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', item.value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss)
-						.attr('fill-opacity', Math.abs(item.value) / feature.cnv.maxabslogratio)
+						.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
 						.attr('shape-rendering', 'crispEdges')
 				}
 			}
@@ -1642,16 +1775,18 @@ sort samples by f.issampleattribute
 		*/
 		const height = this.features_on_rows ? feature.height : sample.height
 		const width = this.features_on_rows ? sample.width : feature.width
+		const loh_range = this.max_loh - this.min_loh
 		const lst = []
 		if (cnv.length) {
 			for (const i of cnv) {
+				const maxabslogratio = i.value > 0 ? this.max_cnv : this.min_cnv
 				let k
 				if (i.value > 0) {
 					k = { color: feature.cnv.colorgain }
 				} else {
 					k = { color: feature.cnv.colorloss }
 				}
-				k.opacity = Math.abs(i.value) / feature.cnv.maxabslogratio
+				k.opacity = Math.abs(i.value) / Math.abs(maxabslogratio)
 				lst.push(k)
 			}
 		}
@@ -1659,7 +1794,7 @@ sort samples by f.issampleattribute
 			for (const i of loh) {
 				lst.push({
 					color: feature.loh.color,
-					opacity: (i.segmean - feature.loh.minvalue) / (feature.loh.maxvalue - feature.loh.minvalue)
+					opacity: (i.segmean - this.min_loh) / loh_range
 				})
 			}
 		}
