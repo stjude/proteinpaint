@@ -1,5 +1,22 @@
 const got = require('got')
 
+/* if filter0 is missing necessary attr, adding it to api query will cause error
+if valid, returns object
+otherwise returns null, so it won't be added to query and will not print error
+*/
+function validate_filter0(f) {
+	if (typeof f != 'object') return null
+	if (typeof f.op != 'string') return null
+	// may check if f.op value is valid
+	if (typeof f.content == 'object') {
+	} else if (typeof f.content == 'array') {
+		// may do recursion
+	} else {
+		return null
+	}
+	return f
+}
+
 ////////////////////////// list of query strings
 
 /*
@@ -809,6 +826,8 @@ module.exports = {
 	genome: 'hg38',
 	snvindel_attributes,
 	apihost: GDC_HOST + '/v0/graphql',
+
+	validate_filter0,
 
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations

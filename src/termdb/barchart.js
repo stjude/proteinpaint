@@ -9,11 +9,6 @@ import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { to_svg } from '../client'
 
-const colors = {
-	c10: scaleOrdinal(schemeCategory10),
-	c20: scaleOrdinal(schemeCategory20)
-}
-
 class TdbBarchart {
 	constructor(app, opts) {
 		this.app = app
@@ -98,6 +93,8 @@ class TdbBarchart {
 				if (q.error) throw q.error
 			}
 		}
+		this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
+		delete this.colorScale
 		this.updateSettings(this.config)
 		this.chartsData = this.processData(this.currServerData)
 		this.render()
@@ -281,7 +278,8 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = (t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade) ? '' : `, n=${series.visibleTotal}`
+				const ntotal =
+					t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -331,14 +329,18 @@ class TdbBarchart {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
 		if (result.dataId in this.term2toColor) return
+		if (!this.colorScale) {
+			this.colorScale =
+				this.settings.rows && this.settings.rows.length < 11
+					? scaleOrdinal(schemeCategory10)
+					: scaleOrdinal(schemeCategory20)
+		}
 		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
 		this.term2toColor[result.dataId] = !this.config.term2
 			? 'rgb(144, 23, 57)'
 			: group && 'color' in group
 			? group.color
-			: rgb(
-					this.settings.rows && this.settings.rows.length < 11 ? colors.c10(result.dataId) : colors.c20(result.dataId)
-			  ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
+			: rgb(this.colorScale(result.dataId)).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
 	}
 
 	getLegendGrps() {

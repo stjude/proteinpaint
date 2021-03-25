@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as client from '../client'
+import { Menu, dofetch2 } from '../client'
 import { init as init_legend } from './legend'
 import { loadTk } from './tk'
 import url2map from '../url2map'
@@ -31,12 +31,11 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
-	tk.load = _load(tk, block) // shorthand
-
-	tk.itemtip = new client.Menu()
-
+	tk.itemtip = new Menu()
 	tk.samplefiltertemp = {}
 	// switch to .samplefilter with a filter.js object
+
+	tk.load = _load(tk, block) // shorthand
 
 	get_ds(tk, block)
 	// tk.mds is created for both official and custom track
@@ -145,7 +144,7 @@ function mayaddGetter_m2csq(tk, block) {
 		} else {
 			return { error: 'unknown query method' }
 		}
-		return await client.dofetch2('mds3?' + lst.join('&'))
+		return await dofetch2('mds3?' + lst.join('&'))
 	}
 }
 
@@ -177,7 +176,7 @@ function mayaddGetter_variant2samples(tk, block) {
 		if (tk.token) par.push('token=' + tk.token)
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		const data = await client.dofetch2('mds3?' + par.join('&'))
+		const data = await dofetch2('mds3?' + par.join('&'))
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples

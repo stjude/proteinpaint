@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.8.2
+
+- Selectively import and re-order code in mds3/makeTk to address bundling issues
+in consumer apps or portal code that use Webpack v3
+
+### GDC-related
+
+- do not use the test/init.js and pp bundle for automated tests of gdc-related code
+
+## 1.8.1
+
+- Bug fix: use the webpack.config.client.js (renamed) in build/pack.sh
+
 ## 1.8.0
 
 ### GDC-related
