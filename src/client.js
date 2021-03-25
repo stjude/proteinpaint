@@ -23,7 +23,7 @@ export const colorantisense = 'red'
 export const colorctx = '#DE3336'
 export const textlensf = 0.6 // to replace n.getBBox().width for detecting filling font size which breaks in chrome
 
-let base_zindex = null
+export let base_zindex = null
 
 // things that used to be in client.js but now have been moved to common
 export const tkt = common.tkt
