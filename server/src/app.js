@@ -345,7 +345,7 @@ async function handle_examples(req, res) {
 	if (req.query) {
 		if (req.query.getexamplejson) {
 			// hardcoded features json file location
-			const txt = await utils.read_file('./modules/features.json')
+			const txt = await utils.read_file('./src/features.json')
 			try {
 				const json = JSON.parse(txt)
 				res.send({ examples: json.examples })
