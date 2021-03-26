@@ -4,7 +4,7 @@ import {json as d3json} from 'd3-request'
 import {bulkin} from './bulk.ui'
 import {string2pos, invalidcoord} from './coord'
 import {scaleOrdinal,schemeCategory10} from 'd3-scale'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 
 
 /*

@@ -3,7 +3,7 @@ import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { rnabamtk_initparam, configPanel_rnabam } from './block.mds.svcnv.share'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as expressionstat from './block.mds.expressionstat'
 
 /*

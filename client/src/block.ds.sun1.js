@@ -3,7 +3,7 @@ import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
 import { itemtable } from './block.ds.itemtable'
-import { stratinput } from '../../shared/src/tree'
+import { stratinput } from '../shared/tree'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import * as client from './client'
 

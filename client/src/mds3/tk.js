@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '../../../shared/src/common'
+import * as common from '../../shared/common'
 import * as client from '../client'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'

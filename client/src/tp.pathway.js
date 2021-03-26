@@ -4,7 +4,7 @@ import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {pack as d3pack,hierarchy as d3hierarchy} from 'd3-hierarchy'
 import * as d3drag from 'd3-drag'
 import * as d3force from 'd3-force'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as client from './client'
 
 

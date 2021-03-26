@@ -5,7 +5,7 @@ import { format as d3format } from 'd3-format'
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
-import { basecompliment } from '../../shared/src/common'
+import { basecompliment } from '../shared/common'
 
 /*
 the "gene model" track, showing in one of four modes:

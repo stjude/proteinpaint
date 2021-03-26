@@ -1,4 +1,4 @@
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as client from './client'
 import {make_one_checkbox} from './dom'
 import {scaleLinear} from 'd3-scale'

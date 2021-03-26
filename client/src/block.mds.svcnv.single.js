@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import {scaleLinear,scaleLog} from 'd3-scale'
 import {axisRight} from 'd3-axis'
 import {event as d3event} from 'd3-selection'

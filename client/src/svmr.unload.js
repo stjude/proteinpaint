@@ -1,5 +1,5 @@
 import {genomic2gm} from './coord'
-import {dtitd,dtdel,dtfusionrna,dtnloss,dtcloss,mclassitd,mclassnloss,mclasscloss,mclassfusionrna} from '../../shared/src/common'
+import {dtitd,dtdel,dtfusionrna,dtnloss,dtcloss,mclassitd,mclassnloss,mclasscloss,mclassfusionrna} from '../shared/common'
 import {newpane,export_data} from './client'
 
 

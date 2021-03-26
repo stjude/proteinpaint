@@ -1,7 +1,7 @@
 import * as client from '../client'
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-import { get_bin_label } from '../../../shared/src/termdb.bins'
+import { get_bin_label } from '../../shared/termdb.bins'
 
 /*
 Arguments

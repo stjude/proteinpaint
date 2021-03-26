@@ -1,4 +1,4 @@
-import {IN_frame, OUT_frame} from '../../shared/src/common'
+import {IN_frame, OUT_frame} from '../shared/common'
 
 export default function(events) {
 	// from a list of exon skip/alt events (resulted from the same junction), find the best one

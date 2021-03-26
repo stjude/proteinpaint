@@ -8,9 +8,9 @@ import {
 	runtimeattr_snvindel
 } from './block.ds.itemtable'
 import * as client from './client'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import may_sunburst from './block.sunburst'
-import { stratinput } from '../../shared/src/tree'
+import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import * as blockds from './block.ds'
 import { legend_newrow } from './block.legend'

@@ -2,7 +2,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
 import { event as d3event } from 'd3-selection'
-import { basecolor } from '../../shared/src/common'
+import { basecolor } from '../shared/common'
 
 export function bampilefromtemplate(tk, template) {
 	if (!tk.fineheight) {

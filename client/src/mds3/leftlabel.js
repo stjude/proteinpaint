@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../../../shared/src/common'
+import * as common from '../../shared/common'
 import * as client from '../client'
 
 const labyspace = 5

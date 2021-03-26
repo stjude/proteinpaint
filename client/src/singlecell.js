@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as d3 from 'd3'
 import { axisTop, axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'

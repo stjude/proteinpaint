@@ -1,5 +1,5 @@
 import Partjson from 'partjson'
-import { compute_bins } from '../../../shared/src/termdb.bins'
+import { compute_bins } from '../../shared/termdb.bins'
 
 export function getBarchartData(_q, data0) {
 	/*

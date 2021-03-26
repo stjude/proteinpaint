@@ -6,7 +6,10 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "rm -rf public/bin && ../node_modules/.bin/webpack --env.NODE_ENV=development --watch --progress --colors"
+    "dev": "rm -rf public/bin && ../node_modules/.bin/webpack --env.NODE_ENV=development --watch --progress --colors",
+    "test": "browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/filter.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static public",
+    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] -o ../public/bin/spec.bundle.js -v",
+    "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static public"
   },
   "browserify": {
     "transform": [
@@ -40,12 +43,9 @@
     "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-preset-react": "^6.24.1",
-    "babel-runtime": "^6.18.0",
     "babelify": "^8.0.0",
     "browserify-css": "^0.15.0",
     "css-loader": "^0.23.1",
-    "deep-object-diff": "^1.1.0",
-    "electron-rebuild": "^1.8.8",
     "prettier": "1.18.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -54,24 +54,13 @@
     "rollup-plugin-terser": "^7.0.2",
     "split-require": "^3.1.2",
     "style-loader": "^0.13.1",
-    "tape": "^4.10.1",
     "tape-run": "^6.0.1",
-    "watchify": "^3.11.1",
-    "webpack": "^4.44.2",
-    "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.7.0"
+    "watchify": "^3.11.1"
   },
   "dependencies": {
-    "async": "^2.6.0",
-    "colorbrewer": "^1.0.0",
-    "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
-    "d3-sankey": "^0.4.1",
     "debounce": "^1.2.0",
-    "jstat": "^1.9.3",
-    "lazy": "^1.0.11",
-    "loader-utils": "^0.2.17"
+    "normalize.css": "^8.0.1"
   },
   "peerDependencies": {
     "react": "^17.0.1"

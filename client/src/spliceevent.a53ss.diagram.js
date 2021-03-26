@@ -1,5 +1,5 @@
 import * as client from './client'
-import {exoncolor, IN_frame, OUT_frame} from '../../shared/src/common'
+import {exoncolor, IN_frame, OUT_frame} from '../shared/common'
 
 
 

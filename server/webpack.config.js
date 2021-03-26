@@ -2,7 +2,7 @@ const nodeExternals = require('webpack-node-externals')
 const webpack = require('webpack')
 const path = require('path')
 
-module.exports = function(env = {}) {
+module.exports = function(env = {}) { console.log(5, env)
 	// the env object is passed to webpack cli call by
 	// adding --env.NODE_ENV='...', --env.devtool='...', etc
 	return {

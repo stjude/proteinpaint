@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { root_ID } from '../../../shared/src/tree'
+import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'

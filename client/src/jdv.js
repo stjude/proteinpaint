@@ -1,8 +1,8 @@
 import * as client from './client'
 import {json as d3json} from 'd3-request'
-import vcf2dstk from '../../shared/src/vcf.tkconvert'
+import vcf2dstk from '../shared/vcf.tkconvert'
 import getdefault_exonskipalt from './spliceevent.exonskip.getdefault'
-import {bplen, exoncolor} from '../../shared/src/common'
+import {bplen, exoncolor} from '../shared/common'
 import {select as d3select} from 'd3-selection'
 import blocklazyload from './block.lazyload'
 

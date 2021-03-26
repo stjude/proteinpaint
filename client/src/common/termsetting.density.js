@@ -1,6 +1,6 @@
 import { select, mouse } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
-import { get_bin_label } from '../../../shared/src/termdb.bins'
+import { get_bin_label } from '../../shared/termdb.bins'
 
 export async function setDensityPlot(self) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {

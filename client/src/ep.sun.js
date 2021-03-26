@@ -3,7 +3,7 @@ import {scaleLinear} from 'd3-scale'
 import {stratify,partition} from 'd3-hierarchy'
 import {select as d3select,event as d3event} from 'd3-selection'
 import {rgb as d3rgb} from 'd3-color'
-import {stratinput} from '../../shared/src/tree'
+import {stratinput} from '../shared/tree'
 import {font as fontfamily} from './client'
 
 

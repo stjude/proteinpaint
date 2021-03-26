@@ -1,7 +1,7 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import { json as d3json } from 'd3-request'
 import * as client from './client'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import blockinit from './block.init'
 import tp_getgeneexpression from './tp.gene.geneexpression'
 

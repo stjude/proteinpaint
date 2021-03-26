@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import {
 	loadTk,
 	focus_singlesample,

@@ -5,7 +5,7 @@ import { scaleLinear } from 'd3-scale'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { itemtable, mlst2samplesummary } from './itemtable'
-import * as common from '../../../shared/src/common'
+import * as common from '../../shared/common'
 import * as client from '../client'
 
 /*

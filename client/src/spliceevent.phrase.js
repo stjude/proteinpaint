@@ -1,4 +1,4 @@
-import {exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon} from '../../shared/src/common'
+import {exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon} from '../shared/common'
 import * as client from './client'
 
 

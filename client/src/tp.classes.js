@@ -1,5 +1,5 @@
 import {event as d3event} from 'd3-selection'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 
 
 /*

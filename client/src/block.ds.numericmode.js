@@ -7,7 +7,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import may_sunburst from './block.sunburst'
 import {
 	mlst_pretreat,

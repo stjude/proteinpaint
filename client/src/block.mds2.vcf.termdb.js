@@ -1,4 +1,4 @@
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as client from './client'
 import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'

@@ -1,7 +1,7 @@
 import {scaleOrdinal} from 'd3-scale'
 import {json as d3json} from 'd3-request'
 import * as client from './client'
-import {nt2aa,codon_stop,bplen} from '../../shared/src/common'
+import {nt2aa,codon_stop,bplen} from '../shared/common'
 import {string2snp} from './coord'
 import {select} from 'd3-selection'
 

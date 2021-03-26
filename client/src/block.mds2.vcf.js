@@ -1,6 +1,6 @@
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import * as client from './client'
-import { vcfparsemeta } from '../../shared/src/vcf'
+import { vcfparsemeta } from '../shared/vcf'
 import * as numericaxis from './block.mds2.vcf.numericaxis'
 import * as plain from './block.mds2.vcf.plain'
 import * as coord from './coord'

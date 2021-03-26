@@ -5,7 +5,7 @@ import { AppProps } from './AppProps'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
-import serverconfig from '../../../serverconfig.json'
+import serverconfig from '../../../../serverconfig.json'
 
 /*************************
  reusable helper functions

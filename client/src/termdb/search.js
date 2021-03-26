@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
-import { root_ID } from '../../../shared/src/tree'
+import { root_ID } from '../../shared/tree'
 import { plotConfig } from './plot'
 import { graphable } from '../common/termutils'
 

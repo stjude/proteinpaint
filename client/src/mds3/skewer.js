@@ -1,4 +1,4 @@
-import * as common from '../../../shared/src/common'
+import * as common from '../../shared/common'
 import * as coord from '../coord'
 import * as client from '../client'
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph } from './skewer.render'

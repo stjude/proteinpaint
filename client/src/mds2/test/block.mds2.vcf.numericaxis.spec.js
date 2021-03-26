@@ -1,6 +1,6 @@
 'use strict'
 const tape = require('tape')
-const serverconfig = require('../../../serverconfig.json')
+const serverconfig = require('../../../../serverconfig.json')
 const host = 'http://localhost:' + serverconfig.port
 
 /*************************

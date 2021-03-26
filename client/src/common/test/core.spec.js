@@ -1,5 +1,5 @@
-const tape = require('tape')
-const rx = require('../rx.core')
+import tape from 'tape'
+import * as rx from '../rx.core'
 
 /*************************
  reusable helper functions

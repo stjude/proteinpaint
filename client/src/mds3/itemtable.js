@@ -1,4 +1,4 @@
-import * as common from '../../../shared/src/common'
+import * as common from '../../shared/common'
 import { to_textfile, fillbar } from '../client'
 
 /*

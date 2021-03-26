@@ -2,7 +2,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import * as client from './client'
 import {findgenemodel_bysymbol} from './gene'
 import './style.css'
-import * as common from '../../shared/src/common'
+import * as common from '../shared/common'
 import {bulkui,bulkembed} from './bulk.ui'
 import {string2pos, invalidcoord} from './coord'
 import {loadstudycohort} from './tp.init'

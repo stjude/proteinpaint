@@ -1,5 +1,5 @@
 import * as client from './client'
-import {stratinput} from '../../shared/src/tree'
+import {stratinput} from '../shared/tree'
 import {stratify} from 'd3-hierarchy'
 
 

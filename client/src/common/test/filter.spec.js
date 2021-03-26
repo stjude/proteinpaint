@@ -385,6 +385,8 @@ tape('2-entry root filter: visible controls', async test => {
 })
 
 tape('+NEW button interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(4)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -424,6 +426,9 @@ tape('+NEW button interaction', async test => {
 })
 
 tape('add-transformer button interaction, 1-pill', async test => {
+	test.timeoutAfter(3000)
+	test.plan(5)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -466,6 +471,9 @@ tape('add-transformer button interaction, 1-pill', async test => {
 })
 
 tape('add-transformer button interaction, 2-pill', async test => {
+	test.timeoutAfter(3000)
+	test.plan(6)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -514,6 +522,9 @@ tape('add-transformer button interaction, 2-pill', async test => {
 })
 
 tape('pill Edit interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(4)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -557,6 +568,9 @@ tape('pill Edit interaction', async test => {
 })
 
 tape('pill Replace interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(3)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -594,6 +608,9 @@ tape('pill Replace interaction', async test => {
 })
 
 tape('pill menu-append interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(5)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -648,6 +665,9 @@ tape('pill menu-append interaction', async test => {
 })
 
 tape('pill Negate interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(1)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -681,6 +701,9 @@ tape('pill Negate interaction', async test => {
 })
 
 tape('pill Remove interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(3)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -711,6 +734,9 @@ tape('pill Remove interaction', async test => {
 })
 
 tape('group menu-append interaction', async test => {
+	test.timeoutAfter(9000)
+	test.plan(5)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -759,6 +785,9 @@ tape('group menu-append interaction', async test => {
 })
 
 tape('group Negate interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(4)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -806,6 +835,9 @@ tape('group Negate interaction', async test => {
 })
 
 tape('group Remove interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(3)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -833,6 +865,9 @@ tape('group Remove interaction', async test => {
 })
 
 tape('nested filters', async test => {
+	test.timeoutAfter(6000)
+	test.plan(10)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -982,6 +1017,9 @@ tape('nested filters', async test => {
 })
 
 tape('hidden filters', async test => {
+	test.timeoutAfter(9000)
+	test.plan(9)
+
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -1016,7 +1054,7 @@ tape('hidden filters', async test => {
 		})
 		.node()
 	adder.click()
-	await sleep(50)
+	await sleep(150)
 	test.notEqual(
 		opts.filter.Inner.dom.treeTip.d.node().style.display,
 		'none',
@@ -1061,6 +1099,8 @@ tape('hidden filters', async test => {
 
 tape('renderAs: htmlSelect', async test => {
 	test.timeoutAfter(1000)
+	test.plan(5)
+
 	const termdbConfig = {
 		selectCohort: {
 			// wrap term.id into a term json object so as to use it in tvs;
@@ -1162,6 +1202,9 @@ tape('renderAs: htmlSelect', async test => {
 })
 
 tape('getNormalRoot()', async test => {
+	test.timeoutAfter(3000)
+	test.plan(7)
+
 	{
 		// direct testing of getNormalRoot
 		const A = { type: 'tvs', tvs: { term_A: true } }
@@ -1414,6 +1457,9 @@ tape('getNormalRoot()', async test => {
 })
 
 tape('filterJoin()', async test => {
+	test.timeoutAfter(3000)
+	test.plan(7)
+
 	const abc = Object.freeze({
 		type: 'tvslst',
 		in: true,

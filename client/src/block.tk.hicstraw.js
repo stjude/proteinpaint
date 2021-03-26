@@ -1,5 +1,5 @@
 import { event as d3event } from 'd3-selection'
-import { bplen } from '../../shared/src/common'
+import { bplen } from '../shared/common'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
