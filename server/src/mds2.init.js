@@ -3,7 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
-const validate_single_numericrange = require('../../shared/src/mds.termdb.termvaluesetting').validate_single_numericrange
+const validate_single_numericrange = require('../shared/mds.termdb.termvaluesetting').validate_single_numericrange
 
 /*
 ********************** EXPORTED

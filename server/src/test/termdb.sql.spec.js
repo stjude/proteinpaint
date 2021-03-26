@@ -14,7 +14,7 @@ const serverconfig = require('../../serverconfig')
 const termjson = require('./termjson').termjson
 
 const ssid = 'genotype-test.txt'
-const src = path.join(__dirname, '../../../test/testdata', ssid)
+const src = path.join(__dirname, '../../test/testdata', ssid)
 const dest = path.join(serverconfig.cachedir, 'ssid', ssid)
 fs.copyFileSync(src, dest, err => {
 	if (err) throw err

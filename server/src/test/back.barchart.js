@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const Partjson = require('partjson')
 const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
-const filterUtils = require('../../../shared/src/filter')
+const filterUtils = require('../../shared/filter')
 
 function barchart_data(q, data0) {
 	/*

@@ -1,5 +1,5 @@
 const utils = require('./utils')
-const vcf = require('../../shared/src/vcf')
+const vcf = require('../shared/vcf')
 const d3scale = require('d3-scale')
 const termdbsql = require('./termdb.sql')
 
