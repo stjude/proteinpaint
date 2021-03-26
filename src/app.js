@@ -172,291 +172,291 @@ export function runproteinpaint(arg) {
 runproteinpaint.wrappers = wrappers
 
 function makeheader(app, obj, jwt) {
-    /*
-    app
-    obj: server returned data
-    jwt: token
-    */
-    const color = d3rgb(common.defaultcolor)
-    const padw = '13px'
-        // head
-    const row = app.holder.append('div')
-    const app_row = app.holder.append('div')
-    const headbox = row.append('div')
-        .style('margin', '10px')
-        .style('padding-right', '10px')
-        .style('display', 'inline-block')
-        .style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
-        .style('border-radius', '5px')
-        .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
-    const headinfo = row.append('div')
-        .style('display', 'inline-block')
-        .style('padding', padw)
-        .style('font-size', '.8em')
-        .style('color', common.defaultcolor)
+	/*
+	app
+	obj: server returned data
+	jwt: token
+	*/
+	const color = d3rgb(common.defaultcolor)
+	const padw = '13px'
+	// head
+	const row = app.holder.append('div')
+	const app_row = app.holder.append('div')
+	const headbox = row.append('div')
+		.style('margin', '10px')
+		.style('padding-right', '10px')
+		.style('display', 'inline-block')
+		.style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
+		.style('border-radius', '5px')
+		.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
+	const headinfo = row.append('div')
+		.style('display', 'inline-block')
+		.style('padding', padw)
+		.style('font-size', '.8em')
+		.style('color', common.defaultcolor)
 		{
-            // a row for server stats
-            const row = headinfo.append('div')
-            row.append('span')
-                .text(
-                    'Code updated: ' +
-                    (obj.codedate || '??') +
-                    ', server launched: ' +
-                    (obj.launchdate || '??') + '.'
-                )
-            if (obj.hasblat) {
-                row.append('a')
-                    .style('margin-left', '10px')
-                    .text('Running BLAT')
-                    .on('click', async() => {
-                        headtip.clear().showunder(d3event.target)
-                        const div = headtip.d.append('div').style('margin', '10px')
-                        const wait = div.append('div').text('Loading...')
-                        try {
-                            const data = await client.dofetch2('blat?serverstat=1')
-                            if (data.error) throw data.error
-                            if (!data.lst) throw 'invalid response'
-                            wait.remove()
-                            for (const i of data.lst) {
-                                div.append('div').text(i)
-                            }
-                        } catch (e) {
-                            wait.text(e.message || e)
-                            if (e.stack) console.log(e.stack)
-                        }
-                    })
-            }
-        }
-    if (obj.headermessage) {
-        headinfo.append('div').html(obj.headermessage)
-    }
+			// a row for server stats
+			const row = headinfo.append('div')
+			row.append('span')
+				.text(
+					'Code updated: ' +
+					(obj.codedate || '??') +
+					', server launched: ' +
+					(obj.launchdate || '??') + '.'
+				)
+			if (obj.hasblat) {
+				row.append('a')
+					.style('margin-left', '10px')
+					.text('Running BLAT')
+					.on('click', async() => {
+						headtip.clear().showunder(d3event.target)
+						const div = headtip.d.append('div').style('margin', '10px')
+						const wait = div.append('div').text('Loading...')
+						try {
+							const data = await client.dofetch2('blat?serverstat=1')
+							if (data.error) throw data.error
+							if (!data.lst) throw 'invalid response'
+							wait.remove()
+							for (const i of data.lst) {
+								div.append('div').text(i)
+							}
+						} catch (e) {
+							wait.text(e.message || e)
+							if (e.stack) console.log(e.stack)
+						}
+					})
+			}
+		}
+	if (obj.headermessage) {
+		headinfo.append('div').html(obj.headermessage)
+	}
 
-    // 1
-    headbox.append('div').text('ProteinPaint')
-        .style('display', 'inline-block')
-        .style('padding', padw)
-        .style('color', common.defaultcolor)
-        .style('font-weight', 'bold')
+	// 1
+	headbox.append('div').text('ProteinPaint')
+		.style('display', 'inline-block')
+		.style('padding', padw)
+		.style('color', common.defaultcolor)
+		.style('font-weight', 'bold')
 
-    // 2, search box
-    const tip = new client.Menu({ border: '', padding: '0px' })
+	// 2, search box
+	const tip = new client.Menu({ border: '', padding: '0px' })
 
-    function entersearch() {
-        // by pressing enter, if not gene will search snp
-        d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
-        let str = input.property('value').trim()
-        if (!str) return
-        const hitgene = tip.d.select('.sja_menuoption')
-        if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-            str = hitgene.text()
-        }
-        findgene2paint(app, str, selectgenome.property('value'), jwt)
-        input.property('value', '')
-        tip.hide()
-    }
+	function entersearch() {
+		// by pressing enter, if not gene will search snp
+		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
+		let str = input.property('value').trim()
+		if (!str) return
+		const hitgene = tip.d.select('.sja_menuoption')
+		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
+			str = hitgene.text()
+		}
+		findgene2paint(app, str, selectgenome.property('value'), jwt)
+		input.property('value', '')
+		tip.hide()
+	}
 
-    function genesearch() {
-        // any other key typing
-        tip.clear().showunder(input.node())
-        findgenelst(
-            app,
-            input.property('value'),
-            selectgenome.property('value'),
-            tip,
-            jwt
-        )
-    }
-    const debouncer = debounce(genesearch, 300)
-    const input = headbox.append('div')
-        .style('display', 'inline-block')
-        .style('padding', padw)
-        .style('padding-right', '5px')
-        .append('input')
-        .style('border', 'solid 1px ' + common.defaultcolor)
-        .style('padding', '3px')
-        .attr('size', 20)
-        .attr('placeholder', 'Gene, position, or SNP')
-        .attr('title', 'Search by gene, SNP, or position')
-        .on('keyup', () => {
-            if (client.keyupEnter()) entersearch()
-            else debouncer()
-            app_btn_active = false
-            apps_off()
-        })
-    input.node().focus()
+	function genesearch() {
+		// any other key typing
+		tip.clear().showunder(input.node())
+		findgenelst(
+			app,
+			input.property('value'),
+			selectgenome.property('value'),
+			tip,
+			jwt
+		)
+	}
+	const debouncer = debounce(genesearch, 300)
+	const input = headbox.append('div')
+		.style('display', 'inline-block')
+		.style('padding', padw)
+		.style('padding-right', '5px')
+		.append('input')
+		.style('border', 'solid 1px ' + common.defaultcolor)
+		.style('padding', '3px')
+		.attr('size', 20)
+		.attr('placeholder', 'Gene, position, or SNP')
+		.attr('title', 'Search by gene, SNP, or position')
+		.on('keyup', () => {
+			if (client.keyupEnter()) entersearch()
+			else debouncer()
+			app_btn_active = false
+			apps_off()
+		})
+	input.node().focus()
 
-    const selectgenome = headbox.append('div')
-        .style('display', 'inline-block')
-        .style('padding', padw)
-        .style('padding-left', '5px')
-        .append('select')
-        .attr('title', 'Select a genome')
-        .style('margin', '1px 20px 1px 10px')
-        .on('change', () => {
-            make_genome_browser_btn(gb_div)
-        })
-    for (const n in app.genomes) {
-        selectgenome.append('option')
-            .attr('n', n)
-            .text(app.genomes[n].species + ' ' + n)
-            .property('value', n)
-    }
-    //Holds element in a consistent location
-    const gb_div = headbox.append('span')
-    make_genome_browser_btn(gb_div)
+	const selectgenome = headbox.append('div')
+		.style('display', 'inline-block')
+		.style('padding', padw)
+		.style('padding-left', '5px')
+		.append('select')
+		.attr('title', 'Select a genome')
+		.style('margin', '1px 20px 1px 10px')
+		.on('change', () => {
+			make_genome_browser_btn(gb_div)
+		})
+	for (const n in app.genomes) {
+		selectgenome.append('option')
+			.attr('n', n)
+			.text(app.genomes[n].species + ' ' + n)
+			.property('value', n)
+	}
+	//Holds element in a consistent location
+	const gb_div = headbox.append('span')
+	make_genome_browser_btn(gb_div)
 
-    //Launch genome browser button in headbox
-    async function make_genome_browser_btn(div){
-        div.selectAll('#genome_btn').remove()
-        const ss = selectgenome.node()
-        const genomename = ss.options[ss.selectedIndex].value
+	//Launch genome browser button in headbox
+	async function make_genome_browser_btn(div){
+		div.selectAll('#genome_btn').remove()
+		const ss = selectgenome.node()
+		const genomename = ss.options[ss.selectedIndex].value
 
-        const genome_browser_btn = div
-            .attr('class', 'sja_menuoption')
-            .attr('id', 'genome_btn')
-            .style('padding', padw)
-            .style('border-radius', '5px')
-            .text(genomename + ' Genome Browser')
-            .on('click', ()=>{
-                apps_off()
-                const g = app.genomes[genomename]
-                if(!g) {
-                    alert('Invalid genome name: '+genomename)
-                    return
-                }
-                //TODO change from pop out pane to new div in the page
-                const p=div.node().getBoundingClientRect()
-                const pane=client.newpane({x:p.left,y:p.top+p.height+10})
-                pane.header.text(genomename+' genome browser')
+		const genome_browser_btn = div
+			.attr('class', 'sja_menuoption')
+			.attr('id', 'genome_btn')
+			.style('padding', padw)
+			.style('border-radius', '5px')
+			.text(genomename + ' Genome Browser')
+			.on('click', ()=>{
+				apps_off()
+				const g = app.genomes[genomename]
+				if(!g) {
+					alert('Invalid genome name: '+genomename)
+					return
+				}
+				//TODO change from pop out pane to new div in the page
+				const p=div.node().getBoundingClientRect()
+				const pane=client.newpane({x:p.left,y:p.top+p.height+10})
+				pane.header.text(genomename+' genome browser')
 
-                const par = {
-                    hostURL: app.hostURL,
-                    jwt: jwt,
-                    holder: pane.body,
-                    genome: g,
-                    chr: g.defaultcoord.chr,
-                    start: g.defaultcoord.start,
-                    stop: g.defaultcoord.stop,
-                    nobox:true,
-                    tklst:[],
-                    debugmode: app.debugmode,
-                }
-                client.first_genetrack_tolist( g, par.tklst )
+				const par = {
+					hostURL: app.hostURL,
+					jwt: jwt,
+					holder: pane.body,
+					genome: g,
+					chr: g.defaultcoord.chr,
+					start: g.defaultcoord.start,
+					stop: g.defaultcoord.stop,
+					nobox:true,
+					tklst:[],
+					debugmode: app.debugmode,
+				}
+				client.first_genetrack_tolist( g, par.tklst )
 
-                import('./block').then(b=>new b.Block( par ))
-            })
-        return genome_browser_btn
-    }
+				import('./block').then(b=>new b.Block( par ))
+			})
+		return genome_browser_btn
+	}
 
-    //Hides app_div and toggles app_btn off
-    function apps_off(){
-        app_btn_active = false
-            if (app_holder !== undefined) {
-                app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-                app_btn_toggle()
-            }
-    }
+	//Hides app_div and toggles app_btn off
+	function apps_off(){
+		app_btn_active = false
+			if (app_holder !== undefined) {
+				app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+				app_btn_toggle()
+			}
+	}
 
-    // launchApps()
+	// launchApps()
 
-    let app_btn, app_btn_active, app_holder
+	let app_btn, app_btn_active, app_holder
 
-    if (!obj.features.examples) {
-        app_btn = headbox.append('span')
-            .attr('class', 'sja_menuoption')
-            .style('padding', padw)
-            .style('border-radius', '5px')
-            .text('Apps')
-            .on('click',()=>{
+	if (!obj.features.examples) {
+		app_btn = headbox.append('span')
+			.attr('class', 'sja_menuoption')
+			.style('padding', padw)
+			.style('border-radius', '5px')
+			.text('Apps')
+			.on('click',()=>{
 				appmenu( app, headbox, selectgenome, jwt )
 			})
-    } else {
-        // show 'apps' div only when url is barbone without any paramerters or example page
-        app_btn_active = window.location.pathname == '/' && !window.location.search.length ?
-            true : false
-        let apps_rendered = false
+	} else {
+		// show 'apps' div only when url is barbone without any paramerters or example page
+		app_btn_active = window.location.pathname == '/' && !window.location.search.length ?
+			true : false
+		let apps_rendered = false
 
-        app_holder = app_row
-            .append('div')
-            .style('margin', '10px')
-            .style('padding-right', '10px')
-            .style('display', app_btn_active ? 'inline-block' : 'none')
-            .style('background-color', '#f2f2f2')
-            .style('border-radius', '5px')
-            .style('width', '95vw')
+		app_holder = app_row
+			.append('div')
+			.style('margin', '10px')
+			.style('padding-right', '10px')
+			.style('display', app_btn_active ? 'inline-block' : 'none')
+			.style('background-color', '#f2f2f2')
+			.style('border-radius', '5px')
+			.style('width', '95vw')
 
-        async function load_app_div() {
-            if (apps_rendered) return
-            apps_rendered = true
-            const _ = await
-            import ('./examples')
-            await _.init_examples({ holder: app_holder, new_div: app.holder })
-        }
+		async function load_app_div() {
+			if (apps_rendered) return
+			apps_rendered = true
+			const _ = await
+			import ('./examples')
+			await _.init_examples({ holder: app_holder, new_div: app.holder })
+		}
 
-        if (app_btn_active) load_app_div()
+		if (app_btn_active) load_app_div()
 
-        app_btn = headbox.append('span')
-            .attr('class', 'sja_menuoption')
-            .style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-            .style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-            .style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-            .style('padding', padw)
-            .style('border-radius', '5px')
-            .text('Apps')
-            .on('click', () => {
-                // toggle button color and hide/show apps div 
-                app_btn_active = !app_btn_active
-                load_app_div()
-                app_btn_toggle()
+		app_btn = headbox.append('span')
+			.attr('class', 'sja_menuoption')
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('padding', padw)
+			.style('border-radius', '5px')
+			.text('Apps')
+			.on('click', () => {
+				// toggle button color and hide/show apps div 
+				app_btn_active = !app_btn_active
+				load_app_div()
+				app_btn_toggle()
 
-                app_holder
-                    .transition()
-                    .duration(500)
-                    .style('display', app_btn_active ? 'inline-block' : 'none')
-            })
-            .on('mouseover', () => {
-                app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
-            })
-            .on('mouseout', () => {
-                app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-            })
-    }
+				app_holder
+					.transition()
+					.duration(500)
+					.style('display', app_btn_active ? 'inline-block' : 'none')
+			})
+			.on('mouseover', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+			})
+			.on('mouseout', () => {
+				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			})
+	}
 
-    function app_btn_toggle() {
-        app_btn
-            .transition()
-            .duration(500)
-            .style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-            .style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-            .style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-    }
+	function app_btn_toggle() {
+		app_btn
+			.transition()
+			.duration(500)
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+	}
 
-    headbox.append('span').classed('sja_menuoption', true).style('padding', padw).style('border-radius', '5px').text('Help').on('click', () => {
-        const p = d3event.target.getBoundingClientRect()
-        const div = headtip.clear()
-            .show(p.left - 50, p.top + p.height + 5)
-            .d
-            .append('div')
-            .style('padding', '5px 20px')
-        div.append('p').html('<a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Embed in your website</a>')
-        div.append('p').html('<a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Make a Study View</a>')
-        div.append('p').html('<a href=https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing target=_blank>URL parameters</a>')
-        div.append('p').html('<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>')
-        div.append('p').html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
-    })
+	headbox.append('span').classed('sja_menuoption', true).style('padding', padw).style('border-radius', '5px').text('Help').on('click', () => {
+		const p = d3event.target.getBoundingClientRect()
+		const div = headtip.clear()
+			.show(p.left - 50, p.top + p.height + 5)
+			.d
+			.append('div')
+			.style('padding', '5px 20px')
+		div.append('p').html('<a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Embed in your website</a>')
+		div.append('p').html('<a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Make a Study View</a>')
+		div.append('p').html('<a href=https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing target=_blank>URL parameters</a>')
+		div.append('p').html('<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>')
+		div.append('p').html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
+	})
 
-    return selectgenome
+	return selectgenome
 }
 
 async function launchApps(app){
-    const new_div = app.holder.append('div')
-    new_div
-    .style('margin', '10px')
-    .style('padding-right', '10px')
-    .style('border-radius', '5px')
-    .style('width', '95vw')
+	const new_div = app.holder.append('div')
+	new_div
+	.style('margin', '10px')
+	.style('padding-right', '10px')
+	.style('border-radius', '5px')
+	.style('width', '95vw')
 
-    return new_div
+	return new_div
 }
 
 
