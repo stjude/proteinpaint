@@ -177,8 +177,8 @@ function makeheader(app, obj, jwt) {
 	obj: server returned data
 	jwt: token
 	*/
-	const color = d3rgb(common.defaultcolor)
-	const padw = '13px'
+	const color=d3rgb(common.defaultcolor)
+	const padw='13px'
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
@@ -227,31 +227,31 @@ function makeheader(app, obj, jwt) {
 					})
 			}
 		}
-	if (obj.headermessage) {
+	if(obj.headermessage) {
 		headinfo.append('div').html(obj.headermessage)
 	}
 
 	// 1
 	headbox.append('div').text('ProteinPaint')
-		.style('display', 'inline-block')
-		.style('padding', padw)
-		.style('color', common.defaultcolor)
-		.style('font-weight', 'bold')
+		.style('display','inline-block')
+		.style('padding',padw)
+		.style('color',common.defaultcolor)
+		.style('font-weight','bold')
 
 	// 2, search box
-	const tip = new client.Menu({ border: '', padding: '0px' })
+	const tip = new client.Menu({border: '',padding: '0px'})
 
 	function entersearch() {
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
-		let str = input.property('value').trim()
+		let str=input.property('value').trim()
 		if (!str) return
-		const hitgene = tip.d.select('.sja_menuoption')
-		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-			str = hitgene.text()
+		const hitgene=tip.d.select('.sja_menuoption')
+		if (hitgene.size()>0 && hitgene.attr('isgene')) {
+			str=hitgene.text()
 		}
 		findgene2paint(app, str, selectgenome.property('value'), jwt)
-		input.property('value', '')
+		input.property('value','')
 		tip.hide()
 	}
 
@@ -266,40 +266,40 @@ function makeheader(app, obj, jwt) {
 			jwt
 		)
 	}
-	const debouncer = debounce(genesearch, 300)
-	const input = headbox.append('div')
-		.style('display', 'inline-block')
-		.style('padding', padw)
-		.style('padding-right', '5px')
+	const debouncer = debounce(genesearch,300)
+	const input=headbox.append('div')
+		.style('display','inline-block')
+		.style('padding',padw)
+		.style('padding-right','5px')
 		.append('input')
-		.style('border', 'solid 1px ' + common.defaultcolor)
-		.style('padding', '3px')
-		.attr('size', 20)
-		.attr('placeholder', 'Gene, position, or SNP')
+		.style('border','solid 1px '+common.defaultcolor)
+		.style('padding','3px')
+		.attr('size',20)
+		.attr('placeholder','Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
-		.on('keyup', () => {
-			if (client.keyupEnter()) entersearch()
+		.on('keyup', ()=>{
+			if(client.keyupEnter()) entersearch()
 			else debouncer()
 			app_btn_active = false
 			apps_off()
 		})
 	input.node().focus()
 
-	const selectgenome = headbox.append('div')
-		.style('display', 'inline-block')
-		.style('padding', padw)
-		.style('padding-left', '5px')
+	const selectgenome=headbox.append('div')
+		.style('display','inline-block')
+		.style('padding',padw)
+		.style('padding-left','5px')
 		.append('select')
 		.attr('title', 'Select a genome')
-		.style('margin', '1px 20px 1px 10px')
+		.style('margin','1px 20px 1px 10px')
 		.on('change', () => {
 			make_genome_browser_btn(gb_div)
 		})
 	for (const n in app.genomes) {
 		selectgenome.append('option')
-			.attr('n', n)
-			.text(app.genomes[n].species + ' ' + n)
-			.property('value', n)
+			.attr('n',n)
+			.text(app.genomes[n].species+' '+n)
+			.property('value',n)
 	}
 	//Holds element in a consistent location
 	const gb_div = headbox.append('span')
@@ -370,7 +370,7 @@ function makeheader(app, obj, jwt) {
 			.on('click',()=>{
 				appmenu( app, headbox, selectgenome, jwt )
 			})
-	} else {
+	}else{
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ?
 			true : false
@@ -393,14 +393,14 @@ function makeheader(app, obj, jwt) {
 			await _.init_examples({ holder: app_holder, new_div: app.holder })
 		}
 
-		if (app_btn_active) load_app_div()
+		if(app_btn_active) load_app_div()
 
 		app_btn = headbox.append('span')
-			.attr('class', 'sja_menuoption')
+			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw)
+			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('padding',padw)
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
@@ -437,7 +437,7 @@ function makeheader(app, obj, jwt) {
 			.show(p.left - 50, p.top + p.height + 5)
 			.d
 			.append('div')
-			.style('padding', '5px 20px')
+			.style('padding','5px 20px')
 		div.append('p').html('<a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Embed in your website</a>')
 		div.append('p').html('<a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Make a Study View</a>')
 		div.append('p').html('<a href=https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing target=_blank>URL parameters</a>')
