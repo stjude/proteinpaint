@@ -182,51 +182,51 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
-	const headbox=row.append('div')
-		.style('margin','10px')
-		.style('padding-right','10px')
-		.style('display','inline-block')
-		.style('border','solid 1px rgba('+color.r+','+color.g+','+color.b+',.3)')
-		.style('border-radius','5px')
-		.style('background-color','rgba('+color.r+','+color.g+','+color.b+',.1)')
-	const headinfo=row.append('div')
-		.style('display','inline-block')
-		.style('padding',padw)
-		.style('font-size','.8em')
-		.style('color',common.defaultcolor)
-	{
-		// a row for server stats
-		const row = headinfo.append('div')
-		row.append('span')
-			.text(
-				'Code updated: '
-				+(obj.codedate||'??')
-				+', server launched: '
-				+(obj.launchdate||'??')+'.'
-			)
-		if(obj.hasblat) {
-			row.append('a')
-				.style('margin-left','10px')
-				.text('Running BLAT')
-				.on('click',async ()=>{
-					headtip.clear().showunder(d3event.target)
-					const div = headtip.d.append('div').style('margin','10px')
-					const wait = div.append('div').text('Loading...')
-					try {
-						const data = await client.dofetch2('blat?serverstat=1')
-						if(data.error) throw data.error
-						if(!data.lst) throw 'invalid response'
-						wait.remove()
-						for(const i of data.lst) {
-							div.append('div').text(i)
+	const headbox = row.append('div')
+		.style('margin', '10px')
+		.style('padding-right', '10px')
+		.style('display', 'inline-block')
+		.style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
+		.style('border-radius', '5px')
+		.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
+	const headinfo = row.append('div')
+		.style('display', 'inline-block')
+		.style('padding', padw)
+		.style('font-size', '.8em')
+		.style('color', common.defaultcolor)
+		{
+			// a row for server stats
+			const row = headinfo.append('div')
+			row.append('span')
+				.text(
+					'Code updated: ' +
+					(obj.codedate || '??') +
+					', server launched: ' +
+					(obj.launchdate || '??') + '.'
+				)
+			if (obj.hasblat) {
+				row.append('a')
+					.style('margin-left', '10px')
+					.text('Running BLAT')
+					.on('click', async() => {
+						headtip.clear().showunder(d3event.target)
+						const div = headtip.d.append('div').style('margin', '10px')
+						const wait = div.append('div').text('Loading...')
+						try {
+							const data = await client.dofetch2('blat?serverstat=1')
+							if (data.error) throw data.error
+							if (!data.lst) throw 'invalid response'
+							wait.remove()
+							for (const i of data.lst) {
+								div.append('div').text(i)
+							}
+						} catch (e) {
+							wait.text(e.message || e)
+							if (e.stack) console.log(e.stack)
 						}
-					}catch(e) {
-						wait.text(e.message||e)
-						if(e.stack) console.log(e.stack)
-					}
-				})
+					})
+			}
 		}
-	}
 	if(obj.headermessage) {
 		headinfo.append('div').html(obj.headermessage)
 	}
@@ -239,21 +239,23 @@ function makeheader(app, obj, jwt) {
 		.style('font-weight','bold')
 
 	// 2, search box
-	const tip = new client.Menu({border:'',padding:'0px'})
-	function entersearch () {
+	const tip = new client.Menu({border: '',padding: '0px'})
+
+	function entersearch() {
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str=input.property('value').trim()
-		if(!str) return
+		if (!str) return
 		const hitgene=tip.d.select('.sja_menuoption')
-		if(hitgene.size()>0 && hitgene.attr('isgene')) {
+		if (hitgene.size()>0 && hitgene.attr('isgene')) {
 			str=hitgene.text()
 		}
-		findgene2paint( app, str, selectgenome.property('value'), jwt )
+		findgene2paint(app, str, selectgenome.property('value'), jwt)
 		input.property('value','')
 		tip.hide()
 	}
-	function genesearch () {
+
+	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
 		findgenelst(
@@ -278,10 +280,10 @@ function makeheader(app, obj, jwt) {
 		.on('keyup', ()=>{
 			if(client.keyupEnter()) entersearch()
 			else debouncer()
+			app_btn_active = false
+			apps_off()
 		})
 	input.node().focus()
-
-
 
 	const selectgenome=headbox.append('div')
 		.style('display','inline-block')
@@ -290,47 +292,110 @@ function makeheader(app, obj, jwt) {
 		.append('select')
 		.attr('title', 'Select a genome')
 		.style('margin','1px 20px 1px 10px')
-	for(const n in app.genomes) {
+		.on('change', () => {
+			make_genome_browser_btn(gb_div)
+		})
+	for (const n in app.genomes) {
 		selectgenome.append('option')
 			.attr('n',n)
 			.text(app.genomes[n].species+' '+n)
 			.property('value',n)
 	}
+	//Holds element in a consistent location
+	const gb_div = headbox.append('span')
+	make_genome_browser_btn(gb_div)
 
-	if(!obj.features.examples){
-		headbox.append('span')
-			.attr('class','sja_menuoption')
-			.style('padding',padw)
-			.style('border-radius','5px')
+	//Launch genome browser button in headbox
+	async function make_genome_browser_btn(div){
+		div.selectAll('#genome_btn').remove()
+		const ss = selectgenome.node()
+		const genomename = ss.options[ss.selectedIndex].value
+
+		const genome_browser_btn = div
+			.attr('class', 'sja_menuoption')
+			.attr('id', 'genome_btn')
+			.style('padding', padw)
+			.style('border-radius', '5px')
+			.text(genomename + ' Genome Browser')
+			.on('click', ()=>{
+				apps_off()
+				const g = app.genomes[genomename]
+				if(!g) {
+					alert('Invalid genome name: '+genomename)
+					return
+				}
+				//TODO change from pop out pane to new div in the page
+				const p=div.node().getBoundingClientRect()
+				const pane=client.newpane({x:p.left,y:p.top+p.height+10})
+				pane.header.text(genomename+' genome browser')
+
+				const par = {
+					hostURL: app.hostURL,
+					jwt: jwt,
+					holder: pane.body,
+					genome: g,
+					chr: g.defaultcoord.chr,
+					start: g.defaultcoord.start,
+					stop: g.defaultcoord.stop,
+					nobox:true,
+					tklst:[],
+					debugmode: app.debugmode,
+				}
+				client.first_genetrack_tolist( g, par.tklst )
+
+				import('./block').then(b=>new b.Block( par ))
+			})
+		return genome_browser_btn
+	}
+
+	//Hides app_div and toggles app_btn off
+	function apps_off(){
+		app_btn_active = false
+			if (app_holder !== undefined) {
+				app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+				app_btn_toggle()
+			}
+	}
+
+	// launchApps()
+
+	let app_btn, app_btn_active, app_holder
+
+	if (!obj.features.examples) {
+		app_btn = headbox.append('span')
+			.attr('class', 'sja_menuoption')
+			.style('padding', padw)
+			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click',()=>{
 				appmenu( app, headbox, selectgenome, jwt )
 			})
 	}else{
 		// show 'apps' div only when url is barbone without any paramerters or example page
-		let app_btn_active = window.location.pathname == '/' && !window.location.search.length 
-			? true : false
-		let apps_rendered = false 
+		app_btn_active = window.location.pathname == '/' && !window.location.search.length ?
+			true : false
+		let apps_rendered = false
 
-		const app_holder = app_row
-				.append('div')
-				.style('margin','10px')
-				.style('padding-right','10px')
-				.style('display', app_btn_active ? 'inline-block' : 'none')
-				.style('background-color', '#f2f2f2')
-				.style('border-radius','5px')
-				.style('width','85vw')
+		app_holder = app_row
+			.append('div')
+			.style('margin', '10px')
+			.style('padding-right', '10px')
+			.style('display', app_btn_active ? 'inline-block' : 'none')
+			.style('background-color', '#f2f2f2')
+			.style('border-radius', '5px')
+			.style('width', '95vw')
 
-		async function load_app_div(){
-			if(apps_rendered) return
+		async function load_app_div() {
+			if (apps_rendered) return
 			apps_rendered = true
-			const _ = await import('./examples')
-			await _.init_examples({holder: app_holder})
+			const _ = await
+			import ('./examples')
+			await _.init_examples({ holder: app_holder, new_div: app.holder })
 		}
 
 		if(app_btn_active) load_app_div()
 
-		const app_btn = headbox.append('span')
+		app_btn = headbox.append('span')
 			.attr('class','sja_menuoption')
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
@@ -342,13 +407,7 @@ function makeheader(app, obj, jwt) {
 				// toggle button color and hide/show apps div 
 				app_btn_active = !app_btn_active
 				load_app_div()
-
-				app_btn
-					.transition()
-					.duration(500)
-					.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-					.style('border-right',app_btn_active ? 'solid 1px #c2c2c2' : '')
-					.style('border-bottom',app_btn_active ? 'solid 1px #c2c2c2' : '')
+				app_btn_toggle()
 
 				app_holder
 					.transition()
@@ -361,12 +420,21 @@ function makeheader(app, obj, jwt) {
 			.on('mouseout', () => {
 				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			})
-	}	
-	
-	headbox.append('span').classed('sja_menuoption',true).style('padding',padw).style('border-radius','5px').text('Help').on('click',()=>{
-		const p=d3event.target.getBoundingClientRect()
-		const div=headtip.clear()
-			.show(p.left-50,p.top+p.height+5)
+	}
+
+	function app_btn_toggle() {
+		app_btn
+			.transition()
+			.duration(500)
+			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+	}
+
+	headbox.append('span').classed('sja_menuoption', true).style('padding', padw).style('border-radius', '5px').text('Help').on('click', () => {
+		const p = d3event.target.getBoundingClientRect()
+		const div = headtip.clear()
+			.show(p.left - 50, p.top + p.height + 5)
 			.d
 			.append('div')
 			.style('padding','5px 20px')
@@ -380,6 +448,16 @@ function makeheader(app, obj, jwt) {
 	return selectgenome
 }
 
+async function launchApps(app){
+	const new_div = app.holder.append('div')
+	new_div
+	.style('margin', '10px')
+	.style('padding-right', '10px')
+	.style('border-radius', '5px')
+	.style('width', '95vw')
+
+	return new_div
+}
 
 
 
