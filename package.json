@@ -6,7 +6,7 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "cd server && ln -sf ../serverconfig.json && npm run dev",
+    "dev": "webpack --env.NODE_ENV=development --watch --progress --colors",
     "start": "cd server && npm start",
     "dev14": "npm run dev -- --env.devtool=source-map",
     "start14": "nodemon --enable-source-maps server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
@@ -14,11 +14,6 @@
     "ppr": "./build/deploy.sh ppr",
     "build-server": "webpack --config=build/webpack.config.server.js --env.NODE_ENV=production",
     "test": "npm run test-back && npm run test-front",
-    "test-back": "tape -r babel-register modules/test/*.spec.js",
-    "test-front": "browserify test/init.js public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
-    "test-browser": "rm -f public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ./public/bin --public /bin ] -o public/bin/spec.bundle.js -v",
-    "test-response": "nodemon modules/test/test.server.js --watch modules",
-    "test-gdc": "rm -f public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ./public/bin --public /bin ] | tape-run --static public",
     "deliver": "sh utils/deliver.sh",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
     "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
@@ -34,30 +29,9 @@
     "printWidth": 120,
     "singleQuote": true
   },
-  "browserify": {
-    "transform": [
-      [
-        "browserify-css"
-      ],
-      [
-        "babelify",
-        {
-          "presets": [
-            "es2015",
-            "react"
-          ],
-          "plugins": [
-            "dynamic-import-split-require"
-          ]
-        }
-      ]
-    ]
-  },
   "author": "",
   "license": "UNLICENSED",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^17.0.0",
-    "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-cli": "^6.18.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.1",
@@ -68,36 +42,21 @@
     "babel-preset-react": "^6.24.1",
     "babel-runtime": "^6.18.0",
     "babelify": "^8.0.0",
-    "browserify-css": "^0.15.0",
-    "css-loader": "^0.23.1",
-    "deep-object-diff": "^1.1.0",
-    "electron-rebuild": "^1.8.8",
     "prettier": "1.18.2",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "rollup": "^2.35.1",
-    "rollup-plugin-postcss": "^3.1.8",
-    "rollup-plugin-terser": "^7.0.2",
     "split-require": "^3.1.2",
-    "style-loader": "^0.13.1",
     "tape": "^4.10.1",
-    "tape-run": "^6.0.1",
-    "watchify": "^3.11.1",
     "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12",
     "webpack-node-externals": "^1.7.2",
     "webpack-notifier": "^1.7.0"
   },
   "dependencies": {
-    "colorbrewer": "^1.0.0",
     "d3": "^4.12.2",
-    "d3-beeswarm": "0.0.4",
-    "d3-sankey": "^0.4.1",
-    "debounce": "^1.2.0",
-    "jstat": "^1.9.3",
-    "lazy": "^1.0.11",
-    "loader-utils": "^0.2.17",
-    "partjson": "^0.58.1"
+    "partjson": "^0.58.1",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-node-externals": "^1.7.2",
+    "webpack-notifier": "^1.7.0"
   },
   "peerDependencies": {
     "react": "^17.0.1"

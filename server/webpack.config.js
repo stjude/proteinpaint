@@ -16,9 +16,7 @@ module.exports = function(env = {}) {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'node',
 		externals: [nodeExternals({ 
-			allowlist: [/\/src\//],
-			modulesDir: '../node_modules',
-			additionalModuleDirs: [ path.join(__dirname, '../node_modules') ]
+			allowlist: [/\/src\//]
 		})],
 		entry: path.join(__dirname, './src/app.js'),
 		output: {

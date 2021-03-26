@@ -9962,8 +9962,8 @@ function get_codedate() {
 		: ppbin
 		? path.dirname(ppbin)
 		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
-		? './node_modules/@stjude/proteinpaint/'
-		: 'public/..'
+		? './node_modules/@stjude/proteinpaint/server/'
+		: '.'
 	const date1 = fs.statSync(dirname + '/server.js').mtime
 	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
