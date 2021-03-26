@@ -28,7 +28,9 @@ module.exports = {
 	cohort and sample annotation
 	*/
 	cohort: {
-		files: [{ file: 'files/hg19/propel/sampletable/propel.samples' }],
+		files: [
+			{ file: 'files/hg19/propel/sampletable/propel.samples' }
+		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds) => {
 			const samplename = item[samplenamekey]
@@ -42,7 +44,7 @@ module.exports = {
 				// new sample
 				ds.cohort.annotation[samplename] = item
 			}
-		}
+		},
 		/*
 		sampleAttribute: {
 			attributes: {
@@ -58,6 +60,7 @@ module.exports = {
 			}
 		},
 		*/
+
 	},
 
 	mutationAttribute: {
