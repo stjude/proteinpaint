@@ -44,7 +44,7 @@ module.exports = function setRoutes(app, basepath) {
 		res.send(await fs.readFileSync(file))
 	})
 	app.get(basepath + '/wrappers/test/:filename', async (req, res) => {
-		const file = path.join(process.cwd(), `./src/wrappers/test/${req.params.filename}`)
+		const file = path.join(process.cwd(), `../client/src/wrappers/test/${req.params.filename}`)
 		res.cookie('gdcsessionid', 0, { expires: new Date(Date.now() - 30000), 'max-age': 0 })
 		res.header('Content-Type', 'application/javascript')
 		res.header('Cache-control', `immutable,max-age=3`)

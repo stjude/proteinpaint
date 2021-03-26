@@ -42,7 +42,7 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 
 if (serverconfig.debugmode) {
 	const routeSetters = []
-	const files = ['./modules/test/routes/gdc.js']
+	const files = ['./src/test/routes/gdc.js']
 	for (const f of files) {
 		if (fs.existsSync(f)) routeSetters.push(f)
 	}
