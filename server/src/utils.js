@@ -342,7 +342,7 @@ samplefilterset:
 exports.run_fishertest = function(tmpfile) {
 	const pfile = tmpfile + '.pvalue'
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['utils/fisher.R', tmpfile, pfile])
+		const sp = spawn('Rscript', [path.join(serverconfig.binpath, './utils/fisher.R'), tmpfile, pfile])
 		sp.on('close', () => resolve(pfile))
 		sp.on('error', () => reject(error))
 	})
@@ -350,7 +350,7 @@ exports.run_fishertest = function(tmpfile) {
 exports.run_fishertest2x3 = function(tmpfile) {
 	const pfile = tmpfile + '.pvalue'
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['utils/fisher.2x3.R', tmpfile, pfile])
+		const sp = spawn('Rscript', [path.join(serverconfig.binpath, './utils/fisher.2x3.R'), tmpfile, pfile])
 		sp.on('close', () => resolve(pfile))
 		sp.on('error', () => reject(error))
 	})
@@ -373,7 +373,7 @@ exports.run_fdr = async function(plst) {
 
 function run_fdr_2(infile, outfile) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['utils/fdr.R', infile, outfile])
+		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
 		sp.on('close', () => resolve())
 		sp.on('error', () => reject(e))
 	})

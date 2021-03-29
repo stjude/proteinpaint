@@ -4,6 +4,7 @@
 */
 
 const fs = require('fs')
+const path = require('path')
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
@@ -84,6 +85,11 @@ if (serverconfig.allow_env_overrides) {
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
+}
+
+if (!serverconfig.binpath) {
+	const jsfile = process.argv.find(n => n.includes('/proteinpaint/'))
+	serverconfig.binpath = path.dirname(jsfile)
 }
 
 //Object.freeze(serverconfig)
