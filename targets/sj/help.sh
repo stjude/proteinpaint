@@ -15,6 +15,6 @@ set -e
 REMOTE=$1
 TASK=$2
 
-rsync -a --delete ./build/helpers/ $REMOTE:/opt/app/pp/helpers
+rsync -a --delete ./helpers/ $REMOTE:/opt/app/pp/helpers
 
-ssh "$REMOTE" "cd /opt/app/pp; chmod -R 755 helpers; bash -s " -- < ./build/helpers/$TASK.sh "${@:3}" 
+ssh "$REMOTE" "cd /opt/app/pp; chmod -R 755 helpers; bash -s " -- < ./helpers/$TASK.sh "${@:3}" 

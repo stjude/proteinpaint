@@ -22,22 +22,24 @@ const execSync = require('child_process').execSync
 const path = require('path')
 const serverconfig = require('./src/serverconfig.js')
 
+const pkgpublic = path.join(serverconfig.binpath, './public')
+
 if (serverconfig.backend_only) {
-	execSync(`rm -rf ${serverconfig.binpath}/public`)
-	execSync(`rm -rf ${serverconfig.binpath}./dist`)
+	execSync(`rm -rf ${pkgpublic}`)
+	execSync(`rm -rf ${path.join(serverconfig.binpath, './dist')}`)
 } else if (!fs.existsSync('.git') && pkg._where) {
 	// do not do the following in a dev environment
 
 	if (!fs.existsSync('public')) {
 		console.log('Creating a public folder ...')
-		execSync(`cp -r ${serverconfig.binpath}/public .`)
+		execSync(`cp -r ${pkgpublic} .`)
 	}
 
 	// when using as a node_module, would need to copy
 	// the pp bin bundles from node_modules/@stjude/proteinpaint to the app directory
 	console.log('Replacing the public/bin bundles ...')
 	execSync(`rm -rf ./public/bin`)
-	execSync(`cp -Rn ${serverconfig.binpath}/public/bin ./public`)
+	execSync(`cp -Rn ${pkgpublic}/bin ./public`)
 
 	const publicPath = serverconfig.URL ? serverconfig.URL : ''
 	console.log(`Setting the dynamic bundle path to '${publicPath}'`)

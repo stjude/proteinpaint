@@ -9,6 +9,8 @@ dist/*
 */*/dist/
 */*/*/dist/
 
+package/*
+
 public/bin/*
 */*/public/bin/*
 public/portal

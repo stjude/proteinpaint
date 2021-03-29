@@ -42,7 +42,10 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const jsfile = process.argv.find(n => n.includes('/proteinpaint/'))
+	console.log(process.argv)
+	const jsfile = process.argv.find(
+		n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+	)
 	try {
 		const realpath = fs.realpathSync(jsfile)
 		serverconfig.binpath = path.dirname(realpath)

@@ -42,7 +42,7 @@ fi
 if [[ "$ENV" != "scp-prod" ]]; then 
 	# convert $REV to standard numeric notation
 	if [[ $REV == "HEAD" ]]; then
-		if [[ -d .git ]]; then
+		if [[ -d ../../.git ]]; then
 			REV=$(git rev-parse --short HEAD)
 		fi
 	fi
@@ -151,11 +151,11 @@ fi
 # available in the remote host machine
 ##############################################
 
-RECENT=$(./build/help.sh $USERatREMOTE recent)
+RECENT=$(./help.sh $USERatREMOTE recent)
 if [[ $(echo -e "$RECENT" | grep -l $REV) != "" ]]; then
 	echo -e "\n"
 	echo -e "Build version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
-	echo -e "You can activate it using './build/help.sh activate $REV' from $REMOTEHOST:$REMOTEDIR."
+	echo -e "You can activate it using './help.sh activate $REV' from $REMOTEHOST:$REMOTEDIR."
 	echo -e "\n"
 	exit 1
 fi
@@ -171,38 +171,39 @@ else
 	rm -Rf tmpbuild
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild  # temporary empty workspace for checkedout commit
-	git archive HEAD | tar -x -C tmpbuild/
+	cd ../..
+	git archive HEAD | tar -x -C targets/sj/tmpbuild/
 
-	cd tmpbuild
+	cd targets/sj/tmpbuild
 
 	# save some time by reusing parent folder's node_modules
 	# but making sure to update to committed package.json
-	ln -s ../node_modules node_modules
+	ln -s ../../../node_modules node_modules
 	# npm update
 
 	# create webpack bundle
+	wp="./node_modules/.bin/webpack"
 	echo "Packing frontend bundles ..."
-	npx webpack --config=build/webpack.config.client.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+	$wp --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
 
 	echo "Packing backend bundle ..."
-	npx webpack --config=build/webpack.config.server.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+	$wp --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
 
 	# create dirs to put extracted files
 	rm -rf $APP
 	mkdir $APP
 	mkdir $APP/public
 	mkdir $APP/src
-	mkdir $APP/utils
-	mkdir $APP/modules
 
-	mv server.js* $APP/
-	mv package.json $APP/
+	mv server/server.js* $APP/
+	mv server/package.json $APP/
+	mv server/genome $APP/
+	mv server/dataset $APP/
+	mv server/utils $APP/
+	mv server/src/serverconfig.js $APP/src
+	rm server/shared # remove symlink
+	mv client/shared server/
 	mv public/bin $APP/public/bin
-	mv genome $APP/
-	mv dataset $APP/
-	mv utils/*.R $APP/utils/
-	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv modules/serverconfig.js $APP/modules
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 
 	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ||  "$SUBDOMAIN" == "proteinpaint" ]]; then
