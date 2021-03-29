@@ -1,6 +1,6 @@
 {
-  "name": "@stjude/proteinpaint",
   "version": "1.8.3",
+  "name": "@stjude/proteinpaint-full",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -23,18 +23,15 @@
   },
   "author": "",
   "license": "UNLICENSED",
-  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/stjude/pp-dist"
   },
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "targets/gdc"
   ],
-  "dependencies": {
-    "@stjude/proteinpaint-server": "^1.7.0"
-  },
   "files": [
     "bin.js",
     "server.js",
@@ -52,8 +49,5 @@
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
-  },
-  "dependencies": {
-    "client": "^0.0.1"
   }
 }

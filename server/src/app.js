@@ -9947,25 +9947,7 @@ async function pp_init() {
 }
 
 function get_codedate() {
-	// detect if proteinpaint was called from outside the
-	// project directory that installed it as an npm dependency
-	const ppbin = process.argv.find(
-		arg => arg.includes('/node_modules/@stjude/proteinpaint/bin.js') || arg.endsWith('/bin.js')
-	)
-	// if the pp binary did not start the process, assume that the
-	// server was called in the same directory as the public dir or symlink;
-	// serverconfig.projectdir is an optional absolute path value to the
-	// consumer app directory that ran proteinpaint, since @stjude/proteinpaint
-	// may be installed as a global app and thus called from any folder with a
-	// valid serverconfig.json
-	const dirname = serverconfig.projectdir
-		? serverconfig.projectdir
-		: ppbin
-		? path.dirname(ppbin)
-		: fs.existsSync('./node_modules/@stjude/proteinpaint/server.js')
-		? './node_modules/@stjude/proteinpaint/server/'
-		: '.'
-	const date1 = fs.statSync(dirname + '/server.js').mtime
+	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
 	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
 	return date1 > date2 ? date1 : date2
 }

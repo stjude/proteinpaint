@@ -41,9 +41,19 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 	serverconfig.allow_env_overrides = true
 }
 
+if (!serverconfig.binpath) {
+	const jsfile = process.argv.find(n => n.includes('/proteinpaint/'))
+	try {
+		const realpath = fs.realpathSync(jsfile)
+		serverconfig.binpath = path.dirname(realpath)
+	} catch (e) {
+		throw e
+	}
+}
+
 if (serverconfig.debugmode) {
 	const routeSetters = []
-	const files = ['./src/test/routes/gdc.js']
+	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
 	for (const f of files) {
 		if (fs.existsSync(f)) routeSetters.push(f)
 	}
@@ -85,11 +95,6 @@ if (serverconfig.allow_env_overrides) {
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
-}
-
-if (!serverconfig.binpath) {
-	const jsfile = process.argv.find(n => n.includes('/proteinpaint/'))
-	serverconfig.binpath = path.dirname(jsfile)
 }
 
 //Object.freeze(serverconfig)
