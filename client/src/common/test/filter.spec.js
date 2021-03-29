@@ -385,7 +385,7 @@ tape('2-entry root filter: visible controls', async test => {
 })
 
 tape('+NEW button interaction', async test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 	test.plan(4)
 	const opts = getOpts({
 		filterData: {

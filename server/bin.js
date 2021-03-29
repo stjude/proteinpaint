@@ -20,7 +20,7 @@ const pkg = require('./package.json')
 const fs = require('fs')
 const execSync = require('child_process').execSync
 const path = require('path')
-const serverconfig = require('./modules/serverconfig.js')
+const serverconfig = require('./src/serverconfig.js')
 
 if (serverconfig.backend_only) {
 	execSync(`rm -rf ./public`)

@@ -6,23 +6,14 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "init": "npm install && cd server && npm install && cd ../client && npm install",
-    "dev": "cd server && npm run dev & cd client && npm run dev",
+    "init-0": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "npm run dev --workspaces",
     "start": "cd server && npm start",
-    "dev14": "npm run dev -- --env.devtool=source-map",
-    "start14": "nodemon --enable-source-maps server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch modules/test",
     "server": "npm start",
     "ppr": "./build/deploy.sh ppr",
     "build-server": "webpack --config=build/webpack.config.server.js --env.NODE_ENV=production",
-    "test": "npm run test-back && npm run test-front",
-    "deliver": "sh utils/deliver.sh",
-    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
-    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v",
-    "rolldev": "rm -rf dist && rollup -c build/rollup.config.js -w",
-    "rollprod": "rm -rf dist && rollup -c build/rollup.config.js",
-    "release-patch": "./build/release.sh patch",
-    "release-minor": "./build/release.sh minor",
-    "revert": "git tag -d v$(node -p \"require('./package.json').version\") && git reset --hard HEAD~1"
+    "test": "npm test --workspaces",
+    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
   },
   "prettier": {
     "semi": false,
@@ -32,40 +23,17 @@
   },
   "author": "",
   "license": "UNLICENSED",
-  "devDependencies": {
-    "babel-cli": "^6.18.0",
-    "babel-core": "^6.26.3",
-    "babel-loader": "^7.1.1",
-    "babel-plugin-dynamic-import-split-require": "^2.0.0",
-    "babel-plugin-syntax-dynamic-import": "^6.18.0",
-    "babel-preset-env": "^1.7.0",
-    "babel-preset-es2015": "^6.18.0",
-    "babel-preset-react": "^6.24.1",
-    "babel-runtime": "^6.18.0",
-    "prettier": "1.18.2",
-    "tape": "^4.10.1",
-    "webpack": "^4.44.2",
-    "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.7.0"
-  },
-  "dependencies": {
-    "d3": "^4.12.2",
-    "partjson": "^0.58.1",
-    "webpack": "^4.44.2",
-    "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.7.0"
-  },
-  "peerDependencies": {
-    "react": "^17.0.1"
-  },
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/stjude/pp-dist"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "dependencies": {
+    "@stjude/proteinpaint-server": "^1.7.0"
   },
   "files": [
     "bin.js",
@@ -84,5 +52,8 @@
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
+  },
+  "dependencies": {
+    "client": "^0.0.1"
   }
 }

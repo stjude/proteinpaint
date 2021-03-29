@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
-import { root_ID } from '../../shared/tree'
+import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { graphable } from '../common/termutils'
 
@@ -62,6 +62,7 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
+
 		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
