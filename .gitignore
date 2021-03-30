@@ -2,10 +2,14 @@
 *.swp
 .DS_Store
 /node_modules*/
+*/node_modules*/
 */*/node_modules*/
 npm-debug.log
 dist/*
 */*/dist/
+*/*/*/dist/
+
+package/*
 
 public/bin/*
 */*/public/bin/*
@@ -39,8 +43,6 @@ public/rev.txt
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
 test/copies/*
-
-package-lock.json
 
 cairo-*/*
 canvas/*

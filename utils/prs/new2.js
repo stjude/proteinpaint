@@ -30,6 +30,7 @@ const sampleidmapfile = process.argv[5]
 
 const fs = require('fs')
 const spawn = require('child_process').spawn
+const spawnSync = require('child_process').spawnSync
 const readline = require('readline')
 const path = require('path')
 
@@ -39,15 +40,49 @@ const sample2id = get_idmap()
 const samplenames = get_samples()
 const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools query
 
+////////////////////////////////////////////
+// 1. break snps into chunks of 10,000 SNPs
+spawnSync('bash', [path.join(__dirname, 'split_snps.sh'), snpfile])
+snpChunks = fs.readdirSync('SNPchunks')
+
+// 2. compute the total PRS of samples across SNP chunks and then output the data as a tab-delimited table
 ;(async () => {
+	totalPRS = await compute_total_prs()
+	console.log('sample\tCNT\tsum')
+	for (let sample in totalPRS) {
+		console.log(sample + '\t' + totalPRS[sample]['cnt'] + '\t' + totalPRS[sample]['sum'])
+	}
+})()
+
+///////////////////////////////////////////
+//// compute the total PRS of samples across SNP chunks
+async function compute_total_prs() {
+	const totalPRS = Object.create(null)
+	for (let snpChunk of snpChunks) {
+		let samples = await compute_chunk_prs(snpChunk)
+		for (let s of samples) {
+			if (!(s.name in totalPRS)) {
+				totalPRS[s.name] = Object.create(null)
+				totalPRS[s.name]['cnt'] = 0
+				totalPRS[s.name]['sum'] = 0
+			}
+			totalPRS[s.name]['cnt'] += s.effcount
+			totalPRS[s.name]['sum'] += s.sum
+		}
+	}
+	return totalPRS
+}
+
+//// compute PRS for a given SNP chunk
+async function compute_chunk_prs(snpChunk) {
 	////////////////////////////////////////////
-	// 1. break snps by chr/chunk and write to temp files
-	const [chr2tmpsnpfile, pos2snp] = await parse_snpfile()
+	// 1. for each snp chunk, further break snps by chr and write to temp files
+	const [chr2tmpsnpfile, pos2snp] = await parse_snpfile(snpChunk)
 	// k: chr.pos, v: {effallele, ref, weight}
 	// after bcftools, add following to v{} about this snp
 
 	////////////////////////////////////////////
-	// 2. for each chunk, run bcftools and filter by maf/callrate
+	// 2. for each snp chr chunk, run bcftools and filter by maf/callrate
 	// good snps passing freq/geno filter in the bcftools query
 	const snparray = []
 	const promises = []
@@ -100,17 +135,11 @@ const sampleids = samplenames.map(i => sample2id.get(i)) // for use in bcftools 
 		}
 	}
 
-	// output
-	console.log('sample\tCNT\tsum')
-	for (const s of samples) {
-		console.log(s.name + '\t' + s.effcount + '\t' + s.sum)
-	}
 	for (const t of chr2tmpsnpfile.values()) {
 		fs.unlink(t, () => {})
 	}
-})()
-
-////////////////////////
+	return samples
+}
 
 function get_effalefreq(l, EAidx) {
 	let eacount = 0,
@@ -165,7 +194,7 @@ function get_samples() {
 	}
 	return lst
 }
-function parse_snpfile() {
+function parse_snpfile(snpChunk) {
 	/*
 1	chr_hg38	chr1
 2	bp_hg38_0	100315612
@@ -187,7 +216,7 @@ function parse_snpfile() {
 	const chr2snp = new Map() // k: chr, v: list of snp position
 	const pos2snp = new Map() // k: "chr:pos", v: {effallele, ref, weight}
 	return new Promise((resolve, reject) => {
-		const rl = readline.createInterface({ input: fs.createReadStream(snpfile) })
+		const rl = readline.createInterface({ input: fs.createReadStream(path.join('SNPchunks', snpChunk)) })
 		rl.on('line', line => {
 			const l = line.split('\t')
 			const chr = l[0],
@@ -221,7 +250,7 @@ function get_hwe(lines) {
 	const infile = Math.random().toString()
 	fs.writeFileSync(infile, lines.join('\n') + '\n')
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['hwe.R', infile])
+		const sp = spawn('Rscript', [path.join(__dirname, 'hwe.R'), infile])
 		const out = [],
 			out2 = []
 		sp.stdout.on('data', d => out.push(d))
