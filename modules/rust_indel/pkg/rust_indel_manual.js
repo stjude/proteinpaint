@@ -114,6 +114,7 @@ const u32CvtShim = new Uint32Array(2)
 const int64CvtShim = new BigInt64Array(u32CvtShim.buffer)
 /**
  * @param {string} sequences
+ * @param {string} start_positions
  * @param {BigInt} variant_pos
  * @param {BigInt} segbplen
  * @param {string} refallele
@@ -126,6 +127,7 @@ const int64CvtShim = new BigInt64Array(u32CvtShim.buffer)
  */
 module.exports.match_complex_variant_rust = function(
 	sequences,
+	start_positions,
 	variant_pos,
 	segbplen,
 	refallele,
@@ -137,32 +139,36 @@ module.exports.match_complex_variant_rust = function(
 ) {
 	var ptr0 = passStringToWasm0(sequences, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
 	var len0 = WASM_VECTOR_LEN
+	var ptr1 = passStringToWasm0(start_positions, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	var len1 = WASM_VECTOR_LEN
 	int64CvtShim[0] = variant_pos
-	const low1 = u32CvtShim[0]
-	const high1 = u32CvtShim[1]
-	int64CvtShim[0] = segbplen
 	const low2 = u32CvtShim[0]
 	const high2 = u32CvtShim[1]
-	var ptr3 = passStringToWasm0(refallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
-	var len3 = WASM_VECTOR_LEN
-	var ptr4 = passStringToWasm0(altallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	int64CvtShim[0] = segbplen
+	const low3 = u32CvtShim[0]
+	const high3 = u32CvtShim[1]
+	var ptr4 = passStringToWasm0(refallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
 	var len4 = WASM_VECTOR_LEN
+	var ptr5 = passStringToWasm0(altallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	var len5 = WASM_VECTOR_LEN
 	int64CvtShim[0] = kmer_length
-	const low5 = u32CvtShim[0]
-	const high5 = u32CvtShim[1]
+	const low6 = u32CvtShim[0]
+	const high6 = u32CvtShim[1]
 	var ret = wasm.match_complex_variant_rust(
 		ptr0,
 		len0,
-		low1,
-		high1,
+		ptr1,
+		len1,
 		low2,
 		high2,
-		ptr3,
-		len3,
+		low3,
+		high3,
 		ptr4,
 		len4,
-		low5,
-		high5,
+		ptr5,
+		len5,
+		low6,
+		high6,
 		weight_no_indel,
 		weight_indel,
 		threshold_slope
@@ -194,10 +200,6 @@ module.exports.__wbg_log_13fd5f3b2bfccacd = function(arg0, arg1) {
 
 module.exports.__wbg_log_d9c364594c4b1fa0 = function(arg0, arg1, arg2) {
 	console.log(getObject(arg0), getObject(arg1), getObject(arg2))
-}
-
-module.exports.__wbg_log_ed116918a3a4989d = function(arg0, arg1, arg2, arg3, arg4, arg5) {
-	console.log(getObject(arg0), getObject(arg1), getObject(arg2), getObject(arg3), getObject(arg4), getObject(arg5))
 }
 
 module.exports.__wbindgen_throw = function(arg0, arg1) {
