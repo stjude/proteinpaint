@@ -2,8 +2,7 @@ const jStat = require('jstat').jStat
 const features = require('./app').features
 const utils = require('./utils')
 const bamcommon = require('./bam.common')
-
-//const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
+const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 
 export async function match_complexvariant_rust(q, templates_info) {
@@ -91,8 +90,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 		//console.log('Reference allele is not correct')
 		refalleleerror = true
 	}
-    
+
+	console.log('templates_info:', templates_info)
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
+	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('\n')
 	let sequences = ''
 	sequences += refseq + '\n'
 	sequences += altseq + '\n'
