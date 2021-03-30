@@ -225,6 +225,7 @@ tape('tvs: Categorical', async test => {
 
 tape('tvs: Numerical', async test => {
 	test.timeoutAfter(20000)
+	test.plan(19)
 
 	const opts = getOpts({
 		filterData: {
@@ -795,7 +796,6 @@ tape('tvs: unbounded range', async test => {
 
 	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data*/
 	const valLabel = opts.holder.select('.tvs_pill .value_btn').text()
-	console.log(valLabel)
 	test.equal(valLabel, '﹣∞ < x < ﹢∞', 'should show an unbounded range label in the blue pill')
 	test.end()
 })

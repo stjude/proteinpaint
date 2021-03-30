@@ -33,10 +33,18 @@ npm run sethooks
 
 ### Scripts
 
-#### in the project root
+This requires *npm v7* and tested with Node v12 and v14. Bundles were tested to run in Node v10.15.3 in a SJ host machine. 
+
+#### Project root
 
 ```bash
-yarn install # installs workspaces
+# one-time setup
+npm install -g npm@7 # if you have not upgraded yet
+npm run empty # remove node_modules and lock files
+npm install # installs workspaces
+npm run linkws # create node_modules symlinks in client and server folders 
+
+# develop
 npm run dev # rebundles backend and frontend code
 npm start # runs the proteinpaint server, requires a serverconfig.json at the project root
 npm test # tests both frontend and backend code

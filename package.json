@@ -6,15 +6,19 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "targets/gdc"
+  ],
   "scripts": {
-    "preinstall": "rm -rf client/node_modules && rm -rf server/node_modules && rm -f package-lock.json && rm -f */package-lock.json",
-    "//": "webpack seem to expect canvas and other binaries at process.cwd()/node_modules",
-    "postinstall": "cd server && rm -rf node_modules && ln -s ../node_modules",
+    "empty": "rm -rf node_modules && rm -rf client/node_modules && rm -rf server/node_modules && rm -f package-lock.json && rm -f yarn.lock && rm -f */package-lock.json",
+    "linkws": "mkdir client/node_modules && ln -s ../../node_modules/.bin ./client/node_modules/ && ln -s ../node_modules ./server",
     "dev": "rm -rf public/bin;webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "start": "nodemon server/bin.js --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
     "ppr": "./build/deploy.sh ppr",
-    "testw": "npm test --workspaces",
+    "testws": "npm test --workspaces",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
   },
   "prettier": {
@@ -27,29 +31,9 @@
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/pp-dist"
+    "url": "https://github.com/stjude/proteinpaint"
   },
-  "workspaces": [
-    "client",
-    "server",
-    "targets/gdc"
-  ],
-  "files": [
-    "bin.js",
-    "server.js",
-    "dist",
-    "genome",
-    "dataset/clinvar.*.js",
-    "dataset/gdc.hg38.js",
-    "public/index.html",
-    "public/rev.txt",
-    "public/bin",
-    "utils/*.R",
-    "utils/install.pp.js",
-    "src/common.js",
-    "modules/serverconfig.js"
-  ],
   "bugs": {
-    "url": "https://github.com/stjude/pp-dist"
+    "url": "https://github.com/stjude/proteinpaint"
   }
 }

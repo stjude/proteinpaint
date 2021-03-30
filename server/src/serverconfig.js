@@ -42,14 +42,19 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const jsfile = process.argv.find(
-		n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
-	)
-	try {
-		const realpath = fs.realpathSync(jsfile)
-		serverconfig.binpath = path.dirname(realpath)
-	} catch (e) {
-		throw e
+	const specfile = process.argv.find(n => n.includes('.spec.js'))
+	if (specfile) {
+		serverconfig.binpath = path.dirname(__dirname)
+	} else {
+		const jsfile = process.argv.find(
+			n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+		)
+		try {
+			const realpath = fs.realpathSync(jsfile)
+			serverconfig.binpath = path.dirname(realpath)
+		} catch (e) {
+			throw e
+		}
 	}
 }
 
