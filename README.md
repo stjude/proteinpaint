@@ -40,9 +40,9 @@ This requires *npm v7* and tested with Node v12 and v14. Bundles were tested to 
 ```bash
 # one-time setup
 npm install -g npm@7 # if you have not upgraded yet
-npm run empty # remove node_modules and lock files
+npm run emptyws # remove node_modules and lock files in workspaces
 npm install # installs workspaces
-npm run linkws # create node_modules symlinks in client and server folders 
+npm run linkws # create node_modules symlinks in workspaces 
 
 # develop
 npm run dev # rebundles backend and frontend code
@@ -57,7 +57,7 @@ npm run browser # bundles the front-end spec files for use at localhost:[port]/t
 npm run gdc # runs the gdc tests
 ```
 
-### in server/
+#### in server/
 ```bash
 npm run dev # generates the server.js bundle
 npm start` # starts the server
@@ -66,7 +66,11 @@ npm test # tests the server conde
 
 #### in targets/sj/
 ```bash
+cd targets/sj
 ./deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
+
+# or to deploy to ppr
+npm run ppr
 ```
 
 ## Build
