@@ -94,13 +94,18 @@ export async function match_complexvariant_rust(templates, q) {
 	let sequences = ''
 	sequences += refseq + '\n'
 	sequences += altseq + '\n'
+	let start_positions = ''
 	for (const template of templates) {
+		start_positions += template.segments[0].segstart.toString() + '\n'
 		sequences += template.segments[0].seq + '\n'
+		//console.log("Sequence:",template.segments[0].seq)
+		//console.log("Start position:",template.segments[0].segstart)
 	}
 	//console.log("sequences:",sequences)
 	//console.log("segbplen:",segbplen)
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
+		start_positions,
 		BigInt(q.variant.pos),
 		BigInt(segbplen),
 		refallele,
@@ -147,7 +152,7 @@ export async function match_complexvariant_rust(templates, q) {
 		} else if (rust_output.category[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = rust_output.groupID[i]
-				console.log('none:', rust_output.kmer_diff_scores[i].toFixed(4))
+				//console.log('none:', rust_output.kmer_diff_scores[i].toFixed(4))
 				templates[index].__tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates[index])
 				const input_items = {
