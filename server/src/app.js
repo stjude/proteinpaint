@@ -344,7 +344,7 @@ async function handle_examples(req, res) {
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
 		if (req.query.getexamplejson) {
-			const txt = await utils.read_file('./src/features.json')
+			const txt = await utils.read_file('./server/src/features.json')
 			try {
 				const json = JSON.parse(txt)
 				res.send({ examples: json.examples })

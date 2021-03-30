@@ -76,3 +76,4 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
+package-lock.json
