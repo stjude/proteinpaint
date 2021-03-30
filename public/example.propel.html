@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+	 <style>
+	 	#aaa {
+	 		width: 90%;
+	 		height: 90%;
+	 	}
+	 </style>
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	host: 'https://proteinpaint.stjude.org',		
+	noheader: true,
+	holder: document.getElementById('aaa'),
+	block: 1,
+	genome: 'hg19',
+	nativetracks: 'refgene',
+	positionbygene: 'IKZF1', // the gene label
+	datasetqueries: [
+		{
+			dataset: 'PROPEL',
+			querykey: 'svcnv',
+			singlesample: { name: 'SJTALL041412_X3' },
+			getsampletrackquickfix: true
+		}
+	]
+})
+</script>
+
+</body>
+</html>

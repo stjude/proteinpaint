@@ -2,10 +2,14 @@
 *.swp
 .DS_Store
 /node_modules*/
+*/node_modules*/
 */*/node_modules*/
 npm-debug.log
 dist/*
 */*/dist/
+*/*/*/dist/
+
+package/*
 
 public/bin/*
 */*/public/bin/*
@@ -40,8 +44,6 @@ public/rev.txt
 
 test/copies/*
 
-package-lock.json
-
 cairo-*/*
 canvas/*
 pixman-*/*
@@ -74,3 +76,4 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
+package-lock.json
