@@ -33,13 +33,20 @@ npm run sethooks
 
 ### Scripts
 
-This requires *npm v7* and tested with Node v12 and v14. Bundles were tested to run in Node v10.15.3 in a SJ host machine. 
+This requires npm v7.7.6+ and tested with Node v12.21.0, which is currently
+compatible with the required node-canvas version of 2.6.0 (Node v14 is not).
+Bundles were also tested to run in Node v10.15.3 in a SJ host machine. 
 
 #### Project root
 
 ```bash
 # one-time setup
+nvm use 12 # use Node v12+
 npm install -g npm@7 # if you have not upgraded yet
+npm run reset # will run emptyws, install, and linkws
+
+# *** troubleshooting only ****
+# if the reset installation results in errors, you can try running these individually
 npm run emptyws # remove node_modules and lock files in workspaces
 npm install # installs workspaces
 npm run linkws # create node_modules symlinks in workspaces 
@@ -48,6 +55,8 @@ npm run linkws # create node_modules symlinks in workspaces
 npm run dev # rebundles backend and frontend code
 npm start # runs the proteinpaint server, requires a serverconfig.json at the project root
 npm test # tests both frontend and backend code
+
+# install 
 ```
 #### in client/
 ```bash
@@ -60,7 +69,7 @@ npm run gdc # runs the gdc tests
 #### in server/
 ```bash
 npm run dev # generates the server.js bundle
-npm start` # starts the server
+npm start # starts the server
 npm test # tests the server conde
 ```
 

@@ -12,6 +12,7 @@
     "targets/gdc"
   ],
   "scripts": {
+    "reset": "npm run emptyws && npm install && npm run linkws",
     "emptyws": "rm -rf node_modules && rm -rf client/node_modules && rm -rf server/node_modules && rm -f package-lock.json && rm -f yarn.lock && rm -f */package-lock.json",
     "linkws": "mkdir client/node_modules && ln -s ../../node_modules/.bin ./client/node_modules/ && ln -s ../node_modules ./server",
     "dev": "rm -rf public/bin;webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
