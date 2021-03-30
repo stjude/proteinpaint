@@ -22,9 +22,8 @@ git clone git@github.com:NCI-GDC/proteinpaint.git
 
 ### Installation
 
-Install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut) as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+If working on the server code: Install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut) as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
 
-Then
 ```bash
 cd proteinpaint
 npm run sethooks
@@ -34,18 +33,33 @@ npm run sethooks
 
 ### Scripts
 
-`npm run dev` rebundles backend and frontend code
+#### in the project root
 
-`npm start` runs the proteinpaint server
+```bash
+yarn install # installs workspaces
+npm run dev # rebundles backend and frontend code
+npm start # runs the proteinpaint server, requires a serverconfig.json at the project root
+npm test # tests both frontend and backend code
+```
+#### in client/
+```bash
+npm run dev # generates bundles to public/bin
+npm test # tests the client code
+npm run browser # bundles the front-end spec files for use at localhost:[port]/testrun.html
+npm run gdc # runs the gdc tests
+```
 
-`npm test` tests both frontend and backend code
+### in server/
+```bash
+npm run dev # generates the server.js bundle
+npm start` # starts the server
+npm test # tests the server conde
+```
 
-`npm run test-browser` bundles the front-end spec files for use at localhost:[port]/testrun.html
-
-`./scripts/deploy.sh [env]` builds and deploys the bundled code to internal SJ hosts
-
-`./build/target.sh dev` builds a Docker image and runs a containerized server, but using the public/bin bundles from `npm run dev`
-
+#### in targets/sj/
+```bash
+./deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
+```
 
 ## Build
 

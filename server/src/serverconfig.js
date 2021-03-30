@@ -42,7 +42,6 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	console.log(process.argv)
 	const jsfile = process.argv.find(
 		n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
 	)

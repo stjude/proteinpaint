@@ -6,9 +6,9 @@
   "module": "dist/app.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "../node_modules/.bin/webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
-    "start": "ln -sf ../serverconfig.json && nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json --watch ./src/test",
-    "test": "../node_modules/.bin/tape -r babel-register src/test/*.spec.js",
+    "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
+    "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
+    "test": "tape -r babel-register src/test/*.spec.js",
     "response": "nodemon modules/test/test.server.js --watch src"
   },
   "author": "",
