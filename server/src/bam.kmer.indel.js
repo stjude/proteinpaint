@@ -91,7 +91,6 @@ export async function match_complexvariant_rust(q, templates_info) {
 		refalleleerror = true
 	}
 
-	console.log('templates_info:', templates_info)
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('\n')
 	let sequences = ''

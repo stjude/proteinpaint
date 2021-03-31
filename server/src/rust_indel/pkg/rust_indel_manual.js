@@ -190,23 +190,19 @@ module.exports.__wbindgen_json_parse = function(arg0, arg1) {
 	return addHeapObject(ret)
 }
 
-module.exports.__wbg_log_2e875b1d2f6f87ac = function(arg0) {
+module.exports.__wbg_log_386a8115a84a780d = function(arg0) {
 	console.log(getObject(arg0))
 }
 
-module.exports.__wbg_log_13fd5f3b2bfccacd = function(arg0, arg1) {
+module.exports.__wbg_log_da824bc9fb9da0a8 = function(arg0, arg1) {
 	console.log(getObject(arg0), getObject(arg1))
-}
-
-module.exports.__wbg_log_d9c364594c4b1fa0 = function(arg0, arg1, arg2) {
-	console.log(getObject(arg0), getObject(arg1), getObject(arg2))
 }
 
 module.exports.__wbindgen_throw = function(arg0, arg1) {
 	throw new Error(getStringFromWasm0(arg0, arg1))
 }
 
-const path = require('path').join('modules/rust_indel/pkg', 'rust_indel_bg.wasm')
+const path = require('path').join('server/src/rust_indel/pkg', 'rust_indel_bg.wasm')
 const bytes = require('fs').readFileSync(path)
 
 const wasmModule = new WebAssembly.Module(bytes)

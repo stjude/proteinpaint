@@ -423,7 +423,7 @@ fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, inde
     //console::log_2(&"left_most_pos:".into(), &left_most_pos.to_string().into());
     let mut kmer_start = left_most_pos;
     let mut kmer_stop = kmer_start + kmer_length;    
-    let mut kmer_start_poly = left_most_pos+2;
+    let mut kmer_start_poly = left_most_pos+1;
     let mut kmer_stop_poly = kmer_start_poly + kmer_length;
     let mut ref_polyclonal_status:i64 = 0;
     let mut alt_polyclonal_status:i64 = 0;
