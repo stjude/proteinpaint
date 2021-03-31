@@ -151,7 +151,9 @@ export async function init(obj, holder, debugmode) {
 			if (!found_flag) {
 				vals.forEach(v => {
 					if (v && typeof v == 'object') {
-						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						const obj_vals = Object.values(v)
+							.filter(a => a != null && typeof a != 'number')
+							.map(x => x.toLowerCase())
 						obj_vals.forEach(ov => {
 							if (ov.toLowerCase().includes(str)) return (found_flag = true)
 						})
