@@ -57,6 +57,7 @@ function getDefaults(opts) {
 */
 
 export async function uncollide(labels, _opts = {}) {
+	if (!labels || !labels.size()) return
 	const opts = getDefaults(_opts)
 	if (!opts.steps || !opts.steps.length) return
 	if (!opts.svg) opts.svg = labels.node().closest('svg')

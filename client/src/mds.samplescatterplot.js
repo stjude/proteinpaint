@@ -650,7 +650,7 @@ function init_plot(obj) {
 		}
 		//circles.attr('r',radius)
 		currBbox = rootholder.getBoundingClientRect()
-		if (obj.userlabel_grp) {
+		if (obj.userlabel_grp && userlabelg && userlabelg.size()) {
 			uncollide(userlabelg, { waitTime: 0, nameKey: 'sample' })
 		}
 	}
