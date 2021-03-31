@@ -161,7 +161,7 @@ function getCharts(q, data) {
 			},
 			boxplot(row, context) {
 				if (!context.self.values || !context.self.values.length) return
-				const values = context.self.values.filter(d => d !== null)
+				const values = context.self.values.filter(d => d !== null && !isNaN(d))
 				if (!values.length) return
 				values.sort((i, j) => i - j)
 				const stat = boxplot_getvalue(

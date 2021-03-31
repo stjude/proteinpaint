@@ -394,14 +394,20 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 
 		// generate term definitions from
 		for (const key in a.s) {
-			const value = a.s[key]
+			const value = isNaN(a.s[key]) ? a.s[key] : parseFloat(a.s[key])
 			if (!terms[key]) {
 				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
 				terms[key] = {
 					id: key,
 					name,
 					parent_id: null,
-					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					// type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					type:
+						sample_attributes[key].type == 'float'
+							? 'float'
+							: sample_attributes[key].type == 'integer'
+							? 'integer'
+							: 'categorical',
 					values: {},
 					isleaf: true
 				}
@@ -413,8 +419,12 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 					t.values[value] = { key: value, label: value }
 				}
 			} else {
-				if (!('min' in t) || value < t.min) t.min = value
-				if (!('max' in t) || value > t.max) t.max = value
+				if (value != 'Not Available') {
+					if (!('min' in t) || value < t.min) t.min = value
+					if (!('max' in t) || value > t.max) t.max = value
+				} else if (!(value in t.values)) {
+					t.values[value] = { label: value, uncomputable: true }
+				}
 			}
 		}
 	}
