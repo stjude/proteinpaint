@@ -93,6 +93,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('\n')
+	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('\n')
 	let sequences = ''
 	sequences += refseq + '\n'
 	sequences += altseq + '\n'
@@ -104,11 +105,12 @@ export async function match_complexvariant_rust(q, templates_info) {
 	//	        templates_info.push(line)
 	//		sequences += sequence + '\n'
 	//	}
-	//console.log("sequences:",sequences)
+	//console.log("cigar_sequences:",cigar_sequences)
 	//console.log("segbplen:",segbplen)
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
 		start_positions,
+		cigar_sequences,
 		BigInt(q.variant.pos),
 		BigInt(segbplen),
 		refallele,

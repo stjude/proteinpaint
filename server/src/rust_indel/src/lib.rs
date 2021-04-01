@@ -136,7 +136,7 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
 }
 
 #[wasm_bindgen]
-pub fn match_complex_variant_rust(sequences: String, start_positions: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
+pub fn match_complex_variant_rust(sequences: String, start_positions: String, cigar_sequences: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
     //console::log_1(&"Hello using web-sys".into());
     //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
@@ -145,6 +145,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, va
     
     let lines: Vec<&str> = sequences.split("\n").collect();
     let start_positions_list: Vec<&str> = start_positions.split("\n").collect();
+    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();
     //let lines = lines.unwrap();    
     
     println!("{:?}", lines);

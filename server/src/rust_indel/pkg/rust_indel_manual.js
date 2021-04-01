@@ -115,6 +115,7 @@ const int64CvtShim = new BigInt64Array(u32CvtShim.buffer)
 /**
  * @param {string} sequences
  * @param {string} start_positions
+ * @param {string} cigar_sequences
  * @param {BigInt} variant_pos
  * @param {BigInt} segbplen
  * @param {string} refallele
@@ -128,6 +129,7 @@ const int64CvtShim = new BigInt64Array(u32CvtShim.buffer)
 module.exports.match_complex_variant_rust = function(
 	sequences,
 	start_positions,
+	cigar_sequences,
 	variant_pos,
 	segbplen,
 	refallele,
@@ -141,34 +143,38 @@ module.exports.match_complex_variant_rust = function(
 	var len0 = WASM_VECTOR_LEN
 	var ptr1 = passStringToWasm0(start_positions, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
 	var len1 = WASM_VECTOR_LEN
+	var ptr2 = passStringToWasm0(cigar_sequences, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	var len2 = WASM_VECTOR_LEN
 	int64CvtShim[0] = variant_pos
-	const low2 = u32CvtShim[0]
-	const high2 = u32CvtShim[1]
-	int64CvtShim[0] = segbplen
 	const low3 = u32CvtShim[0]
 	const high3 = u32CvtShim[1]
-	var ptr4 = passStringToWasm0(refallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
-	var len4 = WASM_VECTOR_LEN
-	var ptr5 = passStringToWasm0(altallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	int64CvtShim[0] = segbplen
+	const low4 = u32CvtShim[0]
+	const high4 = u32CvtShim[1]
+	var ptr5 = passStringToWasm0(refallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
 	var len5 = WASM_VECTOR_LEN
+	var ptr6 = passStringToWasm0(altallele, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc)
+	var len6 = WASM_VECTOR_LEN
 	int64CvtShim[0] = kmer_length
-	const low6 = u32CvtShim[0]
-	const high6 = u32CvtShim[1]
+	const low7 = u32CvtShim[0]
+	const high7 = u32CvtShim[1]
 	var ret = wasm.match_complex_variant_rust(
 		ptr0,
 		len0,
 		ptr1,
 		len1,
-		low2,
-		high2,
+		ptr2,
+		len2,
 		low3,
 		high3,
-		ptr4,
-		len4,
+		low4,
+		high4,
 		ptr5,
 		len5,
-		low6,
-		high6,
+		ptr6,
+		len6,
+		low7,
+		high7,
 		weight_no_indel,
 		weight_indel,
 		threshold_slope
