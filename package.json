@@ -22,12 +22,6 @@
     "testws": "npm test --workspaces",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
   },
-  "prettier": {
-    "semi": false,
-    "useTabs": true,
-    "printWidth": 120,
-    "singleQuote": true
-  },
   "author": "",
   "license": "UNLICENSED",
   "repository": {
