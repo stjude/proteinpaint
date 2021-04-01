@@ -19,6 +19,7 @@
     "start": "nodemon server/bin.js --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
     "ppr": "cd targets/sj && ./deploy.sh ppr && cd ../..",
+    "prp1": "cd targets/sj && ./deploy.sh prp1 && cd ../..",
     "testws": "npm test --workspaces",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
   },
