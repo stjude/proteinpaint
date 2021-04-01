@@ -163,7 +163,12 @@ export async function init(obj, holder, debugmode) {
 			return found_flag
 		}
 	}
-	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	const legend_div = tr1td2
+		.append('div')
+		.style('overflow-x', 'hidden')
+		.style('overflow-y', 'auto')
+		.style('height', '100vh')
+	obj.legendtable = legend_div.append('table').style('border-spacing', '5px')
 	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
