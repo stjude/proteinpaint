@@ -418,13 +418,17 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 				if (!(value in t.values)) {
 					t.values[value] = { key: value, label: value }
 				}
-			} else {
+			} else if (t.type == 'integer' || t.type == 'float') {
 				if (value != 'Not Available') {
 					if (!('min' in t) || value < t.min) t.min = value
 					if (!('max' in t) || value > t.max) t.max = value
 				} else if (!(value in t.values)) {
 					t.values[value] = { label: value, uncomputable: true }
 				}
+			} else if (t.type == 'condition') {
+				//TODO: add logic for conditional terms
+			} else {
+				throw 'Term type not supported:' + t.type
 			}
 		}
 	}

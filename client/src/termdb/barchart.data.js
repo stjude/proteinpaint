@@ -263,6 +263,11 @@ function getNumericIdVal(d, term, q, rows) {
 			if (!b.stopinclusive && v >= b.stop) continue
 			ids.push(b.label)
 		}
+	} else if (isNaN(v)) {
+		// For custom termdb vocabulary where term.values(keys) are not always numeric
+		if (term.values && v in term.values && term.values[v].uncomputable) {
+			ids.push(term.values[v].label)
+		}
 	}
 	return [ids, v]
 }
