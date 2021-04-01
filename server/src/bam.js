@@ -1,4 +1,8 @@
 const app = require('./app')
+const stream = require('stream')
+const { promisify } = require('util')
+const got = require('got')
+const pipeline = promisify(stream.pipeline)
 const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
@@ -226,6 +230,10 @@ module.exports = genomes => {
 			}
 
 			const q = await get_q(genome, req)
+			if (req.query.gdc) {
+				q.gdc_token = req.query.gdc.split(',')[0]
+				q.gdc_case_id = req.query.gdc.split(',')[1]
+			}
 			res.send(await do_query(q))
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -709,6 +717,23 @@ async function do_query(q) {
 		if (!q.pileupheight) throw 'pileupheight missing'
 		result.pileup_data = await plot_pileup(q, templates_total)
 	}
+
+	// Deleting temporary gdc bam file
+
+	if (q.gdc_case_id) {
+		fs.unlink('temp.bam', err => {
+			if (err) console.log(err)
+			else {
+				console.log('Deleted file: temp.bam')
+			}
+		})
+		fs.unlink('temp.bam.bai', err => {
+			if (err) console.log(err)
+			else {
+				console.log('Deleted file: temp.bam.bai')
+			}
+		})
+	}
 	return result
 }
 
@@ -729,6 +754,10 @@ async function query_reads(q) {
 			start: q.variant.pos,
 			stop: q.variant.pos + q.variant.ref.length
 		}
+		if (q.gdc_case_id) {
+			q.file = 'temp.bam'
+			await get_gdc_bam(r, q)
+		}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
 		return
@@ -737,7 +766,41 @@ async function query_reads(q) {
 		return
 	}
 	for (const r of q.regions) {
+		if (q.gdc_case_id) {
+			q.file = 'temp.bam'
+			await get_gdc_bam(r, q)
+		}
 		await query_region(r, q) // add r.lines[]
+		console.log('r.lines:', r.lines)
+	}
+}
+
+async function get_gdc_bam(r, q) {
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	headers['X-Auth-Token'] = q.gdc_token
+	// Inserted "chr" in url. Need to check if it works with other gdc bam files
+	const url =
+		'https://api.gdc.cancer.gov/slicing/view/' +
+		q.gdc_case_id +
+		'?region=chr' +
+		(q.nochr ? r.chr.replace('chr', '') : r.chr) +
+		':' +
+		r.start +
+		'-' +
+		r.stop
+	console.log(url)
+	try {
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream('temp.bam'))
+		const ps = spawn(
+			// Creating index of the gdc bam file
+			samtools,
+			['index', q.file],
+			{ cwd: q.dir }
+		)
+		console.log('Downloaded temp.bam file and indexed it')
+	} catch (error) {
+		console.log(error)
+		console.log('Cannot retrieve bam file')
 	}
 }
 
@@ -745,12 +808,14 @@ function query_region(r, q) {
 	// for each region, query its data
 	// if too many reads, collapse to coverage
 	r.lines = []
+	let bam_region = (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+	if (q.gdc_case_id) {
+		// Inserting "chr" for gdc bam files, need to test it if it works with all gdc bam files
+		bam_region = 'chr' + bam_region
+	}
+	console.log('samtools view ' + q.file + ' ' + bam_region)
 	return new Promise((resolve, reject) => {
-		const ps = spawn(
-			samtools,
-			['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-			{ cwd: q.dir }
-		)
+		const ps = spawn(samtools, ['view', q.file, bam_region], { cwd: q.dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			r.lines.push(line)
@@ -774,20 +839,14 @@ function run_samtools_depth(q, r) {
 	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
 	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
+	// must use r.start+1 to query bam
+	let bam_region = (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop
+	if (q.gdc_case_id) {
+		// Inserting "chr" for gdc bam files, need to test it if it works with all gdc bam files
+		bam_region = 'chr' + bam_region
+	}
 	return new Promise((resolve, reject) => {
-		const ls = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				// must use r.start+1 to query bam
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-				'-g',
-				'DUP',
-				q.file || q.url
-			],
-			{ cwd: q.dir }
-		)
+		const ls = spawn(samtools, ['depth', '-r', bam_region, '-g', 'DUP', q.file || q.url], { cwd: q.dir })
 		const rl = readline.createInterface({ input: ls.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')

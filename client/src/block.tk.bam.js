@@ -144,6 +144,9 @@ async function getData(tk, block, additional = []) {
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
+	if (tk.gdc) {
+		lst.push('gdc=' + tk.gdc)
+	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized
@@ -429,19 +432,31 @@ function may_addvariant(tk) {
 	the variant may be added on the fly from e.g. a vcf track in the same browser session
 	*/
 	const u2p = url2map()
-	if (!u2p.has('variant')) return
-	const tmp = u2p.get('variant').split('.')
-	if (tmp.length < 4) {
-		console.log('urlparam variant should be at least 4 fields joined by .')
-		return
+	if (u2p.has('variant')) {
+		const tmp = u2p.get('variant').split('.')
+		if (tmp.length < 4) {
+			console.log('urlparam variant should be at least 4 fields joined by .')
+			return
+		}
+		tk.variants = []
+		for (let i = 0; i < tmp.length; i += 4) {
+			const pos = Number(tmp[i + 1])
+			if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+			if (!tmp[i + 2]) return console.log('ref allele missing')
+			if (!tmp[i + 3]) return console.log('alt allele missing')
+			tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+		}
 	}
-	tk.variants = []
-	for (let i = 0; i < tmp.length; i += 4) {
-		const pos = Number(tmp[i + 1])
-		if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-		if (!tmp[i + 2]) return console.log('ref allele missing')
-		if (!tmp[i + 3]) return console.log('alt allele missing')
-		tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+
+	// Checking to see if need to query GDC for bam file
+	if (u2p.has('gdc')) {
+		const tmp = u2p.get('gdc').split(',')
+		if (tmp.length != 2) {
+			console.log('Both gdc token and gdc case id must be present')
+			return
+		} else {
+			tk.gdc = u2p.get('gdc')
+		}
 	}
 }
 
