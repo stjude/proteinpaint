@@ -28,9 +28,7 @@ module.exports = {
 	cohort and sample annotation
 	*/
 	cohort: {
-		files: [
-			{ file: 'files/hg19/propel/sampletable/propel.samples' }
-		],
+		files: [{ file: 'files/hg19/propel/sampletable/propel.samples' }],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds) => {
 			const samplename = item[samplenamekey]
@@ -44,7 +42,7 @@ module.exports = {
 				// new sample
 				ds.cohort.annotation[samplename] = item
 			}
-		},
+		}
 		/*
 		sampleAttribute: {
 			attributes: {
@@ -60,7 +58,6 @@ module.exports = {
 			}
 		},
 		*/
-
 	},
 
 	mutationAttribute: {
@@ -114,6 +111,7 @@ module.exports = {
 		svcnv: {
 			name: 'PROPEL tumor mutation',
 			istrack: true,
+			isfull: true,
 			type: 'mdssvcnv',
 			file: 'files/hg19/propel/propel.svcnv.gz',
 
@@ -129,11 +127,11 @@ module.exports = {
 
 			// cnv
 			valueCutoff: 0.2,
-			bplengthUpperLimit: 2000000, // limit cnv length to focal events
+			bplengthUpperLimit: 0, // limit cnv length to focal events
 
 			// loh
 			segmeanValueCutoff: 0.1,
-			lohLengthUpperLimit: 2000000,
+			lohLengthUpperLimit: 0,
 			/*
 			groupsamplebyattr: {
 				attrlst: [
