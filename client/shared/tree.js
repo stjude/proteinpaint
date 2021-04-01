@@ -51,10 +51,15 @@ export function stratinput(lst, levels) {
 	// only increment size to leaf nodes, so that root.sum() will work
 	// k: string id of a node, e.g. HM...BALL
 	// v: number of items
+
 	for (const m of lst) {
 		for (const [i, lev] of levels.entries()) {
 			const thisv = getkey(m, i, levels)
 			const pav = getkey(m, i - 1, levels)
+
+			// as mutations can come as {"subtype":""}
+			// in the sunburst chart at the subtype level, this mutation should not be counted
+			// thus the test with !m[lev.k] rather than !(lev.k in m)
 			if (!m[lev.k]) {
 				// stop at this level
 				// add count to prev level
@@ -63,6 +68,7 @@ export function stratinput(lst, levels) {
 				}
 				break
 			}
+
 			lp[thisv] = pav
 			if (!(thisv in size)) {
 				size[thisv] = 0
