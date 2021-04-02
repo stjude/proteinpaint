@@ -44,6 +44,9 @@ group {}
 	.start
 	.stop
 .height
+.file
+.url
+.gdc   // one string with token and case id joined by comma
 
 enter_partstack()
 getReadInfo
@@ -144,18 +147,18 @@ async function getData(tk, block, additional = []) {
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
-	if (tk.gdc) {
-		lst.push('gdc=' + tk.gdc)
-	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
 	if (tk.asPaired) lst.push('asPaired=1')
 	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
+
+	if (tk.gdc) lst.push('gdc=' + tk.gdc)
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	if (data.error) throw data.error
@@ -386,7 +389,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_addvariant(tk) // only quick fix!! TODO may allow adding variant on the fly??
+	may_add_urlparameter(tk)
 
 	tk.config_handle = block
 		.maketkconfighandle(tk)
@@ -421,41 +424,42 @@ function makeTk(tk, block) {
 	tk.label_count = block.maketklefthandle(tk, laby)
 }
 
-function may_addvariant(tk) {
-	/********* XXX only a quick fix!
-	to supply one or multiple variant from url parameter
-	if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
-	will overwrite the existing tk.variants{}
-
-	Do no use in production!
-
-	the variant may be added on the fly from e.g. a vcf track in the same browser session
-	*/
+// may add additional parameters from url that specifically apply to the bam track
+function may_add_urlparameter(tk) {
 	const u2p = url2map()
+
 	if (u2p.has('variant')) {
+		/* XXX only a quick fix!
+		to supply one or multiple variant from url parameter
+		if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
+		will overwrite the existing tk.variants{}
+
+		Do no use in production!
+
+		the variant may be added on the fly from e.g. a vcf track in the same browser session
+		*/
 		const tmp = u2p.get('variant').split('.')
 		if (tmp.length < 4) {
 			console.log('urlparam variant should be at least 4 fields joined by .')
-			return
-		}
-		tk.variants = []
-		for (let i = 0; i < tmp.length; i += 4) {
-			const pos = Number(tmp[i + 1])
-			if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-			if (!tmp[i + 2]) return console.log('ref allele missing')
-			if (!tmp[i + 3]) return console.log('alt allele missing')
-			tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+		} else {
+			tk.variants = []
+			for (let i = 0; i < tmp.length; i += 4) {
+				const pos = Number(tmp[i + 1])
+				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+				if (!tmp[i + 2]) return console.log('ref allele missing')
+				if (!tmp[i + 3]) return console.log('alt allele missing')
+				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+			}
 		}
 	}
 
 	// Checking to see if need to query GDC for bam file
 	if (u2p.has('gdc')) {
-		const tmp = u2p.get('gdc').split(',')
-		if (tmp.length != 2) {
+		const str = u2p.get('gdc')
+		if (str.indexOf(',') == -1) {
 			console.log('Both gdc token and gdc case id must be present')
-			return
 		} else {
-			tk.gdc = u2p.get('gdc')
+			tk.gdc = str
 		}
 	}
 }
