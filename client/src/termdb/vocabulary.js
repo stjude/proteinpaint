@@ -2,6 +2,7 @@ import { dofetch3 } from '../client'
 import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
+import { scaleLinear } from 'd3-scale'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -315,30 +316,44 @@ class FrontendVocab {
 	}
 
 	async getDensityPlotData(term_id, num_obj, filter) {
-		const countsByVal = new Map()
+		const values = []
+		const distinctValues = new Set()
 		let minvalue,
 			maxvalue,
 			samplecount = 0
 		for (const sample in this.vocab.sampleannotation) {
 			if (!(term_id in this.vocab.sampleannotation[sample])) continue
-			const v = this.vocab.sampleannotation[sample][term_id]
-			samplecount += 1
-			if (minvalue === undefined || v < minvalue) minvalue = v
-			if (maxvalue === undefined || v > maxvalue) maxvalue = v
-			if (!countsByVal.has(v)) countsByVal.set(v, [v, 0])
-			countsByVal.get(v)[1] += 1
+			const _v = this.vocab.sampleannotation[sample][term_id]
+			if (isNumeric(_v)) {
+				const v = +_v
+				samplecount += 1
+				if (minvalue === undefined || v < minvalue) minvalue = v
+				if (maxvalue === undefined || v > maxvalue) maxvalue = v
+				values.push(v)
+				distinctValues.add(v)
+			}
 		}
 
-		const density = [...countsByVal.values()]
+		const term = this.vocab.terms.find(t => t.id == term_id)
+		const default_ticks_n = 40
+		const ticks_n =
+			term.type == 'integer' && maxvalue - minvalue < default_ticks_n
+				? maxvalue - minvalue
+				: term.type == 'float' && distinctValues.size < default_ticks_n
+				? distinctValues
+				: default_ticks_n
+		const xscale = scaleLinear()
+			.domain([minvalue, maxvalue])
+			.range([num_obj.plot_size.xpad, num_obj.plot_size.width - num_obj.plot_size.xpad])
+		const density = get_histogram(xscale.ticks(ticks_n))(values)
+
 		return {
 			density,
-			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), undefined),
 			minvalue,
 			maxvalue,
 			samplecount
 		}
-
-		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
 	}
 
 	async getterm(termid) {
@@ -350,24 +365,6 @@ class FrontendVocab {
 		const q = { term, filter }
 		const data = getCategoryData(q, this.datarows)
 		return data
-		/*const param = lst ? 'getcategories' : 'getnumericcategories'
-		const args = [
-			`${param}=1`,
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id,
-			'filter=' + encodeURIComponent(JSON.stringify(filter))
-		]
-
-		if (lst && lst.length) args.push(...lst)
-
-		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
-			if (data.error) throw data.error
-			return lst ? data : data.lst
-		} catch (e) {
-			window.alert(e.message || e)
-		}*/
 	}
 
 	graphable(term) {
@@ -450,5 +447,26 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 	return {
 		sampleannotation: sanno,
 		terms: Object.values(terms)
+	}
+}
+
+function isNumeric(n) {
+	return !isNaN(parseFloat(n)) && isFinite(n)
+}
+
+function get_histogram(ticks) {
+	return values => {
+		// array of {value}
+		const bins = []
+		for (let i = 0; i < ticks.length; i++) bins.push([ticks[i], 0])
+		for (const v of values) {
+			for (let i = 1; i < ticks.length; i++) {
+				if (v <= ticks[i]) {
+					bins[i - 1][1]++
+					break
+				}
+			}
+		}
+		return bins
 	}
 }

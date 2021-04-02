@@ -318,9 +318,11 @@ export function getNumericMethods(self) {
 				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 			})
 
-		const brush_start = range.startunbounded ? minvalue : range.start
-		const brush_stop = range.stopunbounded ? maxvalue : range.stop
-		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+		const brush_start = range.startunbounded ? Number(minvalue) : +range.start
+		const brush_stop = range.stopunbounded ? Number(maxvalue) : +range.stop
+		brush.init = () => {
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+		}
 
 		if (range.startunbounded) delete range.start
 		if (range.stopunbounded) delete range.stop
@@ -557,7 +559,7 @@ export function getNumericMethods(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value): minvalue
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue
 			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
@@ -759,11 +761,14 @@ export function getNumericMethods(self) {
 			return
 		}
 		// numerical checkbox for unannotated cats
-		const unannotated_cats = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
-
-		for (const [index, cat] of unannotated_cats.entries()) {
-			cat.label = tvs.term.values[cat.value].label
-			cat.key = cat.value
+		const values = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
+		const unannotated_cats = []
+		for (const cat of values.lst) {
+			if (cat.key in tvs.term.values) {
+				cat.label = tvs.term.values[cat.key].label
+				cat.value = cat.key
+				unannotated_cats.push(cat)
+			}
 		}
 
 		const sortedVals = unannotated_cats.sort((a, b) => {

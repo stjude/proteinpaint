@@ -234,7 +234,7 @@ function getNumericIdVal(d, term, q, rows) {
 	if (!q.computed_bins) {
 		const summary = {}
 		rows.map(row => {
-			const v = row.data[term.id]
+			const v = +row.data[term.id]
 			if (!isNumeric(v)) return
 			if (!('min' in summary) || summary.min > v) summary.min = v
 			if (!('max' in summary) || summary.max < v) summary.max = v
@@ -242,10 +242,12 @@ function getNumericIdVal(d, term, q, rows) {
 		q.computed_bins = compute_bins(q, percentiles => summary)
 		q.orderedLabels = q.computed_bins.map(d => d.label)
 	}
-	const v = d[term.id]
-	if (isNumeric(v)) {
+	if (isNumeric(d[term.id])) {
+		const v = +d[term.id]
+		let isUncomputable = false
 		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
 			ids.push(term.values[v].label)
+			isUncomputable = true
 		}
 
 		for (const b of q.computed_bins) {
@@ -263,13 +265,17 @@ function getNumericIdVal(d, term, q, rows) {
 			if (!b.stopinclusive && v >= b.stop) continue
 			ids.push(b.label)
 		}
-	} else if (isNaN(v)) {
+		return [ids, isUncomputable ? undefined : v]
+	} else if (isNaN(d[term.id])) {
+		const v = d[term.id]
 		// For custom termdb vocabulary where term.values(keys) are not always numeric
 		if (term.values && v in term.values && term.values[v].uncomputable) {
 			ids.push(term.values[v].label)
 		}
+		return [ids, undefined]
+	} else {
+		return [ids, undefined]
 	}
-	return [ids, v]
 }
 
 function getUndefinedIdVal() {
