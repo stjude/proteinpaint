@@ -224,15 +224,16 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			if (req.query.getread) {
-				res.send(await route_getread(genome, req))
-				return
-			}
-
 			const q = await get_q(genome, req)
 			if (req.query.gdc) {
 				q.gdc_token = req.query.gdc.split(',')[0]
 				q.gdc_case_id = req.query.gdc.split(',')[1]
+				q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
+			}
+
+			if (req.query.getread) {
+				res.send(await route_getread(genome, req))
+				return
 			}
 			res.send(await do_query(q))
 		} catch (e) {
@@ -721,16 +722,10 @@ async function do_query(q) {
 	// Deleting temporary gdc bam file
 
 	if (q.gdc_case_id) {
-		fs.unlink('temp.bam', err => {
+		fs.unlink(q.file, err => {
 			if (err) console.log(err)
 			else {
-				console.log('Deleted file: temp.bam')
-			}
-		})
-		fs.unlink('temp.bam.bai', err => {
-			if (err) console.log(err)
-			else {
-				console.log('Deleted file: temp.bam.bai')
+				console.log('Deleted file: ' + q.file.toString())
 			}
 		})
 	}
@@ -755,7 +750,6 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		if (q.gdc_case_id) {
-			q.file = 'temp.bam'
 			await get_gdc_bam(r, q)
 		}
 		await query_region(r, q)
@@ -767,11 +761,9 @@ async function query_reads(q) {
 	}
 	for (const r of q.regions) {
 		if (q.gdc_case_id) {
-			q.file = 'temp.bam'
 			await get_gdc_bam(r, q)
 		}
 		await query_region(r, q) // add r.lines[]
-		console.log('r.lines:', r.lines)
 	}
 }
 
@@ -790,14 +782,8 @@ async function get_gdc_bam(r, q) {
 		r.stop
 	console.log(url)
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream('temp.bam'))
-		const ps = spawn(
-			// Creating index of the gdc bam file
-			samtools,
-			['index', q.file],
-			{ cwd: q.dir }
-		)
-		console.log('Downloaded temp.bam file and indexed it')
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(q.file))
+		console.log('Downloaded ' + q.file.toString())
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
@@ -808,14 +794,17 @@ function query_region(r, q) {
 	// for each region, query its data
 	// if too many reads, collapse to coverage
 	r.lines = []
-	let bam_region = (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-	if (q.gdc_case_id) {
-		// Inserting "chr" for gdc bam files, need to test it if it works with all gdc bam files
-		bam_region = 'chr' + bam_region
-	}
-	console.log('samtools view ' + q.file + ' ' + bam_region)
 	return new Promise((resolve, reject) => {
-		const ps = spawn(samtools, ['view', q.file, bam_region], { cwd: q.dir })
+		let ps = ''
+		if (q.gdc_case_id) {
+			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
+		} else {
+			ps = spawn(
+				samtools,
+				['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				{ cwd: q.dir }
+			)
+		}
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			r.lines.push(line)
@@ -839,14 +828,25 @@ function run_samtools_depth(q, r) {
 	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
 	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
-	// must use r.start+1 to query bam
-	let bam_region = (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop
-	if (q.gdc_case_id) {
-		// Inserting "chr" for gdc bam files, need to test it if it works with all gdc bam files
-		bam_region = 'chr' + bam_region
-	}
 	return new Promise((resolve, reject) => {
-		const ls = spawn(samtools, ['depth', '-r', bam_region, '-g', 'DUP', q.file || q.url], { cwd: q.dir })
+		// must use r.start+1 to query bam
+		let ls = ''
+		if (q.gdc_case_id) {
+			ls = spawn(samtools, ['depth', '-g', 'DUP', q.file || q.url], { cwd: q.dir })
+		} else {
+			ls = spawn(
+				samtools,
+				[
+					'depth',
+					'-r',
+					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+					'-g',
+					'DUP',
+					q.file || q.url
+				],
+				{ cwd: q.dir }
+			)
+		}
 		const rl = readline.createInterface({ input: ls.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
@@ -1926,15 +1926,20 @@ async function query_oneread(req, r) {
 	//if (!Number.isInteger(pos)) throw '.pos not integer'
 	let firstseg, lastseg
 	return new Promise((resolve, reject) => {
-		const ps = spawn(
-			samtools,
-			[
-				'view',
-				_file,
-				(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
-			],
-			{ cwd: dir }
-		)
+		let ps = ''
+		if (req.query.gdc) {
+			ps = spawn(samtools, ['view', _file], { cwd: dir })
+		} else {
+			ps = spawn(
+				samtools,
+				[
+					'view',
+					_file,
+					(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
+				],
+				{ cwd: dir }
+			)
+		}
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true)
