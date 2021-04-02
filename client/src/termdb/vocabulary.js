@@ -2,6 +2,7 @@ import { dofetch3 } from '../client'
 import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
+import { scaleLinear } from 'd3-scale'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -315,30 +316,44 @@ class FrontendVocab {
 	}
 
 	async getDensityPlotData(term_id, num_obj, filter) {
-		const countsByVal = new Map()
+		const values = []
+		const distinctValues = new Set()
 		let minvalue,
 			maxvalue,
 			samplecount = 0
 		for (const sample in this.vocab.sampleannotation) {
 			if (!(term_id in this.vocab.sampleannotation[sample])) continue
-			const v = this.vocab.sampleannotation[sample][term_id]
-			samplecount += 1
-			if (minvalue === undefined || v < minvalue) minvalue = v
-			if (maxvalue === undefined || v > maxvalue) maxvalue = v
-			if (!countsByVal.has(v)) countsByVal.set(v, [v, 0])
-			countsByVal.get(v)[1] += 1
+			const _v = this.vocab.sampleannotation[sample][term_id]
+			if (isNumeric(_v)) {
+				const v = +_v
+				samplecount += 1
+				if (minvalue === undefined || v < minvalue) minvalue = v
+				if (maxvalue === undefined || v > maxvalue) maxvalue = v
+				values.push(v)
+				distinctValues.add(v)
+			}
 		}
 
-		const density = [...countsByVal.values()]
+		const term = this.vocab.terms.find(t => t.id == term_id)
+		const default_ticks_n = 40
+		const ticks_n =
+			term.type == 'integer' && maxvalue - minvalue < default_ticks_n
+				? maxvalue - minvalue
+				: term.type == 'float' && distinctValues.size < default_ticks_n
+				? distinctValues
+				: default_ticks_n
+		const xscale = scaleLinear()
+			.domain([minvalue, maxvalue])
+			.range([num_obj.plot_size.xpad, num_obj.plot_size.width - num_obj.plot_size.xpad])
+		const density = get_histogram(xscale.ticks(ticks_n))(values)
+
 		return {
 			density,
-			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), undefined),
 			minvalue,
 			maxvalue,
 			samplecount
 		}
-
-		throw 'ToDo: custom vocab getDensityPlotData(term_id, num_obj)'
 	}
 
 	async getterm(termid) {
@@ -350,24 +365,6 @@ class FrontendVocab {
 		const q = { term, filter }
 		const data = getCategoryData(q, this.datarows)
 		return data
-		/*const param = lst ? 'getcategories' : 'getnumericcategories'
-		const args = [
-			`${param}=1`,
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id,
-			'filter=' + encodeURIComponent(JSON.stringify(filter))
-		]
-
-		if (lst && lst.length) args.push(...lst)
-
-		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
-			if (data.error) throw data.error
-			return lst ? data : data.lst
-		} catch (e) {
-			window.alert(e.message || e)
-		}*/
 	}
 
 	graphable(term) {
@@ -394,14 +391,20 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 
 		// generate term definitions from
 		for (const key in a.s) {
-			const value = a.s[key]
+			const value = isNaN(a.s[key]) ? a.s[key] : parseFloat(a.s[key])
 			if (!terms[key]) {
 				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
 				terms[key] = {
 					id: key,
 					name,
 					parent_id: null,
-					type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					// type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
+					type:
+						sample_attributes[key].type == 'float'
+							? 'float'
+							: sample_attributes[key].type == 'integer'
+							? 'integer'
+							: 'categorical',
 					values: {},
 					isleaf: true
 				}
@@ -412,9 +415,17 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 				if (!(value in t.values)) {
 					t.values[value] = { key: value, label: value }
 				}
+			} else if (t.type == 'integer' || t.type == 'float') {
+				if (value != 'Not Available') {
+					if (!('min' in t) || value < t.min) t.min = value
+					if (!('max' in t) || value > t.max) t.max = value
+				} else if (!(value in t.values)) {
+					t.values[value] = { label: value, uncomputable: true }
+				}
+			} else if (t.type == 'condition') {
+				//TODO: add logic for conditional terms
 			} else {
-				if (!('min' in t) || value < t.min) t.min = value
-				if (!('max' in t) || value > t.max) t.max = value
+				throw 'Term type not supported:' + t.type
 			}
 		}
 	}
@@ -436,5 +447,26 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 	return {
 		sampleannotation: sanno,
 		terms: Object.values(terms)
+	}
+}
+
+function isNumeric(n) {
+	return !isNaN(parseFloat(n)) && isFinite(n)
+}
+
+function get_histogram(ticks) {
+	return values => {
+		// array of {value}
+		const bins = []
+		for (let i = 0; i < ticks.length; i++) bins.push([ticks[i], 0])
+		for (const v of values) {
+			for (let i = 1; i < ticks.length; i++) {
+				if (v <= ticks[i]) {
+					bins[i - 1][1]++
+					break
+				}
+			}
+		}
+		return bins
 	}
 }
