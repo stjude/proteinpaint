@@ -128,7 +128,7 @@ function getCharts(q, data) {
 			idVal(row, context) {
 				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
 				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
-				const [dataId, dataVal] = idValFxns[q.term0.type](row.data, q.term2, q.term2_q, data)
+				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data)
 				return {
 					chartId,
 					chartVal,
@@ -243,7 +243,7 @@ function getNumericIdVal(d, term, q, rows) {
 	}
 	const v = d[term.id]
 	if (term.values && v in term.values && term.values[v].uncomputable) {
-		return [term.values[v].label, undefined]
+		return [[term.values[v].label], undefined]
 	}
 	// ignore non-numeric values like empty string, ""
 	// which may occur naturally in a csv/tab-delimited input

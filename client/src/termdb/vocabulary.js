@@ -409,6 +409,11 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 				}
 			}
 			const t = terms[key]
+			if (!('id' in t)) t.id = key
+			if (!('parent_id' in t)) t.parent_id = null
+			if (!('values' in t)) t.values = {}
+			if (!('isleaf' in t)) t.isleaf = true
+
 			const value = a.s[key]
 			if (t.type == 'categorical') {
 				t.groupsetting = { disabled: true }
