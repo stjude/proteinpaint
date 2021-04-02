@@ -391,36 +391,42 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 
 		// generate term definitions from
 		for (const key in a.s) {
-			const value = isNaN(a.s[key]) ? a.s[key] : parseFloat(a.s[key])
 			if (!terms[key]) {
 				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
 				terms[key] = {
 					id: key,
 					name,
 					parent_id: null,
-					// type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
 					type:
 						sample_attributes[key].type == 'float'
 							? 'float'
 							: sample_attributes[key].type == 'integer'
 							? 'integer'
-							: 'categorical',
+							: // need to work with the cloud/PROPEL team to define type for legacy scatterplot usage
+							  'categorical',
 					values: {},
 					isleaf: true
 				}
 			}
 			const t = terms[key]
+			const value = a.s[key]
 			if (t.type == 'categorical') {
 				t.groupsetting = { disabled: true }
 				if (!(value in t.values)) {
 					t.values[value] = { key: value, label: value }
 				}
 			} else if (t.type == 'integer' || t.type == 'float') {
-				if (value != 'Not Available') {
-					if (!('min' in t) || value < t.min) t.min = value
-					if (!('max' in t) || value > t.max) t.max = value
-				} else if (!(value in t.values)) {
+				// may need to auto-detect more string values that
+				// can be assumed to be non-numeric here, like "N/A"
+				if (value === 'Not Available' && !(value in t.values)) {
 					t.values[value] = { label: value, uncomputable: true }
+				}
+				if (!(value in t.values)) {
+					if (!isNumeric(a.s[key])) throw `non-numeric term value='${value}' for term='${key}'`
+					a.s[key] = Number(a.s[key])
+					const val = a.s[key]
+					if (!('min' in t) || val < t.min) t.min = val
+					if (!('max' in t) || val > t.max) t.max = val
 				}
 			} else if (t.type == 'condition') {
 				//TODO: add logic for conditional terms

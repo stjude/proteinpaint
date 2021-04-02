@@ -229,27 +229,26 @@ function getCategoricalIdVal(d, term) {
 }
 
 function getNumericIdVal(d, term, q, rows) {
-	const ids = []
-	if (!('id' in term) || !(term.id in d)) return [ids, undefined]
+	if (!('id' in term) || !(term.id in d)) return [[], undefined]
 	if (!q.computed_bins) {
 		const summary = {}
 		rows.map(row => {
+			if (!isNumeric(row.data[term.id])) return
 			const v = +row.data[term.id]
-			if (!isNumeric(v)) return
 			if (!('min' in summary) || summary.min > v) summary.min = v
 			if (!('max' in summary) || summary.max < v) summary.max = v
 		})
 		q.computed_bins = compute_bins(q, percentiles => summary)
 		q.orderedLabels = q.computed_bins.map(d => d.label)
 	}
+	const v = d[term.id]
+	if (term.values && v in term.values && term.values[v].uncomputable) {
+		return [term.values[v].label, undefined]
+	}
+	// ignore non-numeric values like empty string, ""
+	// which may occur naturally in a csv/tab-delimited input
 	if (isNumeric(d[term.id])) {
-		const v = +d[term.id]
-		let isUncomputable = false
-		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
-			ids.push(term.values[v].label)
-			isUncomputable = true
-		}
-
+		const ids = []
 		for (const b of q.computed_bins) {
 			if (b.startunbounded) {
 				if (v < b.stop) ids.push(b.label)
@@ -265,17 +264,9 @@ function getNumericIdVal(d, term, q, rows) {
 			if (!b.stopinclusive && v >= b.stop) continue
 			ids.push(b.label)
 		}
-		return [ids, isUncomputable ? undefined : v]
-	} else if (isNaN(d[term.id])) {
-		const v = d[term.id]
-		// For custom termdb vocabulary where term.values(keys) are not always numeric
-		if (term.values && v in term.values && term.values[v].uncomputable) {
-			ids.push(term.values[v].label)
-		}
-		return [ids, undefined]
-	} else {
-		return [ids, undefined]
+		return [ids, v]
 	}
+	return [[], undefined]
 }
 
 function getUndefinedIdVal() {
