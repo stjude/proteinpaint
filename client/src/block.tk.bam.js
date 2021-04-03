@@ -827,14 +827,12 @@ if is pair mode, is the template
 		if (box.isfirst) lst.push('getfirst=1')
 		else if (box.islast) lst.push('getlast=1')
 	}
-	console.log('lst:', lst)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	wait.remove()
 	if (data.error) {
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
-	console.log('data.lst:', data.lst)
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -968,7 +966,7 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
 		if (repeat_file_present == 1) {
-			console.log('h.ref_in_repeat:', h.ref_in_repeat)
+			//console.log('h.ref_in_repeat:', h.ref_in_repeat)
 			tr.append('td').text(h.ref_in_repeat)
 		}
 

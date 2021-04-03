@@ -767,7 +767,6 @@ async function query_reads(q) {
 		}
 		await query_region(r, q) // add r.lines[]
 	}
-	console.log('Query regions')
 }
 
 async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
