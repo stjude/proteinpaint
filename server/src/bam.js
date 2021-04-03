@@ -224,17 +224,12 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			const q = await get_q(genome, req)
-			if (req.query.gdc) {
-				q.gdc_token = req.query.gdc.split(',')[0]
-				q.gdc_case_id = req.query.gdc.split(',')[1]
-				q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
-			}
-
 			if (req.query.getread) {
 				res.send(await route_getread(genome, req))
 				return
 			}
+
+			const q = await get_q(genome, req)
 			res.send(await do_query(q))
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -563,6 +558,11 @@ async function get_q(genome, req) {
 	if (isurl) {
 		q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
 	}
+	if (req.query.gdc) {
+		q.gdc_token = req.query.gdc.split(',')[0]
+		q.gdc_case_id = req.query.gdc.split(',')[1]
+		q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
+	}
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
@@ -603,13 +603,15 @@ async function get_q(genome, req) {
 		q.grouptype = req.query.grouptype
 	}
 
-	if (req.query.nochr) {
+	if (req.query.gdc) {
+	} else if (req.query.nochr) {
 		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
 	} else {
 		// info not provided
 		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
 	}
 	if (!req.query.regions) throw '.regions[] missing'
+	console.log('req.query.regions:', req.query.regions)
 	q.regions = JSON.parse(req.query.regions)
 
 	let maxntwidth = 0
@@ -750,7 +752,7 @@ async function query_reads(q) {
 			stop: q.variant.pos + q.variant.ref.length
 		}
 		if (q.gdc_case_id) {
-			await get_gdc_bam(r, q)
+			await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
 		}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
@@ -761,29 +763,23 @@ async function query_reads(q) {
 	}
 	for (const r of q.regions) {
 		if (q.gdc_case_id) {
-			await get_gdc_bam(r, q)
+			await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
 		}
 		await query_region(r, q) // add r.lines[]
 	}
+	console.log('Query regions')
 }
 
-async function get_gdc_bam(r, q) {
+async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
+	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = q.gdc_token
+	headers['X-Auth-Token'] = gdc_token
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url =
-		'https://api.gdc.cancer.gov/slicing/view/' +
-		q.gdc_case_id +
-		'?region=chr' +
-		(q.nochr ? r.chr.replace('chr', '') : r.chr) +
-		':' +
-		r.start +
-		'-' +
-		r.stop
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdc_case_id + '?region=' + chr + ':' + start + '-' + stop
 	console.log(url)
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(q.file))
-		console.log('Downloaded ' + q.file.toString())
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
+		console.log('Downloaded ' + bam_file_name.toString())
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
@@ -1924,11 +1920,23 @@ async function query_oneread(req, r) {
 	const dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	//const pos = Number(req.query.pos)
 	//if (!Number.isInteger(pos)) throw '.pos not integer'
-	let firstseg, lastseg
+	let firstseg, lastseg, temp_bam_file
+
+	if (req.query.gdc) {
+		temp_bam_file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
+		await get_gdc_bam(
+			req.query.chr,
+			req.query.viewstart,
+			req.query.viewstop,
+			req.query.gdc.split(',')[0],
+			req.query.gdc.split(',')[1],
+			temp_bam_file
+		)
+	}
 	return new Promise((resolve, reject) => {
-		let ps = ''
+		let ps
 		if (req.query.gdc) {
-			ps = spawn(samtools, ['view', _file], { cwd: dir })
+			ps = spawn(samtools, ['view', temp_bam_file], { cwd: dir })
 		} else {
 			ps = spawn(
 				samtools,
@@ -1971,6 +1979,16 @@ async function query_oneread(req, r) {
 		rl.on('close', () => {
 			// finished reading and still not resolved
 			// means it is in paired mode but read is single
+
+			if (req.query.gdc) {
+				// Deleting temporary gdc bam file
+				fs.unlink(temp_bam_file, err => {
+					if (err) console.log(err)
+					else {
+						console.log('Deleted file: ' + temp_bam_file.toString())
+					}
+				})
+			}
 			const lst = []
 			if (firstseg) lst.push(firstseg)
 			if (lastseg) lst.push(lastseg)

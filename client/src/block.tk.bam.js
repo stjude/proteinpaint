@@ -818,12 +818,16 @@ if is pair mode, is the template
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+	if (tk.gdc) {
+		lst.push('gdc=' + tk.gdc)
+	}
 	if (tk.asPaired) {
 		lst.push('getpair=1')
 	} else {
 		if (box.isfirst) lst.push('getfirst=1')
 		else if (box.islast) lst.push('getlast=1')
 	}
+	console.log('lst:', lst)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	wait.remove()
 	if (data.error) {
