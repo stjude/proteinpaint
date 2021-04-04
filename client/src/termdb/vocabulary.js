@@ -3,6 +3,7 @@ import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
+import { sample_match_termvaluesetting } from '../common/termutils'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -321,7 +322,16 @@ class FrontendVocab {
 		let minvalue,
 			maxvalue,
 			samplecount = 0
-		for (const sample in this.vocab.sampleannotation) {
+		let samples = {}
+		for (const anno of this.datarows) {
+			if (samples[anno.sample]) continue
+			const data = anno.s || anno.data
+			if (data && sample_match_termvaluesetting(data, filter)) {
+				samples[anno.sample] = this.vocab.sampleannotation[anno.sample]
+			}
+		}
+
+		for (const sample in samples) {
 			if (!(term_id in this.vocab.sampleannotation[sample])) continue
 			const _v = this.vocab.sampleannotation[sample][term_id]
 			if (isNumeric(_v)) {
