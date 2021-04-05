@@ -359,7 +359,7 @@ class FrontendVocab {
 
 		return {
 			density,
-			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), undefined),
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
 			minvalue,
 			maxvalue,
 			samplecount
