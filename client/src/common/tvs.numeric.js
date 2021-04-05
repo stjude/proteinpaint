@@ -318,8 +318,8 @@ export function getNumericMethods(self) {
 				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 			})
 
-		const brush_start = range.startunbounded ? Number(minvalue) : +range.start
-		const brush_stop = range.stopunbounded ? Number(maxvalue) : +range.stop
+		const brush_start = range.startunbounded ? minvalue : range.start
+		const brush_stop = range.stopunbounded ? maxvalue : range.stop
 		brush.init = () => {
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
 		}
