@@ -181,6 +181,7 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
+	const browser_row = app.holder.append('div')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -302,9 +303,11 @@ function makeheader(app, obj, jwt) {
 			.property('value', n)
 	}
 	//Holds element in a consistent location
+	let genome_browser_btn, g_browser_btn_active = false, g_browser_loaded = false
+	let browser_header, browser_body
 	const genome_btn_div = headbox.append('span')
 	const selected_genome = selectgenome.node().value
-	const genome_browser_btn = make_genome_browser_btn(selected_genome)
+	genome_browser_btn = make_genome_browser_btn(selected_genome)
 
 	//Launch genome browser button in headbox
 	function make_genome_browser_btn(genomename) {
@@ -319,33 +322,104 @@ function makeheader(app, obj, jwt) {
 			.text(d => d + ' Genome Browser')
 			.on('click', (d) => {
 				apps_off()
-				const g = app.genomes[d]
-				if (!g) {
-					alert('Invalid genome name: ' + d)
-					return
+				g_browser_btn_active = !g_browser_btn_active
+				btn_toggle(genome_browser_btn, g_browser_btn_active)
+				if(browser_header !== undefined && !browser_header.text().includes(d)){
+					g_browser_loaded = false
 				}
-				//TODO change from pop out pane to new div in the page
-				const p = genome_btn_div.node().getBoundingClientRect()
-				const pane = client.newpane({ x: p.left, y: p.top + p.height + 10 })
-				pane.header.text(d + ' genome browser')
-
-				const par = {
-					hostURL: app.hostURL,
-					jwt: jwt,
-					holder: pane.body,
-					genome: g,
-					chr: g.defaultcoord.chr,
-					start: g.defaultcoord.start,
-					stop: g.defaultcoord.stop,
-					nobox: true,
-					tklst: [],
-					debugmode: app.debugmode
+				if(g_browser_btn_active && !g_browser_loaded){
+					[browser_header, browser_body] = make_browser_div()
 				}
-				client.first_genetrack_tolist(g, par.tklst)
+				genome_browser_toggle()
 
-				import('./block').then(b => new b.Block(par))
+				// load genome browser only once
+				if(g_browser_btn_active && !g_browser_loaded){
+					const g = app.genomes[d]
+					if (!g) {
+						alert('Invalid genome name: ' + d)
+						return
+					}
+
+					browser_header
+						.text(d + ' genome browser')
+					// browser_body.selectAll('*').remove()
+	
+					const par = {
+						hostURL: app.hostURL,
+						jwt: jwt,
+						holder: browser_body,
+						genome: g,
+						chr: g.defaultcoord.chr,
+						start: g.defaultcoord.start,
+						stop: g.defaultcoord.stop,
+						nobox: true,
+						tklst: [],
+						debugmode: app.debugmode
+					}
+					client.first_genetrack_tolist(g, par.tklst)
+	
+					import('./block').then(b => new b.Block(par))
+					g_browser_loaded = true
+				}
 			})
 		return g_browser_btn
+	}
+
+	function make_browser_div(){
+		const header_row = browser_row
+			.append('div')
+			.style('display', g_browser_btn_active ? 'inline-block' : 'none')
+			.style('margin', '10px')
+			.style('padding-right', '10px')
+			.style('margin-bottom', '0px')
+			.style('border', 'solid 1px #f2f2f2')
+			.style('border-radius', '5px 5px 0 0')
+			.style('background-color', '#f2f2f2')
+			.style('width', '95vw')
+
+		const close_btn = header_row
+			.append('div')
+			.style('display', 'inline-block')
+			.attr('class', 'sja_menuoption')
+			.style('cursor', 'default')
+			.style('padding', '4px 10px')
+			.style('margin', '0px')
+			.style('border-right', 'solid 2px white')
+			.style('font-size', '1.5em')
+			.html('&times;')
+			.on('mousedown', () => {
+				document.body.dispatchEvent(new Event('mousedown'))
+				d3event.stopPropagation()
+			})
+			.on('click',()=>{
+				g_browser_btn_active = false
+				genome_browser_toggle()
+				btn_toggle(genome_browser_btn, g_browser_btn_active)
+			})
+
+		const header = header_row
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '5px 10px')
+
+		const browser_body = browser_row
+			.append('div')
+			.style('margin', '10px')
+			.style('margin-top', '0px')
+			.style('padding-right', '8px')
+			.style('display', 'inline-block')
+			.style('display', g_browser_btn_active ? 'inline-block' : 'none')
+			.style('border', 'solid 2px #f2f2f2')
+			.style('border-top', 'solid 1px white')
+			.style('border-radius', '0  0 5px 5px')
+			.style('width', '95vw')
+
+		return [header, browser_body]
+	}
+
+	function genome_browser_toggle(){
+		d3select(browser_header.node().parentNode).style('display', g_browser_btn_active ? 'inline-block' : 'none')
+		browser_body.style('display', g_browser_btn_active ? 'inline-block' : 'none')
 	}
 
 	//Hides app_div and toggles app_btn off
@@ -353,7 +427,7 @@ function makeheader(app, obj, jwt) {
 		app_btn_active = false
 		if (app_holder !== undefined) {
 			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-			app_btn_toggle()
+			btn_toggle(app_btn, app_btn_active)
 		}
 	}
 
@@ -407,7 +481,7 @@ function makeheader(app, obj, jwt) {
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				app_btn_toggle()
+				btn_toggle(app_btn, app_btn_active)
 
 				app_holder
 					.transition()
@@ -422,13 +496,13 @@ function makeheader(app, obj, jwt) {
 			})
 	}
 
-	function app_btn_toggle() {
-		app_btn
+	function btn_toggle(btn, btn_active) {
+		btn
 			.transition()
 			.duration(500)
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right', btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom', btn_active ? 'solid 1px #c2c2c2' : '')
 	}
 
 	headbox
