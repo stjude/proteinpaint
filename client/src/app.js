@@ -152,15 +152,15 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			let selectgenome // the <select> genome, should belong to this particular launch
+			let selectgenome, genome_browser_btn // the <select> genome, should belong to this particular launch
 
 			if (!arg.noheader) {
-				selectgenome = makeheader(app, data, arg.jwt)
+				[selectgenome, genome_browser_btn] = makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app, selectgenome)
+			return parseembedthenurl(arg, app, selectgenome, genome_browser_btn)
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -280,16 +280,19 @@ function makeheader(app, obj, jwt) {
 		})
 	input.node().focus()
 
-	const selectgenome = headbox
+	const genome_select_div = headbox
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', padw)
 		.style('padding-left', '5px')
+
+	const selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
-			make_genome_browser_btn(gb_div)
+			const genomename = selectgenome.node().value
+			make_genome_browser_btn(genomename)
 		})
 	for (const n in app.genomes) {
 		selectgenome
@@ -299,32 +302,32 @@ function makeheader(app, obj, jwt) {
 			.property('value', n)
 	}
 	//Holds element in a consistent location
-	const gb_div = headbox.append('span')
-	make_genome_browser_btn(gb_div)
+	const genome_btn_div = headbox.append('span')
+	const selected_genome = selectgenome.node().value
+	const genome_browser_btn = make_genome_browser_btn(selected_genome)
 
 	//Launch genome browser button in headbox
-	async function make_genome_browser_btn(div) {
-		div.selectAll('#genome_btn').remove()
-		const ss = selectgenome.node()
-		const genomename = ss.options[ss.selectedIndex].value
+	function make_genome_browser_btn(genomename) {
+		genome_btn_div.selectAll('#genome_btn').remove()
 
-		const genome_browser_btn = div
+		const g_browser_btn = genome_btn_div
 			.attr('class', 'sja_menuoption')
 			.attr('id', 'genome_btn')
 			.style('padding', padw)
 			.style('border-radius', '5px')
-			.text(genomename + ' Genome Browser')
-			.on('click', () => {
+			.datum(genomename)
+			.text(d => d + ' Genome Browser')
+			.on('click', (d) => {
 				apps_off()
-				const g = app.genomes[genomename]
+				const g = app.genomes[d]
 				if (!g) {
-					alert('Invalid genome name: ' + genomename)
+					alert('Invalid genome name: ' + d)
 					return
 				}
 				//TODO change from pop out pane to new div in the page
-				const p = div.node().getBoundingClientRect()
+				const p = genome_btn_div.node().getBoundingClientRect()
 				const pane = client.newpane({ x: p.left, y: p.top + p.height + 10 })
-				pane.header.text(genomename + ' genome browser')
+				pane.header.text(d + ' genome browser')
 
 				const par = {
 					hostURL: app.hostURL,
@@ -342,7 +345,7 @@ function makeheader(app, obj, jwt) {
 
 				import('./block').then(b => new b.Block(par))
 			})
-		return genome_browser_btn
+		return g_browser_btn
 	}
 
 	//Hides app_div and toggles app_btn off
@@ -466,7 +469,7 @@ function makeheader(app, obj, jwt) {
 				.html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
 		})
 
-	return selectgenome
+	return [selectgenome, genome_browser_btn]
 }
 
 async function launchApps(app) {
@@ -797,7 +800,7 @@ function studyui(app, x, y) {
 	}
 }
 
-async function parseembedthenurl(arg, app, selectgenome) {
+async function parseembedthenurl(arg, app, selectgenome, genome_browser_btn) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -922,6 +925,7 @@ async function parseembedthenurl(arg, app, selectgenome) {
 			samplecart: app.samplecart,
 			holder: app.holder,
 			selectgenome: selectgenome,
+			genome_browser_btn,
 			debugmode: app.debugmode
 		})
 		if (err) {

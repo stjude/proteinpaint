@@ -59,12 +59,14 @@ arg
 
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
-		for (let i = 0; i < arg.selectgenome.node().childNodes.length; i++) {
-			if (arg.selectgenome.node().childNodes[i].value == n) {
-				arg.selectgenome.property('selectedIndex', i)
-				break
+		arg.selectgenome.node().childNodes.forEach( genome_opt => {
+			if (genome_opt.value == n) {
+				arg.selectgenome.property('value', genome_opt.value)
+				arg.genome_browser_btn
+					.datum(n)
+					.text(n + ' Genome Browser')
 			}
-		}
+		})
 	}
 
 	if (urlp.has('hicfile') || urlp.has('hicurl')) {
