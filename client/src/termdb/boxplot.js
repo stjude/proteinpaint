@@ -38,6 +38,8 @@ class TdbBoxplot {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('boxplot'),
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term2: config.term2,

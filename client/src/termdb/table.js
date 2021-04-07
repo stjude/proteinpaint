@@ -24,6 +24,8 @@ class TdbTable {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('table'),
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term2: config.term2,
