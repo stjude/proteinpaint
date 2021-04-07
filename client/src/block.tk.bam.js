@@ -174,13 +174,20 @@ async function getData(tk, block, additional = []) {
 		lst2.push('gdc=' + tk.gdc)
 	}
 	let gdc_bam_files
+	let orig_regions = []
 	if (tk.downloadgdc) {
 		lst2.push('downloadgdc=' + tk.downloadgdc)
 		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'))
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		delete tk.downloadgdc, lst2
+		for (const r of tk.regions) {
+			orig_regions.push(r)
+		}
+		tk.orig_regions = orig_regions
 	}
+
+	//delete orig_regions
 
 	if (tk.file) lst.push('file=' + tk.file)
 
@@ -228,6 +235,10 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_shown = false
 	}
 
+	if (tk.gdc) {
+		tk.dom.gdc = tk.glider.append('g')
+		may_render_gdc(data, tk, block)
+	}
 	may_render_variant(data, tk, block)
 
 	if (!tk.groups) {
@@ -261,6 +272,61 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
+function may_render_gdc(data, tk, block) {
+	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
+	// in tk.dom.variantg, indicate location and status of the variant
+	// TODO show variant info alongside box, when box is wide enough, show
+	tk.dom.gdc.selectAll('*').remove()
+	console.log('orig_regions:', tk.orig_regions)
+	let x1, x2 // on screen pixel start/stop of the variant box
+	{
+		// Currently this supports only single-region. In the future, multiregion support will be added.
+		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].start)
+		if (hits) {
+			x1 = hits[0].x - block.exonsf / 2
+		}
+	}
+	{
+		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].stop)
+		if (hits) {
+			x2 = hits[0].x - block.exonsf / 2
+		}
+	}
+	if (x1 >= block.width || x2 <= 0) {
+		// gdc viewrange is out of range, do not show
+		return
+	}
+
+	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+
+	// will render gdc region box in a row
+	tk.dom.gdc
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', yoff)
+		.attr('width', x2 - x1)
+		.attr('height', tk.dom.gdcrowheight - 2)
+
+	const gdc_string = 'Query region'
+	// Determining where to place the text. Before, inside or after the box
+	let gdc_start_text_pos = 0
+	const space_param = 10
+	const pad_param = 15
+	if (gdc_string.length * space_param < x1) {
+		gdc_start_text_pos = 0
+	} else {
+		gdc_start_text_pos = x2 + pad_param
+	}
+
+	tk.dom.gdc
+		.append('text')
+		.attr('x', gdc_start_text_pos)
+		.attr('y', yoff + tk.dom.gdcrowheight)
+		//.attr('dy', '.10em')
+		.attr('font-size', tk.dom.gdcrowheight)
+		.text(gdc_string)
+}
+
 function may_render_variant(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.variantg, indicate location and status of the variant
@@ -285,7 +351,12 @@ function may_render_variant(data, tk, block) {
 		return
 	}
 
-	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	let yoff
+	if (tk.gdc) {
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
+	} else {
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	}
 
 	// will render variant in a row
 	tk.dom.variantg
@@ -347,6 +418,9 @@ function setTkHeight(tk, data) {
 	// call after any group is updated
 	let h = 0
 	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
+	if (tk.gdc) {
+		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	}
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
@@ -418,7 +492,7 @@ function update_box_stay(group, tk, block) {
 
 function makeTk(tk, block) {
 	may_add_urlparameter(tk)
-
+	console.log('tk:', tk)
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
@@ -444,6 +518,11 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
+	}
+	if (tk.gdc) {
+		tk.dom.gdc_bar = tk.glider.append('g')
+		tk.dom.gdcrowheight = 15
+		tk.dom.gdcrowbottompad = 5
 	}
 	tk.asPaired = false
 
