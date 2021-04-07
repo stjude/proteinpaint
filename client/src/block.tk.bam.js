@@ -144,18 +144,46 @@ async function getData(tk, block, additional = []) {
 		'pileupheight=' + tk.pileupheight,
 		...additional
 	]
+	const lst2 = [
+		'genome=' + block.genome.name,
+		'regions=' + JSON.stringify(tk.regions),
+		'nucleotide_length=' + block.exonsf,
+		'pileupheight=' + tk.pileupheight,
+		...additional
+	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst2.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
+		lst2.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
-	if (tk.asPaired) lst.push('asPaired=1')
-	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
+	if (tk.asPaired) {
+		lst.push('asPaired=1')
+		lst2.push('asPaired=1')
+	}
+	if ('nochr' in tk) {
+		lst.push('nochr=' + tk.nochr)
+		lst2.push('nochr=' + tk.nochr)
+	}
 
-	if (tk.gdc) lst.push('gdc=' + tk.gdc)
+	if (tk.gdc) {
+		lst.push('gdc=' + tk.gdc)
+		lst2.push('gdc=' + tk.gdc)
+	}
+	let gdc_bam_files
+	if (tk.downloadgdc) {
+		lst2.push('downloadgdc=' + tk.downloadgdc)
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'))
+		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
+		if (gdc_bam_files.error) throw gdc_bam_files.error
+		delete tk.downloadgdc, lst2
+	}
+
 	if (tk.file) lst.push('file=' + tk.file)
+
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
@@ -460,6 +488,7 @@ function may_add_urlparameter(tk) {
 			console.log('Both gdc token and gdc case id must be present')
 		} else {
 			tk.gdc = str
+			tk.downloadgdc = 'TRUE'
 		}
 	}
 }
