@@ -804,6 +804,8 @@ tape('Conditional term', async test => {
 })
 
 tape('Custom vocabulary', async test => {
+	test.timeoutAfter(5000)
+	test.plan(6)
 	const vocab = vocabData.getExample()
 	const opts = getOpts(
 		{
@@ -861,18 +863,6 @@ tape('Custom vocabulary', async test => {
 		'DDD',
 		`should change the termsetting pill label to '${vocab.terms.find(d => d.id === 'd').name}'`
 	)
-
-	pilldiv1.click()
-	await sleep(50)
-	const editBtn = tipd
-		.selectAll('.sja_menuoption')
-		.filter(function() {
-			return this.innerText.toLowerCase() == 'edit'
-		})
-		.node()
-		.click()
-
-	//test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
