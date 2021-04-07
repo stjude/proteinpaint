@@ -373,7 +373,6 @@ function menuoption_listsamples(self, tvslst) {
 	///////////// quick fix to delete term.values{} from stringified filter to reduce url length
 	normalizeProps(filterRoot, f => {
 		delete f.tag
-		console.log(f)
 		if (f.type == 'tvs' && f.tvs && f.tvs.term) delete f.tvs.term.values
 	})
 	const arg = [
