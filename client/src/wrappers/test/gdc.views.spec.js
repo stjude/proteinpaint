@@ -38,7 +38,7 @@ tape('lolliplot using URL', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 274
+	const numCircles = 283
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,
@@ -98,7 +98,7 @@ tape('lolliplot using props', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 274
+	const numCircles = 283
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,
