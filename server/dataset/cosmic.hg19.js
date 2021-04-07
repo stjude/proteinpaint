@@ -23,10 +23,17 @@ module.exports = function(common) {
 		genome: 'hg19',
 		color: '#074987',
 		cohort: {
-			levels: [{ label: 'Primary site', k: 'primarysite' }]
+			levels: [
+				{ label: 'Primary histology', k: 'primaryhistology' },
+				{ label: 'Histology subtype', k: 'histologysubtype1' }
+				// { label: 'Primary site', k: 'primarysite' } // old setting
+			]
 		},
 		dbfile: 'anno/db/cosmic.hg19.db',
-		stratify: [{ label: 'tissue type', bycohort: true }],
+		stratify: [
+			{ label: 'histology type', bycohort: true }
+			// { label: 'tissue type', bycohort: true } // old setting
+		],
 		queries: [
 			{
 				name: 'cosmic snv/indel',
