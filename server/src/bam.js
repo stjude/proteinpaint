@@ -266,8 +266,7 @@ async function download_gdc_bam(req) {
 	for (const r of JSON.parse(req.query.regions)) {
 		const gdc_token = req.query.gdc.split(',')[0]
 		const gdc_case_id = req.query.gdc.split(',')[1]
-		const secret = 'This is my local iMac installation' // This string needs to be defined in serverconfig.json and NOT in source code for security reasons !!
-		const md5Hasher = crypto.createHmac('md5', secret)
+		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		console.log('gdc_token_hash:', gdc_token_hash)
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
