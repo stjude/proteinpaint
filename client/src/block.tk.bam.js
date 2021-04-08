@@ -274,10 +274,9 @@ or update existing groups, in which groupidx will be provided
 
 function may_render_gdc(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
-	// in tk.dom.variantg, indicate location and status of the variant
+	// in tk.dom.gdc, indicate location and status of the variant
 	// TODO show variant info alongside box, when box is wide enough, show
 	tk.dom.gdc.selectAll('*').remove()
-	console.log('orig_regions:', tk.orig_regions)
 	let x1, x2 // on screen pixel start/stop of the variant box
 	{
 		// Currently this supports only single-region. In the future, multiregion support will be added.
@@ -492,7 +491,6 @@ function update_box_stay(group, tk, block) {
 
 function makeTk(tk, block) {
 	may_add_urlparameter(tk)
-	console.log('tk:', tk)
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)

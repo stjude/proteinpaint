@@ -1,5 +1,6 @@
 const app = require('./app')
 const stream = require('stream')
+const crypto = require('crypto')
 const { promisify } = require('util')
 const got = require('got')
 const pipeline = promisify(stream.pipeline)
@@ -224,16 +225,26 @@ module.exports = genomes => {
 			if (req.query.downloadgdc) {
 				let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 				for (const r of JSON.parse(req.query.regions)) {
-					const gdc_bam_filename = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
+					const gdc_token = req.query.gdc.split(',')[0]
+					const gdc_case_id = req.query.gdc.split(',')[1]
+					const secret = 'This is my local iMac installation' // This string needs to be defined in serverconfig.json and NOT in source code for security reasons !!
+					const md5Hasher = crypto.createHmac('md5', secret)
+					const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
+					console.log('gdc_token_hash:', gdc_token_hash)
+					const dir = serverconfig.cachedir + '/' + gdc_token_hash
+					if (!fs.existsSync(dir)) {
+						// Check if directory exists, if not create one
+						console.log('Directory does not exist')
+						fs.mkdir(dir, err => {
+							if (err) {
+								throw err
+							}
+							console.log('Directory is created.')
+						})
+					}
+					const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
 					// Need to make directory for each user using token
-					await get_gdc_bam(
-						r.chr,
-						r.start,
-						r.stop,
-						req.query.gdc.split(',')[0],
-						req.query.gdc.split(',')[1],
-						gdc_bam_filename
-					)
+					await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_case_id, gdc_bam_filename)
 					gdc_bam_filenames.push(gdc_bam_filename)
 				}
 				res.send(gdc_bam_filenames)
