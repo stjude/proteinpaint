@@ -281,12 +281,14 @@ function may_render_gdc(data, tk, block) {
 	{
 		// Currently this supports only single-region. In the future, multiregion support will be added.
 		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].start)
+		if (hits.length == 0) return
 		if (hits) {
 			x1 = hits[0].x - block.exonsf / 2
 		}
 	}
 	{
 		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].stop)
+		if (hits.length == 0) return
 		if (hits) {
 			x2 = hits[0].x - block.exonsf / 2
 		}
