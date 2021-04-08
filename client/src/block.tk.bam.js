@@ -185,6 +185,7 @@ async function getData(tk, block, additional = []) {
 			orig_regions.push(r)
 		}
 		tk.orig_regions = orig_regions
+		tk.dom.gdc = tk.glider.append('g')
 	}
 
 	//delete orig_regions
@@ -236,7 +237,6 @@ or update existing groups, in which groupidx will be provided
 	}
 
 	if (tk.gdc) {
-		tk.dom.gdc = tk.glider.append('g')
 		may_render_gdc(data, tk, block)
 	}
 	may_render_variant(data, tk, block)
