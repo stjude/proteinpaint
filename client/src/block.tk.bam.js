@@ -12,6 +12,8 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk.groups[]
+tk.downloadgdc // Downloads bam file from gdc
+tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
 tk.pileupheight
@@ -36,6 +38,9 @@ group {}
 	.variantg <g>
 	.variantrowheight
 	.variantrowbottompad
+        .gdc
+        .gdcrowheight
+        .gdcrowbottompad
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
