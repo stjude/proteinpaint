@@ -155,7 +155,7 @@ export function runproteinpaint(arg) {
 			let selectgenome, genome_browser_btn // the <select> genome, should belong to this particular launch
 
 			if (!arg.noheader) {
-				[selectgenome, genome_browser_btn] = makeheader(app, data, arg.jwt)
+				;[selectgenome, genome_browser_btn] = makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
@@ -181,7 +181,7 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
-	const browser_row = app.holder.append('div')
+	const browsers_row = app.holder.append('div')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -303,8 +303,7 @@ function makeheader(app, obj, jwt) {
 			.property('value', n)
 	}
 	//Holds element in a consistent location
-	let genome_browser_btn, g_browser_btn_active = false, g_browser_loaded = false
-	let browser_header, browser_body
+	let genome_browser_btn
 	const genome_btn_div = headbox.append('span')
 	const selected_genome = selectgenome.node().value
 	genome_browser_btn = make_genome_browser_btn(selected_genome)
@@ -320,55 +319,43 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.datum(genomename)
 			.text(d => d + ' Genome Browser')
-			.on('click', (d) => {
-				apps_off()
-				g_browser_btn_active = !g_browser_btn_active
-				btn_toggle(genome_browser_btn, g_browser_btn_active)
-				if(browser_header !== undefined && !browser_header.text().includes(d)){
-					g_browser_loaded = false
-				}
-				if(g_browser_btn_active && !g_browser_loaded){
-					[browser_header, browser_body] = make_browser_div()
-				}
-				genome_browser_toggle()
+			.on('click', d => {
+				let [browser_header, browser_body] = make_browser_div()
 
 				// load genome browser only once
-				if(g_browser_btn_active && !g_browser_loaded){
-					const g = app.genomes[d]
-					if (!g) {
-						alert('Invalid genome name: ' + d)
-						return
-					}
-
-					browser_header
-						.text(d + ' genome browser')
-					// browser_body.selectAll('*').remove()
-	
-					const par = {
-						hostURL: app.hostURL,
-						jwt: jwt,
-						holder: browser_body,
-						genome: g,
-						chr: g.defaultcoord.chr,
-						start: g.defaultcoord.start,
-						stop: g.defaultcoord.stop,
-						nobox: true,
-						tklst: [],
-						debugmode: app.debugmode
-					}
-					client.first_genetrack_tolist(g, par.tklst)
-	
-					import('./block').then(b => new b.Block(par))
-					g_browser_loaded = true
+				const g = app.genomes[d]
+				if (!g) {
+					alert('Invalid genome name: ' + d)
+					return
 				}
+
+				browser_header.text(d + ' genome browser')
+
+				const par = {
+					hostURL: app.hostURL,
+					jwt: jwt,
+					holder: browser_body,
+					genome: g,
+					chr: g.defaultcoord.chr,
+					start: g.defaultcoord.start,
+					stop: g.defaultcoord.stop,
+					nobox: true,
+					tklst: [],
+					debugmode: app.debugmode
+				}
+				client.first_genetrack_tolist(g, par.tklst)
+
+				import('./block').then(b => new b.Block(par))
+				apps_off()
 			})
 		return g_browser_btn
 	}
 
-	function make_browser_div(){
-		const header_row = browser_row
+	function make_browser_div() {
+		const genome_browser_div = browsers_row.insert('div', ':first-child')
+		const header_row = genome_browser_div
 			.append('div')
-			.style('display', g_browser_btn_active ? 'inline-block' : 'none')
+			.style('display', 'inline-block')
 			.style('margin', '10px')
 			.style('padding-right', '10px')
 			.style('margin-bottom', '0px')
@@ -377,7 +364,8 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', '#f2f2f2')
 			.style('width', '95vw')
 
-		const close_btn = header_row
+		// close_btn
+		header_row
 			.append('div')
 			.style('display', 'inline-block')
 			.attr('class', 'sja_menuoption')
@@ -391,10 +379,8 @@ function makeheader(app, obj, jwt) {
 				document.body.dispatchEvent(new Event('mousedown'))
 				d3event.stopPropagation()
 			})
-			.on('click',()=>{
-				g_browser_btn_active = false
-				genome_browser_toggle()
-				btn_toggle(genome_browser_btn, g_browser_btn_active)
+			.on('click', () => {
+				genome_browser_div.selectAll('*').remove()
 			})
 
 		const header = header_row
@@ -402,24 +388,19 @@ function makeheader(app, obj, jwt) {
 			.style('display', 'inline-block')
 			.style('padding', '5px 10px')
 
-		const browser_body = browser_row
+		const browser_body = genome_browser_div
 			.append('div')
 			.style('margin', '10px')
 			.style('margin-top', '0px')
 			.style('padding-right', '8px')
 			.style('display', 'inline-block')
-			.style('display', g_browser_btn_active ? 'inline-block' : 'none')
+			.style('display', 'inline-block')
 			.style('border', 'solid 2px #f2f2f2')
 			.style('border-top', 'solid 1px white')
 			.style('border-radius', '0  0 5px 5px')
 			.style('width', '95vw')
 
 		return [header, browser_body]
-	}
-
-	function genome_browser_toggle(){
-		d3select(browser_header.node().parentNode).style('display', g_browser_btn_active ? 'inline-block' : 'none')
-		browser_body.style('display', g_browser_btn_active ? 'inline-block' : 'none')
 	}
 
 	//Hides app_div and toggles app_btn off
