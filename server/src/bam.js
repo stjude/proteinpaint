@@ -225,7 +225,7 @@ module.exports = genomes => {
 		app.log(req)
 		try {
 			if (req.query.downloadgdc) {
-				let gdc_bam_filenames = await download_gdc_bam(req)
+				const gdc_bam_filenames = await download_gdc_bam(req)
 				res.send(gdc_bam_filenames)
 				return
 			}
