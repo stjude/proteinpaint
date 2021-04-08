@@ -1,9 +1,32 @@
 /*
+input:
+1. list of leaf nodes, e.g. mutation cases, each with a set of key-value pairs
+2. levels of hierarchy in an ordered list
+   each item: { k, full }
+   "k" and "full" are two attribute keys
 
-given a list of leaf nodes, each with annotation for k1, k2,...
-and levels of hierarchy in an ordered list of [ k1, k2, ... ]
-derive the sort of output for d3-hierarchy.stratify
+output:
+a list of items, as input for d3-hierarchy.stratify
+one item for each child-parent relationship in the hierarchy
+{
+	id:
+	parentId:
+	lst:
+	value:
+	name:
+	full:
+	id0:
+	v0:
+	id1:
+	v1:
+	id2:
+	v2:
+}
 
+strange issue: https://github.com/stjude/proteinpaint/commit/c36004d47d4374d2ade719c6ef9e2b848f0850dc
+using Map for lp, nodes etc will cause memory issue, thus the use of simple objects
+
+to-do: verify this works after a reorg
 */
 
 const hardcode_root = 'root'
@@ -28,11 +51,16 @@ export function stratinput(lst, levels) {
 	// only increment size to leaf nodes, so that root.sum() will work
 	// k: string id of a node, e.g. HM...BALL
 	// v: number of items
+
 	for (const m of lst) {
 		for (const [i, lev] of levels.entries()) {
 			const thisv = getkey(m, i, levels)
 			const pav = getkey(m, i - 1, levels)
-			if (!(lev.k in m)) {
+
+			// as mutations can come as {"subtype":""}
+			// in the sunburst chart at the subtype level, this mutation should not be counted
+			// thus the test with !m[lev.k] rather than !(lev.k in m)
+			if (!m[lev.k]) {
 				// stop at this level
 				// add count to prev level
 				if (i > 0) {
@@ -40,6 +68,7 @@ export function stratinput(lst, levels) {
 				}
 				break
 			}
+
 			lp[thisv] = pav
 			if (!(thisv in size)) {
 				size[thisv] = 0

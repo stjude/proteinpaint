@@ -151,7 +151,9 @@ export async function init(obj, holder, debugmode) {
 			if (!found_flag) {
 				vals.forEach(v => {
 					if (v && typeof v == 'object') {
-						const obj_vals = Object.values(v).map(x => x.toLowerCase())
+						const obj_vals = Object.values(v)
+							.filter(a => a != null && typeof a != 'number')
+							.map(x => x.toLowerCase())
 						obj_vals.forEach(ov => {
 							if (ov.toLowerCase().includes(str)) return (found_flag = true)
 						})
@@ -161,7 +163,12 @@ export async function init(obj, holder, debugmode) {
 			return found_flag
 		}
 	}
-	obj.legendtable = tr1td2.append('table').style('border-spacing', '5px')
+	const legend_div = tr1td2
+		.append('div')
+		.style('overflow-x', 'hidden')
+		.style('overflow-y', 'auto')
+		.style('height', '100vh')
+	obj.legendtable = legend_div.append('table').style('border-spacing', '5px')
 	obj.filterDiv = tr1td1.append('div').style('position', 'relative')
 
 	const scatterdiv = tr1td1.append('div').style('position', 'relative')
@@ -650,7 +657,7 @@ function init_plot(obj) {
 		}
 		//circles.attr('r',radius)
 		currBbox = rootholder.getBoundingClientRect()
-		if (obj.userlabel_grp) {
+		if (obj.userlabel_grp && userlabelg && userlabelg.size()) {
 			uncollide(userlabelg, { waitTime: 0, nameKey: 'sample' })
 		}
 	}

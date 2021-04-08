@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu, newpane, get_one_genome, dofetch3, export_data } from '../client'
-import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId } from '../common/filter'
+import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../common/filter'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -360,18 +360,21 @@ function wrapTvs(tvs) {
 /* 			TODO: add to cart and gp          */
 
 function menuoption_listsamples(self, tvslst) {
-	const filterRoot = getNormalRoot(self.state.termfilter.filter)
-	const filterUiRoot = getFilterItemByTag(filterRoot, filterUiRoot)
-	if (filterUiRoot && filterUiRoot != filterRoot) delete filterUiRoot.tag
-	filterRoot.tag = 'filterUiRoot'
-	filterRoot.join = 'and'
-	for (const t of tvslst) {
-		filterRoot.lst.push(wrapTvs(t))
-	}
+	const filterRoot = getNormalRoot({
+		type: 'tvslst',
+		join: 'and',
+		lst: [
+			self.state.termfilter.filter,
+			// create a copy of tvslst to not mutate the barchart state,
+			// such as when deleting tvs.tvs.term.values below
+			...tvslst.map(tvs => wrapTvs(JSON.parse(JSON.stringify(tvs))))
+		]
+	})
 	///////////// quick fix to delete term.values{} from stringified filter to reduce url length
-	for (const tvs of filterRoot.lst) {
-		if (tvs.tvs && tvs.tvs.term) delete tvs.tvs.term.values
-	}
+	normalizeProps(filterRoot, f => {
+		delete f.tag
+		if (f.type == 'tvs' && f.tvs && f.tvs.term) delete f.tvs.term.values
+	})
 	const arg = [
 		'getsamples=1',
 		'genome=' + self.state.genome,

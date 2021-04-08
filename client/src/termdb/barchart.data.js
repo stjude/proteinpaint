@@ -1,5 +1,6 @@
 import Partjson from 'partjson'
 import { compute_bins } from '../../shared/termdb.bins'
+import { sample_match_termvaluesetting } from '../common/termutils'
 
 export function getBarchartData(_q, data0) {
 	/*
@@ -128,7 +129,7 @@ function getCharts(q, data) {
 			idVal(row, context) {
 				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
 				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
-				const [dataId, dataVal] = idValFxns[q.term0.type](row.data, q.term2, q.term2_q, data)
+				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data)
 				return {
 					chartId,
 					chartVal,
@@ -161,7 +162,7 @@ function getCharts(q, data) {
 			},
 			boxplot(row, context) {
 				if (!context.self.values || !context.self.values.length) return
-				const values = context.self.values.filter(d => d !== null)
+				const values = context.self.values.filter(d => d !== null && !isNaN(d))
 				if (!values.length) return
 				values.sort((i, j) => i - j)
 				const stat = boxplot_getvalue(
@@ -229,13 +230,12 @@ function getCategoricalIdVal(d, term) {
 }
 
 function getNumericIdVal(d, term, q, rows) {
-	const ids = []
-	if (!('id' in term) || !(term.id in d)) return [ids, undefined]
+	if (!('id' in term) || !(term.id in d)) return [[], undefined]
 	if (!q.computed_bins) {
 		const summary = {}
 		rows.map(row => {
-			const v = row.data[term.id]
-			if (!isNumeric(v)) return
+			if (!isNumeric(row.data[term.id])) return
+			const v = +row.data[term.id]
 			if (!('min' in summary) || summary.min > v) summary.min = v
 			if (!('max' in summary) || summary.max < v) summary.max = v
 		})
@@ -243,11 +243,13 @@ function getNumericIdVal(d, term, q, rows) {
 		q.orderedLabels = q.computed_bins.map(d => d.label)
 	}
 	const v = d[term.id]
-	if (isNumeric(v)) {
-		if (term.values && '' + v in term.values && term.values[v].uncomputable) {
-			ids.push(term.values[v].label)
-		}
-
+	if (term.values && v in term.values && term.values[v].uncomputable) {
+		return [[term.values[v].label], undefined]
+	}
+	// ignore non-numeric values like empty string, ""
+	// which may occur naturally in a csv/tab-delimited input
+	if (isNumeric(d[term.id])) {
+		const ids = []
 		for (const b of q.computed_bins) {
 			if (b.startunbounded) {
 				if (v < b.stop) ids.push(b.label)
@@ -263,96 +265,13 @@ function getNumericIdVal(d, term, q, rows) {
 			if (!b.stopinclusive && v >= b.stop) continue
 			ids.push(b.label)
 		}
+		return [ids, v]
 	}
-	return [ids, v]
+	return [[], undefined]
 }
 
 function getUndefinedIdVal() {
 	return [['-'], undefined]
-}
-
-function sample_match_termvaluesetting(row, filter) {
-	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
-	let numberofmatchedterms = 0
-
-	/* for AND, require all terms to match */
-	for (const item of lst) {
-		if (item.type == 'tvslst') {
-			if (sample_match_termvaluesetting(row, item)) {
-				numberofmatchedterms++
-			}
-		} else {
-			const t = item.tvs
-			const samplevalue = row[t.term.id]
-
-			let thistermmatch
-
-			if (t.term.type == 'categorical') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				if (!t.valueset) t.valueset = new Set(t.values.map(i => i.key))
-				thistermmatch = t.valueset.has(samplevalue)
-			} else if (t.term.type == 'integer' || t.term.type == 'float') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-
-				for (const range of t.ranges) {
-					if ('value' in range) {
-						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)
-						if (thistermmatch) break
-					} else {
-						// actual range
-						if (t.term.values) {
-							const v = t.term.values[samplevalue.toString()]
-							if (v && v.uncomputable) {
-								continue
-							}
-						}
-						let left, right
-						if (range.startunbounded) {
-							left = true
-						} else if ('start' in range) {
-							if (range.startinclusive) {
-								left = samplevalue >= range.start
-							} else {
-								left = samplevalue > range.start
-							}
-						}
-						if (range.stopunbounded) {
-							right = true
-						} else if ('stop' in range) {
-							if (range.stopinclusive) {
-								right = samplevalue <= range.stop
-							} else {
-								right = samplevalue < range.stop
-							}
-						}
-						thistermmatch = left && right
-					}
-					if (thistermmatch) break
-				}
-			} else if (t.term.type == 'condition') {
-				const key = getPrecomputedKey(t)
-				const anno = samplevalue && samplevalue[key]
-				if (anno) {
-					thistermmatch = Array.isArray(anno)
-						? t.values.find(d => anno.includes(d.key))
-						: t.values.find(d => d.key == anno)
-				}
-			} else {
-				throw 'unknown term type'
-			}
-
-			if (t.isnot) {
-				thistermmatch = !thistermmatch
-			}
-			if (thistermmatch) numberofmatchedterms++
-		}
-
-		// if one tvslst is matched with an "or" (Set UNION), then sample is okay
-		if (filter.join == 'or' && numberofmatchedterms) return true
-	}
-
-	// for join="and" (Set intersection)
-	if (numberofmatchedterms == lst.length) return true
 }
 
 function boxplot_getvalue(lst) {
@@ -398,7 +317,8 @@ export function getCategoryData(q, data) {
 				'&idVal.id': {
 					samplecount: '+1',
 					':__key': '&idVal.id',
-					':__label': '&idVal.id'
+					':__label': '&idVal.id',
+					':__value': '&idVal.id'
 				}
 			}
 		}),

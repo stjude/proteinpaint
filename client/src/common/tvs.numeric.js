@@ -320,7 +320,9 @@ export function getNumericMethods(self) {
 
 		const brush_start = range.startunbounded ? minvalue : range.start
 		const brush_stop = range.stopunbounded ? maxvalue : range.stop
-		brush.init = () => brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+		brush.init = () => {
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+		}
 
 		if (range.startunbounded) delete range.start
 		if (range.stopunbounded) delete range.stop
@@ -557,7 +559,7 @@ export function getNumericMethods(self) {
 
 		function update_input() {
 			const new_range = JSON.parse(JSON.stringify(brush.range))
-			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value): minvalue
+			new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue
 			new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
 			if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
 			if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
@@ -759,11 +761,17 @@ export function getNumericMethods(self) {
 			return
 		}
 		// numerical checkbox for unannotated cats
-		const unannotated_cats = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
-
-		for (const [index, cat] of unannotated_cats.entries()) {
-			cat.label = tvs.term.values[cat.value].label
-			cat.key = cat.value
+		const values = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
+		const unannotated_cats = []
+		const lst = values.lst ? values.lst : values
+		for (const cat of lst) {
+			const key = 'key' in cat ? cat.key : cat.value
+			if (!('key' in cat)) cat.key = key
+			if (!('value' in cat)) cat.value = key
+			if (key in tvs.term.values) {
+				cat.label = tvs.term.values[key].label
+				unannotated_cats.push(cat)
+			}
 		}
 
 		const sortedVals = unannotated_cats.sort((a, b) => {

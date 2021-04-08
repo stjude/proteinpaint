@@ -28,9 +28,7 @@ module.exports = {
 	cohort and sample annotation
 	*/
 	cohort: {
-		files: [
-			{ file: 'files/hg19/propel/sampletable/propel.samples' }
-		],
+		files: [{ file: 'files/hg19/propel/sampletable/propel.samples' }],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds) => {
 			const samplename = item[samplenamekey]
@@ -44,7 +42,7 @@ module.exports = {
 				// new sample
 				ds.cohort.annotation[samplename] = item
 			}
-		},
+		}
 		/*
 		sampleAttribute: {
 			attributes: {
@@ -60,7 +58,6 @@ module.exports = {
 			}
 		},
 		*/
-
 	},
 
 	mutationAttribute: {
@@ -114,6 +111,7 @@ module.exports = {
 		svcnv: {
 			name: 'PROPEL tumor mutation',
 			istrack: true,
+			isfull: true,
 			type: 'mdssvcnv',
 			file: 'files/hg19/propel/propel.svcnv.gz',
 
@@ -129,11 +127,11 @@ module.exports = {
 
 			// cnv
 			valueCutoff: 0.2,
-			bplengthUpperLimit: 2000000, // limit cnv length to focal events
+			bplengthUpperLimit: 0, // limit cnv length to focal events
 
 			// loh
 			segmeanValueCutoff: 0.1,
-			lohLengthUpperLimit: 2000000,
+			lohLengthUpperLimit: 0,
 			/*
 			groupsamplebyattr: {
 				attrlst: [
@@ -148,7 +146,7 @@ module.exports = {
 			},
 			*/
 			vcf_querykey: 'snvindel',
-
+			expressionrank_querykey: 'genefpkm',
 			multihidelabel_vcf: false,
 			multihidelabel_fusion: false,
 			multihidelabel_sv: true,
@@ -175,44 +173,19 @@ module.exports = {
 			singlesamples: {
 				tablefile: 'files/hg19/propel/split.vcf/table'
 			}
-		}
-		/*	
+		},
 		genefpkm: {
 			hideforthemoment: 1,
-			name: 'Pediatric tumor RNA-seq gene FPKM',
+			name: 'tumor RNA-seq gene log2 FPKM',
 			isgenenumeric: true,
-			file: 'hg19/Pediatric/pediatric.fpkm.hg19.gz',
-			datatype: 'FPKM',
+			file: 'files/hg19/propel/propel.fpkm.gz',
+			datatype: 'log2FPKM',
 
 			// for boxplots & circles, and the standalone expression track
 			itemcolor: 'green',
 
 			// for expression rank checking when coupled to svcnv
-			viewrangeupperlimit: 5000000,
-
-			boxplotbysamplegroup: {
-				attributes: [
-					{ k: 'diagnosis_group_short', label: 'Group', full: 'diagnosis_group_full' },
-					{ k: 'diagnosis_short', label: 'Cancer', full: 'diagnosis_full' }
-				]
-			},
-
-			// yu's data & method for ase/outlier
-			ase: {
-				qvalue: 0.05,
-				meandelta_monoallelic: 0.3,
-				asemarkernumber_biallelic: 0,
-				//meandelta_biallelic:0.1,  no longer used
-				color_noinfo: '#858585',
-				color_notsure: '#A8E0B5',
-				color_biallelic: '#40859C',
-				color_monoallelic: '#d95f02'
-			},
-			outlier: {
-				pvalue: 0.05,
-				color: '#FF8875'
-			}
+			viewrangeupperlimit: 5000000
 		}
-		*/
 	}
 }

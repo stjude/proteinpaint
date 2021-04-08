@@ -35,7 +35,7 @@ module.exports = function(common) {
 			},
 			{ k: 'Point mutation annotation', v: 'On RefSeq genes by in-house modified Annovar' },
 			{ k: 'Fusion transcript detection', v: 'CICERO' },
-			{ k: 'Last updated', v: 'August 2016' }
+			{ k: 'Last updated', v: 'April 2021' }
 		],
 		genome: 'hg19',
 		color: '#931638',

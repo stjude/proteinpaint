@@ -23,6 +23,8 @@ class TdbStatTable {
 				config.settings.currViews.includes('barchart') &&
 				(config.term.term.type == 'float' || config.term.term.type == 'integer') &&
 				!config.term.term.noStatTable,
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term0: config.term0,
