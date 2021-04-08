@@ -318,8 +318,8 @@ export function getNumericMethods(self) {
 				brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 			})
 
-		const brush_start = range.startunbounded ? Number(minvalue) : +range.start
-		const brush_stop = range.stopunbounded ? Number(maxvalue) : +range.stop
+		const brush_start = range.startunbounded ? minvalue : range.start
+		const brush_stop = range.stopunbounded ? maxvalue : range.stop
 		brush.init = () => {
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
 		}
@@ -763,10 +763,13 @@ export function getNumericMethods(self) {
 		// numerical checkbox for unannotated cats
 		const values = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
 		const unannotated_cats = []
-		for (const cat of values.lst) {
-			if (cat.key in tvs.term.values) {
-				cat.label = tvs.term.values[cat.key].label
-				cat.value = cat.key
+		const lst = values.lst ? values.lst : values
+		for (const cat of lst) {
+			const key = 'key' in cat ? cat.key : cat.value
+			if (!('key' in cat)) cat.key = key
+			if (!('value' in cat)) cat.value = key
+			if (key in tvs.term.values) {
+				cat.label = tvs.term.values[key].label
 				unannotated_cats.push(cat)
 			}
 		}

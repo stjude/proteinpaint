@@ -3,6 +3,7 @@ import { getBarchartData, getCategoryData } from './barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
+import { sample_match_termvaluesetting } from '../common/termutils'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
 
@@ -321,7 +322,16 @@ class FrontendVocab {
 		let minvalue,
 			maxvalue,
 			samplecount = 0
-		for (const sample in this.vocab.sampleannotation) {
+		let samples = {}
+		for (const anno of this.datarows) {
+			if (samples[anno.sample]) continue
+			const data = anno.s || anno.data
+			if (data && sample_match_termvaluesetting(data, filter)) {
+				samples[anno.sample] = this.vocab.sampleannotation[anno.sample]
+			}
+		}
+
+		for (const sample in samples) {
 			if (!(term_id in this.vocab.sampleannotation[sample])) continue
 			const _v = this.vocab.sampleannotation[sample][term_id]
 			if (isNumeric(_v)) {
@@ -349,7 +359,7 @@ class FrontendVocab {
 
 		return {
 			density,
-			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), undefined),
+			densitymax: density.reduce((maxv, v, i) => (i === 0 || v[1] > maxv ? v[1] : maxv), 0),
 			minvalue,
 			maxvalue,
 			samplecount
@@ -391,36 +401,47 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 
 		// generate term definitions from
 		for (const key in a.s) {
-			const value = isNaN(a.s[key]) ? a.s[key] : parseFloat(a.s[key])
 			if (!terms[key]) {
 				const name = sample_attributes[key] && sample_attributes[key].label ? sample_attributes[key].label : key
 				terms[key] = {
 					id: key,
 					name,
 					parent_id: null,
-					// type: typeof value == 'string' ? 'categorical' : Number.isInteger(value) ? 'integer' : 'float',
 					type:
 						sample_attributes[key].type == 'float'
 							? 'float'
 							: sample_attributes[key].type == 'integer'
 							? 'integer'
-							: 'categorical',
+							: // need to work with the cloud/PROPEL team to define type for legacy scatterplot usage
+							  'categorical',
 					values: {},
 					isleaf: true
 				}
 			}
 			const t = terms[key]
+			if (!('id' in t)) t.id = key
+			if (!('parent_id' in t)) t.parent_id = null
+			if (!('values' in t)) t.values = {}
+			if (!('isleaf' in t)) t.isleaf = true
+
+			const value = a.s[key]
 			if (t.type == 'categorical') {
 				t.groupsetting = { disabled: true }
 				if (!(value in t.values)) {
 					t.values[value] = { key: value, label: value }
 				}
 			} else if (t.type == 'integer' || t.type == 'float') {
-				if (value != 'Not Available') {
-					if (!('min' in t) || value < t.min) t.min = value
-					if (!('max' in t) || value > t.max) t.max = value
-				} else if (!(value in t.values)) {
+				// may need to auto-detect more string values that
+				// can be assumed to be non-numeric here, like "N/A"
+				if (value === 'Not Available' && !(value in t.values)) {
 					t.values[value] = { label: value, uncomputable: true }
+				}
+				if (!(value in t.values)) {
+					if (!isNumeric(a.s[key])) throw `non-numeric term value='${value}' for term='${key}'`
+					a.s[key] = Number(a.s[key])
+					const val = a.s[key]
+					if (!('min' in t) || val < t.min) t.min = val
+					if (!('max' in t) || val > t.max) t.max = val
 				}
 			} else if (t.type == 'condition') {
 				//TODO: add logic for conditional terms
