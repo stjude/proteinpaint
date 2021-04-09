@@ -172,12 +172,10 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
 	// Check to see if the first item in cigar is a soft clip
 	if (&alphabets[0].to_string().as_str() == &"S") {
             //console::log_1(&cigar.to_string().into());
-	    let start_position: i64 = start_positions_list[i as usize].to_string().parse::<i64>().unwrap() - numbers[0].to_string().parse::<i64>().unwrap();
-	    corrected_start_positions_list.push(start_position);
+	    corrected_start_positions_list.push(start_positions_list[i as usize].to_string().parse::<i64>().unwrap() - numbers[0].to_string().parse::<i64>().unwrap()); // Subtracting softclip position from start position
 	}
 	else {
-	  let start_position: i64 = start_positions_list[i as usize].to_string().parse::<i64>().unwrap();
-          corrected_start_positions_list.push(start_position);
+          corrected_start_positions_list.push(start_positions_list[i as usize].to_string().parse::<i64>().unwrap());
 	}    
 	i+=1;
     }	
