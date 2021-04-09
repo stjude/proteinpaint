@@ -268,16 +268,13 @@ async function download_gdc_bam(req) {
 		const gdc_case_id = req.query.gdc.split(',')[1]
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
-		console.log('gdc_token_hash:', gdc_token_hash)
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
 		if (!fs.existsSync(dir)) {
 			// Check if directory exists, if not create one
-			console.log('Directory does not exist')
 			fs.mkdir(dir, err => {
 				if (err) {
 					throw err
 				}
-				console.log('Directory is created.')
 			})
 		}
 		const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
@@ -826,7 +823,7 @@ async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_na
 	console.log(url)
 	try {
 		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
-		console.log('Downloaded ' + bam_file_name.toString())
+		//console.log('Downloaded ' + bam_file_name.toString())
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
@@ -840,7 +837,6 @@ function query_region(r, q) {
 	return new Promise((resolve, reject) => {
 		let ps = ''
 		if (q.gdc_case_id) {
-			console.log('samtools view ' + q.file)
 			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
 		} else {
 			ps = spawn(
@@ -1986,7 +1982,7 @@ async function query_oneread(req, r) {
 	return new Promise((resolve, reject) => {
 		let ps
 		if (req.query.gdc) {
-			console.log('samtools view ' + req.query.file)
+			//console.log('samtools view ' + req.query.file)
 			ps = spawn(samtools, ['view', req.query.file])
 		} else {
 			ps = spawn(
