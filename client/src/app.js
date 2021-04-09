@@ -160,15 +160,13 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			let selectgenome, genome_browser_btn // the <select> genome, should belong to this particular launch
-
 			if (!arg.noheader) {
-				;[selectgenome, genome_browser_btn] = makeheader(app, data, arg.jwt)
+				makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app, selectgenome, genome_browser_btn)
+			return parseembedthenurl(arg, app, app.selectgenome, app.genome_browser_btn)
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -189,7 +187,7 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
-	const browsers_row = app.holder.append('div')
+	app.holder.browsers_row = app.holder.append('div').attr('id', 'browsers_row')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -259,7 +257,7 @@ function makeheader(app, obj, jwt) {
 		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
 			str = hitgene.text()
 		}
-		findgene2paint(app, str, selectgenome.property('value'), jwt)
+		findgene2paint(app, str, app.selectgenome.property('value'), jwt)
 		input.property('value', '')
 		tip.hide()
 	}
@@ -267,7 +265,7 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), selectgenome.property('value'), tip, jwt)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
@@ -300,7 +298,7 @@ function makeheader(app, obj, jwt) {
 		.attr('title', 'Select a genome')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
-			genome_browser_btn.text(selectgenome.node().value + ' genome browser')
+			update_genome_browser_btn(app)
 		})
 	for (const n in app.genomes) {
 		app.selectgenome
@@ -309,7 +307,7 @@ function makeheader(app, obj, jwt) {
 			.text(app.genomes[n].species + ' ' + n)
 			.property('value', n)
 	}
-	app.genome_browser_btn = make_genome_browser_btn(app, headbox)
+	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
@@ -431,23 +429,22 @@ function makeheader(app, obj, jwt) {
 				.append('p')
 				.html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
 		})
-
-	return [selectgenome, genome_browser_btn]
 }
 
-function make_genome_browser_btn(app, headbox) {
+function make_genome_browser_btn(app, headbox, jwt, apps_off) {
+	const padw = '13px'
 	const genome_btn_div = headbox.append('span')
 	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
-	console.log(selectgenome.property('selectedIndex'))
 
 	const g_browser_btn = genome_btn_div
 		.attr('class', 'sja_menuoption')
 		.attr('id', 'genome_btn')
 		.style('padding', padw)
 		.style('border-radius', '5px')
+		.datum(genomename)
 		.text(genomename + ' genome browser')
-		.on('click', () => {
-			let [browser_header, browser_body] = make_browser_div()
+		.on('click', genomename => {
+			let [browser_header, browser_body] = make_browser_div(app.holder.browsers_row)
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -477,7 +474,12 @@ function make_genome_browser_btn(app, headbox) {
 	return g_browser_btn
 }
 
-function make_browser_div() {
+function update_genome_browser_btn(app) {
+	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
+	app.genome_browser_btn.datum(app.selectgenome.node().value)
+}
+
+function make_browser_div(browsers_row) {
 	const genome_browser_div = browsers_row.insert('div', ':first-child')
 	const header_row = genome_browser_div
 		.append('div')
