@@ -59,12 +59,11 @@ arg
 
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
-		arg.selectgenome.node().childNodes.forEach( genome_opt => {
+		// should do away with forEach and toggle selectgenome and trigger a .on('change') callback attached to the <select>
+		arg.selectgenome.node().childNodes.forEach(genome_opt => {
 			if (genome_opt.value == n) {
 				arg.selectgenome.property('value', genome_opt.value)
-				arg.genome_browser_btn
-					.datum(n)
-					.text(n + ' Genome Browser')
+				arg.genome_browser_btn.text(n + ' genome browser')
 			}
 		})
 	}

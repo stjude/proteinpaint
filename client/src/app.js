@@ -21,6 +21,14 @@ exports a global function runproteinpaint()
 will be called for launching anything from pp
 returns a promise that resolve to something e.g. block
 
+internal "app{}"
+.debugmode
+.error0()
+.genomes{}
+.holder
+.holder0
+.hostURL
+
 
 ********** INTERNAL
 
@@ -287,121 +295,21 @@ function makeheader(app, obj, jwt) {
 		.style('padding', padw)
 		.style('padding-left', '5px')
 
-	const selectgenome = genome_select_div
+	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
-			const genomename = selectgenome.node().value
-			make_genome_browser_btn(genomename)
+			genome_browser_btn.text(selectgenome.node().value + ' genome browser')
 		})
 	for (const n in app.genomes) {
-		selectgenome
+		app.selectgenome
 			.append('option')
 			.attr('n', n)
 			.text(app.genomes[n].species + ' ' + n)
 			.property('value', n)
 	}
-	//Holds element in a consistent location
-	let genome_browser_btn
-	const genome_btn_div = headbox.append('span')
-	const selected_genome = selectgenome.node().value
-	genome_browser_btn = make_genome_browser_btn(selected_genome)
-
-	//Launch genome browser button in headbox
-	function make_genome_browser_btn(genomename) {
-		genome_btn_div.selectAll('#genome_btn').remove()
-
-		const g_browser_btn = genome_btn_div
-			.attr('class', 'sja_menuoption')
-			.attr('id', 'genome_btn')
-			.style('padding', padw)
-			.style('border-radius', '5px')
-			.datum(genomename)
-			.text(d => d + ' Genome Browser')
-			.on('click', d => {
-				let [browser_header, browser_body] = make_browser_div()
-
-				// load genome browser only once
-				const g = app.genomes[d]
-				if (!g) {
-					alert('Invalid genome name: ' + d)
-					return
-				}
-
-				browser_header.text(d + ' genome browser')
-
-				const par = {
-					hostURL: app.hostURL,
-					jwt: jwt,
-					holder: browser_body,
-					genome: g,
-					chr: g.defaultcoord.chr,
-					start: g.defaultcoord.start,
-					stop: g.defaultcoord.stop,
-					nobox: true,
-					tklst: [],
-					debugmode: app.debugmode
-				}
-				client.first_genetrack_tolist(g, par.tklst)
-
-				import('./block').then(b => new b.Block(par))
-				apps_off()
-			})
-		return g_browser_btn
-	}
-
-	function make_browser_div() {
-		const genome_browser_div = browsers_row.insert('div', ':first-child')
-		const header_row = genome_browser_div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '10px')
-			.style('padding-right', '10px')
-			.style('margin-bottom', '0px')
-			.style('border', 'solid 1px #f2f2f2')
-			.style('border-radius', '5px 5px 0 0')
-			.style('background-color', '#f2f2f2')
-			.style('width', '95vw')
-
-		// close_btn
-		header_row
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'sja_menuoption')
-			.style('cursor', 'default')
-			.style('padding', '4px 10px')
-			.style('margin', '0px')
-			.style('border-right', 'solid 2px white')
-			.style('font-size', '1.5em')
-			.html('&times;')
-			.on('mousedown', () => {
-				document.body.dispatchEvent(new Event('mousedown'))
-				d3event.stopPropagation()
-			})
-			.on('click', () => {
-				genome_browser_div.selectAll('*').remove()
-			})
-
-		const header = header_row
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '5px 10px')
-
-		const browser_body = genome_browser_div
-			.append('div')
-			.style('margin', '10px')
-			.style('margin-top', '0px')
-			.style('padding-right', '8px')
-			.style('display', 'inline-block')
-			.style('display', 'inline-block')
-			.style('border', 'solid 2px #f2f2f2')
-			.style('border-top', 'solid 1px white')
-			.style('border-radius', '0  0 5px 5px')
-			.style('width', '95vw')
-
-		return [header, browser_body]
-	}
+	app.genome_browser_btn = make_genome_browser_btn(app, headbox)
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
@@ -525,6 +433,100 @@ function makeheader(app, obj, jwt) {
 		})
 
 	return [selectgenome, genome_browser_btn]
+}
+
+function make_genome_browser_btn(app, headbox) {
+	const genome_btn_div = headbox.append('span')
+	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
+	console.log(selectgenome.property('selectedIndex'))
+
+	const g_browser_btn = genome_btn_div
+		.attr('class', 'sja_menuoption')
+		.attr('id', 'genome_btn')
+		.style('padding', padw)
+		.style('border-radius', '5px')
+		.text(genomename + ' genome browser')
+		.on('click', () => {
+			let [browser_header, browser_body] = make_browser_div()
+
+			const g = app.genomes[genomename]
+			if (!g) {
+				alert('Invalid genome name: ' + genomename)
+				return
+			}
+
+			browser_header.text(genomename + ' genome browser')
+
+			const par = {
+				hostURL: app.hostURL,
+				jwt: jwt,
+				holder: browser_body,
+				genome: g,
+				chr: g.defaultcoord.chr,
+				start: g.defaultcoord.start,
+				stop: g.defaultcoord.stop,
+				nobox: true,
+				tklst: [],
+				debugmode: app.debugmode
+			}
+			client.first_genetrack_tolist(g, par.tklst)
+
+			import('./block').then(b => new b.Block(par))
+			apps_off()
+		})
+	return g_browser_btn
+}
+
+function make_browser_div() {
+	const genome_browser_div = browsers_row.insert('div', ':first-child')
+	const header_row = genome_browser_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '10px')
+		.style('padding-right', '10px')
+		.style('margin-bottom', '0px')
+		.style('border', 'solid 1px #f2f2f2')
+		.style('border-radius', '5px 5px 0 0')
+		.style('background-color', '#f2f2f2')
+		.style('width', '95vw')
+
+	// close_btn
+	header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_menuoption')
+		.style('cursor', 'default')
+		.style('padding', '4px 10px')
+		.style('margin', '0px')
+		.style('border-right', 'solid 2px white')
+		.style('font-size', '1.5em')
+		.html('&times;')
+		.on('mousedown', () => {
+			document.body.dispatchEvent(new Event('mousedown'))
+			d3event.stopPropagation()
+		})
+		.on('click', () => {
+			genome_browser_div.selectAll('*').remove()
+		})
+
+	const header = header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '5px 10px')
+
+	const browser_body = genome_browser_div
+		.append('div')
+		.style('margin', '10px')
+		.style('margin-top', '0px')
+		.style('padding-right', '8px')
+		.style('display', 'inline-block')
+		.style('display', 'inline-block')
+		.style('border', 'solid 2px #f2f2f2')
+		.style('border-top', 'solid 1px white')
+		.style('border-radius', '0  0 5px 5px')
+		.style('width', '95vw')
+
+	return [header, browser_body]
 }
 
 async function launchApps(app) {
