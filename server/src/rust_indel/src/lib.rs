@@ -135,6 +135,25 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
     indexes_vec
 }
 
+fn parse_cigar(cigar_seq: &String) -> (Vec<char>,Vec<i64>) {
+    let sequence_vector: Vec<_> = cigar_seq.chars().collect();
+    let mut subseq = String::new();
+    let mut alphabets = Vec::<char>::new();
+    let mut numbers = Vec::<i64>::new();
+    for i in 0..sequence_vector.len() {
+	if (sequence_vector[i].is_alphabetic() == true)
+	{
+            alphabets.push(sequence_vector[i]);
+	    numbers.push(subseq.parse::<i64>().unwrap()); 
+	    subseq="".to_string();
+	}
+	else {
+	    subseq+=&sequence_vector[i].to_string();
+	}    
+    }
+    (alphabets,numbers)
+}
+
 #[wasm_bindgen]
 pub fn match_complex_variant_rust(sequences: String, start_positions: String, cigar_sequences: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
 
@@ -145,8 +164,23 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     
     let lines: Vec<&str> = sequences.split("\n").collect();
     let start_positions_list: Vec<&str> = start_positions.split("\n").collect();
-    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();
-    //let lines = lines.unwrap();    
+    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();   
+    let mut i:i64 = 0;
+    let mut corrected_start_positions_list = Vec::<i64>::new();
+    for cigar in &cigar_sequences_list {
+	let (alphabets,numbers) = parse_cigar(&cigar.to_string());
+	// Check to see if the first item in cigar is a soft clip
+	if (&alphabets[0].to_string().as_str() == &"S") {
+            //console::log_1(&cigar.to_string().into());
+	    let start_position: i64 = start_positions_list[i as usize].to_string().parse::<i64>().unwrap() - numbers[0].to_string().parse::<i64>().unwrap();
+	    corrected_start_positions_list.push(start_position);
+	}
+	else {
+	  let start_position: i64 = start_positions_list[i as usize].to_string().parse::<i64>().unwrap();
+          corrected_start_positions_list.push(start_position);
+	}    
+	i+=1;
+    }	
     
     println!("{:?}", lines);
     println!("{}", lines[0]);
@@ -196,7 +230,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     let mut ref_comparisons = Vec::<f64>::new();
     let mut ref_scores = Vec::<read_diff_scores>::new();
     let mut alt_scores = Vec::<read_diff_scores>::new();
-    let mut i:i64 = 0;
+    i=0;
     let num_of_reads:f64 = (lines.len()-2) as f64;
     let mut ref_polyclonal_status = Vec::<i64>::new();
     let mut ref_read_sequences = Vec::<String>::new();
@@ -208,7 +242,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
     for read in lines{ // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-              let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
+              let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers, &ref_kmers_nodups, &ref_kmers_data, ref_kmers_weight);
     	      let alt_comparison=jaccard_similarity_weights(&kmers, &alt_kmers_nodups, &alt_kmers_data, alt_kmers_weight);
