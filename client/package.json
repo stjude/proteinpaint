@@ -79,10 +79,7 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "dist",
-    "public/index.html",
-    "public/rev.txt",
-    "public/bin"
+    "dist"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

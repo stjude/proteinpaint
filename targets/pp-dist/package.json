@@ -1,0 +1,19 @@
+{
+  "version": "1.8.3",
+  "name": "@stjude/proteinpaint",
+	"files": [
+    "server/server.js"
+    "server/bin.js",
+    "server/package.js",
+    "server/genome",
+    "server/dataset",
+    "dist"
+  ],
+ "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/pp-dist"
+  },
+  "bugs": {
+    "url": "https://github.com/stjude/pp-dist"
+  }
+}

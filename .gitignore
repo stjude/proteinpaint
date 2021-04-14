@@ -53,6 +53,7 @@ setup/*gz*
 setup/*
 tmpbuild/*
 tmppack/*
+*/tmppack/*
 pp-server/*
 
 *-stash.js
