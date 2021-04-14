@@ -9,8 +9,7 @@ use std::collections::HashSet;
 use web_sys::console;
 
 
-pub struct read_diff_scores {
-   sequence: String, 
+pub struct read_diff_scores { //    sequence: String, 
    groupID:usize,
    value:f64,
    polyclonal: i64 
@@ -40,13 +39,11 @@ pub struct output_structure {
 }    
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
-    let seq=item.sequence.to_owned();
     let val=item.value.to_owned();        
     let gID=item.groupID.to_owned();
     let poly=item.polyclonal.to_owned();
 
     let read_val = read_diff_scores{
-	    sequence:String::from(seq),
 	    value:f64::from(val),
 	    groupID:usize::from(gID),
 	    polyclonal:i64::from(poly)
@@ -160,25 +157,14 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     //console::log_1(&"Hello using web-sys".into());
     //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
     //console::log_2(&"sequences:".into(), &sequences.into());
-    
-    
+    let ref_nucleotides: Vec<char> = refallele.chars().collect();
+    let alt_nucleotides: Vec<char> = altallele.chars().collect();
+    //let ref_length: usize = ref_nucleotides.len();
+    //let alt_length: usize = alt_nucleotides.len();
     let lines: Vec<&str> = sequences.split("\n").collect();
     let start_positions_list: Vec<&str> = start_positions.split("\n").collect();
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();   
-    let mut i:i64 = 0;
-    let mut corrected_start_positions_list = Vec::<i64>::new();
-    for cigar in &cigar_sequences_list {
-	let (alphabets,numbers) = parse_cigar(&cigar.to_string());
-	// Check to see if the first item in cigar is a soft clip
-	if (&alphabets[0].to_string().as_str() == &"S") {
-            //console::log_1(&cigar.to_string().into());
-	    corrected_start_positions_list.push(start_positions_list[i as usize].to_string().parse::<i64>().unwrap() - numbers[0].to_string().parse::<i64>().unwrap()); // Subtracting softclip position from start position
-	}
-	else {
-          corrected_start_positions_list.push(start_positions_list[i as usize].to_string().parse::<i64>().unwrap());
-	}    
-	i+=1;
-    }	
+    let mut i:i64 = 0;	
     
     println!("{:?}", lines);
     println!("{}", lines[0]);
@@ -234,13 +220,15 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     let mut ref_read_sequences = Vec::<String>::new();
     let mut alt_read_sequences = Vec::<String>::new();
     let mut all_read_sequences = Vec::<String>::new();    
-    let mut ref_polyclonal_read_status: usize = 0 as usize;
-    let mut alt_polyclonal_read_status: usize = 0 as usize;
+    let mut ref_polyclonal_read_status: i64 = 0;
+    let mut alt_polyclonal_read_status: i64 = 0;
     let mut alt_polyclonal_status = Vec::<i64>::new();
     console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
-    for read in lines{ // Will multithread this loop in the future
+    for read in lines { // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-              let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
+	      let (ref_polyclonal_read_status, alt_polyclonal_read_status) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize);
+              //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
+	      let kmers = build_kmers(read.to_string(),kmer_length);
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers, &ref_kmers_nodups, &ref_kmers_data, ref_kmers_weight);
     	      let alt_comparison=jaccard_similarity_weights(&kmers, &alt_kmers_nodups, &alt_kmers_data, alt_kmers_weight);
@@ -251,7 +239,6 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
 	      //console::log_2(&"Read:".into(), &read.to_string().into());
 	      //console::log_2(&"Read number:".into(), &(i as usize - 2).to_string().into());	    
     	      let item = read_diff_scores{
-	         sequence: String::from(&read.to_string().to_owned()), 	
     	         value:f64::from(diff_score),
     	         groupID:usize::from(i as usize -2), // The -2 has been added since the first two sequences in the file are reference and alternate
 		 polyclonal:i64::from(ref_polyclonal_read_status+alt_polyclonal_read_status) 
@@ -448,6 +435,78 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
     (total_kmers_weight,kmers_nodup,indel_kmers,kmers_data)
 }
 
+fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String, indel_start: i64, ref_nucleotides: &Vec<char>, alt_nucleotides: &Vec<char>, ref_length: usize, alt_length: usize) -> (i64, i64) {
+    let kmer_length: i64 = 1;
+    let sequence_vector: Vec<_> = sequence.chars().collect();
+    let mut kmers = Vec::<String>::new();
+    //let mut kmer_start_poly = left_most_pos+1;
+    //let mut kmer_stop_poly = kmer_start_poly + kmer_length;
+    let mut ref_polyclonal_status:i64 = 0;
+    let mut alt_polyclonal_status:i64 = 0;
+    let mut correct_start_position:i64 = left_most_pos; 
+
+    let (alphabets,numbers) = parse_cigar(&cigar_sequence.to_string());
+    // Check to see if the first item in cigar is a soft clip
+    if (&alphabets[0].to_string().as_str() == &"S") {    
+          correct_start_position = correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
+    }
+    // Looking for insertions and deletions in cigar sequence
+    let mut read_indel_start: usize = (indel_start - correct_start_position) as usize;
+    let mut parse_position: usize = 0;    
+    for i in 0..alphabets.len() {
+      if (parse_position < read_indel_start) {	
+	if (&alphabets[i].to_string().as_str() == &"I") {
+          read_indel_start += numbers[i].to_string().parse::<usize>().unwrap();
+	}
+	else if (&alphabets[i].to_string().as_str() == &"D") {
+          read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap();        
+	}
+	parse_position += numbers[i].to_string().parse::<usize>().unwrap();  
+      }
+      else {
+       break;
+      }	    
+    } 
+    
+    // Checking to see if nucleotides are same between read and ref/alt allele
+
+    //console::log_2(&"sequence:".into(), &sequence.to_string().into());
+    //console::log_2(&"length:".into(), &sequence.len().to_string().into());
+    //console::log_2(&"cigar:".into(),&cigar_sequence.to_string().into());
+    for i in 0..ref_length as usize {
+	if (read_indel_start + i < sequence.len()) {
+	    //console::log_2(&"Ref sequence:".into(), &ref_nucleotides[i].to_string().into());
+	    //console::log_2(&"Ref position:".into(), &(read_indel_start + i).to_string().into());
+	    //console::log_2(&"Ref read:".into(), &sequence_vector[read_indel_start + i].to_string().into());
+	    if (&ref_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
+		ref_polyclonal_status = 1;
+                break;
+	    }	
+	}
+	else {
+            break; 
+	}    
+    }
+
+    for i in 0..alt_length as usize {
+	if (read_indel_start + i < sequence.len()) {	
+            //console::log_2(&"Alt sequence:".into(), &alt_nucleotides[i].to_string().into());
+	    //console::log_2(&"Alt position:".into(), &(read_indel_start + i).to_string().into());
+	    //console::log_2(&"Alt read:".into(), &sequence_vector[read_indel_start + i].to_string().into());
+	    if (&alt_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
+		alt_polyclonal_status = 1;
+                break;
+	    }	    
+	}
+	else {
+             break; 
+	}    
+    }
+    //console::log_2(&"ref_polyclonal_status:".into(), &ref_polyclonal_status.to_string().into());
+    //console::log_2(&"alt_polyclonal_status:".into(), &alt_polyclonal_status.to_string().into());    
+    (ref_polyclonal_status,alt_polyclonal_status)
+}    
+
 fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64, ref_indel_kmers: &Vec<String>, alt_indel_kmers: &Vec<String>, ref_length: i64, alt_length: i64) -> (Vec::<String>, i64, i64)
 {
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
@@ -464,11 +523,11 @@ fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, inde
     for i in 0..num_iterations {
 	#[derive(Copy, Clone)]
 	let mut subseq = String::new();
-	let mut subseq2 = String::new();
+	//let mut subseq2 = String::new();
 	let mut j=i as usize;	
 	for _k in 0..kmer_length {
             subseq+=&sequence_vector[j].to_string();
-	    subseq2+=&sequence_vector[j].to_string();
+	    //subseq2+=&sequence_vector[j].to_string();
 	    j+=1;
 	}				
 	if (indel_start < kmer_start_poly && kmer_stop_poly <= indel_start + ref_length) || (indel_start >= kmer_start_poly && kmer_stop_poly > indel_start + ref_length) { // Checking to see if there are any kmers which support neither reference nor alternate allele
@@ -701,7 +760,6 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
     	for i in 0..start_point {
     	      let item = read_diff_scores{
-		 sequence:String::from(&kmer_diff_scores_sorted[i].sequence.to_owned()),
     	         value:f64::from(kmer_diff_scores_sorted[i].value),
     	         groupID:usize::from(i),
 		 polyclonal:i64::from(kmer_diff_scores_sorted[i].polyclonal) 
@@ -710,14 +768,12 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	}
     
         let min_value=read_diff_scores{
-	        sequence:String::from(&kmer_diff_scores_sorted[0].sequence.to_owned()),
         	value:f64::from(kmer_diff_scores_sorted[0].value),
                 groupID:usize::from(0 as usize),
 	        polyclonal:i64::from(kmer_diff_scores_sorted[0].polyclonal)
         };
         
         let max_value=read_diff_scores{
-	        sequence:String::from(&kmer_diff_scores_sorted[start_point].sequence.to_owned()),
         	value:f64::from(kmer_diff_scores_sorted[start_point].value),
                 groupID:usize::from(start_point),
 	        polyclonal:i64::from(kmer_diff_scores_sorted[start_point].polyclonal)
