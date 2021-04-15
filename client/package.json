@@ -69,7 +69,8 @@
     "partjson": "^0.58.1"
   },
   "peerDependencies": {
-    "react": "^17.0.1"
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
   },
   "repository": {
     "type": "git",

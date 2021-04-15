@@ -1,18 +1,25 @@
 {
   "version": "1.8.3",
   "name": "@stjude/proteinpaint",
-	"files": [
-    "server/server.js"
-    "server/bin.js",
-    "server/package.js",
-    "server/genome",
-    "server/dataset",
-    "dist"
-  ],
- "repository": {
+  "bin": "server/bin.js",
+  "main": "client/dist/app.js",
+  "repository": {
     "type": "git",
     "url": "https://github.com/stjude/pp-dist"
   },
+  "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
+  "files": [
+    "client/dist",
+    "public/index.html",
+    "public/bin",
+    "server/bin.js",
+    "server/dataset/clinvar.*.js",
+    "server/genome",
+    "server/src/serverconfig.js",
+    "server/server.js",
+    "server/utils",
+    "server/shared"
+  ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
   }

@@ -7,8 +7,7 @@
   "private": true,
   "workspaces": [
     "client",
-    "server",
-    "targets/gdc"
+    "server"
   ],
   "scripts": {
     "reset": "npm run emptyws && npm install && npm run linkws",

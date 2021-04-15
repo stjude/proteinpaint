@@ -105,9 +105,9 @@ fi
 
 if [[ "$PACK_FRONTEND" == 1 ]]; then
 	echo -e "\nBundling the client browser bin ...\n"
-	npx webpack --config=build/webpack.config.client.js --env.url="__PP_URL__"
+	npx webpack --config=client/webpack.config.js --env.url="__PP_URL__"
 	echo -e "\nPacking the client module main ...\n"
-	npx rollup -c ../build/rollup.config.js
+	npx rollup -c ./client/rollup.config.js
 fi
 
 ##########
@@ -121,7 +121,7 @@ rm -rf node_modules public scripts
 find . -type d -delete
 
 # get the current tag
-TAG="$(node -p "require('../package.json').version")"
+TAG="$(node -p "require('./package.json').version")"
 # we will look for the tarball of the current package version
 PKGVER="stjude-proteinpaint-$TAG.tgz"
 tar -xzf "$PKGVER"

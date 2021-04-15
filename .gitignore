@@ -6,6 +6,7 @@
 */*/node_modules*/
 npm-debug.log
 dist/*
+*/dist/
 */*/dist/
 */*/*/dist/
 
@@ -58,6 +59,7 @@ pp-server/*
 
 *-stash.js
 
+*.bak
 *.tar
 *.tgz
 *.min.js

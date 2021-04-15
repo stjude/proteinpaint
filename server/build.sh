@@ -25,7 +25,4 @@ npx webpack --config=webpack.config.js
 # PACK
 ##########
 
-rm -rf public
-rm -f shared
-mv ../client/shared ./
 npm pack 
