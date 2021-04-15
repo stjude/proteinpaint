@@ -11,16 +11,11 @@ set -e
 usage() {
 	echo "Usage:
 
-	./build/publish.sh [-b] [-f] [ \"\" | dry | registry | dry | tgz ]
+	./build/publish.sh [-b] [-f]
 
 	-b packs backend code
 	-f packs frontend code
 	- defaults to packing both backend and frontend
-
-	- no argument defaults to dry
-	- dry: equivalent to 'npm publish --dry-run'
-	- registry: equivalent to 'npm publish'
-	- tgz: equivalent to 'npm pack'
 	"
 }
 
@@ -51,19 +46,6 @@ shift $((OPTIND - 1))
 if [[ "$PACK_BACKEND" != 1 && "$PACK_FRONTEND" != 1 ]]; then
 	PACK_BACKEND=1
 	PACK_FRONTEND=1
-fi
-
-
-# default to deploying to ppdev
-if (($# == 0)); then
-	DEST="dry"
-elif (($# == 1)); then
-	DEST=$1
-fi
-
-if [[ "$DEST" != "dry" && "$DEST" != "registry" && "$DEST" != "tgz"  ]]; then
-	usage
-	exit 1
 fi
 
 

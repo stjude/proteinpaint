@@ -1,5 +1,5 @@
 {
-  "name": "@stjude/proteinpaint-client",
+  "name": "@stjude/proteinpaint",
   "version": "1.8.3",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",

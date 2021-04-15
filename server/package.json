@@ -62,6 +62,7 @@
   "files": [
     "bin.js",
     "dataset/clinvar.*.js",
+    "dataset/gdc*.js",
     "genome",
     "src/serverconfig.js",
     "server.js",
