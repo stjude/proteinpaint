@@ -1305,9 +1305,14 @@ may skip insertion if on screen width shorter than minimum width
 	} else if (flag & 0x80) {
 		segment.islast = true
 	}
+
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
+		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
+	} else if (!flag & 0x2) {
+		// When reads are in the same chromosome, but possibly very far away in the chromosome
+		segment.rnext = rnext
 	}
 	return segment
 }
