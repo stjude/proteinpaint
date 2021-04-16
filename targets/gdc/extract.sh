@@ -16,10 +16,10 @@ usage() {
 }
 
 REV=latest
-while getopts "rh" opt; do
+while getopts "r:h:" opt; do
 	case "${opt}" in
 	r)
-		REV=${OPTARG}
+		REV=$OPTARG
 		;;
 	h)
 		usage
@@ -34,6 +34,17 @@ done
 
 FILE=archive.tar
 if [[ "$REV" != 'latest' ]]; then
+	if [[ $REV == "HEAD" ]]; then
+		if [[ -d .git ]]; then
+			REV=$(git rev-parse --short HEAD)
+		fi
+	fi
+
+	if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
+		echo "Unable to convert the HEAD revision into a Git commit hash."
+		exit 1
+	fi
+
 	echo "Extracting from commit='$REV' ... "
 	git archive --output=$FILE $REV
 else 	

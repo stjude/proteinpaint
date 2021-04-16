@@ -16,7 +16,7 @@ usage() {
 }
 
 REV=latest
-while getopts "rh" opt; do
+while getopts "r:h:" opt; do
 	case "${opt}" in
 	r)
 		REV=${OPTARG}
