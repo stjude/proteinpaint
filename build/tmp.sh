@@ -37,4 +37,4 @@ fi
 # get commit sha1
 rm -Rf tmppack 
 mkdir tmppack # temporary empty workspace for checkedout commit
-git archive HEAD | tar -x -C tmppack/
+git archive $REV | tar -x -C tmppack/

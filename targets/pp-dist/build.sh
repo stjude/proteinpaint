@@ -49,7 +49,6 @@ npx webpack --config=webpack.config.js --env.url="__PP_URL__"
 echo -e "\nPacking the client module main ...\n"
 rm -rf dist
 npx rollup -c ./rollup.config.js
-sed -i.bak 's%proteinpaint-client%proteinpaint%' package.json
 
 cd ..
 
@@ -57,11 +56,11 @@ cd ..
 # PACK
 ##########
 
-mv package.json package.bk.json
+mv package.json package.json.bak
 ./targets/pp-dist/editpkgjson.js > package.json
 npm pack 
 rm package.json
-mv package.bk.json package.json
+mv package.json.bak package.json
 
 #####################
 # Build Docker Image

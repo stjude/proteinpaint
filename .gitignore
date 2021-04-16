@@ -10,7 +10,9 @@ dist/*
 */*/dist/
 */*/*/dist/
 
+archive/*
 package/*
+package-lock.json
 
 public/bin/*
 */*/public/bin/*
@@ -79,4 +81,3 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
-package-lock.json

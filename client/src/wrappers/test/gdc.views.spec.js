@@ -5,6 +5,7 @@ import { AppProps } from './AppProps'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
+// to-do: do not require serverconfig.json for testing ???
 import serverconfig from '../../../../serverconfig.json'
 
 /*************************

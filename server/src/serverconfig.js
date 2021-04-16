@@ -5,11 +5,12 @@
 
 const fs = require('fs')
 const path = require('path')
+const execSync = require('child_process').execSync
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || '..') + '/serverconfig.json'
-
+const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
+execSync(`echo "${serverconfigfile} [${fs.existsSync(serverconfigfile)}]" > test.txt`)
 /*******************
  GET SERVERCONFIG
 ********************/
@@ -42,18 +43,23 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const specfile = process.argv.find(n => n.includes('.spec.js'))
-	if (specfile) {
-		serverconfig.binpath = path.dirname(__dirname)
+	const pkfile = process.argv.find(n => n.includes('/tmppack'))
+	if (pkfile) {
+		serverconfig.binpath = pkfile.split('/tmppack')[0] + '/tmppack/server'
 	} else {
-		const jsfile = process.argv.find(
-			n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
-		)
-		try {
-			const realpath = fs.realpathSync(jsfile)
-			serverconfig.binpath = path.dirname(realpath)
-		} catch (e) {
-			throw e
+		const specfile = process.argv.find(n => n.includes('.spec.js'))
+		if (specfile) {
+			serverconfig.binpath = path.dirname(__dirname)
+		} else {
+			const jsfile = process.argv.find(
+				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+			)
+			try {
+				const realpath = fs.realpathSync(jsfile)
+				serverconfig.binpath = path.dirname(realpath)
+			} catch (e) {
+				throw e
+			}
 		}
 	}
 }
