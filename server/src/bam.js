@@ -1299,6 +1299,7 @@ may skip insertion if on screen width shorter than minimum width
 		flag,
 		tempscore
 	}
+
 	if (flag & 0x40) {
 		segment.isfirst = true
 	} else if (flag & 0x80) {
@@ -1609,6 +1610,7 @@ function plot_template(ctx, template, group, q) {
 			}
 		} else {
 			// overlaps with the previous segment
+
 			if (group.overlapRP_multirows) {
 				plot_segment(ctx, seg, template.y + group.stackheight, group, q)
 				if (group.overlapRP_hlline) {
@@ -1959,14 +1961,14 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
+	let firstseg, dir, lastseg, e, _file, isurl
 	if (!req.query.gdc) {
-		const [e, _file, isurl] = app.fileurl(req)
+		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
-		const dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
 	//const pos = Number(req.query.pos)
 	//if (!Number.isInteger(pos)) throw '.pos not integer'
-	let firstseg, lastseg
 
 	//if (req.query.gdc) {
 	//	temp_bam_file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
