@@ -12,6 +12,8 @@ to tell backend to provide color scale
 tk can predefine if bam file has chr or not
 
 tk.groups[]
+tk.downloadgdc // Downloads bam file from gdc
+tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
 tk.pileupheight
@@ -36,6 +38,9 @@ group {}
 	.variantg <g>
 	.variantrowheight
 	.variantrowbottompad
+        .gdc
+        .gdcrowheight
+        .gdcrowbottompad
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -44,6 +49,9 @@ group {}
 	.start
 	.stop
 .height
+.file
+.url
+.gdc   // one string with token and case id joined by comma
 
 enter_partstack()
 getReadInfo
@@ -141,18 +149,57 @@ async function getData(tk, block, additional = []) {
 		'pileupheight=' + tk.pileupheight,
 		...additional
 	]
+	const lst2 = [
+		'genome=' + block.genome.name,
+		'regions=' + JSON.stringify(tk.regions),
+		'nucleotide_length=' + block.exonsf,
+		'pileupheight=' + tk.pileupheight,
+		...additional
+	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst2.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
+		lst2.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
-	if (tk.asPaired) lst.push('asPaired=1')
-	if ('nochr' in tk) lst.push('nochr=' + tk.nochr)
+	if (tk.asPaired) {
+		lst.push('asPaired=1')
+		lst2.push('asPaired=1')
+	}
+	if ('nochr' in tk) {
+		lst.push('nochr=' + tk.nochr)
+		lst2.push('nochr=' + tk.nochr)
+	}
+
+	if (tk.gdc) {
+		lst.push('gdc=' + tk.gdc)
+		lst2.push('gdc=' + tk.gdc)
+	}
+	let gdc_bam_files
+	let orig_regions = []
+	if (tk.downloadgdc) {
+		lst2.push('downloadgdc=' + tk.downloadgdc)
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'))
+		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
+		if (gdc_bam_files.error) throw gdc_bam_files.error
+		delete tk.downloadgdc, lst2
+		for (const r of tk.regions) {
+			orig_regions.push(r)
+		}
+		tk.orig_regions = orig_regions
+		tk.dom.gdc = tk.glider.append('g')
+	}
+
+	//delete orig_regions
+
 	if (tk.file) lst.push('file=' + tk.file)
+
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'))
 	if (data.error) throw data.error
@@ -194,6 +241,9 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_shown = false
 	}
 
+	if (tk.gdc) {
+		may_render_gdc(data, tk, block)
+	}
 	may_render_variant(data, tk, block)
 
 	if (!tk.groups) {
@@ -227,6 +277,62 @@ or update existing groups, in which groupidx will be provided
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
+function may_render_gdc(data, tk, block) {
+	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
+	// in tk.dom.gdc, indicate location and status of the variant
+	// TODO show variant info alongside box, when box is wide enough, show
+	tk.dom.gdc.selectAll('*').remove()
+	let x1, x2 // on screen pixel start/stop of the variant box
+	{
+		// Currently this supports only single-region. In the future, multiregion support will be added.
+		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].start)
+		if (hits.length == 0) return
+		if (hits) {
+			x1 = hits[0].x - block.exonsf / 2
+		}
+	}
+	{
+		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].stop)
+		if (hits.length == 0) return
+		if (hits) {
+			x2 = hits[0].x - block.exonsf / 2
+		}
+	}
+	if (x1 >= block.width || x2 <= 0) {
+		// gdc viewrange is out of range, do not show
+		return
+	}
+
+	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+
+	// will render gdc region box in a row
+	tk.dom.gdc
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', yoff)
+		.attr('width', x2 - x1)
+		.attr('height', tk.dom.gdcrowheight - 2)
+
+	const gdc_string = 'Query region'
+	// Determining where to place the text. Before, inside or after the box
+	let gdc_start_text_pos = 0
+	const space_param = 10
+	const pad_param = 15
+	if (gdc_string.length * space_param < x1) {
+		gdc_start_text_pos = 0
+	} else {
+		gdc_start_text_pos = x2 + pad_param
+	}
+
+	tk.dom.gdc
+		.append('text')
+		.attr('x', gdc_start_text_pos)
+		.attr('y', yoff + tk.dom.gdcrowheight)
+		//.attr('dy', '.10em')
+		.attr('font-size', tk.dom.gdcrowheight)
+		.text(gdc_string)
+}
+
 function may_render_variant(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.variantg, indicate location and status of the variant
@@ -251,7 +357,12 @@ function may_render_variant(data, tk, block) {
 		return
 	}
 
-	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	let yoff
+	if (tk.gdc) {
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
+	} else {
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	}
 
 	// will render variant in a row
 	tk.dom.variantg
@@ -313,6 +424,9 @@ function setTkHeight(tk, data) {
 	// call after any group is updated
 	let h = 0
 	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
+	if (tk.gdc) {
+		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	}
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
@@ -383,8 +497,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_addvariant(tk) // only quick fix!! TODO may allow adding variant on the fly??
-
+	may_add_urlparameter(tk)
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
@@ -411,6 +524,11 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 	}
+	if (tk.gdc) {
+		tk.dom.gdc_bar = tk.glider.append('g')
+		tk.dom.gdcrowheight = 15
+		tk.dom.gdcrowbottompad = 5
+	}
 	tk.asPaired = false
 
 	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
@@ -418,30 +536,44 @@ function makeTk(tk, block) {
 	tk.label_count = block.maketklefthandle(tk, laby)
 }
 
-function may_addvariant(tk) {
-	/********* XXX only a quick fix!
-	to supply one or multiple variant from url parameter
-	if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
-	will overwrite the existing tk.variants{}
-
-	Do no use in production!
-
-	the variant may be added on the fly from e.g. a vcf track in the same browser session
-	*/
+// may add additional parameters from url that specifically apply to the bam track
+function may_add_urlparameter(tk) {
 	const u2p = url2map()
-	if (!u2p.has('variant')) return
-	const tmp = u2p.get('variant').split('.')
-	if (tmp.length < 4) {
-		console.log('urlparam variant should be at least 4 fields joined by .')
-		return
+
+	if (u2p.has('variant')) {
+		/* XXX only a quick fix!
+		to supply one or multiple variant from url parameter
+		if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
+		will overwrite the existing tk.variants{}
+
+		Do no use in production!
+
+		the variant may be added on the fly from e.g. a vcf track in the same browser session
+		*/
+		const tmp = u2p.get('variant').split('.')
+		if (tmp.length < 4) {
+			console.log('urlparam variant should be at least 4 fields joined by .')
+		} else {
+			tk.variants = []
+			for (let i = 0; i < tmp.length; i += 4) {
+				const pos = Number(tmp[i + 1])
+				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+				if (!tmp[i + 2]) return console.log('ref allele missing')
+				if (!tmp[i + 3]) return console.log('alt allele missing')
+				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+			}
+		}
 	}
-	tk.variants = []
-	for (let i = 0; i < tmp.length; i += 4) {
-		const pos = Number(tmp[i + 1])
-		if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-		if (!tmp[i + 2]) return console.log('ref allele missing')
-		if (!tmp[i + 3]) return console.log('alt allele missing')
-		tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+
+	// Checking to see if need to query GDC for bam file
+	if (u2p.has('gdc')) {
+		const str = u2p.get('gdc')
+		if (str.indexOf(',') == -1) {
+			console.log('Both gdc token and gdc case id must be present')
+		} else {
+			tk.gdc = str
+			tk.downloadgdc = 'TRUE'
+		}
 	}
 }
 
@@ -799,6 +931,9 @@ if is pair mode, is the template
 	if (tk.file) lst.push('file=' + tk.file)
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+	if (tk.gdc) {
+		lst.push('gdc=' + tk.gdc)
+	}
 	if (tk.asPaired) {
 		lst.push('getpair=1')
 	} else {
@@ -811,7 +946,6 @@ if is pair mode, is the template
 		client.sayerror(tk.readpane.body, data.error)
 		return
 	}
-	console.log('data.lst:', data.lst)
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -945,7 +1079,7 @@ function show_blatresult2(hits, div, tk, block) {
 		tr.append('td').text(h.ref_startpos)
 		tr.append('td').text(h.ref_alignlen)
 		if (repeat_file_present == 1) {
-			console.log('h.ref_in_repeat:', h.ref_in_repeat)
+			//console.log('h.ref_in_repeat:', h.ref_in_repeat)
 			tr.append('td').text(h.ref_in_repeat)
 		}
 

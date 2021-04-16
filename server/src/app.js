@@ -9523,7 +9523,7 @@ async function pp_init() {
 		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
 		return
 	}
-
+	serverconfig.gdcbamsecret = Math.random().toString()
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
