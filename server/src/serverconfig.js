@@ -43,9 +43,9 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const pkfile = process.argv.find(n => n.includes('/tmppack'))
+	const pkfile = process.argv.find(n => n.includes('/targets'))
 	if (pkfile) {
-		serverconfig.binpath = pkfile.split('/tmppack')[0] + '/tmppack/server'
+		serverconfig.binpath = pkfile.split('/targets')[0] + '/server'
 	} else {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
@@ -78,7 +78,7 @@ if (serverconfig.allow_env_overrides) {
 		serverconfig.URL = process.env.URL
 	}
 
-	if (process.env.PP_BASEPATH) {
+	if ('PP_BASEPATH' in process.env) {
 		serverconfig.basepath = process.env.PP_BASEPATH
 	}
 

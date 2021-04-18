@@ -53,19 +53,22 @@ else
 	git archive --output=$FILE $HASH
 fi
 
+rm -rf tmppack
+mkdir tmppack
+
+echo "Copying selected directories and files from the git archive ..."
+tar -C tmppack/ -xf $FILE server
+tar -C tmppack/ -xf $FILE client
+tar -C tmppack/ -xf $FILE package.json
+tar -C tmppack/ -xvf $FILE targets/gdc
+tar -C tmppack/ -xvf $FILE build/Dockerfile
+
 #####################
 # Build the image
 #####################
 
+cd tmppack
 # get the current tag
 # TAG="$(node -p "require('./package.json').version")"
-
-# docker build --file ./build/Dockerfile --tag ppbase:$REV .
-# docker build --file ./targets/pp-dist/Dockerfile --tag ppgdc:$REV --build-arg PKGVER=$TAG .
-
-##########
-# Clean up
-##########
-
-# rm package.json
-# mv package.bk.json package.json
+docker build --file ./build/Dockerfile --tag ppbase:$REV .
+docker build --file ./targets/gdc/Dockerfile --tag ppgdc:$REV --build-arg PKGVER=$REV .

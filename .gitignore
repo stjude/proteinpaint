@@ -55,7 +55,7 @@ server.js*
 setup/*gz*
 setup/*
 tmpbuild/*
-tmppack/*
+tmppack*/*
 */tmppack/*
 pp-server/*
 
