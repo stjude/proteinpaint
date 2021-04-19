@@ -99,7 +99,7 @@ docker build \
 	.
 
 # delete this test step once the gdc wrapper tests are 
-# run as part of the image building process
+# triggered as part of the image building process
 ./targets/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
 if [[ "$?" != "0" ]]; then
 	echo "Error when running the GDC test image (exit code=$?)"
