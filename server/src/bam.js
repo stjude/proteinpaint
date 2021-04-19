@@ -2202,6 +2202,28 @@ async function convertread(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
+	else if (seg.unmapped)
+		lst.push(
+			'<li>Next segment on <span style="background:' +
+				unmapped_hq +
+				'">' +
+				(query.nochr ? 'chr' : '') +
+				seg.rnext +
+				', ' +
+				seg.pnext +
+				'</span></li>'
+		)
+	else if (seg.orientation)
+		lst.push(
+			'<li>Next segment on <span style="background:' +
+				orientation_hq +
+				'">' +
+				(query.nochr ? 'chr' : '') +
+				seg.rnext +
+				', ' +
+				seg.pnext +
+				'</span></li>'
+		)
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
 	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
