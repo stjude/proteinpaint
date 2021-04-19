@@ -162,6 +162,14 @@ const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 const softclipbg_hq = '#4888bf'
 const softclipbg_lq = '#c9e6ff'
 const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
+// unmapped: soft brown for background only, strong brown for printing nt
+const unmapped_hq = '#6B4423'
+const unmapped_lq = '#987654'
+const qual2unmapped = interpolateRgb(unmapped_lq, unmapped_hq)
+// orientation: soft green for background only, strong green for printing nt
+const orientation_hq = '#3B7A57'
+const orientation_lq = '#84DE02'
+const qual2orientation = interpolateRgb(orientation_lq, orientation_hq)
 // insertion, text color gradient to correlate with the quality
 // cyan
 const insertion_hq = '#47FFFC' //'#00FFFB'
@@ -1311,19 +1319,33 @@ may skip insertion if on screen width shorter than minimum width
 		segment.rnext = rnext
 		segment.pnext = pnext
 	} else if (
-		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) ||
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) ||
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) ||
-		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80)
+		// // Mapped within insert size but incorrect orientation
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
 	) {
-	} // Read and mate is properly paired
-	else if (flag & 0x8 || flag & 0x4) {
-		// Read or mate is unmapped
-		// When reads are in the same chromosome, but possibly very far away in the chromosome
-		segment.rnext = rnext
-		segment.pnext = pnext
+		segment.orientation = rnext
+		segment.orientation = pnext
+	} else if (
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) || // 83
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80) //163
+	) {
+		// Read and mate is properly paired
+	} else if (flag & 0x8 || flag & 0x4) {
+		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
+		segment.unmapped = rnext
+		segment.unmapped = rnext
+	} else if (
+		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
+		(flag & 0x1 && flag & 0x2 && flag & 0x80)
+	) {
+		// 131
+		// Mapped within insert size but incorrect orientation
+		segment.orientation = rnext
+		segment.orientation = pnext
 	} else {
-		// Discordant reads in same chr or improperly oriented
+		// Discordant reads in same chr but not within the insert size
 		segment.rnext = rnext
 		segment.pnext = pnext
 	}
@@ -1589,11 +1611,6 @@ function plot_template(ctx, template, group, q) {
 		group.returntemplatebox.push(box)
 	}
 	for (let i = 0; i < template.segments.length; i++) {
-		let prevseg
-		if (i > 0) {
-			prevseg = template.segments[i - 1]
-			//console.log("prevseg:",prevseg)
-		}
 		const seg = template.segments[i]
 		//console.log("seg:",seg)
 		if (i == 0) {
@@ -1602,6 +1619,7 @@ function plot_template(ctx, template, group, q) {
 			continue
 		}
 		// after the first segment, this only occurs in paired mode
+		const prevseg = template.segments[i - 1]
 		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1732,13 +1750,31 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (r.to_qual) {
 				let xoff = x
 				b.qual.forEach(v => {
-					ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
+					if (segment.rnext) {
+						ctx.fillStyle = qual2ctxpair(v / maxqual)
+					} else if (segment.orientation) {
+						ctx.fillStyle = qual2orientation(v / maxqual)
+					} else if (segment.unmapped) {
+						ctx.fillStyle = qual2unmapped(v / maxqual)
+					} else {
+						ctx.fillStyle = qual2match(v / maxqual)
+					}
+					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					xoff += r.ntwidth
 				})
 			} else {
 				// not showing qual, one box
-				ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+				if (segment.rnext) {
+					ctx.fillStyle = ctxpair_hq
+				} else if (segment.orientation) {
+					ctx.fillStyle = orientation_hq
+				} else if (segment.unmapped) {
+					ctx.fillStyle = unmapped_hq
+				} else {
+					ctx.fillStyle = match_hq
+				}
+				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 			}
 			if (r.to_printnt) {
