@@ -716,9 +716,6 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
-		for (const template of templates) {
-			console.log('template:', template)
-		}
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		// read quality is not parsed yet
@@ -1135,6 +1132,7 @@ only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
 	*/
+	console.log('line:', line)
 	const l = line.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
@@ -1309,18 +1307,24 @@ may skip insertion if on screen width shorter than minimum width
 		segment.islast = true
 	}
 
-	const insert_size_length = 500 // Length of insert size used for determining if read is discordant or not
+	//const insert_size_length = 500 // Length of insert size used for determining if read is discordant or not
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
-	} else if (rnext == '=' && pnext - pos > insert_size_length) {
-		// Determining if read-pair is discordant depending on the distance between them
-		segment.rnext = rnext
-		segment.pnext = pnext
-	} else if (flag & 0x8 || flag & 0x4) {
+	}
+	//else if (rnext == '=' && Math.abs(pnext - pos) > insert_size_length && Math.abs(pnext - segstart) > insert_size_length) {
+	//	// Determining if read-pair is discordant depending on the distance between them
+	//	segment.rnext = rnext
+	//	segment.pnext = pnext
+	//}
+	else if (flag & 0x8 || flag & 0x4) {
 		// Gets activated in case of an inversion when read is unmapped (possibly due to inversion)
 		// When reads are in the same chromosome, but possibly very far away in the chromosome
+		segment.rnext = rnext
+		segment.pnext = pnext
+	} else if (flag & 0x20 || flag & 0x10) {
+	} else {
 		segment.rnext = rnext
 		segment.pnext = pnext
 	}
