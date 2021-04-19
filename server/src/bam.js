@@ -716,6 +716,9 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
+		for (const template of templates) {
+			console.log('template:', template)
+		}
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		// read quality is not parsed yet
@@ -1306,13 +1309,20 @@ may skip insertion if on screen width shorter than minimum width
 		segment.islast = true
 	}
 
+	const insert_size_length = 500 // Length of insert size used for determining if read is discordant or not
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
-	} else if (!flag & 0x2) {
+	} else if (rnext == '=' && pnext - pos > insert_size_length) {
+		// Determining if read-pair is discordant depending on the distance between them
+		segment.rnext = rnext
+		segment.pnext = pnext
+	} else if (flag & 0x8 || flag & 0x4) {
+		// Gets activated in case of an inversion when read is unmapped (possibly due to inversion)
 		// When reads are in the same chromosome, but possibly very far away in the chromosome
 		segment.rnext = rnext
+		segment.pnext = pnext
 	}
 	return segment
 }
@@ -1576,14 +1586,19 @@ function plot_template(ctx, template, group, q) {
 		group.returntemplatebox.push(box)
 	}
 	for (let i = 0; i < template.segments.length; i++) {
+		let prevseg
+		if (i > 0) {
+			prevseg = template.segments[i - 1]
+			//console.log("prevseg:",prevseg)
+		}
 		const seg = template.segments[i]
+		//console.log("seg:",seg)
 		if (i == 0) {
 			// is the first segment, same rendering method no matter in single or paired mode
 			plot_segment(ctx, seg, template.y, group, q)
 			continue
 		}
 		// after the first segment, this only occurs in paired mode
-		const prevseg = template.segments[i - 1]
 		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
