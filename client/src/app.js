@@ -166,7 +166,7 @@ export function runproteinpaint(arg) {
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app, app.selectgenome, app.genome_browser_btn)
+			return parseembedthenurl(arg, app)
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -859,7 +859,7 @@ function studyui(app, x, y) {
 	}
 }
 
-async function parseembedthenurl(arg, app, selectgenome, genome_browser_btn) {
+async function parseembedthenurl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -871,11 +871,11 @@ async function parseembedthenurl(arg, app, selectgenome, genome_browser_btn) {
 
 	*/
 
-	if (arg.genome && selectgenome) {
+	if (arg.genome && app.selectgenome) {
 		// embedding argument specified genome, so flip the <select>
-		for (let i = 0; i < selectgenome.node().childNodes.length; i++) {
-			if (selectgenome.node().childNodes[i].value == arg.genome) {
-				selectgenome.property('selectedIndex', i)
+		for (let i = 0; i < app.selectgenome.node().childNodes.length; i++) {
+			if (app.selectgenome.node().childNodes[i].value == arg.genome) {
+				app.selectgenome.property('selectedIndex', i)
 				break
 			}
 		}
@@ -983,8 +983,8 @@ async function parseembedthenurl(arg, app, selectgenome, genome_browser_btn) {
 			variantPageCall_snv: app.variantPageCall_snv,
 			samplecart: app.samplecart,
 			holder: app.holder,
-			selectgenome: selectgenome,
-			genome_browser_btn,
+			selectgenome: app.selectgenome,
+			genome_browser_btn: app.genome_browser_btn,
 			debugmode: app.debugmode
 		})
 		if (err) {
