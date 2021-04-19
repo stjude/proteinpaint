@@ -88,8 +88,12 @@ fi
 if [[ "$PACK_FRONTEND" == 1 ]]; then
 	echo -e "\nBundling the client browser bin ...\n"
 	npx webpack --config=client/webpack.config.js --env.url="__PP_URL__"
-	echo -e "\nPacking the client module main ...\n"
-	npx rollup -c ./client/rollup.config.js
+	echo -e "\nPacking the client main ...\n"
+	npx rollup -c ../build/rollup.config.js
+else
+	# Remove the public frontend assets if they are not needed.
+	# ProteinPaint should not serve such assets in backend-only mode.
+	rm -rf public/
 fi
 
 ##########
@@ -98,8 +102,10 @@ fi
 
 npm pack
 # delete everything in temp folder except the tar gz file
+# node_modules should be a symlink in the temp folder, so no need to recurse there
 find . -type f ! -name '*.tgz' -delete
-rm -rf node_modules public scripts
+rm node_modules
+rm -rf public scripts
 find . -type d -delete
 
 # get the current tag
