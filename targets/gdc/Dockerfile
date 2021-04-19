@@ -1,10 +1,13 @@
+###################
+# Test-only target 
+###################
+
+ARG IMGVER=latest
 ARG PKGVER=0.0.0
-FROM ppbase:$PKGVER as ppdeps
+FROM ppbase:$IMGVER AS ppgdctest
 
-##############################
-# Electron-system dependencies
-##############################
-
+# Install Electron system dependencies
+# - for testing only
 RUN apt-get update && apt-get install --no-install-recommends -y \
  	xauth \
   libxfont2 \
@@ -31,44 +34,61 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # avoid font-warning that breaks the test message
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
-####################
 # Install NPM deps
-####################
-
 WORKDIR /home/root/pp/app 
 ADD server ./server
 ADD client ./client
 COPY package.json ./
 RUN npm run reset
 
-
-###########################
 # Bundle the server code
-###########################
-
 WORKDIR /home/root/pp/app/server
-RUN echo -e "\nCreating the server bundle\n" && \
-	npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
+RUN npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
 
-
-##########
-# TEST
-##########
-
+# Test
 WORKDIR /home/root/pp/app 
 ADD targets ./targets
-# RUN ./targets/gdc/test.sh
-# CMD ["/bin/bash"]
+
+# For now, must mount a developer's local serverconfig.tpmasterdir
+# in order to run the GDC test in a running container
 CMD [ "/bin/bash", "./targets/gdc/test.sh"]
-# CMD ["node", "server/bin.js"]
 
-#######################################
-# Bundle the client code (ES modules)
-#######################################
+# TODO: run the GDC tests as part of building a Docker image,
+# to act as a quality control step before building a 
+# publishable build target in this Dockerfile
+# !!! requires extracting data subsets for testing Lolliplot wrapper !!!
+# RUN ./targets/gdc/test.sh
 
-# to publish PP client package/tarball in a GDC registry
-# echo -e "\nPacking the client module main ...\n"
-# rm -rf dist
-# npx rollup -c ./rollup.config.js
-# cd ..
 
+########
+# PACK 
+########
+
+FROM ppgdctest AS pppacks
+ARG PKGVER=0.0.0
+
+# Pack the server use later in the published image target
+WORKDIR /home/root/pp/app/server
+RUN npm pack && tar -xvzf stjude-proteinpaint-server-$PKGVER.tgz
+
+WORKDIR /home/root/pp/app/client
+# the .npmrc must have an entry of @stjude:registry=https://my.pkg.registry.somewhere/
+# COPY .npmrc .  
+# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json  && npm publish
+
+
+############################
+# Proteinpaint server image 
+############################
+
+ARG PKGVER=0.0.0
+
+# use the ppbase image which does NOT have 
+# the Xvfb-related libs and NPM devDependencies installed 
+FROM ppbase:$PKGVER as ppserver
+COPY --from=pppacks /home/root/pp/app/server/package /home/root/pp/app/server
+
+WORKDIR /home/root/pp/app/server
+RUN npm install --production
+WORKDIR /home/root/pp/app/
+CMD ["node", "server/bin.js"]

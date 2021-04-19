@@ -69,6 +69,37 @@ tar -C tmppack/ -xvf $FILE build/Dockerfile
 
 cd tmppack
 # get the current tag
-# TAG="$(node -p "require('./package.json').version")"
+TAG="$(node -p "require('./package.json').version")"
+echo "building image TAG=[$TAG]"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
-docker build --file ./targets/gdc/Dockerfile --tag ppgdc:$REV --build-arg PKGVER=$REV .
+
+# build an image for GDC-related tests
+# 
+# TODO: 
+# will do this test as QC for building the server image once 
+# minimal test-only data files are available
+#
+docker build \
+	--file ./targets/gdc/Dockerfile \
+	--target ppgdctest \
+	--tag ppgdctest:$REV \
+	--build-arg IMGVER=$REV \
+	--build-arg PKGVER=$TAG \
+	.
+
+# delete this test step once the gdc wrapper tests are 
+# run as part of the image building process
+./targets/gdc/dockrun.sh /Users/esioson/gb/tp 3456 ppgdctest:latest
+if [[ "$?" != "0" ]]; then
+	echo "Error when running the GDC test image (exit code=$?)"
+	exit 1
+fi
+
+# this image may publish the @stjude-proteinpaint client package
+docker build \
+	--file ./targets/gdc/Dockerfile \
+	--target ppserver \
+	--tag ppgdc:$REV \
+	--build-arg IMGVER=$REV \
+	--build-arg PKGVER=$TAG \
+	.

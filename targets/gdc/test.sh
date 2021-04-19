@@ -35,5 +35,5 @@ cd client
 echo "Running GDC-PP React Wrapper tests ..."
 Xvfb -ac -screen scrn 1280x2000x24 :9.0 -nolisten unix & export DISPLAY=:9.0
 npm run gdc -- --no-sandbox
-pkill -f "server/bin.js"
+pkill -f "server/bin.js" &> /dev/null
 
