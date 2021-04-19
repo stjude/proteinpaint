@@ -1307,24 +1307,24 @@ may skip insertion if on screen width shorter than minimum width
 		segment.islast = true
 	}
 
-	//const insert_size_length = 500 // Length of insert size used for determining if read is discordant or not
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
-	}
-	//else if (rnext == '=' && Math.abs(pnext - pos) > insert_size_length && Math.abs(pnext - segstart) > insert_size_length) {
-	//	// Determining if read-pair is discordant depending on the distance between them
-	//	segment.rnext = rnext
-	//	segment.pnext = pnext
-	//}
+	} else if (
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) ||
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) ||
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) ||
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80)
+	) {
+	} // Read and mate is properly paired
 	else if (flag & 0x8 || flag & 0x4) {
-		// Gets activated in case of an inversion when read is unmapped (possibly due to inversion)
+		// Read or mate is unmapped
 		// When reads are in the same chromosome, but possibly very far away in the chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
-	} else if (flag & 0x20 || flag & 0x10) {
 	} else {
+		// Discordant reads in same chr or improperly oriented
 		segment.rnext = rnext
 		segment.pnext = pnext
 	}
