@@ -1132,7 +1132,6 @@ only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
 	*/
-	console.log('line:', line)
 	const l = line.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
