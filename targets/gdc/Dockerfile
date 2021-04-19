@@ -74,8 +74,9 @@ RUN npm pack && tar -xvzf stjude-proteinpaint-server-$PKGVER.tgz
 WORKDIR /home/root/pp/app/client
 # the .npmrc must have an entry of @stjude:registry=https://my.pkg.registry.somewhere/
 # COPY .npmrc .  
-# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json  && npm publish
-
+# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json && npm publish # to a private registry
+#   --  or --
+# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json && npm pack && scp stjude-proteinpaint-$PKGVER.tgz host:/some/where
 
 ############################
 # Proteinpaint server image 
