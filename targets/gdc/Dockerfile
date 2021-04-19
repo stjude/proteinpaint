@@ -81,11 +81,11 @@ WORKDIR /home/root/pp/app/client
 # Proteinpaint server image 
 ############################
 
-ARG PKGVER=0.0.0
+ARG IMGVER=latest
 
 # use the ppbase image which does NOT have 
 # the Xvfb-related libs and NPM devDependencies installed 
-FROM ppbase:$PKGVER as ppserver
+FROM ppbase:$IMGVER as ppserver
 COPY --from=pppacks /home/root/pp/app/server/package /home/root/pp/app/server
 
 WORKDIR /home/root/pp/app/server

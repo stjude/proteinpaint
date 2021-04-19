@@ -9,15 +9,20 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/pp-dist/build.sh [-r]
+	./targets/pp-dist/build.sh [-t] [-r]
 
+	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
 	"
 }
 
 REV=latest
-while getopts "r:h:" opt; do
+TPDIR=''
+while getopts "t:r:h:" opt; do
 	case "${opt}" in
+	t) 
+		TPMASTERDIR=$OPTARG
+		;;
 	r)
 		REV=$OPTARG
 		;;
@@ -27,6 +32,12 @@ while getopts "r:h:" opt; do
 		;;
 	esac
 done
+
+if [[ "$TPMASTERDIR" == "" ]]; then
+	echo "Missing the -t argument"
+	usage
+	exit 1
+fi
 
 #######################################
 # EXTRACT FROM COMMIT OR TRACKED FILES
@@ -89,7 +100,7 @@ docker build \
 
 # delete this test step once the gdc wrapper tests are 
 # run as part of the image building process
-./targets/gdc/dockrun.sh /Users/esioson/gb/tp 3456 ppgdctest:latest
+./targets/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
 if [[ "$?" != "0" ]]; then
 	echo "Error when running the GDC test image (exit code=$?)"
 	exit 1
