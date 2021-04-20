@@ -24,6 +24,8 @@ export default [
 				extensions: ['.js']
 			}),
 			postcss()
+			// TODO: create an option for GDC build
+			// to not use terser in production/non-watch mode
 			//production && terser()
 		],
 		onwarn
