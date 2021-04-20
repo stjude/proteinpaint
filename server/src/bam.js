@@ -1852,21 +1852,22 @@ function plot_segment(ctx, segment, y, group, q) {
 				)
 			}
 		}
-	} else if (segment.discordsamechr) {
-		if (!r.to_qual) {
-			// no quality and just a solid box, may print name
-			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
-				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-				ctx.fillStyle = 'white'
-				ctx.fillText(
-					(q.nochr ? 'chr' : '') + segment.discordsamechr,
-					(segment.x1 + segment.x2) / 2,
-					y + group.stackheight / 2,
-					segment.x2 - segment.x1
-				)
-			}
-		}
 	}
+	//else if (segment.discordsamechr) {
+	//	if (!r.to_qual) {
+	//		// no quality and just a solid box, may print name
+	//		if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
+	//			ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
+	//			ctx.fillStyle = 'white'
+	//			ctx.fillText(
+	//			    (q.nochr ? 'chr' : '')+q.regions[0].chr.replace('chr',''),
+	//				(segment.x1 + segment.x2) / 2,
+	//				y + group.stackheight / 2,
+	//				segment.x2 - segment.x1
+	//			)
+	//		}
+	//	}
+	//}
 }
 
 function plot_insertions(ctx, group, q, templates, messagerowheights) {
