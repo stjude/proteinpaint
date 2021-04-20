@@ -92,4 +92,5 @@ COPY --from=pppacks /home/root/pp/app/server/package /home/root/pp/app/server
 WORKDIR /home/root/pp/app/server
 RUN npm install --production
 WORKDIR /home/root/pp/app/
+COPY ./LICENSE ./
 CMD ["node", "server/bin.js"]
