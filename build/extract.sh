@@ -63,7 +63,7 @@ printf "Copying selected directories and files ..."
 tar -C tmppack/ -xf $FILE server
 tar -C tmppack/ -xf $FILE client
 tar -C tmppack/ -xf $FILE package.json
-tar -C tmppack/ -xvf $FILE targets/gdc
+tar -C tmppack/ -xvf $FILE targets
 tar -C tmppack/ -xvf $FILE build/Dockerfile
 tar -C tmppack/ -xvf $FILE .dockerignore
 tar -C tmppack/ -xvf $FILE LICENSE

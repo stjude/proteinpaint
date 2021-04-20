@@ -28,15 +28,19 @@ while getopts "r:h:" opt; do
 	esac
 done
 
-#############################
-# EXTRACT FROM COMMIT
-#############################
+#########################
+# EXTRACT REQUIRED FILES
+#########################
 
-if [[ "$REV" != 'latest' ]]; then
-	./build/tmp.sh $REV
-	cd tmppack
-	npm run reset
-fi
+./build/extract.sh
+REV=$(cat tmppack/rev.txt)
+
+#######
+# PACK
+#######
+
+cd tmppack
+npm run reset
 
 cd server
 echo -e "\nCreating the server bundle\n"
@@ -68,6 +72,5 @@ mv package.json.bak package.json
 
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
-
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
-docker build --file ./targets/pp-dist/Dockerfile --tag ppdist:$REV --build-arg PKGVER=$TAG .
+docker build --file ./targets/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

@@ -39,9 +39,9 @@ if [[ "$TPMASTERDIR" == "" ]]; then
 	exit 1
 fi
 
-#######################################
+#########################
 # EXTRACT REQUIRED FILES
-#######################################
+#########################
 
 ./build/extract.sh
 REV=$(cat tmppack/rev.txt)
@@ -53,7 +53,7 @@ REV=$(cat tmppack/rev.txt)
 cd tmppack
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
-echo "building image TAG=[$TAG]"
+echo "building image:$REV, version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
 
 # build an image for GDC-related tests
