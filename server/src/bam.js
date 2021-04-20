@@ -154,6 +154,10 @@ const qual2match = interpolateRgb(match_lq, match_hq)
 const ctxpair_hq = '#d48b37'
 const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
+// discordant reads: soft green for background only, strong green for printing nt
+const discordsamechr_hq = '#3B7A57'
+const discordsamechr_lq = '#84DE02'
+const qual2discordsamechr = interpolateRgb(discordsamechr_lq, discordsamechr_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
 const mismatchbg_hq = '#d13232'
 const mismatchbg_lq = '#ffdbdd'
@@ -166,9 +170,9 @@ const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
 const unmapped_hq = '#6B4423'
 const unmapped_lq = '#987654'
 const qual2unmapped = interpolateRgb(unmapped_lq, unmapped_hq)
-// orientation: soft green for background only, strong green for printing nt
-const orientation_hq = '#3B7A57'
-const orientation_lq = '#84DE02'
+// orientation: soft pink for background only, strong pink for printing nt
+const orientation_hq = '#ff0aef'
+const orientation_lq = '#ffd6fe'
 const qual2orientation = interpolateRgb(orientation_lq, orientation_hq)
 // insertion, text color gradient to correlate with the quality
 // cyan
@@ -1324,7 +1328,7 @@ may skip insertion if on screen width shorter than minimum width
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
 	) {
 		segment.orientation = rnext
-		segment.orientation = pnext
+		segment.pos_orientation = pnext
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
@@ -1335,19 +1339,18 @@ may skip insertion if on screen width shorter than minimum width
 	} else if (flag & 0x8 || flag & 0x4) {
 		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
 		segment.unmapped = rnext
-		segment.unmapped = rnext
+		segment.pos_unmapped = rnext
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
-		(flag & 0x1 && flag & 0x2 && flag & 0x80)
+		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
 	) {
-		// 131
 		// Mapped within insert size but incorrect orientation
 		segment.orientation = rnext
-		segment.orientation = pnext
+		segment.pos_orientation = pnext
 	} else {
 		// Discordant reads in same chr but not within the insert size
-		segment.rnext = rnext
-		segment.pnext = pnext
+		segment.discordsamechr = rnext
+		segment.pos_discordsamechr = pnext
 	}
 	return segment
 }
@@ -1754,6 +1757,8 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2ctxpair(v / maxqual)
 					} else if (segment.orientation) {
 						ctx.fillStyle = qual2orientation(v / maxqual)
+					} else if (segment.discordsamechr) {
+						ctx.fillStyle = qual2discordsamechr(v / maxqual)
 					} else if (segment.unmapped) {
 						ctx.fillStyle = qual2unmapped(v / maxqual)
 					} else {
@@ -1769,6 +1774,8 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = ctxpair_hq
 				} else if (segment.orientation) {
 					ctx.fillStyle = orientation_hq
+				} else if (segment.discordsamechr) {
+					ctx.fillStyle = discordsamechr_hq
 				} else if (segment.unmapped) {
 					ctx.fillStyle = unmapped_hq
 				} else {
@@ -1839,6 +1846,20 @@ function plot_segment(ctx, segment, y, group, q) {
 				ctx.fillStyle = 'white'
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
+					(segment.x1 + segment.x2) / 2,
+					y + group.stackheight / 2,
+					segment.x2 - segment.x1
+				)
+			}
+		}
+	} else if (segment.discordsamechr) {
+		if (!r.to_qual) {
+			// no quality and just a solid box, may print name
+			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
+				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
+				ctx.fillStyle = 'white'
+				ctx.fillText(
+					(q.nochr ? 'chr' : '') + segment.discordsamechr,
 					(segment.x1 + segment.x2) / 2,
 					y + group.stackheight / 2,
 					segment.x2 - segment.x1
