@@ -37,9 +37,7 @@ done
 FILE=archive.tar
 if [[ "$REV" != 'latest' ]]; then
 	if [[ $REV == "HEAD" ]]; then
-		if [[ -d .git ]]; then
-			REV=$(git rev-parse --short HEAD)
-		fi
+		REV=$(git rev-parse --short HEAD)
 	fi
 
 	if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
@@ -49,7 +47,12 @@ if [[ "$REV" != 'latest' ]]; then
 
 	echo "Extracting from commit='$REV' ... "
 	git archive --output=$FILE $REV
-else 	
+elif [[ "$(git status --porcelain)" == "" ]]; then
+	# clean git workspace
+	echo "Extracting from latest commit ... "
+	git archive --output=$FILE "$(git rev-parse --short HEAD)"
+else
+	# dirty git workspace
 	HASH=$(git stash create)
 	echo "Extracting from git-tracked files (stash=$HASH) ..."
 	git archive --output=$FILE $HASH

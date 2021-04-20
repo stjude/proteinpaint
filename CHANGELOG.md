@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.9.1
+
+- Synchronize the version update in client and server package.json
+- Delete unneeded build scripts
+- Fix the extraction of files from a clean git workspace
+
 ## 1.9.0
 
 - Reorganize the code into a monorepo structure using NPM workspaces
