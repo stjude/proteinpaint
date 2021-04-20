@@ -2224,17 +2224,11 @@ async function convertread(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
-	else if (seg.unmapped)
-		lst.push(
-			'<li>Next segment on <span style="background:' +
-				unmapped_hq +
-				'">' +
-				(query.nochr ? 'chr' : '') +
-				seg.rnext +
-				', ' +
-				seg.pnext +
-				'</span></li>'
-		)
+	else if (seg.discordsamechr) lst.push('<li>Other segment mapped in same chromosome</li>')
+	//else if (seg.unmapped)
+	//	lst.push(
+	//		'<li>Other segment is unmapped</li>'
+	//	)
 	else if (seg.orientation)
 		lst.push(
 			'<li>Next segment on <span style="background:' +
