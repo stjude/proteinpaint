@@ -16,18 +16,17 @@
 	$ npx proteinpaint
 */
 
-const pkg = require('./package.json')
 const fs = require('fs')
 const execSync = require('child_process').execSync
 const path = require('path')
 const serverconfig = require('./src/serverconfig.js')
 
-const pkgpublic = path.join(serverconfig.binpath, './public')
+const pkgpublic = path.join(serverconfig.binpath, '../public')
 
 if (serverconfig.backend_only) {
 	execSync(`rm -rf ${pkgpublic}`)
-	execSync(`rm -rf ${path.join(serverconfig.binpath, './dist')}`)
-} else if (!fs.existsSync('.git') && pkg._where) {
+	execSync(`rm -rf ${path.join(serverconfig.binpath, '../client/dist')}`)
+} else if (!fs.existsSync('./webpack.config.js')) {
 	// do not do the following in a dev environment
 
 	if (!fs.existsSync('public')) {

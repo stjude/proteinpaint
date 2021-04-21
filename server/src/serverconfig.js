@@ -5,11 +5,12 @@
 
 const fs = require('fs')
 const path = require('path')
+const execSync = require('child_process').execSync
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || '..') + '/serverconfig.json'
-
+const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
+execSync(`echo "${serverconfigfile} [${fs.existsSync(serverconfigfile)}]" > test.txt`)
 /*******************
  GET SERVERCONFIG
 ********************/
@@ -42,18 +43,23 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const specfile = process.argv.find(n => n.includes('.spec.js'))
-	if (specfile) {
-		serverconfig.binpath = path.dirname(__dirname)
+	const pkfile = process.argv.find(n => n.includes('/targets'))
+	if (pkfile) {
+		serverconfig.binpath = pkfile.split('/targets')[0] + '/server'
 	} else {
-		const jsfile = process.argv.find(
-			n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
-		)
-		try {
-			const realpath = fs.realpathSync(jsfile)
-			serverconfig.binpath = path.dirname(realpath)
-		} catch (e) {
-			throw e
+		const specfile = process.argv.find(n => n.includes('.spec.js'))
+		if (specfile) {
+			serverconfig.binpath = path.dirname(__dirname)
+		} else {
+			const jsfile = process.argv.find(
+				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+			)
+			try {
+				const realpath = fs.realpathSync(jsfile)
+				serverconfig.binpath = path.dirname(realpath)
+			} catch (e) {
+				throw e
+			}
 		}
 	}
 }
@@ -72,7 +78,7 @@ if (serverconfig.allow_env_overrides) {
 		serverconfig.URL = process.env.URL
 	}
 
-	if (process.env.PP_BASEPATH) {
+	if ('PP_BASEPATH' in process.env) {
 		serverconfig.basepath = process.env.PP_BASEPATH
 	}
 
@@ -114,7 +120,6 @@ module.exports = serverconfig
 function getGDCconfig() {
 	return {
 		allow_env_overrides: true,
-		basepath: process.env.PP_MODE && process.env.PP_MODE.startsWith('container') ? '/auth/api/custom/proteinpaint' : '',
 		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
 		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
 		genomes: [

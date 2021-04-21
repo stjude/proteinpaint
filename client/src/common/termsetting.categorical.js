@@ -316,10 +316,6 @@ export function setCategoricalMethods(self) {
 						inuse: true,
 						customset: customset
 					}
-					self.opts.callback({
-						term: self.term,
-						q: self.q
-					})
 
 					self.regroupMenu(default_grp_count, cat_grps)
 				})

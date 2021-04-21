@@ -6,10 +6,13 @@
 */*/node_modules*/
 npm-debug.log
 dist/*
+*/dist/
 */*/dist/
 */*/*/dist/
 
+archive/*
 package/*
+package-lock.json
 
 public/bin/*
 */*/public/bin/*
@@ -52,11 +55,13 @@ server.js*
 setup/*gz*
 setup/*
 tmpbuild/*
-tmppack/*
+tmppack*/*
+*/tmppack/*
 pp-server/*
 
 *-stash.js
 
+*.bak
 *.tar
 *.tgz
 *.min.js
@@ -76,4 +81,3 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
-package-lock.json
