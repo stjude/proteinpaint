@@ -199,8 +199,7 @@ else
 	mv server/dataset $APP/
 	mv server/utils $APP/
 	mv server/src/serverconfig.js $APP/src
-	rm server/shared # remove symlink
-	mv client/shared server/
+	mv server/shared $APP/
 	mv public/bin $APP/public/bin
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 
