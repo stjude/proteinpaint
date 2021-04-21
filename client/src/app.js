@@ -21,6 +21,14 @@ exports a global function runproteinpaint()
 will be called for launching anything from pp
 returns a promise that resolve to something e.g. block
 
+internal "app{}"
+.debugmode
+.error0()
+.genomes{}
+.holder
+.holder0
+.hostURL
+
 
 ********** INTERNAL
 
@@ -152,15 +160,13 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			let selectgenome // the <select> genome, should belong to this particular launch
-
 			if (!arg.noheader) {
-				selectgenome = makeheader(app, data, arg.jwt)
+				makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app, selectgenome)
+			return parseembedthenurl(arg, app)
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -181,6 +187,7 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder.append('div')
 	const app_row = app.holder.append('div')
+	app.holder.browsers_row = app.holder.append('div').attr('id', 'browsers_row')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -250,7 +257,7 @@ function makeheader(app, obj, jwt) {
 		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
 			str = hitgene.text()
 		}
-		findgene2paint(app, str, selectgenome.property('value'), jwt)
+		findgene2paint(app, str, app.selectgenome.property('value'), jwt)
 		input.property('value', '')
 		tip.hide()
 	}
@@ -258,7 +265,7 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), selectgenome.property('value'), tip, jwt)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
@@ -280,77 +287,34 @@ function makeheader(app, obj, jwt) {
 		})
 	input.node().focus()
 
-	const selectgenome = headbox
+	const genome_select_div = headbox
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', padw)
 		.style('padding-left', '5px')
+
+	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
-			make_genome_browser_btn(gb_div)
+			update_genome_browser_btn(app)
 		})
 	for (const n in app.genomes) {
-		selectgenome
+		app.selectgenome
 			.append('option')
 			.attr('n', n)
 			.text(app.genomes[n].species + ' ' + n)
 			.property('value', n)
 	}
-	//Holds element in a consistent location
-	const gb_div = headbox.append('span')
-	make_genome_browser_btn(gb_div)
-
-	//Launch genome browser button in headbox
-	async function make_genome_browser_btn(div) {
-		div.selectAll('#genome_btn').remove()
-		const ss = selectgenome.node()
-		const genomename = ss.options[ss.selectedIndex].value
-
-		const genome_browser_btn = div
-			.attr('class', 'sja_menuoption')
-			.attr('id', 'genome_btn')
-			.style('padding', padw)
-			.style('border-radius', '5px')
-			.text(genomename + ' Genome Browser')
-			.on('click', () => {
-				apps_off()
-				const g = app.genomes[genomename]
-				if (!g) {
-					alert('Invalid genome name: ' + genomename)
-					return
-				}
-				//TODO change from pop out pane to new div in the page
-				const p = div.node().getBoundingClientRect()
-				const pane = client.newpane({ x: p.left, y: p.top + p.height + 10 })
-				pane.header.text(genomename + ' genome browser')
-
-				const par = {
-					hostURL: app.hostURL,
-					jwt: jwt,
-					holder: pane.body,
-					genome: g,
-					chr: g.defaultcoord.chr,
-					start: g.defaultcoord.start,
-					stop: g.defaultcoord.stop,
-					nobox: true,
-					tklst: [],
-					debugmode: app.debugmode
-				}
-				client.first_genetrack_tolist(g, par.tklst)
-
-				import('./block').then(b => new b.Block(par))
-			})
-		return genome_browser_btn
-	}
+	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
 			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-			app_btn_toggle()
+			btn_toggle(app_btn, app_btn_active)
 		}
 	}
 
@@ -404,7 +368,7 @@ function makeheader(app, obj, jwt) {
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				app_btn_toggle()
+				btn_toggle(app_btn, app_btn_active)
 
 				app_holder
 					.transition()
@@ -419,13 +383,13 @@ function makeheader(app, obj, jwt) {
 			})
 	}
 
-	function app_btn_toggle() {
-		app_btn
+	function btn_toggle(btn, btn_active) {
+		btn
 			.transition()
 			.duration(500)
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', btn_active ? '#e2e2e2' : '#f2f2f2')
+			.style('border-right', btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('border-bottom', btn_active ? 'solid 1px #c2c2c2' : '')
 	}
 
 	headbox
@@ -465,8 +429,106 @@ function makeheader(app, obj, jwt) {
 				.append('p')
 				.html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
 		})
+}
 
-	return selectgenome
+function make_genome_browser_btn(app, headbox, jwt, apps_off) {
+	const padw = '13px'
+	const genome_btn_div = headbox.append('span')
+	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
+
+	const g_browser_btn = genome_btn_div
+		.attr('class', 'sja_menuoption')
+		.attr('id', 'genome_btn')
+		.style('padding', padw)
+		.style('border-radius', '5px')
+		.datum(genomename)
+		.text(genomename + ' genome browser')
+		.on('click', genomename => {
+			let [browser_header, browser_body] = make_browser_div(app.holder.browsers_row)
+
+			const g = app.genomes[genomename]
+			if (!g) {
+				alert('Invalid genome name: ' + genomename)
+				return
+			}
+
+			browser_header.text(genomename + ' genome browser')
+
+			const par = {
+				hostURL: app.hostURL,
+				jwt: jwt,
+				holder: browser_body,
+				genome: g,
+				chr: g.defaultcoord.chr,
+				start: g.defaultcoord.start,
+				stop: g.defaultcoord.stop,
+				nobox: true,
+				tklst: [],
+				debugmode: app.debugmode
+			}
+			client.first_genetrack_tolist(g, par.tklst)
+
+			import('./block').then(b => new b.Block(par))
+			apps_off()
+		})
+	return g_browser_btn
+}
+
+function update_genome_browser_btn(app) {
+	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
+	app.genome_browser_btn.datum(app.selectgenome.node().value)
+}
+
+function make_browser_div(browsers_row) {
+	const genome_browser_div = browsers_row.insert('div', ':first-child')
+	const header_row = genome_browser_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '10px')
+		.style('padding-right', '10px')
+		.style('margin-bottom', '0px')
+		.style('border', 'solid 1px #f2f2f2')
+		.style('border-radius', '5px 5px 0 0')
+		.style('background-color', '#f2f2f2')
+		.style('width', '95vw')
+
+	// close_btn
+	header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_menuoption')
+		.style('cursor', 'default')
+		.style('padding', '4px 10px')
+		.style('margin', '0px')
+		.style('border-right', 'solid 2px white')
+		.style('font-size', '1.5em')
+		.html('&times;')
+		.on('mousedown', () => {
+			document.body.dispatchEvent(new Event('mousedown'))
+			d3event.stopPropagation()
+		})
+		.on('click', () => {
+			genome_browser_div.selectAll('*').remove()
+		})
+
+	const header = header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '5px 10px')
+
+	const browser_body = genome_browser_div
+		.append('div')
+		.style('margin', '10px')
+		.style('margin-top', '0px')
+		.style('padding-right', '8px')
+		.style('display', 'inline-block')
+		.style('display', 'inline-block')
+		.style('border', 'solid 2px #f2f2f2')
+		.style('border-top', 'solid 1px white')
+		.style('border-radius', '0  0 5px 5px')
+		.style('width', '95vw')
+
+	return [header, browser_body]
 }
 
 async function launchApps(app) {
@@ -797,7 +859,7 @@ function studyui(app, x, y) {
 	}
 }
 
-async function parseembedthenurl(arg, app, selectgenome) {
+async function parseembedthenurl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -809,11 +871,11 @@ async function parseembedthenurl(arg, app, selectgenome) {
 
 	*/
 
-	if (arg.genome && selectgenome) {
+	if (arg.genome && app.selectgenome) {
 		// embedding argument specified genome, so flip the <select>
-		for (let i = 0; i < selectgenome.node().childNodes.length; i++) {
-			if (selectgenome.node().childNodes[i].value == arg.genome) {
-				selectgenome.property('selectedIndex', i)
+		for (let i = 0; i < app.selectgenome.node().childNodes.length; i++) {
+			if (app.selectgenome.node().childNodes[i].value == arg.genome) {
+				app.selectgenome.property('selectedIndex', i)
 				break
 			}
 		}
@@ -921,7 +983,8 @@ async function parseembedthenurl(arg, app, selectgenome) {
 			variantPageCall_snv: app.variantPageCall_snv,
 			samplecart: app.samplecart,
 			holder: app.holder,
-			selectgenome: selectgenome,
+			selectgenome: app.selectgenome,
+			genome_browser_btn: app.genome_browser_btn,
 			debugmode: app.debugmode
 		})
 		if (err) {

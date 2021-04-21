@@ -98,6 +98,7 @@ segment {}
 .ridx
 .x1, x2  // screen px, used for rendering
 .shiftdownrow // idx of mini stack
+.tempscore // XXX explain what is it
 .isfirst
 .islast
 .discord_wrong_insertsize
@@ -1136,8 +1137,7 @@ function get_templates(q, group) {
 	return [...qname2template.values()]
 }
 
-function parse_one_segment(line, r, ridx, keepallboxes) {
-	/*
+/*
 do not do:
   parse seq
   parse qual
@@ -1147,8 +1147,11 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
-	*/
-	const l = line.sam_info.trim().split('\t')
+
+lineObj: {sam_info, tempscore}
+*/
+function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
+	const l = lineObj.sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1163,8 +1166,6 @@ may skip insertion if on screen width shorter than minimum width
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
-
-	let tempscore = line.tempscore
 
 	if (flag & 0x4) {
 		//console.log('unmapped')
@@ -1319,7 +1320,7 @@ may skip insertion if on screen width shorter than minimum width
 		cigarstr,
 		tlen,
 		flag,
-		tempscore
+		tempscore: lineObj.tempscore
 	}
 
 	if (flag & 0x40) {
@@ -1338,7 +1339,10 @@ may skip insertion if on screen width shorter than minimum width
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
 	) {
 		segment.discord_orientation = true
-		//segment.pos_discord_orientation = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
@@ -1350,18 +1354,23 @@ may skip insertion if on screen width shorter than minimum width
 		// XXX here 0x8 is for mate unmapped, but 0x4 is this reads is unmapped, so must not mix them together and figure out how to handle 0x4
 		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
 		segment.discord_unmapped = true
-		//segment.pos_discord_unmapped = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
 	) {
 		// Mapped within insert size but incorrect orientation
 		segment.discord_orientation = true
-		//segment.pos_discord_orientation = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
 	} else {
 		// Discordant reads in same chr but not within the insert size
 		segment.discord_wrong_insertsize = true
-		//segment.pos_discord_wrong_insertsize = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
 	}
 	return segment
 }
@@ -2045,7 +2054,7 @@ async function route_getread(genome, req) {
 	if (!seglst) throw 'read not found'
 	const lst = []
 	for (const s of seglst) {
-		lst.push(await convertread(s, genome, req.query))
+		lst.push(await convertread2html(s, genome, req.query))
 	}
 	return { lst }
 }
@@ -2057,20 +2066,6 @@ async function query_oneread(req, r) {
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
-	//const pos = Number(req.query.pos)
-	//if (!Number.isInteger(pos)) throw '.pos not integer'
-
-	//if (req.query.gdc) {
-	//	temp_bam_file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
-	//	await get_gdc_bam(
-	//		req.query.chr,
-	//		req.query.viewstart,
-	//		req.query.viewstop,
-	//		req.query.gdc.split(',')[0],
-	//		req.query.gdc.split(',')[1],
-	//		temp_bam_file
-	//	)
-	//}
 	return new Promise((resolve, reject) => {
 		let ps
 		if (req.query.gdc) {
@@ -2088,7 +2083,7 @@ async function query_oneread(req, r) {
 		}
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true)
+			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true, true)
 			if (!s) return
 			if (s.qname != req.query.qname) return
 			if (req.query.getfirst) {
@@ -2118,15 +2113,6 @@ async function query_oneread(req, r) {
 			// finished reading and still not resolved
 			// means it is in paired mode but read is single
 
-			//if (req.query.gdc) {
-			//	// Deleting temporary gdc bam file
-			//	fs.unlink(temp_bam_file, err => {
-			//		if (err) console.log(err)
-			//		else {
-			//			console.log('Deleted file: ' + temp_bam_file.toString())
-			//		}
-			//	})
-			//}
 			const lst = []
 			if (firstseg) lst.push(firstseg)
 			if (lastseg) lst.push(lastseg)
@@ -2134,7 +2120,7 @@ async function query_oneread(req, r) {
 		})
 	})
 }
-async function convertread(seg, genome, query) {
+async function convertread2html(seg, genome, query) {
 	// convert a read to html
 	const refstart = seg.boxes[0].start // 0 based
 	const b = seg.boxes[seg.boxes.length - 1]
@@ -2204,7 +2190,6 @@ async function convertread(seg, genome, query) {
 		}
 	}
 
-	//console.log("seg.boxes:",seg.boxes)
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0
@@ -2216,8 +2201,6 @@ async function convertread(seg, genome, query) {
 		soft_stop += box.len
 		if (box.opr == 'S') {
 			soft_present = 1
-			//console.log("soft_start:",soft_start)
-			//console.log("soft_stop:",soft_stop)
 			soft_starts.push(soft_start)
 			soft_stops.push(soft_stop)
 		}
@@ -2239,13 +2222,22 @@ async function convertread(seg, genome, query) {
 		)
 	} else if (seg.discord_wrong_insertsize) {
 		lst.push(
-			'<li><span style="background:' + discord_wrong_insertsize_hq + ';color:white">Wrong insert size</span></li>'
+			'<li>' +
+				'<span style="background:' +
+				discord_wrong_insertsize_hq +
+				';color:white">Wrong insert size</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>'
 		)
 	} else if (seg.discord_orientation) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_orientation_hq +
-				';color:white">Segments having wrong orientation</span></li>'
+				';color:white">Segments having wrong orientation</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>'
 		)
 	} else if (seg.discord_unmapped) {
 		lst.push(
@@ -2278,7 +2270,7 @@ async function convertread(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
 			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
-			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.tlen)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
