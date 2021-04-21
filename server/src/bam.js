@@ -155,9 +155,9 @@ const ctxpair_hq = '#d48b37'
 const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
 // discordant reads: soft green for background only, strong green for printing nt
-const discordsamechr_hq = '#3B7A57'
-const discordsamechr_lq = '#84DE02'
-const qual2discordsamechr = interpolateRgb(discordsamechr_lq, discordsamechr_hq)
+const discord_wrong_insertsize_hq = '#3B7A57'
+const discord_wrong_insertsize_lq = '#84DE02'
+const qual2discord_wrong_insertsize = interpolateRgb(discord_wrong_insertsize_lq, discord_wrong_insertsize_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
 const mismatchbg_hq = '#d13232'
 const mismatchbg_lq = '#ffdbdd'
@@ -166,14 +166,14 @@ const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 const softclipbg_hq = '#4888bf'
 const softclipbg_lq = '#c9e6ff'
 const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
-// unmapped: soft brown for background only, strong brown for printing nt
-const unmapped_hq = '#6B4423'
-const unmapped_lq = '#987654'
-const qual2unmapped = interpolateRgb(unmapped_lq, unmapped_hq)
-// orientation: soft pink for background only, strong pink for printing nt
-const orientation_hq = '#ff0aef'
-const orientation_lq = '#ffd6fe'
-const qual2orientation = interpolateRgb(orientation_lq, orientation_hq)
+// discord_unmapped: soft brown for background only, strong brown for printing nt
+const discord_unmapped_hq = '#6B4423'
+const discord_unmapped_lq = '#987654'
+const qual2discord_unmapped = interpolateRgb(discord_unmapped_lq, discord_unmapped_hq)
+// discord_orientation: soft pink for background only, strong pink for printing nt
+const discord_orientation_hq = '#ff0aef'
+const discord_orientation_lq = '#ffd6fe'
+const qual2discord_orientation = interpolateRgb(discord_orientation_lq, discord_orientation_hq)
 // insertion, text color gradient to correlate with the quality
 // cyan
 const insertion_hq = '#47FFFC' //'#00FFFB'
@@ -1327,8 +1327,9 @@ may skip insertion if on screen width shorter than minimum width
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
 	) {
-		segment.orientation = rnext
-		segment.pos_orientation = pnext
+		console.log('')
+		segment.discord_orientation = true
+		segment.pos_discord_orientation = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
@@ -1338,19 +1339,19 @@ may skip insertion if on screen width shorter than minimum width
 		// Read and mate is properly paired
 	} else if (flag & 0x8 || flag & 0x4) {
 		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
-		segment.unmapped = rnext
-		segment.pos_unmapped = rnext
+		segment.discord_unmapped = true
+		segment.pos_discord_unmapped = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
 	) {
 		// Mapped within insert size but incorrect orientation
-		segment.orientation = rnext
-		segment.pos_orientation = pnext
+		segment.discord_orientation = true
+		segment.pos_discord_orientation = true
 	} else {
 		// Discordant reads in same chr but not within the insert size
-		segment.discordsamechr = rnext
-		segment.pos_discordsamechr = pnext
+		segment.discord_wrong_insertsize = true
+		segment.pos_discord_wrong_insertsize = true
 	}
 	return segment
 }
@@ -1755,12 +1756,12 @@ function plot_segment(ctx, segment, y, group, q) {
 				b.qual.forEach(v => {
 					if (segment.rnext) {
 						ctx.fillStyle = qual2ctxpair(v / maxqual)
-					} else if (segment.orientation) {
-						ctx.fillStyle = qual2orientation(v / maxqual)
-					} else if (segment.discordsamechr) {
-						ctx.fillStyle = qual2discordsamechr(v / maxqual)
-					} else if (segment.unmapped) {
-						ctx.fillStyle = qual2unmapped(v / maxqual)
+					} else if (segment.discord_orientation) {
+						ctx.fillStyle = qual2discord_orientation(v / maxqual)
+					} else if (segment.discord_wrong_insertsize) {
+						ctx.fillStyle = qual2discord_wrong_insertsize(v / maxqual)
+					} else if (segment.discord_unmapped) {
+						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					} else {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
@@ -1772,12 +1773,12 @@ function plot_segment(ctx, segment, y, group, q) {
 				// not showing qual, one box
 				if (segment.rnext) {
 					ctx.fillStyle = ctxpair_hq
-				} else if (segment.orientation) {
-					ctx.fillStyle = orientation_hq
-				} else if (segment.discordsamechr) {
-					ctx.fillStyle = discordsamechr_hq
-				} else if (segment.unmapped) {
-					ctx.fillStyle = unmapped_hq
+				} else if (segment.discord_orientation) {
+					ctx.fillStyle = discord_orientation_hq
+				} else if (segment.discord_wrong_insertsize) {
+					ctx.fillStyle = discord_wrong_insertsize_hq
+				} else if (segment.discord_unmapped) {
+					ctx.fillStyle = discord_unmapped_hq
 				} else {
 					ctx.fillStyle = match_hq
 				}
@@ -1853,7 +1854,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			}
 		}
 	}
-	//else if (segment.discordsamechr) {
+	//else if (segment.discord_wrong_insertsize) {
 	//	if (!r.to_qual) {
 	//		// no quality and just a solid box, may print name
 	//		if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
@@ -2180,6 +2181,13 @@ async function convertread(seg, genome, query) {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
+				//console.log("b.start:",b.start)
+				//console.log("b.len:",b.len)
+				//console.log("i:",i)
+				//console.log("seg:",seg)
+				//console.log("seg.seq.len:",seg.seq.length)
+				//console.log("nt0:",nt0)
+				//console.log("nt1:",nt1)
 				reflst.push('<td>' + nt0 + '</td>')
 				querylst.push(
 					'<td style="background:' +
@@ -2224,22 +2232,12 @@ async function convertread(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
-	else if (seg.discordsamechr) lst.push('<li>Other segment mapped in same chromosome</li>')
+	else if (seg.discord_wrong_insertsize) lst.push('<li>Other segment mapped in same chromosome</li>')
 	//else if (seg.unmapped)
 	//	lst.push(
 	//		'<li>Other segment is unmapped</li>'
 	//	)
-	else if (seg.orientation)
-		lst.push(
-			'<li>Next segment on <span style="background:' +
-				orientation_hq +
-				'">' +
-				(query.nochr ? 'chr' : '') +
-				seg.rnext +
-				', ' +
-				seg.pnext +
-				'</span></li>'
-		)
+	else if (seg.discord_orientation) lst.push('<li>Segments having wrong orientation</li>')
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
 	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
