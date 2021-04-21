@@ -330,7 +330,7 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
-				appmenu(app, headbox, selectgenome, jwt)
+				appmenu(app, headbox, jwt)
 			})
 	} else {
 		// show 'apps' div only when url is barbone without any paramerters or example page
@@ -542,7 +542,7 @@ async function launchApps(app) {
 	return new_div
 }
 
-function appmenu(app, headbox, selectgenome, jwt) {
+function appmenu(app, headbox, jwt) {
 	/*
 	headbox
 	selectgenome: <select>
@@ -551,7 +551,7 @@ function appmenu(app, headbox, selectgenome, jwt) {
 	const p = d3event.target.getBoundingClientRect()
 	headtip.clear().show(p.left - 50, p.top + p.height + 5)
 	{
-		const ss = selectgenome.node()
+		const ss = app.selectgenome.node()
 		const genomename = ss.options[ss.selectedIndex].value
 		const g = app.genomes[genomename]
 		if (!g) {
@@ -866,8 +866,7 @@ async function parseembedthenurl(arg, app) {
 	after exhausting embedding options, try URL parameters
 
 	arg: embedding param
-	app: {genomes, study, holder0, hostURL, debugmode, jwt?}
-	selectgenome: <select>
+	app: {genomes, study, holder0, hostURL, debugmode, jwt?, selectgenome, genome_browser_btn}
 
 	*/
 
