@@ -9,17 +9,21 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/pp-dist/build.sh [-t] [-r]
+	./build/extract.sh [-r] [-t] [-h]
 
-	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
+	-t TARGETDIR: 
+	-h help manual
 	"
 }
 
 REV=latest
-TPDIR=''
-while getopts "r:h:" opt; do
+TARGETDIR="targets"
+while getopts "t:r:h:" opt; do
 	case "${opt}" in
+	t)
+		TARGETDIR=$TARGETDIR/$OPTARG
+		;;
 	r)
 		REV=$OPTARG
 		;;
@@ -66,7 +70,7 @@ printf "Copying selected directories and files ..."
 tar -C tmppack/ -xf $FILE server
 tar -C tmppack/ -xf $FILE client
 tar -C tmppack/ -xf $FILE package.json
-tar -C tmppack/ -xvf $FILE targets
+tar -C tmppack/ -xvf $FILE $TARGETDIR
 tar -C tmppack/ -xvf $FILE build/Dockerfile
 tar -C tmppack/ -xvf $FILE .dockerignore
 tar -C tmppack/ -xvf $FILE LICENSE
