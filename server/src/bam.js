@@ -1336,7 +1336,7 @@ may skip insertion if on screen width shorter than minimum width
 	) {
 		console.log('')
 		segment.discord_orientation = true
-		segment.pos_discord_orientation = true
+		//segment.pos_discord_orientation = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
@@ -1347,18 +1347,18 @@ may skip insertion if on screen width shorter than minimum width
 	} else if (flag & 0x8 || flag & 0x4) {
 		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
 		segment.discord_unmapped = true
-		segment.pos_discord_unmapped = true
+		//segment.pos_discord_unmapped = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
 	) {
 		// Mapped within insert size but incorrect orientation
 		segment.discord_orientation = true
-		segment.pos_discord_orientation = true
+		//segment.pos_discord_orientation = true
 	} else {
 		// Discordant reads in same chr but not within the insert size
 		segment.discord_wrong_insertsize = true
-		segment.pos_discord_wrong_insertsize = true
+		//segment.pos_discord_wrong_insertsize = true
 	}
 	return segment
 }
