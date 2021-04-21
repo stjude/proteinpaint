@@ -1192,7 +1192,6 @@ may skip insertion if on screen width shorter than minimum width
 		if (cigar.match(/[0-9]/)) continue
 		// read bp length of this part
 		const len = Number.parseInt(cigarstr.substring(prev, i))
-		console.log('len:', len)
 		if (cigar == 'H') {
 			boxes.push({
 				opr: cigar,
@@ -1338,7 +1337,6 @@ may skip insertion if on screen width shorter than minimum width
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
 	) {
-		console.log('')
 		segment.discord_orientation = true
 		//segment.pos_discord_orientation = true
 	} else if (
@@ -1628,7 +1626,6 @@ function plot_template(ctx, template, group, q) {
 	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
-		//console.log("seg:",seg)
 		if (i == 0) {
 			// is the first segment, same rendering method no matter in single or paired mode
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1699,7 +1696,6 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
-	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
@@ -2078,7 +2074,6 @@ async function query_oneread(req, r) {
 	return new Promise((resolve, reject) => {
 		let ps
 		if (req.query.gdc) {
-			//console.log('samtools view ' + req.query.file)
 			ps = spawn(samtools, ['view', req.query.file])
 		} else {
 			ps = spawn(
