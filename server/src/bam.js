@@ -100,6 +100,10 @@ segment {}
 .shiftdownrow // idx of mini stack
 .isfirst
 .islast
+.discord_wrong_insertsize
+.discord_orientation
+.discord_unmapped
+.rnext, pnext // attribute is set when mate is on a different chr
 
 box {}
 .opr
@@ -1345,6 +1349,7 @@ may skip insertion if on screen width shorter than minimum width
 	) {
 		// Read and mate is properly paired
 	} else if (flag & 0x8 || flag & 0x4) {
+		// XXX here 0x8 is for mate unmapped, but 0x4 is this reads is unmapped, so must not mix them together and figure out how to handle 0x4
 		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
 		segment.discord_unmapped = true
 		//segment.pos_discord_unmapped = true
@@ -2224,7 +2229,9 @@ async function convertread(seg, genome, query) {
 	}
 
 	const lst = []
-	if (seg.rnext)
+
+	// indicate discordant read status
+	if (seg.rnext) {
 		lst.push(
 			'<li>Next segment on <span style="background:' +
 				ctxpair_hq +
@@ -2235,16 +2242,28 @@ async function convertread(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
-	else if (seg.discord_wrong_insertsize) lst.push('<li>Other segment mapped in same chromosome</li>')
-	//else if (seg.unmapped)
-	//	lst.push(
-	//		'<li>Other segment is unmapped</li>'
-	//	)
-	else if (seg.discord_orientation) lst.push('<li>Segments having wrong orientation</li>')
+	} else if (seg.discord_wrong_insertsize) {
+		lst.push(
+			'<li><span style="background:' + discord_wrong_insertsize_hq + ';color:white">Wrong insert size</span></li>'
+		)
+	} else if (seg.discord_orientation) {
+		lst.push(
+			'<li><span style="background:' +
+				discord_orientation_hq +
+				';color:white">Segments having wrong orientation</span></li>'
+		)
+	} else if (seg.discord_unmapped) {
+		lst.push(
+			'<li><span style="background:' +
+				discord_unmapped_hq +
+				';color:white">Next segment in the template unmapped</span></li>'
+		)
+	}
+
+	// indicate all flags
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
 	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
-	if (seg.flag & 0x8) lst.push('<li>Next segment in the template unmapped</li>')
 	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
 	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
 	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
