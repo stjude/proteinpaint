@@ -1186,12 +1186,19 @@ may skip insertion if on screen width shorter than minimum width
 	for (let i = 0; i < cigarstr.length; i++) {
 		const cigar = cigarstr[i]
 		if (cigar.match(/[0-9]/)) continue
-		if (cigar == 'H') {
-			// ignore
-			continue
-		}
 		// read bp length of this part
 		const len = Number.parseInt(cigarstr.substring(prev, i))
+		console.log('len:', len)
+		if (cigar == 'H') {
+			boxes.push({
+				opr: cigar,
+				start: pos,
+				len,
+				cidx: cum - len
+			})
+			prev = i + 1
+			continue
+		}
 		if (cigar == 'N') {
 			// no seq
 		} else if (cigar == 'P' || cigar == 'D') {
@@ -1464,7 +1471,7 @@ at the end, set q.canvasheight
 			const r = group.regions[segment.ridx]
 			const quallst = r.to_qual ? qual2int(segment.qual) : null
 			for (const b of segment.boxes) {
-				if (b.cidx == undefined) {
+				if (b.cidx == undefined || b.opr == 'H') {
 					continue
 				}
 				if (quallst) {
@@ -1690,7 +1697,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
-		if (b.opr == 'P') continue // do not handle
+		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
 		if (b.opr == 'I') continue // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
 			// a line
@@ -2137,6 +2144,9 @@ async function convertread(seg, genome, query) {
 	const reflst = ['<td>Reference</td>']
 	const querylst = ['<td style="color:black;text-align:left">Read</td>']
 	for (const b of seg.boxes) {
+		if (b.opr == 'H') {
+			continue
+		}
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {
 				reflst.push('<td>-</td>')
@@ -2181,13 +2191,6 @@ async function convertread(seg, genome, query) {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
-				//console.log("b.start:",b.start)
-				//console.log("b.len:",b.len)
-				//console.log("i:",i)
-				//console.log("seg:",seg)
-				//console.log("seg.seq.len:",seg.seq.length)
-				//console.log("nt0:",nt0)
-				//console.log("nt1:",nt1)
 				reflst.push('<td>' + nt0 + '</td>')
 				querylst.push(
 					'<td style="background:' +
