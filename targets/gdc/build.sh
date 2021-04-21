@@ -9,7 +9,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/pp-dist/build.sh [-t] [-r]
+	./targets/gdc/build.sh [-t] [-r]
 
 	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state

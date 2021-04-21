@@ -10,7 +10,7 @@ const execSync = require('child_process').execSync
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
 const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
-execSync(`echo "${serverconfigfile} [${fs.existsSync(serverconfigfile)}]" > test.txt`)
+
 /*******************
  GET SERVERCONFIG
 ********************/
