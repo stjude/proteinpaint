@@ -3,20 +3,17 @@
 set -e
 
 # TODO We could remove the need for this custom build script if we tweaked
-# a couple things either in this repo or in the GDC pipeline library:
-#
-# 1. We currently need to specify the prod-bare target since the prod target
-# requires a preexisting serverconfig.json.
-#
-# 2. We need to specify a different location for the Dockerfile.
+# the GDC build pipeline to allow changing the Dockerfile location.
 
 DOCKER_TAG="${REGISTRY}/ncigdc/${REPO}:${GIT_TAG}"
+
+# Enable buildkit to skip building unneeded stages.
+export DOCKER_BUILDKIT=1
 
 docker build \
 	--build-arg http_proxy=http://cloud-proxy:3128 \
 	--build-arg https_proxy=http://cloud-proxy:3128 \
-	-f build/Dockerfile \
-	--target prod-bare \
+	-f build/Dockerfile.gdc \
 	-t "$DOCKER_TAG" \
 	.
 

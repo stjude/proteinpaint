@@ -1,4 +1,4 @@
-import pkg from '../package.json'
+import pkg from './package.json'
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import postcss from 'rollup-plugin-postcss'
@@ -23,8 +23,10 @@ export default [
 			commonjs({
 				extensions: ['.js']
 			}),
-			postcss(),
-			production && terser()
+			postcss()
+			// TODO: create an option for GDC build
+			// to not use terser in production/non-watch mode
+			//production && terser()
 		],
 		onwarn
 	}
