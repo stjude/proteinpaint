@@ -1,8 +1,9 @@
 import { dofetch2 } from './client'
 import { debounce } from 'debounce'
+import { make_app_div } from './app'
 
 export async function init_examples(par) {
-	const { holder, new_div } = par
+	const { holder, apps_sandbox_div, apps_off } = par
 	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
 	if (re.error) {
 		holder
@@ -27,7 +28,7 @@ export async function init_examples(par) {
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const appList = make_subheader_contents(app_col, 'Apps')
 
-	const track_arg = {
+	const track_args = {
 		tracks: re.examples,
 		gpaintList,
 		browserList,
@@ -35,8 +36,12 @@ export async function init_examples(par) {
 		launchList,
 		appList
 	}
-	make_searchbar(searchbar_div, track_arg)
-	await loadTracks(track_arg)
+	const page_args = {
+		apps_sandbox_div,
+		apps_off
+	}
+	make_searchbar(track_args, page_args, searchbar_div)
+	await loadTracks(track_args, page_args)
 }
 
 function make_examples_page(holder) {
@@ -108,7 +113,7 @@ function make_top_fnDiv(div) {
 }
 
 //Makes search bar and functionality to search tracks
-function make_searchbar(div, args) {
+function make_searchbar(track_args, page_args, div) {
 	const bar_div = make_top_fnDiv(div)
 
 	const searchBar = bar_div.append('div')
@@ -125,7 +130,7 @@ function make_searchbar(div, args) {
 		.on(
 			'keyup',
 			debounce(async () => {
-				const data = args.tracks
+				const data = track_args.tracks
 				const searchInput = searchBar
 					.select('input')
 					.node()
@@ -139,7 +144,7 @@ function make_searchbar(div, args) {
 					}, false)
 					return searchTermFound || track.name.toLowerCase().includes(searchInput)
 				})
-				await loadTracks(args, filteredTracks)
+				await loadTracks(track_args, page_args, filteredTracks)
 			}),
 			700
 		)
@@ -147,7 +152,7 @@ function make_searchbar(div, args) {
 	return searchBar
 }
 
-async function loadTracks(args, filteredTracks) {
+async function loadTracks(args, page_args, filteredTracks) {
 	const GPaintTracks = (filteredTracks || args.tracks).filter(
 		track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
 	)
@@ -163,11 +168,11 @@ async function loadTracks(args, filteredTracks) {
 	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
 
 	try {
-		displayTracks(GPaintTracks, args.gpaintList)
-		displayTracks(BrowserTracks, args.browserList)
-		displayTracks(ExperimentalTracks, args.experimentalList)
-		displayTracks(LaunchApps, args.launchList)
-		displayTracks(AppTracks, args.appList)
+		displayTracks(GPaintTracks, args.gpaintList, page_args)
+		displayTracks(BrowserTracks, args.browserList, page_args)
+		displayTracks(ExperimentalTracks, args.experimentalList, page_args)
+		displayTracks(LaunchApps, args.launchList, page_args)
+		displayTracks(AppTracks, args.appList, page_args)
 	} catch (err) {
 		console.error(err)
 	}
@@ -176,7 +181,7 @@ async function loadTracks(args, filteredTracks) {
 
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
-function displayTracks(tracks, holder) {
+function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		const li = holder.append('li')
@@ -203,8 +208,9 @@ function displayTracks(tracks, holder) {
 					</div>`
 			)
 			.on('click', async () => {
+				page_args.apps_off()
 				if (track.buttons.example) {
-					openExample(track, holder)
+					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
 		return JSON.stringify(li)
@@ -213,34 +219,26 @@ function displayTracks(tracks, holder) {
 
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track, new_div) {
-	new_div.selectAll('*').remove()
+async function openExample(track, sandbox_div) {
+	// crate unique id for each app div
+	const app_id = track.name + Math.floor(Math.random() * 1000)
+	let [app_header, app_body] = make_app_div(sandbox_div)
+	app_header.text(track.name + ' Example')
+	app_body
+		.append('div')
+		.attr('id', app_id)
+		.style('margin', '20px')
 
-	// const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
+	// template runpp() arg
+	let runpp_arg = {
+		holder: document.getElementById(app_id),
+		host: window.location.origin
+	}
 
-	// const contents = `<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
-	// 			<div id="aaa" style="margin:20px">
-	// 			<button type="submit" onclick="window.open('${window.location.origin}', '_self')">Go Back</button>
-	// 			<h2 class="header" id="track-example-header">${track.name} Example</h2>
-	// 			</div>
-	// 		<script>
-	// 			runproteinpaint({
-	//                 host: '${window.location.origin}',
-	//                 holder: document.getElementById('aaa'),
-	//                 ${strippedTrack}
-	//             })
-	// 		</script>`
-	// new_div.append('div').html(contents)
-	new_div.append('div').text('This Worked')
+	// assign keys of specific app/track to runpp() template
+	Object.keys(track.buttons.example).forEach(key => {
+		runpp_arg[key] = track.buttons.example[key]
+	})
 
-	// const tab = window.open('${window.location.origin}','_self')
-	// const tab = window.open(`${track.shorthand},name=${track.shorthand} Example`)
-	// const script = tab.document.createElement('script')
-	// const tabName = `${track.shorthand}`
-	// script.type = 'text/javascript'
-	// tab.document.write(contents)
-	// tab.document.close()
-	// setTimeout(function() {
-	// 	tab.document.title = tabName
-	// }, 500)
+	runproteinpaint(runpp_arg)
 }

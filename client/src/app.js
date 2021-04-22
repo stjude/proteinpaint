@@ -186,8 +186,8 @@ function makeheader(app, obj, jwt) {
 	const padw = '13px'
 	// head
 	const row = app.holder.append('div')
-	const app_row = app.holder.append('div')
-	app.holder.browsers_row = app.holder.append('div').attr('id', 'browsers_row')
+	const apps_drawer_row = app.holder.append('div')
+	app.holder.apps_sandbox_div = app.holder.append('div')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -337,7 +337,7 @@ function makeheader(app, obj, jwt) {
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
 		let apps_rendered = false
 
-		app_holder = app_row
+		app_holder = apps_drawer_row
 			.append('div')
 			.style('margin', '10px')
 			.style('padding-right', '10px')
@@ -350,7 +350,7 @@ function makeheader(app, obj, jwt) {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, new_div: app.holder })
+			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
 		}
 
 		if (app_btn_active) load_app_div()
@@ -444,7 +444,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let [browser_header, browser_body] = make_browser_div(app.holder.browsers_row)
+			let [browser_header, browser_body] = make_app_div(app.holder.apps_sandbox_div)
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -479,15 +479,16 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
-function make_browser_div(browsers_row) {
-	const genome_browser_div = browsers_row.insert('div', ':first-child')
-	const header_row = genome_browser_div
+export function make_app_div(apps_sandbox_div) {
+	const app_div = apps_sandbox_div.insert('div', ':first-child')
+	const header_row = app_div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin', '10px')
-		.style('padding-right', '10px')
+		.style('padding-right', '8px')
 		.style('margin-bottom', '0px')
 		.style('border', 'solid 1px #f2f2f2')
+		.style('box-shadow', '2px 0px 2px #f2f2f2')
 		.style('border-radius', '5px 5px 0 0')
 		.style('background-color', '#f2f2f2')
 		.style('width', '95vw')
@@ -508,7 +509,7 @@ function make_browser_div(browsers_row) {
 			d3event.stopPropagation()
 		})
 		.on('click', () => {
-			genome_browser_div.selectAll('*').remove()
+			app_div.selectAll('*').remove()
 		})
 
 	const header = header_row
@@ -516,36 +517,26 @@ function make_browser_div(browsers_row) {
 		.style('display', 'inline-block')
 		.style('padding', '5px 10px')
 
-	const browser_body = genome_browser_div
+	const app_body = app_div
 		.append('div')
 		.style('margin', '10px')
 		.style('margin-top', '0px')
 		.style('padding-right', '8px')
 		.style('display', 'inline-block')
 		.style('display', 'inline-block')
-		.style('border', 'solid 2px #f2f2f2')
+		.style('border', 'solid 1px #f2f2f2')
+		.style('box-shadow', '2px 2px 4px #f2f2f2')
 		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return [header, browser_body]
-}
-
-async function launchApps(app) {
-	const new_div = app.holder.append('div')
-	new_div
-		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('border-radius', '5px')
-		.style('width', '95vw')
-
-	return new_div
+	return [header, app_body]
 }
 
 function appmenu(app, headbox, jwt) {
 	/*
+	app: { selectgenome }
 	headbox
-	selectgenome: <select>
 	*/
 
 	const p = d3event.target.getBoundingClientRect()
