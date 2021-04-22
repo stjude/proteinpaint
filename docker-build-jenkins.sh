@@ -13,7 +13,7 @@ export DOCKER_BUILDKIT=1
 docker build \
 	--build-arg http_proxy=http://cloud-proxy:3128 \
 	--build-arg https_proxy=http://cloud-proxy:3128 \
-	-f build/Dockerfile.gdc \
+	-f targets/gdc/Dockerfile.gdc \
 	-t "$DOCKER_TAG" \
 	.
 
