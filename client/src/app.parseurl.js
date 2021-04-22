@@ -337,7 +337,7 @@ arg
 				arg.hostURL,
 				undefined, // jwt
 				false, // no show
-				arg.debugmode
+				{ debugmode: arg.debugmode }
 			)
 		}
 	}

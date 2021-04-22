@@ -70,7 +70,9 @@ export function runproteinpaint(arg) {
 		server emitted state, if true, will trigger globals e.g. window.bb
 		it needs to be set before launching any apps
 		*/
-		debugmode: false
+		debugmode: false,
+		// event callbacks for dynamically-loaded renderer instances
+		callbacks: arg.callbacks || {}
 	}
 
 	if (arg.clear) {
@@ -854,7 +856,7 @@ function studyui(app, x, y) {
 			app.hostURL,
 			null, // jwt
 			false, // no show
-			app.debugmode
+			app
 		)
 	}
 }
@@ -926,17 +928,17 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.study) {
+		console.log(868, 'may need to edit other calls')
 		// launch study-view through name of server-side configuration file (study.json)
-		loadstudycohort(
+		return loadstudycohort(
 			app.genomes,
 			arg.study,
 			app.holder0,
 			app.hostURL,
 			arg.jwt,
 			false, // no show
-			app.debugmode
+			app
 		)
-		return
 	}
 
 	if (arg.studyview) {
@@ -1291,7 +1293,7 @@ async function launchblock(arg, app) {
 			app.hostURL,
 			arg.jwt,
 			true, // no show
-			app.debugmode
+			app
 		)
 	}
 	if (arg.studyview) {

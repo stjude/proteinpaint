@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+	 <style>
+	 	#aaa {
+	 		width: 90%;
+	 		height: 90%;
+	 	}
+	 </style>
+</head>
+<body>
+<script src='http://localhost:3000/sjcharts/bin/sjcharts.js'></script>
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+const my = runproteinpaint({
+	host: 'https://ppr.stjude.org',		
+	noheader: true,
+	holder: document.getElementById('aaa'),
+	study: 'esioson/target-tall-small',
+	callbacks: {
+		'TARGET TALL Study.hm': {
+			postInstance(appInstance) {
+				console.log(appInstance.getSchema("object"))
+			}
+		}
+	}
+})
+my.then(d=>console.log(27, d))
+</script>
+
+</body>
+</html>

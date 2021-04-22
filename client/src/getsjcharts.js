@@ -1,8 +1,12 @@
 let prom
 
-export function getsjcharts() {
+export function getsjcharts(callbacks = {}) {
 	if (window.sjcharts) {
-		//console.log('exists')
+		// console.log('exists')
+		// in case callbacks is not empty
+		for (const name in callbacks) {
+			window.sjcharts.callbacks(name, callbacks[name])
+		}
 		return Promise.resolve(window.sjcharts)
 	} else if (prom) {
 		//console.log('pending')
@@ -20,6 +24,10 @@ export function getsjcharts() {
 			fileref.setAttribute('src', filename)
 			document.getElementsByTagName('head')[0].appendChild(fileref)
 			fileref.onload = () => {
+				// in case callbacks is not empty
+				for (const name in callbacks) {
+					window.sjcharts.callbacks(name, callbacks[name])
+				}
 				resolve(window.sjcharts)
 			}
 			fileref.onerror = () => {
