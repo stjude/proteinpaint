@@ -10,7 +10,7 @@ set -e
 # Enable buildkit to skip building unneeded stages.
 export DOCKER_BUILDKIT=1
 
-./targets/gdc/build.sh
+./targets/gdc/build.sh -r HEAD
 
 #docker build \
 #	--build-arg http_proxy=http://cloud-proxy:3128 \
