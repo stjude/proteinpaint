@@ -183,28 +183,40 @@ function makeheader(app, obj, jwt) {
 	jwt: token
 	*/
 	const color = d3rgb(common.defaultcolor)
-	const padw = '13px'
+	const padw_lg = '13px'
+	const padw_input = '5px 10px'
+	const padw_sm = '7px 10px'
+	const doc_width = document.documentElement.clientWidth
 	// head
-	const row = app.holder.append('div')
+	const row = app.holder
+		.append('div')
+		.style(
+			'border-bottom',
+			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
 	const apps_drawer_row = app.holder.append('div')
-	app.holder.apps_sandbox_div = app.holder.append('div')
+	app.holder.apps_sandbox_div = app.holder.append('div').style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('display', 'inline-block')
-		.style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
-		.style('border-radius', '5px')
-		.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
+		.style('padding', '8px')
+		.style('padding-bottom', '12px')
+		.style('display', doc_width < 1600 ? 'block' : 'inline-block')
+		.style(
+			'border-bottom',
+			doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
+	// .style('border-radius', '5px')
+	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
 	const headinfo = row
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
 	{
 		// a row for server stats
-		const row = headinfo.append('div')
+		const row = headinfo.append('div').style('padding-left', '15px')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -241,8 +253,9 @@ function makeheader(app, obj, jwt) {
 		.append('div')
 		.text('ProteinPaint')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_lg)
 		.style('color', common.defaultcolor)
+		.style('font-size', '1.3em')
 		.style('font-weight', 'bold')
 
 	// 2, search box
@@ -271,11 +284,13 @@ function makeheader(app, obj, jwt) {
 	const input = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-right', '5px')
 		.append('input')
 		.style('border', 'solid 1px ' + common.defaultcolor)
-		.style('padding', '3px')
+		// .style('padding', '3px')
+		.style('padding', '6px 10px')
+		.style('border-radius', '5px')
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
@@ -290,12 +305,14 @@ function makeheader(app, obj, jwt) {
 	const genome_select_div = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-left', '5px')
 
 	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
+		.style('padding', padw_input)
+		.style('border-radius', '5px')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
 			update_genome_browser_btn(app)
@@ -326,7 +343,8 @@ function makeheader(app, obj, jwt) {
 		app_btn = headbox
 			.append('span')
 			.attr('class', 'sja_menuoption')
-			.style('padding', padw)
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
@@ -339,7 +357,7 @@ function makeheader(app, obj, jwt) {
 
 		app_holder = apps_drawer_row
 			.append('div')
-			.style('margin', '10px')
+			.style('margin', '20px')
 			.style('padding-right', '10px')
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('background-color', '#f2f2f2')
@@ -361,7 +379,8 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
 			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw)
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
@@ -395,7 +414,7 @@ function makeheader(app, obj, jwt) {
 	headbox
 		.append('span')
 		.classed('sja_menuoption', true)
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('border-radius', '5px')
 		.text('Help')
 		.on('click', () => {
@@ -432,7 +451,7 @@ function makeheader(app, obj, jwt) {
 }
 
 function make_genome_browser_btn(app, headbox, jwt, apps_off) {
-	const padw = '13px'
+	const padw = '8px'
 	const genome_btn_div = headbox.append('span')
 	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
 
@@ -484,10 +503,10 @@ export function make_app_div(apps_sandbox_div) {
 	const header_row = app_div
 		.append('div')
 		.style('display', 'inline-block')
-		.style('margin', '10px')
+		.style('margin', '5px 10px')
 		.style('padding-right', '8px')
 		.style('margin-bottom', '0px')
-		.style('border', 'solid 1px #f2f2f2')
+		// .style('border', 'solid 1px #f2f2f2')
 		.style('box-shadow', '2px 0px 2px #f2f2f2')
 		.style('border-radius', '5px 5px 0 0')
 		.style('background-color', '#f2f2f2')
@@ -502,6 +521,7 @@ export function make_app_div(apps_sandbox_div) {
 		.style('padding', '4px 10px')
 		.style('margin', '0px')
 		.style('border-right', 'solid 2px white')
+		.style('border-radius', '5px 0 0 0')
 		.style('font-size', '1.5em')
 		.html('&times;')
 		.on('mousedown', () => {
@@ -519,13 +539,13 @@ export function make_app_div(apps_sandbox_div) {
 
 	const app_body = app_div
 		.append('div')
-		.style('margin', '10px')
+		.style('margin', '5px 10px')
 		.style('margin-top', '0px')
 		.style('padding-right', '8px')
 		.style('display', 'inline-block')
 		.style('display', 'inline-block')
-		.style('border', 'solid 1px #f2f2f2')
-		.style('box-shadow', '2px 2px 4px #f2f2f2')
+		// .style('border', 'solid 1px #f2f2f2')
+		.style('box-shadow', '2px 2px 10px #f2f2f2')
 		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
