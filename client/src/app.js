@@ -312,6 +312,7 @@ function makeheader(app, obj, jwt) {
 		.append('select')
 		.attr('title', 'Select a genome')
 		.style('padding', padw_input)
+		.style('border', 'solid 1px ' + common.defaultcolor)
 		.style('border-radius', '5px')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
