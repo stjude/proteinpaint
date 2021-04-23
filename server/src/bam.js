@@ -1167,19 +1167,15 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
-	if (flag & 0x4) {
-		//console.log('unmapped')
-		return
-	}
+	//if (flag & 0x4) {
+	//	//console.log('unmapped')
+	//	return
+	//}
 	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
 		// invalid
 		return
 	}
 	const segstart = segstart_1based - 1
-
-	if (cigarstr == '*') {
-		return
-	}
 
 	const boxes = [] // collect plottable segments
 	// as the absolute coord start of each box, will be incremented after parsing a box
@@ -1188,119 +1184,132 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 	let prev = 0,
 		cum = 0
 
-	for (let i = 0; i < cigarstr.length; i++) {
-		const cigar = cigarstr[i]
-		if (cigar.match(/[0-9]/)) continue
-		// read bp length of this part
-		const len = Number.parseInt(cigarstr.substring(prev, i))
-		if (cigar == 'H') {
-			boxes.push({
-				opr: cigar,
-				start: pos,
-				len,
-				cidx: cum - len
-			})
-			prev = i + 1
-			continue
+	if (cigarstr == '*') {
+		// Could be unmapped read
+		const b = {
+			opr: cigarstr,
+			start: pos,
+			len: seq.length,
+			cidx: cum - seq.length,
+			qual: qual
 		}
-		if (cigar == 'N') {
-			// no seq
-		} else if (cigar == 'P' || cigar == 'D') {
-			// padding or del, no sequence in read
-		} else {
-			// will consume read seq
-			cum += len
-		}
-		prev = i + 1
-		if (cigar == '=' || cigar == 'M') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-				// visible
+		pos += seq.length
+		boxes.push(b)
+	} else {
+		for (let i = 0; i < cigarstr.length; i++) {
+			const cigar = cigarstr[i]
+			if (cigar.match(/[0-9]/)) continue
+			// read bp length of this part
+			const len = Number.parseInt(cigarstr.substring(prev, i))
+			if (cigar == 'H') {
 				boxes.push({
 					opr: cigar,
 					start: pos,
 					len,
 					cidx: cum - len
 				})
-				// need cidx for = / M, for quality and sequence mismatch
+				prev = i + 1
+				continue
 			}
-			pos += len
-			continue
-		}
-		if (cigar == 'I') {
-			if (keepallboxes || (pos > r.start && pos < r.stop)) {
-				if (len * r.ntwidth >= insertion_minpx) {
+			if (cigar == 'N') {
+				// no seq
+			} else if (cigar == 'P' || cigar == 'D') {
+				// padding or del, no sequence in read
+			} else {
+				// will consume read seq
+				cum += len
+			}
+			prev = i + 1
+			if (cigar == '=' || cigar == 'M') {
+				if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+					// visible
 					boxes.push({
-						opr: 'I',
+						opr: cigar,
 						start: pos,
 						len,
 						cidx: cum - len
 					})
+					// need cidx for = / M, for quality and sequence mismatch
 				}
+				pos += len
+				continue
 			}
-			continue
-		}
-		if (cigar == 'N' || cigar == 'D') {
-			// deletion or skipped region, must have at least one end within region
-			// cannot use max(starts)<min(stops)
-			// if both ends are outside of region e.g. intron-spanning rna read, will not include
-			if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
-				boxes.push({
-					opr: cigar,
-					start: pos,
-					len
-				})
-				// no box seq, don't add cidx
-			}
-			pos += len
-			continue
-		}
-		if (cigar == 'X') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-				const b = {
-					opr: cigar,
-					start: pos,
-					len,
-					cidx: cum - len
+			if (cigar == 'I') {
+				if (keepallboxes || (pos > r.start && pos < r.stop)) {
+					if (len * r.ntwidth >= insertion_minpx) {
+						boxes.push({
+							opr: 'I',
+							start: pos,
+							len,
+							cidx: cum - len
+						})
+					}
 				}
-				boxes.push(b)
+				continue
 			}
-			pos += len
-			continue
-		}
-		if (cigar == 'S') {
-			const b = {
-				opr: cigar,
-				start: pos,
-				len,
-				cidx: cum - len
+			if (cigar == 'N' || cigar == 'D') {
+				// deletion or skipped region, must have at least one end within region
+				// cannot use max(starts)<min(stops)
+				// if both ends are outside of region e.g. intron-spanning rna read, will not include
+				if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
+					boxes.push({
+						opr: cigar,
+						start: pos,
+						len
+					})
+					// no box seq, don't add cidx
+				}
+				pos += len
+				continue
 			}
-			if (boxes.length == 0) {
-				// this is the first box, will not consume ref
-				// shift softclip start to left, so its end will be pos, will not increment pos
-				b.start -= len
+			if (cigar == 'X') {
 				if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+					const b = {
+						opr: cigar,
+						start: pos,
+						len,
+						cidx: cum - len
+					}
 					boxes.push(b)
 				}
-			} else {
-				// not the first box, so should be the last box
-				// do not shift start
-				boxes.push(b)
+				pos += len
+				continue
 			}
-			continue
-		}
-		if (cigar == 'P') {
-			if (keepallboxes || (pos > r.start && pos < r.stop)) {
+			if (cigar == 'S') {
 				const b = {
-					opr: 'P',
+					opr: cigar,
 					start: pos,
 					len,
 					cidx: cum - len
 				}
-				boxes.push(b)
+				if (boxes.length == 0) {
+					// this is the first box, will not consume ref
+					// shift softclip start to left, so its end will be pos, will not increment pos
+					b.start -= len
+					if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+						boxes.push(b)
+					}
+				} else {
+					// not the first box, so should be the last box
+					// do not shift start
+					boxes.push(b)
+				}
+				continue
 			}
-			continue
+			if (cigar == 'P') {
+				if (keepallboxes || (pos > r.start && pos < r.stop)) {
+					const b = {
+						opr: 'P',
+						start: pos,
+						len,
+						cidx: cum - len
+					}
+					boxes.push(b)
+				}
+				continue
+			}
+			console.log('unknown cigar: ' + cigar)
 		}
-		console.log('unknown cigar: ' + cigar)
 	}
 	if (boxes.length == 0) {
 		// no visible boxes, do not show this segment
@@ -1741,6 +1750,35 @@ function plot_segment(ctx, segment, y, group, q) {
 			continue
 		}
 
+		if (b.opr == '*') {
+			// Possibly unmapped reads
+			console.log('Hello')
+			if (r.to_qual) {
+				let xoff = x
+				console.log('segment:', segment)
+				b.qual.forEach(v => {
+					if (segment.discord_unmapped) {
+						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
+					}
+					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					xoff += r.ntwidth
+				})
+			} else {
+				console.log('noqual')
+				// not showing qual, one box
+				if (segment.discord_unmapped) {
+					ctx.fillStyle = discord_unmapped_hq
+				}
+				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+			}
+
+			if (r.to_printnt) {
+				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
+			}
+			continue
+		}
 		if (b.opr == 'X' || b.opr == 'S') {
 			// box with maybe letters
 			if (r.to_qual && b.qual) {
