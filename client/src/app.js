@@ -358,7 +358,7 @@ function makeheader(app, obj, jwt) {
 		app_holder = apps_drawer_row
 			.append('div')
 			.style('margin', '20px')
-			.style('padding-right', '10px')
+			.style('padding', '10px')
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('background-color', '#f2f2f2')
 			.style('border-radius', '5px')

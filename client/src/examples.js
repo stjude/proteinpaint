@@ -27,9 +27,8 @@ export async function init_examples(par) {
 	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const appList = make_subheader_contents(app_col, 'Apps')
-
 	const track_args = {
-		tracks: re.examples,
+		tracks: re.examples.filter(track => !track.hidden),
 		gpaintList,
 		browserList,
 		experimentalList,
