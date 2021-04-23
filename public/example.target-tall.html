@@ -18,20 +18,31 @@
 <div id=aaa style="margin:10px"></div>
 
 <script>
-const my = runproteinpaint({
-	host: 'https://ppr.stjude.org',		
-	noheader: true,
-	holder: document.getElementById('aaa'),
-	study: 'esioson/target-tall-small',
-	callbacks: {
-		'TARGET TALL Study.hm': {
-			postInstance(appInstance) {
-				console.log(appInstance.getSchema("object"))
-			}
-		}
+(async ()=>{
+	//const instanceTracker = {}
+	const appname = Math.random() // 'TARGET TALL Study'
+	try {
+		const pp = await runproteinpaint({
+			//host: 'https://ppr.stjude.org',		
+			noheader: true,
+			holder: document.getElementById('aaa'),
+			study: 'target-tall-small',
+			callbacks: {
+				[`${appname}.hm`]: {
+					postInstance(appInstance) {
+						console.log(appInstance.getSchema("object"))
+						console.log(pp.instanceTracker)
+					}
+				}
+			},
+			appname,
+			//instanceTracker
+		})
+		console.log(pp)
+	} catch(e) {
+		throw e
 	}
-})
-my.then(d=>console.log(27, d))
+})()
 </script>
 
 </body>

@@ -217,13 +217,10 @@ if(cohort.render) {
 	}
 	let hm_main
 	if (showheatmap) {
-		console.log(247, cohort.name)
 		const [hmbtn, hmdiv] = makefolder(cohort)
 		hmbtn.text('HEATMAP').style('font-size', '.8em')
-		const appname = (cohort && cohort.name) || 'hm_main'
 		const sjcharts = await getsjcharts()
 		sjcharts.heatmap({
-			appname,
 			cohort,
 			hassamplelst,
 			blockinit,
@@ -235,7 +232,9 @@ if(cohort.render) {
 				holder: hmdiv.node()
 			},
 			tp_getgeneexpression,
-			show_heatmap: cohort.show_heatmap
+			show_heatmap: cohort.show_heatmap,
+			appname: app.appname || (cohort && cohort.name) || 'hm_main',
+			instanceTracker: app.instanceTracker
 		})
 	}
 
@@ -272,7 +271,9 @@ if(cohort.variantgene) {
 			dom: {
 				butt: srvbut.node(),
 				holder: srvdiv.node()
-			}
+			},
+			appname: app.appname || (cohort && cohort.name),
+			instanceTracker: app.instanceTracker
 		})
 	}
 
@@ -310,7 +311,9 @@ if(cohort.variantgene) {
 			dom: {
 				butt: skbtn.node(),
 				holder: skdiv.node()
-			}
+			},
+			appname: app.appname || (cohort && cohort.name),
+			instanceTracker: app.instanceTracker
 		})
 	}
 
@@ -333,7 +336,9 @@ if(cohort.variantgene) {
 			dom: {
 				butt: piebtn.node(),
 				holder: piediv.node()
-			}
+			},
+			appname: app.appname || (cohort && cohort.name),
+			instanceTracker: app.instanceTracker
 		})
 	}
 

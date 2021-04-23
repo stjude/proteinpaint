@@ -1,6 +1,5 @@
 import * as client from './client'
 import vcf2dstk from './vcf.tkconvert'
-import { json as d3json } from 'd3-request'
 import { bulkin } from './bulk.ui'
 import { string2pos, invalidcoord } from './coord'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
@@ -93,10 +92,10 @@ export function tpinit(cohort) {
 				not in use
 				*/
 				if (config.type == client.tkt.vafs1) {
-					for (const type in rawassay[pn][st]) {
-						const tk = rawassay[pn][st][type]
+					for (const name in rawassay[pn][st]) {
+						const tk = rawassay[pn][st][name]
 						if (!tk.file && !tk.url) {
-							return 'no file or URL for ' + type + ' vafs1 of ' + pn + ', ' + st
+							return 'no file or URL for ' + name + ' vafs1 of ' + pn + ', ' + st
 						}
 						tk.type = client.tkt.vafs1
 						tk.patient = pn
@@ -105,7 +104,7 @@ export function tpinit(cohort) {
 						tk.id = config.id
 						tk.tkid = Math.random().toString()
 						if (!tk.name) {
-							tk.name = type + ' vaf'
+							tk.name = name + ' vaf'
 						}
 						cohort.p2st[pn][st].tktemplate.push(tk)
 					}
@@ -236,61 +235,67 @@ export function loadstudycohort(genomes, file, holder, hostURL, jwt, noshow, app
 
 	const wait = holder.append('div').style('color', '#858585')
 	wait.text('Loading ' + file + ' ...')
-	d3json(hostURL + '/study').post(JSON.stringify({ file: file, jwt: jwt }), data => {
-		if (!data) {
-			wait.text('Server error!')
-			return
-		}
-		if (data.error) {
-			wait.text('Error loading study: ' + data.error)
-			return
-		}
-		const cohort = data.cohort
-		if (!cohort) {
-			wait.text('.cohort missing')
-			return
-		}
-		if (!cohort.genome) {
-			wait.text('No genome specified in the cohort JSON content')
-			return
-		}
-		const g = genomes[cohort.genome]
-		if (!g) {
-			wait.text('Invalid genome from cohort: ' + cohort.genome)
-			return
-		}
-
-		cohort.genome = g
-		cohort.jwt = jwt
-
-		if (!data.flagset) {
-			wait.text('.flagset missing')
-			return
-		}
-		wait.text('')
-		cohort.dsset = {}
-		for (const k in data.flagset) {
-			const flag = data.flagset[k]
-			flag.genome = g
-			bulkin({
-				flag: flag,
-				filename: file,
-				cohort: cohort,
-				err: m => client.sayerror(wait, m)
-			})
-		}
-		const err = tpinit(cohort)
-		if (err) {
-			client.sayerror(wait, err)
-		}
-
-		if (!noshow) {
-			import('./tp.ui').then(async p => {
-				getsjcharts(app.callbacks || {}).catch(console.error)
-				p.default(cohort, holder, hostURL, app)
-			})
-		}
+	return fetch(hostURL + '/study', {
+		method: 'POST',
+		body: JSON.stringify({ file: file, jwt: jwt })
 	})
+		.then(res => res.json())
+		.then(data => {
+			if (!data) {
+				wait.text('Server error!')
+				return
+			}
+			if (data.error) {
+				wait.text('Error loading study: ' + data.error)
+				return
+			}
+			const cohort = data.cohort
+			if (!cohort) {
+				wait.text('.cohort missing')
+				return
+			}
+			if (!cohort.genome) {
+				wait.text('No genome specified in the cohort JSON content')
+				return
+			}
+			const g = genomes[cohort.genome]
+			if (!g) {
+				wait.text('Invalid genome from cohort: ' + cohort.genome)
+				return
+			}
+
+			cohort.genome = g
+			cohort.jwt = jwt
+
+			if (!data.flagset) {
+				wait.text('.flagset missing')
+				return
+			}
+			wait.text('')
+			cohort.dsset = {}
+			for (const k in data.flagset) {
+				const flag = data.flagset[k]
+				flag.genome = g
+				bulkin({
+					flag: flag,
+					filename: file,
+					cohort: cohort,
+					err: m => client.sayerror(wait, m)
+				})
+			}
+			const err = tpinit(cohort)
+			if (err) {
+				client.sayerror(wait, err)
+			}
+
+			if (!noshow) {
+				return import('./tp.ui').then(async p => {
+					getsjcharts(app.callbacks || {}).catch(console.error)
+					p.default(cohort, holder, hostURL, app)
+					return app
+				})
+			}
+		})
 }
 
 function tidy_qtk(tk, config) {

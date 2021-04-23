@@ -56,6 +56,9 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
+	// the main Proteinpaint instance, unique for each runproteinpaint() call
+	// NOTE: this app instance may be returned or not depending on the
+	// results of parseembedthenurl(), TODO: make the return value more determinate
 	const app = {
 		error0(m) {
 			client.sayerror(app.holder0, m)
@@ -71,8 +74,16 @@ export function runproteinpaint(arg) {
 		it needs to be set before launching any apps
 		*/
 		debugmode: false,
+		// optional user-defined namespace for naming renderer app instances,
+		// will be used as a prefix to keys in a tracking object,
+		// e.g. `${appname}.hm` as a name to a heatmap instance.
+		// if no appname is given, the cohort name may be used as a prefix
+		appname: arg.appname,
 		// event callbacks for dynamically-loaded renderer instances
-		callbacks: arg.callbacks || {}
+		callbacks: arg.callbacks || {},
+		// object to store instances as created by dynamically loaded apps/renderers
+		// the default is to have a unique tracker per Proteinpaint app instance
+		instanceTracker: arg.instanceTracker || {}
 	}
 
 	if (arg.clear) {
@@ -168,7 +179,8 @@ export function runproteinpaint(arg) {
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app)
+			const subapp = parseembedthenurl(arg, app)
+			return subapp ? subapp : app
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -928,7 +940,6 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.study) {
-		console.log(868, 'may need to edit other calls')
 		// launch study-view through name of server-side configuration file (study.json)
 		return loadstudycohort(
 			app.genomes,
