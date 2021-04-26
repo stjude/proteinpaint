@@ -53,7 +53,7 @@ REV=$(cat tmppack/rev.txt)
 cd tmppack
 # get the current tag
 # GIT_TAG is set when the script is kicked off by GDC Jenkins
-TAG=${GIT_TAG-"$(node -p "require('./package.json').version")"}
+TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 .
 
@@ -87,7 +87,7 @@ docker build \
 docker build \
 	--file ./targets/gdc/Dockerfile \
 	--target ppserver \
-	--tag ppgdc:$REV \
+	--tag ppgdc:$GIT_TAG \
 	--build-arg IMGVER=$REV \
 	--build-arg PKGVER=$TAG \
         --build-arg http_proxy=http://cloud-proxy:3128 \
