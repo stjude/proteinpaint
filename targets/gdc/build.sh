@@ -6,6 +6,7 @@ set -e
 # ARGUMENTS
 ###############
 
+
 usage() {
 	echo "Usage:
 
@@ -18,13 +19,16 @@ usage() {
 
 REV=latest
 TPDIR=''
-while getopts "t:r:h:" opt; do
+while getopts "t:r:h:d:" opt; do
 	case "${opt}" in
 	t) 
 		TPMASTERDIR=$OPTARG
 		;;
 	r)
 		REV=$OPTARG
+		;;
+	d)
+		DOCKER_TAG=$OPTARG
 		;;
 	h)
 		usage
@@ -87,7 +91,7 @@ docker build \
 docker build \
 	--file ./targets/gdc/Dockerfile \
 	--target ppserver \
-	--tag ppgdc:$GIT_TAG \
+	--tag $DOCKER_TAG \
 	--build-arg IMGVER=$REV \
 	--build-arg PKGVER=$TAG \
         --build-arg http_proxy=http://cloud-proxy:3128 \
