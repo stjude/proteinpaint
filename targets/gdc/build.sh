@@ -71,6 +71,8 @@ docker build \
 	--build-arg PKGVER=$TAG \
         --build-arg http_proxy=http://cloud-proxy:3128 \
         --build-arg https_proxy=http://cloud-proxy:3128 \
+	--build-arg electron_get_use_proxy=true \
+	--build-arg global_agent_https_proxy=http://cloud-proxy:3128 \
 	.
 
 # delete this test step once the gdc wrapper tests are 
