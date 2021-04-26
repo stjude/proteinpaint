@@ -39,10 +39,14 @@ const sharedFilters = {
 	ellipse: (d)=>!d.symbol,
 }
 
-export function d2mafui(genomes) {
-	const [pane,inputdiv,gselect,filediv,saydiv,visualdiv]=client.newpane3(100, 100, genomes)
-	pane.header.text('2DMAF: mutant allele fraction plot between a pair of samples')
-	pane.body.style('margin','10px')
+export function d2mafui(genomes, holder) {
+	let pane,inputdiv,gselect,filediv,saydiv,visualdiv
+	if(holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(holder, genomes)
+	else{
+		[pane,inputdiv,gselect,filediv,saydiv,visualdiv]=client.newpane3(100, 100, genomes)
+		pane.header.text('2DMAF: mutant allele fraction plot between a pair of samples')
+		pane.body.style('margin','10px')
+	}
 	inputdiv.append('div').style('margin-top','20px').html(
 		'<ul>'
 		+'<li><a href="https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13" target=_blank>File format</a></li>'

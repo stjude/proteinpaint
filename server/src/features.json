@@ -16,6 +16,7 @@
             "name": "Kaplan-Meier plot",
             "shorthand": "KM plot",
             "app": "Genome Browser",
+            "hidden": true,
             "subheading": "GenomePaint",
             "blurb": "genomic feature analysis",
             "image": "",
@@ -566,11 +567,9 @@
             "buttons": {
                 "example": {
                     "genome": "hg19",
-                    "twodmaf": {
-                        "genome": "hg19",
-                        "datasetname": "2DMAF Demo",
-                        "input": "proteinpaint_demo/hg19/2dmaf/2dmaf.txt"
-                    }
+                    "nobox": 1,
+                    "noheader": 1,
+                    "twodmaf": { "uionly": true }
                 },
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
@@ -592,13 +591,18 @@
             "searchterms": []
         },
         {
-            "name": "Heatmap",
-            "shorthand": "Heatmap",
+            "name": "Mutation from Text file",
+            "shorthand": "Heatmap, mutation",
             "app": "Apps",
             "subheading": "Launch App",
             "blurb": "mutation data in a gene-by-sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "buttons": {
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "project": { "uionly": true }
+                },
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
             },
@@ -638,6 +642,11 @@
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "buttons": {
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "maftimeline": { "uionly": true }
+                },
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
             },
@@ -675,6 +684,7 @@
             "name": "Study View",
             "shorthand": "Study View",
             "app": "Apps",
+            "hidden": true,
             "subheading": "Launch App",
             "blurb": "multiple views options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
@@ -688,6 +698,7 @@
             "name": "Hi-C whole-genome view",
             "shorthand": "HiC whole genome",
             "app": "Apps",
+            "hidden": true,
             "subheading": "Apps",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
@@ -1920,6 +1931,14 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "singlecell": { 
+                        "genome": "mm10",
+                        "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
+                     }
+                },
                 "url": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },

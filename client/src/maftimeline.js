@@ -13,9 +13,13 @@ let maflogscale = true
 
 const tip = new client.Menu()
 
-export default function maftimelineui(genomes) {
-	const [pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
-	pane.header.text('MAF timeline plot')
+export default function maftimelineui(genomes, holder) {
+	let pane,inputdiv,gselect,filediv,saydiv,visualdiv
+	if(holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(holder, genomes)
+	else{
+		[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
+		pane.header.text('MAF timeline plot')
+	}
 	inputdiv
 		.append('p')
 		.html(

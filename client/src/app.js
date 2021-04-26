@@ -1004,7 +1004,9 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.project) {
-		bulkui(0, 0, app.genomes, app.hostURL)
+		let holder = undefined
+		if(arg.project.uionly) holder = app.holder0
+		bulkui(0, 0, app.genomes, app.hostURL, holder)
 	}
 
 	if (arg.toy) {
@@ -1012,6 +1014,10 @@ async function parseembedthenurl(arg, app) {
 	}
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, app)
+	}
+
+	if(arg.maftimeline) {
+		launchmaftimeline(arg, app)
 	}
 }
 
@@ -1479,19 +1485,10 @@ async function launchblock(arg, app) {
 
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
-		// duplicate newpane3
-		const inputdiv = app.holder0.append('div').style('margin', '40px 20px 20px 20px')
-		const p = inputdiv.append('p')
-		p.append('span').html('Genome&nbsp;')
-		const gselect = p.append('select').attr('title', 'Select a genome')
-		for (const n in app.genomes) {
-			gselect.append('option').text(n)
-		}
-		const filediv = inputdiv.append('div').style('margin', '20px 0px')
-		const saydiv = app.holder0.append('div').style('margin', '10px 20px')
-		const visualdiv = app.holder0.append('div').style('margin', '20px')
+		// created seperate function in clinet for same page block div
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
-			p.svmrui([null, inputdiv, gselect.node(), filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
+			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
 		return
 	}
@@ -1519,6 +1516,12 @@ function launchmavb(arg, app) {
 }
 
 function launch2dmaf(arg, app) {
+	if(arg.twodmaf.uionly){
+		import('./2dmaf').then(p => {
+			p.d2mafui(app.genomes, app.holder0)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1529,6 +1532,14 @@ function launch2dmaf(arg, app) {
 	import('./2dmaf').then(d2maf => {
 		d2maf.d2mafparseinput(arg.twodmaf, app.holder0)
 	})
+}
+
+function launchmaftimeline(arg, app){
+	if(arg.maftimeline.uionly){
+		import('./maftimeline').then(p => {
+			p.default(app.genomes, app.holder0)
+		})
+	}
 }
 
 /*
