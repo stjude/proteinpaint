@@ -1299,6 +1299,20 @@ export function newpane3(x, y, genomes) {
 	return [pane, inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
+export function newFormDiv(holder, genomes) {
+	const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
+	const p = inputdiv.append('p')
+	p.append('span').html('Genome&nbsp;')
+	const gselect = p.append('select')
+	for (const n in genomes) {
+		gselect.append('option').text(n)
+	}
+	const filediv = inputdiv.append('div').style('margin', '20px 0px')
+	const saydiv = holder.append('div').style('margin', '10px 20px')
+	const visualdiv = holder.append('div').style('margin', '20px')
+	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
+}
+
 export function to_svg(svg, name, opts = {}) {
 	if (opts.apply_dom_styles) {
 		opts.svgClone = svg.cloneNode(true)
