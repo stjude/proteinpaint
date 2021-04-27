@@ -544,8 +544,10 @@ function renderCustomBinInputs(self) {
 		else {
 			qlst.forEach((bin, i) => {
 				Object.keys(bin).forEach(k => {
-					if (bin[k] && bin[k] != qlst[i][k]) changed = true
-					return changed
+					if (bin[k] && bin[k] !== data[i][k]) {
+						changed = true
+						return changed
+					}
 				})
 			})
 		}
