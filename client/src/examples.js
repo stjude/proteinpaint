@@ -26,14 +26,12 @@ export async function init_examples(par) {
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
-	const appList = make_subheader_contents(app_col, 'Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
 		gpaintList,
 		browserList,
 		experimentalList,
-		launchList,
-		appList
+		launchList
 	}
 	const page_args = {
 		apps_sandbox_div,
@@ -171,7 +169,6 @@ async function loadTracks(args, page_args, filteredTracks) {
 		displayTracks(BrowserTracks, args.browserList, page_args)
 		displayTracks(ExperimentalTracks, args.experimentalList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
-		displayTracks(AppTracks, args.appList, page_args)
 	} catch (err) {
 		console.error(err)
 	}

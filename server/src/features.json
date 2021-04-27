@@ -301,7 +301,7 @@
             "searchterms": []
         },
         {
-            "name": "Track list & Facet table",
+            "name": "Track list & facet table",
             "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -667,7 +667,7 @@
             "app": "Apps",
             "subheading": "Launch App",
             "blurb": "view data at a locus",
-            "image": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
                 "url": "",
                 "doc": ""
@@ -693,7 +693,7 @@
             "shorthand": "HiC whole genome",
             "app": "Apps",
             "hidden": true,
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
             "buttons": {
@@ -706,7 +706,8 @@
             "name": "Scatterplot",
             "shorthand": "Scatterplot",
             "app": "Apps",
-            "subheading": "Apps",
+            "hidden": true,
+            "subheading": "Launch App",
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
@@ -1921,7 +1922,8 @@
             "name": "Single Cell",
             "shorthand": "Single Cell",
             "app": "Apps",
-            "subheading": "Apps",
+            "hidden": true,
+            "subheading": "Launch App",
             "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
@@ -1943,7 +1945,7 @@
             "shorthand": "termdb",
             "app": "Apps",
             "hidden": true,
-            "subheading": "Apps",
+            "subheading": "Launch App",
             "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {
