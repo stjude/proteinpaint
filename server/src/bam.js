@@ -103,7 +103,8 @@ segment {}
 .islast
 .discord_wrong_insertsize
 .discord_orientation
-.discord_unmapped
+.discord_unmapped1 // Current read unmapped
+.discord_unmapped2 // Mate of current read unmapped
 .rnext, pnext // attribute is set when mate is on a different chr
 
 box {}
@@ -1358,11 +1359,13 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) || // 83
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80) //163
 	) {
-		// Read and mate is properly paired
-	} else if (flag & 0x8 || flag & 0x4) {
-		// XXX here 0x8 is for mate unmapped, but 0x4 is this reads is unmapped, so must not mix them together and figure out how to handle 0x4
-		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
-		segment.discord_unmapped = true
+	// Read and mate is properly paired
+	} else if (flag & 0x4) {
+		// Read is unmapped
+	        segment.discord_unmapped1 = true
+	} else if (flag & 0x8) {
+		// Mate  of read is unmapped
+		segment.discord_unmapped2 = true	    
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
@@ -1756,7 +1759,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (r.to_qual) {
 				let xoff = x
 				b.qual.forEach(v => {
-					if (segment.discord_unmapped) {
+					if (segment.discord_unmapped1 || segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
@@ -1765,7 +1768,7 @@ function plot_segment(ctx, segment, y, group, q) {
 				})
 			} else {
 				// not showing qual, one box
-				if (segment.discord_unmapped) {
+				if (segment.discord_unmapped1 || segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
@@ -1813,7 +1816,7 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2discord_orientation(v / maxqual)
 					} else if (segment.discord_wrong_insertsize) {
 						ctx.fillStyle = qual2discord_wrong_insertsize(v / maxqual)
-					} else if (segment.discord_unmapped) {
+					} else if (segment.discord_unmapped1 || segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					} else {
 						ctx.fillStyle = qual2match(v / maxqual)
@@ -1830,7 +1833,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = discord_orientation_hq
 				} else if (segment.discord_wrong_insertsize) {
 					ctx.fillStyle = discord_wrong_insertsize_hq
-				} else if (segment.discord_unmapped) {
+				} else if (segment.discord_unmapped1 || segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				} else {
 					ctx.fillStyle = match_hq
@@ -2275,13 +2278,20 @@ async function convertread2html(seg, genome, query) {
 				seg.pnext +
 				'</li>'
 		)
-	} else if (seg.discord_unmapped) {
+	} else if (seg.discord_unmapped2) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_unmapped_hq +
 				';color:white">Next segment in the template unmapped</span></li>'
 		)
+	} else if (seg.discord_unmapped1) {
+		lst.push(
+			'<li><span style="background:' +
+				discord_unmapped_hq +
+				';color:white">This segment in the template unmapped</span></li>'
+		)
 	}
+      
 
 	// indicate all flags
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
