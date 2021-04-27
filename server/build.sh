@@ -7,7 +7,7 @@ set -e
 ###############
 
 if (($# == 0)); then
-	REV="HEAD"
+	REV="latest"
 else
 	REV=$1
 fi
@@ -16,7 +16,7 @@ fi
 # EXTRACT FROM COMMIT
 #############################
 
-./build/tmp.sh $REV
+./build/extract.sh $REV
 cd tmppack/server
 npm install
 npx webpack --config=webpack.config.js
