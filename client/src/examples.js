@@ -180,6 +180,10 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
+		const trackname =
+			track.shorthand == 'GenomePaint' && page_args.mdsform
+				? `<a href='${window.location.origin}?mdsjsonform=1' target='_blank' onclick='event.stopPropagation()'> ${track.name} </a>`
+				: track.name
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
