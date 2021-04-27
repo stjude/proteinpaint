@@ -897,41 +897,41 @@ async function parseembedthenurl(arg, app) {
 	if (arg.xintest) {
 		// a shortcut to xin's experiments and not to be used in prod
 		launchxintest(arg.xintest, app)
-		return
+		return app
 	}
 
 	if (arg.singlecell) {
 		launch_singlecell(arg.singlecell, app)
-		return
+		return app
 	}
 
 	if (arg.fimo) {
 		launch_fimo(arg.fimo, app)
-		return
+		return app
 	}
 
 	if (arg.mdssurvivalplot) {
 		if (arg.genome) arg.mdssurvivalplot.genome = arg.genome
 		launchmdssurvivalplot(arg.mdssurvivalplot, app)
-		return
+		return app
 	}
 
 	if (arg.mdssamplescatterplot) {
 		if (arg.genome) arg.mdssamplescatterplot.genome = arg.genome
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
-		return
+		return app
 	}
 
 	if (arg.samplematrix) {
 		arg.samplematrix.jwt = arg.jwt
 		launchsamplematrix(arg.samplematrix, app)
-		return
+		return app
 	}
 
 	if (arg.hic) {
 		arg.hic.jwt = arg.jwt
 		launchhic(arg.hic, app)
-		return
+		return app
 	}
 
 	if (arg.block) {
@@ -941,7 +941,7 @@ async function parseembedthenurl(arg, app) {
 
 	if (arg.study) {
 		// launch study-view through name of server-side configuration file (study.json)
-		return loadstudycohort(
+		loadstudycohort(
 			app.genomes,
 			arg.study,
 			app.holder0,
@@ -950,6 +950,7 @@ async function parseembedthenurl(arg, app) {
 			false, // no show
 			app
 		)
+		return app
 	}
 
 	if (arg.studyview) {
@@ -962,27 +963,27 @@ async function parseembedthenurl(arg, app) {
 		obj.jwt = arg.jwt
 		obj.holder = app.holder0
 		bulkembed(obj)
-		return
+		return app
 	}
 
 	if (await may_launchGeneView(arg, app)) {
 		// gene view launched
-		return
+		return app
 	}
 
 	if (arg.fusioneditor) {
 		launchfusioneditor(arg, app)
-		return
+		return app
 	}
 
 	if (arg.mavolcanoplot) {
 		launchmavb(arg, app)
-		return
+		return app
 	}
 
 	if (arg.twodmaf) {
 		launch2dmaf(arg, app)
-		return
+		return app
 	}
 
 	if (arg.parseurl && location.search.length) {
@@ -1015,6 +1016,8 @@ async function parseembedthenurl(arg, app) {
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, app)
 	}
+
+	return app
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1474,8 +1477,8 @@ async function launchblock(arg, app) {
 
 	// return a promise resolving to block
 	return import('./block').then(b => {
-		const bb = new b.Block(blockinitarg)
-		return { block: bb }
+		app.block = new b.Block(blockinitarg)
+		return app
 	})
 }
 

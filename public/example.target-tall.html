@@ -23,10 +23,10 @@
 	const appname = Math.random() // 'TARGET TALL Study'
 	try {
 		const pp = await runproteinpaint({
-			//host: 'https://ppr.stjude.org',		
+			host: 'https://ppr.stjude.org',		
 			noheader: true,
 			holder: document.getElementById('aaa'),
-			study: 'target-tall-small',
+			study: 'esioson/target-tall-small',
 			callbacks: {
 				[`${appname}.hm`]: {
 					postInstance(appInstance) {
