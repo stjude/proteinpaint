@@ -69,7 +69,7 @@ ADD targets ./targets
 
 # For now, must mount a developer's local serverconfig.tpmasterdir
 # in order to run the GDC test in a running container
-#CMD [ "/bin/bash", "./targets/gdc/test.sh"]
+CMD [ "/bin/bash", "./targets/gdc/test.sh"]
 
 # TODO: run the GDC tests as part of building a Docker image,
 # to act as a quality control step before building a 
