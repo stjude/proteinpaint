@@ -2282,13 +2282,13 @@ async function convertread2html(seg, genome, query) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_unmapped_hq +
-				';color:white">Next segment in the template unmapped</span></li>'
+				';color:white">Other segment in template is unmapped</span></li>'
 		)
 	} else if (seg.discord_unmapped1) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_unmapped_hq +
-				';color:white">This segment in the template unmapped</span></li>'
+				';color:white">This segment in template is unmapped</span></li>'
 		)
 	}
       
