@@ -1190,7 +1190,7 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 			opr: cigarstr,
 			start: pos,
 			len: seq.length,
-			cidx: cum - seq.length,
+			cidx: 0,
 			qual: qual
 		}
 		pos += seq.length
@@ -1381,6 +1381,7 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 			segment.pnext = pnext
 		}
 	}
+        console.log("segment:",segment)
 	return segment
 }
 
@@ -1752,10 +1753,8 @@ function plot_segment(ctx, segment, y, group, q) {
 
 		if (b.opr == '*') {
 			// Possibly unmapped reads
-			console.log('Hello')
 			if (r.to_qual) {
 				let xoff = x
-				console.log('segment:', segment)
 				b.qual.forEach(v => {
 					if (segment.discord_unmapped) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
@@ -1765,7 +1764,6 @@ function plot_segment(ctx, segment, y, group, q) {
 					xoff += r.ntwidth
 				})
 			} else {
-				console.log('noqual')
 				// not showing qual, one box
 				if (segment.discord_unmapped) {
 					ctx.fillStyle = discord_unmapped_hq
@@ -2211,10 +2209,10 @@ async function convertread2html(seg, genome, query) {
 			}
 			continue
 		}
-		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X') {
+		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X' || b.opr == '*') {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
-				const nt1 = seg.seq[b.cidx + i]
+			        const nt1 = seg.seq[b.cidx + i]
 				reflst.push('<td>' + nt0 + '</td>')
 				querylst.push(
 					'<td style="background:' +
