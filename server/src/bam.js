@@ -1384,7 +1384,6 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 			segment.pnext = pnext
 		}
 	}
-        console.log("segment:",segment)
 	return segment
 }
 
