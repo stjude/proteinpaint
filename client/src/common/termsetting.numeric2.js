@@ -498,12 +498,14 @@ function renderCustomBinInputs(self) {
 	const thead = self.dom.bins_table.append('thead').append('tr')
 	thead
 		.append('th')
+		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Boundary')
+		.html('Bin Boundaries')
 	thead
 		.append('th')
+		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Label')
+		.html('Bin Labels')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
