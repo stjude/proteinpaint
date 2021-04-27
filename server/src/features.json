@@ -308,6 +308,14 @@
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
+                "example":{
+                    "block": 1,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg38",
+                    "tkjsonfile": "proteinpaint_demo/hg19/misc/tracks.json"
+
+                },
                 "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
             },
