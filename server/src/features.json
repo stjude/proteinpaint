@@ -45,7 +45,7 @@
             "shorthand": "AICheck",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "aka aicheck",
+            "blurb": "from tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
             "buttons": {
                 "example": {
@@ -72,7 +72,7 @@
             "shorthand": "BigWig",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "dense, continuous data in the Genome Browser",
+            "blurb": "quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "buttons": {
                 "example": {
@@ -94,6 +94,34 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
             },
             "searchterms": ["coverage", "numeric"]
+        },
+        {
+            "name": "Stranded BigWig",
+            "shorthand": "Stranded BigWig",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "with forward & reverse strands",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
+            "buttons": {
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr8:128597079-130293343",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "name": "Stranded RNA-seq",
+                        "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
+                        "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
+                        "type": "bigwigstranded"
+                    }]
+                },
+                "url": "",
+                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+            },
+            "searchterms": ["bigwig stranded"]
         },
         {
             "name": "Profile Gene Value",
@@ -144,7 +172,7 @@
             "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "for each sample, against all samples in the same group",
+            "blurb": "against all samples from a cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "buttons": {
                 "example": {
@@ -172,7 +200,7 @@
             "shorthand": "Hi-C",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "chromatin conformation capture",
+            "blurb": "chromatin interaction",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "buttons": {
                 "example": {
@@ -201,7 +229,7 @@
         {
             "name": "JSON BED",
             "shorthand": "JSON BED",
-            "app": "Genome Browser",
+            "app": "genomic feature annotation",
             "subheading": "Tracks",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
@@ -231,21 +259,16 @@
             "shorthand": "Lollipop",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": " lollipop view of Pediatric & COSMIC datasets",
+            "blurb": "coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "buttons": {
                 "example": {
                     "parseurl": true,
-                    "block": true,
+					"gene":"jak2",
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg38",
-                    "position": "chr1:47194417-47322785",
-                    "nativetracks": "RefGene",
-                    "datasetqueries": [{
-                        "dataset": "Pediatric",
-                        "querykey": "svcnv"
-                    }]
+                    "genome": "hg19",
+					"dataset":"Pediatric"
                 },
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
@@ -257,7 +280,7 @@
             "shorthand": "Splice Junction",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": " RNA splice junction data",
+            "blurb": "RNA splice junction",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
                 "example": {
@@ -278,39 +301,11 @@
             "searchterms": []
         },
         {
-            "name": "Stranded BigWig",
-            "shorthand": "Stranded BigWig",
-            "app": "Genome Browser",
-            "subheading": "Tracks",
-            "blurb": "RNA-seq coverage data in forward strand & reverse strand",
-            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
-            "buttons": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr8:128597079-130293343",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "name": "Stranded RNA-seq",
-                        "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
-                        "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
-                        "type": "bigwigstranded"
-                    }]
-                },
-                "url": "",
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
-            },
-            "searchterms": ["bigwig stranded"]
-        },
-        {
             "name": "Track list & Facet table",
             "shorthand": "Track list",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": " array of tracks & facet tables",
+            "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
                 "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
@@ -323,7 +318,7 @@
             "shorthand": "VCF",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": " view variants in a lollipop chart",
+            "blurb": "SNV/indel variants",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
             "buttons": {
                 "example": {
@@ -331,7 +326,7 @@
                     "gene": "kras",
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg19",
+                    "genome": "hg38",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "vcf",
@@ -409,7 +404,7 @@
             "shorthand": "ASE",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "on-the-fly ASE analysis",
+            "blurb": "allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "buttons": {
                 "example": {
@@ -504,7 +499,7 @@
             "shorthand": "BAM",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "nucleotide sequence alignments",
+            "blurb": "sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "buttons": {
                 "example": {
@@ -531,7 +526,7 @@
             "shorthand": "Bampile",
             "app": "Genome Browser",
             "subheading": "Experimental Tracks",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
                 "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
@@ -540,11 +535,11 @@
             "searchterms": []
         },
         {
-            "name": "Use FusionEditor",
+            "name": "FusionEditor",
             "shorthand": "Fusion Editor",
             "app": "Apps",
             "subheading": "Launch App",
-            "blurb": "fusions discovered in a sample",
+            "blurb": "to review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
                 "example": {
@@ -562,7 +557,7 @@
             "shorthand": "2DMAF",
             "app": "Apps",
             "subheading": "Launch App",
-            "blurb": "SNV & indel mutations between diagnosis & relapse samples",
+            "blurb": "somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
                 "example": {
@@ -591,11 +586,11 @@
             "searchterms": []
         },
         {
-            "name": "Mutation from Text file",
+            "name": "Load mutations from text files",
             "shorthand": "Heatmap, mutation",
             "app": "Apps",
             "subheading": "Launch App",
-            "blurb": "mutation data in a gene-by-sample matrix",
+            "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "buttons": {
                 "example": {
@@ -613,7 +608,7 @@
             "shorthand": "MA+Volcano",
             "app": "Apps",
             "subheading": "Launch App",
-            "blurb": "gene expression along side significance",
+            "blurb": "differential gene expression",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
                 "example": {
@@ -653,12 +648,12 @@
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
         },
         {
-            "name": "Mutation Burden & Spectrum",
+            "name": "Mutation burden & spectrum",
             "shorthand": "",
             "app": "Apps",
             "hidden": true,
             "subheading": "Launch App",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "",
             "image": "",
             "buttons": {
                 "url": "",
@@ -667,12 +662,11 @@
             "searchterms": []
         },
         {
-            "name": "Splice Junction by Sample Matrix",
+            "name": "Junction by sample matrix",
             "shorthand": "",
             "app": "Apps",
-            "hidden": true,
             "subheading": "Launch App",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "view data at a locus",
             "image": "",
             "buttons": {
                 "url": "",
@@ -713,7 +707,7 @@
             "shorthand": "Scatterplot",
             "app": "Apps",
             "subheading": "Apps",
-            "blurb": "t-SNE scatterplot of samples & metadata",
+            "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
                 "example": {
@@ -1928,7 +1922,7 @@
             "shorthand": "Single Cell",
             "app": "Apps",
             "subheading": "Apps",
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
                 "example": {
