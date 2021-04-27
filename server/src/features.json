@@ -615,6 +615,7 @@
                     "genome": "hg19",
                     "noheader": 1,
                     "mavolcanoplot": {
+                        "uionly": true,
                         "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
                         "tracks": [{
                             "name": "Demo RNA-seq coverage",
@@ -669,6 +670,11 @@
             "blurb": "view data at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "junctionbymatrix": { "uionly": true }
+                },
                 "url": "",
                 "doc": ""
             },

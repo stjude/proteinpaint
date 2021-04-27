@@ -983,6 +983,11 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -1005,7 +1010,7 @@ async function parseembedthenurl(arg, app) {
 
 	if (arg.project) {
 		let holder = undefined
-		if(arg.project.uionly) holder = app.holder0
+		if (arg.project.uionly) holder = app.holder0
 		bulkui(0, 0, app.genomes, app.hostURL, holder)
 	}
 
@@ -1016,7 +1021,7 @@ async function parseembedthenurl(arg, app) {
 		launchtermdb(arg.termdb, app)
 	}
 
-	if(arg.maftimeline) {
+	if (arg.maftimeline) {
 		launchmaftimeline(arg, app)
 	}
 }
@@ -1503,6 +1508,12 @@ function launchfusioneditor(arg, app) {
 }
 
 function launchmavb(arg, app) {
+	if (arg.mavolcanoplot.uionly) {
+		import('./mavb').then(p => {
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1516,7 +1527,7 @@ function launchmavb(arg, app) {
 }
 
 function launch2dmaf(arg, app) {
-	if(arg.twodmaf.uionly){
+	if (arg.twodmaf.uionly) {
 		import('./2dmaf').then(p => {
 			p.d2mafui(app.genomes, app.holder0)
 		})
@@ -1534,10 +1545,18 @@ function launch2dmaf(arg, app) {
 	})
 }
 
-function launchmaftimeline(arg, app){
-	if(arg.maftimeline.uionly){
+function launchmaftimeline(arg, app) {
+	if (arg.maftimeline.uionly) {
 		import('./maftimeline').then(p => {
 			p.default(app.genomes, app.holder0)
+		})
+	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
 	}
 }
