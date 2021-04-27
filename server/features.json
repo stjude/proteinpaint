@@ -706,7 +706,6 @@
             "name": "Junction by sample matrix",
             "shorthand": "",
             "app": "Apps",
-            "hidden": true,
             "subheading": "Launch App",
             "blurb": "view data at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
