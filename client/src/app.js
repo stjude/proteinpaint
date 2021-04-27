@@ -1029,6 +1029,11 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -1598,6 +1603,14 @@ function launchmaftimeline(arg, app) {
 	if (arg.maftimeline.uionly) {
 		import('./maftimeline').then(p => {
 			p.default(app.genomes, app.holder0, app.sandbox_header)
+		})
+	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
 	}
 }
