@@ -205,7 +205,9 @@ function displayTracks(tracks, holder, page_args) {
 			)
 			.on('click', async () => {
 				page_args.apps_off()
-				if (track.buttons.example) {
+				if (track.shorthand == "GenomePaint"){
+					window.open("https://genomepaint.stjude.cloud/", _blank)
+				} else if (track.buttons.example) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})

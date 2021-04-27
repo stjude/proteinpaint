@@ -343,11 +343,13 @@ async function handle_examples(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query) {
+		let form
+		{!exports.features.mdsjsonform ? form = false : true}
 		if (req.query.getexamplejson) {
 			const txt = await utils.read_file('./server/src/features.json')
 			try {
 				const json = JSON.parse(txt)
-				res.send({ examples: json.examples })
+				res.send({ examples: json.examples, mdsform: form })
 			} catch (e) {
 				res.send({ error: 'Invalid JSON' })
 			}
