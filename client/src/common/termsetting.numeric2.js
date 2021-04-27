@@ -103,7 +103,7 @@ export async function setNumericMethods(self) {
 			.split('\n')
 			.filter(d => d != '')
 			.map(d => +d)
-			.sort((a, b) => (a < b ? -1 : 1))
+			.sort((a, b) => a - b)
 			.map((d, i) => {
 				const bin = {
 					start: +d,
@@ -523,6 +523,7 @@ function renderCustomBinInputs(self) {
 		.on('change', handleChange)
 		.on('keyup', async () => {
 			// enter or backspace/delete
+			// i don't think backspace works
 			if (!client.keyupEnter() && event.key != 8) return
 			handleChange.call(this)
 		})
@@ -539,19 +540,15 @@ function renderCustomBinInputs(self) {
 	}
 
 	function binsChanged(data, qlst) {
-		let changed = false
-		if (data.length != qlst.length) changed = true
-		else {
-			qlst.forEach((bin, i) => {
-				Object.keys(bin).forEach(k => {
-					if (bin[k] && bin[k] !== data[i][k]) {
-						changed = true
-						return changed
-					}
-				})
-			})
+		if (data.length != qlst.length) return true
+		for (const [i, bin] of qlst.entries()) {
+			for (const k of Object.keys(bin)) {
+				if (bin[k] && bin[k] !== data[i][k]) {
+					return true
+				}
+			}
 		}
-		return changed
+		return false
 	}
 
 	self.dom.customBinLabelTd = tr.append('td')
