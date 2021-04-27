@@ -1,11 +1,12 @@
 {
     "examples": [{
-            "name": "<a href=https://ppr.stjude.org/?mdsjsonform=1 target='_blank'>Create a Custom Track</a>",
+            "name": "Create a Custom Track",
             "shorthand": "GenomePaint",
             "app": "Genome Browser",
             "subheading": "GenomePaint",
-            "blurb": "customize a GenomePaint track<br><br><a href=https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank'>Link to paper</a>",
+            "blurb": "customize a GenomePaint track<br><br><a href=https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'>Link to paper</a>",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
+            "clickcard2url" : "https://genomepaint.stjude.cloud/",
             "buttons": {
                 "url": "",
                 "doc": ""

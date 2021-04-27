@@ -35,7 +35,8 @@ export async function init_examples(par) {
 	}
 	const page_args = {
 		apps_sandbox_div,
-		apps_off
+		apps_off,
+		mdsform: re.mdsform
 	}
 	make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -180,33 +181,37 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
+		const trackname =
+			track.shorthand == 'GenomePaint' && page_args.mdsform
+				? `<a href='${window.location.origin}?mdsjsonform=1' target='_blank' onclick='event.stopPropagation()'> ${track.name} </a>`
+				: track.name
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
 				`
 						${
 							track.blurb
-								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
-								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
+								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${trackname}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
+								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${trackname}</span></div>`
 						}
 					<span class="track-image"><img src="${track.image}"></img></span>
 					<div class="track-btns">
 					${
 						track.buttons.url
-							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+							? `<button class="url-tooltip-outer" id="url-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
 							: ''
 					}
 					${
 						track.buttons.doc
-							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+							? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
 							: ''
 					}
 					</div>`
 			)
 			.on('click', async () => {
 				page_args.apps_off()
-				if (track.shorthand == "GenomePaint"){
-					window.open("https://genomepaint.stjude.cloud/", _blank)
+				if (track.clickcard2url) {
+					window.open(track.clickcard2url, '_blank')
 				} else if (track.buttons.example) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
