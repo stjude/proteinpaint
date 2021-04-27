@@ -219,7 +219,7 @@ async function openExample(track, sandbox_div) {
 	// crate unique id for each app div
 	const app_id = track.name + Math.floor(Math.random() * 1000)
 	let [app_header, app_body] = make_app_div(sandbox_div)
-	app_header.text(track.name + ' Example')
+	app_header.text(track.name + (track.subheading == 'Launch App' ? '' : ' Example'))
 	app_body
 		.append('div')
 		.attr('id', app_id)

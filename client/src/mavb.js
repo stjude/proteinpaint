@@ -116,13 +116,17 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 		})
 }
 
-export function mavbui(genomes, hostURL, jwt) {
+export function mavbui(genomes, hostURL, jwt, holder) {
 	/*
 	create GUI to collect user input
 	*/
-	const [pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
-	pane.header.text('Differential gene expression viewer')
-	pane.body.style('margin', '10px')
+	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(holder, genomes)
+	else {
+		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
+		pane.header.text('Differential gene expression viewer')
+		pane.body.style('margin', '10px')
+	}
 	inputdiv
 		.append('div')
 		.style('margin-top', '30px')
