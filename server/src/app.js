@@ -164,7 +164,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 app.get(basepath + '/healthcheck', handle_healthcheck)
-app.post(basepath + '/examples', handle_examples)
+app.get(basepath + '/examples', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)
@@ -341,25 +341,16 @@ function handle_gene2canonicalisoform(req, res) {
 }
 
 async function handle_examples(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	if (!exports.features.examples) return res.send({ error: 'This feature is not enabled on this server.' })
-	if (req.query) {
-		let form
-		form = exports.features.mdsjsonform
-		if (req.query.getexamplejson) {
-			const txt = await utils.read_file('./server/src/features.json')
-			try {
-				const json = JSON.parse(txt)
-				res.send({ examples: json.examples, mdsform: form })
-			} catch (e) {
-				res.send({ error: 'Invalid JSON' })
-			}
-		} else {
-			res.send({ error: 'examples json file not defined' })
-		}
-		return
+	log(req)
+	try {
+		if (!exports.features.examples) throw 'This feature is not enabled on this server.'
+		// more flexibility by reading a file pointed by exports.features.examples
+		const txt = await utils.read_file('./features.json')
+		const json = JSON.parse(txt)
+		res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
+	} catch (e) {
+		res.send({ error: e.message || e })
 	}
-	res.send({ error: 'Invalid request' })
 }
 
 async function handle_mdsjsonform(req, res) {
