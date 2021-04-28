@@ -180,10 +180,15 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
-		const trackname =
-			track.shorthand == 'GenomePaint' && page_args.allow_mdsform
-				? `<a href='${window.location.origin}?mdsjsonform=1' target='_blank' onclick='event.stopPropagation()'> ${track.name} </a>`
-				: track.name
+		const trackblurb =
+			track.shorthand == 'GenomePaint'
+				? page_args.allow_mdsform
+					? `${track.blurb} 
+					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>
+					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='${window.location.origin}?mdsjsonform=1' onclick='event.stopPropagation()'> Create custom track </a>`
+					: `${track.blurb} 
+				<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>`
+				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
