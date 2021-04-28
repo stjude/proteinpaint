@@ -1,15 +1,12 @@
-import { dofetch2 } from './client'
+import { dofetch2, sayerror } from './client'
 import { debounce } from 'debounce'
 import { make_app_div } from './app'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
-	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	const re = await dofetch2('/examples')
 	if (re.error) {
-		holder
-			.append('div')
-			.text(re.error)
-			.style('background-color', '#f5f5f5')
+		sayerror(holder.append('div'), re.error)
 		return
 	}
 	const wrapper_div = make_examples_page(holder)
@@ -36,7 +33,7 @@ export async function init_examples(par) {
 	const page_args = {
 		apps_sandbox_div,
 		apps_off,
-		mdsform: re.mdsform
+		allow_mdsform: re.allow_mdsform
 	}
 	make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -182,7 +179,7 @@ function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		const trackname =
-			track.shorthand == 'GenomePaint' && page_args.mdsform
+			track.shorthand == 'GenomePaint' && page_args.allow_mdsform
 				? `<a href='${window.location.origin}?mdsjsonform=1' target='_blank' onclick='event.stopPropagation()'> ${track.name} </a>`
 				: track.name
 		const li = holder.append('li')
