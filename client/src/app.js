@@ -262,6 +262,8 @@ function makeheader(app, obj, jwt) {
 	const tip = new client.Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
+		app_btn_active = false
+		apps_off()
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str = input.property('value').trim()
@@ -297,8 +299,8 @@ function makeheader(app, obj, jwt) {
 		.on('keyup', () => {
 			if (client.keyupEnter()) entersearch()
 			else debouncer()
-			app_btn_active = false
-			apps_off()
+			// app_btn_active = false
+			// apps_off()
 		})
 	input.node().focus()
 
