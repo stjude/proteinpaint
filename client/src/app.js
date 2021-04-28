@@ -988,6 +988,11 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -1491,7 +1496,7 @@ async function launchblock(arg, app) {
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
 		// created seperate function in clinet for same page block div
-		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(app.holder0, app.genomes)
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newSandBoxDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
 			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
@@ -1505,6 +1510,14 @@ function launchfusioneditor(arg, app) {
 	import('./svmr').then(p => {
 		p.svmrparseinput(arg.fusioneditor, app.error0, genomeobj, app.holder0, app.hostURL, arg.jwt)
 	})
+}
+
+async function launchmdsjsonform(arg, app) {
+	console.log(app)
+	if (arg.mdsjsonform.uionly) {
+		const _ = await import('./mdsjsonform')
+		await _.init_mdsjsonform({ holder: app.holder0, genomes: app.genomes })
+	}
 }
 
 function launchmavb(arg, app) {

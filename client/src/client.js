@@ -1299,7 +1299,7 @@ export function newpane3(x, y, genomes) {
 	return [pane, inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
-export function newFormDiv(holder, genomes) {
+export function newSandBoxDiv(holder, genomes) {
 	const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
 	const p = inputdiv.append('p')
 	p.append('span').html('Genome&nbsp;')
