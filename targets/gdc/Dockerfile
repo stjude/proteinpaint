@@ -34,23 +34,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # avoid font-warning that breaks the test message
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
-
-#Dependencies: Importing from Dockerfile.gdc to test
-ARG htsversion=1.11
-
-RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
-    (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
-    ldconfig && \
-    curl -L https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
-    (cd samtools-${htsversion} && ./configure --with-htslib=system && make install) && \
-    curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
-    (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
-
-RUN mkdir -p /home/root/pp
-
-RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary -P /home/root/pp/tools/
-
 # Install NPM deps
 WORKDIR /home/root/pp/app 
 ADD server ./server
@@ -111,4 +94,5 @@ WORKDIR /home/root/pp/app/server
 RUN npm install --production
 WORKDIR /home/root/pp/app/
 COPY ./LICENSE ./
+ENV PP_MODE container-prod
 CMD ["node", "server/bin.js"]

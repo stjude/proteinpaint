@@ -12,13 +12,6 @@ export DOCKER_BUILDKIT=1
 
 ./targets/gdc/build.sh -r HEAD -d $DOCKER_TAG
 
-#docker build \
-#	--build-arg http_proxy=http://cloud-proxy:3128 \
-#	--build-arg https_proxy=http://cloud-proxy:3128 \
-#	-f targets/gdc/Dockerfile.gdc \
-#	-t "$DOCKER_TAG" \
-#	.
-
 docker push "$DOCKER_TAG"
 
 docker rmi "$DOCKER_TAG"
