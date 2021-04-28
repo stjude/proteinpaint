@@ -866,7 +866,7 @@ hr {
     color: #403f3f;
 }
 
-.track-btns>button {
+.track-btns>button, .landing-page-a {
     grid-area: buttons;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
@@ -881,6 +881,7 @@ hr {
     border-style: none;
     width: 40px;
     height: 30px;
+    font-style: normal;
 }
 
 .gbrowser-btn,

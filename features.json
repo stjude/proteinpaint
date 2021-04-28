@@ -1,10 +1,11 @@
 {
-    "examples": [{
-            "name": "Create a Custom Track",
+    "examples": [
+        {
+            "name": "GenomePaint",
             "shorthand": "GenomePaint",
             "app": "Genome Browser",
-            "subheading": "GenomePaint",
-            "blurb": "customize a GenomePaint track<br><br><a href=https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'>Link to paper</a>",
+            "subheading": "Tracks",
+            "blurb": "Explore coding and non-coding variants in cancer<br><br>",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
             "clickcard2url" : "https://genomepaint.stjude.cloud/",
             "buttons": {

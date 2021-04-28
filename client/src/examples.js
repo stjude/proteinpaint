@@ -19,13 +19,14 @@ export async function init_examples(par) {
 	const searchbar_div = app_col.append('div')
 
 	// subheaders
-	const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
+	// TODO: termporarily hiding genomepaint heading and tracks, enable once more card are visible under this
+	// const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
-		gpaintList,
+		// gpaintList,
 		browserList,
 		experimentalList,
 		launchList
@@ -163,7 +164,7 @@ async function loadTracks(args, page_args, filteredTracks) {
 	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
 
 	try {
-		displayTracks(GPaintTracks, args.gpaintList, page_args)
+		// displayTracks(GPaintTracks, args.gpaintList, page_args)
 		displayTracks(BrowserTracks, args.browserList, page_args)
 		displayTracks(ExperimentalTracks, args.experimentalList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
@@ -178,18 +179,23 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
-		const trackname =
-			track.shorthand == 'GenomePaint' && page_args.allow_mdsform
-				? `<a href='${window.location.origin}?mdsjsonform=1' target='_blank' onclick='event.stopPropagation()'> ${track.name} </a>`
-				: track.name
+		const trackblurb =
+			track.shorthand == 'GenomePaint'
+				? page_args.allow_mdsform
+					? `${track.blurb} 
+					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>
+					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='${window.location.origin}?mdsjsonform=1' onclick='event.stopPropagation()'> Create custom track </a>`
+					: `${track.blurb} 
+				<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>`
+				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
 				`
 						${
 							track.blurb
-								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${trackname}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
-								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${trackname}</span></div>`
+								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${trackblurb}</span></div>`
+								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 						}
 					<span class="track-image"><img src="${track.image}"></img></span>
 					<div class="track-btns">
