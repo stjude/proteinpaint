@@ -2312,7 +2312,7 @@ async function convertread2html(seg, genome, query) {
 	// indicate all flags
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
-	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
+	//if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
 	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
 	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
 	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
