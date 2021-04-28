@@ -150,6 +150,11 @@ do_query
 	plot_pileup
 		run_samtools_depth
 		collect_softclipmismatch2pileup
+route_getread
+    query_one_read
+      parse_one_segment
+    convertread2html
+    convertunmappedread2html  
 */
 
 // match box color, for single read and normal read pairs
