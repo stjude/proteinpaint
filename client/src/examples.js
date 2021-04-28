@@ -1,6 +1,7 @@
 import { dofetch2, sayerror } from './client'
 import { debounce } from 'debounce'
 import { make_app_div } from './app'
+import { event } from 'd3-selection'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -179,37 +180,32 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
+		// TODO: add these extra buttons to features.json and add them as Docs and URL button in same row
 		const trackblurb =
 			track.shorthand == 'GenomePaint'
-				? page_args.allow_mdsform
-					? `${track.blurb} 
-					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>
-					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='${window.location.origin}?mdsjsonform=1' onclick='event.stopPropagation()'> Create custom track </a>`
-					: `${track.blurb} 
-				<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>`
+				? `${track.blurb} <a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='https://pubmed.ncbi.nlm.nih.gov/33434514/' target='_blank' onclick='event.stopPropagation()'> Docs </a>`
 				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
-				`
-						${
-							track.blurb
-								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${trackblurb}</span></div>`
-								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-						}
-					<span class="track-image"><img src="${track.image}"></img></span>
-					<div class="track-btns">
-					${
-						track.buttons.url
-							? `<button class="url-tooltip-outer" id="url-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
-							: ''
-					}
-					${
-						track.buttons.doc
-							? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-							: ''
-					}
-					</div>`
+				`${
+					track.blurb
+						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${trackblurb}</span></div>`
+						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
+				}
+			<span class="track-image"><img src="${track.image}"></img></span>
+			<div class="track-btns">
+			${
+				track.buttons.url
+					? `<button class="url-tooltip-outer" id="url-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+					: ''
+			}
+			${
+				track.buttons.doc
+					? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
+					: ''
+			}
+			</div>`
 			)
 			.on('click', async () => {
 				page_args.apps_off()
@@ -219,6 +215,36 @@ function displayTracks(tracks, holder, page_args) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
+
+		// create custom track button for genomepaint card
+		if (track.shorthand == 'GenomePaint' && page_args.allow_mdsform) {
+			li.select('#track-blurb')
+				.append('div')
+				.attr('class', 'landing-page-a')
+				.style('padding', '7px')
+				.style('cursor', 'pointer')
+				.text('Create custom track')
+				.on('click', () => {
+					event.stopPropagation()
+					page_args.apps_off()
+					const app_id = track.name + Math.floor(Math.random() * 1000)
+					let [app_header, app_body] = make_app_div(page_args.apps_sandbox_div)
+					app_header.text('Create custom track')
+					app_body
+						.append('div')
+						.attr('id', app_id)
+						.style('margin', '20px')
+
+					runproteinpaint({
+						holder: document.getElementById(app_id),
+						host: window.location.origin,
+						nobox: 1,
+						noheader: 1,
+						mdsjsonform: { uionly: true }
+					})
+				})
+		}
+
 		return JSON.stringify(li)
 	})
 }

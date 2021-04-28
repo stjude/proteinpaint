@@ -30,10 +30,10 @@ bulkembed()
 */
 
 export function bulkui(x, y, genomes, hostURL, holder) {
-	let pane,inputdiv,gselect,filediv,saydiv,visualdiv
-	if(holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newFormDiv(holder, genomes)
-	else{
-		[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
+	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newSandBoxDiv(holder, genomes)
+	else {
+		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
 	}
 	inputdiv
