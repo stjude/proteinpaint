@@ -422,7 +422,7 @@ function makeheader(app, obj, jwt) {
 			const p = d3event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
-				.show(p.left - 50, p.top + p.height + 5)
+				.show(p.left-0, p.top + p.height + 5)
 				.d.append('div')
 				.style('padding', '5px 20px')
 			div
