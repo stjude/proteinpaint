@@ -1034,6 +1034,11 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()

@@ -180,14 +180,10 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
+		// TODO: add these extra buttons to features.json and add them as Docs and URL button in same row
 		const trackblurb =
 			track.shorthand == 'GenomePaint'
-				? page_args.allow_mdsform
-					? `${track.blurb} 
-					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>
-					<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='${window.location.origin}?mdsjsonform=1' onclick='event.stopPropagation()'> Create custom track </a>`
-					: `${track.blurb} 
-				<a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' https://pubmed.ncbi.nlm.nih.gov/33434514/ target='_blank' onclick='event.stopPropagation()'> Link to paper </a>`
+				? `${track.blurb} <a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='https://pubmed.ncbi.nlm.nih.gov/33434514/' target='_blank' onclick='event.stopPropagation()'> Docs </a>`
 				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
