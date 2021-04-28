@@ -280,7 +280,7 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt, app_btn_active, apps_off)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
@@ -299,8 +299,6 @@ function makeheader(app, obj, jwt) {
 		.on('keyup', () => {
 			if (client.keyupEnter()) entersearch()
 			else debouncer()
-			// app_btn_active = false
-			// apps_off()
 		})
 	input.node().focus()
 
@@ -424,7 +422,7 @@ function makeheader(app, obj, jwt) {
 			const p = d3event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
-				.show(p.left-0, p.top + p.height + 5)
+				.show(p.left - 0, p.top + p.height + 5)
 				.d.append('div')
 				.style('padding', '5px 20px')
 			div
@@ -708,7 +706,7 @@ function appmenu(app, headbox, jwt) {
 		})
 }
 
-function findgenelst(app, str, genome, tip, jwt) {
+function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
 	if (str.length <= 1) {
 		tip.d.selectAll('*').remove()
 		return
@@ -735,6 +733,8 @@ function findgenelst(app, str, genome, tip, jwt) {
 					.attr('isgene', '1')
 					.text(name)
 					.on('click', () => {
+						app_btn_active = false
+						apps_off()
 						tip.hide()
 						findgene2paint(app, name, genome, jwt)
 					})
@@ -1515,7 +1515,6 @@ function launchfusioneditor(arg, app) {
 }
 
 async function launchmdsjsonform(arg, app) {
-	console.log(app)
 	if (arg.mdsjsonform.uionly) {
 		const _ = await import('./mdsjsonform')
 		await _.init_mdsjsonform({ holder: app.holder0, genomes: app.genomes })
