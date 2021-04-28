@@ -354,7 +354,6 @@ function validate_input(doms) {
 			obj.sample2assaytrack[sample].push(tk)
 		}
 	}
-	console.log(obj)
 	return obj
 }
 
