@@ -902,50 +902,25 @@ function configPanel(tk, block) {
 		.attr('src', tk.colorscale)
 }
 
-async function getReadInfo(tk, block, box, tmp) {
-	/*
+/*
 get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
 */
-	//        console.log("tk:",tk.readpane.body)
-	//        console.log("block:",block)
-	//        console.log("box:",box)
-	//	console.log("tmp:",tmp)
+async function getReadInfo(tk, block, box, tmp) {
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
-
 	const [ridx, pos] = tmp
-	const lst = [
-		'getread=1',
-		'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
-		'genome=' + block.genome.name,
-		'chr=' + block.rglst[ridx].chr,
-		'pos=' + pos,
-		'viewstart=' + block.rglst[ridx].start,
-		'viewstop=' + block.rglst[ridx].stop
-	]
-	if (tk.nochr) lst.push('nochr=1')
-	if (tk.file) lst.push('file=' + tk.file)
-	if (tk.url) lst.push('url=' + tk.url)
-	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
-	if (tk.gdc) {
-		lst.push('gdc=' + tk.gdc)
-	}
-	if (tk.asPaired) {
-		lst.push('getpair=1')
-	} else {
-		if (box.isfirst) lst.push('getfirst=1')
-		else if (box.islast) lst.push('getlast=1')
-	}
-        const data = await client.dofetch2('tkbam?' + lst.join('&'))
-	wait.remove()
+
+	const data = await client.dofetch2('tkbam?' + getparam().join('&'))
+
 	if (data.error) {
-		client.sayerror(tk.readpane.body, data.error)
+		client.sayerror(wait, data.error)
 		return
 	}
+	wait.remove()
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -959,9 +934,12 @@ if is pair mode, is the template
 			May need to reactivate the permission check if users report issues. 
 		***/
 		/*const result = await navigator.permissions.query({ name: 'clipboard-write' })
-		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
+		if (result.state != 'granted' && result.state != 'prompt') {
+			console.log(681, result)
 			// no copy button
-		} else {*/
+		} else {
+		}*/
+
 		const row = div.append('div').style('margin-top', '10px')
 		row
 			.append('button')
@@ -972,74 +950,77 @@ if is pair mode, is the template
 					.append('span')
 					.html('&nbsp;&check;')
 			})
-	        mayshow_blatbutton(r, row, tk, block)
-	        div.append('div').html(r.info)
-	        if (r.unmapped_mate) { // Button is displayed when read contains unmapped mate
-	            row
-			.append('button')
-			.text('Show unmapped mate')
-			.on('click', async() => {
-                            //add
-	                        const wait = tk.readpane.body.append('div').text('Loading...')	                        
-	                        const [ridx, pos] = tmp			     
-	                        const lst2 = [
-	                        	'getread=1',
-	                        	'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
-	                        	'genome=' + block.genome.name,
-	                        	'chr=' + block.rglst[ridx].chr,
-	                        	'pos=' + pos,
-	                        	'viewstart=' + block.rglst[ridx].start,
-	                        	'viewstop=' + block.rglst[ridx].stop
-	                        ]
-	                        if (tk.nochr) lst2.push('nochr=1')
-	                        if (tk.file) lst2.push('file=' + tk.file)
-	                        if (tk.url) lst2.push('url=' + tk.url)
-	                        if (tk.indexURL) lst2.push('indexURL=' + tk.indexURL)
-	                        if (tk.gdc) {
-	                        	lst2.push('gdc=' + tk.gdc)
-	                        }
-	                        if (tk.asPaired) {
-	                        	lst2.push('getpair=1')
-	                        } else {
-	                        	if (box.isfirst) lst2.push('getfirst=1')
-	                        	else if (box.islast) lst2.push('getlast=1')
-	                        }
-			        lst2.push('show_unmapped=1') // Display unmapped read
-                                const data2 = await client.dofetch2('tkbam?' + lst2.join('&'))    
-	                        wait.remove()
-			        console.log("data2:",data2)
-				if (data.error) {
-		                   client.sayerror(tk.readpane.body, data.error)
-		                   return
-	                        }
 
-			        for (const r2 of data2.lst) {
-                                		div.append('div2').html(r2.alignment)
-                                
-                                		/*** 
-                                			Firefox does not seem to support the permision query name == 'clipboard-write'. 
-                                			Tested that removing this permission check works in Chrome, Safari, FF.
-                                			May need to reactivate the permission check if users report issues. 
-                                		***/
-                                		/*const result = await navigator.permissions.query({ name: 'clipboard-write' })
-                                		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
-                                			// no copy button
-                                		} else {*/
-                                		const row = div.append('div2').style('margin-top', '10px')
-                                		row
-                                			.append('button')
-                                			.text('Copy read sequence')
-                                			.on('click', function() {
-                                				navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
-                                				d3select(this)
-                                					.append('span')
-                                					.html('&nbsp;&check;')
-                                			})
-                                                mayshow_blatbutton(r2, row, tk, block)
-				                div.append('div2').html(r2.info)
-			        }
-			})
-	        }
+		if (r.unmapped_mate && !tk.asPaired) {
+			// this read has unmapped mate
+			// only show button to request unmapped mate when tk is in single-read mode
+			// if tk is in paired mode, then the unmapped read is already displayed
+			const mate_button = row
+				.append('button')
+				.style('margin-left', '10px')
+				.text('Show unmapped mate')
+				.on('click', async () => {
+					//add
+					mate_button.property('disabled', true) // disable this button
+					const wait = tk.readpane.body.append('div').text('Loading...')
+					const data2 = await client.dofetch2('tkbam?' + getparam('show_unmapped=1').join('&'))
+					if (data.error) {
+						client.sayerror(wait, data.error)
+						mate_button.property('disabled', false) // reenable this button
+						return
+					}
+					wait.remove()
+					mate_button.remove()
+
+					const r2 = data2.lst[0]
+					div.append('div2').html(r2.alignment)
+
+					const row = div.append('div2').style('margin-top', '10px')
+					row
+						.append('button')
+						.text('Copy read sequence')
+						.on('click', function() {
+							navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
+							d3select(this)
+								.append('span')
+								.html('&nbsp;&check;')
+						})
+					mayshow_blatbutton(r2, row, tk, block)
+					div.append('div2').html(r2.info)
+				})
+		}
+
+		mayshow_blatbutton(r, row, tk, block)
+
+		div.append('div').html(r.info)
+	}
+
+	function getparam(extra) {
+		// reusable helper
+		const lst = [
+			'getread=1',
+			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
+			'genome=' + block.genome.name,
+			'chr=' + block.rglst[ridx].chr,
+			'pos=' + pos,
+			'viewstart=' + block.rglst[ridx].start,
+			'viewstop=' + block.rglst[ridx].stop
+		]
+		if (tk.nochr) lst.push('nochr=1')
+		if (tk.file) lst.push('file=' + tk.file)
+		if (tk.url) lst.push('url=' + tk.url)
+		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+		if (tk.gdc) {
+			lst.push('gdc=' + tk.gdc)
+		}
+		if (tk.asPaired) {
+			lst.push('getpair=1')
+		} else {
+			if (box.isfirst) lst.push('getfirst=1')
+			else if (box.islast) lst.push('getlast=1')
+		}
+		if (extra) lst.push(extra)
+		return lst
 	}
 }
 
