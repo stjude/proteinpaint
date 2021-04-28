@@ -973,9 +973,9 @@ async function getReadInfo(tk, block, box, tmp) {
 					mate_button.remove()
 
 					const r2 = data2.lst[0]
-					div.append('div2').html(r2.alignment)
+					div.append('div').html(r2.alignment)
 
-					const row = div.append('div2').style('margin-top', '10px')
+					const row = div.append('div').style('margin-top', '10px')
 					row
 						.append('button')
 						.text('Copy read sequence')
@@ -986,7 +986,7 @@ async function getReadInfo(tk, block, box, tmp) {
 								.html('&nbsp;&check;')
 						})
 					mayshow_blatbutton(r2, row, tk, block)
-					div.append('div2').html(r2.info)
+					div.append('div').html(r2.info)
 				})
 		}
 
