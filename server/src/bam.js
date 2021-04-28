@@ -1363,8 +1363,9 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 	} else if (flag & 0x4) {
 		// Read is unmapped
 	        segment.discord_unmapped1 = true
+	        if (!keepmatepos) {return}
 	} else if (flag & 0x8) {
-		// Mate  of read is unmapped
+		// Mate of read is unmapped
 		segment.discord_unmapped2 = true	    
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
@@ -1758,7 +1759,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (r.to_qual) {
 				let xoff = x
 				b.qual.forEach(v => {
-					if (segment.discord_unmapped1 || segment.discord_unmapped2) {
+					if (segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
@@ -1767,7 +1768,7 @@ function plot_segment(ctx, segment, y, group, q) {
 				})
 			} else {
 				// not showing qual, one box
-				if (segment.discord_unmapped1 || segment.discord_unmapped2) {
+				if (segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
@@ -1815,7 +1816,7 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2discord_orientation(v / maxqual)
 					} else if (segment.discord_wrong_insertsize) {
 						ctx.fillStyle = qual2discord_wrong_insertsize(v / maxqual)
-					} else if (segment.discord_unmapped1 || segment.discord_unmapped2) {
+					} else if (segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					} else {
 						ctx.fillStyle = qual2match(v / maxqual)
@@ -1832,7 +1833,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = discord_orientation_hq
 				} else if (segment.discord_wrong_insertsize) {
 					ctx.fillStyle = discord_wrong_insertsize_hq
-				} else if (segment.discord_unmapped1 || segment.discord_unmapped2) {
+				} else if (segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				} else {
 					ctx.fillStyle = match_hq
@@ -2088,8 +2089,8 @@ async function route_getread(genome, req) {
 	}
 	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
 	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
-	const seglst = await query_oneread(req, r)
-	if (!seglst) throw 'read not found'
+        const seglst = await query_oneread(req, r)
+        if (!seglst) throw 'read not found'
 	const lst = []
 	for (const s of seglst) {
 		lst.push(await convertread2html(s, genome, req.query))
@@ -2123,8 +2124,23 @@ async function query_oneread(req, r) {
 		rl.on('line', line => {
 			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true, true)
 			if (!s) return
-			if (s.qname != req.query.qname) return
-			if (req.query.getfirst) {
+		        if (s.qname != req.query.qname) return
+
+		        if (req.query.show_unmapped && req.query.getfirst) { // In case first read is mapped and second unmapped 
+				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+		        }
+		        else if (req.query.show_unmapped && req.query.getlast) { // In case first read is mapped and second unmapped 
+				if (s.isfirst) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+		        }		    
+			else if (req.query.getfirst) {
 				if (s.isfirst) {
 					ps.kill()
 					resolve([s])
@@ -2136,7 +2152,8 @@ async function query_oneread(req, r) {
 					resolve([s])
 					return
 				}
-			} else {
+			}
+		        else {
 				// get both
 				if (s.isfirst) firstseg = s
 				else if (s.islast) lastseg = s
@@ -2325,5 +2342,6 @@ async function convertread2html(seg, genome, query) {
 		seq_data.soft_starts = soft_starts
 		seq_data.soft_stops = soft_stops
 	}
+        if (seg.discord_unmapped2) {seq_data.unmapped_mate=true}
 	return seq_data
 }
