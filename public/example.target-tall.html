@@ -10,7 +10,7 @@
 	 </style>
 </head>
 <body>
-<script src='http://localhost:3000/sjcharts/bin/sjcharts.js'></script>
+<script src='https://pecan-test.stjude.org/sjcharts/bin/sjcharts.js'></script>
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
@@ -19,8 +19,6 @@
 
 <script>
 (async ()=>{
-	//const instanceTracker = {}
-	const appname = Math.random() // 'TARGET TALL Study'
 	try {
 		const pp = await runproteinpaint({
 			host: 'https://ppr.stjude.org',		
@@ -28,15 +26,14 @@
 			holder: document.getElementById('aaa'),
 			study: 'esioson/target-tall-small',
 			callbacks: {
-				[`${appname}.hm`]: {
+				'hm': {
 					postInstance(appInstance) {
 						console.log(appInstance.getSchema("object"))
 						console.log(pp.instanceTracker)
 					}
 				}
 			},
-			appname,
-			//instanceTracker
+			instanceTracker: {}
 		})
 		console.log(pp)
 	} catch(e) {

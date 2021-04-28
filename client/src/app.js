@@ -28,7 +28,8 @@ internal "app{}"
 .holder
 .holder0
 .hostURL
-
+.callbacks{}
+.instanceTrackers{}
 
 ********** INTERNAL
 
@@ -74,11 +75,6 @@ export function runproteinpaint(arg) {
 		it needs to be set before launching any apps
 		*/
 		debugmode: false,
-		// optional user-defined namespace for naming renderer app instances,
-		// will be used as a prefix to keys in a tracking object,
-		// e.g. `${appname}.hm` as a name to a heatmap instance.
-		// if no appname is given, the cohort name may be used as a prefix
-		appname: arg.appname,
 		// event callbacks for dynamically-loaded renderer instances
 		callbacks: arg.callbacks || {},
 		// object to store instances as created by dynamically loaded apps/renderers

@@ -233,7 +233,6 @@ if(cohort.render) {
 			},
 			tp_getgeneexpression,
 			show_heatmap: cohort.show_heatmap,
-			appname: app.appname || (cohort && cohort.name) || 'hm_main',
 			instanceTracker: app.instanceTracker
 		})
 	}
@@ -272,7 +271,6 @@ if(cohort.variantgene) {
 				butt: srvbut.node(),
 				holder: srvdiv.node()
 			},
-			appname: app.appname || (cohort && cohort.name),
 			instanceTracker: app.instanceTracker
 		})
 	}
@@ -312,7 +310,6 @@ if(cohort.variantgene) {
 				butt: skbtn.node(),
 				holder: skdiv.node()
 			},
-			appname: app.appname || (cohort && cohort.name),
 			instanceTracker: app.instanceTracker
 		})
 	}
@@ -337,7 +334,6 @@ if(cohort.variantgene) {
 				butt: piebtn.node(),
 				holder: piediv.node()
 			},
-			appname: app.appname || (cohort && cohort.name),
 			instanceTracker: app.instanceTracker
 		})
 	}
