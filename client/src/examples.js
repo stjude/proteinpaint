@@ -181,9 +181,10 @@ function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		// TODO: add these extra buttons to features.json and add them as Docs and URL button in same row
+		// XXX fix later: not to attach behavior/logic to a hardcoded string e.g. GenomePaint; enable the feature in examples.json as a general mechanism to be applied to other contents
 		const trackblurb =
 			track.shorthand == 'GenomePaint'
-				? `${track.blurb} <a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='https://pubmed.ncbi.nlm.nih.gov/33434514/' target='_blank' onclick='event.stopPropagation()'> Docs </a>`
+				? `${track.blurb} <a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing' target='_blank' onclick='event.stopPropagation()'> Docs </a>`
 				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
