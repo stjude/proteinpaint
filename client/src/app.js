@@ -466,7 +466,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let [browser_header, browser_body] = client.newSandboxDiv()
+			let sandbox_div = client.newSandboxDiv()
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -474,12 +474,12 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 				return
 			}
 
-			browser_header.text(genomename + ' genome browser')
+			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
 				hostURL: app.hostURL,
 				jwt: jwt,
-				holder: browser_body,
+				holder: sandbox_div.body,
 				genome: g,
 				chr: g.defaultcoord.chr,
 				start: g.defaultcoord.start,

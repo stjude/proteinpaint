@@ -1352,7 +1352,7 @@ export function newSandboxDiv() {
 		.style('display', 'inline-block')
 		.style('padding', '5px 10px')
 
-	const app_body = app_div
+	const body = app_div
 		.append('div')
 		.style('margin', '5px 10px')
 		.style('margin-top', '0px')
@@ -1364,7 +1364,7 @@ export function newSandboxDiv() {
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return [header, app_body]
+	return {header, body}
 }
 
 export function to_svg(svg, name, opts = {}) {

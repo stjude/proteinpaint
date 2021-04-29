@@ -248,9 +248,9 @@ function displayTracks(tracks, holder, page_args) {
 async function openExample(track) {
 	// crate unique id for each app div
 	const app_id = track.name + Math.floor(Math.random() * 1000)
-	let [app_header, app_body] = newSandboxDiv()
-	app_header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
-	app_body
+	let sandbox_div = newSandboxDiv()
+	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
+	sandbox_div.body
 		.append('div')
 		.attr('id', app_id)
 		.style('margin', '20px')
