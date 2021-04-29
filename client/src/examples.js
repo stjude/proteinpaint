@@ -213,14 +213,14 @@ function displayTracks(tracks, holder, page_args) {
 			})
 
 		// add Beta tag for experimental tracks
-		if(track.isbeta) li.select('.track-tag').text('Beta')
+		if (track.isbeta) li.select('.track-tag').text('Beta')
 
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
 		// if more buttons are added, this code will need to be changed as needed
 		if (track.custom_buttons) {
-			for(const button of track.custom_buttons){
-				if(button.check_mdsjosonform && !page_args.allow_mdsform) return
+			for (const button of track.custom_buttons) {
+				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
 				li.select('.track-btns')
 					.append('button')
 					.attr('class', 'landing-page-a')
@@ -230,7 +230,7 @@ function displayTracks(tracks, holder, page_args) {
 					.on('click', () => {
 						event.stopPropagation()
 						page_args.apps_off()
-						if(button.example){
+						if (button.example) {
 							const btn_args = {
 								name: button.name,
 								buttons: {
