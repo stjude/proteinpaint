@@ -2128,22 +2128,21 @@ async function route_getread(genome, req) {
 	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
 	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
 	const seglst = await query_oneread(req, r)
-	const lst = []
-	if (req.query.show_unmapped && !seglst) {
-		// When unmapped mate is missing
-		let seq_data = {
-			unmapped_absent: true
+	if (!seglst) {
+		// no read found
+		if (req.query.show_unmapped) {
+			// asking to get an unmapped read. if using a bam slice, the unmapped read could be out of range
+			throw 'mate not found'
 		}
-		lst.push(seq_data)
-	} else if (!seglst) throw 'read not found'
-	else {
-		for (const s of seglst) {
-			if (s.discord_unmapped1) {
-				// Invoked when the read itself is unmapped
-				lst.push(await convertunmappedread2html(s, genome, req.query))
-			} else {
-				lst.push(await convertread2html(s, genome, req.query))
-			}
+		throw 'read not found'
+	}
+	const lst = []
+	for (const s of seglst) {
+		if (s.discord_unmapped1) {
+			// Invoked when the read itself is unmapped
+			lst.push(await convertunmappedread2html(s, genome, req.query))
+		} else {
+			lst.push(await convertread2html(s, genome, req.query))
 		}
 	}
 	return { lst }
