@@ -180,18 +180,12 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
-		// TODO: add these extra buttons to features.json and add them as Docs and URL button in same row
-		// XXX fix later: not to attach behavior/logic to a hardcoded string e.g. GenomePaint; enable the feature in examples.json as a general mechanism to be applied to other contents
-		const trackblurb =
-			track.shorthand == 'GenomePaint'
-				? `${track.blurb} <a class='landing-page-a' style='padding:7px; color:black; text-decoration:none;' href='https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing' target='_blank' onclick='event.stopPropagation()'> Docs </a>`
-				: track.blurb
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
 				`${
 					track.blurb
-						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${trackblurb}</span></div>`
+						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
 						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 				}
 			<span class="track-image"><img src="${track.image}"></img></span>
@@ -218,31 +212,25 @@ function displayTracks(tracks, holder, page_args) {
 			})
 
 		// create custom track button for genomepaint card
-		if (track.shorthand == 'GenomePaint' && page_args.allow_mdsform) {
-			li.select('#track-blurb')
-				.append('div')
+		// TODO: rightnow only custom button is for genomepaint card,
+		// if more buttons are added, this code will need to be changed as needed
+		if (track.custom_btn && page_args.allow_mdsform) {
+			li.select('.track-btns')
+				.append('button')
 				.attr('class', 'landing-page-a')
 				.style('padding', '7px')
 				.style('cursor', 'pointer')
-				.text('Create custom track')
+				.text(track.custom_btn.name)
 				.on('click', () => {
 					event.stopPropagation()
 					page_args.apps_off()
-					const app_id = track.name + Math.floor(Math.random() * 1000)
-					let [app_header, app_body] = make_app_div(page_args.apps_sandbox_div)
-					app_header.text('Create custom track')
-					app_body
-						.append('div')
-						.attr('id', app_id)
-						.style('margin', '20px')
-
-					runproteinpaint({
-						holder: document.getElementById(app_id),
-						host: window.location.origin,
-						nobox: 1,
-						noheader: 1,
-						mdsjsonform: { uionly: true }
-					})
+					const btn_args = {
+						name: track.custom_btn.name,
+						buttons: {
+							example: track.custom_btn.example
+						}
+					}
+					openExample(btn_args, page_args.apps_sandbox_div)
 				})
 		}
 
@@ -256,7 +244,7 @@ async function openExample(track, sandbox_div) {
 	// crate unique id for each app div
 	const app_id = track.name + Math.floor(Math.random() * 1000)
 	let [app_header, app_body] = make_app_div(sandbox_div)
-	app_header.text(track.name + (track.subheading == 'Launch App' ? '' : ' Example'))
+	app_header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
 	app_body
 		.append('div')
 		.attr('id', app_id)
