@@ -43,33 +43,6 @@
             "searchterms": ["GenomePaint"]
         },
         {
-            "name": "Allelic Imbalance",
-            "shorthand": "AICheck",
-            "app": "Genome Browser",
-            "subheading": "Tracks",
-            "blurb": "from tumor and germline DNA",
-            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
-            "buttons": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr8:126890266-13279507",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "aicheck",
-                        "file": "proteinpaint_demo/hg19/aicheck/file.gz",
-                        "name": "Demo sample tumor allelic imbalance"
-                    }]
-                },
-                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
-                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
-            },
-            "searchterms": ["aicheck", "tumor", "normal", "DNA"]
-        },
-        {
             "name": "BigWig",
             "shorthand": "BigWig",
             "app": "Genome Browser",
@@ -126,7 +99,62 @@
             "searchterms": ["bigwig stranded"]
         },
         {
-            "name": "Profile Gene Value",
+            "name": "JSON BED",
+            "shorthand": "JSON BED",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "genomic feature annotation",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
+            "buttons": {
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "tracks": [{
+                        "type": "bedj",
+                        "name": "gene track",
+                        "file": "anno/gencode.v34.hg19.gz",
+                        "stackheight": 16,
+                        "stackspace": 1,
+                        "color": "teal"
+                    }]
+                },
+                "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
+                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Allelic imbalance",
+            "shorthand": "AICheck",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "from tumor and germline DNA",
+            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
+            "buttons": {
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr8:126890266-13279507",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "type": "aicheck",
+                        "file": "proteinpaint_demo/hg19/aicheck/file.gz",
+                        "name": "Demo sample tumor allelic imbalance"
+                    }]
+                },
+                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
+                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+            },
+            "searchterms": ["aicheck", "tumor", "normal", "DNA"]
+        },
+        {
+            "name": "Profile gene value",
             "shorthand": "PGV",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -170,7 +198,7 @@
             "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
         },
         {
-            "name": "Expression Rank",
+            "name": "Expression rank",
             "shorthand": "Expression Rank",
             "app": "Genome Browser",
             "subheading": "Tracks",
@@ -210,7 +238,7 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "mm9",
+                    "genome": "hg19",
                     "position": "chr7:13749862-20841903",
                     "nativetracks": "RefGene",
                     "tracks": [{
@@ -223,38 +251,11 @@
                         "enzyme": "MboI"
                     }]
                 },
-                "url": "?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
+				"comment":"https://github.com/stjude/proteinpaint/issues/188",
+                "comment_url": "?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
             },
-            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation"]
-        },
-        {
-            "name": "JSON BED",
-            "shorthand": "JSON BED",
-            "app": "genomic feature annotation",
-            "subheading": "Tracks",
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
-            "buttons": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "tracks": [{
-                        "type": "bedj",
-                        "name": "gene track",
-                        "file": "anno/gencode.v34.hg19.gz",
-                        "stackheight": 16,
-                        "stackspace": 1,
-                        "color": "teal"
-                    }]
-                },
-                "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
-                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
-            },
-            "searchterms": []
+            "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
         },
         {
             "name": "Lollipop",
@@ -291,13 +292,14 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
+					"nativetracks":"refgene",
                     "tracks": [{
                         "type": "junction",
-                        "file": "proteinpaint_demo/hg19/junction/junction_demo.gz",
+                        "file": "proteinpaint_demo/hg19/junction/file.gz",
                         "name": "RNA splice junction demo"
                     }]
                 },
-                "url": "?block=on&genome=hg19&junctionfile=%22RNA%20splice%20junction%22,hg19/PCGP/junction/SJACT061_D.gz",
+                "url": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
                 "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
             },
             "searchterms": []
@@ -314,9 +316,9 @@
                     "block": 1,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg38",
+                    "genome": "hg19",
+					"nativetracks":"refgene",
                     "tkjsonfile": "proteinpaint_demo/hg19/misc/tracks.json"
-
                 },
                 "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
@@ -407,7 +409,7 @@
                 "url": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz",
                 "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
             },
-            "searchterms": ["variant call", "lollipop", "populationfrequencyfilter", "population frequency filter"]
+            "searchterms": ["variant call", "lollipop", "vcf"]
         },
         {
             "name": "ASE",
@@ -526,7 +528,7 @@
                         "name": "Test WES KIT exon mutation"
                     }]
                 },
-                "url": "",
+                "url": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam",
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "searchterms": ["BLAT"]
