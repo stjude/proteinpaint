@@ -15,20 +15,21 @@ export async function init_examples(par) {
 	const app_col = make_col(track_grid, 'otherapps')
 
 	// top of apps column followed by subheader
-	const holddiv = make_top_fnDiv(gbrowser_col)
-	const searchbar_div = app_col.append('div')
+	// TODO: hiding searchbox for now, need to discuss
+	// const holddiv = make_top_fnDiv(gbrowser_col)
+	// const searchbar_div = app_col.append('div')
 
 	// subheaders
-	// TODO: termporarily hiding genomepaint heading and tracks, enable once more card are visible under this
+	// TODO: termporarily hiding 'genomepaint' and 'Experimental tracks' headings, enable once more card are visible under this
 	// const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
-	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
+	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
 		// gpaintList,
 		browserList,
-		experimentalList,
+		// experimentalList,
 		launchList
 	}
 	const page_args = {
@@ -36,7 +37,7 @@ export async function init_examples(par) {
 		apps_off,
 		allow_mdsform: re.allow_mdsform
 	}
-	make_searchbar(track_args, page_args, searchbar_div)
+	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
 }
 
@@ -166,7 +167,7 @@ async function loadTracks(args, page_args, filteredTracks) {
 	try {
 		// displayTracks(GPaintTracks, args.gpaintList, page_args)
 		displayTracks(BrowserTracks, args.browserList, page_args)
-		displayTracks(ExperimentalTracks, args.experimentalList, page_args)
+		// displayTracks(ExperimentalTracks, args.experimentalList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
 	} catch (err) {
 		console.error(err)
@@ -188,6 +189,7 @@ function displayTracks(tracks, holder, page_args) {
 						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 				}
 			<span class="track-image"><img src="${track.image}"></img></span>
+			<span class="track-tag"></span>
 			<div class="track-btns">
 			${
 				track.buttons.url
@@ -209,6 +211,9 @@ function displayTracks(tracks, holder, page_args) {
 					openExample(track)
 				}
 			})
+
+		// add Beta tag for experimental tracks
+		if(track.isbeta) li.select('.track-tag').text('Beta')
 
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,

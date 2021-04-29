@@ -426,7 +426,8 @@
             "name": "ASE",
             "shorthand": "ASE",
             "app": "Genome Browser",
-            "subheading": "Experimental Tracks",
+            "subheading": "Tracks",
+            "isbeta": 1,
             "blurb": "allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "buttons": {
@@ -521,7 +522,8 @@
             "name": "BAM",
             "shorthand": "BAM",
             "app": "Genome Browser",
-            "subheading": "Experimental Tracks",
+            "subheading": "Tracks",
+            "isbeta": 1,
             "blurb": "sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "buttons": {
@@ -535,11 +537,11 @@
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "bam",
-                        "file": "hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam",
+                        "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
                         "name": "Test WES KIT exon mutation"
                     }]
                 },
-                "url": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,hg19/TARGET/DNA/bam-wes/SJAML040517_D2.bam",
+                "url": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "searchterms": ["BLAT"]
@@ -548,7 +550,8 @@
             "name": "Bampile",
             "shorthand": "Bampile",
             "app": "Genome Browser",
-            "subheading": "Experimental Tracks",
+            "subheading": "Tracks",
+            "isbeta": 1,
             "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
