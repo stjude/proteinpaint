@@ -12,14 +12,17 @@
                 "url": "",
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
             },
-            "custom_btn":{
-                "name": "Create custom track",
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "mdsjsonform": { "uionly": true }
+            "custom_buttons":[
+                {
+                    "name": "Create custom track",
+                    "check_mdsjosonform":true,
+                    "example": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "mdsjsonform": { "uionly": true }
+                    }
                 }
-            },
+            ],
             "searchterms": ["GenomePaint"]
         },
         {

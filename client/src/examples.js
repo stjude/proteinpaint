@@ -214,24 +214,30 @@ function displayTracks(tracks, holder, page_args) {
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
 		// if more buttons are added, this code will need to be changed as needed
-		if (track.custom_btn && page_args.allow_mdsform) {
-			li.select('.track-btns')
-				.append('button')
-				.attr('class', 'landing-page-a')
-				.style('padding', '7px')
-				.style('cursor', 'pointer')
-				.text(track.custom_btn.name)
-				.on('click', () => {
-					event.stopPropagation()
-					page_args.apps_off()
-					const btn_args = {
-						name: track.custom_btn.name,
-						buttons: {
-							example: track.custom_btn.example
+		if (track.custom_buttons) {
+			for(const button of track.custom_buttons){
+				if(button.check_mdsjosonform && !page_args.allow_mdsform) return
+				li.select('.track-btns')
+					.append('button')
+					.attr('class', 'landing-page-a')
+					.style('padding', '7px')
+					.style('cursor', 'pointer')
+					.text(button.name)
+					.on('click', () => {
+						event.stopPropagation()
+						page_args.apps_off()
+						if(button.example){
+							const btn_args = {
+								name: button.name,
+								buttons: {
+									example: button.example
+								}
+							}
+							openExample(btn_args, page_args.apps_sandbox_div)
 						}
-					}
-					openExample(btn_args, page_args.apps_sandbox_div)
-				})
+						// TODO: Add logic if custom button has url or some other link
+					})
+			}
 		}
 
 		return JSON.stringify(li)
