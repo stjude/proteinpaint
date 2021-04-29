@@ -964,8 +964,9 @@ async function getReadInfo(tk, block, box, tmp) {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
 					const data2 = await client.dofetch2('tkbam?' + getparam('show_unmapped=1').join('&'))
-					if (data.error) {
-						client.sayerror(wait, data.error)
+					console.log('data2:', data2)
+					if (data2.error) {
+						client.sayerror(wait, data2.error)
 						mate_button.property('disabled', false) // reenable this button
 						return
 					}
@@ -973,20 +974,26 @@ async function getReadInfo(tk, block, box, tmp) {
 					mate_button.remove()
 
 					const r2 = data2.lst[0]
-					div.append('div').html(r2.alignment)
+					if (r2.unmapped_absent) {
+						// Invoked when unmapped bam is absent in bam file
+						console.log('r2:', r2)
+						div.append('div').html(`<p style="color:rgb(255,0,0);">Mate not found</p>`)
+					} else {
+						div.append('div').html(r2.alignment)
 
-					const row = div.append('div').style('margin-top', '10px')
-					row
-						.append('button')
-						.text('Copy read sequence')
-						.on('click', function() {
-							navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
-							d3select(this)
-								.append('span')
-								.html('&nbsp;&check;')
-						})
-					mayshow_blatbutton(r2, row, tk, block)
-					div.append('div').html(r2.info)
+						const row = div.append('div').style('margin-top', '10px')
+						row
+							.append('button')
+							.text('Copy read sequence')
+							.on('click', function() {
+								navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
+								d3select(this)
+									.append('span')
+									.html('&nbsp;&check;')
+							})
+						mayshow_blatbutton(r2, row, tk, block)
+						div.append('div').html(r2.info)
+					}
 				})
 		}
 

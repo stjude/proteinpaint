@@ -2128,14 +2128,22 @@ async function route_getread(genome, req) {
 	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
 	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
 	const seglst = await query_oneread(req, r)
-	if (!seglst) throw 'read not found'
 	const lst = []
-	for (const s of seglst) {
-		if (s.discord_unmapped1) {
-			// Invoked when the read itself is unmapped
-			lst.push(await convertunmappedread2html(s, genome, req.query))
-		} else {
-			lst.push(await convertread2html(s, genome, req.query))
+	if (req.query.show_unmapped && !seglst) {
+		// When unmapped mate is missing
+		let seq_data = {
+			unmapped_absent: true
+		}
+		lst.push(seq_data)
+	} else if (!seglst) throw 'read not found'
+	else {
+		for (const s of seglst) {
+			if (s.discord_unmapped1) {
+				// Invoked when the read itself is unmapped
+				lst.push(await convertunmappedread2html(s, genome, req.query))
+			} else {
+				lst.push(await convertread2html(s, genome, req.query))
+			}
 		}
 	}
 	return { lst }
@@ -2168,7 +2176,7 @@ async function query_oneread(req, r) {
 			if (line.split('\t')[0] != req.query.qname) return
 			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
 			if (!s) return
-
+			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
 			if (req.query.show_unmapped && req.query.getfirst) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
