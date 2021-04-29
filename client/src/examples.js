@@ -1,6 +1,5 @@
-import { dofetch2, sayerror } from './client'
+import { dofetch2, sayerror, newSandboxDiv } from './client'
 import { debounce } from 'debounce'
-import { make_app_div } from './app'
 import { event } from 'd3-selection'
 
 export async function init_examples(par) {
@@ -207,7 +206,7 @@ function displayTracks(tracks, holder, page_args) {
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
 				} else if (track.buttons.example) {
-					openExample(track, page_args.apps_sandbox_div)
+					openExample(track)
 				}
 			})
 
@@ -233,7 +232,7 @@ function displayTracks(tracks, holder, page_args) {
 									example: button.example
 								}
 							}
-							openExample(btn_args, page_args.apps_sandbox_div)
+							openExample(btn_args)
 						}
 						// TODO: Add logic if custom button has url or some other link
 					})
@@ -246,10 +245,10 @@ function displayTracks(tracks, holder, page_args) {
 
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track, sandbox_div) {
+async function openExample(track) {
 	// crate unique id for each app div
 	const app_id = track.name + Math.floor(Math.random() * 1000)
-	let [app_header, app_body] = make_app_div(sandbox_div)
+	let [app_header, app_body] = newSandboxDiv()
 	app_header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
 	app_body
 		.append('div')
