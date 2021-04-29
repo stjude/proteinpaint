@@ -964,6 +964,7 @@ async function getReadInfo(tk, block, box, tmp) {
 					const wait = tk.readpane.body.append('div').text('Loading...')
 					const data2 = await client.dofetch2('tkbam?' + getparam('show_unmapped=1').join('&'))
 					if (data2.error) {
+						wait.text('')
 						client.sayerror(wait, data2.error)
 						mate_button.property('disabled', false) // reenable this button
 						return
