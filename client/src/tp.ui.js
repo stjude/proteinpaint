@@ -23,7 +23,7 @@ and show various apps depending on the data attributes
 
 */
 
-export default async function tpui(cohort, holder, hostURL, app = {}) {
+export default async function tpui(cohort, holder, hostURL, app = { callbacks: {} }) {
 	const debugmode = app.debugmode
 
 	if (debugmode) {

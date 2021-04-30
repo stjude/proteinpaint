@@ -1296,6 +1296,7 @@ async function click_dot_disco(dot, obj) {
 			callbacks: {
 				geneLabelClick: {
 					type: 'genomepaint',
+					hostURL: sessionStorage.getItem('hostURL') || '',
 					genome: obj.genome.name,
 					dslabel: obj.mds.label,
 					sample: dot.sample

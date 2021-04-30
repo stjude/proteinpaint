@@ -337,7 +337,11 @@ arg
 				arg.hostURL,
 				undefined, // jwt
 				false, // no show
-				{ debugmode: arg.debugmode }
+				{
+					debugmode: arg.debugmode,
+					instanceTracker: arg.instanceTracker || {},
+					callbacks: arg.callbacks || {}
+				}
 			)
 		}
 	}
