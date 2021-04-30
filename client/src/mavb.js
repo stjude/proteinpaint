@@ -121,7 +121,8 @@ export function mavbui(genomes, hostURL, jwt, holder) {
 	create GUI to collect user input
 	*/
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newSandBoxDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('Differential gene expression viewer')

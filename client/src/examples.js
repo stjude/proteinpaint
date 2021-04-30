@@ -1,6 +1,5 @@
-import { dofetch2, sayerror } from './client'
+import { dofetch2, sayerror, newSandboxDiv } from './client'
 import { debounce } from 'debounce'
-import { make_app_div } from './app'
 import { event } from 'd3-selection'
 
 export async function init_examples(par) {
@@ -16,20 +15,21 @@ export async function init_examples(par) {
 	const app_col = make_col(track_grid, 'otherapps')
 
 	// top of apps column followed by subheader
-	const holddiv = make_top_fnDiv(gbrowser_col)
-	const searchbar_div = app_col.append('div')
+	// TODO: hiding searchbox for now, need to discuss
+	// const holddiv = make_top_fnDiv(gbrowser_col)
+	// const searchbar_div = app_col.append('div')
 
 	// subheaders
-	// TODO: termporarily hiding genomepaint heading and tracks, enable once more card are visible under this
+	// TODO: termporarily hiding 'genomepaint' and 'Experimental tracks' headings, enable once more card are visible under this
 	// const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
-	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
+	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
 		// gpaintList,
 		browserList,
-		experimentalList,
+		// experimentalList,
 		launchList
 	}
 	const page_args = {
@@ -37,7 +37,7 @@ export async function init_examples(par) {
 		apps_off,
 		allow_mdsform: re.allow_mdsform
 	}
-	make_searchbar(track_args, page_args, searchbar_div)
+	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
 }
 
@@ -167,7 +167,7 @@ async function loadTracks(args, page_args, filteredTracks) {
 	try {
 		// displayTracks(GPaintTracks, args.gpaintList, page_args)
 		displayTracks(BrowserTracks, args.browserList, page_args)
-		displayTracks(ExperimentalTracks, args.experimentalList, page_args)
+		// displayTracks(ExperimentalTracks, args.experimentalList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
 	} catch (err) {
 		console.error(err)
@@ -189,6 +189,7 @@ function displayTracks(tracks, holder, page_args) {
 						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 				}
 			<span class="track-image"><img src="${track.image}"></img></span>
+			<span class="track-tag"></span>
 			<div class="track-btns">
 			${
 				track.buttons.url
@@ -207,31 +208,40 @@ function displayTracks(tracks, holder, page_args) {
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
 				} else if (track.buttons.example) {
-					openExample(track, page_args.apps_sandbox_div)
+					openExample(track)
 				}
 			})
+
+		// add Beta tag for experimental tracks
+		if (track.isbeta) li.select('.track-tag').text('Beta')
 
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
 		// if more buttons are added, this code will need to be changed as needed
-		if (track.custom_btn && page_args.allow_mdsform) {
-			li.select('.track-btns')
-				.append('button')
-				.attr('class', 'landing-page-a')
-				.style('padding', '7px')
-				.style('cursor', 'pointer')
-				.text(track.custom_btn.name)
-				.on('click', () => {
-					event.stopPropagation()
-					page_args.apps_off()
-					const btn_args = {
-						name: track.custom_btn.name,
-						buttons: {
-							example: track.custom_btn.example
+		if (track.custom_buttons) {
+			for (const button of track.custom_buttons) {
+				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
+				li.select('.track-btns')
+					.append('button')
+					.attr('class', 'landing-page-a')
+					.style('padding', '7px')
+					.style('cursor', 'pointer')
+					.text(button.name)
+					.on('click', () => {
+						event.stopPropagation()
+						page_args.apps_off()
+						if (button.example) {
+							const btn_args = {
+								name: button.name,
+								buttons: {
+									example: button.example
+								}
+							}
+							openExample(btn_args)
 						}
-					}
-					openExample(btn_args, page_args.apps_sandbox_div)
-				})
+						// TODO: Add logic if custom button has url or some other link
+					})
+			}
 		}
 
 		return JSON.stringify(li)
@@ -240,12 +250,12 @@ function displayTracks(tracks, holder, page_args) {
 
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track, sandbox_div) {
+async function openExample(track) {
 	// crate unique id for each app div
 	const app_id = track.name + Math.floor(Math.random() * 1000)
-	let [app_header, app_body] = make_app_div(sandbox_div)
-	app_header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
-	app_body
+	let sandbox_div = newSandboxDiv()
+	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
+	sandbox_div.body
 		.append('div')
 		.attr('id', app_id)
 		.style('margin', '20px')

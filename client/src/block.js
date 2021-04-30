@@ -3231,7 +3231,9 @@ show protein view for a given isoform
 and bring along current tracks
 if fromgenetk is provided, will skip this track
 */
-		const pane = client.newpane({ x: 100, y: 100 })
+		// const pane = client.newpane({ x: 100, y: 100 })
+		// example of how to use new sandbox div
+		const pane = client.newSandboxDiv()
 		pane.header.text(isoform)
 		const arg = {
 			genome: this.genome,

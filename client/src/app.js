@@ -195,7 +195,10 @@ function makeheader(app, obj, jwt) {
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 	const apps_drawer_row = app.holder.append('div')
-	app.holder.apps_sandbox_div = app.holder.append('div').style('margin-top', '15px')
+	app.holder.apps_sandbox_div = app.holder
+		.append('div')
+		.attr('id', 'pp_sandbox')
+		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -464,7 +467,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let [browser_header, browser_body] = make_app_div(app.holder.apps_sandbox_div)
+			let sandbox_div = client.newSandboxDiv()
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -472,12 +475,12 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 				return
 			}
 
-			browser_header.text(genomename + ' genome browser')
+			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
 				hostURL: app.hostURL,
 				jwt: jwt,
-				holder: browser_body,
+				holder: sandbox_div.body,
 				genome: g,
 				chr: g.defaultcoord.chr,
 				start: g.defaultcoord.start,
@@ -497,61 +500,6 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 function update_genome_browser_btn(app) {
 	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
-}
-
-export function make_app_div(apps_sandbox_div) {
-	const app_div = apps_sandbox_div.insert('div', ':first-child')
-	const header_row = app_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '5px 10px')
-		.style('padding-right', '8px')
-		.style('margin-bottom', '0px')
-		// .style('border', 'solid 1px #f2f2f2')
-		.style('box-shadow', '2px 0px 2px #f2f2f2')
-		.style('border-radius', '5px 5px 0 0')
-		.style('background-color', '#f2f2f2')
-		.style('width', '95vw')
-
-	// close_btn
-	header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.attr('class', 'sja_menuoption')
-		.style('cursor', 'default')
-		.style('padding', '4px 10px')
-		.style('margin', '0px')
-		.style('border-right', 'solid 2px white')
-		.style('border-radius', '5px 0 0 0')
-		.style('font-size', '1.5em')
-		.html('&times;')
-		.on('mousedown', () => {
-			document.body.dispatchEvent(new Event('mousedown'))
-			d3event.stopPropagation()
-		})
-		.on('click', () => {
-			app_div.selectAll('*').remove()
-		})
-
-	const header = header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px 10px')
-
-	const app_body = app_div
-		.append('div')
-		.style('margin', '5px 10px')
-		.style('margin-top', '0px')
-		.style('padding-right', '8px')
-		.style('display', 'inline-block')
-		.style('display', 'inline-block')
-		// .style('border', 'solid 1px #f2f2f2')
-		.style('box-shadow', '2px 2px 10px #f2f2f2')
-		.style('border-top', 'solid 1px white')
-		.style('border-radius', '0  0 5px 5px')
-		.style('width', '95vw')
-
-	return [header, app_body]
 }
 
 function appmenu(app, headbox, jwt) {
@@ -1498,7 +1446,7 @@ async function launchblock(arg, app) {
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
 		// created seperate function in clinet for same page block div
-		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.newSandBoxDiv(app.holder0, app.genomes)
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
 			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
