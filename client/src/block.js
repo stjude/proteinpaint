@@ -4612,6 +4612,10 @@ if fromgenetk is provided, will skip this track
 		const tk = this.block_addtk_template(tk0)
 		tk.mds = ds
 		tk.querykey = q.querykey
+		if (q.singlesample) {
+			// in sampleview, to show all cnvs, not just focal ones
+			tk.bplengthUpperLimit = 0
+		}
 		tk.customization = q
 
 		this.tk_load(tk)
