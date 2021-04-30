@@ -54,11 +54,18 @@ if (!serverconfig.binpath) {
 			const jsfile = process.argv.find(
 				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
 			)
-			try {
-				const realpath = fs.realpathSync(jsfile)
-				serverconfig.binpath = path.dirname(realpath)
-			} catch (e) {
-				throw e
+			if (jsfile) {
+				try {
+					const realpath = fs.realpathSync(jsfile)
+					serverconfig.binpath = path.dirname(realpath)
+				} catch (e) {
+					throw e
+				}
+			} else {
+				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
+				else if (fs.existsSync('../server')) serverconfig.binpath = fs.realpathSync('../server')
+				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}
 	}
