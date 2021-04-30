@@ -296,20 +296,26 @@ function setOptionalRoutes() {
 async function handle_healthcheck(req, res) {
 	try {
 		const health = { status: 'ok' }
-		health.w = child_process
-			.execSync('w | head -n1')
-			.toString()
-			.trim()
-			.split(' ')
-			.slice(-3)
-			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+		const keys = serverconfig.features.healthcheck_keys || []
 
-		health.rs =
-			child_process
-				.execSync('ps aux | grep rsync -w')
+		if (keys.includes('w')) {
+			health.w = child_process
+				.execSync('w | head -n1')
 				.toString()
 				.trim()
-				.split('\n').length - 1
+				.split(' ')
+				.slice(-3)
+				.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
+		}
+
+		if (keys.includes('rs')) {
+			health.rs =
+				child_process
+					.execSync('ps aux | grep rsync -w')
+					.toString()
+					.trim()
+					.split('\n').length - 1
+		}
 
 		if (fs.existsSync('./public/rev.txt')) {
 			health.version = child_process
