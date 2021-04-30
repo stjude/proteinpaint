@@ -290,7 +290,7 @@ export function loadstudycohort(genomes, file, holder, hostURL, jwt, noshow, app
 
 			if (!noshow) {
 				return import('./tp.ui').then(async p => {
-					getsjcharts(app.callbacks || {}).catch(console.error)
+					getsjcharts().catch(console.error)
 					p.default(cohort, holder, hostURL, app)
 					return app
 				})

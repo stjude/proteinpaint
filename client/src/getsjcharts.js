@@ -1,18 +1,13 @@
 let prom
 
-export function getsjcharts(callbacks = {}) {
+export function getsjcharts() {
 	if (window.sjcharts) {
 		// console.log('exists')
-		// in case callbacks is not empty
-		for (const name in callbacks) {
-			window.sjcharts.callbacks(name, callbacks[name])
-		}
 		return Promise.resolve(window.sjcharts)
 	} else if (prom) {
 		//console.log('pending')
 		return prom
 	} else {
-		//console.log('requesting')
 		prom = new Promise((resolve, reject) => {
 			const subdomain = window.location.hostname.split('.')[0]
 			const codehost = ['pp-test', 'pecan-test', 'ppr'].includes(subdomain)
@@ -24,10 +19,6 @@ export function getsjcharts(callbacks = {}) {
 			fileref.setAttribute('src', filename)
 			document.getElementsByTagName('head')[0].appendChild(fileref)
 			fileref.onload = () => {
-				// in case callbacks is not empty
-				for (const name in callbacks) {
-					window.sjcharts.callbacks(name, callbacks[name])
-				}
 				resolve(window.sjcharts)
 			}
 			fileref.onerror = () => {

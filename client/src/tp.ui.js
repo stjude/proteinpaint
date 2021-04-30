@@ -233,7 +233,8 @@ if(cohort.render) {
 			},
 			tp_getgeneexpression,
 			show_heatmap: cohort.show_heatmap,
-			instanceTracker: app.instanceTracker
+			instanceTracker: app.instanceTracker,
+			callbacks: app.callbacks.hm
 		})
 	}
 
@@ -271,7 +272,8 @@ if(cohort.variantgene) {
 				butt: srvbut.node(),
 				holder: srvdiv.node()
 			},
-			instanceTracker: app.instanceTracker
+			instanceTracker: app.instanceTracker,
+			callbacks: app.callbacks.sv
 		})
 	}
 
@@ -310,7 +312,8 @@ if(cohort.variantgene) {
 				butt: skbtn.node(),
 				holder: skdiv.node()
 			},
-			instanceTracker: app.instanceTracker
+			instanceTracker: app.instanceTracker,
+			callbacks: app.callbacks.sk
 		})
 	}
 
@@ -334,7 +337,8 @@ if(cohort.variantgene) {
 				butt: piebtn.node(),
 				holder: piediv.node()
 			},
-			instanceTracker: app.instanceTracker
+			instanceTracker: app.instanceTracker,
+			callbacks: app.callbacks.pb
 		})
 	}
 
