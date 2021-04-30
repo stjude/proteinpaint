@@ -23,7 +23,7 @@ and show various apps depending on the data attributes
 
 */
 
-export default async function tpui(cohort, holder, hostURL, app = { callbacks: {} }) {
+export default async function tpui(cohort, holder, hostURL, app = { callbacks: { sjcharts: {} } }) {
 	const debugmode = app.debugmode
 
 	if (debugmode) {
@@ -233,8 +233,9 @@ if(cohort.render) {
 			},
 			tp_getgeneexpression,
 			show_heatmap: cohort.show_heatmap,
-			instanceTracker: app.instanceTracker,
-			callbacks: app.callbacks.hm
+			// use a subnested sjcharts object to namespace its instances
+			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
+			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.hm
 		})
 	}
 
@@ -272,8 +273,9 @@ if(cohort.variantgene) {
 				butt: srvbut.node(),
 				holder: srvdiv.node()
 			},
-			instanceTracker: app.instanceTracker,
-			callbacks: app.callbacks.sv
+			// use a subnested sjcharts object to namespace its instances
+			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
+			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.sv
 		})
 	}
 
@@ -312,8 +314,9 @@ if(cohort.variantgene) {
 				butt: skbtn.node(),
 				holder: skdiv.node()
 			},
-			instanceTracker: app.instanceTracker,
-			callbacks: app.callbacks.sk
+			// use a subnested sjcharts object to namespace its instances
+			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
+			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.sk
 		})
 	}
 
@@ -337,8 +340,9 @@ if(cohort.variantgene) {
 				butt: piebtn.node(),
 				holder: piediv.node()
 			},
-			instanceTracker: app.instanceTracker,
-			callbacks: app.callbacks.pb
+			// use a subnested sjcharts object to namespace its instances
+			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
+			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.pb
 		})
 	}
 

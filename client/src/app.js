@@ -76,10 +76,19 @@ export function runproteinpaint(arg) {
 		*/
 		debugmode: false,
 		// event callbacks for dynamically-loaded renderer instances
-		callbacks: arg.callbacks || {},
+		callbacks: arg.callbacks || { sjcharts: {} },
 		// object to store instances as created by dynamically loaded apps/renderers
 		// the default is to have a unique tracker per Proteinpaint app instance
-		instanceTracker: arg.instanceTracker || {}
+		instanceTracker: arg.instanceTracker || { sjcharts: {} }
+	}
+
+	// subnest an sjcharts object to track its app instances by rendererType,
+	// to avoid namespace conflicts with PP renderer instances
+	if (!app.instanceTracker.sjcharts) {
+		app.instanceTracker.sjcharts = {}
+	}
+	if (!app.callbacks.sjcharts) {
+		app.callbacks.sjcharts = {}
 	}
 
 	if (arg.clear) {

@@ -26,17 +26,22 @@
 			holder: document.getElementById('aaa'),
 			study: 'esioson/target-tall-small',
 			callbacks: {
-				'hm': {
-					postInstance(appInstance) {
-						console.log(31, Object.keys(appInstance))
-						console.log(32, pp.instanceTracker)
-					},
-					firstRender(appInstance) {
-						console.log(35, 'firstRender', appInstance.getSchema('object'))
-					},
-					postRender(appInstance) {
-						console.log(38, 'postRender')
-					},
+				sjcharts: {
+					'hm': {
+						postInstance(appInstance) {
+							console.log(31, Object.keys(appInstance))
+							console.log(32, pp.instanceTracker)
+						},
+						postInit(appInstance) {
+							console.log(36, 'postInit')
+						},
+						firstRender(appInstance) {
+							console.log(39, 'firstRender', appInstance.getSchema('object'))
+						},
+						postRender(appInstance) {
+							console.log(42, 'postRender')
+						},
+					}
 				}
 			},
 			//instanceTracker: {}
