@@ -1299,6 +1299,74 @@ export function newpane3(x, y, genomes) {
 	return [pane, inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
+export function renderSandboxFormDiv(holder, genomes) {
+	const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
+	const p = inputdiv.append('p')
+	p.append('span').html('Genome&nbsp;')
+	const gselect = p.append('select')
+	for (const n in genomes) {
+		gselect.append('option').text(n)
+	}
+	const filediv = inputdiv.append('div').style('margin', '20px 0px')
+	const saydiv = holder.append('div').style('margin', '10px 20px')
+	const visualdiv = holder.append('div').style('margin', '20px')
+	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
+}
+
+export function newSandboxDiv() {
+	const sandbox_holder = d3select('#pp_sandbox')
+	const app_div = sandbox_holder.insert('div', ':first-child')
+	const header_row = app_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '5px 10px')
+		.style('padding-right', '8px')
+		.style('margin-bottom', '0px')
+		.style('box-shadow', '2px 0px 2px #f2f2f2')
+		.style('border-radius', '5px 5px 0 0')
+		.style('background-color', '#f2f2f2')
+		.style('width', '95vw')
+
+	// close_btn
+	header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_menuoption')
+		.style('cursor', 'default')
+		.style('padding', '4px 10px')
+		.style('margin', '0px')
+		.style('border-right', 'solid 2px white')
+		.style('border-radius', '5px 0 0 0')
+		.style('font-size', '1.5em')
+		.html('&times;')
+		.on('mousedown', () => {
+			document.body.dispatchEvent(new Event('mousedown'))
+			d3event.stopPropagation()
+		})
+		.on('click', () => {
+			app_div.selectAll('*').remove()
+		})
+
+	const header = header_row
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '5px 10px')
+
+	const body = app_div
+		.append('div')
+		.style('margin', '5px 10px')
+		.style('margin-top', '0px')
+		.style('padding-right', '8px')
+		.style('display', 'inline-block')
+		.style('display', 'inline-block')
+		.style('box-shadow', '2px 2px 10px #f2f2f2')
+		.style('border-top', 'solid 1px white')
+		.style('border-radius', '0  0 5px 5px')
+		.style('width', '95vw')
+
+	return {header, body}
+}
+
 export function to_svg(svg, name, opts = {}) {
 	if (opts.apply_dom_styles) {
 		opts.svgClone = svg.cloneNode(true)

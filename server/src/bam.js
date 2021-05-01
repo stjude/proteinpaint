@@ -103,7 +103,8 @@ segment {}
 .islast
 .discord_wrong_insertsize
 .discord_orientation
-.discord_unmapped
+.discord_unmapped1 // Current read unmapped
+.discord_unmapped2 // Mate of current read unmapped
 .rnext, pnext // attribute is set when mate is on a different chr
 
 box {}
@@ -149,6 +150,11 @@ do_query
 	plot_pileup
 		run_samtools_depth
 		collect_softclipmismatch2pileup
+route_getread
+    query_one_read
+      parse_one_segment
+    convertread2html
+    convertunmappedread2html  
 */
 
 // match box color, for single read and normal read pairs
@@ -1097,7 +1103,9 @@ function get_templates(q, group) {
 			const r = q.regions[i]
 			//for (const line of r.lines) {
 			for (const line of group.templates) {
-				const segment = parse_one_segment(line, r, i)
+				line.r = r
+				line.ridx = i
+				const segment = parse_one_segment(line)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1117,7 +1125,9 @@ function get_templates(q, group) {
 		const r = q.regions[i]
 		//for (const line of r.lines) {
 		for (const line of group.templates) {
-			const segment = parse_one_segment(line, r, i)
+			line.r = r
+			line.ridx = i
+			const segment = parse_one_segment(line)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1137,7 +1147,9 @@ function get_templates(q, group) {
 	return [...qname2template.values()]
 }
 
-/*
+/* parse one line of sam to return an object of a segment/read
+return undefined if unmapped or invalid data
+
 do not do:
   parse seq
   parse qual
@@ -1147,11 +1159,18 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
-
-lineObj: {sam_info, tempscore}
 */
-function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
-	const l = lineObj.sam_info.trim().split('\t')
+function parse_one_segment(arg) {
+	const {
+		sam_info, // sam line
+		tempscore,
+		r,
+		ridx,
+		keepallboxes,
+		keepmatepos,
+		keepunmappedread // return object if the read is unmapped
+	} = arg
+	const l = sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1160,24 +1179,57 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 		flag = l[2 - 1],
 		segstart_1based = Number.parseInt(l[4 - 1]),
 		cigarstr = l[6 - 1],
-		// use rnext to tell if mate is on a different chr
 		rnext = l[7 - 1],
 		pnext = l[8 - 1],
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
-	if (flag & 0x4) {
-		//console.log('unmapped')
-		return
-	}
 	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
 		// invalid
 		return
 	}
 	const segstart = segstart_1based - 1
+	if (flag & 0x4) {
+		if (keepunmappedread) {
+			const segment = {
+				qname,
+				segstart,
+				segstop: segstart,
+				boxes: [
+					{
+						opr: cigarstr,
+						start: segstart,
+						len: seq.length,
+						cidx: 0,
+						qual
+					}
+				],
+				forward: !(flag & 0x10),
+				ridx,
+				seq,
+				qual,
+				cigarstr,
+				tlen,
+				flag,
+				discord_unmapped1: true
+			}
+			if (flag & 0x40) {
+				segment.isfirst = true
+			} else if (flag & 0x80) {
+				segment.islast = true
+			}
+			return segment
+		}
+		// return undefined so the unmapped read will not render
+		// may collect number of unmapped reads in view range and report
+		return
+	}
+
+	// from here, read is mapped
 
 	if (cigarstr == '*') {
+		// why this case?
 		return
 	}
 
@@ -1320,7 +1372,7 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 		cigarstr,
 		tlen,
 		flag,
-		tempscore: lineObj.tempscore
+		tempscore
 	}
 
 	if (flag & 0x40) {
@@ -1350,10 +1402,9 @@ function parse_one_segment(lineObj, r, ridx, keepallboxes, keepmatepos) {
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80) //163
 	) {
 		// Read and mate is properly paired
-	} else if (flag & 0x8 || flag & 0x4) {
-		// XXX here 0x8 is for mate unmapped, but 0x4 is this reads is unmapped, so must not mix them together and figure out how to handle 0x4
-		// Read or mate is unmapped, may use a specific color in the future to indicate this type of discordant read
-		segment.discord_unmapped = true
+	} else if (flag & 0x8) {
+		// Mate of read is unmapped
+		segment.discord_unmapped2 = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
@@ -1741,6 +1792,32 @@ function plot_segment(ctx, segment, y, group, q) {
 			continue
 		}
 
+		if (b.opr == '*') {
+			// Possibly unmapped reads
+			if (r.to_qual) {
+				let xoff = x
+				b.qual.forEach(v => {
+					if (segment.discord_unmapped2) {
+						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
+					}
+					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					xoff += r.ntwidth
+				})
+			} else {
+				// not showing qual, one box
+				if (segment.discord_unmapped2) {
+					ctx.fillStyle = discord_unmapped_hq
+				}
+				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+			}
+
+			if (r.to_printnt) {
+				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
+			}
+			continue
+		}
 		if (b.opr == 'X' || b.opr == 'S') {
 			// box with maybe letters
 			if (r.to_qual && b.qual) {
@@ -1777,7 +1854,7 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2discord_orientation(v / maxqual)
 					} else if (segment.discord_wrong_insertsize) {
 						ctx.fillStyle = qual2discord_wrong_insertsize(v / maxqual)
-					} else if (segment.discord_unmapped) {
+					} else if (segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					} else {
 						ctx.fillStyle = qual2match(v / maxqual)
@@ -1794,7 +1871,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = discord_orientation_hq
 				} else if (segment.discord_wrong_insertsize) {
 					ctx.fillStyle = discord_wrong_insertsize_hq
-				} else if (segment.discord_unmapped) {
+				} else if (segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				} else {
 					ctx.fillStyle = match_hq
@@ -2051,10 +2128,22 @@ async function route_getread(genome, req) {
 	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
 	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
 	const seglst = await query_oneread(req, r)
-	if (!seglst) throw 'read not found'
+	if (!seglst) {
+		// no read found
+		if (req.query.show_unmapped) {
+			// asking to get an unmapped read. if using a bam slice, the unmapped read could be out of range
+			throw 'mate not found'
+		}
+		throw 'read not found'
+	}
 	const lst = []
 	for (const s of seglst) {
-		lst.push(await convertread2html(s, genome, req.query))
+		if (s.discord_unmapped1) {
+			// Invoked when the read itself is unmapped
+			lst.push(await convertunmappedread2html(s, genome, req.query))
+		} else {
+			lst.push(await convertread2html(s, genome, req.query))
+		}
 	}
 	return { lst }
 }
@@ -2083,10 +2172,25 @@ async function query_oneread(req, r) {
 		}
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true, true)
+			if (line.split('\t')[0] != req.query.qname) return
+			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
 			if (!s) return
-			if (s.qname != req.query.qname) return
-			if (req.query.getfirst) {
+			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+			if (req.query.show_unmapped && req.query.getfirst) {
+				// In case first read is mapped and second unmapped
+				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.show_unmapped && req.query.getlast) {
+				// In case first read is mapped and second unmapped
+				if (s.isfirst) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.getfirst) {
 				if (s.isfirst) {
 					ps.kill()
 					resolve([s])
@@ -2120,6 +2224,58 @@ async function query_oneread(req, r) {
 		})
 	})
 }
+
+async function convertunmappedread2html(seg, genome, query) {
+	// convert a read to html
+	const quallst = qual2int(seg.qual)
+	const querylst = ['<td style="color:black;text-align:left">Read</td>']
+	for (const b of seg.boxes) {
+		for (let i = 0; i < b.len; i++) {
+			const nt1 = seg.seq[b.cidx + i]
+			querylst.push(
+				'<td style="background:' + qual2match(quallst[b.cidx + i] / maxqual) + '">' + seg.seq[b.cidx + i] + '</td>'
+			)
+		}
+		continue
+	}
+
+	const lst = []
+	lst.push(
+		'<li><span style="background:' +
+			discord_unmapped_hq +
+			';color:white">This segment in template is unmapped</span></li>'
+	)
+	// indicate all flags
+	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
+	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
+	//if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
+	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
+	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
+	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
+	if (seg.flag & 0x80) lst.push('<li>This is the last segment in the template</li>')
+	if (seg.flag & 0x100) lst.push('<li>Secondary alignment</li>')
+	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
+	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
+	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
+
+	let seq_data = {
+		seq: seg.seq,
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+			  <tr style="color:white">${querylst.join('')}</tr>
+			</table>`,
+		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.seq.length)} bp,
+			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
+		  </div>
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+	}
+	if (seg.discord_unmapped2) {
+		seq_data.unmapped_mate = true
+	}
+	return seq_data
+}
+
 async function convertread2html(seg, genome, query) {
 	// convert a read to html
 	const refstart = seg.boxes[0].start // 0 based
@@ -2173,7 +2329,7 @@ async function convertread2html(seg, genome, query) {
 			}
 			continue
 		}
-		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X') {
+		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X' || b.opr == '*') {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
@@ -2239,18 +2395,18 @@ async function convertread2html(seg, genome, query) {
 				seg.pnext +
 				'</li>'
 		)
-	} else if (seg.discord_unmapped) {
+	} else if (seg.discord_unmapped2) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_unmapped_hq +
-				';color:white">Next segment in the template unmapped</span></li>'
+				';color:white">Other segment in template is unmapped</span></li>'
 		)
 	}
 
 	// indicate all flags
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
-	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
+	//if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
 	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
 	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
 	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
@@ -2279,6 +2435,9 @@ async function convertread2html(seg, genome, query) {
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts
 		seq_data.soft_stops = soft_stops
+	}
+	if (seg.discord_unmapped2) {
+		seq_data.unmapped_mate = true
 	}
 	return seq_data
 }

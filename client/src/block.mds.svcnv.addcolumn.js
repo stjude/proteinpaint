@@ -247,9 +247,11 @@ function multi_show_geneboxplot(arg) {
 		holder: pane.body,
 		block: block,
 		genome: block.genome,
-		jwt: block.jwt,
-		hostURL: block.hostURL,
-		sample: samplename ? { name: samplename, value: value } : null
+		//jwt: block.jwt,
+		//hostURL: block.hostURL,
+		sample: samplename ? { name: samplename, value: value } : null,
+		// if sampleset is defined for custom dataset, allow to show boxplot at exp panel
+		sampleset: tk.sampleset
 	}
 
 	// expression

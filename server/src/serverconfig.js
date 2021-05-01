@@ -54,22 +54,46 @@ if (!serverconfig.binpath) {
 			const jsfile = process.argv.find(
 				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
 			)
-			try {
-				const realpath = fs.realpathSync(jsfile)
-				serverconfig.binpath = path.dirname(realpath)
-			} catch (e) {
-				throw e
+			if (jsfile) {
+				try {
+					const realpath = fs.realpathSync(jsfile)
+					serverconfig.binpath = path.dirname(realpath)
+				} catch (e) {
+					throw e
+				}
+			} else {
+				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
+				else if (fs.existsSync('../server')) serverconfig.binpath = fs.realpathSync('../server')
+				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}
 	}
 }
 
 if (serverconfig.debugmode) {
+	// only apply optional routeSetters in debugmode
 	const routeSetters = []
+
+	if (serverconfig.routeSetters) {
+		for (const f of serverconfig.routeSetters) {
+			if (fs.existsSync(f)) routeSetters.push(f)
+			else {
+				const absf = path.join(serverconfig.binpath, f)
+				if (absf.existsSync(fp)) routeSetters.push(absf)
+			}
+		}
+	}
+
+	// also add testing routes if found
 	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
 	for (const f of files) {
 		if (fs.existsSync(f)) routeSetters.push(f)
 	}
+
+	// may replace the original routeSetters value,
+	// since the serverconfig.binpath prefix may
+	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
 }
 

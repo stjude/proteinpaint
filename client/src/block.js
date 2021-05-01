@@ -3231,7 +3231,9 @@ show protein view for a given isoform
 and bring along current tracks
 if fromgenetk is provided, will skip this track
 */
-		const pane = client.newpane({ x: 100, y: 100 })
+		// const pane = client.newpane({ x: 100, y: 100 })
+		// example of how to use new sandbox div
+		const pane = client.newSandboxDiv()
 		pane.header.text(isoform)
 		const arg = {
 			genome: this.genome,
@@ -4610,6 +4612,10 @@ if fromgenetk is provided, will skip this track
 		const tk = this.block_addtk_template(tk0)
 		tk.mds = ds
 		tk.querykey = q.querykey
+		if (q.singlesample) {
+			// in sampleview, to show all cnvs, not just focal ones
+			tk.bplengthUpperLimit = 0
+		}
 		tk.customization = q
 
 		this.tk_load(tk)

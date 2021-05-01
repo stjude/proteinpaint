@@ -202,28 +202,42 @@ function makeheader(app, obj, jwt) {
 	jwt: token
 	*/
 	const color = d3rgb(common.defaultcolor)
-	const padw = '13px'
+	const padw_lg = '13px'
+	const padw_input = '5px 10px'
+	const padw_sm = '7px 10px'
+	const doc_width = document.documentElement.clientWidth
 	// head
-	const row = app.holder.append('div')
-	const app_row = app.holder.append('div')
-	app.holder.browsers_row = app.holder.append('div').attr('id', 'browsers_row')
+	const row = app.holder
+		.append('div')
+		.style(
+			'border-bottom',
+			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
+	const apps_drawer_row = app.holder.append('div')
+	app.holder.apps_sandbox_div = app.holder.append('div')
+		.attr('id','pp_sandbox')
+		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('display', 'inline-block')
-		.style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
-		.style('border-radius', '5px')
-		.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
+		.style('padding', '8px')
+		.style('padding-bottom', '12px')
+		.style('display', doc_width < 1600 ? 'block' : 'inline-block')
+		.style(
+			'border-bottom',
+			doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
+	// .style('border-radius', '5px')
+	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
 	const headinfo = row
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
 	{
 		// a row for server stats
-		const row = headinfo.append('div')
+		const row = headinfo.append('div').style('padding-left', '15px')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -260,14 +274,17 @@ function makeheader(app, obj, jwt) {
 		.append('div')
 		.text('ProteinPaint')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_lg)
 		.style('color', common.defaultcolor)
+		.style('font-size', '1.3em')
 		.style('font-weight', 'bold')
 
 	// 2, search box
 	const tip = new client.Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
+		app_btn_active = false
+		apps_off()
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str = input.property('value').trim()
@@ -284,37 +301,40 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt, app_btn_active, apps_off)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-right', '5px')
 		.append('input')
 		.style('border', 'solid 1px ' + common.defaultcolor)
-		.style('padding', '3px')
+		// .style('padding', '3px')
+		.style('padding', '6px 10px')
+		.style('border-radius', '5px')
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
 		.on('keyup', () => {
 			if (client.keyupEnter()) entersearch()
 			else debouncer()
-			app_btn_active = false
-			apps_off()
 		})
 	input.node().focus()
 
 	const genome_select_div = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-left', '5px')
 
 	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
+		.style('padding', padw_input)
+		.style('border', 'solid 1px ' + common.defaultcolor)
+		.style('border-radius', '5px')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
 			update_genome_browser_btn(app)
@@ -345,31 +365,32 @@ function makeheader(app, obj, jwt) {
 		app_btn = headbox
 			.append('span')
 			.attr('class', 'sja_menuoption')
-			.style('padding', padw)
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
-				appmenu(app, headbox, selectgenome, jwt)
+				appmenu(app, headbox, jwt)
 			})
 	} else {
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
 		let apps_rendered = false
 
-		app_holder = app_row
+		app_holder = apps_drawer_row
 			.append('div')
-			.style('margin', '10px')
-			.style('padding-right', '10px')
+			.style('margin', '20px')
+			.style('padding', '10px')
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('background-color', '#f2f2f2')
 			.style('border-radius', '5px')
-			.style('width', '95vw')
+			.style('width', '93vw')
 
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, new_div: app.holder })
+			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
 		}
 
 		if (app_btn_active) load_app_div()
@@ -380,7 +401,8 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
 			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
 			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw)
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
@@ -414,14 +436,14 @@ function makeheader(app, obj, jwt) {
 	headbox
 		.append('span')
 		.classed('sja_menuoption', true)
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('border-radius', '5px')
 		.text('Help')
 		.on('click', () => {
 			const p = d3event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
-				.show(p.left - 50, p.top + p.height + 5)
+				.show(p.left - 0, p.top + p.height + 5)
 				.d.append('div')
 				.style('padding', '5px 20px')
 			div
@@ -451,7 +473,7 @@ function makeheader(app, obj, jwt) {
 }
 
 function make_genome_browser_btn(app, headbox, jwt, apps_off) {
-	const padw = '13px'
+	const padw = '8px'
 	const genome_btn_div = headbox.append('span')
 	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
 
@@ -463,7 +485,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let [browser_header, browser_body] = make_browser_div(app.holder.browsers_row)
+			let sandbox_div = client.newSandboxDiv()
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -471,12 +493,12 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 				return
 			}
 
-			browser_header.text(genomename + ' genome browser')
+			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
 				hostURL: app.hostURL,
 				jwt: jwt,
-				holder: browser_body,
+				holder: sandbox_div.body,
 				genome: g,
 				chr: g.defaultcoord.chr,
 				start: g.defaultcoord.start,
@@ -498,79 +520,16 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
-function make_browser_div(browsers_row) {
-	const genome_browser_div = browsers_row.insert('div', ':first-child')
-	const header_row = genome_browser_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('margin-bottom', '0px')
-		.style('border', 'solid 1px #f2f2f2')
-		.style('border-radius', '5px 5px 0 0')
-		.style('background-color', '#f2f2f2')
-		.style('width', '95vw')
-
-	// close_btn
-	header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.attr('class', 'sja_menuoption')
-		.style('cursor', 'default')
-		.style('padding', '4px 10px')
-		.style('margin', '0px')
-		.style('border-right', 'solid 2px white')
-		.style('font-size', '1.5em')
-		.html('&times;')
-		.on('mousedown', () => {
-			document.body.dispatchEvent(new Event('mousedown'))
-			d3event.stopPropagation()
-		})
-		.on('click', () => {
-			genome_browser_div.selectAll('*').remove()
-		})
-
-	const header = header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px 10px')
-
-	const browser_body = genome_browser_div
-		.append('div')
-		.style('margin', '10px')
-		.style('margin-top', '0px')
-		.style('padding-right', '8px')
-		.style('display', 'inline-block')
-		.style('display', 'inline-block')
-		.style('border', 'solid 2px #f2f2f2')
-		.style('border-top', 'solid 1px white')
-		.style('border-radius', '0  0 5px 5px')
-		.style('width', '95vw')
-
-	return [header, browser_body]
-}
-
-async function launchApps(app) {
-	const new_div = app.holder.append('div')
-	new_div
-		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('border-radius', '5px')
-		.style('width', '95vw')
-
-	return new_div
-}
-
-function appmenu(app, headbox, selectgenome, jwt) {
+function appmenu(app, headbox, jwt) {
 	/*
+	app: { selectgenome }
 	headbox
-	selectgenome: <select>
 	*/
 
 	const p = d3event.target.getBoundingClientRect()
 	headtip.clear().show(p.left - 50, p.top + p.height + 5)
 	{
-		const ss = selectgenome.node()
+		const ss = app.selectgenome.node()
 		const genomename = ss.options[ss.selectedIndex].value
 		const g = app.genomes[genomename]
 		if (!g) {
@@ -713,7 +672,7 @@ function appmenu(app, headbox, selectgenome, jwt) {
 		})
 }
 
-function findgenelst(app, str, genome, tip, jwt) {
+function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
 	if (str.length <= 1) {
 		tip.d.selectAll('*').remove()
 		return
@@ -740,6 +699,8 @@ function findgenelst(app, str, genome, tip, jwt) {
 					.attr('isgene', '1')
 					.text(name)
 					.on('click', () => {
+						app_btn_active = false
+						apps_off()
 						tip.hide()
 						findgene2paint(app, name, genome, jwt)
 					})
@@ -885,8 +846,7 @@ async function parseembedthenurl(arg, app) {
 	after exhausting embedding options, try URL parameters
 
 	arg: embedding param
-	app: {genomes, study, holder0, hostURL, debugmode, jwt?}
-	selectgenome: <select>
+	app: {genomes, study, holder0, hostURL, debugmode, jwt?, selectgenome, genome_browser_btn}
 
 	*/
 
@@ -991,6 +951,16 @@ async function parseembedthenurl(arg, app) {
 		return app
 	}
 
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -1012,7 +982,9 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.project) {
-		bulkui(0, 0, app.genomes, app.hostURL)
+		let holder = undefined
+		if (arg.project.uionly) holder = app.holder0
+		bulkui(0, 0, app.genomes, app.hostURL, holder)
 	}
 
 	if (arg.toy) {
@@ -1020,6 +992,9 @@ async function parseembedthenurl(arg, app) {
 	}
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, app)
+	}
+	if (arg.maftimeline) {
+		launchmaftimeline(arg, app)
 	}
 
 	return app
@@ -1489,19 +1464,10 @@ async function launchblock(arg, app) {
 
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
-		// duplicate newpane3
-		const inputdiv = app.holder0.append('div').style('margin', '40px 20px 20px 20px')
-		const p = inputdiv.append('p')
-		p.append('span').html('Genome&nbsp;')
-		const gselect = p.append('select').attr('title', 'Select a genome')
-		for (const n in app.genomes) {
-			gselect.append('option').text(n)
-		}
-		const filediv = inputdiv.append('div').style('margin', '20px 0px')
-		const saydiv = app.holder0.append('div').style('margin', '10px 20px')
-		const visualdiv = app.holder0.append('div').style('margin', '20px')
+		// created seperate function in clinet for same page block div
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
-			p.svmrui([null, inputdiv, gselect.node(), filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
+			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
 		return
 	}
@@ -1515,7 +1481,20 @@ function launchfusioneditor(arg, app) {
 	})
 }
 
+async function launchmdsjsonform(arg, app) {
+	if (arg.mdsjsonform.uionly) {
+		const _ = await import('./mdsjsonform')
+		await _.init_mdsjsonform({ holder: app.holder0, genomes: app.genomes })
+	}
+}
+
 function launchmavb(arg, app) {
+	if (arg.mavolcanoplot.uionly) {
+		import('./mavb').then(p => {
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1529,6 +1508,12 @@ function launchmavb(arg, app) {
 }
 
 function launch2dmaf(arg, app) {
+	if (arg.twodmaf.uionly) {
+		import('./2dmaf').then(p => {
+			p.d2mafui(app.genomes, app.holder0)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1539,6 +1524,22 @@ function launch2dmaf(arg, app) {
 	import('./2dmaf').then(d2maf => {
 		d2maf.d2mafparseinput(arg.twodmaf, app.holder0)
 	})
+}
+
+function launchmaftimeline(arg, app) {
+	if (arg.maftimeline.uionly) {
+		import('./maftimeline').then(p => {
+			p.default(app.genomes, app.holder0)
+		})
+	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+	}
 }
 
 /*
