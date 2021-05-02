@@ -28,7 +28,8 @@ internal "app{}"
 .holder
 .holder0
 .hostURL
-
+.callbacks{}
+.instanceTrackers{}
 
 ********** INTERNAL
 
@@ -56,6 +57,9 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
+	// the main Proteinpaint instance, unique for each runproteinpaint() call
+	// NOTE: this app instance may be returned or not depending on the
+	// results of parseembedthenurl(), TODO: make the return value more determinate
 	const app = {
 		error0(m) {
 			client.sayerror(app.holder0, m)
@@ -70,7 +74,21 @@ export function runproteinpaint(arg) {
 		server emitted state, if true, will trigger globals e.g. window.bb
 		it needs to be set before launching any apps
 		*/
-		debugmode: false
+		debugmode: false,
+		// event callbacks for dynamically-loaded renderer instances
+		callbacks: arg.callbacks || { sjcharts: {} },
+		// object to store instances as created by dynamically loaded apps/renderers
+		// the default is to have a unique tracker per Proteinpaint app instance
+		instanceTracker: arg.instanceTracker || { sjcharts: {} }
+	}
+
+	// subnest an sjcharts object to track its app instances by rendererType,
+	// to avoid namespace conflicts with PP renderer instances
+	if (!app.instanceTracker.sjcharts) {
+		app.instanceTracker.sjcharts = {}
+	}
+	if (!app.callbacks.sjcharts) {
+		app.callbacks.sjcharts = {}
 	}
 
 	if (arg.clear) {
@@ -166,7 +184,8 @@ export function runproteinpaint(arg) {
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app)
+			const subapp = parseembedthenurl(arg, app)
+			return subapp ? subapp : app
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -815,7 +834,7 @@ function studyui(app, x, y) {
 			app.hostURL,
 			null, // jwt
 			false, // no show
-			app.debugmode
+			app
 		)
 	}
 }
@@ -843,41 +862,41 @@ async function parseembedthenurl(arg, app) {
 	if (arg.xintest) {
 		// a shortcut to xin's experiments and not to be used in prod
 		launchxintest(arg.xintest, app)
-		return
+		return app
 	}
 
 	if (arg.singlecell) {
 		launch_singlecell(arg.singlecell, app)
-		return
+		return app
 	}
 
 	if (arg.fimo) {
 		launch_fimo(arg.fimo, app)
-		return
+		return app
 	}
 
 	if (arg.mdssurvivalplot) {
 		if (arg.genome) arg.mdssurvivalplot.genome = arg.genome
 		launchmdssurvivalplot(arg.mdssurvivalplot, app)
-		return
+		return app
 	}
 
 	if (arg.mdssamplescatterplot) {
 		if (arg.genome) arg.mdssamplescatterplot.genome = arg.genome
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
-		return
+		return app
 	}
 
 	if (arg.samplematrix) {
 		arg.samplematrix.jwt = arg.jwt
 		launchsamplematrix(arg.samplematrix, app)
-		return
+		return app
 	}
 
 	if (arg.hic) {
 		arg.hic.jwt = arg.jwt
 		launchhic(arg.hic, app)
-		return
+		return app
 	}
 
 	if (arg.block) {
@@ -894,9 +913,9 @@ async function parseembedthenurl(arg, app) {
 			app.hostURL,
 			arg.jwt,
 			false, // no show
-			app.debugmode
+			app
 		)
-		return
+		return app
 	}
 
 	if (arg.studyview) {
@@ -909,27 +928,27 @@ async function parseembedthenurl(arg, app) {
 		obj.jwt = arg.jwt
 		obj.holder = app.holder0
 		bulkembed(obj)
-		return
+		return app
 	}
 
 	if (await may_launchGeneView(arg, app)) {
 		// gene view launched
-		return
+		return app
 	}
 
 	if (arg.fusioneditor) {
 		launchfusioneditor(arg, app)
-		return
+		return app
 	}
 
 	if (arg.mavolcanoplot) {
 		launchmavb(arg, app)
-		return
+		return app
 	}
 
 	if (arg.twodmaf) {
 		launch2dmaf(arg, app)
-		return
+		return app
 	}
 
 	if (arg.junctionbymatrix) {
@@ -974,10 +993,11 @@ async function parseembedthenurl(arg, app) {
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, app)
 	}
-
 	if (arg.maftimeline) {
 		launchmaftimeline(arg, app)
 	}
+
+	return app
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1267,7 +1287,7 @@ async function launchblock(arg, app) {
 			app.hostURL,
 			arg.jwt,
 			true, // no show
-			app.debugmode
+			app
 		)
 	}
 	if (arg.studyview) {
@@ -1437,8 +1457,8 @@ async function launchblock(arg, app) {
 
 	// return a promise resolving to block
 	return import('./block').then(b => {
-		const bb = new b.Block(blockinitarg)
-		return { block: bb }
+		app.block = new b.Block(blockinitarg)
+		return app
 	})
 }
 
