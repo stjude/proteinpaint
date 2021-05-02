@@ -63,7 +63,7 @@ if (!serverconfig.binpath) {
 				}
 			} else {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
-				else if (fs.existsSync('../server')) serverconfig.binpath = fs.realpathSync('../server')
+				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src')
 				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
 				else throw 'unable to determine the serverconfig.binpath'
 			}
@@ -132,6 +132,13 @@ if (serverconfig.allow_env_overrides) {
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
+}
+
+if (!serverconfig.features) {
+	// default to having an empty object value for
+	// examples of end-user-accessible features are:
+	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
+	serverconfig.features = {}
 }
 
 //Object.freeze(serverconfig)
