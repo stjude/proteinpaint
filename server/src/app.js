@@ -164,7 +164,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 app.get(basepath + '/healthcheck', handle_healthcheck)
-app.get(basepath + '/examples', handle_examples)
+app.get(basepath + '/examplejson', handle_examples)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)

@@ -4,7 +4,7 @@ import { event } from 'd3-selection'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
-	const re = await dofetch2('/examples')
+	const re = await dofetch2('/examplejson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
 		return
