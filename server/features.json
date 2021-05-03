@@ -712,7 +712,7 @@
             "app": "Apps",
             "hidden": true,
             "subheading": "Launch App",
-            "blurb": "multiple views options for genes by sample matrix",
+            "blurb": "multiple viewing options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "buttons": {
                 "url": "",
