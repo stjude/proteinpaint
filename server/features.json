@@ -66,7 +66,7 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg38",
+                    "genome": "hg19",
                     "position": "chr12:25334648-25426944",
                     "nativetracks": "RefGene",
                     "tracks": [{
@@ -221,7 +221,7 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg38",
+                    "genome": "hg19",
                     "position": "chr8:127340055-128243343",
                     "nativetracks": "RefGene",
                     "tracks": [{
