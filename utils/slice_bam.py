@@ -21,6 +21,7 @@ def GENURL(sam,chra,pstart,bop,pstop=False):
                 samtoolsRT = sp.run('samtools view -h -b -o '+outbam+' '+sam_bam+' '+samtoolsRange,shell=True,stderr=sp.PIPE).stderr.decode('utf-8')
                 if 'unknown reference name' in samtoolsRT:
                         sp.run('samtools view -h -b -o '+outbam+' '+sam_bam+' '+samtoolsRange[3:],shell=True)
+                MANIPHEAD(outbam) #manipulate bam header
                 if os.path.isfile(outbam):
                         sp.run('samtools index '+outbam,shell=True)
                 else:
@@ -29,6 +30,14 @@ def GENURL(sam,chra,pstart,bop,pstop=False):
                 relBamPath = re.search('tp/(.*)',outbam).group(1)
                 URLL.append(url+'&position='+samtoolsRange+'&hlregion='+highLightRange+'&bamfile='+sam+','+relBamPath)
         return URLL
+
+###manipulate bam header to remove sample info
+def MANIPHEAD(bam):
+        sp.run('samtools view -H '+bam+ ' -o '+bam+'.header',shell=True)
+        sp.run('sed "/^@PG/d; /^@RG/d" '+bam+'.header >'+bam+'.header.corrected',shell=True)
+        sp.run('samtools reheader -P '+bam+'.header.corrected '+bam+' >'+bam+'.header.corrected.bam',shell=True)
+        sp.run('mv '+bam+'.header.corrected.bam '+bam,shell=True)
+        sp.run('rm -f '+bam+'.header*',shell=True)
 
 #get random bam file name
 #make sure bam file name is unique
