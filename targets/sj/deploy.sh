@@ -198,6 +198,7 @@ else
 	mv server/genome $APP/
 	mv server/dataset $APP/
 	mv server/utils $APP/
+	mv server/features.json $APP/
 	mv server/src/serverconfig.js $APP/src
 	mv server/shared $APP/
 	mv public/bin $APP/public/bin

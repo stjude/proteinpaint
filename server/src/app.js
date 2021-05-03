@@ -351,7 +351,7 @@ async function handle_examples(req, res) {
 	try {
 		if (!exports.features.examples) throw 'This feature is not enabled on this server.'
 		// more flexibility by reading a file pointed by exports.features.examples
-		const txt = await utils.read_file('./features.json')
+		const txt = await utils.read_file(serverconfig.examplejson)
 		const json = JSON.parse(txt)
 		res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
 	} catch (e) {

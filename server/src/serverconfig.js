@@ -63,7 +63,7 @@ if (!serverconfig.binpath) {
 				}
 			} else {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
-				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src')
+				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
 				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
 				else throw 'unable to determine the serverconfig.binpath'
 			}
@@ -139,6 +139,12 @@ if (!serverconfig.features) {
 	// examples of end-user-accessible features are:
 	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
 	serverconfig.features = {}
+}
+
+if (serverconfig.features.examples) {
+	if (!serverconfig.examplejson) {
+		serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
+	}
 }
 
 //Object.freeze(serverconfig)
