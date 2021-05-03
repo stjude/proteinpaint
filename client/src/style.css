@@ -792,8 +792,8 @@ hr {
     border-radius: 5px;
     padding: 10px 5px 10px 5px;
     display: grid;
-    grid-template-columns: 1fr 5fr;
-    grid-template-areas: 'image header' 'image buttons';
+    grid-template-columns: 2fr 9fr 40px;
+    grid-template-areas: 'image header tag' 'image buttons .';
     gap: 5px;
     align-items: center;
     justify-items: left;
@@ -866,7 +866,16 @@ hr {
     color: #403f3f;
 }
 
-.track-btns>button {
+.track-tag {
+    grid-area: tag;
+    width: 20px;
+    font-size: 12px;
+    font-weight: 300;
+    color: #8ab1d4;
+    margin-top: -15px;
+}
+
+.track-btns>button, .landing-page-a {
     grid-area: buttons;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
@@ -879,8 +888,8 @@ hr {
     justify-content: center;
     border-radius: 8px;
     border-style: none;
-    width: 40px;
     height: 30px;
+    font-style: normal;
 }
 
 .gbrowser-btn,

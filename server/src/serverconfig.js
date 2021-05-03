@@ -5,10 +5,11 @@
 
 const fs = require('fs')
 const path = require('path')
+const execSync = require('child_process').execSync
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || '..') + '/serverconfig.json'
+const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
 
 /*******************
  GET SERVERCONFIG
@@ -42,28 +43,57 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const specfile = process.argv.find(n => n.includes('.spec.js'))
-	if (specfile) {
-		serverconfig.binpath = path.dirname(__dirname)
+	const pkfile = process.argv.find(n => n.includes('/targets'))
+	if (pkfile) {
+		serverconfig.binpath = pkfile.split('/targets')[0] + '/server'
 	} else {
-		const jsfile = process.argv.find(
-			n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
-		)
-		try {
-			const realpath = fs.realpathSync(jsfile)
-			serverconfig.binpath = path.dirname(realpath)
-		} catch (e) {
-			throw e
+		const specfile = process.argv.find(n => n.includes('.spec.js'))
+		if (specfile) {
+			serverconfig.binpath = path.dirname(__dirname)
+		} else {
+			const jsfile = process.argv.find(
+				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+			)
+			if (jsfile) {
+				try {
+					const realpath = fs.realpathSync(jsfile)
+					serverconfig.binpath = path.dirname(realpath)
+				} catch (e) {
+					throw e
+				}
+			} else {
+				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
+				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src')
+				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else throw 'unable to determine the serverconfig.binpath'
+			}
 		}
 	}
 }
 
 if (serverconfig.debugmode) {
+	// only apply optional routeSetters in debugmode
 	const routeSetters = []
+
+	if (serverconfig.routeSetters) {
+		for (const f of serverconfig.routeSetters) {
+			if (fs.existsSync(f)) routeSetters.push(f)
+			else {
+				const absf = path.join(serverconfig.binpath, f)
+				if (absf.existsSync(fp)) routeSetters.push(absf)
+			}
+		}
+	}
+
+	// also add testing routes if found
 	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
 	for (const f of files) {
 		if (fs.existsSync(f)) routeSetters.push(f)
 	}
+
+	// may replace the original routeSetters value,
+	// since the serverconfig.binpath prefix may
+	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
 }
 
@@ -72,7 +102,7 @@ if (serverconfig.allow_env_overrides) {
 		serverconfig.URL = process.env.URL
 	}
 
-	if (process.env.PP_BASEPATH) {
+	if ('PP_BASEPATH' in process.env) {
 		serverconfig.basepath = process.env.PP_BASEPATH
 	}
 
@@ -104,6 +134,13 @@ if (serverconfig.allow_env_overrides) {
 	}
 }
 
+if (!serverconfig.features) {
+	// default to having an empty object value for
+	// examples of end-user-accessible features are:
+	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
+	serverconfig.features = {}
+}
+
 //Object.freeze(serverconfig)
 module.exports = serverconfig
 
@@ -114,7 +151,6 @@ module.exports = serverconfig
 function getGDCconfig() {
 	return {
 		allow_env_overrides: true,
-		basepath: process.env.PP_MODE && process.env.PP_MODE.startsWith('container') ? '/auth/api/custom/proteinpaint' : '',
 		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
 		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
 		genomes: [

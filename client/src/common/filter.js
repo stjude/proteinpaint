@@ -1213,11 +1213,12 @@ function normalizeFilter(filter) {
 
 	.filter{} the raw filter root or a subnested filter
 */
-function normalizeProps(filter) {
+export function normalizeProps(filter, callback = null) {
 	delete filter.$id
+	if (typeof callback == 'function') callback(filter)
 	if (filter.type == 'tvslst') {
 		for (const item of filter.lst) {
-			normalizeProps(item)
+			normalizeProps(item, callback)
 		}
 	}
 	return filter

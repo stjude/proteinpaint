@@ -2732,6 +2732,7 @@ function mayaddtab_disco(tabs, p) {
 					callbacks: {
 						geneLabelClick: {
 							type: 'genomepaint',
+							hostURL: p.block.hostURL,
 							genome: p.block.genome.name,
 							dslabel: p.tk.mds.label,
 							sample: p.sample.samplename

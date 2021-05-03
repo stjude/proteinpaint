@@ -129,13 +129,14 @@ function setRenderers(self) {
 			} else {
 				// clickable button
 				button
-					.attr('class', 'sja_filter_tag_btn sja_tree_click_term')
+					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
 					.style('display', 'block')
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
 					.style('background-color', '#cfe2f3')
 					.style('margin', '1px 0px')
+					.style('cursor', 'default')
 					.on('click', () => {
 						self.opts.click_term(term)
 						self.clear()

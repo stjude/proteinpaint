@@ -22,7 +22,9 @@ git clone git@github.com:NCI-GDC/proteinpaint.git
 
 ### Installation
 
-If working on the server code: Install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut) as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+If working on the server code: Install the 
+[system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut)
+as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
 
 ```bash
 cd proteinpaint
@@ -51,12 +53,12 @@ npm run emptyws # remove node_modules and lock files in workspaces
 npm install # installs workspaces
 npm run linkws # create node_modules symlinks in workspaces 
 
-# develop
+# develop both server and client code
 npm run dev # rebundles backend and frontend code
 npm start # runs the proteinpaint server, requires a serverconfig.json at the project root
 npm test # tests both frontend and backend code
 
-# install 
+# develop client code only
 ```
 #### in client/
 ```bash

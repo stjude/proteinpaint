@@ -1,22 +1,20 @@
 {
-  "version": "1.8.3",
-  "name": "@stjude/proteinpaint-full",
+  "version": "1.9.1",
+  "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "dist/app.js",
-  "module": "dist/app.js",
-  "bin": "bin.js",
+  "main": "server/main.js",
+  "bin": "server/bin.js",
   "private": true,
   "workspaces": [
     "client",
-    "server",
-    "targets/gdc"
+    "server"
   ],
   "scripts": {
     "reset": "npm run emptyws && npm install && npm run linkws",
     "emptyws": "rm -rf node_modules && rm -rf client/node_modules && rm -rf server/node_modules && rm -f package-lock.json && rm -f yarn.lock && rm -f */package-lock.json",
     "linkws": "mkdir client/node_modules && ln -s ../../node_modules/.bin ./client/node_modules/ && ln -s ../node_modules ./server",
     "dev": "rm -rf public/bin;webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
-    "start": "nodemon server/bin.js --watch ./server/server*.js* --watch server/genome --watch server/dataset",
+    "start": "nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
     "ppr": "cd targets/sj && ./deploy.sh ppr && cd ../..",
     "prp1": "cd targets/sj && ./deploy.sh prp1 && cd ../..",

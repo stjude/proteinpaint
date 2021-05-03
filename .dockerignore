@@ -1,10 +1,14 @@
+.git
+*.tgz
+!stjude-*.tgz
 node_modules
 package-lock.json
-*.tgz
 scripts
 tmpbuild
 tmppack
 p4
 
 # Exclude Dockerfile from context so changes don't bust the layer cache
-build/Dockerfile
+*/Dockerfile
+*/*/Dockerfile
+*/*/*/Dockerfile

@@ -5,6 +5,10 @@ import { AppProps } from './AppProps'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
+// for local testing, a hardcopy of the serveronfig.json
+// file is required at the project, for things like
+// server port. This serverconfig file will need to be generated
+// for tests in a container
 import serverconfig from '../../../../serverconfig.json'
 
 /*************************
@@ -38,7 +42,7 @@ tape('lolliplot using URL', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 274
+	const numCircles = 283
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,
@@ -98,7 +102,7 @@ tape('lolliplot using props', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 274
+	const numCircles = 283
 	test.equal(
 		holder.selectAll('circle').size(),
 		numCircles,

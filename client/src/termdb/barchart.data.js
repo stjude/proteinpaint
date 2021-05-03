@@ -317,7 +317,8 @@ export function getCategoryData(q, data) {
 				'&idVal.id': {
 					samplecount: '+1',
 					':__key': '&idVal.id',
-					':__label': '&idVal.id'
+					':__label': '&idVal.id',
+					':__value': '&idVal.id'
 				}
 			}
 		}),

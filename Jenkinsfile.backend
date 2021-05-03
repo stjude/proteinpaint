@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-library identifier: "jenkins-lib@feat/GDCDEVOPS-737-calculate-tags-branch"
+library identifier: "jenkins-lib@master"
 dockerPipeline {
     // This repo doesn't use Gitflow, so don't try to parse tag names,
     // and definitely don't create tags automatically.

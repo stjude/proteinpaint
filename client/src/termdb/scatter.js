@@ -28,6 +28,8 @@ class TdbScatter {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('scatter'),
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term0: config.term0,

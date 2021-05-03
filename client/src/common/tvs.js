@@ -221,7 +221,7 @@ function setRenderers(self) {
 				.append('input')
 				.attr('class', 'value_checkbox')
 				.attr('type', 'checkbox')
-				.attr('value', d.key)
+				.attr('value', 'key' in d ? d.key : d.value)
 				.style('position', 'relative')
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
@@ -229,7 +229,7 @@ function setRenderers(self) {
 					if (tvs.term.type == 'categorical') {
 						return tvs.values.find(a => a.key === d.key)
 					} else if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
-						return tvs.ranges.find(a => String(a.value) == d.value.toString())
+						return tvs.ranges.find(a => String(a.value) === d.value.toString())
 					} else if (tvs.term.type == 'condition') {
 						return tvs.values.find(a => String(a.key) === String(d.key))
 					}
