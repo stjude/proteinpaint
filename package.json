@@ -19,7 +19,8 @@
     "ppr": "cd targets/sj && ./deploy.sh ppr && cd ../..",
     "prp1": "cd targets/sj && ./deploy.sh prp1 && cd ../..",
     "testws": "npm test --workspaces",
-    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
+    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
+    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",
   "license": "UNLICENSED",

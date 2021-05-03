@@ -9,7 +9,8 @@
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "test": "tape -r babel-register src/test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
-    "response": "nodemon modules/test/test.server.js --watch src"
+    "response": "nodemon modules/test/test.server.js --watch src",
+    "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",
   "license": "UNLICENSED",
