@@ -979,6 +979,10 @@ async function parseembedthenurl(arg, app) {
 	if (arg.maftimeline) {
 		launchmaftimeline(arg, app)
 	}
+
+	if(arg.gdcbamslice) {
+		launchgdcbamslice(arg, app)
+	}
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1521,6 +1525,13 @@ function launchJunctionbyMatrix(arg, app) {
 			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
 	}
+}
+
+function launchgdcbamslice(arg, app) {
+	if (arg.gdcbamslice.uionly) {
+		// TODO: Add path to bam tak and craete ui
+			return
+		}
 }
 
 /*
