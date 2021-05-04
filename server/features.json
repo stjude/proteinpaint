@@ -151,7 +151,7 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "position": "chr8:126890266-13279507",
+                    "position": "chr9:36821276-37053132",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "aicheck",
@@ -159,7 +159,7 @@
                         "name": "Demo sample tumor allelic imbalance"
                     }]
                 },
-                "url": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
+                "url": "?block=on&genome=hg19&position=chr9:36821276-37053132&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz",
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
             },
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
