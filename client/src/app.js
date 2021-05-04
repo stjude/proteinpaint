@@ -1632,7 +1632,9 @@ function launchJunctionbyMatrix(arg, app) {
 
 function launchgdcbamslice(arg, app) {
 	if (arg.gdcbamslice.uionly) {
-		// TODO: Add path to bam tak and craete ui
+			import('./block.tk.bam').then(p => {
+				p.bamsliceui(app.genomes, app.holder0)
+			})
 			return
 		}
 }
