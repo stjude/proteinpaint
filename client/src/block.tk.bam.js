@@ -1052,8 +1052,9 @@ function mayshow_blatbutton(read, div, tk, block) {
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
+				console.log('data:', data)
 				wait.remove()
-				show_blatresult2(data.hits, blatdiv, tk, block)
+				show_blatresult(data.hits, blatdiv, tk, block)
 			} catch (e) {
 				wait.text(e.message || e)
 				if (e.stack) console.log(e.stack)
@@ -1247,6 +1248,39 @@ async function enter_partstack(group, tk, block, y, data) {
 	setTkHeight(tk, data)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
+}
+
+function show_blatresult(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('QScore')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QStop')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RStop')
+	tr.append('td').text('RAlignLen')
+
+	for (const h of hits) {
+		let tr = table
+			.append('tr')
+			.style('opacity', 0.5)
+			.style('font-size', '.8em')
+		tr.append('td').text(h.query_match)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_stoppos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_stoppos)
+		tr.append('td').text(h.ref_alignlen)
+	}
 }
 
 function renderGroup(group, tk, block) {

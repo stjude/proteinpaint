@@ -30,7 +30,7 @@ exports.request_closure = genomes => {
 			if (!genome.blat) throw 'blat not enabled'
 			if (!req.query.seq) throw '.seq missing'
 			//console.log('req.query:', req.query)
-			res.send(await do_blat2(genome, req.query.seq, req.query.soft_starts, req.query.soft_stops))
+			res.send(await do_blat(genome, req.query.seq, req.query.soft_starts, req.query.soft_stops))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -63,9 +63,47 @@ function server_stat(name, g) {
 	})
 }
 
-async function do_blat2(genome, seq, soft_starts, soft_stops) {
+async function do_blat(genome, seq, soft_starts, soft_stops) {
 	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
-	console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
+	//console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
+	const outfile = await run_blat2(genome, infile)
+	console.log('outfile:', outfile)
+	const outputstr = (await utils.read_file(outfile)).trim()
+	fs.unlink(outfile, () => {})
+	fs.unlink(infile, () => {})
+	if (outputstr == '') return { nohit: 1 }
+	const lines = outputstr.split('\n')
+	const hits = []
+	for (const line of lines) {
+		const l = line.split(' ').filter(function(el) {
+			return el != ''
+		})
+		const h = {}
+		const line2 = l[0].split('\t')
+		h.query_match = line2[0]
+		h.query_startpos = (parseInt(line2[11]) + 1).toString()
+		h.query_stoppos = line2[12]
+		h.query_strand = line2[8]
+		h.query_totallen = line2[10]
+		h.query_alignlen = Math.abs(parseInt(line2[11]) - parseInt(line2[12])).toString()
+		h.ref_chr = line2[13]
+		h.ref_startpos = (parseInt(line2[15]) + 1).toString()
+		h.ref_stoppos = line2[16]
+		h.ref_alignlen = Math.abs(line2[16] - line2[15]).toString()
+		h.ref_totallen = line2[14] // This is actually the chromosome length
+		hits.push(h)
+	}
+	// Sorting alignments in descending order of score
+	hits.sort((a, b) => {
+		return b.query_match - a.query_match
+	})
+	return { hits }
+}
+
+async function do_blat2(genome, seq, soft_starts, soft_stops) {
+	// for parsing maf format
+	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
+	//console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
 	const outfile = await run_blat2(genome, infile)
 	const outputstr = (await utils.read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
@@ -218,7 +256,7 @@ function run_blat2(genome, infile) {
 			'-nohead',
 			'-minScore=20',
 			'-minIdentity=0',
-			'-out=maf'
+			'-out=psl'
 		])
 		//console.log("ps:",ps)
 		const out2 = []
