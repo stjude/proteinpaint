@@ -266,7 +266,9 @@ function makeheader(app, obj, jwt) {
 		}
 	}
 	if (obj.headermessage) {
-		headinfo.append('div').html(obj.headermessage)
+		headinfo.append('div')
+			.style('padding-left', '15px')
+			.html(obj.headermessage)
 	}
 
 	// 1
