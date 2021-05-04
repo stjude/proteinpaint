@@ -60,6 +60,108 @@ getReadInfo
 const labyspace = 5
 const stackpagesize = 60
 
+export function bamsliceui(genomes, holder){
+
+	let default_genome = 'hg38', gdc_token, case_id, position, variant
+
+	const inputdiv = holder.append('div')
+		.style('margin', '40px 20px 20px 20px')
+		.style('font-size','.9em')
+		.style('display','grid')
+		.style('grid-template-columns','150px auto')
+		.style('grid-template-rows','repeat(4, 30px)')
+		.style('gap','5px')
+		.style('align-items','center')
+		.style('justify-items','left')
+
+	const saydiv = holder.append('div').style('margin', '10px 20px')
+	const visualdiv = holder.append('div').style('margin', '20px')
+
+	function cmt(t, red) {
+		saydiv.style('color', red ? 'red' : 'black').html(t)
+	}
+
+	// token file upload
+	inputdiv.append('div')
+		.style('padding','3px 10px')
+		.text('GDC Token file')
+
+	const upload_div = inputdiv.append('div')
+	
+	const fileui = () => {
+		upload_div.selectAll('*').remove()
+
+		upload_div.append('input')
+			.attr('type', 'file')
+			.on('change', () => {
+				const file = d3event.target.files[0]
+				if (!file) {
+					fileui()
+					return
+				}
+				if (!file.size) {
+					cmt('Invalid file ' + file.name)
+					fileui()
+					return
+				}
+				const reader = new FileReader()
+				reader.onload = event => {
+					const err = validateToken(event.target.result.trim().split(/\r?\n/))
+					if (err) {
+						cmt(err, 1)
+						fileui()
+						return
+					}
+					// success
+					inputdiv.remove()
+					saydiv.remove()
+				}
+				reader.onerror = function() {
+					cmt('Error reading file ' + file.name, 1)
+					fileui()
+					return
+				}
+				reader.readAsText(file, 'utf8')
+			})
+			.node()
+			.focus()
+	}
+
+	fileui()
+
+	const input_fields = ['Case ID', 'Position', 'Variant (optional)']
+	for(const input of input_fields){
+		makeFormInput(inputdiv, input)
+	}
+
+	//submit button
+	const submit_btn_div = holder.append('div')
+	
+	submit_btn_div.append('button')
+		.style('font-size','1.1em')
+		.style('margin','20px')	
+		.style('margin-left', '130px')
+		.text('submit')
+		.on('click', ()=>{
+			validateInputs({gdc_token, case_id, position, variant})
+		})
+}
+
+function makeFormInput(holder, name){
+	holder.append('div')
+		.style('padding','3px 10px')
+		.text(name)
+
+	holder.append('input')
+		.attr('size', 20)
+		.style('padding','3px 10px')
+}
+
+function validateInputs(args){
+	// TODO: validate inputs
+	console.log(args)
+}
+
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
 	block.block_setheight()
