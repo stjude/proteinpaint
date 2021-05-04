@@ -233,11 +233,12 @@ function makeheader(app, obj, jwt) {
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', padw_sm)
+		.style('padding-left', '25px')
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
 	{
 		// a row for server stats
-		const row = headinfo.append('div').style('padding-left', '15px')
+		const row = headinfo.append('div')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -266,9 +267,7 @@ function makeheader(app, obj, jwt) {
 		}
 	}
 	if (obj.headermessage) {
-		headinfo.append('div')
-			.style('padding-left', '15px')
-			.html(obj.headermessage)
+		headinfo.append('div').html(obj.headermessage)
 	}
 
 	// 1
