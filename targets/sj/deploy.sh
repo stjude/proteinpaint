@@ -39,18 +39,16 @@ fi
 # PROCESS COMMIT INFO
 ########################
 
-if [[ "$ENV" != "scp-prod" ]]; then 
-	# convert $REV to standard numeric notation
-	if [[ $REV == "HEAD" ]]; then
-		if [[ -d ../../.git ]]; then
-			REV=$(git rev-parse --short HEAD)
-		fi
+# convert $REV to standard numeric notation
+if [[ $REV == "HEAD" ]]; then
+	if [[ -d ../../.git ]]; then
+		REV=$(git rev-parse --short HEAD)
 	fi
+fi
 
-	if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
-		echo "Unable to convert the HEAD revision into a Git commit hash."
-		exit 1
-	fi
+if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
+	echo "Unable to convert the HEAD revision into a Git commit hash."
+	exit 1
 fi
 
 #####################
@@ -200,9 +198,9 @@ else
 	mv server/genome $APP/
 	mv server/dataset $APP/
 	mv server/utils $APP/
+	mv server/features.json $APP/
 	mv server/src/serverconfig.js $APP/src
-	rm server/shared # remove symlink
-	mv client/shared server/
+	mv server/shared $APP/
 	mv public/bin $APP/public/bin
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 

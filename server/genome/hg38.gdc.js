@@ -64,7 +64,7 @@ module.exports = {
 			},
 			file: 'anno/gencode.v22.hg38.gz',
 			type: 'bedj',
-			name: 'GENCODE v34',
+			name: 'GENCODE v22',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4

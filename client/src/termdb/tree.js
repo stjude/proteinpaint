@@ -363,7 +363,7 @@ function setRenderers(self) {
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
-			.style('opacity', termIsDisabled ? 0.4 : 1)
+			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
 
 		if (graphable(term)) {
@@ -377,12 +377,13 @@ function setRenderers(self) {
 				} else {
 					labeldiv
 						// need better css class
-						.attr('class', 'sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
 						.style('color', 'black')
 						.style('padding', '5px 8px')
 						.style('border-radius', '6px')
 						.style('background-color', '#cfe2f3')
 						.style('margin', '1px 0px')
+						.style('cursor', 'default')
 						.on('click', () => {
 							self.opts.click_term(term)
 						})

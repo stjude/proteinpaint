@@ -1,15 +1,16 @@
 {
-  "name": "@stjude/proteinpaint",
-  "version": "1.8.3",
+  "name": "@stjude/proteinpaint-server",
+  "version": "1.9.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "dist/app.js",
-  "module": "dist/app.js",
+  "main": "server.js",
   "bin": "bin.js",
   "scripts": {
     "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "test": "tape -r babel-register src/test/*.spec.js",
-    "response": "nodemon modules/test/test.server.js --watch src"
+    "build": "webpack --config=./webpack.config.js",
+    "response": "nodemon modules/test/test.server.js --watch src",
+    "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -61,14 +62,14 @@
   },
   "files": [
     "bin.js",
-    "server.js",
-    "genome",
     "dataset/clinvar.*.js",
-    "dataset/gdc.hg38.js",
-    "utils/*.R",
-    "utils/install.pp.js",
-    "src/common.js",
-    "server/src/serverconfig.js"
+    "dataset/gdc*.js",
+    "genome",
+    "src/serverconfig.js",
+    "features.json",
+    "server.js*",
+    "shared/common.js",
+    "utils"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

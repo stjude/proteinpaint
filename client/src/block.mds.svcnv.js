@@ -2331,7 +2331,7 @@ export async function focus_singlesample(p) {
 
 	// add sv-cnv-vcf track in single-sample mode
 	const t2 = {
-		bplengthUpperLimit: tk.bplengthUpperLimit,
+		bplengthUpperLimit: 0, // sample view to show all cnvs by default, not just focal
 		valueCutoff: tk.valueCutoff,
 		lohLengthUpperLimit: tk.lohLengthUpperLimit,
 		segmeanValueCutoff: tk.segmeanValueCutoff,
