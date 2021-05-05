@@ -555,7 +555,21 @@
             "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
-                "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr12:25362480-25363264",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "type": "bampile",
+                        "file": "proteinpaint_demo/hg19/bampile/tk.gz",
+                        "name": "Test Bampile"
+                    }]
+                },
+                "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz",
                 "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
             },
             "searchterms": []
