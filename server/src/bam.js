@@ -167,7 +167,7 @@ const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
 // discordant reads: soft green for background only, strong green for printing nt
 const discord_wrong_insertsize_hq = '#3B7A57'
-const discord_wrong_insertsize_lq = '#84DE02'
+const discord_wrong_insertsize_lq = '#E5FFCC'
 const qual2discord_wrong_insertsize = interpolateRgb(discord_wrong_insertsize_lq, discord_wrong_insertsize_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
 const mismatchbg_hq = '#d13232'
