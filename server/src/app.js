@@ -2668,15 +2668,16 @@ async function handle_mdssvcnv(req, res) {
 
 	let filter_sampleset
 	if (req.query.sampleset) {
-		filter_sampleset = {
-			set: new Set(),
-			sample2group: new Map()
-		}
+		const set = new Set()
+		const sample2group = new Map()
 		for (const i of req.query.sampleset) {
 			for (const s of i.samples) {
-				filter_sampleset.set.add(s)
-				filter_sampleset.sample2group.set(s, i.name)
+				set.add(s)
+				sample2group.set(s, i.name)
 			}
+		}
+		if (set.size) {
+			filter_sampleset = { set, sample2group }
 		}
 	}
 
