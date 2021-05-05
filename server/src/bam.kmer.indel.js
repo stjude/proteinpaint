@@ -424,7 +424,6 @@ export async function match_complexvariant(q, templates_info) {
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
 
-	console.log('serverconfig.indel_kmer_scores:', serverconfig)
 	for (const item of ref_indices) {
 		if (item[1] == 'refalt') {
 			if (type2group[bamcommon.type_supportref]) {
