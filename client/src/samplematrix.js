@@ -1786,7 +1786,7 @@ sort samples by f.issampleattribute
 				} else {
 					k = { color: feature.cnv.colorloss }
 				}
-				k.opacity = Math.abs(i.value / Math.abs(maxabslogratio))
+				k.opacity = Math.abs(i.value / maxabslogratio)
 				lst.push(k)
 			}
 		}
