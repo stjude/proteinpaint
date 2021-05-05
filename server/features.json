@@ -221,12 +221,12 @@
                     "block": true,
                     "nobox": 1,
                     "noheader": 1,
-                    "genome": "hg19",
+                    "genome": "hg38",
                     "position": "chr8:127340055-128243343",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "mdsexpressionrank",
-                        "file": "proteinpaint_demo/hg19/exprank/TCGA.fpkm.gz",
+                        "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
                         "name": "TCGA FPKM demo rank",
                         "sample": "TCGA-GS-A9TQ"
                     }]
@@ -541,7 +541,7 @@
                         "name": "Test WES KIT exon mutation"
                     }]
                 },
-                "url": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+                "url": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "searchterms": ["BLAT"]
