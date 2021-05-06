@@ -388,11 +388,13 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.style('width', '93vw')
 
+		let app_holder_full_height
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height
 		}
 
 		if (app_btn_active) load_app_div()
@@ -407,35 +409,25 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
+				event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
 				btn_toggle(app_btn, app_btn_active)
+				const duration = 1000
+				app_holder
+					.style('overflow', 'hidden')
+					.style('display', 'inline-block')
+					.transition()
+					.duration(duration)
+					.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
+					.style('padding', app_btn_active ? padw_sm+'px' : '0px')
 
-				app_holder
-					.transition()
-					.delay(300)
-					.duration(500)
-					.style('opacity', app_btn_active ? '1' : '0')
-					.style('display', app_btn_active ? 'inline-block' : 'none')
-
-				app_holder
-					.selectAll('ul')
-					.transition()
-					.delay(200)
-					.duration(500)
-					.each(function(d) {
-						const ul = d3select(this)
-						const height = ul.node().offsetHeight
-						if (height) ul.datum(height)
-						ul.style('height', app_btn_active ? d + 'px' : '0px')
-					})
-				app_holder
-					.selectAll('li')
-					.transition()
-					.delay(100)
-					.duration(500)
-					.style('display', app_btn_active ? 'grid' : 'none')
+					if (app_btn_active) {
+						setTimeout(()=>{
+							app_holder_full_height = app_holder.node().getBoundingClientRect().height
+						}, duration + 5)
+					}
 			})
 			.on('mouseover', () => {
 				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
