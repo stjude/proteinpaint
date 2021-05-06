@@ -1358,13 +1358,12 @@ export function newSandboxDiv() {
 		.style('margin-top', '0px')
 		.style('padding-right', '8px')
 		.style('display', 'inline-block')
-		.style('display', 'inline-block')
 		.style('box-shadow', '2px 2px 10px #f2f2f2')
 		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return {header, body}
+	return { header, body }
 }
 
 export function to_svg(svg, name, opts = {}) {

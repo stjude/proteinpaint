@@ -414,7 +414,7 @@ function makeheader(app, obj, jwt) {
 
 				app_holder
 					.transition()
-					.delay(500)
+					.delay(300)
 					.duration(500)
 					.style('opacity', app_btn_active ? '1' : '0')
 					.style('display', app_btn_active ? 'inline-block' : 'none')
@@ -422,13 +422,18 @@ function makeheader(app, obj, jwt) {
 				app_holder
 					.selectAll('ul')
 					.transition()
-					.delay(100)
+					.delay(200)
 					.duration(500)
-					.style('height', app_btn_active ? '' : '0px')
+					.each(function(d) {
+						const ul = d3select(this)
+						const height = ul.node().offsetHeight
+						if (height) ul.datum(height)
+						ul.style('height', app_btn_active ? d + 'px' : '0px')
+					})
 				app_holder
 					.selectAll('li')
 					.transition()
-					.delay(200)
+					.delay(100)
 					.duration(500)
 					.style('display', app_btn_active ? 'grid' : 'none')
 			})
