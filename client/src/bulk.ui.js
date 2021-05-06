@@ -31,7 +31,8 @@ bulkembed()
 
 export function bulkui(x, y, genomes, hostURL, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
@@ -184,11 +185,17 @@ export function bulkui(x, y, genomes, hostURL, holder) {
 			saydiv.text('No mutations can be loaded')
 			return
 		}
-		client.disappear(pane.pane)
-		const pane2 = client.newpane({ x: x + 100, y: y + 100, toshrink: true })
-		pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+
+		if (pane) {
+			// "pane" is undefined in landing page code
+			client.disappear(pane.pane)
+		}
+
+		inputdiv.selectAll('*').remove()
+		//pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+		// TODO rewrite header in sandbox
 		import('./tp.ui').then(tpui => {
-			tpui.default(cohort, pane2.body, hostURL)
+			tpui.default(cohort, inputdiv, hostURL)
 		})
 		return cohort
 	}
