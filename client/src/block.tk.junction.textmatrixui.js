@@ -9,7 +9,8 @@ data go into tk.fixeddata
 
 export default function(genomes, hostURL, jwt, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('Splice junctions by sample matrix visualization')
@@ -83,7 +84,7 @@ export default function(genomes, hostURL, jwt, holder) {
 					new b.Block({
 						hostURL: hostURL,
 						jwt: jwt,
-						holder: pane.body.append('div'),
+						holder: holder !== undefined ? holder : pane.body.append('div'),
 						genome: genomeobj,
 						chr: arange.chr,
 						start: arange.start,

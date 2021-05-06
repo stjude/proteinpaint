@@ -116,12 +116,13 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 		})
 }
 
-export function mavbui(genomes, hostURL, jwt, holder) {
+export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 	/*
 	create GUI to collect user input
 	*/
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('Differential gene expression viewer')
@@ -162,7 +163,9 @@ export function mavbui(genomes, hostURL, jwt, holder) {
 							genome: genomes[usegenome],
 							filename: file.name,
 							hostURL: hostURL,
-							jwt: jwt
+							jwt: jwt,
+							holder,
+							sandbox_header
 						},
 						event.target.result.trim().split('\n')
 					)
@@ -171,7 +174,7 @@ export function mavbui(genomes, hostURL, jwt, holder) {
 						fileui()
 						return
 					}
-					pane.pane.remove()
+					if (pane) pane.pane.remove()
 				}
 				reader.onerror = function() {
 					cmt('Error reading file ' + file.name, 1)
@@ -287,10 +290,13 @@ function parseRaw(mavb, lines) {
 		return 'No valid data'
 	}
 	// good data ready
-	if (!mavb.holder) {
+	if (mavb.holder == undefined) {
 		const pane = client.newpane({ x: 100, y: 100 })
 		pane.header.text(mavb.filename)
 		mavb.holder = pane.body
+	} else {
+		mavb.holder.selectAll('*').remove()
+		if (mavb.sandbox_header !== undefined) mavb.sandbox_header.text(mavb.filename)
 	}
 	mavb.data = data
 

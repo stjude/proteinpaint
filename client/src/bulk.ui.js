@@ -186,17 +186,22 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 			return
 		}
 
+		let visual_holder
 		if (pane) {
-			// "pane" is undefined in landing page code
 			client.disappear(pane.pane)
-			pane.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+			const pane2 = client.newpane({ x: 100, y: 100, toshrink: true })
+			pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+			visual_holder = pane2.body
 		}
-		// update sandbox panel header
-		if (header) header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+		// update sandbox panel header for landing page
+		if (holder !== undefined) {
+			header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+			visual_holder = visualdiv
+		}
 
 		inputdiv.selectAll('*').remove()
 		import('./tp.ui').then(tpui => {
-			tpui.default(cohort, visualdiv, hostURL)
+			tpui.default(cohort, visual_holder, hostURL)
 		})
 		return cohort
 	}

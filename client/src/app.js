@@ -1494,7 +1494,7 @@ async function launchmdsjsonform(arg, app) {
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {
 		import('./mavb').then(p => {
-			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0)
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0, app.sandbox_header)
 		})
 		return
 	}
@@ -1532,7 +1532,7 @@ function launch2dmaf(arg, app) {
 function launchmaftimeline(arg, app) {
 	if (arg.maftimeline.uionly) {
 		import('./maftimeline').then(p => {
-			p.default(app.genomes, app.holder0)
+			p.default(app.genomes, app.holder0, app.sandbox_header)
 		})
 	}
 }
