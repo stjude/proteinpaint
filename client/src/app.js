@@ -214,8 +214,9 @@ function makeheader(app, obj, jwt) {
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 	const apps_drawer_row = app.holder.append('div')
-	app.holder.apps_sandbox_div = app.holder.append('div')
-		.attr('id','pp_sandbox')
+	app.holder.apps_sandbox_div = app.holder
+		.append('div')
+		.attr('id', 'pp_sandbox')
 		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')
@@ -399,9 +400,8 @@ function makeheader(app, obj, jwt) {
 		app_btn = headbox
 			.append('span')
 			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
@@ -414,14 +414,29 @@ function makeheader(app, obj, jwt) {
 
 				app_holder
 					.transition()
+					.delay(500)
 					.duration(500)
+					.style('opacity', app_btn_active ? '1' : '0')
 					.style('display', app_btn_active ? 'inline-block' : 'none')
+
+				app_holder
+					.selectAll('ul')
+					.transition()
+					.delay(100)
+					.duration(500)
+					.style('height', app_btn_active ? '' : '0px')
+				app_holder
+					.selectAll('li')
+					.transition()
+					.delay(200)
+					.duration(500)
+					.style('display', app_btn_active ? 'grid' : 'none')
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_btn.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
 	}
 
@@ -429,9 +444,8 @@ function makeheader(app, obj, jwt) {
 		btn
 			.transition()
 			.duration(500)
-			.style('background-color', btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', btn_active ? '#fff' : '#000')
 	}
 
 	headbox
