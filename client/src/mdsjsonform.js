@@ -336,6 +336,9 @@ function validate_input(doms) {
 		for (const [group, lst] of group2lst) {
 			obj.sampleset.push({ name: group, samples: lst })
 		}
+		if (!obj.sampleset.length) {
+			delete obj.sampleset
+		}
 	}
 
 	if (doms.assay_uidiv_inuse) {
@@ -366,8 +369,7 @@ function make_genome(div, genomes) {
 	for (const n in genomes) {
 		select.append('option').text(n)
 	}
-	// return select
-	doms.genome = select.property('value') // this messed up the examples and submit button
+	return select
 }
 //.position
 function make_position(div, doms) {
