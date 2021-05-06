@@ -263,6 +263,7 @@ async function openExample(track) {
 	// template runpp() arg
 	let runpp_arg = {
 		holder: document.getElementById(app_id),
+		sandbox_header: sandbox_div.header,
 		host: window.location.origin
 	}
 

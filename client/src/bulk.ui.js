@@ -29,7 +29,7 @@ bulkembed()
 
 */
 
-export function bulkui(x, y, genomes, hostURL, holder) {
+export function bulkui(x, y, genomes, hostURL, holder, header) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
 	if (holder !== undefined)
 		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
@@ -189,13 +189,14 @@ export function bulkui(x, y, genomes, hostURL, holder) {
 		if (pane) {
 			// "pane" is undefined in landing page code
 			client.disappear(pane.pane)
+			pane.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
 		}
+		// update sandbox panel header
+		if (header) header.html('<span style="opacity:.5">FILE</span> ' + file.name)
 
 		inputdiv.selectAll('*').remove()
-		//pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
-		// TODO rewrite header in sandbox
 		import('./tp.ui').then(tpui => {
-			tpui.default(cohort, inputdiv, hostURL)
+			tpui.default(cohort, visualdiv, hostURL)
 		})
 		return cohort
 	}
