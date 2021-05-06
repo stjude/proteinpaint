@@ -1038,7 +1038,6 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				//console.log("read.soft_start:",read.soft_start,"read.soft_stop:",read.soft_stop)
 				const data = await client.dofetch2(
 					'blat?genome=' +
 						block.genome.name +
@@ -1052,7 +1051,6 @@ function mayshow_blatbutton(read, div, tk, block) {
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
-				console.log('data:', data)
 				wait.remove()
 				show_blatresult(data.hits, blatdiv, tk, block)
 			} catch (e) {
@@ -1267,10 +1265,7 @@ function show_blatresult(hits, div, tk, block) {
 	tr.append('td').text('RAlignLen')
 
 	for (const h of hits) {
-		let tr = table
-			.append('tr')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
+		let tr = table.append('tr').style('font-size', '.8em')
 		tr.append('td').text(h.query_match)
 		tr.append('td').text(h.query_startpos)
 		tr.append('td').text(h.query_stoppos)

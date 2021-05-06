@@ -65,9 +65,7 @@ function server_stat(name, g) {
 
 async function do_blat(genome, seq, soft_starts, soft_stops) {
 	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
-	//console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
 	const outfile = await run_blat2(genome, infile)
-	console.log('outfile:', outfile)
 	const outputstr = (await utils.read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
 	fs.unlink(infile, () => {})
