@@ -204,10 +204,6 @@ module.exports.__wbg_log_da824bc9fb9da0a8 = function(arg0, arg1) {
 	console.log(getObject(arg0), getObject(arg1))
 }
 
-module.exports.__wbg_log_3a64eda22d42a808 = function(arg0, arg1, arg2) {
-	console.log(getObject(arg0), getObject(arg1), getObject(arg2))
-}
-
 module.exports.__wbindgen_throw = function(arg0, arg1) {
 	throw new Error(getStringFromWasm0(arg0, arg1))
 }

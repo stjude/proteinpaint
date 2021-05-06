@@ -1,12 +1,9 @@
-// Syntax for testing wasm implementation: cd .. && wasm-pack build --target nodejs && time node pkg/wasmtest.js
-// Passing vector using webassembly: https://stackoverflow.com/questions/50220966/how-to-use-vectors-of-c-stl-with-webassembly
+// Syntax: rustc indel.rs -o indel
 
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
-use serde::{Serialize, Deserialize};
+use std::env;
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use web_sys::console;
+use std::time::{SystemTime};
 
 
 pub struct read_diff_scores { //    sequence: String, 
@@ -31,13 +28,6 @@ struct read_category {
    diff_score:f64 
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct output_structure {
-    category:Vec<String>,
-    groupID:Vec<usize>,
-    kmer_diff_scores:Vec<f64>	
-}    
-
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let val=item.value.to_owned();        
     let gID=item.groupID.to_owned();
@@ -60,7 +50,6 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
     let mut l:usize = 0;
     let mut r:usize = kmers_dup.len()-1;
     let mut m:usize = 0;
-    //console::log_2(&"r:".into(),&r.to_string().into());
     //let mut n:usize = 0;
     while (l <= r) {
         m = l + ((r-l)/2);
@@ -70,8 +59,6 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 	//else {
          // n=m;
 	//}
-	//console::log_2(&"kmers_dup[m]:".into(),&kmers_dup[m].to_string().into());
-	//console::log_6(&"l:".to_string().into(), &l.to_string().into(),&"m:".to_string().into(), &m.to_string().into(),&"r:".to_string().into(), &r.to_string().into());
 	//println!("l:{},m:{},r:{}",l,m,r);
 	// Check if x is present at mid
 	if (y == &kmers_dup[m]) {
@@ -82,21 +69,17 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 	
 	// If x is greater, ignore left half
 	else if (y > &kmers_dup[m]) {
-	    //console::log_2(&"l:".into(),&l.to_string().into());
 	    l = m + 1;
 	} 
 	// If x is smaller, ignore right half 
 	else {
-	    //console::log_2(&"r:".into(),&r.to_string().into());
 	    if m == 0 as usize {
               break;
             } 			    
 	    r=m-1;
 	}
 	//if r==0 as usize {break;}
-	//console::log_2(&"r:".into(),&r.to_string().into());
     }
-    //console::log_2(&"index:".into(), &index.to_string().into());
     index    
 }
 
@@ -151,12 +134,22 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>,Vec<i64>) {
     (alphabets,numbers)
 }
 
-#[wasm_bindgen]
-pub fn match_complex_variant_rust(sequences: String, start_positions: String, cigar_sequences: String, variant_pos: i64, segbplen: i64, refallele: String, altallele: String, kmer_length: i64, weight_no_indel: f64, weight_indel: f64, threshold_slope: f64) -> JsValue {
-
-    //console::log_1(&"Hello using web-sys".into());
-    //console::log_2(&"segbplen:".into(), &segbplen.to_string().into());
-    //console::log_2(&"sequences:".into(), &sequences.into());
+fn main() {
+    let args: Vec<String> = env::args().collect(); // Collecting arguments from commandline
+    //let arg_seq:String = args[0].parse::<String>().unwrap();
+    //let arg_list: Vec<&str> = arg_seq.split("\t").collect();
+    let sequences: String = args[1].parse::<String>().unwrap(); 
+    let start_positions: String = args[2].parse::<String>().unwrap();
+    let cigar_sequences: String = args[3].parse::<String>().unwrap();
+    let variant_pos: i64 = args[4].parse::<i64>().unwrap();
+    let segbplen: i64 = args[5].parse::<i64>().unwrap();
+    let refallele: String = args[6].parse::<String>().unwrap();
+    let altallele: String = args[7].parse::<String>().unwrap();
+    let kmer_length: i64 = args[8].parse::<i64>().unwrap();
+    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap();
+    let weight_indel: f64 = args[10].parse::<f64>().unwrap();
+    let threshold_slope: f64 = args[11].parse::<f64>().unwrap();
+    
     let ref_nucleotides: Vec<char> = refallele.chars().collect();
     let alt_nucleotides: Vec<char> = altallele.chars().collect();
     //let ref_length: usize = ref_nucleotides.len();
@@ -166,8 +159,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();   
     let mut i:i64 = 0;	
     
-    println!("{:?}", lines);
-    println!("{}", lines[0]);
+    //println!("{:?}", lines);
 
     let left_most_pos = variant_pos - segbplen;
     let ref_length: i64 = refallele.len() as i64;
@@ -177,7 +169,6 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
       indel_length = ref_length;
     }	
 
-    console::log_1(&"Ref kmers:".into());    
     let (ref_kmers_weight, ref_kmers_nodups, mut ref_indel_kmers, ref_kmers_data) = build_kmers_refalt(
     		lines[0].to_string(),
     		kmer_length,
@@ -192,10 +183,9 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     ref_indel_kmers.sort();
     ref_indel_kmers.dedup();
     //for kmer in &ref_indel_kmers {
-    //  console::log_2(&"Indel kmer:".into(), &kmer.into());
+    //  println!(&"Indel kmer:".into(), &kmer.into());
     //}	
 
-    console::log_1(&"Alt kmers:".into());
     let (alt_kmers_weight, alt_kmers_nodups, mut alt_indel_kmers, alt_kmers_data) = build_kmers_refalt(
     		lines[1].to_string(),
     		kmer_length,
@@ -210,7 +200,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     alt_indel_kmers.sort();
     alt_indel_kmers.dedup();    
     //for kmer in &alt_indel_kmers {
-    //  console::log_2(&"Indel kmer:".into(), &kmer.into());
+    //  println!(&"Indel kmer:".into(), &kmer.into());
     //}    
 	
     let mut kmer_diff_scores = Vec::<f64>::new();
@@ -227,7 +217,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     let mut ref_polyclonal_read_status: i64 = 0;
     let mut alt_polyclonal_read_status: i64 = 0;
     let mut alt_polyclonal_status = Vec::<i64>::new();
-    console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
+    println!("{} {}", "Number of reads (from Rust):", (lines.len()-2).to_string());
     for read in lines { // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
 	      let (ref_polyclonal_read_status, alt_polyclonal_read_status) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize, indel_length as usize);
@@ -240,8 +230,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     	      kmer_diff_scores.push(diff_score);
     	      ref_comparisons.push(ref_comparison);
     	      alt_comparisons.push(alt_comparison);
-	      //console::log_2(&"Read:".into(), &read.to_string().into());
-	      //console::log_2(&"Read number:".into(), &(i as usize - 2).to_string().into());	    
+
     	      let item = read_diff_scores{
     	         value:f64::from(diff_score),
     	         groupID:usize::from(i as usize -2), // The -2 has been added since the first two sequences in the file are reference and alternate
@@ -257,13 +246,10 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
 		  ref_read_sequences.push(read.to_string());
     	      }
 	      all_read_sequences.push(read.to_string()); 
-	      //console::log_1(&"Next line:".into());
+	      
     	}    
         i+=1;
-    }	
-
-    console::log_2(&"ref_scores length (from Rust):".into(), &ref_scores.len().to_string().into());
-    console::log_2(&"alt_scores length (from Rust):".into(), &alt_scores.len().to_string().into());
+    }
     
     let mut ref_indices = Vec::<read_category>::new();    
     println!("Parsing ref scores");
@@ -271,7 +257,6 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
 	//ref_indices = determine_maxima_alt(&mut ref_scores, &(&threshold_slope*num_of_reads));
 	ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
     }
-    console::log_2(&"ref_indices length (from Rust):".into(), &ref_indices.len().to_string().into());
     
     let mut alt_indices = Vec::<read_category>::new();
     println!("Parsing alt scores");
@@ -279,7 +264,6 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
 	//alt_indices = determine_maxima_alt(&mut alt_scores, &(&threshold_slope*num_of_reads));
 	alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
     }
-    console::log_2(&"alt_indices length (from Rust):".into(), &alt_indices.len().to_string().into());
     
     let mut output_cat = Vec::<String>::new();
     let mut output_gID = Vec::<usize>::new();
@@ -289,9 +273,6 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     let mut none_num = 0;    
     let mut iter = 0;
     for item in &ref_indices {
-    	//console::log_2(&"ref_sequence:".into(), &ref_read_sequences[iter].to_string().into());
-    	//console::log_2(&"ref_score_value:".into(), &ref_scores[iter].value.to_string().into());
-    	//console::log_2(&"ref_score_groupID:".into(), &ref_scores[iter].groupID.to_string().into());	
     	if item.category == "refalt".to_string() {
             output_cat.push("ref".to_string());
 	    ref_num+=1;
@@ -303,14 +284,10 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     	iter+=1;
         output_gID.push(item.groupID);
 	output_diff_scores.push(item.diff_score);	
-    	//console::log_2(&"Ref scores:".into(), &item.diff_score.to_string().into());
     }
     
     iter=0;
     for item in &alt_indices {
-    	//console::log_2(&"alt_sequence:".into(), &alt_read_sequences[iter].to_string().into());
-    	//console::log_2(&"alt_score:".into(), &alt_scores[iter].value.to_string().into());
-    	//console::log_2(&"alt_score_groupID:".into(), &alt_scores[iter].groupID.to_string().into());	
     	if item.category == "refalt".to_string() {
             output_cat.push("alt".to_string());
 	    alt_num+=1;
@@ -322,19 +299,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
         iter+=1;
         output_gID.push(item.groupID);
 	output_diff_scores.push(item.diff_score);	
-    	//console::log_2(&"Alt scores:".into(), &item.diff_score.to_string().into());
-    }
-
-    console::log_2(&"Ref num:".into(), &ref_num.to_string().into());
-    console::log_2(&"Alt num:".into(), &alt_num.to_string().into());
-    console::log_2(&"None num:".into(), &none_num.to_string().into());
-    let item = output_structure{
-    	category:output_cat,
-    	groupID:output_gID,
-	kmer_diff_scores:output_diff_scores
-    };
-    
-    JsValue::from_serde(&item).unwrap()
+    }        
 }
 
 fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64, indel_length: i64) -> (f64,Vec::<String>,Vec::<String>,Vec::<kmer_data>)
@@ -361,11 +326,6 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 
 	if (indel_start <= kmer_start_poly && kmer_stop_poly <= indel_start + indel_length) || (kmer_start_poly <= indel_start && indel_start + indel_length <= kmer_stop_poly) { // (indel_start+1 >= kmer_start && kmer_stop >= indel_start + indel_length) 
             indel_kmers.push(subseq.to_owned());
-	    //console::log_2(&"Indel kmer:".into(), &subseq2.into());
-	    //console::log_2(&"Indel_start:".into(), &(indel_start).to_string().into());
-	    //console::log_2(&"Indel_stop:".into(), &(indel_start+indel_length).to_string().into());
-	    //console::log_2(&"kmer_start:".into(), &kmer_start_poly.to_string().into());
-	    //console::log_2(&"kmer_stop:".into(), &kmer_stop_poly.to_string().into());
 	}
 	
 	let mut kmer_score:f64 = 0.0;
@@ -510,9 +470,6 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 
     for i in 0..alt_length as usize {
 	if (read_indel_start + i < sequence.len()) {	
-            //console::log_2(&"Alt sequence:".into(), &alt_nucleotides[i].to_string().into());
-	    //console::log_2(&"Alt position:".into(), &(read_indel_start + i).to_string().into());
-	    //console::log_2(&"Alt read:".into(), &sequence_vector[read_indel_start + i].to_string().into());
 	    if (&alt_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
 		alt_polyclonal_status = 1;
                 break;
@@ -522,8 +479,6 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
              break; 
 	}    
     }
-    //console::log_2(&"ref_polyclonal_status:".into(), &ref_polyclonal_status.to_string().into());
-    //console::log_2(&"alt_polyclonal_status:".into(), &alt_polyclonal_status.to_string().into());
 
     if (indel_insertion_starts.len() > 0) {
     	for i in 0..indel_insertion_starts.len() {
@@ -532,12 +487,12 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     	    for j in insertion_start..insertion_stop {
 	      let k: usize = j - insertion_start;	
 	      if (k < indel_length) {
-	        console::log_2(&"sequence len:".into(), &sequence.len().to_string().into());
-		console::log_2(&"read_indel_start:".into(), &read_indel_start.to_string().into());  
-		console::log_2(&"j:".into(), &j.to_string().into());
+	        println!("{} {}","sequence len:", sequence.len().to_string());
+		println!("{} {}","read_indel_start:", read_indel_start);  
+		println!("{} {}","j:", j);
 		//console::log_2(&"k:".into(), &k.to_string().into());
-		console::log_2(&"alt_nucleotides[k]:".into(), &alt_nucleotides[k].to_string().into());
-		console::log_2(&"sequence_vector[j]:".into(), &sequence_vector[j].to_string().into());  
+		println!("{} {}", "alt_nucleotides[k]:", alt_nucleotides[k].to_string());
+		println!("{} {}", "sequence_vector[j]:", sequence_vector[j]);  
      	        if ((&alt_nucleotides[k] != &sequence_vector[j]) && ((read_indel_start as usize) <= j) && (j <= (read_indel_start as usize) + indel_length)) {
      		     alt_polyclonal_status = 2;
     		     ref_polyclonal_status = 0;
@@ -555,7 +510,6 @@ fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, inde
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
     let mut kmers = Vec::<String>::new();
-    //console::log_2(&"left_most_pos:".into(), &left_most_pos.to_string().into());
     let mut kmer_start = left_most_pos;
     let mut kmer_stop = kmer_start + kmer_length;    
     let mut kmer_start_poly = left_most_pos+1;
@@ -582,13 +536,6 @@ fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, inde
 		    index = binary_search(alt_indel_kmers, &subseq);
 		    if (index == -1 as i64) {
 			alt_polyclonal_status = 1 as i64;
-           	        //console::log_2(&"Index:".into(), &index.to_string().into());
-                        //console::log_2(&"Indel kmer:".into(), &subseq2.into());
-                        //console::log_2(&"Indel_start:".into(), &indel_start.to_string().into());
-                        //console::log_2(&"Ref indel_stop:".into(), &(indel_start+ref_length).to_string().into());			
-                        //console::log_2(&"Alt indel_stop:".into(), &(indel_start+alt_length).to_string().into());
-                        //console::log_2(&"kmer_start:".into(), &kmer_start_poly.to_string().into());
-                        //console::log_2(&"kmer_stop:".into(), &kmer_stop_poly.to_string().into());			
 	            }		
 		}    
             }
@@ -600,9 +547,6 @@ fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, inde
 	kmer_stop_poly+=1;	
     }
     kmers.shrink_to_fit();
-    //console::log_2(&"sequence:".into(), &sequence.into());
-    //console::log_2(&"ref_polyclonal_status:".into(), &ref_polyclonal_status.to_string().into());
-    //console::log_2(&"alt_polyclonal_status:".into(), &alt_polyclonal_status.to_string().into());    
     (kmers,ref_polyclonal_status,alt_polyclonal_status)
     //(kmers, 0 as i64, 0 as i64)
 }
@@ -667,7 +611,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
 	//	kmer_count+=1;
         //    } 	
 	//}
-	//console::log_1(&kmer1.into());
+	//println!(&kmer1.into());
 	//if (binary_search(&kmers1,&kmer1) != -1 as i64) {
         //  kmer_count+=1;
 	//}    
@@ -678,7 +622,7 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
 	}
 	else {
 	  //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-          //    console::log_3(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          //    println!(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
           //}		
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmers1_weight += (kmer_count as f64)*score;
@@ -701,11 +645,11 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //    }
 	//    j+=1;
 	//}
-        //console::log_2(&"Intersection kmer1:".into(),&kmer1.into());
+        //println!(&"Intersection kmer1:".into(),&kmer1.into());
         index=binary_search(&kmers2_nodups,&kmer1);
 	if index != -1 as i64 {
 	  //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-          //    console::log_3(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
+          //    println!(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
           //}  
 	  score=kmers2_data[index as usize].kmer_weight;
 	  kmer2_freq=kmers2_data[index as usize].kmer_count;
@@ -721,12 +665,12 @@ fn jaccard_similarity_weights(kmers1: &Vec<String>, kmers2_nodups: &Vec<String>,
         //    }
 	//    j+=1;
 	//}
-	//console::log_2(&"Intersection kmer2:".into(),&kmer1.into());	
+	//println!(&"Intersection kmer2:".into(),&kmer1.into());	
         index=binary_search(&kmers1_nodup,&kmer1);
-	//console::log_2(&"Index:".into(),&index.to_string().into());
+	//println!(&"Index:".into(),&index.to_string().into());
 	if index != -1 as i64 {
 	   //if (kmer1!=&kmers1_nodup[index as usize].to_string()) {
-           //   console::log_3(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
+           //   println!(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
            //}		    
 	   kmer1_freq=kmer1_counts[index as usize];
 	}
@@ -755,7 +699,6 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     }
       
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
-    //console::log_2(&"kmer_diff_scores_length:".into(), &kmer_diff_scores_length.to_string().into());
     
     let mut start_point: usize = kmer_diff_scores_length - 1;
     let mut slope:f64 = 0.0;
@@ -765,8 +708,6 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     if kmer_diff_scores_length > 1 {
        for i in (1..kmer_diff_scores_length).rev() {
 	   slope=(&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
-	   //console::log_2(&"slope:".into(),&slope.to_string().into());
-	   //console::log_2(&"i:".into(),&i.to_string().into());
 	   if slope > threshold_slope_clone {
               start_point=i as usize;
               is_a_line = 0;
@@ -775,7 +716,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
        }	   
     }
     else {
-      console::log_1(&"Number of reads too low to determine curvature of slope".into());       
+      println!("{}", "Number of reads too low to determine curvature of slope");       
     }
     if (is_a_line == 1) {
 	for i in 0..kmer_diff_scores_length {
@@ -795,11 +736,10 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                };
 	       indices.push(read_cat); 
 	   }
-	   //console::log_2(&"i inline:".into(),&i.to_string().into()); 
         }
     }
     else {
-	console::log_2(&"start_point:".into(),&start_point.to_string().into());
+	println!("{} {}","start_point:",start_point.to_string());
     	let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
     	for i in 0..start_point {
     	      let item = read_diff_scores{
@@ -836,7 +776,7 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         	}    
         }
         let score_cutoff:f64 = kmer_diff_scores_sorted[index_array_maximum].value;
-	console::log_2(&"score_cutoff (from Rust):".into(),&score_cutoff.to_string().into());
+	println!("{} {}","score_cutoff (from Rust):",score_cutoff.to_string());
         for i in 0..kmer_diff_scores_length {
            if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
               let read_cat = read_category{

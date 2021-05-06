@@ -1,9 +1,13 @@
 const jStat = require('jstat').jStat
 const features = require('./app').features
 const utils = require('./utils')
+const spawn = require('child_process').spawn
+const readline = require('readline')
 const bamcommon = require('./bam.common')
 const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
+const serverconfig = require('./serverconfig')
+const rust_indel = serverconfig.rust_indel
 
 export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -94,19 +98,19 @@ export async function match_complexvariant_rust(q, templates_info) {
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('\n')
 	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('\n')
+
 	let sequences = ''
 	sequences += refseq + '\n'
 	sequences += altseq + '\n'
-	sequences += sequence_reads // Need to add support for start_positions
-	//        const templates_info = []
-	//        //for (const template of templates) {
-	//        for (const line of q.regions[0].lines) { // q.regions[0] may need to be modified
-	//
-	//	        templates_info.push(line)
-	//		sequences += sequence + '\n'
-	//	}
-	//console.log("cigar_sequences:",cigar_sequences)
-	//console.log("segbplen:",segbplen)
+	sequences += sequence_reads
+
+	//const ps = spawn(rust_indel,[sequences, start_positions, cigar_sequences, q.variant.pos.toString(), segbplen.toString(), refallele, altallele, kmer_length.toString(), weight_no_indel.toString(), weight_indel.toString(), threshold_slope.toString()])
+	//const rl = readline.createInterface({ input: ps.stdout })
+	//rl.on('line', line => {
+	//    console.log(line)
+	//})
+	//const type2group = bamcommon.make_type2group(q)
+
 	const rust_output = await rust_match_complexvariant_indel(
 		sequences,
 		start_positions,
