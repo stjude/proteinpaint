@@ -354,7 +354,17 @@ function makeheader(app, obj, jwt) {
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+			app_holder
+				.transition()
+				.duration(1000)
+				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+				.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+
+			apps_drawer_row
+				.transition()
+				.duration(1000)
+				.style('height', app_btn_active ? '' : '0px')
+
 			btn_toggle(app_btn, app_btn_active)
 		}
 	}
@@ -382,8 +392,9 @@ function makeheader(app, obj, jwt) {
 		app_holder = apps_drawer_row
 			.append('div')
 			.style('margin', '20px')
-			.style('padding', '10px')
+			.style('padding', padw_sm)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
+			.style('overflow', 'hidden')
 			.style('background-color', '#f2f2f2')
 			.style('border-radius', '5px')
 			.style('width', '93vw')
@@ -409,25 +420,29 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
-				event.stopPropagation()
+				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
 				btn_toggle(app_btn, app_btn_active)
 				const duration = 1000
 				app_holder
-					.style('overflow', 'hidden')
 					.style('display', 'inline-block')
 					.transition()
 					.duration(duration)
-					.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
-					.style('padding', app_btn_active ? padw_sm+'px' : '0px')
+					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+					.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
-					if (app_btn_active) {
-						setTimeout(()=>{
-							app_holder_full_height = app_holder.node().getBoundingClientRect().height
-						}, duration + 5)
-					}
+				if (app_btn_active) {
+					setTimeout(() => {
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height
+					}, duration + 5)
+				}
+
+				apps_drawer_row
+					.transition()
+					.duration(duration + 100)
+					.style('height', app_btn_active ? '' : '0px')
 			})
 			.on('mouseover', () => {
 				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
