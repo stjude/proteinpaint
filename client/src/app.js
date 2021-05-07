@@ -213,7 +213,10 @@ function makeheader(app, obj, jwt) {
 			'border-bottom',
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
-	const apps_drawer_row = app.holder.append('div').style('position', 'relative').style('overflow', 'hidden')
+	const apps_drawer_row = app.holder
+		.append('div')
+		.style('position', 'relative')
+		.style('overflow', 'hidden')
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
 		.attr('id', 'pp_sandbox')
@@ -360,18 +363,18 @@ function makeheader(app, obj, jwt) {
 			app_holder
 				.transition()
 				.duration(1000)
-				.style('top', app_btn_active ? '0px' : '-'+ app_holder_full_height + 'px')
-				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+				.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+			//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 			apps_drawer_row
 				.transition()
 				.duration(1000)
-				.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
+				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
 
 			apps_drawer_hint
-					.transition()
-					.duration(duration + 100)
-					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
+				.transition()
+				.duration(duration + 100)
+				.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 
 			btn_toggle(app_btn, app_btn_active)
 		}
@@ -433,8 +436,8 @@ function makeheader(app, obj, jwt) {
 					.style('display', 'inline-block')
 					.transition()
 					.duration(duration)
-					.style('top', app_btn_active ? '0px' : '-'+ app_holder_full_height + 'px')
-					//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+					.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 				if (app_btn_active) {
 					setTimeout(() => {
@@ -445,7 +448,7 @@ function makeheader(app, obj, jwt) {
 				apps_drawer_row
 					.transition()
 					.duration(duration + 100)
-					.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
+					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
 
 				apps_drawer_hint
 					.transition()
@@ -469,20 +472,21 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.text('Apps')
 
-		apps_drawer_hint = app_btn_div.append('div')
+		apps_drawer_hint = app_btn_div
+			.append('div')
 			.style('position', 'absolute')
 			.style('bottom', '-30px')
-    	.style('width', '100%')
-    	.style('text-align', 'center')
-    	.style('cursor', 'pointer')
-    	.append('div')
-    	.style('display', 'inline-block')
-    	//.style('padding', '1px')
-    	//.style('border-radius', '8px')
+			.style('width', '100%')
+			.style('text-align', 'center')
+			.style('cursor', 'pointer')
+			.append('div')
+			.style('display', 'inline-block')
+			//.style('padding', '1px')
+			//.style('border-radius', '8px')
 			.style('font-size', '20px')
-    	.style('transform', 'rotate(180deg)')
+			.style('transform', 'rotate(180deg)')
 			//.style('background-color', '#ececec')
-    	.style('color', '#555')
+			.style('color', '#555')
 			.html('&#9660;')
 	}
 
