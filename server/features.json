@@ -575,6 +575,25 @@
             "searchterms": []
         },
         {
+            "name": "GDC BAM Slice",
+            "shorthand": "GDC bam slice",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "isbeta": 1,
+            "blurb": "visualize GDC BAM reads",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "",
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "gdcbamslice": { "uionly": true }
+                }
+            },
+            "searchterms": []
+        },
+        {
             "name": "FusionEditor",
             "shorthand": "Fusion Editor",
             "app": "Apps",
