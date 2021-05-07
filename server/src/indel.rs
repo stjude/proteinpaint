@@ -407,7 +407,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     //let mut kmer_stop_poly = kmer_start_poly + kmer_length;
     let mut ref_polyclonal_status:i64 = 0;
     let mut alt_polyclonal_status:i64 = 0;
-    let mut correct_start_position:i64 = left_most_pos; 
+    let mut correct_start_position:i64 = left_most_pos;
 
     let (alphabets,numbers) = parse_cigar(&cigar_sequence.to_string());
     // Check to see if the first item in cigar is a soft clip
@@ -425,7 +425,11 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
         parse_position += numbers[i].to_string().parse::<usize>().unwrap();
 	if (&alphabets[i].to_string().as_str() == &"I") {
             read_indel_start += numbers[i].to_string().parse::<usize>().unwrap();
-	    if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
+	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
+		indel_insertion_starts.push(old_parse_position);
+		indel_insertion_stops.push(parse_position);		
+	    }	    
+	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
 		indel_insertion_stops.push(parse_position);		
 	    }
@@ -443,21 +447,36 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 	}
 	old_parse_position = parse_position;  
       }
+      else if (parse_position >= read_indel_start && &alphabets[i].to_string().as_str() == &"I") {
+         parse_position += numbers[i].to_string().parse::<usize>().unwrap();    
+         //if () {	    
+	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
+		indel_insertion_starts.push(old_parse_position);
+		indel_insertion_stops.push(parse_position);		
+	    }	    
+	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
+		indel_insertion_starts.push(old_parse_position);
+		indel_insertion_stops.push(parse_position);		
+	    }
+	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length) { // Making sure part of the insertion is within the indel region
+		indel_insertion_starts.push(old_parse_position);
+		indel_insertion_stops.push(parse_position);		
+	    }
+	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position) { // Making sure part of the insertion is within the indel region
+		indel_insertion_starts.push(old_parse_position);
+		indel_insertion_stops.push(parse_position);		
+	    }
+	 //}
+	 old_parse_position = parse_position; 
+      }	    
       else {
        break;
       }	    
     } 
     
     // Checking to see if nucleotides are same between read and ref/alt allele
-
-    //console::log_2(&"sequence:".into(), &sequence.to_string().into());
-    //console::log_2(&"length:".into(), &sequence.len().to_string().into());
-    //console::log_2(&"cigar:".into(),&cigar_sequence.to_string().into());
     for i in 0..ref_length as usize {
 	if (read_indel_start + i < sequence.len()) {
-	    //console::log_2(&"Ref sequence:".into(), &ref_nucleotides[i].to_string().into());
-	    //console::log_2(&"Ref position:".into(), &(read_indel_start + i).to_string().into());
-	    //console::log_2(&"Ref read:".into(), &sequence_vector[read_indel_start + i].to_string().into());
 	    if (&ref_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
 		ref_polyclonal_status = 1;
                 break;
@@ -469,7 +488,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     }
 
     for i in 0..alt_length as usize {
-	if (read_indel_start + i < sequence.len()) {	
+	if (read_indel_start + i < sequence.len()) {
 	    if (&alt_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
 		alt_polyclonal_status = 1;
                 break;
@@ -484,15 +503,9 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     	for i in 0..indel_insertion_starts.len() {
             let insertion_start: usize = indel_insertion_starts[i];
             let insertion_stop: usize = indel_insertion_stops[i];
-    	    for j in insertion_start..insertion_stop {
-	      let k: usize = j - insertion_start;	
+    	    for j in (insertion_start - 1) .. insertion_stop {
+	      let k: usize = j - insertion_start + 1;	
 	      if (k < indel_length) {
-	        println!("{} {}","sequence len:", sequence.len().to_string());
-		println!("{} {}","read_indel_start:", read_indel_start);  
-		println!("{} {}","j:", j);
-		//console::log_2(&"k:".into(), &k.to_string().into());
-		println!("{} {}", "alt_nucleotides[k]:", alt_nucleotides[k].to_string());
-		println!("{} {}", "sequence_vector[j]:", sequence_vector[j]);  
      	        if ((&alt_nucleotides[k] != &sequence_vector[j]) && ((read_indel_start as usize) <= j) && (j <= (read_indel_start as usize) + indel_length)) {
      		     alt_polyclonal_status = 2;
     		     ref_polyclonal_status = 0;
@@ -503,7 +516,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     	}    
     }	
     (ref_polyclonal_status,alt_polyclonal_status)
-}    
+}
 
 fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64, ref_indel_kmers: &Vec<String>, alt_indel_kmers: &Vec<String>, ref_length: i64, alt_length: i64) -> (Vec::<String>, i64, i64)
 {

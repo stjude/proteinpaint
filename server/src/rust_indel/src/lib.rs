@@ -450,7 +450,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     let mut correct_start_position:i64 = left_most_pos;
 
     let (alphabets,numbers) = parse_cigar(&cigar_sequence.to_string());
-    console::log_2(&"cigar:".into(), &cigar_sequence.into());
+    //console::log_2(&"cigar:".into(), &cigar_sequence.into());
     // Check to see if the first item in cigar is a soft clip
     if (&alphabets[0].to_string().as_str() == &"S") {    
           correct_start_position = correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
@@ -468,10 +468,10 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
         parse_position += numbers[i].to_string().parse::<usize>().unwrap();
 	if (&alphabets[i].to_string().as_str() == &"I") {
             read_indel_start += numbers[i].to_string().parse::<usize>().unwrap();
-	    console::log_2(&"read_indel_start:".into(), &read_indel_start.to_string().into());
-	    console::log_2(&"read_indel_start+indel_length:".into(), &(read_indel_start + indel_length).to_string().into());
-	    console::log_2(&"old_parse_position:".into(), &old_parse_position.to_string().into());
-	    console::log_2(&"parse_position:".into(), &parse_position.to_string().into());
+	    //console::log_2(&"read_indel_start:".into(), &read_indel_start.to_string().into());
+	    //console::log_2(&"read_indel_start+indel_length:".into(), &(read_indel_start + indel_length).to_string().into());
+	    //console::log_2(&"old_parse_position:".into(), &old_parse_position.to_string().into());
+	    //console::log_2(&"parse_position:".into(), &parse_position.to_string().into());
 	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
 		indel_insertion_stops.push(parse_position);		
@@ -562,16 +562,16 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     	for i in 0..indel_insertion_starts.len() {
             let insertion_start: usize = indel_insertion_starts[i];
             let insertion_stop: usize = indel_insertion_stops[i];
-    	    for j in insertion_start .. insertion_stop {
-	      let k: usize = j - insertion_start;	
+    	    for j in (insertion_start - 1) .. insertion_stop {
+	      let k: usize = j - insertion_start + 1;	
 	      if (k < indel_length) {
-	        console::log_2(&"sequence len:".into(), &sequence.len().to_string().into());
-		console::log_2(&"read_indel_start:".into(), &read_indel_start.to_string().into());  
-		console::log_2(&"j:".into(), &j.to_string().into());
-		console::log_2(&"k:".into(), &k.to_string().into());
-		console::log_2(&"indel_length:".into(), &indel_length.to_string().into());		  
-		console::log_2(&"alt_nucleotides[k]:".into(), &alt_nucleotides[k].to_string().into());
-		console::log_2(&"sequence_vector[j]:".into(), &sequence_vector[j].to_string().into());  
+	        //console::log_2(&"sequence len:".into(), &sequence.len().to_string().into());
+		//console::log_2(&"read_indel_start:".into(), &read_indel_start.to_string().into());  
+		//console::log_2(&"j:".into(), &j.to_string().into());
+		//console::log_2(&"k:".into(), &k.to_string().into());
+		//console::log_2(&"indel_length:".into(), &indel_length.to_string().into());		  
+		//console::log_2(&"alt_nucleotides[k]:".into(), &alt_nucleotides[k].to_string().into());
+		//console::log_2(&"sequence_vector[j]:".into(), &sequence_vector[j].to_string().into());  
      	        if ((&alt_nucleotides[k] != &sequence_vector[j]) && ((read_indel_start as usize) <= j) && (j <= (read_indel_start as usize) + indel_length)) {
      		     alt_polyclonal_status = 2;
     		     ref_polyclonal_status = 0;
