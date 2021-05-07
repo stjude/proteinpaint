@@ -2,7 +2,6 @@ import { select, transition } from 'd3'
 import { dofetch, dofetch2, tab2box, tkt } from './client'
 import { make_radios } from './dom'
 import { gene_searchbox } from './gene'
-// import { check } from 'prettier'
 
 /*
 doms{}
@@ -111,7 +110,6 @@ function make_buttons(form_div, doms) {
 			doms.svcnv_radios.nodes()[0].click()
 			doms.vcf_radios.nodes()[0].click()
 			doms.expression_radios.nodes()[0].click()
-			// doms.assaytrack_radios.nodes()[0].click()
 			doms.assay_uidiv_inuse.style('display', 'block')
 			doms.assaytrack_bigwig_textarea.property(
 				'value',
@@ -268,8 +266,6 @@ function validate_input(doms) {
 
 	obj.name = doms.name.property('value') || 'My dataset'
 
-	// .isdense/isfull is already defined
-
 	{
 		const cnv = doms.svcnvfileurl.property('value').trim()
 		const vcf = doms.vcffileurl.property('value').trim()
@@ -288,8 +284,6 @@ function validate_input(doms) {
 			if (limit) {
 				obj.cnvLengthUpperLimit = Number(limit)
 			}
-			// obj.multihidelabel_fusion = doms.multihidelabel_fusion
-			// obj.multihidelabel_sv = doms.multihidelabel_sv
 		}
 		if (vcf) {
 			if (isurl(vcf)) {
@@ -297,7 +291,6 @@ function validate_input(doms) {
 			} else {
 				obj.vcffile = vcf
 			}
-			// obj.multihidelabel_vcf = doms.multihidelabel_vcf
 		}
 	}
 	{
@@ -324,7 +317,6 @@ function validate_input(doms) {
 	}
 	if (doms.sampleset_uidiv_inuse) {
 		const tmp = doms.sampleset_textarea.property('value').trim()
-		// if (!tmp && doms.sampleset_uidiv_inuse.style('display', 'block')) throw 'Missing input for sample subset'
 		const group2lst = new Map()
 		const nogrplst = []
 		for (const line of tmp.split('\n')) {
@@ -344,6 +336,9 @@ function validate_input(doms) {
 		for (const [group, lst] of group2lst) {
 			obj.sampleset.push({ name: group, samples: lst })
 		}
+		if (!obj.sampleset.length) {
+			delete obj.sampleset
+		}
 	}
 
 	if (doms.assay_uidiv_inuse) {
@@ -354,6 +349,7 @@ function validate_input(doms) {
 			obj.sample2assaytrack[sample].push(tk)
 		}
 	}
+	console.log(obj)
 	return obj
 }
 
@@ -374,7 +370,6 @@ function make_genome(div, genomes) {
 		select.append('option').text(n)
 	}
 	return select
-	//doms.genome = select.property('value') - this messed up the examples and submit button
 }
 //.position
 function make_position(div, doms) {
@@ -389,29 +384,6 @@ function make_position(div, doms) {
 		.append('input')
 		.attr('size', 30)
 		.property('placeholder', 'chr:start-stop')
-	// .on('click', () => {
-	// 	gene_searchbox({
-	// 		div: position.append('div'),
-	// 		resultdiv: position.append('div'),
-	// 		genome: doms.genome.name, //TODO why can't this be read?
-	// 		callback: async genename => {
-	// 			const gmlst = await client.dofetch('genelookup', { genome: doms.genome.name, input: genename, deep: 1 })
-	// 			if (gmlst && gmlst[0]) {
-	// 				const gm = gmlst[0]
-	// 				if (!doms.genes) doms.genes = []
-	// 				const geneidx = doms.genes.findIndex(i => i.gene == genename)
-	// 				if (geneidx == -1) {
-	// 					doms.genes.push({
-	// 						gene: genename,
-	// 						chr: gm.chr,
-	// 						start: gm.start,
-	// 						stop: gm.stop //TODO nothing is returned to the view port.. or doms or obj
-	// 					})
-	// 				}
-	// 			}
-	// 		}
-	// 	})
-	// })
 }
 
 //.name
@@ -619,147 +591,12 @@ function make_loh_upperlimit(div) {
 		.attr('type', 'number')
 		.property('placeholder', 'LOH upper limit')
 }
-// .multihidelabel_vcf
-// function make_multihidelabel_vcf(div, doms) {
-// 	const vcf_btn = div.append('div')
-// 	const tooltip = div.append('div')
 
-// 	tooltip
-// 		.style('font-size', '15px')
-// 		.text('Hide Multiple VCF Labels')
-// 		.style('display', 'none')
-// 		.style('text-align', 'center')
-// 		.style('position', 'absolute')
-// 		.style('background-color', '#ebecf0')
-// 		.style('border-color', 'black')
-// 		.style('border-radius', '10%')
-// 		.style('width', '200px')
-// 		.style('height', '20px')
-// 		.style('color', '#030d38')
-
-// 	vcf_btn
-// 		.append('button')
-// 		.style('width', '120px')
-// 		.style('height', '30px')
-// 		.style('text-align', 'center')
-// 		.style('font-size', '15px')
-// 		.style('display', 'inline-block')
-// 		.text('VCF Labels')
-// 		.on('mouseover', () => {
-// 			tooltip
-// 				.transition()
-// 				.duration(200)
-// 				.style('opacity', 0.9)
-
-// 			tooltip.style('display', 'inline-block')
-// 		})
-// 		.on('mouseleave', () => {
-// 			tooltip.style('display', 'none')
-// 		})
-// 		.on('click', () => {
-// 			if (doms.multihidelabel_vcf == '') {
-// 				return (doms.multihidelabel_vcf = true)
-// 			} else {
-// 				return (doms.multihidelabel_vcf = false)
-// 			}
-// 		})
-// }
-// // .multihidelabel_fusion
-// function make_multihidelabel_fusion(div, doms) {
-// 	const fusion_btn = div.append('div')
-// 	const tooltip = div.append('div')
-
-// 	tooltip
-// 		.style('font-size', '15px')
-// 		.text('Hide Multiple Fusion Labels')
-// 		.style('display', 'none')
-// 		.style('text-align', 'center')
-// 		.style('position', 'absolute')
-// 		.style('background-color', '#ebecf0')
-// 		.style('border-color', 'black')
-// 		.style('border-radius', '10%')
-// 		.style('width', '200px')
-// 		.style('height', '20px')
-// 		.style('color', '#030d38')
-
-// 	fusion_btn
-// 		.append('button')
-// 		.style('width', '120px')
-// 		.style('height', '30px')
-// 		.style('text-align', 'center')
-// 		.style('font-size', '15px')
-// 		.style('display', 'inline-block')
-// 		.text('Fusion Labels')
-// 		.on('mouseover', () => {
-// 			tooltip
-// 				.transition()
-// 				.duration(200)
-// 				.style('opacity', 0.9)
-
-// 			tooltip.style('display', 'inline-block')
-// 		})
-// 		.on('mouseleave', () => {
-// 			tooltip.style('display', 'none')
-// 		})
-// 		.on('click', () => {
-// 			if (doms.multihidelabel_fusion == '') {
-// 				return (doms.multihidelabel_fusion = true)
-// 			} else {
-// 				return (doms.multihidelabel_fusion = false)
-// 			}
-// 		})
-// }
-// // .multihidelabel_sv
-// function make_multihidelabel_sv(div, doms) {
-// 	const sv_btn = div.append('div')
-// 	const tooltip = div.append('div')
-
-// 	tooltip
-// 		.style('font-size', '15px')
-// 		.text('Hide Multiple SV Labels')
-// 		.style('display', 'none')
-// 		.style('text-align', 'center')
-// 		.style('position', 'absolute')
-// 		.style('background-color', '#ebecf0')
-// 		.style('border-color', 'black')
-// 		.style('border-radius', '10%')
-// 		.style('width', '200px')
-// 		.style('height', '20px')
-// 		.style('color', '#030d38')
-
-// 	sv_btn
-// 		.append('button')
-// 		.style('width', '120px')
-// 		.style('height', '30px')
-// 		.style('text-align', 'center')
-// 		.style('font-size', '15px')
-// 		.style('display', 'inline-block')
-// 		.text('SV Labels')
-// 		.on('mouseover', () => {
-// 			tooltip
-// 				.transition()
-// 				.duration(200)
-// 				.style('opacity', 0.9)
-
-// 			tooltip.style('display', 'inline-block')
-// 		})
-// 		.on('mouseleave', () => {
-// 			tooltip.style('display', 'none')
-// 		})
-// 		.on('click', () => {
-// 			if (doms.multihidelabel_sv == '') {
-// 				return (doms.multihidelabel_sv = true)
-// 			} else {
-// 				return (doms.multihidelabel_sv = false)
-// 			}
-// 		})
-// }
 // Options under CNV+SV+Fusion text field
 function make_control_panel(div, doms) {
 	const control_panel = div
 		.append('div')
 		.append('div')
-		// .style('margins', '5px')
 		.style('width', '49%')
 		.style('padding', '10px')
 		.style('display', 'inline') //TODO actually get fields to display inline instead one after another
@@ -794,25 +631,6 @@ function make_sampleset(div, doms) {
 	const uidiv = hold_column.append('div').style('display', 'none')
 	doms.sampleset_uidiv_inuse = uidiv
 
-	//**Previous radio button option */
-	// const sampleset_prompt = div.append('div')
-
-	// sampleset_prompt.append('span').text('Subset samples')
-
-	// const column2 = div.append('div')
-	// const radiodiv = column2.append('div')
-	// const uidiv = column2.append('div').style('display', 'none')
-	// make_radios({
-	// 	holder: radiodiv,
-	// 	options: [{ label: 'Show all', value: 1, checked: true }, { label: 'Show subset', value: 2 }],
-	// 	callback: value => {
-	// 		doms.sampleset_inuse = value == 2
-	// 		uidiv.style('display', value == 2 ? 'block' : 'none')
-	// 	},
-	// 	styles: {
-	// 		display: 'inline'
-	// 	}
-	// })
 	// contents of uidiv
 	doms.sampleset_textarea = uidiv
 		.append('textarea')
@@ -842,27 +660,6 @@ function make_assaytracks(div, doms) {
 	const hold_column = div.append('div')
 	const uidiv = hold_column.append('div').style('display', 'none')
 	doms.assay_uidiv_inuse = uidiv
-
-	//**Previous radio button option */
-	// const assay_prompt = div.append('div')
-
-	// assay_prompt.append('span').text('Assay tracks')
-
-	// const column2 = div.append('div')
-	// const radiodiv = column2.append('div')
-	// const uidiv = column2.append('div').style('display', 'none')
-	// const { divs, labels, inputs } = make_radios({
-	// 	holder: radiodiv,
-	// 	options: [{ label: 'Yes', value: 1 }, { label: 'No', value: 2, checked: true }],
-	// 	callback: value => {
-	// 		doms.assaytrack_inuse = value == 1
-	// 		uidiv.style('display', value == 1 ? 'block' : 'none')
-	// 	},
-	// 	styles: {
-	// 		display: 'inline'
-	// 	}
-	// })
-	// doms.assaytrack_radios = inputs
 
 	// contents of uidiv
 	const tabs = [

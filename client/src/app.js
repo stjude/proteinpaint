@@ -103,6 +103,7 @@ export function runproteinpaint(arg) {
 		.attr('class', 'sja_root_holder')
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
+	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.host) {
 		app.hostURL = arg.host
@@ -213,10 +214,12 @@ function makeheader(app, obj, jwt) {
 			'border-bottom',
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
+
 	const apps_drawer_row = app.holder
 		.append('div')
 		.style('position', 'relative')
 		.style('overflow', 'hidden')
+
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
 		.attr('id', 'pp_sandbox')
@@ -1049,7 +1052,7 @@ async function parseembedthenurl(arg, app) {
 	if (arg.project) {
 		let holder = undefined
 		if (arg.project.uionly) holder = app.holder0
-		bulkui(0, 0, app.genomes, app.hostURL, holder)
+		bulkui(0, 0, app.genomes, app.hostURL, holder, app.sandbox_header)
 	}
 
 	if (arg.toy) {
@@ -1556,7 +1559,7 @@ async function launchmdsjsonform(arg, app) {
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {
 		import('./mavb').then(p => {
-			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0)
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0, app.sandbox_header)
 		})
 		return
 	}
@@ -1594,7 +1597,7 @@ function launch2dmaf(arg, app) {
 function launchmaftimeline(arg, app) {
 	if (arg.maftimeline.uionly) {
 		import('./maftimeline').then(p => {
-			p.default(app.genomes, app.holder0)
+			p.default(app.genomes, app.holder0, app.sandbox_header)
 		})
 	}
 }
