@@ -62,7 +62,11 @@ const stackpagesize = 60
 
 export function bamsliceui(genomes, holder){
 
-	let default_genome = 'hg38', gdc_token, case_id, position, variant
+	let gdc_args = {}
+	const default_genome = 'hg38'
+
+	const saydiv = holder.append('div').style('margin', '10px 20px')
+	const visualdiv = holder.append('div').style('margin', '20px')
 
 	const inputdiv = holder.append('div')
 		.style('margin', '40px 20px 20px 20px')
@@ -73,9 +77,6 @@ export function bamsliceui(genomes, holder){
 		.style('gap','5px')
 		.style('align-items','center')
 		.style('justify-items','left')
-
-	const saydiv = holder.append('div').style('margin', '10px 20px')
-	const visualdiv = holder.append('div').style('margin', '20px')
 
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
@@ -106,15 +107,7 @@ export function bamsliceui(genomes, holder){
 				}
 				const reader = new FileReader()
 				reader.onload = event => {
-					const err = validateToken(event.target.result.trim().split(/\r?\n/))
-					if (err) {
-						cmt(err, 1)
-						fileui()
-						return
-					}
-					// success
-					inputdiv.remove()
-					saydiv.remove()
+					gdc_args['gdc_token'] = event.target.result.trim().split(/\r?\n/)[0]
 				}
 				reader.onerror = function() {
 					cmt('Error reading file ' + file.name, 1)
@@ -129,9 +122,13 @@ export function bamsliceui(genomes, holder){
 
 	fileui()
 
-	const input_fields = ['Case ID', 'Position', 'Variant (optional)']
-	for(const input of input_fields){
-		makeFormInput(inputdiv, input)
+	const input_fields = [
+		{title:'Case ID', key: 'case_id', size:40}, 
+		{title:'Position', key: 'position', placeholder: 'chr:start-stop'}, 
+		{title:'Variant (optional)', key: 'variant'}
+	]
+	for(const field of input_fields){
+		makeFormInput(field)
 	}
 
 	//submit button
@@ -143,26 +140,74 @@ export function bamsliceui(genomes, holder){
 		.style('margin-left', '130px')
 		.text('submit')
 		.on('click', ()=>{
-			validateInputs({gdc_token, case_id, position, variant})
+			try{
+				validateInputs(gdc_args)
+			}catch (e) {
+				cmt(e, 1)
+				return
+			}
+			// success
+			inputdiv.remove()
+			saydiv.remove()
+			submit_btn_div.remove()
+			makeBamtkArgs(gdc_args, genomes[default_genome], visualdiv)
 		})
+
+	function makeFormInput(field){
+		inputdiv.append('div')
+			.style('padding','3px 10px')
+			.property('placeholder', field.placeholder || '')
+			.text(field.title)
+	
+		const input = inputdiv.append('input')
+			.attr('size', field.size || 20)
+			.style('padding','3px 10px')
+			.property('placeholder', field.placeholder || '')
+			.on('change',()=>{
+				gdc_args[field.key] = input.property('value').trim()
+			})
+	}
 }
 
-function makeFormInput(holder, name){
-	holder.append('div')
-		.style('padding','3px 10px')
-		.text(name)
-
-	holder.append('input')
-		.attr('size', 20)
-		.style('padding','3px 10px')
+function validateInputs(obj){
+	if(!obj) throw 'no parameters passing to validate'
+	if(!obj.gdc_token) throw 'gdc token missing'
+	if(typeof(obj.gdc_token) !== 'string') throw 'gdc token is not string'
+	if(!obj.case_id) throw ' case ID is missing'
+	if(typeof(obj.case_id) !== 'string') throw 'case id is not string'
+	if(!obj.position) throw ' position is missing'
+	if(typeof(obj.position) !== 'string') throw 'position is not string'
+	if(obj.variant !== undefined && typeof(onj.variant) !== 'string') throw 'Varitent is not string'
 }
 
-function validateInputs(args){
-	// TODO: validate inputs
-	console.log(args)
+function makeBamtkArgs(args, genome, holder){
+	const par = {
+		nobox: 1,
+		genome, 
+		holder
+	}
+	const ll = args.position.split(/[:-]/)
+	par.chr = ll[0]
+	par.start = Number.parseInt(ll[1])
+	par.stop = Number.parseInt(ll[2])
+	par.tklst = []
+
+	const tk = {
+		type: client.tkt.bam,
+		name: 'sample bam slice',
+		gdc: args.gdc_token + ',' + args.case_id,
+		downloadgdc: 1
+	}
+	// TODO: create arg for block init
+	// par.tklst.push(tk)
+	// import('./block').then(b =>{
+	// 	const block = new b.Block(par)
+	// 	loadTk(tk, block)
+	// })
 }
 
 export async function loadTk(tk, block) {
+	console.log(tk, block)
 	block.tkcloakon(tk)
 	block.block_setheight()
 
