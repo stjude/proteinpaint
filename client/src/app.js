@@ -353,7 +353,7 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
-	const duration = 1000
+	const duration = 500 // for apps drawer animation
 	let app_holder_full_height, apps_drawer_hint
 
 	//Hides app_div and toggles app_btn off
@@ -362,13 +362,13 @@ function makeheader(app, obj, jwt) {
 		if (app_holder !== undefined) {
 			app_holder
 				.transition()
-				.duration(1000)
+				.duration(duration)
 				.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
 			//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 			apps_drawer_row
 				.transition()
-				.duration(1000)
+				.duration(duration)
 				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
 
 			apps_drawer_hint
@@ -447,12 +447,12 @@ function makeheader(app, obj, jwt) {
 
 				apps_drawer_row
 					.transition()
-					.duration(duration + 100)
+					.duration(duration)
 					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
 
 				apps_drawer_hint
 					.transition()
-					.duration(duration + 100)
+					.duration(duration)
 					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 			})
 			.on('mouseover', () => {
