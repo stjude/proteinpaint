@@ -258,7 +258,11 @@ async function openExample(track) {
 
 	// template runpp() arg
 	const runpp_arg = {
-		holder: sandbox_div.body.append('div').style('margin', '20px').node(),
+		holder: sandbox_div.body
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		sandbox_header: sandbox_div.header,
 		host: window.location.origin
 	}
 
