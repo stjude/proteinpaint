@@ -213,7 +213,7 @@ function makeheader(app, obj, jwt) {
 			'border-bottom',
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
-	const apps_drawer_row = app.holder.append('div')
+	const apps_drawer_row = app.holder.append('div').style('position', 'relative').style('overflow', 'hidden')
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
 		.attr('id', 'pp_sandbox')
@@ -350,6 +350,8 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
+	let app_holder_full_height, apps_drawer_height
+
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
@@ -357,13 +359,13 @@ function makeheader(app, obj, jwt) {
 			app_holder
 				.transition()
 				.duration(1000)
-				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-				.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+				.style('top', app_btn_active ? '0px' : '-'+ app_holder_full_height + 'px')
+				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 			apps_drawer_row
 				.transition()
 				.duration(1000)
-				.style('height', app_btn_active ? '' : '0px')
+				.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
 
 			btn_toggle(app_btn, app_btn_active)
 		}
@@ -391,6 +393,7 @@ function makeheader(app, obj, jwt) {
 
 		app_holder = apps_drawer_row
 			.append('div')
+			.style('position', 'relative')
 			.style('margin', '20px')
 			.style('padding', padw_sm)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
@@ -399,13 +402,13 @@ function makeheader(app, obj, jwt) {
 			.style('border-radius', '5px')
 			.style('width', '93vw')
 
-		let app_holder_full_height
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height
+			apps_drawer_height = apps_drawer_row.node().getBoundingClientRect().height
 		}
 
 		if (app_btn_active) load_app_div()
@@ -430,19 +433,20 @@ function makeheader(app, obj, jwt) {
 					.style('display', 'inline-block')
 					.transition()
 					.duration(duration)
-					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-					.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+					.style('top', app_btn_active ? '0px' : '-'+ apps_drawer_height + 'px')
+					//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 				if (app_btn_active) {
 					setTimeout(() => {
 						app_holder_full_height = app_holder.node().getBoundingClientRect().height
+						apps_drawer_height = apps_drawer_row.node().getBoundingClientRect().height
 					}, duration + 5)
 				}
 
 				apps_drawer_row
 					.transition()
 					.duration(duration + 100)
-					.style('height', app_btn_active ? '' : '0px')
+					.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
 			})
 			.on('mouseover', () => {
 				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
