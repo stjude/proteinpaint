@@ -69,10 +69,10 @@ export function d2mafui(genomes, holder) {
 		.html('<a href=https://www.dropbox.com/s/9mc35sz9obkvaz5/2dmaf.txt?dl=0 target=_blank>Example file</a>')
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
-	}
+	}; 
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -107,8 +107,8 @@ export function d2mafui(genomes, holder) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+			
+		setTimeout(()=>input.node().focus(), 1100)
 	}
 	fileui()
 }

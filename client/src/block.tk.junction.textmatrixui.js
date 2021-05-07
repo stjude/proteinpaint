@@ -31,7 +31,7 @@ export default function(genomes, hostURL, jwt, holder) {
 		.attr('rows', 6)
 		.attr('cols', 50)
 		.attr('placeholder', 'junction-by-sample matrix')
-	ta1.node().focus()
+	setTimeout(()=>ta1.node().focus(), 1100)
 	const p = filediv.append('p')
 	p.append('button')
 		.text('Submit')

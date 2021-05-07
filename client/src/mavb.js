@@ -141,7 +141,7 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -183,8 +183,8 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+			
+		setTimeout(()=>input.node().focus(), 1100)
 	}
 	fileui()
 }

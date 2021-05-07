@@ -204,6 +204,7 @@ function displayTracks(tracks, holder, page_args) {
 			</div>`
 			)
 			.on('click', async () => {
+				event.stopPropagation()
 				page_args.apps_off()
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
@@ -252,25 +253,14 @@ function displayTracks(tracks, holder, page_args) {
 //Opens example of app in landing page container
 async function openExample(track) {
 	// crate unique id for each app div
-	const app_id = track.name + Math.floor(Math.random() * 1000)
-	let sandbox_div = newSandboxDiv()
+	const sandbox_div = newSandboxDiv()
 	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
-	sandbox_div.body
-		.append('div')
-		.attr('id', app_id)
-		.style('margin', '20px')
 
 	// template runpp() arg
-	let runpp_arg = {
-		holder: document.getElementById(app_id),
-		sandbox_header: sandbox_div.header,
+	const runpp_arg = {
+		holder: sandbox_div.body.append('div').style('margin', '20px').node(),
 		host: window.location.origin
 	}
 
-	// assign keys of specific app/track to runpp() template
-	Object.keys(track.buttons.example).forEach(key => {
-		runpp_arg[key] = track.buttons.example[key]
-	})
-
-	runproteinpaint(runpp_arg)
+	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
 }

@@ -140,7 +140,8 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 				saydiv.text('Parsing file ' + file.name + ' ...')
 				reader.readAsText(file, 'utf8')
 			})
-		butt.node().focus()
+		
+		setTimeout(()=>butt.node().focus(), 1100)
 	}
 	fileui()
 

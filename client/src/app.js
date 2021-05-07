@@ -214,7 +214,12 @@ function makeheader(app, obj, jwt) {
 			'border-bottom',
 			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
-	const apps_drawer_row = app.holder.append('div')
+
+	const apps_drawer_row = app.holder
+		.append('div')
+		.style('position', 'relative')
+		.style('overflow', 'hidden')
+
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
 		.attr('id', 'pp_sandbox')
@@ -351,11 +356,29 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
+	const duration = 500 // for apps drawer animation
+	let app_holder_full_height, apps_drawer_hint
+
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
+			app_holder
+				.transition()
+				.duration(duration)
+				.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+			//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+
+			apps_drawer_row
+				.transition()
+				.duration(duration)
+				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+			apps_drawer_hint
+				.transition()
+				.duration(duration + 100)
+				.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
+
 			btn_toggle(app_btn, app_btn_active)
 		}
 	}
@@ -366,8 +389,9 @@ function makeheader(app, obj, jwt) {
 
 	if (!obj.features.examples) {
 		app_btn = headbox
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
@@ -382,9 +406,11 @@ function makeheader(app, obj, jwt) {
 
 		app_holder = apps_drawer_row
 			.append('div')
+			.style('position', 'relative')
 			.style('margin', '20px')
-			.style('padding', '10px')
+			.style('padding', padw_sm)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
+			.style('overflow', 'hidden')
 			.style('background-color', '#f2f2f2')
 			.style('border-radius', '5px')
 			.style('width', '93vw')
@@ -394,46 +420,85 @@ function makeheader(app, obj, jwt) {
 			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height
 		}
 
 		if (app_btn_active) load_app_div()
 
-		app_btn = headbox
-			.append('span')
-			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
-			.style('border-radius', '5px')
-			.text('Apps')
+		const app_btn_div = headbox
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
 			.on('click', () => {
+				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
 				btn_toggle(app_btn, app_btn_active)
-
 				app_holder
+					.style('display', 'inline-block')
 					.transition()
-					.duration(500)
-					.style('display', app_btn_active ? 'inline-block' : 'none')
+					.duration(duration)
+					.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
+
+				if (app_btn_active) {
+					setTimeout(() => {
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height
+					}, duration + 5)
+				}
+
+				apps_drawer_row
+					.transition()
+					.duration(duration)
+					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+				apps_drawer_hint
+					.transition()
+					.duration(duration)
+					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_btn.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
+
+		app_btn = app_btn_div
+			.append('span')
+			.attr('class', 'sja_menuoption')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
+			.style('border-radius', '5px')
+			.text('Apps')
+
+		apps_drawer_hint = app_btn_div
+			.append('div')
+			.style('position', 'absolute')
+			.style('bottom', '-30px')
+			.style('width', '100%')
+			.style('text-align', 'center')
+			.style('cursor', 'pointer')
+			.append('div')
+			.style('display', 'inline-block')
+			//.style('padding', '1px')
+			//.style('border-radius', '8px')
+			.style('font-size', '20px')
+			.style('transform', 'rotate(180deg)')
+			//.style('background-color', '#ececec')
+			.style('color', '#555')
+			.html('&#9660;')
 	}
 
 	function btn_toggle(btn, btn_active) {
 		btn
 			.transition()
 			.duration(500)
-			.style('background-color', btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', btn_active ? '#fff' : '#000')
 	}
 
 	headbox
