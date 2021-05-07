@@ -350,7 +350,7 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
-	let app_holder_full_height, apps_drawer_height
+	let app_holder_full_height, apps_drawer_hint
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
@@ -367,6 +367,11 @@ function makeheader(app, obj, jwt) {
 				.duration(1000)
 				.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
 
+			apps_drawer_hint
+					.transition()
+					.duration(duration + 100)
+					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
+
 			btn_toggle(app_btn, app_btn_active)
 		}
 	}
@@ -377,8 +382,9 @@ function makeheader(app, obj, jwt) {
 
 	if (!obj.features.examples) {
 		app_btn = headbox
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
@@ -408,20 +414,14 @@ function makeheader(app, obj, jwt) {
 			const _ = await import('./examples')
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height
-			apps_drawer_height = apps_drawer_row.node().getBoundingClientRect().height
 		}
 
 		if (app_btn_active) load_app_div()
 
-		app_btn = headbox
-			.append('span')
-			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-			.style('color', app_btn_active ? '#fff' : '#000')
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
-			.style('border-radius', '5px')
-			.text('Apps')
+		const app_btn_div = headbox
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
 			.on('click', () => {
 				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
@@ -433,13 +433,12 @@ function makeheader(app, obj, jwt) {
 					.style('display', 'inline-block')
 					.transition()
 					.duration(duration)
-					.style('top', app_btn_active ? '0px' : '-'+ apps_drawer_height + 'px')
+					.style('top', app_btn_active ? '0px' : '-'+ app_holder_full_height + 'px')
 					//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
 
 				if (app_btn_active) {
 					setTimeout(() => {
 						app_holder_full_height = app_holder.node().getBoundingClientRect().height
-						apps_drawer_height = apps_drawer_row.node().getBoundingClientRect().height
 					}, duration + 5)
 				}
 
@@ -447,6 +446,11 @@ function makeheader(app, obj, jwt) {
 					.transition()
 					.duration(duration + 100)
 					.style('height', app_btn_active ? app_holder_full_height+'px' : '0px')
+
+				apps_drawer_hint
+					.transition()
+					.duration(duration + 100)
+					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 			})
 			.on('mouseover', () => {
 				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
@@ -454,6 +458,32 @@ function makeheader(app, obj, jwt) {
 			.on('mouseout', () => {
 				app_btn.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
+
+		app_btn = app_btn_div
+			.append('span')
+			.attr('class', 'sja_menuoption')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
+			.style('border-radius', '5px')
+			.text('Apps')
+
+		apps_drawer_hint = app_btn_div.append('div')
+			.style('position', 'absolute')
+			.style('bottom', '-30px')
+    	.style('width', '100%')
+    	.style('text-align', 'center')
+    	.style('cursor', 'pointer')
+    	.append('div')
+    	.style('display', 'inline-block')
+    	//.style('padding', '1px')
+    	//.style('border-radius', '8px')
+			.style('font-size', '20px')
+    	.style('transform', 'rotate(180deg)')
+			//.style('background-color', '#ececec')
+    	.style('color', '#555')
+			.html('&#9660;')
 	}
 
 	function btn_toggle(btn, btn_active) {
