@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
-import { axisLeft, axisRight } from 'd3-axis'
+import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
@@ -60,39 +60,41 @@ getReadInfo
 const labyspace = 5
 const stackpagesize = 60
 
-export function bamsliceui(genomes, holder){
-
+export function bamsliceui(genomes, holder) {
 	let gdc_args = {}
 	const default_genome = 'hg38'
 
 	const saydiv = holder.append('div').style('margin', '10px 20px')
 	const visualdiv = holder.append('div').style('margin', '20px')
 
-	const inputdiv = holder.append('div')
+	const inputdiv = holder
+		.append('div')
 		.style('margin', '40px 20px 20px 20px')
-		.style('font-size','.9em')
-		.style('display','grid')
-		.style('grid-template-columns','150px auto')
-		.style('grid-template-rows','repeat(4, 30px)')
-		.style('gap','5px')
-		.style('align-items','center')
-		.style('justify-items','left')
+		.style('font-size', '.9em')
+		.style('display', 'grid')
+		.style('grid-template-columns', '150px auto')
+		.style('grid-template-rows', 'repeat(4, 30px)')
+		.style('gap', '5px')
+		.style('align-items', 'center')
+		.style('justify-items', 'left')
 
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
 	}
 
 	// token file upload
-	inputdiv.append('div')
-		.style('padding','3px 10px')
+	inputdiv
+		.append('div')
+		.style('padding', '3px 10px')
 		.text('GDC Token file')
 
 	const upload_div = inputdiv.append('div')
-	
+
 	const fileui = () => {
 		upload_div.selectAll('*').remove()
 
-		upload_div.append('input')
+		const file_input = upload_div
+			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
 				const file = d3event.target.files[0]
@@ -116,33 +118,34 @@ export function bamsliceui(genomes, holder){
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+
+		setTimeout(() => file_input.node().focus(), 1100)
 	}
 
 	fileui()
 
 	const input_fields = [
-		{title:'Case ID', key: 'case_id', size:40}, 
-		{title:'Position', key: 'position', placeholder: 'chr:start-stop'}, 
-		{title:'Variant (optional)', key: 'variant'}
+		{ title: 'Case ID', key: 'case_id', size: 40 },
+		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
+		{ title: 'Variant (optional)', key: 'variant' }
 	]
-	for(const field of input_fields){
+	for (const field of input_fields) {
 		makeFormInput(field)
 	}
 
 	//submit button
 	const submit_btn_div = holder.append('div')
-	
-	submit_btn_div.append('button')
-		.style('font-size','1.1em')
-		.style('margin','20px')	
+
+	submit_btn_div
+		.append('button')
+		.style('font-size', '1.1em')
+		.style('margin', '20px')
 		.style('margin-left', '130px')
 		.text('submit')
-		.on('click', ()=>{
-			try{
+		.on('click', () => {
+			try {
 				validateInputs(gdc_args)
-			}catch (e) {
+			} catch (e) {
 				cmt(e, 1)
 				return
 			}
@@ -150,64 +153,66 @@ export function bamsliceui(genomes, holder){
 			inputdiv.remove()
 			saydiv.remove()
 			submit_btn_div.remove()
-			makeBamtkArgs(gdc_args, genomes[default_genome], visualdiv)
+			renderBamSlice(gdc_args, genomes[default_genome], visualdiv)
 		})
 
-	function makeFormInput(field){
-		inputdiv.append('div')
-			.style('padding','3px 10px')
+	function makeFormInput(field) {
+		inputdiv
+			.append('div')
+			.style('padding', '3px 10px')
 			.property('placeholder', field.placeholder || '')
 			.text(field.title)
-	
-		const input = inputdiv.append('input')
+
+		const input = inputdiv
+			.append('input')
 			.attr('size', field.size || 20)
-			.style('padding','3px 10px')
+			.style('padding', '3px 10px')
 			.property('placeholder', field.placeholder || '')
-			.on('change',()=>{
+			.on('change', () => {
 				gdc_args[field.key] = input.property('value').trim()
 			})
 	}
 }
 
-function validateInputs(obj){
-	if(!obj) throw 'no parameters passing to validate'
-	if(!obj.gdc_token) throw 'gdc token missing'
-	if(typeof(obj.gdc_token) !== 'string') throw 'gdc token is not string'
-	if(!obj.case_id) throw ' case ID is missing'
-	if(typeof(obj.case_id) !== 'string') throw 'case id is not string'
-	if(!obj.position) throw ' position is missing'
-	if(typeof(obj.position) !== 'string') throw 'position is not string'
-	if(obj.variant !== undefined && typeof(onj.variant) !== 'string') throw 'Varitent is not string'
+function validateInputs(obj) {
+	if (!obj) throw 'no parameters passing to validate'
+	if (!obj.gdc_token) throw 'gdc token missing'
+	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
+	if (!obj.case_id) throw ' case ID is missing'
+	if (typeof obj.case_id !== 'string') throw 'case id is not string'
+	if (!obj.position) throw ' position is missing'
+	if (typeof obj.position !== 'string') throw 'position is not string'
+	if (obj.variant !== undefined && typeof onj.variant !== 'string') throw 'Varitent is not string'
 }
 
-function makeBamtkArgs(args, genome, holder){
+function renderBamSlice(args, genome, holder) {
+	// create arg for block init
 	const par = {
 		nobox: 1,
-		genome, 
+		genome,
 		holder
 	}
-	const ll = args.position.split(/[:-]/)
-	par.chr = ll[0]
-	par.start = Number.parseInt(ll[1])
-	par.stop = Number.parseInt(ll[2])
+	const pos_str = args.position.split(/[:-]/)
+	par.chr = pos_str[0]
+	par.start = Number.parseInt(pos_str[1])
+	par.stop = Number.parseInt(pos_str[2])
 	par.tklst = []
 
 	const tk = {
 		type: client.tkt.bam,
 		name: 'sample bam slice',
 		gdc: args.gdc_token + ',' + args.case_id,
-		downloadgdc: 1
+		downloadgdc: 1,
+		file: 'dummy_str'
 	}
-	// TODO: create arg for block init
-	// par.tklst.push(tk)
-	// import('./block').then(b =>{
-	// 	const block = new b.Block(par)
-	// 	loadTk(tk, block)
-	// })
+	par.tklst.push(tk)
+	client.first_genetrack_tolist(genome, par.tklst)
+	import('./block').then(b => {
+		new b.Block(par)
+	})
 }
 
 export async function loadTk(tk, block) {
-	console.log(tk, block)
 	block.tkcloakon(tk)
 	block.block_setheight()
 
