@@ -350,6 +350,7 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
+	const duration = 1000
 	let app_holder_full_height, apps_drawer_hint
 
 	//Hides app_div and toggles app_btn off
@@ -428,7 +429,6 @@ function makeheader(app, obj, jwt) {
 				app_btn_active = !app_btn_active
 				load_app_div()
 				btn_toggle(app_btn, app_btn_active)
-				const duration = 1000
 				app_holder
 					.style('display', 'inline-block')
 					.transition()
