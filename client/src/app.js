@@ -210,9 +210,10 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder
 		.append('div')
+		.style('white-space', 'nowrap')
 		.style(
 			'border-bottom',
-			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 
 	const apps_drawer_row = app.holder
@@ -229,10 +230,10 @@ function makeheader(app, obj, jwt) {
 		.style('margin', '10px')
 		.style('padding', '8px')
 		.style('padding-bottom', '12px')
-		.style('display', doc_width < 1600 ? 'block' : 'inline-block')
+		.style('display', 0 && doc_width < 1600 ? 'block' : 'inline-block')
 		.style(
 			'border-bottom',
-			doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 	// .style('border-radius', '5px')
 	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
@@ -243,6 +244,7 @@ function makeheader(app, obj, jwt) {
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
+
 	{
 		// a row for server stats
 		const row = headinfo.append('div')
@@ -356,30 +358,19 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
-	const duration = 500 // for apps drawer animation
-	let app_holder_full_height, apps_drawer_hint
+	const duration = 500, // for apps drawer animation
+		hint_btm = { open: -75, closed: -30 },
+		arrow_size = { open: 65, closed: 20 },
+		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
+
+	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder
-				.transition()
-				.duration(duration)
-				.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
-			//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
-
-			apps_drawer_row
-				.transition()
-				.duration(duration)
-				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-
-			apps_drawer_hint
-				.transition()
-				.duration(duration + 100)
-				.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
-
 			btn_toggle(app_btn, app_btn_active)
+			slide_drawer()
 		}
 	}
 
@@ -435,28 +426,12 @@ function makeheader(app, obj, jwt) {
 				app_btn_active = !app_btn_active
 				load_app_div()
 				btn_toggle(app_btn, app_btn_active)
-				app_holder
-					.style('display', 'inline-block')
-					.transition()
-					.duration(duration)
-					.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
-				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
-
+				slide_drawer()
 				if (app_btn_active) {
 					setTimeout(() => {
 						app_holder_full_height = app_holder.node().getBoundingClientRect().height
 					}, duration + 5)
 				}
-
-				apps_drawer_row
-					.transition()
-					.duration(duration)
-					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-
-				apps_drawer_hint
-					.transition()
-					.duration(duration)
-					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 			})
 			.on('mouseover', () => {
 				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
@@ -478,18 +453,20 @@ function makeheader(app, obj, jwt) {
 		apps_drawer_hint = app_btn_div
 			.append('div')
 			.style('position', 'absolute')
-			.style('bottom', '-30px')
+			.style('bottom', hint_btm.open + 'px')
 			.style('width', '100%')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
+
+		apps_drawer_arrow = apps_drawer_hint
 			.append('div')
 			.style('display', 'inline-block')
 			//.style('padding', '1px')
 			//.style('border-radius', '8px')
-			.style('font-size', '20px')
+			.style('font-size', arrow_size.open + 'px')
 			.style('transform', 'rotate(180deg)')
 			//.style('background-color', '#ececec')
-			.style('color', '#555')
+			.style('color', arrow_color.open)
 			.html('&#9660;')
 	}
 
@@ -499,6 +476,31 @@ function makeheader(app, obj, jwt) {
 			.duration(500)
 			.style('background-color', btn_active ? '#b2b2b2' : '#f2f2f2')
 			.style('color', btn_active ? '#fff' : '#000')
+	}
+
+	function slide_drawer() {
+		app_holder
+			.style('display', 'inline-block')
+			.transition()
+			.duration(duration)
+			.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+
+		apps_drawer_row
+			.transition()
+			.duration(duration)
+			.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+		apps_drawer_hint
+			.transition()
+			.duration(duration)
+			.style('bottom', (app_btn_active ? hint_btm.open : hint_btm.closed) + 'px')
+
+		apps_drawer_arrow
+			.transition()
+			.duration(duration)
+			.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
+			.style('font-size', (app_btn_active ? arrow_size.open : arrow_size.closed) + 'px')
+			.style('color', app_btn_active ? arrow_color.open : arrow_color.closed)
 	}
 
 	headbox
