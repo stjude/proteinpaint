@@ -75,6 +75,7 @@ const express = require('express'),
 	do_hicstat = require('./hicstat').do_hicstat,
 	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
 	phewas = require('./termdb.phewas')
+	// handle_mdssurvivalplot = require('./km')
 
 /*
 valuable globals
