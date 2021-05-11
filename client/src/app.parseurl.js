@@ -656,6 +656,19 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 		}
 	}
+
+	if(urlp.has('junctionrnapeg')) {
+		const lst = urlp.get('junctionrnapeg').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [{ rnapegfile: lst[i + 1] }]
+				})
+			}
+		}
+	}
 	for (const t of tklst) {
 		t.iscustom = true
 	}

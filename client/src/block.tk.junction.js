@@ -171,6 +171,10 @@ export function junctionload(tk, block) {
 	const allfiledata = []
 	for (const t of tk.tracks) {
 		const getheader = new Promise((resolve, reject) => {
+			if(t.rnapegfile){
+				t.samplecount = 1
+				return resolve()
+			} 
 			if (t.samplecount != undefined && t.checkedheader) return resolve()
 			/*
 		#sample is unknown for this track, try loading header line like a vcf
@@ -247,8 +251,56 @@ export function junctionload(tk, block) {
 				.then(() => {
 					const par = ['rglst=' + JSON.stringify(block.tkarg_maygm(t))]
 					if (bincount) par.push('bincount=' + bincount)
-					if (t.file) {
-						par.push('file=' + t.file)
+					// special file handeling for for rnapeg junction files
+					if (t.rnapegfile) {
+						par.push('file=' + t.rnapegfile)
+						client.dofetch2('junctionrnapeg?' + par.join('&')).then(data => {
+							if (!data) reject('rnapeg not supported')
+							if (data.error) reject('Cannot get data: ' + data.error)
+							if (!data.lst && !data.bins) reject('wrong response when getting data for ' + t.name)
+							if(!data.lst.length) reject('no data retrived for given postion')
+							const thisfilejunctions = []
+
+							for (const k of data.lst) {
+								k.data = []
+								for (let i = 0; i < k.rawdata.length; i++) {
+									const v = k.rawdata[i]
+									if (!Number.isInteger(v) || v <= 0) {
+										// invalid read count value
+										continue
+									}
+									const s = { v: v }
+									if (t.headersamples) {
+										const s0 = t.headersamples[i]
+										if (s0) {
+											for (const _k in s0) {
+												s[_k] = s0[_k]
+											}
+										}
+									} else {
+										/*
+										no file header
+										transfer some attributes
+										*/
+										if (t.name) s.name = t.name
+										if (t.sample) s.sample = t.sample
+										if (t.patient) s.patient = t.patient
+										if (t.sampeltype) s.sampletype = t.sampletype
+										if (t.tkid) s.tkid = t.tkid
+										if (t.file) s.file = t.file
+										if (t.url) s.url = t.url
+										if (t.indexURL) s.indexURL = t.indexURL
+									}
+									k.data.push(s)
+								}
+								delete k.rawdata
+								thisfilejunctions.push(k)
+							}
+							resolve(thisfilejunctions)
+						})
+					} else { 
+						if (t.file){
+							par.push('file=' + t.file)
 					} else {
 						par.push('url=' + t.url)
 						if (t.indexURL) par.push('indexURL=' + t.indexURL)
@@ -387,6 +439,7 @@ export function junctionload(tk, block) {
 					*/
 						}
 					})
+				}
 				})
 				.catch(err => reject(err))
 		})
