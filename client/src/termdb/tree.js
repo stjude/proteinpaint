@@ -404,6 +404,17 @@ function setRenderers(self) {
 					.text('VIEW')
 					.on('click', termIsDisabled ? null : self.clickViewButton)
 
+				if (self.app.vocabApi.state.termdbConfig.cumincplot4condition && term.type == 'condition') {
+					div
+						.append('div')
+						.attr('class', termIsDisabled ? '' : 'sja_menuoption ' + cls_termview)
+						.style('display', 'inline-block')
+						.style('border-radius', '5px')
+						.style('margin-left', '20px')
+						.style('font-size', '0.8em')
+						.style('opacity', termIsDisabled ? 0.4 : 1)
+						.text('Cumulative incidence curve')
+				}
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
 		}

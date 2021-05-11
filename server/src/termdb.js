@@ -76,7 +76,8 @@ function trigger_gettermdbconfig(res, tdb) {
 	res.send({
 		termdbConfig: {
 			// add attributes here to reveal to client
-			selectCohort: tdb.selectCohort // optional
+			selectCohort: tdb.selectCohort, // optional
+			cumincplot4condition: tdb.cumincplot4condition // optional
 		}
 	})
 }
