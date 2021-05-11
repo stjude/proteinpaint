@@ -9,7 +9,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/pp-dist/build.sh [-t] [-r]
+	./targets/gdc/build.sh [-t] [-r]
 
 	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
@@ -43,7 +43,7 @@ fi
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh
+./build/extract.sh -r $REV -t gdc
 REV=$(cat tmppack/rev.txt)
 
 #####################
@@ -53,7 +53,7 @@ REV=$(cat tmppack/rev.txt)
 cd tmppack
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
-echo "building image:$REV, version=$TAG"
+echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
 
 # build an image for GDC-related tests
