@@ -453,7 +453,7 @@ function makeheader(app, obj, jwt) {
 		apps_drawer_hint = app_btn_div
 			.append('div')
 			.style('position', 'absolute')
-			.style('bottom', hint_btm.open + 'px')
+			.style('bottom', (app_btn_active ? hint_btm.open : hint_btm.closed) + 'px')
 			.style('width', '100%')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
@@ -463,10 +463,10 @@ function makeheader(app, obj, jwt) {
 			.style('display', 'inline-block')
 			//.style('padding', '1px')
 			//.style('border-radius', '8px')
-			.style('font-size', arrow_size.open + 'px')
-			.style('transform', 'rotate(180deg)')
+			.style('font-size', (app_btn_active ? arrow_size.open : arrow_size.closed) + 'px')
+			.style('transform', app_btn_active ? 'rotate(180deg)' : '')
 			//.style('background-color', '#ececec')
-			.style('color', arrow_color.open)
+			.style('color', app_btn_active ? arrow_color.open : arrow_color.closed)
 			.html('&#9660;')
 	}
 
