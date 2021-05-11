@@ -17,21 +17,15 @@ module.exports = async (req, res) => {
 		if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000)
 			throw 'Zoom in below 1 Mb to show junctions'
 
-	// 	const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
-
 		const items = []
 		for (const r of req.query.rglst) {
-			// await get_lines_rnapeg({file, chr: r.chr, start: r.start, stop: r.stop})
-			// 	.then(lines =>{
-			// 		console.log(lines)
-			// 	})
 			await get_lines_rnapeg({file, chr: r.chr, start: r.start, stop: r.stop}, lines => {
+				// lines are already filterd from get_lines_rnapeg
 				for (let i = 0; i < lines.length; i++) {
 					const l = lines[i].split('\t')
 					const pos = l[0].split(',')
 					const start = Number.parseInt(pos[0].split(':')[1]),
 						stop = Number.parseInt(pos[1].split(':')[1])
-					// only use those with either start/stop in region
 					const j = {
 						chr: r.chr,
 						start,
@@ -39,6 +33,7 @@ module.exports = async (req, res) => {
 						type: l[2],
 						rawdata: []
 					}
+					// rawdata is using value from count column of rnapeg file
 					j.rawdata.push(Number.parseInt(l[1]))
 					items.push(j)
 				}
@@ -62,6 +57,7 @@ function get_lines_rnapeg(args, callback){
 			const chr = _start[0],
 				start = _start[1],
 				stop = pos[1] ? pos[1].split(':')[1] : undefined
+			// assumes that file is sorted by start:stop and stops when stop > args.stops
 			if(chr == args.chr && ((start >= args.start && start <= args.stop) || (stop >= args.start && stop <= args.stop))){
 				if(Number.isNaN(start) || Number.isNaN(stop) || start<0 || stop<0 || start>stop) {
 					reject('error reading file: '+ line)
