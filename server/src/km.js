@@ -3,66 +3,81 @@ const fs = require('fs'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	readline = require('readline'),
+	app = require('./app'),
 	utils = require('./utils'),
-    common = require('../shared/common')
+    common = require('../shared/common'),
+	serverconfig = require('./serverconfig'),
+	vcf = require('../shared/vcf')
 
-module.exports = async (req, res) => {
-	if (reqbodyisinvalidjson(req, res)) return
-	try {
-		const q = req.query
-		const gn = genomes[q.genome]
-		if (!gn) throw 'invalid genome'
-		const ds = gn.datasets[q.dslabel]
-		if (!ds) throw 'invalid dataset'
-		if (!ds.cohort) throw 'no cohort for dataset'
-		if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+	/*
+	valuable globals
+	*/
+	const tabix = serverconfig.tabix || 'tabix'
 
-		const sp = ds.cohort.survivalplot
-		if (!sp) throw 'survivalplot not supported for this dataset'
-		if (!sp.plots) throw '.plots{} missing'
+	const tabixnoterror = s => {
+		return s.startsWith('[M::test_and_fetch]')
+	}
 
-		if (req.query.init) {
-			res.send(sp.init)
-			return
+module.exports = genomes => {
+	return async (req, res) => {	
+// module.exports = async (req, res) => {
+		if (app.reqbodyisinvalidjson(req, res)) return
+		try {
+			const q = req.query
+			const gn = genomes[q.genome]
+			if (!gn) throw 'invalid genome'
+			const ds = gn.datasets[q.dslabel]
+			if (!ds) throw 'invalid dataset'
+			if (!ds.cohort) throw 'no cohort for dataset'
+			if (!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+
+			const sp = ds.cohort.survivalplot
+			if (!sp) throw 'survivalplot not supported for this dataset'
+			if (!sp.plots) throw '.plots{} missing'
+
+			if (req.query.init) {
+				res.send(sp.init)
+				return
+			}
+
+			// make plot
+
+			if (!q.type) throw '.type missing'
+			const plottype = sp.plots[q.type]
+			if (!plottype) throw 'unknown plot type: ' + q.type
+
+			const samples = handle_mdssurvivalplot_getfullsamples(q, ds, plottype)
+
+			const samplesets = await handle_mdssurvivalplot_dividesamples(samples, q, ds, samples)
+
+			let pvalue
+			if (samplesets.length > 1) {
+				pvalue = await handle_mdssurvivalplot_pvalue(samplesets)
+			}
+
+			await handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets)
+			await handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets)
+
+			for (const s of samplesets) {
+				handle_mdssurvivalplot_plot(s)
+				delete s.lst
+			}
+
+			const result = { samplesets, pvalue }
+
+			if (q.samplerule.set && q.samplerule.set.mutation) {
+				result.count_snvindel = q.samplerule.set.samples_snvindel.size
+				result.count_cnv = q.samplerule.set.samples_cnv.size
+				result.count_loh = q.samplerule.set.samples_loh.size
+				result.count_sv = q.samplerule.set.samples_sv.size
+				result.count_fusion = q.samplerule.set.samples_fusion.size
+				result.count_itd = q.samplerule.set.samples_itd.size
+			}
+			res.send(result)
+		} catch (err) {
+			if (err.stack) console.error(err.stack)
+			res.send({ error: err.message || err })
 		}
-
-		// make plot
-
-		if (!q.type) throw '.type missing'
-		const plottype = sp.plots[q.type]
-		if (!plottype) throw 'unknown plot type: ' + q.type
-
-		const samples = handle_mdssurvivalplot_getfullsamples(q, ds, plottype)
-
-		const samplesets = await handle_mdssurvivalplot_dividesamples(samples, q, ds, samples)
-
-		let pvalue
-		if (samplesets.length > 1) {
-			pvalue = await handle_mdssurvivalplot_pvalue(samplesets)
-		}
-
-		await handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets)
-		await handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets)
-
-		for (const s of samplesets) {
-			handle_mdssurvivalplot_plot(s)
-			delete s.lst
-		}
-
-		const result = { samplesets, pvalue }
-
-		if (q.samplerule.set && q.samplerule.set.mutation) {
-			result.count_snvindel = q.samplerule.set.samples_snvindel.size
-			result.count_cnv = q.samplerule.set.samples_cnv.size
-			result.count_loh = q.samplerule.set.samples_loh.size
-			result.count_sv = q.samplerule.set.samples_sv.size
-			result.count_fusion = q.samplerule.set.samples_fusion.size
-			result.count_itd = q.samplerule.set.samples_itd.size
-		}
-		res.send(result)
-	} catch (err) {
-		if (err.stack) console.error(err.stack)
-		res.send({ error: err.message || err })
 	}
 }
 
