@@ -491,8 +491,6 @@ function makeheader(app, obj, jwt) {
 			.duration(500)
 			.style('color', app_btn_active ? '#fff' : '#000')
 
-		app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-
 		app_holder
 			.style('display', 'inline-block')
 			.transition()
