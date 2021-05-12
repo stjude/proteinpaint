@@ -240,6 +240,7 @@ push button to re-render
 	}
 
 	show_dividerules(p, div)
+	show_sampleinput(p, div)
 
 	p.button = div
 		.append('button')
@@ -713,4 +714,42 @@ TODO allow config for each rule, e.g. mutation filters
 				)
 		}
 	}
+}
+
+function show_sampleinput(p, div){
+
+	div.append('div')
+		.style('opacity', 0.5)
+		.style('margin', '20px 0 10px 0')
+		.text('Select by sample names (optional)')
+
+	const row = div.append('div').style('margin-bottom', '10px')
+
+	const groupname_div = row.append('div')
+
+	groupname_div.append('span')
+		.style('opacity', 0.5)
+		.style('margin-left', '20px')
+		.style('display','inline-block')
+		.html('Sample group name &nbsp;')
+
+	const nameinput = groupname_div.append('input')
+		.style('display','inline-block')
+		.attr('type', 'text')
+		.style('width', '130px')
+
+	const samplelist_div = row.append('div')
+		.style('padding-top','10px')
+		.style('margin-left', '20px')
+	
+	samplelist_div.append('div')
+		.style('vertical-align','top')
+		.style('display','inline-block')
+		.style('opacity', 0.5)
+		.html('Enter sample names<br>(one sample per line) &nbsp;')
+
+	samplelist_div.append('textarea')
+		.style('display','inline-block')
+		.attr('cols', '20')
+		.attr('rows', '10')
 }
