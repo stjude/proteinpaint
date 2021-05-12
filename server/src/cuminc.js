@@ -67,15 +67,13 @@ export function handle_incidence(genomes) {
 			const year_to_events = case_year_to_events.concat(control_year_to_events).join('_')
 			const events = event_array.join('_')
 			const groups = group_array.join('_')
-			console.log('year_to_events:', year_to_events)
-			console.log('events:', events)
-			console.log('groups:', groups)
-			const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
-			const rl = readline.createInterface({ input: ps.stdout })
-			rl.on('line', line => {
-				console.log(line)
-			})
-			res.send(case_data)
+			//console.log('year_to_events:', year_to_events)
+			//console.log('events:', events)
+			//console.log('groups:', groups)
+
+			const ci_data = await calculate_cuminc(year_to_events, events, groups)
+			console.log('ci_data:', ci_data)
+			res.send(ci_data)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -109,4 +107,47 @@ WHERE grade < ?
   AND term_id = ?
 GROUP BY sample;`
 	return ds.cohort.db.connection.prepare(sql).all([q.grade, q.term_id])
+}
+
+function calculate_cuminc(year_to_events, events, groups) {
+	const ci_data = {}
+	return new Promise((resolve, reject) => {
+		const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
+		const rl = readline.createInterface({ input: ps.stdout })
+
+		rl.on('line', line => {
+			console.log(line)
+			if (line.includes('p_value') == true) {
+				const line2 = line.split(':')
+				ci_data.pvalue = parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
+			} else if (line.includes('control_time') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.control_time = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('control_est') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.control_est = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('case_time') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.case_time = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('case_est') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.case_est = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('low_control') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.low_control = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('up_control') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.up_control = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('low_case') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.low_case = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			} else if (line.includes('up_case') == true) {
+				const char_array = line.split(':')[1].split(',')
+				ci_data.up_case = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+			}
+		})
+		rl.on('close', () => {
+			resolve(ci_data)
+		})
+	})
 }

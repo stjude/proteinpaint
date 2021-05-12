@@ -1,3 +1,5 @@
+# Rscript cuminc.R 0.3_0.4_0.1_0.2 1_1_0_0 1_1_0_0
+
 #library(survival) #for survfit function
 library(cmprsk) #for cuminc function
 args <- commandArgs(TRUE)
@@ -12,13 +14,11 @@ groups <- as.integer(unlist(strsplit(args[3], split = "_")))
 ci_output <- cuminc(ftime=year_to_events, fstatus=events, group=groups, cencode = 0)
 
 if (length(ci_output[["Tests"]]) == 6) { # Competing risks present
-  print (paste("p_value:",ci_output[["Tests"]][3],ci_output[["Tests"]][4]))
+  print (paste("p_value:",format(round(ci_output[["Tests"]][3], 6), nsmall = 6)))
 }
 if (length(ci_output[["Tests"]]) == 3) { # No competing risks present
-  print (paste("p_value:",ci_output[["Tests"]][2]))
+  print (paste("p_value:",format(round(ci_output[["Tests"]][2], 6), nsmall = 6)))
 }
-
-
 
 print (paste("control_time:",toString(ci_output[[1]]$time)))
 print (paste("control_est:", toString(ci_output[[1]]$est)))
