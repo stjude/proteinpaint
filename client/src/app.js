@@ -373,14 +373,13 @@ function makeheader(app, obj, jwt) {
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			btn_toggle(app_btn, app_btn_active)
 			slide_drawer()
 		}
 	}
 
 	// launchApps()
 
-	let app_btn_div, app_btn, app_btn_active, app_holder
+	let app_btn_wrapper, app_btn, app_btn_active, app_holder
 
 	if (!obj.features.examples) {
 		app_btn = headbox
@@ -420,7 +419,7 @@ function makeheader(app, obj, jwt) {
 
 		if (app_btn_active) load_app_div()
 
-		app_btn_div = headbox
+		app_btn_wrapper = headbox
 			.append('div')
 			.style('position', 'relative')
 			.style('display', 'inline-block')
@@ -428,12 +427,12 @@ function makeheader(app, obj, jwt) {
 			.style('margin-right', '5px')
 			.style('border-radius', '5px')
 			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 			.on('click', () => {
 				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				btn_toggle(app_btn, app_btn_active)
 				slide_drawer()
 				if (app_btn_active) {
 					setTimeout(() => {
@@ -442,55 +441,57 @@ function makeheader(app, obj, jwt) {
 				}
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
 
-		app_btn = app_btn_div
+		app_btn = app_btn_wrapper
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.style('display', 'inline-block')
+			.style('background-color', 'transparent')
 			.style('color', app_btn_active ? '#fff' : '#000')
-			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
 			.text('Apps')
 
-		apps_drawer_hint = app_btn_div
+		apps_drawer_hint = app_btn_wrapper
 			.append('div')
 			.style('position', 'relative')
 			.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
 			.style('height', arrow_size.closed + 'px')
 			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+			.style('background-color', 'transparent')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
 
 		apps_drawer_arrow = apps_drawer_hint
 			.append('div')
 			.style('position', 'absolute')
-			//.style('padding', '1px')
-			//.style('border-radius', '8px')
 			.style('font-size', (app_btn_active ? arrow_size.open : arrow_size.closed) + 'px')
 			.style('right', (app_btn_active ? hint_pos.open.rt : hint_pos.closed.rt) + 'px')
 			.style('bottom', (app_btn_active ? hint_pos.open.btm : hint_pos.closed.btm) + 'px')
 			.style('transform', app_btn_active ? 'rotate(180deg)' : '')
-			//.style('background-color', '#ececec')
+			.style('background-color', 'transparent')
 			.style('color', app_btn_active ? arrow_color.open : arrow_color.closed)
 			.html('&#9660;')
 	}
 
-	function btn_toggle(btn, btn_active) {
-		btn
+	function slide_drawer() {
+		app_btn_wrapper
 			.transition()
 			.duration(500)
-			.style('background-color', btn_active ? '#b2b2b2' : '#f2f2f2')
-			.style('color', btn_active ? '#fff' : '#000')
-	}
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 
-	function slide_drawer() {
-		app_btn_div.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+		app_btn
+			.transition()
+			.duration(500)
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 
 		app_holder
 			.style('display', 'inline-block')
