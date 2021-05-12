@@ -1,4 +1,6 @@
 const app = require('./app')
+const spawn = require('child_process').spawn
+const readline = require('readline')
 
 export function handle_incidence(genomes) {
 	return async (req, res) => {
@@ -22,7 +24,7 @@ export function handle_incidence(genomes) {
 			//const control_grades = control_data.map(i => i.grade).join('\t')
 			const control_year_to_events = control_data.map(i => Object.values(i)[2])
 
-			const death_datas = get_sql_queries_greater(q, ds) // set grade = 5 for deaths
+			const death_datas = get_sql_queries_death(q, ds) // set grade = 5 for deaths
 			const patient_death_ids = death_datas.map(i => i.sample)
 			const patient_death_times = death_datas.map(i => Object.values(i)[2])
 
@@ -38,6 +40,7 @@ export function handle_incidence(genomes) {
 				for (let i = 0; i < death_datas.length; i++) {
 					const patient_death_time = Object.values(death_datas[i])[2]
 					if (death_datas[i].sample == case_data[j].sample && patient_death_time <= case_year_to_event) {
+						console.log('death_datas[i].sample:', death_datas[i].sample)
 						event = 2
 					}
 				}
@@ -63,9 +66,15 @@ export function handle_incidence(genomes) {
 			}
 			const year_to_events = case_year_to_events.concat(control_year_to_events).join('_')
 			const events = event_array.join('_')
-			const group = group_array.join('_')
-			//console.log("year_to_events:",year_to_events)
-
+			const groups = group_array.join('_')
+			console.log('year_to_events:', year_to_events)
+			console.log('events:', events)
+			console.log('groups:', groups)
+			const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
+			const rl = readline.createInterface({ input: ps.stdout })
+			rl.on('line', line => {
+				console.log(line)
+			})
 			res.send(case_data)
 		} catch (e) {
 			res.send({ error: e.message || e })
