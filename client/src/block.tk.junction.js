@@ -251,182 +251,107 @@ export function junctionload(tk, block) {
 				.then(() => {
 					const par = ['rglst=' + JSON.stringify(block.tkarg_maygm(t))]
 					if (bincount) par.push('bincount=' + bincount)
-					// special file handeling for for rnapeg junction files
-					if (t.rnapegfile) {
+					if (t.file){
+						par.push('file=' + t.file)
+					} else if(t.rnapegfile){
 						par.push('file=' + t.rnapegfile)
-						client.dofetch2('junctionrnapeg?' + par.join('&')).then(data => {
-							if (!data) reject('rnapeg not supported')
-							if (data.error) reject('Cannot get data: ' + data.error)
-							if (!data.lst && !data.bins) reject('wrong response when getting data for ' + t.name)
-							if(!data.lst.length) reject('no data retrived for given postion')
-							const thisfilejunctions = []
-
-							for (const k of data.lst) {
-								k.data = []
-								for (let i = 0; i < k.rawdata.length; i++) {
-									const v = k.rawdata[i]
-									if (!Number.isInteger(v) || v <= 0) {
-										// invalid read count value
-										continue
-									}
-									const s = { v: v }
-									if (t.headersamples) {
-										const s0 = t.headersamples[i]
-										if (s0) {
-											for (const _k in s0) {
-												s[_k] = s0[_k]
-											}
-										}
-									} else {
-										/*
-										no file header
-										transfer some attributes
-										*/
-										if (t.name) s.name = t.name
-										if (t.sample) s.sample = t.sample
-										if (t.patient) s.patient = t.patient
-										if (t.sampeltype) s.sampletype = t.sampletype
-										if (t.tkid) s.tkid = t.tkid
-										if (t.file) s.file = t.file
-										if (t.url) s.url = t.url
-										if (t.indexURL) s.indexURL = t.indexURL
-									}
-									k.data.push(s)
-								}
-								delete k.rawdata
-								thisfilejunctions.push(k)
-							}
-							resolve(thisfilejunctions)
-						})
-					} else { 
-						if (t.file){
-							par.push('file=' + t.file)
-						} else {
-							par.push('url=' + t.url)
-							if (t.indexURL) par.push('indexURL=' + t.indexURL)
+					} else {
+						par.push('url=' + t.url)
+						if (t.indexURL) par.push('indexURL=' + t.indexURL)
+					}
+					client.dofetch2( (t.rnapegfile ? 'junctionrnapeg?' : 'junction?') + par.join('&')).then(data => {
+						donenum++
+						if (tk.tracks.length > 1) {
+							block.tkprogress(tk, donenum / tk.tracks.length)
 						}
-						client.dofetch2('junction?' + par.join('&')).then(data => {
-							donenum++
-							if (tk.tracks.length > 1) {
-								block.tkprogress(tk, donenum / tk.tracks.length)
+						if (!data) reject('server error for getting member track ' + t.name)
+						if (data.error) reject('Cannot get data: ' + data.error)
+						if (!data.lst && !data.bins) reject('wrong response when getting data for ' + t.name)
+						if (data.lst) {
+							// actual junction data retrieved
+
+							if (data.lst[0] && data.lst[0].rawdata && t.samplecount == undefined) {
+								/*
+						didn't get sample count from tabix header, or no header
+						get the count from actual data
+						*/
+								t.samplecount = data.lst[0].rawdata.length
+								tk.totalsamplecount += t.samplecount
+								/*
+						if(tk.totalsamplecount>1) {
+							tk.label_samplecount.text(tk.totalsamplecount+' samples')
+						}
+						*/
 							}
-							if (!data) reject('server error for getting member track ' + t.name)
-							if (data.error) reject('Cannot get data: ' + data.error)
-							if (!data.lst && !data.bins) reject('wrong response when getting data for ' + t.name)
-							if (data.lst) {
-								// actual junction data retrieved
 
-								if (data.lst[0] && data.lst[0].rawdata && t.samplecount == undefined) {
-									/*
-							didn't get sample count from tabix header, or no header
-							get the count from actual data
-							*/
-									t.samplecount = data.lst[0].rawdata.length
-									tk.totalsamplecount += t.samplecount
-									/*
-							if(tk.totalsamplecount>1) {
-								tk.label_samplecount.text(tk.totalsamplecount+' samples')
+							if (bins) {
+								/*
+						// current junction data to bin
+						// not in use
+						var binw=(block.stop-block.start)/bincount
+						data.lst.forEach(function(j){
+							if(j.start>=block.start && j.start<=block.stop) {
+								bins[Math.floor((j.start-block.start)/binw)]+=j.v
 							}
-							*/
-								}
-
-								if (bins) {
-									/*
-							// current junction data to bin
-							// not in use
-							var binw=(block.stop-block.start)/bincount
-							data.lst.forEach(function(j){
-								if(j.start>=block.start && j.start<=block.stop) {
-									bins[Math.floor((j.start-block.start)/binw)]+=j.v
-								}
-								if(j.stop>=block.start && j.stop<=block.stop) {
-									bins[Math.floor((j.stop-block.start)/binw)]+=j.v
-								}
-							})
-							*/
-								} else {
-									const thisfilejunctions = []
-
-									for (const k of data.lst) {
-										k.data = []
-										for (let i = 0; i < k.rawdata.length; i++) {
-											const v = k.rawdata[i]
-											if (!Number.isInteger(v) || v <= 0) {
-												// invalid read count value
-												continue
-											}
-											const s = { v: v }
-											if (t.headersamples) {
-												const s0 = t.headersamples[i]
-												if (s0) {
-													for (const _k in s0) {
-														s[_k] = s0[_k]
-													}
-												}
-											} else {
-												/*
-										no file header
-										transfer some attributes
-										*/
-												if (t.name) s.name = t.name
-												if (t.sample) s.sample = t.sample
-												if (t.patient) s.patient = t.patient
-												if (t.sampeltype) s.sampletype = t.sampletype
-												if (t.tkid) s.tkid = t.tkid
-												if (t.file) s.file = t.file
-												if (t.url) s.url = t.url
-												if (t.indexURL) s.indexURL = t.indexURL
-											}
-											k.data.push(s)
-										}
-										delete k.rawdata
-										thisfilejunctions.push(k)
-									}
-									resolve(thisfilejunctions)
-
-									/*
-							not in use
-
-							if(junc.length>300) {
-								// too many junctions, convert to bin
-								const binw=(block.stop-block.start)/bincount
-								bins=[]
-								for(var i=0; i<bincount; i++) {
-									bins.push(0)
-								}
-								junc.forEach(function(j){
-									//var sum=j.data.reduce(function(sum,i){return sum+i.v},0)
-									var sum=0
-									j.data.forEach(function(i){sum+=i.v})
-									if(j.start>=block.start && j.start<=block.stop) {
-										bins[Math.floor((j.start-block.start)/binw)]+=sum
-									}
-									if(j.stop>=block.start && j.stop<=block.stop) {
-										bins[Math.floor((j.stop-block.start)/binw)]+=sum
-									}
-								})
-								junc=[]
+							if(j.stop>=block.start && j.stop<=block.stop) {
+								bins[Math.floor((j.stop-block.start)/binw)]+=j.v
 							}
-							*/
-								}
+						})
+						*/
 							} else {
+								const thisfilejunctions = []
+
+								for (const k of data.lst) {
+									k.data = []
+									for (let i = 0; i < k.rawdata.length; i++) {
+										const v = k.rawdata[i]
+										if (!Number.isInteger(v) || v <= 0) {
+											// invalid read count value
+											continue
+										}
+										const s = { v: v }
+										if (t.headersamples) {
+											const s0 = t.headersamples[i]
+											if (s0) {
+												for (const _k in s0) {
+													s[_k] = s0[_k]
+												}
+											}
+										} else {
+											/*
+									no file header
+									transfer some attributes
+									*/
+											if (t.name) s.name = t.name
+											if (t.sample) s.sample = t.sample
+											if (t.patient) s.patient = t.patient
+											if (t.sampeltype) s.sampletype = t.sampletype
+											if (t.tkid) s.tkid = t.tkid
+											if (t.file) s.file = t.file
+											if (t.url) s.url = t.url
+											if (t.indexURL) s.indexURL = t.indexURL
+										}
+										k.data.push(s)
+									}
+									delete k.rawdata
+									thisfilejunctions.push(k)
+								}
+								resolve(thisfilejunctions)
+
 								/*
 						not in use
 
-						if(!bins) {
-							bins=data.bins
-						} else {
-							for(var i=0; i<data.bins.length; i++) {
-								bins[i]+=data.bins[i]
+						if(junc.length>300) {
+							// too many junctions, convert to bin
+							const binw=(block.stop-block.start)/bincount
+							bins=[]
+							for(var i=0; i<bincount; i++) {
+								bins.push(0)
 							}
-						}
-						if(junc.length>0) {
-							// existing junc data to bin
-							var binw=(block.stop-block.start)/bins.length
 							junc.forEach(function(j){
 								//var sum=j.data.reduce(function(sum,i){return sum+i.v},0)
 								var sum=0
-									j.data.forEach(function(i){sum+=i.v})
+								j.data.forEach(function(i){sum+=i.v})
 								if(j.start>=block.start && j.start<=block.stop) {
 									bins[Math.floor((j.start-block.start)/binw)]+=sum
 								}
@@ -438,8 +363,36 @@ export function junctionload(tk, block) {
 						}
 						*/
 							}
-						})
+						} else {
+							/*
+					not in use
+
+					if(!bins) {
+						bins=data.bins
+					} else {
+						for(var i=0; i<data.bins.length; i++) {
+							bins[i]+=data.bins[i]
+						}
 					}
+					if(junc.length>0) {
+						// existing junc data to bin
+						var binw=(block.stop-block.start)/bins.length
+						junc.forEach(function(j){
+							//var sum=j.data.reduce(function(sum,i){return sum+i.v},0)
+							var sum=0
+								j.data.forEach(function(i){sum+=i.v})
+							if(j.start>=block.start && j.start<=block.stop) {
+								bins[Math.floor((j.start-block.start)/binw)]+=sum
+							}
+							if(j.stop>=block.start && j.stop<=block.stop) {
+								bins[Math.floor((j.stop-block.start)/binw)]+=sum
+							}
+						})
+						junc=[]
+					}
+					*/
+						}
+					})
 				})
 				.catch(err => reject(err))
 		})

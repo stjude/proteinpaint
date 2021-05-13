@@ -1,13 +1,12 @@
-const app = require('./app')
 const fs = require('fs')
 const readline = require('readline')
-const serverconfig = require('./serverconfig')
-exports.features = Object.freeze(serverconfig.features || {})
+const app = require('./app')
 
 module.exports = async (req, res) => {
 	app.log(req)
 	try {
-		if (!exports.features.junctionrnapeg) throw 'junction rnapeg not supported on this server'
+		// check if junctionrnapeg is enabled from serverconfig.features
+		if (!app.features && !app.features.junctionrnapeg) throw 'junction rnapeg not supported on this server'
 		const [e, file, isurl] = app.fileurl(req)
 		if (e) throw e
 		if (!req.query.rglst) throw 'rglst[] missing'
@@ -19,25 +18,21 @@ module.exports = async (req, res) => {
 
 		const items = []
 		for (const r of req.query.rglst) {
-			await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop }, lines => {
-				// lines are already filterd from get_lines_rnapeg
-				for (let i = 0; i < lines.length; i++) {
-					const l = lines[i].split('\t')
-					const pos = l[0].split(',')
-					const start = Number.parseInt(pos[0].split(':')[1]) - 1,
-						stop = Number.parseInt(pos[1].split(':')[1]) - 1
-					const j = {
-						chr: r.chr,
-						start,
-						stop,
-						type: l[2],
-						rawdata: []
-					}
-					// rawdata is using value from count column of rnapeg file
-					j.rawdata.push(Number.parseInt(l[1]))
-					items.push(j)
+			const lines = await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop })
+			// lines are already filterd from get_lines_rnapeg
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i]
+				const j = {
+					chr: line.chr,
+					start: line.start,
+					stop: line.stop,
+					type: line.type,
+					rawdata: []
 				}
-			})
+				// rawdata is using value from count column of rnapeg file
+				j.rawdata.push(line.count)
+				items.push(j)
+			}
 		}
 		res.send({ lst: items })
 	} catch (e) {
@@ -46,7 +41,7 @@ module.exports = async (req, res) => {
 	}
 }
 
-function get_lines_rnapeg(args, callback) {
+function get_lines_rnapeg(args) {
 	return new Promise((resolve, reject) => {
 		const rl = readline.createInterface({ input: fs.createReadStream(args.file, { encoding: 'utf8' }) })
 		const lines = []
@@ -55,8 +50,10 @@ function get_lines_rnapeg(args, callback) {
 			const pos = l[0].split(',')
 			const _start = pos[0].split(':')
 			const chr = _start[0],
-				start = _start[1],
-				stop = pos[1] ? pos[1].split(':')[1] : undefined
+				start = Number.parseInt(_start[1]) - 1,
+				stop = pos[1] ? Number.parseInt(pos[1].split(':')[1])-1 : undefined,
+				count = Number.parseInt(l[1]),
+				type = l[2]
 			// assumes that file is sorted by start:stop and stops when stop > args.stops
 			if (
 				chr == args.chr &&
@@ -65,14 +62,13 @@ function get_lines_rnapeg(args, callback) {
 				if (Number.isNaN(start) || Number.isNaN(stop) || start < 0 || stop < 0 || start > stop) {
 					reject('error reading file: ' + line)
 				}
-				lines.push(line)
+				lines.push({chr, start, stop, count, type})
 			} else if (chr == args.chr && stop > args.stop) {
 				rl.close()
 			}
 		})
 		rl.on('close', () => {
-			callback(lines)
-			resolve()
+			resolve(lines)
 		})
 	})
 }
