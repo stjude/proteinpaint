@@ -219,7 +219,8 @@ function makeheader(app, obj, jwt) {
 	const apps_drawer_row = app.holder
 		.append('div')
 		.style('position', 'relative')
-		.style('overflow', 'hidden')
+		.style('overflow-x', 'visible')
+		.style('overflow-y', 'hidden')
 
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
