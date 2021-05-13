@@ -2,6 +2,7 @@ import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch3 } from '../client'
 import { plotInit } from './plot'
+import { cumincInit } from './cuminc'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 
@@ -15,7 +16,8 @@ const cls_termdiv = 'termdiv',
 	cls_termview = 'termview',
 	cls_termlabel = 'termlabel',
 	cls_termgraphdiv = 'termgraphdiv',
-	cls_termloading = 'termloading'
+	cls_termloading = 'termloading',
+	cls_cuminc = 'termcuminc'
 
 /*
 ******************** EXPORTED
@@ -80,12 +82,14 @@ class TdbTree {
 		// track plots by term ID separately from components,
 		// since active plots is dependent on the active cohort
 		this.plots = {}
-		// this.components.plots will point the applicable
-		// termIds of the active cohort
-		this.components = { plots: {} }
+		this.cuminc = {}
+		// this.components.plots will point to only the termIds
+		// that are applicable to the active cohort
+		this.components = { plots: {}, cuminc: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
+		this.loadingCumIncSet = new Set()
 		this.termsByCohort = {}
 		this.eventTypes = ['postInit', 'postRender']
 	}
@@ -94,6 +98,7 @@ class TdbTree {
 		if (action.type.startsWith('tree_')) return true
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('plot_')) return true
+		if (action.type.startsWith('cuminc_')) return true
 		if (action.type.startsWith('cohort_')) return true
 		if (action.type == 'app_refresh') return true
 	}
@@ -104,6 +109,7 @@ class TdbTree {
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
+			visibleCumIncIds: appState.tree.visibleCumIncIds,
 			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu
 		}
@@ -146,6 +152,22 @@ class TdbTree {
 				}
 			} else if (termId in this.components.plots) {
 				delete this.components.plots[termId]
+			}
+		}
+
+		for (const termId of this.state.visibleCumIncIds) {
+			if (!this.cuminc[termId]) {
+				this.newCumInc(this.termsById[termId])
+			}
+		}
+
+		for (const termId in this.cuminc) {
+			if (termId in this.termsById) {
+				if (!(termId in this.components.cuminc)) {
+					this.components.cuminc[termId] = this.cuminc[termId]
+				}
+			} else if (termId in this.components.cuminc) {
+				delete this.components.cuminc[termId]
 			}
 		}
 	}
@@ -242,6 +264,40 @@ class TdbTree {
 			)
 		)
 		this.plots[term.id] = plot
+	}
+
+	newCumInc(term) {
+		const holder = select(
+			this.dom.treeDiv
+				.selectAll('.' + cls_cuminc)
+				.filter(t => t.id == term.id)
+				.node()
+		)
+		const loading_div = holder
+			.append('div')
+			.text('Loading...')
+			.style('margin', '3px')
+			.style('opacity', 0.5)
+		const cuminc = cumincInit(
+			this.app,
+			rx.copyMerge(
+				{
+					id: term.id,
+					holder: holder,
+					term: term,
+					callbacks: {
+						// must use namespaced eventType otherwise will be rewritten..
+						'postRender.viewbtn': plot => {
+							this.loadingCumIncSet.delete(term.id)
+							if (loading_div) loading_div.remove()
+							plot.on('postRender.viewbtn', null)
+						}
+					}
+				},
+				this.app.opts.cuminc || {}
+			)
+		)
+		this.cuminc[term.id] = cuminc
 	}
 
 	bindKey(term) {
@@ -414,6 +470,9 @@ function setRenderers(self) {
 						.style('font-size', '0.8em')
 						.style('opacity', termIsDisabled ? 0.4 : 1)
 						.text('Cumulative incidence curve')
+						.on('click', self.clickCumIncButton)
+
+					div.append('div').attr('class', cls_cuminc)
 				}
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
@@ -485,6 +544,21 @@ function setInteractivity(self) {
 			self.loadingPlotSet.add(term.id)
 		}
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
+		self.app.dispatch({ type, id: term.id, term })
+	}
+
+	self.clickCumIncButton = function(term) {
+		if (self.loadingCumIncSet.has(term.id)) {
+			// don't respond to repetitive clicking
+			return
+		}
+		event.stopPropagation()
+		event.preventDefault()
+		if (!self.cuminc[term.id]) {
+			// no plot component for this term yet, first time loading this plot
+			self.loadingCumIncSet.add(term.id)
+		}
+		const type = self.state.visibleCumIncIds.includes(term.id) ? 'cuminc_hide' : 'cuminc_show'
 		self.app.dispatch({ type, id: term.id, term })
 	}
 }
