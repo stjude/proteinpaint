@@ -72,8 +72,28 @@ export function handle_incidence(genomes) {
 			//console.log('groups:', groups)
 
 			const ci_data = await calculate_cuminc(year_to_events, events, groups)
-			console.log('ci_data:', ci_data)
-			res.send(ci_data)
+			//console.log('ci_data:', ci_data)
+			const control_array = []
+			for (let i = 0; i < ci_data.control_time.length; i++) {
+				control_array.push([
+					ci_data.control_time[i],
+					ci_data.control_est[i],
+					ci_data.low_control[i],
+					ci_data.up_control[i]
+				])
+			}
+
+			const case_array = []
+			for (let i = 0; i < ci_data.case_time.length; i++) {
+				case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
+			}
+			const final_data = {}
+			final_data.pvalue = ci_data.pvalue
+			final_data.keys = ['time', 'cuminc', 'low', 'high']
+			final_data.control = control_array
+			final_data.case = case_array
+
+			res.send(final_data)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -116,7 +136,6 @@ function calculate_cuminc(year_to_events, events, groups) {
 		const rl = readline.createInterface({ input: ps.stdout })
 
 		rl.on('line', line => {
-			console.log(line)
 			if (line.includes('p_value') == true) {
 				const line2 = line.split(':')
 				ci_data.pvalue = parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
