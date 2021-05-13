@@ -401,20 +401,21 @@ function makeheader(app, obj, jwt) {
 		app_holder = apps_drawer_row
 			.append('div')
 			.style('position', 'relative')
-			.style('margin', '20px')
-			.style('padding', padw_sm)
+			.style('margin', '0 20px')
+			.style('padding', `0 ${padw_sm}`)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('overflow', 'hidden')
-			.style('background-color', '#f2f2f2')
+			.style('background-color', '#f5f5f5')
 			.style('border-radius', '5px')
 			.style('width', '93vw')
+			.style('box-shadow', '1px 2px 1px 1px #ddd')
 
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
-			app_holder_full_height = app_holder.node().getBoundingClientRect().height
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
 		if (app_btn_active) load_app_div()
@@ -436,7 +437,7 @@ function makeheader(app, obj, jwt) {
 				slide_drawer()
 				if (app_btn_active) {
 					setTimeout(() => {
-						app_holder_full_height = app_holder.node().getBoundingClientRect().height
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 					}, duration + 5)
 				}
 			})
