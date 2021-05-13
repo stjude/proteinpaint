@@ -7,7 +7,7 @@ exports.features = Object.freeze(serverconfig.features || {})
 module.exports = async (req, res) => {
 	app.log(req)
 	try {
-		if(!exports.features.junctionrnapeg) throw 'junction rnapeg not supported on this server'
+		if (!exports.features.junctionrnapeg) throw 'junction rnapeg not supported on this server'
 		const [e, file, isurl] = app.fileurl(req)
 		if (e) throw e
 		if (!req.query.rglst) throw 'rglst[] missing'
@@ -19,13 +19,13 @@ module.exports = async (req, res) => {
 
 		const items = []
 		for (const r of req.query.rglst) {
-			await get_lines_rnapeg({file, chr: r.chr, start: r.start, stop: r.stop}, lines => {
+			await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop }, lines => {
 				// lines are already filterd from get_lines_rnapeg
 				for (let i = 0; i < lines.length; i++) {
 					const l = lines[i].split('\t')
 					const pos = l[0].split(',')
-					const start = Number.parseInt(pos[0].split(':')[1]),
-						stop = Number.parseInt(pos[1].split(':')[1])
+					const start = Number.parseInt(pos[0].split(':')[1]) - 1,
+						stop = Number.parseInt(pos[1].split(':')[1]) - 1
 					const j = {
 						chr: r.chr,
 						start,
@@ -46,11 +46,11 @@ module.exports = async (req, res) => {
 	}
 }
 
-function get_lines_rnapeg(args, callback){
+function get_lines_rnapeg(args, callback) {
 	return new Promise((resolve, reject) => {
-		const rl = readline.createInterface({input: fs.createReadStream(args.file, {encoding:'utf8'})})
+		const rl = readline.createInterface({ input: fs.createReadStream(args.file, { encoding: 'utf8' }) })
 		const lines = []
-		rl.on('line',line=>{
+		rl.on('line', line => {
 			const l = line.split('\t')
 			const pos = l[0].split(',')
 			const _start = pos[0].split(':')
@@ -58,18 +58,21 @@ function get_lines_rnapeg(args, callback){
 				start = _start[1],
 				stop = pos[1] ? pos[1].split(':')[1] : undefined
 			// assumes that file is sorted by start:stop and stops when stop > args.stops
-			if(chr == args.chr && ((start >= args.start && start <= args.stop) || (stop >= args.start && stop <= args.stop))){
-				if(Number.isNaN(start) || Number.isNaN(stop) || start<0 || stop<0 || start>stop) {
-					reject('error reading file: '+ line)
+			if (
+				chr == args.chr &&
+				((start >= args.start && start <= args.stop) || (stop >= args.start && stop <= args.stop))
+			) {
+				if (Number.isNaN(start) || Number.isNaN(stop) || start < 0 || stop < 0 || start > stop) {
+					reject('error reading file: ' + line)
 				}
 				lines.push(line)
-			}else if(chr == args.chr && stop > args.stop){
+			} else if (chr == args.chr && stop > args.stop) {
 				rl.close()
 			}
 		})
-		rl.on('close',()=>{
+		rl.on('close', () => {
 			callback(lines)
 			resolve()
 		})
 	})
-} 
+}
