@@ -128,7 +128,7 @@ export function bamsliceui(genomes, holder) {
 	const input_fields = [
 		{ title: 'Case ID', key: 'case_id', size: 40 },
 		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
-		{ title: 'Variant', key: 'variant' }
+		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.ref.mut' }
 	]
 	for (const field of input_fields) {
 		makeFormInput(field)
@@ -200,13 +200,23 @@ function renderBamSlice(args, genome, holder) {
 		genome,
 		holder
 	}
+	let variant
 	if (args.position) {
 		const pos_str = args.position.split(/[:-]/)
 		par.chr = pos_str[0]
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
-		par.query = args.variant
+		const variant_str = args.variant.split('.')
+		variant = {
+			chr: variant_str[0],
+			pos: Number.parseInt(variant_str[1]),
+			ref: variant_str[2],
+			alt: variant_str[3]
+		}
+		par.chr = variant.chr
+		par.start = variant.pos - 500
+		par.stop = variant.pos + 500
 	}
 
 	par.tklst = []
@@ -218,13 +228,15 @@ function renderBamSlice(args, genome, holder) {
 		downloadgdc: 1,
 		file: 'dummy_str'
 	}
+	if (args.variant) {
+		tk.variants = []
+		tk.variants.push(variant)
+	}
 	par.tklst.push(tk)
 	client.first_genetrack_tolist(genome, par.tklst)
-	if (par.query) blockinit(par)
-	else
-		import('./block').then(b => {
-			new b.Block(par)
-		})
+	import('./block').then(b => {
+		new b.Block(par)
+	})
 }
 
 export async function loadTk(tk, block) {
