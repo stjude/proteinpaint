@@ -56,7 +56,7 @@ export function handle_incidence(genomes) {
 				final_data.keys = ['time', 'cuminc', 'low', 'high']
 				//final_data.control = control_array
 				final_data.case = case_array
-				console.log('final_data:', final_data)
+				//console.log('final_data:', final_data)
 				res.send(final_data)
 			}
 		} catch (e) {
