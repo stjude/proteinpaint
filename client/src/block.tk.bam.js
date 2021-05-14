@@ -2,6 +2,7 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
+import blockinit from './block.init'
 import { make_radios } from './dom'
 import url2map from './url2map'
 
@@ -127,11 +128,18 @@ export function bamsliceui(genomes, holder) {
 	const input_fields = [
 		{ title: 'Case ID', key: 'case_id', size: 40 },
 		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
-		{ title: 'Variant (optional)', key: 'variant' }
+		{ title: 'Variant', key: 'variant' }
 	]
 	for (const field of input_fields) {
 		makeFormInput(field)
 	}
+
+	inputdiv
+		.append('div')
+		.style('grid-column', 'span 2')
+		.style('font-size', '80%')
+		.style('padding', '3px 10px')
+		.html('<b>Note:</b> Either position or variant is required.')
 
 	//submit button
 	const submit_btn_div = holder.append('div')
@@ -180,9 +188,9 @@ function validateInputs(obj) {
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
 	if (!obj.case_id) throw ' case ID is missing'
 	if (typeof obj.case_id !== 'string') throw 'case id is not string'
-	if (!obj.position) throw ' position is missing'
-	if (typeof obj.position !== 'string') throw 'position is not string'
-	if (obj.variant !== undefined && typeof onj.variant !== 'string') throw 'Varitent is not string'
+	if (!obj.position && !obj.variant) throw ' position or variant is required'
+	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
+	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
 }
 
 function renderBamSlice(args, genome, holder) {
@@ -192,10 +200,15 @@ function renderBamSlice(args, genome, holder) {
 		genome,
 		holder
 	}
-	const pos_str = args.position.split(/[:-]/)
-	par.chr = pos_str[0]
-	par.start = Number.parseInt(pos_str[1])
-	par.stop = Number.parseInt(pos_str[2])
+	if (args.position) {
+		const pos_str = args.position.split(/[:-]/)
+		par.chr = pos_str[0]
+		par.start = Number.parseInt(pos_str[1])
+		par.stop = Number.parseInt(pos_str[2])
+	} else if (args.variant) {
+		par.query = args.variant
+	}
+
 	par.tklst = []
 
 	const tk = {
@@ -207,9 +220,11 @@ function renderBamSlice(args, genome, holder) {
 	}
 	par.tklst.push(tk)
 	client.first_genetrack_tolist(genome, par.tklst)
-	import('./block').then(b => {
-		new b.Block(par)
-	})
+	if (par.query) blockinit(par)
+	else
+		import('./block').then(b => {
+			new b.Block(par)
+		})
 }
 
 export async function loadTk(tk, block) {
