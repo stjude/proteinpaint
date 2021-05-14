@@ -1,11 +1,15 @@
 const app = require('./app')
 const spawn = require('child_process').spawn
+const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const readline = require('readline')
 
 export function handle_incidence(genomes) {
 	return async (req, res) => {
 		app.log(req)
 		const q = req.query
+		if (q.filter) {
+			q.filter = JSON.parse(decodeURIComponent(q.filter))
+		}
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
@@ -14,86 +18,47 @@ export function handle_incidence(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
-			const case_data = get_sql_queries_greater(q, ds)
-			//const case_patient_ids = case_data.map(i => i.sample)
-			//const case_grades = case_data.map(i => i.grade).join('\t')
-			const case_year_to_events = case_data.map(i => Object.values(i)[2])
+			//console.log("q.filter:",q.filter)
+			const filter = getFilterCTEs(q.filter, ds)
+			//console.log("filter:",filter)
+			//const case_data = get_sql_queries_greater(q, ds, filter)
 
-			const control_data = get_sql_queries_lesser(q, ds)
-			//const control_patient_ids = control_data.map(i => i.sample)
-			//const control_grades = control_data.map(i => i.grade).join('\t')
-			const control_year_to_events = control_data.map(i => Object.values(i)[2])
+			const case_data = get_sql_query(q, ds, filter)
+			//console.log("case_data:",case_data)
 
-			const death_datas = get_sql_queries_death(q, ds) // set grade = 5 for deaths
-			const patient_death_ids = death_datas.map(i => i.sample)
-			const patient_death_times = death_datas.map(i => Object.values(i)[2])
-
-			let event_array = []
-			let group_array = []
-			for (let j = 0; j < case_data.length; j++) {
-				const case_year_to_event = Object.values(case_data[j])[2] // Was not able to call using the key name MIN(years_to_event), therefore using Object.values
-				let event = 0
-				let group = 1
-				if (case_data[j].grade != 0) {
-					event = 1
-				}
-				for (let i = 0; i < death_datas.length; i++) {
-					const patient_death_time = Object.values(death_datas[i])[2]
-					if (death_datas[i].sample == case_data[j].sample && patient_death_time <= case_year_to_event) {
-						console.log('death_datas[i].sample:', death_datas[i].sample)
-						event = 2
-					}
-				}
-				event_array.push(event)
-				group_array.push(group)
-			}
-
-			for (let j = 0; j < control_data.length; j++) {
-				const control_year_to_event = Object.values(control_data[j])[2]
-				let event = 0
-				let group = 0
-				if (control_data[j].grade != 0) {
-					event = 1
-				}
-				for (let i = 0; i < death_datas.length; i++) {
-					const patient_death_time = Object.values(death_datas[i])[2]
-					if (death_datas[i].sample == control_data[j].sample && patient_death_time <= control_year_to_event) {
-						event = 2
-					}
-				}
-				event_array.push(event)
-				group_array.push(group)
-			}
-			const year_to_events = case_year_to_events.concat(control_year_to_events).join('_')
-			const events = event_array.join('_')
-			const groups = group_array.join('_')
-			//console.log('year_to_events:', year_to_events)
-			//console.log('events:', events)
-			//console.log('groups:', groups)
-
-			const ci_data = await calculate_cuminc(year_to_events, events, groups)
+			const year_to_events = case_data.map(i => i.time).join('_')
+			const events = case_data.map(i => i.event).join('_')
+			//console.log("year_to_events:",year_to_events)
+			//console.log("events:",events)
+			const ci_data = await calculate_cuminc(year_to_events, events)
 			//console.log('ci_data:', ci_data)
-			const control_array = []
-			for (let i = 0; i < ci_data.control_time.length; i++) {
-				control_array.push([
-					ci_data.control_time[i],
-					ci_data.control_est[i],
-					ci_data.low_control[i],
-					ci_data.up_control[i]
-				])
-			}
-
-			const case_array = []
-			for (let i = 0; i < ci_data.case_time.length; i++) {
-				case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
-			}
 			const final_data = {}
-			final_data.pvalue = ci_data.pvalue
-			final_data.keys = ['time', 'cuminc', 'low', 'high']
-			final_data.control = control_array
-			final_data.case = case_array
+			if (ci_data == {}) {
+				console.log('No output from R script')
+				res.send(final_data)
+			} else {
+				const case_array = []
+				for (let i = 0; i < ci_data.case_time.length; i++) {
+					case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
+				}
 
-			res.send(final_data)
+				//const control_array = []
+				//for (let i = 0; i < ci_data.control_time.length; i++) {
+				//	control_array.push([
+				//		ci_data.control_time[i],
+				//		ci_data.control_est[i],
+				//		ci_data.low_control[i],
+				//		ci_data.up_control[i]
+				//	])
+				//}
+
+				//final_data.pvalue = ci_data.pvalue
+				final_data.keys = ['time', 'cuminc', 'low', 'high']
+				//final_data.control = control_array
+				final_data.case = case_array
+				console.log('final_data:', final_data)
+				res.send(final_data)
+			}
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -101,41 +66,52 @@ export function handle_incidence(genomes) {
 	}
 }
 
-function get_sql_queries_greater(q, ds) {
-	const sql = `SELECT sample, grade, MIN(years_to_event) 
-FROM chronicevents
-WHERE grade >= ?
-  AND grade < 5
-  AND term_id = ?
-GROUP BY sample;`
-	return ds.cohort.db.connection.prepare(sql).all([q.grade, q.term_id])
+function get_sql_query(q, ds, filter) {
+	const values = filter ? filter.values.slice() : []
+	values.push(q.grade)
+	values.push(q.term_id)
+	const sql = `
+WITH
+${filter ? filter.filters + ',' : ''}
+event1 AS (
+	SELECT sample, MIN(years_to_event) as time, 1 as event
+	FROM chronicevents
+	WHERE grade >= ?
+	  AND grade <= 5
+	  AND term_id = ?
+	  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+	GROUP BY sample
+),
+event1samples AS (
+	SELECT sample
+	FROM event1
+),
+event0 AS (
+	-- hardcode max time as 40 years old, for now
+	SELECT sample, 40 as time, 0 as event
+	FROM chronicevents
+	WHERE grade <= 5 AND sample NOT IN event1samples
+	  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+	GROUP BY sample
+)
+SELECT * FROM event1
+UNION ALL
+SELECT * FROM event0
+`
+	console.log(142, sql)
+	return ds.cohort.db.connection.prepare(sql).all(values)
 }
 
-function get_sql_queries_death(q, ds) {
-	const sql = `SELECT sample, grade, MIN(years_to_event) 
-FROM chronicevents
-WHERE grade = 5
-  AND term_id = ?
-GROUP BY sample;`
-	return ds.cohort.db.connection.prepare(sql).all([q.term_id])
-}
-
-function get_sql_queries_lesser(q, ds) {
-	const sql = `SELECT sample, grade, MIN(years_to_event) 
-FROM chronicevents
-WHERE grade < ?
-  AND term_id = ?
-GROUP BY sample;`
-	return ds.cohort.db.connection.prepare(sql).all([q.grade, q.term_id])
-}
-
-function calculate_cuminc(year_to_events, events, groups) {
+//function calculate_cuminc(year_to_events, events, groups) {
+function calculate_cuminc(year_to_events, events) {
 	const ci_data = {}
 	return new Promise((resolve, reject) => {
-		const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
+		//const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
+		const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events]) // Should we define Rscript in serverconfig.json?
 		const rl = readline.createInterface({ input: ps.stdout })
 
 		rl.on('line', line => {
+			//console.log("R_line:",line)
 			if (line.includes('p_value') == true) {
 				const line2 = line.split(':')
 				ci_data.pvalue = parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
