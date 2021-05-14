@@ -171,10 +171,10 @@ export function junctionload(tk, block) {
 	const allfiledata = []
 	for (const t of tk.tracks) {
 		const getheader = new Promise((resolve, reject) => {
-			if(t.rnapegfile){
+			if (t.rnapegfile) {
 				t.samplecount = 1
 				return resolve()
-			} 
+			}
 			if (t.samplecount != undefined && t.checkedheader) return resolve()
 			/*
 		#sample is unknown for this track, try loading header line like a vcf
@@ -251,15 +251,16 @@ export function junctionload(tk, block) {
 				.then(() => {
 					const par = ['rglst=' + JSON.stringify(block.tkarg_maygm(t))]
 					if (bincount) par.push('bincount=' + bincount)
-					if (t.file){
-						par.push('file=' + t.file)
-					} else if(t.rnapegfile){
-						par.push('file=' + t.rnapegfile)
+					if (t.file || t.rnapegfile) {
+						par.push('file=' + (t.file || t.rnapegfile))
 					} else {
 						par.push('url=' + t.url)
 						if (t.indexURL) par.push('indexURL=' + t.indexURL)
 					}
-					client.dofetch2( (t.rnapegfile ? 'junctionrnapeg?' : 'junction?') + par.join('&')).then(data => {
+					if (t.rnapegfile) {
+						par.push('isrnapeg=1')
+					}
+					client.dofetch2('junction?' + par.join('&')).then(data => {
 						donenum++
 						if (tk.tracks.length > 1) {
 							block.tkprogress(tk, donenum / tk.tracks.length)

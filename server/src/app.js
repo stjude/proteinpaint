@@ -63,7 +63,6 @@ const express = require('express'),
 	aicheck_request_closure = require('./aicheck'),
 	bampile_request = require('./bampile'),
 	junction_request = require('./junction'),
-	rnapeg_junction_request = require('./junction.rnapeg'),
 	bedj_request_closure = require('./bedj'),
 	blat_request_closure = require('./blat').request_closure,
 	mds3_request_closure = require('./mds3.load'),
@@ -194,8 +193,7 @@ app.post(basepath + '/dsgenestat', handle_dsgenestat)
 app.post(basepath + '/study', handle_study)
 app.post(basepath + '/textfile', handle_textfile)
 app.post(basepath + '/urltextfile', handle_urltextfile)
-app.get(basepath + '/junction', junction_request) // legacy
-app.get(basepath + '/junctionrnapeg', rnapeg_junction_request)
+app.get(basepath + '/junction', junction_request) // legacy, including rnapeg
 app.post(basepath + '/mdsjunction', handle_mdsjunction)
 app.post(basepath + '/mdscnv', handle_mdscnv)
 app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
