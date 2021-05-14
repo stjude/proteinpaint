@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3 } from '../client'
 import { plotInit } from './plot'
 import { cumincInit } from './cuminc'
 import { graphable } from '../common/termutils'
@@ -460,7 +459,7 @@ function setRenderers(self) {
 					.text('VIEW')
 					.on('click', termIsDisabled ? null : self.clickViewButton)
 
-				if (self.app.vocabApi.state.termdbConfig.cumincplot4condition && term.type == 'condition') {
+				if (self.app.vocabApi.state.termdbConfig.cumincplot4condition && term.type == 'condition' && term.isleaf) {
 					div
 						.append('div')
 						.attr('class', termIsDisabled ? '' : 'sja_menuoption ' + cls_termview)

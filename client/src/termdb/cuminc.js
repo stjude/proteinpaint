@@ -1,9 +1,11 @@
 import * as rx from '../common/rx.core'
+import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
+import { line, curveStepAfter } from 'd3-shape'
 import Partjson from 'partjson'
-import { to_svg } from '../client'
+import { dofetch3, to_svg } from '../client'
 
 class TdbCumInc {
 	constructor(app, opts) {
@@ -11,14 +13,33 @@ class TdbCumInc {
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)
-
 		this.dom = {
-			div: opts.holder
+			div: opts.holder.style('margin', '10px')
 		}
-		this.settings = {}
+		// hardcode for now, but may be set as option later
+		this.settings = {
+			radius: 3,
+			fill: '#fff',
+			stroke: '#000',
+			fillOpacity: 0,
+			svgw: 400,
+			svgh: 300,
+			svgPadding: {
+				top: 10,
+				left: 30,
+				right: 10,
+				bottom: 30
+			},
+			axisTitleFontSize: 16
+		}
+		this.pj = getPj(this)
+		this.lineFxn = line()
+			.curve(curveStepAfter)
+			.x(c => c.scaledX)
+			.y(c => c.scaledY)
+		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-		//opts.controls.on('downloadClick.cuminc', this.download)
 	}
 
 	getState(appState) {
@@ -28,19 +49,52 @@ class TdbCumInc {
 		const config = appState.tree.cuminc[this.id]
 		return {
 			isVisible: appState.tree.visibleCumIncIds.includes(this.id),
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter
 		}
 	}
 
-	main(data) {
-		console.log(36, 'cuminc.main()')
-		this.config = this.state.config
+	async main(data) {
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
+		console.log(59, 'main() update')
+		this.pj.refresh({ data: await this.getData() })
 		this.render()
+	}
+
+	async getData() {
+		console.log(this.state.termfilter)
+		try {
+			const grade = 3 // HARDCODED, TODO: create a user input
+			const data = await dofetch3(
+				'incidence?' +
+					'genome=' +
+					this.state.genome +
+					'&dslabel=' +
+					this.state.dslabel +
+					'&grade=' +
+					grade +
+					'&term_id=' +
+					this.id +
+					'&filter=' +
+					encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter)))
+			)
+			const rows = []
+			for (const d of data.case) {
+				const obj = {}
+				data.keys.forEach((k, i) => {
+					obj[k] = +d[i]
+				})
+				rows.push(obj)
+			}
+			return rows
+		} catch (e) {
+			throw e
+		}
 	}
 }
 
@@ -48,26 +102,12 @@ export const cumincInit = rx.getInitFxn(TdbCumInc)
 
 function setRenderers(self) {
 	self.render = function() {
-		console.log(49, 'cuminc.render()', this.state)
-		this.dom.div
-			.style('display', '')
-			.style('font-size', '50px')
-			.html('test')
-		return
-
-		/*** 
-			renderer code copied from scatter.js
-			TODO: will need to adapt the code for rendering 
-			cum. incidence curves
-		***/
 		const chartDivs = self.dom.div.selectAll('.pp-cuminc-chart').data(self.pj.tree.charts, d => d.chartId)
-
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
 		self.dom.div.style('display', 'block')
-
 		self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
@@ -81,8 +121,8 @@ function setRenderers(self) {
 			.style('width', s.svgw + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
-			.style('top', 0) //layout.byChc[d.chc].top)
-			.style('left', 0) //layout.byChc[d.chc].left)
+			.style('top', 0)
+			.style('left', 0)
 			.style('text-align', 'left')
 			.style('border', '1px solid #eee')
 			.style('box-shadow', '0px 0px 1px 0px #ccc')
@@ -98,7 +138,6 @@ function setRenderers(self) {
 			.style('margin', '5px')
 			.datum(d.chartId)
 			.html(d.chartId)
-		//.on("click", viz.chcClick);
 
 		const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
 		renderSVG(svg, d, s, 0)
@@ -117,8 +156,6 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('width', s.svgw + 50 + 'px')
-			//.style("top", layout.byChc[d.chc].top)
-			//.style("left", layout.byChc[d.chc].left)
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 		div
@@ -201,9 +238,9 @@ function setRenderers(self) {
 			.attr('r', s.radius)
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
-			//.style("fill", color)
+			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
-		//.style("stroke", color);
+			.style('stroke', s.stroke)
 
 		circles
 			.enter()
@@ -211,12 +248,19 @@ function setRenderers(self) {
 			.attr('r', s.radius)
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
-			//.style("opacity", 0)
-			//.style("fill", color)
+			.style('opacity', 0)
+			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
-			//.style("stroke", color)
+			.style('stroke', s.stroke)
 			.transition()
 			.duration(duration)
+
+		g.selectAll('path').remove()
+		g.append('path')
+			.attr('d', self.lineFxn(series.data))
+			.style('fill', 'none')
+			.style('stroke', '#000')
+			.style('opacity', 1)
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -233,10 +277,7 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel =
-			self.config.term.term.name.length > 24
-				? self.config.term.term.name.slice(0, 20) + '...'
-				: self.config.term.term.name
+		const xTitleLabel = 'Time to Event (years)'
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -249,14 +290,9 @@ function setRenderers(self) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel + (self.config.term.term.unit ? ', ' + self.config.term.term.unit : ''))
+			.text(xTitleLabel)
 
-		xText.append('title').text(self.config.term.term.name)
-
-		const yTitleLabel =
-			self.config.term2.term.name.length > 24
-				? self.config.term2.term.name.slice(0, 20) + '...'
-				: self.config.term2.term.name
+		const yTitleLabel = 'Cumulative Incidence'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -270,9 +306,7 @@ function setRenderers(self) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(yTitleLabel + (self.config.term2.term.unit ? ', ' + self.config.term2.term.unit : ''))
-
-		yText.append('title').text(self.config.term2.term.name)
+			.text(yTitleLabel)
 	}
 }
 
@@ -295,85 +329,6 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		self.app.tip.hide()
 	}
-
-	self.download = () => {
-		if (!self.state || !self.state.isVisible) return
-		// has to be able to handle multichart view
-		const mainGs = []
-		const translate = { x: undefined, y: undefined }
-		const titles = []
-		let maxw = 0,
-			maxh = 0,
-			tboxh = 0
-		let prevY = 0,
-			numChartsPerRow = 0
-
-		self.dom.div.selectAll('.sjpcb-cuminc-mainG').each(function() {
-			mainGs.push(this)
-			const bbox = this.getBBox()
-			if (bbox.width > maxw) maxw = bbox.width
-			if (bbox.height > maxh) maxh = bbox.height
-			const divY = Math.round(this.parentNode.parentNode.getBoundingClientRect().y)
-			if (!numChartsPerRow) {
-				prevY = divY
-				numChartsPerRow++
-			} else if (Math.abs(divY - prevY) < 5) {
-				numChartsPerRow++
-			}
-			const xy = select(this)
-				.attr('transform')
-				.split('translate(')[1]
-				.split(')')[0]
-				.split(',')
-				.map(d => +d.trim())
-			if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
-			if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
-
-			const title = this.parentNode.parentNode.firstChild
-			const tbox = title.getBoundingClientRect()
-			if (tbox.width > maxw) maxw = tbox.width
-			if (tbox.height > tboxh) tboxh = tbox.height
-			titles.push({ text: title.innerText, styles: window.getComputedStyle(title) })
-		})
-
-		// add padding between charts
-		maxw += 30
-		maxh += 30
-
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-
-		select(svg)
-			.style('display', 'block')
-			.style('opacity', 1)
-			.attr('width', numChartsPerRow * maxw)
-			.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
-
-		const svgStyles = window.getComputedStyle(document.querySelector('.pp-cuminc-svg'))
-		const svgSel = select(svg)
-		for (const prop of svgStyles) {
-			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
-		}
-
-		mainGs.forEach((g, i) => {
-			const mainG = g.cloneNode(true)
-			const colNum = i % numChartsPerRow
-			const rowNum = Math.floor(i / numChartsPerRow)
-			const corner = { x: colNum * maxw + translate.x, y: rowNum * maxh + translate.y }
-			const title = select(svg)
-				.append('text')
-				.attr('transform', 'translate(' + corner.x + ',' + corner.y + ')')
-				.text(titles[i].text)
-			for (const prop of titles[i].styles) {
-				if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
-			}
-
-			select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
-			svg.appendChild(mainG)
-		})
-
-		//const svg_name = self.plot.term.term.name + ' cuminc'
-		//to_svg(svg, svg_name) //,{apply_dom_styles:true})
-	}
 }
 
 function getPj(self) {
@@ -382,16 +337,15 @@ function getPj(self) {
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
-			yMin: '>$val2',
-			yMax: '<$val2',
+			yMin: '>$cuminc',
+			yMax: '<$cuminc',
 			charts: [
 				{
 					chartId: '@key',
-					chc: '@key',
-					xMin: '>$val1',
-					xMax: '<$val1',
-					yMin: '>$val2',
-					yMax: '<$val2',
+					xMin: '>$time',
+					xMax: '<$time',
+					yMin: '>$cuminc',
+					yMax: '<$cuminc',
 					'__:xScale': '=xScale()',
 					'__:yScale': '=yScale()',
 					serieses: [
@@ -400,24 +354,24 @@ function getPj(self) {
 							seriesId: '@key',
 							data: [
 								{
-									'__:chc': '@parent.@parent.chc',
 									'__:seriesId': '@parent.@parent.seriesId',
 									//color: "$color",
-									x: '$val1',
-									y: '$val2',
+									x: '$time',
+									y: '$cuminc',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
-								'$val2'
+								'$time'
 							]
 						},
 						'-'
 					]
 				},
-				'$val0'
+				'=chartTitle()'
 			]
 		},
 		'=': {
+			chartTitle(row) {},
 			xScale(row, context) {
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
@@ -430,8 +384,8 @@ function getPj(self) {
 				return context.context.context.context.parent.yScale(context.self.y)
 			},
 			yScale(row, context) {
-				const yMax = context.self.yMax
-				const domain = s.scale == 'byChart' ? [yMax, 0] : [context.root.yMax, 0]
+				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
+				const domain = [Math.min(1, 2 * yMax), 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])

@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { dofetch3 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
 import { statTableInit } from './stattable'

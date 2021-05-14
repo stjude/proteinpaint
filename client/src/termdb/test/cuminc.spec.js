@@ -10,6 +10,7 @@ const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
 		genome: 'hg38'
+		//nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1
 })
@@ -23,7 +24,7 @@ tape('\n', function(test) {
 })
 
 tape.only('cumulative incidence', function(test) {
-	test.timeoutAfter(1100)
+	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			tree: {
@@ -55,7 +56,7 @@ tape.only('cumulative incidence', function(test) {
 	})
 
 	function runTests(cuminc) {
-		test.fail('63 cuminc')
+		test.pass('63 cuminc')
 		test.end()
 	}
 })

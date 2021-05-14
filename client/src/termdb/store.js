@@ -18,6 +18,7 @@ const defaultState = {
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
+		visibleCumIncIds: [],
 		plots: {}
 	},
 	termfilter: {
