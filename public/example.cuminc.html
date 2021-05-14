@@ -95,6 +95,41 @@ runproteinpaint({
 						}
 					}
 				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical' },
+								values: [
+									{ key: 'SJLIFE', label: 'SJLIFE' }
+									//{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{
+							type: 'tvslst',
+							tag: 'filterUiRoot',
+							join: '',
+							in: true,
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: { id: 'sex', name: 'Sex', type: 'categorical' },
+		 								values: [{ key: '1', label: 'Male' }]
+									}
+								}
+							]
+						}
+					]
+				}
 			}
 		},
 	}
