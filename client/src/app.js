@@ -211,6 +211,7 @@ function makeheader(app, obj, jwt) {
 	const row = app.holder
 		.append('div')
 		.style('white-space', 'nowrap')
+		.style('box-shadow', '0 2px 1px -1px #ddd')
 		.style(
 			'border-bottom',
 			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
@@ -409,7 +410,6 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', '#f5f5f5')
 			.style('border-radius', '5px')
 			.style('width', '93vw')
-			.style('box-shadow', '1px 2px 1px 1px #ddd')
 
 		async function load_app_div() {
 			if (apps_rendered) return
