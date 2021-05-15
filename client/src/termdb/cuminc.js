@@ -85,7 +85,7 @@ class TdbCumInc {
 			)
 			const rows = []
 			for (const d of data.case) {
-				const obj = {}
+				const obj = { seriesKeys: ['cuminc', 'low', 'high'] }
 				data.keys.forEach((k, i) => {
 					obj[k] = +d[i]
 				})
@@ -261,6 +261,7 @@ function setRenderers(self) {
 			.style('fill', 'none')
 			.style('stroke', '#000')
 			.style('opacity', 1)
+			.style('stroke-opacity', d => (d.seriesId == 'cuminc' ? 1 : 0.2))
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -357,21 +358,26 @@ function getPj(self) {
 									'__:seriesId': '@parent.@parent.seriesId',
 									//color: "$color",
 									x: '$time',
-									y: '$cuminc',
+									y: '=y()',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
 								'$time'
 							]
 						},
-						'-'
+						'$seriesKeys[]'
 					]
 				},
 				'=chartTitle()'
 			]
 		},
 		'=': {
-			chartTitle(row) {},
+			chartTitle(row) {
+				return 'Test'
+			},
+			y(row, context) {
+				return row[context.context.parent.seriesId]
+			},
 			xScale(row, context) {
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
