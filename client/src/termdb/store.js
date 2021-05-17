@@ -143,6 +143,9 @@ class TdbStore {
 				this.state.nav.header_mode = 'search_only'
 			}
 		}
+		if (this.state.termdbConfig.cumincplot4condition && !this.state.tree.cuminc) {
+			this.state.tree.cuminc = {}
+		}
 	}
 
 	fromJson(str) {

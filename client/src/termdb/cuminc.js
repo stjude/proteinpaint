@@ -3,7 +3,7 @@ import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
-import { line, curveStepAfter } from 'd3-shape'
+import { line, area, curveStepAfter } from 'd3-shape'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
@@ -18,17 +18,19 @@ class TdbCumInc {
 		}
 		// hardcode for now, but may be set as option later
 		this.settings = {
+			gradeCutoff: 3,
 			radius: 3,
 			fill: '#fff',
 			stroke: '#000',
 			fillOpacity: 0,
+			chartMargin: 10,
 			svgw: 400,
 			svgh: 300,
 			svgPadding: {
-				top: 10,
-				left: 30,
-				right: 10,
-				bottom: 30
+				top: 20,
+				left: 55,
+				right: 20,
+				bottom: 50
 			},
 			axisTitleFontSize: 16
 		}
@@ -61,7 +63,6 @@ class TdbCumInc {
 			this.dom.div.style('display', 'none')
 			return
 		}
-		console.log(59, 'main() update')
 		this.pj.refresh({ data: await this.getData() })
 		this.render()
 	}
@@ -69,7 +70,6 @@ class TdbCumInc {
 	async getData() {
 		console.log(this.state.termfilter)
 		try {
-			const grade = 3 // HARDCODED, TODO: create a user input
 			const data = await dofetch3(
 				'incidence?' +
 					'genome=' +
@@ -77,15 +77,16 @@ class TdbCumInc {
 					'&dslabel=' +
 					this.state.dslabel +
 					'&grade=' +
-					grade +
+					this.settings.gradeCutoff +
 					'&term_id=' +
 					this.id +
 					'&filter=' +
 					encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter)))
 			)
+			if (data.error) throw data.error
 			const rows = []
 			for (const d of data.case) {
-				const obj = { seriesKeys: ['cuminc', 'low', 'high'] }
+				const obj = { seriesKeys: ['cuminc', 'low', 'high', 'CI'] }
 				data.keys.forEach((k, i) => {
 					obj[k] = +d[i]
 				})
@@ -121,6 +122,7 @@ function setRenderers(self) {
 			.style('width', s.svgw + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
+			.style('padding', '10px')
 			.style('top', 0)
 			.style('left', 0)
 			.style('text-align', 'left')
@@ -225,43 +227,59 @@ function setRenderers(self) {
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
-		// remove all circles as there is no data id for privacy
-		g.selectAll('circle').remove()
-
-		const circles = g.selectAll('circle').data(series.data, b => b.x)
-
-		circles.exit().remove()
-
-		circles
-			.transition()
-			.duration(duration)
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
-
-		circles
-			.enter()
-			.append('circle')
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('opacity', 0)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
-			.transition()
-			.duration(duration)
-
 		g.selectAll('path').remove()
-		g.append('path')
-			.attr('d', self.lineFxn(series.data))
-			.style('fill', 'none')
-			.style('stroke', '#000')
-			.style('opacity', 1)
-			.style('stroke-opacity', d => (d.seriesId == 'cuminc' ? 1 : 0.2))
+
+		if (Array.isArray(series.data[0].y)) {
+			g.append('path')
+				.attr(
+					'd',
+					area()
+						.curve(curveStepAfter)
+						.x(c => c.scaledX)
+						.y0(c => c.scaledY[0])
+						.y1(c => c.scaledY[1])(series.data)
+				)
+				.style('fill', 'rgba(200,200,200,0.1)')
+				.style('stroke', 'none')
+		} else {
+			// remove all circles as there is no data id for privacy
+			g.selectAll('circle').remove()
+
+			const circles = g.selectAll('circle').data(series.data, b => b.x)
+
+			circles.exit().remove()
+
+			circles
+				.transition()
+				.duration(duration)
+				.attr('r', s.radius)
+				.attr('cx', c => c.scaledX)
+				.attr('cy', c => c.scaledY)
+				.style('fill', s.fill)
+				.style('fill-opacity', s.fillOpacity)
+				.style('stroke', s.stroke)
+
+			circles
+				.enter()
+				.append('circle')
+				.attr('r', s.radius)
+				.attr('cx', c => c.scaledX)
+				.attr('cy', c => c.scaledY)
+				.style('opacity', 0)
+				.style('fill', s.fill)
+				.style('fill-opacity', s.fillOpacity)
+				.style('stroke', s.stroke)
+				.transition()
+				.duration(duration)
+
+			g.append('path')
+				.attr('d', self.lineFxn(series.data))
+				.style('fill', 'none')
+				.style('stroke', '#000')
+				.style('opacity', 1)
+				.style('stroke-opacity', d => (d.seriesId == 'cuminc' ? 1 : 0.2))
+				.attr('stroke-dasharray', d => (d.seriesId == 'cuminc' ? null : '6 3'))
+		}
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -373,10 +391,11 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				return 'Test'
+				return `Cutoff grade = ${s.gradeCutoff}`
 			},
 			y(row, context) {
-				return row[context.context.parent.seriesId]
+				const seriesId = context.context.parent.seriesId
+				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
 			xScale(row, context) {
 				return d3Linear()
@@ -387,7 +406,9 @@ function getPj(self) {
 				return context.context.context.context.parent.xScale(context.self.x)
 			},
 			scaledY(row, context) {
-				return context.context.context.context.parent.yScale(context.self.y)
+				const yScale = context.context.context.context.parent.yScale
+				const y = context.self.y
+				return Array.isArray(y) ? y.map(yScale) : yScale(y)
 			},
 			yScale(row, context) {
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
