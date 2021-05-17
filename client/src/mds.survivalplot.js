@@ -169,6 +169,7 @@ push button to re-render
 		*/
 
 		const row = div.append('div').style('margin-bottom', '20px')
+		const custom_input_row = div.append('div').style('display','none')
 		row
 			.append('span')
 			.html('Choose samples from&nbsp;')
@@ -187,10 +188,16 @@ push button to re-render
 					attr2select[k].style('display', 'none')
 				}
 				const o = d3event.target.options[d3event.target.selectedIndex]
+				custom_input_row.style('display', o.usecustom ? 'block': 'none')
 				if (o.useall) {
 					// user selects to use all samples
 					p.samplerule.full.useall = 1
 					delete p.samplerule.full.byattr
+					return
+				}
+				if(o.usecustom) {
+					//user selects custom sampleset to be entered in inputbox
+					show_sampleinput(p, custom_input_row)
 					return
 				}
 				delete p.samplerule.full.useall
@@ -237,10 +244,14 @@ push button to re-render
 		if (p.samplerule.full.useall) {
 			s.node().selectedIndex = obj.samplegroupings.length
 		}
+
+		// option of slecting custom samples set
+		s.append('option')
+			.text('custom sampleset')
+			.property('usecustom', 1)
 	}
 
 	show_dividerules(p, div)
-	show_sampleinput(p, div)
 
 	p.button = div
 		.append('button')
@@ -718,38 +729,26 @@ TODO allow config for each rule, e.g. mutation filters
 
 function show_sampleinput(p, div){
 
-	div.append('div')
-		.style('opacity', 0.5)
-		.style('margin', '20px 0 10px 0')
-		.text('Select by sample names (optional)')
+	let rendered_flag = div.selectAll('div').size()
 
-	const row = div.append('div').style('margin-bottom', '10px')
+	if(!rendered_flag){
+		const row = div.append('div').style('margin-bottom', '10px')
 
-	const groupname_div = row.append('div')
-
-	groupname_div.append('span')
-		.style('opacity', 0.5)
-		.style('margin-left', '20px')
-		.style('display','inline-block')
-		.html('Sample group name &nbsp;')
-
-	const nameinput = groupname_div.append('input')
-		.style('display','inline-block')
-		.attr('type', 'text')
-		.style('width', '130px')
-
-	const samplelist_div = row.append('div')
-		.style('padding-top','10px')
-		.style('margin-left', '20px')
+		const samplelist_div = row.append('div')
+			.style('margin-left', '20px')
+		
+		samplelist_div.append('div')
+			.style('vertical-align','top')
+			.style('display','inline-block')
+			.style('opacity', 0.5)
+			.html('Enter sample names<br>(one sample per line) &nbsp;')
 	
-	samplelist_div.append('div')
-		.style('vertical-align','top')
-		.style('display','inline-block')
-		.style('opacity', 0.5)
-		.html('Enter sample names<br>(one sample per line) &nbsp;')
-
-	samplelist_div.append('textarea')
-		.style('display','inline-block')
-		.attr('cols', '20')
-		.attr('rows', '10')
+		samplelist_div.append('textarea')
+			.style('display','inline-block')
+			.attr('cols', '20')
+			.attr('rows', '10')
+			.on('change',()=>{
+				//TODO: verify inputs and send it to backend
+			})
+	}
 }
