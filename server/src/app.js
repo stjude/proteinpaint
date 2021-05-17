@@ -60,7 +60,6 @@ const express = require('express'),
 	termdbbarsql = require('./termdb.barsql'),
 	bedgraphdot_request_closure = require('./bedgraphdot'),
 	bam_request_closure = require('./bam'),
-	cuminc = require('./cuminc'),
 	aicheck_request_closure = require('./aicheck'),
 	bampile_request = require('./bampile'),
 	junction_request = require('./junction'),
@@ -224,7 +223,6 @@ app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
-app.get(basepath + '/incidence', cuminc.handle_incidence(genomes))
 /****
 	- validate and start the server
 	This enables the coorect monitoring by the forever module. 

@@ -1,49 +1,33 @@
-const app = require('./app')
 const path = require('path')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const spawn = require('child_process').spawn
 const serverconfig = require('./serverconfig')
 
-export function handle_incidence(genomes) {
-	return async (req, res) => {
-		app.log(req)
-		const q = req.query
-		if (q.filter) {
-			q.filter = JSON.parse(decodeURIComponent(q.filter))
+export async function get_incidence(q, ds) {
+	try {
+		const filter = getFilterCTEs(q.filter, ds)
+		const data = get_sql_query(q, ds, filter)
+		const year_to_events = data.map(d => d.time).join('_')
+		const events = data.map(d => d.event).join('_')
+		const ci_data = await calculate_cuminc(year_to_events, events)
+		const final_data = {
+			keys: ['time', 'cuminc', 'low', 'high']
 		}
-		try {
-			const genome = genomes[q.genome]
-			if (!genome) throw 'invalid genome'
-			const ds = genome.datasets[q.dslabel]
-			if (!ds) throw 'invalid dslabel'
-			if (!ds.cohort) throw 'ds.cohort missing'
-			const tdb = ds.cohort.termdb
-			if (!tdb) throw 'no termdb for this dataset'
-
-			const filter = getFilterCTEs(q.filter, q.ds)
-			const data = get_sql_query(q, ds, filter)
-			const year_to_events = data.map(d => d.time).join('_')
-			const events = data.map(d => d.event).join('_')
-			const ci_data = await calculate_cuminc(year_to_events, events)
-			const final_data = {
-				keys: ['time', 'cuminc', 'low', 'high']
+		if (ci_data == null) {
+			console.log('No output from R script')
+		} else if (!ci_data.case_time || !ci_data.case_time.length) {
+			final_data.case = []
+		} else {
+			const case_array = []
+			for (let i = 0; i < ci_data.case_time.length; i++) {
+				case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
 			}
-			if (ci_data == null) {
-				console.log('No output from R script')
-			} else if (!ci_data.case_time || !ci_data.case_time.length) {
-				final_data.case = []
-			} else {
-				const case_array = []
-				for (let i = 0; i < ci_data.case_time.length; i++) {
-					case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
-				}
-				final_data.case = case_array
-			}
-			res.send(final_data)
-		} catch (e) {
-			res.send({ error: e.message || e })
-			if (e.stack) console.log(e.stack)
+			final_data.case = case_array
 		}
+		return final_data
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		return { error: e.message || e }
 	}
 }
 

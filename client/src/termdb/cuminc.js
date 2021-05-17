@@ -58,7 +58,7 @@ class TdbCumInc {
 		}
 	}
 
-	async main(data) {
+	async main() {
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
@@ -70,8 +70,8 @@ class TdbCumInc {
 	async getData() {
 		try {
 			const data = await dofetch3(
-				'incidence?' +
-					'genome=' +
+				'termdb?getcuminc=1' +
+					'&genome=' +
 					this.state.genome +
 					'&dslabel=' +
 					this.state.dslabel +
@@ -153,6 +153,7 @@ function setRenderers(self) {
 	}
 
 	self.updateCharts = function(d) {
+		if (!d.serieses) return
 		const s = self.settings
 		const div = select(this)
 
