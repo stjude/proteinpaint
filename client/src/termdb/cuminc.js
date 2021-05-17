@@ -19,7 +19,7 @@ class TdbCumInc {
 		// hardcode for now, but may be set as option later
 		this.settings = {
 			gradeCutoff: 3,
-			radius: 3,
+			radius: 5,
 			fill: '#fff',
 			stroke: '#000',
 			fillOpacity: 0,
@@ -85,7 +85,7 @@ class TdbCumInc {
 			if (data.error) throw data.error
 			const rows = []
 			for (const d of data.case) {
-				const obj = { seriesKeys: ['cuminc', 'low', 'high', 'CI'] }
+				const obj = { seriesKeys: ['CI', 'low', 'high', 'cuminc'] }
 				data.keys.forEach((k, i) => {
 					obj[k] = +d[i]
 				})
@@ -333,10 +333,17 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
+	const labels = {
+		cuminc: 'Cumulative incidence',
+		low: 'Lower 95% CI',
+		high: 'Upper 95% CI'
+	}
+
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [
+				`<tr><td colspan=2 style='padding:3px; text-align: center; color:#aaa'>${labels[d.seriesId]}</td></tr<>`,
 				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
 			]
@@ -359,17 +366,17 @@ function getPj(self) {
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
-			yMin: '>$cuminc',
-			yMax: '<$cuminc',
+			yMin: '>=yMin()',
+			yMax: '<=yMax()',
 			charts: [
 				{
 					chartId: '@key',
 					xMin: '>$time',
 					xMax: '<$time',
-					yMin: '>$cuminc',
-					yMax: '<$cuminc',
 					'__:xScale': '=xScale()',
 					'__:yScale': '=yScale()',
+					yMin: '>=yMin()',
+					yMax: '<=yMax()',
 					serieses: [
 						{
 							chartId: '@parent.@parent.@key',
@@ -400,6 +407,12 @@ function getPj(self) {
 				const seriesId = context.context.parent.seriesId
 				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
+			yMin(row) {
+				return row.low
+			},
+			yMax(row) {
+				return row.high
+			},
 			xScale(row, context) {
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
@@ -415,7 +428,7 @@ function getPj(self) {
 			},
 			yScale(row, context) {
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(1, 2 * yMax), 0]
+				const domain = [Math.min(1, 1.1 * yMax), 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
