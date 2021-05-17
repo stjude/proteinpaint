@@ -1,6 +1,8 @@
 const app = require('./app')
+const path = require('path')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const spawn = require('child_process').spawn
+const serverconfig = require('./serverconfig')
 const readline = require('readline')
 
 export function handle_incidence(genomes) {
@@ -23,11 +25,10 @@ export function handle_incidence(genomes) {
 			const data = get_sql_query(q, ds, filter)
 			const year_to_events = data.map(d => d.time).join('_')
 			const events = data.map(d => d.event).join('_')
-
 			const ci_data = await calculate_cuminc(year_to_events, events)
 			//console.log('ci_data:', ci_data)
 			const final_data = {}
-			if (ci_data == {}) {
+			if (ci_data == null) {
 				console.log('No output from R script')
 			} else {
 				const case_array = []
@@ -84,7 +85,7 @@ function calculate_cuminc(year_to_events, events) {
 	const ci_data = {}
 	return new Promise((resolve, reject) => {
 		//const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
-		const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events]) // Should we define Rscript in serverconfig.json?
+		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './server/src/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
 		const rl = readline.createInterface({ input: ps.stdout })
 
 		rl.on('line', line => {
