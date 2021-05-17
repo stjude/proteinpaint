@@ -3,7 +3,6 @@ const path = require('path')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const spawn = require('child_process').spawn
 const serverconfig = require('./serverconfig')
-const readline = require('readline')
 
 export function handle_incidence(genomes) {
 	return async (req, res) => {
@@ -82,44 +81,53 @@ SELECT * FROM event0
 
 //function calculate_cuminc(year_to_events, events, groups) {
 function calculate_cuminc(year_to_events, events) {
-	const ci_data = {}
 	return new Promise((resolve, reject) => {
-		//const ps = spawn('Rscript', ['server/src/cuminc.R', year_to_events, events, groups]) // Should we define Rscript in serverconfig.json?
-		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './server/src/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
-		const rl = readline.createInterface({ input: ps.stdout })
-
-		rl.on('line', line => {
-			//console.log("R_line:",line)
-			if (line.includes('p_value') == true) {
-				const line2 = line.split(':')
-				ci_data.pvalue = parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
-			} else if (line.includes('control_time') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.control_time = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('control_est') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.control_est = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('case_time') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.case_time = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('case_est') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.case_est = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('low_control') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.low_control = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('up_control') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.up_control = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('low_case') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.low_case = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
-			} else if (line.includes('up_case') == true) {
-				const char_array = line.split(':')[1].split(',')
-				ci_data.up_case = char_array.map(v => parseFloat(v.replace(' ', ''), 10))
+		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './utils/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
+		const out = [],
+			out2 = []
+		ps.stdout.on('data', d => out.push(d))
+		ps.stderr.on('data', d => out2.push(d))
+		ps.on('close', code => {
+			const e = out2.join('').trim()
+			if (e) {
+				// got error running r script
+				reject(e)
 			}
-		})
-		rl.on('close', () => {
+			const lines = out
+				.join('')
+				.trim()
+				.split('\n')
+			const ci_data = {}
+			for (const line of lines) {
+				if (line.includes('p_value')) {
+					const line2 = line.split(':')
+					ci_data.pvalue = Number.parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
+				} else if (line.includes('control_time')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.control_time = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('control_est')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.control_est = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('case_time')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.case_time = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('case_est')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.case_est = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('low_control')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.low_control = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('up_control')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.up_control = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('low_case')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.low_case = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				} else if (line.includes('up_case')) {
+					const char_array = line.split(':')[1].split(',')
+					ci_data.up_case = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
+				}
+			}
 			resolve(ci_data)
 		})
 	})
