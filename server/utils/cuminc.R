@@ -1,7 +1,7 @@
 # Rscript cuminc.R 0.3_0.4_0.1_0.2 1_1_0_0
 
 #library(survival) #for survfit function
-library(cmprsk) #for cuminc function
+suppressPackageStartupMessages(library(cmprsk)) #for cuminc function
 args <- commandArgs(TRUE)
 
 year_to_events <- as.numeric(unlist(strsplit(args[1], split = "_")))
