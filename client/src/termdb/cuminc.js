@@ -68,7 +68,6 @@ class TdbCumInc {
 	}
 
 	async getData() {
-		console.log(this.state.termfilter)
 		try {
 			const data = await dofetch3(
 				'incidence?' +
@@ -103,7 +102,8 @@ export const cumincInit = rx.getInitFxn(TdbCumInc)
 
 function setRenderers(self) {
 	self.render = function() {
-		const chartDivs = self.dom.div.selectAll('.pp-cuminc-chart').data(self.pj.tree.charts, d => d.chartId)
+		const data = self.pj.tree.charts || [{ chartId: 'No cumulative incidence data' }]
+		const chartDivs = self.dom.div.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
@@ -117,7 +117,7 @@ function setRenderers(self) {
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
-			.style('opacity', 0)
+			.style('opacity', d.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			//.style("position", "absolute")
 			.style('width', s.svgw + 50 + 'px')
 			.style('display', 'inline-block')
@@ -141,13 +141,15 @@ function setRenderers(self) {
 			.datum(d.chartId)
 			.html(d.chartId)
 
-		const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
-		renderSVG(svg, d, s, 0)
+		if (d.serieses) {
+			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
+			renderSVG(svg, d, s, 0)
 
-		div
-			.transition()
-			.duration(s.duration)
-			.style('opacity', 1)
+			div
+				.transition()
+				.duration(s.duration)
+				.style('opacity', 1)
+		}
 	}
 
 	self.updateCharts = function(d) {

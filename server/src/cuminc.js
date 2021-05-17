@@ -25,16 +25,18 @@ export function handle_incidence(genomes) {
 			const year_to_events = data.map(d => d.time).join('_')
 			const events = data.map(d => d.event).join('_')
 			const ci_data = await calculate_cuminc(year_to_events, events)
-			//console.log('ci_data:', ci_data)
-			const final_data = {}
+			const final_data = {
+				keys: ['time', 'cuminc', 'low', 'high']
+			}
 			if (ci_data == null) {
 				console.log('No output from R script')
+			} else if (!ci_data.case_time || !ci_data.case_time.length) {
+				final_data.case = []
 			} else {
 				const case_array = []
 				for (let i = 0; i < ci_data.case_time.length; i++) {
 					case_array.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
 				}
-				final_data.keys = ['time', 'cuminc', 'low', 'high']
 				final_data.case = case_array
 			}
 			res.send(final_data)
@@ -88,11 +90,11 @@ function calculate_cuminc(year_to_events, events) {
 		ps.stdout.on('data', d => out.push(d))
 		ps.stderr.on('data', d => out2.push(d))
 		ps.on('close', code => {
-			const e = out2.join('').trim()
+			/*const e = out2.join('').trim()
 			if (e) {
 				// got error running r script
 				reject(e)
-			}
+			}*/
 			const lines = out
 				.join('')
 				.trim()
