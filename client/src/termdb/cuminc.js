@@ -343,9 +343,12 @@ function setInteractivity(self) {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [
-				`<tr><td colspan=2 style='padding:3px; text-align: center; color:#aaa'>${labels[d.seriesId]}</td></tr<>`,
-				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${d.x.toFixed(
+					1
+				)} years</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>${
+					labels[d.seriesId]
+				}:</td><td style='padding:3px; text-align:center'>${d.y.toPrecision(2)}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
