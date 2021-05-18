@@ -18,7 +18,6 @@ const defaultState = {
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
-		visibleCumIncIds: [],
 		plots: {}
 	},
 	termfilter: {
@@ -143,9 +142,6 @@ class TdbStore {
 				this.state.nav.header_mode = 'search_only'
 			}
 		}
-		if (this.state.termdbConfig.cumincplot4condition && !this.state.tree.cuminc) {
-			this.state.tree.cuminc = {}
-		}
 	}
 
 	fromJson(str) {
@@ -242,29 +238,6 @@ TdbStore.prototype.actions = {
 			validatePlot(plot, this.app.vocabApi)
 		}
 		this.adjustPlotCurrViews(plot)
-	},
-
-	cuminc_show(action) {
-		if (!this.state.tree.cuminc[action.id]) {
-			this.state.tree.cuminc[action.term.id] = {
-				[action.id]: {
-					term: {
-						id: action.id,
-						term: action.term
-					}
-				}
-			}
-		}
-		if (!this.state.tree.visibleCumIncIds.includes(action.id)) {
-			this.state.tree.visibleCumIncIds.push(action.id)
-		}
-	},
-
-	cuminc_hide(action) {
-		const i = this.state.tree.visibleCumIncIds.indexOf(action.id)
-		if (i != -1) {
-			this.state.tree.visibleCumIncIds.splice(i, 1)
-		}
 	},
 
 	filter_replace(action) {

@@ -45,12 +45,9 @@ class TdbCumInc {
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.cuminc)) {
-			throw `No cumulative incidence with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
-		}
-		const config = appState.tree.cuminc[this.id]
+		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: appState.tree.visibleCumIncIds.includes(this.id),
+			isVisible: config.settings.currViews.includes('cuminc'),
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,

@@ -6,6 +6,7 @@ import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
+import { cumincInit } from './cuminc'
 import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
@@ -47,7 +48,8 @@ class TdbPlot {
 			this.app,
 			{
 				id: this.id,
-				holder: this.dom.controls
+				holder: this.dom.controls,
+				isleaf: opts.term.isleaf
 			},
 			this.app.opts.plotControls
 		)
@@ -76,6 +78,15 @@ class TdbPlot {
 				Object.assign({ controls }, this.app.opts.scatter)
 			),
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
+		}
+
+		if (opts.term.isleaf) {
+			console.log(83)
+			this.components.cuminc = cumincInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.cuminc)
+			)
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
