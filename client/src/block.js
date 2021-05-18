@@ -331,6 +331,11 @@ export class Block {
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
 			this.legend.tr_morigin = tr2.style('display', 'none')
 			this.legend.td_morigin = td2
+
+			if (arg.legendimg) {
+				const [tr, td] = Legend.legend_newrow(this, arg.legendimg.name || '')
+				this.make_legend_img(arg.legendimg, td)
+			}
 		}
 
 		if (arg.usegm) {
@@ -795,6 +800,35 @@ export class Block {
 		this.ifbusy()
 	}
 	/****** end of constructor ***/
+
+	async make_legend_img(arg, div) {
+		/*
+		add a legend showing a server-side image, either for a track or for this block
+		arg: {}
+		.file: tp path to an image file
+		.height: optional icon height
+		*/
+		const data = await client.dofetch2('img?file=' + arg.file)
+		if (data.error) {
+			div.text(data.error)
+			return
+		}
+		let fold = true
+		const img = div
+			.append('img')
+			.attr('class', 'sja_clbb')
+			.attr('src', data.src)
+			.style('height', '80px')
+		img.on('click', () => {
+			if (fold) {
+				fold = false
+				img.transition().style('height', arg.height ? arg.height + 'px' : 'auto')
+			} else {
+				fold = true
+				img.transition().style('height', '80px')
+			}
+		})
+	}
 
 	regioncumlen(ridx, notincludethisregion) {
 		// region bp length up to the view start of a given region

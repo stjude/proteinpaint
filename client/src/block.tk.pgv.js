@@ -194,38 +194,7 @@ function makeTk(tk, block) {
 
 		// if has image, show image, else, may show categories
 		if (tk.legendimg && tk.legendimg.file) {
-			const req = new Request(block.hostURL + '/img', {
-				method: 'POST',
-				body: JSON.stringify({ file: tk.legendimg.file, jwt: block.jwt })
-			})
-			fetch(req)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) throw data.error
-					let fold = true
-					const img = tk.td_legend
-						.append('img')
-						.attr('class', 'sja_clbb')
-						.attr('src', data.src)
-						.style('height', '80px')
-					img.on('click', () => {
-						if (fold) {
-							fold = false
-							img.transition().style('height', tk.legendimg.height ? tk.legendimg.height + 'px' : 'auto')
-						} else {
-							fold = true
-							img.transition().style('height', '80px')
-						}
-					})
-				})
-				.catch(err => {
-					tk.td_legend.text(err.message)
-					if (err.stack) {
-						console.log(err.stack)
-					}
-				})
+			block.make_legend_img(tk.legendimg, tk.td_legend)
 		} else if (tk.categories) {
 			// no legend image, but categories
 			// so show categories

@@ -1399,7 +1399,8 @@ async function launchblock(arg, app) {
 		holder: app.holder0,
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
-		debugmode: app.debugmode
+		debugmode: app.debugmode,
+		legendimg: arg.legendimg
 	}
 
 	if (arg.width) {

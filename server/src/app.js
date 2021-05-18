@@ -187,7 +187,7 @@ app.post(basepath + '/snp', handle_snpbycoord)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
 app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
-app.post(basepath + '/img', handle_img)
+app.get(basepath + '/img', handle_img)
 app.post(basepath + '/svmr', handle_svmr)
 app.post(basepath + '/dsgenestat', handle_dsgenestat)
 app.post(basepath + '/study', handle_study)
@@ -817,22 +817,19 @@ function handle_genelookup(req, res) {
 	res.send({ hits: [] })
 }
 
-function handle_img(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const [e, file, isurl] = fileurl({ query: { file: req.query.file } })
-	if (e) {
-		res.send({ error: 'invalid image file' })
-		return
+async function handle_img(req, res) {
+	log(req)
+	const [e, file, isurl] = fileurl(req) // fileurl({ query: { file: req.query.file } })
+	try {
+		if (e) throw 'invalid image file'
+		const data = await fs.promises.readFile(file)
+		res.send({
+			src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
+			size: imagesize(file)
+		})
+	} catch (e) {
+		res.send({ error: e.message || e })
 	}
-	fs.readFile(file, (err, data) => {
-		if (err) {
-			res.send({ error: 'error reading file' })
-			return
-		}
-		const size = imagesize(file)
-		const src = 'data:image/jpeg;base64,' + new Buffer(data).toString('base64')
-		res.send({ src: src, size: size })
-	})
 }
 
 function handle_ntseq(req, res) {
