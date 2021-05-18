@@ -314,7 +314,7 @@ function setRenderers(self) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(xTitleLabel)
 
-		const yTitleLabel = 'Cumulative Incidence'
+		const yTitleLabel = 'Cumulative Incidence (probability)'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -342,13 +342,12 @@ function setInteractivity(self) {
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
+			const label = labels[d.seriesId]
+			const x = d.x.toFixed(1)
+			const y = d.y.toPrecision(2)
 			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${d.x.toFixed(
-					1
-				)} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${
-					labels[d.seriesId]
-				}:</td><td style='padding:3px; text-align:center'>${d.y.toPrecision(2)}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
