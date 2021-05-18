@@ -211,7 +211,6 @@ function makeheader(app, obj, jwt) {
 	const row = app.holder
 		.append('div')
 		.style('white-space', 'nowrap')
-		.style('box-shadow', '0 2px 1px -1px #ddd')
 		.style(
 			'border-bottom',
 			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
@@ -362,14 +361,15 @@ function makeheader(app, obj, jwt) {
 
 	const duration = 500, // for apps drawer animation
 		hint_pos = {
-			open: { btm: -80, rt: 0 },
-			closed: { btm: -7, rt: 5 }
+			open: { btm: -40, left: 13 },
+			closed: { btm: 3, rt: 5 }
 		},
 		hint_width = { open: '0px', closed: '18px' },
-		arrow_size = { open: 65, closed: 20 },
+		arrow_size = { open: 40, closed: 20 },
 		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
 
-	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow
+	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow, apps_drawer_arrow_open
+	let app_btn_wrapper, app_btn, app_btn_active, app_holder
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
@@ -380,8 +380,6 @@ function makeheader(app, obj, jwt) {
 	}
 
 	// launchApps()
-
-	let app_btn_wrapper, app_btn, app_btn_active, app_holder
 
 	if (!obj.features.examples) {
 		app_btn = headbox
@@ -399,6 +397,8 @@ function makeheader(app, obj, jwt) {
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
 		let apps_rendered = false
+
+		row.style('box-shadow', app_btn_active ? '' : '0 2px 1px -1px #ddd')
 
 		app_holder = apps_drawer_row
 			.append('div')
@@ -459,6 +459,7 @@ function makeheader(app, obj, jwt) {
 			.style('margin', '0px 5px')
 			.text('Apps')
 
+		// an empty spacer div, needed since the arrows are absolutely positioned
 		apps_drawer_hint = app_btn_wrapper
 			.append('div')
 			.style('position', 'relative')
@@ -469,19 +470,38 @@ function makeheader(app, obj, jwt) {
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
 
-		apps_drawer_arrow = apps_drawer_hint
+		apps_drawer_arrow = app_btn_wrapper
 			.append('div')
 			.style('position', 'absolute')
-			.style('font-size', (app_btn_active ? arrow_size.open : arrow_size.closed) + 'px')
-			.style('right', (app_btn_active ? hint_pos.open.rt : hint_pos.closed.rt) + 'px')
-			.style('bottom', (app_btn_active ? hint_pos.open.btm : hint_pos.closed.btm) + 'px')
-			.style('transform', app_btn_active ? 'rotate(180deg)' : '')
+			.style('font-size', arrow_size.closed + 'px')
+			.style('right', hint_pos.closed.rt + 'px')
+			.style('bottom', hint_pos.closed.btm + 'px')
 			.style('background-color', 'transparent')
-			.style('color', app_btn_active ? arrow_color.open : arrow_color.closed)
+			.style('color', arrow_color.closed)
+			.style('opacity', app_btn_active ? 0 : 1)
+			.html('&#9660;')
+
+		apps_drawer_arrow_open = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.open + 'px')
+			.style('left', hint_pos.open.left + 'px')
+			.style('bottom', hint_pos.open.btm + 'px')
+			.style('transform', 'rotate(180deg)')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.open)
+			.style('opacity', app_btn_active ? 1 : 0)
+			.style('cursor', app_btn_active ? 'pointer' : 'default')
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
 			.html('&#9660;')
 	}
 
 	function slide_drawer() {
+		row
+			.transition()
+			.delay(500)
+			.style('box-shadow', app_btn_active ? '' : '0 2px 1px -1px #ddd')
+
 		app_btn_wrapper
 			.transition()
 			.duration(500)
@@ -512,11 +532,13 @@ function makeheader(app, obj, jwt) {
 		apps_drawer_arrow
 			.transition()
 			.duration(duration)
-			.style('right', (app_btn_active ? hint_pos.open.rt : hint_pos.closed.rt) + 'px')
-			.style('bottom', (app_btn_active ? hint_pos.open.btm : hint_pos.closed.btm) + 'px')
-			.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
-			.style('font-size', (app_btn_active ? arrow_size.open : arrow_size.closed) + 'px')
-			.style('color', app_btn_active ? arrow_color.open : arrow_color.closed)
+			.style('opacity', app_btn_active ? 0 : 1)
+
+		apps_drawer_arrow_open
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 1 : 0)
 	}
 
 	headbox
