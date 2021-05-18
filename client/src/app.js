@@ -398,8 +398,6 @@ function makeheader(app, obj, jwt) {
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
 		let apps_rendered = false
 
-		row.style('box-shadow', app_btn_active ? '' : '0 2px 1px -1px #ddd')
-
 		app_holder = apps_drawer_row
 			.append('div')
 			.style('position', 'relative')
@@ -457,6 +455,7 @@ function makeheader(app, obj, jwt) {
 			.style('color', app_btn_active ? '#fff' : '#000')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
+			.style('cursor', 'pointer')
 			.text('Apps')
 
 		// an empty spacer div, needed since the arrows are absolutely positioned
@@ -479,6 +478,7 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', 'transparent')
 			.style('color', arrow_color.closed)
 			.style('opacity', app_btn_active ? 0 : 1)
+			.style('cursor', 'pointer')
 			.html('&#9660;')
 
 		apps_drawer_arrow_open = app_btn_wrapper
@@ -491,17 +491,12 @@ function makeheader(app, obj, jwt) {
 			.style('background-color', 'transparent')
 			.style('color', arrow_color.open)
 			.style('opacity', app_btn_active ? 1 : 0)
-			.style('cursor', app_btn_active ? 'pointer' : 'default')
+			.style('cursor', 'pointer')
 			.style('pointer-events', app_btn_active ? 'auto' : 'none')
 			.html('&#9660;')
 	}
 
 	function slide_drawer() {
-		row
-			.transition()
-			.delay(500)
-			.style('box-shadow', app_btn_active ? '' : '0 2px 1px -1px #ddd')
-
 		app_btn_wrapper
 			.transition()
 			.duration(500)
