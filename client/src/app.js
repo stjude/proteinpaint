@@ -408,7 +408,7 @@ function makeheader(app, obj, jwt) {
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('overflow', 'hidden')
 			.style('background-color', '#f5f5f5')
-			.style('border-radius', '5px')
+			.style('border-radius', '0px 0px 5px 5px')
 			.style('width', '93vw')
 
 		async function load_app_div() {
