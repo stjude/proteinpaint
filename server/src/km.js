@@ -754,11 +754,11 @@ function handle_mdssurvivalplot_getfullsamples(q, ds, plottype) {
 		for(const i in sampleset){
 			const sn = sampleset[i]
 			const o = ds.cohort.annotation[sn]
-			if(o)
-				lst1.push({
-					name: sn,
-					o: o
-				})
+			if(o == undefined) continue
+			lst1.push({
+				name: sn,
+				o: o
+			})
 		}
 	} else {
 		throw 'unknown rule for samplerule.full'

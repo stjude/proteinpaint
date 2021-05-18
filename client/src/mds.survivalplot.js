@@ -734,30 +734,32 @@ function show_sampleinput(p, div){
 
 	let rendered_flag = div.selectAll('div').size()
 
-	if(!rendered_flag){
-		const row = div.append('div').style('margin-bottom', '10px')
+	// return if input field already rendered
+	if(rendered_flag) return
 
-		const samplelist_div = row.append('div')
-			.style('margin-left', '20px')
-		
-		samplelist_div.append('div')
-			.style('vertical-align','top')
-			.style('display','inline-block')
-			.style('opacity', 0.5)
-			.html('Enter sample names<br>(one sample per line) &nbsp;')
+	const row = div.append('div').style('margin-bottom', '10px')
+
+	const samplelist_div = row.append('div')
+		.style('margin-left', '20px')
 	
-		const sample_input = samplelist_div.append('textarea')
-			.style('display','inline-block')
-			.attr('cols', '20')
-			.attr('rows', '10')
-			.on('change',()=>{
-				// verify inputs and send it to backend
-				let sampleset = p.samplerule.full.sampleset = []
-				const str = sample_input.property('value').trim()
-				if (!str) return
-				for (const sample of str.split('\n')) {
-					sampleset.push(sample)
-				}
-			})
-	}
+	samplelist_div.append('div')
+		.style('vertical-align','top')
+		.style('display','inline-block')
+		.style('opacity', 0.5)
+		.html('Enter sample names<br>(one sample per line) &nbsp;')
+
+	const sample_input = samplelist_div.append('textarea')
+		.style('display','inline-block')
+		.attr('cols', '20')
+		.attr('rows', '10')
+		.on('change',()=>{
+			// verify inputs and send it to serverside
+			let sampleset = p.samplerule.full.sampleset = []
+			const str = sample_input.property('value').trim()
+			if (!str) return
+			for (const sample of str.split('\n')) {
+				sampleset.push(sample)
+			}
+		})
+	
 }
