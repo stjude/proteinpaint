@@ -749,6 +749,17 @@ function handle_mdssurvivalplot_getfullsamples(q, ds, plottype) {
 				o: o
 			})
 		}
+	} else if(q.samplerule.full.usesampleset){
+		const sampleset = q.samplerule.full.sampleset
+		for(const i in sampleset){
+			const sn = sampleset[i]
+			const o = ds.cohort.annotation[sn]
+			if(o)
+				lst1.push({
+					name: sn,
+					o: o
+				})
+		}
 	} else {
 		throw 'unknown rule for samplerule.full'
 	}

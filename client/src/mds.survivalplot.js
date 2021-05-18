@@ -188,15 +188,18 @@ push button to re-render
 					attr2select[k].style('display', 'none')
 				}
 				const o = d3event.target.options[d3event.target.selectedIndex]
-				custom_input_row.style('display', o.usecustom ? 'block': 'none')
+				custom_input_row.style('display', o.usesampleset ? 'block': 'none')
 				if (o.useall) {
 					// user selects to use all samples
 					p.samplerule.full.useall = 1
 					delete p.samplerule.full.byattr
 					return
 				}
-				if(o.usecustom) {
+				if(o.usesampleset) {
 					//user selects custom sampleset to be entered in inputbox
+					delete p.samplerule.full.byattr
+					delete p.samplerule.full.useall
+					p.samplerule.full.usesampleset = 1
 					show_sampleinput(p, custom_input_row)
 					return
 				}
@@ -248,7 +251,7 @@ push button to re-render
 		// option of slecting custom samples set
 		s.append('option')
 			.text('custom sampleset')
-			.property('usecustom', 1)
+			.property('usesampleset', 1)
 	}
 
 	show_dividerules(p, div)
@@ -743,12 +746,18 @@ function show_sampleinput(p, div){
 			.style('opacity', 0.5)
 			.html('Enter sample names<br>(one sample per line) &nbsp;')
 	
-		samplelist_div.append('textarea')
+		const sample_input = samplelist_div.append('textarea')
 			.style('display','inline-block')
 			.attr('cols', '20')
 			.attr('rows', '10')
 			.on('change',()=>{
-				//TODO: verify inputs and send it to backend
+				// verify inputs and send it to backend
+				let sampleset = p.samplerule.full.sampleset = []
+				const str = sample_input.property('value').trim()
+				if (!str) return
+				for (const sample of str.split('\n')) {
+					sampleset.push(sample)
+				}
 			})
 	}
 }
