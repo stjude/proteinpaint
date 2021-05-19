@@ -1,26 +1,38 @@
 const fs = require('fs'),
 	path = require('path'),
-	child_process = require('child_process'),
-	spawn = child_process.spawn,
+	spawn = require('child_process').spawn,
 	readline = require('readline'),
 	app = require('./app'),
 	utils = require('./utils'),
-    common = require('../shared/common'),
+	common = require('../shared/common'),
 	serverconfig = require('./serverconfig'),
 	vcf = require('../shared/vcf')
 
-	/*
-	valuable globals
-	*/
-	const tabix = serverconfig.tabix || 'tabix'
+/*
+function cascade
 
-	const tabixnoterror = s => {
-		return s.startsWith('[M::test_and_fetch]')
-	}
+get_samples
+divide_samples
+	dividesamples_genevaluepercentilecutoff
+		get_genevalue
+	dividesamples_genevaluequartile
+	dividesamples_mutationanyornone
+		get_mutatedsamples
+			query_svcnv
+			query_vcf
+get_pvalue
+	pvalue_write1
+	pvalue_write2
+	pvalue_test
+	pvalue_read
+pvalue_may4eachmutatedset
+pvalue_may4expquartile
+do_plot
+*/
 
 module.exports = genomes => {
-	return async (req, res) => {	
-// module.exports = async (req, res) => {
+	return async (req, res) => {
+		// module.exports = async (req, res) => {
 		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
@@ -46,20 +58,20 @@ module.exports = genomes => {
 			const plottype = sp.plots[q.type]
 			if (!plottype) throw 'unknown plot type: ' + q.type
 
-			const samples = handle_mdssurvivalplot_getfullsamples(q, ds, plottype)
+			const samples = get_samples(q, ds, plottype)
 
-			const samplesets = await handle_mdssurvivalplot_dividesamples(samples, q, ds, samples)
+			const samplesets = await divide_samples(samples, q, ds, samples)
 
 			let pvalue
 			if (samplesets.length > 1) {
-				pvalue = await handle_mdssurvivalplot_pvalue(samplesets)
+				pvalue = await get_pvalue(samplesets)
 			}
 
-			await handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets)
-			await handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets)
+			await pvalue_may4eachmutatedset(q, samplesets)
+			await pvalue_may4expquartile(q, samplesets)
 
 			for (const s of samplesets) {
-				handle_mdssurvivalplot_plot(s)
+				do_plot(s)
 				delete s.lst
 			}
 
@@ -81,7 +93,7 @@ module.exports = genomes => {
 	}
 }
 
-async function handle_mdssurvivalplot_pvalue(samplesets) {
+async function get_pvalue(samplesets) {
 	/* [ each_set ]
 .lst[]
 	.serialtime
@@ -93,47 +105,47 @@ async function handle_mdssurvivalplot_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const datafile = await handle_mdssurvivalplot_pvalue_write1(lines)
-	const { scriptfile, outfile } = await handle_mdssurvivalplot_pvalue_write2(datafile)
-	await handle_mdssurvivalplot_pvalue_test(scriptfile)
-	const p = handle_mdssurvivalplot_pvalue_read(outfile)
+	const datafile = await pvalue_write1(lines)
+	const { scriptfile, outfile } = await pvalue_write2(datafile)
+	await pvalue_test(scriptfile)
+	const p = pvalue_read(outfile)
 	fs.unlink(datafile, () => {})
 	fs.unlink(scriptfile, () => {})
 	fs.unlink(outfile, () => {})
 	return p
 }
 
-async function handle_mdssurvivalplot_pvalue_may4eachmutatedset(q, samplesets) {
+async function pvalue_may4eachmutatedset(q, samplesets) {
 	if (!q.samplerule.mutated_sets) return
 	const nomut_set = samplesets.find(i => i.is_notmutated)
 	if (!nomut_set) return
 	for (const s of samplesets) {
 		if (s.is_notmutated) continue
 		// is a not mutated set
-		const pvalue = await handle_mdssurvivalplot_pvalue([s, nomut_set])
+		const pvalue = await get_pvalue([s, nomut_set])
 		s.pvalue = pvalue
 	}
 }
-async function handle_mdssurvivalplot_pvalue_may4expquartile(q, samplesets) {
+async function pvalue_may4expquartile(q, samplesets) {
 	if (!q.samplerule.set) return // possible when using "mutated_sets"
 	if (!q.samplerule.set.geneexpression) return // hardcoded for gene exp
 	if (!q.samplerule.set.byquartile) return // hardcoded for quartile
 	if (samplesets.length != 4) return // should throw
 	if (q.samplerule.set.against1st) {
 		for (let i = 1; i < 4; i++) {
-			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[0], samplesets[i]])
+			samplesets[i].pvalue = await get_pvalue([samplesets[0], samplesets[i]])
 		}
 		return
 	}
 	if (q.samplerule.set.against4th) {
 		for (let i = 0; i < 3; i++) {
-			samplesets[i].pvalue = await handle_mdssurvivalplot_pvalue([samplesets[i], samplesets[3]])
+			samplesets[i].pvalue = await get_pvalue([samplesets[i], samplesets[3]])
 		}
 		return
 	}
 }
 
-function handle_mdssurvivalplot_pvalue_read(file) {
+function pvalue_read(file) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
 			if (err) reject('cannot read result')
@@ -144,7 +156,7 @@ function handle_mdssurvivalplot_pvalue_read(file) {
 	})
 }
 
-function handle_mdssurvivalplot_pvalue_write1(lines) {
+function pvalue_write1(lines) {
 	const file = path.join(serverconfig.cachedir, Math.random().toString()) + '.tab'
 	return new Promise((resolve, reject) => {
 		fs.writeFile(file, lines.join('\n') + '\n', err => {
@@ -154,7 +166,7 @@ function handle_mdssurvivalplot_pvalue_write1(lines) {
 	})
 }
 
-function handle_mdssurvivalplot_pvalue_write2(datafile) {
+function pvalue_write2(datafile) {
 	const scriptfile = path.join(serverconfig.cachedir, Math.random().toString()) + '.R'
 	const outfile = scriptfile + '.out'
 	const lines = [
@@ -173,7 +185,7 @@ function handle_mdssurvivalplot_pvalue_write2(datafile) {
 	})
 }
 
-function handle_mdssurvivalplot_pvalue_test(scriptfile) {
+function pvalue_test(scriptfile) {
 	return new Promise((resolve, reject) => {
 		const sp = spawn('Rscript', [scriptfile])
 		sp.on('close', () => {
@@ -185,7 +197,7 @@ function handle_mdssurvivalplot_pvalue_test(scriptfile) {
 	})
 }
 
-async function handle_mdssurvivalplot_dividesamples(samples, q, ds, plottype) {
+async function divide_samples(samples, q, ds, plottype) {
 	/*
 samples[]
 	.name
@@ -232,22 +244,22 @@ plottype{}
 		if (!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
 		if (!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
 		if (st.bymedian) {
-			return await handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff(samples, q, ds, plottype)
+			return await dividesamples_genevaluepercentilecutoff(samples, q, ds, plottype)
 		}
 		if (st.byquartile) {
-			return await handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q, ds, plottype)
+			return await dividesamples_genevaluequartile(samples, q, ds, plottype)
 		}
 	}
 	if (st.mutation) {
 		if (!st.chr) throw '.chr missing from samplerule.set'
 		if (!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
 		if (!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
-		return await handle_mdssurvivalplot_dividesamples_mutationanyornone(samples, q, ds, plottype)
+		return await dividesamples_mutationanyornone(samples, q, ds, plottype)
 	}
 	throw 'unknown rule for samplerule.set{}'
 }
 
-async function handle_mdssurvivalplot_dividesamples_mutationanyornone(samples, q, ds) {
+async function dividesamples_mutationanyornone(samples, q, ds) {
 	const st = q.samplerule.set
 
 	// init sample count for each type of mutation, to be returned to client
@@ -260,7 +272,7 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone(samples, q
 
 	if (st.cnv && !st.snvindel && !st.loh && !st.sv && !st.fusion && !st.itd) {
 		// just cnv, samples will be divided into loss/gain/nochange
-		const [gainset, lossset] = await handle_mdssurvivalplot_getmutatedsamples(samples, q, ds, true)
+		const [gainset, lossset] = await get_mutatedsamples(samples, q, ds, true)
 		const samples_gain = []
 		const samples_loss = []
 		const samples_nomut = []
@@ -296,7 +308,7 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone(samples, q
 	}
 
 	// otherwise, divide to 2 groups: has mut/no mut
-	const samples_withmut = await handle_mdssurvivalplot_getmutatedsamples(samples, q, ds)
+	const samples_withmut = await get_mutatedsamples(samples, q, ds)
 	const samples_nomut = []
 	for (const s of samples) {
 		if (!samples_withmut.find(i => i.name == s.name)) {
@@ -319,7 +331,7 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone(samples, q
 	return returnsets
 }
 
-async function handle_mdssurvivalplot_getmutatedsamples(fullsamples, q, ds, cnvonly) {
+async function get_mutatedsamples(fullsamples, q, ds, cnvonly) {
 	/*
 if is cnvonly, will return two groups of samples, gain and loss each
 if not, will return all mutated samples
@@ -346,11 +358,11 @@ if not, will return all mutated samples
 
 		if (cnvonly) {
 			// cnv only, returns two groups for gain or loss
-			return await handle_mdssurvivalplot_getmutatedsamples_querysvcnv(svcnvquery, fullsamplenameset, q, true)
+			return await query_svcnv(svcnvquery, fullsamplenameset, q, true)
 		}
 
 		// not just cnv
-		const names = await handle_mdssurvivalplot_getmutatedsamples_querysvcnv(svcnvquery, fullsamplenameset, q)
+		const names = await query_svcnv(svcnvquery, fullsamplenameset, q)
 		for (const n of names) {
 			mutsamples.add(n)
 		}
@@ -359,14 +371,14 @@ if not, will return all mutated samples
 	if (st.snvindel) {
 		if (!vcfquery) throw 'no vcf found in ds.queries'
 		for (const tk of vcfquery.tracks) {
-			await handle_mdssurvivalplot_getmutatedsamples_queryvcf(vcfquery, tk, fullsamplenameset, mutsamples, q)
+			await query_vcf(vcfquery, tk, fullsamplenameset, mutsamples, q)
 		}
 	}
 
 	return fullsamples.filter(i => mutsamples.has(i.name))
 }
 
-async function handle_mdssurvivalplot_getmutatedsamples_querysvcnv(tk, samplenameset, q, cnvonly) {
+async function query_svcnv(tk, samplenameset, q, cnvonly) {
 	/*
 if not cnvonly, return set of altered sample names
 if cnvonly, return two sets, for gain/loss
@@ -378,21 +390,17 @@ tk is from ds.queries{}
 
 	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null // does km ever work on custom track?
 
-	return new Promise((resolve, reject) => {
-		const gain = new Set() // use if cnvonly
-		const loss = new Set()
-		const mutsamples = new Set() // use if has other types in addition to cnv
+	const gain = new Set() // use if cnvonly
+	const loss = new Set()
+	const mutsamples = new Set() // use if has other types in addition to cnv
 
-		const ps = spawn(
-			tabix,
-			[
-				tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
-				(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
-			],
-			{ cwd: dir }
-		)
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_tabix(
+		[
+			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
+		],
+		dir,
+		line => {
 			const l = line.split('\t')
 			const start = Number.parseInt(l[1])
 			const stop = Number.parseInt(l[2])
@@ -454,26 +462,13 @@ tk is from ds.queries{}
 				st.samples_itd.add(j.sample)
 				return
 			}
-		})
-
-		const errout = []
-		ps.stderr.on('data', i => errout.push(i))
-		ps.on('close', code => {
-			const e = errout.join('')
-			if (e && !tabixnoterror(e)) {
-				reject(e)
-				return
-			}
-			if (cnvonly) {
-				resolve([gain, loss])
-			} else {
-				resolve(mutsamples)
-			}
-		})
-	})
+		}
+	)
+	if (cnvonly) return [gain, loss]
+	return mutsamples
 }
 
-async function handle_mdssurvivalplot_getmutatedsamples_queryvcf(vcfquery, tk, samplenameset, mutsamples, q) {
+async function query_vcf(vcfquery, tk, samplenameset, mutsamples, q) {
 	/*
 only return the set of mutated sample names
 */
@@ -482,20 +477,16 @@ only return the set of mutated sample names
 	const st = q.samplerule.set
 
 	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null
-	return new Promise((resolve, reject) => {
-		const ps = spawn(
-			tabix,
-			[
-				tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
-				(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
-			],
-			{ cwd: dir }
-		)
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+
+	await utils.get_lines_tabix(
+		[
+			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
+		],
+		dir,
+		line => {
 			if (tk.type == common.mdsvcftype.vcf) {
 				// vcf
-
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
 					nochr: tk.nochr,
 					samples: tk.samples,
@@ -530,25 +521,16 @@ only return the set of mutated sample names
 						}
 					}
 				}
+			} else {
+				// support another snvindel file type?
 			}
-		})
-
-		const errout = []
-		ps.stderr.on('data', i => errout.push(i))
-		ps.on('close', code => {
-			const e = errout.join('')
-			if (e && !tabixnoterror(e)) {
-				reject(e)
-				return
-			}
-			resolve()
-		})
-	})
+		}
+	)
 }
 
-async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q, ds, plottype) {
+async function dividesamples_genevaluequartile(samples, q, ds, plottype) {
 	const st = q.samplerule.set
-	const [genenumquery, samplewithvalue] = await handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds)
+	const [genenumquery, samplewithvalue] = await get_genevalue(samples, q, ds)
 	const i1 = Math.ceil(samplewithvalue.length * 0.25)
 	const i2 = Math.ceil(samplewithvalue.length * 0.5)
 	const i3 = Math.ceil(samplewithvalue.length * 0.75)
@@ -605,10 +587,10 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile(samples, q
 	]
 }
 
-async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff(samples, q, ds, plottype) {
+async function dividesamples_genevaluepercentilecutoff(samples, q, ds, plottype) {
 	// hardcoded median
 	const st = q.samplerule.set
-	const [genenumquery, samplewithvalue] = await handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds)
+	const [genenumquery, samplewithvalue] = await get_genevalue(samples, q, ds)
 	const i = Math.ceil(samplewithvalue.length / 2)
 	const v = samplewithvalue[i - 1].genevalue
 	return [
@@ -631,7 +613,7 @@ async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff(sa
 	]
 }
 
-async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds) {
+async function get_genevalue(samples, q, ds) {
 	if (!ds.queries) throw '.queries{} missing from ds'
 	let genenumquery // gene numeric value query
 	for (const k in ds.queries) {
@@ -645,7 +627,19 @@ async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds
 
 	const st = q.samplerule.set
 
-	const sample2genevalue = await mds_genenumeric_querygene(genenumquery, dir, st.chr, st.start, st.stop, st.gene)
+	const sample2genevalue = new Map()
+	await utils.get_lines_tabix(
+		[
+			genenumquery.file ? path.join(serverconfig.tpmasterdir, genenumquery.file) : genenumquery.url,
+			st.chr + ':' + st.start + '-' + st.stop
+		],
+		dir,
+		line => {
+			const j = JSON.parse(line.split('\t')[3])
+			if (!j.sample || !Number.isFinite(j.value) || j.gene != st.gene) return
+			sample2genevalue.set(j.sample, j.value)
+		}
+	)
 
 	const samplewithvalue = []
 	for (const s of samples) {
@@ -658,28 +652,7 @@ async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds
 	return [genenumquery, samplewithvalue]
 }
 
-async function mds_genenumeric_querygene(query, dir, chr, start, stop, gene) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(
-			tabix,
-			[query.file ? path.join(serverconfig.tpmasterdir, query.file) : query.url, chr + ':' + start + '-' + stop],
-			{ cwd: dir }
-		)
-
-		const sample2genevalue = new Map()
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (!j.sample || !Number.isFinite(j.value) || j.gene != gene) return
-			sample2genevalue.set(j.sample, j.value)
-		})
-		ps.on('close', code => {
-			resolve(sample2genevalue)
-		})
-	})
-}
-
-function handle_mdssurvivalplot_plot(s) {
+function do_plot(s) {
 	/*
     .name
     .lst[]
@@ -721,7 +694,7 @@ function handle_mdssurvivalplot_plot(s) {
 	}
 }
 
-function handle_mdssurvivalplot_getfullsamples(q, ds, plottype) {
+function get_samples(q, ds, plottype) {
 	if (!q.samplerule) throw '.samplerule missing'
 	if (!q.samplerule.full) throw '.samplerule.full missing'
 
@@ -749,12 +722,12 @@ function handle_mdssurvivalplot_getfullsamples(q, ds, plottype) {
 				o: o
 			})
 		}
-	} else if(q.samplerule.full.usesampleset){
+	} else if (q.samplerule.full.usesampleset) {
 		const sampleset = q.samplerule.full.sampleset
-		for(const i in sampleset){
+		for (const i in sampleset) {
 			const sn = sampleset[i]
 			const o = ds.cohort.annotation[sn]
-			if(o == undefined) continue
+			if (o == undefined) continue
 			lst1.push({
 				name: sn,
 				o: o
