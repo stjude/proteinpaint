@@ -4,6 +4,8 @@ import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
+import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { rgb } from 'd3-color'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
@@ -51,7 +53,16 @@ class TdbCumInc {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			config: {
+				term: JSON.parse(JSON.stringify(config.term)),
+				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
+				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
+				settings: {
+					common: config.settings.common,
+					cuminc: config.settings.cuminc
+				}
+			}
 		}
 	}
 
@@ -60,21 +71,34 @@ class TdbCumInc {
 			this.dom.div.style('display', 'none')
 			return
 		}
-		if (data) this.currData = this.getData(data) // console.log(63, this.currData);
+		if (data) this.currData = this.getData(data)
 		this.pj.refresh({ data: this.currData })
+		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
 	}
 
 	getData(data) {
+		this.uniqueSeriesIds = new Set()
 		const rows = []
 		for (const d of data.case) {
-			const obj = { seriesKeys: ['CI', 'low', 'high', 'cuminc'] }
+			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = +d[i]
+				obj[k] = d[i]
 			})
 			rows.push(obj)
+			this.uniqueSeriesIds.add(obj.seriesId)
 		}
 		return rows
+	}
+
+	setTerm2Color(charts) {
+		this.term2toColor = {}
+		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+		for (const chart of charts) {
+			for (const series of chart.serieses) {
+				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId)).toString()
+			}
+		}
 	}
 }
 
@@ -212,57 +236,95 @@ function setRenderers(self) {
 	function renderSeries(g, chart, series, i, s, duration) {
 		g.selectAll('path').remove()
 
-		if (Array.isArray(series.data[0].y)) {
-			g.append('path')
-				.attr(
-					'd',
-					area()
-						.curve(curveStepAfter)
-						.x(c => c.scaledX)
-						.y0(c => c.scaledY[0])
-						.y1(c => c.scaledY[1])(series.data)
-				)
-				.style('fill', 'rgba(200,200,200,0.1)')
-				.style('stroke', 'none')
-		} else {
-			// remove all circles as there is no data id for privacy
-			g.selectAll('circle').remove()
+		g.append('path')
+			.attr(
+				'd',
+				area()
+					.curve(curveStepAfter)
+					.x(c => c.scaledX)
+					.y0(c => c.scaledY[1])
+					.y1(c => c.scaledY[2])(series.data)
+			)
+			.style('fill', self.term2toColor[series.seriesId])
+			.style('opacity', '0.15')
+			.style('stroke', 'none')
 
-			const circles = g.selectAll('circle').data(series.data, b => b.x)
+		renderSubseries(
+			s,
+			g,
+			series.data.map(d => {
+				return {
+					seriesId: d.seriesId,
+					x: d.x,
+					y: d.y,
+					scaledX: d.scaledX,
+					scaledY: d.scaledY[0]
+				}
+			})
+		)
 
-			circles.exit().remove()
+		renderSubseries(
+			s,
+			g.append('g'),
+			series.data.map(d => {
+				return {
+					seriesId: d.seriesId,
+					x: d.x,
+					y: d.low,
+					scaledX: d.scaledX,
+					scaledY: d.scaledY[1]
+				}
+			})
+		)
 
-			circles
-				.transition()
-				.duration(duration)
-				.attr('r', s.radius)
-				.attr('cx', c => c.scaledX)
-				.attr('cy', c => c.scaledY)
-				.style('fill', s.fill)
-				.style('fill-opacity', s.fillOpacity)
-				.style('stroke', s.stroke)
+		renderSubseries(
+			s,
+			g.append('g'),
+			series.data.map(d => {
+				return {
+					seriesId: d.seriesId,
+					x: d.x,
+					y: d.high,
+					scaledX: d.scaledX,
+					scaledY: d.scaledY[2]
+				}
+			})
+		)
+	}
 
-			circles
-				.enter()
-				.append('circle')
-				.attr('r', s.radius)
-				.attr('cx', c => c.scaledX)
-				.attr('cy', c => c.scaledY)
-				.style('opacity', 0)
-				.style('fill', s.fill)
-				.style('fill-opacity', s.fillOpacity)
-				.style('stroke', s.stroke)
-				.transition()
-				.duration(duration)
+	function renderSubseries(s, g, data) {
+		/* TODO: circles/mouseover is not needed for privacy */
+		g.selectAll('g').remove()
+		const subg = g.append('g')
+		const circles = subg.selectAll('circle').data(data, b => b.x)
+		circles.exit().remove()
 
-			g.append('path')
-				.attr('d', self.lineFxn(series.data))
-				.style('fill', 'none')
-				.style('stroke', '#000')
-				.style('opacity', 1)
-				.style('stroke-opacity', d => (d.seriesId == 'cuminc' ? 1 : 0.2))
-				.attr('stroke-dasharray', d => (d.seriesId == 'cuminc' ? null : '6 3'))
-		}
+		circles
+			.attr('r', s.radius)
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
+			.style('fill', s.fill)
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', s.stroke)
+
+		circles
+			.enter()
+			.append('circle')
+			.attr('r', s.radius)
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
+			.style('opacity', 0)
+			.style('fill', s.fill)
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', s.stroke)
+
+		g.append('path')
+			.attr('d', self.lineFxn(data))
+			.style('fill', 'none')
+			.style('stroke', self.term2toColor[data[0].seriesId])
+			.style('opacity', 1)
+			.style('stroke-opacity', data[0].seriesId == 'cuminc' ? 1 : 0.2)
+			.attr('stroke-dasharray', data[0].seriesId == 'cuminc' ? null : '6 3')
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -320,18 +382,21 @@ function setInteractivity(self) {
 	}
 
 	self.mouseover = function() {
+		const d = event.target.__data__
 		if (event.target.tagName == 'circle') {
-			const d = event.target.__data__
 			const label = labels[d.seriesId]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
 			const rows = [
+				`<tr><td colspan=2 style='text-align: center'>${d.seriesId}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		} else if (event.target.tagName == 'path' && d.seriesId) {
+			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesId)
 		} else {
 			self.app.tip.hide()
 		}
@@ -368,14 +433,16 @@ function getPj(self) {
 									'__:seriesId': '@parent.@parent.seriesId',
 									//color: "$color",
 									x: '$time',
-									y: '=y()',
+									y: '$cuminc',
+									low: '$low',
+									high: '$high',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
 								'$time'
 							]
 						},
-						'$seriesKeys[]'
+						'$seriesId'
 					]
 				},
 				'=chartTitle()'
@@ -383,7 +450,7 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				return `CTCAE grade ${s.gradeCutoff}-5`
+				return row.chartId && row.chartId != '-' ? row.chartId : 'CTCAE grade 3-5'
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
@@ -405,8 +472,8 @@ function getPj(self) {
 			},
 			scaledY(row, context) {
 				const yScale = context.context.context.context.parent.yScale
-				const y = context.self.y
-				return Array.isArray(y) ? y.map(yScale) : yScale(y)
+				const s = context.self
+				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax

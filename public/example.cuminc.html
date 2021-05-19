@@ -13,55 +13,6 @@
 <div id=aaa style="margin:10px"></div>
 
 <script>
-const termjson = {
-	'Cardiac dysrhythmia': {
-		id: 'Cardiac dysrhythmia',
-		name: 'Cardiac dysrhythmia',
-		parent_id: 'Arrhythmias',
-		type: 'condition',
-		graph: {
-			barchart: {
-				bar_choices: [
-					{
-						by_grade: true,
-						label: 'Grades',
-						allow_to_stackby_children: true
-					},
-					{
-						by_children: true,
-						label: 'Sub-conditions',
-						allow_to_stackby_grade: true
-					}
-				],
-				value_choices: [
-					{
-						max_grade_perperson: true,
-						label: 'Max grade per patient'
-					},
-					{
-						most_recent_grade: true,
-						label: 'Most recent grade per patient'
-					},
-					{
-						total_measured: true,
-						label: 'Total number of patients'
-					}
-				]
-			}
-		},
-		values: {
-			'0': { label: '0: No condition' },
-			'1': { label: '1: Mild' },
-			'2': { label: '2: Moderate' },
-			'3': { label: '3: Severe' },
-			'4': { label: '4: Life-threatening' },
-			'5': { label: '5: Death' },
-			'9': { label: 'Unknown status', uncomputable: true }
-		}
-  }
-}
-
-
 runproteinpaint({
 	holder:document.getElementById('exp'),
 	parseurl:true,
@@ -76,26 +27,33 @@ runproteinpaint({
 				header_mode: 'with_tabs',
 				activeTab: 1,
 			},
-			activeCohort:0,
+			activeCohort:1,
 			tree: {
 				expandedTermIds: [
 					'root',
-					'Clinically-assessed Variables',
-					'ctcae_graded',
-					'Cardiovascular System',
-					'Arrhythmias',
-					'Cardiac dysrhythmia'
+					'Self-reported Behavior and Outcome Variables',
+					'Graded adverse events',
+					'Cardiac system',
+					'Congestive heart failure'
 				],
-				visiblePlotIds: ['Cardiac dysrhythmia'],
+				visiblePlotIds: ['Congestive heart failure'],
 				plots: {
-					'Cardiac dysrhythmia': {
+					'Congestive heart failure': {
 						term: {
-							id: 'Cardiac dysrhythmia',
-							term: termjson['Cardiac dysrhythmia'],
+							id: 'Congestive heart failure',
+							term: {id: 'Congestive heart failure', name: 'Congestive heart failure'},
 							q: { bar_by_grade: true, value_by_max_grade: true }
 						},
+						term2: { 
+							id: 'yeardx',
+							//q: {"type":"custom","lst":[{"startunbounded":true,"stop":1970,"startinclusive":false,"stopinclusive":true,"label":"≤1970"},{"start":1970,"startinclusive":false,"stopinclusive":true,"stop":1980,"label":">1970 to 1980"},{"start":1980,"startinclusive":false,"stopinclusive":true,"stop":1990,"label":">1980 to 1990"},{"start":1990,"startinclusive":false,"stopinclusive":true,"stop":2000,"label":">1990 to 2000"},{"start":2000,"startinclusive":false,"stopinclusive":true,"stopunbounded":true,"label":">2000"}],"numDecimals":0}
+						},
+						term0: {id: 'diaggrp'},
 						settings: {
-							currViews: ['cuminc']
+							currViews: ['cuminc'],
+							controls: {
+								term2: { id: 'yeardx' }
+							},
 						}
 					}
 				}
@@ -110,27 +68,39 @@ runproteinpaint({
 							type: 'tvs',
 							tag: 'cohortFilter',
 							tvs: {
-								term: { id: 'subcohort', type: 'categorical' },
+								term: { id: 'subcohort', type: 'categorical', name: 'Cohort' },
 								values: [
-									{ key: 'SJLIFE', label: 'SJLIFE' }
-									//{key:'CCSS',label:'CCSS'},
+									//{ key: 'SJLIFE', label: 'SJLIFE' }
+									{key:'CCSS',label:'CCSS'},
 								]
 							}
 						},
 						{
-							type: 'tvslst',
 							tag: 'filterUiRoot',
+							type:"tvslst",
 							join: '',
 							in: true,
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: { id: 'sex', name: 'Sex', type: 'categorical' },
-		 								values: [{ key: '1', label: 'Male' }]
-									}
+							lst: [{
+								type: 'tvs',
+								tvs:{
+									"term":{
+										"id":"yeardx",
+										"type":"integer",
+										"name": 'Year of Diagnosis'
+									},
+									"ranges":[
+										{
+											"startinclusive":true,
+											"start":1970,
+											"stop":2000,
+											"label":"1970 to <2000",
+											"name":"1970 to <2000",
+											"index":0,
+											"stopinclusive":false
+										}
+									]
 								}
-							]
+							}]
 						}
 					]
 				}

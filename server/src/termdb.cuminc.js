@@ -11,26 +11,38 @@ export async function get_incidence(q, ds) {
 		const data = get_rows(q, { withCTEs: true })
 		const pj = new Partjson({ template, data: data.lst })
 		const final_data = {
-			keys: ['time', 'cuminc', 'low', 'high'],
+			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high'],
 			case: []
 		}
+		const promises = []
 		for (const chartId in pj.tree.results) {
 			for (const seriesId in pj.tree.results[chartId]) {
 				const data = pj.tree.results[chartId][seriesId]
 				const year_to_events = data.map(d => +d.time).join('_')
 				const events = data.map(d => +d.event).join('_')
-				const ci_data = await calculate_cuminc(year_to_events, events) //console.log(ci_data)
-				if (ci_data == null) {
-					return { error: 'No output from R script' }
-				} else if (!ci_data.case_time || !ci_data.case_time.length) {
-					// do nothing
-				} else {
-					for (let i = 0; i < ci_data.case_time.length; i++) {
-						final_data.case.push([ci_data.case_time[i], ci_data.case_est[i], ci_data.low_case[i], ci_data.up_case[i]])
-					}
-				}
+				promises.push(
+					calculate_cuminc(year_to_events, events).then(ci_data => {
+						if (ci_data == null) {
+							return { error: 'No output from R script' }
+						} else if (!ci_data.case_time || !ci_data.case_time.length) {
+							// do nothing
+						} else {
+							for (let i = 0; i < ci_data.case_time.length; i++) {
+								final_data.case.push([
+									chartId,
+									seriesId,
+									ci_data.case_time[i],
+									ci_data.case_est[i],
+									ci_data.low_case[i],
+									ci_data.up_case[i]
+								])
+							}
+						}
+					})
+				)
 			}
 		}
+		await Promise.all(promises)
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -39,7 +51,7 @@ export async function get_incidence(q, ds) {
 }
 
 //function calculate_cuminc(year_to_events, events, groups) {
-function calculate_cuminc(year_to_events, events) {
+function calculate_cuminc(year_to_events, events, callback) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './utils/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
 		const out = [],
@@ -97,6 +109,7 @@ function calculate_cuminc(year_to_events, events) {
 const template = JSON.stringify({
 	results: {
 		$key0: {
+			// unlike bar chart overlay, a cuminc plot overlay is another 'series'
 			$key2: [
 				{
 					time: '$val1',
