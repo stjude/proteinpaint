@@ -3267,7 +3267,9 @@ if fromgenetk is provided, will skip this track
 */
 		// const pane = client.newpane({ x: 100, y: 100 })
 		// example of how to use new sandbox div
-		const pane = client.newSandboxDiv()
+		// sandbox_div is parent div of holder0 parent div, so 2 parentNode  
+		const sandbox_div = d3select(this.holder0.node().parentNode.parentNode)
+		const pane = client.newSandboxDiv(sandbox_div)
 		pane.header.text(isoform)
 		const arg = {
 			genome: this.genome,

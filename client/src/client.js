@@ -1313,8 +1313,8 @@ export function renderSandboxFormDiv(holder, genomes) {
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
-export function newSandboxDiv() {
-	const sandbox_holder = d3select('#pp_sandbox')
+export function newSandboxDiv(sandbox_holder) {
+	// const sandbox_holder = d3select('#pp_sandbox')
 	const app_div = sandbox_holder.insert('div', ':first-child')
 	const header_row = app_div
 		.append('div')
