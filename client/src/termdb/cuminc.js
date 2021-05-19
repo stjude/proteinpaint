@@ -5,7 +5,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
-import { rgb } from 'd3-color'
+import { rgb, darker } from 'd3-color'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
@@ -96,7 +96,7 @@ class TdbCumInc {
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId)).toString()
+				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
 			}
 		}
 	}
@@ -245,7 +245,7 @@ function setRenderers(self) {
 					.y0(c => c.scaledY[1])
 					.y1(c => c.scaledY[2])(series.data)
 			)
-			.style('fill', self.term2toColor[series.seriesId])
+			.style('fill', self.term2toColor[series.seriesId].toString())
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
 
@@ -258,7 +258,8 @@ function setRenderers(self) {
 					x: d.x,
 					y: d.y,
 					scaledX: d.scaledX,
-					scaledY: d.scaledY[0]
+					scaledY: d.scaledY[0],
+					seriesName: 'cuminc'
 				}
 			})
 		)
@@ -272,7 +273,8 @@ function setRenderers(self) {
 					x: d.x,
 					y: d.low,
 					scaledX: d.scaledX,
-					scaledY: d.scaledY[1]
+					scaledY: d.scaledY[1],
+					seriesName: 'low'
 				}
 			})
 		)
@@ -286,7 +288,8 @@ function setRenderers(self) {
 					x: d.x,
 					y: d.high,
 					scaledX: d.scaledX,
-					scaledY: d.scaledY[2]
+					scaledY: d.scaledY[2],
+					seriesName: 'high'
 				}
 			})
 		)
@@ -318,13 +321,18 @@ function setRenderers(self) {
 			.style('fill-opacity', s.fillOpacity)
 			.style('stroke', s.stroke)
 
+		const seriesName = data[0].seriesName
+		const color = self.term2toColor[data[0].seriesId]
+		//if(seriesName == 'cuminc') {
 		g.append('path')
 			.attr('d', self.lineFxn(data))
 			.style('fill', 'none')
-			.style('stroke', self.term2toColor[data[0].seriesId])
+			.style('stroke', seriesName == 'cuminc' ? color.darker() : color)
+			//.style('stroke-width', seriesName == 'cuminc' ? '2px' : '1px')
 			.style('opacity', 1)
-			.style('stroke-opacity', data[0].seriesId == 'cuminc' ? 1 : 0.2)
-			.attr('stroke-dasharray', data[0].seriesId == 'cuminc' ? null : '6 3')
+			.style('stroke-opacity', seriesName == 'cuminc' ? 1 : 0.2)
+			.attr('stroke-dasharray', seriesName == 'cuminc' ? null : '6 3')
+		//}
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -395,7 +403,7 @@ function setInteractivity(self) {
 			self.app.tip
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		} else if (event.target.tagName == 'path' && d.seriesId) {
+		} else if (event.target.tagName == 'path' && d && d.seriesId) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesId)
 		} else {
 			self.app.tip.hide()
