@@ -81,7 +81,6 @@ class TdbPlot {
 		}
 
 		if (opts.term.isleaf) {
-			console.log(83)
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },
@@ -130,6 +129,11 @@ class TdbPlot {
 	getDataName(state) {
 		const plot = this.config // the plot object in state
 		const params = []
+
+		if (plot.settings.currViews.includes('cuminc')) {
+			params.push('getcuminc=1')
+			params.push('grade=3') // harcode for now
+		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')

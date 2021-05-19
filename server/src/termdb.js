@@ -52,7 +52,7 @@ export function handle_request_closure(genomes) {
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
-			if (q.getcuminc) return trigger_getincidence(q, res, ds)
+			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -213,8 +213,8 @@ rightnow only few conditional terms have grade info
 }
 
 async function trigger_getincidence(q, res, ds) {
-	if (!q.term_id) throw 'missing term_id'
 	if (!q.grade) throw 'missing grade'
+	q.grade = Number(q.grade)
 	if (typeof q.filter == 'string') {
 		q.filter = JSON.parse(decodeURIComponent(q.filter))
 	}

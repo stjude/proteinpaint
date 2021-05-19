@@ -55,43 +55,26 @@ class TdbCumInc {
 		}
 	}
 
-	async main() {
+	main(data) {
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
-		this.pj.refresh({ data: await this.getData() })
+		if (data) this.currData = this.getData(data) // console.log(63, this.currData);
+		this.pj.refresh({ data: this.currData })
 		this.render()
 	}
 
-	async getData() {
-		try {
-			const data = await dofetch3(
-				'termdb?getcuminc=1' +
-					'&genome=' +
-					this.state.genome +
-					'&dslabel=' +
-					this.state.dslabel +
-					'&grade=' +
-					this.settings.gradeCutoff +
-					'&term_id=' +
-					this.id +
-					'&filter=' +
-					encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter)))
-			)
-			if (data.error) throw data.error
-			const rows = []
-			for (const d of data.case) {
-				const obj = { seriesKeys: ['CI', 'low', 'high', 'cuminc'] }
-				data.keys.forEach((k, i) => {
-					obj[k] = +d[i]
-				})
-				rows.push(obj)
-			}
-			return rows
-		} catch (e) {
-			throw e
+	getData(data) {
+		const rows = []
+		for (const d of data.case) {
+			const obj = { seriesKeys: ['CI', 'low', 'high', 'cuminc'] }
+			data.keys.forEach((k, i) => {
+				obj[k] = +d[i]
+			})
+			rows.push(obj)
 		}
+		return rows
 	}
 }
 
@@ -400,7 +383,7 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				return `Cutoff grade = ${s.gradeCutoff}`
+				return `CTCAE grade ${s.gradeCutoff}-5`
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId

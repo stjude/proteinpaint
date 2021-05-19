@@ -314,6 +314,10 @@ function get_term_cte(q, values, index, filter) {
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
+	if (index == 1 && q.getcuminc) {
+		termq.getcuminc = q.getcuminc
+		termq.grade = q.grade
+	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
 	if (index != 1) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
@@ -462,7 +466,11 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		}
 	}
 	if (term.type == 'condition') {
-		return makesql_oneterm_condition(tablename, term, q, values)
+		if (index == 1 && q.getcuminc) {
+			return makesql_time2event(tablename, term, q, values, filter)
+		} else {
+			return makesql_oneterm_condition(tablename, term, q, values)
+		}
 	}
 	throw 'unknown term type'
 }
@@ -552,6 +560,40 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 				term_id=?
 				AND value_for=?
 				AND ${restriction}=1
+		)`,
+		tablename
+	}
+}
+
+function makesql_time2event(tablename, term, q, values, filter) {
+	values.push(...[q.grade, term.id])
+
+	return {
+		sql: `event1 AS (
+			SELECT sample, 1 as key, MIN(years_to_event) as value
+			FROM chronicevents
+			WHERE grade >= ?
+			  AND grade <= 5
+			  AND term_id = ?
+			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		),
+		event1samples AS (
+			SELECT sample
+			FROM event1
+		),
+		event0 AS (
+			SELECT sample, 0 as key, MAX(years_to_event) as value
+			FROM chronicevents
+			WHERE grade <= 5 
+				AND sample NOT IN event1samples
+			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		),
+		${tablename} AS (
+			SELECT * FROM event1
+			UNION ALL
+			SELECT * FROM event0
 		)`,
 		tablename
 	}
