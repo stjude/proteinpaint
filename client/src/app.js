@@ -224,7 +224,7 @@ function makeheader(app, obj, jwt) {
 
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
-		.attr('id', 'pp_sandbox')
+		// .attr('id', 'pp_sandbox') // TODO: remove this line before merge to master
 		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')

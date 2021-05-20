@@ -3298,10 +3298,13 @@ show protein view for a given isoform
 and bring along current tracks
 if fromgenetk is provided, will skip this track
 */
-		// const pane = client.newpane({ x: 100, y: 100 })
+		// const pane = client.newpane({ x: 100, y: 100 }) // original floating tip
 		// example of how to use new sandbox div
-		// sandbox_div is parent div of holder0 parent div, so 2 parentNode  
-		const sandbox_div = d3select(this.holder0.node().parentNode.parentNode)
+		// on landing page: sandbox_div is assumed to be 2nd child div of .sja_root_holder parent div
+		// for page with embedded pp: .sja_root_holder will only have 1 child and sandbox will added to that div
+		// TODO: it will not work for page with multiple PP instance
+		const root_divs = d3selectAll('.sja_root_holder > div').nodes()
+		const sandbox_div = root_divs.length > 1 ? d3select(root_divs[2]) : d3select(root_divs[0])
 		const pane = client.newSandboxDiv(sandbox_div)
 		pane.header.text(isoform)
 		const arg = {
