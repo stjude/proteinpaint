@@ -798,6 +798,11 @@ export class Block {
 
 		// help set block.busy off when there is no track to load
 		this.ifbusy()
+		if (this.tklst.length == 0) {
+			this.error(
+				'No tracks specified. If you don\'t expect to see this, delete the "block:true" from runproteinpaint() argument.'
+			)
+		}
 	}
 	/****** end of constructor ***/
 
