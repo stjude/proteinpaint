@@ -594,28 +594,28 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
       else if (parse_position >= read_indel_start && &alphabets[i].to_string().as_str() == &"I") {
          parse_position += numbers[i].to_string().parse::<usize>().unwrap();    
          //if () {	    
-	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);
-		ref_insertion=1;
-	    }	    
-	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);
-		ref_insertion=1;
-	    }
-	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);
-		ref_insertion=1;
-	    }
-	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);
-		ref_insertion=1;
-	    }
-	 //}
-	 old_parse_position = parse_position; 
+      	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }	    
+      	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	 //}
+      	 old_parse_position = parse_position; 
       }	    
       else {
        break;
