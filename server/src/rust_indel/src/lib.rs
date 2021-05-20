@@ -12,7 +12,8 @@ use web_sys::console;
 pub struct read_diff_scores { //    sequence: String, 
    groupID:usize,
    value:f64,
-   polyclonal: i64 
+   polyclonal:i64,
+   ref_insertion:i64 
 }
 
 struct kmer_input {
@@ -28,7 +29,8 @@ struct kmer_data {
 struct read_category {
    category:String,
    groupID:usize,
-   diff_score:f64 
+   diff_score:f64,
+   ref_insertion:i64 
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,11 +44,13 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let val=item.value.to_owned();        
     let gID=item.groupID.to_owned();
     let poly=item.polyclonal.to_owned();
-
+    let ref_ins=item.ref_insertion.to_owned();
+    
     let read_val = read_diff_scores{
 	    value:f64::from(val),
 	    groupID:usize::from(gID),
-	    polyclonal:i64::from(poly)
+	    polyclonal:i64::from(poly),
+	    ref_insertion:i64::from(ref_ins)
     };	
     read_val	
 }
@@ -302,7 +306,7 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     console::log_2(&"Number of reads (from Rust):".into(), &(lines.len()-2).to_string().into());
     for read in lines { // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-	      let (ref_polyclonal_read_status, alt_polyclonal_read_status) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize, indel_length as usize, found_duplicate_kmers);
+	      let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize, indel_length as usize, 0);
             //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
 	      let kmers = build_kmers(read.to_string(),kmer_length_iter);
               //println!("kmers:{}",kmers.len());
@@ -317,7 +321,8 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     	      let item = read_diff_scores{
     	         value:f64::from(diff_score),
     	         groupID:usize::from(i as usize -2), // The -2 has been added since the first two sequences in the file are reference and alternate
-		 polyclonal:i64::from(ref_polyclonal_read_status+alt_polyclonal_read_status) 
+		 polyclonal:i64::from(ref_polyclonal_read_status+alt_polyclonal_read_status),
+		 ref_insertion:i64::from(ref_insertion) 
     	      };
     	      if diff_score > 0.0 {
     		  alt_scores.push(item);
@@ -363,8 +368,12 @@ pub fn match_complex_variant_rust(sequences: String, start_positions: String, ci
     for item in &ref_indices {
     	//console::log_2(&"ref_sequence:".into(), &ref_read_sequences[iter].to_string().into());
     	//console::log_2(&"ref_score_value:".into(), &ref_scores[iter].value.to_string().into());
-    	//console::log_2(&"ref_score_groupID:".into(), &ref_scores[iter].groupID.to_string().into());	
-    	if item.category == "refalt".to_string() {
+    	//console::log_2(&"ref_score_groupID:".into(), &ref_scores[iter].groupID.to_string().into());
+        if item.ref_insertion == 1 {
+            output_cat.push("none".to_string());
+	    none_num+=1;
+	}
+    	else if item.category == "refalt".to_string() {
             output_cat.push("ref".to_string());
 	    ref_num+=1;
         }
@@ -522,7 +531,7 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
     (total_kmers_weight,kmers_nodup,indel_kmers,surrounding_indel_kmers,kmers_data)
 }
 
-fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String, indel_start: i64, ref_nucleotides: &Vec<char>, alt_nucleotides: &Vec<char>, ref_length: usize, alt_length: usize, indel_length: usize, found_duplicate_kmers: usize) -> (i64, i64) {
+fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String, indel_start: i64, ref_nucleotides: &Vec<char>, alt_nucleotides: &Vec<char>, ref_length: usize, alt_length: usize, indel_length: usize, found_duplicate_kmers: usize) -> (i64, i64, i64) {
     let kmer_length: i64 = 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
     let mut kmers = Vec::<String>::new();
@@ -541,6 +550,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     // Looking for insertions and deletions in cigar sequence
     let mut read_indel_start: usize = (indel_start - correct_start_position) as usize;
     let mut parse_position: usize = 0;
+    let mut ref_insertion:i64 = 0; // Keep tab whether there is an insertion within the ref allele
     let mut old_parse_position: usize = 0;
     let mut indel_insertion_starts = Vec::<usize>::new();
     let mut indel_insertion_stops = Vec::<usize>::new();    
@@ -557,19 +567,23 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 	    //console::log_2(&"parse_position:".into(), &parse_position.to_string().into());
 	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }	    
 	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
 	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
 	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }	    
 	}
 	else if (&alphabets[i].to_string().as_str() == &"D") {
@@ -582,19 +596,23 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
          //if () {	    
 	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }	    
 	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
 	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
 	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
 	 //}
 	 old_parse_position = parse_position; 
@@ -666,7 +684,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     	}    
     }
     //console::log_1(&"Done:".into());
-    (ref_polyclonal_status,alt_polyclonal_status)
+    (ref_polyclonal_status,alt_polyclonal_status,ref_insertion)
 }    
 
 fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64, ref_indel_kmers: &Vec<String>, alt_indel_kmers: &Vec<String>, ref_length: i64, alt_length: i64) -> (Vec::<String>, i64, i64)
@@ -902,7 +920,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                let read_cat = read_category{
 	          category:String::from("none"),
 	          groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-	          diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+	          diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		  ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion) 
                };
 	       indices.push(read_cat); 
 	   }
@@ -910,7 +929,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                let read_cat = read_category{
 	          category:String::from("refalt"),
 	          groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-	          diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+	          diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		  ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion) 
                };
 	       indices.push(read_cat); 
 	   }
@@ -924,7 +944,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	      let item = read_diff_scores{
     	         value:f64::from(kmer_diff_scores_sorted[i].value),
     	         groupID:usize::from(i),
-		 polyclonal:i64::from(kmer_diff_scores_sorted[i].polyclonal) 
+		 polyclonal:i64::from(kmer_diff_scores_sorted[i].polyclonal),
+		 ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion) 
     	      };
     	      kmer_diff_scores_input.push(item);
     	}
@@ -932,13 +953,15 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         let min_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[0].value),
                 groupID:usize::from(0 as usize),
-	        polyclonal:i64::from(kmer_diff_scores_sorted[0].polyclonal)
+	        polyclonal:i64::from(kmer_diff_scores_sorted[0].polyclonal),
+		ref_insertion:i64::from(kmer_diff_scores_sorted[0].ref_insertion)	    
         };
         
         let max_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[start_point].value),
                 groupID:usize::from(start_point),
-	        polyclonal:i64::from(kmer_diff_scores_sorted[start_point].polyclonal)
+	        polyclonal:i64::from(kmer_diff_scores_sorted[start_point].polyclonal),
+		ref_insertion:i64::from(kmer_diff_scores_sorted[start_point].ref_insertion)	    
         };
 	
         let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)        
@@ -961,7 +984,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
               let read_cat = read_category{
         	       category:String::from("none"),
         	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)
               };
 	      indices.push(read_cat); 
            }
@@ -970,7 +994,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                   let read_cat = read_category{
             	       category:String::from("none"),
             	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)
                   };
 		  indices.push(read_cat);
               }
@@ -978,7 +1003,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                   let read_cat = read_category{
             	       category:String::from("refalt"),
             	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)
                   };
 		  indices.push(read_cat);
 	      }	   
