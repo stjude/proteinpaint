@@ -26,6 +26,8 @@ export async function get_incidence(q, ds) {
 			for (const seriesId in byChartSeries[chartId]) {
 				const data = byChartSeries[chartId][seriesId]
 				if (!data.length) continue
+				// if there are no event=1, an error in the R script execution is issued (NAs in foreign function call (arg 3))
+				if (!data.filter(d => d.event === 1).length) continue
 				const year_to_events = data.map(d => +d.time).join('_')
 				const events = data.map(d => +d.event).join('_')
 				promises.push(
@@ -67,12 +69,12 @@ function calculate_cuminc(year_to_events, events, callback) {
 		ps.stdout.on('data', d => out.push(d))
 		ps.stderr.on('data', d => out2.push(d))
 		ps.on('close', code => {
-			/*const e = out2.join('').trim()
+			const e = out2.join('').trim()
 			if (e) {
 				// got error running r script
 				reject(e)
 				return
-			}*/
+			}
 			const lines = out
 				.join('')
 				.trim()
