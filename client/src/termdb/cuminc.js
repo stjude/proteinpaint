@@ -458,7 +458,10 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				return row.chartId && row.chartId != '-' ? row.chartId : 'CTCAE grade 3-5'
+				if (!row.chartId || row.chartId == '-') return 'CTCAE grade 3-5'
+				if (!self.state.config.term0 || !self.state.config.term0.term.values) return row.chartId
+				const value = self.state.config.term0.term.values[row.chartId]
+				return value.label ? value.label : row.chartId
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId

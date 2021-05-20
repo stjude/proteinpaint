@@ -7,14 +7,16 @@ export async function get_incidence(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
-		const rows = get_rows(q, { withCTEs: true })
+		// the rows are expected to
+		const rows = get_rows(q, { withCTEs: false })
 		const byChartSeries = {}
-		for (const d of rows.lst) {
+		for (const d of rows) {
+			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string,
+			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}
 			if (!(d.key2 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key2] = []
 			byChartSeries[d.key0][d.key2].push({ time: d.val1, event: d.key1 })
 		}
-
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high'],
 			case: []
@@ -23,6 +25,7 @@ export async function get_incidence(q, ds) {
 		for (const chartId in byChartSeries) {
 			for (const seriesId in byChartSeries[chartId]) {
 				const data = byChartSeries[chartId][seriesId]
+				if (!data.length) continue
 				const year_to_events = data.map(d => +d.time).join('_')
 				const events = data.map(d => +d.event).join('_')
 				promises.push(
@@ -68,6 +71,7 @@ function calculate_cuminc(year_to_events, events, callback) {
 			if (e) {
 				// got error running r script
 				reject(e)
+				return
 			}*/
 			const lines = out
 				.join('')

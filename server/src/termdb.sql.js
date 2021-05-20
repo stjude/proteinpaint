@@ -190,11 +190,25 @@ export function get_rows(q, _opts = {}) {
 	/*
 works for only termdb terms; non-termdb attributes will not work
 
-gets data for barchart
-returns all relevant rows of 
+gets partitioned data for barchart and other plots
+
+returns 
+	if opts.withCTEs == false, then return an array of objects 
+	[{
+		key0, val0, // from term0, used to divide charts, may be set to an empty string="" if not applicable
+		key1, val1, // from term1, used as the main series data
+		key2, val2, // from term2, used to 'overlay' barchart stacked bars or cuminc serieses
+								// key2 and val2 may be set to an empty string="" if not applicable
+		sample (default) OR opts.countas (optional aggregation like counts)
+	}]
+
+	- if opts.withCTEs == true (default), then return
 	{
-		sample, key[0,1,2], val[0,1,2], count AS opts.countas
-		CTE[0,1,2]} if opts.withCTEs == true
+		lst: [row, row, ...],
+		CTE2: { sql, tablename },
+		CTE1: { sql, tablename },
+		CTE1: { sql, tablename },
+		filter: { sql: ..., see getFilterCTEs } 
 	}
 
 q{}
