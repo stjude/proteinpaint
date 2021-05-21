@@ -2491,13 +2491,45 @@ seekrange(chr,start,stop) {
 			.attr('class', null)
 			.attr('font-weight', 'bold')
 
-		if (tk.list_description) {
-			tk.tklabel
-				.on('mouseover', () => {
-					tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-					client.make_table_2col(tk.tktip.d, tk.list_description).style('margin', '0px')
-				})
-				.on('mouseout', () => tk.tktip.hide())
+		// tk name may be available now or will be defined later
+		if (tk.name) {
+			// two conditions to show tooltip on hovering the label
+			// 1. label truncated, hover to show full label
+			// 2. list_description[{k,v}] provided, hover to show table of details
+			let labeltruncated = false
+			if (tk.name.length >= 25) {
+				// to truncate name and also apply tooltip
+				tk.tklabel.text(tk.name.substring(0, 20) + ' ...')
+				labeltruncated = true
+			} else {
+				// no need to truncate label
+				tk.tklabel.text(tk.name)
+			}
+			if (labeltruncated || tk.list_description) {
+				// will show tooltip to display both info if available
+				tk.tklabel
+					.on('mouseover', () => {
+						tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+						if (labeltruncated) {
+							const d = tk.tktip.d.append('div').text(tk.name)
+							if (tk.list_description) d.style('margin-bottom', '5px')
+						}
+						if (tk.list_description) {
+							client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+						}
+					})
+					.on('mouseout', () => tk.tktip.hide())
+			}
+			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
+			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
+			// when it's overwritten, must call block.setllabel() to update ui
+			tk.tklabel.each(function() {
+				tk.leftLabelMaxwidth = this.getBBox().width
+			})
+		} else {
+			// tk.name is not provided, e.g. mds2
+			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
+			// fault is that the tooltip cannot be provided in this case
 		}
 
 		tk.pica = {
@@ -2527,7 +2559,6 @@ seekrange(chr,start,stop) {
 				bampilemaketk(tk, this)
 				break
 			case client.tkt.ds:
-				tk.tklabel.text(tk.name)
 				dsmaketk(tk, this)
 				break
 			case client.tkt.pgv:

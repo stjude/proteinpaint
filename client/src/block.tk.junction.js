@@ -47,7 +47,6 @@ const labyspace = 5
 
 function makeTk(tk, block) {
 	tk.leftaxis = tk.gleft.append('g')
-	tk.tklabel.text(tk.name)
 
 	let laby = labyspace + block.labelfontsize
 

@@ -873,8 +873,6 @@ function makeTk(tk, block) {
 		tk.normalizationmethod = defaultnmeth
 	}
 
-	tk.tklabel.text(tk.name)
-
 	let laby = labyspace + block.labelfontsize
 
 	if (tk.file || tk.url) {

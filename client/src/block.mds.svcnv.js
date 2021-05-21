@@ -162,7 +162,6 @@ export function loadTk(tk, block) {
 		.then(_final => {
 			block.tkcloakoff(tk, { error: _final.error })
 			block.block_setheight()
-			block.setllabel()
 		})
 }
 
@@ -320,10 +319,6 @@ function loadTk_do(tk, block) {
 		// throw errors
 
 		if (data.error) throw { message: data.error }
-
-		tk.tklabel.each(function() {
-			tk.leftLabelMaxwidth = this.getBBox().width
-		})
 
 		/*
 		must keep the loaded "raw" data in _data_vcf, so it can later apply class filter without having to reload from server
@@ -2913,11 +2908,16 @@ for both multi- and single-sample
 			tk.tklabel.text((tk.name ? tk.name + ', ' : '') + tk.singlesample.name)
 		}
 
+		// tklabel name updated, must do below
+		tk.tklabel.each(function() {
+			tk.leftLabelMaxwidth = this.getBBox().width
+		})
+		block.setllabel()
+
 		tk.svvcf_g = tk.glider.append('g') // show sv as lollipops
 		tk.cnv_g = tk.glider.append('g') // show cnv/loh as bed track
 	} else {
 		// multi-sample
-		tk.tklabel.text(tk.name)
 		if (tk.mds && tk.mds.version && tk.mds.version.label) {
 			tk.versionlabel = block.maketklefthandle(tk, block.labelfontsize).text(tk.mds.version.label)
 			if (tk.mds.version.link) {

@@ -164,13 +164,9 @@ function makeTk(tk, block) {
 
 	const collectleftlabw = []
 
-	tk.tklabel
-		.text(tk.name)
-		.attr('y', -10)
-		.attr('font-weight', 'bold')
-		.each(function() {
-			collectleftlabw.push(this.getBBox().width)
-		})
+	tk.tklabel.attr('y', -10).each(function() {
+		collectleftlabw.push(this.getBBox().width)
+	})
 
 	// legend
 	if (block.legend && block.legend.holder) {
