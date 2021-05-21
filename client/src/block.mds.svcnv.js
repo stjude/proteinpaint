@@ -1327,15 +1327,14 @@ function render_multi_cnvloh(tk, block) {
 					.attr('y', yoff1 + sample.height / 2)
 					.attr('font-family', client.font)
 					.attr('font-size', Math.min(15, Math.max(minlabfontsize, sample.height + 1)))
-					.each(function() {
-						tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-					})
+					.each(function() {})
 					.on('mouseover', () => {
 						multi_sample_addhighlight(sample)
 					})
 					.on('mouseout', () => {
 						multi_sample_removehighlight(sample)
 					})
+				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, sample.svglabel.node().getBBox().width)
 			}
 
 			// container for all the browser track elements
@@ -2909,9 +2908,7 @@ for both multi- and single-sample
 		}
 
 		// tklabel name updated, must do below
-		tk.tklabel.each(function() {
-			tk.leftLabelMaxwidth = this.getBBox().width
-		})
+		tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
 		block.setllabel()
 
 		tk.svvcf_g = tk.glider.append('g') // show sv as lollipops

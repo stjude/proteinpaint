@@ -2496,11 +2496,10 @@ seekrange(chr,start,stop) {
 			// two conditions to show tooltip on hovering the label
 			// 1. label truncated, hover to show full label
 			// 2. list_description[{k,v}] provided, hover to show table of details
-			let labeltruncated = false
-			if (tk.name.length >= 25) {
+			const labeltruncated = tk.name.length >= 25
+			if (labeltruncated) {
 				// to truncate name and also apply tooltip
 				tk.tklabel.text(tk.name.substring(0, 20) + ' ...')
-				labeltruncated = true
 			} else {
 				// no need to truncate label
 				tk.tklabel.text(tk.name)
@@ -2523,9 +2522,7 @@ seekrange(chr,start,stop) {
 			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
 			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
 			// when it's overwritten, must call block.setllabel() to update ui
-			tk.tklabel.each(function() {
-				tk.leftLabelMaxwidth = this.getBBox().width
-			})
+			tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
 		} else {
 			// tk.name is not provided, e.g. mds2
 			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth

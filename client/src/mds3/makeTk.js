@@ -55,9 +55,10 @@ export async function makeTk(tk, block) {
 		}
 	}
 
-	tk.tklabel.text(tk.mds.label).each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
+	tk.leftLabelMaxwidth = tk.tklabel
+		.text(tk.mds.label)
+		.node()
+		.getBBox().width
 
 	tk.leftlabelg = tk.gleft.append('g')
 
