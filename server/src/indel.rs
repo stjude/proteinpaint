@@ -1,15 +1,18 @@
 // Syntax: rustc indel.rs -o indel
 
+// echo AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-TAGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAAC-AGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCAAACCCTAACCCCTAACCCTAACCCAAAAACCCTAACCCTAAAACCC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-TAAAGTGAAATTATTGACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTATCCCCTAACCCTAATCCTAACCCTAACCCTAACCCTATCCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-CAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTAC-CTGACCCTTAACCCTAACCCTAACCCCTAACCCTAACCCTTAACCCTTAAACCTTAACCCTCATCCTCACCCTCACCCTCACCCCTAACCCTAACCCCTAACCCAAACCCTCACCCTAAACCCTAACCCTAAACCCAACCCAAACCCTAAC-ACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAGCCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTT-CTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCC:16357-16358-16363-16363-16363-16363-16380-16388-16402-16418:108M1I42M-151M-102M1I48M-151M-101M1I49M-151M-132M1I18M-8S31M1I6M1I32M1I30M41S-110M1I40M-94M1I56M:16463:151:A:AC:6:0.1:10:0.1: | ./indel
+
 use std::env;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::time::{SystemTime};
-
+use std::io::{self, Read};
 
 pub struct read_diff_scores { //    sequence: String, 
    groupID:usize,
    value:f64,
-   polyclonal: i64 
+   polyclonal:i64,
+   ref_insertion:i64    
 }
 
 struct kmer_input {
@@ -25,18 +28,21 @@ struct kmer_data {
 struct read_category {
    category:String,
    groupID:usize,
-   diff_score:f64 
+   diff_score:f64,
+   ref_insertion:i64    
 }
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let val=item.value.to_owned();        
     let gID=item.groupID.to_owned();
     let poly=item.polyclonal.to_owned();
-
+    let ref_ins=item.ref_insertion.to_owned();
+    
     let read_val = read_diff_scores{
 	    value:f64::from(val),
 	    groupID:usize::from(gID),
-	    polyclonal:i64::from(poly)
+	    polyclonal:i64::from(poly),
+	    ref_insertion:i64::from(ref_ins)	
     };	
     read_val	
 }
@@ -135,31 +141,40 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>,Vec<i64>) {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect(); // Collecting arguments from commandline
+let mut input = String::new();
+match io::stdin().read_line(&mut input) {
+Ok(n) => {
+    println!("{} bytes read", n);
+    println!("{}", input);
+  }
+  Err(error) => println!("Piping error: {}", error),
+  }        
+    let args: Vec<&str> = input.split(":").collect();
+    println!("args:{:?}",args);    
     //let arg_seq:String = args[0].parse::<String>().unwrap();
     //let arg_list: Vec<&str> = arg_seq.split("\t").collect();
-    let sequences: String = args[1].parse::<String>().unwrap(); 
-    let start_positions: String = args[2].parse::<String>().unwrap();
-    let cigar_sequences: String = args[3].parse::<String>().unwrap();
-    let variant_pos: i64 = args[4].parse::<i64>().unwrap();
-    let segbplen: i64 = args[5].parse::<i64>().unwrap();
-    let refallele: String = args[6].parse::<String>().unwrap();
-    let altallele: String = args[7].parse::<String>().unwrap();
-    let kmer_length: i64 = args[8].parse::<i64>().unwrap();
-    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap();
-    let weight_indel: f64 = args[10].parse::<f64>().unwrap();
-    let threshold_slope: f64 = args[11].parse::<f64>().unwrap();
-    
+    let sequences: String = args[0].parse::<String>().unwrap();
+    let start_positions: String = args[1].parse::<String>().unwrap();
+    let cigar_sequences: String = args[2].parse::<String>().unwrap();
+    let variant_pos: i64 = args[3].parse::<i64>().unwrap();
+    let segbplen: i64 = args[4].parse::<i64>().unwrap();
+    let refallele: String = args[5].parse::<String>().unwrap();
+    let altallele: String = args[6].parse::<String>().unwrap();
+    let kmer_length: i64 = args[7].parse::<i64>().unwrap();
+    let weight_no_indel: f64 = args[8].parse::<f64>().unwrap();
+    let weight_indel: f64 = args[9].parse::<f64>().unwrap();
+    let threshold_slope: f64 = args[10].parse::<f64>().unwrap();
     let ref_nucleotides: Vec<char> = refallele.chars().collect();
     let alt_nucleotides: Vec<char> = altallele.chars().collect();
+
     //let ref_length: usize = ref_nucleotides.len();
     //let alt_length: usize = alt_nucleotides.len();
-    let lines: Vec<&str> = sequences.split("\n").collect();
-    let start_positions_list: Vec<&str> = start_positions.split("\n").collect();
-    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("\n").collect();   
+    let lines: Vec<&str> = sequences.split("-").collect();
+    let start_positions_list: Vec<&str> = start_positions.split("-").collect();
+    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); 
     let mut i:i64 = 0;	
     
-    //println!("{:?}", lines);
+    //println!("lines:{:?}", lines);
 
     let left_most_pos = variant_pos - segbplen;
     let ref_length: i64 = refallele.len() as i64;
@@ -169,38 +184,110 @@ fn main() {
       indel_length = ref_length;
     }	
 
-    let (ref_kmers_weight, ref_kmers_nodups, mut ref_indel_kmers, ref_kmers_data) = build_kmers_refalt(
+    // Select appropriate kmer length
+    let max_kmer_length: i64 = 20;
+    let mut kmer_length_iter: i64 = kmer_length;
+    let surrounding_region_length: i64 = 25;
+    let mut uniq_kmers: usize = 0;
+    let mut found_duplicate_kmers: usize = 0;    
+    //let mut ref_kmers_weight: f64 = 0.0;
+    //let mut ref_kmers_nodups = Vec::<String>::new();
+    //let mut ref_indel_kmers = Vec::<String>::new();
+    //let mut ref_surrounding_kmers = Vec::<String>::new();
+    //let mut ref_kmers_data = Vec::<kmer_data>::new();
+    //
+    //let mut alt_kmers_weight: f64 = 0.0;
+    //let mut alt_kmers_nodups = Vec::<String>::new();
+    //let mut alt_indel_kmers = Vec::<String>::new();
+    //let mut alt_surrounding_kmers = Vec::<String>::new();
+    //let mut alt_kmers_data = Vec::<kmer_data>::new();    
+    
+    while (kmer_length_iter <= max_kmer_length && uniq_kmers == 0) { 
+    
+          //console::log_1(&"Ref kmers:".into());    
+          let (ref_kmers_weight, ref_kmers_nodups, ref_indel_kmers, mut ref_surrounding_kmers, ref_kmers_data) = build_kmers_refalt(
+          		lines[0].to_string(),
+          		kmer_length_iter,
+          		left_most_pos,
+          		variant_pos,
+          		variant_pos + ref_length,
+          		weight_indel,
+          	        weight_no_indel,
+          	        ref_length,
+          	        surrounding_region_length
+          );
+          
+          //console::log_1(&"Alt kmers:".into());
+          let (alt_kmers_weight, alt_kmers_nodups, alt_indel_kmers, mut alt_surrounding_kmers, alt_kmers_data) = build_kmers_refalt(
+          		lines[1].to_string(),
+          		kmer_length_iter,
+          		left_most_pos,
+          		variant_pos,
+          		variant_pos + alt_length,
+          		weight_indel,
+          	        weight_no_indel,
+          	        alt_length,
+          	        surrounding_region_length
+          );
+
+	  // Check if there are any common kmers between indel region and surrounding region (true in case of repetitive regions)
+          let matching_ref:usize = ref_surrounding_kmers.iter().zip(&ref_indel_kmers).filter(|&(a, b)| a == b).count();
+          let matching_alt:usize = alt_surrounding_kmers.iter().zip(&alt_indel_kmers).filter(|&(a, b)| a == b).count();
+          let old_ref_surrounding_length = ref_surrounding_kmers.len();
+          ref_surrounding_kmers.sort();
+          ref_surrounding_kmers.dedup();
+          let new_ref_surrounding_length = ref_surrounding_kmers.len();
+
+          let old_alt_surrounding_length = alt_surrounding_kmers.len();
+          alt_surrounding_kmers.sort();
+          alt_surrounding_kmers.dedup();
+          let new_alt_surrounding_length = alt_surrounding_kmers.len();	
+	
+          if (matching_ref != 0 || matching_alt != 0 || old_ref_surrounding_length != new_ref_surrounding_length || old_alt_surrounding_length != new_alt_surrounding_length) {
+              kmer_length_iter+=1;
+ 	      found_duplicate_kmers=1;
+	  }
+	  else {
+            uniq_kmers=1;            
+	  }  
+    }	
+    println!("Final kmer length (from Rust){}:", kmer_length_iter);
+    println!("Found duplicate kmers status (from Rust){}:", found_duplicate_kmers);
+    
+    let (ref_kmers_weight, ref_kmers_nodups, mut ref_indel_kmers, ref_surrounding_kmers, ref_kmers_data) = build_kmers_refalt(
     		lines[0].to_string(),
-    		kmer_length,
+    		kmer_length_iter,
     		left_most_pos,
     		variant_pos,
     		variant_pos + ref_length,
     		weight_indel,
     	        weight_no_indel,
-	        ref_length
+    	        ref_length,
+    	        surrounding_region_length
     );
 
     ref_indel_kmers.sort();
     ref_indel_kmers.dedup();
     //for kmer in &ref_indel_kmers {
-    //  println!(&"Indel kmer:".into(), &kmer.into());
+    //  println!("Indel kmer:{}", kmer);
     //}	
 
-    let (alt_kmers_weight, alt_kmers_nodups, mut alt_indel_kmers, alt_kmers_data) = build_kmers_refalt(
+    let (alt_kmers_weight, alt_kmers_nodups, mut alt_indel_kmers, alt_surrounding_kmers, alt_kmers_data) = build_kmers_refalt(
     		lines[1].to_string(),
-    		kmer_length,
+    		kmer_length_iter,
     		left_most_pos,
     		variant_pos,
     		variant_pos + alt_length,
     		weight_indel,
     	        weight_no_indel,
-	        alt_length
+    	        alt_length,
+    	        surrounding_region_length
     );
 
     alt_indel_kmers.sort();
     alt_indel_kmers.dedup();    
     //for kmer in &alt_indel_kmers {
-    //  println!(&"Indel kmer:".into(), &kmer.into());
+    //  println!(&"Indel kmer:{}", kmer);
     //}    
 	
     let mut kmer_diff_scores = Vec::<f64>::new();
@@ -220,9 +307,9 @@ fn main() {
     println!("{} {}", "Number of reads (from Rust):", (lines.len()-2).to_string());
     for read in lines { // Will multithread this loop in the future
     	if i >= 2 && read.len() > 0  { // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-	      let (ref_polyclonal_read_status, alt_polyclonal_read_status) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize, indel_length as usize);
+	      let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) = check_polyclonal(read.to_string(), start_positions_list[i as usize -2].parse::<i64>().unwrap()-1, cigar_sequences_list[i as usize -2].to_string(), variant_pos, &ref_nucleotides, &alt_nucleotides, ref_length as usize, alt_length as usize, indel_length as usize, 0);
               //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-	      let kmers = build_kmers(read.to_string(),kmer_length);
+	      let kmers = build_kmers(read.to_string(),kmer_length_iter);
               //println!("kmers:{}",kmers.len());
               let ref_comparison=jaccard_similarity_weights(&kmers, &ref_kmers_nodups, &ref_kmers_data, ref_kmers_weight);
     	      let alt_comparison=jaccard_similarity_weights(&kmers, &alt_kmers_nodups, &alt_kmers_data, alt_kmers_weight);
@@ -234,7 +321,8 @@ fn main() {
     	      let item = read_diff_scores{
     	         value:f64::from(diff_score),
     	         groupID:usize::from(i as usize -2), // The -2 has been added since the first two sequences in the file are reference and alternate
-		 polyclonal:i64::from(ref_polyclonal_read_status+alt_polyclonal_read_status) 
+		 polyclonal:i64::from(ref_polyclonal_read_status+alt_polyclonal_read_status),
+		 ref_insertion:i64::from(ref_insertion)		  
     	      };
     	      if diff_score > 0.0 {
     		  alt_scores.push(item);
@@ -273,7 +361,11 @@ fn main() {
     let mut none_num = 0;    
     let mut iter = 0;
     for item in &ref_indices {
-    	if item.category == "refalt".to_string() {
+        if item.ref_insertion == 1 {
+            output_cat.push("none".to_string());
+	    none_num+=1;
+	}	
+    	else if item.category == "refalt".to_string() {
             output_cat.push("ref".to_string());
 	    ref_num+=1;
         }
@@ -299,15 +391,16 @@ fn main() {
         iter+=1;
         output_gID.push(item.groupID);
 	output_diff_scores.push(item.diff_score);	
-    }        
+    }
 }
 
-fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64, indel_length: i64) -> (f64,Vec::<String>,Vec::<String>,Vec::<kmer_data>)
+fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64,indel_stop: i64,weight_indel: f64, weight_no_indel: f64, indel_length: i64, surrounding_region_length: i64) -> (f64,Vec::<String>,Vec::<String>,Vec::<String>,Vec::<kmer_data>)
 {
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();    
     let mut kmers = Vec::<kmer_input>::new();
     let mut indel_kmers = Vec::<String>::new();
+    let mut surrounding_indel_kmers = Vec::<String>::new();    
     let mut kmers_nodup = Vec::<String>::new();
     let mut kmer_start = left_most_pos;
     let mut kmer_stop = kmer_start + kmer_length;    
@@ -327,6 +420,9 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
 	if (indel_start <= kmer_start_poly && kmer_stop_poly <= indel_start + indel_length) || (kmer_start_poly <= indel_start && indel_start + indel_length <= kmer_stop_poly) { // (indel_start+1 >= kmer_start && kmer_stop >= indel_start + indel_length) 
             indel_kmers.push(subseq.to_owned());
 	}
+	else if (indel_start - surrounding_region_length <= kmer_start_poly && kmer_stop_poly <= indel_start + indel_length + surrounding_region_length) {
+            surrounding_indel_kmers.push(subseq.to_owned());
+	}    
 	
 	let mut kmer_score:f64 = 0.0;
 	for _k in kmer_start..kmer_stop {
@@ -396,10 +492,10 @@ fn build_kmers_refalt(sequence: String, kmer_length: i64,left_most_pos: i64, ind
     //        }
     //	}	
     //}
-    (total_kmers_weight,kmers_nodup,indel_kmers,kmers_data)
+    (total_kmers_weight,kmers_nodup,indel_kmers,surrounding_indel_kmers,kmers_data)
 }
 
-fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String, indel_start: i64, ref_nucleotides: &Vec<char>, alt_nucleotides: &Vec<char>, ref_length: usize, alt_length: usize, indel_length: usize) -> (i64, i64) {
+fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String, indel_start: i64, ref_nucleotides: &Vec<char>, alt_nucleotides: &Vec<char>, ref_length: usize, alt_length: usize, indel_length: usize, found_duplicate_kmers: usize) -> (i64, i64, i64) {
     let kmer_length: i64 = 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
     let mut kmers = Vec::<String>::new();
@@ -410,6 +506,7 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     let mut correct_start_position:i64 = left_most_pos;
 
     let (alphabets,numbers) = parse_cigar(&cigar_sequence.to_string());
+    //println!("cigar:{}", &cigar_sequence);
     // Check to see if the first item in cigar is a soft clip
     if (&alphabets[0].to_string().as_str() == &"S") {    
           correct_start_position = correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
@@ -417,29 +514,40 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     // Looking for insertions and deletions in cigar sequence
     let mut read_indel_start: usize = (indel_start - correct_start_position) as usize;
     let mut parse_position: usize = 0;
+    let mut ref_insertion:i64 = 0; // Keep tab whether there is an insertion within the ref allele
     let mut old_parse_position: usize = 0;
     let mut indel_insertion_starts = Vec::<usize>::new();
     let mut indel_insertion_stops = Vec::<usize>::new();    
     for i in 0..alphabets.len() {
+	//println!("parse_position:{}",parse_position);
+	//println!("read_indel_start:{}", read_indel_start);  	
       if (parse_position < read_indel_start) {	
         parse_position += numbers[i].to_string().parse::<usize>().unwrap();
 	if (&alphabets[i].to_string().as_str() == &"I") {
             read_indel_start += numbers[i].to_string().parse::<usize>().unwrap();
+	    //println!("read_indel_start:{}", read_indel_start);
+	    //println!("read_indel_start+indel_length:{}", (read_indel_start + indel_length));
+	    //println!("old_parse_position:{}", old_parse_position);
+	    //println!("parse_position:{}", parse_position);
 	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }	    
 	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
 		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+		indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
-	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+		//indel_insertion_starts.push(old_parse_position);
+		//indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }
-	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
+	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+		//indel_insertion_starts.push(old_parse_position);
+		//indel_insertion_stops.push(parse_position);
+		ref_insertion=1;
 	    }	    
 	}
 	else if (&alphabets[i].to_string().as_str() == &"D") {
@@ -450,24 +558,28 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
       else if (parse_position >= read_indel_start && &alphabets[i].to_string().as_str() == &"I") {
          parse_position += numbers[i].to_string().parse::<usize>().unwrap();    
          //if () {	    
-	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
-	    }	    
-	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
-	    }
-	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
-	    }
-	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position) { // Making sure part of the insertion is within the indel region
-		indel_insertion_starts.push(old_parse_position);
-		indel_insertion_stops.push(parse_position);		
-	    }
-	 //}
-	 old_parse_position = parse_position; 
+      	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }	    
+      	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+      		//indel_insertion_starts.push(old_parse_position);
+      		//indel_insertion_stops.push(parse_position);
+      		ref_insertion=1;
+      	    }
+      	 //}
+      	 old_parse_position = parse_position; 
       }	    
       else {
        break;
@@ -475,8 +587,13 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
     } 
     
     // Checking to see if nucleotides are same between read and ref/alt allele
+
+    //println!("cigar:{}",cigar_sequence);
     for i in 0..ref_length as usize {
 	if (read_indel_start + i < sequence.len()) {
+	    //println!("Ref sequence:{}", ref_nucleotides[i]);
+	    //println!("Ref position:{}", (read_indel_start + i));
+	    //println!("Ref read:{}", sequence_vector[read_indel_start + i]);
 	    if (&ref_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
 		ref_polyclonal_status = 1;
                 break;
@@ -489,6 +606,10 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 
     for i in 0..alt_length as usize {
 	if (read_indel_start + i < sequence.len()) {
+            //println!("i:{}", i);	    
+            //println!("Alt sequence:{}", alt_nucleotides[i]);
+	    //println!("Alt position:{}", (read_indel_start + i));
+	    //println!("Alt read:{}", sequence_vector[read_indel_start + i]);
 	    if (&alt_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
 		alt_polyclonal_status = 1;
                 break;
@@ -498,6 +619,8 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
              break; 
 	}    
     }
+    //println!("ref_polyclonal_status:{}", ref_polyclonal_status);
+    //println!("alt_polyclonal_status:{}", alt_polyclonal_status);
 
     if (indel_insertion_starts.len() > 0) {
     	for i in 0..indel_insertion_starts.len() {
@@ -505,7 +628,14 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
             let insertion_stop: usize = indel_insertion_stops[i];
     	    for j in (insertion_start - 1) .. insertion_stop {
 	      let k: usize = j - insertion_start + 1;	
-	      if (k < indel_length) {
+	      if (k < indel_length && k < alt_nucleotides.len()) {
+	        //println!("sequence len:{}", sequence.len());
+		//println!("read_indel_start:{}", read_indel_start);  
+		//println!("j:{}", j);
+		//println!("k:{}", k);
+		//println!("indel_length:{}", indel_length);		  
+		//println!("alt_nucleotides[k]:{}", alt_nucleotides[k]);
+		//println!("sequence_vector[j]:{}", sequence_vector[j]);  
      	        if ((&alt_nucleotides[k] != &sequence_vector[j]) && ((read_indel_start as usize) <= j) && (j <= (read_indel_start as usize) + indel_length)) {
      		     alt_polyclonal_status = 2;
     		     ref_polyclonal_status = 0;
@@ -514,8 +644,8 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 	      } 	 
             } 		
     	}    
-    }	
-    (ref_polyclonal_status,alt_polyclonal_status)
+    }
+    (ref_polyclonal_status,alt_polyclonal_status,ref_insertion)
 }
 
 fn build_kmers_reads(sequence: String, kmer_length: i64,left_most_pos: i64, indel_start: i64, ref_indel_kmers: &Vec<String>, alt_indel_kmers: &Vec<String>, ref_length: i64, alt_length: i64) -> (Vec::<String>, i64, i64)
@@ -737,7 +867,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                let read_cat = read_category{
 	          category:String::from("none"),
 	          groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-	          diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+	          diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		  ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		   
                };
 	       indices.push(read_cat); 
 	   }
@@ -745,7 +876,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                let read_cat = read_category{
 	          category:String::from("refalt"),
 	          groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-	          diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+	          diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		  ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		   
                };
 	       indices.push(read_cat); 
 	   }
@@ -758,7 +890,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
     	      let item = read_diff_scores{
     	         value:f64::from(kmer_diff_scores_sorted[i].value),
     	         groupID:usize::from(i),
-		 polyclonal:i64::from(kmer_diff_scores_sorted[i].polyclonal) 
+		 polyclonal:i64::from(kmer_diff_scores_sorted[i].polyclonal),
+		 ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		  
     	      };
     	      kmer_diff_scores_input.push(item);
     	}
@@ -766,13 +899,15 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
         let min_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[0].value),
                 groupID:usize::from(0 as usize),
-	        polyclonal:i64::from(kmer_diff_scores_sorted[0].polyclonal)
+	        polyclonal:i64::from(kmer_diff_scores_sorted[0].polyclonal),
+		ref_insertion:i64::from(kmer_diff_scores_sorted[0].ref_insertion)	    
         };
         
         let max_value=read_diff_scores{
         	value:f64::from(kmer_diff_scores_sorted[start_point].value),
                 groupID:usize::from(start_point),
-	        polyclonal:i64::from(kmer_diff_scores_sorted[start_point].polyclonal)
+	        polyclonal:i64::from(kmer_diff_scores_sorted[start_point].polyclonal),
+		ref_insertion:i64::from(kmer_diff_scores_sorted[start_point].ref_insertion)	    
         };
 	
         let slope_of_line: f64 = (max_value.value-min_value.value)/(max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)        
@@ -795,7 +930,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
               let read_cat = read_category{
         	       category:String::from("none"),
         	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		  
               };
 	      indices.push(read_cat); 
            }
@@ -804,7 +940,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                   let read_cat = read_category{
             	       category:String::from("none"),
             	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		      
                   };
 		  indices.push(read_cat);
               }
@@ -812,7 +949,8 @@ fn determine_maxima_alt(kmer_diff_scores: &mut Vec<read_diff_scores>, threshold_
                   let read_cat = read_category{
             	       category:String::from("refalt"),
             	       groupID:usize::from(kmer_diff_scores_sorted[i].groupID),
-    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value)
+    		       diff_score:f64::from(kmer_diff_scores_sorted[i].value),
+		       ref_insertion:i64::from(kmer_diff_scores_sorted[i].ref_insertion)		      
                   };
 		  indices.push(read_cat);
 	      }	   
