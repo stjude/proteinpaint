@@ -162,15 +162,12 @@ function makeTk(tk, block) {
 		configPanel(tk, block)
 	})
 
-	const collectleftlabw = []
-
-	tk.tklabel
-		.text(tk.name)
-		.attr('y', -10)
-		.attr('font-weight', 'bold')
-		.each(function() {
-			collectleftlabw.push(this.getBBox().width)
-		})
+	const collectleftlabw = [
+		tk.tklabel
+			.attr('y', -10)
+			.node()
+			.getBBox().width
+	]
 
 	// legend
 	if (block.legend && block.legend.holder) {
@@ -251,15 +248,14 @@ function makeTk(tk, block) {
 			.attr('x', block.tkleftlabel_xshift)
 			.attr('y', 0)
 			.text(t.name)
-			.each(function() {
-				collectleftlabw.push(this.getBBox().width)
-			})
 			.on('mousedown', () => {
 				// drag label and reorder tracks
 				d3event.stopPropagation()
 				d3event.preventDefault()
 				movetrack(t, tk, d3event.clientY)
 			})
+
+		collectleftlabw.push(t.tklabel.node().getBBox().width)
 
 		if (tk.genevaluetklst) {
 			t.genevg = t.immobileg.append('g') // to hold glyphs of all gvtk
@@ -687,10 +683,7 @@ function showgeneplot(tk, block, gene) {
 		tk.changegenelabel.text('CHANGE GENE')
 		if (tk.genevaluetklst.length == 1) {
 			// only one gvtk, gvtk.label shown on left of axis, and change gene label shown on left of it
-			let w = 0
-			tk.genevaluetklst[0].label.each(function() {
-				w = this.getBBox().width
-			})
+			const w = tk.genevaluetklst[0].label.node().getBBox().width
 			tk.changegenelabel.attr('x', -block.rpad - w - 10)
 		}
 	}
