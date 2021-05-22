@@ -144,7 +144,7 @@ fn main() {
 let mut input = String::new();
 match io::stdin().read_line(&mut input) {
 Ok(n) => {
-    println!("{} bytes read", n);
+    //println!("{} bytes read", n);
     //println!("{}", input);
   }
   Err(error) => println!("Piping error: {}", error),
@@ -251,8 +251,8 @@ Ok(n) => {
             uniq_kmers=1;            
 	  }  
     }	
-    println!("Final kmer length (from Rust):{}", kmer_length_iter);
-    println!("Found duplicate kmers status (from Rust):{}", found_duplicate_kmers);
+    println!("Final kmer length (from Rust):{:?}", kmer_length_iter);
+    println!("Found duplicate kmers status (from Rust):{:?}", found_duplicate_kmers);
     
     let (ref_kmers_weight, ref_kmers_nodups, mut ref_indel_kmers, ref_surrounding_kmers, ref_kmers_data) = build_kmers_refalt(
     		lines[0].to_string(),

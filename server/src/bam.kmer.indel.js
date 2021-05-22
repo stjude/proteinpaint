@@ -5,7 +5,7 @@ const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const readline = require('readline')
 const bamcommon = require('./bam.common')
-const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
+//const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
 const rust_indel = serverconfig.rust_indel || 'server/src/rust_indel_cargo/target/release/rust_indel_cargo'
@@ -140,34 +140,50 @@ export async function match_complexvariant_rust(q, templates_info) {
 			console.log(
 				'output_gID:',
 				item
-					.replace('"', '')
+					.replace('/"/g', '')
 					.replace('/,/g', '')
 					.replace('output_gID:', '')
 			)
 			group_ids = item
-				.replace('"', '')
+				.replace('/"/g', '')
 				.replace('/,/g', '')
 				.replace('output_gID:', '')
 				.split(':')
-				.map(Number)
+				//.map(Number)
+				.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('output_cat')) {
+			console.log(
+				'output_cat:',
+				item
+					.replace('/"/g', '')
+					.replace('/,/g', '')
+					.replace('output_cat:', '')
+			)
 			categories = item
-				.replace('"', '')
+				.replace('/"/g', '')
 				.replace('/,/g', '')
 				.replace('output_cat:', '')
 				.split(':')
 		} else if (item.includes('output_diff_scores')) {
+			console.log(
+				'output_diff_scores:',
+				item
+					.replace('/"/g', '')
+					.replace('/,/g', '')
+					.replace('output_diff_scores:', '')
+			)
 			diff_scores = item
-				.replace('"', '')
+				.replace('/"/g', '')
 				.replace('/,/g', '')
 				.replace('output_diff_scores:', '')
 				.split(':')
 				.map(Number)
+			//.map(n => Number(n.replace(/\D/g, '')))
 		}
 	}
 
-	for (const item of group_ids) {
-		console.log(item)
+	for (const item of diff_scores) {
+		console.log(item) // .replace('/\D/g', '')
 	}
 
 	//console.log("group_ids:",group_ids)
