@@ -2,12 +2,13 @@ const jStat = require('jstat').jStat
 const features = require('./app').features
 const utils = require('./utils')
 const spawn = require('child_process').spawn
+const Readable = require('stream').Readable
 const readline = require('readline')
 const bamcommon = require('./bam.common')
 const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const rust_indel = serverconfig.rust_indel
+const rust_indel = serverconfig.rust_indel || 'server/src/rust_indel_cargo/target/release/rust_indel_cargo'
 
 export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -95,69 +96,137 @@ export async function match_complexvariant_rust(q, templates_info) {
 		refalleleerror = true
 	}
 
-	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
-	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('\n')
-	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('\n')
+	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
+	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
+	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
 
 	let sequences = ''
-	sequences += refseq + '\n'
-	sequences += altseq + '\n'
+	sequences += refseq + '-'
+	sequences += altseq + '-'
 	sequences += sequence_reads
 
-	//const ps = spawn(rust_indel,[sequences, start_positions, cigar_sequences, q.variant.pos.toString(), segbplen.toString(), refallele, altallele, kmer_length.toString(), weight_no_indel.toString(), weight_indel.toString(), threshold_slope.toString()])
-	//const rl = readline.createInterface({ input: ps.stdout })
-	//rl.on('line', line => {
-	//    console.log(line)
-	//})
-	//const type2group = bamcommon.make_type2group(q)
+	//const ps = spawn(rust_indel) // [sequences, start_positions, cigar_sequences, q.variant.pos.toString(), segbplen.toString(), refallele, altallele, kmer_length.toString(), weight_no_indel.toString(), weight_indel.toString(), threshold_slope.toString()]
+	const input_data =
+		sequences +
+		':' +
+		start_positions +
+		':' +
+		cigar_sequences +
+		':' +
+		q.variant.pos.toString() +
+		':' +
+		segbplen.toString() +
+		':' +
+		refallele +
+		':' +
+		altallele +
+		':' +
+		kmer_length.toString() +
+		':' +
+		weight_no_indel.toString() +
+		':' +
+		weight_indel.toString() +
+		':' +
+		threshold_slope.toString() +
+		':'
+	const rust_output = await run_rust_indel_pipeline(input_data)
+	const rust_output_list = rust_output.toString('utf-8').split('\n')
+	let group_ids = []
+	let categories = []
+	let diff_scores = []
 
-	const rust_output = await rust_match_complexvariant_indel(
-		sequences,
-		start_positions,
-		cigar_sequences,
-		BigInt(q.variant.pos),
-		BigInt(segbplen),
-		refallele,
-		altallele,
-		BigInt(kmer_length),
-		weight_no_indel,
-		weight_indel,
-		threshold_slope
-	) // Invoking wasm function
-	console.log('rust_output:', rust_output.groupID.length)
+	for (let item of rust_output_list) {
+		if (item.includes('output_gID')) {
+			console.log(
+				'output_gID:',
+				item
+					.replace('"', '')
+					.replace('/,/g', '')
+					.replace('output_gID:', '')
+			)
+			group_ids = item
+				.replace('"', '')
+				.replace('/,/g', '')
+				.replace('output_gID:', '')
+				.split(':')
+				.map(Number)
+		} else if (item.includes('output_cat')) {
+			categories = item
+				.replace('"', '')
+				.replace('/,/g', '')
+				.replace('output_cat:', '')
+				.split(':')
+		} else if (item.includes('output_diff_scores')) {
+			diff_scores = item
+				.replace('"', '')
+				.replace('/,/g', '')
+				.replace('output_diff_scores:', '')
+				.split(':')
+				.map(Number)
+		}
+	}
+
+	for (const item of group_ids) {
+		console.log(item)
+	}
+
+	//console.log("group_ids:",group_ids)
+	//console.log("categories:",categories.length)
+	//console.log("diff_scores:",diff_scores.length)
+
+	//const rust_output = await rust_match_complexvariant_indel(
+	//	sequences,
+	//	start_positions,
+	//	cigar_sequences,
+	//	BigInt(q.variant.pos),
+	//	BigInt(segbplen),
+	//	refallele,
+	//	altallele,
+	//	BigInt(kmer_length),
+	//	weight_no_indel,
+	//	weight_indel,
+	//	threshold_slope
+	//) // Invoking wasm function
+	//console.log('rust_output:', rust_output.groupID.length)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
-	for (let i = 0; i < rust_output.category.length; i++) {
-		if (rust_output.category[i] == 'ref') {
+	for (let i = 0; i < categories.length; i++) {
+		if (categories[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[index]:",diff_scores[index])
+				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[index],
 					groupID: 'ref'
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
-		} else if (rust_output.category[i] == 'alt') {
+		} else if (categories[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[index]:",diff_scores[index])
+				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[index],
 					groupID: 'alt'
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
-		} else if (rust_output.category[i] == 'none') {
+		} else if (categories[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[index]:",diff_scores[index])
+				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[index],
 					groupID: 'none'
 				}
 				kmer_diff_scores_input.push(input_items)
@@ -188,6 +257,22 @@ export async function match_complexvariant_rust(q, templates_info) {
 		groups.push(g)
 	}
 	return { groups, refalleleerror }
+}
+
+function run_rust_indel_pipeline(input_data) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(rust_indel)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => reject(err))
+		ps.on('close', code => {
+			//console.log("stdout:",stdout)
+			resolve(stdout)
+		})
+	})
 }
 
 export async function match_complexvariant(q, templates_info) {
