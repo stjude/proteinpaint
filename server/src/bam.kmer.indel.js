@@ -182,9 +182,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		}
 	}
 
-	for (const item of diff_scores) {
-		console.log(item) // .replace('/\D/g', '')
-	}
+	//for (const item of diff_scores) {
+	//	console.log(item) // .replace('/\D/g', '')
+	//}
 
 	//console.log("group_ids:",group_ids)
 	//console.log("categories:",categories.length)
