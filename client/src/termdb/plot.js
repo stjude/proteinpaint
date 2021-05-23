@@ -49,7 +49,8 @@ class TdbPlot {
 			{
 				id: this.id,
 				holder: this.dom.controls,
-				isleaf: opts.term.isleaf
+				isleaf: opts.term.isleaf,
+				iscondition: opts.term.type == 'condition'
 			},
 			this.app.opts.plotControls
 		)

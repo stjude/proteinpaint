@@ -28,7 +28,8 @@ class TdbConfigUiInit {
 				id: this.id,
 				debug,
 				instanceNum: this.instanceNum,
-				isleaf: opts.isleaf
+				isleaf: opts.isleaf,
+				iscondition: opts.iscondition
 			}),
 			orientation: setOrientationOpts({
 				holder: this.dom.orientationTr,
@@ -237,7 +238,7 @@ function setViewOpts(opts) {
 		{ label: 'Scatter', value: 'scatter' }
 	]
 
-	if (opts.isleaf) {
+	if (opts.isleaf && opts.iscondition) {
 		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
 	}
 
@@ -261,7 +262,7 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', opts.isleaf || plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', (opts.isleaf && opts.iscondition) || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')
