@@ -138,23 +138,23 @@ export async function match_complexvariant_rust(q, templates_info) {
 	for (let item of rust_output_list) {
 		if (item.includes('output_gID')) {
 			group_ids = item
-				.replace('/"/g', '')
-				.replace('/,/g', '')
+				.replace(/"/g, '')
+				.replace(/,/g, '')
 				.replace('output_gID:', '')
 				.split(':')
 				//.map(Number)
 				.map(n => Number(n.replace(/\D/g, ''))) // Removing characters that are not digits
 		} else if (item.includes('output_cat')) {
 			categories = item
-				.replace('/"/g', '')
-				.replace('/,/g', '')
+				.replace(/"/g, '')
+				.replace(/,/g, '')
 				.replace('output_cat:', '')
 				.split(':')
 				.map(n => n.replace(/[^a-zA-Z0-9]+/g, '')) // Removing characters that are not alphabets
 		} else if (item.includes('output_diff_scores')) {
 			diff_scores = item
-				.replace('/"/g', '')
-				.replace('/,/g', '')
+				.replace(/"/g, '')
+				.replace(/,/g, '')
 				.replace('output_diff_scores:', '')
 				.split(':')
 				.map(Number)
