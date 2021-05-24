@@ -84,8 +84,8 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
+		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
-		.append('hr')
 	const list = div.append('ul')
 	list
 		.attr('class', 'track-list')

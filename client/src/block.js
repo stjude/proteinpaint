@@ -331,6 +331,11 @@ export class Block {
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
 			this.legend.tr_morigin = tr2.style('display', 'none')
 			this.legend.td_morigin = td2
+
+			if (arg.legendimg) {
+				const [tr, td] = Legend.legend_newrow(this, arg.legendimg.name || '')
+				this.make_legend_img(arg.legendimg, td)
+			}
 		}
 
 		if (arg.usegm) {
@@ -793,8 +798,42 @@ export class Block {
 
 		// help set block.busy off when there is no track to load
 		this.ifbusy()
+		if (this.tklst.length == 0) {
+			this.error(
+				'No tracks specified. If you don\'t expect to see this, delete the "block:true" from runproteinpaint() argument.'
+			)
+		}
 	}
 	/****** end of constructor ***/
+
+	async make_legend_img(arg, div) {
+		/*
+		add a legend showing a server-side image, either for a track or for this block
+		arg: {}
+		.file: tp path to an image file
+		.height: optional icon height
+		*/
+		const data = await client.dofetch2('img?file=' + arg.file)
+		if (data.error) {
+			div.text(data.error)
+			return
+		}
+		let fold = true
+		const img = div
+			.append('img')
+			.attr('class', 'sja_clbb')
+			.attr('src', data.src)
+			.style('height', '80px')
+		img.on('click', () => {
+			if (fold) {
+				fold = false
+				img.transition().style('height', arg.height ? arg.height + 'px' : 'auto')
+			} else {
+				fold = true
+				img.transition().style('height', '80px')
+			}
+		})
+	}
 
 	regioncumlen(ridx, notincludethisregion) {
 		// region bp length up to the view start of a given region
@@ -2452,13 +2491,42 @@ seekrange(chr,start,stop) {
 			.attr('class', null)
 			.attr('font-weight', 'bold')
 
-		if (tk.list_description) {
-			tk.tklabel
-				.on('mouseover', () => {
-					tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-					client.make_table_2col(tk.tktip.d, tk.list_description).style('margin', '0px')
-				})
-				.on('mouseout', () => tk.tktip.hide())
+		// tk name may be available now or will be defined later
+		if (tk.name) {
+			// two conditions to show tooltip on hovering the label
+			// 1. label truncated, hover to show full label
+			// 2. list_description[{k,v}] provided, hover to show table of details
+			const labeltruncated = tk.name.length >= 25
+			if (labeltruncated) {
+				// to truncate name and also apply tooltip
+				tk.tklabel.text(tk.name.substring(0, 20) + ' ...')
+			} else {
+				// no need to truncate label
+				tk.tklabel.text(tk.name)
+			}
+			if (labeltruncated || tk.list_description) {
+				// will show tooltip to display both info if available
+				tk.tklabel
+					.on('mouseover', () => {
+						tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+						if (labeltruncated) {
+							const d = tk.tktip.d.append('div').text(tk.name)
+							if (tk.list_description) d.style('margin-bottom', '5px')
+						}
+						if (tk.list_description) {
+							client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+						}
+					})
+					.on('mouseout', () => tk.tktip.hide())
+			}
+			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
+			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
+			// when it's overwritten, must call block.setllabel() to update ui
+			tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
+		} else {
+			// tk.name is not provided, e.g. mds2
+			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
+			// fault is that the tooltip cannot be provided in this case
 		}
 
 		tk.pica = {
@@ -2488,7 +2556,6 @@ seekrange(chr,start,stop) {
 				bampilemaketk(tk, this)
 				break
 			case client.tkt.ds:
-				tk.tklabel.text(tk.name)
 				dsmaketk(tk, this)
 				break
 			case client.tkt.pgv:

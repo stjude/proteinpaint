@@ -169,6 +169,7 @@ push button to re-render
 		*/
 
 		const row = div.append('div').style('margin-bottom', '20px')
+		const custom_input_row = div.append('div').style('display','none')
 		row
 			.append('span')
 			.html('Choose samples from&nbsp;')
@@ -187,10 +188,19 @@ push button to re-render
 					attr2select[k].style('display', 'none')
 				}
 				const o = d3event.target.options[d3event.target.selectedIndex]
+				custom_input_row.style('display', o.usesampleset ? 'block': 'none')
 				if (o.useall) {
 					// user selects to use all samples
 					p.samplerule.full.useall = 1
 					delete p.samplerule.full.byattr
+					return
+				}
+				if(o.usesampleset) {
+					//user selects custom sampleset to be entered in inputbox
+					delete p.samplerule.full.byattr
+					delete p.samplerule.full.useall
+					p.samplerule.full.usesampleset = 1
+					show_sampleinput(p, custom_input_row)
 					return
 				}
 				delete p.samplerule.full.useall
@@ -237,6 +247,11 @@ push button to re-render
 		if (p.samplerule.full.useall) {
 			s.node().selectedIndex = obj.samplegroupings.length
 		}
+
+		// option of slecting custom samples set
+		s.append('option')
+			.text('custom sampleset')
+			.property('usesampleset', 1)
 	}
 
 	show_dividerules(p, div)
@@ -713,4 +728,38 @@ TODO allow config for each rule, e.g. mutation filters
 				)
 		}
 	}
+}
+
+function show_sampleinput(p, div){
+
+	let rendered_flag = div.selectAll('div').size()
+
+	// return if input field already rendered
+	if(rendered_flag) return
+
+	const row = div.append('div').style('margin-bottom', '10px')
+
+	const samplelist_div = row.append('div')
+		.style('margin-left', '20px')
+	
+	samplelist_div.append('div')
+		.style('vertical-align','top')
+		.style('display','inline-block')
+		.style('opacity', 0.5)
+		.html('Enter sample names<br>(one sample per line) &nbsp;')
+
+	const sample_input = samplelist_div.append('textarea')
+		.style('display','inline-block')
+		.attr('cols', '20')
+		.attr('rows', '10')
+		.on('change',()=>{
+			// verify inputs and send it to serverside
+			let sampleset = p.samplerule.full.sampleset = []
+			const str = sample_input.property('value').trim()
+			if (!str) return
+			for (const sample of str.split('\n')) {
+				sampleset.push(sample)
+			}
+		})
+	
 }

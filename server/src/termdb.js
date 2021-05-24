@@ -5,6 +5,7 @@ const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
+const cuminc = require('./termdb.cuminc')
 
 /*
 ********************** EXPORTED
@@ -51,6 +52,7 @@ export function handle_request_closure(genomes) {
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
+			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -76,7 +78,8 @@ function trigger_gettermdbconfig(res, tdb) {
 	res.send({
 		termdbConfig: {
 			// add attributes here to reveal to client
-			selectCohort: tdb.selectCohort // optional
+			selectCohort: tdb.selectCohort, // optional
+			cumincplot4condition: tdb.cumincplot4condition // optional
 		}
 	})
 }
@@ -207,4 +210,14 @@ rightnow only few conditional terms have grade info
 */
 	if (!q.tid) throw 'no term id'
 	res.send({ terminfo: tdb.q.getTermInfo(q.tid) })
+}
+
+async function trigger_getincidence(q, res, ds) {
+	if (!q.grade) throw 'missing grade'
+	q.grade = Number(q.grade)
+	if (typeof q.filter == 'string') {
+		q.filter = JSON.parse(decodeURIComponent(q.filter))
+	}
+	const data = await cuminc.get_incidence(q, ds)
+	res.send(data)
 }

@@ -439,9 +439,6 @@ or update existing groups, in which groupidx will be provided
 
 	setTkHeight(tk, data)
 
-	tk.tklabel.each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
 	let countr = 0, // #read
 		countt = 0 // #templates
 	for (const g of tk.groups) {
@@ -716,8 +713,7 @@ function makeTk(tk, block) {
 	}
 	tk.asPaired = false
 
-	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
-	let laby = block.labelfontsize
+	let laby = block.labelfontsize + 5
 	tk.label_count = block.maketklefthandle(tk, laby)
 }
 

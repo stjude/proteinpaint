@@ -150,10 +150,6 @@ function renderTk(tk, block) {
 			.remove()
 	}
 
-	tk.tklabel.each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
-
 	renderTk_covplot(tk, block)
 	renderTk_fpkm(tk, block)
 
@@ -182,7 +178,7 @@ function renderTk_covplot(tk, block) {
 			),
 			showline: true
 		})
-		tk.tklabel.attr('y', tk.rna.coveragebarh / 2 - 2)
+		tk.tklabel.attr('y', tk.rna.coveragebarh / 2 - 7)
 		tk.rna.coveragelabel.attr('y', tk.rna.coveragebarh / 2 + 2).attr('transform', 'scale(1)')
 
 		client.axisstyle({
@@ -373,8 +369,6 @@ function tooltip_genefpkm(gene, tk) {
 
 function makeTk(tk, block) {
 	delete tk.uninitialized
-
-	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
 
 	if (!tk.barypad) tk.barypad = 0
 

@@ -210,15 +210,17 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder
 		.append('div')
+		.style('white-space', 'nowrap')
 		.style(
 			'border-bottom',
-			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 
 	const apps_drawer_row = app.holder
 		.append('div')
 		.style('position', 'relative')
-		.style('overflow', 'hidden')
+		.style('overflow-x', 'visible')
+		.style('overflow-y', 'hidden')
 
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
@@ -229,10 +231,10 @@ function makeheader(app, obj, jwt) {
 		.style('margin', '10px')
 		.style('padding', '8px')
 		.style('padding-bottom', '12px')
-		.style('display', doc_width < 1600 ? 'block' : 'inline-block')
+		.style('display', 0 && doc_width < 1600 ? 'block' : 'inline-block')
 		.style(
 			'border-bottom',
-			doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 	// .style('border-radius', '5px')
 	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
@@ -243,6 +245,7 @@ function makeheader(app, obj, jwt) {
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
+
 	{
 		// a row for server stats
 		const row = headinfo.append('div').style('padding-left', '15px')
@@ -356,36 +359,27 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
-	const duration = 500 // for apps drawer animation
-	let app_holder_full_height, apps_drawer_hint
+	const duration = 500, // for apps drawer animation
+		hint_pos = {
+			open: { btm: -40, left: 13 },
+			closed: { btm: 3, rt: 5 }
+		},
+		hint_width = { open: '0px', closed: '18px' },
+		arrow_size = { open: 40, closed: 20 },
+		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
+
+	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow, apps_drawer_arrow_open
+	let app_btn_wrapper, app_btn, app_btn_active, app_holder
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder
-				.transition()
-				.duration(duration)
-				.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
-			//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
-
-			apps_drawer_row
-				.transition()
-				.duration(duration)
-				.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-
-			apps_drawer_hint
-				.transition()
-				.duration(duration + 100)
-				.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
-
-			btn_toggle(app_btn, app_btn_active)
+			slide_drawer()
 		}
 	}
 
 	// launchApps()
-
-	let app_btn, app_btn_active, app_holder
 
 	if (!obj.features.examples) {
 		app_btn = headbox
@@ -407,98 +401,140 @@ function makeheader(app, obj, jwt) {
 		app_holder = apps_drawer_row
 			.append('div')
 			.style('position', 'relative')
-			.style('margin', '20px')
-			.style('padding', padw_sm)
+			.style('margin', '0 20px')
+			.style('padding', `0 ${padw_sm}`)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
 			.style('overflow', 'hidden')
-			.style('background-color', '#f2f2f2')
-			.style('border-radius', '5px')
+			.style('background-color', '#f5f5f5')
+			.style('border-radius', '0px 0px 5px 5px')
 			.style('width', '93vw')
 
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
+      
 			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off, show_gdcbamslice: obj.features.gdcslice })
-			app_holder_full_height = app_holder.node().getBoundingClientRect().height
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
 		if (app_btn_active) load_app_div()
 
-		const app_btn_div = headbox
+		app_btn_wrapper = headbox
 			.append('div')
 			.style('position', 'relative')
 			.style('display', 'inline-block')
+			.style('margin-left', '5px')
+			.style('margin-right', '5px')
+			.style('border-radius', '5px')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 			.on('click', () => {
 				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				btn_toggle(app_btn, app_btn_active)
-				app_holder
-					.style('display', 'inline-block')
-					.transition()
-					.duration(duration)
-					.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
-				//.style('padding', app_btn_active ? padw_sm + 'px' : '0px')
-
+				slide_drawer()
 				if (app_btn_active) {
 					setTimeout(() => {
-						app_holder_full_height = app_holder.node().getBoundingClientRect().height
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 					}, duration + 5)
 				}
-
-				apps_drawer_row
-					.transition()
-					.duration(duration)
-					.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-
-				apps_drawer_hint
-					.transition()
-					.duration(duration)
-					.style('transform', app_btn_active ? 'rotate(180deg)' : 'rotate(0deg)')
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
 
-		app_btn = app_btn_div
-			.append('span')
+		app_btn = app_btn_wrapper
+			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('display', 'inline-block')
+			.style('background-color', 'transparent')
 			.style('color', app_btn_active ? '#fff' : '#000')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
-			.style('border-radius', '5px')
+			.style('cursor', 'pointer')
 			.text('Apps')
 
-		apps_drawer_hint = app_btn_div
+		// an empty spacer div, needed since the arrows are absolutely positioned
+		apps_drawer_hint = app_btn_wrapper
 			.append('div')
-			.style('position', 'absolute')
-			.style('bottom', '-30px')
-			.style('width', '100%')
+			.style('position', 'relative')
+			.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
+			.style('height', arrow_size.closed + 'px')
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+			.style('background-color', 'transparent')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
+
+		apps_drawer_arrow = app_btn_wrapper
 			.append('div')
-			.style('display', 'inline-block')
-			//.style('padding', '1px')
-			//.style('border-radius', '8px')
-			.style('font-size', '20px')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.closed + 'px')
+			.style('right', hint_pos.closed.rt + 'px')
+			.style('bottom', hint_pos.closed.btm + 'px')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.closed)
+			.style('opacity', app_btn_active ? 0 : 1)
+			.style('cursor', 'pointer')
+			.html('&#9660;')
+
+		apps_drawer_arrow_open = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.open + 'px')
+			.style('left', hint_pos.open.left + 'px')
+			.style('bottom', hint_pos.open.btm + 'px')
 			.style('transform', 'rotate(180deg)')
-			//.style('background-color', '#ececec')
-			.style('color', '#555')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.open)
+			.style('opacity', app_btn_active ? 1 : 0)
+			.style('cursor', 'pointer')
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
 			.html('&#9660;')
 	}
 
-	function btn_toggle(btn, btn_active) {
-		btn
+	function slide_drawer() {
+		app_btn_wrapper
 			.transition()
 			.duration(500)
-			.style('background-color', btn_active ? '#b2b2b2' : '#f2f2f2')
-			.style('color', btn_active ? '#fff' : '#000')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_btn
+			.transition()
+			.duration(500)
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_holder
+			.style('display', 'inline-block')
+			.transition()
+			.duration(duration)
+			.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+
+		apps_drawer_row
+			.transition()
+			.duration(duration)
+			.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+		apps_drawer_hint
+			.transition()
+			.duration(duration)
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+
+		apps_drawer_arrow
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 0 : 1)
+
+		apps_drawer_arrow_open
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 1 : 0)
 	}
 
 	headbox
@@ -1411,7 +1447,8 @@ async function launchblock(arg, app) {
 		holder: app.holder0,
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
-		debugmode: app.debugmode
+		debugmode: app.debugmode,
+		legendimg: arg.legendimg
 	}
 
 	if (arg.width) {

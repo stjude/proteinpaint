@@ -474,7 +474,11 @@ module.exports = {
 				],
 				highlightCohortBy: 'cssSelector',
 				htmlinfo: cohorthtmltable
-			}
+			},
+			/* very quick fix
+			to show a button to plot cumulative incidence curve for "condition" terms
+			*/
+			cumincplot4condition: true
 		}
 	},
 
