@@ -198,7 +198,7 @@ function validateInputs(obj) {
 function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
-		hostURL: window.location.origin || '',
+		hostURL: sessionStorage.getItem('hostURL') || '',
 		nobox: 1,
 		genome,
 		holder
