@@ -60,7 +60,7 @@ getReadInfo
 const labyspace = 5
 const stackpagesize = 60
 
-export function bamsliceui(genomes, holder) {
+export function bamsliceui(genomes, holder, hosturl) {
 	let gdc_args = {}
 	const default_genome = 'hg38'
 
@@ -163,7 +163,7 @@ export function bamsliceui(genomes, holder) {
 			inputdiv.remove()
 			saydiv.remove()
 			submit_btn_div.remove()
-			renderBamSlice(gdc_args, genomes[default_genome], visualdiv)
+			renderBamSlice(gdc_args, genomes[default_genome], visualdiv, hosturl)
 		})
 
 	function makeFormInput(field) {
@@ -195,10 +195,10 @@ function validateInputs(obj) {
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
 }
 
-function renderBamSlice(args, genome, holder) {
+function renderBamSlice(args, genome, holder, hostURL) {
 	// create arg for block init
 	const par = {
-		hostURL: sessionStorage.getItem('hostURL') || '',
+		hostURL,
 		nobox: 1,
 		genome,
 		holder
