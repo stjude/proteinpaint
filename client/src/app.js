@@ -419,7 +419,7 @@ function makeheader(app, obj, jwt) {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
+			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off, show_gdcbamslice: obj.features.gdcslice })
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height
 		}
 

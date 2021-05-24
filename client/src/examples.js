@@ -3,7 +3,7 @@ import { debounce } from 'debounce'
 import { event } from 'd3-selection'
 
 export async function init_examples(par) {
-	const { holder, apps_sandbox_div, apps_off } = par
+	const { holder, apps_sandbox_div, apps_off, show_gdcbamslice } = par
 	const re = await dofetch2('/examplejson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
@@ -25,6 +25,9 @@ export async function init_examples(par) {
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
+	// Quick fix: hide gdcbamslice if serverconfig.gdcbamslice is false or missing
+	re.examples.find(track => track.name ==  'GDC BAM Slice').hidden = !show_gdcbamslice
+	// if(track.name == 'GDC BAM Slice' && !page_args.show_gdcbamslice)
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
 		// gpaintList,

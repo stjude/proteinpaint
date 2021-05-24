@@ -2,7 +2,6 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import blockinit from './block.init'
 import { make_radios } from './dom'
 import url2map from './url2map'
 
@@ -139,7 +138,10 @@ export function bamsliceui(genomes, holder) {
 		.style('grid-column', 'span 2')
 		.style('font-size', '80%')
 		.style('padding', '3px 10px')
-		.html('<b>Note:</b> Either position or variant is required.')
+		.html(`<b>Note:</b> Either position or variant is required.
+			</br>&emsp;&emsp;&nbsp;&nbsp; 
+			GDC BAM slice will be visualized for the provided postion or variant, 
+			to visualze additional reads, enter again from this form.`)
 
 	//submit button
 	const submit_btn_div = holder.append('div')
@@ -196,6 +198,7 @@ function validateInputs(obj) {
 function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
+		hostURL: window.location.origin || '',
 		nobox: 1,
 		genome,
 		holder
@@ -416,7 +419,6 @@ or update existing groups, in which groupidx will be provided
 			color: 'black',
 			showline: true
 		})
-		tk.dom.pileup_axis.attr('transform', 'translate(0,' + (tk.gdc ? tk.notebottompad : '0') + ')')
 	} else {
 		tk.dom.pileup_shown = false
 	}
@@ -483,7 +485,7 @@ function may_render_gdc(data, tk, block) {
 		return
 	}
 
-	const yoff = data.pileup_data ? tk.pileupheight + tk.notebottompad + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
 
 	// will render gdc region box in a row
 	tk.dom.gdc
@@ -540,7 +542,7 @@ function may_render_variant(data, tk, block) {
 	let yoff
 	if (tk.gdc) {
 		yoff = data.pileup_data
-			? tk.pileupheight + tk.notebottompad + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+			? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
 			: 0 // get height of existing graph above variant row
 	} else {
 		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
@@ -607,7 +609,7 @@ function setTkHeight(tk, data) {
 	let h = 0
 	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
 	if (tk.gdc) {
-		h += tk.notebottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
 	}
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
@@ -692,24 +694,11 @@ function makeTk(tk, block) {
 	// <g> of each group is added dynamically to glider
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
-	tk.notebottompad = 6
 
 	tk.dom = {
-		note_g: tk.glider.append('g'),
 		pileup_g: tk.glider.append('g'),
 		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
-	}
-	if (tk.gdc) {
-		// show note reagarding how to render additonal reads from gdc api
-		tk.dom.note_g
-			.append('text')
-			.attr('x', 4)
-			.attr('y', 4)
-			.attr('font-size', 12)
-			.text(
-				'Note: GDC BAM slice will be visualized for the provided postion or variant, to visualze additional reads, enter again from the previous form.'
-			)
 	}
 
 	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
