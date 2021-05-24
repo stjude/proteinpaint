@@ -850,6 +850,7 @@ async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_na
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
+		throw 'Cannot retrieve bam file: ' + error
 	}
 }
 

@@ -329,9 +329,9 @@
                     "noheader": 1,
                     "genome": "hg19",
 					"nativetracks":"refgene",
-                    "tkjsonfile": "proteinpaint_demo/hg19/misc/tracks.json"
+                    "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
                 },
-                "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
+                "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json",
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
             },
             "searchterms": []
@@ -545,6 +545,25 @@
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "searchterms": ["BLAT"]
+        },
+        {
+            "name": "GDC BAM Slice",
+            "shorthand": "GDC bam slice",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "isbeta": 1,
+            "blurb": "visualize GDC BAM reads",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "",
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "gdcbamslice": { "uionly": true }
+                }
+            },
+            "searchterms": []
         },
         {
             "name": "Bampile",

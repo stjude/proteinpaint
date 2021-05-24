@@ -248,7 +248,7 @@ function makeheader(app, obj, jwt) {
 
 	{
 		// a row for server stats
-		const row = headinfo.append('div')
+		const row = headinfo.append('div').style('padding-left', '15px')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -413,7 +413,8 @@ function makeheader(app, obj, jwt) {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
+      
+			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off, show_gdcbamslice: obj.features.gdcslice })
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
@@ -1064,6 +1065,16 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -1100,7 +1111,9 @@ async function parseembedthenurl(arg, app) {
 		launchmaftimeline(arg, app)
 	}
 
-	return app
+	if(arg.gdcbamslice) {
+		launchgdcbamslice(arg, app)
+	}
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1644,6 +1657,23 @@ function launchJunctionbyMatrix(arg, app) {
 			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
 	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+	}
+}
+
+function launchgdcbamslice(arg, app) {
+	if (arg.gdcbamslice.uionly) {
+			import('./block.tk.bam').then(p => {
+				p.bamsliceui(app.genomes, app.holder0)
+			})
+			return
+		}
 }
 
 /*
