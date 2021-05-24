@@ -1,12 +1,12 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { dofetch3 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
 import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
+import { cumincInit } from './cuminc'
 import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
@@ -48,7 +48,9 @@ class TdbPlot {
 			this.app,
 			{
 				id: this.id,
-				holder: this.dom.controls
+				holder: this.dom.controls,
+				isleaf: opts.term.isleaf,
+				iscondition: opts.term.type == 'condition'
 			},
 			this.app.opts.plotControls
 		)
@@ -77,6 +79,14 @@ class TdbPlot {
 				Object.assign({ controls }, this.app.opts.scatter)
 			),
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
+		}
+
+		if (opts.term.type == 'condition' && opts.term.isleaf) {
+			this.components.cuminc = cumincInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.cuminc)
+			)
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
@@ -120,6 +130,11 @@ class TdbPlot {
 	getDataName(state) {
 		const plot = this.config // the plot object in state
 		const params = []
+
+		if (plot.settings.currViews.includes('cuminc')) {
+			params.push('getcuminc=1')
+			params.push('grade=3') // harcode for now
+		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')

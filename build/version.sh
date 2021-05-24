@@ -1,9 +1,6 @@
 set -e
 
-TYPE=""
-if (($# == 1)); then
-	TYPE=$1
-fi
+TYPE=$1
 
 if [[ "$TYPE" != "minor" && "$TYPE" != "patch" ]]; then
 	echo "Usage: ./build/version.sh [minor | patch]"

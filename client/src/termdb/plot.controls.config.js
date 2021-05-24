@@ -22,7 +22,15 @@ class TdbConfigUiInit {
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug, instanceNum: this.instanceNum }),
+			view: setViewOpts({
+				holder: this.dom.viewTr,
+				dispatch,
+				id: this.id,
+				debug,
+				instanceNum: this.instanceNum,
+				isleaf: opts.isleaf,
+				iscondition: opts.iscondition
+			}),
 			orientation: setOrientationOpts({
 				holder: this.dom.orientationTr,
 				dispatch,
@@ -223,15 +231,21 @@ function setViewOpts(opts) {
 		}
 	}
 
+	const options = [
+		{ label: 'Barchart', value: 'barchart' },
+		{ label: 'Table', value: 'table' },
+		{ label: 'Boxplot', value: 'boxplot' },
+		{ label: 'Scatter', value: 'scatter' }
+	]
+
+	if (opts.isleaf && opts.iscondition) {
+		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
+	}
+
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
 		holder: self.dom.inputTd,
-		options: [
-			{ label: 'Barchart', value: 'barchart' },
-			{ label: 'Table', value: 'table' },
-			{ label: 'Boxplot', value: 'boxplot' },
-			{ label: 'Scatter', value: 'scatter' }
-		],
+		options,
 		listeners: {
 			input(d) {
 				const currViews = d.value == 'barchart' ? ['barchart', 'stattable'] : [d.value]
@@ -248,20 +262,22 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', (opts.isleaf && opts.iscondition) || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')
 				? 'boxplot'
 				: plot.settings.currViews.includes('scatter')
 				? 'scatter'
+				: plot.settings.currViews.includes('cuminc')
+				? 'cuminc'
 				: 'barchart'
 
 			const numericTypes = ['integer', 'float']
 
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
-				d.value == 'barchart'
+				d.value == 'barchart' || d.value == 'cuminc'
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'

@@ -32,7 +32,7 @@ done
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh
+./build/extract.sh -r $REV -t pp-dist
 REV=$(cat tmppack/rev.txt)
 
 #######
@@ -72,5 +72,6 @@ mv package.json.bak package.json
 
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
+echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
 docker build --file ./targets/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

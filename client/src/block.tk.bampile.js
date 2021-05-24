@@ -20,10 +20,6 @@ export function bampilefromtemplate(tk, template) {
 }
 
 export function bampilemaketk(tk, block) {
-	tk.tklabel.text(tk.name).each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
-
 	tk.img = tk.glider.append('image').on('click', () => {
 		if (!tk.link) return
 		// if tk.link is provided, will work

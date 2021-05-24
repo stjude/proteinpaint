@@ -48,9 +48,6 @@ export function bedjfromtemplate(tk, template) {
 
 export function bedjmaketk(tk, block) {
 	tk.img = tk.glider.append('image')
-	tk.tklabel.text(tk.name).each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
 
 	if (tk.categories && block.legend && block.legend.holder) {
 		// has categories, block supports legend, show entry

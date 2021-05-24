@@ -80,7 +80,10 @@ class TermdbVocab {
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
 		const config = this.state.tree.plots[plotId]
-		const route = config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
+		const route =
+			config.settings.currViews.includes('scatter') || config.settings.currViews.includes('cuminc')
+				? '/termdb'
+				: '/termdb-barsql'
 		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
