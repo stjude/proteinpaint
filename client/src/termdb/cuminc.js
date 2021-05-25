@@ -309,16 +309,15 @@ function setRenderers(self) {
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId]
-		//if(seriesName == 'cuminc') {
-		g.append('path')
-			.attr('d', self.lineFxn(data))
-			.style('fill', 'none')
-			.style('stroke', seriesName == 'cuminc' ? color.darker() : color)
-			//.style('stroke-width', seriesName == 'cuminc' ? '2px' : '1px')
-			.style('opacity', 1)
-			.style('stroke-opacity', seriesName == 'cuminc' ? 1 : 0.2)
-			.attr('stroke-dasharray', seriesName == 'cuminc' ? null : '6 3')
-		//}
+
+		if (seriesName == 'cuminc') {
+			g.append('path')
+				.attr('d', self.lineFxn(data))
+				.style('fill', 'none')
+				.style('stroke', color.darker())
+				.style('opacity', 1)
+				.style('stroke-opacity', 1)
+		}
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -446,9 +445,13 @@ function getPj(self) {
 				if (!row.chartId || row.chartId == '-') {
 					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
 				}
-				if (!self.state.config.term0 || !self.state.config.term0.term.values) return row.chartId
+				const t0 = self.state.config.term0
+				if (!t0 || !t0.term.values) return row.chartId
+				if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) {
+					return row.chartId
+				}
 				const value = self.state.config.term0.term.values[row.chartId]
-				return value.label ? value.label : row.chartId
+				return value && value.label ? value.label : row.chartId
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
