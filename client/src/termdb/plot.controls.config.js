@@ -238,7 +238,7 @@ function setViewOpts(opts) {
 		{ label: 'Scatter', value: 'scatter' }
 	]
 
-	if (opts.isleaf && opts.iscondition) {
+	if (opts.iscondition) {
 		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
 	}
 
@@ -262,7 +262,7 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', (opts.isleaf && opts.iscondition) || plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', opts.iscondition || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')

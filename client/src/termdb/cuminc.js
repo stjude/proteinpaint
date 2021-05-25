@@ -92,6 +92,7 @@ class TdbCumInc {
 	}
 
 	setTerm2Color(charts) {
+		if (!charts) return
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		for (const chart of charts) {

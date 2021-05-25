@@ -36,8 +36,18 @@ runproteinpaint({
 					'Cardiac system',
 					'Congestive heart failure'
 				],
-				visiblePlotIds: ['Congestive heart failure'],
+				visiblePlotIds: ['Cardiac system', 'Congestive heart failure'],
 				plots: {
+					'Cardiac system': {
+						term: {
+							id: 'Cardiac system',
+							term: {id: 'Cardiac system', name: 'Cardiac system'},
+							q: { bar_by_grade: true, value_by_max_grade: true }
+						},
+						settings: {
+							currViews: ['cuminc']
+						}
+					},
 					'Congestive heart failure': {
 						term: {
 							id: 'Congestive heart failure',

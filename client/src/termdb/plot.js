@@ -81,7 +81,7 @@ class TdbPlot {
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		if (opts.term.type == 'condition' && opts.term.isleaf) {
+		if (opts.term.type == 'condition') {
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },
