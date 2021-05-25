@@ -141,14 +141,14 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>,Vec<i64>) {
 }
 
 fn main() {
-let mut input = String::new();
-match io::stdin().read_line(&mut input) {
-Ok(n) => {
-    //println!("{} bytes read", n);
-    //println!("{}", input);
-  }
-  Err(error) => println!("Piping error: {}", error),
-  }        
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+      Ok(n) => {
+       //println!("{} bytes read", n);
+       //println!("{}", input);
+      }
+      Err(error) => println!("Piping error: {}", error),
+    }        
     let args: Vec<&str> = input.split(":").collect();
     //println!("args:{:?}",args);    
     //let arg_seq:String = args[0].parse::<String>().unwrap();
@@ -185,7 +185,7 @@ Ok(n) => {
     }	
 
     // Select appropriate kmer length
-    let max_kmer_length: i64 = 20;
+    let max_kmer_length: i64 = 200;
     let mut kmer_length_iter: i64 = kmer_length;
     let surrounding_region_length: i64 = 25;
     let mut uniq_kmers: usize = 0;
@@ -567,11 +567,23 @@ fn check_polyclonal(sequence: String, left_most_pos: i64, cigar_sequence: String
 	    }	    
 	}
 	else if (&alphabets[i].to_string().as_str() == &"D") {
-          read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap();        
+            read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap();
+	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
+		ref_insertion=1;
+	    }
+	    else if (old_parse_position <= read_indel_start && read_indel_start + indel_length <= parse_position) { // Making sure the insertion is within the indel region
+		ref_insertion=1;
+	    }
+	    else if (old_parse_position <= read_indel_start && parse_position <= read_indel_start + indel_length && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+		ref_insertion=1;
+	    }
+	    else if (read_indel_start <= old_parse_position && read_indel_start + indel_length <= parse_position && found_duplicate_kmers == 0) { // Making sure part of the insertion is within the indel region
+		ref_insertion=1;
+	    }            
 	}
 	old_parse_position = parse_position;  
       }
-      else if (parse_position >= read_indel_start && &alphabets[i].to_string().as_str() == &"I") {
+      else if (parse_position >= read_indel_start && (&alphabets[i].to_string().as_str() == &"I" || &alphabets[i].to_string().as_str() == &"D")) {
          parse_position += numbers[i].to_string().parse::<usize>().unwrap();    
          //if () {	    
       	    if (read_indel_start <= old_parse_position && parse_position <= read_indel_start + indel_length) { // Making sure the insertion is within the indel region
