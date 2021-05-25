@@ -1,7 +1,19 @@
 const tape = require('tape')
 const fetch = require('node-fetch').default
+const path = require('path')
+const serverconfig = require('../serverconfig')
+const fs = require('fs')
 
 // Note: these integration tests are dependant on clinical datasets that are subject to change.
+
+const ssid = 'fisher2x3-test.txt'
+const src = path.join(__dirname, '../../test/testdata', ssid)
+const dest = path.join(serverconfig.cachedir, 'ssid', ssid)
+try {
+	fs.copyFileSync(src, dest)
+} catch (e) {
+	throw e
+}
 
 tape('\n', test => {
 	test.pass('-***- R scripts integration specs -***-')
@@ -10,7 +22,7 @@ tape('\n', test => {
 
 // Test the integration of fisher.R
 tape('fisher.R integration', test => {
-	fetch('http://localhost:3000/mds2', {
+	fetch(`http://localhost:${serverconfig.port}/mds2`, {
 		method: 'POST',
 		body: JSON.stringify({
 			genome: 'hg38',
@@ -127,7 +139,7 @@ tape('fisher.R integration', test => {
 // Test the integration of fisher.2x3.R
 tape('fisher.2x3.R integration', test => {
 	fetch(
-		'http://localhost:3000/termdb?genome=hg38&dslabel=SJLife&ssid=0.5501243236998616&phewas=1&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=' +
+		`http://localhost:${serverconfig.port}/termdb?genome=hg38&dslabel=SJLife&ssid=${ssid}&phewas=1&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=` +
 			encodeURIComponent(
 				JSON.stringify({
 					type: 'tvslst',
