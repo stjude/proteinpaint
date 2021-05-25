@@ -195,10 +195,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[index]:",diff_scores[index])
-				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
-					value: diff_scores[index],
+					value: diff_scores[i],
 					groupID: 'ref'
 				}
 				kmer_diff_scores_input.push(input_items)
@@ -208,10 +208,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[index]:",diff_scores[index])
-				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
-					value: diff_scores[index],
+					value: diff_scores[i],
 					groupID: 'alt'
 				}
 				kmer_diff_scores_input.push(input_items)
@@ -221,10 +221,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[index]:",diff_scores[index])
-				templates_info[index].tempscore = diff_scores[index].toFixed(4).toString()
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
-					value: diff_scores[index],
+					value: diff_scores[i],
 					groupID: 'none'
 				}
 				kmer_diff_scores_input.push(input_items)
