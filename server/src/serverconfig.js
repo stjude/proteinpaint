@@ -80,7 +80,7 @@ if (serverconfig.debugmode) {
 			if (fs.existsSync(f)) routeSetters.push(f)
 			else {
 				const absf = path.join(serverconfig.binpath, f)
-				if (absf.existsSync(fp)) routeSetters.push(absf)
+				if (fs.existsSync(absf)) routeSetters.push(absf)
 			}
 		}
 	}
