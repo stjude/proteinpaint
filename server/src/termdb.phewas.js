@@ -69,16 +69,11 @@ export async function trigger(q, res, ds) {
 		for (let i = 0; i < tests.length; i++) {
 			lines.push(i + '\t' + tests[i].table.join('\t'))
 		}
-		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
-		await utils.write_file(tmpfile, lines.join('\n'))
-		const pfile = await utils.run_fishertest2x3(tmpfile)
-		const text = await utils.read_file(pfile)
+		const plines = await utils.lines2R('fisher.2x3.R', lines)
 		let i = 0
-		for (const line of text.trim().split('\n')) {
+		for (const line of plines) {
 			tests[i++].pvalue = Number(line.split('\t')[7])
 		}
-		fs.unlink(tmpfile, () => {})
-		fs.unlink(pfile, () => {})
 	}
 
 	result.maxlogp = get_maxlogp(tests)

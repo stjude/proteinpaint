@@ -6,7 +6,8 @@ const fs = require('fs'),
 	vcf = require('../shared/vcf'),
 	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
 	bettersqlite = require('better-sqlite3'),
-	serverconfig = require('./serverconfig')
+	serverconfig = require('./serverconfig'),
+	Readable = require('stream').Readable
 
 exports.serverconfig = serverconfig
 
@@ -30,8 +31,7 @@ get_header_vcf
 get_fasta
 connect_db
 loadfile_ssid
-run_fishertest
-run_fishertest2x3
+lines2R
 ********************** INTERNAL
 */
 
@@ -339,20 +339,32 @@ samplefilterset:
 	return [sample2gt, genotype2sample]
 }
 
-exports.run_fishertest = function(tmpfile) {
-	const pfile = tmpfile + '.pvalue'
+// Stream javascript data into R.
+// <Rscript>: name of R script (assumed to be located in server/utils/).
+// <lines>: javascript array of data lines.
+// Data lines are streamed into the standard input of the R script. The return value is an array of lines of standard output from the R script.
+exports.lines2R = function(Rscript, lines) {
+	const RscriptPath = path.join(serverconfig.binpath, 'utils', Rscript)
+	const table = lines.join('\n') + '\n'
+	const stdout = []
+	const stderr = []
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(serverconfig.binpath, './utils/fisher.R'), tmpfile, pfile])
-		sp.on('close', () => resolve(pfile))
-		sp.on('error', () => reject(error))
-	})
-}
-exports.run_fishertest2x3 = function(tmpfile) {
-	const pfile = tmpfile + '.pvalue'
-	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(serverconfig.binpath, './utils/fisher.2x3.R'), tmpfile, pfile])
-		sp.on('close', () => resolve(pfile))
-		sp.on('error', () => reject(error))
+		if (!fs.existsSync(RscriptPath)) reject('R script does not exist')
+		const sp = spawn('Rscript', [RscriptPath])
+		Readable.from(table).pipe(sp.stdin)
+		sp.stdout.on('data', data => stdout.push(data))
+		sp.stderr.on('data', data => stderr.push(data))
+		sp.on('error', err => reject(err))
+		sp.on('close', code => {
+			if (code !== 0) reject('R process exited with non-zero status')
+			if (stderr.length > 0) reject(stderr.join(''))
+			resolve(
+				stdout
+					.join('')
+					.trim()
+					.split('\n')
+			)
+		})
 	})
 }
 
