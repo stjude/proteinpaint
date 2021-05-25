@@ -66,6 +66,7 @@ arg
 	}
 
 	if (urlp.has('hicfile') || urlp.has('hicurl')) {
+		// whole-genome view
 		let file, url
 		if (urlp.has('hicfile')) {
 			file = urlp.get('hicfile')
@@ -464,6 +465,26 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 		}
 	}
+	if (urlp.has('hictkfile') || urlp.has('hictkurl')) {
+		// name,enzyme,file/url
+		const isfile = urlp.has('hictkfile')
+		const lst = urlp.get(isfile ? 'hictkfile' : 'hictkurl').split(',')
+		for (let i = 0; i < lst.length; i += 3) {
+			if (lst[i] && lst[i + 1] && lst[i + 2]) {
+				const t = {
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					enzyme: lst[i + 1]
+				}
+				if (isfile) {
+					t.file = lst[i + 2]
+				} else {
+					t.url = lst[i + 2]
+				}
+				tklst.push(t)
+			}
+		}
+	}
 	if (urlp.has('bigwigfile')) {
 		const lst = urlp.get('bigwigfile').split(',')
 		for (let i = 0; i < lst.length; i += 2) {
@@ -652,6 +673,19 @@ export async function get_tklst(urlp, genomeobj) {
 					type: 'mdsjunction',
 					name: lst[i],
 					file: lst[i + 1]
+				})
+			}
+		}
+	}
+
+	if (urlp.has('junctionrnapeg')) {
+		const lst = urlp.get('junctionrnapeg').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [{ rnapegfile: lst[i + 1] }]
 				})
 			}
 		}

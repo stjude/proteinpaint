@@ -209,7 +209,7 @@ may attach coloring scheme to result{} for returning to client
 				if (q.hidden_types.includes(ca)) {
 					if (q.background_color) {
 						const c = d3color.color(q.background_color)
-						color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
+						const color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
 						newl.push(color)
 					} else newl.push(16777215) //white color
 				} else {

@@ -1403,7 +1403,7 @@ sort samples by f.issampleattribute
 				.attr('width', Math.max(1, x2 - x1))
 				.attr('height', sample.height)
 				.attr('fill', item.value > 0 ? feature.colorgain : feature.colorloss)
-				.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
+				.attr('fill-opacity', Math.abs(item.value / maxabslogratio))
 				.attr('shape-rendering', 'crispEdges')
 		}
 		g.append('rect')
@@ -1671,7 +1671,7 @@ sort samples by f.issampleattribute
 						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', item.value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss)
-						.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
+						.attr('fill-opacity', Math.abs(item.value / maxabslogratio))
 						.attr('shape-rendering', 'crispEdges')
 				}
 			}
@@ -1786,7 +1786,7 @@ sort samples by f.issampleattribute
 				} else {
 					k = { color: feature.cnv.colorloss }
 				}
-				k.opacity = Math.abs(i.value) / Math.abs(maxabslogratio)
+				k.opacity = Math.abs(i.value / maxabslogratio)
 				lst.push(k)
 			}
 		}

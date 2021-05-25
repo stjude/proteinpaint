@@ -47,7 +47,6 @@ const labyspace = 5
 
 function makeTk(tk, block) {
 	tk.leftaxis = tk.gleft.append('g')
-	tk.tklabel.text(tk.name)
 
 	let laby = labyspace + block.labelfontsize
 
@@ -171,6 +170,10 @@ export function junctionload(tk, block) {
 	const allfiledata = []
 	for (const t of tk.tracks) {
 		const getheader = new Promise((resolve, reject) => {
+			if (t.rnapegfile) {
+				t.samplecount = 1
+				return resolve()
+			}
 			if (t.samplecount != undefined && t.checkedheader) return resolve()
 			/*
 		#sample is unknown for this track, try loading header line like a vcf
@@ -247,11 +250,14 @@ export function junctionload(tk, block) {
 				.then(() => {
 					const par = ['rglst=' + JSON.stringify(block.tkarg_maygm(t))]
 					if (bincount) par.push('bincount=' + bincount)
-					if (t.file) {
-						par.push('file=' + t.file)
+					if (t.file || t.rnapegfile) {
+						par.push('file=' + (t.file || t.rnapegfile))
 					} else {
 						par.push('url=' + t.url)
 						if (t.indexURL) par.push('indexURL=' + t.indexURL)
+					}
+					if (t.rnapegfile) {
+						par.push('isrnapeg=1')
 					}
 					client.dofetch2('junction?' + par.join('&')).then(data => {
 						donenum++

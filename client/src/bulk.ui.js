@@ -29,9 +29,10 @@ bulkembed()
 
 */
 
-export function bulkui(x, y, genomes, hostURL, holder) {
+export function bulkui(x, y, genomes, hostURL, holder, header) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
@@ -139,7 +140,8 @@ export function bulkui(x, y, genomes, hostURL, holder) {
 				saydiv.text('Parsing file ' + file.name + ' ...')
 				reader.readAsText(file, 'utf8')
 			})
-		butt.node().focus()
+
+		setTimeout(() => butt.node().focus(), 1100)
 	}
 	fileui()
 
@@ -184,11 +186,23 @@ export function bulkui(x, y, genomes, hostURL, holder) {
 			saydiv.text('No mutations can be loaded')
 			return
 		}
-		client.disappear(pane.pane)
-		const pane2 = client.newpane({ x: x + 100, y: y + 100, toshrink: true })
-		pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+
+		let visual_holder
+		if (pane) {
+			client.disappear(pane.pane)
+			const pane2 = client.newpane({ x: 100, y: 100, toshrink: true })
+			pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+			visual_holder = pane2.body
+		}
+		// update sandbox panel header for landing page
+		if (holder !== undefined) {
+			header.html('<span style="opacity:.5">FILE</span> ' + file.name)
+			visual_holder = visualdiv
+		}
+
+		inputdiv.selectAll('*').remove()
 		import('./tp.ui').then(tpui => {
-			tpui.default(cohort, pane2.body, hostURL)
+			tpui.default(cohort, visual_holder, hostURL)
 		})
 		return cohort
 	}
@@ -293,6 +307,9 @@ export function bulkin(p, callback = null) {
 		}
 		cohort.variantgene = flag.variantgene
 	}
+
+	/*
+	temporary fix for vizcom: suppress alert
 	if (flag.snv.badlines.length > 0) {
 		client.bulk_badline(flag.snv.header, flag.snv.badlines)
 	}
@@ -314,6 +331,8 @@ export function bulkin(p, callback = null) {
 	if (flag.truncation.badlines.length > 0) {
 		client.bulk_badline(flag.truncation.header, flag.truncation.badlines)
 	}
+	*/
+
 	// newdt
 	if (flag.good == 0) {
 		return false

@@ -33,10 +33,6 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		tk.tklabel.each(function() {
-			tk.leftLabelMaxwidth = this.getBBox().width
-		}) // do this when querying each time
-
 		const par = get_parameter(tk, block)
 		const data = await client.dofetch2('mds3?' + par)
 		if (data.error) throw data.error

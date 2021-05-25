@@ -241,7 +241,7 @@
             "shorthand": "Hi-C",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "chromatin interaction",
+            "blurb": "chromatin interaction at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "buttons": {
                 "example": {
@@ -262,8 +262,7 @@
                         "enzyme": "MboI"
                     }]
                 },
-				"comment":"https://github.com/stjude/proteinpaint/issues/188",
-                "comment_url": "?genome=hg19&hicfile=files/hg19/nalm6/hic_Nalm6.inter.hic&enzyme=MboI",
+                "url": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic",
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
             },
             "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
@@ -307,7 +306,8 @@
                     "tracks": [{
                         "type": "junction",
                         "file": "proteinpaint_demo/hg19/junction/file.gz",
-                        "name": "RNA splice junction demo"
+                        "name": "RNA splice junction demo",
+						"list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
                     }]
                 },
                 "url": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
@@ -329,9 +329,9 @@
                     "noheader": 1,
                     "genome": "hg19",
 					"nativetracks":"refgene",
-                    "tkjsonfile": "proteinpaint_demo/hg19/misc/tracks.json"
+                    "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
                 },
-                "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/misc/tracks.json",
+                "url": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json",
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
             },
             "searchterms": []
@@ -547,6 +547,25 @@
             "searchterms": ["BLAT"]
         },
         {
+            "name": "GDC BAM Slice",
+            "shorthand": "GDC bam slice",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "isbeta": 1,
+            "blurb": "visualize GDC BAM reads",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "buttons": {
+                "url": "",
+                "doc": "",
+                "example": {
+                    "nobox": 1,
+                    "noheader": 1,
+                    "gdcbamslice": { "uionly": true }
+                }
+            },
+            "searchterms": []
+        },
+        {
             "name": "Bampile",
             "shorthand": "Bampile",
             "app": "Genome Browser",
@@ -555,7 +574,21 @@
             "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "buttons": {
-                "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=SJALL018366_D1.gz,ultra/SJALL018366_D1.gz",
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr12:25362480-25363264",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "type": "bampile",
+                        "file": "proteinpaint_demo/hg19/bampile/tk.gz",
+                        "name": "Test Bampile"
+                    }]
+                },
+                "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz",
                 "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
             },
             "searchterms": []

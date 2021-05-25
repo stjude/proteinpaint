@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-// called from the project root folder or proteinpaint/tmppack
-
 const pkg = require('./package.json')
 const serverpkg = require('../../server/package.json')
 const clientpkg = require('../../client/package.json')
@@ -12,5 +10,7 @@ for (const name in clientpkg.dependencies) {
 		pkg.dependencies[name] = clientpkg.dependencies[name]
 	}
 }
+
+pkg.version = serverpkg.version
 
 console.log(JSON.stringify(pkg, null, '    '))

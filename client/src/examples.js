@@ -3,7 +3,7 @@ import { debounce } from 'debounce'
 import { event } from 'd3-selection'
 
 export async function init_examples(par) {
-	const { holder, apps_sandbox_div, apps_off } = par
+	const { holder, apps_sandbox_div, apps_off, show_gdcbamslice } = par
 	const re = await dofetch2('/examplejson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
@@ -25,6 +25,9 @@ export async function init_examples(par) {
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
+	// Quick fix: hide gdcbamslice if serverconfig.gdcbamslice is false or missing
+	re.examples.find(track => track.name == 'GDC BAM Slice').hidden = !show_gdcbamslice
+	// if(track.name == 'GDC BAM Slice' && !page_args.show_gdcbamslice)
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
 		// gpaintList,
@@ -81,8 +84,8 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
+		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
-		.append('hr')
 	const list = div.append('ul')
 	list
 		.attr('class', 'track-list')
@@ -204,6 +207,7 @@ function displayTracks(tracks, holder, page_args) {
 			</div>`
 			)
 			.on('click', async () => {
+				event.stopPropagation()
 				page_args.apps_off()
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
@@ -252,24 +256,18 @@ function displayTracks(tracks, holder, page_args) {
 //Opens example of app in landing page container
 async function openExample(track) {
 	// crate unique id for each app div
-	const app_id = track.name + Math.floor(Math.random() * 1000)
-	let sandbox_div = newSandboxDiv()
+	const sandbox_div = newSandboxDiv()
 	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
-	sandbox_div.body
-		.append('div')
-		.attr('id', app_id)
-		.style('margin', '20px')
 
 	// template runpp() arg
-	let runpp_arg = {
-		holder: document.getElementById(app_id),
+	const runpp_arg = {
+		holder: sandbox_div.body
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		sandbox_header: sandbox_div.header,
 		host: window.location.origin
 	}
 
-	// assign keys of specific app/track to runpp() template
-	Object.keys(track.buttons.example).forEach(key => {
-		runpp_arg[key] = track.buttons.example[key]
-	})
-
-	runproteinpaint(runpp_arg)
+	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
 }

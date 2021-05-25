@@ -48,7 +48,8 @@ const sharedFilters = {
 
 export function d2mafui(genomes, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('2DMAF: mutant allele fraction plot between a pair of samples')
@@ -71,7 +72,7 @@ export function d2mafui(genomes, holder) {
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -106,8 +107,8 @@ export function d2mafui(genomes, holder) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }

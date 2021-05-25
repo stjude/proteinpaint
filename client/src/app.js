@@ -103,6 +103,7 @@ export function runproteinpaint(arg) {
 		.attr('class', 'sja_root_holder')
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
+	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.host) {
 		app.hostURL = arg.host
@@ -209,23 +210,31 @@ function makeheader(app, obj, jwt) {
 	// head
 	const row = app.holder
 		.append('div')
+		.style('white-space', 'nowrap')
 		.style(
 			'border-bottom',
-			doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
-	const apps_drawer_row = app.holder.append('div')
-	app.holder.apps_sandbox_div = app.holder.append('div')
-		.attr('id','pp_sandbox')
+
+	const apps_drawer_row = app.holder
+		.append('div')
+		.style('position', 'relative')
+		.style('overflow-x', 'visible')
+		.style('overflow-y', 'hidden')
+
+	app.holder.apps_sandbox_div = app.holder
+		.append('div')
+		.attr('id', 'pp_sandbox')
 		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
 		.style('padding', '8px')
 		.style('padding-bottom', '12px')
-		.style('display', doc_width < 1600 ? 'block' : 'inline-block')
+		.style('display', 0 && doc_width < 1600 ? 'block' : 'inline-block')
 		.style(
 			'border-bottom',
-			doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 	// .style('border-radius', '5px')
 	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
@@ -236,9 +245,10 @@ function makeheader(app, obj, jwt) {
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
+
 	{
 		// a row for server stats
-		const row = headinfo.append('div')
+		const row = headinfo.append('div').style('padding-left', '15px')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -349,23 +359,33 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
+	const duration = 500, // for apps drawer animation
+		hint_pos = {
+			open: { btm: -40, left: 13 },
+			closed: { btm: 3, rt: 5 }
+		},
+		hint_width = { open: '0px', closed: '18px' },
+		arrow_size = { open: 40, closed: 20 },
+		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
+
+	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow, apps_drawer_arrow_open
+	let app_btn_wrapper, app_btn, app_btn_active, app_holder
+
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-			btn_toggle(app_btn, app_btn_active)
+			slide_drawer()
 		}
 	}
 
 	// launchApps()
 
-	let app_btn, app_btn_active, app_holder
-
 	if (!obj.features.examples) {
 		app_btn = headbox
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
 			.style('padding', padw_sm)
 			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
@@ -380,58 +400,146 @@ function makeheader(app, obj, jwt) {
 
 		app_holder = apps_drawer_row
 			.append('div')
-			.style('margin', '20px')
-			.style('padding', '10px')
+			.style('position', 'relative')
+			.style('margin', '0 20px')
+			.style('padding', `0 ${padw_sm}`)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
-			.style('background-color', '#f2f2f2')
-			.style('border-radius', '5px')
+			.style('overflow', 'hidden')
+			.style('background-color', '#f5f5f5')
+			.style('border-radius', '0px 0px 5px 5px')
 			.style('width', '93vw')
 
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off })
+
+			await _.init_examples({
+				holder: app_holder,
+				apps_sandbox_div: app.holder.apps_sandbox_div,
+				apps_off,
+				show_gdcbamslice: obj.features.gdcslice
+			})
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
 		if (app_btn_active) load_app_div()
 
-		app_btn = headbox
-			.append('span')
-			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
+		app_btn_wrapper = headbox
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
+			.style('margin-left', '5px')
+			.style('margin-right', '5px')
 			.style('border-radius', '5px')
-			.text('Apps')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 			.on('click', () => {
+				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				btn_toggle(app_btn, app_btn_active)
-
-				app_holder
-					.transition()
-					.duration(500)
-					.style('display', app_btn_active ? 'inline-block' : 'none')
+				slide_drawer()
+				if (app_btn_active) {
+					setTimeout(() => {
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
+					}, duration + 5)
+				}
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
+
+		app_btn = app_btn_wrapper
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.style('background-color', 'transparent')
+			.style('color', app_btn_active ? '#fff' : '#000')
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
+			.style('cursor', 'pointer')
+			.text('Apps')
+
+		// an empty spacer div, needed since the arrows are absolutely positioned
+		apps_drawer_hint = app_btn_wrapper
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
+			.style('height', arrow_size.closed + 'px')
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+			.style('background-color', 'transparent')
+			.style('text-align', 'center')
+			.style('cursor', 'pointer')
+
+		apps_drawer_arrow = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.closed + 'px')
+			.style('right', hint_pos.closed.rt + 'px')
+			.style('bottom', hint_pos.closed.btm + 'px')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.closed)
+			.style('opacity', app_btn_active ? 0 : 1)
+			.style('cursor', 'pointer')
+			.html('&#9660;')
+
+		apps_drawer_arrow_open = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.open + 'px')
+			.style('left', hint_pos.open.left + 'px')
+			.style('bottom', hint_pos.open.btm + 'px')
+			.style('transform', 'rotate(180deg)')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.open)
+			.style('opacity', app_btn_active ? 1 : 0)
+			.style('cursor', 'pointer')
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.html('&#9660;')
 	}
 
-	function btn_toggle(btn, btn_active) {
-		btn
+	function slide_drawer() {
+		app_btn_wrapper
 			.transition()
 			.duration(500)
-			.style('background-color', btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_btn
+			.transition()
+			.duration(500)
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_holder
+			.style('display', 'inline-block')
+			.transition()
+			.duration(duration)
+			.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+
+		apps_drawer_row
+			.transition()
+			.duration(duration)
+			.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+		apps_drawer_hint
+			.transition()
+			.duration(duration)
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+
+		apps_drawer_arrow
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 0 : 1)
+
+		apps_drawer_arrow_open
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 1 : 0)
 	}
 
 	headbox
@@ -962,6 +1070,16 @@ async function parseembedthenurl(arg, app) {
 		return
 	}
 
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
+		return
+	}
+
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -985,7 +1103,7 @@ async function parseembedthenurl(arg, app) {
 	if (arg.project) {
 		let holder = undefined
 		if (arg.project.uionly) holder = app.holder0
-		bulkui(0, 0, app.genomes, app.hostURL, holder)
+		bulkui(0, 0, app.genomes, app.hostURL, holder, app.sandbox_header)
 	}
 
 	if (arg.toy) {
@@ -998,7 +1116,9 @@ async function parseembedthenurl(arg, app) {
 		launchmaftimeline(arg, app)
 	}
 
-	return app
+	if (arg.gdcbamslice) {
+		launchgdcbamslice(arg, app)
+	}
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1332,7 +1452,8 @@ async function launchblock(arg, app) {
 		holder: app.holder0,
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
-		debugmode: app.debugmode
+		debugmode: app.debugmode,
+		legendimg: arg.legendimg
 	}
 
 	if (arg.width) {
@@ -1492,7 +1613,7 @@ async function launchmdsjsonform(arg, app) {
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {
 		import('./mavb').then(p => {
-			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0)
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0, app.sandbox_header)
 		})
 		return
 	}
@@ -1530,7 +1651,7 @@ function launch2dmaf(arg, app) {
 function launchmaftimeline(arg, app) {
 	if (arg.maftimeline.uionly) {
 		import('./maftimeline').then(p => {
-			p.default(app.genomes, app.holder0)
+			p.default(app.genomes, app.holder0, app.sandbox_header)
 		})
 	}
 }
@@ -1540,6 +1661,23 @@ function launchJunctionbyMatrix(arg, app) {
 		import('./block.tk.junction.textmatrixui').then(p => {
 			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
 		})
+	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+	}
+}
+
+function launchgdcbamslice(arg, app) {
+	if (arg.gdcbamslice.uionly) {
+		import('./block.tk.bam').then(p => {
+			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+		})
+		return
 	}
 }
 

@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
-import { axisLeft, axisRight } from 'd3-axis'
+import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
@@ -59,6 +59,187 @@ getReadInfo
 
 const labyspace = 5
 const stackpagesize = 60
+
+export function bamsliceui(genomes, holder, hosturl) {
+	let gdc_args = {}
+	const default_genome = 'hg38'
+
+	const saydiv = holder.append('div').style('margin', '10px 20px')
+	const visualdiv = holder.append('div').style('margin', '20px')
+
+	const inputdiv = holder
+		.append('div')
+		.style('margin', '40px 20px 20px 20px')
+		.style('font-size', '.9em')
+		.style('display', 'grid')
+		.style('grid-template-columns', '150px auto')
+		.style('grid-template-rows', 'repeat(4, 30px)')
+		.style('gap', '5px')
+		.style('align-items', 'center')
+		.style('justify-items', 'left')
+
+	function cmt(t, red) {
+		saydiv.style('color', red ? 'red' : 'black').html(t)
+	}
+
+	// token file upload
+	inputdiv
+		.append('div')
+		.style('padding', '3px 10px')
+		.text('GDC Token file')
+
+	const upload_div = inputdiv.append('div')
+
+	const fileui = () => {
+		upload_div.selectAll('*').remove()
+
+		const file_input = upload_div
+			.append('input')
+			.attr('type', 'file')
+			.on('change', () => {
+				const file = d3event.target.files[0]
+				if (!file) {
+					fileui()
+					return
+				}
+				if (!file.size) {
+					cmt('Invalid file ' + file.name)
+					fileui()
+					return
+				}
+				const reader = new FileReader()
+				reader.onload = event => {
+					gdc_args['gdc_token'] = event.target.result.trim().split(/\r?\n/)[0]
+				}
+				reader.onerror = function() {
+					cmt('Error reading file ' + file.name, 1)
+					fileui()
+					return
+				}
+				reader.readAsText(file, 'utf8')
+			})
+
+		setTimeout(() => file_input.node().focus(), 1100)
+	}
+
+	fileui()
+
+	const input_fields = [
+		{ title: 'Case ID', key: 'case_id', size: 40 },
+		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
+		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.ref.mut' }
+	]
+	for (const field of input_fields) {
+		makeFormInput(field)
+	}
+
+	inputdiv
+		.append('div')
+		.style('grid-column', 'span 2')
+		.style('font-size', '80%')
+		.style('padding', '3px 10px').html(`<b>Note:</b> Either position or variant is required.
+			</br>&emsp;&emsp;&nbsp;&nbsp; 
+			GDC BAM slice will be visualized for the provided postion or variant, 
+			to visualze additional reads, enter again from this form.`)
+
+	//submit button
+	const submit_btn_div = holder.append('div')
+
+	submit_btn_div
+		.append('button')
+		.style('font-size', '1.1em')
+		.style('margin', '20px')
+		.style('margin-left', '130px')
+		.text('submit')
+		.on('click', () => {
+			try {
+				validateInputs(gdc_args)
+			} catch (e) {
+				cmt(e, 1)
+				return
+			}
+			// success
+			inputdiv.remove()
+			saydiv.remove()
+			submit_btn_div.remove()
+			renderBamSlice(gdc_args, genomes[default_genome], visualdiv, hosturl)
+		})
+
+	function makeFormInput(field) {
+		inputdiv
+			.append('div')
+			.style('padding', '3px 10px')
+			.property('placeholder', field.placeholder || '')
+			.text(field.title)
+
+		const input = inputdiv
+			.append('input')
+			.attr('size', field.size || 20)
+			.style('padding', '3px 10px')
+			.property('placeholder', field.placeholder || '')
+			.on('change', () => {
+				gdc_args[field.key] = input.property('value').trim()
+			})
+	}
+}
+
+function validateInputs(obj) {
+	if (!obj) throw 'no parameters passing to validate'
+	if (!obj.gdc_token) throw 'gdc token missing'
+	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
+	if (!obj.case_id) throw ' case ID is missing'
+	if (typeof obj.case_id !== 'string') throw 'case id is not string'
+	if (!obj.position && !obj.variant) throw ' position or variant is required'
+	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
+	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
+}
+
+function renderBamSlice(args, genome, holder, hostURL) {
+	// create arg for block init
+	const par = {
+		hostURL,
+		nobox: 1,
+		genome,
+		holder
+	}
+	let variant
+	if (args.position) {
+		const pos_str = args.position.split(/[:-]/)
+		par.chr = pos_str[0]
+		par.start = Number.parseInt(pos_str[1])
+		par.stop = Number.parseInt(pos_str[2])
+	} else if (args.variant) {
+		const variant_str = args.variant.split('.')
+		variant = {
+			chr: variant_str[0],
+			pos: Number.parseInt(variant_str[1]),
+			ref: variant_str[2],
+			alt: variant_str[3]
+		}
+		par.chr = variant.chr
+		par.start = variant.pos - 500
+		par.stop = variant.pos + 500
+	}
+
+	par.tklst = []
+
+	const tk = {
+		type: client.tkt.bam,
+		name: 'sample bam slice',
+		gdc: args.gdc_token + ',' + args.case_id,
+		downloadgdc: 1,
+		file: 'dummy_str'
+	}
+	if (args.variant) {
+		tk.variants = []
+		tk.variants.push(variant)
+	}
+	par.tklst.push(tk)
+	client.first_genetrack_tolist(genome, par.tklst)
+	import('./block').then(b => {
+		new b.Block(par)
+	})
+}
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -257,9 +438,6 @@ or update existing groups, in which groupidx will be provided
 
 	setTkHeight(tk, data)
 
-	tk.tklabel.each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
 	let countr = 0, // #read
 		countt = 0 // #templates
 	for (const g of tk.groups) {
@@ -516,6 +694,7 @@ function makeTk(tk, block) {
 		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
+
 	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
 
 	if (tk.variants) {
@@ -531,8 +710,7 @@ function makeTk(tk, block) {
 	}
 	tk.asPaired = false
 
-	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
-	let laby = block.labelfontsize
+	let laby = block.labelfontsize + 5
 	tk.label_count = block.maketklefthandle(tk, laby)
 }
 
@@ -1038,7 +1216,6 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				//console.log("read.soft_start:",read.soft_start,"read.soft_stop:",read.soft_stop)
 				const data = await client.dofetch2(
 					'blat?genome=' +
 						block.genome.name +
@@ -1053,7 +1230,7 @@ function mayshow_blatbutton(read, div, tk, block) {
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
 				wait.remove()
-				show_blatresult2(data.hits, blatdiv, tk, block)
+				show_blatresult(data.hits, blatdiv, tk, block)
 			} catch (e) {
 				wait.text(e.message || e)
 				if (e.stack) console.log(e.stack)
@@ -1247,6 +1424,36 @@ async function enter_partstack(group, tk, block, y, data) {
 	setTkHeight(tk, data)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
+}
+
+function show_blatresult(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('QScore')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QStop')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RStop')
+	tr.append('td').text('RAlignLen')
+
+	for (const h of hits) {
+		let tr = table.append('tr').style('font-size', '.8em')
+		tr.append('td').text(h.query_match)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_stoppos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_stoppos)
+		tr.append('td').text(h.ref_alignlen)
+	}
 }
 
 function renderGroup(group, tk, block) {

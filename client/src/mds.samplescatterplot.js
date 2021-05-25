@@ -898,6 +898,15 @@ function makeConfigPanel(obj) {
 			.style('font-weight', obj.lasso_active ? '400' : '300')
 
 		lasso_select(obj, dots)
+
+		// reset dots to original state if lasso button deactivated
+		if (obj.lasso_active) return
+		dots
+			.selectAll('circle')
+			.classed('not_possible', false)
+			.classed('possible', false)
+			.attr('r', radius)
+			.style('fill-opacity', '1')
 	}
 }
 

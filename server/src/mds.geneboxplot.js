@@ -6,21 +6,14 @@ const path = require('path')
 /*
 2nd-gen epaint
 for one gene, over entire cohort
-native or custom
-if native, group samples by hierarchy
-if custom, all samples in one group
 
-
+default:
 divide into groups by L1/L2 hierarchy levels
 	for each group, divid into subgroups by sv/cnv/loh status
 		one boxplot for each subgroup
 		boxplot will be generated solely on numeric value
 		the expression status (ase, outlier) will be ignored
 
-or, export all samples from a group
-	returned data on samples will include following for rendering:
-		overlapping sv/cnv/loh
-		ase, outlier status
 
 .gene str
 .chr/start/stop
@@ -31,14 +24,24 @@ or, export all samples from a group
 .url
 .sampleset[ {name, samples[]} ]
 	may be provided by custom dataset
+.getalllst
+	called by clicking FPKM button, or for custom dataset with no group
+	if set, collect exp values from all samples into a group and return.
+	no further group dividing
+	no boxplot is made
+	backend dataset config may reject the request to protect data
+	returned data on samples will include following for rendering:
+		overlapping sv/cnv/loh
+		ase, outlier status
 .getgroup[ {} ]
 	list of attributes
 	if provided, will get actual list of samples with gene value based on filter
+	called by clicking a group in boxplot panel
 	.k
 	.kvalue
-
-.stillmakeboxplot
-	if provided, yield a boxplot for .getgroup
+.getgroup2boxplot
+	modifier of .getgroup; to yield a boxplot rather than list of exp values
+	only used for fimo panel
 */
 
 export default genomes => {
@@ -89,7 +92,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 	*/
 	const nogroupvalues = []
 
-	// use following when getting data for a group
+	// collect data from .getgroup
 	const getgroupdata = []
 
 	await utils.get_lines_tabix(
@@ -247,6 +250,22 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			}
 		}
 	)
+
+	if (req.query.getgroup2boxplot) {
+		getgroupdata.sort((i, j) => i.value - j.value)
+		const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(getgroupdata)
+		return {
+			n: getgroupdata.length,
+			min: getgroupdata[0].value,
+			max: getgroupdata[getgroupdata.length - 1].value,
+			w1,
+			w2,
+			p25,
+			p50,
+			p75,
+			out
+		}
+	}
 
 	const groups = []
 	for (const [n, o] of key2samplegroup) {

@@ -1,6 +1,16 @@
-######################
+#############################################
+# Generate ssl keys for use in development
+#
+# these keys should be saved in a .ssl/
+# directory in the project or app directory,
+# that is, where the public and/or 
+# serverconfig.json are located
+# 
+#############################################
+
+#################################
 # Become a Certificate Authority
-######################
+#################################
 
 # where to store SSL keys
 if (($# != 1)); then

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=exp style="margin:10px"></div>
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('exp'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	debug: 1,
+	termdb:{
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			nav: {
+				header_mode: 'with_tabs',
+				activeTab: 1,
+			},
+			activeCohort:1,
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Self-reported Behavior and Outcome Variables',
+					'Graded adverse events',
+					'Cardiac system',
+					'Congestive heart failure'
+				],
+				visiblePlotIds: ['Congestive heart failure'],
+				plots: {
+					'Congestive heart failure': {
+						term: {
+							id: 'Congestive heart failure',
+							term: {id: 'Congestive heart failure', name: 'Congestive heart failure'},
+							q: { bar_by_grade: true, value_by_max_grade: true }
+						},
+						term2: { 
+							id: 'yeardx',
+							//q: {"type":"custom","lst":[{"startunbounded":true,"stop":1970,"startinclusive":false,"stopinclusive":true,"label":"≤1970"},{"start":1970,"startinclusive":false,"stopinclusive":true,"stop":1980,"label":">1970 to 1980"},{"start":1980,"startinclusive":false,"stopinclusive":true,"stop":1990,"label":">1980 to 1990"},{"start":1990,"startinclusive":false,"stopinclusive":true,"stop":2000,"label":">1990 to 2000"},{"start":2000,"startinclusive":false,"stopinclusive":true,"stopunbounded":true,"label":">2000"}],"numDecimals":0}
+						},
+						term0: {id: 'diaggrp'},
+						settings: {
+							currViews: ['cuminc'],
+							controls: {
+								term2: { id: 'yeardx' }
+							},
+						}
+					}
+				}
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical', name: 'Cohort' },
+								values: [
+									//{ key: 'SJLIFE', label: 'SJLIFE' }
+									{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{
+							tag: 'filterUiRoot',
+							type:"tvslst",
+							join: '',
+							in: true,
+							lst: [{
+								type: 'tvs',
+								tvs:{
+									"term":{
+										"id":"yeardx",
+										"type":"integer",
+										"name": 'Year of Diagnosis'
+									},
+									"ranges":[
+										{
+											"startinclusive":true,
+											"start":1970,
+											"stop":2000,
+											"label":"1970 to <2000",
+											"name":"1970 to <2000",
+											"index":0,
+											"stopinclusive":false
+										}
+									]
+								}
+							}]
+						}
+					]
+				}
+			}
+		},
+	}
+})
+
+</script>
+
+</body>
+</html>
