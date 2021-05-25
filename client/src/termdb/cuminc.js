@@ -65,10 +65,11 @@ class TdbCumInc {
 	getData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
+		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = d[i]
+				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
 			})
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
@@ -349,7 +350,7 @@ function setRenderers(self) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(xTitleLabel)
 
-		const yTitleLabel = 'Cumulative Incidence (probability)'
+		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -377,13 +378,13 @@ function setInteractivity(self) {
 	self.mouseover = function() {
 		const d = event.target.__data__
 		if (event.target.tagName == 'circle') {
-			const label = labels[d.seriesId]
+			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
 			const rows = [
 				`<tr><td colspan=2 style='text-align: center'>${d.seriesId}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Cumulative incidence:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
@@ -480,7 +481,7 @@ function getPj(self) {
 			yScale(row, context) {
 				const s = self.settings.cuminc
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(1, 1.1 * yMax), 0]
+				const domain = [Math.min(100, 1.1 * yMax), 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
