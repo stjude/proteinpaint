@@ -246,7 +246,8 @@ function setRenderers(self) {
 					y: d.y,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[0],
-					seriesName: 'cuminc'
+					seriesName: 'cuminc',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
@@ -261,7 +262,8 @@ function setRenderers(self) {
 					y: d.low,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[1],
-					seriesName: 'low'
+					seriesName: 'low',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
@@ -276,14 +278,14 @@ function setRenderers(self) {
 					y: d.high,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[2],
-					seriesName: 'high'
+					seriesName: 'high',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
 	}
 
 	function renderSubseries(s, g, data) {
-		/* TODO: circles/mouseover is not needed for privacy */
 		g.selectAll('g').remove()
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(data, b => b.x)
@@ -382,7 +384,9 @@ function setInteractivity(self) {
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
 			const rows = [
-				`<tr><td colspan=2 style='text-align: center'>${d.seriesId}</td></tr>`,
+				`<tr><td colspan=2 style='text-align: center'>${
+					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
+				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
 			]
@@ -390,7 +394,7 @@ function setInteractivity(self) {
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		} else if (event.target.tagName == 'path' && d && d.seriesId) {
-			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesId)
+			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
 		} else {
 			self.app.tip.hide()
 		}
@@ -404,7 +408,6 @@ function setInteractivity(self) {
 function getPj(self) {
 	const pj = new Partjson({
 		template: {
-			//"__:charts": "@.byChc.@values",
 			yMin: '>=yMin()',
 			yMax: '<=yMax()',
 			charts: [
@@ -420,6 +423,7 @@ function getPj(self) {
 						{
 							chartId: '@parent.@parent.@key',
 							seriesId: '@key',
+							'__:seriesLabel': '=seriesLabel()',
 							data: [
 								{
 									'__:seriesId': '@parent.@parent.seriesId',
@@ -453,6 +457,14 @@ function getPj(self) {
 				}
 				const value = self.state.config.term0.term.values[row.chartId]
 				return value && value.label ? value.label : row.chartId
+			},
+			seriesLabel(row, context) {
+				const t2 = self.state.config.term2
+				if (!t2) return
+				const seriesId = context.self.seriesId
+				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
+				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
+				return seriesId
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
