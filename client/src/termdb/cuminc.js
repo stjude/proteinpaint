@@ -9,24 +9,6 @@ import { rgb, darker } from 'd3-color'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
-const defaultSettings = {
-	gradeCutoff: 3,
-	radius: 5,
-	fill: '#fff',
-	stroke: '#000',
-	fillOpacity: 0,
-	chartMargin: 10,
-	svgw: 400,
-	svgh: 300,
-	svgPadding: {
-		top: 20,
-		left: 55,
-		right: 20,
-		bottom: 50
-	},
-	axisTitleFontSize: 16
-}
-
 class TdbCumInc {
 	constructor(app, opts) {
 		this.type = 'cuminc'
@@ -37,7 +19,7 @@ class TdbCumInc {
 			div: opts.holder.style('margin', '10px')
 		}
 		// hardcode for now, but may be set as option later
-		this.settings = Object.assign({}, defaultSettings, opts.settings)
+		this.settings = Object.assign({}, opts.settings)
 		this.pj = getPj(this)
 		this.lineFxn = line()
 			.curve(curveStepAfter)
@@ -73,6 +55,7 @@ class TdbCumInc {
 			this.dom.div.style('display', 'none')
 			return
 		}
+		Object.assign(this.settings, this.state.config.settings)
 		if (data) this.currData = this.getData(data)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
@@ -120,7 +103,7 @@ function setRenderers(self) {
 	}
 
 	self.addCharts = function(d) {
-		const s = self.settings
+		const s = self.settings.cuminc
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
@@ -161,7 +144,7 @@ function setRenderers(self) {
 
 	self.updateCharts = function(d) {
 		if (!d.serieses) return
-		const s = self.settings
+		const s = self.settings.cuminc
 		const div = select(this)
 
 		div
@@ -419,8 +402,6 @@ function setInteractivity(self) {
 }
 
 function getPj(self) {
-	const s = self.settings
-
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
@@ -461,7 +442,10 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				if (!row.chartId || row.chartId == '-') return 'CTCAE grade 3-5'
+				const s = self.settings.cuminc
+				if (!row.chartId || row.chartId == '-') {
+					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
+				}
 				if (!self.state.config.term0 || !self.state.config.term0.term.values) return row.chartId
 				const value = self.state.config.term0.term.values[row.chartId]
 				return value.label ? value.label : row.chartId
@@ -477,6 +461,7 @@ function getPj(self) {
 				return row.high
 			},
 			xScale(row, context) {
+				const s = self.settings.cuminc
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
@@ -490,6 +475,7 @@ function getPj(self) {
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
+				const s = self.settings.cuminc
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [Math.min(1, 1.1 * yMax), 0]
 				return d3Linear()

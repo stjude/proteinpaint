@@ -273,7 +273,21 @@ export function plotConfig(opts) {
 				duration: 1000
 			},
 			cuminc: {
-				gradeCutoff: 3
+				gradeCutoff: 3,
+				radius: 5,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16
 			},
 			termInfo: {
 				isVisible: false
