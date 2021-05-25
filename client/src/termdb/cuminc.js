@@ -372,7 +372,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	const labels = {
-		cuminc: 'Cumulative incidence',
+		cuminc: 'Cumulative incidence (%)',
 		low: 'Lower 95% CI',
 		high: 'Upper 95% CI'
 	}
