@@ -339,17 +339,24 @@ samplefilterset:
 	return [sample2gt, genotype2sample]
 }
 
-// Stream javascript data into R.
-// <Rscript>: name of R script (assumed to be located in server/utils/).
-// <lines>: javascript array of data lines.
-// Data lines are streamed into the standard input of the R script. The return value is an array of lines of standard output from the R script.
-exports.lines2R = function(Rscript, lines) {
+/*
+Stream javascript data into R.
+<Rscript>: name of R script (assumed to be located in server/utils/).
+<lines>: javascript array of data lines.
+Data lines are streamed into the standard input of the R script.
+The return value is an array of lines of standard output from the R script.
+*/
+exports.lines2R = async function(Rscript, lines) {
 	const RscriptPath = path.join(serverconfig.binpath, 'utils', Rscript)
+	try {
+		await fs.promises.stat(RscriptPath)
+	} catch (e) {
+		throw 'R script not usable'
+	}
 	const table = lines.join('\n') + '\n'
 	const stdout = []
 	const stderr = []
 	return new Promise((resolve, reject) => {
-		if (!fs.existsSync(RscriptPath)) reject('R script does not exist')
 		const sp = spawn('Rscript', [RscriptPath])
 		Readable.from(table).pipe(sp.stdin)
 		sp.stdout.on('data', data => stdout.push(data))
