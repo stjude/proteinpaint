@@ -133,7 +133,7 @@ class TdbPlot {
 
 		if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
-			params.push('grade=3') // harcode for now
+			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -271,6 +271,9 @@ export function plotConfig(opts) {
 				ciVisible: true,
 				fillOpacity: 0.2,
 				duration: 1000
+			},
+			cuminc: {
+				gradeCutoff: 3
 			},
 			termInfo: {
 				isVisible: false

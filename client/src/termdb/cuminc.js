@@ -9,6 +9,24 @@ import { rgb, darker } from 'd3-color'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
+const defaultSettings = {
+	gradeCutoff: 3,
+	radius: 5,
+	fill: '#fff',
+	stroke: '#000',
+	fillOpacity: 0,
+	chartMargin: 10,
+	svgw: 400,
+	svgh: 300,
+	svgPadding: {
+		top: 20,
+		left: 55,
+		right: 20,
+		bottom: 50
+	},
+	axisTitleFontSize: 16
+}
+
 class TdbCumInc {
 	constructor(app, opts) {
 		this.type = 'cuminc'
@@ -19,23 +37,7 @@ class TdbCumInc {
 			div: opts.holder.style('margin', '10px')
 		}
 		// hardcode for now, but may be set as option later
-		this.settings = {
-			gradeCutoff: 3,
-			radius: 5,
-			fill: '#fff',
-			stroke: '#000',
-			fillOpacity: 0,
-			chartMargin: 10,
-			svgw: 400,
-			svgh: 300,
-			svgPadding: {
-				top: 20,
-				left: 55,
-				right: 20,
-				bottom: 50
-			},
-			axisTitleFontSize: 16
-		}
+		this.settings = Object.assign({}, defaultSettings, opts.settings)
 		this.pj = getPj(this)
 		this.lineFxn = line()
 			.curve(curveStepAfter)
