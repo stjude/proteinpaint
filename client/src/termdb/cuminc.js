@@ -383,7 +383,7 @@ function setInteractivity(self) {
 			const rows = [
 				`<tr><td colspan=2 style='text-align: center'>${d.seriesId}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>Cumulative incidence:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
