@@ -20,7 +20,6 @@ export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
 	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
 	api.get = async q => {
-		console.log(22, api.endpoint)
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
 		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
@@ -30,7 +29,6 @@ export async function validate_ssm2canonicalisoform(api) {
 		let re
 		try {
 			re = JSON.parse(response.body)
-			console.log(31, re)
 		} catch (e) {
 			throw 'invalid json in response'
 		}
@@ -46,7 +44,6 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	console.log(22, ds.apihost)
 	const api = ds.queries.snvindel.byrange.gdcapi
 	if (!api.query) throw '.query missing for byrange.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
@@ -114,7 +111,6 @@ export function validate_query_snvindel_byisoform(ds) {
 		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
 	}
 	ds.queries.snvindel.byisoform.get = async opts => {
-		console.log(113, api)
 		const hits = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
 		for (const hit of hits) {
