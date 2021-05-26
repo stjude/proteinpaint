@@ -42,34 +42,34 @@ tape('lolliplot using URL', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 283
-	test.equal(
-		holder.selectAll('circle').size(),
-		numCircles,
-		`should have ${numCircles} circles on initial load with gene='AKT1'`
+	const akt1Circles = { min: 280, max: 300 }
+	const akt1CirclesActual = holder.selectAll('circle').size()
+	test.true(
+		akt1CirclesActual > akt1Circles.min && akt1CirclesActual < akt1Circles.max,
+		`should have between ${akt1Circles.min} and ${akt1Circles.max} circles on initial load with gene='AKT1', actual=${akt1CirclesActual}`
 	)
 
 	// click set_id checkbox
 	const set_id_checkbox = holder.selectAll('#set_switch')
 	set_id_checkbox.node().click()
 	await sleep(4000)
-	const setCircles = 15
-	test.equal(
-		holder.selectAll('circle').size(),
-		setCircles,
-		`should have ${setCircles} circles after applying set_id filter`
+	const akt1Set = { min: 240, max: 280 }
+	const akt1SetActual = holder.selectAll('circle').size()
+	test.true(
+		akt1SetActual > akt1Set.min && akt1SetActual < akt1Set.max,
+		`should have between ${akt1Set.min} and ${akt1Set.max} circles after applying set_id filter, actual=${akt1SetActual}`
 	)
 
 	// change gene
 	const btns = holder.node().querySelectorAll('button')
-	const alk_btn = btns[3]
-	alk_btn.click()
+	const kras_btn = btns[0]
+	kras_btn.click()
 	await sleep(4000)
-	const alkCircles = 37
-	test.equal(
-		holder.selectAll('circle').size(),
-		alkCircles,
-		`should have ${alkCircles} circles after changing gene to 'ALK'`
+	const krasSet = { min: 185, max: 200 }
+	const krasSetActual = holder.selectAll('circle').size()
+	test.true(
+		krasSetActual > krasSet.min && krasSetActual < krasSet.max,
+		`should have between ${krasSet.min} and ${krasSet.max} circles after changing gene to 'KRAS', actual=${krasSetActual}`
 	)
 
 	// apply filter
@@ -81,11 +81,11 @@ tape('lolliplot using URL', async test => {
 		.property('value', windowObj.location.pathname + `?filters=${encodeURIComponent(JSON.stringify(projectFilter))}`)
 		.on('change')()
 	await sleep(4000)
-	const filteredCircles = 51
-	test.equal(
-		holder.selectAll('circle').size(),
-		filteredCircles,
-		`should have ${filteredCircles} circles after applying filter`
+	const filteredCircles = { min: 1, max: 5 }
+	const filteredActual = holder.selectAll('circle').size()
+	test.true(
+		filteredActual > filteredCircles.min && filteredActual < filteredCircles.max,
+		`should have between ${filteredCircles.min} and ${filteredCircles.max} circles after applying filter, actual=${filteredActual}`
 	)
 	// currently unable to test using a token via the submit button,
 	// since it will reveal user specific token here, may
@@ -102,67 +102,69 @@ tape('lolliplot using props', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const numCircles = 283
-	test.equal(
-		holder.selectAll('circle').size(),
-		numCircles,
-		`should have ${numCircles} circles on initial load with gene='AKT1'`
+	const akt1Circles = { min: 280, max: 300 }
+	const akt1CirclesActual = holder.selectAll('circle').size()
+	test.true(
+		akt1CirclesActual > akt1Circles.min && akt1CirclesActual < akt1Circles.max,
+		`should have between ${akt1Circles.min} and ${akt1Circles.max} circles on initial load with gene='AKT1', actual=${akt1CirclesActual}`
 	)
 
 	// click set_id checkbox
 	const set_id_checkbox = holder.selectAll('#set_switch')
 	set_id_checkbox.node().click()
 	await sleep(4000)
-	const setCircles = 15
-	test.equal(
-		holder.selectAll('circle').size(),
-		setCircles,
-		`should have ${setCircles} circles after applying set_id filter`
+	const akt1Set = { min: 240, max: 280 }
+	const akt1SetActual = holder.selectAll('circle').size()
+	test.true(
+		akt1SetActual > akt1Set.min && akt1SetActual < akt1Set.max,
+		`should have between ${akt1Set.min} and ${akt1Set.max} circles after applying set_id filter, actual=${akt1SetActual}`
 	)
 
 	// change gene
 	const btns = holder.node().querySelectorAll('button')
-	const alk_btn = btns[3]
-	alk_btn.click()
+	const kras_btn = btns[0]
+	kras_btn.click()
 	await sleep(4000)
-	const alkCircles = 37
-	test.equal(
-		holder.selectAll('circle').size(),
-		alkCircles,
-		`should have ${alkCircles} circles after changing gene to 'ALK'`
+	const krasSet = { min: 185, max: 200 }
+	const krasSetActual = holder.selectAll('circle').size()
+	test.true(
+		krasSetActual > krasSet.min && krasSetActual < krasSet.max,
+		`should have between ${krasSet.min} and ${krasSet.max} circles after changing gene to 'KRAS', actual=${krasSetActual}`
 	)
 
-	// apply filter
 	const filters = {
 		op: 'AND',
 		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
 	}
 	portal.setState({ filters })
 	await sleep(4000)
-	const filteredCircles = 51
-	test.equal(
-		holder.selectAll('circle').size(),
-		filteredCircles,
-		`should have ${filteredCircles} circles after applying filter`
+	const filteredCircles = { min: 1, max: 5 }
+	const filteredActual = holder.selectAll('circle').size()
+	test.true(
+		filteredActual > filteredCircles.min && filteredActual < filteredCircles.max,
+		`should have between ${filteredCircles.min} and ${filteredCircles.max} circles after applying filter, actual=${filteredActual}`
 	)
 
 	const disc = holder
 		.selectAll('.sja_aa_disckick')
-		.filter(d => d.occurrence == 1)
+		.filter(d => d.occurrence == 2)
 		.node()
 	disc.dispatchEvent(new Event('click'))
-	await sleep(2000)
-	const mname = disc.__data__.mlst && disc.__data__.mlst[0].mname
-	const tdspans = [...document.querySelectorAll('.sja_menu_div table tr td span')].filter(
-		elem => mname && elem.innerHTML == mname
+	await sleep(3000)
+	const g120 = disc.__data__.mlst && disc.__data__.mlst[0]
+	const mname = g120.mname
+	const tagName = g120.occurrence > 10 ? 'span' : 'a'
+	const tdspans = [...document.querySelectorAll(`.sja_menu_div table tr td ${tagName}`)].filter(
+		elem => mname && elem.innerHTML.startsWith(mname)
 	)
 	const menudiv = tdspans.length ? tdspans[0].parentNode.parentNode.parentNode.parentNode : null
+
 	test.equal(
 		menudiv &&
 			[...menudiv.querySelectorAll('table a')].filter(elem =>
 				elem.href.startsWith('https://portal.gdc.cancer.gov/cases/')
 			).length,
-		1,
+		2,
 		`should display a link to aliquot data when the corresponding disc and table entry is clicked`
 	)
 	test.end()

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "rm -rf ../public/bin && webpack --env.NODE_ENV=development --watch --progress --colors",
     "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
-    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/cuminc.spec.js -p [ split-require --out ../public/bin --public /bin ] -o ../public/bin/spec.bundle.js -v",
+    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] -o ../public/bin/spec.bundle.js -v",
     "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
     "rollw": "rm -rf dist && rollup -c ./client/rollup.config.js -w"
   },
