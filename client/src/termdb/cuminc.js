@@ -372,7 +372,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	const labels = {
-		cuminc: 'Cumulative incidence (%)',
+		cuminc: 'Cumulative incidence',
 		low: 'Lower 95% CI',
 		high: 'Upper 95% CI'
 	}
@@ -388,8 +388,9 @@ function setInteractivity(self) {
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
 			]
+			// may also indicate the confidence interval (low%-high%) in a new row
 			self.app.tip
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
