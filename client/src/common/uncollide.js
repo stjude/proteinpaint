@@ -60,9 +60,15 @@ function getDefaults(opts) {
 
 export async function uncollide(labels, _opts = {}) {
 	if (!labels || !labels.size()) return
+	/*** 
+		TODO 
+		Labels input must include the elements that are being labeled,
+		so that collisions against the dot/element can be computed/tracked
+	***/
+
 	const opts = getDefaults(_opts)
 	if (!opts.steps || !opts.steps.length) return
-	console.log(63, '\n\n---**--- uncollide() ----**----')
+	//console.log(63, '\n\n---**--- uncollide() ----**----')
 	if (!opts.svg) opts.svg = labels.node().closest('svg')
 	await sleep(opts.waitTime)
 	opts.svgBox = opts.svg.getBoundingClientRect()
@@ -71,7 +77,7 @@ export async function uncollide(labels, _opts = {}) {
 	window.boxes = boxes
 	if (minNonZeroCollisions) {
 		const step = opts.steps.shift()
-		console.log(71, '---', step.type, '---')
+		//console.log(71, '---', step.type, '---')
 		const adjustees =
 			step.applyTo == 'all'
 				? boxes
@@ -149,6 +155,9 @@ function sortBoxes(a, b) {
 }
 
 function trackOverlaps(box, boxes) {
+	/*** 
+	   TODO: collisions against the dot/element can be computed/tracked
+	***/
 	const x1 = box.x1,
 		x2 = box.x2
 	const y1 = box.y1,
@@ -279,7 +288,6 @@ function detectSvgOverflow(box, svgBox) {
 	const y1 = box.y1,
 		y2 = box.y2
 	const corners = []
-	console.log(x1, x2, box.name)
 	if (x1 < 0) {
 		box.maxOverlaps.x = { val: Math.abs(x1), dir: 'w' }
 		corners.push('w')
@@ -335,7 +343,6 @@ async function restyle(box, step, boxes, opts) {
 
 async function move(box, step, boxes, opts) {
 	const freeDirections = Object.keys(box.maxFree).filter(dir => box.maxFree[dir] > 0)
-	console.log(327, 'freeDirections', box.name, freeDirections)
 	if (!freeDirections.length) return
 
 	const preAdjustedVal = new Map()
@@ -371,7 +378,6 @@ async function move(box, step, boxes, opts) {
 	}
 
 	if (box.maxOverlaps.x && box.maxOverlaps.x.val > 0) {
-		console.log(354, box.maxOverlaps.x, freeDirections)
 		if (box.maxOverlaps.x.dir == 'e' && freeDirections.includes('w')) {
 			box.label.selectAll(step.css.selector).each(function(d) {
 				const s = select(this)
@@ -393,7 +399,12 @@ async function move(box, step, boxes, opts) {
 	const adjustedBox = getBoxes(box.label, opts)[0]
 	trackOverlaps(adjustedBox, boxes.filter(b => b != box))
 	if (adjustedBox.overlapSum >= box.overlapSum) {
-		// console.log(386, 'revert', box.name, adjustedBox.overlapSum, box.overlapSum)
+		/*** 
+	   TODO: 
+		 instead of reverting the label e-w or w-e move in the x-axis, 
+		 check first if moving the label in the y-axis would avoid
+		 collissions with other labels or labeled elements
+		***/
 		box.label.selectAll(step.css.selector).each(function(d) {
 			select(this).attr('x', preAdjustedVal.get(this))
 		})

@@ -186,7 +186,7 @@ tape('overlapping points', async test => {
 	test.end()
 })
 
-tape.only('svg overflow', async test => {
+tape.skip('svg overflow', async test => {
 	const x = 0.3 * side,
 		y = 0.5 * side
 	const data = [
