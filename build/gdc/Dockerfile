@@ -47,8 +47,8 @@ RUN npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
 
 # Test
 WORKDIR /home/root/pp/app
-ADD targets ./targets
-RUN ./targets/gdc/test.sh
+ADD build ./build
+RUN ./build/gdc/test.sh
 
 
 ########

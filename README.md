@@ -75,9 +75,9 @@ npm start # starts the server
 npm test # tests the server conde
 ```
 
-#### in targets/sj/
+#### in build/sj/
 ```bash
-cd targets/sj
+cd build/sj
 ./deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
 
 # or to deploy to ppr

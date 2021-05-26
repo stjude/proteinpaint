@@ -50,12 +50,12 @@ The following script will:
 - if the test passes, use the same Dockefile to build the ppserver target
 
 ```bash
-./targets/gdc/build.sh -r HEAD -t my/tp/master/dir
+./build/gdc/build.sh -r HEAD -t my/tp/master/dir
 
 # loof for the latest matching ppgdc:$HASH image tag 
 # that was created with the HEAD commit hash
 $ docker image ls 
 
 # if the test passes and the ppserver target builds, you may run it as
-./targets/gdc/dockrun.sh your/tpmasterdir 3456 ppgdc:$HASH
+./build/gdc/dockrun.sh your/tpmasterdir 3456 ppgdc:$HASH
 ```

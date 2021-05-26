@@ -12,7 +12,7 @@ set -e
 # and public/ dir for testing only
 ##################################
 
-echo -e $(./targets/gdc/createServerConfig.js) > serverconfig.json
+echo -e $(./build/gdc/createServerConfig.js) > serverconfig.json
 
 SCRIPT=server/src/test/gdc-cached-data.server.js
 

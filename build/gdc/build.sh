@@ -9,7 +9,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/gdc/build.sh [-r]
+	./build/gdc/build.sh [-r]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	"
@@ -48,7 +48,7 @@ docker build --file ./build/Dockerfile --tag ppbase:$REV .
 
 # build an image for GDC-related tests
 docker build \
-	--file ./targets/gdc/Dockerfile \
+	--file ./build/gdc/Dockerfile \
 	--target ppgdctest \
 	--tag ppgdctest:$REV \
 	--build-arg IMGVER=$REV \
@@ -62,7 +62,7 @@ fi
 
 # this image may publish the @stjude-proteinpaint client package
 docker build \
-	--file ./targets/gdc/Dockerfile \
+	--file ./build/gdc/Dockerfile \
 	--target ppserver \
 	--tag ppgdc:$REV \
 	--build-arg IMGVER=$REV \

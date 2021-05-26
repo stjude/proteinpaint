@@ -170,9 +170,9 @@ else
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild  # temporary empty workspace for checkedout commit
 	cd ../..
-	git archive HEAD | tar -x -C targets/sj/tmpbuild/
+	git archive HEAD | tar -x -C build/sj/tmpbuild/
 
-	cd targets/sj/tmpbuild
+	cd build/sj/tmpbuild
 
 	# save some time by reusing parent folder's node_modules
 	# but making sure to update to committed package.json
