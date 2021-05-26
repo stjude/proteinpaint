@@ -100,6 +100,8 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
+// tandem rest api query: 1. variant and csq, 2. cases
+// not in use
 export function validate_query_snvindel_byisoform(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
@@ -135,6 +137,49 @@ export function validate_query_snvindel_byisoform(ds) {
 				sample.sample_id = c.case_id
 				m.samples.push(sample)
 			}
+			mlst.push(m)
+		}
+		return mlst
+	}
+}
+
+// protein mutation api, just occurrence and without case info
+export function validate_query_snvindel_byisoform_2(ds) {
+	const api = ds.queries.snvindel.byisoform.gdcapi
+	if (!api.query) throw '.query missing for byisoform.gdcapi'
+	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
+	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
+	ds.queries.snvindel.byisoform.get = async opts => {
+		const headers = getheaders(opts)
+		const response = await got.post(api.apihost, {
+			headers,
+			body: JSON.stringify({ query: api.query, variables: api.filters(opts) })
+		})
+		const tmp = JSON.parse(response.body)
+		if (
+			!tmp.data ||
+			!tmp.data.analysis ||
+			!tmp.data.analysis.protein_mutations ||
+			!tmp.data.analysis.protein_mutations.data
+		)
+			throw 'data not .data.analysis.protein_mutations.data'
+		const re = JSON.parse(tmp.data.analysis.protein_mutations.data)
+		if (!re.hits) throw 're.hits missing'
+		const mlst = []
+		for (const a of re.hits) {
+			const b = a._source
+			const m = {
+				ssm_id: b.ssm_id,
+				dt: common.dtsnvindel,
+				chr: b.chromosome,
+				pos: b.start_position - 1,
+				ref: b.reference_allele,
+				alt: b.tumor_allele,
+				isoform: opts.isoform,
+				occurrence: a._score,
+				csqcount: b.consequence.length
+			}
+			snvindel_addclass(m, b.consequence.find(i => i.transcript.transcript_id == opts.isoform))
 			mlst.push(m)
 		}
 		return mlst

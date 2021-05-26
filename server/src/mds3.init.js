@@ -123,6 +123,7 @@ function validate_variant2samples(ds) {
 	for (const id of vs.termidlst) {
 		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
+	// FIXME should be optional. when provided will show sunburst chart
 	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
 	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
@@ -431,7 +432,8 @@ function validate_query_snvindel(ds) {
 
 	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
 	if (q.byisoform.gdcapi) {
-		gdc.validate_query_snvindel_byisoform(ds)
+		//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
+		gdc.validate_query_snvindel_byisoform_2(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
 	}

@@ -1,5 +1,7 @@
 const got = require('got')
 
+const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
 /* if filter0 is missing necessary attr, adding it to api query will cause error
 if valid, returns object
 otherwise returns null, so it won't be added to query and will not print error
@@ -23,7 +25,53 @@ function validate_filter0(f) {
 query list of variants by isoform
 */
 
-const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+const protein_mutations = {
+	// may expand to support both isoform and range query
+	apihost: GDC_HOST + '/v0/graphql',
+	query: `query Lolliplot_relayQuery(
+		  $filter: FiltersArgument
+		  $score: String
+		) {
+		  analysis {
+			protein_mutations {
+			  data(first: 10000, score: $score,  filters: $filter, fields: [
+				"ssm_id"
+				"chromosome"
+				"start_position"
+				"reference_allele"
+				"tumor_allele"
+				"consequence.transcript.aa_change"
+				"consequence.transcript.consequence_type"
+				"consequence.transcript.transcript_id"
+				])
+			}
+		  }
+		}`,
+	filters: p => {
+		if (!p.isoform) throw '.isoform missing'
+		const f = {
+			filter: {
+				op: 'and',
+				content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
+			},
+			score: 'occurrence.case.project.project_id'
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.filter.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.filter.content.push(p.filter0)
+		}
+		return f
+	}
+}
 
 // REST: get list of ssm with consequence, no case info and occurrence
 const isoform2ssm_getvariant = {
@@ -822,7 +870,6 @@ const snvindel_attributes = [
 
 module.exports = {
 	isMds3: true,
-	color: '#545454',
 	genome: 'hg38',
 	snvindel_attributes,
 	apihost: GDC_HOST + '/v0/graphql',
@@ -874,6 +921,7 @@ module.exports = {
 
 	// this is meant for the leftside labels under tklabel
 	// should not be called sample summary but mclassSummary
+	/*
 	sampleSummaries: {
 		lst: [
 			// for a group of samples that carry certain variants
@@ -881,7 +929,7 @@ module.exports = {
 			{ label1: 'primary_site' }
 		]
 	},
-	// how to let gene-level gain/loss data shown as additional labels?
+	*/
 
 	queries: {
 		snvindel: {
@@ -898,7 +946,8 @@ module.exports = {
 				}
 			},
 			byisoform: {
-				gdcapi: { lst: [isoform2ssm_getvariant, isoform2ssm_getcase] }
+				gdcapi: protein_mutations
+				//{ lst: [isoform2ssm_getvariant, isoform2ssm_getcase] }
 			},
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt

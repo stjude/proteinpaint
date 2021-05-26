@@ -10,13 +10,13 @@ const query = `query Lolliplot_relayQuery(
     protein_mutations {
       data(first: 10000, score: $score,  filters: $filter, fields: [
 	  	"ssm_id"
+		"chromosome"
+		"start_position"
+		"reference_allele"
+		"tumor_allele"
 		"consequence.transcript.aa_change"
 		"consequence.transcript.consequence_type"
 		"consequence.transcript.transcript_id"
-		"occurrence.case.project.project_id"
-		"occurrence.case.primary_site"
-		"occurrence.case.disease_type"
-		"occurrence.case.case_id"
 		])
     }
   }
@@ -26,19 +26,8 @@ const variables = {
 	filter: {
 		op: 'and',
 		content: [
-			{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } },
-			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:DDw3QnUB_tcD1Zw3Af72'] } }
-			{
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [
-						'56c07b06-c6d3-4c03-9e57-7be636e7cc5c',
-						'8b3b1f24-419e-4043-82be-2bd41268bb0e',
-						'cd6f37d5-d192-48b9-a63f-54d8d1e810c6'
-					]
-				}
-			}
+			{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [isoform] } }
+			//{ op: 'in', content: { field: 'cases.case_id', value: ['set_id:bfhJqXkB6YqjLFd7yhrb'] } }
 		]
 	},
 	score: 'occurrence.case.project.project_id'
@@ -58,8 +47,9 @@ const variables = {
 			console.log(
 				'\n' + m._source.consequence.map(i => i.transcript.transcript_id + '/' + i.transcript.aa_change).join(',')
 			)
-			console.log('==> ' + m._source.occurrence.length + ' cases')
+			console.log('==> ' + m._score + ' cases')
 		}
+		console.log(re.hits[0])
 	} catch (error) {
 		console.log(error)
 	}

@@ -80,7 +80,7 @@ function loadTk_finish_closure(tk, block) {
 	}
 }
 
-export function get_parameter(tk, block) {
+function get_parameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
