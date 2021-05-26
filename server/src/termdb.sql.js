@@ -580,15 +580,35 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 }
 
 function makesql_time2event(tablename, term, q, values, filter) {
-	values.push(...[q.grade, term.id])
+	if (!term.isleaf) {
+		values.push(...[term.id, q.grade])
+	} else {
+		values.push(...[q.grade, term.id])
+	}
+
+	const termsCTE = term.isleaf
+		? ''
+		: `parentTerms AS (
+SELECT distinct(ancestor_id) 
+FROM ancestry
+),
+eventTerms AS (
+SELECT a.term_id 
+FROM ancestry a
+JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+WHERE a.ancestor_id = ?
+),`
+
+	const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
 
 	return {
-		sql: `event1 AS (
+		sql: `${termsCTE}
+		event1 AS (
 			SELECT sample, 1 as key, MIN(years_to_event) as value
 			FROM chronicevents
 			WHERE grade >= ?
 			  AND grade <= 5
-			  AND term_id = ?
+			  AND ${termsClause}
 			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
 			GROUP BY sample
 		),
