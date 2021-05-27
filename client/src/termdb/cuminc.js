@@ -5,7 +5,8 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
-import { rgb, darker } from 'd3-color'
+import { rgb } from 'd3-color'
+import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
@@ -16,7 +17,9 @@ class TdbCumInc {
 		this.app = app
 		this.api = rx.getComponentApi(this)
 		this.dom = {
-			div: opts.holder.style('margin', '10px')
+			holder: opts.holder,
+			chartsDiv: opts.holder.append('div').style('margin', '10px'),
+			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, opts.settings)
@@ -27,6 +30,16 @@ class TdbCumInc {
 			.y(c => c.scaledY)
 		setInteractivity(this)
 		setRenderers(this)
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click() {}
+				}
+			}
+		})
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
@@ -52,7 +65,7 @@ class TdbCumInc {
 
 	main(data) {
 		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
+			this.dom.holder.style('display', 'none')
 			return
 		}
 		Object.assign(this.settings, this.state.config.settings)
@@ -60,6 +73,7 @@ class TdbCumInc {
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
+		this.legendRenderer(this.legendData)
 	}
 
 	getData(data) {
@@ -81,10 +95,29 @@ class TdbCumInc {
 		if (!charts) return
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				if (!legendItems.find(d => d.dataId == series.seriesId)) {
+					legendItems.push({
+						dataId: series.seriesId,
+						text: series.seriesLabel,
+						color: this.term2toColor[series.seriesId],
+						isHidden: false
+					})
+				}
 			}
+		}
+		if (this.state.config.term2 && legendItems.length) {
+			this.legendData = [
+				{
+					name: this.state.config.term2.term.name,
+					items: legendItems
+				}
+			]
+		} else {
+			this.legendData = []
 		}
 	}
 }
@@ -94,13 +127,13 @@ export const cumincInit = rx.getInitFxn(TdbCumInc)
 function setRenderers(self) {
 	self.render = function() {
 		const data = self.pj.tree.charts || [{ chartId: 'No cumulative incidence data' }]
-		const chartDivs = self.dom.div.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
+		const chartDivs = self.dom.chartsDiv.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
-		self.dom.div.style('display', 'block')
-		self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+		self.dom.holder.style('display', 'block')
+		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
 	self.addCharts = function(d) {
