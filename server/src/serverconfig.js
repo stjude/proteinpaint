@@ -43,9 +43,9 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const pkfile = process.argv.find(n => n.includes('/targets'))
+	const pkfile = process.argv.find(n => n.includes('/build'))
 	if (pkfile) {
-		serverconfig.binpath = pkfile.split('/targets')[0] + '/server'
+		serverconfig.binpath = pkfile.split('/build')[0] + '/server'
 	} else {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
