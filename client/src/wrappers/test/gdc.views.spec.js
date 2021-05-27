@@ -112,7 +112,7 @@ tape('lolliplot using props', async test => {
 	// click set_id checkbox
 	const set_id_checkbox = holder.selectAll('#set_switch')
 	set_id_checkbox.node().click()
-	await sleep(4000)
+	await sleep(5000)
 	const akt1Set = { min: 240, max: 280 }
 	const akt1SetActual = holder.selectAll('circle').size()
 	test.true(
@@ -124,7 +124,7 @@ tape('lolliplot using props', async test => {
 	const btns = holder.node().querySelectorAll('button')
 	const kras_btn = btns[0]
 	kras_btn.click()
-	await sleep(4000)
+	await sleep(5000)
 	const krasSet = { min: 185, max: 200 }
 	const krasSetActual = holder.selectAll('circle').size()
 	test.true(
@@ -137,7 +137,7 @@ tape('lolliplot using props', async test => {
 		content: [{ op: 'IN', content: { field: 'cases.project.project_id', value: 'TCGA-GBM' } }]
 	}
 	portal.setState({ filters })
-	await sleep(4000)
+	await sleep(5000)
 	const filteredCircles = { min: 1, max: 5 }
 	const filteredActual = holder.selectAll('circle').size()
 	test.true(
