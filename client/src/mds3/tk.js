@@ -77,6 +77,10 @@ function loadTk_finish_closure(tk, block) {
 		block.tkcloakoff(tk, { error: data.error })
 		block.block_setheight()
 		block.setllabel()
+		if (tk.mds.sampleSummaries2) {
+			// only process it here after track is rendered
+			load_sampleSummaries2(tk, block)
+		}
 	}
 }
 
@@ -243,4 +247,8 @@ by info_fields[] and variantcase_fields[]
 			return lst
 		}, [])
 	}
+}
+
+async function load_sampleSummaries2(tk, block) {
+	const data = await tk.mds.sampleSummaries2.get()
 }

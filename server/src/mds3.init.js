@@ -27,6 +27,7 @@ export function client_copy(ds) {
 		isMds3: true,
 		label: ds.label,
 		sampleSummaries: ds.sampleSummaries ? ds.sampleSummaries.lst : null,
+		sampleSummaries2: ds.sampleSummaries2 || null,
 		queries: copy_queries(ds)
 	}
 	if (ds.termdb) {

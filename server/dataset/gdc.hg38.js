@@ -25,8 +25,9 @@ function validate_filter0(f) {
 query list of variants by isoform
 */
 
+// TODO FIXME investigate if this api supports both isoform and coordinate query
+// if so then no need for snvindel.byrange and .byisoform
 const protein_mutations = {
-	// may expand to support both isoform and range query
 	apihost: GDC_HOST + '/v0/graphql',
 	query: `query Lolliplot_relayQuery(
 		  $filter: FiltersArgument
@@ -73,7 +74,9 @@ const protein_mutations = {
 	}
 }
 
+/*
 // REST: get list of ssm with consequence, no case info and occurrence
+// isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api" for lollipop+summary label, which is not in use now
 const isoform2ssm_getvariant = {
 	endpoint: GDC_HOST + '/ssms',
 	size: 100000,
@@ -161,8 +164,10 @@ const isoform2ssm_getcase = {
 		return f
 	}
 }
+*/
 
 /*
+TODO if can be done in protein_mutations
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
@@ -930,6 +935,11 @@ module.exports = {
 		]
 	},
 	*/
+
+	// query in paralell, not based on skewer data
+	sampleSummaries2: {
+		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site' }]
+	},
 
 	queries: {
 		snvindel: {

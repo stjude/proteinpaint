@@ -22,7 +22,11 @@ TODO may not update every label when only updating certain sub track
 
 export function make_leftlabels(data, tk, block) {
 	// must call after rendering skewer track
+	// prior labels are erased
 	tk.leftlabelg.selectAll('*').remove()
+	// must reset leftLabelMaxwidth
+	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
+
 	let laby = labyspace + block.labelfontsize
 
 	const labels = [] // for max width
@@ -86,10 +90,17 @@ export function make_leftlabels(data, tk, block) {
 			labels.push(lab)
 		}
 	}
+	if (tk.mds.sampleSummaries2) {
+		for (const l of tk.mds.sampleSummaries2.lst) {
+			const lab = makelabel(tk, block, laby)
+				.text('... ' + l.label1 + 's')
+				.on('click', async () => {})
+			laby += labyspace + block.labelfontsize
+			labels.push(lab)
+		}
+	}
 	for (const l of labels) {
-		l.each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, l.node().getBBox().width)
 	}
 	return laby
 }

@@ -38,6 +38,8 @@ if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id'
 		const re = JSON.parse(response.body)
 		const aa2case = new Map()
 		const caseidset = new Set()
+		const projectset = new Set()
+		const siteset = new Set()
 		for (const hit of re.data.hits) {
 			const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == p.isoform)
 			const aa = consequence.transcript.aa_change
@@ -45,6 +47,8 @@ if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id'
 			aa2case.get(aa).cases.push(hit.case)
 
 			caseidset.add(hit.case.case_id)
+			projectset.add(hit.case.project.project_id)
+			siteset.add(hit.case.primary_site)
 		}
 		for (const [aa, o] of aa2case) {
 			console.log(aa, o.type, o.cases.length)
@@ -52,6 +56,8 @@ if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id'
 
 		console.log(aa2case.size, ' variants')
 		console.log(caseidset.size, ' cases')
+		console.log(projectset.size, ' projects')
+		console.log(siteset.size, ' sites')
 	} catch (error) {
 		console.log(error)
 	}
