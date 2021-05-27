@@ -36,7 +36,7 @@ class TdbCumInc {
 			},
 			handlers: {
 				legend: {
-					click() {}
+					click: this.legendClick
 				}
 			}
 		})
@@ -55,10 +55,7 @@ class TdbCumInc {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
 				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
-				settings: {
-					common: config.settings.common,
-					cuminc: config.settings.cuminc
-				}
+				settings: config.settings.cuminc
 			}
 		}
 	}
@@ -99,12 +96,12 @@ class TdbCumInc {
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
-				if (!legendItems.find(d => d.dataId == series.seriesId)) {
+				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
-						dataId: series.seriesId,
+						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId],
-						isHidden: false
+						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
 			}
@@ -137,7 +134,7 @@ function setRenderers(self) {
 	}
 
 	self.addCharts = function(d) {
-		const s = self.settings.cuminc
+		const s = self.settings
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
@@ -178,7 +175,7 @@ function setRenderers(self) {
 
 	self.updateCharts = function(d) {
 		if (!d.serieses) return
-		const s = self.settings.cuminc
+		const s = self.settings
 		const div = select(this)
 
 		div
@@ -216,7 +213,10 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const serieses = mainG.selectAll('.sjpcb-cuminc-series').data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
+		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const serieses = mainG
+			.selectAll('.sjpcb-cuminc-series')
+			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
@@ -437,6 +437,27 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		self.app.tip.hide()
 	}
+
+	self.legendClick = function() {
+		event.stopPropagation()
+		const d = event.target.__data__
+		if (d === undefined) return
+		const hidden = self.settings.hidden.slice()
+		const i = hidden.indexOf(d.seriesId)
+		if (i == -1) hidden.push(d.seriesId)
+		else hidden.splice(i, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					cuminc: {
+						hidden
+					}
+				}
+			}
+		})
+	}
 }
 
 function getPj(self) {
@@ -480,7 +501,7 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
 					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
 				}
@@ -511,7 +532,7 @@ function getPj(self) {
 				return row.high
 			},
 			xScale(row, context) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
@@ -525,7 +546,7 @@ function getPj(self) {
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [Math.min(100, 1.1 * yMax), 0]
 				return d3Linear()

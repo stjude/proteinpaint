@@ -287,7 +287,8 @@ export function plotConfig(opts) {
 					right: 20,
 					bottom: 50
 				},
-				axisTitleFontSize: 16
+				axisTitleFontSize: 16,
+				hidden: []
 			},
 			termInfo: {
 				isVisible: false
