@@ -14,13 +14,15 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('font-size', '.9em')
 		.style('display', 'grid')
 		.style('grid-template-columns', '150px auto')
-		.style('grid-template-rows', 'repeat(4, 30px)')
+		.style('grid-template-rows', 'repeat(6, auto)')
 		.style('gap', '5px')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
 
 	function cmt(t, red) {
-		saydiv.style('color', red ? 'red' : 'black').html(t)
+		saydiv
+            .style('display','block')
+            .style('color', red ? 'red' : 'black').html(t)
 	}
 
 	// token file upload
@@ -65,8 +67,36 @@ export function bamsliceui(genomes, holder, hosturl) {
 
 	fileui()
 
+    inputdiv.append('div')
+        .style('padding', '3px 10px')
+        .text('GDC ID')
+
+    const input = inputdiv
+        .append('input')
+        .attr('size', 40)
+        .style('padding', '3px 10px')
+        .property('placeholder', 'File UUID / Case UUID / Case ID')
+        .on('change', async() => {
+            const gdc_id = input.property('value').trim()
+            const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
+            // console.log(bam_info)
+            if(bam_info.error){
+                cmt(bam_info.error, 1)
+                baminfo_div.style('display','none')
+            }
+            else{
+                update_singlefile_table(bam_info)
+                saydiv.style('display','none')
+                gdc_args['entity_id'] = bam_info.entity_id
+            } 
+            gdc_args['case_id'] = gdc_id
+        })
+
+    const baminfo_div = inputdiv.append('div')
+        .style('grid-column', 'span 2')
+        .style('display', 'none')
+
 	const input_fields = [
-		{ title: 'Case ID', key: 'case_id', size: 40 },
 		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
 		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.ref.mut' }
 	]
@@ -111,7 +141,6 @@ export function bamsliceui(genomes, holder, hosturl) {
 		inputdiv
 			.append('div')
 			.style('padding', '3px 10px')
-			.property('placeholder', field.placeholder || '')
 			.text(field.title)
 
 		const input = inputdiv
@@ -123,6 +152,41 @@ export function bamsliceui(genomes, holder, hosturl) {
 				gdc_args[field.key] = input.property('value').trim()
 			})
 	}
+
+    function update_singlefile_table(bam_info){
+
+        baminfo_div.style('display','block')
+        baminfo_div.selectAll('*').remove()
+
+        const baminfo_table = baminfo_div.append('div')
+            .style('display','grid')
+            .style('padding','10px 20px')
+            .style('grid-template-columns', '150px 300px')
+            .style('grid-template-rows', 'repeat(5, 20px)')
+            .style('align-items', 'center')
+            .style('justify-items', 'left')
+            .style('font-size', '.8em')
+
+        const baminfo_rows = [
+            { title: 'Entity ID', key: 'entity_id' },
+            { title: 'Entity Type', key:'entity_type'},
+            { title: 'Experimental Strategy', key: 'experimental_strategy' },
+            { title: 'Sample Type', key:'sample_type'},
+            { title: 'Size', key:'file_size'}
+        ]
+        for (const row of baminfo_rows) {
+            baminfo_table
+                .append('div')
+                .style('padding', '3px 10px')
+                .style('font-weight','bold')
+                .text(row.title)
+
+            baminfo_table
+                .append('div')
+                .style('padding', '3px 10px')
+                .text(bam_info[row.key])
+        }
+    }
 }
 
 function validateInputs(obj) {
@@ -167,7 +231,7 @@ function renderBamSlice(args, genome, holder, hostURL) {
 
 	const tk = {
 		type: client.tkt.bam,
-		name: 'sample bam slice',
+		name: args.entity_id || 'sample bam slice',
 		gdc: args.gdc_token + ',' + args.case_id,
 		downloadgdc: 1,
 		file: 'dummy_str'
