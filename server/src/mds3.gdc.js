@@ -12,7 +12,7 @@ getSamples_gdcapi
 get_cohortTotal
 addCrosstabCount_tonodes
 validate_m2csq
-
+validate_ssm2canonicalisoform
 getheaders
 */
 
