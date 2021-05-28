@@ -5,8 +5,8 @@ const variant2samples_getresult = require('./mds3.variant2samples')
 ********************** EXPORTED
 init
 client_copy
-********************** INTERNAL
 get_crosstabCombinations
+********************** INTERNAL
 */
 
 export async function init(ds, genome, _servconfig) {
@@ -14,6 +14,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_termdb(ds)
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
+	validate_sampleSummaries2(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
 	validate_ssm2canonicalisoform(ds)
@@ -26,9 +27,13 @@ export function client_copy(ds) {
 	const ds2 = {
 		isMds3: true,
 		label: ds.label,
-		sampleSummaries: ds.sampleSummaries ? ds.sampleSummaries.lst : null,
-		sampleSummaries2: ds.sampleSummaries2 || null,
 		queries: copy_queries(ds)
+	}
+	if (ds.sampleSummaries) {
+		ds2.sampleSummaries = ds.sampleSummaries.lst
+	}
+	if (ds.sampleSummaries2) {
+		ds2.sampleSummaries2 = { lst: ds.sampleSummaries2.lst }
 	}
 	if (ds.termdb) {
 		ds2.termdb = {}
@@ -183,6 +188,33 @@ function copy_queries(ds) {
 	}
 	// new query
 	return copy
+}
+
+function validate_sampleSummaries2(ds) {
+	const ss = ds.sampleSummaries2
+	if (!ss) return
+	if (!ds.termdb) throw 'ds.termdb missing while sampleSummary2 is in use'
+	if (!ss.lst) throw '.lst missing from sampleSummaries2'
+	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries2'
+	for (const i of ss.lst) {
+		if (!i.label1) throw '.label1 from one of sampleSummaries2.lst'
+		if (!ds.termdb.getTermById(i.label1)) throw 'no term match with .label1: ' + i.label1
+		if (i.label2) {
+			if (!ds.termdb.getTermById(i.label2)) throw 'no term match with .label2: ' + i.label2
+		}
+	}
+	if (!ss.get_number) throw '.get_number{} missing from sampleSummaries2'
+	if (ss.get_number.gdcapi) {
+		gdc.validate_sampleSummaries2_number(ss.get_number)
+	} else {
+		throw 'unknown query method for sampleSummaries2.get_number'
+	}
+	if (!ss.get_mclassdetail) throw '.get_mclassdetail{} missing from sampleSummaries2'
+	if (ss.get_mclassdetail.gdcapi) {
+		gdc.validate_sampleSummaries2_mclassdetail(ss.get_mclassdetail, ds)
+	} else {
+		throw 'unknown query method for sampleSummaries2.get_mclassdetail'
+	}
 }
 
 function validate_sampleSummaries(ds) {
@@ -480,7 +512,7 @@ steps:
 3. for level 3 term, get category size by filtering on each project-disease combination
 4. apply the combination sizes to each node of sunburst
 */
-async function get_crosstabCombinations(termidlst, ds, q, nodes) {
+export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	/*
 	parameters:
 	termidlst[]

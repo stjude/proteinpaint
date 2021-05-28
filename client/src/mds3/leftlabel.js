@@ -90,11 +90,27 @@ export function make_leftlabels(data, tk, block) {
 			labels.push(lab)
 		}
 	}
-	if (tk.mds.sampleSummaries2) {
-		for (const l of tk.mds.sampleSummaries2.lst) {
+	if (data.sampleSummaries2) {
+		for (const l of data.sampleSummaries2) {
 			const lab = makelabel(tk, block, laby)
-				.text('... ' + l.label1 + 's')
-				.on('click', async () => {})
+				.text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : ''))
+				.on('click', async () => {
+					const wait = tk.tktip
+						.clear()
+						.showunder(d3event.target)
+						.d.append('div')
+						.text('Loading...')
+					try {
+						const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
+						if (!config) throw 'not found: ' + l.label1
+						const data = await tk.mds.sampleSummaries2.get(config)
+						if (data.error) throw data.error
+						wait.remove()
+						stratifymenu_samplesummary(data.strat, tk, block)
+					} catch (e) {
+						wait.text('Error: ' + (e.message || e))
+					}
+				})
 			laby += labyspace + block.labelfontsize
 			labels.push(lab)
 		}

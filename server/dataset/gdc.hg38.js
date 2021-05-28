@@ -166,6 +166,127 @@ const isoform2ssm_getcase = {
 }
 */
 
+// REST: get list of ssm with consequence, no case info and occurrence
+// isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api" for lollipop+summary label, which is not in use now
+const samplesummary2_getvariant = {
+	endpoint: GDC_HOST + '/ssms',
+	fields: ['ssm_id', 'consequence.transcript.transcript_id', 'consequence.transcript.consequence_type'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
+// REST: get case details for each ssm, no variant-level info
+const samplesummary2_getcase = {
+	endpoint: GDC_HOST + '/ssm_occurrences',
+	fields: ['ssm.ssm_id', 'case.project.project_id', 'case.case_id', 'case.primary_site', 'case.disease_type'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
+
+/*
+sampleSummaries2 first query, to get the numbers for each sub label under track name
+TODO support range query
+TODO change to a list of queries to support both ssm and fusion etc
+*/
+const isoform2casesummary = {
+	endpoint: GDC_HOST + '/ssm_occurrences',
+	fields: ['case.project.project_id', 'case.primary_site'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
+
 /*
 TODO if can be done in protein_mutations
 query list of variants by genomic range (of a gene/transcript)
@@ -938,6 +1059,8 @@ module.exports = {
 
 	// query in paralell, not based on skewer data
 	sampleSummaries2: {
+		get_number: { gdcapi: isoform2casesummary },
+		get_mclassdetail: { gdcapi: [samplesummary2_getvariant, samplesummary2_getcase] },
 		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site' }]
 	},
 

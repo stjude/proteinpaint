@@ -11,10 +11,10 @@ import { make_leftlabels } from './leftlabel'
 /*
 ********************** EXPORTED
 loadTk
-get_parameter
-********************** INTERNAL
-loadTk_finish_closure
 rangequery_rglst
+********************** INTERNAL
+get_parameter
+loadTk_finish_closure
 rangequery_add_variantfilters
 
 */
@@ -77,10 +77,6 @@ function loadTk_finish_closure(tk, block) {
 		block.tkcloakoff(tk, { error: data.error })
 		block.block_setheight()
 		block.setllabel()
-		if (tk.mds.sampleSummaries2) {
-			// only process it here after track is rendered
-			load_sampleSummaries2(tk, block)
-		}
 	}
 }
 
@@ -105,6 +101,10 @@ function get_parameter(tk, block) {
 		if (tk.mds.sampleSummaries) {
 			// need to make sample summary
 			par.push('samplesummary=1')
+		}
+		if (tk.mds.sampleSummaries2) {
+			// need to make sample summary using different method but still based on same querying parameter
+			par.push('samplesummary2=1')
 		}
 		if (tk.set_id) {
 			// quick fix!!!
@@ -140,11 +140,11 @@ function get_parameter(tk, block) {
 	if (tk.hiddenmclass.size) {
 		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
-	par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
+	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return par.join('&')
 }
 
-function rangequery_rglst(tk, block, par) {
+export function rangequery_rglst(tk, block, par) {
 	let rglst = []
 	if (block.usegm) {
 		/* to merge par.rglst[] into one region
@@ -247,8 +247,4 @@ by info_fields[] and variantcase_fields[]
 			return lst
 		}, [])
 	}
-}
-
-async function load_sampleSummaries2(tk, block) {
-	const data = await tk.mds.sampleSummaries2.get()
 }
