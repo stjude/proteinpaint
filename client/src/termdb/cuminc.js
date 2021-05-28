@@ -66,7 +66,10 @@ class TdbCumInc {
 			return
 		}
 		Object.assign(this.settings, this.state.config.settings)
-		if (data) this.currData = this.getData(data)
+		if (data) {
+			this.currData = this.getData(data)
+			this.refs = data.refs
+		}
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
@@ -494,7 +497,8 @@ function getPj(self) {
 							]
 						},
 						'$seriesId'
-					]
+					],
+					'@done()': '=sortSerieses()'
 				},
 				'=chartTitle()'
 			]
@@ -552,6 +556,11 @@ function getPj(self) {
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
+			},
+			sortSerieses(result) {
+				if (!self.refs.bins) return
+				const labelOrder = self.refs.bins.map(b => b.label)
+				result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
 			}
 		}
 	})
