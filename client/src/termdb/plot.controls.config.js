@@ -38,7 +38,13 @@ class TdbConfigUiInit {
 				debug,
 				instanceNum: this.instanceNum
 			}),
-			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug })
+			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
+			grade: setCumincGradeOpts({
+				holder: this.dom.cumincGradeTr,
+				dispatch,
+				id: this.id,
+				debug
+			})
 		}
 		this.components = {
 			term1: term1uiInit(app, { holder: this.dom.term1Tr, id: this.id, debug }),
@@ -72,6 +78,7 @@ class TdbConfigUiInit {
 		this.dom.overlayTr = this.dom.table.append('tr')
 		this.dom.viewTr = this.dom.table.append('tr')
 		this.dom.orientationTr = this.dom.table.append('tr')
+		this.dom.cumincGradeTr = this.dom.table.append('tr') //.style('display', 'none')
 		this.dom.scaleTr = this.dom.table.append('tr')
 		this.dom.divideTr = this.dom.table.append('tr')
 
@@ -219,6 +226,52 @@ function setScaleOpts(opts) {
 	return Object.freeze(api)
 }
 
+function setCumincGradeOpts(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTd: opts.holder
+				.append('td')
+				.html('Cutoff Grade')
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
+		opts.dispatch({
+			type: 'plot_edit',
+			id: opts.id,
+			config: {
+				settings: {
+					cuminc: {
+						gradeCutoff: self.dom.select.property('value')
+					}
+				}
+			}
+		})
+	})
+
+	self.dom.select
+		.selectAll('option')
+		.data([1, 2, 3, 4, 5])
+		.enter()
+		.append('option')
+		.attr('value', d => d)
+		.attr('selected', d => d === 3)
+		.html(d => '&nbsp;' + d + '&nbsp;')
+
+	const api = {
+		main(plot) {
+			self.dom.row.style('display', plot.settings.currViews.includes('cuminc') ? 'table-row' : 'none')
+			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 function setViewOpts(opts) {
 	const self = {
 		dom: {
@@ -238,7 +291,7 @@ function setViewOpts(opts) {
 		{ label: 'Scatter', value: 'scatter' }
 	]
 
-	if (opts.isleaf && opts.iscondition) {
+	if (opts.iscondition) {
 		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
 	}
 
@@ -262,7 +315,7 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', (opts.isleaf && opts.iscondition) || plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', opts.iscondition || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')

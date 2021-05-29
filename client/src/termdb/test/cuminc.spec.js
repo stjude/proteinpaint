@@ -23,7 +23,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('cumulative incidence', function(test) {
+tape('basic cuminc plot', function(test) {
 	test.timeoutAfter(2000)
 	runpp({
 		state: {
@@ -36,27 +36,42 @@ tape.only('cumulative incidence', function(test) {
 					'Arrhythmias',
 					'Cardiac dysrhythmia'
 				],
-				visibleCumIncIds: ['Cardiac dysrhythmia'],
-				cuminc: {
+				visiblePlotIds: ['Cardiac dysrhythmia'],
+				plots: {
 					'Cardiac dysrhythmia': {
 						term: {
 							id: 'Cardiac dysrhythmia',
 							term: termjson['Cardiac dysrhythmia'],
 							q: { bar_by_grade: true, value_by_max_grade: true }
+						},
+						settings: {
+							currViews: ['cuminc']
 						}
 					}
 				}
 			}
 		},
-		cuminc: {
+		plot: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(cuminc) {
-		test.pass('63 cuminc')
+	let cumincDiv
+	function runTests(plot) {
+		cumincDiv = plot.Inner.components.cuminc.Inner.dom.div
+		test.equal(cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series').size(), 1, 'should render 1 cuminc series g')
+		test.equal(
+			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series path').size(),
+			2,
+			'should render 2 cuminc series paths for estimate line and 95% CI area'
+		)
+		test.equal(
+			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
+			108,
+			'should render 108 cuminc series circles'
+		)
 		test.end()
 	}
 })

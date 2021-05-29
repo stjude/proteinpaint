@@ -9,7 +9,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/pp-dist/build.sh [-r]
+	./build/pp-dist/build.sh [-r]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	"
@@ -61,7 +61,7 @@ cd ..
 ##########
 
 mv package.json package.json.bak
-./targets/pp-dist/editpkgjson.js > package.json
+./build/pp-dist/editpkgjson.js > package.json
 npm pack 
 rm package.json
 mv package.json.bak package.json
@@ -74,4 +74,4 @@ mv package.json.bak package.json
 TAG="$(node -p "require('./package.json').version")"
 echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
-docker build --file ./targets/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

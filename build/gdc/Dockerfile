@@ -46,18 +46,9 @@ WORKDIR /home/root/pp/app/server
 RUN npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
 
 # Test
-WORKDIR /home/root/pp/app 
-ADD targets ./targets
-
-# For now, must mount a developer's local serverconfig.tpmasterdir
-# in order to run the GDC test in a running container
-CMD [ "/bin/bash", "./targets/gdc/test.sh"]
-
-# TODO: run the GDC tests as part of building a Docker image,
-# to act as a quality control step before building a 
-# publishable build target in this Dockerfile
-# !!! requires extracting data subsets for testing Lolliplot wrapper !!!
-# RUN ./targets/gdc/test.sh
+WORKDIR /home/root/pp/app
+ADD build ./build
+RUN ./build/gdc/test.sh
 
 
 ########

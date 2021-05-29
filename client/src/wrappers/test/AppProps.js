@@ -37,7 +37,7 @@ export class AppProps extends React.Component {
 		const set_id =
 			set_filter && set_filter.content.value[0].includes('set_id:')
 				? set_filter.content.value[0].split(':').pop()
-				: 'J4BW1HYBmqgBSxEihjaC'
+				: '9eF7qnkBQZZJsd_opdWz' // open access project TCGA=true filter
 		let gene = genes.find(g => g.ensembl_id == this.props.geneId)
 		if (!gene) gene = this.props.ssm_id ? null : genes[0]
 
@@ -77,8 +77,8 @@ export class AppProps extends React.Component {
 							<button
 								key={index}
 								style={btn_style}
-								onClick={() => this.changeGene(gene.name)}
-								disabled={this.state.gene === gene.name}
+								onClick={() => this.changeGene(gene.ensembl_id)}
+								disabled={this.state.geneId === gene.ensembl_id}
 							>
 								{gene.name}
 							</button>
@@ -86,8 +86,8 @@ export class AppProps extends React.Component {
 					})}
 				</div>
 				<div style={div_style}>
-					<input type="checkbox" id={'set_switch'} checked={this.state.set_id_flag} onChange={() => this.ApplySet()} />
-					<label htmlFor={'set_switch'}>
+					<input type="checkbox" id="set_switch" checked={this.state.set_id_flag} onChange={() => this.ApplySet()} />
+					<label htmlFor="set_switch">
 						<span style={btn_style}>Apply set_id</span>
 					</label>
 					<input
@@ -167,22 +167,21 @@ export class AppProps extends React.Component {
 	componentDidMount() {
 		this.filterJsonRef.current.value = this.filters ? JSON.stringify(this.filters, null, '    ') : ''
 	}
-	changeGene(gene) {
-		const ensembl_id = genes.find(d => d.name == gene).ensembl_id
+	changeGene(ensembl_id) {
 		this.setState({ geneId: ensembl_id })
 	}
 	ApplySet() {
 		const set_id_flag = !this.state.set_id_flag
-		this.setFilters(this.state.set_id)
+		this.setFilters(this.state.set_id, set_id_flag)
 		this.setState({ filters: this.filters, set_id_flag, set_id_editing: true })
 	}
 	editSetid() {
 		this.setState({ set_id_editing: !this.state.set_id_editing })
 	}
 	submitSetid() {
-		console.log(178, 'submitSetid')
 		const set_id = this.setidRef.current.value
-		setFilters(set_id)
+		this.setFilters(set_id)
+
 		this.setState({
 			set_id_flag: true,
 			set_id_editing: false,
@@ -246,7 +245,7 @@ export class AppProps extends React.Component {
 	getUrlParams() {
 		return {}
 	}
-	setFilters(set_id) {
+	setFilters(set_id, set_id_flag = true) {
 		if (!this.filters) {
 			this.filters = {
 				op: 'AND',
@@ -256,7 +255,7 @@ export class AppProps extends React.Component {
 		if (!set_id) return
 
 		let set_filter = this.filters.content.find(f => f.content && f.content.field == 'cases.case_id') //.includes('set_id:')
-		if (!set_id) {
+		if (!set_id || !set_id_flag) {
 			if (set_filter) {
 				const i = this.filters.content.findIndex(f => f === set_filter)
 				this.filters.content.splice(i, 1)

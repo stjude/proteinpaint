@@ -75,13 +75,13 @@ npm start # starts the server
 npm test # tests the server conde
 ```
 
-#### in targets/sj/
+#### in project/root
 ```bash
-cd targets/sj
-./deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
+./build/deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
 
-# or to deploy to ppr
+# or to deploy to internal/external production servers
 npm run ppr
+npm run prp1
 ```
 
 ## Build
