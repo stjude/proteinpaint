@@ -489,7 +489,6 @@ fn build_kmers_refalt(
     let mut kmer_start_poly = left_most_pos - 1;
     let mut kmer_stop_poly = kmer_start_poly + kmer_length;
     for i in 0..num_iterations {
-        #[derive(Copy, Clone)]
         let mut subseq = String::new();
         let mut subseq2 = String::new();
         let mut j = i as usize;
@@ -818,7 +817,6 @@ fn build_kmers_reads(
     let mut alt_polyclonal_status: i64 = 0;
     kmers.reserve(200);
     for i in 0..num_iterations {
-        #[derive(Copy, Clone)]
         let mut subseq = String::new();
         //let mut subseq2 = String::new();
         let mut j = i as usize;
