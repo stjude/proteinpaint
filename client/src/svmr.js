@@ -160,7 +160,7 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 				reader.readAsText(file, 'utf8')
 			})
 
-		setTimeout(()=>input.node().focus(), 1100)
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }

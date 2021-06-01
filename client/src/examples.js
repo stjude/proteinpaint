@@ -26,7 +26,7 @@ export async function init_examples(par) {
 	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	// Quick fix: hide gdcbamslice if serverconfig.gdcbamslice is false or missing
-	re.examples.find(track => track.name ==  'GDC BAM Slice').hidden = !show_gdcbamslice
+	re.examples.find(track => track.name == 'GDC BAM Slice').hidden = !show_gdcbamslice
 	// if(track.name == 'GDC BAM Slice' && !page_args.show_gdcbamslice)
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),

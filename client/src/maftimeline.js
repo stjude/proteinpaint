@@ -116,7 +116,7 @@ export default function maftimelineui(genomes, holder, sandbox_header) {
 				saydiv.text('Parsing file ' + file.name + ' ...')
 				reader.readAsText(file, 'utf8')
 			})
-		setTimeout(()=>butt.node().focus(), 1100)
+		setTimeout(() => butt.node().focus(), 1100)
 	}
 	fileui()
 }

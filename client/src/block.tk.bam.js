@@ -137,8 +137,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.append('div')
 		.style('grid-column', 'span 2')
 		.style('font-size', '80%')
-		.style('padding', '3px 10px')
-		.html(`<b>Note:</b> Either position or variant is required.
+		.style('padding', '3px 10px').html(`<b>Note:</b> Either position or variant is required.
 			</br>&emsp;&emsp;&nbsp;&nbsp; 
 			GDC BAM slice will be visualized for the provided postion or variant, 
 			to visualze additional reads, enter again from this form.`)
@@ -538,9 +537,7 @@ function may_render_variant(data, tk, block) {
 
 	let yoff
 	if (tk.gdc) {
-		yoff = data.pileup_data
-			? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
-			: 0 // get height of existing graph above variant row
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
 	} else {
 		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
 	}

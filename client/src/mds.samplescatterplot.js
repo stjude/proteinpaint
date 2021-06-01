@@ -900,8 +900,9 @@ function makeConfigPanel(obj) {
 		lasso_select(obj, dots)
 
 		// reset dots to original state if lasso button deactivated
-		if(obj.lasso_active) return
-		dots.selectAll('circle')
+		if (obj.lasso_active) return
+		dots
+			.selectAll('circle')
 			.classed('not_possible', false)
 			.classed('possible', false)
 			.attr('r', radius)

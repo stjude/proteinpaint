@@ -413,8 +413,13 @@ function makeheader(app, obj, jwt) {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-      
-			await _.init_examples({ holder: app_holder, apps_sandbox_div: app.holder.apps_sandbox_div, apps_off, show_gdcbamslice: obj.features.gdcslice })
+
+			await _.init_examples({
+				holder: app_holder,
+				apps_sandbox_div: app.holder.apps_sandbox_div,
+				apps_off,
+				show_gdcbamslice: obj.features.gdcslice
+			})
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
@@ -1111,7 +1116,7 @@ async function parseembedthenurl(arg, app) {
 		launchmaftimeline(arg, app)
 	}
 
-	if(arg.gdcbamslice) {
+	if (arg.gdcbamslice) {
 		launchgdcbamslice(arg, app)
 	}
 }
@@ -1669,11 +1674,11 @@ function launchJunctionbyMatrix(arg, app) {
 
 function launchgdcbamslice(arg, app) {
 	if (arg.gdcbamslice.uionly) {
-			import('./block.tk.bam').then(p => {
-				p.bamsliceui(app.genomes, app.holder0, app.hostURL)
-			})
-			return
-		}
+		import('./block.tk.bam').then(p => {
+			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+		})
+		return
+	}
 }
 
 /*
