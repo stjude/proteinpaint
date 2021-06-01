@@ -54,9 +54,10 @@ async function get_gdc_data(gdc_id) {
 			break
 		}
 	}
-	if (!re.data.hits.length) throw 'gdc_id is not file uuid'
+	if (!re.data.hits.length) throw 'gdc_id is not valid file uuid/ case uuid/ case id'
 	for (const s of re.data.hits) {
 		const file = {}
+        file.file_uuid = s.id 
 		file.file_size = (parseFloat(s.file_size) / 10e9).toFixed(2) + ' GB'
 		file.experimental_strategy = s.experimental_strategy
 		file.entity_id = s.associated_entities[0].entity_submitter_id
@@ -70,6 +71,7 @@ async function get_gdc_data(gdc_id) {
 async function query_gdc_api(query_filter) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	const fields = [
+        'id',
 		'file_size',
 		'experimental_strategy',
 		'associated_entities.entity_submitter_id',

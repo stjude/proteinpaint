@@ -101,18 +101,18 @@ query gdc_bam_file($filters: FiltersArgument, $first: Int){
 GET https://api.gdc.cancer.gov/files/
 # ?filters={"op":"in","content":{"field":"file_id","value":"df80679e-c4d3-487b-934c-fcc782e5d46e"}}
 ?filters={"op":"and","content":[{"op":"in","content":{"field":"file_id","value":"df80679e-c4d3-487b-934c-fcc782e5d46e"}}]}
-&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,cases.samples.sample_type
+&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,id,cases.samples.sample_type
 
 ###
 ## files from case_id
 GET https://api.gdc.cancer.gov/files/
 ?filters={"op":"and","content":[{"op":"=","content":{"field":"cases.case_id","value":"02e6f999-24f2-4ad2-9b92-df3ee2b082e5"}},{"op":"=","content":{"field":"data_category","value":"Sequencing Reads"}}]}
-&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,cases.samples.sample_type
+&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,id,cases.samples.sample_type
 
 ###
 ## files from case_id
 GET https://api.gdc.cancer.gov/files/
 ?filters={"op":"and","content":[{"op":"in","content":{"field":"cases.submitter_id","value":"TCGA-D8-A1JC"}},{"op":"=","content":{"field":"data_category","value":"Sequencing Reads"}}]}
-&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,cases.samples.sample_type
+&fields=file_size,experimental_strategy,associated_entities.entity_submitter_id,associated_entities.entity_type,associated_entities.case_id,id,cases.samples.sample_type
 
 ###
