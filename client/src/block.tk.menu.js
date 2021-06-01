@@ -1012,19 +1012,28 @@ function facettrigger(block, holder, menutip) {
 	const toshow = []
 
 	for (const tkset of block.genome.tkset) {
-		// show facet for this set?
+		// { isfacet: bool, name:str, tklst:[ {tk} ] }
 
 		if (tkset.facetlst) {
-			// this set has predefined facets
+			// this set has predefined facets as supplied from tp.init
+			// [ {samples[], assays[]} ]
 			toshow.push(tkset)
 			continue
 		}
+
+		if (tkset.isfacet) {
+			toshow.push(tkset)
+			continue
+		}
+
+		// follow case should not be allowed
+		// if it's a facet table, then it must have the .isfacet flag
 
 		/*
 		no predefined facets
 		see if more than 1 sample & more than 1 assay
 		that will qualify for making facet
-		*/
+
 		const patients = new Map()
 		const assays = new Set()
 		for (const t of tkset.tklst) {
@@ -1043,11 +1052,13 @@ function facettrigger(block, holder, menutip) {
 		if (patients.size > 1 && assays.size > 1) {
 			toshow.push(tkset)
 		}
+		*/
 	}
 	if (toshow.length == 0) {
 		return
 	}
 	// has facets to be shown
+	// a holder to show one button for each facet table
 	const div = holder.append('div').style('margin', '15px')
 	div
 		.append('div')
@@ -1106,19 +1117,20 @@ function facettrigger(block, holder, menutip) {
 	}
 }
 
+/*
+called by clicking a button in tkmenu linking to a set in genome.tkset[]
+to make a facet table for a set in genome.tkset[]
+
+tkset{}
+  required
+  {isfacet, name, tklst[], facetpane}
+
+flet{}
+  optional, a facet table with predefined rows and columns
+  {samples, assays}
+  if undefined, will generate table using tkset.tklst[]
+*/
 function facetmake(block, tkset, flet) {
-	/*
-	called by clicking a button in tkmenu linking to a set in genome.tkset[]
-
-	to make a facet table for a set in genome.tkset[]
-
-	if flet is given
-	to make it for predefined facet let
-
-	rows - samples
-	columns - assays
-	*/
-
 	const tip = new client.Menu()
 
 	const facetpane = (flet || tkset).facetpane
@@ -1134,16 +1146,22 @@ function facetmake(block, tkset, flet) {
 	k: assay name
 	v: tk count
 	*/
-
-	const patients = new Map()
+	const sample2assay2tracks = new Map()
 	/*
-	k: patient
-	v: {}
-	   k: sampletype
-	   v: {}
-	      k: assay name
-	      v: tklst[]
+	k: sample
+	v: map
+	   k: assay
+	   v: tklst
 	*/
+	let L1_2_sample
+	// k: tk.level1, when tk.level2 is not set
+	// v: list of samples
+	let L2_2_samples
+	// k: tk.level2, when both tk.level1 and tk.level2 are set
+	// v: list of samples
+	let L1_2_L2
+	// k: tk.level1, when both tk.level2 and tk.level2 are set
+	// v: list of tk.level2
 
 	if (flet) {
 		// predefined facet
@@ -1151,74 +1169,85 @@ function facetmake(block, tkset, flet) {
 			assays.set(n, 0)
 		}
 		for (const n of flet.samples) {
-			patients.set(n, { count: 0, st: new Map() })
+			sample2assay2tracks.set(n, new Map())
 		}
 		for (const t of tkset.tklst) {
-			if (!assays.has(t.assayname) || !patients.has(t.patient)) continue
+			// assayname and patient are backward compatible
+			const assay = t.assayname || t.assay
+			if (!assays.has(assay)) continue
+			const sample = t.patient || t.sample
+			if (!sample2assay2tracks.has(sample)) continue
 
-			assays.set(t.assayname, assays.get(t.assayname) + 1)
-
-			patients.get(t.patient).count++
-
-			if (!patients.get(t.patient).st.has(t.sampletype)) {
-				patients.get(t.patient).st.set(t.sampletype, new Map())
-			}
-			if (
-				!patients
-					.get(t.patient)
-					.st.get(t.sampletype)
-					.has(t.assayname)
-			) {
-				patients
-					.get(t.patient)
-					.st.get(t.sampletype)
-					.set(t.assayname, [])
-			}
-			patients
-				.get(t.patient)
-				.st.get(t.sampletype)
-				.get(t.assayname)
+			if (!sample2assay2tracks.get(sample).has(assay)) sample2assay2tracks.get(sample).set(assay, [])
+			sample2assay2tracks
+				.get(sample)
+				.get(assay)
 				.push(t)
 		}
 	} else {
+		// backward compatible
 		for (const t of tkset.tklst) {
-			if (!t.assayname || !t.patient || !t.sampletype) {
+			if (t.assayname) {
+				t.assay = t.assayname
+				delete t.assayname
+			}
+			if (t.assay) {
+				assays.set(t.assay, 0)
+				if (t.patient) {
+					t.level1 = t.patient
+					delete t.patient
+					if (t.sampletype) {
+						t.level2 = t.sampletype
+						delete t.sampletype
+					}
+				}
+			} else {
 				continue
 			}
-			if (!assays.has(t.assayname)) {
-				assays.set(t.assayname, 0)
-			}
-			assays.set(t.assayname, assays.get(t.assayname) + 1)
+		}
 
-			if (!patients.has(t.patient)) {
-				patients.set(t.patient, { count: 0, st: new Map() })
+		let hasl1 = false,
+			hasl2 = false
+		for (const t of tkset.tklst) {
+			if (t.level1) {
+				hasl1 = true
+				if (t.level2) hasl2 = true
 			}
-			patients.get(t.patient).count++
-
-			if (!patients.get(t.patient).st.has(t.sampletype)) {
-				patients.get(t.patient).st.set(t.sampletype, new Map())
+		}
+		if (hasl1) {
+			L1_2_sample = new Map()
+			if (hasl2) {
+				L1_2_L2 = new Map()
+				L2_2_samples = new Map()
 			}
-			if (
-				!patients
-					.get(t.patient)
-					.st.get(t.sampletype)
-					.has(t.assayname)
-			) {
-				patients
-					.get(t.patient)
-					.st.get(t.sampletype)
-					.set(t.assayname, [])
-			}
-			patients
-				.get(t.patient)
-				.st.get(t.sampletype)
-				.get(t.assayname)
+		}
+		for (const t of tkset.tklst) {
+			if (!t.assay || !t.sample) continue
+			if (!sample2assay2tracks.has(t.sample)) sample2assay2tracks.set(t.sample, new Map())
+			if (!sample2assay2tracks.get(t.sample).has(t.assay)) sample2assay2tracks.get(t.sample).set(t.assay, [])
+			sample2assay2tracks
+				.get(t.sample)
+				.get(t.assay)
 				.push(t)
+
+			if (t.level1) {
+				const L1 = t.level1
+				if (t.level2) {
+					const L2 = t.level2
+					if (!L2_2_samples.has(L2)) L2_2_samples.set(L2, new Set())
+					L2_2_samples.get(L2).add(t.sample)
+					L1_2_L2.set(L1, L2)
+				} else {
+					if (!L1_2_sample.has(L1)) L1_2_sample.set(L1, new Set())
+					L1_2_sample.get(L1).add(t.sample)
+				}
+			}
 		}
 	}
 
 	// str names for both dimensions, may sort or not
-	let assaynamelst, patientnamelst
+	let assaynamelst
+	//patientnamelst
 
 	if (flet && flet.nosortassay) {
 		assaynamelst = [...assays].map(a => a[0])
@@ -1239,19 +1268,20 @@ function facetmake(block, tkset, flet) {
 			})
 			.map(a => a[0])
 	}
+	/*
 
 	if (flet && flet.nosortsample) {
 		patientnamelst = [...patients].map(a => a[0])
 	} else {
 		patientnamelst = [...patients].sort((a, b) => b[1].count - a[1].count).map(a => a[0])
 	}
+	*/
 
 	/*
 	show sampletype column?
 	if a patient do not have sampletype, the sampletype value is the same as patient name
 	if none of the patients have sampletype, do not show sampletype column
 	otherwise show
-	*/
 	let hasst = false
 	for (const [patient, a] of patients) {
 		for (const [st, b] of a.st) {
@@ -1262,20 +1292,15 @@ function facetmake(block, tkset, flet) {
 		}
 		if (hasst) break
 	}
+	*/
 
 	const scrollholder = facetpane.body.append('div')
-	{
-		// # of rows (st) in the table to see if to scroll?
-		let count = 0
-		for (const [a, b] of patients) {
-			count += b.st.size
-		}
-		if (count > 50) {
-			scrollholder
-				.style('height', '500px')
-				.style('overflow-y', 'scroll')
-				.style('resize', 'vertical')
-		}
+	if (sample2assay2tracks.size > 50) {
+		// more than 50 samples
+		scrollholder
+			.style('height', '500px')
+			.style('overflow-y', 'scroll')
+			.style('resize', 'vertical')
 	}
 
 	const table = scrollholder
@@ -1287,12 +1312,8 @@ function facetmake(block, tkset, flet) {
 
 	///////////////// header row
 	const tr = table.append('tr')
-	// 1. patient
-	tr.append('td')
-	// 2. sampletype
-	if (hasst) {
-		tr.append('td')
-	}
+	if (L1_2_sample) tr.append('td') // empty cell
+	if (L2_2_samples) tr.append('td') // empty cell
 	for (const assay of assaynamelst) {
 		tr.append('td')
 			.text(assay)
@@ -1300,6 +1321,56 @@ function facetmake(block, tkset, flet) {
 			.on('click', () => {
 				batchselect_assay(assay)
 			})
+	}
+
+	if (L1_2_L2) {
+		// one row for each L1 that contains L2
+		for (const [L1, o] of L1_2_L2) {
+			// number of samples under this L1
+			// rendering not implemented!!!!!!!!!!!!!
+			let samplecount1 = 0
+			for (const s of o.values()) {
+				samplecount1 += s.size
+			}
+
+			let tr = table.append('tr')
+			let createnewrow = false
+			tr.append('td')
+				.text(L1)
+				.attr('rowspan', samplecount1)
+
+			for (const [L2, sampleset] of o) {
+				if (createnewrow) {
+					tr = table.append('tr')
+				}
+
+				tr.append('td')
+					.text(L2)
+					.attr('rowspan', sampleset.size)
+
+				for (const sample of sampleset) {
+					if (createnewrow) {
+						tr = table.append('tr')
+					}
+					tr.append('td').text(sample)
+
+					for (const assay of assaynamelst) {
+						makecell(sample, assay, tr)
+					}
+					createnewrow = true
+				}
+				createnewrow = true
+			}
+		}
+	}
+
+	function makecell(sample, assay, tr) {
+		const td = tr.append('td')
+		const s = sample2assay2tracks.get(sample)
+		if (!s) return
+		const lst = s.get(assay)
+		if (!lst) return
+		td.text(lst.length) // TODO
 	}
 
 	////////////////// one row for each sample
