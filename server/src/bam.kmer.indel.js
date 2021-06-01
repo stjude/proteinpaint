@@ -71,9 +71,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		.join('')
 		.toUpperCase()
 
-	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
-	console.log('refSeq', refseq)
-	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log('refSeq', refseq)
+	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
 	const refallele = final_ref.toUpperCase()
 	const altallele = final_alt.toUpperCase()
@@ -162,7 +162,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 				.map(Number)
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
-			console.log(item)
+			//console.log(item)
 		}
 	}
 
@@ -300,6 +300,7 @@ export async function match_complexvariant(q, templates_info) {
 		final_alt = ''
 	}
 
+	/*
 	console.log(
 		'q.variant.pos:',
 		q.variant.pos,
@@ -308,6 +309,8 @@ export async function match_complexvariant(q, templates_info) {
 		',variant:',
 		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
 	)
+	*/
+
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
@@ -338,9 +341,9 @@ export async function match_complexvariant(q, templates_info) {
 		.join('')
 		.toUpperCase()
 
-	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
-	console.log('refSeq', refseq)
-	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log('refSeq', refseq)
+	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
 	const refallele = final_ref.toUpperCase()
 	const altallele = final_alt.toUpperCase()
@@ -392,7 +395,6 @@ export async function match_complexvariant(q, templates_info) {
 	//          ref_weight=altallele.length/refallele.length
 	//        }
 
-	console.log('Ref kmers:')
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,
@@ -402,8 +404,6 @@ export async function match_complexvariant(q, templates_info) {
 		weight_indel,
 		weight_no_indel
 	)
-	//console.log("all_ref_kmers:",all_ref_kmers)
-	console.log('Alt kmers:')
 	const all_alt_kmers = build_kmers_refalt(
 		altseq,
 		kmer_length,
@@ -429,7 +429,7 @@ export async function match_complexvariant(q, templates_info) {
 		const score = item.value
 		ref_kmers_weight += score * kmer2_freq
 	}
-	console.log('ref_kmers_weight:', ref_kmers_weight)
+	//console.log('ref_kmers_weight:', ref_kmers_weight)
 
 	const all_alt_kmers_nodups = new Set(all_alt_kmers)
 	const all_alt_kmers_seq_values_nodups = new Set(all_alt_kmers.map(x => x.sequence))
@@ -446,7 +446,7 @@ export async function match_complexvariant(q, templates_info) {
 		const score = item.value
 		alt_kmers_weight += score * kmer2_freq
 	}
-	console.log('alt_kmers_weight:', alt_kmers_weight)
+	//console.log('alt_kmers_weight:', alt_kmers_weight)
 
 	const ref_kmers = build_kmers(refseq, kmer_length)
 	const alt_kmers = build_kmers(altseq, kmer_length)
@@ -503,7 +503,7 @@ export async function match_complexvariant(q, templates_info) {
 		}
 	}
 
-	console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
+	//console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
 	let ref_indices = []
 	if (ref_scores.length > 0) {
 		ref_indices = determine_maxima_alt(ref_scores, threshold_slope)
@@ -777,7 +777,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 			}
 		}
 	} else {
-		console.log('Number of reads too low to determine curvature of slope')
+		//console.log('Number of reads too low to determine curvature of slope')
 		indices.push([kmer_diff_scores[0].groupID, 'none'])
 		return indices
 	}
@@ -788,7 +788,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		}
 	} else {
 		// The points are in the shape of a curve
-		console.log('start point:', start_point)
+		//console.log('start point:', start_point)
 		const kmer_diff_scores_input = []
 		for (let i = 0; i <= start_point; i++) {
 			kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
@@ -796,10 +796,10 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 
 		const min_value = [0, kmer_diff_scores[0].value]
 		const max_value = [start_point, kmer_diff_scores[start_point].value]
-		console.log('max_value:', max_value)
+		//console.log('max_value:', max_value)
 
 		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0]) // m=(y2-y1)/(x2-x1)
-		console.log('Slope of line:', slope_of_line)
+		//console.log('Slope of line:', slope_of_line)
 		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line // c=y-m*x
 
 		const distances_from_line = []
@@ -814,7 +814,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		const index_array_maximum = distances_from_line.indexOf(array_maximum)
 		// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
 		const score_cutoff = kmer_diff_scores[index_array_maximum].value
-		console.log('score cutoff:', score_cutoff)
+		//console.log('score cutoff:', score_cutoff)
 		for (let i = 0; i < kmer_diff_scores.length; i++) {
 			if (score_cutoff >= kmer_diff_scores[i].value) {
 				indices.push([kmer_diff_scores[i].groupID, 'none'])
