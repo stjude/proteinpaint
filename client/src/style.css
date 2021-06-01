@@ -915,6 +915,7 @@ hr {
     left: 50%;
     margin-left: -60px;
     background-color: #f2f0f0;
+    word-wrap: break-word ;
 }
 
 .gbrowser-btn .launch-btn-tooltip,
