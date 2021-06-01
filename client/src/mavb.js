@@ -183,8 +183,8 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			
-		setTimeout(()=>input.node().focus(), 1100)
+
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }

@@ -81,7 +81,7 @@ class TdbPlot {
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		if (opts.term.type == 'condition' && opts.term.isleaf) {
+		if (opts.term.type == 'condition') {
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },
@@ -133,7 +133,7 @@ class TdbPlot {
 
 		if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
-			params.push('grade=3') // harcode for now
+			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -271,6 +271,23 @@ export function plotConfig(opts) {
 				ciVisible: true,
 				fillOpacity: 0.2,
 				duration: 1000
+			},
+			cuminc: {
+				gradeCutoff: 3,
+				radius: 5,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16
 			},
 			termInfo: {
 				isVisible: false

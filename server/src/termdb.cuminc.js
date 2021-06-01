@@ -11,6 +11,8 @@ export async function get_incidence(q, ds) {
 		const rows = get_rows(q, { withCTEs: false })
 		const byChartSeries = {}
 		for (const d of rows) {
+			// do not include data when years_to_event < 0
+			if (d.val1 < 0) continue
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string,
 			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}

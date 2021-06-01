@@ -356,9 +356,7 @@ function may_render_variant(data, tk, block) {
 
 	let yoff
 	if (tk.gdc) {
-		yoff = data.pileup_data
-			? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
-			: 0 // get height of existing graph above variant row
+		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
 	} else {
 		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
 	}

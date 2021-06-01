@@ -18,7 +18,7 @@ usage() {
 }
 
 REV=latest
-TARGETDIR="targets"
+TARGETDIR="build"
 while getopts "t:r:h:" opt; do
 	case "${opt}" in
 	t)

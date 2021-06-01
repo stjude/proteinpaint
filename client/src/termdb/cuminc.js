@@ -19,23 +19,7 @@ class TdbCumInc {
 			div: opts.holder.style('margin', '10px')
 		}
 		// hardcode for now, but may be set as option later
-		this.settings = {
-			gradeCutoff: 3,
-			radius: 5,
-			fill: '#fff',
-			stroke: '#000',
-			fillOpacity: 0,
-			chartMargin: 10,
-			svgw: 400,
-			svgh: 300,
-			svgPadding: {
-				top: 20,
-				left: 55,
-				right: 20,
-				bottom: 50
-			},
-			axisTitleFontSize: 16
-		}
+		this.settings = Object.assign({}, opts.settings)
 		this.pj = getPj(this)
 		this.lineFxn = line()
 			.curve(curveStepAfter)
@@ -71,6 +55,7 @@ class TdbCumInc {
 			this.dom.div.style('display', 'none')
 			return
 		}
+		Object.assign(this.settings, this.state.config.settings)
 		if (data) this.currData = this.getData(data)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
@@ -80,10 +65,11 @@ class TdbCumInc {
 	getData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
+		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = d[i]
+				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
 			})
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
@@ -92,6 +78,7 @@ class TdbCumInc {
 	}
 
 	setTerm2Color(charts) {
+		if (!charts) return
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		for (const chart of charts) {
@@ -117,7 +104,7 @@ function setRenderers(self) {
 	}
 
 	self.addCharts = function(d) {
-		const s = self.settings
+		const s = self.settings.cuminc
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
@@ -158,7 +145,7 @@ function setRenderers(self) {
 
 	self.updateCharts = function(d) {
 		if (!d.serieses) return
-		const s = self.settings
+		const s = self.settings.cuminc
 		const div = select(this)
 
 		div
@@ -259,7 +246,8 @@ function setRenderers(self) {
 					y: d.y,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[0],
-					seriesName: 'cuminc'
+					seriesName: 'cuminc',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
@@ -274,7 +262,8 @@ function setRenderers(self) {
 					y: d.low,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[1],
-					seriesName: 'low'
+					seriesName: 'low',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
@@ -289,14 +278,14 @@ function setRenderers(self) {
 					y: d.high,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[2],
-					seriesName: 'high'
+					seriesName: 'high',
+					seriesLabel: series.seriesLabel
 				}
 			})
 		)
 	}
 
 	function renderSubseries(s, g, data) {
-		/* TODO: circles/mouseover is not needed for privacy */
 		g.selectAll('g').remove()
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(data, b => b.x)
@@ -323,16 +312,15 @@ function setRenderers(self) {
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId]
-		//if(seriesName == 'cuminc') {
-		g.append('path')
-			.attr('d', self.lineFxn(data))
-			.style('fill', 'none')
-			.style('stroke', seriesName == 'cuminc' ? color.darker() : color)
-			//.style('stroke-width', seriesName == 'cuminc' ? '2px' : '1px')
-			.style('opacity', 1)
-			.style('stroke-opacity', seriesName == 'cuminc' ? 1 : 0.2)
-			.attr('stroke-dasharray', seriesName == 'cuminc' ? null : '6 3')
-		//}
+
+		if (seriesName == 'cuminc') {
+			g.append('path')
+				.attr('d', self.lineFxn(data))
+				.style('fill', 'none')
+				.style('stroke', color.darker())
+				.style('opacity', 1)
+				.style('stroke-opacity', 1)
+		}
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -364,7 +352,7 @@ function setRenderers(self) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(xTitleLabel)
 
-		const yTitleLabel = 'Cumulative Incidence (probability)'
+		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -392,19 +380,22 @@ function setInteractivity(self) {
 	self.mouseover = function() {
 		const d = event.target.__data__
 		if (event.target.tagName == 'circle') {
-			const label = labels[d.seriesId]
+			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
 			const rows = [
-				`<tr><td colspan=2 style='text-align: center'>${d.seriesId}</td></tr>`,
+				`<tr><td colspan=2 style='text-align: center'>${
+					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
+				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
 			]
+			// may also indicate the confidence interval (low%-high%) in a new row
 			self.app.tip
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		} else if (event.target.tagName == 'path' && d && d.seriesId) {
-			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesId)
+			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
 		} else {
 			self.app.tip.hide()
 		}
@@ -416,11 +407,8 @@ function setInteractivity(self) {
 }
 
 function getPj(self) {
-	const s = self.settings
-
 	const pj = new Partjson({
 		template: {
-			//"__:charts": "@.byChc.@values",
 			yMin: '>=yMin()',
 			yMax: '<=yMax()',
 			charts: [
@@ -436,6 +424,7 @@ function getPj(self) {
 						{
 							chartId: '@parent.@parent.@key',
 							seriesId: '@key',
+							'__:seriesLabel': '=seriesLabel()',
 							data: [
 								{
 									'__:seriesId': '@parent.@parent.seriesId',
@@ -458,10 +447,25 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				if (!row.chartId || row.chartId == '-') return 'CTCAE grade 3-5'
-				if (!self.state.config.term0 || !self.state.config.term0.term.values) return row.chartId
+				const s = self.settings.cuminc
+				if (!row.chartId || row.chartId == '-') {
+					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
+				}
+				const t0 = self.state.config.term0
+				if (!t0 || !t0.term.values) return row.chartId
+				if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) {
+					return row.chartId
+				}
 				const value = self.state.config.term0.term.values[row.chartId]
-				return value.label ? value.label : row.chartId
+				return value && value.label ? value.label : row.chartId
+			},
+			seriesLabel(row, context) {
+				const t2 = self.state.config.term2
+				if (!t2) return
+				const seriesId = context.self.seriesId
+				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
+				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
+				return seriesId
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
@@ -474,6 +478,7 @@ function getPj(self) {
 				return row.high
 			},
 			xScale(row, context) {
+				const s = self.settings.cuminc
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
@@ -487,8 +492,9 @@ function getPj(self) {
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
+				const s = self.settings.cuminc
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(1, 1.1 * yMax), 0]
+				const domain = [Math.min(100, 1.1 * yMax), 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])

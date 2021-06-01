@@ -80,14 +80,6 @@ def PARCHR(c):
         else:
                 return 'chr'+c
 
-#!/usr/bin/python3
-
-import sys,os,re
-import argparse
-from argparse import RawTextHelpFormatter
-import subprocess as sp
-import string,random
-
 script_descript="""
 #Python script, put at tp/utils/slice_bam.py
 #Parameter: --varianttable=xx --bamtable=yy --bampath=outbampath -flank=500 --sample=sampleHeaderName --chr=chrHeaderName --start=startheaderName --stop=stopHeadername --chr2=chr2headername --pos2=
