@@ -162,7 +162,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 				.map(Number)
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
-			//console.log(item)
+			console.log(item)
 		}
 	}
 
