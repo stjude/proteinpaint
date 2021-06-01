@@ -620,7 +620,6 @@ export async function match_complexvariant(q, templates_info) {
 		})
 		groups.push(g)
 	}
-	console.log('groups:', groups[0])
 	return { groups, refalleleerror }
 }
 

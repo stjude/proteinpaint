@@ -1021,8 +1021,12 @@ async function divide_reads_togroups(q) {
 		//if (lst) return { groups: lst }
 		//for (const template of templates) {
 		if (q.regions.length == 1) {
-			return await rust_match_complexvariant(q, templates_info)
-			//return await match_complexvariant(q, templates_info)
+			if (serverconfig.features.rust_indel) {
+				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
+				return await rust_match_complexvariant(q, templates_info)
+			} else {
+				return await match_complexvariant(q, templates_info)
+			}
 		}
 	}
 	if (q.sv) {
