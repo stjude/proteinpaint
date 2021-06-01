@@ -94,6 +94,8 @@ function get_parameter(tk, block) {
 		block.gmmode == client.gmmode.genomic ||
 		block.gmmodepast == client.gmmode.genomic
 	) {
+		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
+		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
 			// need to load skewer data
 			par.push('skewer=1')

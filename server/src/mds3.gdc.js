@@ -8,6 +8,7 @@ GDC graphql API
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
+validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
 get_cohortTotal
@@ -593,6 +594,8 @@ export function validate_sampleSummaries2_number(api) {
 		////////////////// XXX //////////////////
 		// hardcoding to project and primary site, rather than programmatically driven by api.gdcapi.fields[]
 		// FIXME should fire this query for each of sampleSummaries2.lst[{label1}]
+		// see comment in lines 251 of gdc.hg38.js
+		// will not fix this and wait for the "xx cases" implementation and menu UI design
 		const project_set = new Set()
 		const site_set = new Set()
 		for (const h of re.data.hits) {

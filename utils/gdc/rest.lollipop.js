@@ -42,7 +42,7 @@ if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id'
 		const siteset = new Set()
 		for (const hit of re.data.hits) {
 			const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == p.isoform)
-			const aa = consequence.transcript.aa_change
+			const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
 			if (!aa2case.has(aa)) aa2case.set(aa, { type: consequence.transcript.consequence_type, cases: [] })
 			aa2case.get(aa).cases.push(hit.case)
 

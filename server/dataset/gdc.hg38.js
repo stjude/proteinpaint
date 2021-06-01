@@ -245,9 +245,15 @@ const samplesummary2_getcase = {
 }
 
 /*
-sampleSummaries2 first query, to get the numbers for each sub label under track name
+sampleSummaries2 first query, to get the number of categories for each sub label under track name
 TODO support range query
 TODO change to a list of queries to support both ssm and fusion etc
+** fields are hardcoded from label1 of each ele of sampleSummaries2.lst
+   no need to fix it now as it will be replaced by a query for number of cases/samples
+   and only display one sub label of "xx cases" rather than two labels (projects and sites)
+   then, click the "xx cases" label to show a menu to list the terms,
+   click a term to show the categories and mclass breakdown (via current query)
+   also UI support for selecting two terms to cross tabulate (project+disease, via current query)
 */
 const isoform2casesummary = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
@@ -1061,7 +1067,7 @@ module.exports = {
 	sampleSummaries2: {
 		get_number: { gdcapi: isoform2casesummary },
 		get_mclassdetail: { gdcapi: [samplesummary2_getvariant, samplesummary2_getcase] },
-		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site' }]
+		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site', label2: 'disease' }]
 	},
 
 	queries: {

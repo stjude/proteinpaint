@@ -44,9 +44,8 @@ const variables = {
 
 		console.log(re.hits.length, 'variants')
 		for (const m of re.hits) {
-			console.log(
-				'\n' + m._source.consequence.map(i => i.transcript.transcript_id + '/' + i.transcript.aa_change).join(',')
-			)
+			const csq = m._source.consequence.find(i => i.transcript.transcript_id == isoform)
+			console.log('\n' + csq.transcript.consequence_type + '/' + csq.transcript.aa_change)
 			console.log('==> ' + m._score + ' cases')
 		}
 		console.log(re.hits[0])
