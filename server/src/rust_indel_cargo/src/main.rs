@@ -4,10 +4,13 @@
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::env;
-//use std::time::{SystemTime};
-use std::io::{self, Read};
 
+//use std::env;
+//use std::time::{SystemTime};
+use std::io;
+
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
 pub struct read_diff_scores {
     groupID: usize,
     value: f64,
@@ -15,16 +18,20 @@ pub struct read_diff_scores {
     ref_insertion: i64,
 }
 
+#[allow(non_camel_case_types)]
 struct kmer_input {
     kmer_sequence: String,
     kmer_weight: f64,
 }
 
+#[allow(non_camel_case_types)]
 struct kmer_data {
     kmer_count: i64,
     kmer_weight: f64,
 }
 
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
 struct read_category {
     category: String,
     groupID: usize,
@@ -34,6 +41,7 @@ struct read_category {
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let val = item.value.to_owned();
+    #[allow(non_snake_case)]
     let gID = item.groupID.to_owned();
     let poly = item.polyclonal.to_owned();
     let ref_ins = item.ref_insertion.to_owned();
@@ -55,9 +63,10 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
     let mut index: i64 = -1;
     let mut l: usize = 0;
     let mut r: usize = kmers_dup.len() - 1;
+    #[allow(unused_assignments)]
     let mut m: usize = 0;
     //let mut n:usize = 0;
-    while (l <= r) {
+    while l <= r {
         m = l + ((r - l) / 2);
         //if (m>=kmers_dup.len()){
         //  n=kmers_dup.len()-1;
@@ -67,14 +76,14 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
         //}
         //println!("l:{},m:{},r:{}",l,m,r);
         // Check if x is present at mid
-        if (y == &kmers_dup[m]) {
+        if y == &kmers_dup[m] {
             index = m as i64;
             break;
         }
         //else if m==0 as usize {break;}
 
         // If x is greater, ignore left half
-        else if (y > &kmers_dup[m]) {
+        else if y > &kmers_dup[m] {
             l = m + 1;
         }
         // If x is smaller, ignore right half
@@ -91,15 +100,14 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 
 fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
     let orig_index: i64 = binary_search(kmers, y);
-    let mut kmer_count: usize = 0;
     let mut indexes_vec = Vec::<usize>::new();
     let x: String = y.to_owned();
     let kmers_dup = &kmers[..];
     if orig_index != -1 as i64 {
         indexes_vec.push(orig_index as usize);
         let mut index: usize = orig_index as usize;
-        while (index > 0) {
-            if (kmers_dup[index - 1] == x) {
+        while index > 0 {
+            if kmers_dup[index - 1] == x {
                 index = index - 1;
                 indexes_vec.push(index);
             } else {
@@ -107,8 +115,8 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
             }
         }
         index = orig_index as usize;
-        while (index < (kmers_dup.len() - 1)) {
-            if (kmers_dup[index + 1] == x) {
+        while index < (kmers_dup.len() - 1) {
+            if kmers_dup[index + 1] == x {
                 index = index + 1;
                 indexes_vec.push(index);
             } else {
@@ -125,7 +133,7 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
     let mut alphabets = Vec::<char>::new();
     let mut numbers = Vec::<i64>::new();
     for i in 0..sequence_vector.len() {
-        if (sequence_vector[i].is_alphabetic() == true) {
+        if sequence_vector[i].is_alphabetic() == true {
             alphabets.push(sequence_vector[i]);
             numbers.push(subseq.parse::<i64>().unwrap());
             subseq = "".to_string();
@@ -139,6 +147,7 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
 fn main() {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
+        #[allow(unused_variables)]
         Ok(n) => {
             //println!("{} bytes read", n);
             //println!("{}", input);
@@ -168,7 +177,6 @@ fn main() {
     let lines: Vec<&str> = sequences.split("-").collect();
     let start_positions_list: Vec<&str> = start_positions.split("-").collect();
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
-    let mut i: i64 = 0;
 
     //println!("lines:{:?}", lines);
 
@@ -176,7 +184,7 @@ fn main() {
     let ref_length: i64 = refallele.len() as i64;
     let alt_length: i64 = altallele.len() as i64;
     let mut indel_length: i64 = alt_length;
-    if (ref_length > alt_length) {
+    if ref_length > alt_length {
         indel_length = ref_length;
     }
 
@@ -198,8 +206,9 @@ fn main() {
     //let mut alt_surrounding_kmers = Vec::<String>::new();
     //let mut alt_kmers_data = Vec::<kmer_data>::new();
 
-    while (kmer_length_iter <= max_kmer_length && uniq_kmers == 0) {
+    while kmer_length_iter <= max_kmer_length && uniq_kmers == 0 {
         //console::log_1(&"Ref kmers:".into());
+        #[allow(unused_variables)]
         let (
             ref_kmers_weight,
             ref_kmers_nodups,
@@ -219,6 +228,7 @@ fn main() {
         );
 
         //console::log_1(&"Alt kmers:".into());
+        #[allow(unused_variables)]
         let (
             alt_kmers_weight,
             alt_kmers_nodups,
@@ -258,10 +268,10 @@ fn main() {
         alt_surrounding_kmers.dedup();
         let new_alt_surrounding_length = alt_surrounding_kmers.len();
 
-        if (matching_ref != 0
+        if matching_ref != 0
             || matching_alt != 0
             || old_ref_surrounding_length != new_ref_surrounding_length
-            || old_alt_surrounding_length != new_alt_surrounding_length)
+            || old_alt_surrounding_length != new_alt_surrounding_length
         {
             kmer_length_iter += 1;
             found_duplicate_kmers = 1;
@@ -275,6 +285,7 @@ fn main() {
         found_duplicate_kmers
     );
 
+    #[allow(unused_variables)]
     let (
         ref_kmers_weight,
         ref_kmers_nodups,
@@ -299,6 +310,7 @@ fn main() {
     //  println!("Indel kmer:{}", kmer);
     //}
 
+    #[allow(unused_variables)]
     let (
         alt_kmers_weight,
         alt_kmers_nodups,
@@ -328,14 +340,14 @@ fn main() {
     let mut ref_comparisons = Vec::<f64>::new();
     let mut ref_scores = Vec::<read_diff_scores>::new();
     let mut alt_scores = Vec::<read_diff_scores>::new();
-    i = 0;
-    let num_of_reads: f64 = (lines.len() - 2) as f64;
+    let mut i: i64 = 0;
+    //let num_of_reads: f64 = (lines.len() - 2) as f64;
     let mut ref_polyclonal_status = Vec::<i64>::new();
     let mut ref_read_sequences = Vec::<String>::new();
     let mut alt_read_sequences = Vec::<String>::new();
     let mut all_read_sequences = Vec::<String>::new();
-    let mut ref_polyclonal_read_status: i64 = 0;
-    let mut alt_polyclonal_read_status: i64 = 0;
+    //let mut ref_polyclonal_read_status: i64 = 0;
+    //let mut alt_polyclonal_read_status: i64 = 0;
     let mut alt_polyclonal_status = Vec::<i64>::new();
     println!(
         "{}{}",
@@ -412,29 +424,22 @@ fn main() {
     }
 
     let mut output_cat: String = "".to_string();
+    #[allow(non_snake_case)]
     let mut output_gID: String = "".to_string();
     //let mut output_cat = Vec::<String>::new();
     //let mut output_gID = Vec::<usize>::new();
     let mut output_diff_scores: String = "".to_string();
-    let mut ref_num = 0;
-    let mut alt_num = 0;
-    let mut none_num = 0;
-    let mut iter = 0;
     for item in &ref_indices {
         if item.ref_insertion == 1 {
             //output_cat.push("none".to_string());
             output_cat.push_str("none:");
-            none_num += 1;
         } else if item.category == "refalt".to_string() {
             //output_cat.push("ref".to_string());
             output_cat.push_str("ref:");
-            ref_num += 1;
         } else {
             //output_cat.push("none".to_string());
             output_cat.push_str("none:");
-            none_num += 1;
         }
-        iter += 1;
         //output_gID.push(item.groupID);
         output_gID.push_str(&item.groupID.to_string());
         output_gID.push_str(&":".to_string());
@@ -442,18 +447,15 @@ fn main() {
         output_diff_scores.push_str(&":".to_string());
     }
 
-    iter = 0;
     for item in &alt_indices {
         if item.category == "refalt".to_string() {
             //output_cat.push("alt".to_string());
             output_cat.push_str("alt:");
-            alt_num += 1;
         } else {
             //output_cat.push("none".to_string());
             output_cat.push_str("none:");
-            none_num += 1;
         }
-        iter += 1;
+
         output_gID.push_str(&item.groupID.to_string());
         output_gID.push_str(&":".to_string());
         output_diff_scores.push_str(&item.diff_score.to_string());
@@ -503,8 +505,8 @@ fn build_kmers_refalt(
         {
             // (indel_start+1 >= kmer_start && kmer_stop >= indel_start + indel_length)
             indel_kmers.push(subseq.to_owned());
-        } else if (indel_start - surrounding_region_length <= kmer_start_poly
-            && kmer_stop_poly <= indel_start + indel_length + surrounding_region_length)
+        } else if indel_start - surrounding_region_length <= kmer_start_poly
+            && kmer_stop_poly <= indel_start + indel_length + surrounding_region_length
         {
             surrounding_indel_kmers.push(subseq.to_owned());
         }
@@ -597,9 +599,7 @@ fn check_polyclonal(
     indel_length: usize,
     found_duplicate_kmers: usize,
 ) -> (i64, i64, i64) {
-    let kmer_length: i64 = 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
-    let mut kmers = Vec::<String>::new();
     //let mut kmer_start_poly = left_most_pos+1;
     //let mut kmer_stop_poly = kmer_start_poly + kmer_length;
     let mut ref_polyclonal_status: i64 = 0;
@@ -609,7 +609,7 @@ fn check_polyclonal(
     let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string());
     //println!("cigar:{}", &cigar_sequence);
     // Check to see if the first item in cigar is a soft clip
-    if (&alphabets[0].to_string().as_str() == &"S") {
+    if &alphabets[0].to_string().as_str() == &"S" {
         correct_start_position =
             correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
     }
@@ -623,103 +623,103 @@ fn check_polyclonal(
     for i in 0..alphabets.len() {
         //println!("parse_position:{}",parse_position);
         //println!("read_indel_start:{}", read_indel_start);
-        if (parse_position < read_indel_start) {
+        if parse_position < read_indel_start {
             parse_position += numbers[i].to_string().parse::<usize>().unwrap();
-            if (&alphabets[i].to_string().as_str() == &"I") {
+            if &alphabets[i].to_string().as_str() == &"I" {
                 read_indel_start += numbers[i].to_string().parse::<usize>().unwrap();
                 //println!("read_indel_start:{}", read_indel_start);
                 //println!("read_indel_start+indel_length:{}", (read_indel_start + indel_length));
                 //println!("old_parse_position:{}", old_parse_position);
                 //println!("parse_position:{}", parse_position);
-                if (read_indel_start <= old_parse_position
-                    && parse_position <= read_indel_start + indel_length)
-                {
-                    // Making sure the insertion is within the indel region
-                    indel_insertion_starts.push(old_parse_position);
-                    indel_insertion_stops.push(parse_position);
-                    ref_insertion = 1;
-                } else if (old_parse_position <= read_indel_start
-                    && read_indel_start + indel_length <= parse_position)
-                {
-                    // Making sure the insertion is within the indel region
-                    indel_insertion_starts.push(old_parse_position);
-                    indel_insertion_stops.push(parse_position);
-                    ref_insertion = 1;
-                } else if (old_parse_position <= read_indel_start
+                if read_indel_start <= old_parse_position
                     && parse_position <= read_indel_start + indel_length
-                    && found_duplicate_kmers == 0)
+                {
+                    // Making sure the insertion is within the indel region
+                    indel_insertion_starts.push(old_parse_position);
+                    indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1;
+                } else if old_parse_position <= read_indel_start
+                    && read_indel_start + indel_length <= parse_position
+                {
+                    // Making sure the insertion is within the indel region
+                    indel_insertion_starts.push(old_parse_position);
+                    indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1;
+                } else if old_parse_position <= read_indel_start
+                    && parse_position <= read_indel_start + indel_length
+                    && found_duplicate_kmers == 0
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1;
-                } else if (read_indel_start <= old_parse_position
+                } else if read_indel_start <= old_parse_position
                     && read_indel_start + indel_length <= parse_position
-                    && found_duplicate_kmers == 0)
+                    && found_duplicate_kmers == 0
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1;
                 }
-            } else if (&alphabets[i].to_string().as_str() == &"D") {
+            } else if &alphabets[i].to_string().as_str() == &"D" {
                 read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap();
-                if (read_indel_start <= old_parse_position
-                    && parse_position <= read_indel_start + indel_length)
-                {
-                    // Making sure the insertion is within the indel region
-                    ref_insertion = 1;
-                } else if (old_parse_position <= read_indel_start
-                    && read_indel_start + indel_length <= parse_position)
-                {
-                    // Making sure the insertion is within the indel region
-                    ref_insertion = 1;
-                } else if (old_parse_position <= read_indel_start
+                if read_indel_start <= old_parse_position
                     && parse_position <= read_indel_start + indel_length
-                    && found_duplicate_kmers == 0)
+                {
+                    // Making sure the insertion is within the indel region
+                    ref_insertion = 1;
+                } else if old_parse_position <= read_indel_start
+                    && read_indel_start + indel_length <= parse_position
+                {
+                    // Making sure the insertion is within the indel region
+                    ref_insertion = 1;
+                } else if old_parse_position <= read_indel_start
+                    && parse_position <= read_indel_start + indel_length
+                    && found_duplicate_kmers == 0
                 {
                     // Making sure part of the insertion is within the indel region
                     ref_insertion = 1;
-                } else if (read_indel_start <= old_parse_position
+                } else if read_indel_start <= old_parse_position
                     && read_indel_start + indel_length <= parse_position
-                    && found_duplicate_kmers == 0)
+                    && found_duplicate_kmers == 0
                 {
                     // Making sure part of the insertion is within the indel region
                     ref_insertion = 1;
                 }
             }
             old_parse_position = parse_position;
-        } else if (parse_position >= read_indel_start
+        } else if parse_position >= read_indel_start
             && (&alphabets[i].to_string().as_str() == &"I"
-                || &alphabets[i].to_string().as_str() == &"D"))
+                || &alphabets[i].to_string().as_str() == &"D")
         {
             parse_position += numbers[i].to_string().parse::<usize>().unwrap();
             //if () {
-            if (read_indel_start <= old_parse_position
-                && parse_position <= read_indel_start + indel_length)
-            {
-                // Making sure the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1;
-            } else if (old_parse_position <= read_indel_start
-                && read_indel_start + indel_length <= parse_position)
-            {
-                // Making sure the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1;
-            } else if (old_parse_position <= read_indel_start
+            if read_indel_start <= old_parse_position
                 && parse_position <= read_indel_start + indel_length
-                && found_duplicate_kmers == 0)
+            {
+                // Making sure the insertion is within the indel region
+                //indel_insertion_starts.push(old_parse_position);
+                //indel_insertion_stops.push(parse_position);
+                ref_insertion = 1;
+            } else if old_parse_position <= read_indel_start
+                && read_indel_start + indel_length <= parse_position
+            {
+                // Making sure the insertion is within the indel region
+                //indel_insertion_starts.push(old_parse_position);
+                //indel_insertion_stops.push(parse_position);
+                ref_insertion = 1;
+            } else if old_parse_position <= read_indel_start
+                && parse_position <= read_indel_start + indel_length
+                && found_duplicate_kmers == 0
             {
                 // Making sure part of the insertion is within the indel region
                 //indel_insertion_starts.push(old_parse_position);
                 //indel_insertion_stops.push(parse_position);
                 ref_insertion = 1;
-            } else if (read_indel_start <= old_parse_position
+            } else if read_indel_start <= old_parse_position
                 && read_indel_start + indel_length <= parse_position
-                && found_duplicate_kmers == 0)
+                && found_duplicate_kmers == 0
             {
                 // Making sure part of the insertion is within the indel region
                 //indel_insertion_starts.push(old_parse_position);
@@ -737,11 +737,11 @@ fn check_polyclonal(
 
     //println!("cigar:{}",cigar_sequence);
     for i in 0..ref_length as usize {
-        if (read_indel_start + i < sequence.len()) {
+        if read_indel_start + i < sequence.len() {
             //println!("Ref sequence:{}", ref_nucleotides[i]);
             //println!("Ref position:{}", (read_indel_start + i));
             //println!("Ref read:{}", sequence_vector[read_indel_start + i]);
-            if (&ref_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
+            if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
                 ref_polyclonal_status = 1;
                 break;
             }
@@ -751,12 +751,12 @@ fn check_polyclonal(
     }
 
     for i in 0..alt_length as usize {
-        if (read_indel_start + i < sequence.len()) {
+        if read_indel_start + i < sequence.len() {
             //println!("i:{}", i);
             //println!("Alt sequence:{}", alt_nucleotides[i]);
             //println!("Alt position:{}", (read_indel_start + i));
             //println!("Alt read:{}", sequence_vector[read_indel_start + i]);
-            if (&alt_nucleotides[i] != &sequence_vector[read_indel_start + i]) {
+            if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
                 alt_polyclonal_status = 1;
                 break;
             }
@@ -767,13 +767,13 @@ fn check_polyclonal(
     //println!("ref_polyclonal_status:{}", ref_polyclonal_status);
     //println!("alt_polyclonal_status:{}", alt_polyclonal_status);
 
-    if (indel_insertion_starts.len() > 0) {
+    if indel_insertion_starts.len() > 0 {
         for i in 0..indel_insertion_starts.len() {
             let insertion_start: usize = indel_insertion_starts[i];
             let insertion_stop: usize = indel_insertion_stops[i];
             for j in (insertion_start - 1)..insertion_stop {
                 let k: usize = j - insertion_start + 1;
-                if (k < indel_length && k < alt_nucleotides.len()) {
+                if k < indel_length && k < alt_nucleotides.len() {
                     //println!("sequence len:{}", sequence.len());
                     //println!("read_indel_start:{}", read_indel_start);
                     //println!("j:{}", j);
@@ -781,9 +781,9 @@ fn check_polyclonal(
                     //println!("indel_length:{}", indel_length);
                     //println!("alt_nucleotides[k]:{}", alt_nucleotides[k]);
                     //println!("sequence_vector[j]:{}", sequence_vector[j]);
-                    if ((&alt_nucleotides[k] != &sequence_vector[j])
+                    if (&alt_nucleotides[k] != &sequence_vector[j])
                         && ((read_indel_start as usize) <= j)
-                        && (j <= (read_indel_start as usize) + indel_length))
+                        && (j <= (read_indel_start as usize) + indel_length)
                     {
                         alt_polyclonal_status = 2;
                         ref_polyclonal_status = 0;
@@ -796,6 +796,7 @@ fn check_polyclonal(
     (ref_polyclonal_status, alt_polyclonal_status, ref_insertion)
 }
 
+#[allow(dead_code)]
 fn build_kmers_reads(
     sequence: String,
     kmer_length: i64,
@@ -809,8 +810,8 @@ fn build_kmers_reads(
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
     let mut kmers = Vec::<String>::new();
+    #[allow(unused_variables)]
     let mut kmer_start = left_most_pos;
-    let mut kmer_stop = kmer_start + kmer_length;
     let mut kmer_start_poly = left_most_pos + 1;
     let mut kmer_stop_poly = kmer_start_poly + kmer_length;
     let mut ref_polyclonal_status: i64 = 0;
@@ -830,14 +831,14 @@ fn build_kmers_reads(
         {
             // Checking to see if there are any kmers which support neither reference nor alternate allele
             let mut index: i64 = binary_search(ref_indel_kmers, &subseq);
-            if (index == -1 as i64) {
+            if index == -1 as i64 {
                 ref_polyclonal_status = 1 as i64;
                 // Comparison with alt allele is only done when a kmer is found with no match to ref allele
                 if (indel_start < kmer_start_poly && kmer_stop_poly <= indel_start + alt_length)
                     || (indel_start >= kmer_start_poly && kmer_stop_poly > indel_start + alt_length)
                 {
                     index = binary_search(alt_indel_kmers, &subseq);
-                    if (index == -1 as i64) {
+                    if index == -1 as i64 {
                         alt_polyclonal_status = 1 as i64;
                     }
                 }
@@ -845,7 +846,6 @@ fn build_kmers_reads(
         }
         kmers.push(subseq);
         kmer_start += 1;
-        kmer_stop += 1;
         kmer_start_poly += 1;
         kmer_stop_poly += 1;
     }
@@ -909,10 +909,11 @@ fn jaccard_similarity_weights(
     let mut kmer1_counts = Vec::<i64>::new();
     kmer1_counts.reserve(250);
     let mut kmers1_weight: f64 = 0.0;
-    let mut index: i64 = 0;
+
+    let mut index;
     for kmer1 in &kmers1_nodup {
-        let mut kmer_count: i64 = 0;
-        let mut score: f64 = 0.0;
+        let kmer_count;
+        let score;
         kmer_count = binary_search_repeat(&kmers1_sorted, &kmer1).len() as i64;
         //for kmer2 in &kmers1_sorted { // Binary search should not be used here since it cannot handle duplicate entries
         //    if kmer1==kmer2 {
@@ -925,6 +926,7 @@ fn jaccard_similarity_weights(
         //}
 
         index = binary_search(&kmers2_nodups, &kmer1);
+        #[allow(unused_assignments)]
         if index == -1 as i64 {
             score = 0.0;
         } else {
@@ -941,7 +943,7 @@ fn jaccard_similarity_weights(
 
     let mut intersection_weight: f64 = 0.0;
     for kmer1 in intersection {
-        let mut score: f64 = 0.0;
+        let score;
         let mut kmer1_freq: i64 = 0;
         let mut kmer2_freq: i64 = 0;
         //for kmer2 in kmers2_nodups {
@@ -1010,7 +1012,7 @@ fn determine_maxima_alt(
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
 
     let mut start_point: usize = kmer_diff_scores_length - 1;
-    let mut slope: f64 = 0.0;
+    let mut slope;
     let mut is_a_line = 1;
     let mut indices = Vec::<read_category>::new();
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
@@ -1030,9 +1032,9 @@ fn determine_maxima_alt(
             "Number of reads too low to determine curvature of slope"
         );
     }
-    if (is_a_line == 1) {
+    if is_a_line == 1 {
         for i in 0..kmer_diff_scores_length {
-            if (kmer_diff_scores_sorted[i].polyclonal == 2 as i64) {
+            if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
                 let read_cat = read_category {
                     category: String::from("none"),
                     groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1080,7 +1082,7 @@ fn determine_maxima_alt(
         let slope_of_line: f64 = (max_value.value - min_value.value)
             / (max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)
         let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x
-        let mut distances_from_line: f64 = 0.0;
+        let mut distances_from_line;
         let mut array_maximum: f64 = 0.0;
         let mut index_array_maximum: usize = 0;
 
@@ -1090,7 +1092,7 @@ fn determine_maxima_alt(
                 + intercept_of_line)
                 .abs()
                 / (1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
-            if (array_maximum < distances_from_line) {
+            if array_maximum < distances_from_line {
                 array_maximum = distances_from_line;
                 index_array_maximum = i;
             }
@@ -1102,7 +1104,7 @@ fn determine_maxima_alt(
             score_cutoff.to_string()
         );
         for i in 0..kmer_diff_scores_length {
-            if (score_cutoff >= kmer_diff_scores_sorted[i].value) {
+            if score_cutoff >= kmer_diff_scores_sorted[i].value {
                 let read_cat = read_category {
                     category: String::from("none"),
                     groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1111,7 +1113,7 @@ fn determine_maxima_alt(
                 };
                 indices.push(read_cat);
             } else {
-                if (kmer_diff_scores_sorted[i].polyclonal == 2 as i64) {
+                if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
                     let read_cat = read_category {
                         category: String::from("none"),
                         groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
