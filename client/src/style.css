@@ -875,6 +875,7 @@ hr {
     margin-top: -15px;
 }
 
+#url-btn,
 .track-btns>button, .landing-page-a {
     grid-area: buttons;
     display: inline;
@@ -892,7 +893,7 @@ hr {
     font-style: normal;
 }
 
-.gbrowser-btn,
+/* .gbrowser-btn,
 .url-tooltip-outer {
     position: relative;
     display: inline-block;
@@ -940,10 +941,10 @@ hr {
     line-height: 2px;
     border-style: solid;
     border-color: transparent transparent transparent darkgray;
-    /* box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     opacity: 1;
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); */
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .url-tooltip-outer .url-tooltip-span::after {
@@ -960,4 +961,4 @@ hr {
 .gbrowser-btn:hover .launch-btn-tooltip,
 .url-tooltip-outer:hover .url-tooltip-span {
     visibility: visible;
-}
+} */
