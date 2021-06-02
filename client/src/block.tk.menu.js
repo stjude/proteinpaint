@@ -1178,17 +1178,22 @@ function facetmake(block, tkset, flet) {
 			}
 
 			let tr = table.append('tr')
-			let createnewrow = false
+			// to disable creating <tr> at first L2
+			// set to true after first L2 and to create <tr> at subsequent L2s
+			let createnewrow_at_L2 = false
 			tr.append('td')
 				.text(L1)
-				.attr('rowspan', samplecount)
 				.attr('class', 'sja_clbtext')
+				.attr('rowspan', samplecount)
 				.on('click', () => {
 					batchselect_sample({ L1 })
 				})
 
 			for (const [L2, sampleset] of o) {
-				if (createnewrow) tr = table.append('tr')
+				if (createnewrow_at_L2) tr = table.append('tr')
+				// to disable creating <tr> at first sample
+				// set to true after first sample and allow to create <tr> at subsequent samples
+				let createnewrow_at_sample = false
 
 				tr.append('td')
 					.text(L2)
@@ -1199,7 +1204,7 @@ function facetmake(block, tkset, flet) {
 					})
 
 				for (const sample of sampleset) {
-					if (createnewrow) tr = table.append('tr')
+					if (createnewrow_at_sample) tr = table.append('tr')
 
 					tr.append('td')
 						.text(sample)
@@ -1211,9 +1216,9 @@ function facetmake(block, tkset, flet) {
 					for (const assay of assaynamelst) {
 						makecell(sample, assay, tr)
 					}
-					createnewrow = true
+					createnewrow_at_sample = true
 				}
-				createnewrow = true
+				createnewrow_at_L2 = true
 			}
 		}
 	}
