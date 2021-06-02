@@ -11,10 +11,10 @@ import { make_leftlabels } from './leftlabel'
 /*
 ********************** EXPORTED
 loadTk
-get_parameter
-********************** INTERNAL
-loadTk_finish_closure
 rangequery_rglst
+********************** INTERNAL
+get_parameter
+loadTk_finish_closure
 rangequery_add_variantfilters
 
 */
@@ -80,7 +80,7 @@ function loadTk_finish_closure(tk, block) {
 	}
 }
 
-export function get_parameter(tk, block) {
+function get_parameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
@@ -94,6 +94,8 @@ export function get_parameter(tk, block) {
 		block.gmmode == client.gmmode.genomic ||
 		block.gmmodepast == client.gmmode.genomic
 	) {
+		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
+		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
 			// need to load skewer data
 			par.push('skewer=1')
@@ -101,6 +103,10 @@ export function get_parameter(tk, block) {
 		if (tk.mds.sampleSummaries) {
 			// need to make sample summary
 			par.push('samplesummary=1')
+		}
+		if (tk.mds.sampleSummaries2) {
+			// need to make sample summary using different method but still based on same querying parameter
+			par.push('samplesummary2=1')
 		}
 		if (tk.set_id) {
 			// quick fix!!!
@@ -136,11 +142,11 @@ export function get_parameter(tk, block) {
 	if (tk.hiddenmclass.size) {
 		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
-	par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
+	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return par.join('&')
 }
 
-function rangequery_rglst(tk, block, par) {
+export function rangequery_rglst(tk, block, par) {
 	let rglst = []
 	if (block.usegm) {
 		/* to merge par.rglst[] into one region

@@ -154,9 +154,16 @@ async function load_driver(q, ds, result) {
 		if (ds.queries && ds.queries.snvindel && ds.queries.snvindel.m2csq) {
 			result.csq = await ds.queries.snvindel.m2csq.get(q)
 			return
-		} else {
-			throw 'm2csq not supported on this dataset'
 		}
+		throw 'm2csq not supported on this dataset'
+	}
+
+	if (q.samplesummary2_mclassdetail) {
+		if (ds.sampleSummaries2) {
+			result.strat = await ds.sampleSummaries2.get_mclassdetail.get(q)
+			return
+		}
+		throw 'sampleSummaries2 not supported on this dataset'
 	}
 
 	if (q.forTrack) {
@@ -165,19 +172,39 @@ async function load_driver(q, ds, result) {
 		if (q.skewer) {
 			// get skewer data
 			result.skewer = [] // for skewer track
+
+			// run queries in parallel
+			const promises = []
+
 			if (ds.queries.snvindel) {
-				result.skewer.push(...(await query_snvindel(q, ds)))
+				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
+				const p = query_snvindel(q, ds).then(d => {
+					//console.log('snv')
+					result.skewer.push(...d)
+				})
+				promises.push(p)
 			}
 			if (ds.queries.svfusion) {
-				result.skewer.push(...(await query_svfusion(q, ds))) // TODO
+				// todo
+				promises.push(query_svfusion(q, ds).then(d => result.skewer.push(...d)))
 			}
 			if (ds.queries.genecnv) {
-				// gene-level cnv data will not be directly returned to client, only summaries
-				result.genecnvNosample = await query_genecnv(q, ds)
-				// TODO need api details
+				promises.push(query_genecnv(q, ds).then(d => result.genecnvNosample))
+				// for gene cnv with sample details, need api details
 				//result.genecnvAtsample = ....
 				// should return genecnv at sample-level, then will be combined with snvindel for summary
 			}
+
+			if (q.samplesummary2) {
+				// FIXME change to issue one query per ds.sampleSummaries2.lst[]
+				const p = ds.sampleSummaries2.get_number.get(q).then(d => {
+					//console.log('s2')
+					result.sampleSummaries2 = d
+				})
+				promises.push(p)
+			}
+
+			await Promise.all(promises)
 
 			filter_data(q, result)
 

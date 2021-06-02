@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu, dofetch2 } from '../client'
 import { init as init_legend } from './legend'
-import { loadTk } from './tk'
+import { loadTk, rangequery_rglst } from './tk'
 import url2map from '../url2map'
 
 /*
@@ -13,6 +13,7 @@ get_ds
 init_termdb
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
+mayaddGetter_sampleSummaries2
 parse_client_config
 configPanel
 _load
@@ -45,8 +46,8 @@ export async function makeTk(tk, block) {
 
 	init_mclass(tk)
 
+	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
-
 	mayaddGetter_m2csq(tk, block)
 
 	if (tk.mds.has_skewer) {
@@ -147,6 +148,21 @@ function mayaddGetter_m2csq(tk, block) {
 		} else {
 			return { error: 'unknown query method' }
 		}
+		return await dofetch2('mds3?' + lst.join('&'))
+	}
+}
+
+function mayaddGetter_sampleSummaries2(tk, block) {
+	if (!tk.mds.sampleSummaries2) return
+	if (tk.mds.sampleSummaries2.get) return
+	tk.mds.sampleSummaries2.get = async level => {
+		// level is one of sampleSummaries2.lst[]
+		const lst = [
+			'genome=' + block.genome.name,
+			'dslabel=' + tk.mds.label,
+			'samplesummary2_mclassdetail=' + encodeURIComponent(JSON.stringify(level))
+		]
+		rangequery_rglst(tk, block, lst)
 		return await dofetch2('mds3?' + lst.join('&'))
 	}
 }
