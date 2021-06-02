@@ -400,15 +400,7 @@ export async function get_tklst(urlp, genomeobj) {
 				delete i.tracks
 				for (const t of i.tklst) {
 					if (!t.assay) throw '.assay missing from a facet track'
-					t.assayname = t.assay
-					delete t.assay
 					if (!t.sample) throw '.sample missing from a facet track'
-
-					// delete follow 3 lines
-					t.patient = t.sample
-					delete t.sample
-					if (!t.sampletype) t.sampletype = t.patient
-
 					// must assign tkid otherwise the tk buttons from facet table won't work
 					t.tkid = Math.random().toString()
 				}
