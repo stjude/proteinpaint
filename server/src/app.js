@@ -60,6 +60,7 @@ const express = require('express'),
 	termdbbarsql = require('./termdb.barsql'),
 	bedgraphdot_request_closure = require('./bedgraphdot'),
 	bam_request_closure = require('./bam'),
+	gdc_bam_request = require('./bam.gdc'),
 	aicheck_request_closure = require('./aicheck'),
 	bampile_request = require('./bampile'),
 	junction_request = require('./junction'),
@@ -174,6 +175,7 @@ app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
 app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get(basepath + '/tkbam', bam_request_closure(genomes))
+app.get(basepath + '/gdcbam', gdc_bam_request())
 app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
 app.get(basepath + '/mds3', mds3_request_closure(genomes))
