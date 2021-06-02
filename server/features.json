@@ -423,6 +423,39 @@
             "searchterms": ["variant call", "lollipop", "vcf"]
         },
         {
+            "name": "Arc Track",
+            "shorthand": "Arc",
+            "app": "Genome Browser",
+            "subheading": "Tracks",
+            "blurb": "",
+            "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
+            "buttons": {
+                "example": {
+                    "parseurl": true,
+                    "block": true,
+                    "nobox": 1,
+                    "noheader": 1,
+                    "genome": "hg19",
+                    "position": "chr7:13749862-20841903",
+                    "nativetracks": "RefGene",
+                    "tracks": [{
+                        "type": "hicstraw",
+                        "file": "proteinpaint_demo/hg19/arc/hic_demo.hic",
+                        "name": "Arc Track Example",
+                        "percentile_max": 95,
+                        "mincutoff": 1,
+                        "pyramidup": 1,
+                        "enzyme": "MboI",
+                        "mode_arc":true,
+                        "mode_hm":false
+                    }]
+                },
+                "url": "",
+                "doc": ""
+            },
+            "searchterms": []
+        },
+        {
             "name": "ASE",
             "shorthand": "ASE",
             "app": "Genome Browser",
