@@ -152,7 +152,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('margin-left', '10px')
 		.style('border-left', '1px solid #eee')
 		.style('grid-template-columns', '150px 300px')
-		.style('grid-template-rows', 'repeat(5, 20px)')
+		.style('grid-template-rows', 'repeat(15, 20px)')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
 		.style('font-size', '.8em')
@@ -162,8 +162,9 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('display', 'grid')
 		.style('position', 'relative')
 		.style('margin-left', '10px')
+		.style('padding', '10px')
 		.style('border-left', '1px solid #eee')
-		.style('grid-template-columns', '70px 250px 100px 150px 150px 100px')
+		.style('grid-template-columns', '70px auto 100px 150px auto 100px')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
 		.style('font-size', '.8em')
@@ -188,8 +189,10 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.append('div')
 		.style('grid-column', 'span 2')
 		.style('font-size', '80%')
-		.style('padding', '3px 10px').html(`<b>Note:</b> Either position or variant is required.
-			</br>&emsp;&emsp;&nbsp;&nbsp; 
+		.style('padding', '3px 10px').html(`<b>Notes:</b>&emsp;All positions are hg38 based. 
+			</br>&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp; 
+			Either position or variant is required.
+			</br>&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;
 			GDC BAM slice will be visualized for the provided postion or variant, 
 			to visualze additional reads, enter again from this form.`)
 
@@ -270,7 +273,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 
 		bamselection_table
 			.style('display', 'grid')
-			.style('grid-template-rows', 'repeat(' + bam_files, length + ', 20px)')
+			.style('grid-template-rows', 'repeat(' + bam_files.length + ', 20px)')
 			.append('div')
 			.style('padding', '3px 10px')
 			.style('font-weight', 'bold')
@@ -312,7 +315,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 			.style('height', '0')
 			.transition()
 			.duration(500)
-			.style('height', '100px')
+			.style('height', bam_files.length * 22 + 'px')
 	}
 }
 
