@@ -11,16 +11,24 @@ to tell backend to provide color scale
 
 tk can predefine if bam file has chr or not
 
-tk.groups[]
 tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
 tk.pileupheight
 tk.pileupbottompad
-group {}
+
+tk.dom{}
+.pileup_axis // left side
+.pileup_g // contains image
+.pileup_img
+.pileup_shown // if pileup is shown or not; to tell setTkHeight() whether height will be included
+.vsliderg
+
+tk.groups[]
 .data{}
 	.templatebox[] // optional
+	.count {r,t} // r for reads, t for templates
 .data_fullstack{}
 	.messagerowheights
 	.stackcount
@@ -218,7 +226,7 @@ or update existing groups, in which groupidx will be provided
 
 	if (data.pileup_data) {
 		// update the pileup image
-		tk.dom.pileup_shown = true // to tell setTkHeight() that pileup is shown
+		tk.dom.pileup_shown = true
 		tk.dom.pileup_img
 			.attr('xlink:href', data.pileup_data.src)
 			.attr('width', data.pileup_data.width)
@@ -238,7 +246,10 @@ or update existing groups, in which groupidx will be provided
 			showline: true
 		})
 	} else {
+		// pileup not returned when there's no visible reads (other cases?)
 		tk.dom.pileup_shown = false
+		tk.dom.pileup_axis.selectAll('*').remove()
+		tk.dom.pileup_img.attr('width', 0)
 	}
 
 	if (tk.gdc) {
