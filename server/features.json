@@ -446,7 +446,7 @@
                         "mode_hm": false
                     }]
                 },
-                "url": "",
+                "url": "?genome=hg19&block=1&position=chr7:13749862-20841903&arcfile=Arc Track Demo,proteinpaint_demo/hg19/arc/mango.gz",
                 "doc": ""
             },
             "searchterms": []
