@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example of Facet Table with 3 column heirarchy and layout</title>
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+    runproteinpaint({
+        holder:document.getElementById('aaa'),
+        parseurl:true,
+        nobox:1,
+        block:1,
+        genome: 'hg19',
+        tkjsonfile: "proteinpaint_demo/hg19/tklist/dev.json"
+    })
+</script>
+
+</body>
+</html>
