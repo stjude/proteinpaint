@@ -179,7 +179,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 
 	const input_fields = [
 		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
-		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.ref.mut' }
+		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.refAllele.altAllele' }
 	]
 	for (const field of input_fields) {
 		makeFormInput(field)
