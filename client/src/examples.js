@@ -193,7 +193,7 @@ function displayTracks(tracks, holder, page_args) {
 			<div class="track-btns">
 			${
 				track.buttons.url
-					? `<button class="url-tooltip-outer" id="url-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
+					? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
 					: ''
 			}
 			${
