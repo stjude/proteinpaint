@@ -547,12 +547,13 @@
             "searchterms": ["BLAT"]
         },
         {
-            "name": "GDC BAM Slice",
+            "name": "GDC BAM slicing",
             "shorthand": "GDC bam slice",
             "app": "Genome Browser",
             "subheading": "Tracks",
+			"note":"if subheading is changed to Launch App, the card will disappear",
             "isbeta": 1,
-            "blurb": "visualize GDC BAM reads",
+            "blurb": "visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "buttons": {
                 "url": "",

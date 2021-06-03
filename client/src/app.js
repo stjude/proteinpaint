@@ -417,8 +417,7 @@ function makeheader(app, obj, jwt) {
 			await _.init_examples({
 				holder: app_holder,
 				apps_sandbox_div: app.holder.apps_sandbox_div,
-				apps_off,
-				show_gdcbamslice: obj.features.gdcslice
+				apps_off
 			})
 			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
@@ -1674,11 +1673,11 @@ function launchJunctionbyMatrix(arg, app) {
 
 function launchgdcbamslice(arg, app) {
 	if (arg.gdcbamslice.uionly) {
-			import('./block.tk.bam.gdc').then(p => {
-				p.bamsliceui(app.genomes, app.holder0, app.hostURL)
-			})
-			return
-		}
+		import('./block.tk.bam.gdc').then(p => {
+			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+		})
+		return
+	}
 }
 
 /*
