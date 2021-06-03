@@ -49,7 +49,8 @@ table {
 
 .sja_root_holder button,
 .sja_menu_div button,
-.sja_pane button {
+.sja_pane button, 
+#url-btn {
     border-width: 1px;
     border-style: solid;
     border-radius: 3px;
@@ -58,7 +59,8 @@ table {
 
 .sja_root_holder button:hover,
 .sja_menu_div button:hover,
-.sja_pane button:hover {
+.sja_pane button:hover,
+#url-btn:hover {
     box-shadow: none;
 }
 

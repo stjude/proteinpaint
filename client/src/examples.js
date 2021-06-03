@@ -196,7 +196,7 @@ function displayTracks(tracks, holder, page_args) {
 			<div class="track-btns">
 			${
 				track.buttons.url
-					? `<a id="url-btn" style="cursor:pointer; padding:7.75px" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
+					? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
 					: ''
 			}
 			${
