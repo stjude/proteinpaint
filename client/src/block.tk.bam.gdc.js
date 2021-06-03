@@ -300,9 +300,9 @@ export function bamsliceui(genomes, holder, hosturl) {
 							track_name: bam_info.sample_type + ', ' + bam_info.experimental_strategy + ', ' + bam_info.entity_id
 						})
 					} else {
-                        // remove from array if checkbox unchecked
-                        gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
-                    }
+						// remove from array if checkbox unchecked
+						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
+					}
 				})
 			for (const row of baminfo_rows) {
 				bamselection_table
