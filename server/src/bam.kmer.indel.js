@@ -164,6 +164,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		} else if (item.includes('Final kmer length (from Rust)')) {
 			console.log(item)
 		}
+		//else {
+		//        console.log(item)
+		//}
 	}
 
 	//for (const item of diff_scores) {

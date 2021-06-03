@@ -186,10 +186,14 @@ fn main() {
     let mut indel_length: i64 = alt_length;
     let mut ref_length2 = ref_length + 1;
     let mut alt_length2 = alt_length;
+    let mut alt_status: String = "Large".to_string();
+    let mut ref_status: String = "Small".to_string();
     if ref_length > alt_length {
         indel_length = ref_length;
         alt_length2 = alt_length + 1;
         ref_length2 = ref_length;
+        ref_status = "Large".to_string();
+        alt_status = "Small".to_string();
     }
     println!("Final ref length:{}", ref_length2);
     println!("Final alt length:{}", alt_length2);
@@ -226,11 +230,12 @@ fn main() {
             kmer_length_iter,
             left_most_pos,
             variant_pos,
-            variant_pos + ref_length,
+            variant_pos + ref_length2,
             weight_indel,
             weight_no_indel,
             ref_length,
             surrounding_region_length,
+            &ref_status,
         );
 
         //console::log_1(&"Alt kmers:".into());
@@ -246,11 +251,12 @@ fn main() {
             kmer_length_iter,
             left_most_pos,
             variant_pos,
-            variant_pos + alt_length,
+            variant_pos + alt_length2,
             weight_indel,
             weight_no_indel,
             alt_length,
             surrounding_region_length,
+            &alt_status,
         );
 
         // Check if there are any common kmers between indel region and surrounding region (true in case of repetitive regions)
@@ -303,17 +309,26 @@ fn main() {
         kmer_length_iter,
         left_most_pos,
         variant_pos,
-        variant_pos + ref_length,
+        variant_pos + ref_length2,
         weight_indel,
         weight_no_indel,
         ref_length,
         surrounding_region_length,
+        &ref_status,
     );
 
     ref_indel_kmers.sort();
     ref_indel_kmers.dedup();
     //for kmer in &ref_indel_kmers {
     //  println!("Indel kmer:{}", kmer);
+    //}
+
+    //let mut n = 0;
+    //println!("Ref kmers");
+    //for kmer in &ref_kmers_nodups {
+    //    println!("kmer:{}", kmer);
+    //    println!("kmer_weight:{}", ref_kmers_data[n].kmer_weight);
+    //    n += 1;
     //}
 
     #[allow(unused_variables)]
@@ -328,17 +343,26 @@ fn main() {
         kmer_length_iter,
         left_most_pos,
         variant_pos,
-        variant_pos + alt_length,
+        variant_pos + alt_length2,
         weight_indel,
         weight_no_indel,
         alt_length,
         surrounding_region_length,
+        &alt_status,
     );
 
     alt_indel_kmers.sort();
     alt_indel_kmers.dedup();
     //for kmer in &alt_indel_kmers {
     //  println!(&"Indel kmer:{}", kmer);
+    //}
+
+    //n = 0;
+    //println!("Alt kmers");
+    //for kmer in &alt_kmers_nodups {
+    //    println!("kmer:{}", kmer);
+    //    println!("kmer_weight:{}", alt_kmers_data[n].kmer_weight);
+    //    n += 1;
     //}
 
     let mut kmer_diff_scores = Vec::<f64>::new();
@@ -485,6 +509,7 @@ fn build_kmers_refalt(
     weight_no_indel: f64,
     indel_length: i64,
     surrounding_region_length: i64,
+    refalt_status: &String,
 ) -> (f64, Vec<String>, Vec<String>, Vec<String>, Vec<kmer_data>) {
     let num_iterations = sequence.len() as i64 - kmer_length + 1;
     let sequence_vector: Vec<_> = sequence.chars().collect();
@@ -518,14 +543,43 @@ fn build_kmers_refalt(
         }
 
         let mut kmer_score: f64 = 0.0;
-        for _k in kmer_start..kmer_stop {
-            if indel_start <= (_k as i64) && (_k as i64) < indel_stop {
-                // Determining if nucleotide is within indel or not
-                kmer_score += weight_indel;
-            } else {
-                kmer_score += weight_no_indel;
+        if refalt_status == &"Large".to_string() {
+            for _k in kmer_start..kmer_stop {
+                if indel_start <= (_k as i64) && (_k as i64) < indel_stop {
+                    // Determining if nucleotide is within indel or not
+                    kmer_score += weight_indel;
+                } else {
+                    kmer_score += weight_no_indel;
+                }
+            }
+        } else if refalt_status == &"Small".to_string() {
+            let mut indel_weight_hit = 0;
+            for _k in kmer_start..kmer_stop {
+                if indel_weight_hit == 1 {
+                    indel_weight_hit = 0;
+                } else if indel_start < (_k as i64) && (_k as i64) <= indel_stop {
+                    // Determining if nucleotide is within indel or not
+                    if _k + 1 < kmer_stop {
+                        //println!("kmer:{}", &subseq);
+                        //println!("k+1:{}", _k + 1);
+                        //println!("Indel start:{}", indel_start);
+                        //println!("Indel stop:{}", indel_stop);
+                        //println!("kmer stop:{}", kmer_stop);
+                        if indel_start < (_k + 1 as i64) && (_k + 1 as i64) <= indel_stop {
+                            kmer_score += 2.0 * weight_indel; // Idea is to increase weights for those reads which contains the indel junction
+                            indel_weight_hit = 1;
+                        } else {
+                            kmer_score += weight_no_indel;
+                        }
+                    } else {
+                        kmer_score += weight_no_indel;
+                    }
+                } else {
+                    kmer_score += weight_no_indel;
+                }
             }
         }
+
         kmers_nodup.push(subseq.to_owned());
         let kmer_weight = kmer_input {
             kmer_sequence: String::from(subseq.to_owned()),
