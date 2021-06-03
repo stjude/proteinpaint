@@ -188,13 +188,12 @@ export function bamsliceui(genomes, holder, hosturl) {
 	formdiv
 		.append('div')
 		.style('grid-column', 'span 2')
-		.style('font-size', '80%')
-		.style('padding', '3px 10px').html(`<b>Notes:</b>&emsp;All positions are hg38 based. 
-			</br>&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp; 
-			Either position or variant is required.
-			</br>&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;
-			GDC BAM slice will be visualized for the provided postion or variant, 
-			to visualze additional reads, enter again from this form.`)
+		.style('opacity', 0.6).html(`<ul>
+			<li>All positions are hg38-based.</li>
+			<li>Either position or variant is required.</li>
+			<li>The BAM file will be sliced at the provided postion or variant and visualized.
+			To visualize reads from a new region, enter again from this form.</li>
+		</ul>`)
 
 	//submit button
 	const submit_btn_div = holder.append('div')
