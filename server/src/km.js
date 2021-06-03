@@ -21,10 +21,6 @@ divide_samples
 			query_svcnv
 			query_vcf
 get_pvalue
-	pvalue_write1
-	pvalue_write2
-	pvalue_test
-	pvalue_read
 pvalue_may4eachmutatedset
 pvalue_may4expquartile
 do_plot
@@ -105,14 +101,8 @@ async function get_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const datafile = await pvalue_write1(lines)
-	const { scriptfile, outfile } = await pvalue_write2(datafile)
-	await pvalue_test(scriptfile)
-	const p = pvalue_read(outfile)
-	fs.unlink(datafile, () => {})
-	fs.unlink(scriptfile, () => {})
-	fs.unlink(outfile, () => {})
-	return p
+	const p = await utils.lines2R('km.R', lines)
+	return Number(p.join(''))
 }
 
 async function pvalue_may4eachmutatedset(q, samplesets) {
@@ -143,58 +133,6 @@ async function pvalue_may4expquartile(q, samplesets) {
 		}
 		return
 	}
-}
-
-function pvalue_read(file) {
-	return new Promise((resolve, reject) => {
-		fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
-			if (err) reject('cannot read result')
-			const lst = data.trim().split('\n')
-			const v = lst[lst.length - 1].split('p= ')[1]
-			resolve(Number.parseFloat(v))
-		})
-	})
-}
-
-function pvalue_write1(lines) {
-	const file = path.join(serverconfig.cachedir, Math.random().toString()) + '.tab'
-	return new Promise((resolve, reject) => {
-		fs.writeFile(file, lines.join('\n') + '\n', err => {
-			if (err) reject('cannot write')
-			resolve(file)
-		})
-	})
-}
-
-function pvalue_write2(datafile) {
-	const scriptfile = path.join(serverconfig.cachedir, Math.random().toString()) + '.R'
-	const outfile = scriptfile + '.out'
-	const lines = [
-		'dat<-read.table("' + datafile + '",sep="\t",header=TRUE)',
-		'library(survival)',
-		'sink("' + outfile + '")',
-		'print(survdiff(Surv(futime, fustat) ~ rx,data=dat))',
-		'sink()'
-	]
-
-	return new Promise((resolve, reject) => {
-		fs.writeFile(scriptfile, lines.join('\n') + '\n', err => {
-			if (err) reject('cannot write')
-			resolve({ scriptfile: scriptfile, outfile: outfile })
-		})
-	})
-}
-
-function pvalue_test(scriptfile) {
-	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [scriptfile])
-		sp.on('close', () => {
-			resolve()
-		})
-		sp.on('error', e => {
-			reject('cannot run survdiff')
-		})
-	})
 }
 
 async function divide_samples(samples, q, ds, plottype) {
