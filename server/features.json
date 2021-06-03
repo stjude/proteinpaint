@@ -436,18 +436,19 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "position": "chr7:13749862-20841903",
+                    "position": "chr11:7839893-9165172",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "hicstraw",
                         "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
                         "name": "Arc Track Example",
+                        "percentile_max":99,
                         "mode_arc": true,
                         "mode_hm": false
                     }]
                 },
-                "url": "?genome=hg19&block=1&position=chr7:13749862-20841903&arcfile=Arc Track Demo,proteinpaint_demo/hg19/arc/mango.gz",
-                "doc": ""
+                "url": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
+                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
             },
             "searchterms": []
         },
