@@ -784,9 +784,16 @@ async function do_query(q) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
 	if (!q.partstack) {
-		// not in partstack mode, will do pileup plot
-		if (!q.pileupheight) throw 'pileupheight missing'
-		result.pileup_data = await plot_pileup(q, templates_total)
+		// not in partstack mode, may do pileup plot
+		if (result.count.r == 0) {
+			// no reads, will not do pileup
+			// FIXME
+			// count.r is not reliable as it will count rnaseq reads splitting across intron and invisible (new issue)
+			// to generate count.plotr and count.splitr through plotting, and when count.plotr==0 then don't do pileup
+		} else {
+			if (!q.pileupheight) throw 'pileupheight missing'
+			result.pileup_data = await plot_pileup(q, templates_total)
+		}
 	}
 
 	// Deleting temporary gdc bam file
