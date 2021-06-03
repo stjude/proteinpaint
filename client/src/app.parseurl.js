@@ -367,28 +367,17 @@ function may_get_officialmds(urlp) {
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
-	if(urlp.has('arcfile') || urlp.has('arcurl')){
-		const isfile = urlp.has('arcfile')
-		const lst = urlp.get(isfile ? 'arcfile' : 'arcurl').split(',')
-		for (let i = 0; i < lst.length; i += 3) {
-			if (lst[i] && lst[i + 1] && lst[i + 2]) {
-				const t = {
+	if (urlp.has('arcfile')) {
+		const lst = urlp.get('arcfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
 					type: client.tkt.hicstraw,
 					name: lst[i],
-					enzyme: lst[i + 1],
-					tracks: [
-						{
-							mode_arc: true,
-                        	mode_hm: false
-						}
-					]
-				}
-				if (isfile) {
-					t.file = lst[i + 2]
-				} else {
-					t.url = lst[i + 2]
-				}
-				tklst.push(t)
+					bedfile: lst[i + 1],
+					mode_hm: false,
+					mode_arc: true
+				})
 			}
 		}
 	}
