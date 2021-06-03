@@ -184,9 +184,15 @@ fn main() {
     let ref_length: i64 = refallele.len() as i64;
     let alt_length: i64 = altallele.len() as i64;
     let mut indel_length: i64 = alt_length;
+    let mut ref_length2 = ref_length + 1;
+    let mut alt_length2 = alt_length;
     if ref_length > alt_length {
         indel_length = ref_length;
+        alt_length2 = alt_length + 1;
+        ref_length2 = ref_length;
     }
+    println!("Final ref length:{}", ref_length2);
+    println!("Final alt length:{}", alt_length2);
 
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200;
