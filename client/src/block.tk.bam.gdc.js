@@ -299,11 +299,10 @@ export function bamsliceui(genomes, holder, hosturl) {
 							file_id: bam_info.file_uuid,
 							track_name: bam_info.sample_type + ', ' + bam_info.experimental_strategy + ', ' + bam_info.entity_id
 						})
-					}else{
+					} else {
                         // remove from array if checkbox unchecked
                         gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
                     }
-                    console.log(gdc_args.bam_files)
 				})
 			for (const row of baminfo_rows) {
 				bamselection_table
