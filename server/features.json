@@ -427,7 +427,7 @@
             "shorthand": "Arc",
             "app": "Genome Browser",
             "subheading": "Tracks",
-            "blurb": "",
+            "blurb": "pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "buttons": {
                 "example": {
