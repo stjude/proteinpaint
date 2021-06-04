@@ -1397,6 +1397,7 @@ function parse_one_segment(arg) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
+	} else if (flag == 0 || flag == 16) {
 	} else if (
 		// // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
