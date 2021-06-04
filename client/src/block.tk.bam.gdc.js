@@ -350,7 +350,7 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
-		const variant_str = args.variant.split('.')
+		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
 			pos: Number.parseInt(variant_str[1]),
