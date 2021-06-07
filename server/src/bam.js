@@ -1398,6 +1398,8 @@ function parse_one_segment(arg) {
 		segment.rnext = rnext
 		segment.pnext = pnext
 	} else if (flag == 0 || flag == 16) {
+		// in some cases star-mapped bam can have this kind of nonstandard flag
+		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
 	} else if (
 		// // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
