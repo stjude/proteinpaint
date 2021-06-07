@@ -323,9 +323,10 @@ async function plot_pileup(q, templates) {
 		bplst[ridx] = await run_samtools_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
-		const lst = []
+		// call stack error fix: use Set instead of array to handle duplicates
+		const lst = new Set()
 		for (const b of bplst[ridx]) {
-			if (b) lst.push(b.total)
+			if (b) lst.add(b.total)
 		}
 		maxValue = Math.max(maxValue, ...lst)
 	}
