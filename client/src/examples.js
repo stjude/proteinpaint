@@ -150,19 +150,19 @@ function make_searchbar(track_args, page_args, div) {
 }
 
 async function loadTracks(args, page_args, filteredTracks) {
-	const GPaintTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
-	)
+	// const GPaintTracks = (filteredTracks || args.tracks).filter(
+	// 	track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
+	// )
 	const BrowserTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Tracks'
+		track => track.app == 'Genome Browser'
 	)
-	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
-	)
+	// const ExperimentalTracks = (filteredTracks || args.tracks).filter(
+	// 	track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
+	// )
 	const LaunchApps = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Apps' && track.subheading == 'Launch App'
+		track => track.app == 'Apps'
 	)
-	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
+	// const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
 
 	try {
 		// displayTracks(GPaintTracks, args.gpaintList, page_args)
@@ -214,7 +214,16 @@ function displayTracks(tracks, holder, page_args) {
 			})
 
 		// add Beta tag for experimental tracks
-		if (track.isbeta) li.select('.track-tag').text('Beta')
+		if (track.isbeta) {
+			//li.select('.track-tag').text('Beta')
+			li.append('img')
+				.attr('src', 'https://pecan.stjude.cloud/static/examples/images/beta-banner.svg')
+				.attr('position', 'absolute')
+				.attr('height', '100%')
+				.attr('width', '50px')
+				.attr('top', '5px')
+				.attr('right', '-90%')
+		}
 
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
@@ -254,7 +263,7 @@ function displayTracks(tracks, holder, page_args) {
 async function openExample(track) {
 	// crate unique id for each app div
 	const sandbox_div = newSandboxDiv()
-	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
+	sandbox_div.header.text(track.name + (track.ui && track.ui == false ? ' Example' : ''))
 
 	// template runpp() arg
 	const runpp_arg = {
