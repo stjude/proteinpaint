@@ -145,10 +145,10 @@ function setqDefaults(self) {
 		self.numqByTermIdType[self.term.id] = {
 			regular:
 				self.q && self.q.type == 'regular'
-					? self.q
+					? JSON.parse(JSON.stringify(self.q))
 					: self.opts.use_bins_less && self.term.bins.less
-					? self.term.bins.less
-					: self.term.bins.default,
+					? JSON.parse(JSON.stringify(self.term.bins.less))
+					: JSON.parse(JSON.stringify(self.term.bins.default)),
 			custom:
 				self.q && self.q.type == 'custom'
 					? self.q
