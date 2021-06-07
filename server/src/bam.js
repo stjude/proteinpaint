@@ -1397,6 +1397,9 @@ function parse_one_segment(arg) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
+	} else if (flag == 0 || flag == 16) {
+		// in some cases star-mapped bam can have this kind of nonstandard flag
+		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
 	} else if (
 		// // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
@@ -1687,7 +1690,9 @@ function plot_template(ctx, template, group, q) {
 			x1: template.x1,
 			x2: template.x2,
 			y1: template.y,
-			y2: template.y + (template.height || group.stackheight)
+			y2: template.y + (template.height || group.stackheight),
+			start: Math.min(...template.segments.map(i => i.segstart)),
+			stop: Math.max(...template.segments.map(i => i.segstop))
 		}
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
@@ -2128,17 +2133,17 @@ async function route_getread(genome, req) {
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
-	if (!req.query.viewstart) throw '.viewstart missing'
-	if (!req.query.viewstop) throw '.viewstart missing'
+	if (!req.query.start) throw '.start missing'
+	if (!req.query.stop) throw '.stop missing'
 	const r = {
 		chr: req.query.chr,
-		start: Number(req.query.viewstart),
-		stop: Number(req.query.viewstop),
+		start: Number(req.query.start),
+		stop: Number(req.query.stop),
 		scale: () => {}, // dummy
 		ntwidth: 10 // good to show all insertions
 	}
-	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
-	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
+	if (!Number.isInteger(r.start)) throw '.start not integer'
+	if (!Number.isInteger(r.stop)) throw '.stop not integer'
 	const seglst = await query_oneread(req, r)
 	if (!seglst) {
 		// no read found
@@ -2161,7 +2166,14 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, dir, lastseg, e, _file, isurl
+	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop
+	if (req.query.unknownorder) {
+		// unknown order, read start/stop must be provided
+		readstart = Number(req.query.readstart)
+		readstop = Number(req.query.readstop)
+		if (Number.isNaN(readstart) || Number.isNaN(readstop))
+			throw 'readstart/stop not provided for read with unknown order'
+	}
 	if (!req.query.gdc) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -2210,6 +2222,12 @@ async function query_oneread(req, r) {
 				}
 			} else if (req.query.getlast) {
 				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.unknownorder) {
+				if (s.segstart == readstart && s.segstop == readstop) {
 					ps.kill()
 					resolve([s])
 					return
