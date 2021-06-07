@@ -218,11 +218,7 @@ function displayTracks(tracks, holder, page_args) {
 			//li.select('.track-tag').text('Beta')
 			li.append('img')
 				.attr('src', 'https://pecan.stjude.cloud/static/examples/images/beta-banner.svg')
-				.attr('position', 'absolute')
-				.attr('height', '100%')
-				.attr('width', '50px')
-				.attr('top', '5px')
-				.attr('right', '-90%')
+				.attr('class', 'beta-banner')
 		}
 
 		// create custom track button for genomepaint card

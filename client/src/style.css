@@ -853,6 +853,15 @@ hr {
     border-radius: 3px;
 }
 
+.beta-banner{
+    grid-area: image;
+    height: 35%;
+    width: 100%;
+    margin-bottom: auto;
+    margin-left: -25%;
+    transform: rotateY(0deg) rotate(320deg);
+}
+
 .track-h {
     grid-area: header;
     display: inline-block;
