@@ -287,8 +287,8 @@ at r.ntwidth<1:
 async function download_gdc_bam(req) {
 	let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.query.gdc.split(',')[0]
-		const gdc_case_id = req.query.gdc.split(',')[1]
+		const gdc_token = req.get('x-auth-token').split(',')[0]
+		const gdc_case_id = req.get('x-auth-token').split(',')[1]
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
@@ -601,7 +601,8 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
-	if (req.query.gdc) {
+	// if gdc_token and case_id present, it will be moved to x-auth-token
+	if (req.get('x-auth-token')) {
 		q = {
 			genome,
 			file: req.query.file, // will need to change this to a loop when viewing multiple regions in the same gdc sample
@@ -611,8 +612,8 @@ async function get_q(genome, req) {
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
-		//q.gdc_token = req.query.gdc.split(',')[0]
-		q.gdc_case_id = req.query.gdc.split(',')[1]
+		//q.gdc_token = req.get('x-auth-token').split(',')[0]
+		q.gdc_case_id = req.get('x-auth-token').split(',')[1]
 		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
