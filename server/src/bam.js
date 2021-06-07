@@ -327,7 +327,8 @@ async function plot_pileup(q, templates) {
 		for (const b of bplst[ridx]) {
 			if (b) lst.push(b.total)
 		}
-		maxValue = Math.max(maxValue, ...lst)
+		// to remove call stack error, convert lst to Set to remove duplicates
+		maxValue = Math.max(maxValue, ...new Set(lst))
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
