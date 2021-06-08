@@ -378,13 +378,15 @@ function renderBamSlice(args, genome, holder, hostURL) {
 	let variant
 	if (args.position) {
 		const pos_str = args.position.split(/[:-]/)
-		par.chr = pos_str[0]
+		par.chr = Number.isNaN(parseInt(pos_str[0])) ? pos_str[0] : ('chr' + pos_str[0])
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
+        // TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
+        // solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
-			chr: variant_str[0],
+			chr: Number.isNaN(parseInt(variant_str[0])) ? variant_str[0] : ('chr' + variant_str[0]),
 			pos: Number.parseInt(variant_str[1]),
 			ref: variant_str[2],
 			alt: variant_str[3]
