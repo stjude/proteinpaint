@@ -367,6 +367,21 @@ function may_get_officialmds(urlp) {
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
+	if (urlp.has('arcfile')) {
+		const lst = urlp.get('arcfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					bedfile: lst[i + 1],
+					mode_hm: false,
+					mode_arc: true
+				})
+			}
+		}
+	}
+
 	if (urlp.has('mdsjsoncache')) {
 		const re = await client.dofetch2('mdsjsonform', {
 			method: 'POST',
@@ -400,12 +415,7 @@ export async function get_tklst(urlp, genomeobj) {
 				delete i.tracks
 				for (const t of i.tklst) {
 					if (!t.assay) throw '.assay missing from a facet track'
-					t.assayname = t.assay
-					delete t.assay
 					if (!t.sample) throw '.sample missing from a facet track'
-					t.patient = t.sample
-					delete t.sample
-					if (!t.sampletype) t.sampletype = t.patient
 					// must assign tkid otherwise the tk buttons from facet table won't work
 					t.tkid = Math.random().toString()
 				}

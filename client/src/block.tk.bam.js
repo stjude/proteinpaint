@@ -11,16 +11,25 @@ to tell backend to provide color scale
 
 tk can predefine if bam file has chr or not
 
-tk.groups[]
 tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
 tk.pileupheight
 tk.pileupbottompad
-group {}
+
+tk.dom{}
+.pileup_axis // left side
+.pileup_g // contains image
+.pileup_img
+.pileup_shown // if pileup is shown or not; to tell setTkHeight() whether height will be included
+.vsliderg
+
+tk.groups[]
 .data{}
-	.templatebox[] // optional
+	.templatebox[{}] // optional, about the templates in view range
+	         // server decides if to return template boxes (at poststack_adjustq)
+	.count {r,t} // r for reads, t for templates
 .data_fullstack{}
 	.messagerowheights
 	.stackcount
@@ -219,7 +228,7 @@ or update existing groups, in which groupidx will be provided
 
 	if (data.pileup_data) {
 		// update the pileup image
-		tk.dom.pileup_shown = true // to tell setTkHeight() that pileup is shown
+		tk.dom.pileup_shown = true
 		tk.dom.pileup_img
 			.attr('xlink:href', data.pileup_data.src)
 			.attr('width', data.pileup_data.width)
@@ -239,7 +248,10 @@ or update existing groups, in which groupidx will be provided
 			showline: true
 		})
 	} else {
+		// pileup not returned when there's no visible reads (other cases?)
 		tk.dom.pileup_shown = false
+		tk.dom.pileup_axis.selectAll('*').remove()
+		tk.dom.pileup_img.attr('width', 0)
 	}
 
 	if (tk.gdc) {
@@ -678,7 +690,7 @@ function makeGroup(gd, tk, block, data) {
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 
-					getReadInfo(tk, block, t, block.pxoff2region(mx))
+					getReadInfo(tk, block, t, block.pxoff2region(mx)[0])
 					return
 				}
 			}
@@ -904,13 +916,14 @@ function configPanel(tk, block) {
 get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
+box{}
+  qname, start, stop
 */
-async function getReadInfo(tk, block, box, tmp) {
+async function getReadInfo(tk, block, box, ridx) {
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
-	const [ridx, pos] = tmp
 
 	const data = await client.dofetch2('tkbam?' + getparam().join('&'))
 
@@ -995,14 +1008,14 @@ async function getReadInfo(tk, block, box, tmp) {
 
 	function getparam(extra) {
 		// reusable helper
+		const r = block.rglst[ridx]
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
 			'genome=' + block.genome.name,
-			'chr=' + block.rglst[ridx].chr,
-			'pos=' + pos,
-			'viewstart=' + block.rglst[ridx].start,
-			'viewstop=' + block.rglst[ridx].stop
+			'chr=' + r.chr,
+			'start=' + r.start,
+			'stop=' + r.stop
 		]
 		if (tk.nochr) lst.push('nochr=1')
 		if (tk.file) lst.push('file=' + tk.file)
@@ -1014,8 +1027,17 @@ async function getReadInfo(tk, block, box, tmp) {
 		if (tk.asPaired) {
 			lst.push('getpair=1')
 		} else {
-			if (box.isfirst) lst.push('getfirst=1')
-			else if (box.islast) lst.push('getlast=1')
+			if (box.isfirst) {
+				lst.push('getfirst=1')
+			} else if (box.islast) {
+				lst.push('getlast=1')
+			} else {
+				// unknown order for this read
+				// supply read position to identify it on server
+				lst.push('unknownorder=1')
+				lst.push('readstart=' + box.start)
+				lst.push('readstop=' + box.stop)
+			}
 		}
 		if (extra) lst.push(extra)
 		return lst
