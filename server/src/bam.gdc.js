@@ -25,6 +25,29 @@ async function get_gdc_data(gdc_id) {
 		{ gdc_id: 'case_id', field: 'cases.submitter_id' }
 	]
 
+    // type of gdc_apis
+    const gdc_apis = {
+        gdc_files: 
+        {
+            end_point: 'https://api.gdc.cancer.gov/files/',
+            fields: [
+                'id',
+                'file_size',
+                'experimental_strategy',
+                'associated_entities.entity_submitter_id',
+                'associated_entities.entity_type',
+                'associated_entities.case_id',
+                'cases.samples.sample_type'
+            ],
+            size: 100
+        },
+        gdc_cases:
+        {
+            end_point: 'https://api.gdc.cancer.gov/cases/',
+            fields: ['case_id']
+        }
+    }
+
 	// data to returned
 	const bamdata = {
 		file_metadata: []
@@ -44,18 +67,32 @@ async function get_gdc_data(gdc_id) {
 	}
 
 	const sequencing_read_filter = { op: '=', content: { field: 'data_category', value: 'Sequencing Reads' } }
-	let re
+	let re, valid_case_id = true, valid_case_uuid = true
 	for (const f of filter_types) {
 		filter.content[0].content.field = f.field
-		if (f.gdc_id != 'file_uuid') filter.content.push(sequencing_read_filter)
-		re = await query_gdc_api(filter)
+		if (f.gdc_id != 'file_uuid'){
+            // check if submitted id is valid case id or not
+            const case_check = await query_gdc_api(filter, gdc_apis.gdc_cases)
+            if (!case_check.data.hits.length){
+                if (f.gdc_id == 'case_uuid') valid_case_uuid = false
+                else if(f.gdc_id == 'case_id') valid_case_id = false
+                if (!valid_case_id && !valid_case_uuid) throw 'gdc_id is not valid case uuid / case id'
+                continue
+            }
+            filter.content.push(sequencing_read_filter)
+        }
+		re = await query_gdc_api(filter, gdc_apis.gdc_files)
+        // re = await query_gdc_api_files(filter)
 		if (re.data.hits.length) {
 			bamdata[f.gdc_id] = true
 			break
 		}
 	}
-	if (!re.data.hits.length) throw 'gdc_id is not valid file uuid / case uuid / case id'
+    // if submitted id is valid case_id, then respond that bam files are not available for this case_id
+    if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
+	else if (!re.data.hits.length) throw 'gdc_id is not valid file uuid / case uuid / case id'
 	for (const s of re.data.hits) {
+        // console.log(s)
 		const file = {}
 		file.file_uuid = s.id
 		file.file_size = (parseFloat(s.file_size) / 10e9).toFixed(2) + ' GB'
@@ -68,25 +105,16 @@ async function get_gdc_data(gdc_id) {
 	return bamdata
 }
 
-async function query_gdc_api(query_filter) {
+async function query_gdc_api(query_filter, gdc_api) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	const fields = [
-		'id',
-		'file_size',
-		'experimental_strategy',
-		'associated_entities.entity_submitter_id',
-		'associated_entities.entity_type',
-		'associated_entities.case_id',
-		'cases.samples.sample_type'
-	]
 	const response = await got(
-		'https://api.gdc.cancer.gov/files/' +
-			// 'size=' +
-			// api.size +
+		gdc_api.end_point +
 			'?filters=' +
 			encodeURIComponent(JSON.stringify(query_filter)) +
+            '&size=' +
+			(gdc_api.size || '10') +
 			'&fields=' +
-			fields.join(','),
+			gdc_api.fields.join(','),
 		{ method: 'GET', headers }
 	)
 	let re
