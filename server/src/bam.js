@@ -1279,7 +1279,7 @@ function parse_one_segment(arg) {
 		}
 		prev = i + 1
 		if (cigar == '=' || cigar == 'M') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+			if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
 				// visible
 				boxes.push({
 					opr: cigar,
