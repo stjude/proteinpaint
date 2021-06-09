@@ -924,8 +924,8 @@ async function getReadInfo(tk, block, box, ridx) {
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
-
-	const data = await client.dofetch2('tkbam?' + getparam().join('&'))
+	const req_data = getparam()
+	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 
 	if (data.error) {
 		client.sayerror(wait, data.error)
@@ -973,7 +973,8 @@ async function getReadInfo(tk, block, box, ridx) {
 				.on('click', async () => {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
-					const data2 = await client.dofetch2('tkbam?' + getparam('show_unmapped=1').join('&'))
+					const req_data = getparam('show_unmapped=1')
+					const data2 = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 					if (data2.error) {
 						wait.text('')
 						client.sayerror(wait, data2.error)
@@ -1009,6 +1010,7 @@ async function getReadInfo(tk, block, box, ridx) {
 	function getparam(extra) {
 		// reusable helper
 		const r = block.rglst[ridx]
+		const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' }
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
@@ -1022,7 +1024,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		if (tk.url) lst.push('url=' + tk.url)
 		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 		if (tk.gdc) {
-			lst.push('gdc=' + tk.gdc)
+			headers['X-Auth-Token'] = tk.gdc
 		}
 		if (tk.asPaired) {
 			lst.push('getpair=1')
@@ -1040,7 +1042,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			}
 		}
 		if (extra) lst.push(extra)
-		return lst
+		return { lst, headers }
 	}
 }
 

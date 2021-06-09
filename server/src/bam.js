@@ -2168,7 +2168,8 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop
+	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop, gdc_query = false
+	if (req.get('x-auth-token')) gdc_query = true
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2176,14 +2177,14 @@ async function query_oneread(req, r) {
 		if (Number.isNaN(readstart) || Number.isNaN(readstop))
 			throw 'readstart/stop not provided for read with unknown order'
 	}
-	if (!req.query.gdc) {
+	if (!gdc_query) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
 	return new Promise((resolve, reject) => {
 		let ps
-		if (req.query.gdc) {
+		if (gdc_query) {
 			ps = spawn(samtools, ['view', req.query.file])
 		} else {
 			ps = spawn(
