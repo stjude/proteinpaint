@@ -131,12 +131,12 @@ export function bamsliceui(genomes, holder, hosturl) {
 		if (bam_info.error) {
 			cmt(bam_info.error, 1)
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.file_uuid) {
+		} else if (bam_info.is_file_uuid) {
 			// update file id to be suppliled to gdc bam query
 			gdc_args.bam_files.push({ file_id: gdc_id })
 			update_singlefile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
-		} else if (bam_info.case_uuid || bam_info.case_id) {
+		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
 			update_multifile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
 		}

@@ -20,9 +20,9 @@ module.exports = () => {
 async function get_gdc_data(gdc_id) {
 	// type of gdc_ids
 	const filter_types = [
-		{ gdc_id: 'file_uuid', field: 'file_id' },
-		{ gdc_id: 'case_uuid', field: 'cases.case_id' },
-		{ gdc_id: 'case_id', field: 'cases.submitter_id' }
+		{ is_file_uuid: 1, field: 'file_id' },
+		{ is_case_uuid: 1, field: 'cases.case_id' },
+		{ is_case_id: 1, field: 'cases.submitter_id' }
 	]
 
     // type of gdc_apis
@@ -70,13 +70,13 @@ async function get_gdc_data(gdc_id) {
 	let re, valid_case_id = true, valid_case_uuid = true
 	for (const f of filter_types) {
 		filter.content[0].content.field = f.field
-		if (f.gdc_id != 'file_uuid'){
-            // check if submitted id is valid case id or not
+        // only if gdc_id is not file_id
+        // check if submitted id is valid case id or not
+		if (!f.is_file_uuid){
             const case_check = await query_gdc_api(filter, gdc_apis.gdc_cases)
             if (!case_check.data.hits.length){
-                if (f.gdc_id == 'case_uuid') valid_case_uuid = false
-                else if(f.gdc_id == 'case_id') valid_case_id = false
-                if (!valid_case_id && !valid_case_uuid) throw 'gdc_id is not valid case uuid / case id'
+                if (f.is_case_uuid) valid_case_uuid = false
+                else if(f.is_case_id) valid_case_id = false
                 continue
             }
             filter.content.push(sequencing_read_filter)
@@ -84,13 +84,13 @@ async function get_gdc_data(gdc_id) {
 		re = await query_gdc_api(filter, gdc_apis.gdc_files)
         // re = await query_gdc_api_files(filter)
 		if (re.data.hits.length) {
-			bamdata[f.gdc_id] = true
+			bamdata[Object.keys(f)[0]] = true
 			break
 		}
 	}
     // if submitted id is valid case_id, then respond that bam files are not available for this case_id
     if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
-	else if (!re.data.hits.length) throw 'gdc_id is not valid file uuid / case uuid / case id'
+	else if (!re.data.hits.length) throw 'GDC ID is not valid'
 	for (const s of re.data.hits) {
         // console.log(s)
 		const file = {}
