@@ -1,6 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
 import * as client from './client'
+import { contigNameNoChr } from '../shared/common'
 import { url2map } from './app.parseurl'
 
 /* args required to generate bam track
@@ -206,7 +207,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.text('submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args)
+				validateInputs(gdc_args, genomes[default_genome])
 			} catch (e) {
 				cmt(e, 1)
 				return
@@ -353,7 +354,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 	}
 }
 
-function validateInputs(obj) {
+function validateInputs(obj, genome) {
 	if (!obj) throw 'no parameters passing to validate'
 	if (!obj.gdc_token) throw 'gdc token missing'
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
@@ -365,6 +366,15 @@ function validateInputs(obj) {
 	if (!obj.position && !obj.variant) throw ' position or variant is required'
 	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
+    const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
+    if(!contigNameNoChr(genome, chr)) throw 'chromosome is not valid in position/variant input: ' + chr
+    else{
+        // add chr to non-standard position or variant
+        if(chr.length < 4 || str.substr(0,3) != 'chr'){
+            if (obj.position) obj.position = 'chr' + obj.position
+            if(obj.variant) obj.variant = 'chr' + obj.variant
+        }
+    }
 }
 
 function renderBamSlice(args, genome, holder, hostURL) {
@@ -378,7 +388,7 @@ function renderBamSlice(args, genome, holder, hostURL) {
 	let variant
 	if (args.position) {
 		const pos_str = args.position.split(/[:-]/)
-		par.chr = get_chr(pos_str[0])
+		par.chr = pos_str[0]
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
@@ -386,7 +396,7 @@ function renderBamSlice(args, genome, holder, hostURL) {
         // solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
-			chr: get_chr(variant_str[0]),
+			chr: variant_str[0],
 			pos: Number.parseInt(variant_str[1]),
 			ref: variant_str[2],
 			alt: variant_str[3]
@@ -415,14 +425,4 @@ function renderBamSlice(args, genome, holder, hostURL) {
 	import('./block').then(b => {
 		new b.Block(par)
 	})
-
-    // validate chromosome if 'chr' is presnet or attach it to valid chromosome str
-    // TODO: move validation in validateInputs()
-    function get_chr(str){
-        if(str.length > 3 && str.substr(0,3) == 'chr')
-            return str
-        else if(/[0-9XYM]/.test(str)){
-            return 'chr' + str
-        }
-    }
 }
