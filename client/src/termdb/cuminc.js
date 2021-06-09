@@ -5,7 +5,8 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
-import { rgb, darker } from 'd3-color'
+import { rgb } from 'd3-color'
+import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
@@ -16,7 +17,9 @@ class TdbCumInc {
 		this.app = app
 		this.api = rx.getComponentApi(this)
 		this.dom = {
-			div: opts.holder.style('margin', '10px')
+			holder: opts.holder,
+			chartsDiv: opts.holder.append('div').style('margin', '10px'),
+			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, opts.settings)
@@ -27,6 +30,16 @@ class TdbCumInc {
 			.y(c => c.scaledY)
 		setInteractivity(this)
 		setRenderers(this)
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
@@ -42,24 +55,25 @@ class TdbCumInc {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
 				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
-				settings: {
-					common: config.settings.common,
-					cuminc: config.settings.cuminc
-				}
+				settings: config.settings.cuminc
 			}
 		}
 	}
 
 	main(data) {
 		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
+			this.dom.holder.style('display', 'none')
 			return
 		}
 		Object.assign(this.settings, this.state.config.settings)
-		if (data) this.currData = this.getData(data)
+		if (data) {
+			this.currData = this.getData(data)
+			this.refs = data.refs
+		}
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
+		this.legendRenderer(this.legendData)
 	}
 
 	getData(data) {
@@ -81,10 +95,29 @@ class TdbCumInc {
 		if (!charts) return
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
+					legendItems.push({
+						seriesId: series.seriesId,
+						text: series.seriesLabel,
+						color: this.term2toColor[series.seriesId],
+						isHidden: this.settings.hidden.includes(series.seriesId)
+					})
+				}
 			}
+		}
+		if (this.state.config.term2 && legendItems.length) {
+			this.legendData = [
+				{
+					name: this.state.config.term2.term.name,
+					items: legendItems
+				}
+			]
+		} else {
+			this.legendData = []
 		}
 	}
 }
@@ -94,17 +127,17 @@ export const cumincInit = rx.getInitFxn(TdbCumInc)
 function setRenderers(self) {
 	self.render = function() {
 		const data = self.pj.tree.charts || [{ chartId: 'No cumulative incidence data' }]
-		const chartDivs = self.dom.div.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
+		const chartDivs = self.dom.chartsDiv.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
-		self.dom.div.style('display', 'block')
-		self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+		self.dom.holder.style('display', 'block')
+		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
 	self.addCharts = function(d) {
-		const s = self.settings.cuminc
+		const s = self.settings
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
@@ -145,7 +178,7 @@ function setRenderers(self) {
 
 	self.updateCharts = function(d) {
 		if (!d.serieses) return
-		const s = self.settings.cuminc
+		const s = self.settings
 		const div = select(this)
 
 		div
@@ -183,7 +216,10 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const serieses = mainG.selectAll('.sjpcb-cuminc-series').data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
+		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const serieses = mainG
+			.selectAll('.sjpcb-cuminc-series')
+			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
@@ -404,6 +440,27 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		self.app.tip.hide()
 	}
+
+	self.legendClick = function() {
+		event.stopPropagation()
+		const d = event.target.__data__
+		if (d === undefined) return
+		const hidden = self.settings.hidden.slice()
+		const i = hidden.indexOf(d.seriesId)
+		if (i == -1) hidden.push(d.seriesId)
+		else hidden.splice(i, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					cuminc: {
+						hidden
+					}
+				}
+			}
+		})
+	}
 }
 
 function getPj(self) {
@@ -440,14 +497,15 @@ function getPj(self) {
 							]
 						},
 						'$seriesId'
-					]
+					],
+					'@done()': '=sortSerieses()'
 				},
 				'=chartTitle()'
 			]
 		},
 		'=': {
 			chartTitle(row) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
 					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
 				}
@@ -478,7 +536,7 @@ function getPj(self) {
 				return row.high
 			},
 			xScale(row, context) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
@@ -492,12 +550,17 @@ function getPj(self) {
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
-				const s = self.settings.cuminc
+				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [Math.min(100, 1.1 * yMax), 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
+			},
+			sortSerieses(result) {
+				if (!self.refs.bins) return
+				const labelOrder = self.refs.bins.map(b => b.label)
+				result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
 			}
 		}
 	})

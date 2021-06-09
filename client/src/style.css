@@ -49,7 +49,8 @@ table {
 
 .sja_root_holder button,
 .sja_menu_div button,
-.sja_pane button {
+.sja_pane button, 
+#url-btn {
     border-width: 1px;
     border-style: solid;
     border-radius: 3px;
@@ -58,7 +59,8 @@ table {
 
 .sja_root_holder button:hover,
 .sja_menu_div button:hover,
-.sja_pane button:hover {
+.sja_pane button:hover,
+#url-btn:hover {
     box-shadow: none;
 }
 
@@ -875,6 +877,7 @@ hr {
     margin-top: -15px;
 }
 
+#url-btn,
 .track-btns>button, .landing-page-a {
     grid-area: buttons;
     display: inline;
@@ -892,7 +895,7 @@ hr {
     font-style: normal;
 }
 
-.gbrowser-btn,
+/* .gbrowser-btn,
 .url-tooltip-outer {
     position: relative;
     display: inline-block;
@@ -915,6 +918,7 @@ hr {
     left: 50%;
     margin-left: -60px;
     background-color: #f2f0f0;
+    word-wrap: break-word ;
 }
 
 .gbrowser-btn .launch-btn-tooltip,
@@ -939,10 +943,10 @@ hr {
     line-height: 2px;
     border-style: solid;
     border-color: transparent transparent transparent darkgray;
-    /* box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     opacity: 1;
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); */
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .url-tooltip-outer .url-tooltip-span::after {
@@ -959,4 +963,4 @@ hr {
 .gbrowser-btn:hover .launch-btn-tooltip,
 .url-tooltip-outer:hover .url-tooltip-span {
     visibility: visible;
-}
+} */

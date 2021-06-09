@@ -118,7 +118,8 @@ box {}
 
 *********************** function cascade
 download_gdc_bam  // For downloading gdc bam files
-        get_gdc_bam
+	get_gdc_bam
+		index_bam
 get_q
 do_query
 	query_reads
@@ -285,10 +286,10 @@ at r.ntwidth<1:
 */
 
 async function download_gdc_bam(req) {
-	let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
+	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.query.gdc.split(',')[0]
-		const gdc_case_id = req.query.gdc.split(',')[1]
+		const gdc_token = req.get('x-auth-token').split(',')[0]
+		const gdc_case_id = req.get('x-auth-token').split(',')[1]
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
@@ -323,11 +324,9 @@ async function plot_pileup(q, templates) {
 		bplst[ridx] = await run_samtools_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
-		const lst = []
 		for (const b of bplst[ridx]) {
-			if (b) lst.push(b.total)
+			if (b) maxValue = Math.max(maxValue, b.total)
 		}
-		maxValue = Math.max(maxValue, ...lst)
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
@@ -601,7 +600,8 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
-	if (req.query.gdc) {
+	// if gdc_token and case_id present, it will be moved to x-auth-token
+	if (req.get('x-auth-token')) {
 		q = {
 			genome,
 			file: req.query.file, // will need to change this to a loop when viewing multiple regions in the same gdc sample
@@ -611,8 +611,8 @@ async function get_q(genome, req) {
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
-		//q.gdc_token = req.query.gdc.split(',')[0]
-		q.gdc_case_id = req.query.gdc.split(',')[1]
+		//q.gdc_token = req.get('x-auth-token').split(',')[0]
+		q.gdc_case_id = req.get('x-auth-token').split(',')[1]
 		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
@@ -784,9 +784,16 @@ async function do_query(q) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
 	if (!q.partstack) {
-		// not in partstack mode, will do pileup plot
-		if (!q.pileupheight) throw 'pileupheight missing'
-		result.pileup_data = await plot_pileup(q, templates_total)
+		// not in partstack mode, may do pileup plot
+		if (result.count.r == 0) {
+			// no reads, will not do pileup
+			// FIXME
+			// count.r is not reliable as it will count rnaseq reads splitting across intron and invisible (new issue)
+			// to generate count.plotr and count.splitr through plotting, and when count.plotr==0 then don't do pileup
+		} else {
+			if (!q.pileupheight) throw 'pileupheight missing'
+			result.pileup_data = await plot_pileup(q, templates_total)
+		}
 	}
 
 	// Deleting temporary gdc bam file
@@ -819,9 +826,6 @@ async function query_reads(q) {
 			start: q.variant.pos,
 			stop: q.variant.pos + q.variant.ref.length
 		}
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
 		return
@@ -830,28 +834,34 @@ async function query_reads(q) {
 		return
 	}
 	for (const r of q.regions) {
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q) // add r.lines[]
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
+async function get_gdc_bam(chr, start, stop, token, case_id, file) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = gdc_token
+	headers['X-Auth-Token'] = token
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdc_case_id + '?region=' + chr + ':' + start + '-' + stop
-	console.log(url)
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
-		//console.log('Downloaded ' + bam_file_name.toString())
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(file))
+		await index_bam(file)
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
 		throw 'Cannot retrieve bam file: ' + error
 	}
+}
+
+function index_bam(file) {
+	// only work for gdc bam slices, file is absolute path in cache dir
+	return new Promise((resolve, reject) => {
+		const ps = spawn(samtools, ['index', file])
+		ps.on('close', code => {
+			resolve()
+		})
+	})
 }
 
 function query_region(r, q) {
@@ -887,31 +897,30 @@ function query_region(r, q) {
 	})
 }
 
+/*
+'samtools depth' returns single base depth
+results are collected in bplst[]
+when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
+when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
+should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
+*/
 function run_samtools_depth(q, r) {
-	// "samtools depth" returns single base depth
-	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
-	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		// must use r.start+1 to query bam
-		let ls = ''
-		if (q.gdc_case_id) {
-			ls = spawn(samtools, ['depth', '-g', 'DUP', q.file || q.url], { cwd: q.dir })
-		} else {
-			ls = spawn(
-				samtools,
-				[
-					'depth',
-					'-r',
-					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-					'-g',
-					'DUP',
-					q.file || q.url
-				],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ls.stdout })
+		const ps = spawn(
+			samtools,
+			[
+				'depth',
+				'-r',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+				'-g',
+				'DUP',
+				q.file || q.url
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
@@ -1390,6 +1399,9 @@ function parse_one_segment(arg) {
 		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
+	} else if (flag == 0 || flag == 16) {
+		// in some cases star-mapped bam can have this kind of nonstandard flag
+		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
 	} else if (
 		// // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
@@ -1680,7 +1692,9 @@ function plot_template(ctx, template, group, q) {
 			x1: template.x1,
 			x2: template.x2,
 			y1: template.y,
-			y2: template.y + (template.height || group.stackheight)
+			y2: template.y + (template.height || group.stackheight),
+			start: Math.min(...template.segments.map(i => i.segstart)),
+			stop: Math.max(...template.segments.map(i => i.segstop))
 		}
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
@@ -2121,17 +2135,17 @@ async function route_getread(genome, req) {
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
-	if (!req.query.viewstart) throw '.viewstart missing'
-	if (!req.query.viewstop) throw '.viewstart missing'
+	if (!req.query.start) throw '.start missing'
+	if (!req.query.stop) throw '.stop missing'
 	const r = {
 		chr: req.query.chr,
-		start: Number(req.query.viewstart),
-		stop: Number(req.query.viewstop),
+		start: Number(req.query.start),
+		stop: Number(req.query.stop),
 		scale: () => {}, // dummy
 		ntwidth: 10 // good to show all insertions
 	}
-	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
-	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
+	if (!Number.isInteger(r.start)) throw '.start not integer'
+	if (!Number.isInteger(r.stop)) throw '.stop not integer'
 	const seglst = await query_oneread(req, r)
 	if (!seglst) {
 		// no read found
@@ -2154,7 +2168,14 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, dir, lastseg, e, _file, isurl
+	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop
+	if (req.query.unknownorder) {
+		// unknown order, read start/stop must be provided
+		readstart = Number(req.query.readstart)
+		readstop = Number(req.query.readstop)
+		if (Number.isNaN(readstart) || Number.isNaN(readstop))
+			throw 'readstart/stop not provided for read with unknown order'
+	}
 	if (!req.query.gdc) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -2203,6 +2224,12 @@ async function query_oneread(req, r) {
 				}
 			} else if (req.query.getlast) {
 				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.unknownorder) {
+				if (s.segstart == readstart && s.segstop == readstop) {
 					ps.kill()
 					resolve([s])
 					return

@@ -367,6 +367,21 @@ function may_get_officialmds(urlp) {
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
+	if (urlp.has('arcfile')) {
+		const lst = urlp.get('arcfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					bedfile: lst[i + 1],
+					mode_hm: false,
+					mode_arc: true
+				})
+			}
+		}
+	}
+
 	if (urlp.has('mdsjsoncache')) {
 		const re = await client.dofetch2('mdsjsonform', {
 			method: 'POST',

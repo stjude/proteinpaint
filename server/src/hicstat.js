@@ -31,11 +31,14 @@ export async function do_hicstat(file, isurl) {
 	}
 
 	// Chromosomes
-	out_data['Chromosomes'] = {}
+	out_data.Chromosomes = {}
+	out_data.chrorder = [] // order of chromosomes in this hic file, for assigning chr to 1st/2nd column of straw output
 	let nChrs = getInt()
 	let Chr_i = 0
 	while (Chr_i !== nChrs) {
-		out_data['Chromosomes'][getString()] = getInt()
+		const chr = getString()
+		out_data.chrorder.push(chr)
+		out_data.Chromosomes[chr] = getInt()
 		Chr_i++
 	}
 
