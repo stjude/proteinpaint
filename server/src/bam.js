@@ -118,7 +118,8 @@ box {}
 
 *********************** function cascade
 download_gdc_bam  // For downloading gdc bam files
-        get_gdc_bam
+	get_gdc_bam
+		index_bam
 get_q
 do_query
 	query_reads
@@ -285,7 +286,7 @@ at r.ntwidth<1:
 */
 
 async function download_gdc_bam(req) {
-	let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
+	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
 		const gdc_token = req.get('x-auth-token').split(',')[0]
 		const gdc_case_id = req.get('x-auth-token').split(',')[1]
@@ -323,12 +324,9 @@ async function plot_pileup(q, templates) {
 		bplst[ridx] = await run_samtools_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
-		// call stack error fix: use Set instead of array to handle duplicates
-		const lst = new Set()
 		for (const b of bplst[ridx]) {
-			if (b) lst.add(b.total)
+			if (b) maxValue = Math.max(maxValue, b.total)
 		}
-		maxValue = Math.max(maxValue, ...lst)
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
@@ -828,9 +826,6 @@ async function query_reads(q) {
 			start: q.variant.pos,
 			stop: q.variant.pos + q.variant.ref.length
 		}
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
 		return
@@ -839,28 +834,34 @@ async function query_reads(q) {
 		return
 	}
 	for (const r of q.regions) {
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q) // add r.lines[]
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
+async function get_gdc_bam(chr, start, stop, token, case_id, file) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = gdc_token
+	headers['X-Auth-Token'] = token
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdc_case_id + '?region=' + chr + ':' + start + '-' + stop
-	console.log(url)
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
-		//console.log('Downloaded ' + bam_file_name.toString())
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(file))
+		await index_bam(file)
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
 		throw 'Cannot retrieve bam file: ' + error
 	}
+}
+
+function index_bam(file) {
+	// only work for gdc bam slices, file is absolute path in cache dir
+	return new Promise((resolve, reject) => {
+		const ps = spawn(samtools, ['index', file])
+		ps.on('close', code => {
+			resolve()
+		})
+	})
 }
 
 function query_region(r, q) {
@@ -896,31 +897,30 @@ function query_region(r, q) {
 	})
 }
 
+/*
+'samtools depth' returns single base depth
+results are collected in bplst[]
+when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
+when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
+should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
+*/
 function run_samtools_depth(q, r) {
-	// "samtools depth" returns single base depth
-	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
-	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		// must use r.start+1 to query bam
-		let ls = ''
-		if (q.gdc_case_id) {
-			ls = spawn(samtools, ['depth', '-g', 'DUP', q.file || q.url], { cwd: q.dir })
-		} else {
-			ls = spawn(
-				samtools,
-				[
-					'depth',
-					'-r',
-					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-					'-g',
-					'DUP',
-					q.file || q.url
-				],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ls.stdout })
+		const ps = spawn(
+			samtools,
+			[
+				'depth',
+				'-r',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+				'-g',
+				'DUP',
+				q.file || q.url
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
