@@ -447,6 +447,7 @@ export class Menu {
 
 		const body = d3select(document.body)
 		body.on('mousedown.menu' + this.typename, () => {
+			if (this.d.node().contains(d3event.target)) return
 			this.hide()
 		})
 
@@ -458,7 +459,19 @@ export class Menu {
 			.style('background-color', 'white')
 			.style('font-family', font)
 			.on('mousedown.menu' + this.typename, () => {
-				d3event.stopPropagation()
+				// if the event is propagated to body, it will cause a Menu instance to be closed
+				// which may be a problem in an active menu where sub-menus can be viewed simultaneously
+
+				const t = d3select(d3event.target)
+				if (
+					// the following will have listeners that closes all affected menus
+					// so in this case, must stop event bubbling to the document body
+					['INPUT', 'SELECT', 'TEXTAREA'].includes(d3event.target.tagName.toUpperCase()) ||
+					t.on('mousedown') ||
+					t.on('click')
+				) {
+					d3event.stopPropagation()
+				}
 			})
 
 		if (base_zindex) {

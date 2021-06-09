@@ -67,6 +67,7 @@ class TermSetting {
 		// this api will be frozen and returned by termsettingInit()
 		this.api = {
 			main: async (data = {}) => {
+				this.dom.tip.hide()
 				// console.log(data)
 				this.validateMainData(data)
 				// term is read-only if it comes from state, let it remain read-only

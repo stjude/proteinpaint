@@ -70,6 +70,7 @@ class Overlay {
 		return state
 	}
 	main() {
+		this.dom.tip.hide()
 		this.mayRegisterTerm(this.state.config.term2)
 		this.updateUI()
 	}
