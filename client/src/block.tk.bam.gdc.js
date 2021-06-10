@@ -1,6 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
 import * as client from './client'
+import { contigNameNoChr2 } from '../shared/common'
 import { url2map } from './app.parseurl'
 
 /* args required to generate bam track
@@ -130,12 +131,12 @@ export function bamsliceui(genomes, holder, hosturl) {
 		if (bam_info.error) {
 			cmt(bam_info.error, 1)
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.file_uuid) {
+		} else if (bam_info.is_file_uuid) {
 			// update file id to be suppliled to gdc bam query
 			gdc_args.bam_files.push({ file_id: gdc_id })
 			update_singlefile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
-		} else if (bam_info.case_uuid || bam_info.case_id) {
+		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
 			update_multifile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
 		}
@@ -206,7 +207,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.text('submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args)
+				validateInputs(gdc_args, genomes[default_genome])
 			} catch (e) {
 				cmt(e, 1)
 				return
@@ -353,7 +354,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 	}
 }
 
-function validateInputs(obj) {
+function validateInputs(obj, genome) {
 	if (!obj) throw 'no parameters passing to validate'
 	if (!obj.gdc_token) throw 'gdc token missing'
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
@@ -365,6 +366,14 @@ function validateInputs(obj) {
 	if (!obj.position && !obj.variant) throw ' position or variant is required'
 	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
+    const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
+    const [nocount, hascount] = contigNameNoChr2( genome, [chr])
+    if (nocount+hascount==0) throw 'chromosome is not valid in position/variant input: ' + chr
+    else if (nocount){
+        // add chr to non-standard position or variant
+        if (obj.position) obj.position = 'chr' + obj.position
+        if (obj.variant) obj.variant = 'chr' + obj.variant
+    }
 }
 
 function renderBamSlice(args, genome, holder, hostURL) {
@@ -382,6 +391,8 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
+        // TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
+        // solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
