@@ -4,7 +4,8 @@
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
-
+use std::sync::{Arc, Mutex};
+use std::thread;
 //use std::env;
 //use std::time::{SystemTime};
 use std::io;
@@ -177,8 +178,8 @@ fn main() {
     let lines: Vec<&str> = sequences.split("-").collect();
     let start_positions_list: Vec<&str> = start_positions.split("-").collect();
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
-
-    //println!("lines:{:?}", lines);
+    let single_thread_limit: usize = 1000;
+    let max_threads: usize = 3;
 
     let left_most_pos = variant_pos - segbplen;
     let ref_length: i64 = refallele.len() as i64;
@@ -285,6 +286,12 @@ fn main() {
         found_duplicate_kmers
     );
 
+    println!(
+        "{}{}",
+        "Number of reads (from Rust):",
+        (lines.len() - 2).to_string()
+    );
+
     #[allow(unused_variables)]
     let (
         ref_kmers_weight,
@@ -334,81 +341,166 @@ fn main() {
     //for kmer in &alt_indel_kmers {
     //  println!(&"Indel kmer:{}", kmer);
     //}
-
-    let mut kmer_diff_scores = Vec::<f64>::new();
-    let mut alt_comparisons = Vec::<f64>::new();
-    let mut ref_comparisons = Vec::<f64>::new();
     let mut ref_scores = Vec::<read_diff_scores>::new();
     let mut alt_scores = Vec::<read_diff_scores>::new();
-    let mut i: i64 = 0;
-    //let num_of_reads: f64 = (lines.len() - 2) as f64;
-    let mut ref_polyclonal_status = Vec::<i64>::new();
-    let mut ref_read_sequences = Vec::<String>::new();
-    let mut alt_read_sequences = Vec::<String>::new();
-    let mut all_read_sequences = Vec::<String>::new();
-    //let mut ref_polyclonal_read_status: i64 = 0;
-    //let mut alt_polyclonal_read_status: i64 = 0;
-    let mut alt_polyclonal_status = Vec::<i64>::new();
-    println!(
-        "{}{}",
-        "Number of reads (from Rust):",
-        (lines.len() - 2).to_string()
-    );
-    for read in lines {
-        // Will multithread this loop in the future
-        if i >= 2 && read.len() > 0 {
-            // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-            let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
-                check_polyclonal(
-                    read.to_string(),
-                    start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
-                    cigar_sequences_list[i as usize - 2].to_string(),
-                    variant_pos,
-                    &ref_nucleotides,
-                    &alt_nucleotides,
-                    ref_length as usize,
-                    alt_length as usize,
-                    indel_length as usize,
-                    0,
-                );
-            //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-            let kmers = build_kmers(read.to_string(), kmer_length_iter);
-            //println!("kmers:{}",kmers.len());
-            let ref_comparison = jaccard_similarity_weights(
-                &kmers,
-                &ref_kmers_nodups,
-                &ref_kmers_data,
-                ref_kmers_weight,
-            );
-            let alt_comparison = jaccard_similarity_weights(
-                &kmers,
-                &alt_kmers_nodups,
-                &alt_kmers_data,
-                alt_kmers_weight,
-            );
-            let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-            kmer_diff_scores.push(diff_score);
-            ref_comparisons.push(ref_comparison);
-            alt_comparisons.push(alt_comparison);
 
-            let item = read_diff_scores {
-                value: f64::from(diff_score),
-                groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
-                polyclonal: i64::from(ref_polyclonal_read_status + alt_polyclonal_read_status),
-                ref_insertion: i64::from(ref_insertion),
-            };
-            if diff_score > 0.0 {
-                alt_scores.push(item);
-                alt_polyclonal_status.push(ref_polyclonal_read_status + alt_polyclonal_read_status);
-                alt_read_sequences.push(read.to_string());
-            } else if diff_score <= 0.0 {
-                ref_scores.push(item);
-                ref_polyclonal_status.push(ref_polyclonal_read_status + alt_polyclonal_read_status);
-                ref_read_sequences.push(read.to_string());
+    if lines.len() - 2 < single_thread_limit {
+        let mut i: i64 = 0;
+        //let num_of_reads: f64 = (lines.len() - 2) as f64;
+        for read in lines {
+            if i >= 2 && read.len() > 0 {
+                // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
+                let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
+                    check_polyclonal(
+                        read.to_string(),
+                        start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
+                        cigar_sequences_list[i as usize - 2].to_string(),
+                        variant_pos,
+                        &ref_nucleotides,
+                        &alt_nucleotides,
+                        ref_length as usize,
+                        alt_length as usize,
+                        indel_length as usize,
+                        0,
+                    );
+                //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
+                let kmers = build_kmers(read.to_string(), kmer_length_iter);
+                //println!("kmers:{}",kmers.len());
+                let ref_comparison = jaccard_similarity_weights(
+                    &kmers,
+                    &ref_kmers_nodups,
+                    &ref_kmers_data,
+                    ref_kmers_weight,
+                );
+                let alt_comparison = jaccard_similarity_weights(
+                    &kmers,
+                    &alt_kmers_nodups,
+                    &alt_kmers_data,
+                    alt_kmers_weight,
+                );
+                let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+
+                let item = read_diff_scores {
+                    value: f64::from(diff_score),
+                    groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
+                    polyclonal: i64::from(ref_polyclonal_read_status + alt_polyclonal_read_status),
+                    ref_insertion: i64::from(ref_insertion),
+                };
+                if diff_score > 0.0 {
+                    alt_scores.push(item);
+                } else if diff_score <= 0.0 {
+                    ref_scores.push(item);
+                }
             }
-            all_read_sequences.push(read.to_string());
+            i += 1;
         }
-        i += 1;
+    } else {
+        // Multithreaded implementation starts from here
+        let sequences = Arc::new(sequences);
+        let start_positions = Arc::new(start_positions);
+        let cigar_sequences = Arc::new(cigar_sequences);
+        let refallele = Arc::new(refallele);
+        let altallele = Arc::new(altallele);
+        let ref_kmers_nodups = Arc::new(ref_kmers_nodups);
+        let ref_kmers_data = Arc::new(ref_kmers_data);
+        let alt_kmers_nodups = Arc::new(alt_kmers_nodups);
+        let alt_kmers_data = Arc::new(alt_kmers_data);
+        let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new()));
+        let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new()));
+        let mut handles = vec![];
+
+        for thread_num in 0..max_threads {
+            let sequences = Arc::clone(&sequences);
+            let start_positions = Arc::clone(&start_positions);
+            let cigar_sequences = Arc::clone(&cigar_sequences);
+            let ref_kmers_nodups = Arc::clone(&ref_kmers_nodups);
+            let ref_kmers_data = Arc::clone(&ref_kmers_data);
+            let refallele = Arc::clone(&refallele);
+            let altallele = Arc::clone(&altallele);
+            let alt_kmers_nodups = Arc::clone(&alt_kmers_nodups);
+            let alt_kmers_data = Arc::clone(&alt_kmers_data);
+            let ref_scores_temp = Arc::clone(&ref_scores_temp);
+            let alt_scores_temp = Arc::clone(&alt_scores_temp);
+
+            let handle = thread::spawn(move || {
+                println!("thread:{}", thread_num);
+                let lines: Vec<&str> = sequences.split("-").collect();
+                let start_positions_list: Vec<&str> = start_positions.split("-").collect();
+                let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
+                let ref_nucleotides: Vec<char> = refallele.chars().collect();
+                let alt_nucleotides: Vec<char> = altallele.chars().collect();
+                let mut ref_scores_thread = Vec::<read_diff_scores>::new();
+                let mut alt_scores_thread = Vec::<read_diff_scores>::new();
+                for iter in 0..lines.len() - 2 {
+                    let remainder: usize = iter % max_threads;
+                    if remainder == thread_num {
+                        // Thread analyzing a particular read must have the same remainder as the thread_num
+                        let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
+                            check_polyclonal(
+                                lines[iter + 2].to_string(),
+                                start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                                cigar_sequences_list[iter].to_string(),
+                                variant_pos,
+                                &ref_nucleotides,
+                                &alt_nucleotides,
+                                ref_length as usize,
+                                alt_length as usize,
+                                indel_length as usize,
+                                0,
+                            );
+                        let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter);
+                        let ref_comparison = jaccard_similarity_weights(
+                            &kmers,
+                            &ref_kmers_nodups,
+                            &ref_kmers_data,
+                            ref_kmers_weight,
+                        );
+                        let alt_comparison = jaccard_similarity_weights(
+                            &kmers,
+                            &alt_kmers_nodups,
+                            &alt_kmers_data,
+                            alt_kmers_weight,
+                        );
+                        let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                        let item = read_diff_scores {
+                            value: f64::from(diff_score),
+                            groupID: usize::from(iter),
+                            polyclonal: i64::from(
+                                ref_polyclonal_read_status + alt_polyclonal_read_status,
+                            ),
+                            ref_insertion: i64::from(ref_insertion),
+                        };
+                        if diff_score > 0.0 {
+                            alt_scores_thread.push(item);
+                        } else if diff_score <= 0.0 {
+                            ref_scores_thread.push(item);
+                        }
+                    }
+                }
+                for item in alt_scores_thread {
+                    alt_scores_temp.lock().unwrap().push(item);
+                }
+                drop(alt_scores_temp);
+                for item in ref_scores_thread {
+                    ref_scores_temp.lock().unwrap().push(item);
+                }
+                drop(ref_scores_temp);
+            });
+            handles.push(handle);
+        }
+        for handle in handles {
+            // Wait for all threads to finish before proceeding further
+            handle.join().unwrap();
+        }
+        // Combining data from all threads
+        for item in &mut *ref_scores_temp.lock().unwrap() {
+            let item2 = read_diff_scores_owned(item);
+            ref_scores.push(item2);
+        }
+        for item in &mut *alt_scores_temp.lock().unwrap() {
+            let item2 = read_diff_scores_owned(item);
+            alt_scores.push(item2);
+        }
     }
 
     let mut ref_indices = Vec::<read_category>::new();
