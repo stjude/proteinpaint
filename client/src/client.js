@@ -446,10 +446,6 @@ export class Menu {
 		this.typename = Math.random().toString()
 
 		const body = d3select(document.body)
-		body.on('mousedown.menu' + this.typename, () => {
-			this.hide()
-		})
-
 		this.d = body
 			.append('div')
 			.attr('class', 'sja_menu_div')
@@ -458,8 +454,57 @@ export class Menu {
 			.style('background-color', 'white')
 			.style('font-family', font)
 			.on('mousedown.menu' + this.typename, () => {
-				d3event.stopPropagation()
+				/* 
+					When clicking on non-interactive elements within a menu, 
+					it should trigger other menus to be hidden. For example,
+					clicking on an empty spot in a parent menu should close 
+					any submenu that are open, which is done by allowing the 
+					mousedown event to propagate to the body (default behavior).
+				*/
+				const t = d3select(d3event.target)
+				if (
+					/*** 
+						NOTE on interactive menu elements: 
+						Any menu element (input, button, etc) that has event listeners
+					  is expected to handle that event, including possibly closing any
+					  associated menus, and thus no need to propagate the mousedown event 
+						to the document body
+					***/
+					t.on('mousedown') ||
+					t.on('click') ||
+					// also assume that the following elements have event listeners by default,
+					// so same logic of not wanting to propagate the event to the body
+					['INPUT', 'SELECT', 'TEXTAREA'].includes(d3event.target.tagName.toUpperCase())
+				) {
+					d3event.stopPropagation()
+				} /* else {
+					 // allow the bubbling of the mouse event to the document body
+				}*/
 			})
+
+		// detect if this menu is launched from within another menu
+		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
+		this.d.node().parent_menu = arg.parent_menu
+
+		body.on('mousedown.menu' + this.typename, () => {
+			/*** 
+				Problem: A parent menu can close unexpectedly when clicking on a 
+				non-interactive submenu element, leaving its submenu still visible
+				but "floating" without context since its parent menu disappeared on 'body' click.
+
+				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
+			***/
+			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
+			if (this.d.node().contains(d3event.target)) return
+			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
+			if (d3event.target.parent_menu === this.d.node()) return
+			// detect in case the mousedown occurred on a menu's child element,
+			// in which case the menu's parent should still be not hidden
+			const menu = d3event.target.closest('.sja_menu_div')
+			if (menu && menu.parent_menu === this.d.node()) return
+			// close a menu for all other mousedown events outside of its own div or submenu
+			this.hide()
+		})
 
 		if (base_zindex) {
 			this.d.style('z-index', base_zindex + 1)
