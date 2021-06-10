@@ -5,11 +5,9 @@ const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const readline = require('readline')
 const bamcommon = require('./bam.common')
-//const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const rust_indel =
-	serverconfig.rust_indel || serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
+const rust_indel = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
 
 export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -170,28 +168,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		//}
 	}
 
-	//for (const item of diff_scores) {
-	//	console.log(item) // .replace('/\D/g', '')
-	//}
-
 	//console.log("group_ids:",group_ids)
 	//console.log("categories:",categories.length)
 	//console.log("diff_scores:",diff_scores.length)
-
-	//const rust_output = await rust_match_complexvariant_indel(
-	//	sequences,
-	//	start_positions,
-	//	cigar_sequences,
-	//	BigInt(q.variant.pos),
-	//	BigInt(segbplen),
-	//	refallele,
-	//	altallele,
-	//	BigInt(kmer_length),
-	//	weight_no_indel,
-	//	weight_indel,
-	//	threshold_slope
-	//) // Invoking wasm function
-	//console.log('rust_output:', rust_output.groupID.length)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
@@ -200,7 +179,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 			if (type2group[bamcommon.type_supportref]) {
 				index = group_ids[i]
 				//console.log("index:",index)
-				//console.log("diff_scores[index]:",diff_scores[index])
+				//console.log("diff_scores[i]:",diff_scores[i])
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
@@ -213,7 +192,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = group_ids[i]
 				//console.log("index:",index)
-				//console.log("diff_scores[index]:",diff_scores[index])
+				//console.log("diff_scores[i]:",diff_scores[i])
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
@@ -226,7 +205,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = group_ids[i]
 				//console.log("index:",index)
-				//console.log("diff_scores[index]:",diff_scores[index])
+				//console.log("diff_scores[i]:",diff_scores[i])
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
