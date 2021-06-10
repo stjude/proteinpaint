@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
 //use std::time::{SystemTime};
@@ -13,34 +13,39 @@ use std::io;
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
 pub struct read_diff_scores {
-    groupID: usize,
-    value: f64,
-    polyclonal: i64,
-    ref_insertion: i64,
+    // struct for storing read details, used throughout the code
+    groupID: usize,     // Original read ID
+    value: f64,         // Diff score value
+    polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
+    ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
 }
 
 #[allow(non_camel_case_types)]
 struct kmer_input {
+    // struct for storing kmer and its weight when initially determining weight of kmers in ref and alt sequence
     kmer_sequence: String,
     kmer_weight: f64,
 }
 
 #[allow(non_camel_case_types)]
 struct kmer_data {
-    kmer_count: i64,
-    kmer_weight: f64,
+    // struct for storing frequency of a kmer and its corresponding weight. Useful when same kmer is repeated
+    kmer_count: i64,  // Frequency of kmer
+    kmer_weight: f64, // Weight of kmer
 }
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
 struct read_category {
-    category: String,
-    groupID: usize,
-    diff_score: f64,
-    ref_insertion: i64,
+    // struct for storing in which category a read has been classified
+    category: String,   // Category: Ref/Alt/None
+    groupID: usize,     // Original read ID
+    diff_score: f64,    // Diff score value
+    ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
 }
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
+    // Function to convert struct read_diff_scores from borrowed to owned
     let val = item.value.to_owned();
     #[allow(non_snake_case)]
     let gID = item.groupID.to_owned();
@@ -57,6 +62,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 }
 
 fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
+    // Binary search implementation to search a kmer in a vector of kmer when all kmers are unique
     let kmers_dup = &kmers[..];
     //let kmers_dup = kmers.clone();
     //let x:String = y.to_owned();
@@ -100,6 +106,7 @@ fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
 }
 
 fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
+    // Binary search implementation to search a kmer in a vector of kmers but when the kmer could be repeated
     let orig_index: i64 = binary_search(kmers, y);
     let mut indexes_vec = Vec::<usize>::new();
     let x: String = y.to_owned();
