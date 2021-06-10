@@ -1,4 +1,4 @@
-const serverconfig = require('../../serverconfig.json')
+const serverconfig = require('../../server/serverconfig.json')
 const path = require('path')
 const fs = require('fs')
 const Partjson = require('partjson')

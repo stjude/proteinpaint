@@ -4,6 +4,7 @@ node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
 # also makes "samples.idmap"
 
 node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
+cat PRS/annotation.scores >> annotation.matrix
 
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 > raw/intID/outcomes_sjlife.txt
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccssrename/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
@@ -17,9 +18,13 @@ node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tre
 sh ~/proteinpaint/utils/sjlife2/phenotree.makeentiretree.sh
 node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.tree keep/termjson
+
 node ~/proteinpaint/utils/sjlife2/subcohort.validateancestry.js ancestry
+cat PRS/ancestry.prs >> ancestry
+
 node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/files/hg38/sjlife/clinical/
 mv termdb.updated termdb
+cat PRS/termdb.prs >> termdb
 
 node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree/sjlifectcae.tree raw/intID/outcomes_sjlife.txt > annotation.outcome
 node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree/ccssctcae.tree raw/intID/outcomes_ccss.txt >> annotation.outcome
