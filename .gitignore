@@ -43,6 +43,10 @@ public/rev.txt
 /utils/countbamallele.phased/bin*
 /utils/prs/bin.js
 
+server/utils/rust_indel_cargo/target/release/
+server/utils/rust_indel_cargo/target/*.json
+server/utils/rust_indel_cargo/*.lock
+
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
 test/copies/*

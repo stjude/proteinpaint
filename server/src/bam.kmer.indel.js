@@ -8,7 +8,8 @@ const bamcommon = require('./bam.common')
 //const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const rust_indel = serverconfig.rust_indel || 'server/utils/rust_indel_cargo/target/release/rust_indel_cargo'
+const rust_indel =
+	serverconfig.rust_indel || serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
 
 export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
