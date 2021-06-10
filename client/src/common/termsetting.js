@@ -55,10 +55,14 @@ class TermSetting {
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
-
+		// detect if the holder is contained within a floating client Menu instance;
+		// this will be useful in preventing premature closure of the menu in case
+		// a submenu is clicked and is still visible
+		// NOTE: the parent_menu value may be empty (undefined)
+		this.parent_menu = this.opts.holder.node().closest('.sja_menu_div')
 		this.dom = {
 			holder: opts.holder,
-			tip: new client.Menu({ padding: '0px' })
+			tip: new client.Menu({ padding: '0px', parent_menu: this.parent_menu })
 		}
 		setInteractivity(this)
 		setRenderers(this)
