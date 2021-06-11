@@ -130,7 +130,11 @@ export async function match_complexvariant_rust(q, templates_info) {
 		':' +
 		threshold_slope.toString() +
 		':'
+
+	const time1 = new Date()
 	const rust_output = await run_rust_indel_pipeline(input_data)
+	const time2 = new Date()
+	console.log('Time taken to run rust indel pipeline:', time2.getSeconds() - time1.getSeconds(), 'sec')
 	const rust_output_list = rust_output.toString('utf-8').split('\n')
 	let group_ids = []
 	let categories = []
