@@ -136,6 +136,7 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
 }
 
 fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
+    // function to parse out all letters (e.g S, M, I) and their corresponding numbers given a CIGAR sequence
     let sequence_vector: Vec<_> = cigar_seq.chars().collect();
     let mut subseq = String::new();
     let mut alphabets = Vec::<char>::new();
@@ -155,6 +156,7 @@ fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
 fn main() {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
+        // Accepting the piped input from nodejs (or command line from testing)
         #[allow(unused_variables)]
         Ok(n) => {
             //println!("{} bytes read", n);
@@ -162,57 +164,40 @@ fn main() {
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let args: Vec<&str> = input.split(":").collect();
-    //println!("args:{:?}",args);
-    //let arg_seq:String = args[0].parse::<String>().unwrap();
-    //let arg_list: Vec<&str> = arg_seq.split("\t").collect();
-    let sequences: String = args[0].parse::<String>().unwrap();
-    let start_positions: String = args[1].parse::<String>().unwrap();
-    let cigar_sequences: String = args[2].parse::<String>().unwrap();
-    let variant_pos: i64 = args[3].parse::<i64>().unwrap();
-    let segbplen: i64 = args[4].parse::<i64>().unwrap();
-    let refallele: String = args[5].parse::<String>().unwrap();
-    let altallele: String = args[6].parse::<String>().unwrap();
-    let kmer_length: i64 = args[7].parse::<i64>().unwrap();
-    let weight_no_indel: f64 = args[8].parse::<f64>().unwrap();
-    let weight_indel: f64 = args[9].parse::<f64>().unwrap();
-    let threshold_slope: f64 = args[10].parse::<f64>().unwrap();
-    let ref_nucleotides: Vec<char> = refallele.chars().collect();
-    let alt_nucleotides: Vec<char> = altallele.chars().collect();
+    let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" characater
+    let sequences: String = args[0].parse::<String>().unwrap(); // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
+    let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
+    let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains caigar sequences separated by "-" character
+    let variant_pos: i64 = args[3].parse::<i64>().unwrap(); // Variant position
+    let segbplen: i64 = args[4].parse::<i64>().unwrap(); // read sequence length
+    let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
+    let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
+    let mut kmer_length_iter: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
+    let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
+    let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
+    let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
+    let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
+    let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
 
-    //let ref_length: usize = ref_nucleotides.len();
-    //let alt_length: usize = alt_nucleotides.len();
-    let lines: Vec<&str> = sequences.split("-").collect();
-    let start_positions_list: Vec<&str> = start_positions.split("-").collect();
-    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
-    let single_thread_limit: usize = 1000;
-    let max_threads: usize = 3;
+    let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
+    let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
+    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
+    let single_thread_limit: usize = 3000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
+    let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
 
-    let left_most_pos = variant_pos - segbplen;
-    let ref_length: i64 = refallele.len() as i64;
-    let alt_length: i64 = altallele.len() as i64;
-    let mut indel_length: i64 = alt_length;
+    let left_most_pos = variant_pos - segbplen; // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
+    let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
+    let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
+    let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
     if ref_length > alt_length {
         indel_length = ref_length;
     }
 
     // Select appropriate kmer length
-    let max_kmer_length: i64 = 200;
-    let mut kmer_length_iter: i64 = kmer_length;
-    let surrounding_region_length: i64 = 25;
-    let mut uniq_kmers: usize = 0;
-    let mut found_duplicate_kmers: usize = 0;
-    //let mut ref_kmers_weight: f64 = 0.0;
-    //let mut ref_kmers_nodups = Vec::<String>::new();
-    //let mut ref_indel_kmers = Vec::<String>::new();
-    //let mut ref_surrounding_kmers = Vec::<String>::new();
-    //let mut ref_kmers_data = Vec::<kmer_data>::new();
-    //
-    //let mut alt_kmers_weight: f64 = 0.0;
-    //let mut alt_kmers_nodups = Vec::<String>::new();
-    //let mut alt_indel_kmers = Vec::<String>::new();
-    //let mut alt_surrounding_kmers = Vec::<String>::new();
-    //let mut alt_kmers_data = Vec::<kmer_data>::new();
+    let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
+    let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
+    let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
+    let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
 
     while kmer_length_iter <= max_kmer_length && uniq_kmers == 0 {
         //console::log_1(&"Ref kmers:".into());
@@ -235,7 +220,6 @@ fn main() {
             surrounding_region_length,
         );
 
-        //console::log_1(&"Alt kmers:".into());
         #[allow(unused_variables)]
         let (
             alt_kmers_weight,
@@ -266,22 +250,23 @@ fn main() {
             .zip(&alt_indel_kmers)
             .filter(|&(a, b)| a == b)
             .count();
-        let old_ref_surrounding_length = ref_surrounding_kmers.len();
-        ref_surrounding_kmers.sort();
-        ref_surrounding_kmers.dedup();
-        let new_ref_surrounding_length = ref_surrounding_kmers.len();
+        let non_uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
+        ref_surrounding_kmers.sort(); // Sorting vector
+        ref_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
+        let uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
 
-        let old_alt_surrounding_length = alt_surrounding_kmers.len();
-        alt_surrounding_kmers.sort();
-        alt_surrounding_kmers.dedup();
-        let new_alt_surrounding_length = alt_surrounding_kmers.len();
+        let non_uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
+        alt_surrounding_kmers.sort(); // Sorting vector
+        alt_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
+        let uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
 
         if matching_ref != 0
             || matching_alt != 0
-            || old_ref_surrounding_length != new_ref_surrounding_length
-            || old_alt_surrounding_length != new_alt_surrounding_length
+            || non_uniq_ref_surrounding_length != uniq_ref_surrounding_length
+            || non_uniq_alt_surrounding_length != uniq_alt_surrounding_length
         {
-            kmer_length_iter += 1;
+            // Checking to see if there is no duplicate kmer between flanking region and indel region and also within ref and alt allele
+            kmer_length_iter += 1; // kmer length is incremented in case duplicate kmers are found
             found_duplicate_kmers = 1;
         } else {
             uniq_kmers = 1;
@@ -301,11 +286,11 @@ fn main() {
 
     #[allow(unused_variables)]
     let (
-        ref_kmers_weight,
-        ref_kmers_nodups,
-        mut ref_indel_kmers,
-        ref_surrounding_kmers,
-        ref_kmers_data,
+        ref_kmers_weight,      // Total sum of all the kmers from the ref sequence set
+        ref_kmers_nodups,      // Vector of ref sequence kmers without any duplication
+        mut ref_indel_kmers,   // Vector of ref sequence kmers within indel region
+        ref_surrounding_kmers, // Vector of ref sequence kmers in the flanking region as defined by surrounding_region_length
+        ref_kmers_data, // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in ref_kmers_nodups
     ) = build_kmers_refalt(
         lines[0].to_string(),
         kmer_length_iter,
@@ -326,11 +311,11 @@ fn main() {
 
     #[allow(unused_variables)]
     let (
-        alt_kmers_weight,
-        alt_kmers_nodups,
-        mut alt_indel_kmers,
-        alt_surrounding_kmers,
-        alt_kmers_data,
+        alt_kmers_weight,      // Total sum of all the kmers from the alt sequence set
+        alt_kmers_nodups,      // Vector of alt sequence kmers without any duplication
+        mut alt_indel_kmers,   // Vector of alt sequence kmers within indel region
+        alt_surrounding_kmers, // Vector of alt sequence kmers in the flanking region as defined by surrounding_region_length
+        alt_kmers_data, // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in alt_kmers_nodups
     ) = build_kmers_refalt(
         lines[1].to_string(),
         kmer_length_iter,
@@ -348,10 +333,11 @@ fn main() {
     //for kmer in &alt_indel_kmers {
     //  println!(&"Indel kmer:{}", kmer);
     //}
-    let mut ref_scores = Vec::<read_diff_scores>::new();
-    let mut alt_scores = Vec::<read_diff_scores>::new();
+    let mut ref_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting ref allele
+    let mut alt_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting alt allele
 
-    if lines.len() - 2 < single_thread_limit {
+    if lines.len() - 2 <= single_thread_limit {
+        // Start of sequential single-thread implementation for classifying reads
         let mut i: i64 = 0;
         //let num_of_reads: f64 = (lines.len() - 2) as f64;
         for read in lines {
@@ -359,6 +345,7 @@ fn main() {
                 // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
                 let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
                     check_polyclonal(
+                        // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
                         read.to_string(),
                         start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
                         cigar_sequences_list[i as usize - 2].to_string(),
@@ -371,15 +358,16 @@ fn main() {
                         0,
                     );
                 //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-                let kmers = build_kmers(read.to_string(), kmer_length_iter);
-                //println!("kmers:{}",kmers.len());
+                let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
                 let ref_comparison = jaccard_similarity_weights(
+                    // Computes jaccard similarity w.r.t ref sequence
                     &kmers,
                     &ref_kmers_nodups,
                     &ref_kmers_data,
                     ref_kmers_weight,
                 );
                 let alt_comparison = jaccard_similarity_weights(
+                    // Computes jaccard similarity w.r.t alt sequence
                     &kmers,
                     &alt_kmers_nodups,
                     &alt_kmers_data,
@@ -394,6 +382,7 @@ fn main() {
                     ref_insertion: i64::from(ref_insertion),
                 };
                 if diff_score > 0.0 {
+                    // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
                     alt_scores.push(item);
                 } else if diff_score <= 0.0 {
                     ref_scores.push(item);
@@ -402,7 +391,9 @@ fn main() {
             i += 1;
         }
     } else {
-        // Multithreaded implementation starts from here
+        // Multithreaded implementation for parsing reads in parallel starts from here
+        // Generally in rust one variable only own a data at a time, but `Arc` keyword is special and allows for multiple threads to access the same data.
+
         let sequences = Arc::new(sequences);
         let start_positions = Arc::new(start_positions);
         let cigar_sequences = Arc::new(cigar_sequences);
@@ -412,11 +403,13 @@ fn main() {
         let ref_kmers_data = Arc::new(ref_kmers_data);
         let alt_kmers_nodups = Arc::new(alt_kmers_nodups);
         let alt_kmers_data = Arc::new(alt_kmers_data);
-        let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new()));
-        let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new()));
-        let mut handles = vec![];
+        let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as ref, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
+        let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as alt, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
+        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
 
         for thread_num in 0..max_threads {
+            // Assigning thread number thread_num to each thread
+            // In the next few lines each variable gets cloned, so that each thread has its own copy of the variable
             let sequences = Arc::clone(&sequences);
             let start_positions = Arc::clone(&start_positions);
             let cigar_sequences = Arc::clone(&cigar_sequences);
@@ -430,20 +423,22 @@ fn main() {
             let alt_scores_temp = Arc::clone(&alt_scores_temp);
 
             let handle = thread::spawn(move || {
-                println!("thread:{}", thread_num);
+                // Thread is initiallized here
+                //println!("thread:{}", thread_num);
                 let lines: Vec<&str> = sequences.split("-").collect();
                 let start_positions_list: Vec<&str> = start_positions.split("-").collect();
                 let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
                 let ref_nucleotides: Vec<char> = refallele.chars().collect();
                 let alt_nucleotides: Vec<char> = altallele.chars().collect();
-                let mut ref_scores_thread = Vec::<read_diff_scores>::new();
-                let mut alt_scores_thread = Vec::<read_diff_scores>::new();
+                let mut ref_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for ref classified reads) parsed by each thread. This variable is then concatenated from other threads later.
+                let mut alt_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for alt classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 for iter in 0..lines.len() - 2 {
-                    let remainder: usize = iter % max_threads;
+                    let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
                     if remainder == thread_num {
-                        // Thread analyzing a particular read must have the same remainder as the thread_num
+                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
                         let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
                             check_polyclonal(
+                                // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
                                 lines[iter + 2].to_string(),
                                 start_positions_list[iter].parse::<i64>().unwrap() - 1,
                                 cigar_sequences_list[iter].to_string(),
@@ -455,14 +450,16 @@ fn main() {
                                 indel_length as usize,
                                 0,
                             );
-                        let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter);
+                        let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
                         let ref_comparison = jaccard_similarity_weights(
+                            // Computer jaccard similarity w.r.t ref
                             &kmers,
                             &ref_kmers_nodups,
                             &ref_kmers_data,
                             ref_kmers_weight,
                         );
                         let alt_comparison = jaccard_similarity_weights(
+                            // Computer jaccard similarity w.r.t alt
                             &kmers,
                             &alt_kmers_nodups,
                             &alt_kmers_data,
@@ -478,94 +475,89 @@ fn main() {
                             ref_insertion: i64::from(ref_insertion),
                         };
                         if diff_score > 0.0 {
+                            // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
                             alt_scores_thread.push(item);
                         } else if diff_score <= 0.0 {
                             ref_scores_thread.push(item);
                         }
                     }
                 }
+                // Once all reads are analyzed by a thread it transfers all the read_diff_scores thread. I tried out an alternative implementation where all read_diff_scores struct was directly stored in alt_scores_thread and ref_scores_thread but that was slower because it was keeping other threads idle while one was writing into those variables
                 for item in alt_scores_thread {
                     alt_scores_temp.lock().unwrap().push(item);
                 }
-                drop(alt_scores_temp);
+                drop(alt_scores_temp); // This drops the vector so that other threads can now write into this variable while the current thread can do some other computation. This helps in better concurrency.
                 for item in ref_scores_thread {
                     ref_scores_temp.lock().unwrap().push(item);
                 }
-                drop(ref_scores_temp);
+                drop(ref_scores_temp); // This drops the vector so that other threads can now write into this variable while the current thread can do some other computation. This helps in better concurrency.
             });
-            handles.push(handle);
+            handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
         }
         for handle in handles {
             // Wait for all threads to finish before proceeding further
             handle.join().unwrap();
         }
-        // Combining data from all threads
+        // Combining data from all different threads
         for item in &mut *ref_scores_temp.lock().unwrap() {
-            let item2 = read_diff_scores_owned(item);
+            let item2 = read_diff_scores_owned(item); // Converting from borrowed variable to owned (Read memory-safe nature of Rust in official documentation to better understand this)
             ref_scores.push(item2);
         }
         for item in &mut *alt_scores_temp.lock().unwrap() {
-            let item2 = read_diff_scores_owned(item);
+            let item2 = read_diff_scores_owned(item); // Converting from borrowed variable to owned (Read memory-safe nature of Rust in official documentation to better understand this)
             alt_scores.push(item2);
         }
     }
 
-    let mut ref_indices = Vec::<read_category>::new();
+    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by determine_maxima_alt function
     if ref_scores.len() > 0 {
         //ref_indices = determine_maxima_alt(&mut ref_scores, &(&threshold_slope*num_of_reads));
-        ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope);
+        ref_indices = determine_maxima_alt(&mut ref_scores, &threshold_slope); // Function to classify reads as either ref or as none
     }
 
-    let mut alt_indices = Vec::<read_category>::new();
+    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by determine_maxima_alt function
     if alt_scores.len() > 0 {
         //alt_indices = determine_maxima_alt(&mut alt_scores, &(&threshold_slope*num_of_reads));
-        alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope);
+        alt_indices = determine_maxima_alt(&mut alt_scores, &threshold_slope); // Function to classify reads as either alt or as none
     }
 
-    let mut output_cat: String = "".to_string();
+    let mut output_cat: String = "".to_string(); // Initializing string variable which will store the read categories and will be printed for being passed onto nodejs
     #[allow(non_snake_case)]
-    let mut output_gID: String = "".to_string();
-    //let mut output_cat = Vec::<String>::new();
-    //let mut output_gID = Vec::<usize>::new();
-    let mut output_diff_scores: String = "".to_string();
+    let mut output_gID: String = "".to_string(); // Initializing string variable which will store the original read ID and will be printed for being passed onto nodejs
+    let mut output_diff_scores: String = "".to_string(); // Initializing string variable which will store the read diff_scores and will be printed for being passed onto nodejs
     for item in &ref_indices {
         if item.ref_insertion == 1 {
-            //output_cat.push("none".to_string());
-            output_cat.push_str("none:");
+            // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
+            output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
-            //output_cat.push("ref".to_string());
-            output_cat.push_str("ref:");
+            output_cat.push_str("ref:"); // Appending ref to output_cat string
         } else {
-            //output_cat.push("none".to_string());
-            output_cat.push_str("none:");
+            output_cat.push_str("none:"); // Appending none to output_cat string
         }
-        //output_gID.push(item.groupID);
-        output_gID.push_str(&item.groupID.to_string());
-        output_gID.push_str(&":".to_string());
-        output_diff_scores.push_str(&item.diff_score.to_string());
-        output_diff_scores.push_str(&":".to_string());
+        output_gID.push_str(&item.groupID.to_string()); // Appending group ID to output_gID string
+        output_gID.push_str(&":".to_string()); // Appending ":" to string
+        output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
+        output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
     }
 
     for item in &alt_indices {
         if item.category == "refalt".to_string() {
-            //output_cat.push("alt".to_string());
-            output_cat.push_str("alt:");
+            output_cat.push_str("alt:"); // Appending alt to output_cat string
         } else {
-            //output_cat.push("none".to_string());
-            output_cat.push_str("none:");
+            output_cat.push_str("none:"); // Appending none to output_cat string
         }
 
-        output_gID.push_str(&item.groupID.to_string());
-        output_gID.push_str(&":".to_string());
-        output_diff_scores.push_str(&item.diff_score.to_string());
-        output_diff_scores.push_str(&":".to_string());
+        output_gID.push_str(&item.groupID.to_string()); // Appending group ID to output_gID string
+        output_gID.push_str(&":".to_string()); // Appending ":" to string
+        output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
+        output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
     }
-    output_cat.pop();
-    output_gID.pop();
-    output_diff_scores.pop();
-    println!("output_cat:{:?}", output_cat);
-    println!("output_gID:{:?}", output_gID);
-    println!("output_diff_scores:{:?}", output_diff_scores);
+    output_cat.pop(); // Removing the last ":" character from string
+    output_gID.pop(); // Removing the last ":" character from string
+    output_diff_scores.pop(); // Removing the last ":" character from string
+    println!("output_cat:{:?}", output_cat); // Final read categories assigned
+    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
+    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
 }
 
 fn build_kmers_refalt(
