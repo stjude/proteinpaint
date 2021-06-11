@@ -60,7 +60,7 @@ try {
 	}
 
 	if (missingfromtermdb.size) {
-		console.error(missingfromtermdb.size + ' CHC terms missing from db: ' + [...missingfromtermdb])
+		console.error(missingfromtermdb.size + ' CHC terms missing from db: ' + [...missingfromtermdb].join(' | '))
 	}
 } catch (e) {
 	console.error(e.message || e)

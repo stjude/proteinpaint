@@ -171,6 +171,8 @@ function parse_phenotree() {
 		if (line.startsWith('\t')) abort('line ' + (i + 1) + ' starts with tab')
 
 		const l = line.split('\t')
+		if (!l[3]) throw 'missing column 4 at line ' + i + ': ' + line
+		if (!l[2]) throw 'missing column 3 at line ' + i + ': ' + line
 
 		// names of each level, may be empty; if id is provided, levelX will be term name, otherwise will be term ID
 		let level1 = str2level(l[0]),
