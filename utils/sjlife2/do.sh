@@ -1,4 +1,4 @@
-node ~/proteinpaint/utils/sjlife2/update2matrix.js raw/ccssrename/updatematrix.csv > matrix.stringID
+node ~/proteinpaint/utils/sjlife2/update2matrix.js raw/updatematrix.csv > matrix.stringID
 node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
 # "matrix" is now using integer sample id
 # also makes "samples.idmap"
@@ -7,11 +7,11 @@ node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
 cat PRS/annotation.scores >> annotation.matrix
 
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 > raw/intID/outcomes_sjlife.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccssrename/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccssrename/subneoplasms.txt 0,1 > raw/intID/subneoplasms.txt
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/subneoplasms.txt 0,1 > raw/intID/subneoplasms.txt
 
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annotation.admix.sjlife
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccssrename/ccss.admix 0 > annotation.admix.ccss
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 
 node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig > keep/termjson 2>diagnostic_messages.txt
