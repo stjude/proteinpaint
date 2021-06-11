@@ -152,14 +152,7 @@ export async function loadTk(tk, block) {
 
 async function getData(tk, block, additional = []) {
 	let headers
-	const lst = [
-		'genome=' + block.genome.name,
-		'regions=' + JSON.stringify(tk.regions),
-		'nucleotide_length=' + block.exonsf,
-		'pileupheight=' + tk.pileupheight,
-		...additional
-	]
-	const lst2 = [
+	let lst = [
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'nucleotide_length=' + block.exonsf,
@@ -168,20 +161,16 @@ async function getData(tk, block, additional = []) {
 	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
-		lst2.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
-		lst2.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
 	if (tk.asPaired) {
 		lst.push('asPaired=1')
-		lst2.push('asPaired=1')
 	}
 	if ('nochr' in tk) {
 		lst.push('nochr=' + tk.nochr)
-		lst2.push('nochr=' + tk.nochr)
 	}
 
 	if (tk.gdc) {
@@ -190,16 +179,16 @@ async function getData(tk, block, additional = []) {
 	}
 	if (tk.gdc_file) {
 		lst.push('gdc_file=' + tk.gdc_file)
-		lst2.push('gdc_file=' + tk.gdc_file)
 	}
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
-		lst2.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), { headers })
+		lst.push('downloadgdc=' + tk.downloadgdc)
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
-		delete tk.downloadgdc, lst2
+		delete tk.downloadgdc
+		lst = lst.filter(a => a != 'downloadgdc=1') //remove this key after file download
 		for (const r of tk.regions) {
 			orig_regions.push(r)
 		}
