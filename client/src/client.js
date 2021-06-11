@@ -484,7 +484,7 @@ export class Menu {
 
 		// detect if this menu is launched from within another menu
 		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
-		this.d.node().parent_menu = arg.parent_menu
+		if (Object.values(this.d._groups[0]).length) this.d.node().parent_menu = arg.parent_menu
 
 		body.on('mousedown.menu' + this.typename, () => {
 			/*** 
