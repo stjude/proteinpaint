@@ -399,7 +399,8 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		const tk = {
 			type: client.tkt.bam,
 			name: file.track_name || 'sample bam slice',
-			gdc: args.gdc_token + ',' + file.file_id,
+			gdc: args.gdc_token,
+			gdc_file: file.file_id,
 			downloadgdc: 1,
 			file: 'dummy_str'
 		}

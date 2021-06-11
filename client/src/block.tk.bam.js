@@ -185,14 +185,18 @@ async function getData(tk, block, additional = []) {
 	}
 
 	if (tk.gdc) {
-		headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		headers['X-Auth-Token'] = tk.gdc
+	}
+	if (tk.gdc_file) {
+		lst.push('gdc_file=' + tk.gdc_file)
+		lst2.push('gdc_file=' + tk.gdc_file)
 	}
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
 		lst2.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), {headers})
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		delete tk.downloadgdc, lst2
@@ -211,7 +215,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'), {headers})
+	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 	if (data.error) throw data.error
 	return data
 }
@@ -1010,7 +1014,7 @@ async function getReadInfo(tk, block, box, ridx) {
 	function getparam(extra) {
 		// reusable helper
 		const r = block.rglst[ridx]
-		const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
