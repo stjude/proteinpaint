@@ -63,7 +63,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 }
 
 fn binary_search(kmers: &Vec<String>, y: &String) -> i64 {
-    // Binary search implementation to search a kmer in a vector of kmer when all kmers are unique
+    // Binary search implementation to search a kmer in a vector of kmer when all kmers are unique. Returns the index of the query in the vector if found, otherwise returns -1 if not found
     let kmers_dup = &kmers[..];
     //let kmers_dup = kmers.clone();
     //let x:String = y.to_owned();
@@ -931,156 +931,111 @@ fn build_kmers(sequence: String, kmer_length: i64) -> Vec<String> {
 }
 
 fn jaccard_similarity_weights(
-    kmers1: &Vec<String>,
-    kmers2_nodups: &Vec<String>,
-    kmers2_data: &Vec<kmer_data>,
-    kmers2_weight: f64,
+    kmers1: &Vec<String>,         // Kmers from read sequences
+    kmers2_nodups: &Vec<String>,  // Kmers from ref/alt without duplication
+    kmers2_data: &Vec<kmer_data>, // Kmer frequency and weight corresponding to kmers in kmers2_nodups
+    kmers2_weight: f64,           // Total weight of kmers from ref/alt
 ) -> f64 {
     // Getting unique read kmers
-    let mut kmers1_nodup = kmers1.clone();
-    kmers1_nodup.sort();
+    let mut kmers1_nodup = kmers1.clone(); // Creating copy of kmers1
+    kmers1_nodup.sort(); // Sorting vector
     let kmers1_sorted = kmers1_nodup.clone();
-    kmers1_nodup.dedup();
+    kmers1_nodup.dedup(); // Getting rid of adjacent duplicate kmers
 
     // Finding common kmers between read and ref/alt
-    let mut intersection = HashSet::new();
-    //let mut intersection = kmers1_nodup.clone();
-
-    //println!("Length of kmers1_nodup:{}",kmers1_nodup.len());
-    //println!("Length of kmer2_seq_values_nodups:{}",kmer2_seq_values_nodups.len());
+    let mut intersection = HashSet::new(); // Initializing hashset which only accepts unique elements
 
     for kmer in &kmers1_nodup {
-        intersection.insert(kmer);
+        intersection.insert(kmer); // Adding kmers to hashset
     }
 
     for kmer in kmers2_nodups {
-        intersection.insert(kmer);
+        intersection.insert(kmer); // Adding kmers to hashset
     }
 
-    //println!("Length of intersection:{}",intersection.len());
-
-    let mut kmer1_counts = Vec::<i64>::new();
-    kmer1_counts.reserve(250);
-    let mut kmers1_weight: f64 = 0.0;
+    let mut kmer1_counts = Vec::<i64>::new(); // Vector to store frequency of kmers
+    kmer1_counts.reserve(250); // This in advance creates space for data to be added so that each time push function is called, it does not have to make space reducing execution time
+    let mut kmers1_weight: f64 = 0.0; // Variable storing the total weight of all the kmers of the read being analyzed
 
     let mut index;
     for kmer1 in &kmers1_nodup {
+        // For each kmer in vector, determining its frequency and weight by parsing it out from the kmer weight's vector from ref/alt
         let kmer_count;
         let score;
-        kmer_count = binary_search_repeat(&kmers1_sorted, &kmer1).len() as i64;
-        //for kmer2 in &kmers1_sorted { // Binary search should not be used here since it cannot handle duplicate entries
-        //    if kmer1==kmer2 {
-        //	kmer_count+=1;
-        //    }
-        //}
-        //println!(&kmer1.into());
-        //if (binary_search(&kmers1,&kmer1) != -1 as i64) {
-        //  kmer_count+=1;
-        //}
+        kmer_count = binary_search_repeat(&kmers1_sorted, &kmer1).len() as i64; // Using binary search to get frequency of kmer
 
-        index = binary_search(&kmers2_nodups, &kmer1);
+        index = binary_search(&kmers2_nodups, &kmer1); // Function returns -1 if query not found. If found returns its position in array
         #[allow(unused_assignments)]
-        if index == -1 as i64 {
-            score = 0.0;
+        if index == -1 {
+            // Query not found
+            score = 0.0; // Kmer assigned weight of zero since it was not found in the ref/alt set
         } else {
-            //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-            //    println!(&"Incorrect binary_search (1st):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
-            //}
-            score = kmers2_data[index as usize].kmer_weight;
-            kmers1_weight += (kmer_count as f64) * score;
+            score = kmers2_data[index as usize].kmer_weight; // Getting score from ref/alt set
+            kmers1_weight += (kmer_count as f64) * score; // Adding weight of each kmer by multiplying frequency (or counts) with the weight of that particular kmer
         }
-        kmer1_counts.push(kmer_count);
+        kmer1_counts.push(kmer_count); // Adding kmer_counts to the kmer_counts vector
     }
-    kmer1_counts.shrink_to_fit();
-    //println!("kmers1_weight:{}",kmers1_weight);
+    kmer1_counts.shrink_to_fit(); // Getting rid of excess space that may have been added initially
 
-    let mut intersection_weight: f64 = 0.0;
+    let mut intersection_weight: f64 = 0.0; // This variable will store the total weight of the intersection of reads and ref/alt sequence
     for kmer1 in intersection {
         let score;
         let mut kmer1_freq: i64 = 0;
         let mut kmer2_freq: i64 = 0;
-        //for kmer2 in kmers2_nodups {
-        //    if kmer1==&kmer2.kmer_sequence {
-        //	score=kmer2.kmer_weight;
-        //	kmer2_freq=kmer2_counts[j];
-        //	continue;
-        //    }
-        //    j+=1;
-        //}
-        //println!(&"Intersection kmer1:".into(),&kmer1.into());
         index = binary_search(&kmers2_nodups, &kmer1);
         if index != -1 as i64 {
-            //if (kmer1!=&kmers2_nodups[index as usize].to_string()) {
-            //    println!(&"Incorrect binary_search (2nd):".into(), &kmer1.to_string().into(),&kmers2_nodups[index as usize].to_string().into());
-            //}
-            score = kmers2_data[index as usize].kmer_weight;
-            kmer2_freq = kmers2_data[index as usize].kmer_count;
+            score = kmers2_data[index as usize].kmer_weight; // Determining weight of kmer
+            kmer2_freq = kmers2_data[index as usize].kmer_count; // Determining frequency of kmer in ref/alt sequence
         } else {
-            score = 0.0;
+            score = 0.0; // If not found in ref/alt sequence, assigned a score of 0
         }
-        //j=0;
-        //for kmer2 in &kmers1_nodup {
-        //    if kmer1==kmer2 {
-        //	kmer1_freq=kmer1_counts[j];
-        //	continue;
-        //    }
-        //    j+=1;
-        //}
-        //println!(&"Intersection kmer2:".into(),&kmer1.into());
-        index = binary_search(&kmers1_nodup, &kmer1);
-        //println!(&"Index:".into(),&index.to_string().into());
+        index = binary_search(&kmers1_nodup, &kmer1); // Searching for kmer in read sequence
         if index != -1 as i64 {
-            //if (kmer1!=&kmers1_nodup[index as usize].to_string()) {
-            //   println!(&"Incorrect binary_search (3rd):".into(), &kmer1.to_string().into(),&kmers1_nodup[index as usize].to_string().into());
-            //}
-            kmer1_freq = kmer1_counts[index as usize];
+            kmer1_freq = kmer1_counts[index as usize]; // Getting frequency of the kmer in read sequence
         }
         if kmer1_freq <= kmer2_freq {
-            intersection_weight += score * (kmer1_freq as f64);
+            intersection_weight += score * (kmer1_freq as f64); // If frequency of the kmer is less in read than in ref/alt, then that is used in calculation of intersection_weight
         }
         if kmer1_freq > kmer2_freq {
-            intersection_weight += score * (kmer2_freq as f64);
+            intersection_weight += score * (kmer2_freq as f64); // If frequency of the kmer is less in ref/alt than in read, then that is used in calculation of intersection_weight
         }
     }
-    intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Jaccard similarity
+    intersection_weight / (kmers1_weight + kmers2_weight - intersection_weight) // Jaccard similarity i.e (A intersection B) / (A union B)
 }
 
 fn determine_maxima_alt(
-    kmer_diff_scores: &mut Vec<read_diff_scores>,
-    threshold_slope: &f64,
+    kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
+    threshold_slope: &f64, // Threashold slope at which the cutoff will be marked between ref/alt and none
 ) -> Vec<read_category> {
     // Sorting kmer_diff_scores
     kmer_diff_scores.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
 
-    let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new();
+    let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new(); // Converting from borrowed to owned (idea specific to Rust, read official docs for more info)
     for item in kmer_diff_scores {
-        // Making multiple copyies of kmer_diff_scores for further use
-        //println!("Value:{}",item.value);
-        //println!("groupID:{}",item.groupID);
         let item2: read_diff_scores = read_diff_scores_owned(item);
         kmer_diff_scores_sorted.push(item2);
-        //let item2:read_diff_scores = read_diff_scores_owned(item);
     }
 
-    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len();
+    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len(); // Determining length of kmer_diff_scores
 
-    let mut start_point: usize = kmer_diff_scores_length - 1;
-    let mut slope;
-    let mut is_a_line = 1;
-    let mut indices = Vec::<read_category>::new();
+    let mut start_point: usize = kmer_diff_scores_length - 1; // Starting from the last element of the array sorted in ascending order i.e the highest element in the array
+    let mut slope; // Slope between two adjacent points
+    let mut is_a_line = 1; // flag to check if the slope_threshold is never reached
+    let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
     if kmer_diff_scores_length > 1 {
         for i in (1..kmer_diff_scores_length).rev() {
             slope =
                 (&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
             if slope > threshold_slope_clone {
+                // If threshold_slope is reached that is used as the threshold point of the curve
                 start_point = i as usize;
-                is_a_line = 0;
+                is_a_line = 0; // When threshold_slope is reached, the curve cannot be called a line
                 break;
             }
         }
     } else {
-        println!(
+        println!( // If length of kmer_diff_scores = 1, this function does not classify reads
             "{}",
             "Number of reads too low to determine curvature of slope"
         );
@@ -1088,6 +1043,7 @@ fn determine_maxima_alt(
     if is_a_line == 1 {
         for i in 0..kmer_diff_scores_length {
             if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
+                // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
                 let read_cat = read_category {
                     category: String::from("none"),
                     groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1106,9 +1062,10 @@ fn determine_maxima_alt(
             }
         }
     } else {
-        println!("{} {}", "start_point:", start_point.to_string());
+        //println!("{} {}", "start_point:", start_point.to_string());
         let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
         for i in 0..start_point {
+            // Adding all reads before threshold in kmer_diff_scores_input
             let item = read_diff_scores {
                 value: f64::from(kmer_diff_scores_sorted[i].value),
                 groupID: usize::from(i),
@@ -1139,6 +1096,7 @@ fn determine_maxima_alt(
         let mut array_maximum: f64 = 0.0;
         let mut index_array_maximum: usize = 0;
 
+        // Trying to determine the point that is furthest from the line, will use that as the final cutoff
         for i in 0..kmer_diff_scores_input.len() {
             distances_from_line = (slope_of_line * kmer_diff_scores_input[i].groupID as f64
                 - kmer_diff_scores_input[i].value
@@ -1150,7 +1108,7 @@ fn determine_maxima_alt(
                 index_array_maximum = i;
             }
         }
-        let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].value;
+        let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].value; // getting diff_score of the read used as the threshold
         println!(
             "{} {}",
             "score_cutoff (from Rust):",
@@ -1158,6 +1116,7 @@ fn determine_maxima_alt(
         );
         for i in 0..kmer_diff_scores_length {
             if score_cutoff >= kmer_diff_scores_sorted[i].value {
+                // Classifying allreads lower than this diff_score cutoff as 'none'
                 let read_cat = read_category {
                     category: String::from("none"),
                     groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1167,6 +1126,7 @@ fn determine_maxima_alt(
                 indices.push(read_cat);
             } else {
                 if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
+                    // If polyclonal = 2 (which is when read neither contains ref allele or alt allele of interest) classifying read as 'none'
                     let read_cat = read_category {
                         category: String::from("none"),
                         groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1186,5 +1146,5 @@ fn determine_maxima_alt(
             }
         }
     }
-    indices
+    indices // Indices vector being returned to main function
 }
