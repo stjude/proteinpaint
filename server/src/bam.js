@@ -293,13 +293,19 @@ async function download_gdc_bam(req) {
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
-		if (!fs.existsSync(dir)) {
-			// Check if directory exists, if not create one
-			fs.mkdir(dir, err => {
-				if (err) {
-					throw err
+		try {
+			await fs.promises.stat(dir)
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// make dir
+				try {
+					await fs.promises.mkdir(dir, { recursive: true })
+				} catch (e) {
+					throw 'url dir: cannot mkdir'
 				}
-			})
+			} else {
+				throw 'stating gz url dir: ' + e.code
+			}
 		}
 		const gdc_bam_filename = path.join(gdc_token_hash, 'temp.' + Math.random().toString() + '.bam')
 		// Need to make directory for each user using token
@@ -2185,7 +2191,7 @@ async function query_oneread(req, r) {
 	return new Promise((resolve, reject) => {
 		let ps
 		if (req.query.gdc) {
-			ps = spawn(samtools, ['view', req.query.file])
+			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
 		} else {
 			ps = spawn(
 				samtools,
