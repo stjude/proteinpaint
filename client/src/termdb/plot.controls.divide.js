@@ -67,6 +67,7 @@ class Divide {
 		return state
 	}
 	main() {
+		this.dom.tip.hide()
 		this.mayRegisterTerm(this.state.config.term0)
 		this.updateUI()
 	}
