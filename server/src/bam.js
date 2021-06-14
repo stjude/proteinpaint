@@ -1494,11 +1494,13 @@ function stack_templates(group, q, templates) {
 	for (const template of templates) {
 		// group.templates
 		let stackidx = null
-		for (let i = 0; i < group.stacks.length; i++) {
-			if (group.stacks[i] + q.stacksegspacing < template.x1) {
-				stackidx = i
-				group.stacks[i] = template.x2
-				break
+		if (!q.variant) {
+			for (let i = 0; i < group.stacks.length; i++) {
+				if (group.stacks[i] + q.stacksegspacing < template.x1) {
+					stackidx = i
+					group.stacks[i] = template.x2
+					break
+				}
 			}
 		}
 		if (stackidx == null) {
