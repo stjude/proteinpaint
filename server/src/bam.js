@@ -301,7 +301,7 @@ async function download_gdc_bam(req) {
 				}
 			})
 		}
-		const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
+		const gdc_bam_filename = path.join(gdc_token_hash, 'temp.' + Math.random().toString() + '.bam')
 		// Need to make directory for each user using token
 		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_case_id, gdc_bam_filename)
 		gdc_bam_filenames.push(gdc_bam_filename)
@@ -604,7 +604,7 @@ async function get_q(genome, req) {
 	if (req.get('x-auth-token')) {
 		q = {
 			genome,
-			file: req.query.file, // will need to change this to a loop when viewing multiple regions in the same gdc sample
+			file: path.join(serverconfig.cachedir, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			_numofreads: 0, // temp, to count num of reads while loading and detect above limit
@@ -838,10 +838,11 @@ async function query_reads(q) {
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, token, case_id, file) {
+async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	headers['X-Auth-Token'] = token
+	const file = path.join(serverconfig.cachedir, cache_dir)
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
 	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
