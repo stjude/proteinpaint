@@ -802,15 +802,9 @@ hr {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    overflow: hidden;
 }
 
-.gbrowser-btn {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-
-.gbrowser-btn::after,
 .track::after {
     content: "";
     border-radius: 8px;
@@ -826,13 +820,11 @@ hr {
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.gbrowser-btn:hover,
 .track:hover {
     -webkit-transform: scale(1, 1);
     transform: scale(1, 1);
 }
 
-.gbrowser-btn:hover::after,
 .track:hover::after {
     opacity: 1;
 }
@@ -853,13 +845,27 @@ hr {
     border-radius: 3px;
 }
 
-.beta-banner{
+.track-ribbon{
     grid-area: image;
-    height: 35%;
-    width: 100%;
-    margin-bottom: auto;
-    margin-left: -25%;
+    height: auto;
+    width: 120%;
+    top: 5%;
+    left: -30%;
+    position: relative;
+    text-align: center;
     transform: rotateY(0deg) rotate(320deg);
+    transform-origin: top left;
+    background-color: #2E3D92;
+    color: #F0F1F3;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    border-color: transparent transparent transparent darkgray;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    opacity: 1;
+    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .track-h {

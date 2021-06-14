@@ -197,9 +197,10 @@ function displayTracks(tracks, holder, page_args) {
 
 		// add Beta tag for experimental tracks
 		if (track.isbeta == true) {
-			li.append('img')
-				.attr('src', 'https://pecan.stjude.cloud/static/examples/images/beta-banner.svg')
-				.attr('class', 'beta-banner')
+			li.append('div')
+				.text('Beta')
+				.attr('class', 'track-ribbon')
+				.attr('id', 'beta-banner')
 		}
 
 		// create custom track button for genomepaint card
