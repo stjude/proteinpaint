@@ -288,8 +288,8 @@ at r.ntwidth<1:
 async function download_gdc_bam(req) {
 	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.get('x-auth-token').split(',')[0]
-		const gdc_case_id = req.get('x-auth-token').split(',')[1]
+		const gdc_token = req.get('x-auth-token')
+		const gdc_file_id = req.query.gdc_file
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
@@ -303,7 +303,7 @@ async function download_gdc_bam(req) {
 		}
 		const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
 		// Need to make directory for each user using token
-		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_case_id, gdc_bam_filename)
+		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, gdc_bam_filename)
 		gdc_bam_filenames.push(gdc_bam_filename)
 	}
 	return gdc_bam_filenames
@@ -612,7 +612,7 @@ async function get_q(genome, req) {
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		//q.gdc_token = req.get('x-auth-token').split(',')[0]
-		q.gdc_case_id = req.get('x-auth-token').split(',')[1]
+		q.gdc_file = req.query.gdc_file
 		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
@@ -2168,7 +2168,16 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop
+	let firstseg,
+		lastseg,
+		dir,
+		e,
+		_file,
+		isurl,
+		readstart,
+		readstop,
+		gdc_query = false
+	if (req.get('x-auth-token')) gdc_query = true
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2176,14 +2185,14 @@ async function query_oneread(req, r) {
 		if (Number.isNaN(readstart) || Number.isNaN(readstop))
 			throw 'readstart/stop not provided for read with unknown order'
 	}
-	if (!req.query.gdc) {
+	if (!gdc_query) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
 	return new Promise((resolve, reject) => {
 		let ps
-		if (req.query.gdc) {
+		if (gdc_query) {
 			ps = spawn(samtools, ['view', req.query.file])
 		} else {
 			ps = spawn(

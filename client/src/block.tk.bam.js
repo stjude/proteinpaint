@@ -152,14 +152,7 @@ export async function loadTk(tk, block) {
 
 async function getData(tk, block, additional = []) {
 	let headers
-	const lst = [
-		'genome=' + block.genome.name,
-		'regions=' + JSON.stringify(tk.regions),
-		'nucleotide_length=' + block.exonsf,
-		'pileupheight=' + tk.pileupheight,
-		...additional
-	]
-	const lst2 = [
+	let lst = [
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'nucleotide_length=' + block.exonsf,
@@ -168,34 +161,34 @@ async function getData(tk, block, additional = []) {
 	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
-		lst2.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
-		lst2.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
 	if (tk.asPaired) {
 		lst.push('asPaired=1')
-		lst2.push('asPaired=1')
 	}
 	if ('nochr' in tk) {
 		lst.push('nochr=' + tk.nochr)
-		lst2.push('nochr=' + tk.nochr)
 	}
 
 	if (tk.gdc) {
-		headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		headers['X-Auth-Token'] = tk.gdc
+	}
+	if (tk.gdc_file) {
+		lst.push('gdc_file=' + tk.gdc_file)
 	}
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
-		lst2.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), {headers})
+		lst.push('downloadgdc=' + tk.downloadgdc)
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
-		delete tk.downloadgdc, lst2
+		delete tk.downloadgdc
+		lst = lst.filter(a => a != 'downloadgdc=1') //remove this key after file download
 		for (const r of tk.regions) {
 			orig_regions.push(r)
 		}
@@ -211,7 +204,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'), {headers})
+	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 	if (data.error) throw data.error
 	return data
 }
@@ -924,8 +917,8 @@ async function getReadInfo(tk, block, box, ridx) {
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
-
-	const data = await client.dofetch2('tkbam?' + getparam().join('&'))
+	const req_data = getparam()
+	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 
 	if (data.error) {
 		client.sayerror(wait, data.error)
@@ -973,7 +966,8 @@ async function getReadInfo(tk, block, box, ridx) {
 				.on('click', async () => {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
-					const data2 = await client.dofetch2('tkbam?' + getparam('show_unmapped=1').join('&'))
+					const req_data = getparam('show_unmapped=1')
+					const data2 = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 					if (data2.error) {
 						wait.text('')
 						client.sayerror(wait, data2.error)
@@ -1009,6 +1003,7 @@ async function getReadInfo(tk, block, box, ridx) {
 	function getparam(extra) {
 		// reusable helper
 		const r = block.rglst[ridx]
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
@@ -1022,7 +1017,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		if (tk.url) lst.push('url=' + tk.url)
 		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 		if (tk.gdc) {
-			lst.push('gdc=' + tk.gdc)
+			headers['X-Auth-Token'] = tk.gdc
 		}
 		if (tk.asPaired) {
 			lst.push('getpair=1')
@@ -1040,7 +1035,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			}
 		}
 		if (extra) lst.push(extra)
-		return lst
+		return { lst, headers }
 	}
 }
 
