@@ -20,7 +20,9 @@ node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/ccssctcae.tree
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sjlifectcae.tree
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sn.tree
 
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig > keep/termjson 2>diagnostic_messages.txt
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig 
+# output files: keep/termjson, diagnostic_messages.txt
+
 sh ~/proteinpaint/utils/sjlife2/phenotree.makeentiretree.sh
 node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.tree keep/termjson

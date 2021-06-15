@@ -44,6 +44,8 @@ outputs these files:
 2. ancestry  - load to "ancestry" table
 */
 
+console.log('\nRUNNING phenotree.parse.term2term.js ...')
+
 const level2_ctcaegraded = 'Graded Adverse Events'
 
 const abort = m => {
