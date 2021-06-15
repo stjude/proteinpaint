@@ -406,14 +406,10 @@ function loadStrawdata(tk, block) {
 			par.isfrag = true
 		}
 		tasks.push(
-			fetch(
-				new Request(block.hostURL + '/hicdata', {
+			client
+				.dofetch2('hicdata', {
 					method: 'POST',
 					body: JSON.stringify(par)
-				})
-			)
-				.then(data => {
-					return data.json()
 				})
 				.then(data => {
 					if (data.error) throw data.error
@@ -449,14 +445,10 @@ function loadStrawdata(tk, block) {
 				par.isfrag = true
 			}
 			tasks.push(
-				fetch(
-					new Request(block.hostURL + '/hicdata', {
+				client
+					.dofetch2('hicdata', {
 						method: 'POST',
 						body: JSON.stringify(par)
-					})
-				)
-					.then(data => {
-						return data.json()
 					})
 					.then(data => {
 						if (data.error) throw { message: data.error }
