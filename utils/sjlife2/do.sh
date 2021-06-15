@@ -1,3 +1,7 @@
+###############################################
+# procedures to build database table files
+# on mac, run `brew install csvkit` first to get the "csvformat" command
+
 node ~/proteinpaint/utils/sjlife2/update2matrix.js raw/updatematrix.csv > matrix.stringID
 node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
 # "matrix" is now using integer sample id
