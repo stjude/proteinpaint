@@ -3267,17 +3267,17 @@ seekrange(chr,start,stop) {
 		*/
 		// example of how to use new sandbox div
 		// cases where gene panel is used from genomepaint track
-		// 1. on landing page: sandbox_div is assumed to be 2nd child div of .sja_root_holder parent div (1st child is header)
+		// 1. on landing page: use sandbox, sandbox_div is 2nd child div of .sja_root_holder parent div (1st child is header)
 		// 2. on page with track (mds2): use sandbox same as landing page (case 1)
-		// 3. for page with embedded pp: .sja_root_holder will only have 1 child and tip will be used insted of sandbox
-		// 4. for multiple pp instance onn same page: use tip as embdded pp (case 3)
+		// 3. for page with embedded pp: use tip, .sja_root_holder will only have 1 child and sanbox_div is missing
+		// 4. for multiple pp instance on same page: use tip as embdded pp (case 3)
 		let pane
 		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
 		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
 		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
-		if ( use_tip )
+		if ( use_tip ) // case 3 & 4
 			pane = client.newpane({ x: 100, y: 100 }) // original floating tip
-		else {
+		else { // case 1 & 2
 			const sandbox_div = d3select(root_divs[2])
 			pane = client.newSandboxDiv(sandbox_div)
 		}
