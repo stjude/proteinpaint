@@ -309,6 +309,23 @@ async function download_gdc_bam(req) {
 	return gdc_bam_filenames
 }
 
+async function plot_diff_scores(q, group) {
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.stackheight * q.devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
+	const max_diff_score = 100 // This will be the maxValue of diff_score that shall be computed later
+	ctx.fillStyle = pileup_totalcolor // Just a temporary color for now
+	ctx.fillRect(0, 0, 100, group.stackheight * q.devicePixelRatio)
+
+	return {
+		height: group.stackheight * q.devicePixelRatio,
+		max_diff_score,
+		src: canvas.toDataURL()
+	}
+}
+
 async function plot_pileup(q, templates) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
@@ -772,6 +789,11 @@ async function do_query(q) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
+		if (q.variant) {
+			// diff scores plotted only if a variant is specified by user
+			gr.diff_scores_img = await plot_diff_scores(q, group)
+		}
+
 		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
