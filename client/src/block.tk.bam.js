@@ -437,7 +437,7 @@ function setTkHeight(tk, data) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (g.partstack) {
 			// slider visible
-			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ')')
+			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
 		}
 		h += g.data.height
 	}
@@ -1302,8 +1302,7 @@ function renderGroup(group, tk, block) {
 			.attr('height', group.data.height)
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
-		//tk.config_handle.transition().attr('x', 40)
-		group.dom.vslider.g.transition().attr('transform', 'translate(0,' + group.data.messagerowheights + ') scale(1)')
+		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
 		group.dom.vslider.bar.transition().attr('height', group.data.height)
 		group.dom.vslider.boxy = (group.data.height * group.partstack.start) / group.data_fullstack.stackcount
 		group.dom.vslider.boxh =
@@ -1320,7 +1319,6 @@ function renderGroup(group, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		//tk.config_handle.transition().attr('x', 0)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
