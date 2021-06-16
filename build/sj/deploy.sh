@@ -230,7 +230,7 @@ ssh -t $USERatREMOTE "
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
 
-	cd available/$APP-$REV/server/utils/rust_indel_cargo && cargo build --release
+	cd available/$APP-$REV/utils/rust_indel_cargo && cargo build --release
 	cd $REMOTEDIR 
 	chmod -R 755 available/$APP-$REV
 
