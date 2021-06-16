@@ -1303,10 +1303,11 @@ function renderGroup(group, tk, block) {
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
-		group.dom.vslider.bar.transition().attr('height', group.data.height)
-		group.dom.vslider.boxy = (group.data.height * group.partstack.start) / group.data_fullstack.stackcount
+		const scrollableheight = group.data.height - group.data.messagerowheights
+		group.dom.vslider.bar.transition().attr('height', scrollableheight)
+		group.dom.vslider.boxy = (scrollableheight * group.partstack.start) / group.data_fullstack.stackcount
 		group.dom.vslider.boxh =
-			(group.data.height * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
+			(scrollableheight * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
 		group.dom.vslider.box.transition().attr('height', group.dom.vslider.boxh)
 		group.dom.vslider.boxbotline
 			.transition()
