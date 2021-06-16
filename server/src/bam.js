@@ -316,7 +316,7 @@ async function plot_diff_scores(q, group) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const max_diff_score = 100 // This will be the maxValue of diff_score that shall be computed later
-	ctx.fillStyle = pileup_totalcolor // Just a temporary color for now
+	ctx.fillStyle = '#FF0000' // Just a temporary color for now
 	ctx.fillRect(0, 0, 100, group.stackheight * q.devicePixelRatio)
 
 	return {

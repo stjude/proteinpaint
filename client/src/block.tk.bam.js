@@ -185,14 +185,14 @@ async function getData(tk, block, additional = []) {
 	}
 
 	if (tk.gdc) {
-		headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		headers['X-Auth-Token'] = tk.gdc
 	}
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
 		lst2.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), {headers})
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		delete tk.downloadgdc, lst2
@@ -211,7 +211,8 @@ async function getData(tk, block, additional = []) {
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'), {headers})
+	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+	console.log('data:', data)
 	if (data.error) throw data.error
 	return data
 }
@@ -442,6 +443,9 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+		if (tk.variants) {
+			g.dom.diff_score_barplot.transition().attr('transform', 'translate(0,' + h + ')')
+		}
 		if (g.partstack) {
 			// slider visible
 			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ')')
@@ -534,6 +538,7 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
+		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 	}
 	if (tk.gdc) {
 		tk.dom.gdc_bar = tk.glider.append('g')
@@ -597,6 +602,13 @@ function makeGroup(gd, tk, block, data) {
 				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
 			}
 		}
+	}
+	if (tk.variants) {
+		group.dom.diff_score_barplot = tk.dom.diff_score_g
+			.append('image')
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', gd.diff_scores_img.width)
+			.attr('height', gd.diff_scores_img.height)
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
