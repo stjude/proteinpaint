@@ -201,6 +201,8 @@ function displayTracks(tracks, holder, page_args) {
 				.text('Beta')
 				.attr('class', 'track-ribbon')
 				.attr('id', 'beta-banner')
+				.style('color', 'black')
+				.style('background-color', '#e6f0ff')
 		}
 
 		// create custom track button for genomepaint card
