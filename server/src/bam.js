@@ -310,19 +310,22 @@ async function download_gdc_bam(req) {
 }
 
 async function plot_diff_scores(q, group) {
-	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.stackheight * q.devicePixelRatio)
+	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	const max_diff_score = 100 // This will be the maxValue of diff_score that shall be computed later
-	ctx.fillStyle = '#FF0000' // Just a temporary color for now
-	ctx.fillRect(0, 0, 100, group.stackheight * q.devicePixelRatio)
-
-	return {
-		height: group.stackheight * q.devicePixelRatio,
-		max_diff_score,
-		src: canvas.toDataURL()
+	for (const [ridx, r] of q.regions.entries()) {
+		const max_diff_score = 100 // This will be the maxValue of diff_score that shall be computed later
+		ctx.fillStyle = '#FF0000' // Just a temporary color for now
+		ctx.fillRect(50, 12, max_diff_score, group.stacks.length * q.devicePixelRatio * r.ntwidth)
+		console.log('group.stackheight:', group.stacks.length)
+		console.log('q.devicePixelRatio:', q.devicePixelRatio)
+		return {
+			height: group.canvasheight * q.devicePixelRatio,
+			width: max_diff_score,
+			src: canvas.toDataURL()
+		}
 	}
 }
 

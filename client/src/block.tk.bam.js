@@ -607,8 +607,8 @@ function makeGroup(gd, tk, block, data) {
 		group.dom.diff_score_barplot = tk.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
-			.attr('width', gd.diff_scores_img.width)
-			.attr('height', gd.diff_scores_img.height)
+			.attr('width', group.data.width)
+			.attr('height', group.data.height)
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
