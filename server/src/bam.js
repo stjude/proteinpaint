@@ -2199,7 +2199,7 @@ async function query_oneread(req, r) {
 	}
 	return new Promise((resolve, reject) => {
 		let ps
-		if (req.query.gdc) {
+		if (gdc_query) {
 			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
 		} else {
 			ps = spawn(
