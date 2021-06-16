@@ -224,7 +224,6 @@ function makeheader(app, obj, jwt) {
 
 	app.holder.apps_sandbox_div = app.holder
 		.append('div')
-		.attr('id', 'pp_sandbox')
 		.style('margin-top', '15px')
 	const headbox = row
 		.append('div')
@@ -593,7 +592,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let sandbox_div = client.newSandboxDiv()
+			let sandbox_div = client.newSandboxDiv(app.holder.apps_sandbox_div)
 
 			const g = app.genomes[genomename]
 			if (!g) {

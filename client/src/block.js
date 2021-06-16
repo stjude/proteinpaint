@@ -3294,13 +3294,26 @@ seekrange(chr,start,stop) {
 
 	to_proteinview(isoform, fromgenetk) {
 		/*
-show protein view for a given isoform
-and bring along current tracks
-if fromgenetk is provided, will skip this track
-*/
-		// const pane = client.newpane({ x: 100, y: 100 })
+		show protein view for a given isoform
+		and bring along current tracks
+		if fromgenetk is provided, will skip this track
+		*/
 		// example of how to use new sandbox div
-		const pane = client.newSandboxDiv()
+		// cases where gene panel is used from genomepaint track
+		// 1. on landing page: use sandbox, sandbox_div is 2nd child div of .sja_root_holder parent div (1st child is header)
+		// 2. on page with track (mds2): use sandbox same as landing page (case 1)
+		// 3. for page with embedded pp: use tip, .sja_root_holder will only have 1 child and sanbox_div is missing
+		// 4. for multiple pp instance on same page: use tip as embdded pp (case 3)
+		let pane
+		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
+		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
+		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
+		if ( use_tip ) // case 3 & 4
+			pane = client.newpane({ x: 100, y: 100 }) // original floating tip
+		else { // case 1 & 2
+			const sandbox_div = d3select(root_divs[2])
+			pane = client.newSandboxDiv(sandbox_div)
+		}
 		pane.header.text(isoform)
 		const arg = {
 			genome: this.genome,
