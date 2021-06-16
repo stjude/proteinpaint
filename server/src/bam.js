@@ -318,20 +318,27 @@ async function download_gdc_bam(req) {
 async function plot_diff_scores(q, group) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
+	const read_height = group.templates[0].r.ntwidth
+	console.log('group:', group.templates[0])
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	for (const [ridx, r] of q.regions.entries()) {
-		const max_diff_score = 100 // This will be the maxValue of diff_score that shall be computed later
+	const diff_scores_list = group.templates.map(i => parseFloat(i.tempscore))
+	const max_diff_score = Math.max(diff_scores_list)
+	const min_diff_score = Math.min(diff_scores_list)
+	console.log('diff_scores_list length:', diff_scores_list.length)
+	console.log('group.stackheight:', group.stacks.length)
+	console.log('q.devicePixelRatio:', q.devicePixelRatio)
+	let i = 0
+	for (const diff_score of diff_scores_list) {
 		ctx.fillStyle = '#FF0000' // Just a temporary color for now
-		ctx.fillRect(50, 12, max_diff_score, group.stacks.length * q.devicePixelRatio * r.ntwidth)
-		console.log('group.stackheight:', group.stacks.length)
-		console.log('q.devicePixelRatio:', q.devicePixelRatio)
-		return {
-			height: group.canvasheight * q.devicePixelRatio,
-			width: max_diff_score,
-			src: canvas.toDataURL()
-		}
+		ctx.fillRect(50, 12 + i * q.devicePixelRatio * read_height, diff_score * 100, q.devicePixelRatio * read_height)
+		i += 1
+	}
+	return {
+		height: group.canvasheight * q.devicePixelRatio,
+		width: max_diff_score,
+		src: canvas.toDataURL()
 	}
 }
 
