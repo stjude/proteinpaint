@@ -229,11 +229,16 @@ ssh -t $USERatREMOTE "
 	cp active/serverconfig.json available/$APP-$REV/
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
+
+	cd available/$APP-$REV/utils/rust_indel_cargo && cargo build --release
+	rm -rf available/$APP-$REV/utils/rust_indel_cargo/src
+	cd $REMOTEDIR 
 	chmod -R 755 available/$APP-$REV
+
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
-
 	ln -sfn available/$APP-$REV active
+	
 	./helpers/record.sh deployed
 	./proteinpaint_run_node.sh
 	./helpers/purge.sh \"pp-*\"
