@@ -315,24 +315,31 @@ async function download_gdc_bam(req) {
 	return gdc_bam_filenames
 }
 
-async function plot_diff_scores(q, group) {
+async function plot_diff_scores(q, group, templates) {
 	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
-	const read_height = group.templates[0].r.ntwidth
-	console.log('group:', group.templates[0])
+	//const read_height = group.templates[0].r.ntwidth
+	//console.log('group:', group.templates[0])
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	const diff_scores_list = group.templates.map(i => parseFloat(i.tempscore))
+	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
+	const read_height = group.canvasheight / diff_scores_list.length
 	const max_diff_score = Math.max(diff_scores_list)
 	const min_diff_score = Math.min(diff_scores_list)
-	console.log('diff_scores_list length:', diff_scores_list.length)
-	console.log('group.stackheight:', group.stacks.length)
-	console.log('q.devicePixelRatio:', q.devicePixelRatio)
+	//console.log('diff_scores_list length:', diff_scores_list.length)
+	//console.log('group.stackheight:', group.stacks.length)
+	//console.log('q.devicePixelRatio:', q.devicePixelRatio)
 	let i = 0
+	//console.log('New group:')
 	for (const diff_score of diff_scores_list) {
-		ctx.fillStyle = '#FF0000' // Just a temporary color for now
-		ctx.fillRect(50, 12 + i * q.devicePixelRatio * read_height, diff_score * 100, q.devicePixelRatio * read_height)
+		//console.log('diff_score:', diff_score)
+		if (diff_score > 0) {
+			ctx.fillStyle = '#FF0000' // Red color
+		} else {
+			ctx.fillStyle = '#0AC71A' // Green color
+		}
+		ctx.fillRect(70, 7 + i * read_height, diff_score * 50, read_height)
 		i += 1
 	}
 	return {
@@ -805,14 +812,15 @@ async function do_query(q) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
-		if (q.variant) {
-			// diff scores plotted only if a variant is specified by user
-			gr.diff_scores_img = await plot_diff_scores(q, group)
-		}
 
 		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
+		if (q.variant) {
+			// diff scores plotted only if a variant is specified by user
+			gr.diff_scores_img = await plot_diff_scores(q, group, templates)
+		}
+
 		gr.src = canvas.toDataURL()
 		result.groups.push(gr)
 		templates_total = [...templates_total, ...templates]
