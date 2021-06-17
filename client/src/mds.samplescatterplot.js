@@ -241,7 +241,6 @@ async function get_data(obj) {
 	}
 	///////////////////// client data /////////////////////
 	const ad = obj.analysisdata
-	console.log(ad)
 	if (obj.disco || ad.disco) {
 		// some old external mdsjson files have analysisdata.disco
 		// convert obj.disco to obj.mds for backward compatibity
