@@ -325,26 +325,38 @@ async function plot_diff_scores(q, group, templates) {
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
 	const read_height = group.canvasheight / diff_scores_list.length
-	const max_diff_score = Math.max(diff_scores_list)
-	const min_diff_score = Math.min(diff_scores_list)
-	//console.log('diff_scores_list length:', diff_scores_list.length)
-	//console.log('group.stackheight:', group.stacks.length)
-	//console.log('q.devicePixelRatio:', q.devicePixelRatio)
 	let i = 0
+	const space_offset = 0.5
 	//console.log('New group:')
 	for (const diff_score of diff_scores_list) {
 		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
 			ctx.fillStyle = '#FF0000' // Red color
+			ctx.fillRect(
+				70,
+				15 + i * read_height,
+				//(diff_score * 50) / max_diff_score,
+				diff_score * 20,
+				read_height - space_offset * read_height
+			)
+			//console.log(diff_score / max_diff_score)
 		} else {
 			ctx.fillStyle = '#0AC71A' // Green color
+			ctx.fillRect(
+				70,
+				15 + i * read_height,
+				//(diff_score * 50 * -1) / min_diff_score,
+				diff_score * 20,
+				read_height - space_offset * read_height
+			)
+			//console.log(diff_score / min_diff_score)
 		}
-		ctx.fillRect(70, 7 + i * read_height, diff_score * 50, read_height)
+
 		i += 1
 	}
 	return {
-		height: group.canvasheight * q.devicePixelRatio,
-		width: max_diff_score,
+		//height: group.canvasheight * q.devicePixelRatio,
+		//width: 10,
 		src: canvas.toDataURL()
 	}
 }
