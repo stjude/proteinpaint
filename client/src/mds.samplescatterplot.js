@@ -70,7 +70,7 @@ obj:
 
 ********************** EXPORTED
 init()
-init_json()
+init_mdstsne_json()
 ********************** INTERNAL
 get_data()
 finish_setup
@@ -198,7 +198,7 @@ export async function init(obj, holder, debugmode) {
 	}
 }
 
-export async function init_json(json_file){
+export async function init_mdstsne_json(json_file){
 	if (json_file !== undefined && json_file == '') throw '.jsonfile missing'
 	let tmp
 	if (json_file !== undefined) tmp = await client.dofetch('textfile', { file: json_file })
