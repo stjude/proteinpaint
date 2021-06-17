@@ -203,14 +203,14 @@ function renderBinLines(self, data) {
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
-
-	let lastScaledX = Math.min(
-		scaledMaxX,
-		lines
-			.slice()
-			.reverse()
-			.find(d => d.scaledX < scaledMaxX).scaledX
-	)
+	const lastVisibleLine =
+		lines.length == 1
+			? lines[0]
+			: lines
+					.slice()
+					.reverse()
+					.find(d => d.scaledX < scaledMaxX)
+	let lastScaledX = lastVisibleLine ? Math.min(scaledMaxX, lastVisibleLine.scaledX) : scaledMaxX
 
 	self.num_obj.binsize_g
 		.selectAll('line')
