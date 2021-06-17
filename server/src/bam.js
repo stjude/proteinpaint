@@ -341,15 +341,15 @@ async function plot_diff_scores(q, group, templates) {
 			70,
 			(i + 1) * read_height,
 			//(diff_score * 50 * -1) / min_diff_score,
-			diff_score * 20,
+			diff_score * 1000,
 			read_height - space_offset * read_height
 		)
 
 		i += 1
 	}
 	return {
-		//height: group.canvasheight * q.devicePixelRatio,
-		//width: 10,
+		height: group.canvasheight * q.devicePixelRatio,
+		width: q.canvaswidth * q.devicePixelRatio,
 		src: canvas.toDataURL()
 	}
 }
