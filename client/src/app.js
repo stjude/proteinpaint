@@ -1185,7 +1185,13 @@ async function launchmdssamplescatterplot(arg, app) {
 	} else if (arg.analysisdata) {
 		// validate later
 	} else if (arg.analysisdata_file) {
-		arg.analysisdata = await init_json(arg.analysisdata_file)
+		try {
+			arg.analysisdata = await init_json(arg.analysisdata_file)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			app.error0(e.message || e)
+			return
+		}
 	} else {
 		app.error0('neither .dataset or .analysisdata is given')
 		return
