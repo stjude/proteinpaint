@@ -70,6 +70,7 @@ obj:
 
 ********************** EXPORTED
 init()
+init_json()
 ********************** INTERNAL
 get_data()
 finish_setup
@@ -197,6 +198,16 @@ export async function init(obj, holder, debugmode) {
 	}
 }
 
+export async function init_json(json_file){
+	if (json_file !== undefined && json_file == '') throw '.jsonfile missing'
+	let tmp
+	if (json_file !== undefined) tmp = await client.dofetch('textfile', { file: json_file })
+	if (tmp.error) {
+		throw tmp.error
+	}
+	return JSON.parse(tmp.text)
+}
+
 async function get_data(obj) {
 	if (obj.dslabel) {
 		// server data from official dataset
@@ -230,6 +241,7 @@ async function get_data(obj) {
 	}
 	///////////////////// client data /////////////////////
 	const ad = obj.analysisdata
+	console.log(ad)
 	if (obj.disco || ad.disco) {
 		// some old external mdsjson files have analysisdata.disco
 		// convert obj.disco to obj.mds for backward compatibity

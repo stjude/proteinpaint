@@ -12,6 +12,7 @@ import { getsjcharts } from './getsjcharts'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
+import { init_json } from './mds.samplescatterplot'
 
 import * as wrappers from './wrappers/PpReact'
 
@@ -1162,7 +1163,7 @@ async function may_launchGeneView(arg, app) {
 	return false
 }
 
-function launchmdssamplescatterplot(arg, app) {
+async function launchmdssamplescatterplot(arg, app) {
 	if (!arg.genome) {
 		app.error0('missing genome for mdssamplescatterplot')
 		return
@@ -1183,6 +1184,8 @@ function launchmdssamplescatterplot(arg, app) {
 		delete arg.dataset
 	} else if (arg.analysisdata) {
 		// validate later
+	} else if (arg.analysisdata_file) {
+		arg.analysisdata = await init_json(arg.analysisdata_file)
 	} else {
 		app.error0('neither .dataset or .analysisdata is given')
 		return
