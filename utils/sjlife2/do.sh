@@ -8,11 +8,11 @@ node ~/proteinpaint/utils/sjlife2/matrix.string2intID.js > matrix
 # also makes "samples.idmap"
 
 node ~/proteinpaint/utils/sjlife2/matrix2db.js matrix > annotation.matrix
-cat PRS/annotation.scores >> annotation.matrix
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js PRS/annotation.scores 0 >> annotation.matrix
 
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 > raw/intID/outcomes_sjlife.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_ccss.txt 0 > raw/intID/outcomes_ccss.txt
-node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/subneoplasms.txt 0,1 > raw/intID/subneoplasms.txt
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_sjlife.txt 0 yes > raw/intID/outcomes_sjlife.txt
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/outcomes_ccss.txt 0 yes > raw/intID/outcomes_ccss.txt
+node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/subneoplasms.txt 0,1 yes > raw/intID/subneoplasms.txt
 
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annotation.admix.sjlife
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss

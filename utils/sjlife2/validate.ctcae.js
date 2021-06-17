@@ -3,23 +3,27 @@ if (process.argv.length != 4) {
 	process.exit()
 }
 
+console.log('\nRUNNING validate.ctcae.js ...')
+
 /*
+to be run three times:
+1. sjlife ctcae
+2. ccss ctcae
+3. sjlife+ccss secondary neoplasm
+
+<phenotree file>
+should only have chc terms
+use that to validate terms in "outcomes" file and find any mismatch
 load outcome terms from phenotree:
 first branch: Graded Adverse Events
 second branch: organ system
 third branch: grouped condition
 forth branch: individual condition, maybe missing
 
-to be run three times:
-1. sjlife ctcae
-2. ccss ctcae
-3. sjlife+ccss secondary neoplasm
-
+<outcomes file>
+header line required, "sample_id" identifies the column of integer sample ids
 age, yeartoevent, grade are all required
 
-the phenotree file is solely chc terms
-
-use that to validate terms in "outcomes" file and find any mismatch
 
 output minimized outcome data with following fields:
 1. patient
@@ -27,11 +31,41 @@ output minimized outcome data with following fields:
 3. grade
 4. age graded
 
+
+sjlife ctcae file:
+1	sample_id	11
+2	root	Clinically-assessed Variables
+3	first	Graded Adverse Events
+4	second	Auditory System
+5	third	Hearing loss
+6	fourth
+7	agegraded	12.684931507
+8	yearstoevent	10.884931507
+9	grade	1
+
+ccss ctcae file:
+1	sample_id	11
+2	root	Self-reported Behavior and Outcome Variables
+3	first	Graded Adverse Events
+4	second	Auditory system
+5	third	Loss of Hearing
+6	agegraded
+7	grade	0
+
+secondary neoplasm file:
+1	sample_id	11
+2	root	Clinically-assessed Variables
+3	first	Graded Adverse Events
+4	second	Secondary Neoplasms
+5	third	Non Melanoma Skin Cancer
+6	fourth	Basal cell carcinoma
+7	agegraded	45.621917808
+8	yearstoevent	40.605479452
+9	grade	2
 */
 
 const phenotreefile = process.argv[2]
 const outcomefile = process.argv[3]
-//const L2_CHC = 'Graded Adverse Events' // the phenotree is a subset with only chc terms
 
 const fs = require('fs')
 const readline = require('readline')
@@ -77,8 +111,7 @@ v: {}
    v: [ {grade,age}, {} ]
 */
 
-let sjlididx,
-	ccssididx,
+let sampleid,
 	rootidx = 1,
 	firstidx = 2,
 	secondidx = 3,
@@ -92,9 +125,8 @@ rl.on('line', line => {
 	if (first) {
 		first = false
 		const l = line.split('\t')
-		sjlididx = l.indexOf('sjlid')
-		ccssididx = l.indexOf('ccssid')
-		if (sjlididx == -1 && ccssididx == -1) throw 'both sjlid and ccssid are missing'
+		sampleid = l.indexOf('sample_id')
+		if (sampleid == -1) throw '"sample_id" column is missing'
 		rootidx = l.indexOf('root')
 		if (rootidx == -1) throw 'root missing'
 		firstidx = l.indexOf('first')
@@ -112,50 +144,9 @@ rl.on('line', line => {
 		if (gradeidx == -1) throw 'grade missing from header'
 		return
 	}
-	/*
-	sjlife ctcae file:
-	1	sjlid	SJL5332610
-	2	root	Clinically-assessed Variables
-	3	first	Graded Adverse Events
-	4	second	Auditory System
-	5	third	Hearing loss
-	6	fourth
-	7	agegraded	12.684931507
-	8	yearstoevent	10.884931507
-	9	grade	1
-
-	ccss ctcae file:
-	1	ccssid	1262412
-	2	root	Self-reported Behavior and Outcome Variables
-	3	first	Graded Adverse Events
-	4	second	Auditory system
-	5	third	Loss of Hearing
-	6	agegraded
-	7	grade	0
-
-	secondary neoplasm file:
-	1	sjlid	SJL0253301
-	2	ccssid
-	3	root	Clinically-assessed Variables
-	4	first	Graded Adverse Events
-	5	second	Secondary Neoplasms
-	6	third	Non Melanoma Skin Cancer
-	7	fourth	Basal cell carcinoma
-	8	agegraded	45.621917808
-	9	yearstoevent	40.605479452
-	10	grade	2
-
-	*/
 
 	const l = line.split('\t')
-	let patient
-	if (sjlididx == -1 || ccssididx == -1) {
-		// just one id, always first column
-		patient = l[0]
-	} else {
-		// use whichever id available
-		patient = l[sjlididx] || l[ccssididx]
-	}
+	const patient = l[sampleid]
 	const w1 = l[firstidx].replace(/"/g, '')
 	const w2 = l[secondidx].replace(/"/g, '')
 	const w3 = l[thirdidx].replace(/"/g, '')
