@@ -324,7 +324,7 @@ async function plot_diff_scores(q, group, templates) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
-	const read_height = group.canvasheight / diff_scores_list.length
+	const read_height = group.canvasheight / (diff_scores_list.length + 1)
 	let i = 0
 	const space_offset = 0.5
 	//console.log('New group:')
@@ -332,25 +332,18 @@ async function plot_diff_scores(q, group, templates) {
 		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
 			ctx.fillStyle = '#FF0000' // Red color
-			ctx.fillRect(
-				70,
-				15 + i * read_height,
-				//(diff_score * 50) / max_diff_score,
-				diff_score * 20,
-				read_height - space_offset * read_height
-			)
 			//console.log(diff_score / max_diff_score)
 		} else {
 			ctx.fillStyle = '#0AC71A' // Green color
-			ctx.fillRect(
-				70,
-				15 + i * read_height,
-				//(diff_score * 50 * -1) / min_diff_score,
-				diff_score * 20,
-				read_height - space_offset * read_height
-			)
 			//console.log(diff_score / min_diff_score)
 		}
+		ctx.fillRect(
+			70,
+			(i + 1) * read_height,
+			//(diff_score * 50 * -1) / min_diff_score,
+			diff_score * 20,
+			read_height - space_offset * read_height
+		)
 
 		i += 1
 	}
