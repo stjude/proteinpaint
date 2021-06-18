@@ -16,7 +16,9 @@ Newly generated reheadered bcf/vcf files and logfiles will be put under working 
 reheadered bcf/vcf files will be indexed here and moved to the final directory.
 The inputs:
 	1. the folder where bcf/vcf files could be found. The reheadered bcf/vcf files will be put here and the old files will be overwrited. 
-	2. bcf or vcf file you are working on 
+	2. bcf or vcf  you are working on 
+	3. header with SJID
+	4. working directory(/research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/bcf/reheader)
 """
 
 import argparse
