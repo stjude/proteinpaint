@@ -12,7 +12,6 @@ import { getsjcharts } from './getsjcharts'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { init_mdstsne_json } from './mds.samplescatterplot'
 
 import * as wrappers from './wrappers/PpReact'
 
@@ -1186,7 +1185,9 @@ async function launchmdssamplescatterplot(arg, app) {
 		// validate later
 	} else if (arg.analysisdata_file) {
 		try {
-			arg.analysisdata = await init_mdstsne_json(arg.analysisdata_file)
+			const data = await client.dofetch('textfile', { file: arg.analysisdata_file })
+			if (data.error) throw tmp.error
+			else if (data.text) arg.analysisdata = JSON.parse(data.text)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			app.error0(e.message || e)
