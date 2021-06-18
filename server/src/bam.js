@@ -329,7 +329,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
 	const read_height = group.canvasheight / (diff_scores_list.length + 1)
 	let i = 0
-	const space_offset = 0.5
+	const space_offset = 0
 	for (const diff_score of diff_scores_list) {
 		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
@@ -1581,6 +1581,7 @@ function may_trimstacks(group, templates, q) {
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
+	//console.log('templates:', templates)
 	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
 		group.stacks.push(0)
 	}
