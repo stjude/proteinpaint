@@ -1,3 +1,7 @@
+set -e
+set -u
+set -o pipefail
+
 ###############################################
 # procedures to build database table files
 # on mac, run `brew install csvkit` first to get the "csvformat" command
