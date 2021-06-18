@@ -802,7 +802,6 @@
             "name": "Scatterplot",
             "shorthand": "Scatterplot",
             "app": "Apps",
-            "hidden": true,
             "subheading": "Launch App",
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
