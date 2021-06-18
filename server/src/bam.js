@@ -315,8 +315,11 @@ async function download_gdc_bam(req) {
 	return gdc_bam_filenames
 }
 
-async function plot_diff_scores(q, group, templates) {
-	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
+async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
+	const multiplication_factor = 100
+	const diff_score_bar_width =
+		max_diff_score * 1.5 * multiplication_factor + min_diff_score * -1 * multiplication_factor * 1.5
+	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	//const read_height = group.templates[0].r.ntwidth
 	//console.log('group:', group.templates[0])
@@ -327,7 +330,6 @@ async function plot_diff_scores(q, group, templates) {
 	const read_height = group.canvasheight / (diff_scores_list.length + 1)
 	let i = 0
 	const space_offset = 0.5
-	//console.log('New group:')
 	for (const diff_score of diff_scores_list) {
 		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
@@ -338,18 +340,18 @@ async function plot_diff_scores(q, group, templates) {
 			//console.log(diff_score / min_diff_score)
 		}
 		ctx.fillRect(
-			70,
+			min_diff_score * -1 * multiplication_factor,
 			(i + 1) * read_height,
 			//(diff_score * 50 * -1) / min_diff_score,
-			diff_score * 1000,
+			diff_score * multiplication_factor,
 			read_height - space_offset * read_height
 		)
 
 		i += 1
 	}
 	return {
-		height: group.canvasheight * q.devicePixelRatio,
-		width: q.canvaswidth * q.devicePixelRatio,
+		height: group.canvasheight,
+		width: diff_score_bar_width,
 		src: canvas.toDataURL()
 	}
 }
@@ -763,10 +765,16 @@ async function do_query(q) {
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-
+	let max_diff_score, min_diff_score
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
+		if (out.max_diff_score) {
+			max_diff_score = out.max_diff_score
+		}
+		if (out.min_diff_score) {
+			min_diff_score = out.min_diff_score
+		}
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
 
@@ -823,7 +831,7 @@ async function do_query(q) {
 		if (q.asPaired) gr.count.t = templates.length // group.templates
 		if (q.variant) {
 			// diff scores plotted only if a variant is specified by user
-			gr.diff_scores_img = await plot_diff_scores(q, group, templates)
+			gr.diff_scores_img = await plot_diff_scores(q, group, templates, max_diff_score, min_diff_score)
 		}
 
 		gr.src = canvas.toDataURL()

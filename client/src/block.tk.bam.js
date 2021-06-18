@@ -441,7 +441,13 @@ function setTkHeight(tk, data) {
 		}
 		if (g.partstack) {
 			// slider visible
-			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+			if (tk.variants) {
+				g.dom.vslider.g
+					.transition()
+					.attr('transform', 'translate(' + g.data.width / 10 + ',' + (h + g.data.messagerowheights) + ') scale(1)')
+			} else {
+				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+			}
 		}
 		h += g.data.height
 	}
@@ -597,11 +603,14 @@ function makeGroup(gd, tk, block, data) {
 		}
 	}
 	if (tk.variants) {
+		if (group.dom.diff_score_barplot) {
+			delete group.dom.diff_score_barplot
+		}
 		group.dom.diff_score_barplot = tk.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
-			.attr('width', group.data.width)
-			.attr('height', group.data.height)
+			.attr('width', gd.diff_scores_img.width)
+			.attr('height', gd.diff_scores_img.height)
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
