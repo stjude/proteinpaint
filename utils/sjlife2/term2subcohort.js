@@ -78,7 +78,7 @@ function parse_matrix() {
 			const [sample, tid, value] = line.split('\t')
 			if (tid == subcohort_key) return
 			const cohortofthissample = sample2cohort.get(sample)
-			if (!cohortofthissample) throw 'unknown cohort for matrix sample ' + sample
+			if (!cohortofthissample) throw `unknown cohort for matrix sample "${sample}"`
 			if (!c2cohort.has(tid)) c2cohort.set(tid, new Map())
 			if (!c2cohort.get(tid).has(cohortofthissample)) c2cohort.get(tid).set(cohortofthissample, new Set())
 			c2cohort
@@ -98,7 +98,7 @@ function parse_outcome() {
 		rl.on('line', line => {
 			const [sample, tid] = line.split('\t')
 			const cohortofthissample = sample2cohort.get(sample)
-			if (!cohortofthissample) throw 'unknown cohort for outcome sample ' + sample
+			if (!cohortofthissample) throw `unknown cohort for outcome sample "${sample}"`
 			if (!c2cohort.has(tid)) c2cohort.set(tid, new Map())
 			if (!c2cohort.get(tid).has(cohortofthissample)) c2cohort.get(tid).set(cohortofthissample, new Set())
 			c2cohort

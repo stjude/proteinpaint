@@ -3,7 +3,7 @@ if (process.argv.length != 4) {
 	process.exit()
 }
 
-console.log('\nRUNNING validate.ctcae.js ...')
+console.error('\nRUNNING validate.ctcae.js ...')
 
 /*
 to be run three times:
