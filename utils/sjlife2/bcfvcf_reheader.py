@@ -3,12 +3,8 @@
 
 script_description="""
 Python script used to reheader bcf or vcf file
-The following two files are required
-	1. /research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/bcf/reheader/sam2intID
-		the file includes SJID and current integer ID
-		after reheadering, sam2intID will be renamed as sam2intID.old
-		new sam2intID will be generated for next time use
-	2. /research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/clinical/samples.idmap
+The following file is required
+	1. /research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/clinical/samples.idmap
 		new samples.idmap
 	These two file will be used to generate a new file called intIDmap which will contain two columns. 
 	The first column is call old_name(current integer ID) and new_name(new integer ID)
