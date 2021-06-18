@@ -1,4 +1,3 @@
-const serverconfig = require('../../server/serverconfig.json')
 const path = require('path')
 const fs = require('fs')
 const Partjson = require('partjson')
@@ -12,6 +11,8 @@ if (process.argv.length != 4) {
 	console.log('<termdb> <annotation.outcome>, output to stdout for loading to db')
 	process.exit()
 }
+
+console.error('\nRUNNING precompute.ctcae.js ...')
 
 const termdbfile = process.argv[2]
 // input file with lines of term_id \t name \t parent_id \t {termjson}
