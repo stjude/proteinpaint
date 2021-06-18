@@ -6,8 +6,6 @@ Python script used to reheader bcf or vcf file
 The following file is required
 	1. /research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/clinical/samples.idmap
 		new samples.idmap
-	These two file will be used to generate a new file called intIDmap which will contain two columns. 
-	The first column is call old_name(current integer ID) and new_name(new integer ID)
 Newly generated reheadered bcf/vcf files and logfiles will be put under working directory. Here it is /research/rgs01/resgen/legacy/gb_customTracks/tp/files/hg38/sjlife/bcf/reheader. 
 reheadered bcf/vcf files will be indexed here and moved to the final directory.
 The inputs:
