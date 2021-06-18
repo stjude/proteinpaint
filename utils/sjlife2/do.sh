@@ -48,7 +48,7 @@ node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.
 cat PRS/ancestry.prs >> ancestry
 node ~/proteinpaint/utils/sjlife2/subcohort.validateancestry.js ancestry
 
-node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/files/hg38/sjlife/clinical/
+node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js
 # created "termdb.updated"
 # created "termid2htmldef"
 mv termdb.updated termdb
