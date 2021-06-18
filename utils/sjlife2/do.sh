@@ -52,7 +52,7 @@ node ~/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js /Users/xzhou1/data/tp/f
 # created "termdb.updated"
 # created "termid2htmldef"
 mv termdb.updated termdb
-cat PRS/termdb.prs >> termdb
+node ~/proteinpaint/utils/sjlife2/validate.termdbfile.js PRS/termdb.prs >> termdb
 
 node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree/sjlifectcae.tree raw/intID/outcomes_sjlife.txt > annotation.outcome
 node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree/ccssctcae.tree raw/intID/outcomes_ccss.txt >> annotation.outcome
