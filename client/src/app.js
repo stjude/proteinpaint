@@ -1161,7 +1161,7 @@ async function may_launchGeneView(arg, app) {
 	return false
 }
 
-function launchmdssamplescatterplot(arg, app) {
+async function launchmdssamplescatterplot(arg, app) {
 	if (!arg.genome) {
 		app.error0('missing genome for mdssamplescatterplot')
 		return
@@ -1182,6 +1182,16 @@ function launchmdssamplescatterplot(arg, app) {
 		delete arg.dataset
 	} else if (arg.analysisdata) {
 		// validate later
+	} else if (arg.analysisdata_file) {
+		try {
+			const data = await client.dofetch('textfile', { file: arg.analysisdata_file })
+			if (data.error) throw tmp.error
+			else if (data.text) arg.analysisdata = JSON.parse(data.text)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			app.error0(e.message || e)
+			return
+		}
 	} else {
 		app.error0('neither .dataset or .analysisdata is given')
 		return
