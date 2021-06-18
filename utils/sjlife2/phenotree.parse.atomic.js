@@ -47,6 +47,8 @@ step 3:
 
 */
 
+console.log('\nRUNNING phenotree.parse.atomic.js ...')
+
 const file_phenotree = process.argv[2]
 const file_matrix = process.argv[3]
 const file_termconfig = process.argv[4]
@@ -131,7 +133,11 @@ function step1_parsephenotree() {
 		const [t1, t2, t3, t4, t5, key0, configstr0] = lines[i].split('\t')
 
 		try {
-			if (!configstr0 || !configstr0.trim()) throw 'configstr missing'
+			if (!configstr0 || !configstr0.trim()) {
+				console.error('missing configuration string, line: ' + i + ', term: ' + key0)
+				continue
+				//throw 'configstr missing'
+			}
 			const L1 = t1.trim(),
 				L2 = t2.trim(),
 				L3 = t3.trim(),
