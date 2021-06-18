@@ -24,6 +24,20 @@ runproteinpaint({
 		state:{
 			dslabel:'SJLife',
 			genome:'hg38',
+			tree: {
+				expandedTermIds: ['root', 'Genetic Factors', 'Polygenic Risk Scores', 'prs_PGS000001'],
+				visiblePlotIds: ['prs_PGS000001'],
+				plots: {
+					prs_PGS000001: {
+						term: {
+							id: 'prs_PGS000001'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			},
 			termfilter: {
 				afilter:{
 					type:'tvslst',
