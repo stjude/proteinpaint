@@ -216,6 +216,9 @@ const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
 const pileup_totalcolor = '#e0e0e0'
 
+const alt_diff_score_color = '#FF0000'
+const ref_diff_score_color = '#47C8FF'
+
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
 const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
@@ -329,22 +332,20 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
 	const read_height = group.canvasheight / (diff_scores_list.length + 1)
 	let i = 0
-	const space_offset = 0
+	const dist_bw_reads = group.stackspace / group.canvasheight
 	for (const diff_score of diff_scores_list) {
 		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
-			ctx.fillStyle = '#FF0000' // Red color
-			//console.log(diff_score / max_diff_score)
+			ctx.fillStyle = alt_diff_score_color
 		} else {
-			ctx.fillStyle = '#0AC71A' // Green color
-			//console.log(diff_score / min_diff_score)
+			ctx.fillStyle = ref_diff_score_color
 		}
 		ctx.fillRect(
 			min_diff_score * -1 * multiplication_factor,
 			(i + 1) * read_height,
 			//(diff_score * 50 * -1) / min_diff_score,
 			diff_score * multiplication_factor,
-			read_height - space_offset * read_height
+			read_height - dist_bw_reads * read_height
 		)
 
 		i += 1

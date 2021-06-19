@@ -476,10 +476,7 @@ function updateExistingGroups(data, tk, block) {
 			.attr('height', gd.diff_scores_img.height)
 
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		if (group.dom.diff_score_barplot_partstack) {
-			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
-			delete group.dom.diff_score_barplot_partstack
-		}
+		group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
 
 		//tk.config_handle.transition().attr('x', 0)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
@@ -1331,10 +1328,6 @@ function renderGroup(group, tk, block) {
 	update_boxes(group, tk, block)
 	if (group.partstack) {
 		if (tk.variants) {
-			console.log('group:', group)
-			//if (group.dom.diff_score_barplot_partstack) {
-			//	delete group.dom.diff_score_barplot_partstack
-			//}
 			group.dom.diff_score_barplot_partstack
 				.attr('xlink:href', group.data.diff_scores_img.src)
 				.attr('width', group.data.diff_scores_img.width)
