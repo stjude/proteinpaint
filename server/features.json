@@ -2,10 +2,9 @@
     "examples": [
         {
             "name": "GenomePaint",
-            "shorthand": "GenomePaint",
             "app": "Genome Browser",
-            "subheading": "Tracks",
-            "blurb": "Explore coding and non-coding variants in cancer<br><br>",
+            "is_ui": false,
+            "blurb": "Explore coding and non-coding variants in cancer",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
             "clickcard2url" : "https://genomepaint.stjude.cloud/",
             "buttons": {
@@ -27,10 +26,9 @@
         },
         {
             "name": "Kaplan-Meier plot",
-            "shorthand": "KM plot",
             "app": "Genome Browser",
             "hidden": true,
-            "subheading": "GenomePaint",
+            "is_ui": false,
             "blurb": "genomic feature analysis",
             "image": "",
             "buttons": {
@@ -41,10 +39,9 @@
         },
         {
             "name": "Sample Matrix",
-            "shorthand": "Sample Matrix",
             "app": "Genome Browser",
             "hidden": true,
-            "subheading": "GenomePaint",
+            "is_ui": false,
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
             "buttons": {
@@ -55,9 +52,8 @@
         },
         {
             "name": "BigWig",
-            "shorthand": "BigWig",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "buttons": {
@@ -83,9 +79,8 @@
         },
         {
             "name": "Stranded BigWig",
-            "shorthand": "Stranded BigWig",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "with forward & reverse strands",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
             "buttons": {
@@ -111,9 +106,8 @@
         },
         {
             "name": "JSON BED",
-            "shorthand": "JSON BED",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "genomic feature annotation",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
             "buttons": {
@@ -139,9 +133,8 @@
         },
         {
             "name": "Allelic imbalance",
-            "shorthand": "AICheck",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "from tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
             "buttons": {
@@ -166,9 +159,8 @@
         },
         {
             "name": "Profile gene value",
-            "shorthand": "PGV",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "profiling results & gene-level values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "buttons": {
@@ -210,9 +202,8 @@
         },
         {
             "name": "Expression rank",
-            "shorthand": "Expression Rank",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "against all samples from a cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "buttons": {
@@ -238,9 +229,8 @@
         },
         {
             "name": "Hi-C",
-            "shorthand": "Hi-C",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "chromatin interaction at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "buttons": {
@@ -269,9 +259,8 @@
         },
         {
             "name": "Lollipop",
-            "shorthand": "Lollipop",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "buttons": {
@@ -290,9 +279,8 @@
         },
         {
             "name": "Splice junction",
-            "shorthand": "Splice Junction",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "RNA splice junction",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "buttons": {
@@ -317,11 +305,12 @@
         },
         {
             "name": "Track list & facet table",
-            "shorthand": "Track list",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
+            "update_expire": "2021-07-02",
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
+            "sandbox_intro": "To view the facet table:<ul><li>Click on the Tracks button in the genome browser toolbar</li><li>A button appears under FACET. Click on '77 tracks from My facet table.'</li><li>Launch track by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
             "buttons": {
                 "example":{
                     "block": 1,
@@ -338,9 +327,8 @@
         },
         {
             "name": "VCF",
-            "shorthand": "VCF",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "blurb": "SNV/indel variants",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
             "buttons": {
@@ -424,9 +412,9 @@
         },
         {
             "name": "Arc Track",
-            "shorthand": "Arc",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
+            "new_expire": "2021-07-02",
             "blurb": "pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "buttons": {
@@ -454,9 +442,8 @@
         },
         {
             "name": "ASE",
-            "shorthand": "ASE",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "isbeta": 1,
             "blurb": "allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
@@ -550,9 +537,8 @@
         },
         {
             "name": "BAM",
-            "shorthand": "BAM",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "isbeta": 1,
             "blurb": "sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
@@ -578,10 +564,8 @@
         },
         {
             "name": "GDC BAM slicing",
-            "shorthand": "GDC bam slice",
             "app": "Genome Browser",
-            "subheading": "Tracks",
-			"note":"if subheading is changed to Launch App, the card will disappear",
+            "is_ui": true,
             "isbeta": 1,
             "blurb": "visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
@@ -598,9 +582,8 @@
         },
         {
             "name": "Bampile",
-            "shorthand": "Bampile",
             "app": "Genome Browser",
-            "subheading": "Tracks",
+            "is_ui": false,
             "isbeta": 1,
             "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
@@ -626,9 +609,8 @@
         },
         {
             "name": "FusionEditor",
-            "shorthand": "Fusion Editor",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "to review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "buttons": {
@@ -644,9 +626,8 @@
         },
         {
             "name": "2DMAF",
-            "shorthand": "2DMAF",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "buttons": {
@@ -663,10 +644,9 @@
         },
         {
             "name": "FIMO motif analysis",
-            "shorthand": "FIMO",
             "app": "Apps",
+            "is_ui": true,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "predicts motif changes",
             "image": "",
             "buttons": {
@@ -677,9 +657,8 @@
         },
         {
             "name": "Load mutations from text files",
-            "shorthand": "Heatmap, mutation",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "buttons": {
@@ -695,9 +674,8 @@
         },
         {
             "name": "MA+Volcano plots",
-            "shorthand": "MA+Volcano",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "differential gene expression",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "buttons": {
@@ -722,9 +700,8 @@
         },
         {
             "name": "MAF-timeline",
-            "shorthand": "MAF",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "buttons": {
@@ -740,10 +717,9 @@
         },
         {
             "name": "Mutation burden & spectrum",
-            "shorthand": "",
             "app": "Apps",
+            "is_ui": true,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "",
             "image": "",
             "buttons": {
@@ -754,11 +730,10 @@
         },
         {
             "name": "Junction by sample matrix",
-            "shorthand": "",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
             "blurb": "view data at a locus",
-            "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junctionbysample-square.png",
             "buttons": {
                 "example": {
                     "nobox": 1,
@@ -772,10 +747,9 @@
         },
         {
             "name": "Study View",
-            "shorthand": "Study View",
             "app": "Apps",
+            "is_ui": true,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "multiple viewing options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "buttons": {
@@ -786,10 +760,9 @@
         },
         {
             "name": "Hi-C whole-genome view",
-            "shorthand": "HiC whole genome",
             "app": "Apps",
+            "is_ui": true,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
             "buttons": {
@@ -800,9 +773,9 @@
         },
         {
             "name": "Scatterplot",
-            "shorthand": "Scatterplot",
             "app": "Apps",
-            "subheading": "Launch App",
+            "is_ui": true,
+            "hidden": true,
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
@@ -822,17 +795,16 @@
         },
         {
             "name": "Single Cell",
-            "shorthand": "Single Cell",
             "app": "Apps",
+            "is_ui": false,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "buttons": {
                 "example": {
                     "nobox": 1,
                     "noheader": 1,
-                    "singlecell": { 
+                    "singlecell": {
                         "genome": "mm10",
                         "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
                      }
@@ -844,10 +816,9 @@
         },
         {
             "name": "termdb with custom vocabulary",
-            "shorthand": "termdb",
             "app": "Apps",
+            "is_ui": true,
             "hidden": true,
-            "subheading": "Launch App",
             "blurb": "TODO: Brief description of track or app",
             "image": "",
             "buttons": {

@@ -19,17 +19,11 @@ export async function init_examples(par) {
 	// const holddiv = make_top_fnDiv(gbrowser_col)
 	// const searchbar_div = app_col.append('div')
 
-	// subheaders
-	// TODO: termporarily hiding 'genomepaint' and 'Experimental tracks' headings, enable once more card are visible under this
-	// const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
-	// const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
-		// gpaintList,
 		browserList,
-		// experimentalList,
 		launchList
 	}
 	const page_args = {
@@ -150,30 +144,19 @@ function make_searchbar(track_args, page_args, div) {
 }
 
 async function loadTracks(args, page_args, filteredTracks) {
-	const GPaintTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
-	)
 	const BrowserTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Tracks'
-	)
-	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
+		track => track.app == 'Genome Browser'
 	)
 	const LaunchApps = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Apps' && track.subheading == 'Launch App'
+		track => track.app == 'Apps'
 	)
-	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
-
 	try {
-		// displayTracks(GPaintTracks, args.gpaintList, page_args)
 		displayTracks(BrowserTracks, args.browserList, page_args)
-		// displayTracks(ExperimentalTracks, args.experimentalList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
 	} catch (err) {
 		console.error(err)
 	}
 }
-//TODO: ?? Styling difference between clickable tiles and not clickable tiles (which ones have examples and which don't)??
 
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
@@ -189,7 +172,6 @@ function displayTracks(tracks, holder, page_args) {
 						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
 				}
 			<span class="track-image"><img src="${track.image}"></img></span>
-			<span class="track-tag"></span>
 			<div class="track-btns">
 			${
 				track.buttons.url
@@ -214,7 +196,34 @@ function displayTracks(tracks, holder, page_args) {
 			})
 
 		// add Beta tag for experimental tracks
-		if (track.isbeta) li.select('.track-tag').text('Beta')
+		if (track.isbeta == true) {
+			li.append('div')
+				.text('Beta')
+				.attr('class', 'track-ribbon')
+				.style('color', '#4f5459')
+				.style('background-color', '#e6f0ff')
+		}
+
+		if (track.update_expire || track.new_expire) {
+			const today = new Date()
+			const update = new Date(track.update_expire)
+			const newtrack = new Date(track.new_expire)
+			if (update > today){
+				li.append('div')
+				.text('Updated')
+				.attr('class', 'track-ribbon')
+				.style('color', '#4f5459')
+				.style('background-color', '#fffecc')
+				.style('font-size', '10.5px')
+			}
+			if (newtrack > today){
+				li.append('div')
+				.text('New')
+				.attr('class', 'track-ribbon')
+				.style('color', '#4f5459')
+				.style('background-color', '#e9fce6')
+			}
+		}
 
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
@@ -254,8 +263,14 @@ function displayTracks(tracks, holder, page_args) {
 async function openExample(track, holder) {
 	// crate unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
+	sandbox_div.header.text(track.name + (track.is_ui != undefined && track.is_ui == false ? ' Example' : ''))
 
+	if (track.sandbox_intro) {
+		const intro = sandbox_div.body
+		.append('div')
+		.style('margin', '20px')
+		.html(track.sandbox_intro)
+	}
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
