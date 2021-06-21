@@ -1,6 +1,8 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
 import * as client from './client'
+import { contigNameNoChr2 } from '../shared/common'
+import { url2map } from './app.parseurl'
 
 /* args required to generate bam track
     gdc_args = 
@@ -95,7 +97,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 
 	const gdcid_inputdiv = formdiv.append('div')
 
-	const input = gdcid_inputdiv
+	const gdcid_input = gdcid_inputdiv
 		.append('input')
 		.attr('size', 40)
 		.style('padding', '3px 10px')
@@ -111,30 +113,30 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.html('loading...')
 
 	async function gdc_search() {
-		const gdc_id = input.property('value').trim()
+		const gdc_id = gdcid_input.property('value').trim()
 		if (!gdc_id.length) {
 			baminfo_div.style('display', 'none')
 			saydiv.style('display', 'none')
 			return
 		} else {
 			// disable input field and show 'loading...' until response returned from gdc api
-			input.attr('disabled', 1)
+			gdcid_input.attr('disabled', 1)
 			gdc_loading.style('display', 'inline-block')
 		}
 		const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
 		// enable input field and hide 'Loading...'
-		input.attr('disabled', null)
+		gdcid_input.attr('disabled', null)
 		gdc_loading.style('display', 'none')
 		gdc_args.bam_files = [] //empty bam_files array after each gdc api call
 		if (bam_info.error) {
 			cmt(bam_info.error, 1)
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.file_uuid) {
+		} else if (bam_info.is_file_uuid) {
 			// update file id to be suppliled to gdc bam query
 			gdc_args.bam_files.push({ file_id: gdc_id })
 			update_singlefile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
-		} else if (bam_info.case_uuid || bam_info.case_id) {
+		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
 			update_multifile_table(bam_info.file_metadata)
 			saydiv.style('display', 'none')
 		}
@@ -181,9 +183,8 @@ export function bamsliceui(genomes, holder, hosturl) {
 		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
 		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.refAllele.altAllele' }
 	]
-	for (const field of input_fields) {
-		makeFormInput(field)
-	}
+
+	const [position_input, variant_input] = makeFormInput(input_fields)
 
 	formdiv
 		.append('div')
@@ -206,7 +207,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.text('submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args)
+				validateInputs(gdc_args, genomes[default_genome])
 			} catch (e) {
 				cmt(e, 1)
 				return
@@ -218,20 +219,25 @@ export function bamsliceui(genomes, holder, hosturl) {
 			renderBamSlice(gdc_args, genomes[default_genome], visualdiv, hosturl)
 		})
 
-	function makeFormInput(field) {
-		formdiv
-			.append('div')
-			.style('padding', '3px 10px')
-			.text(field.title)
+	function makeFormInput(fields) {
+		const inputs = []
+		for (const field of fields) {
+			formdiv
+				.append('div')
+				.style('padding', '3px 10px')
+				.text(field.title)
 
-		const input = formdiv
-			.append('input')
-			.attr('size', field.size || 20)
-			.style('padding', '3px 10px')
-			.property('placeholder', field.placeholder || '')
-			.on('change', () => {
-				gdc_args[field.key] = input.property('value').trim()
-			})
+			const input = formdiv
+				.append('input')
+				.attr('size', field.size || 20)
+				.style('padding', '3px 10px')
+				.property('placeholder', field.placeholder || '')
+				.on('change', () => {
+					gdc_args[field.key] = input.property('value').trim()
+				})
+			inputs.push(input)
+		}
+		return inputs
 	}
 
 	function update_singlefile_table(bam_metadata) {
@@ -299,6 +305,9 @@ export function bamsliceui(genomes, holder, hosturl) {
 							file_id: bam_info.file_uuid,
 							track_name: bam_info.sample_type + ', ' + bam_info.experimental_strategy + ', ' + bam_info.entity_id
 						})
+					} else {
+						// remove from array if checkbox unchecked
+						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
 					}
 				})
 			for (const row of baminfo_rows) {
@@ -316,9 +325,36 @@ export function bamsliceui(genomes, holder, hosturl) {
 			.duration(500)
 			.style('height', bam_files.length * 22 + 'px')
 	}
+
+	autofill_url()
+
+	function autofill_url() {
+		// autofill input fields if supplied from url
+		// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
+		// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
+		// TODO: can't auto upload file for gdc_token provided from url,
+		// google suggests it's not possible because of security reason
+		const urlp = url2map()
+		if (urlp.has('gdc_id'))
+			gdcid_input
+				.property('value', urlp.get('gdc_id'))
+				.node()
+				.dispatchEvent(new Event('keyup'))
+
+		if (urlp.has('gdc_pos'))
+			position_input
+				.property('value', urlp.get('gdc_pos'))
+				.node()
+				.dispatchEvent(new Event('change'))
+		else if (urlp.has('gdc_var'))
+			variant_input
+				.property('value', urlp.get('gdc_var'))
+				.node()
+				.dispatchEvent(new Event('change'))
+	}
 }
 
-function validateInputs(obj) {
+function validateInputs(obj, genome) {
 	if (!obj) throw 'no parameters passing to validate'
 	if (!obj.gdc_token) throw 'gdc token missing'
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
@@ -330,6 +366,14 @@ function validateInputs(obj) {
 	if (!obj.position && !obj.variant) throw ' position or variant is required'
 	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
+    const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
+    const [nocount, hascount] = contigNameNoChr2( genome, [chr])
+    if (nocount+hascount==0) throw 'chromosome is not valid in position/variant input: ' + chr
+    else if (nocount){
+        // add chr to non-standard position or variant
+        if (obj.position) obj.position = 'chr' + obj.position
+        if (obj.variant) obj.variant = 'chr' + obj.variant
+    }
 }
 
 function renderBamSlice(args, genome, holder, hostURL) {
@@ -347,7 +391,9 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
-		const variant_str = args.variant.split('.')
+        // TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
+        // solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
+		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
 			pos: Number.parseInt(variant_str[1]),
@@ -364,7 +410,8 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		const tk = {
 			type: client.tkt.bam,
 			name: file.track_name || 'sample bam slice',
-			gdc: args.gdc_token + ',' + file.file_id,
+			gdc: args.gdc_token,
+			gdc_file: file.file_id,
 			downloadgdc: 1,
 			file: 'dummy_str'
 		}

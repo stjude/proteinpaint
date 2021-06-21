@@ -65,6 +65,8 @@ class Filter {
 
 		this.api = {
 			main: async (rawFilter, opts = {}) => {
+				this.dom.controlsTip.hide()
+				this.dom.treeTip.hide()
 				/*
 				rawFilter{}
 				  the raw filter data structure

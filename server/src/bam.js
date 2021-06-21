@@ -118,7 +118,8 @@ box {}
 
 *********************** function cascade
 download_gdc_bam  // For downloading gdc bam files
-        get_gdc_bam
+	get_gdc_bam
+		index_bam
 get_q
 do_query
 	query_reads
@@ -285,24 +286,30 @@ at r.ntwidth<1:
 */
 
 async function download_gdc_bam(req) {
-	let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
+	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.query.gdc.split(',')[0]
-		const gdc_case_id = req.query.gdc.split(',')[1]
+		const gdc_token = req.get('x-auth-token')
+		const gdc_file_id = req.query.gdc_file
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
-		if (!fs.existsSync(dir)) {
-			// Check if directory exists, if not create one
-			fs.mkdir(dir, err => {
-				if (err) {
-					throw err
+		try {
+			await fs.promises.stat(dir)
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// make dir
+				try {
+					await fs.promises.mkdir(dir, { recursive: true })
+				} catch (e) {
+					throw 'url dir: cannot mkdir'
 				}
-			})
+			} else {
+				throw 'stating gz url dir: ' + e.code
+			}
 		}
-		const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
+		const gdc_bam_filename = path.join(gdc_token_hash, 'temp.' + Math.random().toString() + '.bam')
 		// Need to make directory for each user using token
-		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_case_id, gdc_bam_filename)
+		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, gdc_bam_filename)
 		gdc_bam_filenames.push(gdc_bam_filename)
 	}
 	return gdc_bam_filenames
@@ -323,11 +330,9 @@ async function plot_pileup(q, templates) {
 		bplst[ridx] = await run_samtools_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
-		const lst = []
 		for (const b of bplst[ridx]) {
-			if (b) lst.push(b.total)
+			if (b) maxValue = Math.max(maxValue, b.total)
 		}
-		maxValue = Math.max(maxValue, ...lst)
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
@@ -601,18 +606,19 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
-	if (req.query.gdc) {
+	// if gdc_token and case_id present, it will be moved to x-auth-token
+	if (req.get('x-auth-token')) {
 		q = {
 			genome,
-			file: req.query.file, // will need to change this to a loop when viewing multiple regions in the same gdc sample
+			file: path.join(serverconfig.cachedir, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
-		//q.gdc_token = req.query.gdc.split(',')[0]
-		q.gdc_case_id = req.query.gdc.split(',')[1]
+		//q.gdc_token = req.get('x-auth-token').split(',')[0]
+		q.gdc_file = req.query.gdc_file
 		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
@@ -826,9 +832,6 @@ async function query_reads(q) {
 			start: q.variant.pos,
 			stop: q.variant.pos + q.variant.ref.length
 		}
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q)
 		q.regions[0].lines = r.lines
 		return
@@ -837,28 +840,35 @@ async function query_reads(q) {
 		return
 	}
 	for (const r of q.regions) {
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q) // add r.lines[]
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
+async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = gdc_token
+	headers['X-Auth-Token'] = token
+	const file = path.join(serverconfig.cachedir, cache_dir)
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdc_case_id + '?region=' + chr + ':' + start + '-' + stop
-	console.log(url)
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
-		//console.log('Downloaded ' + bam_file_name.toString())
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(file))
+		await index_bam(file)
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
 		throw 'Cannot retrieve bam file: ' + error
 	}
+}
+
+function index_bam(file) {
+	// only work for gdc bam slices, file is absolute path in cache dir
+	return new Promise((resolve, reject) => {
+		const ps = spawn(samtools, ['index', file])
+		ps.on('close', code => {
+			resolve()
+		})
+	})
 }
 
 function query_region(r, q) {
@@ -894,31 +904,30 @@ function query_region(r, q) {
 	})
 }
 
+/*
+'samtools depth' returns single base depth
+results are collected in bplst[]
+when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
+when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
+should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
+*/
 function run_samtools_depth(q, r) {
-	// "samtools depth" returns single base depth
-	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
-	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		// must use r.start+1 to query bam
-		let ls = ''
-		if (q.gdc_case_id) {
-			ls = spawn(samtools, ['depth', '-g', 'DUP', q.file || q.url], { cwd: q.dir })
-		} else {
-			ls = spawn(
-				samtools,
-				[
-					'depth',
-					'-r',
-					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-					'-g',
-					'DUP',
-					q.file || q.url
-				],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ls.stdout })
+		const ps = spawn(
+			samtools,
+			[
+				'depth',
+				'-r',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+				'-g',
+				'DUP',
+				q.file || q.url
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
@@ -1277,7 +1286,7 @@ function parse_one_segment(arg) {
 		}
 		prev = i + 1
 		if (cigar == '=' || cigar == 'M') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+			if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
 				// visible
 				boxes.push({
 					opr: cigar,
@@ -2166,7 +2175,16 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop
+	let firstseg,
+		lastseg,
+		dir,
+		e,
+		_file,
+		isurl,
+		readstart,
+		readstop,
+		gdc_query = false
+	if (req.get('x-auth-token')) gdc_query = true
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2174,15 +2192,15 @@ async function query_oneread(req, r) {
 		if (Number.isNaN(readstart) || Number.isNaN(readstop))
 			throw 'readstart/stop not provided for read with unknown order'
 	}
-	if (!req.query.gdc) {
+	if (!gdc_query) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
 	return new Promise((resolve, reject) => {
 		let ps
-		if (req.query.gdc) {
-			ps = spawn(samtools, ['view', req.query.file])
+		if (gdc_query) {
+			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
 		} else {
 			ps = spawn(
 				samtools,

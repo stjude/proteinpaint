@@ -29,6 +29,6 @@ if (($NUMMATCHEDDIRS < $MAXRETAINED + 1)); then
 	exit 0
 fi
 
-oldestdir="pp-$(./helpers/recent.sh | tail -n1)"
+oldestdir="available/pp-$(./helpers/recent.sh | tail -n1)" 
 echo "deleting $oldestdir"
 rm -rf $oldestdir

@@ -176,7 +176,19 @@ arg
 			if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
 				const url_str = urlp.get('mdsjsonurl')
 				const file_str = urlp.get('mdsjson')
-				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str, arg.holder)
+				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str)
+			}
+			if (urlp.has('tsnejson')) {
+				const file_str = urlp.get('tsnejson')
+				const data = await client.dofetch('textfile', { file: file_str })
+				if (data.error) throw tmp.error
+				else if (data.text) {
+					plot_data = {
+						mdssamplescatterplot: {
+							analysisdata: JSON.parse(data.text)
+						}
+					}
+				}
 			}
 		} catch (e) {
 			if (e.stack) console.log(e.stack)

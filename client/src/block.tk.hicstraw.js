@@ -406,14 +406,10 @@ function loadStrawdata(tk, block) {
 			par.isfrag = true
 		}
 		tasks.push(
-			fetch(
-				new Request(block.hostURL + '/hicdata', {
+			client
+				.dofetch2('hicdata', {
 					method: 'POST',
 					body: JSON.stringify(par)
-				})
-			)
-				.then(data => {
-					return data.json()
 				})
 				.then(data => {
 					if (data.error) throw data.error
@@ -449,14 +445,10 @@ function loadStrawdata(tk, block) {
 				par.isfrag = true
 			}
 			tasks.push(
-				fetch(
-					new Request(block.hostURL + '/hicdata', {
+				client
+					.dofetch2('hicdata', {
 						method: 'POST',
 						body: JSON.stringify(par)
-					})
-				)
-					.then(data => {
-						return data.json()
 					})
 					.then(data => {
 						if (data.error) throw { message: data.error }
@@ -507,8 +499,7 @@ function parseStrawData(datalst, resolution_bp, resolution_frag, tk, block) {
 			r_right = tk.regions[data.rightregionidx]
 			fs_right = r_right.width / (r_right.stop - r_right.start)
 
-			firstisleft =
-				block.genome.chrlookup[r_left.chr.toUpperCase()].len > block.genome.chrlookup[r_right.chr.toUpperCase()].len
+			firstisleft = tk.hic.chrorder.indexOf(r_left.chr) < tk.hic.chrorder.indexOf(r_right.chr)
 		}
 
 		for (const [n1, n2, v] of data.items) {
