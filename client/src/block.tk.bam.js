@@ -125,6 +125,7 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
+		console.log('data:', data)
 		if (data.error) throw data.error
 		if (data.colorscale) {
 			// available from 1st query, cache
@@ -376,7 +377,13 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight - 2)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+		tk.variants[0].chr +
+		'.' +
+		(parseInt(tk.variants[0].pos) + 1).toString() +
+		'.' +
+		tk.variants[0].ref +
+		'.' +
+		tk.variants[0].alt
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -420,6 +427,11 @@ function may_render_variant(data, tk, block) {
 			//.attr('dy', '.10em')
 			.attr('font-size', tk.dom.variantrowheight)
 			.text(text_string)
+	}
+
+	if (data.max_diff_score) {
+		// Should always be true if variant field was given by user, but may change in the future
+		const diff_score_start_pos = data.pileup_data.width
 	}
 }
 

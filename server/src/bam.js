@@ -766,15 +766,14 @@ async function do_query(q) {
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-	let max_diff_score, min_diff_score
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
 		if (out.max_diff_score) {
-			max_diff_score = out.max_diff_score
+			result.max_diff_score = out.max_diff_score
 		}
 		if (out.min_diff_score) {
-			min_diff_score = out.min_diff_score
+			result.min_diff_score = out.min_diff_score
 		}
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
@@ -832,7 +831,7 @@ async function do_query(q) {
 		if (q.asPaired) gr.count.t = templates.length // group.templates
 		if (q.variant) {
 			// diff scores plotted only if a variant is specified by user
-			gr.diff_scores_img = await plot_diff_scores(q, group, templates, max_diff_score, min_diff_score)
+			gr.diff_scores_img = await plot_diff_scores(q, group, templates, result.max_diff_score, result.min_diff_score)
 		}
 
 		gr.src = canvas.toDataURL()
