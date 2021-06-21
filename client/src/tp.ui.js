@@ -200,11 +200,11 @@ if(cohort.render) {
 			}
 		}
 
-		if (!cohort.disable_sampletable) {
+		/*if (!cohort.disable_sampletable) {
 			// show sample table
 			const [butt, folder] = makefolder(cohort, cohort.show_sampletable)
 			tp_sample(cohort, ds2clst, butt, folder, hostURL)
-		}
+		}*/
 
 		// hm
 		if (hassamplelst.length > 0 && !cohort.hardcodemap) {
@@ -301,7 +301,7 @@ if(cohort.variantgene) {
 		})
 	}
 
-	if (hasdiseaselst.length) {
+	/*if (hasdiseaselst.length) {
 		const [skbtn, skdiv] = makefolder(cohort)
 		skbtn
 			.style('font-size', '.8em')
@@ -318,9 +318,9 @@ if(cohort.variantgene) {
 			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
 			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.sk
 		})
-	}
+	}*/
 
-	if (
+	/*if (
 		hasdiseaselst.length ||
 		cohort.piebarJSON ||
 		(cohort.heatmapJSON && cohort.heatmapJSON.samplegroup && cohort.heatmapJSON.samplegroup.length)
@@ -344,7 +344,7 @@ if(cohort.variantgene) {
 			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
 			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.pb
 		})
-	}
+	}*/
 
 	if (cohort.browserview) {
 		const [butt, folder] = makefolder(cohort)
