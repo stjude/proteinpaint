@@ -265,6 +265,12 @@ async function openExample(track, holder) {
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header.text(track.name + (track.is_ui != undefined && track.is_ui == false ? ' Example' : ''))
 
+	if (track.sandbox_intro) {
+		const intro = sandbox_div.body
+		.append('div')
+		.style('margin', '20px')
+		.html(track.sandbox_intro)
+	}
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
