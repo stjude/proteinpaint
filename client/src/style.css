@@ -845,15 +845,15 @@ hr {
     border-radius: 3px;
 }
 
-.track-ribbon{
+.track>.track-ribbon{
     grid-area: image;
     height: auto;
-    width: 120%;
+    width: 100%;
     top: 5%;
-    left: -30%;
+    left: -25%;
     position: relative;
     text-align: center;
-    transform: rotateY(0deg) rotate(320deg);
+    transform: rotate(-45deg);
     transform-origin: top left;
     align-items: center;
     justify-content: center;

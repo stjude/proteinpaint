@@ -200,9 +200,29 @@ function displayTracks(tracks, holder, page_args) {
 			li.append('div')
 				.text('Beta')
 				.attr('class', 'track-ribbon')
-				.attr('id', 'beta-banner')
-				.style('color', 'black')
+				.style('color', '#4f5459')
 				.style('background-color', '#e6f0ff')
+		}
+
+		if (track.update_expire || track.new_expire) {
+			const today = new Date()
+			const update = new Date(track.update_expire)
+			const newtrack = new Date(track.new_expire)
+			if (update > today){
+				li.append('div')
+				.text('Updated')
+				.attr('class', 'track-ribbon')
+				.style('color', '#4f5459')
+				.style('background-color', '#fffecc')
+				.style('font-size', '10.5px')
+			}
+			if (newtrack > today){
+				li.append('div')
+				.text('New')
+				.attr('class', 'track-ribbon')
+				.style('color', '#4f5459')
+				.style('background-color', '#e9fce6')
+			}
 		}
 
 		// create custom track button for genomepaint card
@@ -242,7 +262,7 @@ function displayTracks(tracks, holder, page_args) {
 //Opens example of app in landing page container
 async function openExample(track, holder) {
 	// crate unique id for each app div
-	const sandbox_div = newSandboxDiv()
+	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header.text(track.name + (track.is_ui != undefined && track.is_ui == false ? ' Example' : ''))
 
 	// template runpp() arg

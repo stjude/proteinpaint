@@ -307,6 +307,7 @@
             "name": "Track list & facet table",
             "app": "Genome Browser",
             "is_ui": false,
+            "update_expire": "2021-07-02",
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "buttons": {
@@ -412,6 +413,7 @@
             "name": "Arc Track",
             "app": "Genome Browser",
             "is_ui": false,
+            "new_expire": "2021-07-02",
             "blurb": "pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "buttons": {
