@@ -21,6 +21,7 @@ async function get_gdc_data(gdc_id) {
 	// type of gdc_ids
 	const filter_types = [
 		{ is_file_uuid: 1, field: 'file_id' },
+		{ is_file_id: 1, field: 'file_name' },
 		{ is_case_uuid: 1, field: 'cases.case_id' },
 		{ is_case_id: 1, field: 'cases.submitter_id' }
 	]
@@ -72,7 +73,7 @@ async function get_gdc_data(gdc_id) {
 		filter.content[0].content.field = f.field
         // only if gdc_id is not file_id
         // check if submitted id is valid case id or not
-		if (!f.is_file_uuid){
+		if (!f.is_file_uuid && !f.is_file_id){
             const case_check = await query_gdc_api(filter, gdc_apis.gdc_cases)
             if (!case_check.data.hits.length){
                 if (f.is_case_uuid) valid_case_uuid = false

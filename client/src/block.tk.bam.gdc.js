@@ -101,7 +101,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.append('input')
 		.attr('size', 40)
 		.style('padding', '3px 10px')
-		.property('placeholder', 'File UUID / Case UUID / Case ID')
+		.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
 		.on('keyup', debounce(gdc_search, 100))
 
 	const gdc_loading = gdcid_inputdiv
@@ -131,7 +131,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		if (bam_info.error) {
 			cmt(bam_info.error, 1)
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.is_file_uuid) {
+		} else if (bam_info.is_file_uuid || bam_info.is_file_id) {
 			// update file id to be suppliled to gdc bam query
 			gdc_args.bam_files.push({ file_id: gdc_id })
 			update_singlefile_table(bam_info.file_metadata)
