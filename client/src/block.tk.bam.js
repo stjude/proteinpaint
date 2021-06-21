@@ -376,7 +376,13 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight - 2)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+		tk.variants[0].chr +
+		'.' +
+		(parseInt(tk.variants[0].pos) + 1).toString() +
+		'.' +
+		tk.variants[0].ref +
+		'.' +
+		tk.variants[0].alt
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
