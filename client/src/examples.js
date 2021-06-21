@@ -209,7 +209,7 @@ function displayTracks(tracks, holder, page_args) {
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
 				} else if (track.buttons.example) {
-					openExample(track)
+					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
 
@@ -238,7 +238,7 @@ function displayTracks(tracks, holder, page_args) {
 									example: button.example
 								}
 							}
-							openExample(btn_args)
+							openExample(btn_args, page_args.apps_sandbox_div)
 						}
 						// TODO: Add logic if custom button has url or some other link
 					})
@@ -251,9 +251,9 @@ function displayTracks(tracks, holder, page_args) {
 
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track) {
+async function openExample(track, holder) {
 	// crate unique id for each app div
-	const sandbox_div = newSandboxDiv()
+	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header.text(track.name + (track.subheading && track.subheading != 'Launch App' ? ' Example' : ''))
 
 	// template runpp() arg

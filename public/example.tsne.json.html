@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+	 <style>
+	 	#aaa {
+	 		width: 98%;
+	 		height: 98%;
+	 	}
+	 </style>
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	genome:'hg38',
+	mdssamplescatterplot:{
+		features_on_rows: true,
+		mds:{
+			// using the same genome build as obj.genome
+			dslabel:'Pediatric',
+			querykey:'svcnv',
+		},
+		analysisdata_file: 'proteinpaint_demo/hg38/mdstsne/file.json'
+	}
+})
+</script>
+
+</body>
+</html>

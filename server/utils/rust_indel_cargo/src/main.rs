@@ -695,177 +695,180 @@ fn check_polyclonal(
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
-
-    let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
-
-    // Check to see if the first item in cigar is a soft clip
-    if &alphabets[0].to_string().as_str() == &"S" {
-        correct_start_position =
-            correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
-        // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
-    }
-    // Looking for insertions and deletions in cigar sequence
-    let mut read_indel_start: usize = (indel_start - correct_start_position) as usize; // Position of cigar sequence starts in reference genome coordinates (i.e if cigar sequence is 47M3S, this will initialize to the reference genome coordinate of the start of the first matched nucleotide)
-    let mut parse_position: usize = 0; // This contains the current cigar position being analyzed
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
-    let mut old_parse_position: usize = 0; // This contains the previous cigar position being analyzed
-    let mut indel_insertion_starts = Vec::<usize>::new(); // Vector storing insertion starts if inside indel region
-    let mut indel_insertion_stops = Vec::<usize>::new(); // Vector storing insertion stops if inside indel region
-    for i in 0..alphabets.len() {
-        // Looping over each CIGAR item
-        if parse_position < read_indel_start {
-            parse_position += numbers[i].to_string().parse::<usize>().unwrap();
-            if &alphabets[i].to_string().as_str() == &"I" {
-                read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
 
-                if read_indel_start <= old_parse_position
-                    && parse_position <= read_indel_start + indel_length
-                {
-                    // (Insertion inside indel region)
-                    indel_insertion_starts.push(old_parse_position); // Adding indel start to vector
-                    indel_insertion_stops.push(parse_position); // Adding indel stop to vector
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                } else if old_parse_position <= read_indel_start
-                    && read_indel_start + indel_length <= parse_position
-                {
-                    // (Indel region inside insertion)
-                    indel_insertion_starts.push(old_parse_position);
-                    indel_insertion_stops.push(parse_position);
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                } else if old_parse_position <= read_indel_start
-                    && parse_position <= read_indel_start + indel_length
-                    && found_duplicate_kmers == 0
-                // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
-                {
-                    // Making sure part of the insertion is within the indel region
-                    //indel_insertion_starts.push(old_parse_position);
-                    //indel_insertion_stops.push(parse_position);
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                } else if read_indel_start <= old_parse_position
-                    && read_indel_start + indel_length <= parse_position
-                    && found_duplicate_kmers == 0
-                // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
-                {
-                    // Making sure part of the insertion is within the indel region
-                    //indel_insertion_starts.push(old_parse_position);
-                    //indel_insertion_stops.push(parse_position);
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                }
-            } else if &alphabets[i].to_string().as_str() == &"D" {
-                read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
-                if read_indel_start <= old_parse_position
-                    && parse_position <= read_indel_start + indel_length
-                // Deletion inside indel region
-                {
-                    // Making sure the insertion is within the indel region
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                } else if old_parse_position <= read_indel_start
-                    && read_indel_start + indel_length <= parse_position
-                // Indel region inside deletion
-                {
-                    // Making sure the insertion is within the indel region
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                } else if old_parse_position <= read_indel_start
-                    && parse_position <= read_indel_start + indel_length
-                    && found_duplicate_kmers == 0
-                // Part of deletion inside indel region
-                {
-                    // Making sure part of the insertion is within the indel region
-                    ref_insertion = 1;
-                } else if read_indel_start <= old_parse_position
-                    && read_indel_start + indel_length <= parse_position
-                    && found_duplicate_kmers == 0
-                // Part of deletion inside indel region
-                {
-                    // Making sure part of the insertion is within the indel region
-                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-                }
-            }
-            old_parse_position = parse_position;
-        } else if parse_position >= read_indel_start
-            && (&alphabets[i].to_string().as_str() == &"I"
-                || &alphabets[i].to_string().as_str() == &"D")
-        {
-            parse_position += numbers[i].to_string().parse::<usize>().unwrap();
-            if read_indel_start <= old_parse_position
-                && parse_position <= read_indel_start + indel_length
-            // Insertion inside indel region
-            {
-                // Making sure the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-            } else if old_parse_position <= read_indel_start
-                && read_indel_start + indel_length <= parse_position
-            {
-                // Making sure the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-            } else if old_parse_position <= read_indel_start
-                && parse_position <= read_indel_start + indel_length
-                && found_duplicate_kmers == 0
-            {
-                // Making sure part of the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-            } else if read_indel_start <= old_parse_position
-                && read_indel_start + indel_length <= parse_position
-                && found_duplicate_kmers == 0
-            {
-                // Making sure part of the insertion is within the indel region
-                //indel_insertion_starts.push(old_parse_position);
-                //indel_insertion_stops.push(parse_position);
-                ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
-            }
-            //}
-            old_parse_position = parse_position;
-        } else {
-            break;
+    if &cigar_sequence == &"*" {
+    } else {
+        let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
+
+        // Check to see if the first item in cigar is a soft clip
+        if &alphabets[0].to_string().as_str() == &"S" {
+            correct_start_position =
+                correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
+            // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
         }
-    }
+        // Looking for insertions and deletions in cigar sequence
+        let mut read_indel_start: usize = (indel_start - correct_start_position) as usize; // Position of cigar sequence starts in reference genome coordinates (i.e if cigar sequence is 47M3S, this will initialize to the reference genome coordinate of the start of the first matched nucleotide)
+        let mut parse_position: usize = 0; // This contains the current cigar position being analyzed
+        let mut old_parse_position: usize = 0; // This contains the previous cigar position being analyzed
+        let mut indel_insertion_starts = Vec::<usize>::new(); // Vector storing insertion starts if inside indel region
+        let mut indel_insertion_stops = Vec::<usize>::new(); // Vector storing insertion stops if inside indel region
+        for i in 0..alphabets.len() {
+            // Looping over each CIGAR item
+            if parse_position < read_indel_start {
+                parse_position += numbers[i].to_string().parse::<usize>().unwrap();
+                if &alphabets[i].to_string().as_str() == &"I" {
+                    read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
 
-    // Checking to see if nucleotides are same between read and ref/alt allele
-
-    //println!("cigar:{}",cigar_sequence);
-    for i in 0..ref_length as usize {
-        if read_indel_start + i < sequence.len() {
-            if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-
-    for i in 0..alt_length as usize {
-        if read_indel_start + i < sequence.len() {
-            if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-
-    // In case of an indel insertion, see if the inserted nucleotides in the read matches that of the indel of interest. If not, its marked as a polyclonal variant
-    if indel_insertion_starts.len() > 0 {
-        for i in 0..indel_insertion_starts.len() {
-            let insertion_start: usize = indel_insertion_starts[i];
-            let insertion_stop: usize = indel_insertion_stops[i];
-            for j in (insertion_start - 1)..insertion_stop {
-                let k: usize = j - insertion_start + 1;
-                if k < indel_length && k < alt_nucleotides.len() {
-                    if (&alt_nucleotides[k] != &sequence_vector[j])
-                        && ((read_indel_start as usize) <= j)
-                        && (j <= (read_indel_start as usize) + indel_length)
+                    if read_indel_start <= old_parse_position
+                        && parse_position <= read_indel_start + indel_length
                     {
-                        alt_polyclonal_status = 2; // alt_polyclonal_status = 2 is set to 2 which will automatically classify as a polyclonal variant
-                        ref_polyclonal_status = 0;
-                        break;
+                        // (Insertion inside indel region)
+                        indel_insertion_starts.push(old_parse_position); // Adding indel start to vector
+                        indel_insertion_stops.push(parse_position); // Adding indel stop to vector
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && read_indel_start + indel_length <= parse_position
+                    {
+                        // (Indel region inside insertion)
+                        indel_insertion_starts.push(old_parse_position);
+                        indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && parse_position <= read_indel_start + indel_length
+                        && found_duplicate_kmers == 0
+                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        //indel_insertion_starts.push(old_parse_position);
+                        //indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if read_indel_start <= old_parse_position
+                        && read_indel_start + indel_length <= parse_position
+                        && found_duplicate_kmers == 0
+                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        //indel_insertion_starts.push(old_parse_position);
+                        //indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    }
+                } else if &alphabets[i].to_string().as_str() == &"D" {
+                    read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
+                    if read_indel_start <= old_parse_position
+                        && parse_position <= read_indel_start + indel_length
+                    // Deletion inside indel region
+                    {
+                        // Making sure the insertion is within the indel region
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && read_indel_start + indel_length <= parse_position
+                    // Indel region inside deletion
+                    {
+                        // Making sure the insertion is within the indel region
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && parse_position <= read_indel_start + indel_length
+                        && found_duplicate_kmers == 0
+                    // Part of deletion inside indel region
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        ref_insertion = 1;
+                    } else if read_indel_start <= old_parse_position
+                        && read_indel_start + indel_length <= parse_position
+                        && found_duplicate_kmers == 0
+                    // Part of deletion inside indel region
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    }
+                }
+                old_parse_position = parse_position;
+            } else if parse_position >= read_indel_start
+                && (&alphabets[i].to_string().as_str() == &"I"
+                    || &alphabets[i].to_string().as_str() == &"D")
+            {
+                parse_position += numbers[i].to_string().parse::<usize>().unwrap();
+                if read_indel_start <= old_parse_position
+                    && parse_position <= read_indel_start + indel_length
+                // Insertion inside indel region
+                {
+                    // Making sure the insertion is within the indel region
+                    //indel_insertion_starts.push(old_parse_position);
+                    //indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                } else if old_parse_position <= read_indel_start
+                    && read_indel_start + indel_length <= parse_position
+                {
+                    // Making sure the insertion is within the indel region
+                    //indel_insertion_starts.push(old_parse_position);
+                    //indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                } else if old_parse_position <= read_indel_start
+                    && parse_position <= read_indel_start + indel_length
+                    && found_duplicate_kmers == 0
+                {
+                    // Making sure part of the insertion is within the indel region
+                    //indel_insertion_starts.push(old_parse_position);
+                    //indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                } else if read_indel_start <= old_parse_position
+                    && read_indel_start + indel_length <= parse_position
+                    && found_duplicate_kmers == 0
+                {
+                    // Making sure part of the insertion is within the indel region
+                    //indel_insertion_starts.push(old_parse_position);
+                    //indel_insertion_stops.push(parse_position);
+                    ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                }
+                //}
+                old_parse_position = parse_position;
+            } else {
+                break;
+            }
+        }
+
+        // Checking to see if nucleotides are same between read and ref/alt allele
+
+        //println!("cigar:{}",cigar_sequence);
+        for i in 0..ref_length as usize {
+            if read_indel_start + i < sequence.len() {
+                if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+                    ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        for i in 0..alt_length as usize {
+            if read_indel_start + i < sequence.len() {
+                if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+                    alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // In case of an indel insertion, see if the inserted nucleotides in the read matches that of the indel of interest. If not, its marked as a polyclonal variant
+        if indel_insertion_starts.len() > 0 {
+            for i in 0..indel_insertion_starts.len() {
+                let insertion_start: usize = indel_insertion_starts[i];
+                let insertion_stop: usize = indel_insertion_stops[i];
+                for j in (insertion_start - 1)..insertion_stop {
+                    let k: usize = j - insertion_start + 1;
+                    if k < indel_length && k < alt_nucleotides.len() {
+                        if (&alt_nucleotides[k] != &sequence_vector[j])
+                            && ((read_indel_start as usize) <= j)
+                            && (j <= (read_indel_start as usize) + indel_length)
+                        {
+                            alt_polyclonal_status = 2; // alt_polyclonal_status = 2 is set to 2 which will automatically classify as a polyclonal variant
+                            ref_polyclonal_status = 0;
+                            break;
+                        }
                     }
                 }
             }

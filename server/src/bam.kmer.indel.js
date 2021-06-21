@@ -131,6 +131,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		threshold_slope.toString() +
 		':'
 
+	//fs.writeFile('test.txt', input_data, function (err) { // For catching input to rust pipeline, in case of an error
+	//   if (err) return console.log(err);
+	//});
 	const time1 = new Date()
 	const rust_output = await run_rust_indel_pipeline(input_data)
 	const time2 = new Date()
@@ -257,7 +260,10 @@ function run_rust_indel_pipeline(input_data) {
 		Readable.from(input_data).pipe(ps.stdin)
 		ps.stdout.on('data', data => stdout.push(data))
 		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => reject(err))
+		ps.on('error', err => {
+			console.log('stderr:', stderr)
+			reject(err)
+		})
 		ps.on('close', code => {
 			//console.log("stdout:",stdout)
 			resolve(stdout)

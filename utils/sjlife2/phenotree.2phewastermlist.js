@@ -36,6 +36,8 @@ for (let i = 1; i < lines.length; i++) {
 	}
 
 	const l = line.split('\t')
+	if (!l[3]) throw 'missing column 4 at line ' + i + ': ' + line
+	if (!l[2]) throw 'missing column 3 at line ' + i + ': ' + line
 
 	// id of this line, either l[5] or lowest name
 	let thisid = l[5] ? str2level(l[5]) : null
