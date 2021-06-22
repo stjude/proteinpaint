@@ -175,7 +175,7 @@ function renderBinLines(self, data) {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
 		// to the left, will reveal additional non-draggable boundaries from the right
-		const binLinesStop = o.density_data.maxvalue + data.first_bin.stop
+		const binLinesStop = o.density_data.maxvalue + Math.abs(data.first_bin.stop) - Math.min(o.density_data.minvalue, 0)
 		let index = 0
 		//
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {

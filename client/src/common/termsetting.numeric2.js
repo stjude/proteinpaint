@@ -188,7 +188,7 @@ function setqDefaults(self) {
 	if (!self.q.type) self.q.type = 'regular'
 	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
-	if (!self.q.rounding && bin_size.includes('.') && !bin_size.endsWith('.')) {
+	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
 		const binDecimals = bin_size.split('.')[1].length
 		self.q.rounding = '.' + binDecimals + 'f'
 	}
