@@ -207,7 +207,7 @@ for line in fh:
                 URLL.extend(GENURL(sample,chra,posStar,bamOutPath,pstop=int(posStop)))
         else:
                 URLL.extend(GENURL(sample,chra,posStar,bamOutPath))
-                #support on the fly genotyping. REF and ALT should be empty for variant except for SNVindels
+                #support on the fly genotyping. reference and alternative alleles should be available for SNVindels
                 if REF or ALT:
                         NEWURLL = []
                         VARIANT = '.'.join([chra,str(posStar),REF,ALT])
