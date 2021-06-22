@@ -138,24 +138,27 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
 
 	const orderedLabels = []
+	// round the min and max values for use as bin start and stop
+	// in the first and last bins, respectively
+	const minFloor = Math.floor(summary.min * 100) / 100
+	const maxCeil = Math.ceil(summary.max * 100) / 100
 	const min = bc.first_bin.startunbounded
-		? summary.min
+		? minFloor
 		: bc.first_bin.start_percentile
 		? summary['p' + bc.first_bin.start_percentile]
 		: bc.first_bin.start
-
-	// following about last_bin are quick-fix
-	let max = summary.max,
+	let max = maxCeil, // in order to include the max value in the last bin
 		last_start,
 		last_stop
+
 	if (bc.last_bin) {
 		max = bc.last_bin.stopunbounded
-			? summary.max
+			? maxCeil // in order to include the max value in the last bin
 			: bc.last_bin.stop_percentile
 			? summary['p' + bc.last_bin.stop_percentile]
 			: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max
 			? bc.last_bin.stop
-			: summary.max
+			: maxCeil // in order to include the max value in the last bin
 		last_start = isNumeric(bc.last_bin.start_percentile)
 			? summary['p' + bc.last_bin.start_percentile]
 			: isNumeric(bc.last_bin.start)
@@ -171,12 +174,13 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	} else if (bc.lst) {
 		const last_bin = bc.lst[bc.lst.length - 1]
 		last_start = last_bin.start
-		last_stop = 'stop' in last_bin && !last_bin.stopunbounded ? last_bin.stop : summary.max
+		last_stop = 'stop' in last_bin && !last_bin.stopunbounded ? last_bin.stop : maxCeil
 		max = last_stop
 	} else {
-		last_start = summary.max
-		last_stop = summary.max
+		last_start = maxCeil
+		last_stop = maxCeil
 	}
+
 	const numericMax = isNumeric(max)
 	const numericLastStart = isNumeric(last_start)
 	const numericLastStop = isNumeric(last_stop)
