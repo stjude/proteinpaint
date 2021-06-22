@@ -166,25 +166,13 @@ function displayTracks(tracks, holder, page_args) {
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
-				`${
-					track.blurb
-						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
-						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-				}
-			<span class="track-image"><img src="${track.image}"></img></span>
-			<div class="track-btns">
-			${
-				track.buttons.url
-					? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
-					: ''
-			}
-			${
-				track.buttons.doc
-					? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-					: ''
-			}
-			</div>`
-			)
+				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
+				<span class="track-image"><img src="${track.image}"></img></span>
+				<div class="track-btns">
+				${track.buttons.url ? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
+				${track.buttons.doc ? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`: ''}
+				</div>`
+				)
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
@@ -278,6 +266,8 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
 
+	showCode(track,sandbox_div)
+
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
@@ -292,7 +282,7 @@ async function openExample(track, holder) {
 }
 
 
-// Update message corresponding to the update ribbon
+// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
 async function addUpdateMessage(track, div) {
 	if(track.sandbox.update_message != undefined && !track.update_expire) {
 		console.log("Must provide expiration date: track.update_expire")
@@ -305,6 +295,39 @@ async function addUpdateMessage(track, div) {
 			.append('div')
 			.style('margin', '20px')
 			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		return message
 		}
+	}
+}
+
+async function showCode(track, div){
+	if (track.sandbox.is_ui != true) {
+		const codeBtn = div.body
+		.append('button')
+		.attr('id','code-btn')
+		.style('margin', '20px')
+		.text('See Code')
+		.on('click', () => {
+			if (code.style('display') == 'none') {
+				code.style('display', 'block') //TODO fadein fn
+				document.querySelector('#code-btn').textContent = 'Hide'
+			} else {
+				code.style('display', 'none') //TODO fadeout fn
+				document.querySelector('#code-btn').textContent = 'See Code'
+			}
+		})
+	const code = div.body
+		.append('div')
+		.append('textarea')
+		.style('display', 'none')
+		.html(
+			`runproteinpaint({
+				host: ${window.location.origin}
+				holder: document.getElementById('a')` +
+				JSON.stringify(track.buttons.example) +
+			`})`
+			)
+
+	return [ codeBtn, code ]
 	}
 }

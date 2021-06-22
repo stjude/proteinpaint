@@ -344,8 +344,8 @@
             },
             "sandbox":{
                 "is_ui": false,
-                "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
-                "update_message": "<p style='display:inline-block'>Please see updated facet table schema <a href='https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.8eof1np9jymk' target='_blank'>here</a></p>"
+                "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
+                "update_message": "<p style='display:inline-block'>The updated facet table schema provides optional two or three hierarchies for presenting samples. Please see the updated documentation <a href='https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.8eof1np9jymk' target='_blank'>here</a> to learn more</p>"
             },
             "searchterms": []
         },
