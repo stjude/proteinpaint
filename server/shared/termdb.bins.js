@@ -1,4 +1,4 @@
-import * as d3format from 'd3-format'
+import { format } from 'd3-format'
 
 export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -241,7 +241,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 }
 
 function getNumDecimalsFormatter(bc) {
-	return d3format.format('rounding' in bc ? bc.rounding : 'd')
+	//return format('rounding' in bc ? bc.rounding : '')
+	return 'rounding' in bc ? format(bc.rounding) : d => d // default to labeling using the start/stop value as-is
 }
 
 export function get_bin_label(bin, binconfig) {
@@ -255,7 +256,8 @@ export function get_bin_label(bin, binconfig) {
 		else if (bc.stopinclusive) bin.stopinclusive = true
 	}
 
-	const label_offset = 'label_offset' in bc ? bc.label_offset : 0
+	bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
+	const label_offset = 'label_offset' in bc && !bc.label_offset_ignored ? bc.label_offset : 0
 	/*
 	  NOTE: The first_bin and last_bin are assigned in compute_bins,
 	  so these min and max values are not needed for generating
@@ -292,9 +294,9 @@ export function get_bin_label(bin, binconfig) {
 
 	// two-sided bins
 	if (label_offset && bin.startinclusive && !bin.stopinclusive) {
-		if (Math.abs(bin.start - bin.stop) === label_offset) {
+		if (Number.isInteger(bc.bin_size) && Math.abs(bin.start - bin.stop) === label_offset) {
 			// make a simpler label when the range simply spans the bin_size
-			return '' + bin.start
+			return '' + bc.binLabelFormatter(bin.start)
 		} else {
 			const v0 = bc.binLabelFormatter(bin.start)
 			const v1 = bc.binLabelFormatter(bin.stop - label_offset)

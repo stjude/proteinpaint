@@ -72,12 +72,12 @@ function handleNoDensity(self) {
 			const mean_value = (maxvalue + minvalue) / 2
 			const first_bin = {
 				startunbounded: true,
-				stop: Math.round(mean_value),
+				stop: mean_value,
 				stopinclusive: true,
 				name: 'First bin'
 			}
 			const last_bin = {
-				start: Math.round(mean_value),
+				start: mean_value,
 				stopunbounded: true,
 				startinclusive: false,
 				name: 'Last bin'
