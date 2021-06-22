@@ -48,13 +48,6 @@ export function bamsliceui(genomes, holder, hosturl) {
 			.html(t)
 	}
 
-	function show_input_check(holder, error) {
-		holder
-			.style('display', 'inline-block')
-			.style('color', error ? 'red' : 'green')
-			.html(error ? '&#10060; ' + error : '&#10003;')
-	}
-
 	// token file upload
 	formdiv
 		.append('div')
@@ -371,8 +364,8 @@ export function bamsliceui(genomes, holder, hosturl) {
 		// autofill input fields if supplied from url
 		// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
 		// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
-		// TODO: can't auto upload file for gdc_token provided from url,
-		// google suggests it's not possible because of security reason
+		// Note: can't auto upload file for gdc_token provided from url,
+		// it's not possible because of security reason
 		const urlp = url2map()
 		if (urlp.has('gdc_id'))
 			gdcid_input
@@ -391,6 +384,15 @@ export function bamsliceui(genomes, holder, hosturl) {
 				.node()
 				.dispatchEvent(new Event('change'))
 	}
+}
+
+function show_input_check(holder, error_msg) {
+	// if error_msg was supplied it will appear as red next to input field
+	// if error_msg is not supplied, check mark will appear next to field after entering value
+	holder
+		.style('display', 'inline-block')
+		.style('color', error_msg ? 'red' : 'green')
+		.html(error_msg ? '&#10060; ' + error : '&#10003;')
 }
 
 function validateInputs(obj) {
@@ -422,8 +424,6 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
-		// TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
-		// solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
