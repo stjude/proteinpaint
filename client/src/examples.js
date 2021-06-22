@@ -208,7 +208,10 @@ function displayTracks(tracks, holder, page_args) {
 			const today = new Date()
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
-			if (update > today){
+			if (update > today && !track.sandbox.update_message) {
+				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
+			}
+			if (update > today && track.sandbox.update_message){
 				li.append('div')
 				.text('Updated')
 				.attr('class', 'track-ribbon')
@@ -261,16 +264,20 @@ function displayTracks(tracks, holder, page_args) {
 //TODO: styling for the container
 //Opens example of app in landing page container
 async function openExample(track, holder) {
-	// crate unique id for each app div
+	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(track.name + (track.is_ui != undefined && track.is_ui == false ? ' Example' : ''))
+	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
 
-	if (track.sandbox_intro) {
+	// creates div for instructions or other messaging about the track
+	if (track.sandbox.intro) {
 		const intro = sandbox_div.body
 		.append('div')
 		.style('margin', '20px')
-		.html(track.sandbox_intro)
+		.html(track.sandbox.intro)
 	}
+	// message explaining the update ribbon
+	addUpdateMessage(track, sandbox_div)
+
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
@@ -282,4 +289,22 @@ async function openExample(track, holder) {
 	}
 
 	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
+}
+
+
+// Update message corresponding to the update ribbon
+async function addUpdateMessage(track, div) {
+	if(track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log("Must provide expiration date: track.update_expire")
+	}
+	if (track.sandbox.update_message != undefined && track.update_expire) {
+		const today = new Date()
+		const update = new Date(track.update_expire)
+		if (update > today) {
+			const message = div.body
+			.append('div')
+			.style('margin', '20px')
+			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		}
+	}
 }
