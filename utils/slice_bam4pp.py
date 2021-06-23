@@ -19,7 +19,7 @@ def GENURL(sam,chra,pstart,bop,pstop=False):
                 bamNam = GENBAMNAM()+'.bam'
                 outbam = os.path.join(bop,bamNam)
                 samtoolsRT = sp.run('samtools view -h -b -o '+outbam+' '+sam_bam+' '+samtoolsRange,shell=True,stderr=sp.PIPE).stderr.decode('utf-8')
-                if 'unknown reference name' in samtoolsRT:
+                if 'unknown reference name' in samtoolsRT: #in case there is not 'chr' for chromosome name in bam file
                         sp.run('samtools view -h -b -o '+outbam+' '+sam_bam+' '+samtoolsRange[3:],shell=True)
                 MANIPHEAD(outbam) #manipulate bam header
                 if os.path.isfile(outbam):
@@ -57,7 +57,7 @@ def GETRANGE(a,b=False):
         r = []
         if b:
                 ss,st = GETBIG(a,b)
-                if (st - ss + 1) <= 10000: #CNV with distance between two point < 10k. 2 means that final bam reads will contain all between 2 points
+                if (st - ss + 1) <= 10000: #CNV with distance between two point < 10k. final bam slice will contain all reads between 2 points
                         r.append([ss-args.flank,st+args.flank])
                 else:
                         r.append([ss-args.flank,ss+args.flank])
@@ -87,7 +87,7 @@ script_descript="""
 #Bamtable has two columns 1. Sample ID, 2: full path to bam
 #Flank is optional, default=500
 #SNV: require -chr, -start (generate one link)
-#CNV: require -chr, -start, -stop (generate two links if span>10k, otherwise will only generate one link and retrieve reads from two ends)
+#CNV: require -chr, -start, -stop (generate two links if span > 10k, otherwise will only generate one link and retrieve reads from two ends)
 #SV/fusion: require -chr, -start, -chr2, -pos2 (generate two links)
 """
 
@@ -98,16 +98,21 @@ required.add_argument('-b','--bamtable',help='Bam table with 2 columns: 1. sampl
 required.add_argument('--bampath',help='the absolute path pointing to somewhere under tp/ where you want to put the sliced bam file')
 required.add_argument('-s','--sample',help='the header name of sample in variant table')
 required.add_argument('--chr',help='the header name of chromosome in variant table')
-required.add_argument('--start',help='the header name of start position in variant table')
+required.add_argument('--start',help='the header name of start position in variant table. Position should be 1-based')
 required.add_argument('-o','--output',help='output file')
 optional = parser.add_argument_group('optional arguemnts')
+optional.add_argument('--pubserver',help='URL link will be made for public server',required=False,action="store_true")
+optional.add_argument('--genotyping',help='on the fly genotyping to identify and group reads supporting either mutant or reference allele',action="store_true",required=False)
+optional.add_argument('--ref',help='the header name of reference allele for SNVindel. required if --genotyping is specified',required=False)
+optional.add_argument('--alt',help='the header name of mutant allele for SNVindel. required if --genotyping is specified',required=False)
 optional.add_argument('--flank',help='flanking region upstream and downstream from variant position. 500 by default',type=int,default=500)
 optional.add_argument('--stop',help='the header name of stop position in variant table. Optional and required only for CNV',required=False)
 optional.add_argument('--chr2',help='the header name of chromosomeB in variant table. Optional and required only for SV and fusion',required=False)
-optional.add_argument('--pos2',help='the header name of postion on chrommosomeB in variant table. Optional and need to provided with --chr2',required=False)
+optional.add_argument('--pos2',help='the header name of postion on chrommosomeB in variant table. Position should be 1-based. Optional and need to provided with --chr2',required=False)
 optional.add_argument('-g','--genome',help='genome version. hg19 by default',default='hg19',type=str)
 optional.add_argument('-h','--help',action='help',help='show this help message and exit')
 args = parser.parse_args()
+
 
 if len(sys.argv) == 1:
         parser.print_help()
@@ -121,6 +126,11 @@ for p in [args.varianttable,args.bamtable,args.chr,args.start,args.output]:
                 parser.error('required parameters need to be provided')
 if args.chr2 and not args.pos2:
         parser.error('--chr2 requires --pos2.')
+#########################
+#dependet parameter check:
+if args.genotyping and not args.ref or not args.alt:
+        parser.print_help()
+        parser.error('--ref and --alt required if --genotyping is specified')
 
 
 #########################
@@ -133,7 +143,10 @@ if 'command not found' in samtools_RT:
 
 #########################
 #URL
-url = 'https://ppr.stjude.org/?genome='+args.genome+'&block=1'
+if args.pubserver:
+        url = 'https://proteinpaint.stjude.org/?genome='+args.genome+'&block=1'
+else:
+        url = 'https://ppr.stjude.org/?genome='+args.genome+'&block=1'
 
 
 #########################
@@ -152,6 +165,9 @@ if args.stop:
 if args.chr2:
         chrbColumn,posbColumn = args.chr2,args.pos2
         rHeader.extend([chrbColumn,posbColumn])
+if args.genotyping:
+        refColumn,altColumn = args.ref,args.alt
+        rHeader.extend([refColumn,altColumn])
 
 #output file
 out = open(args.output,'w')
@@ -184,10 +200,20 @@ for line in fh:
                 posStop = L[rHeaderIdx[posStopColumn]].strip()
         else:
                 posStop = ''
+        if args.genotyping:
+                REF = L[rHeaderIdx[refColumn]].strip()
+                ALT = L[rHeaderIdx[altColumn]].strip()
         if posStop:
                 URLL.extend(GENURL(sample,chra,posStar,bamOutPath,pstop=int(posStop)))
         else:
                 URLL.extend(GENURL(sample,chra,posStar,bamOutPath))
+                #support on the fly genotyping. reference and alternative alleles should be available for SNVindels
+                if REF or ALT:
+                        NEWURLL = []
+                        VARIANT = '.'.join([chra,str(posStar),REF,ALT])
+                        for u in URLL:
+                                NEWURLL.append(u+'&variant='+VARIANT)
+                        URLL = NEWURLL
         if args.chr2:
                 chrb = L[rHeaderIdx[chrbColumn]]
                 if chrb:
