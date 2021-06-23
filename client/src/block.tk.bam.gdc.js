@@ -138,6 +138,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 			gdc_loading.style('display', 'inline-block')
 		}
 		const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
+		console.log(bam_info)
 		// enable input field and hide 'Loading...'
 		gdcid_input.attr('disabled', null)
 		gdc_loading.style('display', 'none')
@@ -392,7 +393,7 @@ function show_input_check(holder, error_msg) {
 	holder
 		.style('display', 'inline-block')
 		.style('color', error_msg ? 'red' : 'green')
-		.html(error_msg ? '&#10060; ' + error : '&#10003;')
+		.html(error_msg ? '&#10060; ' + error_msg : '&#10003;')
 }
 
 function validateInputs(obj) {
