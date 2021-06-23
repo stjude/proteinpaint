@@ -54,7 +54,8 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('padding', '3px 10px')
 		.text('GDC Token file')
 
-	const upload_div = formdiv.append('div')
+	const upload_holder = formdiv.append('div')
+	const upload_div = upload_holder.append('div').style('display', 'inline-block')
 
 	const fileui = () => {
 		upload_div.selectAll('*').remove()
@@ -69,7 +70,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 					return
 				}
 				if (!file.size) {
-					cmt('Invalid file ' + file.name)
+					show_input_check(file_error_div, 'Invalid file ' + file.name)
 					fileui()
 					return
 				}
@@ -78,10 +79,11 @@ export function bamsliceui(genomes, holder, hosturl) {
 					gdc_args['gdc_token'] = event.target.result.trim().split(/\r?\n/)[0]
 				}
 				reader.onerror = function() {
-					cmt('Error reading file ' + file.name, 1)
+					show_input_check(file_error_div, 'Error reading file ' + file.name)
 					fileui()
 					return
 				}
+				show_input_check(file_error_div)
 				reader.readAsText(file, 'utf8')
 			})
 
@@ -89,6 +91,12 @@ export function bamsliceui(genomes, holder, hosturl) {
 	}
 
 	fileui()
+
+	const file_error_div = upload_holder
+		.append('div')
+		.style('display', 'none')
+		.style('padding', '2px 5px')
+		.style('font-size', '90%')
 
 	formdiv
 		.append('div')
@@ -101,7 +109,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.append('input')
 		.attr('size', 40)
 		.style('padding', '3px 10px')
-		.property('placeholder', 'File UUID / Case UUID / Case ID')
+		.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
 		.on('keyup', debounce(gdc_search, 100))
 
 	const gdc_loading = gdcid_inputdiv
@@ -111,6 +119,12 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('color', '#999')
 		.style('display', 'none')
 		.html('loading...')
+
+	const gdcid_error_div = gdcid_inputdiv
+		.append('span')
+		.style('font-size', '90%')
+		.style('display', 'none')
+		.style('padding', '2px 5px')
 
 	async function gdc_search() {
 		const gdc_id = gdcid_input.property('value').trim()
@@ -129,16 +143,16 @@ export function bamsliceui(genomes, holder, hosturl) {
 		gdc_loading.style('display', 'none')
 		gdc_args.bam_files = [] //empty bam_files array after each gdc api call
 		if (bam_info.error) {
-			cmt(bam_info.error, 1)
+			show_input_check(gdcid_error_div, bam_info.error)
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.is_file_uuid) {
+		} else if (bam_info.is_file_uuid || bam_info.is_file_id) {
 			// update file id to be suppliled to gdc bam query
-			gdc_args.bam_files.push({ file_id: gdc_id })
+			gdc_args.bam_files.push({ file_id: bam_info.is_file_uuid ? gdc_id : bam_info.file_metadata[0].file_uuid })
 			update_singlefile_table(bam_info.file_metadata)
-			saydiv.style('display', 'none')
+			show_input_check(gdcid_error_div)
 		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
 			update_multifile_table(bam_info.file_metadata)
-			saydiv.style('display', 'none')
+			show_input_check(gdcid_error_div)
 		}
 	}
 
@@ -207,7 +221,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.text('submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args, genomes[default_genome])
+				validateInputs(gdc_args)
 			} catch (e) {
 				cmt(e, 1)
 				return
@@ -227,15 +241,33 @@ export function bamsliceui(genomes, holder, hosturl) {
 				.style('padding', '3px 10px')
 				.text(field.title)
 
-			const input = formdiv
+			const input_div = formdiv.append('div').style('display', 'inline-block')
+
+			const input = input_div
 				.append('input')
 				.attr('size', field.size || 20)
 				.style('padding', '3px 10px')
 				.property('placeholder', field.placeholder || '')
 				.on('change', () => {
-					gdc_args[field.key] = input.property('value').trim()
+					let input_str = input.property('value').trim()
+					const chr = input_str.split(/[:.>]/)[0]
+					const [nocount, hascount] = contigNameNoChr2(genomes[default_genome], [chr])
+					if (nocount + hascount == 0) {
+						const err_msg = 'chromosome is not valid: ' + chr
+						show_input_check(err_div, err_msg)
+					} else {
+						if (nocount) input_str = 'chr' + input_str
+						show_input_check(err_div)
+					}
+					gdc_args[field.key] = input_str
 				})
 			inputs.push(input)
+
+			const err_div = input_div
+				.append('div')
+				.style('display', 'none')
+				.style('padding', '2px 5px')
+				.style('font-size', '90%')
 		}
 		return inputs
 	}
@@ -332,8 +364,8 @@ export function bamsliceui(genomes, holder, hosturl) {
 		// autofill input fields if supplied from url
 		// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
 		// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
-		// TODO: can't auto upload file for gdc_token provided from url,
-		// google suggests it's not possible because of security reason
+		// Note: can't auto upload file for gdc_token provided from url,
+		// it's not possible because of security reason
 		const urlp = url2map()
 		if (urlp.has('gdc_id'))
 			gdcid_input
@@ -354,7 +386,16 @@ export function bamsliceui(genomes, holder, hosturl) {
 	}
 }
 
-function validateInputs(obj, genome) {
+function show_input_check(holder, error_msg) {
+	// if error_msg was supplied it will appear as red next to input field
+	// if error_msg is not supplied, check mark will appear next to field after entering value
+	holder
+		.style('display', 'inline-block')
+		.style('color', error_msg ? 'red' : 'green')
+		.html(error_msg ? '&#10060; ' + error_msg : '&#10003;')
+}
+
+function validateInputs(obj) {
 	if (!obj) throw 'no parameters passing to validate'
 	if (!obj.gdc_token) throw 'gdc token missing'
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
@@ -366,14 +407,6 @@ function validateInputs(obj, genome) {
 	if (!obj.position && !obj.variant) throw ' position or variant is required'
 	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
-    const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
-    const [nocount, hascount] = contigNameNoChr2( genome, [chr])
-    if (nocount+hascount==0) throw 'chromosome is not valid in position/variant input: ' + chr
-    else if (nocount){
-        // add chr to non-standard position or variant
-        if (obj.position) obj.position = 'chr' + obj.position
-        if (obj.variant) obj.variant = 'chr' + obj.variant
-    }
 }
 
 function renderBamSlice(args, genome, holder, hostURL) {
@@ -391,8 +424,6 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
-        // TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
-        // solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
