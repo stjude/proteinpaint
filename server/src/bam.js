@@ -877,6 +877,9 @@ function query_region(r, q) {
 	r.lines = []
 	return new Promise((resolve, reject) => {
 		let ps = ''
+		console.log(
+			'samtools view ' + q.file + ' ' + (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+		)
 		if (q.gdc_case_id) {
 			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
 		} else {
