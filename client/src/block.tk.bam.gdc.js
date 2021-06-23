@@ -138,7 +138,6 @@ export function bamsliceui(genomes, holder, hosturl) {
 			gdc_loading.style('display', 'inline-block')
 		}
 		const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
-		console.log(bam_info)
 		// enable input field and hide 'Loading...'
 		gdcid_input.attr('disabled', null)
 		gdc_loading.style('display', 'none')
