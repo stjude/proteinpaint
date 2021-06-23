@@ -431,7 +431,29 @@ function may_render_variant(data, tk, block) {
 
 	if (data.max_diff_score) {
 		// Should always be true if variant field was given by user, but may change in the future
-		const diff_score_start_pos = data.pileup_data.width
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff - tk.dom.variantrowheight)
+			//.attr('dy', '.10em')
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Diff Score')
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff + tk.dom.variantrowheight)
+			//.attr('dy', '.10em')
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff + 2 * tk.dom.variantrowheight)
+			//.attr('dy', '.10em')
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
 	}
 }
 
