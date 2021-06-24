@@ -325,12 +325,13 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	//const read_height = group.templates[0].r.ntwidth
-	//console.log('group:', group.templates[0])
+	console.log('group:', group.messagerows[0].h)
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
-	const read_height = group.canvasheight / (diff_scores_list.length + 1)
+	console.log('diff_scores_list.length:', diff_scores_list.length)
+	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
 	for (const diff_score of diff_scores_list) {
@@ -353,7 +354,8 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	return {
 		height: group.canvasheight,
 		width: diff_score_bar_width,
-		src: canvas.toDataURL()
+		src: canvas.toDataURL(),
+		read_height: read_height
 	}
 }
 

@@ -462,14 +462,19 @@ function setTkHeight(tk, data) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
+		console.log('g:', g)
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (tk.variants) {
-			g.dom.diff_score_barplot_fullstack.transition().attr('transform', 'translate(0,' + h + ')')
+			g.dom.diff_score_barplot_fullstack
+				.transition()
+				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')') // + g.data.diff_scores_img.row_height
 		}
 		if (g.partstack) {
 			// slider visible
 			if (tk.variants) {
-				g.dom.diff_score_barplot_partstack.transition().attr('transform', 'translate(0,' + h + ')')
+				g.dom.diff_score_barplot_partstack
+					.transition()
+					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
 				g.dom.vslider.g
 					.transition()
 					.attr('transform', 'translate(' + g.data.diff_scores_img.width + ',' + h + ') scale(1)')
