@@ -1837,7 +1837,7 @@ function plot_template(ctx, template, group, q) {
 
 	// for testing, print a stat (numeric or string) per template on the right of each row
 	// should not use this in production
-	if (template.__tempscore != undefined) {
+	if (template.__tempscore != undefined && serverconfig.features.indel_kmer_scores) {
 		ctx.fillStyle = 'blue'
 		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)

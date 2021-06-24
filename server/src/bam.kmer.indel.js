@@ -187,9 +187,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -202,9 +203,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -217,9 +218,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -522,10 +523,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
-					// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -537,10 +538,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
-					// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -556,10 +557,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
-					//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4)
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4)
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -571,10 +572,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
-					//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
