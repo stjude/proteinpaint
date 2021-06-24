@@ -523,7 +523,7 @@ export async function match_complexvariant(q, templates_info) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
 				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toString()
+					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
 					// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
@@ -538,7 +538,7 @@ export async function match_complexvariant(q, templates_info) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
 				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toString()
+					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
 					// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
@@ -557,7 +557,7 @@ export async function match_complexvariant(q, templates_info) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
 				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toString()
+					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
 					//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4)
 				}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
@@ -572,7 +572,7 @@ export async function match_complexvariant(q, templates_info) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
 				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = kmer_diff_scores[index].toString()
+					templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
 					//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
 				}
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
