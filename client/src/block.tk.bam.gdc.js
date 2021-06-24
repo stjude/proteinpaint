@@ -413,6 +413,15 @@ function validateInputs(obj) {
 	if (!obj.position && !obj.variant) throw ' position or variant is required'
 	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
 	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
+
+	const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
+	const [nocount, hascount] = contigNameNoChr2(genome, [chr])
+	if (nocount + hascount == 0) throw 'chromosome is not valid in position/variant input: ' + chr
+	else if (nocount) {
+		// add chr to non-standard position or variant
+		if (obj.position) obj.position = 'chr' + obj.position
+		if (obj.variant) obj.variant = 'chr' + obj.variant
+	}
 }
 
 function renderBamSlice(args, genome, holder, hostURL) {
@@ -430,6 +439,8 @@ function renderBamSlice(args, genome, holder, hostURL) {
 		par.start = Number.parseInt(pos_str[1])
 		par.stop = Number.parseInt(pos_str[2])
 	} else if (args.variant) {
+		// TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
+		// solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
 		const variant_str = args.variant.split(/[:.>]/)
 		variant = {
 			chr: variant_str[0],
