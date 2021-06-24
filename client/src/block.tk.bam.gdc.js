@@ -131,6 +131,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		if (!gdc_id.length) {
 			baminfo_div.style('display', 'none')
 			saydiv.style('display', 'none')
+			gdcid_error_div.style('display', 'none')
 			return
 		} else {
 			// disable input field and show 'loading...' until response returned from gdc api
@@ -251,6 +252,11 @@ export function bamsliceui(genomes, holder, hosturl) {
 				.on('change', () => {
 					let input_str = input.property('value').trim()
 					const chr = input_str.split(/[:.>]/)[0]
+					if (!input_str.length) {
+						saydiv.style('display', 'none')
+						err_div.style('display', 'none')
+						return
+					}
 					const [nocount, hascount] = contigNameNoChr2(genomes[default_genome], [chr])
 					if (nocount + hascount == 0) {
 						const err_msg = 'chromosome is not valid: ' + chr
