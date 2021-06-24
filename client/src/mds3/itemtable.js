@@ -1,5 +1,6 @@
 import * as common from '../../shared/common'
 import { to_textfile, fillbar } from '../client'
+import { init_sampletable } from './sampletable'
 
 /*
 ********************** EXPORTED
@@ -305,7 +306,8 @@ async function table_snvindel(arg) {
 			const c = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 			heading.text(c < cutoff_tableview ? 'Sample details' : 'Summary of ' + c + ' samples')
 		}
-		await mlst2samplesummary(arg)
+		// await mlst2samplesummary(arg)
+		await init_sampletable(arg)
 	}
 }
 
