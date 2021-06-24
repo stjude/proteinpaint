@@ -162,6 +162,10 @@ async function getData(tk, block, additional = []) {
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
+		if (tk.max_diff_score) {
+			lst.push('max_diff_score=' + tk.max_diff_score)
+			lst.push('min_diff_score=' + tk.min_diff_score)
+		}
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -423,7 +427,7 @@ function may_render_variant(data, tk, block) {
 			.text(text_string)
 	}
 
-	if (data.max_diff_score) {
+	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
 		tk.dom.variantg
 			.append('text')
@@ -460,6 +464,14 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+
+		if (!g.data.allowpartstack && !tk.max_diff_score) {
+			// Set max and min diff_score in full stack mode
+
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
+		}
+
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
 				.transition()
