@@ -319,18 +319,15 @@ async function download_gdc_bam(req) {
 }
 
 async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
-	const multiplication_factor = 100
-	const diff_score_bar_width =
-		max_diff_score * 1.5 * multiplication_factor + min_diff_score * -1 * multiplication_factor * 1.5
+	const multiplication_factor = q.diff_score_plotwidth / (max_diff_score - min_diff_score)
+	const diff_score_bar_width = max_diff_score * multiplication_factor - min_diff_score * multiplication_factor
 	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 	const ctx = canvas.getContext('2d')
 	//const read_height = group.templates[0].r.ntwidth
-	console.log('group:', group.messagerows[0].h)
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
-	console.log('diff_scores_list.length:', diff_scores_list.length)
 	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
@@ -650,6 +647,7 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
+	console.log('req.query:', req.query)
 	// if gdc_token and case_id present, it will be moved to x-auth-token
 	if (req.get('x-auth-token')) {
 		q = {
@@ -687,6 +685,7 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
+		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		const t = req.query.variant.split('.')
 		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
 		q.variant = {

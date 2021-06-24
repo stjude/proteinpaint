@@ -125,7 +125,6 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
-		console.log('data:', data)
 		if (data.error) throw data.error
 		if (data.colorscale) {
 			// available from 1st query, cache
@@ -162,6 +161,7 @@ async function getData(tk, block, additional = []) {
 	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -462,7 +462,6 @@ function setTkHeight(tk, data) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
-		console.log('g:', g)
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
@@ -579,6 +578,7 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
+		tk.dom.diff_score_plotwidth = 100
 	}
 	if (tk.gdc) {
 		tk.dom.gdc_bar = tk.glider.append('g')
