@@ -428,24 +428,21 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff - tk.dom.variantrowheight)
-			//.attr('dy', '.10em')
+			.attr('y', yoff - 2 * tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
 
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff + tk.dom.variantrowheight)
-			//.attr('dy', '.10em')
+			.attr('y', yoff - tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
 
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff + 2 * tk.dom.variantrowheight)
-			//.attr('dy', '.10em')
+			.attr('y', yoff)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
 	}
@@ -476,7 +473,7 @@ function setTkHeight(tk, data) {
 					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
 				g.dom.vslider.g
 					.transition()
-					.attr('transform', 'translate(' + g.data.diff_scores_img.width + ',' + h + ') scale(1)')
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
 			} else {
 				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
 			}
@@ -578,7 +575,7 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
-		tk.dom.diff_score_plotwidth = 100
+		tk.dom.diff_score_plotwidth = 50
 	}
 	if (tk.gdc) {
 		tk.dom.gdc_bar = tk.glider.append('g')
