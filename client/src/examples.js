@@ -75,6 +75,7 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
+		.attr('class', 'track-cols')
 		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
 	const list = div.append('ul')
@@ -168,9 +169,9 @@ function displayTracks(tracks, holder, page_args) {
 			.html(
 				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
 				<span class="track-image"><img src="${track.image}"></img></span>
-				<div class="track-btns">
-				${track.buttons.url ? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
-				${track.buttons.doc ? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`: ''}
+				<div class='track-links'>
+				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
+				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation(); href="'${track.buttons.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
 				)
 			.on('click', async () => {
@@ -185,11 +186,7 @@ function displayTracks(tracks, holder, page_args) {
 
 		// add Beta tag for experimental tracks
 		if (track.isbeta == true) {
-			li.append('div')
-				.text('Beta')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#e6f0ff')
+			makeRibbon(li, 'BETA', '#418cb5')
 		}
 
 		if (track.update_expire || track.new_expire) {
@@ -200,19 +197,10 @@ function displayTracks(tracks, holder, page_args) {
 				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
 			}
 			if (update > today && track.sandbox.update_message){
-				li.append('div')
-				.text('Updated')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#fffecc')
-				.style('font-size', '10.5px')
+				makeRibbon(li, 'UPDATED', '#e67d15')
 			}
 			if (newtrack > today){
-				li.append('div')
-				.text('New')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#e9fce6')
+				makeRibbon(li, 'NEW', '#1ba176')
 			}
 		}
 
@@ -247,6 +235,27 @@ function displayTracks(tracks, holder, page_args) {
 
 		return JSON.stringify(li)
 	})
+}
+
+function makeRibbon(e, text, color) {
+	const ribbonDiv = e.append('div')
+	.attr('class', 'track-ribbon')
+	.style('align-items','center')
+	.style('justify-content', 'center')
+
+	const ribbon = ribbonDiv.append('span')
+	.text(text)
+	.style('color', 'white')
+	.style('background-color', color)
+	.style('height','auto')
+	.style('width', '100%')
+	.style('top','15%')
+	.style('left', '-23%')
+	.style('font-size', '11.5px')
+	.style('text-transform', 'uppercase')
+	.style('text-align', 'center')
+
+	return [ ribbonDiv, ribbon ]
 }
 
 //TODO: styling for the container
@@ -322,9 +331,9 @@ async function showCode(track, div){
 		.style('display', 'none')
 		.html(
 			`runproteinpaint({
-				host: ${window.location.origin}
-				holder: document.getElementById('a')` +
-				JSON.stringify(track.buttons.example) +
+				"host": "${window.location.origin}",
+				"holder": document.getElementById('a'),` +
+				JSON.stringify(track.buttons.example).slice(1,-1) +
 			`})`
 			)
 
