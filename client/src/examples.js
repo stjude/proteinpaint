@@ -315,26 +315,32 @@ async function showCode(track, div){
 		.append('button')
 		.attr('id','code-btn')
 		.style('margin', '20px')
-		.text('See Code')
+		.text('Show Code')
 		.on('click', () => {
 			if (code.style('display') == 'none') {
 				code.style('display', 'block') //TODO fadein fn
 				document.querySelector('#code-btn').textContent = 'Hide'
 			} else {
 				code.style('display', 'none') //TODO fadeout fn
-				document.querySelector('#code-btn').textContent = 'See Code'
+				document.querySelector('#code-btn').textContent = 'Show Code'
 			}
 		})
+
 	const code = div.body
 		.append('div')
-		.append('textarea')
+		.append('pre')
+		.append('code')
+		.style('background-color', '#faf7ed')
 		.style('display', 'none')
+		.style('margin', '35px')
+		.style('width', '700px')
+		.style('border', '1px solid black')
 		.html(
-			`runproteinpaint({
-				"host": "${window.location.origin}",
-				"holder": document.getElementById('a'),` +
-				JSON.stringify(track.buttons.example).slice(1,-1) +
-			`})`
+`runproteinpaint({
+    "host": "${window.location.origin}",
+    "holder": document.getElementById('a'),` +
+	JSON.stringify(track.buttons.example, null, 4).slice(1,-1) +
+`})`
 			)
 
 	return [ codeBtn, code ]
