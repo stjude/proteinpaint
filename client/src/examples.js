@@ -1,6 +1,10 @@
 import { dofetch2, sayerror, newSandboxDiv } from './client'
 import { debounce } from 'debounce'
 import { event } from 'd3-selection'
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+hljs.registerLanguage('javascript', javascript);
+import 'highlight.js/styles/github.css';
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -309,6 +313,8 @@ async function addUpdateMessage(track, div) {
 	}
 }
 
+
+// Creates 'Show Code' button in Sandbox for all examples
 async function showCode(track, div){
 	if (track.sandbox.is_ui != true) {
 		const codeBtn = div.body
@@ -326,22 +332,25 @@ async function showCode(track, div){
 			}
 		})
 
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
+	const runppCode = `runproteinpaint({
+    "host": "${window.location.origin}",
+    "holder": document.getElementById('a'),` +
+			JSON.stringify(track.buttons.example, null, 4).slice(1,-1) +
+		`})`
+
+	const codefill = hljs.highlight(runppCode, {language: 'javascript'}).value
+
 	const code = div.body
 		.append('div')
 		.append('pre')
 		.append('code')
-		.style('background-color', '#faf7ed')
+		.attr('class', 'code')
 		.style('display', 'none')
 		.style('margin', '35px')
-		.style('width', '700px')
+		.style('width', 'auto')
 		.style('border', '1px solid black')
-		.html(
-`runproteinpaint({
-    "host": "${window.location.origin}",
-    "holder": document.getElementById('a'),` +
-	JSON.stringify(track.buttons.example, null, 4).slice(1,-1) +
-`})`
-			)
+		.html(codefill)
 
 	return [ codeBtn, code ]
 	}
