@@ -162,7 +162,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
-		if (tk.max_diff_score) {
+		if (Number.isFinite(tk.max_diff_score)) {
 			lst.push('max_diff_score=' + tk.max_diff_score)
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
@@ -465,7 +465,7 @@ function setTkHeight(tk, data) {
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 
-		if (!g.data.allowpartstack && !tk.max_diff_score) {
+		if (!g.data.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
 			// Set max and min diff_score in full stack mode
 
 			tk.max_diff_score = data.max_diff_score
