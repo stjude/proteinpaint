@@ -1,5 +1,5 @@
 const serverconfig = require('../src/serverconfig')
-const clinvar_clinsig = require('./clinvar.clinsig')
+const clinvar = require('../dataset/clinvar')
 module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
@@ -29,7 +29,7 @@ module.exports = {
 	clinvarVCF: {
 		file: 'hg38/clinvar.hg38.vcf.gz',
 		infokey: 'CLNSIG',
-		categories: clinvar_clinsig
+		categories: clinvar.clinsig
 	},
 	tracks: [
 		{

@@ -1,5 +1,4 @@
-const clinvar_clinsig = require('../genome/clinvar.clinsig')
-const clinvar_AF = require('./clinvar.AF')
+const clinvar = require('./clinvar')
 module.exports = {
 	color: '#545454',
 	dsinfo: [
@@ -25,11 +24,11 @@ module.exports = {
 				locusinfo: {
 					key: 'CLNSIG'
 				},
-				categories: clinvar_clinsig
+				categories: clinvar.clinsig
 			},
-			clinvar_AF.AF_EXAC,
-			clinvar_AF.AF_ESP,
-			clinvar_AF.AF_TGP
+			clinvar.AF.AF_EXAC,
+			clinvar.AF.AF_ESP,
+			clinvar.AF.AF_TGP
 		]
 	},
 
