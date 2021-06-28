@@ -187,9 +187,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -202,9 +203,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -217,9 +218,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
@@ -234,9 +235,10 @@ export async function match_complexvariant_rust(q, templates_info) {
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
 	// console.log('Final array for plotting:', kmer_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-
+	const diff_list = kmer_diff_scores_input.map(i => i.value)
+	const max_diff_score = Math.max(...diff_list)
+	const min_diff_score = Math.min(...diff_list)
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
-
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]
@@ -254,7 +256,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 		})
 		groups.push(g)
 	}
-	return { groups, refalleleerror }
+	return { groups, refalleleerror, max_diff_score, min_diff_score }
 }
 
 function run_rust_indel_pipeline(input_data) {
@@ -490,7 +492,7 @@ export async function match_complexvariant(q, templates_info) {
 			ref_comparisons.push(ref_comparison)
 			alt_comparisons.push(alt_comparison)
 			const item = {
-				value: Math.abs(diff_score),
+				value: Math.max(diff_score),
 				groupID: i
 			}
 			if (diff_score > 0) {
@@ -521,10 +523,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore =
-						alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -536,10 +538,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore =
-						alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -555,10 +557,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore =
-						alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4)
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -570,10 +572,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				if (serverconfig.features.indel_kmer_scores) {
-					templates_info[index].tempscore =
-						alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
-				}
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
@@ -587,7 +589,9 @@ export async function match_complexvariant(q, templates_info) {
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
 	// console.log('Final array for plotting:', kmer_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-
+	const diff_list = kmer_diff_scores_input.map(i => i.value)
+	const max_diff_score = Math.max(...diff_list)
+	const min_diff_score = Math.min(...diff_list)
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
 	//	if (features.bamScoreRplot) {
 	//		const file = fs.createWriteStream(
@@ -619,7 +623,7 @@ export async function match_complexvariant(q, templates_info) {
 		})
 		groups.push(g)
 	}
-	return { groups, refalleleerror }
+	return { groups, refalleleerror, max_diff_score, min_diff_score }
 }
 
 function build_kmers(sequence, kmer_length) {

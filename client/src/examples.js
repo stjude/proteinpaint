@@ -144,12 +144,8 @@ function make_searchbar(track_args, page_args, div) {
 }
 
 async function loadTracks(args, page_args, filteredTracks) {
-	const BrowserTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser'
-	)
-	const LaunchApps = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Apps'
-	)
+	const BrowserTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Genome Browser')
+	const LaunchApps = (filteredTracks || args.tracks).filter(track => track.app == 'Apps')
 	try {
 		displayTracks(BrowserTracks, args.browserList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
@@ -208,20 +204,20 @@ function displayTracks(tracks, holder, page_args) {
 			const today = new Date()
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
-			if (update > today){
+			if (update > today) {
 				li.append('div')
-				.text('Updated')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#fffecc')
-				.style('font-size', '10.5px')
+					.text('Updated')
+					.attr('class', 'track-ribbon')
+					.style('color', '#4f5459')
+					.style('background-color', '#fffecc')
+					.style('font-size', '10.5px')
 			}
-			if (newtrack > today){
+			if (newtrack > today) {
 				li.append('div')
-				.text('New')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#e9fce6')
+					.text('New')
+					.attr('class', 'track-ribbon')
+					.style('color', '#4f5459')
+					.style('background-color', '#e9fce6')
 			}
 		}
 
@@ -267,9 +263,9 @@ async function openExample(track, holder) {
 
 	if (track.sandbox_intro) {
 		const intro = sandbox_div.body
-		.append('div')
-		.style('margin', '20px')
-		.html(track.sandbox_intro)
+			.append('div')
+			.style('margin', '20px')
+			.html(track.sandbox_intro)
 	}
 	// template runpp() arg
 	const runpp_arg = {

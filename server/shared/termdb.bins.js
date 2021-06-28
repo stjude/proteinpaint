@@ -290,7 +290,8 @@ export function get_bin_label(bin, binconfig) {
 		const v1 = bc.binLabelFormatter(bin.stop) //bin.startinclusive && label_offset ? bin.stop - label_offset : bin.stop)
 		return oper + v1
 	}
-	if (bin.stopunbounded) {
+	// a data value may coincide with the last bin's start
+	if (bin.stopunbounded || bin.start === bin.stop) {
 		const oper = bin.startinclusive /*|| label_offset*/ ? '≥' : '>' // \u2265
 		const v0 = bc.binLabelFormatter(bin.start) //bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset)
 		return oper + v0
@@ -313,7 +314,13 @@ export function get_bin_label(bin, binconfig) {
 		const oper1 = bin.stopinclusive ? '' : '<'
 		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
 		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
-		return oper0 + v0 + ' to ' + oper1 + v1
+		// after rounding the bin labels, the bin start may equal the last bin stop as derived from actual data
+		if (+v0 >= +v1) {
+			const oper = bin.startinclusive ? '≥' : '>' // \u2265
+			return oper + v0
+		} else {
+			return oper0 + v0 + ' to ' + oper1 + v1
+		}
 	}
 }
 

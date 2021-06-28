@@ -161,6 +161,11 @@ async function getData(tk, block, additional = []) {
 	]
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
+		if (tk.max_diff_score) {
+			lst.push('max_diff_score=' + tk.max_diff_score)
+			lst.push('min_diff_score=' + tk.min_diff_score)
+		}
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -421,6 +426,30 @@ function may_render_variant(data, tk, block) {
 			.attr('font-size', tk.dom.variantrowheight)
 			.text(text_string)
 	}
+
+	if (Number.isFinite(data.max_diff_score)) {
+		// Should always be true if variant field was given by user, but may change in the future
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff - 2 * tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Diff Score')
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff - tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
+	}
 }
 
 function setTkHeight(tk, data) {
@@ -435,9 +464,31 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+
+		if (!g.data.allowpartstack && !tk.max_diff_score) {
+			// Set max and min diff_score in full stack mode
+
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
+		}
+
+		if (tk.variants) {
+			g.dom.diff_score_barplot_fullstack
+				.transition()
+				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')') // + g.data.diff_scores_img.row_height
+		}
 		if (g.partstack) {
 			// slider visible
-			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+			if (tk.variants) {
+				g.dom.diff_score_barplot_partstack
+					.transition()
+					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
+				g.dom.vslider.g
+					.transition()
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
+			} else {
+				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+			}
 		}
 		h += g.data.height
 	}
@@ -459,7 +510,15 @@ function updateExistingGroups(data, tk, block) {
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
+
+		group.dom.diff_score_barplot_fullstack
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', gd.diff_scores_img.width)
+			.attr('height', gd.diff_scores_img.height)
+
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
+		group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+
 		//tk.config_handle.transition().attr('x', 0)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 		group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
@@ -527,6 +586,8 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
+		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
+		tk.dom.diff_score_plotwidth = 50
 	}
 	if (tk.gdc) {
 		tk.dom.gdc_bar = tk.glider.append('g')
@@ -590,6 +651,18 @@ function makeGroup(gd, tk, block, data) {
 				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
 			}
 		}
+	}
+	if (tk.variants) {
+		group.dom.diff_score_barplot_fullstack = tk.dom.diff_score_g
+			.append('image')
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', gd.diff_scores_img.width)
+			.attr('height', gd.diff_scores_img.height)
+		group.dom.diff_score_barplot_partstack = tk.dom.diff_score_g
+			.append('image')
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', 0)
+			.attr('height', 0)
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
@@ -1296,12 +1369,19 @@ function show_blatresult(hits, div, tk, block) {
 function renderGroup(group, tk, block) {
 	update_boxes(group, tk, block)
 	if (group.partstack) {
+		if (tk.variants) {
+			group.dom.diff_score_barplot_partstack
+				.attr('xlink:href', group.data.diff_scores_img.src)
+				.attr('width', group.data.diff_scores_img.width)
+				.attr('height', group.data.diff_scores_img.height)
+		}
 		group.dom.img_partstack
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
+		group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
 		const scrollableheight = group.data.height - group.data.messagerowheights
 		group.dom.vslider.bar.transition().attr('height', scrollableheight)
@@ -1320,6 +1400,12 @@ function renderGroup(group, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
+		if (group.dom.diff_score_barplot_partstack) {
+			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		}
+		group.dom.diff_score_barplot_fullstack
+			.attr('width', group.data.diff_scores_img.width)
+			.attr('height', group.data.diff_scores_img.height)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
