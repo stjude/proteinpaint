@@ -1,5 +1,5 @@
 import * as common from '../../shared/common'
-import { to_textfile, fillbar } from '../client'
+import { to_textfile, fillbar, tab2box } from '../client'
 
 
 /*
@@ -44,7 +44,7 @@ export async function init_sampletable(arg) {
 			await make_multiSampleTable(arg, holder)
 		} else {
 			// more cases, show summary
-			// await make_sampleSummary(arg, table, downloadlinkdiv)
+			await make_sampleSummary2(arg, holder)
 		}
 		err_check_div.remove()
 	} catch (e) {
@@ -207,6 +207,82 @@ async function make_multiSampleTable(arg, holder) {
 	}
 }
 
+async function make_sampleSummary(arg, holder) {
+
+	arg.querytype = arg.tk.mds.variant2samples.type_summary
+	const data = await arg.tk.mds.variant2samples.get(arg)
+
+    const table = holder
+        .append('div')
+        .style('margin', '20px')
+        .style('font-size', '.9em')
+        .style('display', 'grid')
+        .style('grid-template-columns', 'auto auto')
+        .style('gap-row-gap', '1px')
+        .style('align-items', 'center')
+        .style('justify-items', 'left')
+
+	for (const entry of data) {
+		const [td1, td2] = get_list_cells(table)
+		td1.text(entry.name)
+		if (entry.numbycategory) {
+			const t2 = td2.append('table')
+			for (const [category, count] of entry.numbycategory) {
+				const tr = t2.append('tr')
+				tr.append('td')
+					.text(count)
+					.style('text-align', 'right')
+					.style('padding-right', '10px')
+				tr.append('td').text(category)
+			}
+		}
+	}
+
+	/////// temporary fix! add link at table top to download summaries
+	{
+		const lines = []
+		for (const entry of data) {
+			if (entry.numbycategory) {
+				for (const [category, count] of entry.numbycategory) {
+					lines.push(entry.name + '\t' + category + '\t' + count)
+				}
+			}
+		}
+		// linkdiv
+		// 	.style('margin', '10px 0px')
+		// 	.append('a')
+		// 	.text('DOWNLOAD SUMMARY')
+		// 	.style('font-size', '.9em')
+		// 	.on('click', () => to_textfile('Summary', lines.join('\n')))
+	}
+}
+
+async function make_sampleSummary2(arg, holder) {
+
+	arg.querytype = arg.tk.mds.variant2samples.type_summary
+	const data = await arg.tk.mds.variant2samples.get(arg)
+    console.log(data)
+
+    const main_tabs = [
+        { heading: 'Summary'}, {heading: 'List'}
+    ]
+
+    horizontal_tabs(holder, main_tabs)
+
+    const summary_tabs = []
+    for(const category of data){
+        summary_tabs.push({
+            label: category.name,
+            callback: div => make_summary_panel(div, category)
+        })
+    }
+
+    const summary_div = holder.append('div')
+        .style('padding-top', '10px')
+
+    tab2box(summary_div, summary_tabs)
+}
+
 function get_list_cells(table) {
 	return [
 		table
@@ -222,10 +298,44 @@ function get_list_cells(table) {
 	]
 }
 
-function get_table_cell(table, i){
+function get_table_cell(table, row_id){
     return table.append('div')
         .style('width','95%')
         .style('height','100%')
         .style('padding','2px 5px')
-        .style('background-color', i % 2 == 0 ? '#eee':'#fff')
+        .style('background-color', row_id % 2 == 0 ? '#eee':'#fff')
+}
+
+function horizontal_tabs(holder, tabs){
+    const tab_holder = holder.append('div')
+        .style('padding', '10px 10px 0 10px')
+        .style('border-bottom', 'solid 1px #aaa')
+
+    const has_active_tab = tabs.some(i => i.active)
+    if(!has_active_tab) tabs[0].active = true
+    
+    for (const [i, tab] of tabs.entries()){
+        tab_holder.append('div')
+            .classed('sja_menuoption', !tab.active ? true : false)
+            .style('padding', '7px 10px')
+            .style('display','inline-block')
+            .style('border-top', 'solid 1px #ddd')
+            .style('border-left', i == 0 ? 'solid 1px #ddd' : '')
+            .style('border-right', 'solid 1px #ddd')
+            .text(tab.heading)
+    }
+}
+
+function make_summary_panel(div, category){
+    if (category.numbycategory) {
+        const table = div.append('table')
+        for (const [category_name, count] of category.numbycategory) {
+            const tr = table.append('tr')
+            tr.append('td')
+                .text(count)
+                .style('text-align', 'right')
+                .style('padding-right', '10px')
+            tr.append('td').text(category_name)
+        }
+    }
 }
