@@ -1,4 +1,4 @@
-module.exports = {
+module.exports.clinsig = {
 	Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white' },
 	not_provided: { color: '#ccc', label: 'Not provided' },
 	_not_provided: { color: '#ccc', label: 'Not provided' },
@@ -26,4 +26,22 @@ module.exports = {
 	_Affects: { color: '#ccc', label: 'Affects' },
 	protective: { color: '#ccc', label: 'Protective' },
 	_protective: { color: '#ccc', label: 'Protective' }
+}
+
+module.exports.AF = {
+	AF_EXAC: {
+		name: 'ExAC frequency',
+		locusinfo: { key: 'AF_EXAC' },
+		numericfilter: [{ side: '<', value: 0.0001 }, { side: '<', value: 0.001 }, { side: '<', value: 0.01 }]
+	},
+	AF_ESP: {
+		name: 'GO-ESP frequency',
+		locusinfo: { key: 'AF_ESP' },
+		numericfilter: [{ side: '<', value: 0.0001 }, { side: '<', value: 0.001 }, { side: '<', value: 0.01 }]
+	},
+	AF_TGP: {
+		name: '1000 Genomes frequency',
+		locusinfo: { key: 'AF_TGP' },
+		numericfilter: [{ side: '<', value: 0.0001 }, { side: '<', value: 0.001 }, { side: '<', value: 0.01 }]
+	}
 }

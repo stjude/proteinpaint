@@ -1,4 +1,4 @@
-const clinvar_clinsig = require('./clinvar.clinsig')
+const clinvar = require('../dataset/clinvar')
 module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
@@ -26,7 +26,7 @@ module.exports = {
 	clinvarVCF: {
 		file: 'hg19/clinvar.hg19.vcf.gz',
 		infokey: 'CLNSIG',
-		categories: clinvar_clinsig
+		categories: clinvar.clinsig
 	},
 	tracks: [
 		{
