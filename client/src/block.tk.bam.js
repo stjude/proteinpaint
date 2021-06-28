@@ -1385,7 +1385,9 @@ function renderGroup(group, tk, block) {
 			.attr('height', group.data.height)
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
-		group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
+		}
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
 		const scrollableheight = group.data.height - group.data.messagerowheights
 		group.dom.vslider.bar.transition().attr('height', scrollableheight)
@@ -1404,12 +1406,14 @@ function renderGroup(group, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		if (group.dom.diff_score_barplot_partstack) {
-			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			if (group.dom.diff_score_barplot_partstack) {
+				group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+			}
+			group.dom.diff_score_barplot_fullstack
+				.attr('width', group.data.diff_scores_img.width)
+				.attr('height', group.data.diff_scores_img.height)
 		}
-		group.dom.diff_score_barplot_fullstack
-			.attr('width', group.data.diff_scores_img.width)
-			.attr('height', group.data.diff_scores_img.height)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
