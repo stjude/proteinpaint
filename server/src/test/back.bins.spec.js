@@ -312,6 +312,34 @@ tape('get_bin_label(), label_offset=0', function(test) {
 	test.end()
 })
 
+tape('get_bin_label(), last bin start === stop', test => {
+	const summary = {
+		min: -0.0232,
+		max: 0.06
+	}
+	const binconfig = {
+		rounding: '.2f',
+		bin_size: 0.03,
+		startinclusive: true,
+		first_bin: { startunbounded: true, stop: -0.0645461 },
+		label_offset: 1
+	}
+	const bins = b.compute_bins(binconfig, () => summary)
+	const last_bin = bins.pop()
+	test.deepEqual(
+		last_bin,
+		{
+			startinclusive: true,
+			stopinclusive: undefined,
+			start: 0.0554539,
+			stop: 0.06,
+			label: '≥0.06'
+		},
+		'should simplify the last bin label to a one-sided value when bin start === stop'
+	)
+	test.end()
+})
+
 tape('compute_bins() unbounded', function(test) {
 	test.deepLooseEqual(
 		b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary),
