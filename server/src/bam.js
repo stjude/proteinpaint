@@ -686,8 +686,8 @@ async function get_q(genome, req) {
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		if (req.query.max_diff_score) {
-			q.max_diff_score = req.query.max_diff_score
-			q.min_diff_score = req.query.min_diff_score
+			q.max_diff_score = Number(req.query.max_diff_score)
+			q.min_diff_score = Number(req.query.min_diff_score)
 		}
 		const t = req.query.variant.split('.')
 		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'

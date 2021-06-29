@@ -260,13 +260,6 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			if (!g.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
-				// Set max and min diff_score in full stack mode
-
-				tk.max_diff_score = data.max_diff_score
-				tk.min_diff_score = data.min_diff_score
-			}
-
 			tk.groups.push(makeGroup(g, tk, block, data))
 		}
 	} else {
@@ -666,6 +659,12 @@ function makeGroup(gd, tk, block, data) {
 			.attr('xlink:href', gd.diff_scores_img.src)
 			.attr('width', 0)
 			.attr('height', 0)
+
+		if (!group.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
+			// Set max and min diff_score in full stack mode
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
+		}
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
