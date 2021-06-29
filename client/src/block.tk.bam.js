@@ -260,7 +260,6 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			console.log('g:', g)
 			if (!g.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
 				// Set max and min diff_score in full stack mode
 
