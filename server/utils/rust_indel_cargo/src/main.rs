@@ -11,6 +11,7 @@
 //   }
 // Analyze each read
 //   for each read {
+//      check_read_within_indel_region() (Checks if the read contains indel region)
 //      check_polyclonal() (checking if read is polyclonal)
 //      build_kmers()
 //      jaccard_similarity_weights() (w.r.t ref and alt)
@@ -365,6 +366,7 @@ fn main() {
             if i >= 2 && read.len() > 0 {
                 // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
                 within_indel = check_read_within_indel_region(
+                    // Checks if the read contains the indel region (or a part of it)
                     start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
                     cigar_sequences_list[i as usize - 2].to_string(),
                     variant_pos,
@@ -463,14 +465,14 @@ fn main() {
                 let alt_nucleotides: Vec<char> = altallele.chars().collect();
                 let mut ref_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for ref classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 let mut alt_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for alt classified reads) parsed by each thread. This variable is then concatenated from other threads later.
-                let mut within_indel;
                 for iter in 0..lines.len() - 2 {
                     let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
                     if remainder == thread_num {
                         // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
-                        within_indel = check_read_within_indel_region(
-                            start_positions_list[iter - 2].parse::<i64>().unwrap() - 1,
-                            cigar_sequences_list[iter - 2].to_string(),
+                        let within_indel = check_read_within_indel_region(
+                            // Checks if the read contains the indel region (or a part of it)
+                            start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                            cigar_sequences_list[iter].to_string(),
                             variant_pos,
                             indel_length as usize,
                         );
@@ -735,6 +737,10 @@ fn check_read_within_indel_region(
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             }
         }
+        //println!("correct_start_position:{}", correct_start_position);
+        //println!("correct_end_position:{}", correct_end_position);
+        //println!("indel_start:{}", indel_start);
+        //println!("indel_stop:{}", indel_stop);
         if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
             || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
         // When the indel region is completely inside the read or the read is completely inside the indel region
