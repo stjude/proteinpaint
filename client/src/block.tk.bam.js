@@ -162,7 +162,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.variants) {
 		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
 		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
-		if (tk.max_diff_score) {
+		if (Number.isFinite(tk.max_diff_score)) {
 			lst.push('max_diff_score=' + tk.max_diff_score)
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
@@ -464,14 +464,6 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
-
-		if (!g.data.allowpartstack && !tk.max_diff_score) {
-			// Set max and min diff_score in full stack mode
-
-			tk.max_diff_score = data.max_diff_score
-			tk.min_diff_score = data.min_diff_score
-		}
-
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
 				.transition()
@@ -511,13 +503,17 @@ function updateExistingGroups(data, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 
-		group.dom.diff_score_barplot_fullstack
-			.attr('xlink:href', gd.diff_scores_img.src)
-			.attr('width', gd.diff_scores_img.width)
-			.attr('height', gd.diff_scores_img.height)
+		if (tk.variants) {
+			group.dom.diff_score_barplot_fullstack
+				.attr('xlink:href', gd.diff_scores_img.src)
+				.attr('width', gd.diff_scores_img.width)
+				.attr('height', gd.diff_scores_img.height)
+		}
 
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		}
 
 		//tk.config_handle.transition().attr('x', 0)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
@@ -663,6 +659,12 @@ function makeGroup(gd, tk, block, data) {
 			.attr('xlink:href', gd.diff_scores_img.src)
 			.attr('width', 0)
 			.attr('height', 0)
+
+		if (!group.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
+			// Set max and min diff_score in full stack mode
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
+		}
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
@@ -1381,7 +1383,9 @@ function renderGroup(group, tk, block) {
 			.attr('height', group.data.height)
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
-		group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
+		}
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
 		const scrollableheight = group.data.height - group.data.messagerowheights
 		group.dom.vslider.bar.transition().attr('height', scrollableheight)
@@ -1400,12 +1404,14 @@ function renderGroup(group, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		if (group.dom.diff_score_barplot_partstack) {
-			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			if (group.dom.diff_score_barplot_partstack) {
+				group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+			}
+			group.dom.diff_score_barplot_fullstack
+				.attr('width', group.data.diff_scores_img.width)
+				.attr('height', group.data.diff_scores_img.height)
 		}
-		group.dom.diff_score_barplot_fullstack
-			.attr('width', group.data.diff_scores_img.width)
-			.attr('height', group.data.diff_scores_img.height)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)

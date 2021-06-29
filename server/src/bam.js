@@ -686,8 +686,8 @@ async function get_q(genome, req) {
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		if (req.query.max_diff_score) {
-			q.max_diff_score = req.query.max_diff_score
-			q.min_diff_score = req.query.min_diff_score
+			q.max_diff_score = Number(req.query.max_diff_score)
+			q.min_diff_score = Number(req.query.min_diff_score)
 		}
 		const t = req.query.variant.split('.')
 		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
@@ -773,19 +773,15 @@ async function do_query(q) {
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
-		if (q.max_diff_score) {
+		if (Number.isFinite(q.max_diff_score) && q.variant) {
 			// In partstack mode
 			result.max_diff_score = q.max_diff_score
-		} else if (out.max_diff_score) {
-			result.max_diff_score = out.max_diff_score
-		}
-
-		if (q.min_diff_score) {
-			// In partstack mode
 			result.min_diff_score = q.min_diff_score
-		} else if (out.min_diff_score) {
+		} else if (Number.isFinite(out.max_diff_score)) {
+			result.max_diff_score = out.max_diff_score
 			result.min_diff_score = out.min_diff_score
 		}
+
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
 
