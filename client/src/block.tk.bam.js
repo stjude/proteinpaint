@@ -260,6 +260,13 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
+			if (!g.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
+				// Set max and min diff_score in full stack mode
+
+				tk.max_diff_score = data.max_diff_score
+				tk.min_diff_score = data.min_diff_score
+			}
+
 			tk.groups.push(makeGroup(g, tk, block, data))
 		}
 	} else {
@@ -464,14 +471,6 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
-
-		if (!g.data.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
-			// Set max and min diff_score in full stack mode
-
-			tk.max_diff_score = data.max_diff_score
-			tk.min_diff_score = data.min_diff_score
-		}
-
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
 				.transition()
