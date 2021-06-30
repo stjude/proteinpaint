@@ -129,6 +129,8 @@ export async function match_complexvariant_rust(q, templates_info) {
 		weight_indel.toString() +
 		':' +
 		threshold_slope.toString() +
+		':' +
+		q.variant.strictness +
 		':'
 
 	//fs.writeFile('test.txt', input_data, function (err) { // For catching input to rust pipeline, in case of an error
