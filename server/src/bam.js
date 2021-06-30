@@ -690,12 +690,13 @@ async function get_q(genome, req) {
 			q.min_diff_score = Number(req.query.min_diff_score)
 		}
 		const t = req.query.variant.split('.')
-		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
+		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
 		q.variant = {
 			chr: t[0],
 			pos: Number(t[1]),
 			ref: t[2].toUpperCase(),
-			alt: t[3].toUpperCase()
+			alt: t[3].toUpperCase(),
+			strictness: t[4]
 		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
