@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -135,7 +135,7 @@ tape('column and row labels', function(test) {
 		termfilter,
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age (years)', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -164,7 +164,7 @@ tape('column and row labels', function(test) {
 					.node()
 					.querySelectorAll('th')
 			].map(elem => elem.innerText),
-			['Male', 'Female', '<5', '5 to 9', '10 to 14', '15 to 19', '20 to 23'],
+			['Female', 'Male', '<5', '5 to 9', '10 to 14', '15 to 19', '20 to 20.15'],
 			'should use term.values{key: {label}} as column labels, if available'
 		)
 		test.end()

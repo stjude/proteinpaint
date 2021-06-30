@@ -6,7 +6,7 @@ const helpers = require('../../../test/front.helpers.js')
 **************************/
 
 const runpp = helpers.getRunPp('toy', {
-	dslabel: 'SJLife',
+	dslabel: 'TermdbTest',
 	genome: 'hg38',
 	debug: 1,
 	fetchOpts: {
@@ -78,8 +78,8 @@ tape('text input', function(test) {
 	function testExactSuggestedTerm(search) {
 		test.equal(
 			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(),
-			3,
-			"should render 3 search suggestion for 'sex' term"
+			1,
+			"should render 1 search suggestion for 'sex' term"
 		)
 	}
 
@@ -92,8 +92,8 @@ tape('text input', function(test) {
 	function testLooseSuggestedTerm(search) {
 		test.equal(
 			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(),
-			4,
-			"should render 4 search suggestions for 'cardio' term"
+			3,
+			"should render 3 search suggestions for 'cardio' term"
 		)
 	}
 })

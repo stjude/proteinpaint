@@ -11,7 +11,7 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		// initialize with default arguments for all tests
 		const runpp = getRunPp('termdb', {
 		    state: {
-		        dslabel: 'SJLife',
+		        dslabel: 'TermdbTest',
 		        genome: 'hg38'
 		    },
 		    debug: 1,
