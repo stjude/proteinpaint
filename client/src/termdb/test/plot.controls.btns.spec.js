@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1

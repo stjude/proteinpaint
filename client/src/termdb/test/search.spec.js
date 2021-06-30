@@ -5,13 +5,13 @@ const graphable = require('../../common/termutils').graphable
 
 /*
 Note:
-these tests are dependent on SJLife termdb data.
+these tests are dependent on TermdbTest termdb data.
 if data updates, these tests may also needs to be updated
 */
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -68,7 +68,7 @@ tape('term search, default behavior', function(test) {
 	let searchResultBtns
 	function testFirstSearch(search) {
 		searchResultBtns = search.Inner.dom.resultDiv.select('table').selectAll('.sja_menuoption')
-		test.equal(searchResultBtns.size(), 4, 'search result should show 4 buttons')
+		test.equal(searchResultBtns.size(), 3, 'search result should show 3 buttons')
 	}
 
 	let clickedTerm_firstSearch
@@ -80,7 +80,7 @@ tape('term search, default behavior', function(test) {
 
 	function testClickResult_firstSearch(tree) {
 		const termdivs = tree.Inner.dom.treeDiv.selectAll('.termdiv')
-		test.ok(termdivs.nodes().length > 10, 'updated tree should show more than 10 terms')
+		test.ok(termdivs.nodes().length > 3, 'updated tree should show more than 3 terms')
 		test.equal(
 			termdivs.filter(i => i.id == clickedTerm_firstSearch.id).size(),
 			1,

@@ -85,7 +85,7 @@ const sqlParamsReformat = {
 
 function getSqlUrl(_params = {}) {
 	const params = Object.assign({}, _params)
-	let url = 'http://localhost:' + serverconfig.port + sqlBasePath + '&genome=hg38' + '&dslabel=SJLife'
+	let url = 'http://localhost:' + serverconfig.port + sqlBasePath + '&genome=hg38' + '&dslabel=TermdbTest'
 
 	for (const key in params) {
 		if (key in sqlParamsReformat.rename) {
@@ -197,6 +197,13 @@ function normalizeRefs(refs, comparedRefs) {
 					}
 				}
 			})
+		}
+	}
+
+	if (refs.q) {
+		for (const q of refs.q) {
+			if (!q) continue
+			delete q.label_offset_ignored
 		}
 	}
 

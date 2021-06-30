@@ -109,7 +109,7 @@ tape('state rehydrate: default cohort', function(test) {
 	runpp({
 		state: {
 			genome: 'hg38',
-			dslabel: 'SJLife'
+			dslabel: 'TermdbTest'
 		},
 		app: {
 			callbacks: {
@@ -159,7 +159,7 @@ tape('state rehydrate: activeCohort=1', function(test) {
 	runpp({
 		state: {
 			genome: 'hg38',
-			dslabel: 'SJLife',
+			dslabel: 'TermdbTest',
 			activeCohort: 1
 		},
 		app: {
@@ -211,7 +211,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 	runpp({
 		state: {
 			genome: 'hg38',
-			dslabel: 'SJLife',
+			dslabel: 'TermdbTest',
 			termfilter: {
 				filter: {
 					type: 'tvslst',

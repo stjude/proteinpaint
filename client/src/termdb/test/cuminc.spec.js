@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 		//nav: { header_mode: 'with_tabs' }
 	},
@@ -59,8 +59,8 @@ tape('basic cuminc plot', function(test) {
 	})
 
 	let cumincDiv
-	function runTests(plot) {
-		cumincDiv = plot.Inner.components.cuminc.Inner.dom.div
+	async function runTests(plot) {
+		cumincDiv = plot.Inner.components.cuminc.Inner.dom.chartsDiv
 		test.equal(cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series').size(), 1, 'should render 1 cuminc series g')
 		test.equal(
 			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series path').size(),
@@ -69,8 +69,8 @@ tape('basic cuminc plot', function(test) {
 		)
 		test.equal(
 			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
-			108,
-			'should render 108 cuminc series circles'
+			9,
+			'should render 9 cuminc series circles'
 		)
 		test.end()
 	}

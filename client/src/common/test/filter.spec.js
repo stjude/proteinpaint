@@ -38,7 +38,7 @@ function getOpts(_opts = {}) {
 		_opts
 	)
 
-	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'SJLife' }
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'TermdbTest' }
 
 	opts.filter = filterInit({
 		btn: holder.append('div'),
@@ -401,10 +401,10 @@ tape('+NEW button interaction', async test => {
 		.node()
 		.querySelector('.sja_new_filter_btn')
 		.click()
-	await sleep(150)
-	test.notEqual(
-		opts.filter.Inner.dom.treeTip.d.node().style.display,
-		'none',
+	await sleep(350)
+	test.true(
+		opts.filter.Inner.dom.treeTip.d.node().style.display != 'none' &&
+			opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv').length > 2,
 		'should display the tree menu when clicking the +NEW button'
 	)
 

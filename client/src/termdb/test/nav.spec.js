@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38',
 		nav: { header_mode: 'with_tabs' }
 	},
@@ -22,12 +22,14 @@ function sleep(ms) {
 async function addDemographicSexFilter(opts, btn) {
 	btn.click()
 	await sleep(200)
-	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')[2]
-	termdiv1.querySelectorAll('.termbtn')[0].click()
+	// termdiv[2] is assumed to be Demographics
+	const termdiv = [...opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')].find(
+		elem => elem.__data__.id == 'Demographic Variables'
+	)
+	termdiv.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
-	const termdivSex = [...termdiv1.querySelectorAll('.termdiv')].find(elem => elem.__data__.id === 'sex')
+	const termdivSex = [...termdiv.querySelectorAll('.termdiv')].find(elem => elem.__data__.id === 'sex')
 	termdivSex.querySelectorAll('.termview')[0].click()
 	await sleep(800)
 
@@ -287,7 +289,7 @@ tape('filter subheader and tab', async function(test) {
 		test.equal(itemCountTd.innerText, '1', 'should indicate a filter item count of 1')
 
 		const sampleCountTd = tds._groups[0][7]
-		const n = 2149
+		const n = 35
 		test.equal(sampleCountTd.innerText, `n=${n}`, 'should display the correct filtered sample count')
 	}
 })

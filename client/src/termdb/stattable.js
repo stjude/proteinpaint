@@ -68,8 +68,8 @@ function setRenderers(self) {
 	  }
 	  */
 
-		let rows =
-			'<tr><td>Mean (SD)</td><td>' + data.boxplot.mean.toFixed(2) + ' (' + data.boxplot.sd.toFixed(2) + ') </td></tr>'
+		const sd = data.boxplot.sd ? ' (' + data.boxplot.sd.toFixed(2) + ') ' : ''
+		let rows = '<tr><td>Mean (SD)</td><td>' + data.boxplot.mean.toFixed(2) + sd + '</td></tr>'
 		if ('p50' in data.boxplot) {
 			rows +=
 				'<tr><td>Median (IQR)</td><td>' +
