@@ -726,7 +726,7 @@ fn check_read_within_indel_region(
     indel_length: usize, // Length of indel
 ) -> usize {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
-    if &cigar_sequence == &"*" {
+    if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
         let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
