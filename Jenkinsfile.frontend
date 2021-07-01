@@ -1,0 +1,5 @@
+#!/usr/bin/env groovy
+
+library identifier: "jenkins-lib@GDCDEVOPS-741-npm-Jenkins-pipeline"
+npmPipeline {
+}
