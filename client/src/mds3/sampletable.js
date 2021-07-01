@@ -129,17 +129,22 @@ async function make_singleSampleTable(arg, holder) {
 async function make_multiSampleTable(arg, holder, size, from) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	const default_samp_per_page = 10
-	let sam_per_page = size || default_samp_per_page
-	const pages = Math.ceil(numofcases / sam_per_page)
+	const default_size = 10
+	let current_size = parseInt(size) || default_size
+	const pages = Math.ceil(numofcases / current_size)
 	const default_from = 0
-	let current_from = from || default_from
+	let current_from = parseInt(from) || default_from
 	const pagination = numofcases > 10
 	if (pagination) {
-		arg.size = sam_per_page
+		arg.size = current_size
 		arg.from = current_from
 	}
+
+    holder.append('div')
+        .style('color', '#bbb')
+        .text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
+    holder.selectAll('*').remove()
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -147,13 +152,15 @@ async function make_multiSampleTable(arg, holder, size, from) {
 	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
 
 	// showing sample info for pagination
+    const count_start = arg.from + 1
+    const count_end = (arg.from + arg.size) < numofcases ? (arg.from + arg.size) : numofcases
 	if (pagination)
 		holder
 			.append('div')
 			.style('padding', '5px 10px')
 			.style('font-size', '.9em')
 			.style('color', '#999')
-			.html(`<p> Showing <b>${arg.from + 1} - ${arg.size} </b> of <b>${numofcases}</b> Samples`)
+			.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${numofcases}</b> Samples`)
 
 	const grid_div = holder
 		.append('div')
@@ -239,19 +246,62 @@ async function make_multiSampleTable(arg, holder, size, from) {
 
 	// pages
 	if (pagination) {
-		const pages_div = holder
+        const footer = holder.append('div')
+            .style('display','flex')
+            .style('justify-content', 'space-between')
+
+        const entries_div = footer
+            .append('div')
+            .style('display','inline-block')
+            .style('padding', '20px 15px 15px 15px')
+            .style('color', '#999')
+            .style('font-size', '.9em')
+        entries_div.append('span')
+            .style('padding-right','10px')
+            .text('Showing')
+
+        const entries_options = ['10', '20', '50', '100']    
+        const entries_select = entries_div.append('select')
+            .style('border', 'solid 1px #ddd')
+            .attr('title', 'Enteries per page')
+            .on('change', ()=>{
+                const new_size = entries_select.property('value')
+                make_multiSampleTable(arg, holder, new_size)
+            })
+
+        for(const ent of entries_options){
+            entries_select.append('option')
+                .text(ent)
+                .property('value', ent)
+                .property('selected', current_size == ent)
+        }
+
+        entries_div.append('span')
+            .style('padding-left','10px')
+            .text('entries')
+
+		const pages_div = footer
 			.append('div')
+            .style('display','inline-block')
 			.style('padding', '15px')
 			.style('font-size', '.9em')
 			.style('text-align', 'end')
-		const current_page = arg.from == 0 ? 1 : Math.ceil(arg.from / arg.size)
-		for (let i = 1; i < pages; i++) {
+		const current_page = arg.from == 0 ? 1 : (Math.ceil(arg.from / arg.size) + 1)
+		for (let i = 1; i <= pages; i++) {
 			pages_div
 				.append('div')
 				.style('padding', '5px')
 				.style('display', 'inline-block')
-				.style('color', '#999')
-				.html(i == current_page ? i : `<a> ${i}</a>`)
+                .classed('sja_menuoption', i != current_page ? true : false)
+                .style('border', 'solid 1px #ddd')
+				.html(i)
+                .on('click',()=>{
+                    if (i == current_page) return
+                    else {
+                        const new_from = ((i - 1) * current_size)
+                        make_multiSampleTable(arg, holder, current_size, new_from)
+                    }
+                })
 		}
 	}
 }
@@ -329,13 +379,8 @@ function horizontal_tabs(holder, tabs) {
 					tab_.holder.style('display', tab_.active ? 'block' : 'none')
 				}
 				if (tab.callback) {
-					const loading_div = tab.holder
-						.append('div')
-						.style('color', '#bbb')
-						.text('Loading...')
 					await tab.callback(tab.holder)
 					delete tab.callback
-					loading_div.remove()
 				}
 			})
 
