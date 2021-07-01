@@ -1006,6 +1006,30 @@ fn check_polyclonal(
                         break;
                     }
                 }
+            } else {
+                for i in ref_length..0 as usize {
+                    #[allow(unused_comparisons)]
+                    if read_indel_start - i >= 0 {
+                        if &ref_nucleotides[i] != &sequence_vector[read_indel_start - i] {
+                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                for i in alt_length..0 as usize {
+                    #[allow(unused_comparisons)]
+                    if read_indel_start - i >= 0 {
+                        if &alt_nucleotides[i] != &sequence_vector[read_indel_start - i] {
+                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
             }
         }
 
