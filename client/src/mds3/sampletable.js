@@ -41,7 +41,7 @@ export async function init_sampletable(arg) {
 			await make_singleSampleTable(arg, holder)
 		} else if (numofcases < cutoff_tableview) {
 			// few cases
-			await make_multiSampleTable(arg, holder)
+			await make_multiSampleTable({arg, holder})
 		} else {
 			// more cases, show summary
 			await make_sampleSummary(arg, holder)
@@ -126,9 +126,15 @@ async function make_singleSampleTable(arg, holder) {
 	}
 }
 
-async function make_multiSampleTable(arg, holder, size, from) {
+async function make_multiSampleTable(args) {
+    const arg = args.arg,
+        holder = args.holder,
+        size = args.size,
+        from = args.from,
+        total_size = args.total_size
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+    const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+	const numofcases = total_size || occurrence
 	const default_size = 10
 	let current_size = parseInt(size) || default_size
 	const pages = Math.ceil(numofcases / current_size)
@@ -139,9 +145,8 @@ async function make_multiSampleTable(arg, holder, size, from) {
 		arg.size = current_size
 		arg.from = current_from
 	}
-
+    holder.selectAll('*').style('opacity', 0.5)
     holder.append('div')
-        .style('color', '#bbb')
         .text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
     holder.selectAll('*').remove()
@@ -150,6 +155,22 @@ async function make_multiSampleTable(arg, holder, size, from) {
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
 	const has_ssm_depth = data.some(i => i.ssm_read_depth)
 	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
+
+    // show filter pill
+    if(arg.tid2value){
+        const filter_div = holder.append('div')
+            .style('font-size', '.9em')
+            .style('padding', '5px 10px')
+
+        make_filter_pill(arg, filter_div, holder)
+
+        // show sample size
+        filter_div.append('div')
+            .style('display', 'inline-block')
+            .style('padding', '5px 10px')
+            .style('color','#bbb')
+            .html(`n= ${numofcases} / ${occurrence} Samples`)
+    }
 
 	// showing sample info for pagination
     const count_start = arg.from + 1
@@ -266,7 +287,7 @@ async function make_multiSampleTable(arg, holder, size, from) {
             .attr('title', 'Enteries per page')
             .on('change', ()=>{
                 const new_size = entries_select.property('value')
-                make_multiSampleTable(arg, holder, new_size)
+                make_multiSampleTable({arg, holder, size: new_size, total_size})
             })
 
         for(const ent of entries_options){
@@ -299,7 +320,7 @@ async function make_multiSampleTable(arg, holder, size, from) {
                     if (i == current_page) return
                     else {
                         const new_from = ((i - 1) * current_size)
-                        make_multiSampleTable(arg, holder, current_size, new_from)
+                        make_multiSampleTable({arg, holder, size: current_size, from: new_from, total_size})
                     }
                 })
 		}
@@ -314,16 +335,16 @@ async function make_sampleSummary(arg, holder) {
 	for (const category of data) {
 		summary_tabs.push({
 			label: category.name,
-			callback: div => make_summary_panel(div, category)
+			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
 
 	const main_tabs = [
 		{ heading: 'Summary', callback: div => tab2box(div, summary_tabs) },
-		{ heading: 'List', callback: div => make_multiSampleTable(arg, div) }
+		{ heading: 'List', callback: div => make_multiSampleTable({arg, holder:div}) }
 	]
 
-	horizontal_tabs(holder, main_tabs)
+	make_horizontal_tabs(holder, main_tabs)
 }
 
 function get_list_cells(table) {
@@ -351,7 +372,7 @@ function get_table_cell(table, row_id) {
 		.style('background-color', row_id % 2 == 0 ? '#eee' : '#fff')
 }
 
-function horizontal_tabs(holder, tabs) {
+function make_horizontal_tabs(holder, tabs) {
 	const tab_holder = holder
 		.append('div')
 		.style('padding', '10px 10px 0 10px')
@@ -396,7 +417,17 @@ function horizontal_tabs(holder, tabs) {
 	}
 }
 
-function make_summary_panel(div, category) {
+function update_horizontal_tabs(tabs){
+    const has_active_tab = tabs.some(i => i.active)
+	if (!has_active_tab) tabs[0].active = true
+
+	for (const tab of tabs) {
+        tab.tab.classed('sja_menuoption', !tab.active ? true : false)
+        tab.holder.style('display', tab.active ? 'block' : 'none')
+    }
+}
+
+function make_summary_panel(arg, div, category, main_tabs) {
 	if (category.numbycategory) {
 		const grid_div = div
 			.append('div')
@@ -407,13 +438,84 @@ function make_summary_panel(div, category) {
 			.style('grid-row-gap', '3px')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
+        
 		for (const [category_name, count] of category.numbycategory) {
 			grid_div
 				.append('div')
-				.text(count)
+				.html(`<a>${count}</a>`)
 				.style('text-align', 'right')
 				.style('padding-right', '10px')
-			grid_div.append('div').text(category_name)
+                .on('mouseover',()=>{
+                    cat_div.style('color','blue')
+                        .style('text-decoration','underline')
+                })
+                .on('mouseout', ()=>{
+                    cat_div.style('color','#000')
+                        .style('text-decoration','none')
+                })
+                .on('click', () => makeFilteredList(category_name, count))
+			const cat_div = grid_div.append('div')
+                .style('padding-right', '10px')
+                .style('cursor', 'pointer')
+                .text(category_name)
+                .on('mouseover',()=>{
+                    cat_div.style('color','blue')
+                        .style('text-decoration','underline')
+                })
+                .on('mouseout', ()=>{
+                    cat_div.style('color','#000')
+                        .style('text-decoration','none')
+                })
 		}
+
+        function makeFilteredList(cat, count){
+            arg.tid2value = {}
+            arg.tid2value[category.name.toLowerCase()] = cat
+            delete main_tabs[0].active
+            main_tabs[1].active = true
+            update_horizontal_tabs(main_tabs)
+            make_multiSampleTable({arg, holder: main_tabs[1].holder, total_size: count})
+        }
 	}
+}
+
+function make_filter_pill(arg, filter_holder, page_holder){
+    // term
+    filter_holder.append('div')
+        .attr('class', 'term_name_btn sja_filter_tag_btn')
+        .style('display', 'inline-block')
+        .style('border-radius', '6px 0 0 6px')
+        .style('padding', '6px 6px 3px 6px')
+        .style('text-transform', 'capitalize')
+        .html(Object.keys(arg.tid2value)[0])
+
+    // is button
+    filter_holder.append('div')
+        .attr('class', 'negate_btn')
+        .style('cursor', 'default')
+        .style('display', 'inline-block')
+        .style('padding', '6px 6px 3px 6px')
+        .style('background', '#a2c4c9')
+        .html('IS')
+
+    // value
+    filter_holder.append('div')
+        .attr('class', 'value_btn sja_filter_tag_btn')
+        .style('display', 'inline-block')
+        .style('padding', '6px 6px 3px 6px')
+        .style('font-style', 'italic')
+        .html(Object.values(arg.tid2value)[0])
+
+    // remove button
+    filter_holder.append('div')
+        .attr('class', 'value_btn sja_filter_tag_btn')
+        .style('display', 'inline-block')
+        .style('padding', '6px 6px 3px 6px')
+        .style('margin-left', '1px')
+        .style('border-radius', '0 6px 6px 0')
+        .html('x')
+        .on('click',()=>{
+            delete arg.tid2value
+            make_multiSampleTable({arg, holder: page_holder, size: arg.size, from: arg.from})
+        })
 }
