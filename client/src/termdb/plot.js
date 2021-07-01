@@ -7,6 +7,7 @@ import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
 import { cumincInit } from './cuminc'
+import { survivalInit } from './survival'
 import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
@@ -81,11 +82,20 @@ class TdbPlot {
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		if (opts.term.type == 'condition') {
+		const termdbConfig = this.app.getState().termdbConfig
+		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },
 				Object.assign({ controls }, this.app.opts.cuminc)
+			)
+		}
+
+		if (termdbConfig.survivalplot) {
+			this.components.survival = survivalInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.survival)
 			)
 		}
 
@@ -110,7 +120,9 @@ class TdbPlot {
 			activeCohort: appState.activeCohort,
 			termfilter: { filter },
 			config: appState.tree.plots[this.id],
-			ssid: appState.ssid
+			ssid: appState.ssid,
+			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
+			survivalplot: appState.termdbConfig.survivalplot || {}
 		}
 	}
 
@@ -134,6 +146,10 @@ class TdbPlot {
 		if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
+		}
+
+		if (plot.settings.currViews.includes('survival')) {
+			params.push('getsurvival=efs')
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -274,6 +290,24 @@ export function plotConfig(opts) {
 			},
 			cuminc: {
 				gradeCutoff: 3,
+				radius: 5,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16,
+				hidden: []
+			},
+			survival: {
+				term: 'efs',
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

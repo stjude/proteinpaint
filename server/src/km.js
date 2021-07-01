@@ -26,7 +26,7 @@ pvalue_may4expquartile
 do_plot
 */
 
-module.exports = genomes => {
+exports.handle_mdssurvivalplot = genomes => {
 	return async (req, res) => {
 		// module.exports = async (req, res) => {
 		if (app.reqbodyisinvalidjson(req, res)) return
@@ -631,6 +631,8 @@ function do_plot(s) {
 		})
 	}
 }
+
+exports.do_plot = do_plot
 
 function get_samples(q, ds, plottype) {
 	if (!q.samplerule) throw '.samplerule missing'

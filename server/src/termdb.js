@@ -6,6 +6,7 @@ const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
 const cuminc = require('./termdb.cuminc')
+const survival = require('./termdb.survival')
 
 /*
 ********************** EXPORTED
@@ -53,6 +54,8 @@ export function handle_request_closure(genomes) {
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
+			console.log(56, q)
+			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -75,11 +78,13 @@ function trigger_getsamples(q, res, ds) {
 }
 
 function trigger_gettermdbconfig(res, tdb) {
+	console.log(tdb)
 	res.send({
 		termdbConfig: {
 			// add attributes here to reveal to client
 			selectCohort: tdb.selectCohort, // optional
-			cumincplot4condition: tdb.cumincplot4condition // optional
+			cumincplot4condition: tdb.cumincplot4condition, // optional
+			survivalplot: tdb.survivalplot // optional
 		}
 	})
 }
@@ -219,5 +224,14 @@ async function trigger_getincidence(q, res, ds) {
 		q.filter = JSON.parse(decodeURIComponent(q.filter))
 	}
 	const data = await cuminc.get_incidence(q, ds)
+	res.send(data)
+}
+
+async function trigger_getsurvival(q, res, ds) {
+	console.log(227, q)
+	if (typeof q.filter == 'string') {
+		q.filter = JSON.parse(decodeURIComponent(q.filter))
+	}
+	const data = await survival.get_survival(q, ds)
 	res.send(data)
 }

@@ -273,7 +273,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	// console.log(statement, values)
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -328,9 +328,13 @@ function get_term_cte(q, values, index, filter) {
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	if (index == 1 && q.getcuminc) {
-		termq.getcuminc = q.getcuminc
-		termq.grade = q.grade
+	if (index == 1) {
+		if (q.getcuminc) {
+			termq.getcuminc = q.getcuminc
+			termq.grade = q.grade
+		} else if (q.getsurvival) {
+			termq.getsurvival = q.getsurvival
+		}
 	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
 	if (index != 1) {
@@ -463,6 +467,9 @@ returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
+	if (index == 1 && q.getsurvival) {
+		return makesql_survivaltte(tablename, term, q, values, filter)
+	}
 	if (term.type == 'categorical') {
 		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
@@ -481,7 +488,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 	}
 	if (term.type == 'condition') {
 		if (index == 1 && q.getcuminc) {
-			return makesql_time2event(tablename, term, q, values, filter)
+			return makesql_chronictte(tablename, term, q, values, filter)
 		} else {
 			return makesql_oneterm_condition(tablename, term, q, values)
 		}
@@ -579,7 +586,7 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 	}
 }
 
-function makesql_time2event(tablename, term, q, values, filter) {
+function makesql_chronictte(tablename, term, q, values, filter) {
 	if (!term.isleaf) {
 		values.push(...[term.id, q.grade])
 	} else {
@@ -628,6 +635,18 @@ WHERE a.ancestor_id = ?
 			SELECT * FROM event1
 			UNION ALL
 			SELECT * FROM event0
+		)`,
+		tablename
+	}
+}
+
+function makesql_survivaltte(tablename, term, q, values, filter) {
+	return {
+		sql: `${tablename} AS (
+			SELECT sample, s.value as key, tte as value
+			FROM survival s
+			WHERE term_id='efs'
+			${filter ? 'AND sample IN ' + filter.CTEname : ''}
 		)`,
 		tablename
 	}

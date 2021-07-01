@@ -2,12 +2,14 @@ const path = require('path')
 const get_rows = require('./termdb.sql').get_rows
 const spawn = require('child_process').spawn
 const serverconfig = require('./serverconfig')
+const do_plot = require('./km').do_plot
 
-export async function get_incidence(q, ds) {
+export async function get_survival(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		const results = get_rows(q)
+		console.log(results.lst.slice(0, 5))
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// do not include data when years_to_event < 0
@@ -16,11 +18,11 @@ export async function get_incidence(q, ds) {
 			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}
 			if (!(d.key2 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key2] = []
-			byChartSeries[d.key0][d.key2].push({ time: d.val1, event: d.key1 })
+			byChartSeries[d.key0][d.key2].push({ name: d.key2, serialtime: Number(d.val1), censored: Number(d.key1) === 0 })
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high'],
+			keys: ['chartId', 'seriesId', 'time', 'survival', 'low', 'high'],
 			case: [],
 			refs: { bins }
 		}
@@ -29,33 +31,21 @@ export async function get_incidence(q, ds) {
 			for (const seriesId in byChartSeries[chartId]) {
 				const data = byChartSeries[chartId][seriesId]
 				if (!data.length) continue
-				// if there are no event=1, an error in the R script execution is issued (NAs in foreign function call (arg 3))
-				if (!data.filter(d => d.event === 1).length) continue
-				const year_to_events = data.map(d => +d.time).join('_')
-				const events = data.map(d => +d.event).join('_')
-				promises.push(
-					calculate_cuminc(year_to_events, events).then(ci_data => {
-						if (ci_data == null) {
-							return { error: 'No output from R script' }
-						} else if (!ci_data.case_time || !ci_data.case_time.length) {
-							// do nothing
-						} else {
-							for (let i = 0; i < ci_data.case_time.length; i++) {
-								final_data.case.push([
-									chartId,
-									seriesId,
-									ci_data.case_time[i],
-									ci_data.case_est[i],
-									ci_data.low_case[i],
-									ci_data.up_case[i]
-								])
-							}
-						}
-					})
+				console.log(
+					31,
+					data.filter(d => d.censored === 0).length,
+					data.filter(d => d.censored === 1).length,
+					data.slice(-3)
 				)
+				//if (!data.filter(d => d.censored === 0).length) continue; console.log(35)
+				const input = { name: data[0].key2, lst: data }
+				do_plot(input)
+				console.log(input.steps)
+				for (const d of input.steps) {
+					final_data.case.push([chartId, seriesId, d.x, 1 - d.y, 1 - d.y - 0.1, 1 - d.y + 0.1])
+				}
 			}
 		}
-		await Promise.all(promises)
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
