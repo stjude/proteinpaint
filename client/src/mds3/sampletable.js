@@ -334,7 +334,7 @@ async function make_sampleSummary(arg, holder) {
 	const summary_tabs = []
 	for (const category of data) {
 		summary_tabs.push({
-			label: category.name,
+			label: `${category.name} <span style='color:#999;font-size:.8em;'>n=${category.numbycategory.length}</span>`,
 			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
@@ -466,6 +466,7 @@ function make_summary_panel(arg, div, category, main_tabs) {
                     cat_div.style('color','#000')
                         .style('text-decoration','none')
                 })
+                .on('click', () => makeFilteredList(category_name, count))
 		}
 
         function makeFilteredList(cat, count){
