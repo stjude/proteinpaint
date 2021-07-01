@@ -633,11 +633,11 @@ function may_add_urlparameter(tk) {
 				if (!tmp[i + 2]) return console.log('ref allele missing')
 				if (!tmp[i + 3]) return console.log('alt allele missing')
 				if (!tmp[i + 4]) {
-					strictness = 1
+					strictness = 1 // Default strictness
 				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
 					return 'Strictness must be a positive number'
-				} else if (Number(tmp[i + 4]) > 1) return 'Invalid strictness'
-				// For now, there are only two levels of strictness. More will be added in the future
+				} else if (Number(tmp[i + 4]) > 2) return 'Invalid strictness'
+				// For now, there are only three levels of strictness. More will be added in the future
 				else {
 					strictness = Number(tmp[i + 4])
 				}

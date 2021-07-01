@@ -806,7 +806,10 @@ fn check_polyclonal(
             // Looping over each CIGAR item
             if parse_position < read_indel_start {
                 parse_position += numbers[i].to_string().parse::<usize>().unwrap();
-                if &alphabets[i].to_string().as_str() == &"I" && strictness != 0 {
+                if (&alphabets[i].to_string().as_str() == &"I"
+                    || &alphabets[i].to_string().as_str() == &"S")
+                    && strictness >= 2
+                {
                     read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
 
                     if read_indel_start <= old_parse_position
@@ -842,7 +845,43 @@ fn check_polyclonal(
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     }
-                } else if &alphabets[i].to_string().as_str() == &"D" && strictness != 0 {
+                } else if &alphabets[i].to_string().as_str() == &"I" && strictness >= 1 {
+                    read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
+
+                    if read_indel_start <= old_parse_position
+                        && parse_position <= read_indel_start + indel_length
+                    {
+                        // (Insertion inside indel region)
+                        indel_insertion_starts.push(old_parse_position); // Adding indel start to vector
+                        indel_insertion_stops.push(parse_position); // Adding indel stop to vector
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && read_indel_start + indel_length <= parse_position
+                    {
+                        // (Indel region inside insertion)
+                        indel_insertion_starts.push(old_parse_position);
+                        indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if old_parse_position <= read_indel_start
+                        && parse_position <= read_indel_start + indel_length
+                        && found_duplicate_kmers == 0
+                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        //indel_insertion_starts.push(old_parse_position);
+                        //indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    } else if read_indel_start <= old_parse_position
+                        && read_indel_start + indel_length <= parse_position
+                        && found_duplicate_kmers == 0
+                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
+                    {
+                        // Making sure part of the insertion is within the indel region
+                        //indel_insertion_starts.push(old_parse_position);
+                        //indel_insertion_stops.push(parse_position);
+                        ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                    }
+                } else if &alphabets[i].to_string().as_str() == &"D" && strictness >= 1 {
                     read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
                     if read_indel_start <= old_parse_position
                         && parse_position <= read_indel_start + indel_length
@@ -874,7 +913,7 @@ fn check_polyclonal(
                 }
                 old_parse_position = parse_position;
             } else if parse_position >= read_indel_start
-                && strictness != 0
+                && strictness >= 1
                 && (&alphabets[i].to_string().as_str() == &"I"
                     || &alphabets[i].to_string().as_str() == &"D")
             {
@@ -921,7 +960,27 @@ fn check_polyclonal(
         // Checking to see if nucleotides are same between read and ref/alt allele
 
         //println!("cigar:{}",cigar_sequence);
-        if strictness != 0 {
+
+        //if strictness >= 2 {
+        //    for i in 0..indel_length as usize {
+        //        if read_indel_start + i < sequence.len() {
+        //            if ref_length >= alt_length {
+        //                if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+        //                    ref_polyclonal_status = 2; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+        //                    break;
+        //                }
+        //            } else if alt_length > ref_length {
+        //                if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+        //                    alt_polyclonal_status = 2; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+        //                    break;
+        //                }
+        //            }
+        //        } else {
+        //            break;
+        //        }
+        //    }
+        //} else
+        if strictness >= 1 {
             for i in 0..ref_length as usize {
                 if read_indel_start + i < sequence.len() {
                     if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
