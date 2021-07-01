@@ -378,6 +378,7 @@ fn main() {
                     cigar_sequences_list[i as usize - 2].to_string(),
                     variant_pos,
                     indel_length as usize,
+                    strictness,
                 );
                 if within_indel == 1 {
                     let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
@@ -483,6 +484,7 @@ fn main() {
                             cigar_sequences_list[iter].to_string(),
                             variant_pos,
                             indel_length as usize,
+                            strictness,
                         );
 
                         if within_indel == 1 {
@@ -726,6 +728,7 @@ fn check_read_within_indel_region(
     cigar_sequence: String, // Cigar sequence of that read
     indel_start: i64,   // Indel start position
     indel_length: usize, // Length of indel
+    strictness: usize,  // Strictness of the indel pipeline
 ) -> usize {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
@@ -754,7 +757,24 @@ fn check_read_within_indel_region(
         //println!("correct_end_position:{}", correct_end_position);
         //println!("indel_start:{}", indel_start);
         //println!("indel_stop:{}", indel_stop);
-        if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
+        if strictness >= 2 {
+            let percentage_indel_length: f64 = 0.1;
+            let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64;
+            if (indel_start + indel_cutoff <= correct_start_position
+                && correct_end_position <= indel_stop - indel_cutoff)
+                || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
+            // When the indel region is completely inside the read or the read is completely inside the indel region
+            {
+                within_indel = 1;
+            } else if (indel_start + indel_cutoff <= correct_start_position
+                && correct_start_position <= indel_stop - indel_cutoff)
+                || (indel_start + indel_cutoff <= correct_end_position
+                    && correct_end_position <= indel_stop - indel_cutoff)
+            // When read contains only part of a read
+            {
+                within_indel = 1;
+            }
+        } else if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
             || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
         // When the indel region is completely inside the read or the read is completely inside the indel region
         {
