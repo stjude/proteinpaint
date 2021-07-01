@@ -119,7 +119,7 @@ function get_ds(tk, block) {
 		return
 	}
 	// custom
-	if (!tk.name) tk.name = 'Unamed'
+	if (!tk.name) tk.name = 'Unnamed'
 	tk.mds = {}
 	// to fill in details to tk.mds
 	/*
