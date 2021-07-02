@@ -28,7 +28,7 @@ arg{}
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	const holder = arg.div.append('div')
+	const holder = arg.div.append('div').attr('class', 'sj_multisample_holder')
 	const err_check_div = arg.div
 		.append('div')
 		.style('color', '#bbb')
@@ -261,7 +261,6 @@ async function make_multiSampleTable(args) {
 async function make_multiSampleSummaryList(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	const data = await arg.tk.mds.variant2samples.get(arg)
-	holder.attr('class', 'sj_multisample_holder')
 
 	const summary_tabs = []
 	for (const category of data) {
@@ -502,7 +501,7 @@ function make_pagination(arg, page_doms) {
 		.attr('title', 'Enteries per page')
 		.on('change', () => {
 			const new_size = entries_select.property('value')
-			make_multiSampleTable({ arg, holder, size: new_size, total_size })
+			make_multiSampleTable({ arg, holder: list_holder, size: new_size, total_size: arg.numofcases })
 		})
 
 	for (const ent of entries_options) {
@@ -525,18 +524,46 @@ function make_pagination(arg, page_doms) {
 		.style('font-size', '.9em')
 		.style('text-align', 'end')
 	const current_page = arg.from == 0 ? 1 : Math.ceil(arg.from / arg.size) + 1
-	for (let i = 1; i <= pages; i++) {
+	const page_start = current_page < 10 ? 1 : current_page - 5
+	const page_truncation = pages > 10 ? true : false
+	const page_end = page_truncation && page_start == 1 ? 10 : page_start + 10 < pages ? page_start + 10 : pages
+
+	// first page button, only visible when large sample size and first page button not displayed
+	if (page_truncation && page_start != 1) {
+		render_page_button('First page', 0)
 		pages_div
 			.append('div')
 			.style('padding', '5px')
 			.style('display', 'inline-block')
-			.classed('sja_menuoption', i != current_page ? true : false)
+			.text('....')
+	}
+
+	for (let i = page_start; i <= page_end; i++) {
+		render_page_button(i, i)
+	}
+
+	// last page button, only visible when large sample size and last page button not displayed
+	if (page_truncation && page_end < pages) {
+		pages_div
+			.append('div')
+			.style('padding', '5px')
+			.style('display', 'inline-block')
+			.text('....')
+		render_page_button('Last page', pages)
+	}
+
+	function render_page_button(text, page_i) {
+		pages_div
+			.append('div')
+			.style('padding', '5px')
+			.style('display', 'inline-block')
+			.classed('sja_menuoption', page_i != current_page ? true : false)
 			.style('border', 'solid 1px #ddd')
-			.html(i)
+			.html(text)
 			.on('click', () => {
-				if (i == current_page) return
+				if (page_i == current_page) return
 				else {
-					const new_from = (i - 1) * arg.size
+					const new_from = page_i == 0 ? 0 : (page_i - 1) * arg.size
 					make_multiSampleTable({
 						arg,
 						holder: list_holder,
