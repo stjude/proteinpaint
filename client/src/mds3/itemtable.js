@@ -304,7 +304,9 @@ async function table_snvindel(arg) {
 			.style('font-size', '1.1em')
 		{
 			const c = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-			heading.text(c < cutoff_tableview ? 'Sample details' : 'Summary of ' + c + ' samples')
+			heading
+				.style('display', c < cutoff_tableview ? 'block' : 'none')
+				.text(c < cutoff_tableview ? 'Sample details' : '')
 		}
 		// await mlst2samplesummary(arg)
 		await init_sampletable(arg)

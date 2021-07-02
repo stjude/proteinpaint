@@ -41,10 +41,10 @@ export async function init_sampletable(arg) {
 			await make_singleSampleTable(arg, holder)
 		} else if (numofcases < cutoff_tableview) {
 			// few cases
-			await make_multiSampleTable({arg, holder})
+			await make_multiSampleTable({ arg, holder })
 		} else {
 			// more cases, show summary
-			await make_sampleSummary(arg, holder)
+			await make_multiSampleSummaryList(arg, holder)
 		}
 		err_check_div.remove()
 	} catch (e) {
@@ -127,61 +127,49 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-    const arg = args.arg,
-        holder = args.holder,
-        size = args.size,
-        from = args.from,
-        total_size = args.total_size
+	const { arg, holder, size, from, total_size } = args
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
-    const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	const numofcases = total_size || occurrence
+	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+	arg.numofcases = total_size || occurrence
 	const default_size = 10
 	let current_size = parseInt(size) || default_size
-	const pages = Math.ceil(numofcases / current_size)
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
-	const pagination = numofcases > 10
+	const pagination = arg.numofcases > 10
 	if (pagination) {
 		arg.size = current_size
 		arg.from = current_from
 	}
-    holder.selectAll('*').style('opacity', 0.5)
-    holder.append('div')
-        .text('Loading...')
+	holder.selectAll('*').style('opacity', 0.5)
+	holder.append('div').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
-    holder.selectAll('*').remove()
+	holder.selectAll('*').remove()
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
 	const has_ssm_depth = data.some(i => i.ssm_read_depth)
 	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
 
-    // show filter pill
-    if(arg.tid2value){
-        const filter_div = holder.append('div')
-            .style('font-size', '.9em')
-            .style('padding', '5px 10px')
-
-        make_filter_pill(arg, filter_div, holder)
-
-        // show sample size
-        filter_div.append('div')
-            .style('display', 'inline-block')
-            .style('padding', '5px 10px')
-            .style('color','#bbb')
-            .html(`n= ${numofcases} / ${occurrence} Samples`)
-    }
-
-	// showing sample info for pagination
-    const count_start = arg.from + 1
-    const count_end = (arg.from + arg.size) < numofcases ? (arg.from + arg.size) : numofcases
-	if (pagination)
-		holder
+	// show filter pill
+	if (arg.tid2value) {
+		const filter_div = holder
 			.append('div')
-			.style('padding', '5px 10px')
 			.style('font-size', '.9em')
-			.style('color', '#999')
-			.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${numofcases}</b> Samples`)
+			.style('padding', '5px 10px')
+
+		make_filter_pill(arg, filter_div, holder)
+
+		// show sample size
+		filter_div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '5px 10px')
+			.style('color', '#bbb')
+			.html(`n= ${arg.numofcases} / ${occurrence} Samples`)
+	}
+
+	// top text to display sample per page and total sample size (only for pagination)
+	const page_header = holder.append('div').style('display', 'none')
 
 	const grid_div = holder
 		.append('div')
@@ -265,83 +253,26 @@ async function make_multiSampleTable(args) {
 		}
 	}
 
-	// pages
-	if (pagination) {
-        const footer = holder.append('div')
-            .style('display','flex')
-            .style('justify-content', 'space-between')
-
-        const entries_div = footer
-            .append('div')
-            .style('display','inline-block')
-            .style('padding', '20px 15px 15px 15px')
-            .style('color', '#999')
-            .style('font-size', '.9em')
-        entries_div.append('span')
-            .style('padding-right','10px')
-            .text('Showing')
-
-        const entries_options = ['10', '20', '50', '100']    
-        const entries_select = entries_div.append('select')
-            .style('border', 'solid 1px #ddd')
-            .attr('title', 'Enteries per page')
-            .on('change', ()=>{
-                const new_size = entries_select.property('value')
-                make_multiSampleTable({arg, holder, size: new_size, total_size})
-            })
-
-        for(const ent of entries_options){
-            entries_select.append('option')
-                .text(ent)
-                .property('value', ent)
-                .property('selected', current_size == ent)
-        }
-
-        entries_div.append('span')
-            .style('padding-left','10px')
-            .text('entries')
-
-		const pages_div = footer
-			.append('div')
-            .style('display','inline-block')
-			.style('padding', '15px')
-			.style('font-size', '.9em')
-			.style('text-align', 'end')
-		const current_page = arg.from == 0 ? 1 : (Math.ceil(arg.from / arg.size) + 1)
-		for (let i = 1; i <= pages; i++) {
-			pages_div
-				.append('div')
-				.style('padding', '5px')
-				.style('display', 'inline-block')
-                .classed('sja_menuoption', i != current_page ? true : false)
-                .style('border', 'solid 1px #ddd')
-				.html(i)
-                .on('click',()=>{
-                    if (i == current_page) return
-                    else {
-                        const new_from = ((i - 1) * current_size)
-                        make_multiSampleTable({arg, holder, size: current_size, from: new_from, total_size})
-                    }
-                })
-		}
-	}
+	// pages and option to change samples per size (only for pagination)
+	const page_footer = holder.append('div').style('display', 'none')
+	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
 }
 
-async function make_sampleSummary(arg, holder) {
+async function make_multiSampleSummaryList(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	const data = await arg.tk.mds.variant2samples.get(arg)
 
 	const summary_tabs = []
 	for (const category of data) {
 		summary_tabs.push({
-			label: `${category.name} <span style='color:#999;font-size:.8em;'>n=${category.numbycategory.length}</span>`,
+			label: `${category.name} <span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`,
 			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
 
 	const main_tabs = [
 		{ heading: 'Summary', callback: div => tab2box(div, summary_tabs) },
-		{ heading: 'List', callback: div => make_multiSampleTable({arg, holder:div}) }
+		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div }) }
 	]
 
 	make_horizontal_tabs(holder, main_tabs)
@@ -417,17 +348,28 @@ function make_horizontal_tabs(holder, tabs) {
 	}
 }
 
-function update_horizontal_tabs(tabs){
-    const has_active_tab = tabs.some(i => i.active)
+function update_horizontal_tabs(tabs) {
+	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const tab of tabs) {
-        tab.tab.classed('sja_menuoption', !tab.active ? true : false)
-        tab.holder.style('display', tab.active ? 'block' : 'none')
-    }
+		tab.tab.classed('sja_menuoption', !tab.active ? true : false)
+		tab.holder.style('display', tab.active ? 'block' : 'none')
+	}
 }
 
 function make_summary_panel(arg, div, category, main_tabs) {
+	// occurance info at top of summary
+	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+	div
+		.append('div')
+		.style('display', 'block')
+		.style('padding', '5px 20px')
+		.style('font-size', '.9em')
+		.style('color', '#999')
+		.html(`${occurrence}<span style='padding-left:10px;'>samples</span>`)
+
+	// summary for active tab
 	if (category.numbycategory) {
 		const grid_div = div
 			.append('div')
@@ -438,85 +380,170 @@ function make_summary_panel(arg, div, category, main_tabs) {
 			.style('grid-row-gap', '3px')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
-        
+
 		for (const [category_name, count] of category.numbycategory) {
 			grid_div
 				.append('div')
 				.html(`<a>${count}</a>`)
 				.style('text-align', 'right')
 				.style('padding-right', '10px')
-                .on('mouseover',()=>{
-                    cat_div.style('color','blue')
-                        .style('text-decoration','underline')
-                })
-                .on('mouseout', ()=>{
-                    cat_div.style('color','#000')
-                        .style('text-decoration','none')
-                })
-                .on('click', () => makeFilteredList(category_name, count))
-			const cat_div = grid_div.append('div')
-                .style('padding-right', '10px')
-                .style('cursor', 'pointer')
-                .text(category_name)
-                .on('mouseover',()=>{
-                    cat_div.style('color','blue')
-                        .style('text-decoration','underline')
-                })
-                .on('mouseout', ()=>{
-                    cat_div.style('color','#000')
-                        .style('text-decoration','none')
-                })
-                .on('click', () => makeFilteredList(category_name, count))
+				.on('mouseover', () => {
+					cat_div.style('color', 'blue').style('text-decoration', 'underline')
+				})
+				.on('mouseout', () => {
+					cat_div.style('color', '#000').style('text-decoration', 'none')
+				})
+				.on('click', () => makeFilteredList(category_name, count))
+			const cat_div = grid_div
+				.append('div')
+				.style('padding-right', '10px')
+				.style('cursor', 'pointer')
+				.text(category_name)
+				.on('mouseover', () => {
+					cat_div.style('color', 'blue').style('text-decoration', 'underline')
+				})
+				.on('mouseout', () => {
+					cat_div.style('color', '#000').style('text-decoration', 'none')
+				})
+				.on('click', () => makeFilteredList(category_name, count))
 		}
 
-        function makeFilteredList(cat, count){
-            arg.tid2value = {}
-            arg.tid2value[category.name.toLowerCase()] = cat
-            delete main_tabs[0].active
-            main_tabs[1].active = true
-            update_horizontal_tabs(main_tabs)
-            make_multiSampleTable({arg, holder: main_tabs[1].holder, total_size: count})
-        }
+		function makeFilteredList(cat, count) {
+			arg.tid2value = {}
+			arg.tid2value[category.name.toLowerCase()] = cat
+			delete main_tabs[0].active
+			main_tabs[1].active = true
+			update_horizontal_tabs(main_tabs)
+			make_multiSampleTable({ arg, holder: main_tabs[1].holder, total_size: count })
+		}
 	}
 }
 
-function make_filter_pill(arg, filter_holder, page_holder){
-    // term
-    filter_holder.append('div')
-        .attr('class', 'term_name_btn sja_filter_tag_btn')
-        .style('display', 'inline-block')
-        .style('border-radius', '6px 0 0 6px')
-        .style('padding', '6px 6px 3px 6px')
-        .style('text-transform', 'capitalize')
-        .html(Object.keys(arg.tid2value)[0])
+function make_filter_pill(arg, filter_holder, page_holder) {
+	// term
+	filter_holder
+		.append('div')
+		.attr('class', 'term_name_btn sja_filter_tag_btn')
+		.style('display', 'inline-block')
+		.style('border-radius', '6px 0 0 6px')
+		.style('padding', '6px 6px 3px 6px')
+		.style('text-transform', 'capitalize')
+		.style('cursor', 'default')
+		.html(Object.keys(arg.tid2value)[0])
 
-    // is button
-    filter_holder.append('div')
-        .attr('class', 'negate_btn')
-        .style('cursor', 'default')
-        .style('display', 'inline-block')
-        .style('padding', '6px 6px 3px 6px')
-        .style('background', '#a2c4c9')
-        .html('IS')
+	// is button
+	filter_holder
+		.append('div')
+		.attr('class', 'negate_btn')
+		.style('cursor', 'default')
+		.style('display', 'inline-block')
+		.style('padding', '6px 6px 3px 6px')
+		.style('background', '#a2c4c9')
+		.html('IS')
 
-    // value
-    filter_holder.append('div')
-        .attr('class', 'value_btn sja_filter_tag_btn')
-        .style('display', 'inline-block')
-        .style('padding', '6px 6px 3px 6px')
-        .style('font-style', 'italic')
-        .html(Object.values(arg.tid2value)[0])
+	// value
+	filter_holder
+		.append('div')
+		.attr('class', 'value_btn sja_filter_tag_btn')
+		.style('display', 'inline-block')
+		.style('padding', '6px 6px 3px 6px')
+		.style('font-style', 'italic')
+		.style('cursor', 'default')
+		.html(Object.values(arg.tid2value)[0])
 
-    // remove button
-    filter_holder.append('div')
-        .attr('class', 'value_btn sja_filter_tag_btn')
-        .style('display', 'inline-block')
-        .style('padding', '6px 6px 3px 6px')
-        .style('margin-left', '1px')
-        .style('border-radius', '0 6px 6px 0')
-        .html('x')
-        .on('click',()=>{
-            delete arg.tid2value
-            make_multiSampleTable({arg, holder: page_holder, size: arg.size, from: arg.from})
-        })
+	// remove button
+	filter_holder
+		.append('div')
+		.attr('class', 'value_btn sja_filter_tag_btn')
+		.style('display', 'inline-block')
+		.style('padding', '6px 6px 3px 6px')
+		.style('margin-left', '1px')
+		.style('border-radius', '0 6px 6px 0')
+		.style('cursor', 'pointer')
+		.html('x')
+		.on('click', () => {
+			delete arg.tid2value
+			make_multiSampleTable({ arg, holder: page_holder, size: arg.size, from: arg.from })
+		})
+}
+
+function make_pagination(arg, page_doms) {
+	const [page_header, page_footer, list_holder] = page_doms
+	// sample info for pagination
+	const pages = Math.ceil(arg.numofcases / arg.size)
+	const count_start = arg.from + 1
+	const count_end = arg.from + arg.size < arg.numofcases ? arg.from + arg.size : arg.numofcases
+
+	page_header
+		.style('display', 'block')
+		.style('padding', '5px 10px')
+		.style('font-size', '.9em')
+		.style('color', '#999')
+		.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${arg.numofcases}</b> Samples`)
+
+	page_footer.style('display', 'flex').style('justify-content', 'space-between')
+
+	const entries_div = page_footer
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '20px 15px 15px 15px')
+		.style('color', '#999')
+		.style('font-size', '.9em')
+	entries_div
+		.append('span')
+		.style('padding-right', '10px')
+		.text('Showing')
+
+	const entries_options = ['10', '20', '50', '100']
+	const entries_select = entries_div
+		.append('select')
+		.style('border', 'solid 1px #ddd')
+		.attr('title', 'Enteries per page')
+		.on('change', () => {
+			const new_size = entries_select.property('value')
+			make_multiSampleTable({ arg, holder, size: new_size, total_size })
+		})
+
+	for (const ent of entries_options) {
+		entries_select
+			.append('option')
+			.text(ent)
+			.property('value', ent)
+			.property('selected', arg.size == ent)
+	}
+
+	entries_div
+		.append('span')
+		.style('padding-left', '10px')
+		.text('entries')
+
+	const pages_div = page_footer
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '15px')
+		.style('font-size', '.9em')
+		.style('text-align', 'end')
+	const current_page = arg.from == 0 ? 1 : Math.ceil(arg.from / arg.size) + 1
+	for (let i = 1; i <= pages; i++) {
+		pages_div
+			.append('div')
+			.style('padding', '5px')
+			.style('display', 'inline-block')
+			.classed('sja_menuoption', i != current_page ? true : false)
+			.style('border', 'solid 1px #ddd')
+			.html(i)
+			.on('click', () => {
+				if (i == current_page) return
+				else {
+					const new_from = (i - 1) * arg.size
+					make_multiSampleTable({
+						arg,
+						holder: list_holder,
+						size: arg.size,
+						from: new_from,
+						total_size: arg.numofcases
+					})
+				}
+			})
+	}
 }
