@@ -72,8 +72,8 @@
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "bigwig",
-                        "url": "http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
-                        "name": "UCSC phyloP 100ways",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
                         "height": 100
                     }]
                 },
@@ -129,7 +129,7 @@
                     "tracks": [{
                         "type": "bedj",
                         "name": "gene track",
-                        "file": "anno/gencode.v34.hg19.gz",
+                        "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
                         "stackheight": 16,
                         "stackspace": 1,
                         "color": "teal"
@@ -167,7 +167,8 @@
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz"
             },
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
         },
@@ -271,6 +272,9 @@
                 },
                 "url": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic",
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
+            },
+            "sandbox":{
+                "is_ui": false
             },
             "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
         },

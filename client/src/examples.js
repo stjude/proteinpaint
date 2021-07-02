@@ -1,10 +1,13 @@
-import { dofetch2, sayerror, newSandboxDiv } from './client'
+import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event } from 'd3-selection'
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
 hljs.registerLanguage('javascript', javascript);
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/github.css'
+// import 'highlight.js/styles/base16/cupertino.css'
+// const hljs = require('highlight.js/lib/common') less efficient
+
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -281,6 +284,8 @@ async function openExample(track, holder) {
 
 	showCode(track,sandbox_div)
 
+	makeDataDownload(track, sandbox_div)
+
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
@@ -322,6 +327,7 @@ async function showCode(track, div){
 		.attr('id','code-btn')
 		.style('margin', '20px')
 		.text('Show Code')
+		.style('display', 'inline-block')
 		.on('click', () => {
 			if (code.style('display') == 'none') {
 				code.style('display', 'block') //TODO fadein fn
@@ -332,26 +338,49 @@ async function showCode(track, div){
 			}
 		})
 
+
+	const json = JSON.stringify(track.buttons.example, null, 4)
+
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
 	const runppCode = `runproteinpaint({
-    "host": "${window.location.origin}",
-    "holder": document.getElementById('a'),` +
-			JSON.stringify(track.buttons.example, null, 4).slice(1,-1) +
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+		json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 		`})`
 
-	const codefill = hljs.highlight(runppCode, {language: 'javascript'}).value
+	const codefill = hljs.highlight(runppCode, {language:'javascript'}).value
 
 	const code = div.body
-		.append('div')
 		.append('pre')
 		.append('code')
 		.attr('class', 'code')
+		.attr('id', 'highlight')
 		.style('display', 'none')
 		.style('margin', '35px')
-		.style('width', 'auto')
-		.style('border', '1px solid black')
+		.style('font-size', '14px')
+		.style('border', '1px solid #aeafb0')
 		.html(codefill)
 
+		document.querySelectorAll('code.code#highlight').forEach(el => {
+			hljs.highlightElement(el);
+		  });
+
 	return [ codeBtn, code ]
+	}
+}
+
+async function makeDataDownload(track, div){
+	if (track.sandbox.datadownload) {
+		const dataBtn = div.body
+		.append('button')
+		.attr('type', 'button')
+		.style('margin', '20px')
+		.attr('id','data-btn')
+		.style('display', 'inline-block')
+		.text('Download Data')
+		.on('click', () => {
+			to_textfile(track.sandbox.datadownload)
+		})
+	return dataBtn
 	}
 }
