@@ -699,6 +699,18 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 		}
 	}
+	if (urlp.has('junctionmatrix')) {
+		const lst = urlp.get('junctionmatrix').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'mdsjunction',
+					name: lst[i],
+					file2: lst[i + 1] // quick fix to support new file type
+				})
+			}
+		}
+	}
 
 	if (urlp.has('junctionrnapeg')) {
 		const lst = urlp.get('junctionrnapeg').split(',')

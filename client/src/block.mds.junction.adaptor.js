@@ -105,7 +105,10 @@ export function mdsjunctionfromtemplate(tk, template) {
 								color: '#787854'
 							}
 						},
-						hiddenCategories: { Unannotated: 1 }
+						hiddenCategories: {
+							// in custom track, show all junctions by default
+							//Unannotated: 1
+						}
 					}
 				]
 			}
