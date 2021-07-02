@@ -5,6 +5,7 @@ import { scaleLinear } from 'd3-scale'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { itemtable, mlst2samplesummary } from './itemtable'
+import { init_sampletable } from './sampletable'
 import * as common from '../../shared/common'
 import * as client from '../client'
 
@@ -1033,7 +1034,7 @@ async function click_variants(d, tk, block, tippos) {
 					/* do not call variant_details() as no need to show info on variants
 					only need to show sample display
 					*/
-					mlst2samplesummary(arg)
+					init_sampletable(arg)
 				}
 			}
 			if (d.aa) {
@@ -1083,7 +1084,7 @@ async function variant_details(arg) {
 		// more than 1 data types, won't print detail table for each variant
 		if (arg.tk.mds.variant2samples) {
 			// show sample summary
-			await mlst2samplesummary(arg)
+			await init_sampletable(arg)
 		} else {
 			throw 'no variant2samples, do not know what to show'
 		}

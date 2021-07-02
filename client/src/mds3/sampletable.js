@@ -127,7 +127,7 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, total_size } = args
+	const { arg, holder, size, from, total_size, filter_tag } = args
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	arg.numofcases = total_size || occurrence
@@ -151,7 +151,7 @@ async function make_multiSampleTable(args) {
 	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
 
 	// show filter pill
-	if (arg.tid2value) {
+	if (filter_tag) {
 		const filter_div = holder
 			.append('div')
 			.style('font-size', '.9em')
@@ -261,6 +261,7 @@ async function make_multiSampleTable(args) {
 async function make_multiSampleSummaryList(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	const data = await arg.tk.mds.variant2samples.get(arg)
+	holder.attr('class', 'sj_multisample_holder')
 
 	const summary_tabs = []
 	for (const category of data) {
@@ -414,7 +415,7 @@ function make_summary_panel(arg, div, category, main_tabs) {
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_horizontal_tabs(main_tabs)
-			make_multiSampleTable({ arg, holder: main_tabs[1].holder, total_size: count })
+			make_multiSampleTable({ arg, holder: main_tabs[1].holder, total_size: count, filter_tag: true })
 		}
 	}
 }
