@@ -159,8 +159,8 @@ async function do_query(q, ds, dsquery) {
 
 				if (dsquery.file2) {
 					// matrix file made from rnapeg
-					//const strand = l[3]
-					const thistype = l[3]
+					const strand = l[3]
+					const thistype = l[4]
 					// convert rnapeg "known/novel" to hardcoded types of this track
 					let type
 					if (thistype == 'known') {
@@ -190,7 +190,7 @@ async function do_query(q, ds, dsquery) {
 					}
 
 					const samplecountlst = []
-					for (let i = 4; i < l.length; i++) {
+					for (let i = 5; i < l.length; i++) {
 						const str = l[i]
 						if (!str) continue
 						const v = Number.parseInt(str)
