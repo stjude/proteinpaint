@@ -23,6 +23,7 @@ export function validate_bins(binconfig) {
 				if ('startunbounded' in bin && !bin.startunbounded) {
 					throw `a custom first bin must not set bin.startunbounded to false`
 				}
+				bin.startunbounded = true
 				if ('start' in bin) {
 					throw 'a custom first bin must not set a bin.start value'
 				}
@@ -45,6 +46,7 @@ export function validate_bins(binconfig) {
 				if ('stopunbounded' in bin && !bin.stopunbounded) {
 					throw 'a custom last bin must not set bin.stopunbounded to false'
 				}
+				bin.stopunbounded = true
 				if ('stop' in bin) {
 					throw 'a custom last bin must not set a bin.stop value'
 				}
@@ -69,49 +71,29 @@ export function validate_bins(binconfig) {
 
 		{
 			const b = bc.first_bin
-			if (b.startunbounded) {
-				// requires stop_percentile, or stop
-				if (b.stop_percentile) {
-					if (!Number.isInteger(b.stop_percentile)) throw 'first_bin.stop_percentile should be integer'
-					if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'first_bin.stop_percentile out of bound (0-100)'
-				} else {
-					if (!Number.isFinite(b.stop))
-						throw 'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
-				}
-			} else {
-				if (b.start_percentile) {
-					if (!Number.isInteger(b.start_percentile)) throw 'first_bin.start_percentile should be integer'
-					if (b.start_percentile <= 0 || b.start_percentile >= 100)
-						throw 'first_bin.start_percentile out of bound (0-100)'
-				} else {
-					if (!Number.isFinite(b.start))
-						throw 'first_bin.start not a number when neither startunbounded or start_percentile'
-				}
-				// stop is not required
+			b.startunbounded = true
+			// requires stop_percentile, or stop
+			if (b.stop_percentile) {
+				if (!Number.isInteger(b.stop_percentile)) throw 'first_bin.stop_percentile should be integer'
+				if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'first_bin.stop_percentile out of bound (0-100)'
+			} else if (!Number.isFinite(b.stop)) {
+				throw 'first_bin.stop not a number when stop_percentile is not set'
 			}
 		}
 
 		if (bc.last_bin) {
 			const b = bc.last_bin
-			if (b.stopunbounded) {
-				// requires start_percentile or start
-				if (b.start_percentile) {
-					if (!Number.isInteger(b.start_percentile)) throw 'last_bin.start_percentile should be integer'
-					if (b.start_percentile <= 0 || b.start_percentile >= 100)
-						throw 'last_bin.start_percentile out of bound (0-100)'
-				} else {
-					if (!Number.isFinite(b.start))
-						throw 'last_bin.start not a number when is stopunbounded and start_percentile is not set'
-				}
-			} else {
-				// requires stop
-				if (b.stop_percentile) {
-					if (!Number.isInteger(b.stop_percentile)) throw 'last_bin.stop_percentile should be integer'
-					if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'last_bin.stop_percentile out of bound (0-100)'
-				} else {
-					if (!Number.isFinite(b.stop))
-						throw 'last_bin.stop not a number when neither startunbounded or stop_percentile'
-				}
+			// requires start_percentile or start
+			if (b.start_percentile) {
+				if (!Number.isInteger(b.start_percentile)) throw 'last_bin.start_percentile should be integer'
+				if (b.start_percentile <= 0 || b.start_percentile >= 100) throw 'last_bin.start_percentile out of bound (0-100)'
+			} else if (!Number.isFinite(b.start)) {
+				throw 'last_bin.start not a number when start_percentile is not set'
+			}
+
+			b.stopunbounded = true
+			if ('stop' in b) {
+				throw 'a regular last bin must not set a bin.stop value'
 			}
 		}
 	} else {
@@ -216,9 +198,14 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const maxNumBins = 100 // harcoded limit for now to not stress sqlite
 
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
-		currBin.label = get_bin_label(currBin, bc)
 		bins.push(currBin)
-		if (currBin.stopunbounded || currBin.stop >= max) break
+		// force a computed last bin to have stopunbounded true
+		if (currBin.stop >= max) {
+			currBin.stopunbounded = true
+			delete currBin.stop
+		}
+		currBin.label = get_bin_label(currBin, bc)
+		if (currBin.stopunbounded) break
 
 		const upper = currBin.stop + bc.bin_size
 		const previousStop = currBin.stop
@@ -253,6 +240,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		}
 	}
 	delete bc.binLabelFormatter
+	delete bins[bins.length - 1].stop
 	return bins
 }
 
