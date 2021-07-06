@@ -35,6 +35,7 @@ export async function init_sampletable(arg) {
 		.text('Loading...')
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
+	arg.tid2value_orig = Object.keys(arg.tid2value) //terms from sunburst ring
 	try {
 		if (numofcases == 1) {
 			// one sample
@@ -411,6 +412,10 @@ function make_summary_panel(arg, div, category, main_tabs) {
 
 		function makeFilteredList(cat, count) {
 			if (arg.tid2value == undefined) arg.tid2value = {}
+			else if (arg.filter_term) {
+				delete arg.tid2value[arg.filter_term]
+				delete arg.filter_term
+			}
 			arg.tid2value[category.name.toLowerCase()] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
@@ -426,6 +431,7 @@ function make_summary_panel(arg, div, category, main_tabs) {
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
+	console.log(arg)
 	if (arg.tid2value[arg.filter_term] == undefined) return
 	// term
 	filter_holder
@@ -469,8 +475,12 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('cursor', 'pointer')
 		.html('x')
 		.on('click', () => {
-			if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
-			else delete arg.tid2value[arg.filter_term]
+			const orig_terms_flag = arg.tid2value_orig.filter(t => t == arg.filter_term).length
+			// don't remove original terms from tid2value (terms from sunburst ring)
+			if (!orig_terms_flag) {
+				if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
+				else delete arg.tid2value[arg.filter_term]
+			}
 			// delete from arg as well
 			delete arg.filter_term
 			make_multiSampleTable({ arg, holder: page_holder, size: arg.size, from: arg.from })
