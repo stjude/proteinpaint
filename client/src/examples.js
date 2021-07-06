@@ -327,8 +327,13 @@ if (track.sandbox.is_ui != true) {
 		const btnID = 'btn'+id
 		const codeBtn = div.body
 		.append('button')
+		.attr('class', 'sja_menuoption')
 		.attr('id',btnID)
 		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('font-size', '14px')
 		.text('Show Code')
 		.style('display', 'inline-block')
 		.on('click', () => {
@@ -376,9 +381,13 @@ async function makeDataDownload(track, div){
 	if (track.sandbox.datadownload) {
 		const dataBtn = div.body
 		.append('button')
-		.attr('type', 'button')
-		.style('margin', '20px')
+		.attr('class', 'sja_menuoption')
 		.attr('id','data-btn')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('font-size', '14px')
 		.style('display', 'inline-block')
 		.text('Download Data')
 		.on('click', () => {
