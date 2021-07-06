@@ -58,6 +58,8 @@ const templateBar = JSON.stringify({
 	},
 	results: {
 		'_2:maxAcrossCharts': '=maxAcrossCharts()',
+		'_:_min': '>&idVal.seriesVal',
+		'_:_max': '<&idVal.seriesVal',
 		charts: [
 			{
 				chartId: '@key',
@@ -193,6 +195,8 @@ function getPj(q, inReqs, data, tdb, ds) {
 				}
 				stat.sd = Math.sqrt(s / (values.length - 1))
 				if (isNaN(stat.sd)) stat.sd = null
+				stat.min = context.self.min
+				stat.max = context.self.max
 				return stat
 			},
 			numSamples(row, context) {

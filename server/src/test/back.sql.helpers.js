@@ -125,13 +125,27 @@ function normalizeCharts(data, comparedRefs = null) {
 		for (const key of Object.keys(summary.boxplot)) {
 			if (key.startsWith('p')) summary.boxplot[key] = summary.boxplot[key].toPrecision(8)
 		}
+		if (data.boxplot.min) {
+			summary.boxplot.min = summary.boxplot.min.toPrecision(8)
+		}
+		if (data.boxplot.max) {
+			summary.boxplot.max = summary.boxplot.max.toPrecision(8)
+		}
 	}
 	for (const chart of summary.charts) {
 		for (const series of chart.serieses) {
-			if (series.boxplot && series.boxplot.mean) {
-				series.boxplot.mean = series.boxplot.mean.toPrecision(8)
-				if (series.boxplot.sd) {
-					series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+			if (series.boxplot) {
+				if (series.boxplot.mean) {
+					series.boxplot.mean = series.boxplot.mean.toPrecision(8)
+					if (series.boxplot.sd) {
+						series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+					}
+				}
+				if (series.boxplot.min) {
+					series.boxplot.min = series.boxplot.min.toPrecision(8)
+				}
+				if (series.boxplot.max) {
+					series.boxplot.max = series.boxplot.max.toPrecision(8)
 				}
 			}
 		}

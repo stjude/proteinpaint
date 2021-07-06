@@ -575,12 +575,13 @@ tape('numerical term1', function(test) {
 				type: 'regular',
 				bin_size: 5,
 				first_bin: {
+					startunbounded: true,
 					start: 0,
 					stop_percentile: 20
 				},
 				last_bin: {
 					start_percentile: 80,
-					stopunbounded: 1
+					stopunbounded: true
 				},
 				startinclusive: 1,
 				stopinclusive: 0
