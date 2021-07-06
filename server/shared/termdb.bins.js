@@ -20,24 +20,36 @@ export function validate_bins(binconfig) {
 			}
 
 			if (bin == first_bin) {
-				if (!('startunbounded' in bin) && !('start' in bin)) {
-					throw `the first bin must define either startunbounded or start`
+				if ('startunbounded' in bin && !bin.startunbounded) {
+					throw `a custom first bin must not set bin.startunbounded to false`
 				}
-				if (!bin.startunbounded) {
-					if (!isNumeric(bin.start)) throw 'bin.start must be numeric for a bounded first bin'
+				if ('start' in bin) {
+					throw 'a custom first bin must not set a bin.start value'
+				}
+				if ('start_percentile' in bin) {
+					throw 'the first bin must not set a bin.start_percentile value'
+				}
+				if (!('stop' in bin)) {
+					throw `a custom first bin must define a bin.stop value`
+				}
+				if (!isNumeric(bin.stop)) {
+					throw `a custom first bin.stop value should be numeric`
+				}
+			} else if (bin == last_bin) {
+				if (!('start' in bin)) {
+					throw `a custom last bin must define a bin.start value`
+				}
+				if (!isNumeric(bin.start)) {
+					throw `a custom last bin.start must be numeric`
+				}
+				if ('stopunbounded' in bin && !bin.stopunbounded) {
+					throw 'a custom last bin must not set bin.stopunbounded to false'
+				}
+				if ('stop' in bin) {
+					throw 'a custom last bin must not set a bin.stop value'
 				}
 			} else {
 				if (!isNumeric(bin.start)) throw 'bin.start must be numeric for a non-first bin'
-			}
-
-			if (bin == last_bin) {
-				if (!('stopunbounded' in bin) && !('stop' in bin)) {
-					throw `the last bin must define either stopunbounded or stop`
-				}
-				if (!bin.stopunbounded) {
-					if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a bounded last bin'
-				}
-			} else {
 				if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
 		}

@@ -89,38 +89,93 @@ tape('compute_bins() error handling, type=custom', function(test) {
 		'custom bin.startinclusive and/or bin.stopinclusive must be defined'
 	)
 
+	// first bin
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, startunbounded: false, stop: 3 }] },
+		'should throw on a custom first bin having .startunbounded: false',
+		'a custom first bin must not set bin.startunbounded to false'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, start: 0, stop: 3 }] },
+		'should throw on a custom first bin having .start',
+		'a custom first bin must not set a bin.start value'
+	)
+
 	tryBin(
 		test,
 		{ type: 'custom', lst: [{ startinclusive: 1 }] },
-		'should throw on a custom first bin missing both .startunbounded and .start',
-		'the first bin must define either startunbounded or start'
+		'should throw on a missing first bin.start value',
+		'a custom first bin must define a bin.stop value'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, start: 'abc' }] },
-		'should throw on non-numeric start for a bounded first bin',
-		'bin.start must be numeric for a bounded first bin'
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 'abc' }] },
+		'should throw on non-numeric stop value for a first bin',
+		'a custom first bin.stop value should be numeric'
+	)
+
+	// last bin
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1 }] },
+		'should throw on a missing last bin.start value',
+		'a custom last bin must define a bin.start value'
 	)
 
 	tryBin(
 		test,
 		{
 			type: 'custom',
-			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3 }]
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 'abc' }]
 		},
-		'should throw on a custom last bin missing both .stopunbounded and .stop',
-		'the last bin must define either stopunbounded or stop'
+		'should throw on non-numeric start for a bounded last bin',
+		'a custom last bin.start must be numeric'
 	)
 
 	tryBin(
 		test,
 		{
 			type: 'custom',
-			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 'abc' }]
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 6 }]
 		},
-		'should throw on non-numeric stop for a bounded last bin',
-		'bin.stop must be numeric for a bounded last bin'
+		'should throw on a custom last bin having a .stop value',
+		'a custom last bin must not set a bin.stop value'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 3 }, { startinclusive: 1, start: 3, stopunbounded: false }] },
+		'should throw on a custom last bin having .stopunbounded: false',
+		'a custom last bin must not set bin.stopunbounded to false'
+	)
+
+	// middle bin
+	tryBin(
+		test,
+		{
+			type: 'custom',
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, stop: 6 }, { startinclusive: 1, start: 7 }]
+		},
+		'should throw on a non-numeric middle bin.start value',
+		'bin.start must be numeric for a non-first bin'
+	)
+
+	tryBin(
+		test,
+		{
+			type: 'custom',
+			lst: [
+				{ startinclusive: 1, stop: 2 },
+				{ startinclusive: 1, start: 2, stop: 'abc' },
+				{ startinclusive: 1, start: 7 }
+			]
+		},
+		'should throw on a non-numeric middle bin.stop value',
+		'bin.stop must be numeric for a non-last bin'
 	)
 
 	test.end()
