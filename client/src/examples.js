@@ -272,6 +272,12 @@ async function openExample(track, holder) {
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
 
+	const id = Math.random().toString()
+
+	//Download data and show runpp() code at the top
+	makeDataDownload(track, sandbox_div)
+	showCode(track,sandbox_div, id)
+
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		const intro = sandbox_div.body
@@ -281,10 +287,6 @@ async function openExample(track, holder) {
 	}
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
-
-	showCode(track,sandbox_div)
-
-	makeDataDownload(track, sandbox_div)
 
 	// template runpp() arg
 	const runpp_arg = {
@@ -320,21 +322,22 @@ async function addUpdateMessage(track, div) {
 
 
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, div){
-	if (track.sandbox.is_ui != true) {
+async function showCode(track, div, id){
+if (track.sandbox.is_ui != true) {
+		const btnID = 'btn'+id
 		const codeBtn = div.body
 		.append('button')
-		.attr('id','code-btn')
+		.attr('id',btnID)
 		.style('margin', '20px')
 		.text('Show Code')
 		.style('display', 'inline-block')
 		.on('click', () => {
 			if (code.style('display') == 'none') {
 				code.style('display', 'block') //TODO fadein fn
-				document.querySelector('#code-btn').textContent = 'Hide'
+				document.getElementById(btnID).textContent = 'Hide'
 			} else {
 				code.style('display', 'none') //TODO fadeout fn
-				document.querySelector('#code-btn').textContent = 'Show Code'
+				document.getElementById(btnID).textContent = 'Show Code'
 			}
 		})
 
@@ -379,7 +382,7 @@ async function makeDataDownload(track, div){
 		.style('display', 'inline-block')
 		.text('Download Data')
 		.on('click', () => {
-			to_textfile(track.sandbox.datadownload)
+			to_textfile(track.sandbox.datadownload, track.name)
 		})
 	return dataBtn
 	}
