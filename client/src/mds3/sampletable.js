@@ -127,7 +127,7 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, total_size, filter_tag } = args
+	const { arg, holder, size, from, total_size, filter_term } = args
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	arg.numofcases = total_size || occurrence
@@ -151,7 +151,8 @@ async function make_multiSampleTable(args) {
 	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
 
 	// show filter pill
-	if (filter_tag) {
+	if (filter_term != undefined) {
+		arg.filter_term = filter_term
 		const filter_div = holder
 			.append('div')
 			.style('font-size', '.9em')
@@ -409,17 +410,23 @@ function make_summary_panel(arg, div, category, main_tabs) {
 		}
 
 		function makeFilteredList(cat, count) {
-			arg.tid2value = {}
+			if (arg.tid2value == undefined) arg.tid2value = {}
 			arg.tid2value[category.name.toLowerCase()] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_horizontal_tabs(main_tabs)
-			make_multiSampleTable({ arg, holder: main_tabs[1].holder, total_size: count, filter_tag: true })
+			make_multiSampleTable({
+				arg,
+				holder: main_tabs[1].holder,
+				total_size: count,
+				filter_term: category.name.toLowerCase()
+			})
 		}
 	}
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
+	if (arg.tid2value[arg.filter_term] == undefined) return
 	// term
 	filter_holder
 		.append('div')
@@ -429,7 +436,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('text-transform', 'capitalize')
 		.style('cursor', 'default')
-		.html(Object.keys(arg.tid2value)[0])
+		.html(arg.filter_term)
 
 	// is button
 	filter_holder
@@ -449,7 +456,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(Object.values(arg.tid2value)[0])
+		.html(arg.tid2value[arg.filter_term])
 
 	// remove button
 	filter_holder
@@ -462,7 +469,10 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('cursor', 'pointer')
 		.html('x')
 		.on('click', () => {
-			delete arg.tid2value
+			if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
+			else delete arg.tid2value[arg.filter_term]
+			// delete from arg as well
+			delete arg.filter_term
 			make_multiSampleTable({ arg, holder: page_holder, size: arg.size, from: arg.from })
 		})
 }
@@ -501,7 +511,13 @@ function make_pagination(arg, page_doms) {
 		.attr('title', 'Enteries per page')
 		.on('change', () => {
 			const new_size = entries_select.property('value')
-			make_multiSampleTable({ arg, holder: list_holder, size: new_size, total_size: arg.numofcases })
+			make_multiSampleTable({
+				arg,
+				holder: list_holder,
+				size: new_size,
+				total_size: arg.numofcases,
+				filter_term: arg.filter_term
+			})
 		})
 
 	for (const ent of entries_options) {
@@ -569,7 +585,8 @@ function make_pagination(arg, page_doms) {
 						holder: list_holder,
 						size: arg.size,
 						from: new_from,
-						total_size: arg.numofcases
+						total_size: arg.numofcases,
+						filter_term: arg.filter_term
 					})
 				}
 			})
