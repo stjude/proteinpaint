@@ -164,7 +164,7 @@ tape('column and row labels', function(test) {
 					.node()
 					.querySelectorAll('th')
 			].map(elem => elem.innerText),
-			['Female', 'Male', '<5', '5 to 9', '10 to 14', '15 to 19', '20 to 20.15'],
+			['Female', 'Male', '<5', '5 to 9', '10 to 14', '15 to 19', '≥20'],
 			'should use term.values{key: {label}} as column labels, if available'
 		)
 		test.end()
