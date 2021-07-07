@@ -24,7 +24,7 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
-	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'SJLife' }
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'TermdbTest' }
 
 	opts.filter = filterInit({
 		vocab,
@@ -188,7 +188,7 @@ tape('tvs: Categorical', async test => {
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 24, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll('.value_checkbox').size(), 10, 'Should have checkbox for each value')
 	test.equal(
 		tipd
 			.selectAll('.value_checkbox')
@@ -594,7 +594,7 @@ tape('tvs: Conditional', async test => {
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 5, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll('.value_checkbox').size(), 4, 'Should have checkbox for each value')
 	test.equal(
 		tipd
 			.selectAll('.value_checkbox')
@@ -698,25 +698,25 @@ tape('tvs: Cohort + Numerical', async test => {
 						name: 'subcohort',
 						type: 'categorical',
 						values: {
-							SJLIFE: { key: 'SJLIFE' },
-							CCSS: { key: 'CCSS' },
+							SJLIFE: { key: 'SJLIFE', label: 'SJLIFE', shortLabel: 'SJLIFE' },
+							CCSS: { key: 'CCSS', label: 'CCSS', shortLabel: 'CCSS' },
 							'SJLIFE,CCSS': { keys: ['SJLIFE', 'CCSS'], shortLabel: 'SJLIFE+CCSS' }
 						}
 					},
-					values: [{ key: 'SJLIFE' }]
+					values: [{ key: 'SJLIFE', label: 'SJLIFE', shortLabel: 'SJLIFE' }]
 				}
 			},
 			{
 				type: 'tvs',
 				tvs: {
 					term: {
-						id: 'yeardx',
-						name: 'Year of Diagnosis',
+						id: 'agedx',
+						name: 'Age (year) at Cancer Diagnosis',
 						unit: 'year',
 						type: 'float',
 						values: {}
 					},
-					ranges: [{ stopinclusive: true, start: 1980, stop: 1985 }]
+					ranges: [{ stopinclusive: true, start: 1, stop: 8 }]
 				}
 			}
 		]

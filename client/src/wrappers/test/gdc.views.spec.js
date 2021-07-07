@@ -42,7 +42,7 @@ tape('lolliplot using URL', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const akt1Circles = { min: 280, max: 300 }
+	const akt1Circles = { min: 250, max: 300 }
 	const akt1CirclesActual = holder.selectAll('circle').size()
 	test.true(
 		akt1CirclesActual > akt1Circles.min && akt1CirclesActual < akt1Circles.max,
@@ -53,7 +53,7 @@ tape('lolliplot using URL', async test => {
 	const set_id_checkbox = holder.selectAll('#set_switch')
 	set_id_checkbox.node().click()
 	await sleep(4000)
-	const akt1Set = { min: 240, max: 280 }
+	const akt1Set = { min: 200, max: 280 }
 	const akt1SetActual = holder.selectAll('circle').size()
 	test.true(
 		akt1SetActual > akt1Set.min && akt1SetActual < akt1Set.max,
@@ -65,7 +65,7 @@ tape('lolliplot using URL', async test => {
 	const kras_btn = btns[0]
 	kras_btn.click()
 	await sleep(4000)
-	const krasSet = { min: 185, max: 200 }
+	const krasSet = { min: 150, max: 220 }
 	const krasSetActual = holder.selectAll('circle').size()
 	test.true(
 		krasSetActual > krasSet.min && krasSetActual < krasSet.max,
@@ -102,7 +102,7 @@ tape('lolliplot using props', async test => {
 		holder.node()
 	)
 	await sleep(5500)
-	const akt1Circles = { min: 280, max: 300 }
+	const akt1Circles = { min: 250, max: 300 }
 	const akt1CirclesActual = holder.selectAll('circle').size()
 	test.true(
 		akt1CirclesActual > akt1Circles.min && akt1CirclesActual < akt1Circles.max,
@@ -112,8 +112,8 @@ tape('lolliplot using props', async test => {
 	// click set_id checkbox
 	const set_id_checkbox = holder.selectAll('#set_switch')
 	set_id_checkbox.node().click()
-	await sleep(5000)
-	const akt1Set = { min: 240, max: 280 }
+	await sleep(6000)
+	const akt1Set = { min: 200, max: 280 }
 	const akt1SetActual = holder.selectAll('circle').size()
 	test.true(
 		akt1SetActual > akt1Set.min && akt1SetActual < akt1Set.max,
@@ -125,7 +125,7 @@ tape('lolliplot using props', async test => {
 	const kras_btn = btns[0]
 	kras_btn.click()
 	await sleep(5000)
-	const krasSet = { min: 185, max: 200 }
+	const krasSet = { min: 150, max: 220 }
 	const krasSetActual = holder.selectAll('circle').size()
 	test.true(
 		krasSetActual > krasSet.min && krasSetActual < krasSet.max,

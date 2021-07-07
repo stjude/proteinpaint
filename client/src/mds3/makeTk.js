@@ -119,7 +119,7 @@ function get_ds(tk, block) {
 		return
 	}
 	// custom
-	if (!tk.name) tk.name = 'Unamed'
+	if (!tk.name) tk.name = 'Unnamed'
 	tk.mds = {}
 	// to fill in details to tk.mds
 	/*
@@ -184,6 +184,8 @@ function mayaddGetter_variant2samples(tk, block) {
 		// hardcode to getsummary and using fixed levels
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
 		if (arg.tk1) par.push('samplefiltertemp=' + JSON.stringify(arg.tk1.samplefiltertemp)) // must use tk1 but not tk for this one
+		if (arg.size) par.push('size=' + arg.size)
+		if (arg.from != undefined) par.push('from=' + arg.from)
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
 			// in such case, need alternative query method

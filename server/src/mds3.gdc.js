@@ -405,7 +405,9 @@ export async function getSamples_gdcapi(q, ds) {
 	const response = await got(
 		api.endpoint +
 			'?size=' +
-			api.size +
+			(q.size || api.size) +
+			'&from=' +
+			(q.from || 0) +
 			'&fields=' +
 			fields.join(',') +
 			'&filters=' +

@@ -12,7 +12,7 @@ const vocabData = require('./vocabData')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		vocab: {
-			dslabel: 'SJLife',
+			dslabel: 'TermdbTest',
 			genome: 'hg38'
 		},
 		nav: { header_mode: 'with_tabs' }
@@ -70,9 +70,10 @@ tape('single barchart, categorical bars', function(test) {
 	let barDiv
 	function testBarCount(plot) {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const minBars = 5
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > 5, 'should have more than 10 Diagnosis Group bars')
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
@@ -138,7 +139,7 @@ tape('single chart, with overlay', function(test) {
 		testOverlayOrder(plot)
 		await sleep(1000)
 		triggerUncomputableOverlay(plot)
-		await sleep(1000)
+		await sleep(1100)
 		clickLegendToHideOverlay(plot)
 		await sleep(1200)
 		testHiddenOverlayData(plot)
@@ -146,9 +147,10 @@ tape('single chart, with overlay', function(test) {
 	}
 
 	function testBarCount(plot) {
+		const minBars = 5
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
@@ -184,11 +186,13 @@ tape('single chart, with overlay', function(test) {
 		})
 	}
 
+	const legendDataId = 'not exposed'
+
 	async function clickLegendToHideOverlay(plot) {
 		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
 		const item = legendDiv
 			.selectAll('.legend-row')
-			.filter(d => d.dataId == 'unknown exposure')
+			.filter(d => d.dataId == legendDataId)
 			.node()
 		item.dispatchEvent(new Event('click', { bubbles: true }))
 	}
@@ -196,7 +200,7 @@ tape('single chart, with overlay', function(test) {
 	async function testHiddenOverlayData(plot) {
 		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
 		const item = legendDiv.selectAll('.legend-row').filter(function(d) {
-			return +this.style.opacity < 1 && d.dataId == 'unknown exposure'
+			return +this.style.opacity < 1 && d.dataId == legendDataId
 		})
 		test.equal(item.size(), 1, 'should hide a clicked uncomputable overlay legend')
 	}
@@ -295,7 +299,13 @@ tape('series visibility - numeric', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2'
+				],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -332,7 +342,7 @@ tape('series visibility - numeric', function(test) {
 		)
 		test.equal(
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
-			excluded.length,
+			2,
 			'should display the correct number of hidden legend labels'
 		)
 	}
@@ -352,7 +362,7 @@ tape('series visibility - numeric', function(test) {
 		test.equal(excluded.length, numHiddenLegendBeforeClick - 1, 'should adjust the number of excluded series data')
 		test.equal(
 			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
-			excluded.length,
+			1,
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
@@ -360,7 +370,7 @@ tape('series visibility - numeric', function(test) {
 	function triggerMenuClickToHide(plot) {
 		plot.Inner.components.barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
-			.filter(d => d.seriesId == 'not treated')
+			.filter(d => d.seriesId == 'not exposed')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
@@ -376,7 +386,7 @@ tape('series visibility - numeric', function(test) {
 			plot.Inner.components.barchart.Inner.dom.legendDiv
 				.selectAll('.legend-row')
 				.filter(function() {
-					return this.innerHTML.includes('exposed, dose unknown')
+					return this.innerHTML.includes('not exposed')
 				})
 				.size(),
 			1,
@@ -504,7 +514,7 @@ tape('click non-group bar to add filter', function(test) {
 			},
 			termfilter,
 			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age (years)', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
@@ -920,8 +930,10 @@ tape('single chart, genotype overlay', function(test) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 67, 'should have a total of 67 overlays')
+		const minBars = 5
+		const expectedOverlays = 15
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
+		test.equal(numOverlays, expectedOverlays, `should have a total of ${expectedOverlays} overlays`)
 		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
@@ -937,14 +949,14 @@ tape('numeric exclude range', function(test) {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Anthracyclines',
-					'idarubicin_5'
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2',
+					'aaclassic_5'
 				],
-				visiblePlotIds: ['idarubicin_5'],
+				visiblePlotIds: ['aaclassic_5'],
 				plots: {
-					idarubicin_5: {
-						term: { id: 'idarubicin_5', term: termjson['idarubicin_5'] },
+					aaclassic_5: {
+						term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
 						term2: 'genotype',
 						settings: { currViews: ['barchart'] }
 					}
@@ -976,8 +988,8 @@ tape('numeric exclude range', function(test) {
 								{
 									type: 'tvs',
 									tvs: {
-										term: termjson['idarubicin_5'],
-										ranges: [{ start: 10, stopunbounded: true, startinclusive: false, stopinclusive: true }],
+										term: termjson['aaclassic_5'],
+										ranges: [{ start: 10000, stopunbounded: true, startinclusive: false, stopinclusive: true }],
 										isnot: true
 									}
 								}
@@ -1001,7 +1013,7 @@ tape('numeric exclude range', function(test) {
 	function testBarCount(plot) {
 		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 bar')
+		test.equal(numBars, 2, 'should have 2 bars')
 		if (test._ok) plot.Inner.app.destroy()
 		test.end()
 	}
@@ -1013,7 +1025,13 @@ tape('numeric filter - only special value', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2'
+				],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -1214,7 +1232,7 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numBars, 3, 'should have 3 bars')
+		test.equal(numBars, 5, 'should have 5 bars')
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })
@@ -1229,8 +1247,8 @@ tape('max number of bins: exceeded', test => {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Alkylating Agents',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2',
 					'aaclassic_5'
 				],
 				visiblePlotIds: ['aaclassic_5'],
@@ -1274,7 +1292,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testBarCount(plot) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 31, 'should have 31 age bars')
+		test.equal(numBars, 21, 'should have 21 age bars')
 	}
 
 	function triggerExceedMaxBin(plot) {
@@ -1301,7 +1319,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testExceedMaxBin(plot) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 31, 'should still have 31 age bars and not re-render on error')
+		test.equal(numBars, 21, 'should still have 31 age bars and not re-render on error')
 		const errorbar = plot.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
 		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
@@ -1320,8 +1338,8 @@ tape('no visible series data, no overlay', function(test) {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Platinum Agent',
+					'Chemotherapy, Lifetime',
+					'Platinum Agents, mg/m2',
 					'cisplateq_5'
 				],
 				visiblePlotIds: ['cisplateq_5'],
@@ -1425,8 +1443,8 @@ tape('all hidden + with overlay, legend click', function(test) {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Platinum Agent',
+					'Chemotherapy, Lifetime',
+					'Platinum Agents, mg/m2',
 					'cisplateq_5'
 				],
 				visiblePlotIds: ['cisplateq_5'],
@@ -1502,7 +1520,7 @@ tape('all hidden + with overlay, legend click', function(test) {
 	function triggerMenuClick(plot) {
 		plot.Inner.app.Inner.tip.d
 			.selectAll('.sja_menuoption')
-			.filter(d => d.label.includes('Hide "Male"'))
+			.filter(d => d.label.includes('Hide "Female"'))
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
@@ -1516,7 +1534,8 @@ tape('all hidden + with overlay, legend click', function(test) {
 
 	function triggerUnhideOverlay(plot) {
 		plot.Inner.components.barchart.Inner.dom.legendDiv
-			.select('.legend-row')
+			.selectAll('.legend-row')
+			.filter(d => d.dataId == '2')
 			.node()
 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
 	}
@@ -1556,8 +1575,8 @@ tape('unhidden chart and legend', test => {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Alkylating Agents',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2',
 					'aaclassic_5'
 				],
 				visiblePlotIds: ['aaclassic_5'],
@@ -1654,8 +1673,8 @@ tape('customized bins', test => {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Alkylating Agents',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2',
 					'aaclassic_5'
 				],
 				visiblePlotIds: ['aaclassic_5'],
@@ -1712,7 +1731,7 @@ tape('customized bins', test => {
 
 	async function triggerSearch(plot) {
 		const dom = plot.Inner.app.getComponents('nav.search').Inner.dom
-		dom.input.property('value', 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)')
+		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
 		dom.input.on('input')()
 		await sleep(500)
 		dom.holder

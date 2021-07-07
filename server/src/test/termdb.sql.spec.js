@@ -416,14 +416,7 @@ tape('categorical term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: '1', label: 'Male' }]
-						}
-					},
-					{
-						type: 'tvs',
-						tvs: {
-							term: { id: 'aaclassic_5', name: 'alkaline dosage', type: 'float' },
-							ranges: [{ start: 1000, stop: 5000 }]
+							values: [{ key: '2', label: 'Female' }]
 						}
 					}
 				]
@@ -553,13 +546,6 @@ tape('numerical term1', function(test) {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
 							values: [{ key: '1', label: 'Male' }]
 						}
-					},
-					{
-						type: 'tvs',
-						tvs: {
-							term: { id: 'aaclassic_5', name: 'alkaline dosage', type: 'float' },
-							ranges: [{ start: 1000, stop: 5000 }]
-						}
 					}
 				]
 			}
@@ -589,12 +575,13 @@ tape('numerical term1', function(test) {
 				type: 'regular',
 				bin_size: 5,
 				first_bin: {
+					startunbounded: true,
 					start: 0,
 					stop_percentile: 20
 				},
 				last_bin: {
 					start_percentile: 80,
-					stopunbounded: 1
+					stopunbounded: true
 				},
 				startinclusive: 1,
 				stopinclusive: 0
@@ -729,14 +716,14 @@ tape('leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: '1', label: 'Female' }]
+							values: [{ key: '2', label: 'Female' }]
 						}
 					},
 					{
 						type: 'tvs',
 						tvs: {
 							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
-							ranges: [{ start: 0, stop: 8 }]
+							ranges: [{ start: 0, stop: 18 }]
 						}
 					}
 				]
@@ -917,14 +904,7 @@ tape('non-leaf condition term1', function(test) {
 						type: 'tvs',
 						tvs: {
 							term: { id: 'sex', name: 'Sex', type: 'categorical' },
-							values: [{ key: '1', label: 'Female' }]
-						}
-					},
-					{
-						type: 'tvs',
-						tvs: {
-							term: { id: 'agedx', name: 'Age at diagnosis', type: 'float' },
-							ranges: [{ start: 0, stop: 8 }]
+							values: [{ key: '2', label: 'Female' }]
 						}
 					},
 					{
@@ -932,7 +912,7 @@ tape('non-leaf condition term1', function(test) {
 						tvs: {
 							term: { id: 'Asthma', name: 'Asthma', type: 'condition' },
 							bar_by_grade: true,
-							values: [{ key: 3, label: '3' }],
+							values: [{ key: 1, label: '1' }],
 							value_by_max_grade: true
 						}
 					}

@@ -6,7 +6,7 @@ import Svmr from './svmr.c'
 
 export function svmrparseinput(arg, sayerror, genome, holder, hostURL, jwt) {
 	if (!arg.dataname) {
-		arg.dataname = 'Unamed dataset'
+		arg.dataname = 'Unnamed dataset'
 	}
 	if (arg.input) {
 		const [e, header, items] = svmrparseraw(arg.input, genome)

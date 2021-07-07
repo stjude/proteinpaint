@@ -68,8 +68,17 @@ function setRenderers(self) {
 	  }
 	  */
 
-		let rows =
-			'<tr><td>Mean (SD)</td><td>' + data.boxplot.mean.toFixed(2) + ' (' + data.boxplot.sd.toFixed(2) + ') </td></tr>'
+		const sd = data.boxplot.sd ? ' (' + data.boxplot.sd.toFixed(2) + ') ' : ''
+		let rows = ''
+		if (Number.isFinite(data.boxplot.min)) {
+			rows += '<tr><td>Minimum</td><td>' + data.boxplot.min.toFixed(2) + '</td></tr>'
+		}
+		if (Number.isFinite(data.boxplot.max)) {
+			rows += '<tr><td>Maximum</td><td>' + data.boxplot.max.toFixed(2) + '</td></tr>'
+		}
+
+		rows += '<tr><td>Mean (SD)</td><td>' + data.boxplot.mean.toFixed(2) + sd + '</td></tr>'
+
 		if ('p50' in data.boxplot) {
 			rows +=
 				'<tr><td>Median (IQR)</td><td>' +
