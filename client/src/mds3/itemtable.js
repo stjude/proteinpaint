@@ -1,5 +1,7 @@
 import * as common from '../../shared/common'
 import { to_textfile, fillbar } from '../client'
+import { init_sampletable } from './sampletable'
+import { event as d3event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -303,9 +305,11 @@ async function table_snvindel(arg) {
 			.style('font-size', '1.1em')
 		{
 			const c = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-			heading.text(c < cutoff_tableview ? 'Sample details' : 'Summary of ' + c + ' samples')
+			heading
+				.style('display', c < cutoff_tableview ? 'block' : 'none')
+				.text(c < cutoff_tableview ? 'Sample details' : '')
 		}
-		await mlst2samplesummary(arg)
+		await init_sampletable(arg)
 	}
 }
 
@@ -411,7 +415,7 @@ one row for each variant
 click a button from a row to show the sample summary/detail table for that variant
 show a summary table across samples of all variants
 */
-function table_snvindel_multivariant({ mlst, tk, block, table }) {
+function table_snvindel_multivariant({ mlst, tk, block, table, div }) {
 	const columnnum = 2 // get number of columns, dependent on tk.mds setting
 	// header row
 	const tr = table.append('tr')
@@ -422,6 +426,7 @@ function table_snvindel_multivariant({ mlst, tk, block, table }) {
 	tr.append('td')
 		.text('Occurrence')
 		.style('opacity', 0.5)
+	let mlst_render = []
 	// one row for each variant
 	for (const m of mlst) {
 		const tr = table.append('tr')
@@ -431,35 +436,34 @@ function table_snvindel_multivariant({ mlst, tk, block, table }) {
 		const td2 = tr.append('td')
 		if (tk.mds.variant2samples) {
 			let first = true
-			td2
-				.html(m.occurrence + '\t&#9660;')
-				.style('text-align', 'right')
-				.attr('class', 'sja_clbtext')
-				.on('click', async () => {
-					if (tr2.style('display') == 'none') {
-						tr2.style('display', 'table-row')
-						td2.html(m.occurrence + '\t&#9650;')
-					} else {
-						tr2.style('display', 'none')
-						td2.html(m.occurrence + '\t&#9660;')
+
+			const occurnace_div = td2.append('div')
+
+			occurnace_div
+				.append('input')
+				.property('type', 'checkbox')
+				.on('change', async () => {
+					if (d3event.target.checked) mlst_render.push(m)
+					else {
+						mlst_render = mlst_render.filter(mt => mt.ssm_id != m.ssm_id)
 					}
-					if (!first) return
-					// load sample info
-					first = false
-					await mlst2samplesummary({
-						mlst: [m],
+					const multisample_div = div.select('.sj_multisample_holder')
+					multisample_div.selectAll('*').remove()
+					await init_sampletable({
+						mlst: mlst_render.length ? mlst_render : mlst,
 						tk,
 						block,
-						div: tr2
-							.append('td')
-							.attr('colspan', columnnum)
-							.append('table')
-							.style('border', 'solid 1px #ccc')
-							.style('margin-left', '20px')
+						div: multisample_div
 					})
 				})
-			// hidden row to show sample details of this variant
-			const tr2 = table.append('tr').style('display', 'none')
+
+			occurnace_div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('text-align', 'right')
+				.style('margin-left', '5px')
+				.attr('class', 'sja_clbtext')
+				.text(m.occurrence)
 		} else {
 			td2.text(m.occurrence)
 		}
@@ -479,7 +483,7 @@ async function table_fusionsv(arg) {
 	*/
 	if (arg.tk.mds.variant2samples) {
 		// show sample summary
-		await mlst2samplesummary(arg)
+		await init_sampletable(arg)
 	}
 }
 

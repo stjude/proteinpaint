@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
-    "test": "tape -r babel-register src/test/*.spec.js",
+    "pretest": "./test/pretest.js",
+    "test": "tape -r babel-register */test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"

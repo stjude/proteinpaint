@@ -523,7 +523,7 @@ export function bulkembed(arg) {
 
 	*/
 
-	if (!arg.name) arg.name = 'Unamed dataset'
+	if (!arg.name) arg.name = 'Unnamed dataset'
 
 	let holder = arg.holder
 	if (!holder) {

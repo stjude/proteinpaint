@@ -2,7 +2,7 @@ const serverconfig = require('../../serverconfig')
 const fs = require('fs')
 const path = require('path')
 const Partjson = require('partjson')
-const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
+const sjlife = require('./load.sjlife').init('termdb.test.js')
 const filterUtils = require('../../shared/filter')
 
 function barchart_data(q, data0) {
@@ -58,6 +58,8 @@ const templateBar = JSON.stringify({
 	},
 	results: {
 		'_2:maxAcrossCharts': '=maxAcrossCharts()',
+		'_:_min': '>&idVal.seriesVal',
+		'_:_max': '<&idVal.seriesVal',
 		charts: [
 			{
 				chartId: '@key',
@@ -193,6 +195,8 @@ function getPj(q, inReqs, data, tdb, ds) {
 				}
 				stat.sd = Math.sqrt(s / (values.length - 1))
 				if (isNaN(stat.sd)) stat.sd = null
+				stat.min = context.self.min
+				stat.max = context.self.max
 				return stat
 			},
 			numSamples(row, context) {

@@ -152,12 +152,8 @@ function make_searchbar(track_args, page_args, div) {
 }
 
 async function loadTracks(args, page_args, filteredTracks) {
-	const BrowserTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser'
-	)
-	const LaunchApps = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Apps'
-	)
+	const BrowserTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Genome Browser')
+	const LaunchApps = (filteredTracks || args.tracks).filter(track => track.app == 'Apps')
 	try {
 		displayTracks(BrowserTracks, args.browserList, page_args)
 		displayTracks(LaunchApps, args.launchList, page_args)
@@ -200,6 +196,7 @@ function displayTracks(tracks, holder, page_args) {
 			const today = new Date()
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
+      
 			if (update > today && !track.sandbox.update_message) {
 				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
 			}
@@ -281,9 +278,9 @@ async function openExample(track, holder) {
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		const intro = sandbox_div.body
-		.append('div')
-		.style('margin', '20px')
-		.html(track.sandbox.intro)
+			.append('div')
+			.style('margin', '20px')
+			.html(track.sandbox_intro)
 	}
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)

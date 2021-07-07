@@ -21,7 +21,7 @@ tape('\n', test => {
 })
 
 // Test the integration of fisher.R
-tape('fisher.R integration', test => {
+tape.skip('fisher.R integration', test => {
 	fetch(`http://localhost:${serverconfig.port}/mds2`, {
 		method: 'POST',
 		body: JSON.stringify({
@@ -43,7 +43,7 @@ tape('fisher.R integration', test => {
 				{ key: 'BadBLAT', isflag: true, remove_yes: true },
 				{ key: 'Polymer_region', isflag: true, remove_yes: true }
 			],
-			dslabel: 'SJLife',
+			dslabel: 'TermdbTest',
 			trigger_vcfbyrange: 1,
 			AFtest: {
 				groups: [
@@ -97,38 +97,38 @@ tape('fisher.R integration', test => {
 			test.deepEqual(
 				obj.vcf.rglst[0].variants.map(v => v.nm_axis_value),
 				[
-					1.8817443524792397,
-					0.9035330365204425,
-					0.9849078300420343,
-					0.9523705066963577,
-					0.8548112961035059,
-					2.478794670463805,
-					2.846352579551519,
-					0.1549824581545291,
-					0.23053832970445318,
-					3.313257831421107,
-					2.9414285546123646,
-					3.370063840047983,
-					2.9354413180208287,
-					2.801575825255521,
-					2.8421068112137795,
-					3.286146093332917,
-					3.1779166025613144,
-					3.9553614966109127,
-					0.32843589573831544,
-					0.24045241311560614,
-					1.5852028932479911,
-					1.8828066388526647,
-					1.5618157065409919,
-					1.5928481549669289,
-					1.627355967657384,
-					1.307801917776898,
-					1.314032517292687,
-					1.5749209604430299,
-					0.05589778299983046,
-					1.700840707255109,
-					1.5376062718583596,
-					1.2461358761461159
+					1.4242032382171663,
+					14.347630932233224,
+					2.5423778840310414,
+					0.36530719729188244,
+					0.16526936577441664,
+					0.9682595405170482,
+					2.0556742102656207,
+					12.584815056549552,
+					5.732218697937837,
+					2.2400027809882324,
+					4.361855972827262,
+					4.708988890052095,
+					0.6379692834134763,
+					0.6676341551734228,
+					0.6382767265201461,
+					4.153737440292865,
+					3.476891341505346,
+					4.340635210425329,
+					10.79961012873397,
+					4.940117906043664,
+					3.8358862800882,
+					4.367259550183515,
+					4.733933800258545,
+					4.8892715539503255,
+					4.735469454648908,
+					35.42399158266384,
+					37.1150359439827,
+					4.047139919299597,
+					43.11900330805673,
+					4.601249811463866,
+					4.677021741496268,
+					41.43412233963457
 				],
 				'should match expected output'
 			)
@@ -137,7 +137,7 @@ tape('fisher.R integration', test => {
 })
 
 // Test the integration of fisher.2x3.R
-tape('fisher.2x3.R integration', test => {
+tape.skip('fisher.2x3.R integration', test => {
 	fetch(
 		`http://localhost:${serverconfig.port}/termdb?genome=hg38&dslabel=SJLife&ssid=${ssid}&phewas=1&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=` +
 			encodeURIComponent(

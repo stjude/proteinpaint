@@ -8,7 +8,7 @@ const graphable = require('../../common/termutils').graphable
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -52,7 +52,7 @@ tape('default behavior', function(test) {
 	}
 
 	function testRoot(tree) {
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 5, 'should have 5 root terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
 	}
 
 	let termbtn1, childdiv1
@@ -66,7 +66,7 @@ tape('default behavior', function(test) {
 
 	function testExpand1(tree) {
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
-		test.equal(childdiv1.querySelectorAll('.termdiv').length, 3, 'child DIV now contains 3 sub terms')
+		test.equal(childdiv1.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
 	}
 
 	let childdiv2
@@ -226,8 +226,8 @@ tape('rehydrated from saved state', function(test) {
 	})
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 10, 'should have 10 expanded terms')
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 8, 'should have 8 term toggle buttons')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 8, 'should have 8 expanded terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 6, 'should have 6 term toggle buttons')
 	}
 })
 

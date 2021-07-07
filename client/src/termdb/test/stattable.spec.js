@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -32,8 +32,8 @@ tape('barchart-dependent display', function(test) {
 					'root',
 					'Cancer-related Variables',
 					'Treatment',
-					'Chemotherapy',
-					'Alkylating Agents',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2',
 					'aaclassic_5'
 				],
 				visiblePlotIds: ['aaclassic_5'],
@@ -170,7 +170,7 @@ tape('term.type == "float" dependent display', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'Age'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age (years)'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {

@@ -216,6 +216,9 @@ const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
 const pileup_totalcolor = '#e0e0e0'
 
+const alt_diff_score_color = '#FF0000'
+const ref_diff_score_color = '#47C8FF'
+
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
 const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
@@ -313,6 +316,44 @@ async function download_gdc_bam(req) {
 		gdc_bam_filenames.push(gdc_bam_filename)
 	}
 	return gdc_bam_filenames
+}
+
+async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
+	const multiplication_factor = q.diff_score_plotwidth / (max_diff_score - min_diff_score)
+	const diff_score_bar_width = max_diff_score * multiplication_factor - min_diff_score * multiplication_factor
+	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	//const read_height = group.templates[0].r.ntwidth
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
+	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
+	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
+	let i = 0
+	const dist_bw_reads = group.stackspace / group.canvasheight
+	for (const diff_score of diff_scores_list) {
+		//console.log('diff_score:', diff_score)
+		if (diff_score > 0) {
+			ctx.fillStyle = alt_diff_score_color
+		} else {
+			ctx.fillStyle = ref_diff_score_color
+		}
+		ctx.fillRect(
+			min_diff_score * -1 * multiplication_factor,
+			(i + 1) * read_height,
+			//(diff_score * 50 * -1) / min_diff_score,
+			diff_score * multiplication_factor,
+			read_height - dist_bw_reads * read_height
+		)
+
+		i += 1
+	}
+	return {
+		height: group.canvasheight,
+		width: diff_score_bar_width,
+		src: canvas.toDataURL(),
+		read_height: read_height
+	}
 }
 
 async function plot_pileup(q, templates) {
@@ -643,6 +684,11 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
+		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
+		if (req.query.max_diff_score) {
+			q.max_diff_score = Number(req.query.max_diff_score)
+			q.min_diff_score = Number(req.query.min_diff_score)
+		}
 		const t = req.query.variant.split('.')
 		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
 		q.variant = {
@@ -724,10 +770,18 @@ async function do_query(q) {
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
+		if (Number.isFinite(q.max_diff_score) && q.variant) {
+			// In partstack mode
+			result.max_diff_score = q.max_diff_score
+			result.min_diff_score = q.min_diff_score
+		} else if (Number.isFinite(out.max_diff_score)) {
+			result.max_diff_score = out.max_diff_score
+			result.min_diff_score = out.min_diff_score
+		}
+
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
 
@@ -778,9 +832,15 @@ async function do_query(q) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
+
 		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
+		if (q.variant) {
+			// diff scores plotted only if a variant is specified by user
+			gr.diff_scores_img = await plot_diff_scores(q, group, templates, result.max_diff_score, result.min_diff_score)
+		}
+
 		gr.src = canvas.toDataURL()
 		result.groups.push(gr)
 		templates_total = [...templates_total, ...templates]
@@ -1501,11 +1561,13 @@ function stack_templates(group, q, templates) {
 	for (const template of templates) {
 		// group.templates
 		let stackidx = null
-		for (let i = 0; i < group.stacks.length; i++) {
-			if (group.stacks[i] + q.stacksegspacing < template.x1) {
-				stackidx = i
-				group.stacks[i] = template.x2
-				break
+		if (!q.variant) {
+			for (let i = 0; i < group.stacks.length; i++) {
+				if (group.stacks[i] + q.stacksegspacing < template.x1) {
+					stackidx = i
+					group.stacks[i] = template.x2
+					break
+				}
 			}
 		}
 		if (stackidx == null) {
@@ -1526,6 +1588,7 @@ function may_trimstacks(group, templates, q) {
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
+	//console.log('templates:', templates)
 	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
 		group.stacks.push(0)
 	}
@@ -1770,7 +1833,7 @@ function plot_template(ctx, template, group, q) {
 
 	// for testing, print a stat (numeric or string) per template on the right of each row
 	// should not use this in production
-	if (template.__tempscore != undefined) {
+	if (template.__tempscore != undefined && serverconfig.features.indel_kmer_scores) {
 		ctx.fillStyle = 'blue'
 		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
