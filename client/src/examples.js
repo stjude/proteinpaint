@@ -177,8 +177,8 @@ function displayTracks(tracks, holder, page_args) {
 				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
 				<span class="track-image"><img src="${track.image}"></img></span>
 				<div class='track-links'>
-				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
-				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation(); href="'${track.buttons.doc}", target="_blank">Docs</a>`: ''}
+				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
+				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
 				)
 			.on('click', async () => {
@@ -275,7 +275,7 @@ async function openExample(track, holder) {
 	const id = Math.random().toString()
 
 	//Download data and show runpp() code at the top
-	makeDataDownload(track, sandbox_div)
+	// makeDataDownload(track, sandbox_div)
 	showCode(track,sandbox_div, id)
 
 	// creates div for instructions or other messaging about the track
@@ -333,7 +333,7 @@ if (track.sandbox.is_ui != true) {
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
-		.style('font-size', '14px')
+		.style('font-size', '12.75x')
 		.text('Show Code')
 		.style('display', 'inline-block')
 		.on('click', () => {
@@ -387,7 +387,7 @@ async function makeDataDownload(track, div){
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
-		.style('font-size', '14px')
+		.style('font-size', '12.75px')
 		.style('display', 'inline-block')
 		.text('Download Data')
 		.on('click', () => {

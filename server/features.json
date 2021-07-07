@@ -136,7 +136,7 @@
                     }]
                 },
                 "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
-                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A "
+                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
             },
             "sandbox":{
                 "is_ui": false
