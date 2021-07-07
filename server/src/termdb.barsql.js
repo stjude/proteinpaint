@@ -81,8 +81,8 @@ const template = JSON.stringify({
 	'@before()': '=prep()',
 	results: {
 		'_2:maxAcrossCharts': '=maxAcrossCharts()',
-		'_:_min': '>$val1',
-		'_:_max': '<$val1',
+		'_:_min': '>$nval1',
+		'_:_max': '<$nval1',
 		charts: [
 			{
 				chartId: '@key',
@@ -101,7 +101,7 @@ const template = JSON.stringify({
 							},
 							'$key2'
 						],
-						'_:_max': '<$val2', // needed by client-side boxplot renderer
+						'_:_max': '<$nval2', // needed by client-side boxplot renderer
 						'~values': ['$nval2', 0],
 						'~sum': '+$nval2',
 						'~samples': ['$sample', 'set'],
