@@ -10,7 +10,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./targets/gdc/build.sh [-t] [-r]
+	./build/gdc/build.sh [-t] [-r]
 
 	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
@@ -68,7 +68,7 @@ docker build --file ./build/Dockerfile --tag ppbase:$REV --build-arg http_proxy=
 # minimal test-only data files are available
 #
 docker build \
-	--file ./targets/gdc/Dockerfile \
+	--file ./build/gdc/Dockerfile \
 	--target ppgdctest \
 	--tag ppgdctest:$REV \
 	--build-arg IMGVER=$REV \
@@ -81,7 +81,7 @@ docker build \
 
 # delete this test step once the gdc wrapper tests are 
 # triggered as part of the image building process
-#./targets/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
+#./build/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
 #if [[ "$?" != "0" ]]; then
 #	echo "Error when running the GDC test image (exit code=$?)"
 #	exit 1
@@ -89,7 +89,7 @@ docker build \
 
 # this image may publish the @stjude-proteinpaint client package
 docker build \
-	--file ./targets/gdc/Dockerfile \
+	--file ./build/gdc/Dockerfile \
 	--target ppserver \
 	--tag $DOCKER_TAG \
 	--build-arg IMGVER=$REV \
