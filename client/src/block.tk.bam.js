@@ -160,7 +160,9 @@ async function getData(tk, block, additional = []) {
 		...additional
 	]
 	if (tk.variants) {
-		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst.push(
+			'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+		)
 		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
 		if (Number.isFinite(tk.max_diff_score)) {
 			lst.push('max_diff_score=' + tk.max_diff_score)
@@ -252,6 +254,20 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_img.attr('width', 0)
 	}
 
+	if (data.count.read_limit) {
+		// When view range contains reads in excess of the number of reads limit
+		tk.dom.read_limit_height = 15
+		tk.dom.read_limit_bottompad = 6
+		tk.dom.read_limit = tk.glider.append('g')
+		tk.dom.read_limit
+			.append('text')
+			.attr('x', data.pileup_data.width / 3)
+			.attr('y', tk.pileupheight + tk.pileupbottompad + tk.dom.read_limit_bottompad)
+			.style('fill', 'red')
+			.attr('font-size', tk.dom.read_limit_height)
+			.text('Too many reads in view range. Try zooming into a smaller region.')
+	}
+
 	if (tk.gdc) {
 		may_render_gdc(data, tk, block)
 	}
@@ -260,13 +276,6 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			if (!g.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
-				// Set max and min diff_score in full stack mode
-
-				tk.max_diff_score = data.max_diff_score
-				tk.min_diff_score = data.min_diff_score
-			}
-
 			tk.groups.push(makeGroup(g, tk, block, data))
 		}
 	} else {
@@ -318,8 +327,10 @@ function may_render_gdc(data, tk, block) {
 		return
 	}
 
-	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
-
+	let yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	if (data.count.read_limit) {
+		yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
+	}
 	// will render gdc region box in a row
 	tk.dom.gdc
 		.append('rect')
@@ -377,6 +388,9 @@ function may_render_variant(data, tk, block) {
 		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
 	} else {
 		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	}
+	if (data.count.read_limit) {
+		yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
 	}
 
 	// will render variant in a row
@@ -465,6 +479,10 @@ function setTkHeight(tk, data) {
 	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
 	if (tk.gdc) {
 		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	}
+	if (data.count.read_limit) {
+		// When view exceeds max number of reads limit
+		h += tk.dom.read_limit_height //+ tk.dom.read_limit_bottompad
 	}
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
@@ -622,12 +640,31 @@ function may_add_urlparameter(tk) {
 			console.log('urlparam variant should be at least 4 fields joined by .')
 		} else {
 			tk.variants = []
-			for (let i = 0; i < tmp.length; i += 4) {
+			//for (let i = 0; i < tmp.length; i += 4) {
+			//	const pos = Number(tmp[i + 1])
+			//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+			//	if (!tmp[i + 2]) return console.log('ref allele missing')
+			//	if (!tmp[i + 3]) return console.log('alt allele missing')
+			//	tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+			//}
+
+			// The 5th value is the strictness. If multiple variants are given, strictness may have to be compulsory to avoid confusion
+			for (let i = 0; i < tmp.length; i += 5) {
 				const pos = Number(tmp[i + 1])
+				let strictness
 				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
 				if (!tmp[i + 2]) return console.log('ref allele missing')
 				if (!tmp[i + 3]) return console.log('alt allele missing')
-				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+				if (!tmp[i + 4]) {
+					strictness = 1 // Default strictness
+				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
+					return 'Strictness must be a positive number'
+				} else if (Number(tmp[i + 4]) > 2) return 'Invalid strictness'
+				// For now, there are only three levels of strictness. More will be added in the future
+				else {
+					strictness = Number(tmp[i + 4])
+				}
+				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
 			}
 		}
 	}
@@ -666,6 +703,12 @@ function makeGroup(gd, tk, block, data) {
 			.attr('xlink:href', gd.diff_scores_img.src)
 			.attr('width', 0)
 			.attr('height', 0)
+
+		if (!group.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
+			// Set max and min diff_score in full stack mode
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
+		}
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
