@@ -67,6 +67,7 @@
     "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
     "debounce": "^1.2.0",
+    "highlight.js": "^11.0.1",
     "normalize.css": "^8.0.1",
     "partjson": "^0.58.1"
   },
