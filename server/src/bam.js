@@ -240,7 +240,7 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 30000 // maximum number of reads to load
+const maxreadcount = 15000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
