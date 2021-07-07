@@ -1,12 +1,12 @@
 import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event } from 'd3-selection'
-import hljs from 'highlight.js/lib/core';
-import javascript from 'highlight.js/lib/languages/javascript';
-hljs.registerLanguage('javascript', javascript);
+// import hljs from 'highlight.js/lib/core';
+// import javascript from 'highlight.js/lib/languages/javascript';
+// hljs.registerLanguage('javascript', javascript);
 import 'highlight.js/styles/github.css'
 // import 'highlight.js/styles/base16/cupertino.css'
-// const hljs = require('highlight.js/lib/common') less efficient
+const hljs = require('highlight.js/lib/common')
 
 
 export async function init_examples(par) {
@@ -365,10 +365,6 @@ if (track.sandbox.is_ui != true) {
 		.style('font-size', '14px')
 		.style('border', '1px solid #aeafb0')
 		.html(codefill)
-
-		document.querySelectorAll('code.code#highlight').forEach(el => {
-			hljs.highlightElement(el);
-		  });
 
 	return [ codeBtn, code ]
 	}
