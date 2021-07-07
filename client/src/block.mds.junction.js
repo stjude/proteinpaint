@@ -157,11 +157,7 @@ export async function loadTk(tk, block, noViewRangeChange) {
 		})
 		if (data.error) throw data.error
 		if (!data.lst) '.lst[] missing'
-		/*
-		if (data.sample2client) {
-			tk.samples = data.sample2client
-		}
-		*/
+		if (data.sample2client) tk.samples = data.sample2client
 		if (data.lst.length == 0) throw 'no data' // actually not error, so need to provide numbers for showing on labels
 		if (!data.maxreadcount) throw 'got junctions but no maxreadcount'
 		const err = rawdata2track(data.lst, tk, block)
@@ -213,12 +209,10 @@ export async function loadTk(tk, block, noViewRangeChange) {
 
 function addLoadParameter(par, tk) {
 	if (tk.iscustom) {
-		/* will not retrieve custom track sample list as the number of samples may be too large
 		if (tk.uninitialized) {
 			// first time the track is loaded, request samples from the header line of the track file
 			par.getsamples = 1
 		}
-		*/
 		par.iscustom = 1
 		par.file = tk.file
 		par.file2 = tk.file2
@@ -741,10 +735,8 @@ jug2.filter(function(d){return d.rimwidth>0})
 			const div1 = pane.body.append('div').style('margin-top', '15px')
 			showOneJunction(j, tk, div1, block, true)
 
-			if (!tk.iscustom) {
-				const div2 = pane.body.append('div')
-				queryOneJunction(j, tk, block, div2)
-			}
+			const div2 = pane.body.append('div')
+			queryOneJunction(j, tk, block, div2)
 		})
 
 	doForceLayout(tk, block, viewpxwidth).then(() => {
@@ -2460,9 +2452,52 @@ async function queryOneJunction(j, tk, block, holder) {
 					client.sayerror(div, 'Boxplot error: ' + err)
 				}
 			}
+		} else if (data.samples) {
+			// print list of samples
+			if (data.sampletotalnumber) {
+				holder
+					.append('p')
+					.text('Displaying top ' + data.samples.length + ' samples')
+					.style('opacity', 0.5)
+			}
+			const div = holder
+				.append('div')
+				.style('margin-top', '20px')
+				.style('display', 'grid')
+				.style('grid-template-columns', 'auto auto')
+				.style('gap-row-gap', '1px')
+				.style('align-items', 'center')
+				.style('justify-items', 'left')
+			const [c1, c2] = get_list_cells(div)
+			c1.text('Sample')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+			c2.text('Read count')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+			for (const s of data.samples) {
+				const [c1, c2] = get_list_cells(div)
+				c1.text(s.sample_name ? s.sample_name : tk.samples[s.i])
+				c2.text(s.readcount)
+			}
 		}
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		wait.text('Error: ' + (e.message || e))
 	}
+}
+
+function get_list_cells(table) {
+	return [
+		table
+			.append('div')
+			.style('width', '100%')
+			.style('padding', '5px 20px 5px 0px')
+			.style('border-bottom', 'solid 1px #ededed'),
+		table
+			.append('div')
+			.style('width', '100%')
+			.style('border-bottom', 'solid 1px #ededed')
+			.style('padding', '5px 20px 5px 0px')
+	]
 }

@@ -72,6 +72,7 @@ async function get_q(req, genomes) {
 
 	if (q.iscustom) {
 		// won't have q.dslabel and q.querykey, but still generate adhoc objects
+		dsquery.listsamples = true // clicking single junction will list samples
 		if (q.url) {
 			dsquery.url = q.url
 			dsquery.dir = await utils.cache_index(q.url, q.indexURL)
@@ -113,10 +114,9 @@ async function do_query(q, ds, dsquery) {
 	// resulting data object to return to client
 	const data = {}
 
-	/*
 	if (q.iscustom && q.getsamples) {
 		// first time querying a custom track, get list of samples and keep on client, not on server
-		const lines = await utils.get_header_tabix(dsquery.file || dsquery.url, dsquery.dir)
+		const lines = await utils.get_header_tabix(getfile(dsquery), dsquery.dir)
 		if (lines[0]) {
 			// has header line
 			const l = lines[0].split('\t')
@@ -125,7 +125,6 @@ async function do_query(q, ds, dsquery) {
 			}
 		}
 	}
-	*/
 
 	if (!q.rglst) throw 'rglst missing'
 
@@ -149,197 +148,192 @@ async function do_query(q, ds, dsquery) {
 	const allsampleidxset = new Set()
 
 	for (const r of q.rglst) {
-		await utils.get_lines_tabix(
-			[dsquery.file ? dsquery.file : dsquery.file2 ? dsquery.file2 : dsquery.url, r.chr + ':' + r.start + '-' + r.stop],
-			dsquery.dir,
-			line => {
-				const l = line.split('\t')
-				const start = Number.parseInt(l[1])
-				const stop = Number.parseInt(l[2])
+		await utils.get_lines_tabix([getfile(dsquery), r.chr + ':' + r.start + '-' + r.stop], dsquery.dir, line => {
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop = Number.parseInt(l[2])
 
-				if (dsquery.file2) {
-					// matrix file made from rnapeg
-					const strand = l[3]
-					const thistype = l[4]
-					// convert rnapeg "known/novel" to hardcoded types of this track
-					let type
-					if (thistype == 'known') {
-						type = 'canonical'
-					} else if (thistype == 'novel') {
-						type = infoFilter_unannotated
-					} else {
-						throw 'unknown rnapeg type: ' + thistype
-					}
-					if (q.infoFilter && q.infoFilter.type) {
-						// to filter by type
-						if (q.infoFilter.type[type]) {
-							// drop this junction
-							return
-						}
-					}
-					const j = {
-						chr: r.chr,
-						start,
-						stop,
-						info: {
-							type: {
-								// "type" is hardcoded
-								lst: [{ attrValue: type }]
-							}
-						}
-					}
-
-					const samplecountlst = []
-					for (let i = 5; i < l.length; i++) {
-						const str = l[i]
-						if (!str) continue
-						const v = Number.parseInt(str)
-						if (Number.isNaN(v)) continue
-						if (v > 0) {
-							// if needed, use i to match with sample from header
-							samplecountlst.push({ readcount: v })
-							maxreadcount = Math.max(maxreadcount, v)
-						}
-					}
-					if (samplecountlst.length == 0) {
-						// no sample, don't include junction
-						return
-					}
-					junctiontotalnumber++
-					j.sampleCount = samplecountlst.length
-					if (j.sampleCount == 1) {
-						j.medianReadCount = samplecountlst[0].readcount
-					} else {
-						const p = get_percentile_readcount(samplecountlst, 0.05, 0.25, 0.5, 0.75, 0.95)
-						j.medianReadCount = p[2]
-						j.readcountBoxplot = {
-							percentile: p
-						}
-					}
-					junctions.push(j)
+			if (dsquery.file2) {
+				// matrix file made from rnapeg
+				const strand = l[3]
+				const thistype = l[4]
+				// convert rnapeg "known/novel" to hardcoded types of this track
+				let type
+				if (thistype == 'known') {
+					type = 'canonical'
+				} else if (thistype == 'novel') {
+					type = infoFilter_unannotated
 				} else {
-					// json format
-					const strand = l[3]
-					const thistype = l[4] // not used!!
-
-					// only use those with either start/stop in region
-					if (!(start >= r.start && start <= r.stop) && !(stop >= r.start && stop <= r.stop)) {
-						// both ends not in view range, only use those with either start/stop in view
+					throw 'unknown rnapeg type: ' + thistype
+				}
+				if (q.infoFilter && q.infoFilter.type) {
+					// to filter by type
+					if (q.infoFilter.type[type]) {
+						// drop this junction
 						return
 					}
+				}
+				const j = {
+					chr: r.chr,
+					start,
+					stop,
+					info: {
+						type: {
+							// "type" is hardcoded
+							lst: [{ attrValue: type }]
+						}
+					}
+				}
 
-					junctiontotalnumber++
+				const samplecountlst = []
+				for (let i = 5; i < l.length; i++) {
+					const str = l[i]
+					if (!str) continue
+					const v = Number.parseInt(str)
+					if (Number.isNaN(v)) continue
+					if (v <= 0) continue
+					// if needed, use i to match with sample from header
+					samplecountlst.push({ readcount: v })
+					maxreadcount = Math.max(maxreadcount, v)
+				}
+				if (samplecountlst.length == 0) {
+					// no sample, don't include junction
+					return
+				}
+				junctiontotalnumber++
+				j.sampleCount = samplecountlst.length
+				if (j.sampleCount == 1) {
+					j.medianReadCount = samplecountlst[0].readcount
+				} else {
+					const p = get_percentile_readcount(samplecountlst, 0.05, 0.25, 0.5, 0.75, 0.95)
+					j.medianReadCount = p[2]
+					j.readcountBoxplot = {
+						percentile: p
+					}
+				}
+				junctions.push(j)
+			} else {
+				// json format
+				const strand = l[3]
+				const thistype = l[4] // not used!!
 
-					/*
+				// only use those with either start/stop in region
+				if (!(start >= r.start && start <= r.stop) && !(stop >= r.start && stop <= r.stop)) {
+					// both ends not in view range, only use those with either start/stop in view
+					return
+				}
+
+				junctiontotalnumber++
+
+				/*
 					info.type is hardcoded
 					*/
-					const j = {
-						chr: r.chr,
-						start: start,
-						stop: stop,
-						info: {
-							type: {
-								// "type" is hardcoded
-								lst: []
-							}
+				const j = {
+					chr: r.chr,
+					start: start,
+					stop: stop,
+					info: {
+						type: {
+							// "type" is hardcoded
+							lst: []
 						}
 					}
+				}
 
-					const jd = JSON.parse(l[5])
+				const jd = JSON.parse(l[5])
 
-					if (jd.sv) {
-						// is sv, copy over business end
-						j.sv = jd.sv
-						const key = j.chr + '.' + j.start + '.' + j.sv.mate.chr + '.' + j.sv.mate.start
-						if (svSet.has(key)) {
-							// a sv with exact same coord has been loaded
-							return
-						}
-						// register this sv
-						svSet.add(key)
-						svSet.add(j.sv.mate.chr + '.' + j.sv.mate.start + '.' + j.chr + '.' + j.start)
-					}
-
-					if (jd.canonical) {
-						// label of canonical is hardcoded
-						j.info.type.lst.push({ attrValue: 'canonical' })
-					}
-
-					if (jd.events) {
-						// this junction has events
-						for (const ek in jd.events) {
-							const e = jd.events[ek]
-							e.__ek = ek
-							j.info.type.lst.push(e)
-						}
-					} else if (!jd.canonical) {
-						// no splice events, and not canonical, then it's unannotated
-						j.info.type.lst.push({ attrValue: infoFilter_unannotated })
-					}
-
-					// info.type is ready for this junction
-					if (q.infoFilter && q.infoFilter.type) {
-						// some types will be dropped
-						for (const t of j.info.type.lst) {
-							if (q.infoFilter.type[t.attrValue]) {
-								// drop this event
-								return
-							}
-						}
-					}
-
-					const passfiltersamples = filtersamples4onejunction(jd, q, ds, dsquery)
-
-					if (passfiltersamples.length == 0) {
-						// this junction has no sample passing filter
+				if (jd.sv) {
+					// is sv, copy over business end
+					j.sv = jd.sv
+					const key = j.chr + '.' + j.start + '.' + j.sv.mate.chr + '.' + j.sv.mate.start
+					if (svSet.has(key)) {
+						// a sv with exact same coord has been loaded
 						return
 					}
+					// register this sv
+					svSet.add(key)
+					svSet.add(j.sv.mate.chr + '.' + j.sv.mate.start + '.' + j.chr + '.' + j.start)
+				}
 
-					// this junction is acceptable
+				if (jd.canonical) {
+					// label of canonical is hardcoded
+					j.info.type.lst.push({ attrValue: 'canonical' })
+				}
 
-					if (
-						jd.exonleft ||
-						jd.exonright ||
-						jd.exonleftin ||
-						jd.exonrightin ||
-						jd.intronleft ||
-						jd.intronright ||
-						jd.leftout ||
-						jd.rightout
-					) {
-						j.ongene = {}
-						if (jd.exonleft) j.ongene.exonleft = jd.exonleft
-						if (jd.exonright) j.ongene.exonright = jd.exonright
-						if (jd.exonleftin) j.ongene.exonleftin = jd.exonleftin
-						if (jd.exonrightin) j.ongene.exonrightin = jd.exonrightin
-						if (jd.intronleft) j.ongene.intronleft = jd.intronleft
-						if (jd.intronright) j.ongene.intronright = jd.intronright
-						if (jd.leftout) j.ongene.leftout = jd.leftout
-						if (jd.rightout) j.ongene.rightout = jd.rightout
+				if (jd.events) {
+					// this junction has events
+					for (const ek in jd.events) {
+						const e = jd.events[ek]
+						e.__ek = ek
+						j.info.type.lst.push(e)
 					}
+				} else if (!jd.canonical) {
+					// no splice events, and not canonical, then it's unannotated
+					j.info.type.lst.push({ attrValue: infoFilter_unannotated })
+				}
 
-					passfiltersamples.forEach(sample => {
-						allsampleidxset.add(sample.i)
-						maxreadcount = Math.max(maxreadcount, sample.readcount)
-					})
-
-					// for all samples passing filter
-					j.sampleCount = passfiltersamples.length
-					if (j.sampleCount == 1) {
-						j.medianReadCount = passfiltersamples[0].readcount
-					} else {
-						const p = get_percentile_readcount(passfiltersamples, 0.05, 0.25, 0.5, 0.75, 0.95)
-						j.medianReadCount = p[2]
-						j.readcountBoxplot = {
-							// for making mouseover boxplot
-							percentile: p
+				// info.type is ready for this junction
+				if (q.infoFilter && q.infoFilter.type) {
+					// some types will be dropped
+					for (const t of j.info.type.lst) {
+						if (q.infoFilter.type[t.attrValue]) {
+							// drop this event
+							return
 						}
 					}
-
-					junctions.push(j)
 				}
+
+				const passfiltersamples = filtersamples4onejunction(jd, q, ds, dsquery)
+
+				if (passfiltersamples.length == 0) {
+					// this junction has no sample passing filter
+					return
+				}
+
+				// this junction is acceptable
+
+				if (
+					jd.exonleft ||
+					jd.exonright ||
+					jd.exonleftin ||
+					jd.exonrightin ||
+					jd.intronleft ||
+					jd.intronright ||
+					jd.leftout ||
+					jd.rightout
+				) {
+					j.ongene = {}
+					if (jd.exonleft) j.ongene.exonleft = jd.exonleft
+					if (jd.exonright) j.ongene.exonright = jd.exonright
+					if (jd.exonleftin) j.ongene.exonleftin = jd.exonleftin
+					if (jd.exonrightin) j.ongene.exonrightin = jd.exonrightin
+					if (jd.intronleft) j.ongene.intronleft = jd.intronleft
+					if (jd.intronright) j.ongene.intronright = jd.intronright
+					if (jd.leftout) j.ongene.leftout = jd.leftout
+					if (jd.rightout) j.ongene.rightout = jd.rightout
+				}
+
+				passfiltersamples.forEach(sample => {
+					allsampleidxset.add(sample.i)
+					maxreadcount = Math.max(maxreadcount, sample.readcount)
+				})
+
+				// for all samples passing filter
+				j.sampleCount = passfiltersamples.length
+				if (j.sampleCount == 1) {
+					j.medianReadCount = passfiltersamples[0].readcount
+				} else {
+					const p = get_percentile_readcount(passfiltersamples, 0.05, 0.25, 0.5, 0.75, 0.95)
+					j.medianReadCount = p[2]
+					j.readcountBoxplot = {
+						// for making mouseover boxplot
+						percentile: p
+					}
+				}
+
+				junctions.push(j)
 			}
-		)
+		})
 	}
 
 	data.lst = junctions
@@ -385,76 +379,113 @@ async function do_query(q, ds, dsquery) {
 	return data
 }
 
+function getfile(dsquery) {
+	return dsquery.file ? dsquery.file : dsquery.file2 ? dsquery.file2 : dsquery.url
+}
+
 async function get_singlejunction(q, ds, dsquery) {
 	const j = q.junction
 
 	if (!j.chr || !Number.isInteger(j.start) || !Number.isInteger(j.stop))
 		throw 'incomplete/invalid info about querying junction'
 
-	let jd // data of this junction
+	let samples // list of samples with this junction
 
-	await utils.get_lines_tabix(
-		[dsquery.file || dsquery.url, j.chr + ':' + j.start + '-' + j.stop],
-		dsquery.dir,
-		line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			const stop = Number.parseInt(l[2])
-			if (start != j.start || stop != j.stop) return
-			jd = JSON.parse(l[5])
+	await utils.get_lines_tabix([getfile(dsquery), j.chr + ':' + j.start + '-' + j.stop], dsquery.dir, line => {
+		const l = line.split('\t')
+		const start = Number.parseInt(l[1])
+		const stop = Number.parseInt(l[2])
+		if (start != j.start || stop != j.stop) return
+		// found the junction, parse samples
+		if (dsquery.file2) {
+			samples = []
+			for (let i = 5; i < l.length; i++) {
+				const str = l[i]
+				if (!str) continue
+				const v = Number.parseInt(str)
+				if (Number.isNaN(v)) continue
+				if (v <= 0) continue
+				samples.push({
+					i: i - 5, // sample.i follows the same json key structure as {i, readcount, events, anno}
+					readcount: v
+				})
+			}
+		} else {
+			const jd = JSON.parse(l[5])
+			samples = filtersamples4onejunction(jd, q, ds, dsquery)
 		}
-	)
+	})
 
-	const samples = filtersamples4onejunction(jd, q, ds, dsquery)
 	if (samples.length == 0) throw 'no sample passing filters'
 
 	const data = {} // return to client
-	if (!dsquery.singlejunctionsummary) throw 'dsquery.singlejunctionsummary missing'
-	if (dsquery.singlejunctionsummary.readcountboxplotpercohort) {
-		data.readcountboxplotpercohort = []
 
-		for (const grp of dsquery.singlejunctionsummary.readcountboxplotpercohort.groups) {
-			const value2sample = new Map()
-			for (const sample of samples) {
-				if (!sample.anno) {
-					// no annotation for this sample (appended by filtersamples4onejunction)
+	if (dsquery.listsamples) {
+		// hardcoded logic to list up to 100 samples by descending order of read count
+		const lst = samples.map(i => {
+			const j = { readcount: i.readcount }
+			if (i.anno) {
+				j.sample_name = i.anno.sample_name
+			} else {
+				j.i = i.i
+			}
+			return j
+		})
+		lst.sort((i, j) => j.readcount - i.readcount)
+		if (lst.length > 100) {
+			data.samples = lst.slice(0, 100)
+			data.sampletotalnumber = lst.length
+		} else {
+			data.samples = lst
+		}
+	} else if (dsquery.singlejunctionsummary) {
+		// different ways to summarize this junction
+		if (dsquery.singlejunctionsummary.readcountboxplotpercohort) {
+			data.readcountboxplotpercohort = []
+
+			for (const grp of dsquery.singlejunctionsummary.readcountboxplotpercohort.groups) {
+				const value2sample = new Map()
+				for (const sample of samples) {
+					if (!sample.anno) {
+						// no annotation for this sample (appended by filtersamples4onejunction)
+						continue
+					}
+					// categorical attributes only
+					const attrvalue = sample.anno[grp.key]
+					if (attrvalue == undefined) continue
+					if (!value2sample.has(attrvalue)) {
+						value2sample.set(attrvalue, [])
+					}
+					value2sample.get(attrvalue).push(sample)
+				}
+				if (value2sample.size == 0) {
+					// no value for this group
 					continue
 				}
-				// categorical attributes only
-				const attrvalue = sample.anno[grp.key]
-				if (attrvalue == undefined) continue
-				if (!value2sample.has(attrvalue)) {
-					value2sample.set(attrvalue, [])
-				}
-				value2sample.get(attrvalue).push(sample)
-			}
-			if (value2sample.size == 0) {
-				// no value for this group
-				continue
-			}
-			const lst = [...value2sample].sort((i, j) => j[1].length - i[1].length)
-			const boxplots = []
-			for (const [attrvalue, thissamplelst] of lst) {
-				let minv = thissamplelst[0].readcount
-				let maxv = minv
-				thissamplelst.forEach(s => {
-					minv = Math.min(minv, s.readcount)
-					maxv = Math.max(maxv, s.readcount)
-				})
+				const lst = [...value2sample].sort((i, j) => j[1].length - i[1].length)
+				const boxplots = []
+				for (const [attrvalue, thissamplelst] of lst) {
+					let minv = thissamplelst[0].readcount
+					let maxv = minv
+					thissamplelst.forEach(s => {
+						minv = Math.min(minv, s.readcount)
+						maxv = Math.max(maxv, s.readcount)
+					})
 
-				const p = get_percentile_readcount(thissamplelst, 0.05, 0.25, 0.5, 0.75, 0.95)
-				boxplots.push({
-					label: attrvalue,
-					samplecount: thissamplelst.length,
-					percentile: { p05: p[0], p25: p[1], p50: p[2], p75: p[3], p95: p[4] },
-					minvalue: minv,
-					maxvalue: maxv
+					const p = get_percentile_readcount(thissamplelst, 0.05, 0.25, 0.5, 0.75, 0.95)
+					boxplots.push({
+						label: attrvalue,
+						samplecount: thissamplelst.length,
+						percentile: { p05: p[0], p25: p[1], p50: p[2], p75: p[3], p95: p[4] },
+						minvalue: minv,
+						maxvalue: maxv
+					})
+				}
+				data.readcountboxplotpercohort.push({
+					label: grp.label,
+					boxplots: boxplots
 				})
 			}
-			data.readcountboxplotpercohort.push({
-				label: grp.label,
-				boxplots: boxplots
-			})
 		}
 	}
 	return data
