@@ -23,3 +23,13 @@ Run the pipeline as follows:
 Arguments:
     <pgsID>: PGS identifier (e.g. PGS000332)
     <outDir>: directory to store output files
+
+
+
+After the PRS pipeline is complete, update the PRS database files with the new PRS data by running the following update script:
+
+    bash update_prs_db.sh <pgsID> <prsDir>
+
+Arguments:
+    <pgsID>: PGS identifier (e.g. PGS000332)
+    <prsDir>: directory containing output files of PRS pipline
