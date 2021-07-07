@@ -96,7 +96,7 @@ const labyspace = 5
 const hardcode_infoKey_type = 'type' // currently the only infoFilter key
 const hardcode_infoValue_canonical = 'canonical'
 
-export function loadTk(tk, block, noViewRangeChange) {
+export async function loadTk(tk, block, noViewRangeChange) {
 	/*
 	also works for subtrack
 	*/
@@ -120,7 +120,6 @@ export function loadTk(tk, block, noViewRangeChange) {
 	}
 
 	const par = {
-		jwt: block.jwt,
 		genome: block.genome.name,
 		rglst: block.tkarg_maygm(tk),
 		dslabel: tk.mds.label,
@@ -149,108 +148,71 @@ export function loadTk(tk, block, noViewRangeChange) {
 		delete tk.uninitialized
 	}
 
-	const req = new Request(block.hostURL + '/mdsjunction', {
-		method: 'POST',
-		body: JSON.stringify(par)
-	})
-	fetch(req)
-		.then(data => {
-			return data.json()
+	let data // produced inside try{} and accessed after catch()
+
+	try {
+		data = await client.dofetch2('mdsjunction', {
+			method: 'POST',
+			body: JSON.stringify(par)
 		})
-		.then(data => {
-			if (data.error) throw { message: data.error }
-			if (!data.lst) throw { message: '.lst[] missing' }
-			/*
-			if (data.sample2client) {
-				tk.samples = data.sample2client
-			}
-			*/
-			if (data.lst.length == 0) {
-				// actually not error, so need to provide numbers for showing on labels
-				throw {
-					message: 'no data',
-					passover: {
-						junctiontotalnumber: data.junctiontotalnumber,
-						samplecount: data.samplecount
-					}
-				}
-			}
-			if (!data.maxreadcount) throw { message: 'got junctions but no maxreadcount' }
+		if (data.error) throw data.error
+		if (!data.lst) '.lst[] missing'
+		if (data.sample2client) tk.samples = data.sample2client
+		if (data.lst.length == 0) throw 'no data' // actually not error, so need to provide numbers for showing on labels
+		if (!data.maxreadcount) throw 'got junctions but no maxreadcount'
+		const err = rawdata2track(data.lst, tk, block)
+		if (err) throw err
 
-			const err = rawdata2track(data.lst, tk, block)
-			if (err) {
-				throw { message: err }
-			}
+		tk.maxReadCount = data.maxreadcount
+		renderTk(tk, block)
 
-			tk.maxReadCount = data.maxreadcount
-			renderTk(tk, block)
+		block.tkcloakoff(tk, {})
+	} catch (e) {
+		// error somewhere, no rendering
+		tk.data = []
+		tk.leftaxis.selectAll('*').remove()
+		tk.glider.selectAll('*').remove()
+		block.tkcloakoff(tk, { error: tk.name + ': ' + (e.message || e) })
+		if (e.stack) console.log(e.stack)
+	}
+	// after catch()
+	if (data.junctiontotalnumber) {
+		tk.junctionCountLabel.text(
+			(tk.data.length == data.junctiontotalnumber
+				? tk.data.length
+				: tk.data.length + ' of ' + data.junctiontotalnumber) +
+				' junction' +
+				(data.junctiontotalnumber > 1 ? 's' : '')
+		)
+	} else {
+		tk.junctionCountLabel.text('')
+	}
+	if (data.samplecount) {
+		tk.sampleCountLabel.text(data.samplecount + ' sample' + (data.samplecount > 1 ? 's' : ''))
+	} else {
+		tk.sampleCountLabel.text('')
+	}
 
-			block.tkcloakoff(tk, {})
+	// legend
+	if (tk.parentTk) {
+		// is subtrack, no legend
+	} else {
+		makeLegend_cohort(data, tk, block)
+		for (const info of tk.infoFilter.lst) {
+			makeLegend_infoFilter(info, tk, block)
+		}
+	}
 
-			return {
-				attributeSummary: data.attributeSummary,
-				hierarchySummary: data.hierarchySummary,
-				junctiontotalnumber: data.junctiontotalnumber,
-				samplecount: data.samplecount
-			}
-		})
-
-		.catch(obj => {
-			// error somewhere, no rendering
-			tk.data = []
-			tk.leftaxis.selectAll('*').remove()
-			tk.glider.selectAll('*').remove()
-			block.tkcloakoff(tk, { error: tk.name + ': ' + obj.message })
-
-			if (obj.stack) {
-				// error
-				console.log(obj.stack)
-			}
-
-			return obj.passover || {}
-		})
-
-		.then(obj => {
-			if (obj.junctiontotalnumber) {
-				tk.junctionCountLabel.text(
-					(tk.data.length == obj.junctiontotalnumber
-						? tk.data.length
-						: tk.data.length + ' of ' + obj.junctiontotalnumber) +
-						' junction' +
-						(obj.junctiontotalnumber > 1 ? 's' : '')
-				)
-			} else {
-				tk.junctionCountLabel.text('')
-			}
-			if (obj.samplecount) {
-				tk.sampleCountLabel.text(obj.samplecount + ' sample' + (obj.samplecount > 1 ? 's' : ''))
-			} else {
-				tk.sampleCountLabel.text('')
-			}
-
-			// legend
-			if (tk.parentTk) {
-				// is subtrack, no legend
-			} else {
-				makeLegend_cohort(obj, tk, block)
-				for (const info of tk.infoFilter.lst) {
-					makeLegend_infoFilter(info, tk, block)
-				}
-			}
-
-			block.block_setheight()
-			updateLabel(tk, block)
-		})
+	block.block_setheight()
+	updateLabel(tk, block)
 }
 
 function addLoadParameter(par, tk) {
 	if (tk.iscustom) {
-		/* will not retrieve custom track sample list as the number of samples may be too large
 		if (tk.uninitialized) {
 			// first time the track is loaded, request samples from the header line of the track file
 			par.getsamples = 1
 		}
-		*/
 		par.iscustom = 1
 		par.file = tk.file
 		par.file2 = tk.file2
@@ -773,10 +735,8 @@ jug2.filter(function(d){return d.rimwidth>0})
 			const div1 = pane.body.append('div').style('margin-top', '15px')
 			showOneJunction(j, tk, div1, block, true)
 
-			if (!tk.iscustom) {
-				const div2 = pane.body.append('div')
-				queryOneJunction(j, tk, block, div2)
-			}
+			const div2 = pane.body.append('div')
+			queryOneJunction(j, tk, block, div2)
 		})
 
 	doForceLayout(tk, block, viewpxwidth).then(() => {
@@ -2333,7 +2293,7 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 	})
 }
 
-function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2readcounttext, jAlst) {
+async function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2readcounttext, jAlst) {
 	/*
 	query server to get median read count for display for these junctions
 	over the same group of sample
@@ -2343,7 +2303,6 @@ function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2read
 	junction2readcounttext: svg text for printing median read count for each A junction
 	*/
 	const par = {
-		jwt: block.jwt,
 		genome: block.genome.name,
 		dslabel: tk.mds.label,
 		querykey: tk.querykey,
@@ -2352,31 +2311,27 @@ function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2read
 		junctionAposlst: jAlst
 	}
 	addLoadParameter(par, tk)
-	const req = new Request(block.hostURL + '/mdsjunction', {
-		method: 'POST',
-		body: JSON.stringify(par)
-	})
-	fetch(req)
-		.then(data => {
-			return data.json()
+	try {
+		const data = await client.dofetch2('mdsjunction', {
+			method: 'POST',
+			body: JSON.stringify(par)
 		})
-		.then(data => {
-			if (!data.lst) throw '.lst[] missing'
-			for (const j of data.lst) {
-				/*
+		if (data.error) throw data.error
+		if (!data.lst) throw '.lst[] missing'
+		for (const j of data.lst) {
+			/*
 			.start
 			.stop
 			.v
 			*/
-				const key = j.start + '.' + j.stop
-				if (junction2readcounttext.has(key)) {
-					junction2readcounttext.get(key).text(j.v)
-				}
+			const key = j.start + '.' + j.stop
+			if (junction2readcounttext.has(key)) {
+				junction2readcounttext.get(key).text(j.v)
 			}
-		})
-		.catch(err => {
-			console.error(err.message)
-		})
+		}
+	} catch (e) {
+		console.error(e.message || e)
+	}
 }
 
 function listAllEvents(lst, holder, j, tk, block) {
@@ -2440,16 +2395,12 @@ function eventlabel(e) {
 
 /////////////// __eventdiagram ENDS
 
-/////////////// __onedetail
-
-function queryOneJunction(j, tk, block, holder) {
+async function queryOneJunction(j, tk, block, holder) {
 	/*
 	query server about details of one junction
 	depending on permission from ds config, may expose samples (e.g. for clicking)
 	*/
-	console.log(j)
 	const par = {
-		jwt: block.jwt,
 		genome: block.genome.name,
 		dslabel: tk.mds.label,
 		querykey: tk.querykey,
@@ -2463,19 +2414,16 @@ function queryOneJunction(j, tk, block, holder) {
 
 	const wait = holder.append('div').text('Loading ...')
 
-	const req = new Request(block.hostURL + '/mdsjunction', {
-		method: 'POST',
-		body: JSON.stringify(par)
-	})
-	fetch(req)
-		.then(data => {
-			return data.json()
+	try {
+		const data = await client.dofetch2('mdsjunction', {
+			method: 'POST',
+			body: JSON.stringify(par)
 		})
-		.then(data => {
-			wait.remove()
+		if (data.error) throw data.error
+		wait.remove()
 
-			if (data.readcountboxplotpercohort) {
-				/* each cohort has a group of boxplots
+		if (data.readcountboxplotpercohort) {
+			/* each cohort has a group of boxplots
 			[{group}]
 				.label
 				.boxplots[]
@@ -2483,33 +2431,73 @@ function queryOneJunction(j, tk, block, holder) {
 					.samplecount
 					.percentile
 			*/
-				const row = holder.append('div')
-				for (const group of data.readcountboxplotpercohort) {
-					const div = row
-						.append('div')
-						.style('margin', '10px')
-						.style('display', 'inline-block')
-						.style('vertical-align', 'top')
-					div
-						.append('h3')
-						.text(group.label)
-						.style('text-align', 'center')
-					import('./plot.boxplot').then(p => {
-						const err = p.default({
-							holder: div,
-							list: group.boxplots,
-							axislabel: 'Read count'
-						})
-						if (err) {
-							client.sayerror(div, 'Boxplot error: ' + err)
-						}
-					})
+			const row = holder.append('div')
+			for (const group of data.readcountboxplotpercohort) {
+				const div = row
+					.append('div')
+					.style('margin', '10px')
+					.style('display', 'inline-block')
+					.style('vertical-align', 'top')
+				div
+					.append('h3')
+					.text(group.label)
+					.style('text-align', 'center')
+				const p = await import('./plot.boxplot')
+				const err = p.default({
+					holder: div,
+					list: group.boxplots,
+					axislabel: 'Read count'
+				})
+				if (err) {
+					client.sayerror(div, 'Boxplot error: ' + err)
 				}
 			}
-		})
-		.catch(err => {
-			wait.text('Error: ' + err)
-		})
+		} else if (data.samples) {
+			// print list of samples
+			if (data.sampletotalnumber) {
+				holder
+					.append('p')
+					.text('Displaying top ' + data.samples.length + ' samples')
+					.style('opacity', 0.5)
+			}
+			const div = holder
+				.append('div')
+				.style('margin-top', '20px')
+				.style('display', 'grid')
+				.style('grid-template-columns', 'auto auto')
+				.style('gap-row-gap', '1px')
+				.style('align-items', 'center')
+				.style('justify-items', 'left')
+			const [c1, c2] = get_list_cells(div)
+			c1.text('Sample')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+			c2.text('Read count')
+				.style('opacity', 0.5)
+				.style('font-size', '.7em')
+			for (const s of data.samples) {
+				const [c1, c2] = get_list_cells(div)
+				c1.text(s.sample_name ? s.sample_name : tk.samples[s.i])
+				c2.text(s.readcount)
+			}
+		}
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		wait.text('Error: ' + (e.message || e))
+	}
 }
 
-/////////////// __onedetail ends
+function get_list_cells(table) {
+	return [
+		table
+			.append('div')
+			.style('width', '100%')
+			.style('padding', '5px 20px 5px 0px')
+			.style('border-bottom', 'solid 1px #ededed'),
+		table
+			.append('div')
+			.style('width', '100%')
+			.style('border-bottom', 'solid 1px #ededed')
+			.style('padding', '5px 20px 5px 0px')
+	]
+}
