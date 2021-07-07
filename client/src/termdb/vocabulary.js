@@ -445,6 +445,11 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 					const val = a.s[key]
 					if (!('min' in t) || val < t.min) t.min = val
 					if (!('max' in t) || val > t.max) t.max = val
+					if (!('maxdecimals' in t)) t.maxdecimals = 0
+					const numdecimals = a.s[key].toString().split('.')[1]
+					if (numdecimals && numdecimals.length > t.maxdecimals) {
+						t.maxdecimals = numdecimals.length
+					}
 				}
 			} else if (t.type == 'condition') {
 				//TODO: add logic for conditional terms
@@ -462,7 +467,8 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 				default: {
 					bin_size,
 					stopinclusive: true,
-					first_bin: { startunbounded: true, stop: t.min + bin_size, stopinclusive: true }
+					first_bin: { startunbounded: true, stop: t.min + bin_size, stopinclusive: true },
+					rounding: '.' + t.maxdecimals + 'f'
 				}
 			}
 		}
