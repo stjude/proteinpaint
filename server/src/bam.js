@@ -240,7 +240,7 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 10000 // maximum number of reads to load
+const maxreadcount = 30000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
@@ -690,12 +690,13 @@ async function get_q(genome, req) {
 			q.min_diff_score = Number(req.query.min_diff_score)
 		}
 		const t = req.query.variant.split('.')
-		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
+		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
 		q.variant = {
 			chr: t[0],
 			pos: Number(t[1]),
 			ref: t[2].toUpperCase(),
-			alt: t[3].toUpperCase()
+			alt: t[3].toUpperCase(),
+			strictness: t[4]
 		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
@@ -886,16 +887,16 @@ async function query_reads(q) {
 
 	otherwise, query for every region in q.regions
 	*/
-	if (q.variant) {
-		const r = {
-			chr: q.variant.chr,
-			start: q.variant.pos,
-			stop: q.variant.pos + q.variant.ref.length
-		}
-		await query_region(r, q)
-		q.regions[0].lines = r.lines
-		return
-	}
+	//if (q.variant) {
+	//	const r = {
+	//		chr: q.variant.chr,
+	//		start: q.variant.pos,
+	//		stop: q.variant.pos + q.variant.ref.length,
+	//	}
+	//	await query_region(r, q)
+	//	q.regions[0].lines = r.lines
+	//	return
+	//}
 	if (q.sv) {
 		return
 	}
@@ -937,6 +938,9 @@ function query_region(r, q) {
 	r.lines = []
 	return new Promise((resolve, reject) => {
 		let ps = ''
+		//console.log(
+		//	'samtools view ' + q.file + ' ' + (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+		//)
 		if (q.gdc_case_id) {
 			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
 		} else {

@@ -106,7 +106,11 @@ export async function match_complexvariant_rust(q, templates_info) {
 	sequences += altseq + '-'
 	sequences += sequence_reads
 
-	//const ps = spawn(rust_indel) // [sequences, start_positions, cigar_sequences, q.variant.pos.toString(), segbplen.toString(), refallele, altallele, kmer_length.toString(), weight_no_indel.toString(), weight_indel.toString(), threshold_slope.toString()]
+	// This code has been added to parse input from example.bam.indel.html
+	if (!Number.isFinite(Number(q.variant.strictness))) {
+		q.variant.strictness = 1
+	}
+
 	const input_data =
 		sequences +
 		':' +
@@ -129,11 +133,14 @@ export async function match_complexvariant_rust(q, templates_info) {
 		weight_indel.toString() +
 		':' +
 		threshold_slope.toString() +
+		':' +
+		q.variant.strictness +
 		':'
 
-	//fs.writeFile('test.txt', input_data, function (err) { // For catching input to rust pipeline, in case of an error
-	//   if (err) return console.log(err);
-	//});
+	//fs.writeFile('test.txt', input_data, function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 	const time1 = new Date()
 	const rust_output = await run_rust_indel_pipeline(input_data)
 	const time2 = new Date()
@@ -171,7 +178,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 			console.log(item)
 		}
 		//else {
-		//        console.log(item)
+		//	console.log(item)
 		//}
 	}
 
