@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -19,7 +19,7 @@ function testByTermId(id, runTests) {
 		id == 'diaggrp'
 			? ['root', 'Cancer-related Variables', 'Diagnosis']
 			: 'aaclassic_5'
-			? ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents']
+			? ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy, Lifetime', 'Alkylating Agents, mg/m2']
 			: null
 
 	if (!expandedTermIds) throw `unmatched id -> expandedTermIds in plot.controls.config test`
@@ -345,7 +345,7 @@ tape('Term1 bins', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'Age', 'agedx'],
+				expandedTermIds: ['root', 'Demographic Variables', 'Age (years)', 'agedx'],
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {

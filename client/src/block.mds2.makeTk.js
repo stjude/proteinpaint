@@ -44,7 +44,7 @@ export async function makeTk(tk, block) {
 		copy_official_configs(tk)
 	} else {
 		// custom
-		if (!tk.name) tk.name = 'Unamed'
+		if (!tk.name) tk.name = 'Unnamed'
 
 		if (tk.vcf) {
 			await getvcfheader_customtk(tk.vcf, block.genome)

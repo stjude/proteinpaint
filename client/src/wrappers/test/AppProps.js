@@ -37,7 +37,7 @@ export class AppProps extends React.Component {
 		const set_id =
 			set_filter && set_filter.content.value[0].includes('set_id:')
 				? set_filter.content.value[0].split(':').pop()
-				: '9eF7qnkBQZZJsd_opdWz' // open access project TCGA=true filter
+				: 'BgEiOnoBAYdDycJ8bW6g' // open access project TCGA=true filter
 		let gene = genes.find(g => g.ensembl_id == this.props.geneId)
 		if (!gene) gene = this.props.ssm_id ? null : genes[0]
 

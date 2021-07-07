@@ -279,7 +279,7 @@ if(cohort.variantgene) {
 		})
 	}
 
-	if (ds2clst && !cohort.disable_genenetwork) {
+	/*if (ds2clst && !cohort.disable_genenetwork) {
 		// has mlst
 		const [butt, folder] = makefolder(cohort)
 		butt
@@ -299,7 +299,7 @@ if(cohort.variantgene) {
 			loaded = true
 			tp_pathway(cohort, folder)
 		})
-	}
+	}*/
 
 	/*if (hasdiseaselst.length) {
 		const [skbtn, skdiv] = makefolder(cohort)

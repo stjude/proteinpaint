@@ -81,6 +81,8 @@ const template = JSON.stringify({
 	'@before()': '=prep()',
 	results: {
 		'_2:maxAcrossCharts': '=maxAcrossCharts()',
+		'_:_min': '>$val1',
+		'_:_max': '<$val1',
 		charts: [
 			{
 				chartId: '@key',
@@ -229,6 +231,8 @@ function getPj(q, data, tdb, ds) {
 					s += Math.pow(v - stat.mean, 2)
 				}
 				stat.sd = Math.sqrt(s / (values.length - 1))
+				stat.min = context.self.min
+				stat.max = context.self.max
 				return stat
 			},
 			getAF(row, context) {

@@ -160,9 +160,11 @@ export function loadTk(tk, block, noViewRangeChange) {
 		.then(data => {
 			if (data.error) throw { message: data.error }
 			if (!data.lst) throw { message: '.lst[] missing' }
+			/*
 			if (data.sample2client) {
 				tk.samples = data.sample2client
 			}
+			*/
 			if (data.lst.length == 0) {
 				// actually not error, so need to provide numbers for showing on labels
 				throw {
@@ -243,12 +245,15 @@ export function loadTk(tk, block, noViewRangeChange) {
 
 function addLoadParameter(par, tk) {
 	if (tk.iscustom) {
+		/* will not retrieve custom track sample list as the number of samples may be too large
 		if (tk.uninitialized) {
 			// first time the track is loaded, request samples from the header line of the track file
 			par.getsamples = 1
 		}
+		*/
 		par.iscustom = 1
 		par.file = tk.file
+		par.file2 = tk.file2
 		par.url = tk.url
 	}
 	if (tk.readcountCutoff) {

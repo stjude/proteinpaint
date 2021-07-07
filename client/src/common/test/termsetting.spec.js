@@ -16,7 +16,7 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-function getOpts(_opts = {}, genome = 'hg38', dslabel = 'SJLife') {
+function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 	const holder = d3s
 		.select('body')
 		.append('div')
@@ -568,13 +568,13 @@ tape('Numerical term: integer custom bins', async test => {
 	const opts = getOpts({
 		tsData: {
 			term: {
-				id: 'yeardx',
-				name: 'Year of Cancer Diagnosis',
+				id: 'agedx',
+				name: 'Age (years) at Cancer Diagnosis',
 				unit: 'year',
 				type: 'integer',
 				bins: {
 					default: {
-						bin_size: 300,
+						bin_size: 4,
 						label_offset: 1,
 						stopinclusive: true,
 						first_bin: { startunbounded: true, stop: 1990, stopinclusive: true }
@@ -589,28 +589,28 @@ tape('Numerical term: integer custom bins', async test => {
 						startunbounded: true,
 						startinclusive: false,
 						stopinclusive: true,
-						stop: 1970,
-						label: '<=1970'
+						stop: 3,
+						label: '<=3'
 					},
 					{
 						startinclusive: false,
 						stopinclusive: true,
-						start: 1970,
-						stop: 1990,
-						label: '1970 to 1990'
+						start: 3,
+						stop: 6,
+						label: '4 to 6'
 					},
 					{
 						stopunbounded: true,
 						startinclusive: false,
 						stopinclusive: true,
-						start: 1990
-						//label: '>1990'
+						start: 6,
+						label: '>6'
 					}
 				],
 				results: {
 					summary: {
-						min: 1960,
-						max: 2011
+						min: 3,
+						max: 15
 					}
 				}
 			}
