@@ -10,12 +10,7 @@ DOCKER_TAG="${REGISTRY}/ncigdc/${REPO}:${GIT_TAG}"
 # Enable buildkit to skip building unneeded stages.
 export DOCKER_BUILDKIT=1
 
-docker build \
-	--build-arg http_proxy=http://cloud-proxy:3128 \
-	--build-arg https_proxy=http://cloud-proxy:3128 \
-	-f build/Dockerfile.gdc \
-	-t "$DOCKER_TAG" \
-	.
+./targets/gdc/build.sh -r HEAD -d $DOCKER_TAG
 
 docker push "$DOCKER_TAG"
 

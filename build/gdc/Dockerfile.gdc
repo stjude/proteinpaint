@@ -70,7 +70,7 @@ RUN npm install
 
 # Package the ProteinPaint backend code into ./tmppack/package
 COPY ./ ./
-RUN ./build/pack.sh -b
+RUN ./server/build.sh
 
 # We no longer need the dev modules. Remove them so the next stage can copy
 # only the prod modules.
@@ -87,7 +87,7 @@ WORKDIR /home/root/pp/app
 COPY --from=pppack-backend /home/root/pp/build/node_modules ./node_modules
 COPY --from=pppack-backend /home/root/pp/build/tmppack/package ./
 
-ADD genome ./genome
-ADD dataset ./dataset
+ADD server/genome ./genome
+ADD server/dataset ./dataset
 ENV PP_MODE container-prod
 CMD [ "node", "bin.js" ]

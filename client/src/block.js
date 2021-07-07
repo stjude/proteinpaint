@@ -3308,9 +3308,12 @@ seekrange(chr,start,stop) {
 		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
 		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
 		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
-		if ( use_tip ) // case 3 & 4
-			pane = client.newpane({ x: 100, y: 100 }) // original floating tip
-		else { // case 1 & 2
+		if (use_tip)
+			// case 3 & 4
+			pane = client.newpane({ x: 100, y: 100 })
+		// original floating tip
+		else {
+			// case 1 & 2
 			const sandbox_div = d3select(root_divs[2])
 			pane = client.newSandboxDiv(sandbox_div)
 		}
