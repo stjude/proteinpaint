@@ -35,7 +35,8 @@ export async function init_sampletable(arg) {
 		.text('Loading...')
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
-	arg.tid2value_orig = Object.keys(arg.tid2value) //terms from sunburst ring
+    //terms from sunburst ring
+	arg.tid2value_orig = arg.tid2value ? Object.keys(arg.tid2value) : [] 
 	try {
 		if (numofcases == 1) {
 			// one sample
@@ -431,7 +432,6 @@ function make_summary_panel(arg, div, category, main_tabs) {
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
-	console.log(arg)
 	if (arg.tid2value[arg.filter_term] == undefined) return
 	// term
 	filter_holder
