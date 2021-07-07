@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
-import { axisLeft, axisRight } from 'd3-axis'
+import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
@@ -11,16 +11,25 @@ to tell backend to provide color scale
 
 tk can predefine if bam file has chr or not
 
-tk.groups[]
 tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
 tk.pileupheight
 tk.pileupbottompad
-group {}
+
+tk.dom{}
+.pileup_axis // left side
+.pileup_g // contains image
+.pileup_img
+.pileup_shown // if pileup is shown or not; to tell setTkHeight() whether height will be included
+.vsliderg
+
+tk.groups[]
 .data{}
-	.templatebox[] // optional
+	.templatebox[{}] // optional, about the templates in view range
+	         // server decides if to return template boxes (at poststack_adjustq)
+	.count {r,t} // r for reads, t for templates
 .data_fullstack{}
 	.messagerowheights
 	.stackcount
@@ -142,14 +151,8 @@ export async function loadTk(tk, block) {
 }
 
 async function getData(tk, block, additional = []) {
-	const lst = [
-		'genome=' + block.genome.name,
-		'regions=' + JSON.stringify(tk.regions),
-		'nucleotide_length=' + block.exonsf,
-		'pileupheight=' + tk.pileupheight,
-		...additional
-	]
-	const lst2 = [
+	let headers
+	let lst = [
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'nucleotide_length=' + block.exonsf,
@@ -157,35 +160,42 @@ async function getData(tk, block, additional = []) {
 		...additional
 	]
 	if (tk.variants) {
-		lst.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
-		lst2.push('variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'))
+		lst.push(
+			'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+		)
+		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
+		if (Number.isFinite(tk.max_diff_score)) {
+			lst.push('max_diff_score=' + tk.max_diff_score)
+			lst.push('min_diff_score=' + tk.min_diff_score)
+		}
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
-		lst2.push('getcolorscale=1')
 		delete tk.uninitialized
 	}
 	if (tk.asPaired) {
 		lst.push('asPaired=1')
-		lst2.push('asPaired=1')
 	}
 	if ('nochr' in tk) {
 		lst.push('nochr=' + tk.nochr)
-		lst2.push('nochr=' + tk.nochr)
 	}
 
 	if (tk.gdc) {
-		lst.push('gdc=' + tk.gdc)
-		lst2.push('gdc=' + tk.gdc)
+		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		headers['X-Auth-Token'] = tk.gdc
+	}
+	if (tk.gdc_file) {
+		lst.push('gdc_file=' + tk.gdc_file)
 	}
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
-		lst2.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst2.join('&'))
+		lst.push('downloadgdc=' + tk.downloadgdc)
+		gdc_bam_files = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
-		delete tk.downloadgdc, lst2
+		delete tk.downloadgdc
+		lst = lst.filter(a => a != 'downloadgdc=1') //remove this key after file download
 		for (const r of tk.regions) {
 			orig_regions.push(r)
 		}
@@ -201,7 +211,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'))
+	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 	if (data.error) throw data.error
 	return data
 }
@@ -218,7 +228,7 @@ or update existing groups, in which groupidx will be provided
 
 	if (data.pileup_data) {
 		// update the pileup image
-		tk.dom.pileup_shown = true // to tell setTkHeight() that pileup is shown
+		tk.dom.pileup_shown = true
 		tk.dom.pileup_img
 			.attr('xlink:href', data.pileup_data.src)
 			.attr('width', data.pileup_data.width)
@@ -238,7 +248,10 @@ or update existing groups, in which groupidx will be provided
 			showline: true
 		})
 	} else {
+		// pileup not returned when there's no visible reads (other cases?)
 		tk.dom.pileup_shown = false
+		tk.dom.pileup_axis.selectAll('*').remove()
+		tk.dom.pileup_img.attr('width', 0)
 	}
 
 	if (tk.gdc) {
@@ -257,9 +270,6 @@ or update existing groups, in which groupidx will be provided
 
 	setTkHeight(tk, data)
 
-	tk.tklabel.each(function() {
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
 	let countr = 0, // #read
 		countt = 0 // #templates
 	for (const g of tk.groups) {
@@ -373,7 +383,7 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight - 2)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + tk.variants[0].pos + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -418,6 +428,30 @@ function may_render_variant(data, tk, block) {
 			.attr('font-size', tk.dom.variantrowheight)
 			.text(text_string)
 	}
+
+	if (Number.isFinite(data.max_diff_score)) {
+		// Should always be true if variant field was given by user, but may change in the future
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff - 2 * tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Diff Score')
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff - tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
+
+		tk.dom.variantg
+			.append('text')
+			.attr('x', data.pileup_data.width)
+			.attr('y', yoff)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
+	}
 }
 
 function setTkHeight(tk, data) {
@@ -432,9 +466,23 @@ function setTkHeight(tk, data) {
 	}
 	for (const g of tk.groups) {
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+		if (tk.variants) {
+			g.dom.diff_score_barplot_fullstack
+				.transition()
+				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')') // + g.data.diff_scores_img.row_height
+		}
 		if (g.partstack) {
 			// slider visible
-			g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ')')
+			if (tk.variants) {
+				g.dom.diff_score_barplot_partstack
+					.transition()
+					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
+				g.dom.vslider.g
+					.transition()
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
+			} else {
+				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+			}
 		}
 		h += g.data.height
 	}
@@ -456,7 +504,19 @@ function updateExistingGroups(data, tk, block) {
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
+
+		if (tk.variants) {
+			group.dom.diff_score_barplot_fullstack
+				.attr('xlink:href', gd.diff_scores_img.src)
+				.attr('width', gd.diff_scores_img.width)
+				.attr('height', gd.diff_scores_img.height)
+		}
+
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
+		if (tk.variants) {
+			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+		}
+
 		//tk.config_handle.transition().attr('x', 0)
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 		group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
@@ -516,6 +576,7 @@ function makeTk(tk, block) {
 		pileup_axis: tk.glider.append('g'),
 		vsliderg: tk.gright.append('g')
 	}
+
 	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
 
 	if (tk.variants) {
@@ -523,6 +584,8 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
+		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
+		tk.dom.diff_score_plotwidth = 50
 	}
 	if (tk.gdc) {
 		tk.dom.gdc_bar = tk.glider.append('g')
@@ -531,8 +594,7 @@ function makeTk(tk, block) {
 	}
 	tk.asPaired = false
 
-	tk.tklabel.text(tk.name).attr('dominant-baseline', 'auto')
-	let laby = block.labelfontsize
+	let laby = block.labelfontsize + 5
 	tk.label_count = block.maketklefthandle(tk, laby)
 }
 
@@ -555,12 +617,31 @@ function may_add_urlparameter(tk) {
 			console.log('urlparam variant should be at least 4 fields joined by .')
 		} else {
 			tk.variants = []
-			for (let i = 0; i < tmp.length; i += 4) {
+			//for (let i = 0; i < tmp.length; i += 4) {
+			//	const pos = Number(tmp[i + 1])
+			//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+			//	if (!tmp[i + 2]) return console.log('ref allele missing')
+			//	if (!tmp[i + 3]) return console.log('alt allele missing')
+			//	tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+			//}
+
+			// The 5th value is the strictness. If multiple variants are given, strictness may have to be compulsory to avoid confusion
+			for (let i = 0; i < tmp.length; i += 5) {
 				const pos = Number(tmp[i + 1])
+				let strictness
 				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
 				if (!tmp[i + 2]) return console.log('ref allele missing')
 				if (!tmp[i + 3]) return console.log('alt allele missing')
-				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+				if (!tmp[i + 4]) {
+					strictness = 1 // Default strictness
+				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
+					return 'Strictness must be a positive number'
+				} else if (Number(tmp[i + 4]) > 2) return 'Invalid strictness'
+				// For now, there are only three levels of strictness. More will be added in the future
+				else {
+					strictness = Number(tmp[i + 4])
+				}
+				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
 			}
 		}
 	}
@@ -586,6 +667,24 @@ function makeGroup(gd, tk, block, data) {
 			vslider: {
 				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
 			}
+		}
+	}
+	if (tk.variants) {
+		group.dom.diff_score_barplot_fullstack = tk.dom.diff_score_g
+			.append('image')
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', gd.diff_scores_img.width)
+			.attr('height', gd.diff_scores_img.height)
+		group.dom.diff_score_barplot_partstack = tk.dom.diff_score_g
+			.append('image')
+			.attr('xlink:href', gd.diff_scores_img.src)
+			.attr('width', 0)
+			.attr('height', 0)
+
+		if (!group.allowpartstack && !Number.isFinite(tk.max_diff_score) && tk.variants) {
+			// Set max and min diff_score in full stack mode
+			tk.max_diff_score = data.max_diff_score
+			tk.min_diff_score = data.min_diff_score
 		}
 	}
 	group.dom.img_fullstack = group.dom.imgg
@@ -680,7 +779,7 @@ function makeGroup(gd, tk, block, data) {
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 
-					getReadInfo(tk, block, t, block.pxoff2region(mx))
+					getReadInfo(tk, block, t, block.pxoff2region(mx)[0])
 					return
 				}
 			}
@@ -902,50 +1001,26 @@ function configPanel(tk, block) {
 		.attr('src', tk.colorscale)
 }
 
-async function getReadInfo(tk, block, box, tmp) {
-	/*
+/*
 get info for a read/template
 if is single mode, will be single read and with first/last info
 if is pair mode, is the template
+box{}
+  qname, start, stop
 */
-	//        console.log("tk:",tk.readpane.body)
-	//        console.log("block:",block)
-	//        console.log("box:",box)
-	//	console.log("tmp:",tmp)
+async function getReadInfo(tk, block, box, ridx) {
 	client.appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
+	const req_data = getparam()
+	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 
-	const [ridx, pos] = tmp
-	const lst = [
-		'getread=1',
-		'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
-		'genome=' + block.genome.name,
-		'chr=' + block.rglst[ridx].chr,
-		'pos=' + pos,
-		'viewstart=' + block.rglst[ridx].start,
-		'viewstop=' + block.rglst[ridx].stop
-	]
-	if (tk.nochr) lst.push('nochr=1')
-	if (tk.file) lst.push('file=' + tk.file)
-	if (tk.url) lst.push('url=' + tk.url)
-	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
-	if (tk.gdc) {
-		lst.push('gdc=' + tk.gdc)
-	}
-	if (tk.asPaired) {
-		lst.push('getpair=1')
-	} else {
-		if (box.isfirst) lst.push('getfirst=1')
-		else if (box.islast) lst.push('getlast=1')
-	}
-	const data = await client.dofetch2('tkbam?' + lst.join('&'))
-	wait.remove()
 	if (data.error) {
-		client.sayerror(tk.readpane.body, data.error)
+		client.sayerror(wait, data.error)
 		return
 	}
+	wait.remove()
 
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
@@ -959,9 +1034,12 @@ if is pair mode, is the template
 			May need to reactivate the permission check if users report issues. 
 		***/
 		/*const result = await navigator.permissions.query({ name: 'clipboard-write' })
-		if (result.state != 'granted' && result.state != 'prompt') { console.log(681, result)
+		if (result.state != 'granted' && result.state != 'prompt') {
+			console.log(681, result)
 			// no copy button
-		} else {*/
+		} else {
+		}*/
+
 		const row = div.append('div').style('margin-top', '10px')
 		row
 			.append('button')
@@ -972,9 +1050,88 @@ if is pair mode, is the template
 					.append('span')
 					.html('&nbsp;&check;')
 			})
+
+		if (r.unmapped_mate && !tk.asPaired) {
+			// this read has unmapped mate
+			// only show button to request unmapped mate when tk is in single-read mode
+			// if tk is in paired mode, then the unmapped read is already displayed
+			const mate_button = row
+				.append('button')
+				.style('margin-left', '10px')
+				.text('Show unmapped mate')
+				.on('click', async () => {
+					mate_button.property('disabled', true) // disable this button
+					const wait = tk.readpane.body.append('div').text('Loading...')
+					const req_data = getparam('show_unmapped=1')
+					const data2 = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+					if (data2.error) {
+						wait.text('')
+						client.sayerror(wait, data2.error)
+						mate_button.property('disabled', false) // reenable this button
+						return
+					}
+					wait.remove()
+					mate_button.remove()
+
+					const r2 = data2.lst[0]
+					div.append('div').html(r2.alignment)
+
+					const row = div.append('div').style('margin-top', '10px')
+					row
+						.append('button')
+						.text('Copy read sequence')
+						.on('click', function() {
+							navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
+							d3select(this)
+								.append('span')
+								.html('&nbsp;&check;')
+						})
+					mayshow_blatbutton(r2, row, tk, block)
+					div.append('div').html(r2.info)
+				})
+		}
+
 		mayshow_blatbutton(r, row, tk, block)
 
 		div.append('div').html(r.info)
+	}
+
+	function getparam(extra) {
+		// reusable helper
+		const r = block.rglst[ridx]
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		const lst = [
+			'getread=1',
+			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
+			'genome=' + block.genome.name,
+			'chr=' + r.chr,
+			'start=' + r.start,
+			'stop=' + r.stop
+		]
+		if (tk.nochr) lst.push('nochr=1')
+		if (tk.file) lst.push('file=' + tk.file)
+		if (tk.url) lst.push('url=' + tk.url)
+		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+		if (tk.gdc) {
+			headers['X-Auth-Token'] = tk.gdc
+		}
+		if (tk.asPaired) {
+			lst.push('getpair=1')
+		} else {
+			if (box.isfirst) {
+				lst.push('getfirst=1')
+			} else if (box.islast) {
+				lst.push('getlast=1')
+			} else {
+				// unknown order for this read
+				// supply read position to identify it on server
+				lst.push('unknownorder=1')
+				lst.push('readstart=' + box.start)
+				lst.push('readstop=' + box.stop)
+			}
+		}
+		if (extra) lst.push(extra)
+		return { lst, headers }
 	}
 }
 
@@ -992,7 +1149,6 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				//console.log("read.soft_start:",read.soft_start,"read.soft_stop:",read.soft_stop)
 				const data = await client.dofetch2(
 					'blat?genome=' +
 						block.genome.name +
@@ -1007,7 +1163,7 @@ function mayshow_blatbutton(read, div, tk, block) {
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
 				wait.remove()
-				show_blatresult2(data.hits, blatdiv, tk, block)
+				show_blatresult(data.hits, blatdiv, tk, block)
 			} catch (e) {
 				wait.text(e.message || e)
 				if (e.stack) console.log(e.stack)
@@ -1203,21 +1359,60 @@ async function enter_partstack(group, tk, block, y, data) {
 	block.block_setheight()
 }
 
+function show_blatresult(hits, div, tk, block) {
+	const table = div.append('table')
+	const tr = table
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('QScore')
+	tr.append('td').text('QStart')
+	tr.append('td').text('QStop')
+	tr.append('td').text('QStrand')
+	tr.append('td').text('QAlignLen')
+	tr.append('td').text('RChr')
+	tr.append('td').text('RStart')
+	tr.append('td').text('RStop')
+	tr.append('td').text('RAlignLen')
+
+	for (const h of hits) {
+		let tr = table.append('tr').style('font-size', '.8em')
+		tr.append('td').text(h.query_match)
+		tr.append('td').text(h.query_startpos)
+		tr.append('td').text(h.query_stoppos)
+		tr.append('td').text(h.query_strand)
+		tr.append('td').text(h.query_alignlen)
+		tr.append('td').text(h.ref_chr)
+		tr.append('td').text(h.ref_startpos)
+		tr.append('td').text(h.ref_stoppos)
+		tr.append('td').text(h.ref_alignlen)
+	}
+}
+
 function renderGroup(group, tk, block) {
 	update_boxes(group, tk, block)
 	if (group.partstack) {
+		if (tk.variants) {
+			group.dom.diff_score_barplot_partstack
+				.attr('xlink:href', group.data.diff_scores_img.src)
+				.attr('width', group.data.diff_scores_img.width)
+				.attr('height', group.data.diff_scores_img.height)
+		}
 		group.dom.img_partstack
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 			.attr('y', 0)
 		group.dom.img_fullstack.attr('width', 0).attr('height', 0)
-		//tk.config_handle.transition().attr('x', 40)
-		group.dom.vslider.g.transition().attr('transform', 'translate(0,' + group.data.messagerowheights + ') scale(1)')
-		group.dom.vslider.bar.transition().attr('height', group.data.height)
-		group.dom.vslider.boxy = (group.data.height * group.partstack.start) / group.data_fullstack.stackcount
+		if (tk.variants) {
+			group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
+		}
+		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
+		const scrollableheight = group.data.height - group.data.messagerowheights
+		group.dom.vslider.bar.transition().attr('height', scrollableheight)
+		group.dom.vslider.boxy = (scrollableheight * group.partstack.start) / group.data_fullstack.stackcount
 		group.dom.vslider.boxh =
-			(group.data.height * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
+			(scrollableheight * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
 		group.dom.vslider.box.transition().attr('height', group.dom.vslider.boxh)
 		group.dom.vslider.boxbotline
 			.transition()
@@ -1230,7 +1425,14 @@ function renderGroup(group, tk, block) {
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		//tk.config_handle.transition().attr('x', 0)
+		if (tk.variants) {
+			if (group.dom.diff_score_barplot_partstack) {
+				group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+			}
+			group.dom.diff_score_barplot_fullstack
+				.attr('width', group.data.diff_scores_img.width)
+				.attr('height', group.data.diff_scores_img.height)
+		}
 		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)

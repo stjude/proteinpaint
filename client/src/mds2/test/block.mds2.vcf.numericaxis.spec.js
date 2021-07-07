@@ -27,9 +27,8 @@ tape('\n', function(test) {
 	that generate similarly-classed DOM tooltips or menus. Running this test with 
 	other component specs will require being able to determine the particular
 	tooltip or menu that is launched by this mds2 track.
-
 */
-tape('AF Test: term tree menu', async test => {
+tape.skip('AF Test: term tree menu', async test => {
 	test.timeoutAfter(7000)
 
 	const holder = document.body.appendChild(document.createElement('div'))
@@ -44,7 +43,7 @@ tape('AF Test: term tree menu', async test => {
 		tracks: [
 			{
 				type: 'mds2',
-				dslabel: 'SJLife',
+				dslabel: 'TermdbTest',
 				// customizations to the official track
 				vcf: {
 					numerical_axis: {
@@ -218,7 +217,7 @@ tape('AF Test: term tree menu', async test => {
 		await sleep(400)
 		test.equal(
 			pane.querySelectorAll('.termdiv').length,
-			5,
+			6,
 			'should have the expected number of root terms in the Clinical info tab'
 		)
 		test.equal(pane.querySelectorAll('select option').length, 3, 'should have the expected number of cohort options')
@@ -239,7 +238,7 @@ tape('AF Test: term tree menu', async test => {
 			else {
 				test.equal(
 					treemenu.querySelectorAll('.termdiv').length,
-					5,
+					6,
 					'should have the expected number of root terms in the MAV plot Overlay term menu'
 				)
 			}

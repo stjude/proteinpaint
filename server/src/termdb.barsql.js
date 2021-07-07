@@ -81,6 +81,8 @@ const template = JSON.stringify({
 	'@before()': '=prep()',
 	results: {
 		'_2:maxAcrossCharts': '=maxAcrossCharts()',
+		'_:_min': '>$nval1',
+		'_:_max': '<$nval1',
 		charts: [
 			{
 				chartId: '@key',
@@ -99,7 +101,7 @@ const template = JSON.stringify({
 							},
 							'$key2'
 						],
-						'_:_max': '<$val2', // needed by client-side boxplot renderer
+						'_:_max': '<$nval2', // needed by client-side boxplot renderer
 						'~values': ['$nval2', 0],
 						'~sum': '+$nval2',
 						'~samples': ['$sample', 'set'],
@@ -229,6 +231,8 @@ function getPj(q, data, tdb, ds) {
 					s += Math.pow(v - stat.mean, 2)
 				}
 				stat.sd = Math.sqrt(s / (values.length - 1))
+				stat.min = context.self.min
+				stat.max = context.self.max
 				return stat
 			},
 			getAF(row, context) {

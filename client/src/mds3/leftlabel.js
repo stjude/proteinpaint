@@ -22,7 +22,11 @@ TODO may not update every label when only updating certain sub track
 
 export function make_leftlabels(data, tk, block) {
 	// must call after rendering skewer track
+	// prior labels are erased
 	tk.leftlabelg.selectAll('*').remove()
+	// must reset leftLabelMaxwidth
+	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
+
 	let laby = labyspace + block.labelfontsize
 
 	const labels = [] // for max width
@@ -86,10 +90,33 @@ export function make_leftlabels(data, tk, block) {
 			labels.push(lab)
 		}
 	}
+	if (data.sampleSummaries2) {
+		for (const l of data.sampleSummaries2) {
+			const lab = makelabel(tk, block, laby)
+				.text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : ''))
+				.on('click', async () => {
+					const wait = tk.tktip
+						.clear()
+						.showunder(d3event.target)
+						.d.append('div')
+						.text('Loading...')
+					try {
+						const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
+						if (!config) throw 'not found: ' + l.label1
+						const data = await tk.mds.sampleSummaries2.get(config)
+						if (data.error) throw data.error
+						wait.remove()
+						stratifymenu_samplesummary(data.strat, tk, block)
+					} catch (e) {
+						wait.text('Error: ' + (e.message || e))
+					}
+				})
+			laby += labyspace + block.labelfontsize
+			labels.push(lab)
+		}
+	}
 	for (const l of labels) {
-		l.each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, l.node().getBBox().width)
 	}
 	return laby
 }

@@ -14,6 +14,7 @@
 <div id=c style="margin:30px"></div>
 
 <script>
+const dslabel = window.location.hash ? window.location.hash.slice(1) : 'SJLife'
 
 runproteinpaint({
 	holder:document.getElementById('a'),
@@ -22,8 +23,31 @@ runproteinpaint({
 	termdb:{
 		dev:true,
 		state:{
-			dslabel:'SJLife',
+			dslabel,
 			genome:'hg38',
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables', 'Diagnosis', 'diaggrp',
+					'Genetic Factors', 'Polygenic Risk Scores', 'prs_PGS000001'
+				],
+				visiblePlotIds: ['prs_PGS000001'],
+				plots: {
+					diaggrp: {
+						term: {
+							id: 'diaggrp'
+						}
+					},
+					prs_PGS000001: {
+						term: {
+							id: 'prs_PGS000001'
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			},
 			termfilter: {
 				afilter:{
 					type:'tvslst',
@@ -49,7 +73,7 @@ runproteinpaint({
 			nav: {
 				header_mode: 'with_tabs',
 			},
-			activeCohort:-1
+			activeCohort:0
 		},
 		barchart:{
 			bar_click_opts:['hide_bar','add_filter','select_to_gp']
@@ -66,7 +90,7 @@ runproteinpaint({
 	termdb:{
 		dev:true,
 		state:{
-			dslabel:'SJLife',
+			dslabel,
 			genome:'hg38',
 			termfilter: {
 				filter:{
@@ -78,8 +102,8 @@ runproteinpaint({
 							tvs:{
 								term:{id:'subcohort',type:'categorical'},
 								values:[
-									//{key:'SJLIFE',label:'SJLIFE'},
-									{key:'CCSS',label:'CCSS'},
+									{key:'SJLIFE',label:'SJLIFE'},
+									//{key:'CCSS',label:'CCSS'},
 								]
 							}
 						},

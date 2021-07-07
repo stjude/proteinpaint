@@ -13,9 +13,14 @@ let maflogscale = true
 
 const tip = new client.Menu()
 
-export default function maftimelineui(genomes) {
-	const [pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
-	pane.header.text('MAF timeline plot')
+export default function maftimelineui(genomes, holder, sandbox_header) {
+	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	else {
+		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
+		pane.header.text('MAF timeline plot')
+	}
 	inputdiv
 		.append('p')
 		.html(
@@ -87,10 +92,21 @@ export default function maftimelineui(genomes) {
 						return
 					}
 					// good data ready
-					client.disappear(pane.pane)
-					const pane2 = client.newpane({ x: 100, y: 100, toshrink: true })
-					pane2.header.html('<span style="opacity:.5;font-size:.7em">MAF TIMELINE</span> ' + file.name)
-					render(data, header, pane2.body)
+					let visual_holder
+					if (pane) {
+						client.disappear(pane.pane)
+						const pane2 = client.newpane({ x: 100, y: 100, toshrink: true })
+						pane2.header.html('<span style="opacity:.5;font-size:.7em">MAF TIMELINE</span> ' + file.name)
+						visual_holder = pane2.body
+					}
+					// update sandbox panel header for landing page
+					if (holder !== undefined) {
+						sandbox_header.html('<span style="opacity:.5;font-size:.7em">MAF TIMELINE</span> ' + file.name)
+						visual_holder = visualdiv
+						inputdiv.selectAll('*').remove()
+						saydiv.text('')
+					}
+					render(data, header, visual_holder)
 				}
 				reader.onerror = function() {
 					saydiv.text('Error reading file ' + file.name)
@@ -100,7 +116,7 @@ export default function maftimelineui(genomes) {
 				saydiv.text('Parsing file ' + file.name + ' ...')
 				reader.readAsText(file, 'utf8')
 			})
-		butt.node().focus()
+		setTimeout(() => butt.node().focus(), 1100)
 	}
 	fileui()
 }

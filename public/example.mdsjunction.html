@@ -22,16 +22,22 @@ runproteinpaint({
 	tracks:[
 		{
 			type:'mdsjunction',
-			name:'native',
+			name:'native json',
 			dslabel:'Pediatric2',
 			querykey:'junction'
 		},
 		{
 			type:'mdsjunction',
-			name:'custom',
-			file:'hg19/Pediatric/pcgp.target.junction.hg19.gz',
+			name:'custom json',
+			file:'proteinpaint_demo/hg19/junction/json.gz',
 		},
-
+		/*
+		{
+			type:'mdsjunction',
+			name:'custom matrix',
+			file2:'proteinpaint_demo/hg19/junction/matrix.gz',
+		},
+		*/
 	],
 })
 </script>

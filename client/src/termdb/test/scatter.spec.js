@@ -8,7 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'SJLife',
+		dslabel: 'TermdbTest',
 		genome: 'hg38'
 	},
 	debug: 1
@@ -27,7 +27,13 @@ tape('numeric term + overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2'
+				],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
@@ -61,13 +67,19 @@ tape('integer overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alkylating Agents'],
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Treatment',
+					'Chemotherapy, Lifetime',
+					'Alkylating Agents, mg/m2'
+				],
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
 						settings: { currViews: ['scatter'] },
 						term: { id: 'aaclassic_5' },
-						term2: { id: 'wgs_sample_age' }
+						term2: { id: 'agedx' }
 					}
 				}
 			}

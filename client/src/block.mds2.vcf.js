@@ -71,6 +71,18 @@ and return row height
 		}
 	}
 
+	// count total number of variants
+	{
+		const total = data.vcf.rglst.reduce((i, j) => i + j.variants.length, 0)
+		tk.vcfrow_label_numbervariants.text(total == 0 ? 'No variant' : total + ' variant' + (total > 1 ? 's' : ''))
+		// quick fix! to allow variant data to be accessible by #variant handle
+		if (total == 0) {
+			tk.__vcf_data = null
+		} else {
+			tk.__vcf_data = data
+		}
+	}
+
 	return rowheight
 }
 

@@ -43,9 +43,9 @@ if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 }
 
 if (!serverconfig.binpath) {
-	const pkfile = process.argv.find(n => n.includes('/targets'))
+	const pkfile = process.argv.find(n => n.includes('/build'))
 	if (pkfile) {
-		serverconfig.binpath = pkfile.split('/targets')[0] + '/server'
+		serverconfig.binpath = pkfile.split('/build')[0] + '/server'
 	} else {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
@@ -54,22 +54,46 @@ if (!serverconfig.binpath) {
 			const jsfile = process.argv.find(
 				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
 			)
-			try {
-				const realpath = fs.realpathSync(jsfile)
-				serverconfig.binpath = path.dirname(realpath)
-			} catch (e) {
-				throw e
+			if (jsfile) {
+				try {
+					const realpath = fs.realpathSync(jsfile)
+					serverconfig.binpath = path.dirname(realpath)
+				} catch (e) {
+					throw e
+				}
+			} else {
+				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
+				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
+				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}
 	}
 }
 
 if (serverconfig.debugmode) {
+	// only apply optional routeSetters in debugmode
 	const routeSetters = []
+
+	if (serverconfig.routeSetters) {
+		for (const f of serverconfig.routeSetters) {
+			if (fs.existsSync(f)) routeSetters.push(f)
+			else {
+				const absf = path.join(serverconfig.binpath, f)
+				if (fs.existsSync(absf)) routeSetters.push(absf)
+			}
+		}
+	}
+
+	// also add testing routes if found
 	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
 	for (const f of files) {
 		if (fs.existsSync(f)) routeSetters.push(f)
 	}
+
+	// may replace the original routeSetters value,
+	// since the serverconfig.binpath prefix may
+	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
 }
 
@@ -107,6 +131,19 @@ if (serverconfig.allow_env_overrides) {
 
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
+	}
+}
+
+if (!serverconfig.features) {
+	// default to having an empty object value for
+	// examples of end-user-accessible features are:
+	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
+	serverconfig.features = {}
+}
+
+if (serverconfig.features.examples) {
+	if (!serverconfig.examplejson) {
+		serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
 	}
 }
 

@@ -190,11 +190,25 @@ export function get_rows(q, _opts = {}) {
 	/*
 works for only termdb terms; non-termdb attributes will not work
 
-gets data for barchart
-returns all relevant rows of 
+gets partitioned data for barchart and other plots
+
+returns 
+	if opts.withCTEs == false, then return an array of objects 
+	[{
+		key0, val0, // from term0, used to divide charts, may be set to an empty string="" if not applicable
+		key1, val1, // from term1, used as the main series data
+		key2, val2, // from term2, used to 'overlay' barchart stacked bars or cuminc serieses
+								// key2 and val2 may be set to an empty string="" if not applicable
+		sample (default) OR opts.countas (optional aggregation like counts)
+	}]
+
+	- if opts.withCTEs == true (default), then return
 	{
-		sample, key[0,1,2], val[0,1,2], count AS opts.countas
-		CTE[0,1,2]} if opts.withCTEs == true
+		lst: [row, row, ...],
+		CTE2: { sql, tablename },
+		CTE1: { sql, tablename },
+		CTE1: { sql, tablename },
+		filter: { sql: ..., see getFilterCTEs } 
 	}
 
 q{}
@@ -313,6 +327,10 @@ function get_term_cte(q, values, index, filter) {
 	let termq = q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
+	}
+	if (index == 1 && q.getcuminc) {
+		termq.getcuminc = q.getcuminc
+		termq.grade = q.grade
 	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
 	if (index != 1) {
@@ -462,7 +480,11 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		}
 	}
 	if (term.type == 'condition') {
-		return makesql_oneterm_condition(tablename, term, q, values)
+		if (index == 1 && q.getcuminc) {
+			return makesql_time2event(tablename, term, q, values, filter)
+		} else {
+			return makesql_oneterm_condition(tablename, term, q, values)
+		}
 	}
 	throw 'unknown term type'
 }
@@ -552,6 +574,60 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 				term_id=?
 				AND value_for=?
 				AND ${restriction}=1
+		)`,
+		tablename
+	}
+}
+
+function makesql_time2event(tablename, term, q, values, filter) {
+	if (!term.isleaf) {
+		values.push(...[term.id, q.grade])
+	} else {
+		values.push(...[q.grade, term.id])
+	}
+
+	const termsCTE = term.isleaf
+		? ''
+		: `parentTerms AS (
+SELECT distinct(ancestor_id) 
+FROM ancestry
+),
+eventTerms AS (
+SELECT a.term_id 
+FROM ancestry a
+JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+WHERE a.ancestor_id = ?
+),`
+
+	const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
+
+	return {
+		sql: `${termsCTE}
+		event1 AS (
+			SELECT sample, 1 as key, MIN(years_to_event) as value
+			FROM chronicevents
+			WHERE grade >= ?
+			  AND grade <= 5
+			  AND ${termsClause}
+			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		),
+		event1samples AS (
+			SELECT sample
+			FROM event1
+		),
+		event0 AS (
+			SELECT sample, 0 as key, MAX(years_to_event) as value
+			FROM chronicevents
+			WHERE grade <= 5 
+				AND sample NOT IN event1samples
+			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		),
+		${tablename} AS (
+			SELECT * FROM event1
+			UNION ALL
+			SELECT * FROM event0
 		)`,
 		tablename
 	}

@@ -2,13 +2,12 @@ let prom
 
 export function getsjcharts() {
 	if (window.sjcharts) {
-		//console.log('exists')
+		// console.log('exists')
 		return Promise.resolve(window.sjcharts)
 	} else if (prom) {
 		//console.log('pending')
 		return prom
 	} else {
-		//console.log('requesting')
 		prom = new Promise((resolve, reject) => {
 			const subdomain = window.location.hostname.split('.')[0]
 			const codehost = ['pp-test', 'pecan-test', 'ppr'].includes(subdomain)

@@ -21,6 +21,15 @@ exports a global function runproteinpaint()
 will be called for launching anything from pp
 returns a promise that resolve to something e.g. block
 
+internal "app{}"
+.debugmode
+.error0()
+.genomes{}
+.holder
+.holder0
+.hostURL
+.callbacks{}
+.instanceTrackers{}
 
 ********** INTERNAL
 
@@ -48,6 +57,9 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
+	// the main Proteinpaint instance, unique for each runproteinpaint() call
+	// NOTE: this app instance may be returned or not depending on the
+	// results of parseembedthenurl(), TODO: make the return value more determinate
 	const app = {
 		error0(m) {
 			client.sayerror(app.holder0, m)
@@ -62,7 +74,21 @@ export function runproteinpaint(arg) {
 		server emitted state, if true, will trigger globals e.g. window.bb
 		it needs to be set before launching any apps
 		*/
-		debugmode: false
+		debugmode: false,
+		// event callbacks for dynamically-loaded renderer instances
+		callbacks: arg.callbacks || { sjcharts: {} },
+		// object to store instances as created by dynamically loaded apps/renderers
+		// the default is to have a unique tracker per Proteinpaint app instance
+		instanceTracker: arg.instanceTracker || { sjcharts: {} }
+	}
+
+	// subnest an sjcharts object to track its app instances by rendererType,
+	// to avoid namespace conflicts with PP renderer instances
+	if (!app.instanceTracker.sjcharts) {
+		app.instanceTracker.sjcharts = {}
+	}
+	if (!app.callbacks.sjcharts) {
+		app.callbacks.sjcharts = {}
 	}
 
 	if (arg.clear) {
@@ -77,6 +103,7 @@ export function runproteinpaint(arg) {
 		.attr('class', 'sja_root_holder')
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
+	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.host) {
 		app.hostURL = arg.host
@@ -152,15 +179,14 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			let selectgenome // the <select> genome, should belong to this particular launch
-
 			if (!arg.noheader) {
-				selectgenome = makeheader(app, data, arg.jwt)
+				makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			return parseembedthenurl(arg, app, selectgenome)
+			const subapp = parseembedthenurl(arg, app)
+			return subapp ? subapp : app
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -177,27 +203,49 @@ function makeheader(app, obj, jwt) {
 	jwt: token
 	*/
 	const color = d3rgb(common.defaultcolor)
-	const padw = '13px'
+	const padw_lg = '13px'
+	const padw_input = '5px 10px'
+	const padw_sm = '7px 10px'
+	const doc_width = document.documentElement.clientWidth
 	// head
-	const row = app.holder.append('div')
-	const app_row = app.holder.append('div')
+	const row = app.holder
+		.append('div')
+		.style('white-space', 'nowrap')
+		.style(
+			'border-bottom',
+			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
+
+	const apps_drawer_row = app.holder
+		.append('div')
+		.style('position', 'relative')
+		.style('overflow-x', 'visible')
+		.style('overflow-y', 'hidden')
+
+	app.holder.apps_sandbox_div = app.holder.append('div').style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
-		.style('padding-right', '10px')
-		.style('display', 'inline-block')
-		.style('border', 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)')
-		.style('border-radius', '5px')
-		.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
+		.style('padding', '8px')
+		.style('padding-bottom', '12px')
+		.style('display', 0 && doc_width < 1600 ? 'block' : 'inline-block')
+		.style(
+			'border-bottom',
+			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
+		)
+	// .style('border-radius', '5px')
+	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
 	const headinfo = row
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
+		.style('padding-left', '25px')
 		.style('font-size', '.8em')
 		.style('color', common.defaultcolor)
+
 	{
 		// a row for server stats
-		const row = headinfo.append('div')
+		const row = headinfo.append('div').style('padding-left', '15px')
 		row
 			.append('span')
 			.text('Code updated: ' + (obj.codedate || '??') + ', server launched: ' + (obj.launchdate || '??') + '.')
@@ -234,14 +282,17 @@ function makeheader(app, obj, jwt) {
 		.append('div')
 		.text('ProteinPaint')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_lg)
 		.style('color', common.defaultcolor)
+		.style('font-size', '1.3em')
 		.style('font-weight', 'bold')
 
 	// 2, search box
 	const tip = new client.Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
+		app_btn_active = false
+		apps_off()
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str = input.property('value').trim()
@@ -250,7 +301,7 @@ function makeheader(app, obj, jwt) {
 		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
 			str = hitgene.text()
 		}
-		findgene2paint(app, str, selectgenome.property('value'), jwt)
+		findgene2paint(app, str, app.selectgenome.property('value'), jwt)
 		input.property('value', '')
 		tip.hide()
 	}
@@ -258,187 +309,246 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), selectgenome.property('value'), tip, jwt)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt, app_btn_active, apps_off)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-right', '5px')
 		.append('input')
 		.style('border', 'solid 1px ' + common.defaultcolor)
-		.style('padding', '3px')
+		// .style('padding', '3px')
+		.style('padding', '6px 10px')
+		.style('border-radius', '5px')
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
 		.on('keyup', () => {
 			if (client.keyupEnter()) entersearch()
 			else debouncer()
-			app_btn_active = false
-			apps_off()
 		})
 	input.node().focus()
 
-	const selectgenome = headbox
+	const genome_select_div = headbox
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('padding-left', '5px')
+
+	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
+		.style('padding', padw_input)
+		.style('border', 'solid 1px ' + common.defaultcolor)
+		.style('border-radius', '5px')
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
-			make_genome_browser_btn(gb_div)
+			update_genome_browser_btn(app)
 		})
 	for (const n in app.genomes) {
-		selectgenome
+		app.selectgenome
 			.append('option')
 			.attr('n', n)
 			.text(app.genomes[n].species + ' ' + n)
 			.property('value', n)
 	}
-	//Holds element in a consistent location
-	const gb_div = headbox.append('span')
-	make_genome_browser_btn(gb_div)
+	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
 
-	//Launch genome browser button in headbox
-	async function make_genome_browser_btn(div) {
-		div.selectAll('#genome_btn').remove()
-		const ss = selectgenome.node()
-		const genomename = ss.options[ss.selectedIndex].value
+	const duration = 500, // for apps drawer animation
+		hint_pos = {
+			open: { btm: -40, left: 13 },
+			closed: { btm: 3, rt: 5 }
+		},
+		hint_width = { open: '0px', closed: '18px' },
+		arrow_size = { open: 40, closed: 20 },
+		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
 
-		const genome_browser_btn = div
-			.attr('class', 'sja_menuoption')
-			.attr('id', 'genome_btn')
-			.style('padding', padw)
-			.style('border-radius', '5px')
-			.text(genomename + ' Genome Browser')
-			.on('click', () => {
-				apps_off()
-				const g = app.genomes[genomename]
-				if (!g) {
-					alert('Invalid genome name: ' + genomename)
-					return
-				}
-				//TODO change from pop out pane to new div in the page
-				const p = div.node().getBoundingClientRect()
-				const pane = client.newpane({ x: p.left, y: p.top + p.height + 10 })
-				pane.header.text(genomename + ' genome browser')
-
-				const par = {
-					hostURL: app.hostURL,
-					jwt: jwt,
-					holder: pane.body,
-					genome: g,
-					chr: g.defaultcoord.chr,
-					start: g.defaultcoord.start,
-					stop: g.defaultcoord.stop,
-					nobox: true,
-					tklst: [],
-					debugmode: app.debugmode
-				}
-				client.first_genetrack_tolist(g, par.tklst)
-
-				import('./block').then(b => new b.Block(par))
-			})
-		return genome_browser_btn
-	}
+	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow, apps_drawer_arrow_open
+	let app_btn_wrapper, app_btn, app_btn_active, app_holder
 
 	//Hides app_div and toggles app_btn off
 	function apps_off() {
 		app_btn_active = false
 		if (app_holder !== undefined) {
-			app_holder.style('display', app_btn_active ? 'inline-block' : 'none')
-			app_btn_toggle()
+			slide_drawer()
 		}
 	}
 
 	// launchApps()
 
-	let app_btn, app_btn_active, app_holder
-
 	if (!obj.features.examples) {
 		app_btn = headbox
-			.append('span')
+			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('padding', padw)
+			.style('display', 'inline-block')
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
 			.style('border-radius', '5px')
 			.text('Apps')
 			.on('click', () => {
-				appmenu(app, headbox, selectgenome, jwt)
+				appmenu(app, headbox, jwt)
 			})
 	} else {
 		// show 'apps' div only when url is barbone without any paramerters or example page
 		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
 		let apps_rendered = false
 
-		app_holder = app_row
+		app_holder = apps_drawer_row
 			.append('div')
-			.style('margin', '10px')
-			.style('padding-right', '10px')
+			.style('position', 'relative')
+			.style('margin', '0 20px')
+			.style('padding', `0 ${padw_sm}`)
 			.style('display', app_btn_active ? 'inline-block' : 'none')
-			.style('background-color', '#f2f2f2')
-			.style('border-radius', '5px')
-			.style('width', '95vw')
+			.style('overflow', 'hidden')
+			.style('background-color', '#f5f5f5')
+			.style('border-radius', '0px 0px 5px 5px')
+			.style('width', '93vw')
 
 		async function load_app_div() {
 			if (apps_rendered) return
 			apps_rendered = true
 			const _ = await import('./examples')
-			await _.init_examples({ holder: app_holder, new_div: app.holder })
+
+			await _.init_examples({
+				holder: app_holder,
+				apps_sandbox_div: app.holder.apps_sandbox_div,
+				apps_off
+			})
+			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
 		}
 
 		if (app_btn_active) load_app_div()
 
-		app_btn = headbox
-			.append('span')
-			.attr('class', 'sja_menuoption')
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('padding', padw)
+		app_btn_wrapper = headbox
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
+			.style('margin-left', '5px')
+			.style('margin-right', '5px')
 			.style('border-radius', '5px')
-			.text('Apps')
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
 			.on('click', () => {
+				d3event.stopPropagation()
 				// toggle button color and hide/show apps div
 				app_btn_active = !app_btn_active
 				load_app_div()
-				app_btn_toggle()
-
-				app_holder
-					.transition()
-					.duration(500)
-					.style('display', app_btn_active ? 'inline-block' : 'none')
+				slide_drawer()
+				if (app_btn_active) {
+					setTimeout(() => {
+						app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
+					}, duration + 5)
+				}
 			})
 			.on('mouseover', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#e6e6e6')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
 			})
 			.on('mouseout', () => {
-				app_btn.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
+				app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 			})
+
+		app_btn = app_btn_wrapper
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.style('background-color', 'transparent')
+			.style('color', app_btn_active ? '#fff' : '#000')
+			.style('padding', padw_sm)
+			.style('margin', '0px 5px')
+			.style('cursor', 'pointer')
+			.text('Apps')
+
+		// an empty spacer div, needed since the arrows are absolutely positioned
+		apps_drawer_hint = app_btn_wrapper
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
+			.style('height', arrow_size.closed + 'px')
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+			.style('background-color', 'transparent')
+			.style('text-align', 'center')
+			.style('cursor', 'pointer')
+
+		apps_drawer_arrow = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.closed + 'px')
+			.style('right', hint_pos.closed.rt + 'px')
+			.style('bottom', hint_pos.closed.btm + 'px')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.closed)
+			.style('opacity', app_btn_active ? 0 : 1)
+			.style('cursor', 'pointer')
+			.html('&#9660;')
+
+		apps_drawer_arrow_open = app_btn_wrapper
+			.append('div')
+			.style('position', 'absolute')
+			.style('font-size', arrow_size.open + 'px')
+			.style('left', hint_pos.open.left + 'px')
+			.style('bottom', hint_pos.open.btm + 'px')
+			.style('transform', 'rotate(180deg)')
+			.style('background-color', 'transparent')
+			.style('color', arrow_color.open)
+			.style('opacity', app_btn_active ? 1 : 0)
+			.style('cursor', 'pointer')
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.html('&#9660;')
 	}
 
-	function app_btn_toggle() {
+	function slide_drawer() {
+		app_btn_wrapper
+			.transition()
+			.duration(500)
+			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+			.style('color', app_btn_active ? '#fff' : '#000')
+
 		app_btn
 			.transition()
 			.duration(500)
-			.style('background-color', app_btn_active ? '#e2e2e2' : '#f2f2f2')
-			.style('border-right', app_btn_active ? 'solid 1px #c2c2c2' : '')
-			.style('border-bottom', app_btn_active ? 'solid 1px #c2c2c2' : '')
+			.style('color', app_btn_active ? '#fff' : '#000')
+
+		app_holder
+			.style('display', 'inline-block')
+			.transition()
+			.duration(duration)
+			.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
+
+		apps_drawer_row
+			.transition()
+			.duration(duration)
+			.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
+
+		apps_drawer_hint
+			.transition()
+			.duration(duration)
+			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
+
+		apps_drawer_arrow
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 0 : 1)
+
+		apps_drawer_arrow_open
+			.style('pointer-events', app_btn_active ? 'auto' : 'none')
+			.transition()
+			.duration(duration)
+			.style('opacity', app_btn_active ? 1 : 0)
 	}
 
 	headbox
 		.append('span')
 		.classed('sja_menuoption', true)
-		.style('padding', padw)
+		.style('padding', padw_sm)
 		.style('border-radius', '5px')
 		.text('Help')
 		.on('click', () => {
 			const p = d3event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
-				.show(p.left - 50, p.top + p.height + 5)
+				.show(p.left - 0, p.top + p.height + 5)
 				.d.append('div')
 				.style('padding', '5px 20px')
 			div
@@ -465,31 +575,66 @@ function makeheader(app, obj, jwt) {
 				.append('p')
 				.html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
 		})
-
-	return selectgenome
 }
 
-async function launchApps(app) {
-	const new_div = app.holder.append('div')
-	new_div
-		.style('margin', '10px')
-		.style('padding-right', '10px')
+function make_genome_browser_btn(app, headbox, jwt, apps_off) {
+	const padw = '8px'
+	const genome_btn_div = headbox.append('span')
+	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
+
+	const g_browser_btn = genome_btn_div
+		.attr('class', 'sja_menuoption')
+		.attr('id', 'genome_btn')
+		.style('padding', padw)
 		.style('border-radius', '5px')
-		.style('width', '95vw')
+		.datum(genomename)
+		.text(genomename + ' genome browser')
+		.on('click', genomename => {
+			let sandbox_div = client.newSandboxDiv(app.holder.apps_sandbox_div)
 
-	return new_div
+			const g = app.genomes[genomename]
+			if (!g) {
+				alert('Invalid genome name: ' + genomename)
+				return
+			}
+
+			sandbox_div.header.text(genomename + ' genome browser')
+
+			const par = {
+				hostURL: app.hostURL,
+				jwt: jwt,
+				holder: sandbox_div.body,
+				genome: g,
+				chr: g.defaultcoord.chr,
+				start: g.defaultcoord.start,
+				stop: g.defaultcoord.stop,
+				nobox: true,
+				tklst: [],
+				debugmode: app.debugmode
+			}
+			client.first_genetrack_tolist(g, par.tklst)
+
+			import('./block').then(b => new b.Block(par))
+			apps_off()
+		})
+	return g_browser_btn
 }
 
-function appmenu(app, headbox, selectgenome, jwt) {
+function update_genome_browser_btn(app) {
+	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
+	app.genome_browser_btn.datum(app.selectgenome.node().value)
+}
+
+function appmenu(app, headbox, jwt) {
 	/*
+	app: { selectgenome }
 	headbox
-	selectgenome: <select>
 	*/
 
 	const p = d3event.target.getBoundingClientRect()
 	headtip.clear().show(p.left - 50, p.top + p.height + 5)
 	{
-		const ss = selectgenome.node()
+		const ss = app.selectgenome.node()
 		const genomename = ss.options[ss.selectedIndex].value
 		const g = app.genomes[genomename]
 		if (!g) {
@@ -632,7 +777,7 @@ function appmenu(app, headbox, selectgenome, jwt) {
 		})
 }
 
-function findgenelst(app, str, genome, tip, jwt) {
+function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
 	if (str.length <= 1) {
 		tip.d.selectAll('*').remove()
 		return
@@ -659,6 +804,8 @@ function findgenelst(app, str, genome, tip, jwt) {
 					.attr('isgene', '1')
 					.text(name)
 					.on('click', () => {
+						app_btn_active = false
+						apps_off()
 						tip.hide()
 						findgene2paint(app, name, genome, jwt)
 					})
@@ -792,28 +939,27 @@ function studyui(app, x, y) {
 			app.hostURL,
 			null, // jwt
 			false, // no show
-			app.debugmode
+			app
 		)
 	}
 }
 
-async function parseembedthenurl(arg, app, selectgenome) {
+async function parseembedthenurl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
 	after exhausting embedding options, try URL parameters
 
 	arg: embedding param
-	app: {genomes, study, holder0, hostURL, debugmode, jwt?}
-	selectgenome: <select>
+	app: {genomes, study, holder0, hostURL, debugmode, jwt?, selectgenome, genome_browser_btn}
 
 	*/
 
-	if (arg.genome && selectgenome) {
+	if (arg.genome && app.selectgenome) {
 		// embedding argument specified genome, so flip the <select>
-		for (let i = 0; i < selectgenome.node().childNodes.length; i++) {
-			if (selectgenome.node().childNodes[i].value == arg.genome) {
-				selectgenome.property('selectedIndex', i)
+		for (let i = 0; i < app.selectgenome.node().childNodes.length; i++) {
+			if (app.selectgenome.node().childNodes[i].value == arg.genome) {
+				app.selectgenome.property('selectedIndex', i)
 				break
 			}
 		}
@@ -821,41 +967,41 @@ async function parseembedthenurl(arg, app, selectgenome) {
 	if (arg.xintest) {
 		// a shortcut to xin's experiments and not to be used in prod
 		launchxintest(arg.xintest, app)
-		return
+		return app
 	}
 
 	if (arg.singlecell) {
 		launch_singlecell(arg.singlecell, app)
-		return
+		return app
 	}
 
 	if (arg.fimo) {
 		launch_fimo(arg.fimo, app)
-		return
+		return app
 	}
 
 	if (arg.mdssurvivalplot) {
 		if (arg.genome) arg.mdssurvivalplot.genome = arg.genome
 		launchmdssurvivalplot(arg.mdssurvivalplot, app)
-		return
+		return app
 	}
 
 	if (arg.mdssamplescatterplot) {
 		if (arg.genome) arg.mdssamplescatterplot.genome = arg.genome
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, app)
-		return
+		return app
 	}
 
 	if (arg.samplematrix) {
 		arg.samplematrix.jwt = arg.jwt
 		launchsamplematrix(arg.samplematrix, app)
-		return
+		return app
 	}
 
 	if (arg.hic) {
 		arg.hic.jwt = arg.jwt
 		launchhic(arg.hic, app)
-		return
+		return app
 	}
 
 	if (arg.block) {
@@ -872,9 +1018,9 @@ async function parseembedthenurl(arg, app, selectgenome) {
 			app.hostURL,
 			arg.jwt,
 			false, // no show
-			app.debugmode
+			app
 		)
-		return
+		return app
 	}
 
 	if (arg.studyview) {
@@ -887,26 +1033,36 @@ async function parseembedthenurl(arg, app, selectgenome) {
 		obj.jwt = arg.jwt
 		obj.holder = app.holder0
 		bulkembed(obj)
-		return
+		return app
 	}
 
 	if (await may_launchGeneView(arg, app)) {
 		// gene view launched
-		return
+		return app
 	}
 
 	if (arg.fusioneditor) {
 		launchfusioneditor(arg, app)
-		return
+		return app
 	}
 
 	if (arg.mavolcanoplot) {
 		launchmavb(arg, app)
-		return
+		return app
 	}
 
 	if (arg.twodmaf) {
 		launch2dmaf(arg, app)
+		return app
+	}
+
+	if (arg.junctionbymatrix) {
+		launchJunctionbyMatrix(arg, app)
+		return
+	}
+
+	if (arg.mdsjsonform) {
+		await launchmdsjsonform(arg, app)
 		return
 	}
 
@@ -921,7 +1077,8 @@ async function parseembedthenurl(arg, app, selectgenome) {
 			variantPageCall_snv: app.variantPageCall_snv,
 			samplecart: app.samplecart,
 			holder: app.holder,
-			selectgenome: selectgenome,
+			selectgenome: app.selectgenome,
+			genome_browser_btn: app.genome_browser_btn,
 			debugmode: app.debugmode
 		})
 		if (err) {
@@ -930,7 +1087,9 @@ async function parseembedthenurl(arg, app, selectgenome) {
 	}
 
 	if (arg.project) {
-		bulkui(0, 0, app.genomes, app.hostURL)
+		let holder = undefined
+		if (arg.project.uionly) holder = app.holder0
+		bulkui(0, 0, app.genomes, app.hostURL, holder, app.sandbox_header)
 	}
 
 	if (arg.toy) {
@@ -938,6 +1097,13 @@ async function parseembedthenurl(arg, app, selectgenome) {
 	}
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, app)
+	}
+	if (arg.maftimeline) {
+		launchmaftimeline(arg, app)
+	}
+
+	if (arg.gdcbamslice) {
+		launchgdcbamslice(arg, app)
 	}
 }
 
@@ -993,7 +1159,7 @@ async function may_launchGeneView(arg, app) {
 	return false
 }
 
-function launchmdssamplescatterplot(arg, app) {
+async function launchmdssamplescatterplot(arg, app) {
 	if (!arg.genome) {
 		app.error0('missing genome for mdssamplescatterplot')
 		return
@@ -1014,6 +1180,16 @@ function launchmdssamplescatterplot(arg, app) {
 		delete arg.dataset
 	} else if (arg.analysisdata) {
 		// validate later
+	} else if (arg.analysisdata_file) {
+		try {
+			const data = await client.dofetch('textfile', { file: arg.analysisdata_file })
+			if (data.error) throw tmp.error
+			else if (data.text) arg.analysisdata = JSON.parse(data.text)
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			app.error0(e.message || e)
+			return
+		}
 	} else {
 		app.error0('neither .dataset or .analysisdata is given')
 		return
@@ -1228,7 +1404,7 @@ async function launchblock(arg, app) {
 			app.hostURL,
 			arg.jwt,
 			true, // no show
-			app.debugmode
+			app
 		)
 	}
 	if (arg.studyview) {
@@ -1272,7 +1448,8 @@ async function launchblock(arg, app) {
 		holder: app.holder0,
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
-		debugmode: app.debugmode
+		debugmode: app.debugmode,
+		legendimg: arg.legendimg
 	}
 
 	if (arg.width) {
@@ -1398,26 +1575,17 @@ async function launchblock(arg, app) {
 
 	// return a promise resolving to block
 	return import('./block').then(b => {
-		const bb = new b.Block(blockinitarg)
-		return { block: bb }
+		app.block = new b.Block(blockinitarg)
+		return app
 	})
 }
 
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
-		// duplicate newpane3
-		const inputdiv = app.holder0.append('div').style('margin', '40px 20px 20px 20px')
-		const p = inputdiv.append('p')
-		p.append('span').html('Genome&nbsp;')
-		const gselect = p.append('select').attr('title', 'Select a genome')
-		for (const n in app.genomes) {
-			gselect.append('option').text(n)
-		}
-		const filediv = inputdiv.append('div').style('margin', '20px 0px')
-		const saydiv = app.holder0.append('div').style('margin', '10px 20px')
-		const visualdiv = app.holder0.append('div').style('margin', '20px')
+		// created seperate function in clinet for same page block div
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
-			p.svmrui([null, inputdiv, gselect.node(), filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
+			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
 		return
 	}
@@ -1431,7 +1599,20 @@ function launchfusioneditor(arg, app) {
 	})
 }
 
+async function launchmdsjsonform(arg, app) {
+	if (arg.mdsjsonform.uionly) {
+		const _ = await import('./mdsjsonform')
+		await _.init_mdsjsonform({ holder: app.holder0, genomes: app.genomes })
+	}
+}
+
 function launchmavb(arg, app) {
+	if (arg.mavolcanoplot.uionly) {
+		import('./mavb').then(p => {
+			p.mavbui(app.genomes, app.hostURL, arg.jwt, app.holder0, app.sandbox_header)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1445,6 +1626,12 @@ function launchmavb(arg, app) {
 }
 
 function launch2dmaf(arg, app) {
+	if (arg.twodmaf.uionly) {
+		import('./2dmaf').then(p => {
+			p.d2mafui(app.genomes, app.holder0)
+		})
+		return
+	}
 	const genomeobj = app.genomes[arg.genome]
 	if (!genomeobj) {
 		app.error0('Invalid genome: ' + arg.genome)
@@ -1455,6 +1642,31 @@ function launch2dmaf(arg, app) {
 	import('./2dmaf').then(d2maf => {
 		d2maf.d2mafparseinput(arg.twodmaf, app.holder0)
 	})
+}
+
+function launchmaftimeline(arg, app) {
+	if (arg.maftimeline.uionly) {
+		import('./maftimeline').then(p => {
+			p.default(app.genomes, app.holder0, app.sandbox_header)
+		})
+	}
+}
+
+function launchJunctionbyMatrix(arg, app) {
+	if (arg.junctionbymatrix.uionly) {
+		import('./block.tk.junction.textmatrixui').then(p => {
+			p.default(app.genomes, app.hostURL, arg.jwt, app.holder0)
+		})
+	}
+}
+
+function launchgdcbamslice(arg, app) {
+	if (arg.gdcbamslice.uionly) {
+		import('./block.tk.bam.gdc').then(p => {
+			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+		})
+		return
+	}
 }
 
 /*

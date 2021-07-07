@@ -919,7 +919,7 @@ function factorprofile_genevalue_onegene_loadboxplot(obj, profile, gene) {
 		chr: r.chr,
 		start: r.start,
 		stop: r.stop,
-		stillmakeboxplot: 1
+		getgroup2boxplot: 1
 	}
 	if (profile.mdslabel) {
 		arg.dslabel = profile.mdslabel

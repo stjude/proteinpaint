@@ -3,7 +3,7 @@ const path = require('path')
 
 module.exports = function(env = {}) {
 	const publicPath = (env.url || '') + '/bin/'
-	const outputPath =  path.join(__dirname, '../public/bin')
+	const outputPath = path.join(__dirname, '../public/bin')
 
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
@@ -62,9 +62,10 @@ module.exports = function(env = {}) {
 		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
 	}
 
-	if (env.NODE_ENV == 'development') {
+	if (config.mode == 'development') {
 		config.plugins = [new WebpackNotifierPlugin()]
-	} else if (!env.url || !env.url.startsWith('proteinpaint')) {
+	}
+	if (config.mode != 'production') {
 		// do not minify
 		if (!config.optimization) config.optimization = {}
 		config.optimization.minimizer = []

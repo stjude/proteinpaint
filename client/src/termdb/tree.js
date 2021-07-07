@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3 } from '../client'
 import { plotInit } from './plot'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
@@ -80,8 +79,8 @@ class TdbTree {
 		// track plots by term ID separately from components,
 		// since active plots is dependent on the active cohort
 		this.plots = {}
-		// this.components.plots will point the applicable
-		// termIds of the active cohort
+		// this.components.plots will point to only the termIds
+		// that are applicable to the active cohort
 		this.components = { plots: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
@@ -228,7 +227,7 @@ class TdbTree {
 				{
 					id: term.id,
 					holder: holder,
-					term: term,
+					term,
 					callbacks: {
 						// must use namespaced eventType otherwise will be rewritten..
 						'postRender.viewbtn': plot => {

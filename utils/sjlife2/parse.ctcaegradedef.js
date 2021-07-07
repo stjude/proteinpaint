@@ -1,8 +1,8 @@
 /*
 highly one-off script
 
-input:
-1. termdb file
+following two files are required to be found in current directory:
+1. termdb
 2. raw/ctcae.grading.js
 
 output:
@@ -11,12 +11,12 @@ output:
 
 */
 
-if (process.argv.length != 3) {
-	console.log('<input file dir> to find "termdb" and "raw/ctcae.grading.js" under it, also writes two new files to it')
+if (process.argv.length != 2) {
+	console.log('Load "termdb" and "raw/ctcae.grading.js" under current directory, also writes two new files to it')
 	process.exit()
 }
 
-const dir = process.argv[2]
+const dir = process.cwd()
 
 const fs = require('fs')
 const path = require('path')

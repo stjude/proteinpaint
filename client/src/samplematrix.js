@@ -1403,7 +1403,7 @@ sort samples by f.issampleattribute
 				.attr('width', Math.max(1, x2 - x1))
 				.attr('height', sample.height)
 				.attr('fill', item.value > 0 ? feature.colorgain : feature.colorloss)
-				.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
+				.attr('fill-opacity', Math.abs(item.value / maxabslogratio))
 				.attr('shape-rendering', 'crispEdges')
 		}
 		g.append('rect')
@@ -1671,7 +1671,7 @@ sort samples by f.issampleattribute
 						.attr('width', this.features_on_rows ? width : Math.max(1, x2 - x1))
 						.attr('height', this.features_on_rows ? Math.max(1, x2 - x1) : height)
 						.attr('fill', item.value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss)
-						.attr('fill-opacity', Math.abs(item.value) / maxabslogratio)
+						.attr('fill-opacity', Math.abs(item.value / maxabslogratio))
 						.attr('shape-rendering', 'crispEdges')
 				}
 			}
@@ -1786,7 +1786,7 @@ sort samples by f.issampleattribute
 				} else {
 					k = { color: feature.cnv.colorloss }
 				}
-				k.opacity = Math.abs(i.value) / Math.abs(maxabslogratio)
+				k.opacity = Math.abs(i.value / maxabslogratio)
 				lst.push(k)
 			}
 		}
@@ -1838,76 +1838,86 @@ sort samples by f.issampleattribute
 
 	/*********** __draw ends *****/
 
-	click_cell(sample, feature) {
+	async click_cell(sample, feature) {
 		/*
 		browser view of single sample, to show whatever data's available from the dataset, irrespective of feature type
 		feature provides view range
 
 		some duplication from focus_singlesample(), on fetching assay track for requested sample
 		since there is no block here, so cannot call the existing function
-
 		*/
-
-		Promise.resolve()
-			.then(() => {
-				// not general track yet -- still need the svcnv track as trunk
-				let svcnvtk
-				if (this.iscustom) {
-					svcnvtk = {
-						iscustom: true,
-						type: common.tkt.mdssvcnv,
-						singlesample: {
-							name: sample.name
-						}
+		try {
+			// not general track yet -- still need the svcnv track as trunk
+			let svcnvtk
+			if (this.iscustom) {
+				svcnvtk = {
+					iscustom: true,
+					type: common.tkt.mdssvcnv,
+					singlesample: {
+						name: sample.name
 					}
-					for (const k in this.querykey2tracks) {
-						const t = this.querykey2tracks[k]
-						if (t.type == common.tkt.mdssvcnv) {
-							svcnvtk.name = t.name || 'Custom tk'
-							svcnvtk.file = t.file
-							svcnvtk.url = t.url
-							svcnvtk.indexURL = t.indexURL
-						} else if (t.type == common.tkt.mdsvcf) {
-							svcnvtk.checkvcf = {
-								file: t.file,
-								url: t.url,
-								indexURL: t.indexURL
-							}
-						} else if (t.type == common.tkt.mdsexpression) {
-							svcnvtk.checkexpressionrank = {
-								file: t.file,
-								url: t.url,
-								indexURL: t.indexURL
-							}
+				}
+				for (const k in this.querykey2tracks) {
+					const t = this.querykey2tracks[k]
+					if (t.type == common.tkt.mdssvcnv) {
+						svcnvtk.name = t.name || 'Custom tk'
+						svcnvtk.file = t.file
+						svcnvtk.url = t.url
+						svcnvtk.indexURL = t.indexURL
+					} else if (t.type == common.tkt.mdsvcf) {
+						svcnvtk.checkvcf = {
+							file: t.file,
+							url: t.url,
+							indexURL: t.indexURL
 						}
-					}
-				} else {
-					if (!this.mds) throw 'not custom but .mds{} missing'
-					for (const querykey in this.mds.queries) {
-						const tk = this.mds.queries[querykey]
-						if (tk.type == common.tkt.mdssvcnv) {
-							// found svcnv from official, must keep the querykey, so build new object
-							svcnvtk = {
-								mds: this.mds,
-								querykey: querykey,
-								singlesample: {
-									name: sample.name
-								}
-							}
-							for (const k in tk) svcnvtk[k] = tk[k]
-							break
+					} else if (t.type == common.tkt.mdsexpression) {
+						svcnvtk.checkexpressionrank = {
+							file: t.file,
+							url: t.url,
+							indexURL: t.indexURL
 						}
 					}
 				}
-				if (!svcnvtk) throw 'cannot find a svcnv tk'
-
-				if (this.iscustom) {
-					// no checking for custom data
-					return { svcnvtk: svcnvtk }
+			} else {
+				if (!this.mds) throw 'not custom but .mds{} missing'
+				for (const querykey in this.mds.queries) {
+					const tk = this.mds.queries[querykey]
+					if (tk.type == common.tkt.mdssvcnv) {
+						// found svcnv from official, must keep the querykey, so build new object
+						svcnvtk = {
+							mds: this.mds,
+							querykey: querykey,
+							singlesample: {
+								name: sample.name
+							}
+						}
+						for (const k in tk) svcnvtk[k] = tk[k]
+						break
+					}
 				}
+			}
+			if (!svcnvtk) throw 'cannot find a svcnv tk'
 
+			svcnvtk.bplengthUpperLimit = 0 // sample view to show all cnv, not just focal
+
+			const pane = client.newpane({ x: 100, y: 100 })
+			const blockarg = {
+				jwt: this.jwt,
+				hostURL: this.hostURL,
+				nobox: 1,
+				genome: this.genome,
+				holder: pane.body,
+				chr: feature.chr,
+				start: feature.start,
+				stop: feature.stop,
+				tklst: []
+			}
+			client.first_genetrack_tolist(this.genome, blockarg.tklst)
+			blockarg.tklst.push(svcnvtk)
+
+			if (!this.iscustom) {
+				// offical ds
 				if (!this.dslabel) throw 'not custom but dslabel missing'
-
 				// for official dataset, check for availability of assay track of this sample
 				const par = {
 					genome: this.genome.name,
@@ -1915,40 +1925,18 @@ sort samples by f.issampleattribute
 					querykey: svcnvtk.querykey,
 					gettrack4singlesample: sample.name
 				}
-				return client.dofetch('/mdssvcnv', par).then(data => {
-					if (data.error) throw 'Error checking for assay track: ' + data.error
-					return {
-						svcnvtk: svcnvtk,
-						tracks: data.tracks
-					}
-				})
-			})
-			.then(arg => {
-				const pane = client.newpane({ x: 100, y: 100 })
-				const blockarg = {
-					jwt: this.jwt,
-					hostURL: this.hostURL,
-					nobox: 1,
-					genome: this.genome,
-					holder: pane.body,
-					chr: feature.chr,
-					start: feature.start,
-					stop: feature.stop,
-					tklst: []
+				const data = await client.dofetch('/mdssvcnv', par)
+				if (data.error) throw 'Error checking for assay track: ' + data.error
+				if (data.tracks) {
+					for (const t of data.tracks) blockarg.tklst.push(t)
 				}
-				client.first_genetrack_tolist(this.genome, blockarg.tklst)
-				blockarg.tklst.push(arg.svcnvtk)
-				if (arg.tracks) {
-					for (const t of arg.tracks) blockarg.tklst.push(t)
-				}
-				import('./block.js').then(_ => {
-					new _.Block(blockarg)
-				})
-			})
-			.catch(err => {
-				window.alert(typeof err == 'string' ? err : err.message)
-				if (err.stack) console.log(err.stack)
-			})
+			}
+			const _ = await import('./block.js')
+			new _.Block(blockarg)
+		} catch (e) {
+			window.alert(e.message || e)
+			if (e.stack) console.log(e.stack)
+		}
 	}
 
 	/********** __menu and tooltip **********/

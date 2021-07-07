@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu, dofetch2 } from '../client'
 import { init as init_legend } from './legend'
-import { loadTk } from './tk'
+import { loadTk, rangequery_rglst } from './tk'
 import url2map from '../url2map'
 
 /*
@@ -13,6 +13,7 @@ get_ds
 init_termdb
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
+mayaddGetter_sampleSummaries2
 parse_client_config
 configPanel
 _load
@@ -45,8 +46,8 @@ export async function makeTk(tk, block) {
 
 	init_mclass(tk)
 
+	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
-
 	mayaddGetter_m2csq(tk, block)
 
 	if (tk.mds.has_skewer) {
@@ -55,7 +56,10 @@ export async function makeTk(tk, block) {
 		}
 	}
 
-	tk.tklabel.text(tk.mds.label)
+	tk.leftLabelMaxwidth = tk.tklabel
+		.text(tk.mds.label)
+		.node()
+		.getBBox().width
 
 	tk.leftlabelg = tk.gleft.append('g')
 
@@ -115,7 +119,7 @@ function get_ds(tk, block) {
 		return
 	}
 	// custom
-	if (!tk.name) tk.name = 'Unamed'
+	if (!tk.name) tk.name = 'Unnamed'
 	tk.mds = {}
 	// to fill in details to tk.mds
 	/*
@@ -148,6 +152,21 @@ function mayaddGetter_m2csq(tk, block) {
 	}
 }
 
+function mayaddGetter_sampleSummaries2(tk, block) {
+	if (!tk.mds.sampleSummaries2) return
+	if (tk.mds.sampleSummaries2.get) return
+	tk.mds.sampleSummaries2.get = async level => {
+		// level is one of sampleSummaries2.lst[]
+		const lst = [
+			'genome=' + block.genome.name,
+			'dslabel=' + tk.mds.label,
+			'samplesummary2_mclassdetail=' + encodeURIComponent(JSON.stringify(level))
+		]
+		rangequery_rglst(tk, block, lst)
+		return await dofetch2('mds3?' + lst.join('&'))
+	}
+}
+
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
@@ -165,6 +184,8 @@ function mayaddGetter_variant2samples(tk, block) {
 		// hardcode to getsummary and using fixed levels
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
 		if (arg.tk1) par.push('samplefiltertemp=' + JSON.stringify(arg.tk1.samplefiltertemp)) // must use tk1 but not tk for this one
+		if (arg.size) par.push('size=' + arg.size)
+		if (arg.from != undefined) par.push('from=' + arg.from)
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
 			// in such case, need alternative query method

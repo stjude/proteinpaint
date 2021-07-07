@@ -1,9 +1,13 @@
 const jStat = require('jstat').jStat
 const features = require('./app').features
 const utils = require('./utils')
+const spawn = require('child_process').spawn
+const Readable = require('stream').Readable
+const readline = require('readline')
 const bamcommon = require('./bam.common')
-//const rust_match_complexvariant_indel = require('./rust_indel/pkg/rust_indel_manual').match_complex_variant_rust
 const fs = require('fs')
+const serverconfig = require('./serverconfig')
+const rust_indel = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
 
 export async function match_complexvariant_rust(q, templates_info) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -26,6 +30,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 		final_alt = ''
 	}
 
+	/*
 	console.log(
 		'q.variant.pos:',
 		q.variant.pos,
@@ -34,6 +39,7 @@ export async function match_complexvariant_rust(q, templates_info) {
 		',variant:',
 		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
 	)
+	*/
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
@@ -64,9 +70,9 @@ export async function match_complexvariant_rust(q, templates_info) {
 		.join('')
 		.toUpperCase()
 
-	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
-	console.log('refSeq', refseq)
-	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log('refSeq', refseq)
+	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
 	const refallele = final_ref.toUpperCase()
 	const altallele = final_alt.toUpperCase()
@@ -91,78 +97,155 @@ export async function match_complexvariant_rust(q, templates_info) {
 		refalleleerror = true
 	}
 
-	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('\n')
-	let sequences = ''
-	sequences += refseq + '\n'
-	sequences += altseq + '\n'
-	sequences += sequence_reads
-	//        const templates_info = []
-	//        //for (const template of templates) {
-	//        for (const line of q.regions[0].lines) { // q.regions[0] may need to be modified
-	//
-	//	        templates_info.push(line)
-	//		sequences += sequence + '\n'
-	//	}
-	//console.log("sequences:",sequences)
-	//console.log("segbplen:",segbplen)
-	const rust_output = await rust_match_complexvariant_indel(
-		sequences,
-		BigInt(q.variant.pos),
-		BigInt(segbplen),
-		refallele,
-		altallele,
-		BigInt(kmer_length),
-		weight_no_indel,
-		weight_indel,
-		threshold_slope
-	) // Invoking wasm function
-	console.log('rust_output:', rust_output.groupID.length)
+	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
+	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
+	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
 
+	let sequences = ''
+	sequences += refseq + '-'
+	sequences += altseq + '-'
+	sequences += sequence_reads
+
+	// This code has been added to parse input from example.bam.indel.html
+	if (!Number.isFinite(Number(q.variant.strictness))) {
+		q.variant.strictness = 1
+	}
+
+	const input_data =
+		sequences +
+		':' +
+		start_positions +
+		':' +
+		cigar_sequences +
+		':' +
+		q.variant.pos.toString() +
+		':' +
+		segbplen.toString() +
+		':' +
+		refallele +
+		':' +
+		altallele +
+		':' +
+		kmer_length.toString() +
+		':' +
+		weight_no_indel.toString() +
+		':' +
+		weight_indel.toString() +
+		':' +
+		threshold_slope.toString() +
+		':' +
+		q.variant.strictness +
+		':'
+
+	//fs.writeFile('test.txt', input_data, function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
+	const time1 = new Date()
+	const rust_output = await run_rust_indel_pipeline(input_data)
+	const time2 = new Date()
+	console.log('Time taken to run rust indel pipeline:', time2.getSeconds() - time1.getSeconds(), 'sec')
+	const rust_output_list = rust_output.toString('utf-8').split('\n')
+	let group_ids = []
+	let categories = []
+	let diff_scores = []
+
+	for (let item of rust_output_list) {
+		if (item.includes('output_gID')) {
+			group_ids = item
+				.replace(/"/g, '')
+				.replace(/,/g, '')
+				.replace('output_gID:', '')
+				.split(':')
+				//.map(Number)
+				.map(n => Number(n.replace(/\D/g, ''))) // Removing characters that are not digits
+		} else if (item.includes('output_cat')) {
+			categories = item
+				.replace(/"/g, '')
+				.replace(/,/g, '')
+				.replace('output_cat:', '')
+				.split(':')
+				.map(n => n.replace(/[^a-zA-Z0-9]+/g, '')) // Removing characters that are not alphabets
+		} else if (item.includes('output_diff_scores')) {
+			diff_scores = item
+				.replace(/"/g, '')
+				.replace(/,/g, '')
+				.replace('output_diff_scores:', '')
+				.split(':')
+				.map(Number)
+			//.map(n => Number(n.replace(/\D/g, '')))
+		} else if (item.includes('Final kmer length (from Rust)')) {
+			console.log(item)
+		}
+		//else {
+		//	console.log(item)
+		//}
+	}
+
+	//console.log("group_ids:",group_ids)
+	//console.log("categories:",categories.length)
+	//console.log("diff_scores:",diff_scores.length)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
-	for (let i = 0; i < rust_output.category.length; i++) {
-		if (rust_output.category[i] == 'ref') {
+	for (let i = 0; i < categories.length; i++) {
+		if (categories[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[i]:",diff_scores[i])
+
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[i],
 					groupID: 'ref'
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
-		} else if (rust_output.category[i] == 'alt') {
+		} else if (categories[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[i]:",diff_scores[i])
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[i],
 					groupID: 'alt'
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
-		} else if (rust_output.category[i] == 'none') {
+		} else if (categories[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
-				index = rust_output.groupID[i]
-				templates_info[index].tempscore = rust_output.kmer_diff_scores[index].toFixed(4).toString()
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[i]:",diff_scores[i])
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
-					value: rust_output.kmer_diff_scores[i],
+					value: diff_scores[i],
 					groupID: 'none'
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
+		} else {
+			console.log('Unknown category:', categories[i])
 		}
 	}
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
 	// console.log('Final array for plotting:', kmer_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-
+	const diff_list = kmer_diff_scores_input.map(i => i.value)
+	const max_diff_score = Math.max(...diff_list)
+	const min_diff_score = Math.min(...diff_list)
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
-
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]
@@ -180,7 +263,26 @@ export async function match_complexvariant_rust(q, templates_info) {
 		})
 		groups.push(g)
 	}
-	return { groups, refalleleerror }
+	return { groups, refalleleerror, max_diff_score, min_diff_score }
+}
+
+function run_rust_indel_pipeline(input_data) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(rust_indel)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			console.log('stderr:', stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			//console.log("stdout:",stdout)
+			resolve(stdout)
+		})
+	})
 }
 
 export async function match_complexvariant(q, templates_info) {
@@ -206,6 +308,7 @@ export async function match_complexvariant(q, templates_info) {
 		final_alt = ''
 	}
 
+	/*
 	console.log(
 		'q.variant.pos:',
 		q.variant.pos,
@@ -214,6 +317,8 @@ export async function match_complexvariant(q, templates_info) {
 		',variant:',
 		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
 	)
+	*/
+
 	const leftflankseq = (await utils.get_fasta(
 		q.genome,
 		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
@@ -244,9 +349,9 @@ export async function match_complexvariant(q, templates_info) {
 		.join('')
 		.toUpperCase()
 
-	console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
-	console.log('refSeq', refseq)
-	console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log('refSeq', refseq)
+	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
 	const refallele = final_ref.toUpperCase()
 	const altallele = final_alt.toUpperCase()
@@ -298,7 +403,6 @@ export async function match_complexvariant(q, templates_info) {
 	//          ref_weight=altallele.length/refallele.length
 	//        }
 
-	console.log('Ref kmers:')
 	const all_ref_kmers = build_kmers_refalt(
 		refseq,
 		kmer_length,
@@ -308,8 +412,6 @@ export async function match_complexvariant(q, templates_info) {
 		weight_indel,
 		weight_no_indel
 	)
-	//console.log("all_ref_kmers:",all_ref_kmers)
-	console.log('Alt kmers:')
 	const all_alt_kmers = build_kmers_refalt(
 		altseq,
 		kmer_length,
@@ -335,7 +437,7 @@ export async function match_complexvariant(q, templates_info) {
 		const score = item.value
 		ref_kmers_weight += score * kmer2_freq
 	}
-	console.log('ref_kmers_weight:', ref_kmers_weight)
+	//console.log('ref_kmers_weight:', ref_kmers_weight)
 
 	const all_alt_kmers_nodups = new Set(all_alt_kmers)
 	const all_alt_kmers_seq_values_nodups = new Set(all_alt_kmers.map(x => x.sequence))
@@ -352,7 +454,7 @@ export async function match_complexvariant(q, templates_info) {
 		const score = item.value
 		alt_kmers_weight += score * kmer2_freq
 	}
-	console.log('alt_kmers_weight:', alt_kmers_weight)
+	//console.log('alt_kmers_weight:', alt_kmers_weight)
 
 	const ref_kmers = build_kmers(refseq, kmer_length)
 	const alt_kmers = build_kmers(altseq, kmer_length)
@@ -397,7 +499,7 @@ export async function match_complexvariant(q, templates_info) {
 			ref_comparisons.push(ref_comparison)
 			alt_comparisons.push(alt_comparison)
 			const item = {
-				value: Math.abs(diff_score),
+				value: Math.max(diff_score),
 				groupID: i
 			}
 			if (diff_score > 0) {
@@ -409,7 +511,7 @@ export async function match_complexvariant(q, templates_info) {
 		}
 	}
 
-	console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
+	//console.log('ref_scores length:', ref_scores.length, 'alt_scores length:', alt_scores.length)
 	let ref_indices = []
 	if (ref_scores.length > 0) {
 		ref_indices = determine_maxima_alt(ref_scores, threshold_slope)
@@ -428,8 +530,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportref]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index].tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -441,8 +545,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index].tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				// alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -458,8 +564,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index].tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4)
+				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: kmer_diff_scores[index],
@@ -471,8 +579,10 @@ export async function match_complexvariant(q, templates_info) {
 			if (type2group[bamcommon.type_supportno]) {
 				index = item[0]
 				//console.log("templates_info[index]:",templates_info[index])
-				templates_info[index].tempscore =
-					alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = kmer_diff_scores[index].toFixed(4).toString()
+				//alt_comparisons[index].toFixed(4).toString() + '-' + ref_comparisons[index].toFixed(4).toString()
+				//}
 				// templates[index].__tempscore = kmer_diff_scores[index].toFixed(4).toString()
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
@@ -486,7 +596,9 @@ export async function match_complexvariant(q, templates_info) {
 	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
 	// console.log('Final array for plotting:', kmer_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-
+	const diff_list = kmer_diff_scores_input.map(i => i.value)
+	const max_diff_score = Math.max(...diff_list)
+	const min_diff_score = Math.min(...diff_list)
 	q.kmer_diff_scores_asc = kmer_diff_scores_input
 	//	if (features.bamScoreRplot) {
 	//		const file = fs.createWriteStream(
@@ -518,7 +630,7 @@ export async function match_complexvariant(q, templates_info) {
 		})
 		groups.push(g)
 	}
-	return { groups, refalleleerror }
+	return { groups, refalleleerror, max_diff_score, min_diff_score }
 }
 
 function build_kmers(sequence, kmer_length) {
@@ -675,7 +787,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 			}
 		}
 	} else {
-		console.log('Number of reads too low to determine curvature of slope')
+		//console.log('Number of reads too low to determine curvature of slope')
 		indices.push([kmer_diff_scores[0].groupID, 'none'])
 		return indices
 	}
@@ -686,7 +798,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		}
 	} else {
 		// The points are in the shape of a curve
-		console.log('start point:', start_point)
+		//console.log('start point:', start_point)
 		const kmer_diff_scores_input = []
 		for (let i = 0; i <= start_point; i++) {
 			kmer_diff_scores_input.push([i, kmer_diff_scores[i].value])
@@ -694,10 +806,10 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 
 		const min_value = [0, kmer_diff_scores[0].value]
 		const max_value = [start_point, kmer_diff_scores[start_point].value]
-		console.log('max_value:', max_value)
+		//console.log('max_value:', max_value)
 
 		const slope_of_line = (max_value[1] - min_value[1]) / (max_value[0] - min_value[0]) // m=(y2-y1)/(x2-x1)
-		console.log('Slope of line:', slope_of_line)
+		//console.log('Slope of line:', slope_of_line)
 		const intercept_of_line = min_value[1] - min_value[0] * slope_of_line // c=y-m*x
 
 		const distances_from_line = []
@@ -712,7 +824,7 @@ function determine_maxima_alt(kmer_diff_scores, threshold_slope) {
 		const index_array_maximum = distances_from_line.indexOf(array_maximum)
 		// console.log("Max index:",index_array_maximum,"Total length:",kmer_diff_scores.length)
 		const score_cutoff = kmer_diff_scores[index_array_maximum].value
-		console.log('score cutoff:', score_cutoff)
+		//console.log('score cutoff:', score_cutoff)
 		for (let i = 0; i < kmer_diff_scores.length; i++) {
 			if (score_cutoff >= kmer_diff_scores[i].value) {
 				indices.push([kmer_diff_scores[i].groupID, 'none'])
