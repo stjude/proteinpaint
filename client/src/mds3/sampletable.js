@@ -187,32 +187,16 @@ async function make_multiSampleTable(args) {
 		.style('justify-items', 'left')
 
 	if (has_sampleid) {
-		grid_div
-			.append('div')
-			.style('font-size', '.8em')
-			.style('opacity', 0.5)
-			.text('SAMPLE')
+        get_table_header(grid_div, 'SAMPLE')
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text(term.name)
+        get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
 		// to support other configs
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text('TUMOR DNA MAF')
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text('NORMAL DEPTH')
+		get_table_header(grid_div, 'TUMOR DNA MAF')
+		get_table_header(grid_div, 'NORMAL DEPTH')
 	}
 
 	// one row per sample
@@ -296,6 +280,15 @@ function get_list_cells(holder) {
 			.style('border-bottom', 'solid 1px #ededed')
 			.style('padding', '5px 20px 5px 0px')
 	]
+}
+
+function get_table_header(table, title_text){
+    return table
+        .append('div')
+        .style('opacity', 0.5)
+        .style('font-size', '.8em')
+        .style('padding', '2px 5px')
+        .text(title_text)
 }
 
 function get_table_cell(table, row_id) {
