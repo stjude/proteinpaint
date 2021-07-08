@@ -1,6 +1,4 @@
-import { select } from 'd3'
-import * as common from '../../shared/common'
-import { to_textfile, fillbar, tab2box } from '../client'
+import { fillbar, tab2box } from '../client'
 
 /*
 ********************** EXPORTED
@@ -262,8 +260,10 @@ async function make_multiSampleSummaryList(arg, holder) {
 		})
 	}
 
+    const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+    const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ heading: 'Summary', callback: div => tab2box(div, summary_tabs) },
+		{ heading: summary_label, callback: div => tab2box(div, summary_tabs) },
 		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div }) }
 	]
 
@@ -323,7 +323,7 @@ function make_horizontal_tabs(holder, tabs) {
 			.style('border-top', 'solid 1px #ddd')
 			.style('border-left', i == 0 ? 'solid 1px #ddd' : '')
 			.style('border-right', 'solid 1px #ddd')
-			.text(tab.heading)
+			.html(tab.heading)
 			.on('click', async () => {
 				const last_active_tab = tabs.find(t => t.active == true)
 				delete last_active_tab.active
@@ -361,15 +361,6 @@ function update_horizontal_tabs(tabs) {
 }
 
 function make_summary_panel(arg, div, category, main_tabs) {
-	// occurance info at top of summary
-	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '5px 20px')
-		.style('font-size', '.9em')
-		.style('color', '#999')
-		.html(`${occurrence}<span style='padding-left:10px;'>samples</span>`)
 
 	// summary for active tab
 	if (category.numbycategory) {
