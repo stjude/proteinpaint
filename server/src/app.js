@@ -2,7 +2,15 @@
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const serverconfig = require('./serverconfig')
+let serverconfig
+try {
+	serverconfig = require('./serverconfig')
+} catch (e) {
+	console.log('ERROR: invalid JSON in serverconfig.json')
+	console.log(e.message)
+	process.exit()
+}
+
 exports.features = Object.freeze(serverconfig.features || {})
 
 /* test accessibility of serverconfig.tpmasterdir at two places.
