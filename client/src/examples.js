@@ -1,9 +1,7 @@
 import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
-import 'highlight.js/styles/github.css'
 import { highlight } from 'highlight.js/lib/common';
-
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -172,7 +170,7 @@ function displayTracks(tracks, holder, page_args) {
 				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
 				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
-				)
+			)
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
@@ -194,12 +192,14 @@ function displayTracks(tracks, holder, page_args) {
 			const newtrack = new Date(track.new_expire)
 
 			if (update > today && !track.sandbox.update_message) {
-				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
+				console.log(
+					'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
+				)
 			}
-			if (update > today && track.sandbox.update_message){
+			if (update > today && track.sandbox.update_message) {
 				makeRibbon(li, 'UPDATED', '#e67d15')
 			}
-			if (newtrack > today){
+			if (newtrack > today) {
 				makeRibbon(li, 'NEW', '#1ba176')
 			}
 		}
@@ -243,18 +243,18 @@ function makeRibbon(e, text, color) {
 	.style('align-items','center')
 	.style('justify-content', 'center')
 
-	const ribbon = ribbonDiv.append('span')
-	.text(text)
-	.style('color', 'white')
-	.style('background-color', color)
-	.style('height','auto')
-	.style('width', '100%')
-	.style('top','15%')
-	.style('left', '-23%')
-	.style('font-size', '11.5px')
-	.style('text-transform', 'uppercase')
-	.style('text-align', 'center')
-
+	const ribbon = ribbonDiv
+		.append('span')
+		.text(text)
+		.style('color', 'white')
+		.style('background-color', color)
+		.style('height', 'auto')
+		.style('width', '100%')
+		.style('top', '15%')
+		.style('left', '-23%')
+		.style('font-size', '11.5px')
+		.style('text-transform', 'uppercase')
+		.style('text-align', 'center')
 }
 
 //TODO: styling for the container
@@ -262,7 +262,9 @@ function makeRibbon(e, text, color) {
 async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
+	sandbox_div.header.text(
+		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
+	)
 
 	//Download data and show runpp() code at the top
 	// makeDataDownload(track, sandbox_div)
@@ -291,56 +293,54 @@ async function openExample(track, holder) {
 	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
 }
 
-
 // Update message corresponding to the update ribbon. Expires on the same date as the ribbon
 async function addUpdateMessage(track, div) {
-	if(track.sandbox.update_message != undefined && !track.update_expire) {
-		console.log("Must provide expiration date: track.update_expire")
+	if (track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log('Must provide expiration date: track.update_expire')
 	}
 	if (track.sandbox.update_message != undefined && track.update_expire) {
 		const today = new Date()
 		const update = new Date(track.update_expire)
 		if (update > today) {
 			const message = div.body
-			.append('div')
-			.style('margin', '20px')
-			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+				.append('div')
+				.style('margin', '20px')
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
 		}
 	}
 }
 
-
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, div){
-if (track.sandbox.is_ui != true) {
+async function showCode(track, div) {
+	if (track.sandbox.is_ui != true) {
 		const codeBtn = div.body
-		.append('button')
-		.attr('class', 'sja_menuoption')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		.style('font-size', '12.75x')
-		.text('Show Code')
-		.style('display', 'inline-block')
-		.on('click', () => {
-			if (code.style('display') == 'none') {
-				code.style('display', 'block') //TODO fadein fn
-				select(event.target).text('Hide')
-			} else {
-				code.style('display', 'none') //TODO fadeout fn
-				select(event.target).text('Show Code')
-			}
-		})
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.style('margin', '20px')
+			.style('padding', '8px')
+			.style('border', 'none')
+			.style('border-radius', '3px')
+			.style('font-size', '12.75x')
+			.text('Show Code')
+			.style('display', 'inline-block')
+			.on('click', () => {
+				if (code.style('display') == 'none') {
+					code.style('display', 'block') //TODO fadein fn
+					select(event.target).text('Hide')
+				} else {
+					code.style('display', 'none') //TODO fadeout fn
+					select(event.target).text('Show Code')
+				}
+			})
 
+		const json = JSON.stringify(track.buttons.example, null, 4)
 
-	const json = JSON.stringify(track.buttons.example, null, 4)
-
-	//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
-	const runppCode = `runproteinpaint({
+		//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
+		const runppCode =
+			`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
-		json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+		  json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 		`})`
 
 	const codefill = highlight(runppCode, {language:'javascript'}).value
@@ -353,11 +353,10 @@ if (track.sandbox.is_ui != true) {
 		.style('font-size', '14px')
 		.style('border', '1px solid #aeafb0')
 		.html(codefill)
-
 	}
 }
 
-async function makeDataDownload(track, div){
+async function makeDataDownload(track, div) {
 	if (track.sandbox.datadownload) {
 		const dataBtn = div.body
 		.append('button')

@@ -3,6 +3,7 @@ const ch_genemcount = {} // genome name - gene name - ds name - mutation class -
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
 const serverconfig = require('./serverconfig')
+
 exports.features = Object.freeze(serverconfig.features || {})
 
 /* test accessibility of serverconfig.tpmasterdir at two places.

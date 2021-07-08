@@ -39,7 +39,8 @@ WORKDIR /home/root/pp/app
 ADD server ./server
 ADD client ./client
 COPY package.json ./
-RUN npm run reset
+RUN npx cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128 npm -D run reset
+#RUN npm run reset
 
 # Bundle the server code
 WORKDIR /home/root/pp/app/server
@@ -84,4 +85,5 @@ WORKDIR /home/root/pp/app/server
 RUN npm install --production
 WORKDIR /home/root/pp/app/
 COPY ./LICENSE ./
+ENV PP_MODE container-prod
 CMD ["node", "server/bin.js"]
