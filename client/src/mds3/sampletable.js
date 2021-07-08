@@ -36,7 +36,10 @@ export async function init_sampletable(arg) {
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
     //terms from sunburst ring
-	arg.tid2value_orig = arg.tid2value ? Object.keys(arg.tid2value) : [] 
+    // Note: in ordered to keep term-values related to sunburst immuatable, these term names are 
+    // stored as 'tid2value_orig' and not removed from tid2Value when filter changed or removed
+    arg.tid2value_orig = new Set()
+	if(arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 	try {
 		if (numofcases == 1) {
 			// one sample
@@ -475,9 +478,8 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('cursor', 'pointer')
 		.html('x')
 		.on('click', () => {
-			const orig_terms_flag = arg.tid2value_orig.filter(t => t == arg.filter_term).length
 			// don't remove original terms from tid2value (terms from sunburst ring)
-			if (!orig_terms_flag) {
+			if (!arg.tid2value_orig.has(arg.filter_term)) {
 				if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
 				else delete arg.tid2value[arg.filter_term]
 			}
