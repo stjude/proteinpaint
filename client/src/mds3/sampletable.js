@@ -29,7 +29,7 @@ const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
 	const holder = arg.div.append('div').attr('class', 'sj_sampletable_holder')
-	const err_check_div = arg.div
+	arg.temp_div = arg.div
 		.append('div')
 		.style('color', '#bbb')
 		.text('Loading...')
@@ -51,9 +51,9 @@ export async function init_sampletable(arg) {
 			// more cases, show summary
 			await make_multiSampleSummaryList(arg, holder)
 		}
-		err_check_div.remove()
+		arg.temp_div.style('display','none')
 	} catch (e) {
-		err_check_div.text('Error: ' + (e.message || e))
+		arg.temp_div.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
 }
@@ -62,6 +62,7 @@ async function make_singleSampleTable(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	const sampledata = data[0] // must have just one sample
+    arg.temp_div.style('display','block').text('Loading...')
 
 	const grid_div = holder
 		.append('div')
@@ -127,6 +128,7 @@ async function make_singleSampleTable(arg, holder) {
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
 	}
+    arg.temp_div.style('display','none')
 }
 
 async function make_multiSampleTable(args) {
@@ -144,7 +146,7 @@ async function make_multiSampleTable(args) {
 		arg.from = current_from
 	}
 	holder.selectAll('*').style('opacity', 0.5)
-	holder.append('div').text('Loading...')
+	arg.temp_div.style('display','block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
 
@@ -244,10 +246,12 @@ async function make_multiSampleTable(args) {
 	// pages and option to change samples per size (only for pagination)
 	const page_footer = holder.append('div').style('display', 'none')
 	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
+    arg.temp_div.style('display','none')
 }
 
 async function make_multiSampleSummaryList(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
+    arg.temp_div.style('display','block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 
 	const summary_tabs = []
@@ -264,6 +268,7 @@ async function make_multiSampleSummaryList(arg, holder) {
 	]
 
 	make_horizontal_tabs(holder, main_tabs)
+    arg.temp_div.style('display','none')
 }
 
 function get_list_cells(holder) {
