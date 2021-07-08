@@ -28,7 +28,7 @@ arg{}
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	const holder = arg.div.append('div').attr('class', 'sj_multisample_holder')
+	const holder = arg.div.append('div').attr('class', 'sj_sampletable_holder')
 	const err_check_div = arg.div
 		.append('div')
 		.style('color', '#bbb')
@@ -65,8 +65,6 @@ async function make_singleSampleTable(arg, holder) {
 
 	const grid_div = holder
 		.append('div')
-		.style('margin', '20px')
-		.style('font-size', '.9em')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'auto auto')
 		.style('gap-row-gap', '1px')
@@ -284,15 +282,15 @@ async function make_multiSampleSummaryList(arg, holder) {
 	make_horizontal_tabs(holder, main_tabs)
 }
 
-function get_list_cells(table) {
+function get_list_cells(holder) {
 	return [
-		table
+		holder
 			.append('div')
 			.style('width', '100%')
 			.style('padding', '5px 20px 5px 0px')
 			.style('color', '#bbb')
 			.style('border-bottom', 'solid 1px #ededed'),
-		table
+		holder
 			.append('div')
 			.style('width', '100%')
 			.style('border-bottom', 'solid 1px #ededed')
