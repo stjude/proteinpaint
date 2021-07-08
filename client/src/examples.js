@@ -2,7 +2,7 @@ import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import 'highlight.js/styles/github.css'
-import hljs from 'highlight.js/lib/common';
+import { highlight } from 'highlight.js/lib/common';
 
 
 export async function init_examples(par) {
@@ -78,12 +78,12 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
-		.attr('class', 'track-cols')
+		.attr('class', 'sjpp-track-cols')
 		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
 	const list = div.append('ul')
 	list
-		.attr('class', 'track-list')
+		.attr('class', 'sjpp-track-list')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
@@ -164,11 +164,11 @@ function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		const li = holder.append('li')
-		li.attr('class', 'track')
+		li.attr('class', 'sjpp-track')
 			.html(
-				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
-				<span class="track-image"><img src="${track.image}"></img></span>
-				<div class='track-links'>
+				`${track.blurb ? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
+				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
+				<div class='sjpp-track-links'>
 				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
 				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
@@ -212,7 +212,7 @@ function displayTracks(tracks, holder, page_args) {
 				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
 				li.select('.track-btns')
 					.append('button')
-					.attr('class', 'landing-page-a')
+					.attr('class', 'sjpp-landing-page-a')
 					.style('padding', '7px')
 					.style('cursor', 'pointer')
 					.text(button.name)
@@ -239,7 +239,7 @@ function displayTracks(tracks, holder, page_args) {
 
 function makeRibbon(e, text, color) {
 	const ribbonDiv = e.append('div')
-	.attr('class', 'track-ribbon')
+	.attr('class', 'sjpp-track-ribbon')
 	.style('align-items','center')
 	.style('justify-content', 'center')
 
@@ -343,7 +343,7 @@ if (track.sandbox.is_ui != true) {
 		json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 		`})`
 
-	const codefill = hljs.highlight(runppCode, {language:'javascript'}).value
+	const codefill = highlight(runppCode, {language:'javascript'}).value
 
 	const code = div.body
 		.append('pre')
@@ -362,7 +362,7 @@ async function makeDataDownload(track, div){
 		const dataBtn = div.body
 		.append('button')
 		.attr('class', 'sja_menuoption')
-		.attr('id','data-btn')
+		.attr('id','sjpp-data-btn')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
