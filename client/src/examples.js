@@ -266,14 +266,14 @@ async function openExample(track, holder) {
 
 	//Download data and show runpp() code at the top
 	// makeDataDownload(track, sandbox_div)
-	showCode(track,sandbox_div)
+	showCode(track, sandbox_div)
 
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
-		const intro = sandbox_div.body
+		sandbox_div.body
 			.append('div')
 			.style('margin', '20px')
-			.html(track.sandbox_intro)
+			.html(track.sandbox.intro)
 	}
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
