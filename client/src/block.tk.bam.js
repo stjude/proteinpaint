@@ -254,6 +254,16 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_img.attr('width', 0)
 	}
 
+	if (data.count.read_limit) {
+		// When view range contains reads in excess of the number of reads limit
+		tk.dom.read_limit_text
+			.attr('x', data.pileup_data.width / 2)
+			.attr('y', (tk.dom.pileup_shown ? tk.pileupheight + tk.pileupbottompad : 0) + tk.dom.read_limit_height)
+			.attr('transform', 'scale(1)')
+	} else {
+		tk.dom.read_limit_text.attr('transform', 'scale(0)')
+	}
+
 	if (tk.gdc) {
 		may_render_gdc(data, tk, block)
 	}
@@ -313,8 +323,8 @@ function may_render_gdc(data, tk, block) {
 		return
 	}
 
-	const yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
-
+	let yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	if (data.count.read_limit) yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
 	// will render gdc region box in a row
 	tk.dom.gdc
 		.append('rect')
@@ -367,12 +377,9 @@ function may_render_variant(data, tk, block) {
 		return
 	}
 
-	let yoff
-	if (tk.gdc) {
-		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad + tk.dom.gdcrowheight + tk.dom.gdcrowbottompad : 0 // get height of existing graph above variant row
-	} else {
-		yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
-	}
+	let yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
+	if (tk.gdc) yoff += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	if (data.count.read_limit) yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
 
 	// will render variant in a row
 	tk.dom.variantg
@@ -455,11 +462,16 @@ function may_render_variant(data, tk, block) {
 }
 
 function setTkHeight(tk, data) {
+	// FIXME TODO should set yoffset of all subtracks here (pileup, read_limit, variant, gdc, groups)
 	// call after any group is updated
 	let h = 0
 	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
 	if (tk.gdc) {
 		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	}
+	if (data && data.count && data.count.read_limit) {
+		// When view exceeds max number of reads limit
+		h += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
 	}
 	if (tk.dom.variantg) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
@@ -574,8 +586,18 @@ function makeTk(tk, block) {
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
 		pileup_axis: tk.glider.append('g'),
-		vsliderg: tk.gright.append('g')
+		vsliderg: tk.gright.append('g'),
+		read_limit_height: 15,
+		read_limit_bottompad: 6,
+		read_limit_g: tk.glider.append('g')
 	}
+	tk.dom.read_limit_text = tk.dom.read_limit_g
+		.append('text')
+		.style('fill', 'red')
+		.attr('text-anchor', 'middle')
+		.attr('font-size', tk.dom.read_limit_height)
+		.attr('transform', 'scale(0)')
+		.text('Too many reads in view range. Try zooming into a smaller region.')
 
 	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
 
