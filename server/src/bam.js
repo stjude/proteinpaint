@@ -769,6 +769,10 @@ async function do_query(q) {
 		},
 		groups: []
 	}
+	if (q.read_limit_reached) {
+		// When maximum read limit is reached
+		result.count.read_limit = q.read_limit_reached
+	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	{
@@ -956,6 +960,7 @@ function query_region(r, q) {
 			q._numofreads++
 			if (q._numofreads >= maxreadcount) {
 				ps.kill()
+				q.read_limit_reached = true
 				q.messagerows.push({
 					h: 13,
 					t: 'Too many reads in view range. Try zooming into a smaller region.'
