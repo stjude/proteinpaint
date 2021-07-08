@@ -1,12 +1,8 @@
 import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
-import { event } from 'd3-selection'
-// import hljs from 'highlight.js/lib/core';
-// import javascript from 'highlight.js/lib/languages/javascript';
-// hljs.registerLanguage('javascript', javascript);
+import { event, select } from 'd3-selection'
 import 'highlight.js/styles/github.css'
-// import 'highlight.js/styles/base16/cupertino.css'
-const hljs = require('highlight.js/lib/common')
+import hljs from 'highlight.js/lib/common';
 
 
 export async function init_examples(par) {
@@ -196,7 +192,7 @@ function displayTracks(tracks, holder, page_args) {
 			const today = new Date()
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
-      
+
 			if (update > today && !track.sandbox.update_message) {
 				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
 			}
@@ -259,7 +255,6 @@ function makeRibbon(e, text, color) {
 	.style('text-transform', 'uppercase')
 	.style('text-align', 'center')
 
-	return [ ribbonDiv, ribbon ]
 }
 
 //TODO: styling for the container
@@ -269,11 +264,9 @@ async function openExample(track, holder) {
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
 
-	const id = Math.random().toString()
-
 	//Download data and show runpp() code at the top
 	// makeDataDownload(track, sandbox_div)
-	showCode(track,sandbox_div, id)
+	showCode(track,sandbox_div)
 
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
@@ -312,20 +305,17 @@ async function addUpdateMessage(track, div) {
 			.append('div')
 			.style('margin', '20px')
 			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
-		return message
 		}
 	}
 }
 
 
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, div, id){
+async function showCode(track, div){
 if (track.sandbox.is_ui != true) {
-		const btnID = 'btn'+id
 		const codeBtn = div.body
 		.append('button')
 		.attr('class', 'sja_menuoption')
-		.attr('id',btnID)
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
@@ -336,10 +326,10 @@ if (track.sandbox.is_ui != true) {
 		.on('click', () => {
 			if (code.style('display') == 'none') {
 				code.style('display', 'block') //TODO fadein fn
-				document.getElementById(btnID).textContent = 'Hide'
+				select(event.target).text('Hide')
 			} else {
 				code.style('display', 'none') //TODO fadeout fn
-				document.getElementById(btnID).textContent = 'Show Code'
+				select(event.target).text('Show Code')
 			}
 		})
 
@@ -358,15 +348,12 @@ if (track.sandbox.is_ui != true) {
 	const code = div.body
 		.append('pre')
 		.append('code')
-		.attr('class', 'code')
-		.attr('id', 'highlight')
 		.style('display', 'none')
 		.style('margin', '35px')
 		.style('font-size', '14px')
 		.style('border', '1px solid #aeafb0')
 		.html(codefill)
 
-	return [ codeBtn, code ]
 	}
 }
 
@@ -386,6 +373,5 @@ async function makeDataDownload(track, div){
 		.on('click', () => {
 			to_textfile(track.sandbox.datadownload, track.name)
 		})
-	return dataBtn
 	}
 }
