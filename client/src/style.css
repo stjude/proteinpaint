@@ -772,7 +772,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
 
 /* App Drawer style */
 
-.track-cols {
+.sjpp-track-cols {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 500;
     font-size: 17px;
@@ -781,23 +781,22 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     margin: 10px 10px 0px 10px;
 }
 
-.track {
+.sjpp-track {
     background-color: white;
     border-radius: 5px;
     padding: 10px 5px 10px 5px;
     display: grid;
     grid-template-columns: 2fr 9fr 40px;
-    grid-template-areas: 'image header header' 'image buttons buttons';
+    grid-template-areas: 'image header header' 'image info info';
     gap: 5px;
     align-items: center;
     justify-items: left;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    /* overflow: hidden; */
 }
 
-.track::after {
+.sjpp-track::after {
     content: "";
     border-radius: 8px;
     position: absolute;
@@ -812,16 +811,16 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.track:hover {
+.sjpp-track:hover {
     -webkit-transform: scale(1, 1);
     transform: scale(1, 1);
 }
 
-.track:hover::after {
+.sjpp-track:hover::after {
     opacity: 1;
 }
 
-.track-image {
+.sjpp-track-image {
     grid-area: image;
     width: 75px;
     height: 75px;
@@ -830,7 +829,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     overflow: hidden;
 }
 
-.track-image img {
+.sjpp-track-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -838,20 +837,22 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     border-radius: 3px;
 }
 
-.track-ribbon{
+.sjpp-track-ribbon{
     grid-area: image;
     overflow: hidden;
     width: 100%;
     height: 100%;
 }
-.track-ribbon::before,
-.track-ribbon::after {
+.sjpp-track-ribbon::before,
+.sjpp-track-ribbon::after {
   position: relative;
   z-index: -1;
   content: '';
   display: block;
+  border-top-color: transparent;
+  border-left-color: transparent;
 }
-.track-ribbon span {
+.sjpp-track-ribbon span {
   position: relative;
   display: block;
   width: 100%;
@@ -865,21 +866,21 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
   transform: rotate(-45deg);
 }
 
-.track-ribbon::before,
-.track-ribbon::after {
+/* .sjpp-track-ribbon::before,
+.sjpp-track-ribbon::after {
     border-top-color: transparent;
     border-left-color: transparent;
-}
-.track-ribbon::before {
+} */
+.sjpp-track-ribbon::before {
     top: 0;
     right: 0;
 }
-.track-ribbon::after {
+.sjpp-track-ribbon::after {
     bottom: 0;
     left: 0;
 }
 
-.track-h {
+.sjpp-track-h {
     grid-area: header;
     display: inline-block;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
@@ -887,15 +888,15 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     padding: 0px;
 }
 
-#track-blurb {
+.sjpp-track-blurb {
     font-size: 12px;
     font-weight: 300;
     font-style: oblique;
     color: #403f3f;
 }
 
-.track-links>a, .landing-page-a {
-    grid-area: buttons;
+.sjpp-track-links>a, .sjpp-landing-page-a {
+    grid-area: info;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     margin: 0px 0px 0px 8px;
