@@ -299,7 +299,7 @@ function get_table_header(table, title_text){
 function get_table_cell(table, row_id) {
 	return table
 		.append('div')
-		.style('width', '95%')
+        .style('justify-self', 'stretch')
 		.style('height', '100%')
 		.style('padding', '2px 5px')
 		.style('background-color', row_id % 2 == 0 ? '#eee' : '#fff')
