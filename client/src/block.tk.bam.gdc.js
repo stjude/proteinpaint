@@ -222,7 +222,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.text('submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args)
+				validateInputs(gdc_args, genomes[default_genome])
 			} catch (e) {
 				cmt(e, 1)
 				return
@@ -401,7 +401,7 @@ function show_input_check(holder, error_msg) {
 		.html(error_msg ? '&#10060; ' + error_msg : '&#10003;')
 }
 
-function validateInputs(obj) {
+function validateInputs(obj, genome) {
 	if (!obj) throw 'no parameters passing to validate'
 	if (!obj.gdc_token) throw 'gdc token missing'
 	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
