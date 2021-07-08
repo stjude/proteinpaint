@@ -222,6 +222,14 @@ fn main() {
         indel_length = ref_length;
     }
 
+    // Preprocessing of input
+    let (
+        ref_repeat_flanking_region,
+        optimized_ref_allele,
+        alt_repeat_flanking_region,
+        optimized_alt_allele,
+    ) = preprocess_input(&ref_nucleotides, &alt_nucleotides, &lines[0], &lines[1]);
+
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
     let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
@@ -623,6 +631,24 @@ fn main() {
     println!("output_cat:{:?}", output_cat); // Final read categories assigned
     println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
     println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+}
+
+fn preprocess_input(
+    ref_nucleotides: &Vec<char>,
+    alt_nucleotides: &Vec<char>,
+    ref_sequence: &str,
+    alt_sequence: &str,
+) -> (usize, String, usize, String) {
+    let mut ref_repeat_flanking_region: usize = 0;
+    let optimized_ref_allele = String::new();
+    let mut alt_repeat_flanking_region: usize = 0;
+    let optimized_alt_allele = String::new();
+    (
+        ref_repeat_flanking_region,
+        optimized_ref_allele,
+        alt_repeat_flanking_region,
+        optimized_alt_allele,
+    )
 }
 
 fn build_kmers_refalt(
