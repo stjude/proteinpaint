@@ -1,6 +1,9 @@
-import { dofetch2, sayerror, newSandboxDiv } from './client'
+import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
-import { event } from 'd3-selection'
+import { event, select } from 'd3-selection'
+import 'highlight.js/styles/github.css'
+import hljs from 'highlight.js/lib/common';
+
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -75,6 +78,7 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
+		.attr('class', 'track-cols')
 		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
 	const list = div.append('ul')
@@ -162,25 +166,13 @@ function displayTracks(tracks, holder, page_args) {
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
-				`${
-					track.blurb
-						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
-						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-				}
-			<span class="track-image"><img src="${track.image}"></img></span>
-			<div class="track-btns">
-			${
-				track.buttons.url
-					? `<a id="url-btn" style="cursor:pointer; padding:7.75px; text-decoration: none;" onclick="event.stopPropagation()" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
-					: ''
-			}
-			${
-				track.buttons.doc
-					? `<button id="doc-btn" style="cursor:pointer" onclick="event.stopPropagation(); window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-					: ''
-			}
-			</div>`
-			)
+				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
+				<span class="track-image"><img src="${track.image}"></img></span>
+				<div class='track-links'>
+				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
+				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
+				</div>`
+				)
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
@@ -193,31 +185,22 @@ function displayTracks(tracks, holder, page_args) {
 
 		// add Beta tag for experimental tracks
 		if (track.isbeta == true) {
-			li.append('div')
-				.text('Beta')
-				.attr('class', 'track-ribbon')
-				.style('color', '#4f5459')
-				.style('background-color', '#e6f0ff')
+			makeRibbon(li, 'BETA', '#418cb5')
 		}
 
 		if (track.update_expire || track.new_expire) {
 			const today = new Date()
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
-			if (update > today) {
-				li.append('div')
-					.text('Updated')
-					.attr('class', 'track-ribbon')
-					.style('color', '#4f5459')
-					.style('background-color', '#fffecc')
-					.style('font-size', '10.5px')
+
+			if (update > today && !track.sandbox.update_message) {
+				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
 			}
-			if (newtrack > today) {
-				li.append('div')
-					.text('New')
-					.attr('class', 'track-ribbon')
-					.style('color', '#4f5459')
-					.style('background-color', '#e9fce6')
+			if (update > today && track.sandbox.update_message){
+				makeRibbon(li, 'UPDATED', '#e67d15')
+			}
+			if (newtrack > today){
+				makeRibbon(li, 'NEW', '#1ba176')
 			}
 		}
 
@@ -254,19 +237,47 @@ function displayTracks(tracks, holder, page_args) {
 	})
 }
 
+function makeRibbon(e, text, color) {
+	const ribbonDiv = e.append('div')
+	.attr('class', 'track-ribbon')
+	.style('align-items','center')
+	.style('justify-content', 'center')
+
+	const ribbon = ribbonDiv.append('span')
+	.text(text)
+	.style('color', 'white')
+	.style('background-color', color)
+	.style('height','auto')
+	.style('width', '100%')
+	.style('top','15%')
+	.style('left', '-23%')
+	.style('font-size', '11.5px')
+	.style('text-transform', 'uppercase')
+	.style('text-align', 'center')
+
+}
+
 //TODO: styling for the container
 //Opens example of app in landing page container
 async function openExample(track, holder) {
-	// crate unique id for each app div
+	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(track.name + (track.is_ui != undefined && track.is_ui == false ? ' Example' : ''))
+	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
 
-	if (track.sandbox_intro) {
-		const intro = sandbox_div.body
+	//Download data and show runpp() code at the top
+	// makeDataDownload(track, sandbox_div)
+	showCode(track, sandbox_div)
+
+	// creates div for instructions or other messaging about the track
+	if (track.sandbox.intro) {
+		sandbox_div.body
 			.append('div')
 			.style('margin', '20px')
-			.html(track.sandbox_intro)
+			.html(track.sandbox.intro)
 	}
+	// message explaining the update ribbon
+	addUpdateMessage(track, sandbox_div)
+
 	// template runpp() arg
 	const runpp_arg = {
 		holder: sandbox_div.body
@@ -278,4 +289,89 @@ async function openExample(track, holder) {
 	}
 
 	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
+}
+
+
+// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
+async function addUpdateMessage(track, div) {
+	if(track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log("Must provide expiration date: track.update_expire")
+	}
+	if (track.sandbox.update_message != undefined && track.update_expire) {
+		const today = new Date()
+		const update = new Date(track.update_expire)
+		if (update > today) {
+			const message = div.body
+			.append('div')
+			.style('margin', '20px')
+			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		}
+	}
+}
+
+
+// Creates 'Show Code' button in Sandbox for all examples
+async function showCode(track, div){
+if (track.sandbox.is_ui != true) {
+		const codeBtn = div.body
+		.append('button')
+		.attr('class', 'sja_menuoption')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('font-size', '12.75x')
+		.text('Show Code')
+		.style('display', 'inline-block')
+		.on('click', () => {
+			if (code.style('display') == 'none') {
+				code.style('display', 'block') //TODO fadein fn
+				select(event.target).text('Hide')
+			} else {
+				code.style('display', 'none') //TODO fadeout fn
+				select(event.target).text('Show Code')
+			}
+		})
+
+
+	const json = JSON.stringify(track.buttons.example, null, 4)
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
+	const runppCode = `runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+		json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+		`})`
+
+	const codefill = hljs.highlight(runppCode, {language:'javascript'}).value
+
+	const code = div.body
+		.append('pre')
+		.append('code')
+		.style('display', 'none')
+		.style('margin', '35px')
+		.style('font-size', '14px')
+		.style('border', '1px solid #aeafb0')
+		.html(codefill)
+
+	}
+}
+
+async function makeDataDownload(track, div){
+	if (track.sandbox.datadownload) {
+		const dataBtn = div.body
+		.append('button')
+		.attr('class', 'sja_menuoption')
+		.attr('id','data-btn')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('font-size', '12.75px')
+		.style('display', 'inline-block')
+		.text('Download Data')
+		.on('click', () => {
+			to_textfile(track.sandbox.datadownload, track.name)
+		})
+	}
 }
