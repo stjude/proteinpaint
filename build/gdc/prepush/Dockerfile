@@ -50,7 +50,7 @@ RUN npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
 WORKDIR /home/root/pp/app
 ADD build ./build
 RUN ./build/gdc/test.sh
-
+CMD ['/bin/bash']
 
 ########
 # PACK 
