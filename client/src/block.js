@@ -724,6 +724,21 @@ export class Block {
 					this.block_addtk_template(t)
 				}
 			}
+
+			/* quick fix: 
+			when there are bam tracks, these tracks usually are taller than a screen
+			making it hard to compare to gene tracks lying on the bottom
+			move the native gene track to the top
+			usually that is the only bedj track in the list
+			*/
+			if (this.tklst.find(i => i.type == client.tkt.bam)) {
+				const bedtkidx = this.tklst.findIndex(i => i.type == client.tkt.bedj)
+				if (bedtkidx != -1) {
+					const t = this.tklst[bedtkidx]
+					this.tklst.splice(bedtkidx, 1)
+					this.tklst.unshift(t)
+				}
+			}
 		}
 
 		this.tk_load_all()
