@@ -1,6 +1,6 @@
 #!/bin/bash
 node -v
-cp targets/gdc/client/package.json client/
+cp build/gdc/client/package.json client/
 npm run emptyws
 cd client/
 npx cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128 npm -D install

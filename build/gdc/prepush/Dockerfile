@@ -1,0 +1,89 @@
+###################
+# Test-only target 
+###################
+
+ARG IMGVER=latest
+ARG PKGVER=0.0.0
+FROM ppbase:$IMGVER AS ppgdctest
+
+# Install Electron system dependencies
+# - for testing only
+RUN apt-get update && apt-get install --no-install-recommends -y \
+ 	xauth \
+  libxfont2 \
+ 	xvfb \
+ 	libnss3 \
+ 	libasound2 \
+ 	libnotify4 \
+  libgconf2-4 \
+  libnss3 \
+  libxtst-dev \
+  libc6 \
+  libstdc++6 \
+  libgcc1 \
+  libgtk2.0-0 \
+  libgtk-3-0 \
+  libasound2 \
+  libxrender1 \
+  libxss1 \
+  	## clean up
+    && apt-get clean \ 
+    && rm -rf /var/lib/apt/lists/ \ 
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+# avoid font-warning that breaks the test message
+RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
+
+# Install NPM deps
+WORKDIR /home/root/pp/app 
+ADD server ./server
+ADD client ./client
+COPY package.json ./
+#RUN npx cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128 npm -D run reset
+RUN npm run reset
+
+# Bundle the server code
+WORKDIR /home/root/pp/app/server
+RUN npx webpack --config=webpack.config.js --env.devtool=cheap-source-map
+
+# Test
+WORKDIR /home/root/pp/app
+ADD build ./build
+RUN ./build/gdc/test.sh
+CMD ['/bin/bash']
+
+########
+# PACK 
+########
+
+FROM ppgdctest AS pppacks
+ARG PKGVER=0.0.0
+
+# Pack the server use later in the published image target
+WORKDIR /home/root/pp/app/server
+RUN npm pack && tar -xvzf stjude-proteinpaint-server-$PKGVER.tgz
+
+WORKDIR /home/root/pp/app/client
+# the .npmrc must have an entry of @stjude:registry=https://my.pkg.registry.somewhere/
+# COPY .npmrc .  
+# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json && npm publish # to a private registry
+#   --  or --
+# RUN npx rollup -c ./rollup.config.js && sed i.bak 's/proteinpaint-client/proteinpaint/' package.json && npm pack && scp stjude-proteinpaint-$PKGVER.tgz host:/some/where
+
+############################
+# Proteinpaint server image 
+############################
+
+ARG IMGVER=latest
+
+# use the ppbase image which does NOT have 
+# the Xvfb-related libs and NPM devDependencies installed 
+FROM ppbase:$IMGVER as ppserver
+COPY --from=pppacks /home/root/pp/app/server/package /home/root/pp/app/server
+
+WORKDIR /home/root/pp/app/server
+RUN npm install --production
+WORKDIR /home/root/pp/app/
+COPY ./LICENSE ./
+ENV PP_MODE container-prod
+CMD ["node", "server/bin.js"]
