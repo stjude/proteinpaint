@@ -150,7 +150,8 @@ async function make_multiSampleTable(args) {
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
 	const has_ssm_depth = data.some(i => i.ssm_read_depth)
-	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
+	const col_count =
+		arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0) - arg.tid2value_orig.size
 
 	// show filter pill
 	if (filter_term != undefined) {
@@ -190,6 +191,7 @@ async function make_multiSampleTable(args) {
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
+		if (arg.tid2value_orig.has(term.name.toLowerCase())) continue
 		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
@@ -220,6 +222,7 @@ async function make_multiSampleTable(args) {
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
+			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid])
 		}
