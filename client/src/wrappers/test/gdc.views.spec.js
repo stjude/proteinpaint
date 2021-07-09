@@ -153,14 +153,14 @@ tape('lolliplot using props', async test => {
 	await sleep(3000)
 	const g120 = disc.__data__.mlst && disc.__data__.mlst[0]
 	const mname = g120.mname
-	const links = [...document.querySelectorAll(`.sja_menu_div .sj_multisample_holder a`)].filter(elem =>
+	const links = [...document.querySelectorAll(`.sja_menu_div .sj_sampletable_holder a`)].filter(elem =>
 		elem.innerHTML.startsWith('TCGA-')
 	)
 	const menudiv = links.length ? links[0].closest('.sja_menu_div') : null
 
 	test.equal(
 		menudiv &&
-			[...menudiv.querySelectorAll('.sj_multisample_holder a')].filter(elem =>
+			[...menudiv.querySelectorAll('.sj_sampletable_holder a')].filter(elem =>
 				elem.href.startsWith('https://portal.gdc.cancer.gov/cases/')
 			).length,
 		2,
