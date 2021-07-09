@@ -1,6 +1,4 @@
-import { select } from 'd3'
-import * as common from '../../shared/common'
-import { to_textfile, fillbar, tab2box } from '../client'
+import { fillbar, tab2box } from '../client'
 
 /*
 ********************** EXPORTED
@@ -28,18 +26,15 @@ arg{}
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	const holder = arg.div.append('div').attr('class', 'sj_multisample_holder')
-	const err_check_div = arg.div
-		.append('div')
-		.style('color', '#bbb')
-		.text('Loading...')
+	const holder = arg.div.append('div').attr('class', 'sj_sampletable_holder')
+	arg.temp_div = arg.div.append('div').text('Loading...')
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
-    //terms from sunburst ring
-    // Note: in ordered to keep term-values related to sunburst immuatable, these term names are 
-    // stored as 'tid2value_orig' and not removed from tid2Value when filter changed or removed
-    arg.tid2value_orig = new Set()
-	if(arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
+	//terms from sunburst ring
+	// Note: in ordered to keep term-values related to sunburst immuatable, these term names are
+	// stored as 'tid2value_orig' and not removed from tid2Value when filter changed or removed
+	arg.tid2value_orig = new Set()
+	if (arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 	try {
 		if (numofcases == 1) {
 			// one sample
@@ -51,9 +46,9 @@ export async function init_sampletable(arg) {
 			// more cases, show summary
 			await make_multiSampleSummaryList(arg, holder)
 		}
-		err_check_div.remove()
+		arg.temp_div.style('display', 'none')
 	} catch (e) {
-		err_check_div.text('Error: ' + (e.message || e))
+		arg.temp_div.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
 }
@@ -62,12 +57,11 @@ async function make_singleSampleTable(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	const sampledata = data[0] // must have just one sample
+	arg.temp_div.style('display', 'block').text('Loading...')
 
 	const grid_div = holder
 		.append('div')
-		.style('margin', '20px')
-		.style('font-size', '.9em')
-		.style('display', 'grid')
+		.style('display', 'inline-grid')
 		.style('grid-template-columns', 'auto auto')
 		.style('gap-row-gap', '1px')
 		.style('align-items', 'center')
@@ -129,6 +123,7 @@ async function make_singleSampleTable(arg, holder) {
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
 	}
+	arg.temp_div.style('display', 'none')
 }
 
 async function make_multiSampleTable(args) {
@@ -146,14 +141,17 @@ async function make_multiSampleTable(args) {
 		arg.from = current_from
 	}
 	holder.selectAll('*').style('opacity', 0.5)
-	holder.append('div').text('Loading...')
+	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
+	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
+	if (arg.tid2value_orig.size && occurrence < 10) make_sunburst_tidlist(arg, holder)
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
 	const has_ssm_depth = data.some(i => i.ssm_read_depth)
-	const col_count = arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0)
+	const col_count =
+		arg.tk.mds.variant2samples.termidlst.length + has_sampleid + (has_ssm_depth ? 2 : 0) - arg.tid2value_orig.size
 
 	// show filter pill
 	if (filter_term != undefined) {
@@ -189,32 +187,17 @@ async function make_multiSampleTable(args) {
 		.style('justify-items', 'left')
 
 	if (has_sampleid) {
-		grid_div
-			.append('div')
-			.style('font-size', '.8em')
-			.style('opacity', 0.5)
-			.text('SAMPLE')
+		get_table_header(grid_div, 'SAMPLE')
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text(term.name)
+		if (arg.tid2value_orig.has(term.name.toLowerCase())) continue
+		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
 		// to support other configs
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text('TUMOR DNA MAF')
-		grid_div
-			.append('div')
-			.style('opacity', 0.5)
-			.style('font-size', '.8em')
-			.text('NORMAL DEPTH')
+		get_table_header(grid_div, 'TUMOR DNA MAF')
+		get_table_header(grid_div, 'NORMAL DEPTH')
 	}
 
 	// one row per sample
@@ -239,6 +222,7 @@ async function make_multiSampleTable(args) {
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
+			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid])
 		}
@@ -262,37 +246,49 @@ async function make_multiSampleTable(args) {
 	// pages and option to change samples per size (only for pagination)
 	const page_footer = holder.append('div').style('display', 'none')
 	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
+	arg.temp_div.style('display', 'none')
 }
 
 async function make_multiSampleSummaryList(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
+	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
+
+	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
+	if (arg.tid2value_orig.size) {
+		make_sunburst_tidlist(arg, holder)
+	}
 
 	const summary_tabs = []
 	for (const category of data) {
+		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
+		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
 		summary_tabs.push({
 			label: `${category.name} <span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`,
 			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
 
+	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+	const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ heading: 'Summary', callback: div => tab2box(div, summary_tabs) },
+		{ heading: summary_label, callback: div => tab2box(div, summary_tabs) },
 		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div }) }
 	]
 
 	make_horizontal_tabs(holder, main_tabs)
+	arg.temp_div.style('display', 'none')
 }
 
-function get_list_cells(table) {
+function get_list_cells(holder) {
 	return [
-		table
+		holder
 			.append('div')
 			.style('width', '100%')
 			.style('padding', '5px 20px 5px 0px')
 			.style('color', '#bbb')
 			.style('border-bottom', 'solid 1px #ededed'),
-		table
+		holder
 			.append('div')
 			.style('width', '100%')
 			.style('border-bottom', 'solid 1px #ededed')
@@ -300,10 +296,19 @@ function get_list_cells(table) {
 	]
 }
 
+function get_table_header(table, title_text) {
+	return table
+		.append('div')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+		.style('padding', '2px 5px')
+		.text(title_text)
+}
+
 function get_table_cell(table, row_id) {
 	return table
 		.append('div')
-		.style('width', '95%')
+		.style('justify-self', 'stretch')
 		.style('height', '100%')
 		.style('padding', '2px 5px')
 		.style('background-color', row_id % 2 == 0 ? '#eee' : '#fff')
@@ -327,7 +332,7 @@ function make_horizontal_tabs(holder, tabs) {
 			.style('border-top', 'solid 1px #ddd')
 			.style('border-left', i == 0 ? 'solid 1px #ddd' : '')
 			.style('border-right', 'solid 1px #ddd')
-			.text(tab.heading)
+			.html(tab.heading)
 			.on('click', async () => {
 				const last_active_tab = tabs.find(t => t.active == true)
 				delete last_active_tab.active
@@ -365,23 +370,13 @@ function update_horizontal_tabs(tabs) {
 }
 
 function make_summary_panel(arg, div, category, main_tabs) {
-	// occurance info at top of summary
-	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '5px 20px')
-		.style('font-size', '.9em')
-		.style('color', '#999')
-		.html(`${occurrence}<span style='padding-left:10px;'>samples</span>`)
-
 	// summary for active tab
 	if (category.numbycategory) {
 		const grid_div = div
 			.append('div')
 			.style('margin', '20px')
 			.style('font-size', '.9em')
-			.style('display', 'grid')
+			.style('display', 'inline-grid')
 			.style('grid-template-columns', 'auto auto')
 			.style('grid-row-gap', '3px')
 			.style('align-items', 'center')
@@ -431,6 +426,26 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				filter_term: category.name.toLowerCase()
 			})
 		}
+	}
+}
+
+function make_sunburst_tidlist(arg, holder) {
+	const grid_div = holder
+		.append('div')
+		.style('display', 'inline-grid')
+		.style('grid-template-columns', '100px auto')
+		.style('gap-row-gap', '1px')
+		.style('align-items', 'center')
+		.style('justify-items', 'left')
+		.style('justrify-content', 'start')
+
+	for (const termid of arg.tid2value_orig) {
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text(termid)
+		cell2
+			.style('width', 'auto')
+			.style('justify-self', 'stretch')
+			.text(arg.tid2value[termid])
 	}
 }
 
