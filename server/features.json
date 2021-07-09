@@ -81,7 +81,8 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw"
             },
             "searchterms": ["coverage", "numeric"]
         },
@@ -110,7 +111,8 @@
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz"
             },
             "searchterms": ["bigwig stranded"]
         },
@@ -135,11 +137,12 @@
                         "color": "teal"
                     }]
                 },
-                "url": "?block=on&genome=hg19&bedjfile=JSON-BED,anno/gencode.v34.hg19.gz",
+                "url": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz",
                 "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz"
             },
             "searchterms": []
         },
@@ -168,7 +171,7 @@
             },
             "sandbox":{
                 "is_ui": false,
-                "datadownload": "proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz"
+                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz"
             },
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
         },
@@ -213,7 +216,8 @@
                 "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz"
             },
             "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
         },
@@ -242,7 +246,8 @@
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankkDemoData.tar.gz"
             },
             "searchterms": []
         },
@@ -436,7 +441,8 @@
                 "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/vcf/vcfDemoData.tar.gz"
             },
             "searchterms": ["variant call", "lollipop", "vcf"]
         },
@@ -565,7 +571,8 @@
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz"
             },
             "searchterms": ["Allele-specific gene expression"]
         },
@@ -594,7 +601,8 @@
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.tar.gz"
             },
             "searchterms": ["BLAT"]
         },
@@ -636,14 +644,15 @@
                     "tracks": [{
                         "type": "bampile",
                         "file": "proteinpaint_demo/hg19/bampile/tk.gz",
-                        "name": "Test Bampile"
+                        "name": "Demo Bampile"
                     }]
                 },
                 "url": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz",
                 "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
             },
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bampile/bampileDemoData.tar.gz"
             },
             "searchterms": []
         },

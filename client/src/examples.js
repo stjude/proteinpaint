@@ -272,7 +272,7 @@ async function openExample(track, holder) {
 	)
 
 	//Download data and show runpp() code at the top
-	// makeDataDownload(track, sandbox_div)
+	makeDataDownload(track, sandbox_div)
 	showCode(track, sandbox_div)
 
 	// creates div for instructions or other messaging about the track
@@ -360,17 +360,19 @@ async function makeDataDownload(track, div) {
 	if (track.sandbox.datadownload) {
 		const dataBtn = div.body
 		.append('button')
+		.attr('type', 'button')
 		.attr('class', 'sja_menuoption')
-		.attr('id','sjpp-data-btn')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
-		.style('font-size', '12.75px')
+		// .style('font-size', '12.75px')
 		.style('display', 'inline-block')
 		.text('Download Data')
 		.on('click', () => {
-			to_textfile(track.sandbox.datadownload, track.name)
+			event.stopPropagation();
+			window.open(`${track.sandbox.datadownload}`, '_blank')
 		})
+		// .html(`<a href="${track.sandbox.datadownload}" target="_blank" style="text-decoration:none;" download>Download Data</a>`)
 	}
 }
