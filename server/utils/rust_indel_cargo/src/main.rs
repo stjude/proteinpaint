@@ -261,7 +261,7 @@ fn main() {
             kmer_length_iter,
             left_most_pos,
             variant_pos,
-            variant_pos + ref_length,
+            variant_pos + optimized_ref_allele.len() as i64,
             weight_indel,
             weight_no_indel,
             ref_length,
@@ -280,7 +280,7 @@ fn main() {
             kmer_length_iter,
             left_most_pos,
             variant_pos,
-            variant_pos + alt_length,
+            variant_pos + optimized_alt_allele.len() as i64,
             weight_indel,
             weight_no_indel,
             alt_length,
@@ -344,7 +344,7 @@ fn main() {
         kmer_length_iter,
         left_most_pos,
         variant_pos,
-        variant_pos + ref_length,
+        variant_pos + optimized_ref_allele.len() as i64,
         weight_indel,
         weight_no_indel,
         ref_length,
@@ -369,7 +369,7 @@ fn main() {
         kmer_length_iter,
         left_most_pos,
         variant_pos,
-        variant_pos + alt_length,
+        variant_pos + optimized_alt_allele.len() as i64,
         weight_indel,
         weight_no_indel,
         alt_length,
@@ -704,6 +704,7 @@ fn preprocess_input(
     let mut no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
     let mut left_offset: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
     let mut right_offset: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
+    let mut iter: usize = 0;
     while actual_indel.len() as i64 <= surrounding_region_length && no_repeats == 1 {
         let mut left_nearby_seq = String::new();
         let mut right_nearby_seq = String::new();
@@ -720,8 +721,12 @@ fn preprocess_input(
         //println!("actual_indel:{}", actual_indel);
         if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
             no_repeats = 0;
-            optimized_ref_allele = optimized_ref_allele + &right_nearby_seq; // Trying to get the first non-repeating nucleotide in ref allele
-            optimized_alt_allele = optimized_alt_allele + &right_nearby_seq; // Trying to get the first non-repeating nucleotide in alt allele
+            if iter != 0 {
+                // If no repeats are found in the very first iteration of the while loop, the region is probably not a repeat region, so no need to add flanking region to optimized ref and alt alleles
+                optimized_ref_allele = optimized_ref_allele + &right_nearby_seq; // Trying to get the first non-repeating nucleotide in ref allele
+                optimized_alt_allele = optimized_alt_allele + &right_nearby_seq;
+                // Trying to get the first non-repeating nucleotide in alt allele
+            }
         } else if left_nearby_seq != actual_indel && right_nearby_seq == actual_indel {
             right_offset += &right_nearby_seq.len();
             optimized_ref_allele = optimized_ref_allele + &right_nearby_seq;
@@ -743,13 +748,14 @@ fn preprocess_input(
         }
         //println!("actual_indel:{}", actual_indel);
         //println!("no_repeats:{}", no_repeats);
+        iter += 1;
     }
 
     // Testing if the original indel starts with similar sequence as right flanking sequence or vice-versa (i.e original indel finishes with similar sequence as left-flanking sequence finishes with)
     let mut left_offset_part: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
     let mut right_offset_part: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
     let mut no_repeats_part: usize = 1; // Flag to check if non-repeating region has been reached
-    let mut iter: usize = 0;
+    iter = 0;
     while iter < original_indel_length as usize && no_repeats_part == 1 {
         if actual_indel_nucleotides[iter] != right_flanking_nucleotides[iter] {
             no_repeats_part = 0;
