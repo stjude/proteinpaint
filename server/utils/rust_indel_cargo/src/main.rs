@@ -204,6 +204,8 @@ fn main() {
     let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
     let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
     let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
+    let leftflankseq: String = args[11].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[12].parse::<String>().unwrap(); //Right flanking sequence
     let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
     let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
     let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
@@ -221,18 +223,25 @@ fn main() {
     if ref_length > alt_length {
         indel_length = ref_length;
     }
+    let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
-    let (
-        ref_repeat_flanking_region,
-        optimized_ref_allele,
-        alt_repeat_flanking_region,
-        optimized_alt_allele,
-    ) = preprocess_input(&ref_nucleotides, &alt_nucleotides, &lines[0], &lines[1]);
-
+    let (optimized_ref_allele, optimized_alt_allele, left_offset, right_offset) = preprocess_input(
+        &ref_nucleotides,
+        &alt_nucleotides,
+        &refallele,
+        &altallele,
+        indel_length,
+        leftflankseq,
+        rightflankseq,
+        surrounding_region_length,
+    );
+    println!("optimized_ref_allele:{}", optimized_ref_allele);
+    println!("optimized_alt_allele:{}", optimized_alt_allele);
+    println!("left_offset:{}", left_offset);
+    println!("right_offset:{}", right_offset);
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
-    let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
     let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
     let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
 
@@ -636,18 +645,103 @@ fn main() {
 fn preprocess_input(
     ref_nucleotides: &Vec<char>,
     alt_nucleotides: &Vec<char>,
-    ref_sequence: &str,
-    alt_sequence: &str,
-) -> (usize, String, usize, String) {
-    let mut ref_repeat_flanking_region: usize = 0;
-    let optimized_ref_allele = String::new();
-    let mut alt_repeat_flanking_region: usize = 0;
-    let optimized_alt_allele = String::new();
+    ref_allele: &String,
+    alt_allele: &String,
+    indel_length: i64,
+    leftflankseq: String,
+    rightflankseq: String,
+    surrounding_region_length: i64,
+) -> (String, String, usize, usize) {
+    let mut optimized_ref_allele = ref_allele.clone();
+    let mut optimized_alt_allele = alt_allele.clone();
+    let mut right_subseq = String::new(); // String for storing kmer sequence
+    let right_sequence_vector: Vec<_> = rightflankseq.chars().collect(); // A vector which contains all the nucleotides of the right flanking sequence
+    for k in 0..surrounding_region_length as usize {
+        right_subseq += &right_sequence_vector[k].to_string();
+    }
+    let mut left_subseq = String::new(); // String for storing kmer sequence. In case of left_subseq the nucleotides are stored in reverse order i.e nucleotides closest to the indel are first
+    let left_sequence_vector: Vec<_> = leftflankseq.chars().collect(); // A vector which contains all the nucleotides of the left flanking sequence
+    for k in 0..surrounding_region_length as usize {
+        let j = left_sequence_vector.len() - k - 1;
+        left_subseq += &left_sequence_vector[j].to_string();
+    }
+    let left_flanking_nucleotides: Vec<char> = left_subseq.chars().collect(); // Vector containing left flanking  nucleotides
+    let right_flanking_nucleotides: Vec<char> = right_subseq.chars().collect(); // Vector containing right flanking  nucleotides
+
+    // Check if the alt allele starts with ref nucleotide
+    let mut original_indel_length = indel_length;
+    let mut actual_indel = String::new();
+    if ref_nucleotides[0] == alt_nucleotides[0] {
+        original_indel_length = indel_length - 1; // If the insertion/deletion starts with same nucleotide, subtracting 1 from indel_length.
+        if ref_nucleotides.len() > alt_nucleotides.len() {
+            // In case of deletion
+            for j in 1..ref_nucleotides.len() {
+                actual_indel += &ref_nucleotides[j].to_string();
+            }
+        } else {
+            // In case of insertion
+            for j in 1..alt_nucleotides.len() {
+                actual_indel += &alt_nucleotides[j].to_string();
+            }
+        }
+    } else {
+        if ref_nucleotides.len() > alt_nucleotides.len() {
+            // In case of deletion
+            for j in 0..ref_nucleotides.len() {
+                actual_indel += &ref_nucleotides[j].to_string();
+            }
+        } else {
+            // In case of insertion
+            for j in 0..alt_nucleotides.len() {
+                actual_indel += &alt_nucleotides[j].to_string();
+            }
+        }
+    }
+
+    let mut no_repeats: usize = 1;
+    let mut left_offset: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
+    let mut right_offset: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
+    while actual_indel.len() as i64 <= surrounding_region_length && no_repeats == 1 {
+        let mut left_nearby_seq = String::new();
+        let mut right_nearby_seq = String::new();
+
+        for j in left_offset..left_offset + original_indel_length as usize {
+            left_nearby_seq += &left_flanking_nucleotides[j].to_string();
+        }
+        for j in right_offset..right_offset + original_indel_length as usize {
+            right_nearby_seq += &right_flanking_nucleotides[j].to_string();
+        }
+
+        if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
+            no_repeats = 0;
+        } else if left_nearby_seq != actual_indel && right_nearby_seq == actual_indel {
+            actual_indel = actual_indel + &right_nearby_seq;
+            right_offset += &right_nearby_seq.len();
+            optimized_ref_allele = optimized_ref_allele + &right_nearby_seq;
+            optimized_alt_allele = optimized_alt_allele + &right_nearby_seq;
+        } else if left_nearby_seq == actual_indel && right_nearby_seq != actual_indel {
+            left_offset += &left_nearby_seq.len();
+            actual_indel = left_nearby_seq.clone() + &actual_indel;
+            optimized_ref_allele = left_nearby_seq.clone() + &optimized_ref_allele;
+            optimized_alt_allele = left_nearby_seq + &optimized_alt_allele;
+        } else if left_nearby_seq == actual_indel && right_nearby_seq == actual_indel {
+            left_offset += &left_nearby_seq.len();
+            actual_indel = left_nearby_seq.clone() + &actual_indel + &right_nearby_seq;
+            optimized_ref_allele =
+                left_nearby_seq.clone() + &optimized_ref_allele + &right_nearby_seq;
+            optimized_alt_allele =
+                left_nearby_seq.clone() + &optimized_alt_allele + &right_nearby_seq;
+            right_offset += &right_nearby_seq.len();
+        } else {
+            // Should not happen at all
+            println!("Something wrong happened. Please check!");
+        }
+    }
     (
-        ref_repeat_flanking_region,
         optimized_ref_allele,
-        alt_repeat_flanking_region,
         optimized_alt_allele,
+        left_offset,
+        right_offset,
     )
 }
 
