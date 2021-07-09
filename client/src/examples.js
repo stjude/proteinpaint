@@ -2,6 +2,7 @@ import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common';
+import { deepFreeze } from './common/rx.core'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -31,6 +32,10 @@ export async function init_examples(par) {
 		apps_sandbox_div,
 		apps_off,
 		allow_mdsform: re.allow_mdsform
+	}
+	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
+	for (const example of re.examples){
+		if (example.buttons && example.buttons.example) deepFreeze(example.buttons.example)
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -290,7 +295,9 @@ async function openExample(track, holder) {
 		host: window.location.origin
 	}
 
-	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
+	const example = JSON.parse(JSON.stringify(track.buttons.example))
+
+	runproteinpaint(Object.assign(runpp_arg, example))
 }
 
 // Update message corresponding to the update ribbon. Expires on the same date as the ribbon
@@ -333,18 +340,7 @@ async function showCode(track, div) {
 				}
 			})
 
-		const json = JSON.stringify(track.buttons.example, null, 4)
-
-		//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
-		const runppCode =
-			`runproteinpaint({
-    host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
-		  json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-		`})`
-
-	const codefill = highlight(runppCode, {language:'javascript'}).value
-
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
 	const code = div.body
 		.append('pre')
 		.append('code')
@@ -352,7 +348,11 @@ async function showCode(track, div) {
 		.style('margin', '35px')
 		.style('font-size', '14px')
 		.style('border', '1px solid #aeafb0')
-		.html(codefill)
+		.html(highlight(`runproteinpaint({
+   host: "${window.location.origin}",
+   holder: document.getElementById('a'),` +
+			JSON.stringify(track.buttons.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+			`})`, {language:'javascript'}).value)
 	}
 }
 
