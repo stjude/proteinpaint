@@ -9,8 +9,12 @@
 //   0: No postprocessing, pure indel typing results
 //   1: Postprocessing will be carried out (In the future, there will be different levels of postprocessing)
 
-// Function cascade
-// Select apparopriate kmer length
+// Function cascade:
+//
+// Optimize ref/alt allele given by user
+// preproces_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
+//
+// Select appropriate kmer length
 //   while duplicate_kmers {
 //      build_kmers_refalt() (for both ref and alt)
 //      check for duplicate kmers
@@ -386,19 +390,19 @@ fn main() {
     if lines.len() - 2 <= single_thread_limit {
         // Start of sequential single-thread implementation for classifying reads
         let mut i: i64 = 0;
-        let mut within_indel;
         //let num_of_reads: f64 = (lines.len() - 2) as f64;
         for read in lines {
             if i >= 2 && read.len() > 0 {
                 // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-                within_indel = check_read_within_indel_region(
-                    // Checks if the read contains the indel region (or a part of it)
-                    start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
-                    cigar_sequences_list[i as usize - 2].to_string(),
-                    variant_pos,
-                    indel_length as usize,
-                    strictness,
-                );
+                let (within_indel, correct_start_position, correct_end_position) =
+                    check_read_within_indel_region(
+                        // Checks if the read contains the indel region (or a part of it)
+                        start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
+                        cigar_sequences_list[i as usize - 2].to_string(),
+                        variant_pos,
+                        indel_length as usize,
+                        strictness,
+                    );
                 if within_indel == 1 {
                     let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
                         check_polyclonal(
@@ -497,14 +501,15 @@ fn main() {
                     let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
                     if remainder == thread_num {
                         // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
-                        let within_indel = check_read_within_indel_region(
-                            // Checks if the read contains the indel region (or a part of it)
-                            start_positions_list[iter].parse::<i64>().unwrap() - 1,
-                            cigar_sequences_list[iter].to_string(),
-                            variant_pos,
-                            indel_length as usize,
-                            strictness,
-                        );
+                        let (within_indel, correct_start_position, correct_end_position) =
+                            check_read_within_indel_region(
+                                // Checks if the read contains the indel region (or a part of it)
+                                start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                                cigar_sequences_list[iter].to_string(),
+                                variant_pos,
+                                indel_length as usize,
+                                strictness,
+                            );
 
                         if within_indel == 1 {
                             let (
@@ -896,12 +901,13 @@ fn check_read_within_indel_region(
     indel_start: i64,   // Indel start position
     indel_length: usize, // Length of indel
     strictness: usize,  // Strictness of the indel pipeline
-) -> usize {
+) -> (usize, i64, i64) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
+    let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
+    let mut correct_end_position = correct_start_position; // Correct end position of read
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
-        let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
         let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
         let cigar_length: usize = alphabets.len();
         // Check to see if the first item in cigar is a soft clip
@@ -910,7 +916,6 @@ fn check_read_within_indel_region(
                 correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
             // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
         }
-        let mut correct_end_position = correct_start_position;
         for i in 0..cigar_length {
             if &alphabets[i].to_string().as_str() == &"D" {
                 // In case of deleted nucleotides, the end position will be pushed to the left
@@ -953,7 +958,7 @@ fn check_read_within_indel_region(
             within_indel = 1;
         }
     }
-    within_indel
+    (within_indel, correct_start_position, correct_end_position)
 }
 
 fn check_polyclonal(
