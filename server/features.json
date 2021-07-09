@@ -832,9 +832,8 @@
             "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
-            "name": "Scatterplot",
+            "name": "Sample Scatterplot",
             "app": "Apps",
-            "hidden": true,
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "buttons": {
@@ -844,14 +843,14 @@
                     "noheader": 1,
                     "genome": "hg38",
                     "mdssamplescatterplot": {
-                        "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json" 
+                        "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
                     }
                 },
                 "url": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json",
                 "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
             },
             "sandbox":{
-                "is_ui": true
+                "is_ui": false
             },
             "searchterms": ["tSNE", "lasso"]
         },

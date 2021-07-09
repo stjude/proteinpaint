@@ -1,9 +1,8 @@
 import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
-import 'highlight.js/styles/github.css'
-import hljs from 'highlight.js/lib/common';
-
+import { highlight } from 'highlight.js/lib/common';
+import { deepFreeze } from './common/rx.core'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -33,6 +32,10 @@ export async function init_examples(par) {
 		apps_sandbox_div,
 		apps_off,
 		allow_mdsform: re.allow_mdsform
+	}
+	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
+	for (const example of re.examples){
+		if (example.buttons && example.buttons.example) deepFreeze(example.buttons.example)
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -78,12 +81,12 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
-		.attr('class', 'track-cols')
+		.attr('class', 'sjpp-track-cols')
 		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
 	const list = div.append('ul')
 	list
-		.attr('class', 'track-list')
+		.attr('class', 'sjpp-track-list')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 		.style('gap', '10px')
@@ -164,15 +167,15 @@ function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		const li = holder.append('li')
-		li.attr('class', 'track')
+		li.attr('class', 'sjpp-track')
 			.html(
-				`${track.blurb ? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
-				<span class="track-image"><img src="${track.image}"></img></span>
-				<div class='track-links'>
+				`${track.blurb ? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
+				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
+				<div class='sjpp-track-links'>
 				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
 				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
-				)
+			)
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
@@ -194,12 +197,14 @@ function displayTracks(tracks, holder, page_args) {
 			const newtrack = new Date(track.new_expire)
 
 			if (update > today && !track.sandbox.update_message) {
-				console.log("No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required")
+				console.log(
+					'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
+				)
 			}
-			if (update > today && track.sandbox.update_message){
+			if (update > today && track.sandbox.update_message) {
 				makeRibbon(li, 'UPDATED', '#e67d15')
 			}
-			if (newtrack > today){
+			if (newtrack > today) {
 				makeRibbon(li, 'NEW', '#1ba176')
 			}
 		}
@@ -212,7 +217,7 @@ function displayTracks(tracks, holder, page_args) {
 				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
 				li.select('.track-btns')
 					.append('button')
-					.attr('class', 'landing-page-a')
+					.attr('class', 'sjpp-landing-page-a')
 					.style('padding', '7px')
 					.style('cursor', 'pointer')
 					.text(button.name)
@@ -239,22 +244,22 @@ function displayTracks(tracks, holder, page_args) {
 
 function makeRibbon(e, text, color) {
 	const ribbonDiv = e.append('div')
-	.attr('class', 'track-ribbon')
+	.attr('class', 'sjpp-track-ribbon')
 	.style('align-items','center')
 	.style('justify-content', 'center')
 
-	const ribbon = ribbonDiv.append('span')
-	.text(text)
-	.style('color', 'white')
-	.style('background-color', color)
-	.style('height','auto')
-	.style('width', '100%')
-	.style('top','15%')
-	.style('left', '-23%')
-	.style('font-size', '11.5px')
-	.style('text-transform', 'uppercase')
-	.style('text-align', 'center')
-
+	const ribbon = ribbonDiv
+		.append('span')
+		.text(text)
+		.style('color', 'white')
+		.style('background-color', color)
+		.style('height', 'auto')
+		.style('width', '100%')
+		.style('top', '15%')
+		.style('left', '-23%')
+		.style('font-size', '11.5px')
+		.style('text-transform', 'uppercase')
+		.style('text-align', 'center')
 }
 
 //TODO: styling for the container
@@ -262,7 +267,9 @@ function makeRibbon(e, text, color) {
 async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : ''))
+	sandbox_div.header.text(
+		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
+	)
 
 	//Download data and show runpp() code at the top
 	// makeDataDownload(track, sandbox_div)
@@ -288,63 +295,52 @@ async function openExample(track, holder) {
 		host: window.location.origin
 	}
 
-	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
-}
+	const example = JSON.parse(JSON.stringify(track.buttons.example))
 
+	runproteinpaint(Object.assign(runpp_arg, example))
+}
 
 // Update message corresponding to the update ribbon. Expires on the same date as the ribbon
 async function addUpdateMessage(track, div) {
-	if(track.sandbox.update_message != undefined && !track.update_expire) {
-		console.log("Must provide expiration date: track.update_expire")
+	if (track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log('Must provide expiration date: track.update_expire')
 	}
 	if (track.sandbox.update_message != undefined && track.update_expire) {
 		const today = new Date()
 		const update = new Date(track.update_expire)
 		if (update > today) {
 			const message = div.body
-			.append('div')
-			.style('margin', '20px')
-			.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+				.append('div')
+				.style('margin', '20px')
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
 		}
 	}
 }
 
-
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, div){
-if (track.sandbox.is_ui != true) {
+async function showCode(track, div) {
+	if (track.sandbox.is_ui != true) {
 		const codeBtn = div.body
-		.append('button')
-		.attr('class', 'sja_menuoption')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		.style('font-size', '12.75x')
-		.text('Show Code')
-		.style('display', 'inline-block')
-		.on('click', () => {
-			if (code.style('display') == 'none') {
-				code.style('display', 'block') //TODO fadein fn
-				select(event.target).text('Hide')
-			} else {
-				code.style('display', 'none') //TODO fadeout fn
-				select(event.target).text('Show Code')
-			}
-		})
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.style('margin', '20px')
+			.style('padding', '8px')
+			.style('border', 'none')
+			.style('border-radius', '3px')
+			.style('font-size', '12.75x')
+			.text('Show Code')
+			.style('display', 'inline-block')
+			.on('click', () => {
+				if (code.style('display') == 'none') {
+					code.style('display', 'block') //TODO fadein fn
+					select(event.target).text('Hide')
+				} else {
+					code.style('display', 'none') //TODO fadeout fn
+					select(event.target).text('Show Code')
+				}
+			})
 
-
-	const json = JSON.stringify(track.buttons.example, null, 4)
-
-	//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
-	const runppCode = `runproteinpaint({
-    host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
-		json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-		`})`
-
-	const codefill = hljs.highlight(runppCode, {language:'javascript'}).value
-
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
 	const code = div.body
 		.append('pre')
 		.append('code')
@@ -352,17 +348,20 @@ if (track.sandbox.is_ui != true) {
 		.style('margin', '35px')
 		.style('font-size', '14px')
 		.style('border', '1px solid #aeafb0')
-		.html(codefill)
-
+		.html(highlight(`runproteinpaint({
+   host: "${window.location.origin}",
+   holder: document.getElementById('a'),` +
+			JSON.stringify(track.buttons.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+			`})`, {language:'javascript'}).value)
 	}
 }
 
-async function makeDataDownload(track, div){
+async function makeDataDownload(track, div) {
 	if (track.sandbox.datadownload) {
 		const dataBtn = div.body
 		.append('button')
 		.attr('class', 'sja_menuoption')
-		.attr('id','data-btn')
+		.attr('id','sjpp-data-btn')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
