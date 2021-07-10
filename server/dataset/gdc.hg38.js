@@ -919,7 +919,8 @@ const terms = [
 		name: 'Birth year',
 		id: 'year_of_birth',
 		type: 'integer',
-		fields: ['demographic', 'year_of_birth']
+		fields: ['demographic', 'year_of_birth'],
+		unit: 'year'
 	},
 	{
 		name: 'Race',

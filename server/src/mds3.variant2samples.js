@@ -1,6 +1,7 @@
 const { stratinput } = require('../shared/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
+const { get_densityplot } = require('./mds3.densityPlot')
 
 /*
 from one or more variants, get list of samples harboring any of the variants
@@ -69,7 +70,7 @@ async function make_sunburst(samples, ds, q) {
 	return nodes
 }
 
-function make_summary(samples, ds) {
+async function make_summary(samples, ds) {
 	const entries = []
 	for (const termid of ds.variant2samples.termidlst) {
 		const term = ds.termdb.getTermById(termid)
@@ -87,6 +88,12 @@ function make_summary(samples, ds) {
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
+			// add numeric term summary here
+			const density_data = await get_densityplot(term, samples)
+			entries.push({
+				name: term.name,
+				density_data
+			})
 		} else {
 			throw 'unknown term type'
 		}

@@ -1,4 +1,5 @@
 import { fillbar, tab2box } from '../client'
+import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
 
 /*
 ********************** EXPORTED
@@ -264,7 +265,11 @@ async function make_multiSampleSummaryList(arg, holder) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
 		summary_tabs.push({
-			label: `${category.name} <span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`,
+			label: `${category.name} ${
+				category.numbycategory
+					? `<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`
+					: ``
+			}`,
 			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
@@ -426,7 +431,80 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				filter_term: category.name.toLowerCase()
 			})
 		}
+	} else if (category.density_data) {
+		make_densityplot(div, category.density_data)
 	}
+}
+
+function make_densityplot(holder, data) {
+	const width = 500,
+		height = 150,
+		xpad = 10,
+		ypad = 20,
+		xaxis_height = 20
+	const svg = holder.append('svg')
+	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
+
+	//density data, add first and last values to array
+	const density_data = data.density
+	density_data.unshift([data.minvalue, 0])
+	density_data.push([data.maxvalue, 0])
+
+	// x-axis
+	const xscale = scaleLinear()
+		.domain([data.minvalue, data.maxvalue])
+		.range([xpad, width - xpad])
+
+	const x_axis = axisBottom().scale(xscale)
+	x_axis.tickFormat(format(''))
+
+	// y-scale
+	const yscale = scaleLinear()
+		.domain([0, data.densitymax])
+		.range([height + ypad, ypad])
+
+	const y_axis = axisLeft()
+		.scale(yscale)
+		.ticks(data.densitymax < 10 ? data.densitymax : 10)
+		.tickFormat(format('d'))
+
+	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+
+	// SVG line generator
+	const line = d3line()
+		.x(function(d) {
+			return xscale(d[0])
+		})
+		.y(function(d) {
+			return yscale(d[1])
+		})
+		.curve(curveMonotoneX)
+
+	g.append('g')
+		.attr('transform', `translate(${xpad}, 0)`)
+		.call(y_axis)
+
+	// plot the data as a line
+	g.append('path')
+		.datum(density_data)
+		.attr('class', 'line')
+		.attr('d', line)
+		.style('fill', '#eee')
+		.style('stroke', '#000')
+
+	g.append('g')
+		.attr('transform', `translate(0, ${ypad + height})`)
+		.call(x_axis)
+
+	g.append('text')
+		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+		.attr('font-size', '13px')
+		.text(data.unit)
+
+	const brush_g = svg
+		.append('g')
+		.attr('class', 'brush_g')
+		.attr('transform', `translate(${xpad}, ${ypad})`)
 }
 
 function make_sunburst_tidlist(arg, holder) {
