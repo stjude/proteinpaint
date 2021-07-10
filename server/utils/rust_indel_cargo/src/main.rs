@@ -19,9 +19,13 @@
 //      build_kmers_refalt() (for both ref and alt)
 //      check for duplicate kmers
 //   }
+//
+// if number of reads > single_thread_limit (multithreading option is turned on)
+//
 // Analyze each read
 //   for each read {
 //      check_read_within_indel_region() (Checks if the read contains indel region)
+//      check_if_read_ambivalent() (Checks if a read starts/ends within repeat region (if present))
 //      check_polyclonal() (checking if read is polyclonal)
 //      build_kmers()
 //      jaccard_similarity_weights() (w.r.t ref and alt)
