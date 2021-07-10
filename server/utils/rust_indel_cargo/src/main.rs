@@ -404,6 +404,16 @@ fn main() {
                         strictness,
                     );
                 if within_indel == 1 {
+                    let read_ambivalent = check_if_read_ambivalent(
+                        correct_start_position,
+                        correct_end_position,
+                        left_offset,
+                        right_offset,
+                        variant_pos,
+                        refallele.len(),
+                        &ref_nucleotides,
+                        &alt_nucleotides,
+                    );
                     let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
                         check_polyclonal(
                             // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
@@ -441,7 +451,9 @@ fn main() {
                         value: f64::from(diff_score),
                         groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
                         polyclonal: i64::from(
-                            ref_polyclonal_read_status + alt_polyclonal_read_status,
+                            ref_polyclonal_read_status
+                                + alt_polyclonal_read_status
+                                + read_ambivalent,
                         ),
                         ref_insertion: i64::from(ref_insertion),
                     };
@@ -512,6 +524,17 @@ fn main() {
                             );
 
                         if within_indel == 1 {
+                            let read_ambivalent = check_if_read_ambivalent(
+                                correct_start_position,
+                                correct_end_position,
+                                left_offset,
+                                right_offset,
+                                variant_pos,
+                                refallele.len(),
+                                &ref_nucleotides,
+                                &alt_nucleotides,
+                            );
+
                             let (
                                 ref_polyclonal_read_status,
                                 alt_polyclonal_read_status,
@@ -550,7 +573,9 @@ fn main() {
                                 value: f64::from(diff_score),
                                 groupID: usize::from(iter),
                                 polyclonal: i64::from(
-                                    ref_polyclonal_read_status + alt_polyclonal_read_status,
+                                    ref_polyclonal_read_status
+                                        + alt_polyclonal_read_status
+                                        + read_ambivalent,
                                 ),
                                 ref_insertion: i64::from(ref_insertion),
                             };
@@ -647,6 +672,33 @@ fn main() {
     println!("output_cat:{:?}", output_cat); // Final read categories assigned
     println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
     println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+}
+
+fn check_if_read_ambivalent(
+    correct_start_position: i64,
+    correct_end_position: i64,
+    left_offset: usize,
+    right_offset: usize,
+    ref_start: i64,
+    ref_length: usize,
+    ref_nucleotides: &Vec<char>,
+    alt_nucleotides: &Vec<char>,
+) -> i64 {
+    let mut read_ambivalent: i64 = 0;
+    let mut ref_stop = ref_start + ref_length as i64;
+    if ref_nucleotides[0] == alt_nucleotides[0] {
+        // Generally the alt position contains the nucleotide preceding the indel. In that case one is subtracted from ref_stop
+        ref_stop -= 1;
+    }
+    let repeat_start = ref_start - left_offset as i64;
+    let repeat_stop = ref_stop + right_offset as i64;
+
+    if repeat_start <= correct_start_position && correct_start_position <= ref_start {
+        read_ambivalent = 2;
+    } else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
+        read_ambivalent = 2;
+    }
+    read_ambivalent
 }
 
 fn preprocess_input(
