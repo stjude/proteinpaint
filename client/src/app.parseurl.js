@@ -379,6 +379,17 @@ function may_get_officialmds(urlp) {
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
+	if (urlp.has('mds3')) {
+		const lst = urlp.get('mds3').split(',')
+		for (const n of lst) {
+			tklst.push({
+				type: client.tkt.mds3,
+				dslabel: n,
+				token: urlp.get('token')
+			})
+		}
+	}
+
 	if (urlp.has('arcfile')) {
 		const lst = urlp.get('arcfile').split(',')
 		for (let i = 0; i < lst.length; i += 2) {
