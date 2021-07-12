@@ -68,7 +68,6 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "position": "chr12:25334648-25426944",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "bigwig",
@@ -77,7 +76,7 @@
                         "height": 100
                     }]
                 },
-                "url": "?block=on&genome=hg19&bigwigfile=UCSC-phyloP-100way,hg19/hg19.100way.phastCons.bw",
+                "url": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.gz",
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
             },
             "sandbox":{
@@ -247,7 +246,7 @@
             },
             "sandbox":{
                 "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankkDemoData.tar.gz"
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz"
             },
             "searchterms": []
         },
