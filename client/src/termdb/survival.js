@@ -71,7 +71,7 @@ class TdbSurvival {
 			this.refs = data.refs
 		}
 		this.pj.refresh({ data: this.currData })
-		this.setTerm2Color(this.pj.tree.charts)
+		this.setTerm1Color(this.pj.tree.charts)
 		this.render()
 		this.legendRenderer(this.legendData)
 	}
@@ -79,11 +79,19 @@ class TdbSurvival {
 	getData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
-		const estKeys = ['survival', 'low', 'high']
+		const estKeys = ['survival'] //, 'low', 'high']
 		for (const d of data.case) {
-			const obj = {}
+			const obj = { censored: 0 }
 			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
+				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
+			})
+			rows.push(obj)
+			this.uniqueSeriesIds.add(obj.seriesId)
+		}
+		for (const d of data.censored) {
+			const obj = { censored: 1 }
+			data.keys.forEach((k, i) => {
+				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
 			})
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
@@ -91,28 +99,28 @@ class TdbSurvival {
 		return rows
 	}
 
-	setTerm2Color(charts) {
+	setTerm1Color(charts) {
 		if (!charts) return
-		this.term2toColor = {}
+		this.term1toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				this.term1toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId],
+						color: this.term1toColor[series.seriesId],
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
 			}
 		}
-		if (this.state.config.term2 && legendItems.length) {
+		if (legendItems.length) {
 			this.legendData = [
 				{
-					name: this.state.config.term2.term.name,
+					name: this.state.config.term.term.name,
 					items: legendItems
 				}
 			]
@@ -150,9 +158,8 @@ function setRenderers(self) {
 			.style('top', 0)
 			.style('left', 0)
 			.style('text-align', 'left')
-			.style('border', '1px solid #eee')
-			.style('box-shadow', '0px 0px 1px 0px #ccc')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
+		//.style('border', '1px solid #eee')
+		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
 		div
 			.append('div')
@@ -259,19 +266,6 @@ function setRenderers(self) {
 	function renderSeries(g, chart, series, i, s, duration) {
 		g.selectAll('path').remove()
 
-		g.append('path')
-			.attr(
-				'd',
-				area()
-					.curve(curveStepAfter)
-					.x(c => c.scaledX)
-					.y0(c => c.scaledY[1])
-					.y1(c => c.scaledY[2])(series.data)
-			)
-			.style('fill', self.term2toColor[series.seriesId].toString())
-			.style('opacity', '0.15')
-			.style('stroke', 'none')
-
 		renderSubseries(
 			s,
 			g,
@@ -283,12 +277,13 @@ function setRenderers(self) {
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[0],
 					seriesName: 'survival',
-					seriesLabel: series.seriesLabel
+					seriesLabel: series.seriesLabel,
+					censored: d.censored
 				}
 			})
 		)
 
-		renderSubseries(
+		/*renderSubseries(
 			s,
 			g.append('g'),
 			series.data.map(d => {
@@ -318,13 +313,15 @@ function setRenderers(self) {
 					seriesLabel: series.seriesLabel
 				}
 			})
-		)
+		)*/
 	}
 
 	function renderSubseries(s, g, data) {
 		g.selectAll('g').remove()
+		const terminalData = data.filter(d => !d.censored)
+		const censoredData = data.filter(d => d.censored)
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(data, b => b.x)
+		const circles = subg.selectAll('circle').data(terminalData, b => b.x)
 		circles.exit().remove()
 
 		circles
@@ -347,16 +344,44 @@ function setRenderers(self) {
 			.style('stroke', s.stroke)
 
 		const seriesName = data[0].seriesName
-		const color = self.term2toColor[data[0].seriesId]
+		const color = self.term1toColor[data[0].seriesId]
 
 		if (seriesName == 'survival') {
 			g.append('path')
-				.attr('d', self.lineFxn(data))
+				.attr('d', self.lineFxn(terminalData))
 				.style('fill', 'none')
 				.style('stroke', color.darker())
 				.style('opacity', 1)
 				.style('stroke-opacity', 1)
 		}
+
+		const subg1 = g.append('g').attr('class', 'sjpp-survival-censored')
+		const censored = subg1.selectAll('circle').data(censoredData, d => d.x)
+		censored.exit().remove()
+
+		censored
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
+			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', data.fill ? data.fill : colors[i])
+			.transition()
+			.duration(1000)
+			.style('opacity', 1)
+
+		censored
+			.enter()
+			.append('circle')
+			//.attr('class', 'pp-survival-circle-censored')
+			.attr('r', s.radius)
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
+			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
+			//.style('fill-opacity', s.fillOpacity)
+			.style('stroke', '#000') //data.fill ? data.fill : colors[i])
+			.transition()
+			.duration(1000)
+			.style('opacity', 1)
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -388,7 +413,7 @@ function setRenderers(self) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(xTitleLabel)
 
-		const yTitleLabel = 'Survival (%)'
+		const yTitleLabel = 'Probability of Survival'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -488,12 +513,13 @@ function getPj(self) {
 									//color: "$color",
 									x: '$time',
 									y: '$survival',
-									low: '$low',
-									high: '$high',
+									censored: '$censored',
+									//low: '$low',
+									//high: '$high',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
-								'$time'
+								'=timeCensored()'
 							]
 						},
 						'$seriesId'
@@ -507,7 +533,9 @@ function getPj(self) {
 			chartTitle(row) {
 				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
-					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
+					if (s.term_id == 'efs') return 'Event-free survival'
+					if (s.term_id == 'os') return `Overall survival`
+					return 'Survival'
 				}
 				const t0 = self.state.config.term0
 				if (!t0 || !t0.term.values) return row.chartId
@@ -518,22 +546,25 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t2 = self.state.config.term2
-				if (!t2) return
+				const t1 = self.state.config.term
+				if (!t1) return
 				const seriesId = context.self.seriesId
-				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
-				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
+				if (t1 && t1.q && t1.q.groupsetting && t1.q.groupsetting.inuse) return seriesId
+				if (t1 && t1.term.values && seriesId in t1.term.values) return t1.term.values[seriesId].label
 				return seriesId
+			},
+			timeCensored(row) {
+				return row.time + '-' + row.censored
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
 				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
 			yMin(row) {
-				return row.low
+				return row.survival
 			},
 			yMax(row) {
-				return row.high
+				return row.survival
 			},
 			xScale(row, context) {
 				const s = self.settings

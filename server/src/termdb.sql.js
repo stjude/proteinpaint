@@ -332,8 +332,8 @@ function get_term_cte(q, values, index, filter) {
 		if (q.getcuminc) {
 			termq.getcuminc = q.getcuminc
 			termq.grade = q.grade
-		} else if (q.getsurvival) {
-			termq.getsurvival = q.getsurvival
+		} else if (q.survival_term) {
+			termq.survival_term = q.survival_term
 		}
 	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
@@ -467,7 +467,7 @@ returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
-	if (index == 1 && q.getsurvival) {
+	if (index == 1 && q.survival_term) {
 		return makesql_survivaltte(tablename, term, q, values, filter)
 	}
 	if (term.type == 'categorical') {
@@ -641,12 +641,14 @@ WHERE a.ancestor_id = ?
 }
 
 function makesql_survivaltte(tablename, term, q, values, filter) {
+	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
-			SELECT sample, s.value as key, tte as value
+			SELECT s.sample, a.value as key, tte AS value, s.value AS censored
 			FROM survival s
-			WHERE term_id='efs'
-			${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			JOIN annotations a ON a.sample = s.sample AND a.term_id = ?
+			WHERE s.term_id='${q.survival_term}'
+			${filter ? 'AND s.sample IN ' + filter.CTEname : ''}
 		)`,
 		tablename
 	}

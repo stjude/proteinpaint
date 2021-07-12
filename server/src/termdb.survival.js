@@ -3,46 +3,75 @@ const get_rows = require('./termdb.sql').get_rows
 const spawn = require('child_process').spawn
 const serverconfig = require('./serverconfig')
 const do_plot = require('./km').do_plot
+const processSerieses = require('./survival.km').processSerieses
 
 export async function get_survival(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
-		const results = get_rows(q)
-		console.log(results.lst.slice(0, 5))
+		const results = get_rows(q, {
+			columnas: 't1.sample AS sample, t1.censored AS censored'
+		})
+		results.lst.sort((a, b) => (a.val1 < b.val1 ? -1 : 1))
+		//console.log(13, results.lst.length, results.lst.filter(d=>d.key1===0).length, results.lst.filter(d=>d.key1).length)
 		const byChartSeries = {}
 		for (const d of results.lst) {
+			//console.log(16, d)
 			// do not include data when years_to_event < 0
 			if (d.val1 < 0) continue
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string,
 			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}
-			if (!(d.key2 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key2] = []
-			byChartSeries[d.key0][d.key2].push({ name: d.key2, serialtime: Number(d.val1), censored: Number(d.key1) === 0 })
+			if (!(d.key1 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key1] = []
+			if (q.km_method == 1)
+				byChartSeries[d.key0][d.key1].push({
+					id: d.sample,
+					x: d.val1,
+					event: d.censored === 1 ? 'censored' : 'terminal'
+				})
+			else
+				byChartSeries[d.key0][d.key1].push({
+					name: d.sample,
+					serialtime: Number(d.val1),
+					censored: !d.censored // === 0 ? 1 : 0
+				})
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'survival', 'low', 'high'],
+			keys: ['chartId', 'seriesId', 'time', 'survival'],
 			case: [],
+			censored: [],
 			refs: { bins }
 		}
 		const promises = []
 		for (const chartId in byChartSeries) {
+			let serieses = {} // may be used if q.km _method == 1
 			for (const seriesId in byChartSeries[chartId]) {
 				const data = byChartSeries[chartId][seriesId]
-				if (!data.length) continue
-				console.log(
-					31,
-					data.filter(d => d.censored === 0).length,
-					data.filter(d => d.censored === 1).length,
-					data.slice(-3)
-				)
-				//if (!data.filter(d => d.censored === 0).length) continue; console.log(35)
-				const input = { name: data[0].key2, lst: data }
-				do_plot(input)
-				console.log(input.steps)
-				for (const d of input.steps) {
-					final_data.case.push([chartId, seriesId, d.x, 1 - d.y, 1 - d.y - 0.1, 1 - d.y + 0.1])
+				if (data.length < 5) continue
+				if (q.km_method == 1) {
+					serieses[seriesId] = data
+				} else {
+					const input = { name: data[0].key2, lst: data }
+					do_plot(input)
+					//console.log(52, input.steps.map(d=>[d.x, d.y, d.censored]))
+					for (const d of input.steps) {
+						if (!d.censored.length) final_data.case.push([chartId, seriesId, d.x, 1 - d.y])
+						else final_data.censored.push([chartId, seriesId, d.x, 1 - d.y])
+					}
+				}
+			}
+			if (q.km_method == 1) {
+				const results = processSerieses(serieses)
+				for (const series of Object.values(results.data)) {
+					if (series.data.length < 5) continue
+					for (const d of series.data) {
+						final_data.case.push([chartId, series.seriesId, d.x, d.y])
+					}
+					series.censored.sort((a, b) => (a.x < b.x ? -1 : 1))
+					for (const d of series.censored) {
+						final_data.censored.push([chartId, series.seriesId, d.x, d.y])
+					}
 				}
 			}
 		}

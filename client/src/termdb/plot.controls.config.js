@@ -29,7 +29,8 @@ class TdbConfigUiInit {
 				debug,
 				instanceNum: this.instanceNum,
 				isleaf: opts.isleaf,
-				iscondition: opts.iscondition
+				iscondition: opts.iscondition,
+				survivalplot: opts.survivalplot
 			}),
 			orientation: setOrientationOpts({
 				holder: this.dom.orientationTr,
@@ -91,7 +92,8 @@ class TdbConfigUiInit {
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			config: appState.tree.plots[this.id],
+			survivalplot: appState.termdbConfig.survivalplot
 		}
 	}
 
@@ -295,6 +297,10 @@ function setViewOpts(opts) {
 		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
 	}
 
+	if (opts.survivalplot) {
+		options.push({ label: 'Survival', value: 'survival' })
+	}
+
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
 		holder: self.dom.inputTd,
@@ -315,7 +321,7 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', opts.iscondition || plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', opts.survivalplot || opts.iscondition || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')
@@ -324,13 +330,15 @@ function setViewOpts(opts) {
 				? 'scatter'
 				: plot.settings.currViews.includes('cuminc')
 				? 'cuminc'
+				: plot.settings.currViews.includes('survival')
+				? 'survival'
 				: 'barchart'
 
 			const numericTypes = ['integer', 'float']
 
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
-				d.value == 'barchart' || d.value == 'cuminc'
+				d.value == 'barchart' || d.value == 'cuminc' || (d.value == 'survival' && opts.survivalplot)
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'

@@ -45,13 +45,15 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
+		const termdbConfig = this.app.getState().termdbConfig
 		const controls = controlsInit(
 			this.app,
 			{
 				id: this.id,
 				holder: this.dom.controls,
 				isleaf: opts.term.isleaf,
-				iscondition: opts.term.type == 'condition'
+				iscondition: opts.term.type == 'condition',
+				survivalplot: termdbConfig.survivalplot
 			},
 			this.app.opts.plotControls
 		)
@@ -82,7 +84,6 @@ class TdbPlot {
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		const termdbConfig = this.app.getState().termdbConfig
 		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
 			this.components.cuminc = cumincInit(
 				this.app,
@@ -149,7 +150,8 @@ class TdbPlot {
 		}
 
 		if (plot.settings.currViews.includes('survival')) {
-			params.push('getsurvival=efs')
+			params.push(`survival_term=${plot.settings.survival.term_id}`)
+			params.push(`km_method=${plot.settings.survival.method}`)
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -307,7 +309,9 @@ export function plotConfig(opts) {
 				hidden: []
 			},
 			survival: {
-				term: 'efs',
+				enabled: '',
+				method: 1, // for testing, default: 1 = survival.km.processSerieses, 0 = km.do_plot(),
+				term_id: 'efs',
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

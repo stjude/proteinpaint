@@ -27,7 +27,7 @@ runproteinpaint({
 				header_mode: 'with_tabs',
 				activeTab: 1,
 			},
-			activeCohort:1,
+			activeCohort:2,
 			tree: {
 				expandedTermIds: [
 					'root',
@@ -44,7 +44,8 @@ runproteinpaint({
 						settings: {
 							currViews: ['survival'],
 							survival: {
-								term_id: 'efs'
+								term_id: 'efs',
+								method: window.location.search.includes('method=0') ? 0 : 1
 							}
 						}
 					}
@@ -62,7 +63,7 @@ runproteinpaint({
 							tvs: {
 								term: { id: 'subcohort', type: 'categorical', name: 'Cohort' },
 								values: [
-									//{ key: 'SJLIFE', label: 'SJLIFE' }
+									{ key: 'SJLIFE', label: 'SJLIFE' },
 									{key:'CCSS',label:'CCSS'},
 								]
 							}
