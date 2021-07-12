@@ -13,30 +13,59 @@ tr>:first-child {
 </style>
 
 
-<table>
-<tr> <td>BAM</td> <td id=bam></td> </tr>
-<tr> <td>mds</td> <td id=mds></td> </tr>
-</table>
+<!-- URLs will be added to this table -->
+<table id='table'></table>
 
 
 
 <script>
-url('bam', [
-	[ 'WES 3bp del', 'genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
-	[ 'kmer','genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
-	[ 'RNA 8bp insert','genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
-	['kmer','genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+makeURL([
+{
+	name: 'BAM',
+	links: [
+		[ 'WES 3bp del', 'genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
+		[ 'kmer','genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+		[ 'RNA 8bp insert','genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
+		['kmer','genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+	]
+},
+{name:'mds3',
+	links:[
+		['AKT1','genome=hg38&gene=ENST00000407796&mds3=GDC'],
+		['TP53','genome=hg38&gene=ENST00000269305&mds3=GDC'],
+		['KRAS','genome=hg38&gene=ENST00000256078&mds3=GDC'],
+	]
+}
 ])
 
-function url(id,lst) {
-	const holder = document.getElementById(id)
-	for(const i of lst) {
-		const a = document.createElement('a')
-		holder.appendChild(a)
-		a.innerHTML = i[0]
-		a.setAttribute('href',window.location.origin+'?'+i[1])
-		a.setAttribute('target','_blank')
-		a.style.paddingRight = '8px'
+function makeURL(rows) {
+	const table = document.getElementById('table')
+	for(const row of rows) {
+		const tr = document.createElement('tr')
+		table.appendChild(tr)
+		const td = document.createElement('td')
+		tr.appendChild(td)
+		td.innerHTML = row.name || '.name missing'
+		const td_links = document.createElement('td')
+		tr.appendChild(td_links)
+
+		if(!Array.isArray(row.links)) {
+			td_links.innerHTML = '.links[] missing'
+			continue
+		}
+		if(row.links.length==0) {
+			td_links.innerHTML = '.links[] empty array'
+			continue
+		}
+
+		for(const i of row.links) {
+			const a = document.createElement('a')
+			td_links.appendChild(a)
+			a.innerHTML = i[0]
+			a.setAttribute('href',window.location.origin+'?'+i[1])
+			a.setAttribute('target','_blank')
+			a.style.paddingRight = '8px'
+		}
 	}
 }
 </script>
