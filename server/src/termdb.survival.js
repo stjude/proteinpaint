@@ -13,10 +13,8 @@ export async function get_survival(q, ds) {
 			columnas: 't1.sample AS sample, t2.censored AS censored'
 		})
 		results.lst.sort((a, b) => (a.val1 < b.val1 ? -1 : 1))
-		console.log(13, results.lst.length)
 		const byChartSeries = {}
 		for (const d of results.lst) {
-			//console.log(16, d)
 			// do not include data when years_to_event < 0
 			if (d.val1 < 0) continue
 			// if no applicable term0, the d.key0 is just a placeholder empty string,
@@ -43,7 +41,6 @@ export async function get_survival(q, ds) {
 			censored: [],
 			refs: { bins }
 		}
-		console.log(45)
 		const promises = []
 		for (const chartId in byChartSeries) {
 			let serieses = {} // may be used if q.km _method == 1
@@ -55,7 +52,6 @@ export async function get_survival(q, ds) {
 				} else {
 					const input = { name: data[0].key1, lst: data }
 					do_plot(input)
-					//console.log(52, input.steps.map(d=>[d.x, d.y, d.censored]))
 					for (const d of input.steps) {
 						if (!d.censored.length) final_data.case.push([chartId, seriesId, d.x, 1 - d.y])
 						else final_data.censored.push([chartId, seriesId, d.x, 1 - d.y])
