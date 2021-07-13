@@ -435,6 +435,7 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 		}
 	} else if (category.density_data) {
 		const callback = range => {
+			console.log(range)
 			if (!range.range_start && !range.range_end) return
 			else {
 				if (arg.tid2value == undefined) arg.tid2value = {}
@@ -527,10 +528,9 @@ async function make_densityplot(holder, data, callabck) {
 		.text(data.unit)
 
 	// add brush to select range from the density plot
-	const y_axis_width = y_scale.node().getBBox().width
-	svg.call(
+	g.call(
 		brushX()
-			.extent([[xpad, ypad], [width - xpad + y_axis_width, height + ypad]])
+			.extent([[xpad, ypad], [width - xpad, height + ypad]])
 			.on('end', async () => {
 				const selection = d3event.selection
 				const range_start = xscale.invert(selection[0])
