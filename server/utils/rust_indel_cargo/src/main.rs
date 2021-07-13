@@ -52,6 +52,7 @@ pub struct read_diff_scores {
     // struct for storing read details, used throughout the code
     groupID: usize,     // Original read ID
     value: f64,         // Diff score value
+    abs_value: f64,     // Absolute diff score value
     polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
 }
@@ -83,6 +84,7 @@ struct read_category {
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     // Function to convert struct read_diff_scores from borrowed to owned
     let val = item.value.to_owned();
+    let abs_val = item.abs_value.to_owned();
     #[allow(non_snake_case)]
     let gID = item.groupID.to_owned();
     let poly = item.polyclonal.to_owned();
@@ -90,6 +92,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
 
     let read_val = read_diff_scores {
         value: f64::from(val),
+        abs_value: f64::from(abs_val),
         groupID: usize::from(gID),
         polyclonal: i64::from(poly),
         ref_insertion: i64::from(ref_ins),
@@ -453,6 +456,7 @@ fn main() {
 
                     let item = read_diff_scores {
                         value: f64::from(diff_score),
+                        abs_value: f64::from(diff_score.abs()), // Absolute value of diff_score
                         groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
                         polyclonal: i64::from(
                             ref_polyclonal_read_status
@@ -575,6 +579,7 @@ fn main() {
                             let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                             let item = read_diff_scores {
                                 value: f64::from(diff_score),
+                                abs_value: f64::from(diff_score.abs()),
                                 groupID: usize::from(iter),
                                 polyclonal: i64::from(
                                     ref_polyclonal_read_status
@@ -1456,14 +1461,20 @@ fn jaccard_similarity_weights(
 
 fn determine_maxima_alt(
     kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
-    threshold_slope: &f64, // Threashold slope at which the cutoff will be marked between ref/alt and none
+    threshold_slope: &f64, // Threshold slope at which the cutoff will be marked between ref/alt and none
 ) -> Vec<read_category> {
-    // Sorting kmer_diff_scores
-    kmer_diff_scores.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal));
+    //Sorting kmer_diff_scores
+    kmer_diff_scores.sort_by(|a, b| {
+        a.abs_value
+            .partial_cmp(&b.abs_value)
+            .unwrap_or(Ordering::Equal)
+    });
 
     let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new(); // Converting from borrowed to owned (idea specific to Rust, read official docs for more info)
     for item in kmer_diff_scores {
         let item2: read_diff_scores = read_diff_scores_owned(item);
+        //println!("item2.value:{}", &item2.value);
+        //println!("item2.abs_value:{}", &item2.abs_value);
         kmer_diff_scores_sorted.push(item2);
     }
 
@@ -1476,8 +1487,9 @@ fn determine_maxima_alt(
     let threshold_slope_clone: f64 = threshold_slope.to_owned();
     if kmer_diff_scores_length > 1 {
         for i in (1..kmer_diff_scores_length).rev() {
-            slope =
-                (&kmer_diff_scores_sorted[i - 1].value - &kmer_diff_scores_sorted[i].value).abs();
+            slope = (&kmer_diff_scores_sorted[i - 1].abs_value
+                - &kmer_diff_scores_sorted[i].abs_value)
+                .abs();
             if slope > threshold_slope_clone {
                 // If threshold_slope is reached that is used as the threshold point of the curve
                 start_point = i as usize;
@@ -1519,6 +1531,7 @@ fn determine_maxima_alt(
             // Adding all reads before threshold in kmer_diff_scores_input
             let item = read_diff_scores {
                 value: f64::from(kmer_diff_scores_sorted[i].value),
+                abs_value: f64::from(kmer_diff_scores_sorted[i].abs_value),
                 groupID: usize::from(i),
                 polyclonal: i64::from(kmer_diff_scores_sorted[i].polyclonal),
                 ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
@@ -1528,6 +1541,7 @@ fn determine_maxima_alt(
 
         let min_value = read_diff_scores {
             value: f64::from(kmer_diff_scores_sorted[0].value),
+            abs_value: f64::from(kmer_diff_scores_sorted[0].abs_value),
             groupID: usize::from(0 as usize),
             polyclonal: i64::from(kmer_diff_scores_sorted[0].polyclonal),
             ref_insertion: i64::from(kmer_diff_scores_sorted[0].ref_insertion),
@@ -1535,14 +1549,16 @@ fn determine_maxima_alt(
 
         let max_value = read_diff_scores {
             value: f64::from(kmer_diff_scores_sorted[start_point].value),
+            abs_value: f64::from(kmer_diff_scores_sorted[start_point].abs_value),
             groupID: usize::from(start_point),
             polyclonal: i64::from(kmer_diff_scores_sorted[start_point].polyclonal),
             ref_insertion: i64::from(kmer_diff_scores_sorted[start_point].ref_insertion),
         };
 
-        let slope_of_line: f64 = (max_value.value - min_value.value)
+        let slope_of_line: f64 = (max_value.abs_value - min_value.abs_value)
             / (max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)
-        let intercept_of_line: f64 = min_value.value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x
+        let intercept_of_line: f64 =
+            min_value.abs_value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x
         let mut distances_from_line;
         let mut array_maximum: f64 = 0.0;
         let mut index_array_maximum: usize = 0;
@@ -1550,7 +1566,7 @@ fn determine_maxima_alt(
         // Trying to determine the point that is furthest from the line, will use that as the final cutoff
         for i in 0..kmer_diff_scores_input.len() {
             distances_from_line = (slope_of_line * kmer_diff_scores_input[i].groupID as f64
-                - kmer_diff_scores_input[i].value
+                - kmer_diff_scores_input[i].abs_value
                 + intercept_of_line)
                 .abs()
                 / (1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
@@ -1559,14 +1575,14 @@ fn determine_maxima_alt(
                 index_array_maximum = i;
             }
         }
-        let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].value; // getting diff_score of the read used as the threshold
+        let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].abs_value; // getting diff_score of the read used as the threshold
         println!(
             "{} {}",
             "score_cutoff (from Rust):",
             score_cutoff.to_string()
         );
         for i in 0..kmer_diff_scores_length {
-            if score_cutoff >= kmer_diff_scores_sorted[i].value {
+            if score_cutoff >= kmer_diff_scores_sorted[i].abs_value {
                 // Classifying allreads lower than this diff_score cutoff as 'none'
                 let read_cat = read_category {
                     category: String::from("none"),
