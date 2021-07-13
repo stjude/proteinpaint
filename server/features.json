@@ -78,7 +78,7 @@
                 },
                 "urls": [
                     {
-                        "hyperlink": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.gz"
+                        "hyperlink": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw"
                     }
                 ],
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
@@ -388,7 +388,7 @@
             },
             "sandbox":{
                 "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionCohortDemoData.tar.gz"
+                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz"
             },
             "searchterms": []
         },
