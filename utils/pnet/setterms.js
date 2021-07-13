@@ -1,17 +1,38 @@
 const ds = require('../../server/dataset/pnet.hg19.js')
 const bettersqlite = require('better-sqlite3')
 
-console.log(ds)
-
 const cn = new bettersqlite('db', {
 	readonly: false,
 	fileMustExist: true
 })
 
+const annoSamples = cn.prepare(`SELECT distinct(sample) FROM annotations`).all()
+for (const sample of annoSamples) {
+	const sname = sample.sample
+		.split(';')[0]
+		.trim()
+		.split('_')[0]
+		.trim()
+	if (sname != sample.sample) {
+		cn.prepare(`UPDATE annotations SET sample=? WHERE sample=?`).run([sname, sname])
+	}
+}
+
+const survSamples = cn.prepare(`SELECT distinct(sample) FROM survival`).all()
+for (const sample of survSamples) {
+	const sname = sample.sample
+		.split(';')[0]
+		.trim()
+		.split('_')[0]
+		.trim()
+	if (sname != sample.sample) {
+		cn.prepare(`UPDATE survival SET sample=? WHERE sample=?`).run([sname, sname])
+	}
+}
+
 const annoTerms = cn.prepare(`SELECT distinct(term_id) as id FROM annotations`).all()
-console.log(annoTerms)
+
 for (const term of annoTerms) {
-	//console.log(15, term)
 	const values = cn.prepare(`SELECT distinct(value) FROM annotations WHERE term_id=?`).all([term.id])
 	if (values.filter(v => isNumeric(v.value)).length == values.length) {
 		let maxDecimals = 0
@@ -22,7 +43,7 @@ for (const term of annoTerms) {
 				maxDecimals = numDecimals.length
 			}
 		})
-		console.log(values[0].value, values[values.length - 1].value)
+
 		const type = values.filter(v => Number.isInteger(v.value)).length == values.length ? 'integer' : 'float'
 		values.sort(numericSorter)
 		const bin_size = (values[values.length - 1].value - values[0].value) / 6
@@ -42,7 +63,6 @@ for (const term of annoTerms) {
 			bins,
 			isleaf: true
 		})
-		if (term.id == 'Age') console.log(jsondata)
 
 		cn.prepare(`UPDATE terms SET jsondata=? WHERE id=?`).run([jsondata, term.id])
 	} else {
@@ -67,7 +87,6 @@ for (const term of annoTerms) {
 const survRoot = 'Survival outcome'
 const survTerms = cn.prepare(`SELECT distinct(term_id) as id FROM survival`).all()
 for (const term of survTerms) {
-	console.log(15, term.id)
 	const jsondata = JSON.stringify({
 		type: 'survival',
 		name: term.id,

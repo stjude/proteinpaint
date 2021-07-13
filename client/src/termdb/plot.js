@@ -148,9 +148,8 @@ class TdbPlot {
 			params.push('getcuminc=1')
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		}
-
 		if (plot.settings.currViews.includes('survival')) {
-			params.push(`survival_term=${plot.settings.survival.term_id}`)
+			params.push('getsurvival=1')
 			params.push(`km_method=${plot.settings.survival.method}`)
 		}
 
@@ -158,7 +157,14 @@ class TdbPlot {
 		if (isscatter) params.push('scatter=1')
 		;['term', 'term2', 'term0'].forEach(_key => {
 			// "term" on client is "term1" at backend
-			const term = plot[_key]
+			const term =
+				_key != 'term2' || !plot.settings.currViews.includes('survival')
+					? plot[_key]
+					: {
+							id: plot.settings.survival.term_id,
+							term: this.state.survivalplot.terms.find(t => t.id == plot.settings.survival.term_id),
+							q: {}
+					  }
 			if (!term) return
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
@@ -221,7 +227,7 @@ function q_to_param(q) {
 	return encodeURIComponent(JSON.stringify(q2))
 }
 
-export function plotConfig(opts) {
+export function plotConfig(opts, appState = {}) {
 	if (!opts.term) throw 'plotConfig: opts.term{} missing'
 	if (!opts.term.term) throw 'plotConfig: opts.term.term{} missing'
 	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
@@ -240,6 +246,7 @@ export function plotConfig(opts) {
 		if (!opts.term0.q) opts.term0.q = {}
 		termsetting_fill_q(opts.term0.q, opts.term0.term)
 	}
+	const survivalplot = appState.termdbConfig && appState.termdbConfig.survivalplot
 
 	const config = {
 		id: opts.term.term.id,
@@ -309,9 +316,8 @@ export function plotConfig(opts) {
 				hidden: []
 			},
 			survival: {
-				enabled: '',
-				method: 1, // for testing, default: 1 = survival.km.processSerieses, 0 = km.do_plot(),
-				term_id: 'efs',
+				method: 1, // for testing, 1 = survival.km.processSerieses, 0 = km.do_plot(),
+				term_id: survivalplot && survivalplot.term_ids[0],
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

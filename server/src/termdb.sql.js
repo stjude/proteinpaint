@@ -332,8 +332,6 @@ function get_term_cte(q, values, index, filter) {
 		if (q.getcuminc) {
 			termq.getcuminc = q.getcuminc
 			termq.grade = q.grade
-		} else if (q.survival_term) {
-			termq.survival_term = q.survival_term
 		}
 	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
@@ -467,7 +465,7 @@ returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
-	if (index == 1 && q.survival_term) {
+	if (term.type == 'survival') {
 		return makesql_survivaltte(tablename, term, q, values, filter)
 	}
 	if (term.type == 'categorical') {
@@ -644,10 +642,9 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
-			SELECT s.sample, a.value as key, tte AS value, s.value AS censored
+			SELECT s.sample, s.value as key, tte AS value, s.value AS censored
 			FROM survival s
-			JOIN annotations a ON a.sample = s.sample AND a.term_id = ?
-			WHERE s.term_id='${q.survival_term}'
+			WHERE s.term_id=?
 			${filter ? 'AND s.sample IN ' + filter.CTEname : ''}
 		)`,
 		tablename
@@ -1239,6 +1236,12 @@ thus less things to worry about...
 			}
 			return s_cohort[questionmarks]
 		}
+	}
+
+	if (ds.cohort.termdb.survivalplot) {
+		const term_ids = ds.cohort.termdb.survivalplot.term_ids
+		const qmarks = term_ids.map(id => '?').join(',')
+		ds.cohort.termdb.survivalplot.terms = cn.prepare(`SELECT * FROM terms WHERE id IN (${qmarks})`).all(term_ids)
 	}
 }
 

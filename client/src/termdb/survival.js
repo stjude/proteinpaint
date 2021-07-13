@@ -56,7 +56,8 @@ class TdbSurvival {
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
 				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
 				settings: config.settings.survival
-			}
+			},
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
@@ -71,7 +72,7 @@ class TdbSurvival {
 			this.refs = data.refs
 		}
 		this.pj.refresh({ data: this.currData })
-		this.setTerm1Color(this.pj.tree.charts)
+		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
 		this.legendRenderer(this.legendData)
 	}
@@ -99,19 +100,19 @@ class TdbSurvival {
 		return rows
 	}
 
-	setTerm1Color(charts) {
+	setTerm2Color(charts) {
 		if (!charts) return
-		this.term1toColor = {}
+		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				this.term1toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term1toColor[series.seriesId],
+						color: this.term2toColor[series.seriesId],
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
@@ -344,7 +345,7 @@ function setRenderers(self) {
 			.style('stroke', s.stroke)
 
 		const seriesName = data[0].seriesName
-		const color = self.term1toColor[data[0].seriesId]
+		const color = self.term2toColor[data[0].seriesId]
 
 		if (seriesName == 'survival') {
 			g.append('path')
@@ -533,9 +534,8 @@ function getPj(self) {
 			chartTitle(row) {
 				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
-					if (s.term_id == 'efs') return 'Event-free survival'
-					if (s.term_id == 'os') return `Overall survival`
-					return 'Survival'
+					const term = self.state.termdbConfig.survivalplot.terms.find(t => t.id == s.term_id)
+					return term ? term.name : 'Survival'
 				}
 				const t0 = self.state.config.term0
 				if (!t0 || !t0.term.values) return row.chartId

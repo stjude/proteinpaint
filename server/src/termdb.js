@@ -54,7 +54,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
-			if (q.survival_term) return await trigger_getsurvival(q, res, ds)
+			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {

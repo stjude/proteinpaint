@@ -26,7 +26,28 @@ runproteinpaint({
 			tree: {
 				expandedTermIds: [
 					'root',
+					'Age',
+					'Gender'
 				],
+				visiblePlotIds: ['Age', 'Gender'],
+				plots: {
+					Age: {
+						term: {
+							id: 'Age'
+						},
+						settings: {
+							currViews: ['survival']
+						}
+					},
+					Gender: {
+						term: {
+							id: 'Gender'
+						},
+						settings: {
+							//currViews: ['survival']
+						}
+					}
+				}
 			},
 		},
 	}
