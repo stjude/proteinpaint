@@ -31,6 +31,7 @@ fs.copyFileSync(srctbi, desttbi)
 
 copy.cohort.termdb.survivalplot = {
 	term_ids: ['efs', 'os'],
+	xUnit: 'years',
 	codes: [{ value: 0, name: '' }, { value: 1, name: 'censored' }]
 }
 

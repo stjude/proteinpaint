@@ -399,7 +399,7 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = 'Time to Event (years)'
+		const xTitleLabel = `Time to Event (${self.settings.xUnit})`
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -449,7 +449,7 @@ function setInteractivity(self) {
 				`<tr><td colspan=2 style='text-align: center'>${
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${self.settings.xUnit}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
 			]
 			// may also indicate the confidence interval (low%-high%) in a new row

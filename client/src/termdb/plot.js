@@ -315,28 +315,33 @@ export function plotConfig(opts, appState = {}) {
 				axisTitleFontSize: 16,
 				hidden: []
 			},
-			survival: {
-				method: 1, // for testing, 1 = survival.km.processSerieses, 0 = km.do_plot(),
-				term_id: survivalplot && survivalplot.term_ids[0],
-				radius: 5,
-				fill: '#fff',
-				stroke: '#000',
-				fillOpacity: 0,
-				chartMargin: 10,
-				svgw: 400,
-				svgh: 300,
-				svgPadding: {
-					top: 20,
-					left: 55,
-					right: 20,
-					bottom: 50
-				},
-				axisTitleFontSize: 16,
-				hidden: []
-			},
+
 			termInfo: {
 				isVisible: false
 			}
+		}
+	}
+
+	if (survivalplot) {
+		config.settings.survival = {
+			method: 1, // for testing, 1 = survival.km.processSerieses, 0 = km.do_plot(),
+			term_id: survivalplot.term_ids[0],
+			xUnit: survivalplot.xUnit,
+			radius: 5,
+			fill: '#fff',
+			stroke: '#000',
+			fillOpacity: 0,
+			chartMargin: 10,
+			svgw: 400,
+			svgh: 300,
+			svgPadding: {
+				top: 20,
+				left: 55,
+				right: 20,
+				bottom: 50
+			},
+			axisTitleFontSize: 16,
+			hidden: []
 		}
 	}
 

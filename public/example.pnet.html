@@ -23,6 +23,10 @@ runproteinpaint({
 		state: {
 			dslabel: 'PNET',
 			genome: 'hg19',
+			nav: {
+				header_mode: 'with_tabs',
+				activeTab: 1,
+			},
 			tree: {
 				expandedTermIds: [
 					'root',
@@ -36,7 +40,10 @@ runproteinpaint({
 							id: 'Age'
 						},
 						settings: {
-							currViews: ['survival']
+							currViews: ['survival'],
+							survival: {
+								method: window.location.search.includes('method=0') ? 0 : 1
+							}
 						}
 					},
 					Gender: {
