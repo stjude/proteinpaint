@@ -412,6 +412,7 @@ fn main() {
                     );
                 if within_indel == 1 {
                     let read_ambivalent = check_if_read_ambivalent(
+                        // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
                         correct_end_position,
                         left_offset,
@@ -533,6 +534,7 @@ fn main() {
 
                         if within_indel == 1 {
                             let read_ambivalent = check_if_read_ambivalent(
+                                // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                                 correct_start_position,
                                 correct_end_position,
                                 left_offset,
@@ -739,9 +741,11 @@ fn preprocess_input(
     // Check if the alt allele starts with ref nucleotide
     let mut original_indel_length = indel_length;
     let mut actual_indel = String::new();
+    let mut ref_alt_same_base_start: usize = 0; // Flag to see if the original ref/alt nucleotide start with the same base i.e the ref start position of the indel is in the alt allele (e.g. ACGA/A representing 3bp deletion)
     if ref_nucleotides[0] == alt_nucleotides[0] {
         original_indel_length = indel_length - 1; // If the insertion/deletion starts with same nucleotide, subtracting 1 from indel_length.
         if ref_nucleotides.len() > alt_nucleotides.len() {
+            ref_alt_same_base_start = 1;
             // In case of deletion
             for j in 1..ref_nucleotides.len() {
                 actual_indel += &ref_nucleotides[j].to_string();
@@ -810,7 +814,7 @@ fn preprocess_input(
             right_offset += &right_nearby_seq.len();
         } else {
             // Should not happen at all
-            println!("Something wrong happened. Please check!");
+            println!("Something unexpected happened. Please check!");
         }
         //println!("actual_indel:{}", actual_indel);
         //println!("no_repeats:{}", no_repeats);
@@ -822,6 +826,11 @@ fn preprocess_input(
     let mut right_offset_part: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
     let mut no_repeats_part: usize = 1; // Flag to check if non-repeating region has been reached
     iter = 0;
+    if ref_alt_same_base_start == 1 {
+        // If ref/alt nucleotide start with the same base (e.g ACGA/A representing 3bp deletion),increment right_offset_part by 1
+        right_offset_part += 1;
+    }
+
     while iter < original_indel_length as usize && no_repeats_part == 1 {
         if actual_indel_nucleotides[iter] != right_flanking_nucleotides[iter] {
             no_repeats_part = 0;
