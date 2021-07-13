@@ -94,7 +94,7 @@ async function make_singleSampleTable(arg, holder) {
 		if (!term) throw 'unknown term id: ' + termid
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text(term.name)
-		cell2.text(sampledata[termid])
+		cell2.text(sampledata[termid] || 'N/A')
 	}
 
 	/////////////
@@ -118,7 +118,7 @@ async function make_singleSampleTable(arg, holder) {
 			.style('opacity', 0.5)
 		const d = cell2.append('div') // next row to show normal total
 		d.append('span')
-			.text(sm.totalNormal)
+			.text(sm.totalNormal || 'N/A')
 			.style('margin-right', '10px')
 		d.append('span')
 			.text('TOTAL DEPTH IN NORMAL')
@@ -227,7 +227,7 @@ async function make_multiSampleTable(args) {
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
 			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
-			cell.text(sample[termid])
+			cell.text(sample[termid] || 'N/A')
 		}
 		if (has_ssm_depth) {
 			const cell1 = get_table_cell(grid_div, i) // tumor
@@ -241,7 +241,7 @@ async function make_multiSampleTable(args) {
 					.append('span')
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
-				cell2.text(sm.totalNormal)
+				cell2.text(sm.totalNormal || 'N/A')
 			}
 		}
 	}
@@ -266,6 +266,9 @@ async function make_multiSampleSummaryList(arg, holder) {
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
+		// if for numeric_term if samplecont is 0,
+		// means no sample have value for that term, skip that term in summary
+		if (category.density_data && !category.density_data.samplecount) continue
 		summary_tabs.push({
 			label: `${category.name} ${
 				category.numbycategory
