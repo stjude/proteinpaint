@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<style>
+tr>:first-child {
+  opacity:.5;
+  padding:5px;
+}
+</style>
+
+
+<!-- URLs will be added to this table -->
+<table id='table'></table>
+
+
+
+<script>
+makeURL([
+{
+	name: 'BAM',
+	links: [
+		[ 'WES 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
+		[ 'kmer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
+		['kmer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['GDC AKT1 E17K','example.gdc.bamslice.html?gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780213.C.T'],
+		['GDC KRAS G12D','example.gdc.bamslice.html?gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245349.C.T'],
+		['GDC NPM1 exon12 insertion','example.gdc.bamslice.html?gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410538.C.CTCTG'],
+		['GDC MYC 3bp del','example.gdc.bamslice.html?gdc_id=d15a8749-e497-495d-a0a5-d21e79f4e172&gdc_var=chr8.127740425.ATGT.A']
+	]
+},
+{name:'mds3',
+	links:[
+		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],
+		['TP53','?genome=hg38&gene=ENST00000269305&mds3=GDC'],
+		['KRAS','?genome=hg38&gene=ENST00000256078&mds3=GDC'],
+	]
+}
+])
+
+function makeURL(rows) {
+	const table = document.getElementById('table')
+	for(const row of rows) {
+		const tr = document.createElement('tr')
+		table.appendChild(tr)
+		const td = document.createElement('td')
+		tr.appendChild(td)
+		td.innerHTML = row.name || '.name missing'
+		const td_links = document.createElement('td')
+		tr.appendChild(td_links)
+
+		if(!Array.isArray(row.links)) {
+			td_links.innerHTML = '.links[] missing'
+			continue
+		}
+		if(row.links.length==0) {
+			td_links.innerHTML = '.links[] empty array'
+			continue
+		}
+
+		for(const i of row.links) {
+			const a = document.createElement('a')
+			td_links.appendChild(a)
+			a.innerHTML = i[0]
+			a.setAttribute('href',window.location.origin+'/'+i[1])
+			a.setAttribute('target','_blank')
+			a.style.paddingRight = '8px'
+		}
+	}
+}
+</script>
+
+</body>
+</html>

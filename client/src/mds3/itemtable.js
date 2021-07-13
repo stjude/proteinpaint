@@ -297,23 +297,11 @@ async function table_snvindel(arg) {
 		table_snvindel_multivariant(arg)
 	}
 	if (arg.tk.mds.variant2samples) {
-		// to show sample info (occurrence=1) or summary (occurrence>1)
-		const heading = arg.div
-			.append('div')
-			.style('margin-top', '20px')
-			.style('opacity', 0.4)
-			.style('font-size', '1.1em')
-		{
-			const c = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-			heading
-				.style('display', c < cutoff_tableview ? 'block' : 'none')
-				.text(c < cutoff_tableview ? 'Sample details' : '')
-		}
 		await init_sampletable(arg)
 	}
 }
 
-function table_snvindel_onevariant({ m, tk, block, table }) {
+function table_snvindel_onevariant({ m, tk, table }) {
 	{
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Consequence')
@@ -447,7 +435,7 @@ function table_snvindel_multivariant({ mlst, tk, block, table, div }) {
 					else {
 						mlst_render = mlst_render.filter(mt => mt.ssm_id != m.ssm_id)
 					}
-					const multisample_div = div.select('.sj_multisample_holder')
+					const multisample_div = div.select('.sj_sampletable_holder')
 					multisample_div.selectAll('*').remove()
 					await init_sampletable({
 						mlst: mlst_render.length ? mlst_render : mlst,

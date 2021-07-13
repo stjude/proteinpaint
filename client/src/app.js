@@ -222,9 +222,7 @@ function makeheader(app, obj, jwt) {
 		.style('overflow-x', 'visible')
 		.style('overflow-y', 'hidden')
 
-	app.holder.apps_sandbox_div = app.holder
-		.append('div')
-		.style('margin-top', '15px')
+	app.holder.apps_sandbox_div = app.holder.append('div').style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')

@@ -153,15 +153,14 @@ tape('lolliplot using props', async test => {
 	await sleep(3000)
 	const g120 = disc.__data__.mlst && disc.__data__.mlst[0]
 	const mname = g120.mname
-	const tagName = g120.occurrence > 10 ? 'span' : 'a'
-	const tdspans = [...document.querySelectorAll(`.sja_menu_div table tr td ${tagName}`)].filter(
-		elem => mname && elem.innerHTML.startsWith(mname)
+	const links = [...document.querySelectorAll(`.sja_menu_div .sj_sampletable_holder a`)].filter(elem =>
+		elem.innerHTML.startsWith('TCGA-')
 	)
-	const menudiv = tdspans.length ? tdspans[0].parentNode.parentNode.parentNode.parentNode : null
+	const menudiv = links.length ? links[0].closest('.sja_menu_div') : null
 
 	test.equal(
 		menudiv &&
-			[...menudiv.querySelectorAll('table a')].filter(elem =>
+			[...menudiv.querySelectorAll('.sj_sampletable_holder a')].filter(elem =>
 				elem.href.startsWith('https://portal.gdc.cancer.gov/cases/')
 			).length,
 		2,

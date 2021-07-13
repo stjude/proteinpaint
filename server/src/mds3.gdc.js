@@ -422,7 +422,9 @@ export async function getSamples_gdcapi(q, ds) {
 	}
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
-
+	// total to display on sample list page
+	// for numerical terms, total is not possible before making GDC query  
+	const total = re.data.pagination.total
 	const samples = []
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit'
@@ -459,7 +461,7 @@ export async function getSamples_gdcapi(q, ds) {
 		///////////////////
 		samples.push(sample)
 	}
-	return samples
+	return [samples, total]
 }
 
 function may_add_readdepth(acase, sample) {

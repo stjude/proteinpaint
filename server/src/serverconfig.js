@@ -23,7 +23,7 @@ if (fs.existsSync(serverconfigfile)) {
 		const configstr = fs.readFileSync(serverconfigfile, { encoding: 'utf8' })
 		serverconfig = JSON.parse(configstr)
 	} catch (e) {
-		throw e
+		throw `Error reading or parsing ${serverconfigfile}:` + e
 	}
 } else {
 	// automatically generate serverconfig, hardcoded by customer

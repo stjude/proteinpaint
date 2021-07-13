@@ -726,6 +726,21 @@ export class Block {
 			}
 		}
 
+		/* quick fix: 
+		when there are bam tracks, these tracks usually are taller than a screen
+		making it hard to compare to gene tracks lying on the bottom
+		move the native gene track to the top
+		usually that is the only bedj track in the list
+		*/
+		if (this.tklst.find(i => i.type == client.tkt.bam)) {
+			const bedtkidx = this.tklst.findIndex(i => i.type == client.tkt.bedj)
+			if (bedtkidx != -1) {
+				const t = this.tklst[bedtkidx]
+				this.tklst.splice(bedtkidx, 1)
+				this.tklst.unshift(t)
+			}
+		}
+
 		this.tk_load_all()
 
 		if (arg.mset) {
@@ -3308,9 +3323,12 @@ seekrange(chr,start,stop) {
 		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
 		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
 		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
-		if ( use_tip ) // case 3 & 4
-			pane = client.newpane({ x: 100, y: 100 }) // original floating tip
-		else { // case 1 & 2
+		if (use_tip)
+			// case 3 & 4
+			pane = client.newpane({ x: 100, y: 100 })
+		// original floating tip
+		else {
+			// case 1 & 2
 			const sandbox_div = d3select(root_divs[2])
 			pane = client.newSandboxDiv(sandbox_div)
 		}

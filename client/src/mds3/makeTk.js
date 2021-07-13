@@ -32,6 +32,7 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
+	tk.cache = {}
 	tk.itemtip = new Menu()
 	tk.samplefiltertemp = {}
 	// switch to .samplefilter with a filter.js object
@@ -148,7 +149,8 @@ function mayaddGetter_m2csq(tk, block) {
 		} else {
 			return { error: 'unknown query method' }
 		}
-		return await dofetch2('mds3?' + lst.join('&'))
+		if (tk.token) lst.push('token=' + tk.token) // TODO add to header
+		return await dofetch2('mds3?' + lst.join('&'), undefined, { serverData: tk.cache })
 	}
 }
 
@@ -163,7 +165,10 @@ function mayaddGetter_sampleSummaries2(tk, block) {
 			'samplesummary2_mclassdetail=' + encodeURIComponent(JSON.stringify(level))
 		]
 		rangequery_rglst(tk, block, lst)
-		return await dofetch2('mds3?' + lst.join('&'))
+		if (tk.set_id) lst.push('set_id=' + tk.set_id)
+		if (tk.token) lst.push('token=' + tk.token) // TODO add to header
+		if (tk.filter0) lst.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		return await dofetch2('mds3?' + lst.join('&'), undefined, { serverData: tk.cache })
 	}
 }
 
@@ -194,10 +199,10 @@ function mayaddGetter_variant2samples(tk, block) {
 			throw 'unknown variantkey for variant2samples'
 		}
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
-		if (tk.token) par.push('token=' + tk.token)
+		if (tk.token) par.push('token=' + tk.token) // TODO add to header
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		const data = await dofetch2('mds3?' + par.join('&'))
+		const data = await dofetch2('mds3?' + par.join('&'), undefined, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
