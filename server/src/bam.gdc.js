@@ -94,7 +94,7 @@ async function get_gdc_data(gdc_id) {
 	for (const s of re.data.hits) {
 		const file = {}
 		file.file_uuid = s.id
-		file.file_size = (parseFloat(s.file_size) / 10e9).toFixed(2) + ' GB'
+		file.file_size = (parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'
 		file.experimental_strategy = s.experimental_strategy
 		file.entity_id = s.associated_entities[0].entity_submitter_id
 		file.entity_type = s.associated_entities[0].entity_type
