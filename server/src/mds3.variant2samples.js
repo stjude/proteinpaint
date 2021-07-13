@@ -29,9 +29,9 @@ get types:
 
 module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
-	const samples = await get_samples(q, ds)
+	const [ samples, total ] = await get_samples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_samples) return [ samples, total ]
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
 	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
 	throw 'unknown get type'

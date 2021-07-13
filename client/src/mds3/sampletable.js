@@ -1,5 +1,6 @@
 import { fillbar, tab2box } from '../client'
-import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
+import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX } from 'd3'
+import { event as d3event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -143,7 +144,8 @@ async function make_multiSampleTable(args) {
 	}
 	holder.selectAll('*').style('opacity', 0.5)
 	arg.temp_div.style('display', 'block').text('Loading...')
-	const data = await arg.tk.mds.variant2samples.get(arg)
+	const [ data, total ] = await arg.tk.mds.variant2samples.get(arg)
+    if (total) arg.numofcases = total
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (arg.tid2value_orig.size && occurrence < 10) make_sunburst_tidlist(arg, holder)
@@ -374,7 +376,7 @@ function update_horizontal_tabs(tabs) {
 	}
 }
 
-function make_summary_panel(arg, div, category, main_tabs) {
+async function make_summary_panel(arg, div, category, main_tabs) {
 	// summary for active tab
 	if (category.numbycategory) {
 		const grid_div = div
@@ -420,7 +422,7 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				delete arg.tid2value[arg.filter_term]
 				delete arg.filter_term
 			}
-			arg.tid2value[category.name.toLowerCase()] = cat
+			arg.tid2value[category.name] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_horizontal_tabs(main_tabs)
@@ -428,15 +430,37 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				arg,
 				holder: main_tabs[1].holder,
 				total_size: count,
-				filter_term: category.name.toLowerCase()
+				filter_term: category.name
 			})
 		}
 	} else if (category.density_data) {
-		make_densityplot(div, category.density_data)
+        const callback = range => {
+            if (!range.range_start && !range.range_end) return
+            else {
+                if (arg.tid2value == undefined) arg.tid2value = {}
+                else if (arg.filter_term) {
+                    delete arg.tid2value[arg.filter_term]
+                    delete arg.filter_term
+			    }
+                arg.tid2value[category.name] = [
+                    {op: '>=', range: Math.round(range.range_start)},
+                    {op: '<=', range: Math.round(range.range_end)}
+                ]
+                delete main_tabs[0].active
+                main_tabs[1].active = true
+                update_horizontal_tabs(main_tabs)
+                make_multiSampleTable({
+                    arg,
+                    holder: main_tabs[1].holder,
+                    filter_term: category.name
+                })
+            }
+        }
+		make_densityplot(div, category.density_data, callback)
 	}
 }
 
-function make_densityplot(holder, data) {
+async function make_densityplot(holder, data, callabck) {
 	const width = 500,
 		height = 150,
 		xpad = 10,
@@ -480,7 +504,7 @@ function make_densityplot(holder, data) {
 		})
 		.curve(curveMonotoneX)
 
-	g.append('g')
+	const y_scale = g.append('g')
 		.attr('transform', `translate(${xpad}, 0)`)
 		.call(y_axis)
 
@@ -501,10 +525,18 @@ function make_densityplot(holder, data) {
 		.attr('font-size', '13px')
 		.text(data.unit)
 
-	const brush_g = svg
-		.append('g')
-		.attr('class', 'brush_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
+        // add brush to select range from the density plot
+        const y_axis_width = y_scale.node().getBBox().width
+        svg.call( 
+            brushX()
+                .extent([[xpad, ypad], [width - xpad + y_axis_width, height + ypad]])
+                .on('end', async()=>{
+                    const selection = d3event.selection
+                    const range_start = xscale.invert(selection[0])
+                    const range_end = xscale.invert(selection[1])
+                    callabck({range_start, range_end})
+                })
+        )
 }
 
 function make_sunburst_tidlist(arg, holder) {
@@ -558,7 +590,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(arg.tid2value[arg.filter_term])
+		.html(get_value(arg.tid2value[arg.filter_term]))
 
 	// remove button
 	filter_holder
@@ -580,6 +612,18 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 			delete arg.filter_term
 			make_multiSampleTable({ arg, holder: page_holder, size: arg.size, from: arg.from })
 		})
+
+    function get_value(values){
+        if (typeof(values) == 'string') return values
+        else {
+            let val = ''
+            for(const [i,v] of values.entries()){
+                val += v.op + ' ' + v.range
+                if( i != values.length-1 ) val += '  &  '
+            }
+            return val
+        }
+    }
 }
 
 function make_pagination(arg, page_doms) {
