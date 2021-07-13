@@ -7,7 +7,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
             "clickcard2url" : "https://genomepaint.stjude.cloud/",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
             },
             "custom_buttons":[
@@ -33,7 +33,7 @@
             "blurb": "genomic feature analysis",
             "image": "",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu"
             },
             "sandbox":{
@@ -48,7 +48,7 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": ""
             },
             "sandbox":{
@@ -110,7 +110,7 @@
                         "type": "bigwigstranded"
                     }]
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
             },
             "sandbox":{
@@ -143,6 +143,10 @@
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz"
+                    },
+                    {
+                        "name": "BED3",
+                        "hyperlink": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz"
                     }
                 ],
                 "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
@@ -223,7 +227,7 @@
                         ]
                     }]
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
             },
             "sandbox":{
@@ -253,7 +257,7 @@
                         "sample": "TCGA-GS-A9TQ"
                     }]
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
             },
             "sandbox":{
@@ -312,7 +316,7 @@
                     "genome": "hg19",
 					"dataset":"Pediatric"
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
             },
             "sandbox":{
@@ -634,7 +638,7 @@
                         }
                     }]
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
             },
             "sandbox":{
@@ -684,7 +688,7 @@
             "blurb": "visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": "",
                 "example": {
                     "nobox": 1,
@@ -742,7 +746,7 @@
                     "noheader": 1,
                     "fusioneditor": { "uionly": true }
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
             },
             "sandbox":{
@@ -762,7 +766,7 @@
                     "noheader": 1,
                     "twodmaf": { "uionly": true }
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
             },
             "sandbox":{
@@ -777,7 +781,7 @@
             "blurb": "predicts motif changes",
             "image": "",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": ""
             },
             "sandbox":{
@@ -796,7 +800,7 @@
                     "noheader": 1,
                     "project": { "uionly": true }
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
             },
             "sandbox":{
@@ -828,7 +832,7 @@
                         }]
                     }
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
             },
             "sandbox":{
@@ -847,7 +851,7 @@
                     "noheader": 1,
                     "maftimeline": { "uionly": true }
                 },
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
             },
             "sandbox":{
@@ -862,7 +866,7 @@
             "blurb": "",
             "image": "",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": ""
             },
             "sandbox":{
@@ -877,7 +881,7 @@
             "blurb": "multiple viewing options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
             },
             "sandbox":{
@@ -957,7 +961,7 @@
             "blurb": "TODO: Brief description of track or app",
             "image": "",
             "media": {
-                "urls": "",
+                "urls": [],
                 "doc": ""
             },
             "sandbox":{

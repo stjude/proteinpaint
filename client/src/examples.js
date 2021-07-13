@@ -35,7 +35,7 @@ export async function init_examples(par) {
 	}
 	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
 	for (const example of re.examples){
-		if (example.buttons && example.buttons.example) deepFreeze(example.buttons.example)
+		if (example.buttons && example.media.example) deepFreeze(example.media.example)
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -163,17 +163,28 @@ async function loadTracks(args, page_args, filteredTracks) {
 
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
+// ${track.media.urls && (track.media.urls.hyperlink && track.media.urls.name) ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.media.urls.hyperlink}" target="_blank">${track.media.urls.name}</a>`: ''}
+
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
+		const urls = track.media.urls
 		const li = holder.append('li')
 		li.attr('class', 'sjpp-track')
 			.html(
 				`${track.blurb ? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
 				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
 				<div class='sjpp-track-links'>
-				${track.buttons.url ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`: ''}
-				${track.buttons.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`: ''}
+				${urls.map((url)=>{
+					if (!url) return ''
+					if (url.hyperlink && !url.name) {
+						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.hyperlink}" target="_blank">URL</a>`
+					}
+					if (url.hyperlink && url.name){
+						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.hyperlink}" target="_blank">${url.name}</a>`
+					}
+				}).join("")}
+				${track.media.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`: ''}
 				</div>`
 			)
 			.on('click', async () => {
@@ -181,7 +192,7 @@ function displayTracks(tracks, holder, page_args) {
 				page_args.apps_off()
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
-				} else if (track.buttons.example) {
+				} else if (track.media.example) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -295,25 +306,28 @@ async function openExample(track, holder) {
 		host: window.location.origin
 	}
 
-	const example = JSON.parse(JSON.stringify(track.buttons.example))
+	const example = JSON.parse(JSON.stringify(track.media.example))
 
 	runproteinpaint(Object.assign(runpp_arg, example))
 }
 
-// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
-async function addUpdateMessage(track, div) {
-	if (track.sandbox.update_message != undefined && !track.update_expire) {
-		console.log('Must provide expiration date: track.update_expire')
-	}
-	if (track.sandbox.update_message != undefined && track.update_expire) {
-		const today = new Date()
-		const update = new Date(track.update_expire)
-		if (update > today) {
-			const message = div.body
-				.append('div')
-				.style('margin', '20px')
-				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
-		}
+async function makeDataDownload(track, div) {
+	if (track.sandbox.datadownload) {
+		const dataBtn = div.body
+		.append('button')
+		.attr('type', 'button')
+		.attr('class', 'sja_menuoption')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		// .style('font-size', '12.75px')
+		.style('display', 'inline-block')
+		.text('Download Data')
+		.on('click', () => {
+			event.stopPropagation();
+			window.open(`${track.sandbox.datadownload}`, '_blank')
+		})
 	}
 }
 
@@ -351,28 +365,24 @@ async function showCode(track, div) {
 		.html(highlight(`runproteinpaint({
    host: "${window.location.origin}",
    holder: document.getElementById('a'),` +
-			JSON.stringify(track.buttons.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+			JSON.stringify(track.media.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 			`})`, {language:'javascript'}).value)
 	}
 }
 
-async function makeDataDownload(track, div) {
-	if (track.sandbox.datadownload) {
-		const dataBtn = div.body
-		.append('button')
-		.attr('type', 'button')
-		.attr('class', 'sja_menuoption')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		// .style('font-size', '12.75px')
-		.style('display', 'inline-block')
-		.text('Download Data')
-		.on('click', () => {
-			event.stopPropagation();
-			window.open(`${track.sandbox.datadownload}`, '_blank')
-		})
-		// .html(`<a href="${track.sandbox.datadownload}" target="_blank" style="text-decoration:none;" download>Download Data</a>`)
+// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
+async function addUpdateMessage(track, div) {
+	if (track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log('Must provide expiration date: track.update_expire')
+	}
+	if (track.sandbox.update_message != undefined && track.update_expire) {
+		const today = new Date()
+		const update = new Date(track.update_expire)
+		if (update > today) {
+			const message = div.body
+				.append('div')
+				.style('margin', '20px')
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		}
 	}
 }
