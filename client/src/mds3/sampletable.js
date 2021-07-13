@@ -1,4 +1,6 @@
 import { fillbar, tab2box } from '../client'
+import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX } from 'd3'
+import { event as d3event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -55,8 +57,8 @@ export async function init_sampletable(arg) {
 
 async function make_singleSampleTable(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const data = await arg.tk.mds.variant2samples.get(arg)
-	const sampledata = data[0] // must have just one sample
+	const data = await arg.tk.mds.variant2samples.get(arg) // data is [samples, total]
+	const sampledata = data[0][0] // must have just one sample
 	arg.temp_div.style('display', 'block').text('Loading...')
 
 	const grid_div = holder
@@ -142,7 +144,8 @@ async function make_multiSampleTable(args) {
 	}
 	holder.selectAll('*').style('opacity', 0.5)
 	arg.temp_div.style('display', 'block').text('Loading...')
-	const data = await arg.tk.mds.variant2samples.get(arg)
+	const [data, total] = await arg.tk.mds.variant2samples.get(arg)
+	if (total) arg.numofcases = total
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (arg.tid2value_orig.size && occurrence < 10) make_sunburst_tidlist(arg, holder)
@@ -264,7 +267,11 @@ async function make_multiSampleSummaryList(arg, holder) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
 		summary_tabs.push({
-			label: `${category.name} <span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`,
+			label: `${category.name} ${
+				category.numbycategory
+					? `<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`
+					: ``
+			}`,
 			callback: div => make_summary_panel(arg, div, category, main_tabs)
 		})
 	}
@@ -369,7 +376,7 @@ function update_horizontal_tabs(tabs) {
 	}
 }
 
-function make_summary_panel(arg, div, category, main_tabs) {
+async function make_summary_panel(arg, div, category, main_tabs) {
 	// summary for active tab
 	if (category.numbycategory) {
 		const grid_div = div
@@ -415,7 +422,7 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				delete arg.tid2value[arg.filter_term]
 				delete arg.filter_term
 			}
-			arg.tid2value[category.name.toLowerCase()] = cat
+			arg.tid2value[category.name] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_horizontal_tabs(main_tabs)
@@ -423,10 +430,114 @@ function make_summary_panel(arg, div, category, main_tabs) {
 				arg,
 				holder: main_tabs[1].holder,
 				total_size: count,
-				filter_term: category.name.toLowerCase()
+				filter_term: category.name
 			})
 		}
+	} else if (category.density_data) {
+		const callback = range => {
+			if (!range.range_start && !range.range_end) return
+			else {
+				if (arg.tid2value == undefined) arg.tid2value = {}
+				else if (arg.filter_term) {
+					delete arg.tid2value[arg.filter_term]
+					delete arg.filter_term
+				}
+				arg.tid2value[category.name] = [
+					{ op: '>=', range: Math.round(range.range_start) },
+					{ op: '<=', range: Math.round(range.range_end) }
+				]
+				delete main_tabs[0].active
+				main_tabs[1].active = true
+				update_horizontal_tabs(main_tabs)
+				make_multiSampleTable({
+					arg,
+					holder: main_tabs[1].holder,
+					filter_term: category.name
+				})
+			}
+		}
+		make_densityplot(div, category.density_data, callback)
 	}
+}
+
+async function make_densityplot(holder, data, callabck) {
+	const width = 500,
+		height = 150,
+		xpad = 10,
+		ypad = 20,
+		xaxis_height = 20
+	const svg = holder.append('svg')
+	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
+
+	//density data, add first and last values to array
+	const density_data = data.density
+	density_data.unshift([data.minvalue, 0])
+	density_data.push([data.maxvalue, 0])
+
+	// x-axis
+	const xscale = scaleLinear()
+		.domain([data.minvalue, data.maxvalue])
+		.range([xpad, width - xpad])
+
+	const x_axis = axisBottom().scale(xscale)
+	x_axis.tickFormat(format(''))
+
+	// y-scale
+	const yscale = scaleLinear()
+		.domain([0, data.densitymax])
+		.range([height + ypad, ypad])
+
+	const y_axis = axisLeft()
+		.scale(yscale)
+		.ticks(data.densitymax < 10 ? data.densitymax : 10)
+		.tickFormat(format('d'))
+
+	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
+
+	// SVG line generator
+	const line = d3line()
+		.x(function(d) {
+			return xscale(d[0])
+		})
+		.y(function(d) {
+			return yscale(d[1])
+		})
+		.curve(curveMonotoneX)
+
+	const y_scale = g
+		.append('g')
+		.attr('transform', `translate(${xpad}, 0)`)
+		.call(y_axis)
+
+	// plot the data as a line
+	g.append('path')
+		.datum(density_data)
+		.attr('class', 'line')
+		.attr('d', line)
+		.style('fill', '#eee')
+		.style('stroke', '#000')
+
+	g.append('g')
+		.attr('transform', `translate(0, ${ypad + height})`)
+		.call(x_axis)
+
+	g.append('text')
+		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+		.attr('font-size', '13px')
+		.text(data.unit)
+
+	// add brush to select range from the density plot
+	const y_axis_width = y_scale.node().getBBox().width
+	svg.call(
+		brushX()
+			.extent([[xpad, ypad], [width - xpad + y_axis_width, height + ypad]])
+			.on('end', async () => {
+				const selection = d3event.selection
+				const range_start = xscale.invert(selection[0])
+				const range_end = xscale.invert(selection[1])
+				callabck({ range_start, range_end })
+			})
+	)
 }
 
 function make_sunburst_tidlist(arg, holder) {
@@ -480,7 +591,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(arg.tid2value[arg.filter_term])
+		.html(get_value(arg.tid2value[arg.filter_term]))
 
 	// remove button
 	filter_holder
@@ -502,6 +613,15 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 			delete arg.filter_term
 			make_multiSampleTable({ arg, holder: page_holder, size: arg.size, from: arg.from })
 		})
+
+	function get_value(values) {
+		if (typeof values == 'string') return values
+		else {
+			const vals = values.map(a => a.range)
+			const num_value = Math.min(...vals) + ' <= x <= ' + Math.max(...vals)
+			return num_value
+		}
+	}
 }
 
 function make_pagination(arg, page_doms) {

@@ -473,12 +473,21 @@ const variant2samples = {
 		}
 		if (p.tid2value) {
 			for (const tid in p.tid2value) {
-				const t = terms.find(i => i.id == tid)
-				if (t) {
+				let t = terms.find(i => i.id == tid)
+				// Quick Fix: tid2value from sample table has term.name rather than term.id
+				if (!t) t = terms.find(i => i.name == tid)  
+				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
 						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
 					})
+				} else if (t && t.type == 'integer'){
+					for( const val of p.tid2value[tid]){
+						f.content.push({
+							op : val.op,
+							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+						})
+					}
 				}
 			}
 		}
@@ -919,7 +928,8 @@ const terms = [
 		name: 'Birth year',
 		id: 'year_of_birth',
 		type: 'integer',
-		fields: ['demographic', 'year_of_birth']
+		fields: ['demographic', 'year_of_birth'],
+		unit: 'year'
 	},
 	{
 		name: 'Race',
