@@ -986,6 +986,7 @@ fn check_read_within_indel_region(
                 correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
             // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
         }
+        correct_end_position = correct_start_position;
         for i in 0..cigar_length {
             if &alphabets[i].to_string().as_str() == &"D" {
                 // In case of deleted nucleotides, the end position will be pushed to the left
@@ -995,6 +996,10 @@ fn check_read_within_indel_region(
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             }
         }
+        //println!(
+        //    "&cigar_sequence.to_string():{}",
+        //    &cigar_sequence.to_string()
+        //);
         //println!("correct_start_position:{}", correct_start_position);
         //println!("correct_end_position:{}", correct_end_position);
         //println!("indel_start:{}", indel_start);
