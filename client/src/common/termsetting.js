@@ -147,9 +147,9 @@ function setRenderers(self) {
 			float: setNumericMethods,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
-			// for now, use empty methods as placeholder functions
+			// for now, use default methods as placeholder functions
 			// until there is actual need to group survival term values
-			survival: setEmptyMethods
+			survival: setDefaultMethods
 		}
 	}
 
@@ -431,9 +431,12 @@ function valid_binscheme(q) {
 }
 
 function emptyMethod() {}
+function getTermLabel(d) {
+	return d.name.length <= 20 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+}
 
-function setEmptyMethods(self) {
+function setDefaultMethods(self) {
 	self.showEditMenu = emptyMethod
-	self.term_name_gen = emptyMethod
 	self.get_status_msg = emptyMethod
+	self.term_name_gen = getTermLabel
 }
