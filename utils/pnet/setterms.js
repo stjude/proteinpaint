@@ -90,7 +90,8 @@ for (const term of survTerms) {
 	const jsondata = JSON.stringify({
 		type: 'survival',
 		name: term.id,
-		isleaf: true
+		isleaf: true,
+		unit: 'days'
 	})
 	cn.prepare(`UPDATE terms SET jsondata=? WHERE id=?`).run([jsondata, term.id])
 }

@@ -118,10 +118,12 @@ class TdbSurvival {
 				}
 			}
 		}
-		if (legendItems.length) {
+		const config = this.state.config
+		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
+			const termNum = config.term.term.type == 'survival' ? 'term2' : 'term'
 			this.legendData = [
 				{
-					name: this.state.config.term.term.name,
+					name: config[termNum].term.name,
 					items: legendItems
 				}
 			]
@@ -399,7 +401,9 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = `Time to Event (${self.settings.xUnit})`
+		const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
+		const xUnit = self.state.config[termNum].term.unit
+		const xTitleLabel = `Time to Event (${xUnit})`
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -445,11 +449,13 @@ function setInteractivity(self) {
 			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
+			const termNum = self.state.config.term.term.type == 'survival' ? 'term1' : 'term2'
+			const xUnit = self.state.config[termNum].term.unit
 			const rows = [
 				`<tr><td colspan=2 style='text-align: center'>${
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${self.settings.xUnit}</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
 			]
 			// may also indicate the confidence interval (low%-high%) in a new row
@@ -534,8 +540,8 @@ function getPj(self) {
 			chartTitle(row) {
 				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
-					const term = self.state.termdbConfig.survivalplot.terms.find(t => t.id == s.term_id)
-					return term ? term.name : 'Survival'
+					const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
+					return self.state.config[termNum].term.name
 				}
 				const t0 = self.state.config.term0
 				if (!t0 || !t0.term.values) return row.chartId

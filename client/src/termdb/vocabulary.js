@@ -80,7 +80,8 @@ class TermdbVocab {
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
 		const config = this.state.tree.plots[plotId]
-		const displayAsSurvival = config.term.term.type == 'survival' || (config.term2 && config.term2.term.type)
+		const displayAsSurvival =
+			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		const route =
 			config.settings.currViews.includes('scatter') || config.settings.currViews.includes('cuminc') || displayAsSurvival
 				? '/termdb'

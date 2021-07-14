@@ -4,10 +4,11 @@
 .import survival.txt survival
 
 insert into terms
-VALUES ('Survival outcome', 'Survival outcome', null, '{"type": "survival", "name": "Survival outcome"}', 0);
+VALUES ('Survival outcome', 'Survival outcome', null, '{"name": "Survival outcome"}', 0);
 
 insert into terms
-select term_id, term_id, 'Survival outcome', '{"type": "survival"}', 1
+-- will fill-in the jsondata using setterms.js
+select term_id, term_id, 'Survival outcome', '{}', 1
 from survival
 group by term_id;
 
