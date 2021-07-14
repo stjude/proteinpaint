@@ -5,7 +5,7 @@ import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
 
 export function vocabInit(app, opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -80,10 +80,9 @@ class TermdbVocab {
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
 		const config = this.state.tree.plots[plotId]
+		const displayAsSurvival = config.term.term.type == 'survival' || (config.term2 && config.term2.term.type)
 		const route =
-			config.settings.currViews.includes('scatter') ||
-			config.settings.currViews.includes('cuminc') ||
-			config.settings.currViews.includes('survival')
+			config.settings.currViews.includes('scatter') || config.settings.currViews.includes('cuminc') || displayAsSurvival
 				? '/termdb'
 				: '/termdb-barsql'
 		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel

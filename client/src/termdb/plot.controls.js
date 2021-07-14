@@ -47,8 +47,7 @@ class TdbPlotControls {
 				tip: app.tip,
 				debug,
 				isleaf: opts.isleaf,
-				iscondition: opts.iscondition,
-				survivalplot: opts.survivalplot
+				iscondition: opts.iscondition
 			})
 		}
 

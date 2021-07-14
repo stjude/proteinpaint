@@ -9,29 +9,48 @@ export async function get_survival(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
+		for (const i of [0, 1, 2]) {
+			const termnum = 'term' + i
+			const termnum_id = termnum + '_id'
+			if (q[termnum_id]) {
+				q[termnum_id] = decodeURIComponent(q[termnum_id])
+			}
+			const termnum_q = termnum + '_q'
+			if (q[termnum_q]) {
+				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
+			}
+		}
+
+		// only term1 XOR term2 may be a survival term
+		const tNum = q.term1_q && q.term1_q.type == 'survival' ? 't1' : 't2'
+		const vNum = q.term1_q && q.term1_q.type == 'survival' ? 'val1' : 'val2'
+		const sNum = tNum == 't1' ? 'key2' : 'key1'
+
 		const results = get_rows(q, {
-			columnas: 't1.sample AS sample, t2.censored AS censored'
+			columnas: `t1.sample AS sample, ${tNum}.censored AS censored`
 		})
-		results.lst.sort((a, b) => (a.val1 < b.val1 ? -1 : 1))
+		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// do not include data when years_to_event < 0
-			if (d.val1 < 0) continue
+			if (d[vNum] < 0) continue
 			// if no applicable term0, the d.key0 is just a placeholder empty string,
 			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}
-			if (!(d.key1 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key1] = []
+			const sKey = d[sNum]
+			if (!(sKey in byChartSeries[d.key0])) byChartSeries[d.key0][sKey] = []
 			if (q.km_method == 1)
-				byChartSeries[d.key0][d.key1].push({
+				byChartSeries[d.key0][sKey].push({
 					id: d.sample,
-					x: d.val2,
+					x: d[vNum],
 					event: d.censored === 1 ? 'censored' : 'terminal'
 				})
+			// do_plot
 			else
-				byChartSeries[d.key0][d.key1].push({
+				byChartSeries[d.key0][sKey].push({
 					name: d.sample,
-					serialtime: Number(d.val2),
-					censored: !d.censored // === 0 ? 1 : 0
+					serialtime: Number(d[vNum]),
+					censored: d.censored === 0 ? 1 : 0
 				})
 		}
 		const bins = q.term1_id && results.CTE1.bins ? results.CTE1.bins : []

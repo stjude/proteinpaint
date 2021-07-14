@@ -46,7 +46,7 @@ class TdbSurvival {
 	getState(appState) {
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('survival'),
+			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,

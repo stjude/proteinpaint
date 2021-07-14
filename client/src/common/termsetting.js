@@ -146,7 +146,8 @@ function setRenderers(self) {
 			integer: setNumericMethods,
 			float: setNumericMethods,
 			categorical: setCategoricalMethods,
-			condition: setConditionalMethods
+			condition: setConditionalMethods,
+			survival: setNumericMethods
 		}
 	}
 
@@ -392,6 +393,10 @@ export function termsetting_fill_q(q, term) {
 		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
 			q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
 		}
+		return
+	}
+	if (term.type == 'survival') {
+		q.type = 'survival'
 		return
 	}
 	throw 'unknown term type'

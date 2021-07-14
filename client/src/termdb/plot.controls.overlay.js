@@ -72,10 +72,6 @@ class Overlay {
 	main() {
 		this.dom.tip.hide()
 		this.mayRegisterTerm(this.state.config.term2)
-		if (this.state.config.settings.currViews.includes('survival')) {
-			this.dom.tr.style('display', 'none')
-			return
-		}
 		this.dom.tr.style('display', 'table-row')
 		this.updateUI()
 	}

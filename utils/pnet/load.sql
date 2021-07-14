@@ -4,7 +4,7 @@
 .import survival.txt survival
 
 insert into terms
-VALUES ('Survival outcome', 'Survival outcome', '*** HIDDEN ***', '{"type": "survival", "name": "Survival outcome"}', 0);
+VALUES ('Survival outcome', 'Survival outcome', null, '{"type": "survival", "name": "Survival outcome"}', 0);
 
 insert into terms
 select term_id, term_id, 'Survival outcome', '{"type": "survival"}', 1

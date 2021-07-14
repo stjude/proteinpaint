@@ -33,25 +33,40 @@ runproteinpaint({
 					'root',
 					'Cancer-related Variables',
 					'Diagnosis',
-					'diaggrp'
+					'diaggrp',
+					'Survival outcome',
+					'files'
 				],
-				visiblePlotIds: ['diaggrp'],
+				visiblePlotIds: ['diaggrp', 'efs'],
 				plots: {
 					diaggrp: {
 						term: {
 							id: 'diaggrp'
 						},
+						term2: {
+							id: 'efs'
+						},
 						settings: {
-							currViews: ['survival'],
+							currViews: ['barchart'],
 							survival: {
-								term_id: 'efs',
+								method: window.location.search.includes('method=0') ? 0 : 1
+							}
+						}
+					},
+					efs: {
+						term: {
+							id: 'efs'
+						},
+						settings: {
+							currViews: ['barchart'],
+							survival: {
 								method: window.location.search.includes('method=0') ? 0 : 1
 							}
 						}
 					}
 				}
 			},
-			termfilter: {
+			/*termfilter: {
 				filter: {
 					type: 'tvslst',
 					join: 'and',
@@ -77,7 +92,7 @@ runproteinpaint({
 						}
 					]
 				}
-			}
+			}*/
 		},
 	}
 })

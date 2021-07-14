@@ -34,10 +34,13 @@ WHERE st.term_id IN ('Race/Ethnicity', 'genetic_race');
 ---------------------------------------------
 
 INSERT INTO terms
-VALUES('efs', 'Event-free survival', NULL, '{"type": "survival"}', 100);
+VALUES('Survival outcome', 'Survival outcome', NULL, '{"name": "Survival outcome"}', 1);
 
 INSERT INTO terms
-VALUES('os', 'Overall survival', NULL, '{"type": "survival"}', 101);
+VALUES('efs', 'Event-free survival', 'Survival outcome', '{"type": "survival", "name": "Event-free survival", "isleaf": true}', 100);
+
+INSERT INTO terms
+VALUES('os', 'Overall survival', 'Survival outcome', '{"type": "survival", "name": "Overall survival", "isleaf": true}', 101);
 
 DROP TABLE IF EXISTS survival;
 DROP INDEX IF EXISTS survival_term;

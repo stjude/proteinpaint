@@ -316,6 +316,7 @@ function validatePlotTerm(t, vocabApi) {
 	switch (t.term.type) {
 		case 'integer':
 		case 'float':
+		case 'survival':
 			// t.q is binning scheme, it is validated on server
 			break
 		case 'categorical':

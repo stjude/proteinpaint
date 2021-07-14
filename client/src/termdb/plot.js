@@ -45,15 +45,13 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
-		const termdbConfig = this.app.getState().termdbConfig
 		const controls = controlsInit(
 			this.app,
 			{
 				id: this.id,
 				holder: this.dom.controls,
 				isleaf: opts.term.isleaf,
-				iscondition: opts.term.type == 'condition',
-				survivalplot: termdbConfig.survivalplot
+				iscondition: opts.term.type == 'condition'
 			},
 			this.app.opts.plotControls
 		)
@@ -84,19 +82,12 @@ class TdbPlot {
 			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
+		const termdbConfig = this.app.getState().termdbConfig
+		if (opts.term.type == 'condition' && appState.cumincplot4condition) {
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },
 				Object.assign({ controls }, this.app.opts.cuminc)
-			)
-		}
-
-		if (termdbConfig.survivalplot) {
-			this.components.survival = survivalInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.survival)
 			)
 		}
 
@@ -117,13 +108,14 @@ class TdbPlot {
 			throw `No plot with id='${this.id}' found.`
 		}
 		const filter = getNormalRoot(appState.termfilter.filter)
+		const config = appState.tree.plots[this.id]
 		return {
 			activeCohort: appState.activeCohort,
 			termfilter: { filter },
-			config: appState.tree.plots[this.id],
 			ssid: appState.ssid,
+			config,
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
-			survivalplot: appState.termdbConfig.survivalplot || {}
+			displayAsSurvival: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		}
 	}
 
@@ -135,6 +127,16 @@ class TdbPlot {
 		if (data.error) throw data.error
 		this.syncParams(this.config, data)
 		this.currData = data
+
+		// may need to display a survival plot
+		if (this.state.displayAsSurvival && !this.components.survival) {
+			this.components.survival = survivalInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls: this.components.controls }, this.app.opts.survival)
+			)
+		}
+
 		return data
 	}
 
@@ -144,27 +146,19 @@ class TdbPlot {
 		const plot = this.config // the plot object in state
 		const params = []
 
-		if (plot.settings.currViews.includes('cuminc')) {
-			params.push('getcuminc=1')
-			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
-		}
-		if (plot.settings.currViews.includes('survival')) {
+		if (state.displayAsSurvival) {
 			params.push('getsurvival=1')
 			params.push(`km_method=${plot.settings.survival.method}`)
+		} else if (plot.settings.currViews.includes('cuminc')) {
+			params.push('getcuminc=1')
+			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')
 		;['term', 'term2', 'term0'].forEach(_key => {
 			// "term" on client is "term1" at backend
-			const term =
-				_key != 'term2' || !plot.settings.currViews.includes('survival')
-					? plot[_key]
-					: {
-							id: plot.settings.survival.term_id,
-							term: this.state.survivalplot.terms.find(t => t.id == plot.settings.survival.term_id),
-							q: {}
-					  }
+			const term = plot[_key]
 			if (!term) return
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
@@ -246,7 +240,6 @@ export function plotConfig(opts, appState = {}) {
 		if (!opts.term0.q) opts.term0.q = {}
 		termsetting_fill_q(opts.term0.q, opts.term0.term)
 	}
-	const survivalplot = appState.termdbConfig && appState.termdbConfig.survivalplot
 
 	const config = {
 		id: opts.term.term.id,
@@ -318,35 +311,30 @@ export function plotConfig(opts, appState = {}) {
 
 			termInfo: {
 				isVisible: false
+			},
+
+			survival: {
+				method: 1, // for testing, 1 = survival.km.processSerieses(), 0 = km.do_plot(),
+				radius: 5,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16,
+				hidden: []
 			}
 		}
 	}
 
-	if (survivalplot) {
-		config.settings.survival = {
-			method: 1, // for testing, 1 = survival.km.processSerieses, 0 = km.do_plot(),
-			term_id: survivalplot.term_ids[0],
-			xUnit: survivalplot.xUnit,
-			radius: 5,
-			fill: '#fff',
-			stroke: '#000',
-			fillOpacity: 0,
-			chartMargin: 10,
-			svgw: 400,
-			svgh: 300,
-			svgPadding: {
-				top: 20,
-				left: 55,
-				right: 20,
-				bottom: 50
-			},
-			axisTitleFontSize: 16,
-			hidden: []
-		}
-	}
-
 	// may apply term-specific changes to the default object
-
 	return rx.copyMerge(config, opts)
 }
 
