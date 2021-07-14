@@ -129,26 +129,25 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, total_size, filter_term } = args
+	const { arg, holder, size, from, filter_term } = args
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	arg.numofcases = total_size || occurrence
+	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	const default_size = 10
 	let current_size = parseInt(size) || default_size
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
-	const pagination = arg.numofcases > 10
+	const pagination = arg.totalcases > 10
 	if (pagination) {
 		arg.size = current_size
 		arg.from = current_from
 	}
 	holder.selectAll('*').style('opacity', 0.5)
 	arg.temp_div.style('display', 'block').text('Loading...')
-	const [data, total] = await arg.tk.mds.variant2samples.get(arg)
-	if (total) arg.numofcases = total
+	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
+	arg.numofcases = numofcases
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
-	if (arg.tid2value_orig.size && occurrence < 10) make_sunburst_tidlist(arg, holder)
+	if (arg.tid2value_orig.size && arg.totalcases < 10) make_sunburst_tidlist(arg, holder)
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -172,7 +171,7 @@ async function make_multiSampleTable(args) {
 			.style('display', 'inline-block')
 			.style('padding', '5px 10px')
 			.style('color', '#bbb')
-			.html(`n= ${arg.numofcases} / ${occurrence} Samples`)
+			.html(`n= ${arg.numofcases} / ${arg.totalcases} Samples`)
 	}
 
 	// top text to display sample per page and total sample size (only for pagination)
@@ -283,7 +282,7 @@ async function make_multiSampleSummaryList(arg, holder) {
 	const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
 		{ heading: summary_label, callback: div => tab2box(div, summary_tabs) },
-		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div }) }
+		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
 	]
 
 	make_horizontal_tabs(holder, main_tabs)
@@ -404,7 +403,7 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 				.on('mouseout', () => {
 					cat_div.style('color', '#000').style('text-decoration', 'none')
 				})
-				.on('click', () => makeFilteredList(category_name, count))
+				.on('click', () => makeFilteredList(category_name))
 			const cat_div = grid_div
 				.append('div')
 				.style('padding-right', '10px')
@@ -416,10 +415,10 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 				.on('mouseout', () => {
 					cat_div.style('color', '#000').style('text-decoration', 'none')
 				})
-				.on('click', () => makeFilteredList(category_name, count))
+				.on('click', () => makeFilteredList(category_name))
 		}
 
-		function makeFilteredList(cat, count) {
+		function makeFilteredList(cat) {
 			if (arg.tid2value == undefined) arg.tid2value = {}
 			else if (arg.filter_term) {
 				delete arg.tid2value[arg.filter_term]
@@ -432,7 +431,6 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			make_multiSampleTable({
 				arg,
 				holder: main_tabs[1].holder,
-				total_size: count,
 				filter_term: category.name
 			})
 		}
@@ -530,10 +528,9 @@ async function make_densityplot(holder, data, callabck) {
 		.text(data.unit)
 
 	// add brush to select range from the density plot
-	const y_axis_width = y_scale.node().getBBox().width
-	svg.call(
+	g.call(
 		brushX()
-			.extent([[xpad, ypad], [width - xpad + y_axis_width, height + ypad]])
+			.extent([[xpad, ypad], [width - xpad, height + ypad]])
 			.on('end', async () => {
 				const selection = d3event.selection
 				const range_start = xscale.invert(selection[0])
@@ -665,7 +662,6 @@ function make_pagination(arg, page_doms) {
 				arg,
 				holder: list_holder,
 				size: new_size,
-				total_size: arg.numofcases,
 				filter_term: arg.filter_term
 			})
 		})
@@ -735,7 +731,6 @@ function make_pagination(arg, page_doms) {
 						holder: list_holder,
 						size: arg.size,
 						from: new_from,
-						total_size: arg.numofcases,
 						filter_term: arg.filter_term
 					})
 				}
