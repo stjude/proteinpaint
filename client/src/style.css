@@ -787,7 +787,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     padding: 10px 5px 10px 5px;
     display: grid;
     grid-template-columns: 2fr 9fr 40px;
-    grid-template-areas: 'image header header' 'image info info';
+    grid-template-areas: 'image header header' 'image media media';
     gap: 5px;
     align-items: center;
     justify-items: left;
@@ -826,7 +826,6 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     height: 75px;
     align-self: center;
     justify-self: center;
-    overflow: hidden;
 }
 
 .sjpp-track-image img {
@@ -866,11 +865,6 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
   transform: rotate(-45deg);
 }
 
-/* .sjpp-track-ribbon::before,
-.sjpp-track-ribbon::after {
-    border-top-color: transparent;
-    border-left-color: transparent;
-} */
 .sjpp-track-ribbon::before {
     top: 0;
     right: 0;
@@ -896,7 +890,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
 }
 
 .sjpp-track-links>a, .sjpp-landing-page-a {
-    grid-area: info;
+    grid-area: media;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     margin: 0px 0px 0px 8px;

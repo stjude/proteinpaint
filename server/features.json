@@ -387,6 +387,40 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
             },
+            "ppcalls": [
+                {
+                    "label":"Json",
+                    "runpparg": {
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "block":1,
+                        "genome": "hg19",
+                        "nativetracks": "Refgene",
+                        "tracks": [{
+                            "type": "mdsjunction",
+                            "name": "Demo",
+                            "file": "proteinpaint_demo/hg19/junction/json.gz"
+                        }]
+                    }
+                },
+                {
+                    "label":"Matrix",
+                    "runpparg": {
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "block":1,
+                        "genome": "hg19",
+                        "nativetracks": "Refgene",
+                        "tracks": [{
+                            "type": "mdsjunction",
+                            "name": "Demo",
+                            "file": "proteinpaint_demo/hg19/junction/matrix.gz"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false,
                 "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz"
