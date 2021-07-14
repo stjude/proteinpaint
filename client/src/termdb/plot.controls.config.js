@@ -86,23 +86,24 @@ class TdbConfigUiInit {
 	}
 
 	getState(appState) {
+		const config = appState.tree.plots[this.id]
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			config,
+			displayAsSurvival: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		}
 	}
 
 	main() {
 		const plot = this.state.config
 		const isOpen = plot.settings.controls.isOpen
-
 		this.render(isOpen)
 		for (const name in this.inputs) {
 			const o = this.inputs[name]
-			o.main(o.usestate ? this.state : plot)
+			o.main(o.usestate ? this.state : plot, this.state.displayAsSurvival)
 		}
 	}
 
@@ -163,8 +164,11 @@ function setOrientationOpts(opts) {
 	})
 
 	const api = {
-		main(plot) {
-			self.dom.row.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
+		main(plot, displayAsSurvival = false) {
+			self.dom.row.style(
+				'display',
+				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
+			)
 			self.radio.main(plot.settings.barchart.orientation)
 		}
 	}
@@ -207,8 +211,11 @@ function setScaleOpts(opts) {
 	})
 
 	const api = {
-		main(plot) {
-			self.dom.row.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
+		main(plot, displayAsSurvival = false) {
+			self.dom.row.style(
+				'display',
+				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
+			)
 			self.radio.main(plot.settings.barchart.unit)
 			self.radio.dom.divs.style('display', d => {
 				if (d.value == 'log') {
@@ -262,7 +269,7 @@ function setCumincGradeOpts(opts) {
 		.html(d => '&nbsp;' + d + '&nbsp;')
 
 	const api = {
-		main(plot) {
+		main(plot, displayAsSurvival = false) {
 			self.dom.row.style('display', plot.settings.currViews.includes('cuminc') ? 'table-row' : 'none')
 			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
 		}
@@ -314,8 +321,8 @@ function setViewOpts(opts) {
 	})
 
 	const api = {
-		main(plot) {
-			self.dom.row.style('display', opts.iscondition || plot.term2 ? 'table-row' : 'none')
+		main(plot, displayAsSurvival = false) {
+			self.dom.row.style('display', !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')

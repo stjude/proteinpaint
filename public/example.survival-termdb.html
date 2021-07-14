@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=exp style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	debug: 1,
+	termdb:{
+		state: {
+			dslabel: 'TermdbTest',
+			genome: 'hg38',
+			nav: {
+				header_mode: 'with_tabs',
+				activeTab: 1,
+			},
+			activeCohort:2,
+			tree: {
+				expandedTermIds: [
+					'root',
+					'Cancer-related Variables',
+					'Diagnosis',
+					'diaggrp',
+					'Survival outcome',
+					'files'
+				],
+				visiblePlotIds: ['diaggrp', 'efs'],
+				plots: {
+					diaggrp: {
+						term: {
+							id: 'diaggrp'
+						},
+						term2: {
+							id: 'efs'
+						},
+						settings: {
+							currViews: ['barchart'],
+							survival: {
+								method: window.location.search.includes('method=0') ? 0 : 1
+							}
+						}
+					},
+					efs: {
+						term: {
+							id: 'efs'
+						},
+						settings: {
+							currViews: ['barchart'],
+							survival: {
+								method: window.location.search.includes('method=0') ? 0 : 1
+							}
+						}
+					}
+				}
+			},
+			/*termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'and',
+					in: true,
+					lst: [
+						{
+							type: 'tvs',
+							tag: 'cohortFilter',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical', name: 'Cohort' },
+								values: [
+									{ key: 'SJLIFE', label: 'SJLIFE' },
+									{key:'CCSS',label:'CCSS'},
+								]
+							}
+						},
+						{
+							tag: 'filterUiRoot',
+							type:"tvslst",
+							join: '',
+							in: true,
+							lst: []
+						}
+					]
+				}
+			}*/
+		},
+	}
+})
+
+</script>
+
+</body>
+</html>

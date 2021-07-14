@@ -146,7 +146,10 @@ function setRenderers(self) {
 			integer: setNumericMethods,
 			float: setNumericMethods,
 			categorical: setCategoricalMethods,
-			condition: setConditionalMethods
+			condition: setConditionalMethods,
+			// for now, use default methods as placeholder functions
+			// until there is actual need to group survival term values
+			survival: setDefaultMethods
 		}
 	}
 
@@ -394,6 +397,10 @@ export function termsetting_fill_q(q, term) {
 		}
 		return
 	}
+	if (term.type == 'survival') {
+		q.type = 'survival'
+		return
+	}
 	throw 'unknown term type'
 }
 
@@ -421,4 +428,15 @@ function valid_binscheme(q) {
 		}
 	}
 	return false
+}
+
+function emptyMethod() {}
+function getTermLabel(d) {
+	return d.name.length <= 20 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+}
+
+function setDefaultMethods(self) {
+	self.showEditMenu = emptyMethod
+	self.get_status_msg = emptyMethod
+	self.term_name_gen = getTermLabel
 }

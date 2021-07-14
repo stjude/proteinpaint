@@ -28,7 +28,7 @@ export async function getterm(termid, dslabel = null, genome = null) {
 	return data.term
 }
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
 
 // shared in client, server, and tape test
 export function graphable(term) {
@@ -104,6 +104,8 @@ export function sample_match_termvaluesetting(row, filter) {
 						? t.values.find(d => anno.includes(d.key))
 						: t.values.find(d => d.key == anno)
 				}
+			} else if (t.term.type == 'survival') {
+				// don't do anything?
 			} else {
 				throw 'unknown term type'
 			}

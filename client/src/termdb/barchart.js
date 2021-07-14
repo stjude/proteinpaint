@@ -60,8 +60,13 @@ class TdbBarchart {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const config = appState.tree.plots[this.id]
+		const displayAsSurvival =
+			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		return {
-			isVisible: config.settings.currViews.includes('barchart') && appState.tree.visiblePlotIds.includes(this.id),
+			isVisible:
+				!displayAsSurvival &&
+				config.settings.currViews.includes('barchart') &&
+				appState.tree.visiblePlotIds.includes(this.id),
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
@@ -278,7 +283,8 @@ class TdbBarchart {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = (t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade) ? '' : `, n=${series.visibleTotal}`
+				const ntotal =
+					t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal

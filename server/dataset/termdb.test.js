@@ -16,6 +16,7 @@ copy.cohort.db.file = 'files/hg38/TermdbTest/db2'
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, copy.cohort.db.file)
 fs.copyFileSync(srcdb, destdb)
+
 /*
 const vcfname = 'vcf.gz'
 copy.track.vcf.file = 'files/hg38/TermdbTest/' + vcfname
@@ -27,4 +28,11 @@ const srctbi = srcvcf + '.tbi'
 const desttbi = destvcf + '.tbi'
 fs.copyFileSync(srctbi, desttbi)
 */
+
+copy.cohort.termdb.survivalplot = {
+	term_ids: ['efs', 'os'],
+	xUnit: 'years',
+	codes: [{ value: 0, name: '' }, { value: 1, name: 'censored' }]
+}
+
 module.exports = copy

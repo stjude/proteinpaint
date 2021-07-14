@@ -72,6 +72,7 @@ class Overlay {
 	main() {
 		this.dom.tip.hide()
 		this.mayRegisterTerm(this.state.config.term2)
+		this.dom.tr.style('display', 'table-row')
 		this.updateUI()
 	}
 	mayRegisterTerm(term) {

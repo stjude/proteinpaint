@@ -72,6 +72,8 @@ class TdbStore {
 	}
 
 	async rehydrate() {
+		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
+
 		// maybe no need to provide term filter at this query
 		for (const plotId in this.state.tree.plots) {
 			const savedPlot = this.state.tree.plots[plotId]
@@ -85,7 +87,7 @@ class TdbStore {
 				if (!savedPlot[t]) continue
 				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 			}
-			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+			this.state.tree.plots[plotId] = plotConfig(savedPlot, await this.api.copyState())
 			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
 		}
 
@@ -95,7 +97,6 @@ class TdbStore {
 			filterUiRoot = this.state.termfilter.filter
 		}
 
-		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
@@ -215,9 +216,12 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	plot_show(action) {
+	async plot_show(action) {
 		if (!this.state.tree.plots[action.id]) {
-			this.state.tree.plots[action.term.id] = plotConfig({ id: action.id, term: { term: action.term } })
+			this.state.tree.plots[action.term.id] = plotConfig(
+				{ id: action.id, term: { term: action.term } },
+				await this.api.copyState()
+			)
 		}
 		if (!this.state.tree.visiblePlotIds.includes(action.id)) {
 			this.state.tree.visiblePlotIds.push(action.id)
@@ -312,6 +316,7 @@ function validatePlotTerm(t, vocabApi) {
 	switch (t.term.type) {
 		case 'integer':
 		case 'float':
+		case 'survival':
 			// t.q is binning scheme, it is validated on server
 			break
 		case 'categorical':

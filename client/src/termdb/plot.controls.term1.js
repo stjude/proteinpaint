@@ -34,10 +34,12 @@ class Term1ui {
 		this.dom = { tr: o.holder }
 	}
 	getState(appState) {
+		const plot = appState.tree.plots[this.id]
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
-			plot: appState.tree.plots[this.id]
+			plot,
+			displayAsSurvival: plot.term.term.type == 'survival' || (plot.term2 && plot.term2.term.type == 'survival')
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -45,6 +47,11 @@ class Term1ui {
 		return state
 	}
 	main() {
+		if (this.state.displayAsSurvival) {
+			this.dom.tr.style('display', 'none')
+			return
+		}
+		this.dom.tr.style('display', 'table-row')
 		this.render()
 	}
 	setPill() {
@@ -118,6 +125,8 @@ function setRenderers(self) {
 			case 'integer':
 			case 'float':
 				self.dom.td1.text('Customize bins')
+				break
+			case 'survival':
 				break
 			default:
 				throw 'unknown term type'
