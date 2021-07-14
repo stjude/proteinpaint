@@ -166,7 +166,7 @@ function setRenderers(self) {
 
 		div
 			.append('div')
-			.attr('class', 'sjpcb-survival-title')
+			.attr('class', 'sjpp-survival-title')
 			.style('text-align', 'center')
 			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
@@ -198,15 +198,15 @@ function setRenderers(self) {
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 		div
-			.select('.sjpcb-survival-title')
+			.select('.sjpp-survival-title')
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(d.chartId)
 			.html(d.chartId)
 
-		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
+		div.selectAll('.sjpp-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
-		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
+		div.selectAll('.sjpp-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
 		renderSVG(div.select('svg'), d, s, s.duration)
 	}
@@ -228,7 +228,7 @@ function setRenderers(self) {
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
 		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
 		const serieses = mainG
-			.selectAll('.sjpcb-survival-series')
+			.selectAll('.sjpp-survival-series')
 			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
@@ -238,7 +238,7 @@ function setRenderers(self) {
 		serieses
 			.enter()
 			.append('g')
-			.attr('class', 'sjpcb-survival-series')
+			.attr('class', 'sjpp-survival-series')
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
@@ -248,20 +248,20 @@ function setRenderers(self) {
 
 	function getSvgSubElems(svg) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
-		if (!svg.select('.sjpcb-survival-mainG').size()) {
-			mainG = svg.append('g').attr('class', 'sjpcb-survival-mainG')
-			axisG = mainG.append('g').attr('class', 'sjpcb-survival-axis')
-			xAxis = axisG.append('g').attr('class', 'sjpcb-survival-x-axis')
-			yAxis = axisG.append('g').attr('class', 'sjpcb-survival-y-axis')
-			xTitle = axisG.append('g').attr('class', 'sjpcb-survival-x-title')
-			yTitle = axisG.append('g').attr('class', 'sjpcb-survival-y-title')
+		if (!svg.select('.sjpp-survival-mainG').size()) {
+			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
+			axisG = mainG.append('g').attr('class', 'sjpp-survival-axis')
+			xAxis = axisG.append('g').attr('class', 'sjpp-survival-x-axis')
+			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
+			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
+			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
 		} else {
-			mainG = svg.select('.sjpcb-survival-mainG')
-			axisG = mainG.select('.sjpcb-survival-axis')
-			xAxis = axisG.select('.sjpcb-survival-x-axis')
-			yAxis = axisG.select('.sjpcb-survival-y-axis')
-			xTitle = axisG.select('.sjpcb-survival-x-title')
-			yTitle = axisG.select('.sjpcb-survival-y-title')
+			mainG = svg.select('.sjpp-survival-mainG')
+			axisG = mainG.select('.sjpp-survival-axis')
+			xAxis = axisG.select('.sjpp-survival-x-axis')
+			yAxis = axisG.select('.sjpp-survival-y-axis')
+			xTitle = axisG.select('.sjpp-survival-x-title')
+			yTitle = axisG.select('.sjpp-survival-y-title')
 		}
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
@@ -449,7 +449,7 @@ function setInteractivity(self) {
 			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
-			const termNum = self.state.config.term.term.type == 'survival' ? 'term1' : 'term2'
+			const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
 			const xUnit = self.state.config[termNum].term.unit
 			const rows = [
 				`<tr><td colspan=2 style='text-align: center'>${

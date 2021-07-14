@@ -147,7 +147,9 @@ function setRenderers(self) {
 			float: setNumericMethods,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
-			survival: setNumericMethods
+			// for now, use empty methods as placeholder functions
+			// until there is actual need to group survival term values
+			survival: setEmptyMethods
 		}
 	}
 
@@ -426,4 +428,12 @@ function valid_binscheme(q) {
 		}
 	}
 	return false
+}
+
+function emptyMethod() {}
+
+function setEmptyMethods(self) {
+	self.showEditMenu = emptyMethod
+	self.term_name_gen = emptyMethod
+	self.get_status_msg = emptyMethod
 }
