@@ -279,7 +279,7 @@ async function make_multiSampleSummaryList(arg, holder) {
 	const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
 		{ heading: summary_label, callback: div => tab2box(div, summary_tabs) },
-		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div }) }
+		{ heading: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
 	]
 
 	make_horizontal_tabs(holder, main_tabs)
