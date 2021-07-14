@@ -642,7 +642,7 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
-			SELECT s.sample, s.value as key, tte AS value, s.value AS censored
+			SELECT sample, exit_code as key, tte AS value
 			FROM survival s
 			WHERE s.term_id=?
 			${filter ? 'AND s.sample IN ' + filter.CTEname : ''}
@@ -1236,12 +1236,6 @@ thus less things to worry about...
 			}
 			return s_cohort[questionmarks]
 		}
-	}
-
-	if (ds.cohort.termdb.survivalplot) {
-		const term_ids = ds.cohort.termdb.survivalplot.term_ids
-		const qmarks = term_ids.map(id => '?').join(',')
-		ds.cohort.termdb.survivalplot.terms = cn.prepare(`SELECT * FROM terms WHERE id IN (${qmarks})`).all(term_ids)
 	}
 }
 

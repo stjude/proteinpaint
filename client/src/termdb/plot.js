@@ -83,7 +83,7 @@ class TdbPlot {
 		}
 
 		const termdbConfig = this.app.getState().termdbConfig
-		if (opts.term.type == 'condition' && appState.cumincplot4condition) {
+		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
 			this.components.cuminc = cumincInit(
 				this.app,
 				{ holder: this.dom.viz.append('div'), id: this.id },

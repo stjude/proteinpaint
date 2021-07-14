@@ -23,17 +23,17 @@ export async function get_survival(q, ds) {
 
 		// only term1 XOR term2 may be a survival term
 		const tNum = q.term1_q && q.term1_q.type == 'survival' ? 't1' : 't2'
+		const kNum = q.term1_q && q.term1_q.type == 'survival' ? 'key1' : 'key2'
 		const vNum = q.term1_q && q.term1_q.type == 'survival' ? 'val1' : 'val2'
 		const sNum = tNum == 't1' ? 'key2' : 'key1'
 
-		const results = get_rows(q, {
-			columnas: `t1.sample AS sample, ${tNum}.censored AS censored`
-		})
+		const results = get_rows(q)
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// do not include data when years_to_event < 0
 			if (d[vNum] < 0) continue
+			d.censored = d[kNum]
 			// if no applicable term0, the d.key0 is just a placeholder empty string,
 			// see the comments in the get_rows() function for more details
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}

@@ -141,7 +141,7 @@ CREATE TABLE survival(
  sample INT,
  term_id TEXT,
  tte INT, -- time-to-event
- value INT -- cohort defined exit code, may be 0=death, 1=censored, or similar
+ exit_code INT -- cohort defined exit code, may be 0=death, 1=censored, or similar
 );
 CREATE INDEX survival_term ON survival(term_id);
 CREATE INDEX survival_sample ON survival(sample);

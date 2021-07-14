@@ -52,7 +52,7 @@ tape('default behavior', function(test) {
 	}
 
 	function testRoot(tree) {
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 5, 'should have 5 root terms')
 	}
 
 	let termbtn1, childdiv1
@@ -226,8 +226,8 @@ tape('rehydrated from saved state', function(test) {
 	})
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 8, 'should have 8 expanded terms')
-		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 6, 'should have 6 term toggle buttons')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
 	}
 })
 
