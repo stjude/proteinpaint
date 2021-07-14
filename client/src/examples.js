@@ -282,7 +282,7 @@ async function openExample(track, holder) {
 
 	//Download data and show runpp() code at the top
 	makeDataDownload(track, sandbox_div)
-	showCode(track, sandbox_div)
+	showCode(track, track.media.example, sandbox_div)
 
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
@@ -355,21 +355,7 @@ async function showCode(track, arg, div) {
 			})
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-	if(!track.ppcalls){
 		const code = div.body
-			.append('pre')
-			.append('code')
-			.style('display', 'none')
-			.style('margin', '35px')
-			.style('font-size', '14px')
-			.style('border', '1px solid #aeafb0')
-			.html(highlight(`runproteinpaint({
-		host: "${window.location.origin}",
-		holder: document.getElementById('a'),` +
-				JSON.stringify(track.media.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-				`})`, {language:'javascript'}).value)
-		} else {
-			const code = div.body
 			.append('pre')
 			.append('code')
 			.style('display', 'none')
@@ -381,7 +367,6 @@ async function showCode(track, arg, div) {
 		holder: document.getElementById('a'),` +
 				JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 				`})`, {language:'javascript'}).value)
-		}
 	}
 }
 
@@ -427,9 +412,8 @@ async function tabArray(tabs, track){
 }
 
 async function makeTab(arg, div) {
+	showCode2(arg, div)
 	const tab_div = div.append('div')
-	// tab_div.append('div')
-	// 	showCode(arg, div)
 	const runpp_arg = {
 		holder: tab_div
 			.append('div')
@@ -443,4 +427,42 @@ async function makeTab(arg, div) {
 
 		runproteinpaint(Object.assign(runpp_arg, call))
 
+	return tab_div
+
+}
+
+async function showCode2(arg, div) {
+		const codeBtn = div
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.style('margin', '20px')
+			.style('padding', '8px')
+			.style('border', 'none')
+			.style('border-radius', '3px')
+			.style('font-size', '12.75x')
+			.text('Show Code')
+			.style('display', 'inline-block')
+			.on('click', () => {
+				if (code.style('display') == 'none') {
+					code.style('display', 'block') //TODO fadein fn
+					select(event.target).text('Hide')
+				} else {
+					code.style('display', 'none') //TODO fadeout fn
+					select(event.target).text('Show Code')
+				}
+			})
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
+		const code = div
+			.append('pre')
+			.append('code')
+			.style('display', 'none')
+			.style('margin', '35px')
+			.style('font-size', '14px')
+			.style('border', '1px solid #aeafb0')
+			.html(highlight(`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+			JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+			`})`, {language:'javascript'}).value)
 }

@@ -416,7 +416,7 @@
                         "tracks": [{
                             "type": "mdsjunction",
                             "name": "Demo",
-                            "file": "proteinpaint_demo/hg19/junction/matrix.gz"
+                            "file2": "proteinpaint_demo/hg19/junction/matrix.gz"
                         }]
                     }
                 }
