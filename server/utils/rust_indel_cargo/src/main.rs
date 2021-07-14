@@ -12,7 +12,7 @@
 // Function cascade:
 //
 // Optimize ref/alt allele given by user
-// preproces_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
+// preprocess_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
 //
 // Select appropriate kmer length
 //   while duplicate_kmers {
@@ -701,14 +701,33 @@ fn check_if_read_ambivalent(
         // Generally the alt position contains the nucleotide preceding the indel. In that case one is subtracted from ref_stop
         ref_stop -= 1;
     }
+
+    //println!("ref_start (before offset):{}", ref_start);
+    //println!("ref_stop (before offset):{}", ref_stop);
     let repeat_start = ref_start - left_offset as i64;
     let repeat_stop = ref_stop + right_offset as i64;
+    //println!("correct_start_position:{}", correct_start_position);
+    //println!("correct_end_position:{}", correct_end_position);
+    //println!("repeat_start:{}", repeat_start);
+    //println!("repeat_stop:{}", repeat_stop);
 
     if repeat_start <= correct_start_position && correct_start_position <= ref_start {
         read_ambivalent = 2;
     } else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
         read_ambivalent = 2;
+    } else if repeat_start <= correct_end_position && correct_end_position <= ref_stop {
+        if (correct_end_position - ref_start).abs() <= right_offset as i64 {
+            read_ambivalent = 2;
+        }
     }
+
+    // This part of the code is not tested, so its commented out for now.
+
+    //else if ref_start <= correct_start_position && correct_start_position <= repeat_stop {
+    //    if (correct_start_position - ref_stop).abs() <= left_offset as i64 {
+    //        read_ambivalent = 2;
+    //    }
+    //}
     read_ambivalent
 }
 
@@ -830,6 +849,12 @@ fn preprocess_input(
         // If ref/alt nucleotide start with the same base (e.g ACGA/A representing 3bp deletion),increment right_offset_part by 1
         right_offset_part += 1;
     }
+    //println!(
+    //    "right_flanking_nucleotides:{:?}",
+    //    right_flanking_nucleotides
+    //);
+    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
+    //println!("actual_indel_nucleotides:{:?}", actual_indel_nucleotides);
 
     while iter < original_indel_length as usize && no_repeats_part == 1 {
         if actual_indel_nucleotides[iter] != right_flanking_nucleotides[iter] {
