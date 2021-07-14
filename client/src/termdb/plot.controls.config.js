@@ -279,7 +279,7 @@ function setCumincGradeOpts(opts) {
 	return Object.freeze(api)
 }
 
-function setViewOpts(opts, displayAsSurvival = false) {
+function setViewOpts(opts) {
 	const self = {
 		dom: {
 			row: opts.holder,
@@ -322,7 +322,7 @@ function setViewOpts(opts, displayAsSurvival = false) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', !displayAsSurvival && plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')
