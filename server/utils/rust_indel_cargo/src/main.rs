@@ -237,7 +237,13 @@ fn main() {
     let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
-    let (optimized_ref_allele, optimized_alt_allele, left_offset, right_offset) = preprocess_input(
+    let (
+        optimized_ref_allele,
+        optimized_alt_allele,
+        left_offset,
+        right_offset,
+        ref_alt_same_base_start,
+    ) = preprocess_input(
         &ref_nucleotides,
         &alt_nucleotides,
         &refallele,
@@ -253,6 +259,7 @@ fn main() {
     println!("optimized_alt_allele:{}", optimized_alt_allele);
     println!("left_offset:{}", left_offset);
     println!("right_offset:{}", right_offset);
+    println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
     let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
@@ -436,7 +443,9 @@ fn main() {
                             indel_length as usize,
                             strictness,
                             0,
+                            ref_alt_same_base_start,
                         );
+
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
                     let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
                     let ref_comparison = jaccard_similarity_weights(
@@ -562,7 +571,9 @@ fn main() {
                                 indel_length as usize,
                                 strictness,
                                 0,
+                                ref_alt_same_base_start,
                             );
+
                             let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
                             let ref_comparison = jaccard_similarity_weights(
                                 // Computer jaccard similarity w.r.t ref
@@ -740,7 +751,7 @@ fn preprocess_input(
     leftflankseq: String,
     rightflankseq: String,
     surrounding_region_length: i64,
-) -> (String, String, usize, usize) {
+) -> (String, String, usize, usize, usize) {
     let mut optimized_ref_allele = ref_allele.clone();
     let mut optimized_alt_allele = alt_allele.clone();
     let mut right_subseq = String::new(); // String for storing kmer sequence
@@ -762,9 +773,9 @@ fn preprocess_input(
     let mut actual_indel = String::new();
     let mut ref_alt_same_base_start: usize = 0; // Flag to see if the original ref/alt nucleotide start with the same base i.e the ref start position of the indel is in the alt allele (e.g. ACGA/A representing 3bp deletion)
     if ref_nucleotides[0] == alt_nucleotides[0] {
+        ref_alt_same_base_start = 1;
         original_indel_length = indel_length - 1; // If the insertion/deletion starts with same nucleotide, subtracting 1 from indel_length.
         if ref_nucleotides.len() > alt_nucleotides.len() {
-            ref_alt_same_base_start = 1;
             // In case of deletion
             for j in 1..ref_nucleotides.len() {
                 actual_indel += &ref_nucleotides[j].to_string();
@@ -889,6 +900,7 @@ fn preprocess_input(
         optimized_alt_allele,
         left_offset,
         right_offset,
+        ref_alt_same_base_start,
     )
 }
 
@@ -1062,7 +1074,7 @@ fn check_read_within_indel_region(
 }
 
 fn check_polyclonal(
-    sequence: String,             // Read sequence
+    sequence: String,               // Read sequence
     left_most_pos: i64, // Left most pos, contains start_positions_list input for that particular read i.e the nucleotide position from where that particular read starts from
     cigar_sequence: String, // Cigar sequence of that read
     indel_start: i64,   // Indel start position
@@ -1073,6 +1085,7 @@ fn check_polyclonal(
     indel_length: usize, // Length of indel
     strictness: usize, // Strictness of the pipeline
     found_duplicate_kmers: usize, // Flag to tell if there are duplicated kmers (Currently hardcoded to 0 in main function, but maybe used in the future)
+    ref_alt_same_base_start: usize, // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
 ) -> (i64, i64, i64) {
     let sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
@@ -1129,6 +1142,7 @@ fn check_polyclonal(
                         //indel_insertion_starts.push(old_parse_position);
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                        println!("ref_insertion3");
                     } else if read_indel_start <= old_parse_position
                         && read_indel_start + indel_length <= parse_position
                         && found_duplicate_kmers == 0
@@ -1230,6 +1244,7 @@ fn check_polyclonal(
                 } else if old_parse_position <= read_indel_start
                     && parse_position <= read_indel_start + indel_length
                     && found_duplicate_kmers == 0
+                    && strictness >= 2
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
@@ -1238,11 +1253,19 @@ fn check_polyclonal(
                 } else if read_indel_start <= old_parse_position
                     && read_indel_start + indel_length <= parse_position
                     && found_duplicate_kmers == 0
+                    && strictness >= 2
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                       //println!("read_indel_start:{}", read_indel_start);
+                                       //println!("old_parse_position:{}", old_parse_position);
+                                       //println!("parse_position:{}", parse_position);
+                                       //println!(
+                                       //    "read_indel_start + indel_length:{}",
+                                       //    read_indel_start + indel_length
+                                       //);
                 }
                 //}
                 old_parse_position = parse_position;
@@ -1279,6 +1302,12 @@ fn check_polyclonal(
                 // When a read starts with a softclip, then the indel will be on the left-side. Then this logic below will not work. Will have to compare each nucleotide from the end of the indel rather than from the beginning
                 for i in 0..ref_length as usize {
                     if read_indel_start + i < sequence.len() {
+                        if i == 0 && ref_alt_same_base_start == 1 {
+                            if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
+                                break;
+                            }
+                        }
                         if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
                             ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
                             break;
@@ -1290,6 +1319,13 @@ fn check_polyclonal(
 
                 for i in 0..alt_length as usize {
                     if read_indel_start + i < sequence.len() {
+                        if i == 0 && ref_alt_same_base_start == 1 {
+                            if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
+                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
+                                break;
+                            }
+                        }
+
                         if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
                             alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
                             break;
@@ -1300,8 +1336,7 @@ fn check_polyclonal(
                 }
             } else {
                 for i in ref_length..0 as usize {
-                    #[allow(unused_comparisons)]
-                    if read_indel_start - i >= 0 {
+                    if read_indel_start as i64 - i as i64 >= 0 {
                         if &ref_nucleotides[i] != &sequence_vector[read_indel_start - i] {
                             ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
                             break;
@@ -1312,8 +1347,7 @@ fn check_polyclonal(
                 }
 
                 for i in alt_length..0 as usize {
-                    #[allow(unused_comparisons)]
-                    if read_indel_start - i >= 0 {
+                    if read_indel_start as i64 - i as i64 >= 0 {
                         if &alt_nucleotides[i] != &sequence_vector[read_indel_start - i] {
                             alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
                             break;
@@ -1324,6 +1358,9 @@ fn check_polyclonal(
                 }
             }
         }
+
+        //println!("ref_polyclonal_status:{}", ref_polyclonal_status);
+        //println!("alt_polyclonal_status:{}", alt_polyclonal_status);
 
         // In case of an indel insertion, see if the inserted nucleotides in the read matches that of the indel of interest. If not, its marked as a polyclonal variant
         if indel_insertion_starts.len() > 0 {
@@ -1346,6 +1383,8 @@ fn check_polyclonal(
             }
         }
     }
+
+    //println!("cigar_sequence:{}", cigar_sequence);
     (ref_polyclonal_status, alt_polyclonal_status, ref_insertion)
 }
 
