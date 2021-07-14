@@ -255,6 +255,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 					if (!input_str.length) {
 						saydiv.style('display', 'none')
 						err_div.style('display', 'none')
+						delete gdc_args[field.key]
 						return
 					}
 					const [nocount, hascount] = contigNameNoChr2(genomes[default_genome], [chr])
