@@ -331,6 +331,11 @@ export class Block {
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
 			this.legend.tr_morigin = tr2.style('display', 'none')
 			this.legend.td_morigin = td2
+
+			if (arg.legendimg) {
+				const [tr, td] = Legend.legend_newrow(this, arg.legendimg.name || '')
+				this.make_legend_img(arg.legendimg, td)
+			}
 		}
 
 		if (arg.usegm) {
@@ -793,8 +798,42 @@ export class Block {
 
 		// help set block.busy off when there is no track to load
 		this.ifbusy()
+		if (this.tklst.length == 0) {
+			this.error(
+				'No tracks specified. If you don\'t expect to see this, delete the "block:true" from runproteinpaint() argument.'
+			)
+		}
 	}
 	/****** end of constructor ***/
+
+	async make_legend_img(arg, div) {
+		/*
+		add a legend showing a server-side image, either for a track or for this block
+		arg: {}
+		.file: tp path to an image file
+		.height: optional icon height
+		*/
+		const data = await client.dofetch2('img?file=' + arg.file)
+		if (data.error) {
+			div.text(data.error)
+			return
+		}
+		let fold = true
+		const img = div
+			.append('img')
+			.attr('class', 'sja_clbb')
+			.attr('src', data.src)
+			.style('height', '80px')
+		img.on('click', () => {
+			if (fold) {
+				fold = false
+				img.transition().style('height', arg.height ? arg.height + 'px' : 'auto')
+			} else {
+				fold = true
+				img.transition().style('height', '80px')
+			}
+		})
+	}
 
 	regioncumlen(ridx, notincludethisregion) {
 		// region bp length up to the view start of a given region
@@ -2452,13 +2491,42 @@ seekrange(chr,start,stop) {
 			.attr('class', null)
 			.attr('font-weight', 'bold')
 
-		if (tk.list_description) {
-			tk.tklabel
-				.on('mouseover', () => {
-					tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-					client.make_table_2col(tk.tktip.d, tk.list_description).style('margin', '0px')
-				})
-				.on('mouseout', () => tk.tktip.hide())
+		// tk name may be available now or will be defined later
+		if (tk.name) {
+			// two conditions to show tooltip on hovering the label
+			// 1. label truncated, hover to show full label
+			// 2. list_description[{k,v}] provided, hover to show table of details
+			const labeltruncated = tk.name.length >= 25
+			if (labeltruncated) {
+				// to truncate name and also apply tooltip
+				tk.tklabel.text(tk.name.substring(0, 20) + ' ...')
+			} else {
+				// no need to truncate label
+				tk.tklabel.text(tk.name)
+			}
+			if (labeltruncated || tk.list_description) {
+				// will show tooltip to display both info if available
+				tk.tklabel
+					.on('mouseover', () => {
+						tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+						if (labeltruncated) {
+							const d = tk.tktip.d.append('div').text(tk.name)
+							if (tk.list_description) d.style('margin-bottom', '5px')
+						}
+						if (tk.list_description) {
+							client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+						}
+					})
+					.on('mouseout', () => tk.tktip.hide())
+			}
+			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
+			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
+			// when it's overwritten, must call block.setllabel() to update ui
+			tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
+		} else {
+			// tk.name is not provided, e.g. mds2
+			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
+			// fault is that the tooltip cannot be provided in this case
 		}
 
 		tk.pica = {
@@ -2488,7 +2556,6 @@ seekrange(chr,start,stop) {
 				bampilemaketk(tk, this)
 				break
 			case client.tkt.ds:
-				tk.tklabel.text(tk.name)
 				dsmaketk(tk, this)
 				break
 			case client.tkt.pgv:
@@ -3227,11 +3294,29 @@ seekrange(chr,start,stop) {
 
 	to_proteinview(isoform, fromgenetk) {
 		/*
-show protein view for a given isoform
-and bring along current tracks
-if fromgenetk is provided, will skip this track
-*/
-		const pane = client.newpane({ x: 100, y: 100 })
+		show protein view for a given isoform
+		and bring along current tracks
+		if fromgenetk is provided, will skip this track
+		*/
+		// example of how to use new sandbox div
+		// cases where gene panel is used from genomepaint track
+		// 1. on landing page: use sandbox, sandbox_div is 2nd child div of .sja_root_holder parent div (1st child is header)
+		// 2. on page with track (mds2): use sandbox same as landing page (case 1)
+		// 3. for page with embedded pp: use tip, .sja_root_holder will only have 1 child and sanbox_div is missing
+		// 4. for multiple pp instance on same page: use tip as embdded pp (case 3)
+		let pane
+		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
+		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
+		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
+		if (use_tip)
+			// case 3 & 4
+			pane = client.newpane({ x: 100, y: 100 })
+		// original floating tip
+		else {
+			// case 1 & 2
+			const sandbox_div = d3select(root_divs[2])
+			pane = client.newSandboxDiv(sandbox_div)
+		}
 		pane.header.text(isoform)
 		const arg = {
 			genome: this.genome,
@@ -4610,6 +4695,10 @@ if fromgenetk is provided, will skip this track
 		const tk = this.block_addtk_template(tk0)
 		tk.mds = ds
 		tk.querykey = q.querykey
+		if (q.singlesample) {
+			// in sampleview, to show all cnvs, not just focal ones
+			tk.bplengthUpperLimit = 0
+		}
 		tk.customization = q
 
 		this.tk_load(tk)

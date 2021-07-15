@@ -22,7 +22,15 @@ class TdbConfigUiInit {
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug, instanceNum: this.instanceNum }),
+			view: setViewOpts({
+				holder: this.dom.viewTr,
+				dispatch,
+				id: this.id,
+				debug,
+				instanceNum: this.instanceNum,
+				isleaf: opts.isleaf,
+				iscondition: opts.iscondition
+			}),
 			orientation: setOrientationOpts({
 				holder: this.dom.orientationTr,
 				dispatch,
@@ -30,7 +38,13 @@ class TdbConfigUiInit {
 				debug,
 				instanceNum: this.instanceNum
 			}),
-			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug })
+			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
+			grade: setCumincGradeOpts({
+				holder: this.dom.cumincGradeTr,
+				dispatch,
+				id: this.id,
+				debug
+			})
 		}
 		this.components = {
 			term1: term1uiInit(app, { holder: this.dom.term1Tr, id: this.id, debug }),
@@ -64,6 +78,7 @@ class TdbConfigUiInit {
 		this.dom.overlayTr = this.dom.table.append('tr')
 		this.dom.viewTr = this.dom.table.append('tr')
 		this.dom.orientationTr = this.dom.table.append('tr')
+		this.dom.cumincGradeTr = this.dom.table.append('tr') //.style('display', 'none')
 		this.dom.scaleTr = this.dom.table.append('tr')
 		this.dom.divideTr = this.dom.table.append('tr')
 
@@ -211,6 +226,52 @@ function setScaleOpts(opts) {
 	return Object.freeze(api)
 }
 
+function setCumincGradeOpts(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTd: opts.holder
+				.append('td')
+				.html('Cutoff Grade')
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
+		opts.dispatch({
+			type: 'plot_edit',
+			id: opts.id,
+			config: {
+				settings: {
+					cuminc: {
+						gradeCutoff: self.dom.select.property('value')
+					}
+				}
+			}
+		})
+	})
+
+	self.dom.select
+		.selectAll('option')
+		.data([1, 2, 3, 4, 5])
+		.enter()
+		.append('option')
+		.attr('value', d => d)
+		.attr('selected', d => d === 3)
+		.html(d => '&nbsp;' + d + '&nbsp;')
+
+	const api = {
+		main(plot) {
+			self.dom.row.style('display', plot.settings.currViews.includes('cuminc') ? 'table-row' : 'none')
+			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 function setViewOpts(opts) {
 	const self = {
 		dom: {
@@ -223,15 +284,21 @@ function setViewOpts(opts) {
 		}
 	}
 
+	const options = [
+		{ label: 'Barchart', value: 'barchart' },
+		{ label: 'Table', value: 'table' },
+		{ label: 'Boxplot', value: 'boxplot' },
+		{ label: 'Scatter', value: 'scatter' }
+	]
+
+	if (opts.iscondition) {
+		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
+	}
+
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
 		holder: self.dom.inputTd,
-		options: [
-			{ label: 'Barchart', value: 'barchart' },
-			{ label: 'Table', value: 'table' },
-			{ label: 'Boxplot', value: 'boxplot' },
-			{ label: 'Scatter', value: 'scatter' }
-		],
+		options,
 		listeners: {
 			input(d) {
 				const currViews = d.value == 'barchart' ? ['barchart', 'stattable'] : [d.value]
@@ -248,20 +315,22 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('display', plot.term2 ? 'table-row' : 'none')
+			self.dom.row.style('display', opts.iscondition || plot.term2 ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')
 				? 'boxplot'
 				: plot.settings.currViews.includes('scatter')
 				? 'scatter'
+				: plot.settings.currViews.includes('cuminc')
+				? 'cuminc'
 				: 'barchart'
 
 			const numericTypes = ['integer', 'float']
 
 			self.radio.main(currValue)
 			self.radio.dom.divs.style('display', d =>
-				d.value == 'barchart'
+				d.value == 'barchart' || d.value == 'cuminc'
 					? 'inline-block'
 					: d.value == 'table' && plot.term2
 					? 'inline-block'

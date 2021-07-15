@@ -12,7 +12,7 @@ const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
-//const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
+const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
@@ -98,8 +98,14 @@ segment {}
 .ridx
 .x1, x2  // screen px, used for rendering
 .shiftdownrow // idx of mini stack
+.tempscore // XXX explain what is it
 .isfirst
 .islast
+.discord_wrong_insertsize
+.discord_orientation
+.discord_unmapped1 // Current read unmapped
+.discord_unmapped2 // Mate of current read unmapped
+.rnext, pnext // attribute is set when mate is on a different chr
 
 box {}
 .opr
@@ -112,7 +118,8 @@ box {}
 
 *********************** function cascade
 download_gdc_bam  // For downloading gdc bam files
-        get_gdc_bam
+	get_gdc_bam
+		index_bam
 get_q
 do_query
 	query_reads
@@ -144,6 +151,11 @@ do_query
 	plot_pileup
 		run_samtools_depth
 		collect_softclipmismatch2pileup
+route_getread
+    query_one_read
+      parse_one_segment
+    convertread2html
+    convertunmappedread2html  
 */
 
 // match box color, for single read and normal read pairs
@@ -154,6 +166,10 @@ const qual2match = interpolateRgb(match_lq, match_hq)
 const ctxpair_hq = '#d48b37'
 const ctxpair_lq = '#dbc6ad'
 const qual2ctxpair = interpolateRgb(ctxpair_lq, ctxpair_hq)
+// discordant reads: soft green for background only, strong green for printing nt
+const discord_wrong_insertsize_hq = '#3B7A57'
+const discord_wrong_insertsize_lq = '#E5FFCC'
+const qual2discord_wrong_insertsize = interpolateRgb(discord_wrong_insertsize_lq, discord_wrong_insertsize_hq)
 // mismatch: soft red for background only without printed nt, strong red for printing nt on gray background
 const mismatchbg_hq = '#d13232'
 const mismatchbg_lq = '#ffdbdd'
@@ -162,6 +178,14 @@ const qual2mismatchbg = interpolateRgb(mismatchbg_lq, mismatchbg_hq)
 const softclipbg_hq = '#4888bf'
 const softclipbg_lq = '#c9e6ff'
 const qual2softclipbg = interpolateRgb(softclipbg_lq, softclipbg_hq)
+// discord_unmapped: soft brown for background only, strong brown for printing nt
+const discord_unmapped_hq = '#6B4423'
+const discord_unmapped_lq = '#987654'
+const qual2discord_unmapped = interpolateRgb(discord_unmapped_lq, discord_unmapped_hq)
+// discord_orientation: soft pink for background only, strong pink for printing nt
+const discord_orientation_hq = '#ff0aef'
+const discord_orientation_lq = '#ffd6fe'
+const qual2discord_orientation = interpolateRgb(discord_orientation_lq, discord_orientation_hq)
 // insertion, text color gradient to correlate with the quality
 // cyan
 const insertion_hq = '#47FFFC' //'#00FFFB'
@@ -192,6 +216,9 @@ const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
 const pileup_totalcolor = '#e0e0e0'
 
+const alt_diff_score_color = '#FF0000'
+const ref_diff_score_color = '#47C8FF'
+
 const insertion_minpx = 1 // minimum px width to display an insertion
 const minntwidth_toqual = 1 // minimum nt px width to show base quality
 const minntwidth_overlapRPmultirows = 0.4 // minimum nt px width to show
@@ -213,7 +240,7 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 10000 // maximum number of reads to load
+const maxreadcount = 30000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
@@ -262,27 +289,71 @@ at r.ntwidth<1:
 */
 
 async function download_gdc_bam(req) {
-	let gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
+	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.query.gdc.split(',')[0]
-		const gdc_case_id = req.query.gdc.split(',')[1]
+		const gdc_token = req.get('x-auth-token')
+		const gdc_file_id = req.query.gdc_file
 		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
 		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
 		const dir = serverconfig.cachedir + '/' + gdc_token_hash
-		if (!fs.existsSync(dir)) {
-			// Check if directory exists, if not create one
-			fs.mkdir(dir, err => {
-				if (err) {
-					throw err
+		try {
+			await fs.promises.stat(dir)
+		} catch (e) {
+			if (e.code == 'ENOENT') {
+				// make dir
+				try {
+					await fs.promises.mkdir(dir, { recursive: true })
+				} catch (e) {
+					throw 'url dir: cannot mkdir'
 				}
-			})
+			} else {
+				throw 'stating gz url dir: ' + e.code
+			}
 		}
-		const gdc_bam_filename = path.join(dir, 'temp.' + Math.random().toString() + '.bam')
+		const gdc_bam_filename = path.join(gdc_token_hash, 'temp.' + Math.random().toString() + '.bam')
 		// Need to make directory for each user using token
-		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_case_id, gdc_bam_filename)
+		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, gdc_bam_filename)
 		gdc_bam_filenames.push(gdc_bam_filename)
 	}
 	return gdc_bam_filenames
+}
+
+async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
+	const multiplication_factor = q.diff_score_plotwidth / (max_diff_score - min_diff_score)
+	const diff_score_bar_width = max_diff_score * multiplication_factor - min_diff_score * multiplication_factor
+	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	//const read_height = group.templates[0].r.ntwidth
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
+	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
+	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
+	let i = 0
+	const dist_bw_reads = group.stackspace / group.canvasheight
+	for (const diff_score of diff_scores_list) {
+		//console.log('diff_score:', diff_score)
+		if (diff_score > 0) {
+			ctx.fillStyle = alt_diff_score_color
+		} else {
+			ctx.fillStyle = ref_diff_score_color
+		}
+		ctx.fillRect(
+			min_diff_score * -1 * multiplication_factor,
+			(i + 1) * read_height,
+			//(diff_score * 50 * -1) / min_diff_score,
+			diff_score * multiplication_factor,
+			read_height - dist_bw_reads * read_height
+		)
+
+		i += 1
+	}
+	return {
+		height: group.canvasheight,
+		width: diff_score_bar_width,
+		src: canvas.toDataURL(),
+		read_height: read_height
+	}
 }
 
 async function plot_pileup(q, templates) {
@@ -300,11 +371,9 @@ async function plot_pileup(q, templates) {
 		bplst[ridx] = await run_samtools_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
-		const lst = []
 		for (const b of bplst[ridx]) {
-			if (b) lst.push(b.total)
+			if (b) maxValue = Math.max(maxValue, b.total)
 		}
-		maxValue = Math.max(maxValue, ...lst)
 	}
 
 	for (const [ridx, r] of q.regions.entries()) {
@@ -578,18 +647,19 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
-	if (req.query.gdc) {
+	// if gdc_token and case_id present, it will be moved to x-auth-token
+	if (req.get('x-auth-token')) {
 		q = {
 			genome,
-			file: req.query.file, // will need to change this to a loop when viewing multiple regions in the same gdc sample
+			file: path.join(serverconfig.cachedir, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
-		//q.gdc_token = req.query.gdc.split(',')[0]
-		q.gdc_case_id = req.query.gdc.split(',')[1]
+		//q.gdc_token = req.get('x-auth-token').split(',')[0]
+		q.gdc_file = req.query.gdc_file
 		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
@@ -614,13 +684,19 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
 	if (req.query.variant) {
+		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
+		if (req.query.max_diff_score) {
+			q.max_diff_score = Number(req.query.max_diff_score)
+			q.min_diff_score = Number(req.query.min_diff_score)
+		}
 		const t = req.query.variant.split('.')
-		if (t.length != 4) throw 'invalid variant, not chr.pos.ref.alt'
+		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
 		q.variant = {
 			chr: t[0],
 			pos: Number(t[1]),
 			ref: t[2].toUpperCase(),
-			alt: t[3].toUpperCase()
+			alt: t[3].toUpperCase(),
+			strictness: t[4]
 		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
@@ -693,12 +769,24 @@ async function do_query(q) {
 		},
 		groups: []
 	}
+	if (q.read_limit_reached) {
+		// When maximum read limit is reached
+		result.count.read_limit = q.read_limit_reached
+	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
-
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
+		if (Number.isFinite(q.max_diff_score) && q.variant) {
+			// In partstack mode
+			result.max_diff_score = q.max_diff_score
+			result.min_diff_score = q.min_diff_score
+		} else if (Number.isFinite(out.max_diff_score)) {
+			result.max_diff_score = out.max_diff_score
+			result.min_diff_score = out.min_diff_score
+		}
+
 		if (out.refalleleerror) result.refalleleerror = out.refalleleerror
 	}
 
@@ -749,9 +837,15 @@ async function do_query(q) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
+
 		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
+		if (q.variant) {
+			// diff scores plotted only if a variant is specified by user
+			gr.diff_scores_img = await plot_diff_scores(q, group, templates, result.max_diff_score, result.min_diff_score)
+		}
+
 		gr.src = canvas.toDataURL()
 		result.groups.push(gr)
 		templates_total = [...templates_total, ...templates]
@@ -761,9 +855,16 @@ async function do_query(q) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
 	}
 	if (!q.partstack) {
-		// not in partstack mode, will do pileup plot
-		if (!q.pileupheight) throw 'pileupheight missing'
-		result.pileup_data = await plot_pileup(q, templates_total)
+		// not in partstack mode, may do pileup plot
+		if (result.count.r == 0) {
+			// no reads, will not do pileup
+			// FIXME
+			// count.r is not reliable as it will count rnaseq reads splitting across intron and invisible (new issue)
+			// to generate count.plotr and count.splitr through plotting, and when count.plotr==0 then don't do pileup
+		} else {
+			if (!q.pileupheight) throw 'pileupheight missing'
+			result.pileup_data = await plot_pileup(q, templates_total)
+		}
 	}
 
 	// Deleting temporary gdc bam file
@@ -790,44 +891,49 @@ async function query_reads(q) {
 
 	otherwise, query for every region in q.regions
 	*/
-	if (q.variant) {
-		const r = {
-			chr: q.variant.chr,
-			start: q.variant.pos,
-			stop: q.variant.pos + q.variant.ref.length
-		}
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
-		await query_region(r, q)
-		q.regions[0].lines = r.lines
-		return
-	}
+	//if (q.variant) {
+	//	const r = {
+	//		chr: q.variant.chr,
+	//		start: q.variant.pos,
+	//		stop: q.variant.pos + q.variant.ref.length,
+	//	}
+	//	await query_region(r, q)
+	//	q.regions[0].lines = r.lines
+	//	return
+	//}
 	if (q.sv) {
 		return
 	}
 	for (const r of q.regions) {
-		//if (q.gdc_case_id) {
-		//	await get_gdc_bam(q.nochr ? r.chr.replace('chr', '') : r.chr, r.start, r.stop, q.gdc_token, q.gdc_case_id, q.file)
-		//}
 		await query_region(r, q) // add r.lines[]
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, gdc_token, gdc_case_id, bam_file_name) {
+async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = gdc_token
+	headers['X-Auth-Token'] = token
+	const file = path.join(serverconfig.cachedir, cache_dir)
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdc_case_id + '?region=' + chr + ':' + start + '-' + stop
-	console.log(url)
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(bam_file_name))
-		//console.log('Downloaded ' + bam_file_name.toString())
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(file))
+		await index_bam(file)
 	} catch (error) {
 		console.log(error)
 		console.log('Cannot retrieve bam file')
+		throw 'Cannot retrieve bam file: ' + error
 	}
+}
+
+function index_bam(file) {
+	// only work for gdc bam slices, file is absolute path in cache dir
+	return new Promise((resolve, reject) => {
+		const ps = spawn(samtools, ['index', file])
+		ps.on('close', code => {
+			resolve()
+		})
+	})
 }
 
 function query_region(r, q) {
@@ -836,6 +942,9 @@ function query_region(r, q) {
 	r.lines = []
 	return new Promise((resolve, reject) => {
 		let ps = ''
+		//console.log(
+		//	'samtools view ' + q.file + ' ' + (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+		//)
 		if (q.gdc_case_id) {
 			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
 		} else {
@@ -851,6 +960,7 @@ function query_region(r, q) {
 			q._numofreads++
 			if (q._numofreads >= maxreadcount) {
 				ps.kill()
+				q.read_limit_reached = true
 				q.messagerows.push({
 					h: 13,
 					t: 'Too many reads in view range. Try zooming into a smaller region.'
@@ -863,31 +973,30 @@ function query_region(r, q) {
 	})
 }
 
+/*
+'samtools depth' returns single base depth
+results are collected in bplst[]
+when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
+when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
+should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
+*/
 function run_samtools_depth(q, r) {
-	// "samtools depth" returns single base depth
-	// when region resolution is low with #bp per pixel is above a cutoff e.g. 3
-	// bplst[] should not return single base coverage, but should summarize into bins, each bin for a pixel with .coverage for each pixel
 	const bplst = []
 	return new Promise((resolve, reject) => {
 		// must use r.start+1 to query bam
-		let ls = ''
-		if (q.gdc_case_id) {
-			ls = spawn(samtools, ['depth', '-g', 'DUP', q.file || q.url], { cwd: q.dir })
-		} else {
-			ls = spawn(
-				samtools,
-				[
-					'depth',
-					'-r',
-					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-					'-g',
-					'DUP',
-					q.file || q.url
-				],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ls.stdout })
+		const ps = spawn(
+			samtools,
+			[
+				'depth',
+				'-r',
+				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+				'-g',
+				'DUP',
+				q.file || q.url
+			],
+			{ cwd: q.dir }
+		)
+		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
@@ -997,8 +1106,12 @@ async function divide_reads_togroups(q) {
 		//if (lst) return { groups: lst }
 		//for (const template of templates) {
 		if (q.regions.length == 1) {
-			//return await rust_match_complexvariant(q, templates_info)
-			return await match_complexvariant(q, templates_info)
+			if (serverconfig.features.rust_indel) {
+				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
+				return await rust_match_complexvariant(q, templates_info)
+			} else {
+				return await match_complexvariant(q, templates_info)
+			}
 		}
 	}
 	if (q.sv) {
@@ -1080,7 +1193,9 @@ function get_templates(q, group) {
 			const r = q.regions[i]
 			//for (const line of r.lines) {
 			for (const line of group.templates) {
-				const segment = parse_one_segment(line, r, i)
+				line.r = r
+				line.ridx = i
+				const segment = parse_one_segment(line)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1100,7 +1215,9 @@ function get_templates(q, group) {
 		const r = q.regions[i]
 		//for (const line of r.lines) {
 		for (const line of group.templates) {
-			const segment = parse_one_segment(line, r, i)
+			line.r = r
+			line.ridx = i
+			const segment = parse_one_segment(line)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1120,8 +1237,9 @@ function get_templates(q, group) {
 	return [...qname2template.values()]
 }
 
-function parse_one_segment(line, r, ridx, keepallboxes) {
-	/*
+/* parse one line of sam to return an object of a segment/read
+return undefined if unmapped or invalid data
+
 do not do:
   parse seq
   parse qual
@@ -1131,8 +1249,18 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
-	*/
-	const l = line.sam_info.trim().split('\t')
+*/
+function parse_one_segment(arg) {
+	const {
+		sam_info, // sam line
+		tempscore,
+		r,
+		ridx,
+		keepallboxes,
+		keepmatepos,
+		keepunmappedread // return object if the read is unmapped
+	} = arg
+	const l = sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
 		return
@@ -1141,26 +1269,57 @@ may skip insertion if on screen width shorter than minimum width
 		flag = l[2 - 1],
 		segstart_1based = Number.parseInt(l[4 - 1]),
 		cigarstr = l[6 - 1],
-		// use rnext to tell if mate is on a different chr
 		rnext = l[7 - 1],
 		pnext = l[8 - 1],
 		tlen = Number.parseInt(l[9 - 1]),
 		seq = l[10 - 1],
 		qual = l[11 - 1]
 
-	let tempscore = line.tempscore
-
-	if (flag & 0x4) {
-		//console.log('unmapped')
-		return
-	}
 	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
 		// invalid
 		return
 	}
 	const segstart = segstart_1based - 1
+	if (flag & 0x4) {
+		if (keepunmappedread) {
+			const segment = {
+				qname,
+				segstart,
+				segstop: segstart,
+				boxes: [
+					{
+						opr: cigarstr,
+						start: segstart,
+						len: seq.length,
+						cidx: 0,
+						qual
+					}
+				],
+				forward: !(flag & 0x10),
+				ridx,
+				seq,
+				qual,
+				cigarstr,
+				tlen,
+				flag,
+				discord_unmapped1: true
+			}
+			if (flag & 0x40) {
+				segment.isfirst = true
+			} else if (flag & 0x80) {
+				segment.islast = true
+			}
+			return segment
+		}
+		// return undefined so the unmapped read will not render
+		// may collect number of unmapped reads in view range and report
+		return
+	}
+
+	// from here, read is mapped
 
 	if (cigarstr == '*') {
+		// why this case?
 		return
 	}
 
@@ -1174,12 +1333,18 @@ may skip insertion if on screen width shorter than minimum width
 	for (let i = 0; i < cigarstr.length; i++) {
 		const cigar = cigarstr[i]
 		if (cigar.match(/[0-9]/)) continue
-		if (cigar == 'H') {
-			// ignore
-			continue
-		}
 		// read bp length of this part
 		const len = Number.parseInt(cigarstr.substring(prev, i))
+		if (cigar == 'H') {
+			boxes.push({
+				opr: cigar,
+				start: pos,
+				len,
+				cidx: cum - len
+			})
+			prev = i + 1
+			continue
+		}
 		if (cigar == 'N') {
 			// no seq
 		} else if (cigar == 'P' || cigar == 'D') {
@@ -1190,7 +1355,7 @@ may skip insertion if on screen width shorter than minimum width
 		}
 		prev = i + 1
 		if (cigar == '=' || cigar == 'M') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+			if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
 				// visible
 				boxes.push({
 					opr: cigar,
@@ -1305,9 +1470,51 @@ may skip insertion if on screen width shorter than minimum width
 	} else if (flag & 0x80) {
 		segment.islast = true
 	}
+
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
+		// When mates are in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
+	} else if (flag == 0 || flag == 16) {
+		// in some cases star-mapped bam can have this kind of nonstandard flag
+		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
+	} else if (
+		// // Mapped within insert size but incorrect orientation
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
+	) {
+		segment.discord_orientation = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
+	} else if (
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) || // 83
+		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80) //163
+	) {
+		// Read and mate is properly paired
+	} else if (flag & 0x8) {
+		// Mate of read is unmapped
+		segment.discord_unmapped2 = true
+	} else if (
+		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
+		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
+	) {
+		// Mapped within insert size but incorrect orientation
+		segment.discord_orientation = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
+	} else {
+		// Discordant reads in same chr but not within the insert size
+		segment.discord_wrong_insertsize = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
 	}
 	return segment
 }
@@ -1363,11 +1570,13 @@ function stack_templates(group, q, templates) {
 	for (const template of templates) {
 		// group.templates
 		let stackidx = null
-		for (let i = 0; i < group.stacks.length; i++) {
-			if (group.stacks[i] + q.stacksegspacing < template.x1) {
-				stackidx = i
-				group.stacks[i] = template.x2
-				break
+		if (!q.variant) {
+			for (let i = 0; i < group.stacks.length; i++) {
+				if (group.stacks[i] + q.stacksegspacing < template.x1) {
+					stackidx = i
+					group.stacks[i] = template.x2
+					break
+				}
 			}
 		}
 		if (stackidx == null) {
@@ -1388,6 +1597,7 @@ function may_trimstacks(group, templates, q) {
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
+	//console.log('templates:', templates)
 	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
 		group.stacks.push(0)
 	}
@@ -1420,7 +1630,7 @@ at the end, set q.canvasheight
 			const r = group.regions[segment.ridx]
 			const quallst = r.to_qual ? qual2int(segment.qual) : null
 			for (const b of segment.boxes) {
-				if (b.cidx == undefined) {
+				if (b.cidx == undefined || b.opr == 'H') {
 					continue
 				}
 				if (quallst) {
@@ -1561,7 +1771,9 @@ function plot_template(ctx, template, group, q) {
 			x1: template.x1,
 			x2: template.x2,
 			y1: template.y,
-			y2: template.y + (template.height || group.stackheight)
+			y2: template.y + (template.height || group.stackheight),
+			start: Math.min(...template.segments.map(i => i.segstart)),
+			stop: Math.max(...template.segments.map(i => i.segstop))
 		}
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
@@ -1630,7 +1842,7 @@ function plot_template(ctx, template, group, q) {
 
 	// for testing, print a stat (numeric or string) per template on the right of each row
 	// should not use this in production
-	if (template.__tempscore != undefined) {
+	if (template.__tempscore != undefined && serverconfig.features.indel_kmer_scores) {
 		ctx.fillStyle = 'blue'
 		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
@@ -1642,10 +1854,9 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 
-	//console.log("segment.boxes:",segment.boxes)
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
-		if (b.opr == 'P') continue // do not handle
+		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
 		if (b.opr == 'I') continue // do it next round
 		if (b.opr == 'D' || b.opr == 'N') {
 			// a line
@@ -1679,6 +1890,32 @@ function plot_segment(ctx, segment, y, group, q) {
 			continue
 		}
 
+		if (b.opr == '*') {
+			// Possibly unmapped reads
+			if (r.to_qual) {
+				let xoff = x
+				b.qual.forEach(v => {
+					if (segment.discord_unmapped2) {
+						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
+					}
+					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
+					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					xoff += r.ntwidth
+				})
+			} else {
+				// not showing qual, one box
+				if (segment.discord_unmapped2) {
+					ctx.fillStyle = discord_unmapped_hq
+				}
+				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+			}
+
+			if (r.to_printnt) {
+				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
+			}
+			continue
+		}
 		if (b.opr == 'X' || b.opr == 'S') {
 			// box with maybe letters
 			if (r.to_qual && b.qual) {
@@ -1709,13 +1946,35 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (r.to_qual) {
 				let xoff = x
 				b.qual.forEach(v => {
-					ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
+					if (segment.rnext) {
+						ctx.fillStyle = qual2ctxpair(v / maxqual)
+					} else if (segment.discord_orientation) {
+						ctx.fillStyle = qual2discord_orientation(v / maxqual)
+					} else if (segment.discord_wrong_insertsize) {
+						ctx.fillStyle = qual2discord_wrong_insertsize(v / maxqual)
+					} else if (segment.discord_unmapped2) {
+						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
+					} else {
+						ctx.fillStyle = qual2match(v / maxqual)
+					}
+					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					xoff += r.ntwidth
 				})
 			} else {
 				// not showing qual, one box
-				ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+				if (segment.rnext) {
+					ctx.fillStyle = ctxpair_hq
+				} else if (segment.discord_orientation) {
+					ctx.fillStyle = discord_orientation_hq
+				} else if (segment.discord_wrong_insertsize) {
+					ctx.fillStyle = discord_wrong_insertsize_hq
+				} else if (segment.discord_unmapped2) {
+					ctx.fillStyle = discord_unmapped_hq
+				} else {
+					ctx.fillStyle = match_hq
+				}
+				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 			}
 			if (r.to_printnt) {
@@ -1787,6 +2046,21 @@ function plot_segment(ctx, segment, y, group, q) {
 			}
 		}
 	}
+	//else if (segment.discord_wrong_insertsize) {
+	//	if (!r.to_qual) {
+	//		// no quality and just a solid box, may print name
+	//		if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
+	//			ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
+	//			ctx.fillStyle = 'white'
+	//			ctx.fillText(
+	//			    (q.nochr ? 'chr' : '')+q.regions[0].chr.replace('chr',''),
+	//				(segment.x1 + segment.x2) / 2,
+	//				y + group.stackheight / 2,
+	//				segment.x2 - segment.x1
+	//			)
+	//		}
+	//	}
+	//}
 }
 
 function plot_insertions(ctx, group, q, templates, messagerowheights) {
@@ -1940,52 +2214,65 @@ async function route_getread(genome, req) {
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	//if(!req.query.pos) throw '.pos missing'
-	if (!req.query.viewstart) throw '.viewstart missing'
-	if (!req.query.viewstop) throw '.viewstart missing'
+	if (!req.query.start) throw '.start missing'
+	if (!req.query.stop) throw '.stop missing'
 	const r = {
 		chr: req.query.chr,
-		start: Number(req.query.viewstart),
-		stop: Number(req.query.viewstop),
+		start: Number(req.query.start),
+		stop: Number(req.query.stop),
 		scale: () => {}, // dummy
 		ntwidth: 10 // good to show all insertions
 	}
-	if (!Number.isInteger(r.start)) throw '.viewstart not integer'
-	if (!Number.isInteger(r.stop)) throw '.viewstop not integer'
+	if (!Number.isInteger(r.start)) throw '.start not integer'
+	if (!Number.isInteger(r.stop)) throw '.stop not integer'
 	const seglst = await query_oneread(req, r)
-	if (!seglst) throw 'read not found'
+	if (!seglst) {
+		// no read found
+		if (req.query.show_unmapped) {
+			// asking to get an unmapped read. if using a bam slice, the unmapped read could be out of range
+			throw 'mate not found'
+		}
+		throw 'read not found'
+	}
 	const lst = []
 	for (const s of seglst) {
-		lst.push(await convertread(s, genome, req.query))
+		if (s.discord_unmapped1) {
+			// Invoked when the read itself is unmapped
+			lst.push(await convertunmappedread2html(s, genome, req.query))
+		} else {
+			lst.push(await convertread2html(s, genome, req.query))
+		}
 	}
 	return { lst }
 }
 
 async function query_oneread(req, r) {
-	let firstseg, dir, lastseg, e, _file, isurl
-	if (!req.query.gdc) {
+	let firstseg,
+		lastseg,
+		dir,
+		e,
+		_file,
+		isurl,
+		readstart,
+		readstop,
+		gdc_query = false
+	if (req.get('x-auth-token')) gdc_query = true
+	if (req.query.unknownorder) {
+		// unknown order, read start/stop must be provided
+		readstart = Number(req.query.readstart)
+		readstop = Number(req.query.readstop)
+		if (Number.isNaN(readstart) || Number.isNaN(readstop))
+			throw 'readstart/stop not provided for read with unknown order'
+	}
+	if (!gdc_query) {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
-	//const pos = Number(req.query.pos)
-	//if (!Number.isInteger(pos)) throw '.pos not integer'
-
-	//if (req.query.gdc) {
-	//	temp_bam_file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
-	//	await get_gdc_bam(
-	//		req.query.chr,
-	//		req.query.viewstart,
-	//		req.query.viewstop,
-	//		req.query.gdc.split(',')[0],
-	//		req.query.gdc.split(',')[1],
-	//		temp_bam_file
-	//	)
-	//}
 	return new Promise((resolve, reject) => {
 		let ps
-		if (req.query.gdc) {
-			//console.log('samtools view ' + req.query.file)
-			ps = spawn(samtools, ['view', req.query.file])
+		if (gdc_query) {
+			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
 		} else {
 			ps = spawn(
 				samtools,
@@ -1999,10 +2286,25 @@ async function query_oneread(req, r) {
 		}
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line => {
-			const s = parse_one_segment({ sam_info: line, tempscore: '' }, r, null, true)
+			if (line.split('\t')[0] != req.query.qname) return
+			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
 			if (!s) return
-			if (s.qname != req.query.qname) return
-			if (req.query.getfirst) {
+			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+			if (req.query.show_unmapped && req.query.getfirst) {
+				// In case first read is mapped and second unmapped
+				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.show_unmapped && req.query.getlast) {
+				// In case first read is mapped and second unmapped
+				if (s.isfirst) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.getfirst) {
 				if (s.isfirst) {
 					ps.kill()
 					resolve([s])
@@ -2010,6 +2312,12 @@ async function query_oneread(req, r) {
 				}
 			} else if (req.query.getlast) {
 				if (s.islast) {
+					ps.kill()
+					resolve([s])
+					return
+				}
+			} else if (req.query.unknownorder) {
+				if (s.segstart == readstart && s.segstop == readstop) {
 					ps.kill()
 					resolve([s])
 					return
@@ -2029,15 +2337,6 @@ async function query_oneread(req, r) {
 			// finished reading and still not resolved
 			// means it is in paired mode but read is single
 
-			//if (req.query.gdc) {
-			//	// Deleting temporary gdc bam file
-			//	fs.unlink(temp_bam_file, err => {
-			//		if (err) console.log(err)
-			//		else {
-			//			console.log('Deleted file: ' + temp_bam_file.toString())
-			//		}
-			//	})
-			//}
 			const lst = []
 			if (firstseg) lst.push(firstseg)
 			if (lastseg) lst.push(lastseg)
@@ -2045,7 +2344,59 @@ async function query_oneread(req, r) {
 		})
 	})
 }
-async function convertread(seg, genome, query) {
+
+async function convertunmappedread2html(seg, genome, query) {
+	// convert a read to html
+	const quallst = qual2int(seg.qual)
+	const querylst = ['<td style="color:black;text-align:left">Read</td>']
+	for (const b of seg.boxes) {
+		for (let i = 0; i < b.len; i++) {
+			const nt1 = seg.seq[b.cidx + i]
+			querylst.push(
+				'<td style="background:' + qual2match(quallst[b.cidx + i] / maxqual) + '">' + seg.seq[b.cidx + i] + '</td>'
+			)
+		}
+		continue
+	}
+
+	const lst = []
+	lst.push(
+		'<li><span style="background:' +
+			discord_unmapped_hq +
+			';color:white">This segment in template is unmapped</span></li>'
+	)
+	// indicate all flags
+	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
+	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
+	//if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
+	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
+	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
+	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
+	if (seg.flag & 0x80) lst.push('<li>This is the last segment in the template</li>')
+	if (seg.flag & 0x100) lst.push('<li>Secondary alignment</li>')
+	if (seg.flag & 0x200) lst.push('<li>Not passing filters</li>')
+	if (seg.flag & 0x400) lst.push('<li>PCR or optical duplicate</li>')
+	if (seg.flag & 0x800) lst.push('<li>Supplementary alignment</li>')
+
+	let seq_data = {
+		seq: seg.seq,
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+			  <tr style="color:white">${querylst.join('')}</tr>
+			</table>`,
+		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.seq.length)} bp,
+			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
+		  </div>
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+	}
+	if (seg.discord_unmapped2) {
+		seq_data.unmapped_mate = true
+	}
+	return seq_data
+}
+
+async function convertread2html(seg, genome, query) {
 	// convert a read to html
 	const refstart = seg.boxes[0].start // 0 based
 	const b = seg.boxes[seg.boxes.length - 1]
@@ -2055,6 +2406,9 @@ async function convertread(seg, genome, query) {
 	const reflst = ['<td>Reference</td>']
 	const querylst = ['<td style="color:black;text-align:left">Read</td>']
 	for (const b of seg.boxes) {
+		if (b.opr == 'H') {
+			continue
+		}
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {
 				reflst.push('<td>-</td>')
@@ -2095,7 +2449,7 @@ async function convertread(seg, genome, query) {
 			}
 			continue
 		}
-		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X') {
+		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X' || b.opr == '*') {
 			for (let i = 0; i < b.len; i++) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
@@ -2112,7 +2466,6 @@ async function convertread(seg, genome, query) {
 		}
 	}
 
-	//console.log("seg.boxes:",seg.boxes)
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0
@@ -2124,15 +2477,15 @@ async function convertread(seg, genome, query) {
 		soft_stop += box.len
 		if (box.opr == 'S') {
 			soft_present = 1
-			//console.log("soft_start:",soft_start)
-			//console.log("soft_stop:",soft_stop)
 			soft_starts.push(soft_start)
 			soft_stops.push(soft_stop)
 		}
 	}
 
 	const lst = []
-	if (seg.rnext)
+
+	// indicate discordant read status
+	if (seg.rnext) {
 		lst.push(
 			'<li>Next segment on <span style="background:' +
 				ctxpair_hq +
@@ -2143,10 +2496,37 @@ async function convertread(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
+	} else if (seg.discord_wrong_insertsize) {
+		lst.push(
+			'<li>' +
+				'<span style="background:' +
+				discord_wrong_insertsize_hq +
+				';color:white">Wrong insert size</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>'
+		)
+	} else if (seg.discord_orientation) {
+		lst.push(
+			'<li><span style="background:' +
+				discord_orientation_hq +
+				';color:white">Segments having wrong orientation</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>'
+		)
+	} else if (seg.discord_unmapped2) {
+		lst.push(
+			'<li><span style="background:' +
+				discord_unmapped_hq +
+				';color:white">Other segment in template is unmapped</span></li>'
+		)
+	}
+
+	// indicate all flags
 	if (seg.flag & 0x1) lst.push('<li>Template has multiple segments</li>')
 	if (seg.flag & 0x2) lst.push('<li>Each segment properly aligned</li>')
-	if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
-	if (seg.flag & 0x8) lst.push('<li>Next segment in the template unmapped</li>')
+	//if (seg.flag & 0x4) lst.push('<li>Segment unmapped</li>')
 	if (seg.flag & 0x10) lst.push('<li>Reverse complemented</li>')
 	if (seg.flag & 0x20) lst.push('<li>Next segment in the template is reverse complemented</li>')
 	if (seg.flag & 0x40) lst.push('<li>This is the first segment in the template</li>')
@@ -2166,7 +2546,7 @@ async function convertread(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
 			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
-			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${seg.tlen} bp,
+			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.tlen)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
@@ -2175,6 +2555,9 @@ async function convertread(seg, genome, query) {
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts
 		seq_data.soft_stops = soft_stops
+	}
+	if (seg.discord_unmapped2) {
+		seq_data.unmapped_mate = true
 	}
 	return seq_data
 }

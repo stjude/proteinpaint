@@ -39,7 +39,7 @@ export default function spectrumui(genomes) {
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -71,8 +71,8 @@ export default function spectrumui(genomes) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }

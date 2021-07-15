@@ -10,7 +10,7 @@ DOCKER_TAG="${REGISTRY}/ncigdc/${REPO}:${GIT_TAG}"
 # Enable buildkit to skip building unneeded stages.
 export DOCKER_BUILDKIT=1
 
-./targets/gdc/build.sh -r HEAD -d $DOCKER_TAG
+./build/gdc/build.sh -r HEAD -d $DOCKER_TAG
 
 docker push "$DOCKER_TAG"
 

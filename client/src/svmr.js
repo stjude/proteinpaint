@@ -6,7 +6,7 @@ import Svmr from './svmr.c'
 
 export function svmrparseinput(arg, sayerror, genome, holder, hostURL, jwt) {
 	if (!arg.dataname) {
-		arg.dataname = 'Unamed dataset'
+		arg.dataname = 'Unnamed dataset'
 	}
 	if (arg.input) {
 		const [e, header, items] = svmrparseraw(arg.input, genome)
@@ -124,7 +124,7 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -159,6 +159,8 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
+
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }

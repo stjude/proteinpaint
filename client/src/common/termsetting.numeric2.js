@@ -1,5 +1,6 @@
 import * as client from '../client'
 import { select, event } from 'd3-selection'
+import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
 
@@ -63,10 +64,16 @@ export async function setNumericMethods(self) {
 	self.applyEdits = function() {
 		if (self.q.type == 'regular') {
 			self.q.first_bin.startunbounded = true
-			self.q.bin_size = +self.dom.bin_size_input.property('value')
 			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
 			self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 			self.q.stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
+			const bin_size = self.dom.bin_size_input.property('value')
+			self.q.bin_size = Number(bin_size)
+			if (bin_size.includes('.') && !bin_size.endsWith('.')) {
+				self.q.rounding = '.' + bin_size.split('.')[1].length + 'f'
+			} else {
+				self.q.rounding = '.0f'
+			}
 
 			if (self.dom.last_radio_auto.property('checked')) {
 				delete self.q.last_bin
@@ -103,7 +110,7 @@ export async function setNumericMethods(self) {
 			.split('\n')
 			.filter(d => d != '')
 			.map(d => +d)
-			.sort((a, b) => (a < b ? -1 : 1))
+			.sort((a, b) => a - b)
 			.map((d, i) => {
 				const bin = {
 					start: +d,
@@ -145,10 +152,10 @@ function setqDefaults(self) {
 		self.numqByTermIdType[self.term.id] = {
 			regular:
 				self.q && self.q.type == 'regular'
-					? self.q
+					? JSON.parse(JSON.stringify(self.q))
 					: self.opts.use_bins_less && self.term.bins.less
-					? self.term.bins.less
-					: self.term.bins.default,
+					? JSON.parse(JSON.stringify(self.term.bins.less))
+					: JSON.parse(JSON.stringify(self.term.bins.default)),
 			custom:
 				self.q && self.q.type == 'custom'
 					? self.q
@@ -180,8 +187,11 @@ function setqDefaults(self) {
 	if (!self.q) self.q = {}
 	if (!self.q.type) self.q.type = 'regular'
 	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
-	if (!self.q.numDecimals)
-		self.q.numDecimals = Math.max(('' + dd.minvalue).split('.').length - 1, ('' + dd.maxvalue).split('.').length - 1)
+	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
+	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
+		const binDecimals = bin_size.split('.')[1].length
+		self.q.rounding = '.' + binDecimals + 'f'
+	}
 	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
@@ -285,7 +295,7 @@ function renderBinSizeInput(self, tr) {
 		.append('td')
 		.append('input')
 		.attr('type', 'number')
-		.attr('value', self.q.bin_size)
+		.attr('value', 'rounding' in self.q ? format(self.q.rounding)(self.q.bin_size) : self.q.bin_size)
 		.style('margin-left', '15px')
 		.style('width', '100px')
 		.style('color', d => (self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
@@ -498,12 +508,14 @@ function renderCustomBinInputs(self) {
 	const thead = self.dom.bins_table.append('thead').append('tr')
 	thead
 		.append('th')
+		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Boundary')
+		.html('Bin Boundaries')
 	thead
 		.append('th')
+		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Label')
+		.html('Bin Labels')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
@@ -521,6 +533,7 @@ function renderCustomBinInputs(self) {
 		.on('change', handleChange)
 		.on('keyup', async () => {
 			// enter or backspace/delete
+			// i don't think backspace works
 			if (!client.keyupEnter() && event.key != 8) return
 			handleChange.call(this)
 		})
@@ -537,17 +550,15 @@ function renderCustomBinInputs(self) {
 	}
 
 	function binsChanged(data, qlst) {
-		let changed = false
-		if (data.length != qlst.length) changed = true
-		else {
-			qlst.forEach((bin, i) => {
-				Object.keys(bin).forEach(k => {
-					if (bin[k] && bin[k] != qlst[i][k]) changed = true
-					return changed
-				})
-			})
+		if (data.length != qlst.length) return true
+		for (const [i, bin] of qlst.entries()) {
+			for (const k of Object.keys(bin)) {
+				if (bin[k] && bin[k] !== data[i][k]) {
+					return true
+				}
+			}
 		}
-		return changed
+		return false
 	}
 
 	self.dom.customBinLabelTd = tr.append('td')

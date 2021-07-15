@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.10
+
+- move targets/ contents under the build/ directory
+- improve the app drawer and examples
+- prototype cumulative incidence plots in the termdb app
+- extract or synthesize data for testing  
+
+### GDC-related
+
+- Use the GDC API to view slices in the BAM track
+
 ## 1.9.1
 
 - Synchronize the version update in client and server package.json

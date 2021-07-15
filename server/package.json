@@ -1,15 +1,17 @@
 {
   "name": "@stjude/proteinpaint-server",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "bin.js",
   "scripts": {
     "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
-    "test": "tape -r babel-register src/test/*.spec.js",
+    "pretest": "./test/pretest.js",
+    "test": "tape -r babel-register */test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
-    "response": "nodemon modules/test/test.server.js --watch src"
+    "response": "nodemon modules/test/test.server.js --watch src",
+    "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -65,6 +67,7 @@
     "dataset/gdc*.js",
     "genome",
     "src/serverconfig.js",
+    "features.json",
     "server.js*",
     "shared/common.js",
     "utils"

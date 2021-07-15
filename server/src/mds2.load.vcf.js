@@ -655,11 +655,8 @@ async function may_apply_fishertest(q) {
 		// no data
 		return
 	}
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
-	await utils.write_file(tmpfile, lines.join('\n'))
-	const pfile = await utils.run_fishertest(tmpfile)
-	const text = await utils.read_file(pfile)
-	for (const line of text.trim().split('\n')) {
+	const plines = await utils.lines2R('fisher.R', lines)
+	for (const line of plines) {
 		const l = line.split('\t')
 		const m = mlst[l[0]]
 		if (m) {
@@ -668,8 +665,6 @@ async function may_apply_fishertest(q) {
 			m.nm_axis_value = Number.isNaN(v) ? 0 : -Math.log10(v) // for axis
 		}
 	}
-	fs.unlink(tmpfile, () => {})
-	fs.unlink(pfile, () => {})
 }
 
 function _m_is_filtered(q, result, mockblock) {

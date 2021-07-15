@@ -72,12 +72,12 @@ function handleNoDensity(self) {
 			const mean_value = (maxvalue + minvalue) / 2
 			const first_bin = {
 				startunbounded: true,
-				stop: Math.round(mean_value),
+				stop: mean_value,
 				stopinclusive: true,
 				name: 'First bin'
 			}
 			const last_bin = {
-				start: Math.round(mean_value),
+				start: mean_value,
 				stopunbounded: true,
 				startinclusive: false,
 				name: 'Last bin'
@@ -175,7 +175,7 @@ function renderBinLines(self, data) {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
 		// to the left, will reveal additional non-draggable boundaries from the right
-		const binLinesStop = o.density_data.maxvalue + data.first_bin.stop
+		const binLinesStop = o.density_data.maxvalue + Math.abs(data.first_bin.stop) - Math.min(o.density_data.minvalue, 0)
 		let index = 0
 		//
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {
@@ -203,14 +203,14 @@ function renderBinLines(self, data) {
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
-
-	let lastScaledX = Math.min(
-		scaledMaxX,
-		lines
-			.slice()
-			.reverse()
-			.find(d => d.scaledX < scaledMaxX).scaledX
-	)
+	const lastVisibleLine =
+		lines.length == 1
+			? lines[0]
+			: lines
+					.slice()
+					.reverse()
+					.find(d => d.scaledX < scaledMaxX)
+	let lastScaledX = lastVisibleLine ? Math.min(scaledMaxX, lastVisibleLine.scaledX) : scaledMaxX
 
 	self.num_obj.binsize_g
 		.selectAll('line')

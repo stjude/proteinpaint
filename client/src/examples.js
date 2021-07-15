@@ -1,14 +1,13 @@
-import { dofetch2 } from './client'
+import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
 import { debounce } from 'debounce'
+import { event, select } from 'd3-selection'
+import hljs from 'highlight.js/lib/common'
 
 export async function init_examples(par) {
-	const { holder, new_div } = par
-	const re = await dofetch2('/examples', { method: 'POST', body: JSON.stringify({ getexamplejson: true }) })
+	const { holder, apps_sandbox_div, apps_off } = par
+	const re = await dofetch2('/examplejson')
 	if (re.error) {
-		holder
-			.append('div')
-			.text(re.error)
-			.style('background-color', '#f5f5f5')
+		sayerror(holder.append('div'), re.error)
 		return
 	}
 	const wrapper_div = make_examples_page(holder)
@@ -17,26 +16,24 @@ export async function init_examples(par) {
 	const app_col = make_col(track_grid, 'otherapps')
 
 	// top of apps column followed by subheader
-	const holddiv = make_top_fnDiv(gbrowser_col)
-	const searchbar_div = app_col.append('div')
+	// TODO: hiding searchbox for now, need to discuss
+	// const holddiv = make_top_fnDiv(gbrowser_col)
+	// const searchbar_div = app_col.append('div')
 
-	// subheaders
-	const gpaintList = make_subheader_contents(gbrowser_col, 'GenomePaint')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
-	const experimentalList = make_subheader_contents(gbrowser_col, 'Experimental Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
-	const appList = make_subheader_contents(app_col, 'Apps')
-
-	const track_arg = {
-		tracks: re.examples,
-		gpaintList,
+	const track_args = {
+		tracks: re.examples.filter(track => !track.hidden),
 		browserList,
-		experimentalList,
-		launchList,
-		appList
+		launchList
 	}
-	make_searchbar(searchbar_div, track_arg)
-	await loadTracks(track_arg)
+	const page_args = {
+		apps_sandbox_div,
+		apps_off,
+		allow_mdsform: re.allow_mdsform
+	}
+	// make_searchbar(track_args, page_args, searchbar_div)
+	await loadTracks(track_args, page_args)
 }
 
 function make_examples_page(holder) {
@@ -79,8 +76,9 @@ function make_subheader_contents(div, sub_name) {
 	div
 		.append('div')
 		.append('h5')
+		.attr('class', 'track-cols')
+		.style('color', 'rgb(100, 122, 152)')
 		.html(sub_name)
-		.append('hr')
 	const list = div.append('ul')
 	list
 		.attr('class', 'track-list')
@@ -108,7 +106,7 @@ function make_top_fnDiv(div) {
 }
 
 //Makes search bar and functionality to search tracks
-function make_searchbar(div, args) {
+function make_searchbar(track_args, page_args, div) {
 	const bar_div = make_top_fnDiv(div)
 
 	const searchBar = bar_div.append('div')
@@ -125,7 +123,7 @@ function make_searchbar(div, args) {
 		.on(
 			'keyup',
 			debounce(async () => {
-				const data = args.tracks
+				const data = track_args.tracks
 				const searchInput = searchBar
 					.select('input')
 					.node()
@@ -139,7 +137,7 @@ function make_searchbar(div, args) {
 					}, false)
 					return searchTermFound || track.name.toLowerCase().includes(searchInput)
 				})
-				await loadTracks(args, filteredTracks)
+				await loadTracks(track_args, page_args, filteredTracks)
 			}),
 			700
 		)
@@ -147,100 +145,245 @@ function make_searchbar(div, args) {
 	return searchBar
 }
 
-async function loadTracks(args, filteredTracks) {
-	const GPaintTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'GenomePaint'
-	)
-	const BrowserTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Tracks'
-	)
-	const ExperimentalTracks = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Genome Browser' && track.subheading == 'Experimental Tracks'
-	)
-	const LaunchApps = (filteredTracks || args.tracks).filter(
-		track => track.app == 'Apps' && track.subheading == 'Launch App'
-	)
-	const AppTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Apps' && track.subheading == 'Apps')
-
+async function loadTracks(args, page_args, filteredTracks) {
+	const BrowserTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Genome Browser')
+	const LaunchApps = (filteredTracks || args.tracks).filter(track => track.app == 'Apps')
 	try {
-		displayTracks(GPaintTracks, args.gpaintList)
-		displayTracks(BrowserTracks, args.browserList)
-		displayTracks(ExperimentalTracks, args.experimentalList)
-		displayTracks(LaunchApps, args.launchList)
-		displayTracks(AppTracks, args.appList)
+		displayTracks(BrowserTracks, args.browserList, page_args)
+		displayTracks(LaunchApps, args.launchList, page_args)
 	} catch (err) {
 		console.error(err)
 	}
 }
-//TODO: ?? Styling difference between clickable tiles and not clickable tiles (which ones have examples and which don't)??
 
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
-function displayTracks(tracks, holder) {
+function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
 		const li = holder.append('li')
 		li.attr('class', 'track')
 			.html(
-				`
-						${
-							track.blurb
-								? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;">${track.name}</span><span id="track-blurb">  ${track.blurb}</span></div>`
-								: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-						}
-					<span class="track-image"><img src="${track.image}"></img></span>
-					<div class="track-btns">
-					${
-						track.buttons.url
-							? `<button class="url-tooltip-outer" id="url-btn" onclick="window.open('${window.location.origin}${track.buttons.url}', '_blank')">URL<span class="url-tooltip-span">View a parameterized URL example of this track</span></button>`
-							: ''
-					}
-					${
-						track.buttons.doc
-							? `<button id="doc-btn" onclick="window.open('${track.buttons.doc}', '_blank')" type="button">Docs</button>`
-							: ''
-					}
-					</div>`
+				`${
+					track.blurb
+						? `<div class="track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span id="track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
+						: `<div class="track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
+				}
+				<span class="track-image"><img src="${track.image}"></img></span>
+				<div class='track-links'>
+				${
+					track.buttons.url
+						? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.buttons.url}" target="_blank">URL</a>`
+						: ''
+				}
+				${
+					track.buttons.doc
+						? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.buttons.doc}", target="_blank">Docs</a>`
+						: ''
+				}
+				</div>`
 			)
 			.on('click', async () => {
-				if (track.buttons.example) {
-					openExample(track, holder)
+				event.stopPropagation()
+				page_args.apps_off()
+				if (track.clickcard2url) {
+					window.open(track.clickcard2url, '_blank')
+				} else if (track.buttons.example) {
+					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
+
+		// add Beta tag for experimental tracks
+		if (track.isbeta == true) {
+			makeRibbon(li, 'BETA', '#418cb5')
+		}
+
+		if (track.update_expire || track.new_expire) {
+			const today = new Date()
+			const update = new Date(track.update_expire)
+			const newtrack = new Date(track.new_expire)
+
+			if (update > today && !track.sandbox.update_message) {
+				console.log(
+					'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
+				)
+			}
+			if (update > today && track.sandbox.update_message) {
+				makeRibbon(li, 'UPDATED', '#e67d15')
+			}
+			if (newtrack > today) {
+				makeRibbon(li, 'NEW', '#1ba176')
+			}
+		}
+
+		// create custom track button for genomepaint card
+		// TODO: rightnow only custom button is for genomepaint card,
+		// if more buttons are added, this code will need to be changed as needed
+		if (track.custom_buttons) {
+			for (const button of track.custom_buttons) {
+				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
+				li.select('.track-btns')
+					.append('button')
+					.attr('class', 'landing-page-a')
+					.style('padding', '7px')
+					.style('cursor', 'pointer')
+					.text(button.name)
+					.on('click', () => {
+						event.stopPropagation()
+						page_args.apps_off()
+						if (button.example) {
+							const btn_args = {
+								name: button.name,
+								buttons: {
+									example: button.example
+								}
+							}
+							openExample(btn_args, page_args.apps_sandbox_div)
+						}
+						// TODO: Add logic if custom button has url or some other link
+					})
+			}
+		}
+
 		return JSON.stringify(li)
 	})
 }
 
+function makeRibbon(e, text, color) {
+	const ribbonDiv = e
+		.append('div')
+		.attr('class', 'track-ribbon')
+		.style('align-items', 'center')
+		.style('justify-content', 'center')
+
+	const ribbon = ribbonDiv
+		.append('span')
+		.text(text)
+		.style('color', 'white')
+		.style('background-color', color)
+		.style('height', 'auto')
+		.style('width', '100%')
+		.style('top', '15%')
+		.style('left', '-23%')
+		.style('font-size', '11.5px')
+		.style('text-transform', 'uppercase')
+		.style('text-align', 'center')
+}
+
 //TODO: styling for the container
 //Opens example of app in landing page container
-async function openExample(track, new_div) {
-	new_div.selectAll('*').remove()
+async function openExample(track, holder) {
+	// create unique id for each app div
+	const sandbox_div = newSandboxDiv(holder)
+	sandbox_div.header.text(
+		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
+	)
 
-	// const strippedTrack = `${JSON.stringify(track.buttons.example)}`.slice(1, -1)
+	//Download data and show runpp() code at the top
+	// makeDataDownload(track, sandbox_div)
+	showCode(track, sandbox_div)
 
-	// const contents = `<script src="${window.location.origin}/bin/proteinpaint.js" charset="utf-8"></script>
-	// 			<div id="aaa" style="margin:20px">
-	// 			<button type="submit" onclick="window.open('${window.location.origin}', '_self')">Go Back</button>
-	// 			<h2 class="header" id="track-example-header">${track.name} Example</h2>
-	// 			</div>
-	// 		<script>
-	// 			runproteinpaint({
-	//                 host: '${window.location.origin}',
-	//                 holder: document.getElementById('aaa'),
-	//                 ${strippedTrack}
-	//             })
-	// 		</script>`
-	// new_div.append('div').html(contents)
-	new_div.append('div').text('This Worked')
+	// creates div for instructions or other messaging about the track
+	if (track.sandbox.intro) {
+		sandbox_div.body
+			.append('div')
+			.style('margin', '20px')
+			.html(track.sandbox.intro)
+	}
+	// message explaining the update ribbon
+	addUpdateMessage(track, sandbox_div)
 
-	// const tab = window.open('${window.location.origin}','_self')
-	// const tab = window.open(`${track.shorthand},name=${track.shorthand} Example`)
-	// const script = tab.document.createElement('script')
-	// const tabName = `${track.shorthand}`
-	// script.type = 'text/javascript'
-	// tab.document.write(contents)
-	// tab.document.close()
-	// setTimeout(function() {
-	// 	tab.document.title = tabName
-	// }, 500)
+	// template runpp() arg
+	const runpp_arg = {
+		holder: sandbox_div.body
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		sandbox_header: sandbox_div.header,
+		host: window.location.origin
+	}
+
+	runproteinpaint(Object.assign(runpp_arg, track.buttons.example))
+}
+
+// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
+async function addUpdateMessage(track, div) {
+	if (track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log('Must provide expiration date: track.update_expire')
+	}
+	if (track.sandbox.update_message != undefined && track.update_expire) {
+		const today = new Date()
+		const update = new Date(track.update_expire)
+		if (update > today) {
+			const message = div.body
+				.append('div')
+				.style('margin', '20px')
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		}
+	}
+}
+
+// Creates 'Show Code' button in Sandbox for all examples
+async function showCode(track, div) {
+	if (track.sandbox.is_ui != true) {
+		const codeBtn = div.body
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.style('margin', '20px')
+			.style('padding', '8px')
+			.style('border', 'none')
+			.style('border-radius', '3px')
+			.style('font-size', '12.75x')
+			.text('Show Code')
+			.style('display', 'inline-block')
+			.on('click', () => {
+				if (code.style('display') == 'none') {
+					code.style('display', 'block') //TODO fadein fn
+					select(event.target).text('Hide')
+				} else {
+					code.style('display', 'none') //TODO fadeout fn
+					select(event.target).text('Show Code')
+				}
+			})
+
+		const json = JSON.stringify(track.buttons.example, null, 4)
+
+		//Leave the weird spacing below. Otherwise the lines won't display the same identation in pp.
+		const runppCode =
+			`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+			json.replaceAll(/"(.+)"\s*:/g, '$1:').slice(1, -1) +
+			`})`
+
+		const codefill = hljs.highlight(runppCode, { language: 'javascript' }).value
+
+		const code = div.body
+			.append('pre')
+			.append('code')
+			.style('display', 'none')
+			.style('margin', '35px')
+			.style('font-size', '14px')
+			.style('border', '1px solid #aeafb0')
+			.html(codefill)
+	}
+}
+
+async function makeDataDownload(track, div) {
+	if (track.sandbox.datadownload) {
+		const dataBtn = div.body
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.attr('id', 'data-btn')
+			.style('margin', '20px')
+			.style('padding', '8px')
+			.style('border', 'none')
+			.style('border-radius', '3px')
+			.style('font-size', '12.75px')
+			.style('display', 'inline-block')
+			.text('Download Data')
+			.on('click', () => {
+				to_textfile(track.sandbox.datadownload, track.name)
+			})
+	}
 }

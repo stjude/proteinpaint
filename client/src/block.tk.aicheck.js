@@ -28,13 +28,7 @@ function makeTk(tk, block) {
 		tk.rowspace = 5
 	}
 
-	tk.tklabel
-		.attr('y', 20)
-		.text(tk.name)
-		.each(function() {
-			tk.leftLabelMaxwidth = this.getBBox().width
-		})
-	block.setllabel()
+	tk.tklabel.attr('y', 20)
 
 	// left side axes
 	tk.Tvafaxis = tk.gleft.append('g')

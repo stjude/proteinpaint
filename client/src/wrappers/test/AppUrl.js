@@ -51,7 +51,7 @@ export class AppUrl extends React.Component {
 			message,
 			basepath: 'basepath' in this.props ? this.props.basepath : '/auth/api/custom/proteinpaint',
 			gene: gene.name,
-			set_id: set_id ? set_id : 'J4BW1HYBmqgBSxEihjaC',
+			set_id: set_id ? set_id : 'BgEiOnoBAYdDycJ8bW6g',
 			set_id_flag: set_id != null, // false,
 			set_id_editing: false,
 			token_flag: false,

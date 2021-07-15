@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+	 <style>
+	 	#aaa {
+	 		width: 90%;
+	 		height: 90%;
+	 	}
+	 </style>
+</head>
+<body>
+<script src='https://pecan-test.stjude.org/sjcharts/bin/sjcharts.js'></script>
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+(async ()=>{
+	try {
+		const pp = await runproteinpaint({
+			host: 'https://ppr.stjude.org',		
+			noheader: true,
+			holder: document.getElementById('aaa'),
+			study: 'esioson/target-tall-small',
+			callbacks: {
+				sjcharts: {
+					'hm': {
+						postInstance(appInstance) {
+							console.log(31, Object.keys(appInstance))
+							console.log(32, pp.instanceTracker)
+						},
+						postInit(appInstance) {
+							console.log(36, 'postInit')
+						},
+						firstRender(appInstance) {
+							console.log(39, 'firstRender', appInstance.getSchema('object'))
+						},
+						postRender(appInstance) {
+							console.log(42, 'postRender')
+						},
+					}
+				}
+			},
+			//instanceTracker: {}
+		})
+		console.log(38, pp)
+	} catch(e) {
+		throw e
+	}
+})()
+</script>
+
+</body>
+</html>

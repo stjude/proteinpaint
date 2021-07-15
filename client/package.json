@@ -1,10 +1,11 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "scripts": {
     "dev": "rm -rf ../public/bin && webpack --env.NODE_ENV=development --watch --progress --colors",
+    "pretest": "./test/pretest.js",
     "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
     "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] -o ../public/bin/spec.bundle.js -v",
     "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
@@ -66,6 +67,7 @@
     "d3": "^4.12.2",
     "d3-beeswarm": "0.0.4",
     "debounce": "^1.2.0",
+    "highlight.js": "^11.0.1",
     "normalize.css": "^8.0.1",
     "partjson": "^0.58.1"
   },

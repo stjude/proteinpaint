@@ -313,6 +313,9 @@ export function hicparsestat(hic, txt) {
 	}
 
 	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
+	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
+	if (j.chrorder.length == 0) return '.chrorder[] empty array'
+	hic.chrorder = j.chrorder
 	if (!j['Base pair-delimited resolutions']) return 'Base pair-delimited resolutions not found in file stat'
 	if (!Array.isArray(j['Base pair-delimited resolutions'])) return 'Base pair-delimited resolutions should be array'
 	hic.bpresolution = j['Base pair-delimited resolutions']
@@ -324,10 +327,13 @@ export function hicparsestat(hic, txt) {
 	for (const chr in j.Chromosomes) {
 		chrlst.push(chr)
 	}
-	//hic.nochr = common.contigNameNoChr(hic.genome, chrlst)
 	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
 	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
-	if (nochrcount > 0) hic.nochr = true
+	if (nochrcount > 0) {
+		hic.nochr = true
+		// prepend 'chr' to names in chrorder array
+		for (let i = 0; i < hic.chrorder.length; i++) hic.chrorder[i] = 'chr' + hic.chrorder[i]
+	}
 	// as a way of skipping chrM
 	hic.chrlst = []
 	for (const chr of hic.genome.majorchrorder) {
@@ -913,16 +919,18 @@ function init_chrpair(hic, chrx, chry) {
 	getdata_chrpair(hic)
 }
 
+function tell_firstisx(hic, chrx, chry) {
+	if (chrx == chry) return true
+	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
+}
+
 function getdata_chrpair(hic) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
 	const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 	const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
-	let firstisx = false
-	if (!isintrachr) {
-		firstisx = chrxlen > chrylen
-	}
+	const firstisx = tell_firstisx(hic, chrx, chry)
 
 	const resolution = hic.chrpairview.resolution
 	const binpx = hic.chrpairview.binpx
@@ -1650,7 +1658,8 @@ function getdata_detail(hic) {
 			if (isintrachr) {
 				firstisx = xstart < ystart
 			} else {
-				firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
+				firstisx = tell_firstisx(hic, chrx, chry)
+				//firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
 			}
 
 			const lst = []

@@ -44,7 +44,7 @@ export async function makeTk(tk, block) {
 		copy_official_configs(tk)
 	} else {
 		// custom
-		if (!tk.name) tk.name = 'Unamed'
+		if (!tk.name) tk.name = 'Unnamed'
 
 		if (tk.vcf) {
 			await getvcfheader_customtk(tk.vcf, block.genome)
@@ -57,7 +57,7 @@ export async function makeTk(tk, block) {
 
 	tk.tklabel.text(tk.name)
 
-	may_initiate_vcf(tk)
+	may_initiate_vcf(tk, block)
 	may_initiate_ld(tk)
 
 	tk.clear = () => {
@@ -110,7 +110,7 @@ configurations and their location are not stable
 
 function configPanel(tk, block) {}
 
-function may_initiate_vcf(tk) {
+function may_initiate_vcf(tk, block) {
 	if (!tk.vcf) return
 
 	// vcf row
@@ -119,6 +119,26 @@ function may_initiate_vcf(tk) {
 	// both are inside glider so can glide
 	tk.g_vcfrow_layer2 = tk.glider.append('g')
 	tk.leftaxis_vcfrow = tk.gleft.append('g')
+
+	// quick fix to add label for number of variants for downloading (request from zhaoming)
+	// FIXME hardcoded yoffset=15! change if there are multiple labels stacked vertically
+	tk.vcfrow_label_numbervariants = block.maketklefthandle(tk, 15).on('click', () => {
+		if (!tk.__vcf_data || !tk.__vcf_data.vcf || !tk.__vcf_data.vcf.rglst) return // no data registered
+		const variantlst = []
+		for (const r of tk.__vcf_data.vcf.rglst) {
+			if (!r.variants) continue
+			for (const m of r.variants) {
+				variantlst.push(m.chr + ':' + (m.pos + 1) + ' ' + m.ref + '>' + m.altstr)
+			}
+		}
+		tk.tktip.showunder(tk.vcfrow_label_numbervariants.node())
+		tk.tktip
+			.clear()
+			.d.append('textarea')
+			.attr('cols', 25)
+			.attr('rows', 20)
+			.text(variantlst.join('\n'))
+	})
 
 	try {
 		may_setup_numerical_axis(tk)

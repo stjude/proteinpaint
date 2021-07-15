@@ -1,4 +1,5 @@
-@import '../../node_modules/normalize.css/normalize.css'
+@import '../../node_modules/normalize.css/normalize.css';
+@import '../../node_modules/highlight.js/styles/github.css';
 /*
 html {
     height:100%;
@@ -49,7 +50,8 @@ table {
 
 .sja_root_holder button,
 .sja_menu_div button,
-.sja_pane button {
+.sja_pane button, 
+#url-btn {
     border-width: 1px;
     border-style: solid;
     border-radius: 3px;
@@ -58,7 +60,8 @@ table {
 
 .sja_root_holder button:hover,
 .sja_menu_div button:hover,
-.sja_pane button:hover {
+.sja_pane button:hover,
+#url-btn:hover {
     box-shadow: none;
 }
 
@@ -767,9 +770,9 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
 }
 
 
-/* Example page style */
+/* App Drawer style */
 
-h5 {
+.track-cols {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 500;
     font-size: 17px;
@@ -778,37 +781,22 @@ h5 {
     margin: 10px 10px 0px 10px;
 }
 
-hr {
-    background: #324870;
-    border: none;
-    height: 2px;
-    margin: auto;
-    margin-top: 0px;
-    margin-bottom: 0px;
-}
-
 .track {
     background-color: white;
     border-radius: 5px;
     padding: 10px 5px 10px 5px;
     display: grid;
-    grid-template-columns: 1fr 5fr;
-    grid-template-areas: 'image header' 'image buttons';
+    grid-template-columns: 2fr 9fr 40px;
+    grid-template-areas: 'image header header' 'image buttons buttons';
     gap: 5px;
     align-items: center;
     justify-items: left;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    /* overflow: hidden; */
 }
 
-.gbrowser-btn {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-
-.gbrowser-btn::after,
 .track::after {
     content: "";
     border-radius: 8px;
@@ -824,13 +812,11 @@ hr {
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.gbrowser-btn:hover,
 .track:hover {
     -webkit-transform: scale(1, 1);
     transform: scale(1, 1);
 }
 
-.gbrowser-btn:hover::after,
 .track:hover::after {
     opacity: 1;
 }
@@ -841,6 +827,7 @@ hr {
     height: 75px;
     align-self: center;
     justify-self: center;
+    overflow: hidden;
 }
 
 .track-image img {
@@ -849,6 +836,47 @@ hr {
     object-fit: cover;
     border: 1px solid #eee;
     border-radius: 3px;
+}
+
+.track-ribbon{
+    grid-area: image;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+.track-ribbon::before,
+.track-ribbon::after {
+  position: relative;
+  z-index: -1;
+  content: '';
+  display: block;
+}
+.track-ribbon span {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 1px 0;
+  border-color: transparent transparent transparent darkgray;
+  box-shadow: 0 2px 7.5px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  right: -5%;
+  top: 5%;
+  transform: rotate(-45deg);
+}
+
+.track-ribbon::before,
+.track-ribbon::after {
+    border-top-color: transparent;
+    border-left-color: transparent;
+}
+.track-ribbon::before {
+    top: 0;
+    right: 0;
+}
+.track-ribbon::after {
+    bottom: 0;
+    left: 0;
 }
 
 .track-h {
@@ -866,88 +894,15 @@ hr {
     color: #403f3f;
 }
 
-.track-btns>button {
+.track-links>a, .landing-page-a {
     grid-area: buttons;
     display: inline;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    margin: 0px 0px 0px 20px;
+    margin: 0px 0px 0px 8px;
     text-align: center;
     font-size: 12px;
-    color: black;
-    background-color: #e6f0f5;
     align-content: center;
     justify-content: center;
-    border-radius: 8px;
     border-style: none;
-    width: 40px;
-    height: 30px;
-}
-
-.gbrowser-btn,
-.url-tooltip-outer {
-    position: relative;
-    display: inline-block;
-}
-
-.gbrowser-btn .launch-btn-tooltip {
-    top: -25px;
-    right: 105%;
-    margin-left: -60px;
-    margin-top: 0px;
-    background-color: #e0f6ff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    opacity: 1;
-    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-
-.url-tooltip-outer .url-tooltip-span {
-    bottom: 150%;
-    left: 50%;
-    margin-left: -60px;
-    background-color: #f2f0f0;
-}
-
-.gbrowser-btn .launch-btn-tooltip,
-.url-tooltip-outer .url-tooltip-span {
-    visibility: hidden;
-    width: 120px;
-    color: #1b2646;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px 0;
-    position: absolute;
-    z-index: 1;
-}
-
-.gbrowser-btn .launch-btn-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 20%;
-    left: 100%;
-    margin-left: 0px;
-    border-width: 7px;
-    line-height: 2px;
-    border-style: solid;
-    border-color: transparent transparent transparent darkgray;
-    /* box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    opacity: 1;
-    -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); */
-}
-
-.url-tooltip-outer .url-tooltip-span::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #f2f0f0 transparent transparent transparent;
-}
-
-.gbrowser-btn:hover .launch-btn-tooltip,
-.url-tooltip-outer:hover .url-tooltip-span {
-    visibility: visible;
+    font-style: normal;
 }

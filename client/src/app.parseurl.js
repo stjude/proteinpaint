@@ -59,15 +59,14 @@ arg
 
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
-		for (let i = 0; i < arg.selectgenome.node().childNodes.length; i++) {
-			if (arg.selectgenome.node().childNodes[i].value == n) {
-				arg.selectgenome.property('selectedIndex', i)
-				break
-			}
-		}
+		const genome_options = [...arg.selectgenome.node().childNodes]
+		const selectedIndex = genome_options.findIndex(d => d.value == n)
+		arg.selectgenome.node().selectedIndex = selectedIndex
+		arg.selectgenome.node().dispatchEvent(new Event('change'))
 	}
 
 	if (urlp.has('hicfile') || urlp.has('hicurl')) {
+		// whole-genome view
 		let file, url
 		if (urlp.has('hicfile')) {
 			file = urlp.get('hicfile')
@@ -177,7 +176,19 @@ arg
 			if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
 				const url_str = urlp.get('mdsjsonurl')
 				const file_str = urlp.get('mdsjson')
-				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str, arg.holder)
+				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str)
+			}
+			if (urlp.has('tsnejson')) {
+				const file_str = urlp.get('tsnejson')
+				const data = await client.dofetch('textfile', { file: file_str })
+				if (data.error) throw tmp.error
+				else if (data.text) {
+					plot_data = {
+						mdssamplescatterplot: {
+							analysisdata: JSON.parse(data.text)
+						}
+					}
+				}
 			}
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
@@ -339,7 +350,11 @@ arg
 				arg.hostURL,
 				undefined, // jwt
 				false, // no show
-				arg.debugmode
+				{
+					debugmode: arg.debugmode,
+					instanceTracker: arg.instanceTracker || {},
+					callbacks: arg.callbacks || {}
+				}
 			)
 		}
 	}
@@ -363,6 +378,21 @@ function may_get_officialmds(urlp) {
 
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
+
+	if (urlp.has('arcfile')) {
+		const lst = urlp.get('arcfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					bedfile: lst[i + 1],
+					mode_hm: false,
+					mode_arc: true
+				})
+			}
+		}
+	}
 
 	if (urlp.has('mdsjsoncache')) {
 		const re = await client.dofetch2('mdsjsonform', {
@@ -397,12 +427,7 @@ export async function get_tklst(urlp, genomeobj) {
 				delete i.tracks
 				for (const t of i.tklst) {
 					if (!t.assay) throw '.assay missing from a facet track'
-					t.assayname = t.assay
-					delete t.assay
 					if (!t.sample) throw '.sample missing from a facet track'
-					t.patient = t.sample
-					delete t.sample
-					if (!t.sampletype) t.sampletype = t.patient
 					// must assign tkid otherwise the tk buttons from facet table won't work
 					t.tkid = Math.random().toString()
 				}
@@ -459,6 +484,26 @@ export async function get_tklst(urlp, genomeobj) {
 					name: lst[i],
 					url: lst[i + 1]
 				})
+			}
+		}
+	}
+	if (urlp.has('hictkfile') || urlp.has('hictkurl')) {
+		// name,enzyme,file/url
+		const isfile = urlp.has('hictkfile')
+		const lst = urlp.get(isfile ? 'hictkfile' : 'hictkurl').split(',')
+		for (let i = 0; i < lst.length; i += 3) {
+			if (lst[i] && lst[i + 1] && lst[i + 2]) {
+				const t = {
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					enzyme: lst[i + 1]
+				}
+				if (isfile) {
+					t.file = lst[i + 2]
+				} else {
+					t.url = lst[i + 2]
+				}
+				tklst.push(t)
 			}
 		}
 	}
@@ -650,6 +695,31 @@ export async function get_tklst(urlp, genomeobj) {
 					type: 'mdsjunction',
 					name: lst[i],
 					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('junctionmatrix')) {
+		const lst = urlp.get('junctionmatrix').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'mdsjunction',
+					name: lst[i],
+					file2: lst[i + 1] // quick fix to support new file type
+				})
+			}
+		}
+	}
+
+	if (urlp.has('junctionrnapeg')) {
+		const lst = urlp.get('junctionrnapeg').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [{ rnapegfile: lst[i + 1] }]
 				})
 			}
 		}

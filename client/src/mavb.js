@@ -116,13 +116,18 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 		})
 }
 
-export function mavbui(genomes, hostURL, jwt) {
+export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 	/*
 	create GUI to collect user input
 	*/
-	const [pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
-	pane.header.text('Differential gene expression viewer')
-	pane.body.style('margin', '10px')
+	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
+	if (holder !== undefined)
+		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	else {
+		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
+		pane.header.text('Differential gene expression viewer')
+		pane.body.style('margin', '10px')
+	}
 	inputdiv
 		.append('div')
 		.style('margin-top', '30px')
@@ -136,7 +141,7 @@ export function mavbui(genomes, hostURL, jwt) {
 	}
 	const fileui = () => {
 		filediv.selectAll('*').remove()
-		filediv
+		const input = filediv
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
@@ -158,7 +163,9 @@ export function mavbui(genomes, hostURL, jwt) {
 							genome: genomes[usegenome],
 							filename: file.name,
 							hostURL: hostURL,
-							jwt: jwt
+							jwt: jwt,
+							holder,
+							sandbox_header
 						},
 						event.target.result.trim().split('\n')
 					)
@@ -167,7 +174,7 @@ export function mavbui(genomes, hostURL, jwt) {
 						fileui()
 						return
 					}
-					pane.pane.remove()
+					if (pane) pane.pane.remove()
 				}
 				reader.onerror = function() {
 					cmt('Error reading file ' + file.name, 1)
@@ -176,8 +183,8 @@ export function mavbui(genomes, hostURL, jwt) {
 				}
 				reader.readAsText(file, 'utf8')
 			})
-			.node()
-			.focus()
+
+		setTimeout(() => input.node().focus(), 1100)
 	}
 	fileui()
 }
@@ -283,10 +290,13 @@ function parseRaw(mavb, lines) {
 		return 'No valid data'
 	}
 	// good data ready
-	if (!mavb.holder) {
+	if (mavb.holder == undefined) {
 		const pane = client.newpane({ x: 100, y: 100 })
 		pane.header.text(mavb.filename)
 		mavb.holder = pane.body
+	} else {
+		mavb.holder.selectAll('*').remove()
+		if (mavb.sandbox_header !== undefined) mavb.sandbox_header.text(mavb.filename)
 	}
 	mavb.data = data
 

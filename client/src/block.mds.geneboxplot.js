@@ -554,7 +554,8 @@ async function loadplot(plot) {
 		start: plot.start,
 		stop: plot.stop,
 		svcnv: plot.svcnv,
-		index_boxplotgroupers: plot.index_boxplotgroupers
+		index_boxplotgroupers: plot.index_boxplotgroupers,
+		sampleset: plot.sampleset
 	}
 	if (plot.dslabel) {
 		arg.dslabel = plot.dslabel
@@ -575,7 +576,7 @@ async function loadplot(plot) {
 		.attr('x', plot.svg.attr('width') / 2)
 		.attr('y', plot.svg.attr('height') / 2)
 
-	const data = await client.dofetch('mdsgeneboxplot', arg)
+	const data = await client.dofetch2('mdsgeneboxplot', { method: 'POST', body: JSON.stringify(arg) })
 	if (data.error) throw data.error
 
 	// must clear g0 since may be adding/removing boxplots
@@ -840,7 +841,6 @@ function addbutton_showdata_newquery(plot) {
 	/*
 only when .data.lst[] is not returned by server
 to query server for it
-only for official mds
 server may deny the request!
 */
 	plot.buttonholder_sampleexpdata.selectAll('*').remove()
@@ -848,7 +848,7 @@ server may deny the request!
 	plot.buttonholder_sampleexpdata
 		.append('button')
 		.text(plot.gecfg.datatype)
-		.on('click', () => {
+		.on('click', async () => {
 			const pane = client.newpane({ x: 100, y: 100 })
 			pane.header.text(plot.gene + ' ' + plot.gecfg.datatype)
 			const wait = pane.body
@@ -862,39 +862,44 @@ server may deny the request!
 				chr: plot.chr,
 				start: plot.start,
 				stop: plot.stop,
-				dslabel: plot.dslabel,
-				querykey: plot.querykey,
 				getalllst: 1
 			}
+			if (plot.dslabel) {
+				arg.dslabel = plot.dslabel
+				arg.querykey = plot.querykey
+			} else {
+				arg.iscustom = 1
+				arg.file = plot.file
+				arg.url = plot.url
+				arg.indexURL = plot.indexURL
+			}
 
-			client
-				.dofetch('mdsgeneboxplot', arg)
-				.then(data => {
-					if (data.error) throw data.error
-					wait.remove()
-					const table = pane.body
-						.append('table')
-						.style('border-spacing', '4px')
-						.style('border-collapse', 'separate')
+			try {
+				const data = await client.dofetch2('mdsgeneboxplot', { method: 'POST', body: JSON.stringify(arg) })
+				if (data.error) throw data.error
+				wait.remove()
+				const table = pane.body
+					.append('table')
+					.style('border-spacing', '4px')
+					.style('border-collapse', 'separate')
+				const tr = table.append('tr')
+				tr.append('td')
+					.text('Sample')
+					.style('font-size', '.8em')
+					.style('opacity', 0.5)
+				tr.append('td')
+					.text(plot.gecfg.datatype)
+					.style('font-size', '.8em')
+					.style('opacity', 0.5)
+				for (const i of data.lst) {
 					const tr = table.append('tr')
-					tr.append('td')
-						.text('Sample')
-						.style('font-size', '.8em')
-						.style('opacity', 0.5)
-					tr.append('td')
-						.text(plot.gecfg.datatype)
-						.style('font-size', '.8em')
-						.style('opacity', 0.5)
-					for (const i of data.lst) {
-						const tr = table.append('tr')
-						tr.append('td').text(i.sample)
-						tr.append('td').text(i.value)
-					}
-				})
-				.catch(e => {
-					wait.text('Error: ' + (e.message || e))
-					if (e.stack) console.log(e.stack)
-				})
+					tr.append('td').text(i.sample)
+					tr.append('td').text(i.value)
+				}
+			} catch (e) {
+				wait.text('Error: ' + (e.message || e))
+				if (e.stack) console.log(e.stack)
+			}
 		})
 }
 
@@ -1282,7 +1287,7 @@ function init2(x, y, plot, group) {
 	loadplot2(pp)
 }
 
-function loadplot2(pp) {
+async function loadplot2(pp) {
 	const _p = pp._plot
 	const arg = {
 		genome: _p.genome.name,
@@ -1292,7 +1297,8 @@ function loadplot2(pp) {
 		stop: _p.stop,
 		getgroup: pp.getgroup,
 		getgroup_unannotated: pp.getgroup_unannotated,
-		svcnv: _p.svcnv
+		svcnv: _p.svcnv,
+		sampleset: _p.sampleset
 	}
 	if (_p.dslabel) {
 		arg.dslabel = _p.dslabel
@@ -1313,23 +1319,16 @@ function loadplot2(pp) {
 		.attr('x', pp.svg.attr('width') / 2)
 		.attr('y', pp.svg.attr('height') / 2)
 
-	client
-		.dofetch('mdsgeneboxplot', arg)
-		.then(data => {
-			// incoming new data
-
-			if (data.error) throw { message: data.error }
-
-			pp.g0.selectAll('*').remove()
-
-			pp.data = data
-
-			pp.makegraph()
-		})
-		.catch(err => {
-			client.sayerror(pp.errdiv, 'Error: ' + err.message)
-			if (err.stack) console.log(err.stack)
-		})
+	try {
+		const data = await client.dofetch2('mdsgeneboxplot', { method: 'POST', body: JSON.stringify(arg) })
+		if (data.error) throw data.error
+		pp.g0.selectAll('*').remove()
+		pp.data = data
+		pp.makegraph()
+	} catch (e) {
+		client.sayerror(pp.errdiv, 'Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
 }
 
 function tooltip_pp(d, holder, pp) {

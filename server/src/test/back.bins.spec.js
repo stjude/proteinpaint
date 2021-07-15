@@ -68,8 +68,8 @@ tape('compute_bins() error handling, type=regular', function(test) {
 	tryBin(
 		test,
 		{ bin_size: 5, first_bin: { startunbounded: 1 } },
-		'should throw if missing first_bin.startunbounded + stop, or start_percentile, or start',
-		'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
+		'should throw if missing first_bin.stop, or stop_percentile, or start',
+		'first_bin.stop not a number when stop_percentile is not set'
 	)
 
 	test.end()
@@ -89,38 +89,93 @@ tape('compute_bins() error handling, type=custom', function(test) {
 		'custom bin.startinclusive and/or bin.stopinclusive must be defined'
 	)
 
+	// first bin
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, startunbounded: false, stop: 3 }] },
+		'should throw on a custom first bin having .startunbounded: false',
+		'a custom first bin must not set bin.startunbounded to false'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, start: 0, stop: 3 }] },
+		'should throw on a custom first bin having .start',
+		'a custom first bin must not set a bin.start value'
+	)
+
 	tryBin(
 		test,
 		{ type: 'custom', lst: [{ startinclusive: 1 }] },
-		'should throw on a custom first bin missing both .startunbounded and .start',
-		'the first bin must define either startunbounded or start'
+		'should throw on a missing first bin.start value',
+		'a custom first bin must define a bin.stop value'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, start: 'abc' }] },
-		'should throw on non-numeric start for a bounded first bin',
-		'bin.start must be numeric for a bounded first bin'
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 'abc' }] },
+		'should throw on non-numeric stop value for a first bin',
+		'a custom first bin.stop value should be numeric'
+	)
+
+	// last bin
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1 }] },
+		'should throw on a missing last bin.start value',
+		'a custom last bin must define a bin.start value'
 	)
 
 	tryBin(
 		test,
 		{
 			type: 'custom',
-			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3 }]
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 'abc' }]
 		},
-		'should throw on a custom last bin missing both .stopunbounded and .stop',
-		'the last bin must define either stopunbounded or stop'
+		'should throw on non-numeric start for a bounded last bin',
+		'a custom last bin.start must be numeric'
 	)
 
 	tryBin(
 		test,
 		{
 			type: 'custom',
-			lst: [{ startinclusive: 1, start: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 'abc' }]
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 6 }]
 		},
-		'should throw on non-numeric stop for a bounded last bin',
-		'bin.stop must be numeric for a bounded last bin'
+		'should throw on a custom last bin having a .stop value',
+		'a custom last bin must not set a bin.stop value'
+	)
+
+	tryBin(
+		test,
+		{ type: 'custom', lst: [{ startinclusive: 1, stop: 3 }, { startinclusive: 1, start: 3, stopunbounded: false }] },
+		'should throw on a custom last bin having .stopunbounded: false',
+		'a custom last bin must not set bin.stopunbounded to false'
+	)
+
+	// middle bin
+	tryBin(
+		test,
+		{
+			type: 'custom',
+			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, stop: 6 }, { startinclusive: 1, start: 7 }]
+		},
+		'should throw on a non-numeric middle bin.start value',
+		'bin.start must be numeric for a non-first bin'
+	)
+
+	tryBin(
+		test,
+		{
+			type: 'custom',
+			lst: [
+				{ startinclusive: 1, stop: 2 },
+				{ startinclusive: 1, start: 2, stop: 'abc' },
+				{ startinclusive: 1, start: 7 }
+			]
+		},
+		'should throw on a non-numeric middle bin.stop value',
+		'bin.stop must be numeric for a non-last bin'
 	)
 
 	test.end()
@@ -312,6 +367,34 @@ tape('get_bin_label(), label_offset=0', function(test) {
 	test.end()
 })
 
+tape('get_bin_label(), last bin start === stop', test => {
+	const summary = {
+		min: -0.0232,
+		max: 0.06
+	}
+	const binconfig = {
+		rounding: '.2f',
+		bin_size: 0.03,
+		startinclusive: true,
+		first_bin: { startunbounded: true, stop: -0.0645461 },
+		label_offset: 1
+	}
+	const bins = b.compute_bins(binconfig, () => summary)
+	const last_bin = bins.pop()
+	test.deepEqual(
+		last_bin,
+		{
+			stopunbounded: true,
+			startinclusive: true,
+			stopinclusive: undefined,
+			start: 0.0554539,
+			label: '≥0.06'
+		},
+		'should simplify the last bin label to a one-sided value when bin start === stop'
+	)
+	test.end()
+})
+
 tape('compute_bins() unbounded', function(test) {
 	test.deepLooseEqual(
 		b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary),
@@ -319,7 +402,7 @@ tape('compute_bins() unbounded', function(test) {
 			{ startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
 			{ startinclusive: 1, stopinclusive: 0, start: 5, stop: 10, label: '5 to 9' },
 			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 15, label: '10 to 14' },
-			{ startinclusive: 1, stopinclusive: 0, start: 15, stop: 20, label: '15 to 19' }
+			{ startinclusive: 1, stopinclusive: 0, start: 15, stopunbounded: 1, label: '≥15' }
 		],
 		'should default to unbounded firt and last bins, equally sized bins'
 	)
@@ -332,7 +415,7 @@ tape('compute_bins() unbounded', function(test) {
 			{ startinclusive: 1, stopinclusive: 0, start: 6, stop: 10, label: '6 to 9' },
 			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 14, label: '10 to 13' },
 			{ startinclusive: 1, stopinclusive: 0, start: 14, stop: 18, label: '14 to 17' },
-			{ startinclusive: 1, stopinclusive: 0, start: 18, stop: 20, label: '18 to 19' }
+			{ startinclusive: 1, stopinclusive: 0, start: 18, stopunbounded: 1, label: '≥18' }
 		],
 		'should default to unbounded firt and last bins, not equally sized bins'
 	)
@@ -345,7 +428,7 @@ tape('compute_bins() unbounded', function(test) {
 		[
 			{ startunbounded: 1, start: undefined, stop: 10, startinclusive: 1, stopinclusive: 0, label: '<10' },
 			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 16, label: '10 to 15' },
-			{ startinclusive: 1, stopinclusive: 0, start: 16, stop: 20, label: '16 to 19' }
+			{ startinclusive: 1, stopinclusive: 0, start: 16, stopunbounded: 1, label: '≥16' }
 		],
 		'should override start_percentile or start with startunbounded'
 	)
@@ -355,43 +438,30 @@ tape('compute_bins() unbounded', function(test) {
 
 tape('compute_bins() non-percentile', function(test) {
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { start: 4 } }, get_summary),
+		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop: 8 } }, get_summary),
 		[
-			{ startunbounded: undefined, start: 4, stop: 7, startinclusive: 1, stopinclusive: 0, label: '4 to 6' },
-			{ startinclusive: 1, stopinclusive: 0, start: 7, stop: 10, label: '7 to 9' },
-			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 13, label: '10 to 12' },
-			{ startinclusive: 1, stopinclusive: 0, start: 13, stop: 16, label: '13 to 15' },
-			{ startinclusive: 1, stopinclusive: 0, start: 16, stop: 19, label: '16 to 18' },
-			{ startinclusive: 1, stopinclusive: 0, start: 19, stop: 20, label: '19' }
-		],
-		'should handle first_bin.start'
-	)
-
-	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { start: 4, stop: 8 } }, get_summary),
-		[
-			{ startunbounded: undefined, start: 4, stop: 8, startinclusive: 1, stopinclusive: 0, label: '4 to 7' },
+			{ startunbounded: true, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 11, label: '8 to 10' },
 			{ startinclusive: 1, stopinclusive: 0, start: 11, stop: 14, label: '11 to 13' },
 			{ startinclusive: 1, stopinclusive: 0, start: 14, stop: 17, label: '14 to 16' },
-			{ startinclusive: 1, stopinclusive: 0, start: 17, stop: 20, label: '17 to 19' }
+			{ stopunbounded: true, startinclusive: 1, stopinclusive: 0, start: 17, label: '≥17' }
 		],
-		'should handle first_bin.start + stop'
+		'should handle first_bin.stop'
 	)
 
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { start: 4 }, last_bin: { stop: 15 } }, get_summary),
+		b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start: 12 } }, get_summary),
 		[
-			{ startunbounded: undefined, start: 4, stop: 8, startinclusive: 1, stopinclusive: 0, label: '4 to 7' },
+			{ startunbounded: true, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 12, label: '8 to 11' },
-			{ startinclusive: 1, stopinclusive: 0, start: 12, stop: 15, label: '12 to 14' }
+			{ stopunbounded: true, startinclusive: 1, stopinclusive: 0, start: 12, label: '≥12' }
 		],
 		'should handle last_bin.start'
 	)
 
 	test.deepLooseEqual(
 		b.compute_bins(
-			{ bin_size: 3, label_offset: 1, first_bin: { startunbounded: 1, stop: 3 }, last_bin: { start: 15, stop: 18 } },
+			{ bin_size: 3, label_offset: 1, first_bin: { startunbounded: 1, stop: 3 }, last_bin: { start: 15 } },
 			get_summary
 		),
 		[
@@ -400,7 +470,7 @@ tape('compute_bins() non-percentile', function(test) {
 			{ startinclusive: 1, stopinclusive: 0, start: 6, stop: 9, label: '6 to 8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 9, stop: 12, label: '9 to 11' },
 			{ startinclusive: 1, stopinclusive: 0, start: 12, stop: 15, label: '12 to 14' },
-			{ startinclusive: 1, stopinclusive: 0, start: 15, stop: 18, label: '15 to 17' }
+			{ stopunbounded: 1, startinclusive: 1, stopinclusive: 0, start: 15, label: '≥15' }
 		],
 		'should handle last_bin.start + stop'
 	)
@@ -416,13 +486,13 @@ tape('compute_bins() non-percentile', function(test) {
 			get_summary
 		),
 		[
-			{ startunbounded: undefined, start: 5, stop: 7, startinclusive: 1, stopinclusive: 0, label: '5 to 6' },
+			{ startunbounded: 1, start: undefined, stop: 7, startinclusive: 1, stopinclusive: 0, label: '<7' },
 			{ startinclusive: 1, stopinclusive: 0, start: 7, stop: 8, label: 7 },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 9, label: 8 },
 			{ startinclusive: 1, stopinclusive: 0, start: 9, stop: 10, label: 9 },
 			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 11, label: 10 },
 			{ startinclusive: 1, stopinclusive: 0, start: 11, stop: 12, label: 11 },
-			{ startinclusive: 1, stopinclusive: 0, start: 12, stop: 13, stopunbounded: true, label: '≥12' }
+			{ startinclusive: 1, stopinclusive: 0, start: 12, stopunbounded: true, label: '≥12' }
 		],
 		'should handle first_bins, last_bin'
 	)
@@ -473,50 +543,33 @@ tape('target_percentiles()', function(test) {
 
 tape('compute_bins() percentile', function(test) {
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { start_percentile: 10 } }, get_summary),
+		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop_percentile: 25 } }, get_summary),
 		[
-			{ startunbounded: undefined, start: 2, stop: 5, startinclusive: 1, stopinclusive: 0, label: '2 to 4' },
+			{ startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
 			{ startinclusive: 1, stopinclusive: 0, start: 5, stop: 8, label: '5 to 7' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 11, label: '8 to 10' },
 			{ startinclusive: 1, stopinclusive: 0, start: 11, stop: 14, label: '11 to 13' },
 			{ startinclusive: 1, stopinclusive: 0, start: 14, stop: 17, label: '14 to 16' },
-			{ startinclusive: 1, stopinclusive: 0, start: 17, stop: 20, label: '17 to 19' }
+			{ startinclusive: 1, stopinclusive: 0, start: 17, stopunbounded: 1, label: '≥17' }
 		],
-		'should handle first_bin.start_percentile'
+		'should handle first_bin.stop_percentile'
 	)
 
 	test.deepLooseEqual(
 		b.compute_bins(
-			{ bin_size: 3, label_offset: 1, first_bin: { start_percentile: 10, stop_percentile: 20 } },
+			{ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start_percentile: 90 } },
 			get_summary
 		),
 		[
-			{ startunbounded: undefined, start: 2, stop: 4, startinclusive: 1, stopinclusive: 0, label: '2 to 3' },
-			{ startinclusive: 1, stopinclusive: 0, start: 4, stop: 7, label: '4 to 6' },
-			{ startinclusive: 1, stopinclusive: 0, start: 7, stop: 10, label: '7 to 9' },
-			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 13, label: '10 to 12' },
-			{ startinclusive: 1, stopinclusive: 0, start: 13, stop: 16, label: '13 to 15' },
-			{ startinclusive: 1, stopinclusive: 0, start: 16, stop: 19, label: '16 to 18' },
-			{ startinclusive: 1, stopinclusive: 0, start: 19, stop: 20, label: '19' }
-		],
-		'should handle first_bin.start_percentile + stop_percentile'
-	)
-
-	test.deepLooseEqual(
-		b.compute_bins(
-			{ bin_size: 4, label_offset: 1, first_bin: { start: 4 }, last_bin: { start_percentile: 90, stopunbounded: 1 } },
-			get_summary
-		),
-		[
-			{ startunbounded: undefined, start: 4, stop: 8, startinclusive: 1, stopinclusive: 0, label: '4 to 7' },
+			{ startunbounded: 1, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 12, label: '8 to 11' },
 			{ startinclusive: 1, stopinclusive: 0, start: 12, stop: 16, label: '12 to 15' },
 			{ startinclusive: 1, stopinclusive: 0, start: 16, stop: 18, label: '16 to 17' },
-			{ startinclusive: 1, stopinclusive: 0, start: 18, stop: 20, stopunbounded: 1, label: '≥18' }
+			{ startinclusive: 1, stopinclusive: 0, start: 18, stopunbounded: 1, label: '≥18' }
 		],
 		'should handle last_bin.start_percentile'
 	)
-
+	/*
 	test.deepLooseEqual(
 		b.compute_bins(
 			{
@@ -528,14 +581,14 @@ tape('compute_bins() percentile', function(test) {
 			get_summary
 		),
 		[
-			{ startunbounded: undefined, start: 5, stop: 9, startinclusive: 1, stopinclusive: 0, label: '5 to 8' },
+			{ startunbounded: 1, start: 5, stop: 9, startinclusive: 1, stopinclusive: 0, label: '5 to 8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 9, stop: 13, label: '9 to 12' },
 			{ startinclusive: 1, stopinclusive: 0, start: 13, stop: 16, label: '13 to 15' },
 			{ startinclusive: 1, stopinclusive: 0, start: 16, stop: 19, label: '16 to 18' }
 		],
 		'should handle last_bin.start_percentile + stop_percentile'
 	)
-
+*/
 	test.end()
 })
 
@@ -558,7 +611,7 @@ tape('compute_bins() wgs_sample_age', function(test) {
 	})
 	test.equal(bins.length, 5, 'should create 5 bins')
 	test.equal(bins[0].label, '<' + Math.round(stop), 'should include the rounded first bin stop value in the bin label')
-	test.equal(bins[4].label, '56 to 65', 'should include decimals in the last bin label')
+	test.equal(bins[4].label, '≥56', 'should include decimals in the last bin label')
 	test.end()
 })
 

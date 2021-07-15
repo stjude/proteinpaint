@@ -45,7 +45,9 @@ class TdbPlotControls {
 				id: this.id,
 				holder: this.dom.config_div,
 				tip: app.tip,
-				debug
+				debug,
+				isleaf: opts.isleaf,
+				iscondition: opts.iscondition
 			})
 		}
 
