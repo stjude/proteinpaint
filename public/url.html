@@ -13,15 +13,21 @@ tr>:first-child {
 </style>
 
 
-<!-- URLs will be added to this table -->
+<!-- rows of URLs are added to this table -->
 <table id='table'></table>
 
 
 
 <script>
 makeURL([
-{
-	name: 'BAM',
+/*
+each element defines one type of feature showing in a row
+with a number of URLs demonstrating different examples of this feature
+.name: string
+.links: []
+   each element: [0]: URL label, [1]: URL path name
+*/
+{ name: 'BAM',
 	links: [
 		[ 'WES 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
 		[ 'kmer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
@@ -29,8 +35,7 @@ makeURL([
 		['kmer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
 	]
 },
-{
-	name:'GDC BAM slice',
+{ name:'GDC BAM slice',
 	links:[
 		['GBM EGFR','example.gdc.bamslice.html?gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['AKT1 E17K','example.gdc.bamslice.html?gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780213.C.T'],
@@ -45,8 +50,25 @@ makeURL([
 		['TP53','?genome=hg38&gene=ENST00000269305&mds3=GDC'],
 		['KRAS','?genome=hg38&gene=ENST00000256078&mds3=GDC'],
 	]
+},
+{name:'junction',
+	links:[
+		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
+		['rnapeg','?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg'],
+		['official mds','?genome=hg19&block=1&mds=Pediatric2,junction'],
+		['custom mds json','?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz'],
+		['custom matrix','?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz']
+	]
+},
+{name:'interaction',
+	links:[
+		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
+		['hic tk','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
+		['bed arc','?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc%20Track,proteinpaint_demo/hg19/arc/mango.gz'],
+	]
 }
-])
+]
+)
 
 function makeURL(rows) {
 	const table = document.getElementById('table')
