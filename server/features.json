@@ -35,12 +35,12 @@
                             {
                                 "type": "mdssvcnv",
                                 "name": "TCGA_DLBC",
-                                "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz",
+                                "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz",
                                 "checkvcf": {
-                                    "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz"
+                                    "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz"
                                 },
                                 "checkexpressionrank": {
-                                    "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz"
+                                    "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz"
                                 }
                             }
                         ]
