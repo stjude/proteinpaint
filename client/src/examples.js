@@ -190,7 +190,7 @@ function displayTracks(tracks, holder, page_args) {
 				page_args.apps_off()
 				if (track.clickcard2url) {
 					window.open(track.clickcard2url, '_blank')
-				} else if (track.media.example) {
+				} else if (track.media.example || track.ppcalls) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -282,8 +282,6 @@ async function openExample(track, holder) {
 
 	//Download data and show runpp() code at the top
 	makeDataDownload(track, sandbox_div)
-	showCode(track, track.media.example, sandbox_div)
-
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
@@ -294,21 +292,25 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
 
-	// template runpp() arg
-	const runpp_arg = {
-		holder: sandbox_div.body
-			.append('div')
-			.style('margin', '20px')
-			.node(),
-		sandbox_header: sandbox_div.header,
-		host: window.location.origin
+	if (track.media.example && !track.ppcalls) {
+		showCode(track, track.media.example, sandbox_div)
+
+		// template runpp() arg
+		const runpp_arg = {
+			holder: sandbox_div.body
+				.append('div')
+				.style('margin', '20px')
+				.node(),
+			sandbox_header: sandbox_div.header,
+			host: window.location.origin
+		}
+
+		const example = JSON.parse(JSON.stringify(track.media.example))
+
+		runproteinpaint(Object.assign(runpp_arg, example))
+	} else if (track.ppcalls) {
+		makeExampleMenu(track, sandbox_div)
 	}
-
-	const example = JSON.parse(JSON.stringify(track.media.example))
-
-	runproteinpaint(Object.assign(runpp_arg, example))
-
-	makeExampleMenu(track, sandbox_div)
 }
 
 async function makeDataDownload(track, div) {
@@ -390,44 +392,47 @@ async function addUpdateMessage(track, div) {
 async function makeExampleMenu(track, holder){
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(holder.body, tabs)
+	tab2box(holder.body.style('margin','20px'), tabs)
 }
 
 async function tabArray(tabs, track){
 	const calls = track.ppcalls
-	calls.map(call => {
+	calls.forEach(call => {
 		tabs.push({
 			label: call.label,
 			callback: async (div) => {
 				const wait = tab_wait(div)
 				try {
-					await makeTab(call.runpparg, div)
+					await makeTab(call, div)
 					wait.remove()
 				} catch(e) {
 					wait.text('Error: ' + (e.message || e))
 				}
 			}
 		})
-	}).join("")
+	})
 }
 
 async function makeTab(arg, div) {
-	showCode2(arg, div)
-	const tab_div = div.append('div')
+	showCode2(arg.runpparg, div)
+
+	if (arg.message) {
+		div.append('div')
+			.style('margin', '20px')
+			.html(arg.message)
+	}
+
 	const runpp_arg = {
-		holder: tab_div
+		holder: div
 			.append('div')
 			.style('margin', '20px')
 			.node(),
-		// sandbox_header: div.header,
 		host: window.location.origin
 		}
 
-		const call = JSON.parse(JSON.stringify(arg))
+		const call = JSON.parse(JSON.stringify(arg.runpparg))
 
 		runproteinpaint(Object.assign(runpp_arg, call))
-
-	return tab_div
 
 }
 

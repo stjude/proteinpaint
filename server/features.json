@@ -363,19 +363,6 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
             "new_expire": "2021-08-15",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "block":1,
-                    "genome": "hg19",
-                    "nativetracks": "Refgene",
-                    "tracks": [{
-                        "type": "mdsjunction",
-                        "name": "Demo",
-                        "file": "proteinpaint_demo/hg19/junction/json.gz"
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz"
@@ -390,6 +377,7 @@
             "ppcalls": [
                 {
                     "label":"Json",
+                    "message": "Something about this example",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
@@ -406,6 +394,7 @@
                 },
                 {
                     "label":"Matrix",
+                    "message": "Something about this matrix example",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
