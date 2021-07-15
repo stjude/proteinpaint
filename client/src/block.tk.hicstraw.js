@@ -746,8 +746,14 @@ function drawCanvas(tk, block) {
 			ctx.closePath()
 			ctx.fill()
 		} else if (tk.mode_arc) {
-			const arcxspan = (right1 + right2) / 2 - (left1 + left2) / 2
-			const centerx = (left1 + left2) / 2 + arcxspan / 2
+			/* in an arc file converted from hic
+			(left1+left2) is bigger than (right1+right2)
+			following is to ensure not to get negative arcxspan and radius
+			*/
+			const a = (left1 + left2) / 2
+			const b = (right1 + right2) / 2
+			const arcxspan = Math.abs(a - b)
+			const centerx = Math.min(a, b) + arcxspan / 2
 			const radius = arcxspan / 2 / Math.sin(tk.arcangle / 2)
 			let centery, startangle, endangle
 			if (tk.pyramidup) {
