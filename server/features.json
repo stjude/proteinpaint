@@ -5,7 +5,6 @@
             "app": "Genome Browser",
             "blurb": "Explore coding and non-coding variants in cancer",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
-            "clickcard2url" : "https://genomepaint.stjude.cloud/",
             "media": {
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
@@ -21,8 +20,45 @@
                     }
                 }
             ],
+            "ppcalls":[
+                {
+                    "label":"TCGA DLBC example",
+                    "runpparg":{
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "block": true,
+                        "genome": "hg38",
+                        "position": "chr22:22569655-23013766",
+                        "nativetracks": "RefGene",
+                        "tracks":[
+                            {
+                                "type": "mdssvcnv",
+                                "name": "TCGA_DLBC",
+                                "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz",
+                                "checkvcf": {
+                                    "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz"
+                                },
+                                "checkexpressionrank": {
+                                    "url": "https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false
+                "is_ui": false,
+                "buttons": [
+                    {
+                        "name": "Docs",
+                        "hyperlink": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
+                    },
+                    {
+                        "name": "Launch GenomePaint",
+                        "hyperlink": "https://genomepaint.stjude.cloud/"
+                    }
+                ]
             },
             "searchterms": ["GenomePaint"]
         },

@@ -308,7 +308,8 @@ async function openExample(track, holder) {
 		const example = JSON.parse(JSON.stringify(track.media.example))
 
 		runproteinpaint(Object.assign(runpp_arg, example))
-	} else if (track.ppcalls) {
+	} else if (track.ppcalls && !track.media.example) {
+		addButtons(track, sandbox_div)
 		makeExampleMenu(track, sandbox_div)
 	}
 }
@@ -323,7 +324,6 @@ async function makeDataDownload(track, div) {
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
-		// .style('font-size', '12.75px')
 		.style('display', 'inline-block')
 		.text('Download Data')
 		.on('click', () => {
@@ -457,7 +457,6 @@ async function showCode2(arg, div) {
 				}
 			})
 
-	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
 		const code = div
 			.append('pre')
 			.append('code')
@@ -465,9 +464,32 @@ async function showCode2(arg, div) {
 			.style('margin', '35px')
 			.style('font-size', '14px')
 			.style('border', '1px solid #aeafb0')
+			//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
 			.html(highlight(`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
 			JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
 			`})`, {language:'javascript'}).value)
+}
+
+async function addButtons(track, div){
+	const buttons = track.sandbox.buttons
+	if (buttons){
+		buttons.forEach(button => {
+			const sandboxButton = div.body
+				.append('button')
+				.attr('type', 'button')
+				.attr('class', 'sja_menuoption')
+				.style('margin', '20px')
+				.style('padding', '8px')
+				.style('border', 'none')
+				.style('border-radius', '3px')
+				.style('display', 'inline-block')
+				.text(button.name)
+				.on('click', () => {
+					event.stopPropagation();
+					window.open(`${button.hyperlink}`, '_blank')
+				})
+			})
+		}
 }
