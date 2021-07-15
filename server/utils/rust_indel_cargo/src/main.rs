@@ -418,6 +418,10 @@ fn main() {
                         strictness,
                     );
                 if within_indel == 1 {
+                    //println!(
+                    //    "cigar_sequence:{}",
+                    //    &cigar_sequences_list[i as usize - 2].to_string()
+                    //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -445,7 +449,9 @@ fn main() {
                             0,
                             ref_alt_same_base_start,
                         );
-
+                    //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
+                    //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
+                    //println!("read_ambivalent:{}", read_ambivalent);
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
                     let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
                     let ref_comparison = jaccard_similarity_weights(
@@ -724,11 +730,14 @@ fn check_if_read_ambivalent(
 
     if repeat_start <= correct_start_position && correct_start_position <= ref_start {
         read_ambivalent = 2;
+        //println!("Case1");
     } else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
         read_ambivalent = 2;
+        //println!("Case2");
     } else if repeat_start <= correct_end_position && correct_end_position <= ref_stop {
         if (correct_end_position - ref_start).abs() <= right_offset as i64 {
             read_ambivalent = 2;
+            //println!("Case3");
         }
     }
 
@@ -1025,10 +1034,11 @@ fn check_read_within_indel_region(
         }
         correct_end_position = correct_start_position;
         for i in 0..cigar_length {
-            if &alphabets[i].to_string().as_str() == &"D" {
-                // In case of deleted nucleotides, the end position will be pushed to the left
-                correct_end_position -= numbers[i].to_string().parse::<i64>().unwrap();
-            } else if &alphabets[i].to_string().as_str() == &"H" { // In case of a hard-clip, the read in the bam file will not contain indel region
+            //if &alphabets[i].to_string().as_str() == &"D" {
+            //    // In case of deleted nucleotides, the end position will be pushed to the left
+            //    correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
+            //} else
+            if &alphabets[i].to_string().as_str() == &"H" { // In case of a hard-clip, the read in the bam file will not contain indel region
             } else {
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             }
@@ -1583,7 +1593,7 @@ fn determine_maxima_alt(
     }
     if is_a_line == 1 {
         for i in 0..kmer_diff_scores_length {
-            if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
+            if kmer_diff_scores_sorted[i].polyclonal >= 2 as i64 {
                 // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
                 let read_cat = read_category {
                     category: String::from("none"),
@@ -1670,7 +1680,7 @@ fn determine_maxima_alt(
                 };
                 indices.push(read_cat);
             } else {
-                if kmer_diff_scores_sorted[i].polyclonal == 2 as i64 {
+                if kmer_diff_scores_sorted[i].polyclonal >= 2 as i64 {
                     // If polyclonal = 2 (which is when read neither contains ref allele or alt allele of interest) classifying read as 'none'
                     let read_cat = read_category {
                         category: String::from("none"),
