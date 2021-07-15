@@ -169,7 +169,7 @@
                     "nobox": 1,
                     "noheader": 1,
                     "genome": "hg19",
-                    "position": "chr9:36821276-37053132",
+                    "position": "chr8:126890266-132795076",
                     "nativetracks": "RefGene",
                     "tracks": [{
                         "type": "aicheck",
@@ -376,7 +376,7 @@
             },
             "ppcalls": [
                 {
-                    "label":"Json",
+                    "label":"JSON",
                     "message": "Something about this example",
                     "runpparg": {
                         "parseurl": true,
@@ -694,6 +694,10 @@
                 "urls": [
                     {
                         "hyperlink": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam"
+                    },
+                    {
+                        "name": "kmer typing",
+                        "hyperlink": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A"
                     }
                 ],
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"

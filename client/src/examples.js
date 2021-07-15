@@ -365,10 +365,10 @@ async function showCode(track, arg, div) {
 			.style('font-size', '14px')
 			.style('border', '1px solid #aeafb0')
 			.html(highlight(`runproteinpaint({
-		host: "${window.location.origin}",
-		holder: document.getElementById('a'),` +
-				JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-				`})`, {language:'javascript'}).value)
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+		JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+		`})`, {language:'javascript'}).value)
 	}
 }
 
