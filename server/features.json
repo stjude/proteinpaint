@@ -6,7 +6,12 @@
             "blurb": "Explore coding and non-coding variants in cancer",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
             "media": {
-                "urls": [],
+                "urls": [
+                    {
+                        "name": "TCGA_DLBC cnv",
+                        "hyperlink": "?genome=hg38&block=1&svcnvfpkmfile=TCGA_DLBC cnv,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz"
+                    }
+                ],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
             },
             "custom_buttons":[
@@ -24,7 +29,7 @@
                 {
                     "label":"TCGA DLBC example",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/GPDemoData.tar.gz",
-                    "runpparg":{
+                    "runargs":{
                         "parseurl": true,
                         "nobox": 1,
                         "noheader": 1,
@@ -99,20 +104,6 @@
             "blurb": "quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "bigwig",
-                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
-                        "name": "BigWig Demo",
-                        "height": 100
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw"
@@ -120,9 +111,27 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
             },
+            "ppcalls":[
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw",
+                    "runargs":{
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                        "type": "bigwig",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
+                        "height": 100
+                    }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw"
+                "is_ui": false
             },
             "searchterms": ["coverage", "numeric"]
         },
@@ -132,27 +141,31 @@
             "blurb": "with forward & reverse strands",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr8:128597079-130293343",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "name": "Stranded RNA-seq",
-                        "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
-                        "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
-                        "type": "bigwigstranded"
-                    }]
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr8:128597079-130293343",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "name": "Stranded RNA-seq",
+                            "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
+                            "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
+                            "type": "bigwigstranded"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["bigwig stranded"]
         },
@@ -162,21 +175,6 @@
             "blurb": "genomic feature annotation",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "tracks": [{
-                        "type": "bedj",
-                        "name": "gene track",
-                        "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
-                        "stackheight": 16,
-                        "stackspace": 1,
-                        "color": "teal"
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz"
@@ -188,9 +186,28 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "tracks": [{
+                            "type": "bedj",
+                            "name": "gene track",
+                            "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
+                            "stackheight": 16,
+                            "stackspace": 1,
+                            "color": "teal"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": []
         },
@@ -200,20 +217,6 @@
             "blurb": "from tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr8:126890266-132795076",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "aicheck",
-                        "file": "proteinpaint_demo/hg19/aicheck/file.gz",
-                        "name": "Demo sample tumor allelic imbalance"
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg19&position=chr9:36821276-37053132&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,hg19/aicheck/file.gz"
@@ -221,9 +224,27 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr8:126890266-132795076",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "aicheck",
+                            "file": "proteinpaint_demo/hg19/aicheck/file.gz",
+                            "name": "Demo sample tumor allelic imbalance"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
         },
@@ -233,43 +254,47 @@
             "blurb": "profiling results & gene-level values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "nativetracks": "RefGene",
-                    "position": "chr14:24549316-24584223",
-                    "tracks": [{
-                        "type": "profilegenevalue",
-                        "genevaluetrack": {
-                            "file": "proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz"
-                        },
-                        "genevaluetype": "FPKM",
-                        "legendimg": {
-                            "file": "proteinpaint_demo/hg19/pgv/HMM.png",
-                            "width": 400,
-                            "height": 400
-                        },
-                        "name": "Demo chromHMM",
-                        "genevaluematchname": "sampleID",
-                        "tracks": [
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample1.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 1", "sampleID": "101" },
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample2.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 2", "sampleID": "102" },
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample3.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 3", "sampleID": "103" },
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample4.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 4", "sampleID": "104" },
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample5.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 5", "sampleID": "105" },
-                            { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample6.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 6", "sampleID": "106" }
-                        ]
-                    }]
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "nativetracks": "RefGene",
+                        "position": "chr14:24549316-24584223",
+                        "tracks": [{
+                            "type": "profilegenevalue",
+                            "genevaluetrack": {
+                                "file": "proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz"
+                            },
+                            "genevaluetype": "FPKM",
+                            "legendimg": {
+                                "file": "proteinpaint_demo/hg19/pgv/HMM.png",
+                                "width": 400,
+                                "height": 400
+                            },
+                            "name": "Demo chromHMM",
+                            "genevaluematchname": "sampleID",
+                            "tracks": [
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample1.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 1", "sampleID": "101" },
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample2.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 2", "sampleID": "102" },
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample3.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 3", "sampleID": "103" },
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample4.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 4", "sampleID": "104" },
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample5.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 5", "sampleID": "105" },
+                                { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample6.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 6", "sampleID": "106" }
+                            ]
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
         },
@@ -279,27 +304,31 @@
             "blurb": "against all samples from a cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg38",
-                    "position": "chr8:127340055-128243343",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "mdsexpressionrank",
-                        "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                        "name": "TCGA FPKM demo rank",
-                        "sample": "TCGA-GS-A9TQ"
-                    }]
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "position": "chr8:127340055-128243343",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "mdsexpressionrank",
+                            "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
+                            "name": "TCGA FPKM demo rank",
+                            "sample": "TCGA-GS-A9TQ"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": []
         },
@@ -309,24 +338,6 @@
             "blurb": "chromatin interaction at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr7:13749862-20841903",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "hicstraw",
-                        "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
-                        "name": "Example Hi-C",
-                        "percentile_max": 95,
-                        "mincutoff": 1,
-                        "pyramidup": 1,
-                        "enzyme": "MboI"
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic"
@@ -334,6 +345,28 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr7:13749862-20841903",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "hicstraw",
+                            "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                            "name": "Example Hi-C",
+                            "percentile_max": 95,
+                            "mincutoff": 1,
+                            "pyramidup": 1,
+                            "enzyme": "MboI"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false
             },
@@ -345,17 +378,21 @@
             "blurb": "coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-					"gene":"jak2",
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-					"dataset":"Pediatric"
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "parseurl": true,
+                        "gene":"jak2",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "dataset":"Pediatric"
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false
             },
@@ -367,20 +404,6 @@
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-					"nativetracks":"refgene",
-                    "tracks": [{
-                        "type": "junction",
-                        "file": "proteinpaint_demo/hg19/junction/file.gz",
-                        "name": "RNA splice junction demo",
-						"list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz"
@@ -388,6 +411,25 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
             },
+            "ppcalls": [
+                {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "nativetracks":"refgene",
+                        "tracks": [{
+                            "type": "junction",
+                            "file": "proteinpaint_demo/hg19/junction/file.gz",
+                            "name": "RNA splice junction demo",
+                            "list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false
             },
@@ -415,8 +457,8 @@
                 {
                     "label":"JSON",
                     "message": "",
-                    "download": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
-                    "runpparg": {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
+                    "runargs": {
                         "parseurl": true,
                         "nobox": 1,
                         "noheader": 1,
@@ -433,8 +475,8 @@
                 {
                     "label":"Matrix",
                     "message": "",
-                    "download": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
-                    "runpparg": {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
+                    "runargs": {
                         "parseurl": true,
                         "nobox": 1,
                         "noheader": 1,
@@ -460,14 +502,6 @@
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
             "media": {
-                "example":{
-                    "block": 1,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-					"nativetracks":"refgene",
-                    "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
-                },
                 "urls": [
                     {
                         "hyperlink": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json"
@@ -475,6 +509,19 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
             },
+            "ppcalls": [
+                {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/tklist/tklistDemoData.tar.gz",
+                    "runargs": {
+                        "block": 1,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "nativetracks":"refgene",
+                        "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false,
                 "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>"
@@ -488,79 +535,6 @@
             "blurb": "SNV/indel variants",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "gene": "kras",
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg38",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "vcf",
-                        "name": "Clinvar",
-                        "file": "hg38/clinvar.hg38.vcf.gz",
-                        "vcfinfofilter": {
-                            "lst": [{
-                                    "autocolor": 1,
-                                    "name": "Clinical significance",
-                                    "locusinfo": {
-                                        "key": "CLNSIG"
-                                    },
-                                    "categories": {
-                                        "Uncertain_significance": { "color": "#aaa", "label": "Uncertain significance", "textcolor": "white" },
-                                        "not_provided": { "color": "#ccc", "label": "Not provided" },
-                                        "_not_provided": { "color": "#ccc", "label": "Not provided" },
-                                        "Benign": { "color": "#43ac6a", "label": "Benign", "textcolor": "white" },
-                                        "Benign/Likely_benign": { "color": "#43ac6a", "label": "Benign/Likely benign", "textcolor": "white" },
-                                        "Likely_benign": { "color": "#5bc0de", "label": "Likely benign", "textcolor": "white" },
-                                        "Likely_pathogenic": { "color": "#e99002", "label": "Likely pathogenic", "textcolor": "white" },
-                                        "Pathogenic": { "color": "#f04124", "label": "Pathogenic", "textcolor": "white" },
-                                        "Pathogenic/Likely_pathogenic": { "color": "#f04124", "label": "Pathogenic/Likely pathogenic", "textcolor": "white" },
-                                        "drug_response": { "color": "gold", "label": "Drug response", "textcolor": "white" },
-                                        "_drug_response": { "color": "gold", "label": "Drug response", "textcolor": "white" },
-                                        "Conflicting_interpretations_of_pathogenicity": { "color": "#90C3D4", "label": "Conflicting interpretations of pathogenicity" },
-                                        "other": { "color": "#ccc", "label": "Other" },
-                                        "_other": { "color": "#ccc", "label": "Other" },
-                                        "risk_factor": { "color": "#ccc", "label": "Risk factor" },
-                                        "_risk_factor": { "color": "#ccc", "label": "Risk factor" },
-                                        "association": { "color": "#ccc", "label": "Association" },
-                                        "_association": { "color": "#ccc", "label": "Association" },
-                                        "Affects": { "color": "#ccc", "label": "Affects" },
-                                        "_Affects": { "color": "#ccc", "label": "Affects" },
-                                        "protective": { "color": "#ccc", "label": "Protective" },
-                                        "_protective": { "color": "#ccc", "label": "Protective" }
-                                    }
-                                },
-                                {
-                                    "name": "ExAC frequency",
-                                    "locusinfo": { "key": "AF_EXAC" },
-                                    "numericfilter": [{ "side": "<", "value": 0.0001 },
-                                        { "side": "<", "value": 0.001 },
-                                        { "side": "<", "value": 0.01 }
-                                    ]
-                                },
-                                {
-                                    "name": "GO-ESP frequency",
-                                    "locusinfo": { "key": "AF_ESP" },
-                                    "numericfilter": [{ "side": "<", "value": 0.0001 },
-                                        { "side": "<", "value": 0.001 },
-                                        { "side": "<", "value": 0.01 }
-                                    ]
-                                },
-                                {
-                                    "name": "1000 Genomes frequency",
-                                    "locusinfo": { "key": "AF_TGP" },
-                                    "numericfilter": [{ "side": "<", "value": 0.0001 },
-                                        { "side": "<", "value": 0.001 },
-                                        { "side": "<", "value": 0.01 }
-                                    ]
-                                }
-                            ],
-                            "setidx4mclass": 0,
-                            "setidx4numeric": 1
-                        }
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz"
@@ -568,9 +542,86 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/vcf/vcfDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "gene": "kras",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "vcf",
+                            "name": "Clinvar",
+                            "file": "hg38/clinvar.hg38.vcf.gz",
+                            "vcfinfofilter": {
+                                "lst": [{
+                                        "autocolor": 1,
+                                        "name": "Clinical significance",
+                                        "locusinfo": {
+                                            "key": "CLNSIG"
+                                        },
+                                        "categories": {
+                                            "Uncertain_significance": { "color": "#aaa", "label": "Uncertain significance", "textcolor": "white" },
+                                            "not_provided": { "color": "#ccc", "label": "Not provided" },
+                                            "_not_provided": { "color": "#ccc", "label": "Not provided" },
+                                            "Benign": { "color": "#43ac6a", "label": "Benign", "textcolor": "white" },
+                                            "Benign/Likely_benign": { "color": "#43ac6a", "label": "Benign/Likely benign", "textcolor": "white" },
+                                            "Likely_benign": { "color": "#5bc0de", "label": "Likely benign", "textcolor": "white" },
+                                            "Likely_pathogenic": { "color": "#e99002", "label": "Likely pathogenic", "textcolor": "white" },
+                                            "Pathogenic": { "color": "#f04124", "label": "Pathogenic", "textcolor": "white" },
+                                            "Pathogenic/Likely_pathogenic": { "color": "#f04124", "label": "Pathogenic/Likely pathogenic", "textcolor": "white" },
+                                            "drug_response": { "color": "gold", "label": "Drug response", "textcolor": "white" },
+                                            "_drug_response": { "color": "gold", "label": "Drug response", "textcolor": "white" },
+                                            "Conflicting_interpretations_of_pathogenicity": { "color": "#90C3D4", "label": "Conflicting interpretations of pathogenicity" },
+                                            "other": { "color": "#ccc", "label": "Other" },
+                                            "_other": { "color": "#ccc", "label": "Other" },
+                                            "risk_factor": { "color": "#ccc", "label": "Risk factor" },
+                                            "_risk_factor": { "color": "#ccc", "label": "Risk factor" },
+                                            "association": { "color": "#ccc", "label": "Association" },
+                                            "_association": { "color": "#ccc", "label": "Association" },
+                                            "Affects": { "color": "#ccc", "label": "Affects" },
+                                            "_Affects": { "color": "#ccc", "label": "Affects" },
+                                            "protective": { "color": "#ccc", "label": "Protective" },
+                                            "_protective": { "color": "#ccc", "label": "Protective" }
+                                        }
+                                    },
+                                    {
+                                        "name": "ExAC frequency",
+                                        "locusinfo": { "key": "AF_EXAC" },
+                                        "numericfilter": [{ "side": "<", "value": 0.0001 },
+                                            { "side": "<", "value": 0.001 },
+                                            { "side": "<", "value": 0.01 }
+                                        ]
+                                    },
+                                    {
+                                        "name": "GO-ESP frequency",
+                                        "locusinfo": { "key": "AF_ESP" },
+                                        "numericfilter": [{ "side": "<", "value": 0.0001 },
+                                            { "side": "<", "value": 0.001 },
+                                            { "side": "<", "value": 0.01 }
+                                        ]
+                                    },
+                                    {
+                                        "name": "1000 Genomes frequency",
+                                        "locusinfo": { "key": "AF_TGP" },
+                                        "numericfilter": [{ "side": "<", "value": 0.0001 },
+                                            { "side": "<", "value": 0.001 },
+                                            { "side": "<", "value": 0.01 }
+                                        ]
+                                    }
+                                ],
+                                "setidx4mclass": 0,
+                                "setidx4numeric": 1
+                            }
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/vcf/vcfDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["variant call", "lollipop", "vcf"]
         },
@@ -581,23 +632,6 @@
             "blurb": "pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr11:7839893-9165172",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "hicstraw",
-                        "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
-                        "name": "Arc Track Example",
-                        "percentile_max":99,
-                        "mode_arc": true,
-                        "mode_hm": false
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz"
@@ -605,6 +639,27 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr11:7839893-9165172",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "hicstraw",
+                            "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
+                            "name": "Arc Track Example",
+                            "percentile_max":99,
+                            "mode_arc": true,
+                            "mode_hm": false
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false
             },
@@ -617,94 +672,98 @@
             "blurb": "allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg38",
-                    "position": "chr5:1252462-1297568",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "mdssvcnv",
-                        "name": "Demo ASE",
-                        "checkvcf": {
-                            "file": "proteinpaint_demo/hg38/ase/vcf.gz"
-                        },
-                        "checkrnabam": {
-                            "hetsnp_minbaf": 0.2,
-                            "hetsnp_maxbaf": 0.8,
-                            "samples": {
-                                "sample1": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample1.bam",
-                                    "totalreads": 172048689,
-                                    "pairedend": true
-                                },
-                                "sample2": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample2.bam",
-                                    "totalreads": 151710239,
-                                    "pairedend": true
-                                },
-                                "sample3": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample3.bam",
-                                    "totalreads": 167864903,
-                                    "pairedend": true
-                                },
-                                "sample4": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample4.bam",
-                                    "totalreads": 153196442,
-                                    "pairedend": true
-                                },
-                                "sample12": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample12.bam",
-                                    "totalreads": 155650314,
-                                    "pairedend": true
-                                },
-                                "sample5": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample5.bam",
-                                    "totalreads": 144649042,
-                                    "pairedend": true
-                                },
-                                "sample6": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample6.bam",
-                                    "totalreads": 170516947,
-                                    "pairedend": true
-                                },
-                                "sample7": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample7.bam",
-                                    "totalreads": 167971047,
-                                    "pairedend": true
-                                },
-                                "sample8": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample8.bam",
-                                    "totalreads": 137990338,
-                                    "pairedend": true
-                                },
-                                "sample9": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample9.bam",
-                                    "totalreads": 150401722,
-                                    "pairedend": true
-                                },
-                                "sample10": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample10.bam",
-                                    "totalreads": 131681552,
-                                    "pairedend": true
-                                },
-                                "sample11": {
-                                    "file": "proteinpaint_demo/hg38/ase/sample11.bam",
-                                    "totalreads": 150240544,
-                                    "pairedend": true
-                                }
-                            }
-                        }
-                    }]
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
             },
+            "ppcalls": [
+                {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "position": "chr5:1252462-1297568",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "mdssvcnv",
+                            "name": "Demo ASE",
+                            "checkvcf": {
+                                "file": "proteinpaint_demo/hg38/ase/vcf.gz"
+                            },
+                            "checkrnabam": {
+                                "hetsnp_minbaf": 0.2,
+                                "hetsnp_maxbaf": 0.8,
+                                "samples": {
+                                    "sample1": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample1.bam",
+                                        "totalreads": 172048689,
+                                        "pairedend": true
+                                    },
+                                    "sample2": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample2.bam",
+                                        "totalreads": 151710239,
+                                        "pairedend": true
+                                    },
+                                    "sample3": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample3.bam",
+                                        "totalreads": 167864903,
+                                        "pairedend": true
+                                    },
+                                    "sample4": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample4.bam",
+                                        "totalreads": 153196442,
+                                        "pairedend": true
+                                    },
+                                    "sample12": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample12.bam",
+                                        "totalreads": 155650314,
+                                        "pairedend": true
+                                    },
+                                    "sample5": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample5.bam",
+                                        "totalreads": 144649042,
+                                        "pairedend": true
+                                    },
+                                    "sample6": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample6.bam",
+                                        "totalreads": 170516947,
+                                        "pairedend": true
+                                    },
+                                    "sample7": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample7.bam",
+                                        "totalreads": 167971047,
+                                        "pairedend": true
+                                    },
+                                    "sample8": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample8.bam",
+                                        "totalreads": 137990338,
+                                        "pairedend": true
+                                    },
+                                    "sample9": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample9.bam",
+                                        "totalreads": 150401722,
+                                        "pairedend": true
+                                    },
+                                    "sample10": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample10.bam",
+                                        "totalreads": 131681552,
+                                        "pairedend": true
+                                    },
+                                    "sample11": {
+                                        "file": "proteinpaint_demo/hg38/ase/sample11.bam",
+                                        "totalreads": 150240544,
+                                        "pairedend": true
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["Allele-specific gene expression"]
         },
@@ -715,20 +774,6 @@
             "blurb": "sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr4:55589707-55589907",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "bam",
-                        "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-                        "name": "Test WES KIT exon mutation"
-                    }]
-                },
                 "urls": [
                     {
                         "hyperlink": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam"
@@ -740,9 +785,27 @@
                 ],
                 "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.westkit.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr4:55589707-55589907",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "bam",
+                            "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+                            "name": "Test WES KIT exon mutation"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": ["BLAT"]
         },
@@ -754,13 +817,17 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "media": {
                 "urls": [],
-                "doc": "",
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "gdcbamslice": { "uionly": true }
-                }
+                "doc": ""
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "gdcbamslice": { "uionly": true }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -774,20 +841,6 @@
             "blurb": "deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "block": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg19",
-                    "position": "chr12:25362480-25363264",
-                    "nativetracks": "RefGene",
-                    "tracks": [{
-                        "type": "bampile",
-                        "file": "proteinpaint_demo/hg19/bampile/tk.gz",
-                        "name": "Demo Bampile"
-                    }]
-                },
                 "urls": [
                     {
                         "link": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz"
@@ -795,9 +848,27 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bampile/bampileDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position": "chr12:25362480-25363264",
+                        "nativetracks": "RefGene",
+                        "tracks": [{
+                            "type": "bampile",
+                            "file": "proteinpaint_demo/hg19/bampile/tk.gz",
+                            "name": "Demo Bampile"
+                        }]
+                    }
+                }
+            ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bampile/bampileDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": []
         },
@@ -807,14 +878,18 @@
             "blurb": "to review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
             "media": {
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "fusioneditor": { "uionly": true }
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "fusioneditor": { "uionly": true }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -826,15 +901,19 @@
             "blurb": "somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
             "media": {
-                "example": {
-                    "genome": "hg19",
-                    "nobox": 1,
-                    "noheader": 1,
-                    "twodmaf": { "uionly": true }
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "genome": "hg19",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "twodmaf": { "uionly": true }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -861,14 +940,18 @@
             "blurb": "",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
             "media": {
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "project": { "uionly": true }
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "project": { "uionly": true }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -880,14 +963,19 @@
             "blurb": "differential gene expression",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
             "media": {
-                "example": {
-                    "genome": "hg19",
-                    "noheader": 1,
-                    "mavolcanoplot": {
+                "urls": [],
+                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
+            },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "genome": "hg19",
+                        "noheader": 1,
+                        "mavolcanoplot": {
                         "uionly": true,
                         "urls": [
                             {
-                                "hyperlink": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt" 
+                                "hyperlink": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt"
                             }
                         ],
                         "tracks": [{
@@ -896,11 +984,10 @@
                             "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
                             "type": "bigwigstranded"
                         }]
+                        }
                     }
-                },
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
-            },
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -912,14 +999,18 @@
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "media": {
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "maftimeline": { "uionly": true }
-                },
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "maftimeline": { "uionly": true }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -935,6 +1026,11 @@
                 "urls": [],
                 "doc": ""
             },
+            "ppcalls": [
+                {
+                    "runargs": {}
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },
@@ -976,15 +1072,6 @@
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "media": {
-                "example": {
-                    "parseurl": true,
-                    "nobox": 1,
-                    "noheader": 1,
-                    "genome": "hg38",
-                    "mdssamplescatterplot": {
-                        "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
-                    }
-                },
                 "urls": [
                     {
                         "hyperlink": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json"
@@ -992,6 +1079,20 @@
                 ],
                 "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
             },
+            "ppcalls": [
+                {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/file.json",
+                    "runargs": {
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "mdssamplescatterplot": {
+                            "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
+                        }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": false
             },
@@ -1004,17 +1105,21 @@
             "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "media": {
-                "example": {
-                    "nobox": 1,
-                    "noheader": 1,
-                    "singlecell": {
-                        "genome": "mm10",
-                        "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
-                     }
-                },
                 "urls": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },
+            "ppcalls": [
+                {
+                    "runargs": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "singlecell": {
+                        "genome": "mm10",
+                        "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
+                        }
+                    }
+                }
+            ],
             "sandbox":{
                 "is_ui": true
             },

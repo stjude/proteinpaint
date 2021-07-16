@@ -188,9 +188,7 @@ function displayTracks(tracks, holder, page_args) {
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
-				if (track.clickcard2url) {
-					window.open(track.clickcard2url, '_blank')
-				} else if (track.media.example || track.ppcalls) {
+				if (track.ppcalls) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -279,9 +277,6 @@ async function openExample(track, holder) {
 	sandbox_div.header.text(
 		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
 	)
-
-	//Download data and show runpp() code at the top
-	makeDataDownload(track.sandbox.datadownload, sandbox_div.body)
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
@@ -292,8 +287,14 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
 
-	if (track.media.example && !track.ppcalls) {
-		showCode(track, track.media.example, sandbox_div)
+	if (track.ppcalls.length == 1) {
+		const call = track.ppcalls[0]
+		//Creates any custom buttons
+		addButtons(track, sandbox_div.body)
+		//Download data and show runpp() code at the top
+		makeDataDownload(call.download, sandbox_div.body)
+		//Shows code used to create sandbox
+		showCode(track, call.runargs, sandbox_div.body)
 
 		// template runpp() arg
 		const runpp_arg = {
@@ -305,28 +306,20 @@ async function openExample(track, holder) {
 			host: window.location.origin
 		}
 
-		const example = JSON.parse(JSON.stringify(track.media.example))
+		const oneexample = JSON.parse(JSON.stringify(call.runargs))
 
-		runproteinpaint(Object.assign(runpp_arg, example))
-	} else if (track.ppcalls && !track.media.example) {
+		runproteinpaint(Object.assign(runpp_arg, oneexample))
+
+	} else if (track.ppcalls.length > 1) {
 		addButtons(track, sandbox_div)
-		makeExampleMenu(track, sandbox_div)
+		makeTabMenu(track, sandbox_div)
 	}
 }
 
-async function makeDataDownload(arg, div) {
+function makeDataDownload(arg, div) {
 	if (arg) {
-		const dataBtn = div
-		.append('button')
-		.attr('type', 'button')
-		.attr('class', 'sja_menuoption')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		.style('display', 'inline-block')
-		.text('Download Data')
-		.on('click', () => {
+		const dataBtn = makeButton(div, "Download Data")
+		dataBtn.on('click', () => {
 			event.stopPropagation();
 			window.open(`${arg}`, '_blank')
 		})
@@ -334,19 +327,10 @@ async function makeDataDownload(arg, div) {
 }
 
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, arg, div) {
+function showCode(track, arg, div) {
 	if (track.sandbox.is_ui != true) {
-		const codeBtn = div.body
-			.append('button')
-			.attr('class', 'sja_menuoption')
-			.style('margin', '20px')
-			.style('padding', '8px')
-			.style('border', 'none')
-			.style('border-radius', '3px')
-			.style('font-size', '12.75x')
-			.text('Show Code')
-			.style('display', 'inline-block')
-			.on('click', () => {
+		const codeBtn = makeButton(div, "Show Code")
+			codeBtn.on('click', () => {
 				if (code.style('display') == 'none') {
 					code.style('display', 'block') //TODO fadein fn
 					select(event.target).text('Hide')
@@ -357,7 +341,7 @@ async function showCode(track, arg, div) {
 			})
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-		const code = div.body
+		const code = div
 			.append('pre')
 			.append('code')
 			.style('display', 'none')
@@ -389,13 +373,13 @@ async function addUpdateMessage(track, div) {
 	}
 }
 
-async function makeExampleMenu(track, holder){
+function makeTabMenu(track, holder){
 	const tabs = []
 	tabArray(tabs, track)
 	tab2box(holder.body.style('margin','20px'), tabs)
 }
 
-async function tabArray(tabs, track){
+function tabArray(tabs, track){
 	const calls = track.ppcalls
 	calls.forEach(call => {
 		tabs.push({
@@ -403,7 +387,7 @@ async function tabArray(tabs, track){
 			callback: async (div) => {
 				const wait = tab_wait(div)
 				try {
-					await makeTab(call, div)
+					await makeTab(track, call, div)
 					wait.remove()
 				} catch(e) {
 					wait.text('Error: ' + (e.message || e))
@@ -413,9 +397,9 @@ async function tabArray(tabs, track){
 	})
 }
 
-async function makeTab(arg, div) {
+function makeTab(track, arg, div) {
 	makeDataDownload(arg.download, div)
-	showCode2(arg.runpparg, div)
+	showCode(track, arg.runargs, div)
 
 	if (arg.message) {
 		div.append('div')
@@ -431,66 +415,36 @@ async function makeTab(arg, div) {
 		host: window.location.origin
 		}
 
-		const call = JSON.parse(JSON.stringify(arg.runpparg))
+		const call = JSON.parse(JSON.stringify(arg.runargs))
 
 		runproteinpaint(Object.assign(runpp_arg, call))
 
 }
 
-async function showCode2(arg, div) {
-		const codeBtn = div
-			.append('button')
-			.attr('class', 'sja_menuoption')
-			.style('margin', '20px')
-			.style('padding', '8px')
-			.style('border', 'none')
-			.style('border-radius', '3px')
-			.style('font-size', '12.75x')
-			.text('Show Code')
-			.style('display', 'inline-block')
-			.on('click', () => {
-				if (code.style('display') == 'none') {
-					code.style('display', 'block') //TODO fadein fn
-					select(event.target).text('Hide')
-				} else {
-					code.style('display', 'none') //TODO fadeout fn
-					select(event.target).text('Show Code')
-				}
-			})
-
-		const code = div
-			.append('pre')
-			.append('code')
-			.style('display', 'none')
-			.style('margin', '35px')
-			.style('font-size', '14px')
-			.style('border', '1px solid #aeafb0')
-			//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-			.html(highlight(`runproteinpaint({
-    host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
-			JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-			`})`, {language:'javascript'}).value)
-}
-
-async function addButtons(track, div){
+function addButtons(track, div){
 	const buttons = track.sandbox.buttons
 	if (buttons){
 		buttons.forEach(button => {
-			const sandboxButton = div.body
-				.append('button')
-				.attr('type', 'button')
-				.attr('class', 'sja_menuoption')
-				.style('margin', '20px')
-				.style('padding', '8px')
-				.style('border', 'none')
-				.style('border-radius', '3px')
-				.style('display', 'inline-block')
-				.text(button.name)
-				.on('click', () => {
+			const sandboxButton = makeButton(div, button.name)
+				sandboxButton.on('click', () => {
 					event.stopPropagation();
 					window.open(`${button.hyperlink}`, '_blank')
 				})
 			})
 		}
+}
+
+function makeButton(div, text) {
+	const button = div
+		.append('button')
+		.attr('type', 'button')
+		.attr('class', 'sja_menuoption')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('display', 'inline-block')
+		.text(text)
+
+	return button
 }
