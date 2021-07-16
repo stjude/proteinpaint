@@ -8,8 +8,8 @@
             "media": {
                 "urls": [
                     {
-                        "name": "TCGA_DLBC cnv",
-                        "hyperlink": "?genome=hg38&block=1&svcnvfpkmfile=TCGA_DLBC cnv,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz"
+                        "name": "URL",
+                        "hyperlink": "?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz"
                     }
                 ],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
