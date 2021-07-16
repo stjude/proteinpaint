@@ -495,6 +495,10 @@ const variant2samples = {
 	}
 }
 
+const ssm_occurrences_dictionary = {
+	endpoint: GDC_HOST + '/ssm_occurrences/_mapping'
+}
+
 /*
 getting total cohort sizes
 */
@@ -1027,7 +1031,10 @@ module.exports = {
 			project: { gdcapi: project_size },
 			disease: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
-		}
+		},
+		dictionary: {
+			variant2samples: { gdcapi: ssm_occurrences_dictionary }
+		} 
 	},
 
 	ssm2canonicalisoform,

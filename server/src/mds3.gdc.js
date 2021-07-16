@@ -780,3 +780,27 @@ function sort_mclass(set) {
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
 }
+
+export async function init_dictionary(dictioary){
+	for (const dict_name in dictioary) {
+		const dict= dictioary[dict_name]
+		if (!dict.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
+		const response = await got(
+			dict.gdcapi.endpoint,
+			{ 
+				method: 'GET',
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, 
+			}
+		)
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from GDC for variant2samples'
+		}
+		if (!re._mapping) throw 'returned data does not have ._mapping'
+		if (!re.fields) throw 'returned data does not have .fields'
+		if (!Array.isArray(re.fields)) throw '.fields not array'
+		// TODO: store termdb dictionary in memory
+	}
+}

@@ -18,6 +18,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
 	validate_ssm2canonicalisoform(ds)
+	validate_dictionary(ds)
 }
 
 export function client_copy(ds) {
@@ -651,4 +652,10 @@ function validate_ssm2canonicalisoform(ds) {
 	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
 	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
+}
+
+function validate_dictionary(ds){
+	const dictioary = (ds.termdb.dictionary)
+	if(!dictioary) return
+	gdc.init_dictionary(dictioary)
 }
