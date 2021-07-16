@@ -329,7 +329,8 @@ export function plotConfig(opts, appState = {}) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
-				hidden: []
+				hidden: [],
+				ciVisible: true
 			}
 		}
 	}

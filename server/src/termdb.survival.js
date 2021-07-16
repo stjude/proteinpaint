@@ -37,10 +37,12 @@ export async function get_survival(q, ds) {
 			d.censored = d[kNum]
 			if (q.km_method == 2) {
 				if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = ['cohort\ttime\tstatus']
-				const sKey = d[sNum]
+				// R errors on an empty string cohort value,
+				// so use '*' as a placeholder for now and will reconvert later
+				const sKey = d[sNum] === '' ? '*' : d[sNum]
 				// negate the d.censored value (where 1 is censored) to transform to survfit() status value
 				// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
-				byChartSeries[d.key0].push([d[sNum], d[vNum], d.censored == 0 ? 1 : 0].join('\t'))
+				byChartSeries[d.key0].push([sKey, d[vNum], d.censored == 0 ? 1 : 0].join('\t'))
 			} else {
 				// if no applicable term0, the d.key0 is just a placeholder empty string,
 				// see the comments in the get_rows() function for more details
@@ -86,7 +88,9 @@ export async function get_survival(q, ds) {
 							header.forEach((key, i) => {
 								obj[key] = i > 0 ? Number(row[i]) : row[i]
 							})
-							final_data.case.push([chartId, obj.cohort, obj.time, obj.surv, obj.ncensor, obj.lower, obj.upper])
+							// may reconvert a placeholder cohort value with an empty string
+							const cohort = obj.cohort == '*' ? '' : obj.cohort
+							final_data.case.push([chartId, cohort, obj.time, obj.surv, obj.ncensor, obj.lower, obj.upper])
 						}
 					})
 			} else {

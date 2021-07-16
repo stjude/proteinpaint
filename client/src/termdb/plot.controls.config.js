@@ -44,6 +44,13 @@ class TdbConfigUiInit {
 				dispatch,
 				id: this.id,
 				debug
+			}),
+			ci: setCIOpts({
+				holder: this.dom.ciTr,
+				dispatch,
+				id: this.id,
+				debug,
+				instanceNum: this.instanceNum
 			})
 		}
 		this.components = {
@@ -79,6 +86,7 @@ class TdbConfigUiInit {
 		this.dom.viewTr = this.dom.table.append('tr')
 		this.dom.orientationTr = this.dom.table.append('tr')
 		this.dom.cumincGradeTr = this.dom.table.append('tr') //.style('display', 'none')
+		this.dom.ciTr = this.dom.table.append('tr')
 		this.dom.scaleTr = this.dom.table.append('tr')
 		this.dom.divideTr = this.dom.table.append('tr')
 
@@ -350,6 +358,53 @@ function setViewOpts(opts) {
 					? 'inline-block'
 					: 'none'
 			)
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setCIOpts(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTdb: opts.holder
+				.append('td')
+				.html('95% CI')
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	const label = self.dom.inputTd.append('label')
+
+	self.dom.input = label
+		.append('input')
+		.attr('type', 'checkbox')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						survival: {
+							ciVisible: self.dom.input.property('checked')
+						}
+					}
+				}
+			})
+		})
+
+	label
+		.append('span')
+		.html('&nbsp;Visible')
+		.attr('type', 'checkbox')
+
+	const api = {
+		main(plot, displayAsSurvival = false) {
+			self.dom.row.style('display', displayAsSurvival ? 'table-row' : 'none')
+			self.dom.input.property('checked', plot.settings.survival.ciVisible)
 		}
 	}
 
