@@ -413,7 +413,7 @@
             "ppcalls": [
                 {
                     "label":"JSON",
-                    "message": "Something about this example",
+                    "message": "",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
@@ -430,7 +430,7 @@
                 },
                 {
                     "label":"Matrix",
-                    "message": "Something about this matrix example",
+                    "message": "",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
