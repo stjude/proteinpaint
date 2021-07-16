@@ -148,7 +148,6 @@ class TdbPlot {
 
 		if (state.displayAsSurvival) {
 			params.push('getsurvival=1')
-			params.push(`km_method=${plot.settings.survival.method}`)
 		} else if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
@@ -314,7 +313,6 @@ export function plotConfig(opts, appState = {}) {
 			},
 
 			survival: {
-				method: 2, // for testing, 0 = km.do_plot(), 1 = survival.km.processSerieses(), 2 = R survfit()
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

@@ -261,21 +261,19 @@ function setRenderers(self) {
 	function renderSeries(g, chart, series, i, s, duration) {
 		// todo: allow update of exiting path instead of replacing
 		g.selectAll('path').remove()
-		if (s.method == 2) {
-			g.append('path')
-				.attr(
-					'd',
-					area()
-						.curve(curveStepAfter)
-						.x(c => c.scaledX)
-						.y0(c => c.scaledY[1])
-						.y1(c => c.scaledY[2])(series.data)
-				)
-				.style('display', s.ciVisible ? '' : 'none')
-				.style('fill', self.term2toColor[series.seriesId].toString())
-				.style('opacity', '0.15')
-				.style('stroke', 'none')
-		}
+		g.append('path')
+			.attr(
+				'd',
+				area()
+					.curve(curveStepAfter)
+					.x(c => c.scaledX)
+					.y0(c => c.scaledY[1])
+					.y1(c => c.scaledY[2])(series.data)
+			)
+			.style('display', s.ciVisible ? '' : 'none')
+			.style('fill', self.term2toColor[series.seriesId].toString())
+			.style('opacity', '0.15')
+			.style('stroke', 'none')
 
 		renderSubseries(
 			s,
@@ -294,46 +292,44 @@ function setRenderers(self) {
 			})
 		)
 
-		if (s.method == 2) {
-			renderSubseries(
-				s,
-				g.append('g'),
-				series.data.map(d => {
-					return {
-						seriesId: d.seriesId,
-						x: d.x,
-						y: d.lower,
-						scaledX: d.scaledX,
-						scaledY: d.scaledY[1],
-						seriesName: 'lower',
-						seriesLabel: series.seriesLabel
-					}
-				})
-			)
+		renderSubseries(
+			s,
+			g.append('g'),
+			series.data.map(d => {
+				return {
+					seriesId: d.seriesId,
+					x: d.x,
+					y: d.lower,
+					scaledX: d.scaledX,
+					scaledY: d.scaledY[1],
+					seriesName: 'lower',
+					seriesLabel: series.seriesLabel
+				}
+			})
+		)
 
-			renderSubseries(
-				s,
-				g.append('g'),
-				series.data.map(d => {
-					return {
-						seriesId: d.seriesId,
-						x: d.x,
-						y: d.upper,
-						scaledX: d.scaledX,
-						scaledY: d.scaledY[2],
-						seriesName: 'upper',
-						seriesLabel: series.seriesLabel
-					}
-				})
-			)
-		}
+		renderSubseries(
+			s,
+			g.append('g'),
+			series.data.map(d => {
+				return {
+					seriesId: d.seriesId,
+					x: d.x,
+					y: d.upper,
+					scaledX: d.scaledX,
+					scaledY: d.scaledY[2],
+					seriesName: 'upper',
+					seriesLabel: series.seriesLabel
+				}
+			})
+		)
 	}
 
 	function renderSubseries(s, g, data) {
 		// todo: allow update of exiting g's instead of replacing
 		g.selectAll('g').remove()
 		const lastDataIndex = data.length - 1
-		const lineData = data.filter(s.method == 1 ? d => !d.censored : (d, i) => !d.censored || i == lastDataIndex) //; console.log(lineData)
+		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex) //; console.log(lineData)
 		const censoredData = data.filter(d => d.censored) //; console.log(censoredData)
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
@@ -571,14 +567,14 @@ function getPj(self) {
 				return seriesId == 'CI' ? [row.lower, row.upper] : row[seriesId]
 			},
 			yMin(row) {
-				return self.settings.method == 2 ? row.lower : row.survival
+				return row.lower
 			},
 			yMax(row) {
-				return self.settings.method == 2 ? row.upper : row.survival
+				return row.upper
 			},
 			xScale(row, context) {
 				const s = self.settings
-				const xMin = s.method == 2 ? 0 : context.self.xMin
+				const xMin = 0
 				return d3Linear()
 					.domain([xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
@@ -601,21 +597,19 @@ function getPj(self) {
 			},
 			padAndSortSerieses(result) {
 				const s = self.settings
-				if (s.method == 2 || s.method == 0) {
-					for (const series of result.serieses) {
-						// prepend a starting prob=1 data point that survfit() does not include
-						const d0 = series.data[0]
-						series.data.unshift({
-							seriesId: d0.seriesId,
-							x: 0,
-							y: 1,
-							censored: 0,
-							lower: 1,
-							upper: 1,
-							scaledX: 0, //result.xScale(0),
-							scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
-						})
-					}
+				for (const series of result.serieses) {
+					// prepend a starting prob=1 data point that survfit() does not include
+					const d0 = series.data[0]
+					series.data.unshift({
+						seriesId: d0.seriesId,
+						x: 0,
+						y: 1,
+						censored: 0,
+						lower: 1,
+						upper: 1,
+						scaledX: 0, //result.xScale(0),
+						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
+					})
 				}
 				if (self.refs.bins) return
 				const labelOrder = self.refs.bins.map(b => b.label)
