@@ -24,7 +24,7 @@ tape('\n', function(test) {
 })
 
 tape('survival term as term1', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			tree: {
@@ -52,8 +52,8 @@ tape('survival term as term1', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			61,
-			'should render 61 survival series circles (hidden for hover)'
+			183,
+			'should render 183 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
@@ -65,7 +65,7 @@ tape('survival term as term1', function(test) {
 })
 
 tape('survival term as term1, with overlay', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			tree: {
@@ -93,15 +93,15 @@ tape('survival term as term1, with overlay', function(test) {
 	let survivalDiv
 	async function runTests(plot) {
 		survivalDiv = plot.Inner.components.survival.Inner.dom.chartsDiv
-		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 3, 'should render 3 surv series g')
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			54,
-			'should render 54 survival series circles (hidden for hover)'
+			201,
+			'should render 201 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
-			9,
+			10,
 			'should render 9 survival censored circles'
 		)
 		test.end()
@@ -109,7 +109,7 @@ tape('survival term as term1, with overlay', function(test) {
 })
 
 tape('survival term as overlay', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			tree: {
@@ -137,16 +137,16 @@ tape('survival term as overlay', function(test) {
 	let survivalDiv
 	async function runTests(plot) {
 		survivalDiv = plot.Inner.components.survival.Inner.dom.chartsDiv
-		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 3, 'should render 3 surv series g')
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			54,
-			'should render 54 survival series circles (hidden for hover)'
+			201,
+			'should render 201 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
-			9,
-			'should render 9 survival censored circles'
+			10,
+			'should render 10 survival censored circles'
 		)
 		test.end()
 	}

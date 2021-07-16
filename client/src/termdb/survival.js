@@ -80,19 +80,11 @@ class TdbSurvival {
 	getData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
-		const estKeys = ['survival'] //, 'low', 'high']
+		const estKeys = ['survival', 'lower', 'upper']
 		for (const d of data.case) {
-			const obj = { censored: 0 }
+			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
-			})
-			rows.push(obj)
-			this.uniqueSeriesIds.add(obj.seriesId)
-		}
-		for (const d of data.censored) {
-			const obj = { censored: 1 }
-			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
+				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i]
 			})
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
@@ -267,7 +259,21 @@ function setRenderers(self) {
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
+		// todo: allow update of exiting path instead of replacing
 		g.selectAll('path').remove()
+		g.append('path')
+			.attr(
+				'd',
+				area()
+					.curve(curveStepAfter)
+					.x(c => c.scaledX)
+					.y0(c => c.scaledY[1])
+					.y1(c => c.scaledY[2])(series.data)
+			)
+			.style('display', s.ciVisible ? '' : 'none')
+			.style('fill', self.term2toColor[series.seriesId].toString())
+			.style('opacity', '0.15')
+			.style('stroke', 'none')
 
 		renderSubseries(
 			s,
@@ -286,17 +292,17 @@ function setRenderers(self) {
 			})
 		)
 
-		/*renderSubseries(
+		renderSubseries(
 			s,
 			g.append('g'),
 			series.data.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
-					y: d.low,
+					y: d.lower,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[1],
-					seriesName: 'low',
+					seriesName: 'lower',
 					seriesLabel: series.seriesLabel
 				}
 			})
@@ -309,38 +315,33 @@ function setRenderers(self) {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
-					y: d.high,
+					y: d.upper,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[2],
-					seriesName: 'high',
+					seriesName: 'upper',
 					seriesLabel: series.seriesLabel
 				}
 			})
-		)*/
+		)
 	}
 
 	function renderSubseries(s, g, data) {
+		// todo: allow update of exiting g's instead of replacing
 		g.selectAll('g').remove()
-		const terminalData = data.filter(d => !d.censored)
-		const censoredData = data.filter(d => d.censored)
+		const lastDataIndex = data.length - 1
+		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex) //; console.log(lineData)
+		const censoredData = data.filter(d => d.censored) //; console.log(censoredData)
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(terminalData, b => b.x)
+		const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
 
-		circles
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
-
+		//
 		circles
 			.enter()
 			.append('circle')
 			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
+			.attr('cx', c => c.scaledX[0])
+			.attr('cy', c => c.scaledY[0])
 			.style('opacity', 0)
 			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
@@ -348,10 +349,9 @@ function setRenderers(self) {
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId]
-
 		if (seriesName == 'survival') {
 			g.append('path')
-				.attr('d', self.lineFxn(terminalData))
+				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
 				.style('stroke', color.darker())
 				.style('opacity', 1)
@@ -367,7 +367,7 @@ function setRenderers(self) {
 			.attr('cy', c => c.scaledY)
 			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', data.fill ? data.fill : colors[i])
+			.style('stroke', color.darker())
 			.transition()
 			.duration(1000)
 			.style('opacity', 1)
@@ -380,8 +380,8 @@ function setRenderers(self) {
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
 			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
-			//.style('fill-opacity', s.fillOpacity)
-			.style('stroke', '#000') //data.fill ? data.fill : colors[i])
+			.style('fill-opacity', s.fillOpacity)
+			.style('stroke', color.darker()) //data.fill ? data.fill : colors[i])
 			.transition()
 			.duration(1000)
 			.style('opacity', 1)
@@ -439,8 +439,8 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	const labels = {
 		survival: 'Survival',
-		low: 'Lower 95% CI',
-		high: 'Upper 95% CI'
+		lower: 'Lower 95% CI',
+		upper: 'Upper 95% CI'
 	}
 
 	self.mouseover = function() {
@@ -458,7 +458,7 @@ function setInteractivity(self) {
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
 			]
-			// may also indicate the confidence interval (low%-high%) in a new row
+			// may also indicate the confidence interval (lower%-upper%) in a new row
 			self.app.tip
 				.show(event.clientX, event.clientY)
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
@@ -521,8 +521,8 @@ function getPj(self) {
 									x: '$time',
 									y: '$survival',
 									censored: '$censored',
-									//low: '$low',
-									//high: '$high',
+									lower: '$lower',
+									upper: '$upper',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
@@ -531,7 +531,7 @@ function getPj(self) {
 						},
 						'$seriesId'
 					],
-					'@done()': '=sortSerieses()'
+					'@done()': '=padAndSortSerieses()'
 				},
 				'=chartTitle()'
 			]
@@ -552,11 +552,11 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t1 = self.state.config.term
-				if (!t1) return
+				const t2 = self.state.config.term2
+				if (!t2) return
 				const seriesId = context.self.seriesId
-				if (t1 && t1.q && t1.q.groupsetting && t1.q.groupsetting.inuse) return seriesId
-				if (t1 && t1.term.values && seriesId in t1.term.values) return t1.term.values[seriesId].label
+				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
+				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
 				return seriesId
 			},
 			timeCensored(row) {
@@ -564,18 +564,19 @@ function getPj(self) {
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
-				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
+				return seriesId == 'CI' ? [row.lower, row.upper] : row[seriesId]
 			},
 			yMin(row) {
-				return row.survival
+				return row.lower
 			},
 			yMax(row) {
-				return row.survival
+				return row.upper
 			},
 			xScale(row, context) {
 				const s = self.settings
+				const xMin = 0
 				return d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
+					.domain([xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
@@ -584,18 +585,33 @@ function getPj(self) {
 			scaledY(row, context) {
 				const yScale = context.context.context.context.parent.yScale
 				const s = context.self
-				return [yScale(s.y), yScale(s.low), yScale(s.high)]
+				return [yScale(s.y), yScale(s.lower), yScale(s.upper)]
 			},
 			yScale(row, context) {
 				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(100, 1.1 * yMax), 0]
+				const domain = [1.05, 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			sortSerieses(result) {
-				if (!self.refs.bins) return
+			padAndSortSerieses(result) {
+				const s = self.settings
+				for (const series of result.serieses) {
+					// prepend a starting prob=1 data point that survfit() does not include
+					const d0 = series.data[0]
+					series.data.unshift({
+						seriesId: d0.seriesId,
+						x: 0,
+						y: 1,
+						censored: 0,
+						lower: 1,
+						upper: 1,
+						scaledX: 0, //result.xScale(0),
+						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
+					})
+				}
+				if (self.refs.bins) return
 				const labelOrder = self.refs.bins.map(b => b.label)
 				result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
 			}
