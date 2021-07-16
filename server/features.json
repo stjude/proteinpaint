@@ -23,6 +23,7 @@
             "ppcalls":[
                 {
                     "label":"TCGA DLBC example",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/GPDemoData.tar.gz",
                     "runpparg":{
                         "parseurl": true,
                         "nobox": 1,
@@ -414,6 +415,7 @@
                 {
                     "label":"JSON",
                     "message": "",
+                    "download": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
@@ -431,6 +433,7 @@
                 {
                     "label":"Matrix",
                     "message": "",
+                    "download": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runpparg": {
                         "parseurl": true,
                         "nobox": 1,
@@ -447,8 +450,7 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
-                "datadownload": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz"
+                "is_ui": false
             },
             "searchterms": []
         },

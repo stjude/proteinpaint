@@ -281,7 +281,7 @@ async function openExample(track, holder) {
 	)
 
 	//Download data and show runpp() code at the top
-	makeDataDownload(track, sandbox_div)
+	makeDataDownload(track.sandbox.datadownload, sandbox_div.body)
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
@@ -314,9 +314,9 @@ async function openExample(track, holder) {
 	}
 }
 
-async function makeDataDownload(track, div) {
-	if (track.sandbox.datadownload) {
-		const dataBtn = div.body
+async function makeDataDownload(arg, div) {
+	if (arg) {
+		const dataBtn = div
 		.append('button')
 		.attr('type', 'button')
 		.attr('class', 'sja_menuoption')
@@ -328,7 +328,7 @@ async function makeDataDownload(track, div) {
 		.text('Download Data')
 		.on('click', () => {
 			event.stopPropagation();
-			window.open(`${track.sandbox.datadownload}`, '_blank')
+			window.open(`${arg}`, '_blank')
 		})
 	}
 }
@@ -414,6 +414,7 @@ async function tabArray(tabs, track){
 }
 
 async function makeTab(arg, div) {
+	makeDataDownload(arg.download, div)
 	showCode2(arg.runpparg, div)
 
 	if (arg.message) {
