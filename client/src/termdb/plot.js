@@ -314,6 +314,7 @@ export function plotConfig(opts, appState = {}) {
 
 			survival: {
 				radius: 5,
+				ciVisible: false,
 				fill: '#fff',
 				stroke: '#000',
 				fillOpacity: 0,
@@ -327,8 +328,7 @@ export function plotConfig(opts, appState = {}) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
-				hidden: [],
-				ciVisible: true
+				hidden: []
 			}
 		}
 	}

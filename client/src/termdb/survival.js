@@ -1,10 +1,9 @@
 import * as rx from '../common/rx.core'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
-import { scaleLinear as d3Linear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
-import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
@@ -73,6 +72,7 @@ class TdbSurvival {
 		}
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
+		this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 		this.render()
 		this.legendRenderer(this.legendData)
 	}
@@ -335,13 +335,13 @@ function setRenderers(self) {
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
 
-		//
+		// for mouseover only
 		circles
 			.enter()
 			.append('circle')
 			.attr('r', s.radius)
 			.attr('cx', c => c.scaledX[0])
-			.attr('cy', c => c.scaledY[0])
+			.attr('cy', c => c.scaledY)
 			.style('opacity', 0)
 			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
@@ -359,32 +359,27 @@ function setRenderers(self) {
 		}
 
 		const subg1 = g.append('g').attr('class', 'sjpp-survival-censored')
-		const censored = subg1.selectAll('circle').data(censoredData, d => d.x)
+		const censored = subg1.selectAll('.sjpp-survival-censored-x').data(censoredData, d => d.x)
 		censored.exit().remove()
 
 		censored
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
-			.style('fill-opacity', s.fillOpacity)
+			.attr('transform', c => `translate(${c.scaledX},${c.scaledY})`)
 			.style('stroke', color.darker())
-			.transition()
-			.duration(1000)
-			.style('opacity', 1)
+			.style('display', '')
 
 		censored
 			.enter()
-			.append('circle')
-			//.attr('class', 'pp-survival-circle-censored')
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
+			.append('path')
+			.attr('class', 'sjpp-survival-censored-x')
+			.attr('transform', c => `translate(${c.scaledX},${c.scaledY})`)
+			.attr('d', self.symbol)
 			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
 			.style('fill-opacity', s.fillOpacity)
 			.style('stroke', color.darker()) //data.fill ? data.fill : colors[i])
-			.transition()
-			.duration(1000)
-			.style('opacity', 1)
+			.style('display', '')
+		//.transition()
+		//.duration(1000)
+		//.style('opacity', 1)
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
@@ -394,7 +389,7 @@ function setRenderers(self) {
 
 		yAxis.call(
 			axisLeft(
-				d3Linear()
+				scaleLinear()
 					.domain(d.yScale.domain())
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			).ticks(5)
@@ -433,6 +428,27 @@ function setRenderers(self) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(yTitleLabel)
+	}
+
+	self.getSymbol = function(size) {
+		return (
+			'M ' +
+			-size / 2 +
+			' ' +
+			-size / 2 +
+			' l ' +
+			size +
+			' ' +
+			size +
+			' M ' +
+			size / 2 +
+			' ' +
+			-size / 2 +
+			' l -' +
+			size +
+			' ' +
+			size
+		)
 	}
 }
 
@@ -574,8 +590,8 @@ function getPj(self) {
 			},
 			xScale(row, context) {
 				const s = self.settings
-				const xMin = 0
-				return d3Linear()
+				const xMin = s.method == 2 ? 0 : context.self.xMin
+				return scaleLinear()
 					.domain([xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
@@ -591,7 +607,7 @@ function getPj(self) {
 				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [1.05, 0]
-				return d3Linear()
+				return scaleLinear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
