@@ -1,4 +1,4 @@
-import { dofetch2, sayerror, newSandboxDiv, to_textfile } from './client'
+import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common';
@@ -163,8 +163,6 @@ async function loadTracks(args, page_args, filteredTracks) {
 
 //For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
-// ${track.media.urls && (track.media.urls.hyperlink && track.media.urls.name) ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${track.media.urls.hyperlink}" target="_blank">${track.media.urls.name}</a>`: ''}
-
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
@@ -190,9 +188,7 @@ function displayTracks(tracks, holder, page_args) {
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
-				if (track.clickcard2url) {
-					window.open(track.clickcard2url, '_blank')
-				} else if (track.media.example) {
+				if (track.ppcalls) {
 					openExample(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -281,11 +277,6 @@ async function openExample(track, holder) {
 	sandbox_div.header.text(
 		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
 	)
-
-	//Download data and show runpp() code at the top
-	makeDataDownload(track, sandbox_div)
-	showCode(track, sandbox_div)
-
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
@@ -296,55 +287,50 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div)
 
-	// template runpp() arg
-	const runpp_arg = {
-		holder: sandbox_div.body
-			.append('div')
-			.style('margin', '20px')
-			.node(),
-		sandbox_header: sandbox_div.header,
-		host: window.location.origin
+	if (track.ppcalls.length == 1) {
+		const call = track.ppcalls[0]
+		//Creates any custom buttons
+		addButtons(track, sandbox_div.body)
+		//Download data and show runpp() code at the top
+		makeDataDownload(call.download, sandbox_div.body)
+		//Shows code used to create sandbox
+		showCode(track, call.runargs, sandbox_div.body)
+
+		// template runpp() arg
+		const runpp_arg = {
+			holder: sandbox_div.body
+				.append('div')
+				.style('margin', '20px')
+				.node(),
+			sandbox_header: sandbox_div.header,
+			host: window.location.origin
+		}
+
+		const oneexample = JSON.parse(JSON.stringify(call.runargs))
+
+		runproteinpaint(Object.assign(runpp_arg, oneexample))
+
+	} else if (track.ppcalls.length > 1) {
+		addButtons(track, sandbox_div)
+		makeTabMenu(track, sandbox_div)
 	}
-
-	const example = JSON.parse(JSON.stringify(track.media.example))
-
-	runproteinpaint(Object.assign(runpp_arg, example))
 }
 
-async function makeDataDownload(track, div) {
-	if (track.sandbox.datadownload) {
-		const dataBtn = div.body
-		.append('button')
-		.attr('type', 'button')
-		.attr('class', 'sja_menuoption')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		// .style('font-size', '12.75px')
-		.style('display', 'inline-block')
-		.text('Download Data')
-		.on('click', () => {
+function makeDataDownload(arg, div) {
+	if (arg) {
+		const dataBtn = makeButton(div, "Download Data")
+		dataBtn.on('click', () => {
 			event.stopPropagation();
-			window.open(`${track.sandbox.datadownload}`, '_blank')
+			window.open(`${arg}`, '_blank')
 		})
 	}
 }
 
 // Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, div) {
+function showCode(track, arg, div) {
 	if (track.sandbox.is_ui != true) {
-		const codeBtn = div.body
-			.append('button')
-			.attr('class', 'sja_menuoption')
-			.style('margin', '20px')
-			.style('padding', '8px')
-			.style('border', 'none')
-			.style('border-radius', '3px')
-			.style('font-size', '12.75x')
-			.text('Show Code')
-			.style('display', 'inline-block')
-			.on('click', () => {
+		const codeBtn = makeButton(div, "Show Code")
+			codeBtn.on('click', () => {
 				if (code.style('display') == 'none') {
 					code.style('display', 'block') //TODO fadein fn
 					select(event.target).text('Hide')
@@ -355,18 +341,18 @@ async function showCode(track, div) {
 			})
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-	const code = div.body
-		.append('pre')
-		.append('code')
-		.style('display', 'none')
-		.style('margin', '35px')
-		.style('font-size', '14px')
-		.style('border', '1px solid #aeafb0')
-		.html(highlight(`runproteinpaint({
-   host: "${window.location.origin}",
-   holder: document.getElementById('a'),` +
-			JSON.stringify(track.media.example, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-			`})`, {language:'javascript'}).value)
+		const code = div
+			.append('pre')
+			.append('code')
+			.style('display', 'none')
+			.style('margin', '35px')
+			.style('font-size', '14px')
+			.style('border', '1px solid #aeafb0')
+			.html(highlight(`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+		JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+		`})`, {language:'javascript'}).value)
 	}
 }
 
@@ -385,4 +371,80 @@ async function addUpdateMessage(track, div) {
 				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
 		}
 	}
+}
+
+function makeTabMenu(track, holder){
+	const tabs = []
+	tabArray(tabs, track)
+	tab2box(holder.body.style('margin','20px'), tabs)
+}
+
+function tabArray(tabs, track){
+	const calls = track.ppcalls
+	calls.forEach(call => {
+		tabs.push({
+			label: call.label,
+			callback: async (div) => {
+				const wait = tab_wait(div)
+				try {
+					await makeTab(track, call, div)
+					wait.remove()
+				} catch(e) {
+					wait.text('Error: ' + (e.message || e))
+				}
+			}
+		})
+	})
+}
+
+function makeTab(track, arg, div) {
+	makeDataDownload(arg.download, div)
+	showCode(track, arg.runargs, div)
+
+	if (arg.message) {
+		div.append('div')
+			.style('margin', '20px')
+			.html(arg.message)
+	}
+
+	const runpp_arg = {
+		holder: div
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		host: window.location.origin
+		}
+
+		const call = JSON.parse(JSON.stringify(arg.runargs))
+
+		runproteinpaint(Object.assign(runpp_arg, call))
+
+}
+
+function addButtons(track, div){
+	const buttons = track.sandbox.buttons
+	if (buttons){
+		buttons.forEach(button => {
+			const sandboxButton = makeButton(div, button.name)
+				sandboxButton.on('click', () => {
+					event.stopPropagation();
+					window.open(`${button.hyperlink}`, '_blank')
+				})
+			})
+		}
+}
+
+function makeButton(div, text) {
+	const button = div
+		.append('button')
+		.attr('type', 'button')
+		.attr('class', 'sja_menuoption')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('display', 'inline-block')
+		.text(text)
+
+	return button
 }
