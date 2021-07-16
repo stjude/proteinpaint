@@ -13,6 +13,17 @@
 <div id=exp style="margin:10px"></div>
 
 <script>
+function getParams() {
+	const params={}
+	window.location.search.substr(1).split('#')[0].split("&").forEach(kv=>{
+		const [key,value]=kv.split("=")
+		params[key]=value
+	})
+	return params 
+}
+
+const params = getParams()
+
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -45,7 +56,7 @@ runproteinpaint({
 						settings: {
 							currViews: ['barchart'],
 							survival: {
-								method: window.location.search.includes('method=0') ? 0 : 1
+								method: 'method' in params ? +params.method : 2
 							}
 						}
 					},

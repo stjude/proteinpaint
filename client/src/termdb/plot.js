@@ -314,7 +314,7 @@ export function plotConfig(opts, appState = {}) {
 			},
 
 			survival: {
-				method: 1, // for testing, 1 = survival.km.processSerieses(), 0 = km.do_plot(),
+				method: 2, // for testing, 0 = km.do_plot(), 1 = survival.km.processSerieses(), 2 = R survfit()
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

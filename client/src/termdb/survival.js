@@ -82,15 +82,7 @@ class TdbSurvival {
 		const rows = []
 		const estKeys = ['survival'] //, 'low', 'high']
 		for (const d of data.case) {
-			const obj = { censored: 0 }
-			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
-			})
-			rows.push(obj)
-			this.uniqueSeriesIds.add(obj.seriesId)
-		}
-		for (const d of data.censored) {
-			const obj = { censored: 1 }
+			const obj = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i] //100 * d[i] : d[i]
 			})
@@ -321,10 +313,11 @@ function setRenderers(self) {
 
 	function renderSubseries(s, g, data) {
 		g.selectAll('g').remove()
-		const terminalData = data.filter(d => !d.censored)
-		const censoredData = data.filter(d => d.censored)
+		const lastDataIndex = data.length - 1
+		const lineData = data.filter(s.method == 1 ? d => !d.censored : (d, i) => !d.censored || i == lastDataIndex) //; console.log(lineData)
+		const censoredData = data.filter(d => d.censored) //; console.log(censoredData)
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(terminalData, b => b.x)
+		const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
 
 		circles
@@ -351,7 +344,7 @@ function setRenderers(self) {
 
 		if (seriesName == 'survival') {
 			g.append('path')
-				.attr('d', self.lineFxn(terminalData))
+				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
 				.style('stroke', color.darker())
 				.style('opacity', 1)
@@ -531,7 +524,7 @@ function getPj(self) {
 						},
 						'$seriesId'
 					],
-					'@done()': '=sortSerieses()'
+					'@done()': '=padAndSortSerieses()'
 				},
 				'=chartTitle()'
 			]
@@ -574,8 +567,9 @@ function getPj(self) {
 			},
 			xScale(row, context) {
 				const s = self.settings
+				const xMin = s.method == 2 ? 0 : context.self.xMin
 				return d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
+					.domain([xMin, context.self.xMax])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
@@ -589,13 +583,30 @@ function getPj(self) {
 			yScale(row, context) {
 				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(100, 1.1 * yMax), 0]
+				const domain = [1.05, 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			sortSerieses(result) {
-				if (!self.refs.bins) return
+			padAndSortSerieses(result) {
+				const s = self.settings
+				if (s.method == 2 || s.method == 0) {
+					for (const series of result.serieses) {
+						// prepend a starting prob=1 data point that survfit() does not include
+						const d0 = series.data[0]
+						series.data.unshift({
+							seriesId: d0.seriesId,
+							x: 0,
+							y: 1,
+							censored: 0,
+							//low: '$low',
+							//high: '$high',
+							scaledX: 0, //result.xScale(0),
+							scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
+						})
+					}
+				}
+				if (self.refs.bins) return
 				const labelOrder = self.refs.bins.map(b => b.label)
 				result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
 			}

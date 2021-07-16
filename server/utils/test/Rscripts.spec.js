@@ -266,6 +266,7 @@ tape('survival.R', async function(test) {
 	try {
 		const output1 = await lines2R('survival.R', validInput1)
 		const expected1 = [
+			'cohort\ttime\tsurv\tncensor\tlower\tupper',
 			'1\t23\t0.976190476190476\t0\t0.931155465908631\t1',
 			'1\t30\t0.952380952380952\t0\t0.890105444476807\t1',
 			'1\t69\t0.928571428571428\t0\t0.853861149033387\t1',
@@ -315,16 +316,6 @@ tape('survival.R', async function(test) {
 			'2\t3208\t0.125\t0\t0.0199840670220076\t0.781872878168034',
 			'2\t6156\t0.125\t1\t0.0199840670220076\t0.781872878168034'
 		]
-
-		test.deepEqual(
-			output1.filter((v, i) => {
-				const [cohort, time, prob, ncensor] = v.split('\t').map(Number)
-				const [ecohort, etime, eprob, encensor] = expected1[i].split('\t').map(Number)
-				return cohort != ecohort || time != etime || prob.toFixed(5) != eprob.toFixed(5) || ncensor != encensor
-			}),
-			[],
-			'should match the expected cohort, time, and survival probability output'
-		)
 
 		test.deepEqual(output1, expected1, 'should match the expected output')
 	} catch (e) {
