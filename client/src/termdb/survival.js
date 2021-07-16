@@ -552,12 +552,12 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t1 = self.state.config.term
-				if (!t1) return
+				const t2 = self.state.config.term2
+				if (!t2) return
 				const seriesId = context.self.seriesId
-				if (t1 && t1.q && t1.q.groupsetting && t1.q.groupsetting.inuse) return seriesId
-				if (t1 && t1.term.values && seriesId in t1.term.values) return t1.term.values[seriesId].label
-				return t1.term.name + ': ' + seriesId
+				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
+				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
+				return seriesId
 			},
 			timeCensored(row) {
 				return row.time + '-' + row.censored
