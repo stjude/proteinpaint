@@ -219,7 +219,7 @@
             "media": {
                 "urls": [
                     {
-                        "hyperlink": "?block=on&genome=hg19&position=chr8:126890266-132795076&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,proteinpaint_demo/hg19/aicheck/file.gz"
+                        "hyperlink": "?block=on&genome=hg19&position=cchr9:36816442-37058548&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,proteinpaint_demo/hg19/aicheck/file.gz"
                     }
                 ],
                 "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
@@ -233,7 +233,7 @@
                         "nobox": 1,
                         "noheader": 1,
                         "genome": "hg19",
-                        "position": "chr8:126890266-132795076",
+                        "position": "chr9:36816442-37058548",
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "aicheck",
