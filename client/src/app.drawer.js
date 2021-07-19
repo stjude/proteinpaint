@@ -12,7 +12,7 @@ const defaults = {
 	arrow_color: { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
 }
 
-export function drawer_init(app, row, features, appmenu, overrides = {}) {
+export function drawer_init(app, row, features, overrides = {}) {
 	const settings = Object.assign({}, defaults, overrides)
 	let examples_rendered = false
 	let drawer_full_height
@@ -94,7 +94,7 @@ export function drawer_init(app, row, features, appmenu, overrides = {}) {
 	return {
 		apps_sandbox_div: dom.sandbox_div,
 		apps_off,
-		addBtn(headbox, btnLabel, padw_sm) {
+		addBtn(headbox, btnLabel, padw_sm, appmenu, jwt) {
 			if (!features.examples) {
 				dom.btn = headbox
 					.append('div')
