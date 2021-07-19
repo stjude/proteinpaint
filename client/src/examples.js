@@ -293,6 +293,8 @@ async function openExample(track, holder) {
 		addButtons(track, sandbox_div.body)
 		//Download data and show runpp() code at the top
 		makeDataDownload(call.download, sandbox_div.body)
+		//Redirects to URL parameter of track
+		showURLLaunch(call.urlparam, sandbox_div.body)
 		//Shows code used to create sandbox
 		showCode(track, call.runargs, sandbox_div.body)
 
@@ -311,11 +313,22 @@ async function openExample(track, holder) {
 		runproteinpaint(Object.assign(runpp_arg, oneexample))
 
 	} else if (track.ppcalls.length > 1) {
-		addButtons(track, sandbox_div)
+		addButtons(track, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
 	}
 }
 
+function showURLLaunch(arg,div){
+	if (arg){
+		const URLbtn = makeButton(div, "Run track from URL")
+		URLbtn.on('click', () => {
+			event.stopPropagation();
+			window.open(`${arg}`, '_blank')
+		})
+	}
+}
+
+//TODO logic for downloading json files -> showing up in new tab, not as a download
 function makeDataDownload(arg, div) {
 	if (arg) {
 		const dataBtn = makeButton(div, "Download Data")
@@ -399,6 +412,7 @@ function tabArray(tabs, track){
 
 function makeTab(track, arg, div) {
 	makeDataDownload(arg.download, div)
+	showURLLaunch(arg.urlparam, div)
 	showCode(track, arg.runargs, div)
 
 	if (arg.message) {
