@@ -350,8 +350,8 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = drawer_init(app, row, appmenu, obj.features)
-	app.drawer.addBtn(headbox, 'Apps')
+	app.drawer = drawer_init(app, row, obj.features)
+	app.drawer.addBtn(headbox, 'Apps', padw_sm, appmenu, jwt)
 
 	headbox
 		.append('span')
