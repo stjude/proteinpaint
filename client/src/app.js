@@ -350,7 +350,7 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = drawer_init(app, row, obj.features)
+	app.drawer = drawer_init(app, row, appmenu, obj.features)
 	app.drawer.addBtn(headbox, 'Apps')
 
 	headbox
@@ -392,7 +392,7 @@ function makeheader(app, obj, jwt) {
 		})
 }
 
-function make_genome_browser_btn(app, headbox) {
+function make_genome_browser_btn(app, headbox, jwt) {
 	const padw = '8px'
 	const genome_btn_div = headbox.append('span')
 	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
@@ -417,7 +417,7 @@ function make_genome_browser_btn(app, headbox) {
 
 			const par = {
 				hostURL: app.hostURL,
-				jwt: jwt,
+				jwt,
 				holder: sandbox_div.body,
 				genome: g,
 				chr: g.defaultcoord.chr,
