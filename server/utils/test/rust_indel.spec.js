@@ -123,7 +123,9 @@ function runTest(e, test) {
 }
 
 const examples = [
+	// one object for each example
 	{
+		// link is for display only, not computing
 		pplink:
 			'https://ppr.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG',
 		leftFlank: 'GTACCCTAGGTGGAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGAC',
@@ -139,6 +141,13 @@ const examples = [
 			alt: 'TTGACCTGG'
 		},
 		reads: [
+			{
+				// softclip on right
+				seq: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCC',
+				pos: 119155692,
+				cigar: '61M14S',
+				group: 'alt'
+			},
 			{
 				seq: 'CACGACTTGACCTGGCGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTC',
 				pos: 119155749,
