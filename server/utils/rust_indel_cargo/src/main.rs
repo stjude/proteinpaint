@@ -269,6 +269,7 @@ fn main() {
         left_offset,
         right_offset,
         ref_alt_same_base_start,
+        optimized_allele,
     ) = preprocess_input(
         &ref_nucleotides,
         &alt_nucleotides,
@@ -286,13 +287,6 @@ fn main() {
     println!("left_offset:{}", left_offset);
     println!("right_offset:{}", right_offset);
     println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
-
-    let mut optimized_allele = 0; // Flag to check if alleles have been optimized
-    if optimized_ref_allele.len() != refallele.len()
-        || optimized_alt_allele.len() != altallele.len()
-    {
-        optimized_allele = 1;
-    }
 
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
@@ -1056,7 +1050,7 @@ fn preprocess_input(
     leftflankseq: String,
     rightflankseq: String,
     surrounding_region_length: i64,
-) -> (String, String, usize, usize, usize) {
+) -> (String, String, usize, usize, usize, usize) {
     let mut optimized_ref_allele = ref_allele.clone();
     let mut optimized_alt_allele = alt_allele.clone();
     let mut right_subseq = String::new(); // String for storing kmer sequence
@@ -1192,6 +1186,16 @@ fn preprocess_input(
         }
     }
 
+    let mut optimized_allele: usize = 0; // Flag to check if alleles have been optimized
+    if optimized_ref_allele.len() != ref_allele.len()
+        || optimized_alt_allele.len() != alt_allele.len()
+    {
+        optimized_allele = 1;
+        right_offset_part +=
+            (optimized_alt_allele.len() as i64 - alt_allele.len() as i64).abs() as usize;
+        // When the alt allele has been optimized, the right offset part needs to be increased
+    }
+
     if right_offset_part > right_offset {
         right_offset = right_offset_part;
     }
@@ -1206,6 +1210,7 @@ fn preprocess_input(
         left_offset,
         right_offset,
         ref_alt_same_base_start,
+        optimized_allele,
     )
 }
 
