@@ -286,6 +286,14 @@ fn main() {
     println!("left_offset:{}", left_offset);
     println!("right_offset:{}", right_offset);
     println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
+
+    let mut optimized_allele = 0; // Flag to check if alleles have been optimized
+    if optimized_ref_allele.len() != refallele.len()
+        || optimized_alt_allele.len() != altallele.len()
+    {
+        optimized_allele = 1;
+    }
+
     // Select appropriate kmer length
     let max_kmer_length: i64 = 200; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
     let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
@@ -394,6 +402,8 @@ fn main() {
         // For now weights are not balanced in case of very repetitive cases
         activate_weight_balancing = 1;
     }
+
+    #[allow(unused_variables)]
     let (
         ref_kmers_weight,      // Total sum of all the kmers from the ref sequence set
         ref_kmers_nodups,      // Vector of ref sequence kmers without any duplication
@@ -444,6 +454,10 @@ fn main() {
                     //    "cigar_sequence:{}",
                     //    &cigar_sequences_list[i as usize - 2].to_string()
                     //);
+                    //println!(
+                    //    "start_position:{}",
+                    //    start_positions_list[i as usize - 2].to_string()
+                    //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -454,6 +468,7 @@ fn main() {
                         refallele.len(),
                         &ref_nucleotides,
                         &alt_nucleotides,
+                        optimized_allele,
                     );
                     let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
                         check_polyclonal(
@@ -475,15 +490,6 @@ fn main() {
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-
-                    //println!(
-                    //    "start_position:{}",
-                    //    start_positions_list[i as usize - 2].to_string()
-                    //);
-                    //println!(
-                    //    "cigar_sequence:{}",
-                    //    cigar_sequences_list[i as usize - 2].to_string()
-                    //);
                     let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
                     let ref_comparison = jaccard_similarity_weights(
                         // Computes jaccard similarity w.r.t ref sequence
@@ -591,6 +597,7 @@ fn main() {
                                 refallele.len(),
                                 &ref_nucleotides,
                                 &alt_nucleotides,
+                                optimized_allele,
                             );
 
                             let (
@@ -930,10 +937,8 @@ fn back_calculate_weight_indel(
     let mut kmer_num_completely_inside_indel_region = 0; // Variable containing number of kmers which completely lie inside indel region or number of kmers containing the complete indel region
     let mut nucleotide_indel_freq: i64 = 0; // Variable containing number of times nucleotide inside indel region is found
     let mut nucleotide_no_indel_freq: i64 = 0; // Variable containing number of times nucleotide NOT found inside indel region
-    let mut kmers_partially_or_completly_inside_indel_region: i64 = 0; // Variable containing number of kmers which are partially or completely inside indel region
     if ref_alt_length >= kmer_length_iter {
         kmer_num_completely_inside_indel_region = ref_alt_length - kmer_length_iter + 1;
-        kmers_partially_or_completly_inside_indel_region = kmer_num_completely_inside_indel_region;
         nucleotide_indel_freq = kmer_num_completely_inside_indel_region * kmer_length_iter;
         for i in 1..kmer_length_iter {
             // Getting frequency of nucleotide inside and outside indel region for kmers partially containing indel region
@@ -943,7 +948,6 @@ fn back_calculate_weight_indel(
         }
     } else if ref_alt_length < kmer_length_iter {
         kmer_num_completely_inside_indel_region = kmer_length_iter - ref_alt_length + 1;
-        kmers_partially_or_completly_inside_indel_region = kmer_num_completely_inside_indel_region;
         nucleotide_indel_freq = kmer_num_completely_inside_indel_region * ref_alt_length;
         nucleotide_no_indel_freq =
             kmer_num_completely_inside_indel_region * kmer_length_iter - nucleotide_indel_freq;
@@ -973,6 +977,7 @@ fn check_if_read_ambivalent(
     ref_length: usize,
     ref_nucleotides: &Vec<char>,
     alt_nucleotides: &Vec<char>,
+    optimized_allele: usize,
 ) -> i64 {
     let mut read_ambivalent: i64 = 0;
     let mut ref_stop = ref_start + ref_length as i64;
@@ -990,16 +995,45 @@ fn check_if_read_ambivalent(
     //println!("repeat_start:{}", repeat_start);
     //println!("repeat_stop:{}", repeat_stop);
 
-    if repeat_start <= correct_start_position && correct_start_position <= ref_start {
+    //if repeat_start <= correct_start_position && correct_start_position <= ref_start {
+    //    read_ambivalent = 2;
+    //    println!("Case1");
+    //} else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
+    //    read_ambivalent = 2;
+    //    println!("Case2");
+    //}
+
+    if correct_start_position <= repeat_start
+        && repeat_start < correct_end_position
+        && correct_end_position <= ref_start
+    {
         read_ambivalent = 2;
         //println!("Case1");
-    } else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
+    } else if ref_stop <= correct_start_position
+        && correct_start_position < repeat_stop
+        && correct_end_position > repeat_stop
+    {
         read_ambivalent = 2;
         //println!("Case2");
-    } else if repeat_start <= correct_end_position && correct_end_position <= ref_stop {
+    }
+    if repeat_start <= correct_start_position
+        && correct_start_position < ref_start
+        && correct_end_position > repeat_stop
+        && optimized_allele == 1
+    {
+        read_ambivalent = 2;
+        //println!("Case3");
+    } else if ref_stop <= correct_end_position
+        && correct_end_position < repeat_stop
+        && correct_start_position < repeat_start
+        && optimized_allele == 1
+    {
+        read_ambivalent = 2;
+        //println!("Case4");
+    } else if repeat_start <= correct_end_position && correct_end_position < ref_stop {
         if (correct_end_position - ref_start).abs() <= right_offset as i64 {
             read_ambivalent = 2;
-            //println!("Case3");
+            //println!("Case5");
         }
     }
 
