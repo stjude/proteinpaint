@@ -654,8 +654,17 @@ function validate_ssm2canonicalisoform(ds) {
 	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
 }
 
-function validate_dictionary(ds){
+async function validate_dictionary(ds){
 	const dictioary = (ds.termdb.dictionary)
 	if(!dictioary) return
-	gdc.init_dictionary(dictioary)
+	ds.cohort.termdb = await gdc.init_dictionary(dictioary)
+	ds.cohort.termdb.q = {}
+	const q = ds.cohort.termdb.q
+
+	q.getRootTerms = () => {
+		if (cache) return cache
+		const terms = [...ds.cohort.termdb.values()]
+		const cache = terms.filter( t => t.term.parent_id == undefined)
+		return cache
+	}
 }

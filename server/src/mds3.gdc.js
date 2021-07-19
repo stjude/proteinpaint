@@ -782,8 +782,9 @@ function sort_mclass(set) {
 }
 
 export async function init_dictionary(dictioary){
+	const termdb = new Map()
 	for (const dict_name in dictioary) {
-		const dict= dictioary[dict_name]
+		const dict = dictioary[dict_name]
 		if (!dict.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
 		const response = await got(
 			dict.gdcapi.endpoint,
@@ -801,6 +802,51 @@ export async function init_dictionary(dictioary){
 		if (!re._mapping) throw 'returned data does not have ._mapping'
 		if (!re.fields) throw 'returned data does not have .fields'
 		if (!Array.isArray(re.fields)) throw '.fields not array'
-		// TODO: store termdb dictionary in memory
+		if (!re.expand) throw 'returned data does not have .expand'
+		if (!Array.isArray(re.expand)) throw '.expand not array'
+		// store termdb dictionary in memory
+		// step 1: add leaf terms
+		for (const i in re.fields) {
+			const term_path_str = re.fields[i]
+			const term_paths = term_path_str.split('.')
+			const term_id = term_paths[term_paths.length - 1]
+			const term_obj = { 
+				term : {
+					 id: term_id,
+					name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g,' '),
+					path: term_path_str,
+					isleaf: true,
+					parent_id: term_paths[term_paths.length - 2]
+				}
+			}
+			termdb.set(term_id , term_obj)
+		}
+		// step 2: add type of leaf terms
+		for (const t of termdb.values()) {
+			const t_map = re._mapping[ dict.gdcapi.mapping_prefix + '.' + t.term.path]
+			t.term.type = t_map.type == 'keyword' ? 'categorical' 
+				: 'long' ? 'integer' 
+				: 'double' ? 'float' : 'undefined'  
+
+		}
+		// step 3: add parent  and root terms
+		for(const i in re.expand) {
+			const term_str = re.expand[i]
+			const term_levels = term_str.split('.')
+			const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
+			const term_obj = {
+				term:{
+					id: term_id, 
+					name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g,' ')
+				}
+			}
+			if(term_levels.length > 1)
+				term_obj.term['parent_id'] = term_levels[term_levels.length - 2]
+			termdb.set(term_id , term_obj)
+		}
+		// console.log(termdb.get('demographic'))
+		// console.log(re._mapping['ssm_occurrence_centrics.case.case_id'])
 	}
+	// console.log('gdc termdb created with total terms : ', termdb.size)
+	return termdb
 }

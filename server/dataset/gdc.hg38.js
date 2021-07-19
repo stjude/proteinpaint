@@ -496,7 +496,8 @@ const variant2samples = {
 }
 
 const ssm_occurrences_dictionary = {
-	endpoint: GDC_HOST + '/ssm_occurrences/_mapping'
+	endpoint: GDC_HOST + '/ssm_occurrences/_mapping', 
+	mapping_prefix: 'ssm_occurrence_centrics'
 }
 
 /*
@@ -1133,5 +1134,6 @@ module.exports = {
 		geneexpression: {
 		},
 		*/
-	}
+	},
+	cohort: {}
 }
