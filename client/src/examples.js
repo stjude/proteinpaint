@@ -175,11 +175,11 @@ function displayTracks(tracks, holder, page_args) {
 				<div class='sjpp-track-links'>
 				${urls.map((url)=>{
 					if (!url) return ''
-					if (url.hyperlink && !url.name) {
-						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.hyperlink}" target="_blank">URL</a>`
+					if (url.link && !url.name) {
+						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">URL</a>`
 					}
-					if (url.hyperlink && url.name){
-						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.hyperlink}" target="_blank">${url.name}</a>`
+					if (url.link && url.name){
+						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">${url.name}</a>`
 					}
 				}).join("")}
 				${track.media.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`: ''}
@@ -290,7 +290,7 @@ async function openExample(track, holder) {
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
 		//Creates any custom buttons
-		addButtons(track, sandbox_div.body)
+		addButtons(track.sandbox.buttons, track, sandbox_div.body)
 		//Download data and show runpp() code at the top
 		makeDataDownload(call.download, sandbox_div.body)
 		//Redirects to URL parameter of track
@@ -313,7 +313,7 @@ async function openExample(track, holder) {
 		runproteinpaint(Object.assign(runpp_arg, oneexample))
 
 	} else if (track.ppcalls.length > 1) {
-		addButtons(track, sandbox_div.body)
+		addButtons(track.sandbox.buttons, track, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
 	}
 }
@@ -328,10 +328,10 @@ function showURLLaunch(arg,div){
 	}
 }
 
-//TODO logic for downloading json files -> showing up in new tab, not as a download
+//TODO logic for downloading json and script files -> showing up in new tab, not as a download
 function makeDataDownload(arg, div) {
 	if (arg) {
-		const dataBtn = makeButton(div, "Download Data")
+		const dataBtn = makeButton(div, "Download Track File(s)")
 		dataBtn.on('click', () => {
 			event.stopPropagation();
 			window.open(`${arg}`, '_blank')
@@ -411,6 +411,7 @@ function tabArray(tabs, track){
 }
 
 function makeTab(track, arg, div) {
+	addButtons(arg.buttons, track, div)
 	makeDataDownload(arg.download, div)
 	showURLLaunch(arg.urlparam, div)
 	showCode(track, arg.runargs, div)
@@ -435,14 +436,14 @@ function makeTab(track, arg, div) {
 
 }
 
-function addButtons(track, div){
-	const buttons = track.sandbox.buttons
+function addButtons(arg, track, div){
+	const buttons = arg
 	if (buttons){
 		buttons.forEach(button => {
 			const sandboxButton = makeButton(div, button.name)
 				sandboxButton.on('click', () => {
 					event.stopPropagation();
-					window.open(`${button.hyperlink}`, '_blank')
+					window.open(`${button.link}`, '_blank')
 				})
 			})
 		}
