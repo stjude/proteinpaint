@@ -405,7 +405,7 @@ function make_genome_browser_btn(app, headbox) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let sandbox_div = client.newSandboxDiv(app.holder.apps_sandbox_div)
+			let sandbox_div = client.newSandboxDiv(app.drawer.apps_sandbox_div)
 
 			const g = app.genomes[genomename]
 			if (!g) {
