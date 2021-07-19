@@ -44,10 +44,10 @@ function runTest(e, test) {
 	if (!Array.isArray(e.reads)) throw '.reads[] missing'
 	if (e.reads.length == 0) throw '.reads[] empty array'
 	for (const r of e.reads) {
-		if (!r.seq) throw '.seq missing from a read'
-		if (!Number.isInteger(r.pos)) throw '.pos not integer from a read'
-		if (!r.cigar) throw '.cigar missing from a read'
-		if (r.group != 'none' && r.group != 'ref' && r.group != 'alt') throw '.group is not none/ref/alt for a read'
+		if (!r.s) throw '.s (sequence) missing from a read'
+		if (!Number.isInteger(r.p)) throw '.p (position) not integer from a read'
+		if (!r.c) throw '.c (cigar) missing from a read'
+		if (r.g != 'none' && r.g != 'ref' && r.g != 'alt') throw '.g (group) is not none/ref/alt for a read'
 	}
 
 	// compose input string
@@ -56,11 +56,11 @@ function runTest(e, test) {
 		'-' +
 		e.seqMut +
 		'-' +
-		e.reads.map(i => i.seq).join('-') +
+		e.reads.map(i => i.s).join('-') +
 		':' +
-		e.reads.map(i => i.pos).join('-') +
+		e.reads.map(i => i.p).join('-') +
 		':' +
-		e.reads.map(i => i.cigar).join('-') +
+		e.reads.map(i => i.c).join('-') +
 		':' +
 		e.variant.pos +
 		':' +
@@ -114,10 +114,22 @@ function runTest(e, test) {
 		}
 
 		// detect reads that fail the test
-		for (const idx of indices) {
-			if (e.reads[idx].group != groups[idx]) {
-				test.fail(`Read #${idx + 1} assigned to "${e.reads[idx].group}", should be "${groups[idx]}". ${e.pplink}`)
+		let wrongcount = 0
+		for (let i = 0; i < indices.length; i++) {
+			if (e.reads[indices[i]].g != groups[i]) wrongcount++
+		}
+		if (wrongcount) {
+			const lst = []
+			for (let i = 0; i < e.reads.length; i++) {
+				const truth = e.reads[i].g
+				const result = groups[indices.indexOf(i)]
+				lst.push(
+					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
+				)
 			}
+			test.fail(`Misassigned ${wrongcount} reads: ${e.pplink}\nRead\tTruth\tResult\n${lst.join('\n')}`)
+		} else {
+			test.pass('All passed: ' + e.pplink)
 		}
 	})
 }
@@ -142,48 +154,71 @@ const examples = [
 		},
 		reads: [
 			{
-				// softclip on right
-				seq: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCC',
-				pos: 119155692,
-				cigar: '61M14S',
-				group: 'alt'
+				n: 'mismatch on right',
+				s: 'CGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACC',
+				p: 119155685,
+				c: '75M',
+				g: 'alt'
 			},
 			{
-				seq: 'CACGACTTGACCTGGCGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTC',
-				pos: 119155749,
-				cigar: '62M88N13M',
-				group: 'none'
+				n: 'softclip on right',
+				s: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCC',
+				p: 119155692, // 1-based
+				c: '61M14S',
+				g: 'alt'
 			},
 			{
-				seq: 'TGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGTAAAGCATTTTCCATTAC',
-				pos: 119155755,
-				cigar: '3M8834N72M',
-				group: 'ref'
+				n: 'softclip on right',
+				s: 'CCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCCGCCGCAGC',
+				p: 119155697,
+				c: '56M19S',
+				g: 'alt'
 			},
 			{
-				seq: 'GTAATCTCAGCTACTTGGGAGGCTGAGGCAGGAGAATTGCTTCAACACAAGAGGCGGAGGTTGCAGTCAGTCGAG',
-				pos: 119146842,
-				cigar: '3M8834N72M',
-				group: 'none'
+				n: 'insertion at right',
+				s: 'TCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAG',
+				p: 119155696,
+				c: '51M8I16M',
+				g: 'alt'
 			},
 			{
-				seq: 'CCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCT',
-				pos: 119155742,
-				cigar: '69M88N6M',
-				group: 'none'
+				n: 'insertion at left',
+				s: 'AAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAG',
+				p: 119155716,
+				c: '37M8I30M',
+				g: 'alt'
 			},
 			{
-				seq: 'CCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTT',
-				pos: 119155747,
-				cigar: '16S59M',
-				group: 'alt'
+				n: 'softclip on left',
+				s: 'CCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTT',
+				p: 119155731,
+				c: '16S59M',
+				g: 'alt'
 			},
 			{
-				seq: 'CTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGG',
-				pos: 119155747,
-				cigar: '10S65M',
-				group: 'alt'
+				n: 'softclip on left',
+				s: 'CTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGG',
+				p: 119155737,
+				c: '10S65M',
+				g: 'alt'
 			}
+			/*
+			{
+				n:'mismatch on left',
+				s:'CCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCT',
+				p:119155742,
+				c:'69M88N6M',
+				g:'alt',
+			},
+
+			{
+				n:'ref',
+				s:'GAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTG',
+				p:119155682,
+				c:'75M',
+				g:'ref'
+			}
+			*/
 		]
 	}
 ]
