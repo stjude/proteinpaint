@@ -654,17 +654,48 @@ function validate_ssm2canonicalisoform(ds) {
 	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
 }
 
-async function validate_dictionary(ds){
-	const dictioary = (ds.termdb.dictionary)
-	if(!dictioary) return
+async function validate_dictionary(ds) {
+	const dictioary = ds.termdb.dictionary
+	if (!dictioary) return
+	ds.cohort = {}
 	ds.cohort.termdb = await gdc.init_dictionary(dictioary)
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
-	q.getRootTerms = () => {
-		if (cache) return cache
+	const cache = new Map()
+	q.getRootTerms = (cohortStr = '') => {
+		const cacheId = cohortStr
+		if (cache.has(cacheId)) return cache.get(cacheId)
 		const terms = [...ds.cohort.termdb.values()]
-		const cache = terms.filter( t => t.term.parent_id == undefined)
-		return cache
+		const re = terms.filter(t => t.parent_id == undefined)
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.getTermChildren = (id, cohortStr = '') => {
+		const cacheId = id + ';;' + cohortStr
+		if (cache.has(cacheId)) return cache.get(cacheId)
+		const terms = [...ds.cohort.termdb.values()]
+		const re = terms.filter(t => t.parent_id == id)
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.findTermByName = (searchStr, cohortStr = '') => {
+		const cacheId = searchStr + ';;' + cohortStr
+		if (cache.has(cacheId)) return cache.get(cacheId)
+		const terms = [...ds.cohort.termdb.values()]
+		const re = terms.filter(t => t.id.includes(searchStr))
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.getAncestorIDs = id => {
+		if (cache.has(id)) return cache.get(id)
+		const terms = [...ds.cohort.termdb.values()]
+		const search_term = terms.find(t => t.id == id)
+		const re = search_term.path ? search_term.path.split('.') : ''
+		cache.set(id, re)
+		return re
 	}
 }
