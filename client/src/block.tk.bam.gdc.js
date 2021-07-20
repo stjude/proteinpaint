@@ -1,8 +1,8 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
-import * as client from './client'
+import { first_genetrack_tolist, tkt, dofetch2, sayerror } from './client'
 import { contigNameNoChr2 } from '../shared/common'
-import { url2map } from './app.parseurl'
+import urlmap from './common/urlmap'
 
 /* args required to generate bam track
     gdc_args = 
@@ -21,11 +21,12 @@ import { url2map } from './app.parseurl'
     }
 */
 
-export function bamsliceui(genomes, holder, hosturl) {
+const gdc_genome = 'hg38'
+
+export function bamsliceui(genomes, holder) {
 	let gdc_args = {
 		bam_files: []
 	}
-	const default_genome = 'hg38'
 
 	const saydiv = holder.append('div').style('margin', '10px 20px')
 	const visualdiv = holder.append('div').style('margin', '20px')
@@ -40,13 +41,6 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('gap', '5px')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
-
-	function cmt(t, red) {
-		saydiv
-			.style('display', 'block')
-			.style('color', red ? 'red' : 'black')
-			.html(t)
-	}
 
 	// token file upload
 	formdiv
@@ -138,7 +132,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 			gdcid_input.attr('disabled', 1)
 			gdc_loading.style('display', 'inline-block')
 		}
-		const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
+		const bam_info = await dofetch2('gdcbam?gdc_id=' + gdc_id)
 		// enable input field and hide 'Loading...'
 		gdcid_input.attr('disabled', null)
 		gdc_loading.style('display', 'none')
@@ -205,7 +199,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.append('div')
 		.style('grid-column', 'span 2')
 		.style('opacity', 0.6).html(`<ul>
-			<li>All positions are hg38-based.</li>
+			<li>All positions are on hg38 and 1-based.</li>
 			<li>Either position or variant is required.</li>
 			<li>The BAM file will be sliced at the provided postion or variant and visualized.
 			To visualize reads from a new region, enter again from this form.</li>
@@ -219,19 +213,20 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('font-size', '1.1em')
 		.style('margin', '20px')
 		.style('margin-left', '130px')
-		.text('submit')
+		.text('Submit')
 		.on('click', () => {
 			try {
-				validateInputs(gdc_args, genomes[default_genome])
+				validateInputs(gdc_args, genomes[gdc_genome])
 			} catch (e) {
-				cmt(e, 1)
+				sayerror(saydiv, e.message || e)
+				if (e.stack) console.log(e.stack)
 				return
 			}
 			// success
 			formdiv.remove()
 			saydiv.remove()
 			submit_btn_div.remove()
-			renderBamSlice(gdc_args, genomes[default_genome], visualdiv, hosturl)
+			renderBamSlice(gdc_args, genomes[gdc_genome], visualdiv)
 		})
 
 	function makeFormInput(fields) {
@@ -258,7 +253,7 @@ export function bamsliceui(genomes, holder, hosturl) {
 						delete gdc_args[field.key]
 						return
 					}
-					const [nocount, hascount] = contigNameNoChr2(genomes[default_genome], [chr])
+					const [nocount, hascount] = contigNameNoChr2(genomes[gdc_genome], [chr])
 					if (nocount + hascount == 0) {
 						const err_msg = 'chromosome is not valid: ' + chr
 						show_input_check(err_div, err_msg)
@@ -365,31 +360,29 @@ export function bamsliceui(genomes, holder, hosturl) {
 			.style('height', bam_files.length * 22 + 'px')
 	}
 
-	autofill_url()
+	// autofill input fields if supplied from url
+	// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
+	// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
+	// Note: can't auto upload file for gdc_token provided from url,
+	// it's not possible because of security reason
+	const urlp = urlmap()
+	if (urlp.has('gdc_id')) {
+		gdcid_input
+			.property('value', urlp.get('gdc_id'))
+			.node()
+			.dispatchEvent(new Event('keyup'))
+	}
 
-	function autofill_url() {
-		// autofill input fields if supplied from url
-		// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
-		// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
-		// Note: can't auto upload file for gdc_token provided from url,
-		// it's not possible because of security reason
-		const urlp = url2map()
-		if (urlp.has('gdc_id'))
-			gdcid_input
-				.property('value', urlp.get('gdc_id'))
-				.node()
-				.dispatchEvent(new Event('keyup'))
-
-		if (urlp.has('gdc_pos'))
-			position_input
-				.property('value', urlp.get('gdc_pos'))
-				.node()
-				.dispatchEvent(new Event('change'))
-		else if (urlp.has('gdc_var'))
-			variant_input
-				.property('value', urlp.get('gdc_var'))
-				.node()
-				.dispatchEvent(new Event('change'))
+	if (urlp.has('gdc_pos')) {
+		position_input
+			.property('value', urlp.get('gdc_pos'))
+			.node()
+			.dispatchEvent(new Event('change'))
+	} else if (urlp.has('gdc_var')) {
+		variant_input
+			.property('value', urlp.get('gdc_var'))
+			.node()
+			.dispatchEvent(new Event('change'))
 	}
 }
 
@@ -411,53 +404,60 @@ function validateInputs(obj, genome) {
 		if (!file.file_id) throw ' file uuid is missing'
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
 	}
-	if (!obj.position && !obj.variant) throw ' position or variant is required'
-	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
-	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
-
-	const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
-	const [nocount, hascount] = contigNameNoChr2(genome, [chr])
-	if (nocount + hascount == 0) throw 'chromosome is not valid in position/variant input: ' + chr
-	else if (nocount) {
-		// add chr to non-standard position or variant
-		if (obj.position) obj.position = 'chr' + obj.position
-		if (obj.variant) obj.variant = 'chr' + obj.variant
+	if (!obj.position && !obj.variant) throw 'position or variant is required'
+	// parse position or variant string and replace with object
+	if (obj.position) {
+		if (typeof obj.position !== 'string') throw 'position is not string'
+		const tmp = obj.position.split(/[:\-]/)
+		if (tmp.length != 3) throw 'position is not in "chr:start-stop" format'
+		const [nocount, hascount] = contigNameNoChr2(genome, [tmp[0]])
+		if (nocount + hascount == 0) throw 'invalid chromosome in position'
+		const start = Number(tmp[1])
+		const stop = Number(tmp[2])
+		if (!Number.isInteger(start) || !Number.isInteger(stop)) throw 'non-integer start/stop in position'
+		obj.position = {
+			chr: nocount ? 'chr' + tmp[0] : tmp[0],
+			start,
+			stop
+		}
+	} else {
+		if (typeof obj.variant !== 'string') throw 'variant is not string'
+		const tmp = obj.variant.split(/[:\-.>]/)
+		if (tmp.length != 4) throw 'variant is not in format of "chr.pos.ref.alt"'
+		const [nocount, hascount] = contigNameNoChr2(genome, [tmp[0]])
+		if (nocount + hascount == 0) throw 'invalid chromosome in variant'
+		const pos = Number(tmp[1])
+		if (!Number.isInteger(pos)) throw 'non-integer position in variant'
+		obj.variant = {
+			chr: nocount ? 'chr' + tmp[0] : tmp[0],
+			pos: pos - 1, // convert 1-based to 0-based
+			ref: tmp[2],
+			alt: tmp[3]
+		}
 	}
 }
 
-function renderBamSlice(args, genome, holder, hostURL) {
+function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
-		hostURL,
 		nobox: 1,
 		genome,
 		holder
 	}
-	let variant
 	if (args.position) {
-		const pos_str = args.position.split(/[:-]/)
-		par.chr = pos_str[0]
-		par.start = Number.parseInt(pos_str[1])
-		par.stop = Number.parseInt(pos_str[2])
+		par.chr = args.position.chr
+		par.start = args.position.start
+		par.stop = args.position.stop
 	} else if (args.variant) {
-		// TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
-		// solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
-		const variant_str = args.variant.split(/[:.>]/)
-		variant = {
-			chr: variant_str[0],
-			pos: Number.parseInt(variant_str[1]),
-			ref: variant_str[2],
-			alt: variant_str[3]
-		}
-		par.chr = variant.chr
-		par.start = variant.pos - 500
-		par.stop = variant.pos + 500
+		par.chr = args.variant.chr
+		par.start = args.variant.pos - 60
+		par.stop = args.variant.pos + 60
 	}
 
 	par.tklst = []
 	for (const file of args.bam_files) {
 		const tk = {
-			type: client.tkt.bam,
+			type: tkt.bam,
 			name: file.track_name || 'sample bam slice',
 			gdc: args.gdc_token,
 			gdc_file: file.file_id,
@@ -465,12 +465,11 @@ function renderBamSlice(args, genome, holder, hostURL) {
 			file: 'dummy_str'
 		}
 		if (args.variant) {
-			tk.variants = []
-			tk.variants.push(variant)
+			tk.variants = [args.variant]
 		}
 		par.tklst.push(tk)
 	}
-	client.first_genetrack_tolist(genome, par.tklst)
+	first_genetrack_tolist(genome, par.tklst)
 	import('./block').then(b => {
 		new b.Block(par)
 	})

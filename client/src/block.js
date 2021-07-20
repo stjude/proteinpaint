@@ -83,8 +83,8 @@ export class Block {
 			this.debugmode = true
 		}
 
-		this.hostURL = arg.hostURL
-		this.jwt = arg.jwt
+		this.hostURL = sessionStorage.getItem('hostURL') // NO NEED for these after replacing fetch() with dofetch2()
+		this.jwt = sessionStorage.getItem('jwt')
 
 		if (!arg.style) {
 			arg.style = {}

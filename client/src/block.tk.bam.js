@@ -3,7 +3,7 @@ import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
-import url2map from './url2map'
+import urlmap from './common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -622,7 +622,7 @@ function makeTk(tk, block) {
 
 // may add additional parameters from url that specifically apply to the bam track
 function may_add_urlparameter(tk) {
-	const u2p = url2map()
+	const u2p = urlmap()
 
 	if (u2p.has('variant')) {
 		/* XXX only a quick fix!
