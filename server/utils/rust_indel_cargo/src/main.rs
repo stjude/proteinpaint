@@ -1876,6 +1876,7 @@ fn determine_maxima_alt(
         kmer_diff_scores_sorted.push(item2);
     }
 
+    let absolute_threshold_cutoff: f64 = 0.03; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
     let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len(); // Determining length of kmer_diff_scores
 
     let mut start_point: usize = kmer_diff_scores_length - 1; // Starting from the last element of the array sorted in ascending order i.e the highest element in the array
@@ -1905,6 +1906,15 @@ fn determine_maxima_alt(
         for i in 0..kmer_diff_scores_length {
             if kmer_diff_scores_sorted[i].polyclonal >= 2 as i64 {
                 // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
+                let read_cat = read_category {
+                    category: String::from("none"),
+                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
+                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
+                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
+                };
+                indices.push(read_cat);
+            } else if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
+                // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
                 let read_cat = read_category {
                     category: String::from("none"),
                     groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
@@ -1980,7 +1990,16 @@ fn determine_maxima_alt(
             score_cutoff.to_string()
         );
         for i in 0..kmer_diff_scores_length {
-            if score_cutoff >= kmer_diff_scores_sorted[i].abs_value {
+            if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
+                // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
+                let read_cat = read_category {
+                    category: String::from("none"),
+                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
+                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
+                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
+                };
+                indices.push(read_cat);
+            } else if score_cutoff >= kmer_diff_scores_sorted[i].abs_value {
                 // Classifying allreads lower than this diff_score cutoff as 'none'
                 let read_cat = read_category {
                     category: String::from("none"),
