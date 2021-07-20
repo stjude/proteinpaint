@@ -30,6 +30,7 @@ examples data structure
 ]
 ***************/
 const rust_indel_bin = '../rust_indel_cargo/target/release/rust_indel_cargo'
+const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 
 // these are constants. can be overwritten by the same settings in the examples
 const kmer_length = 6,
@@ -178,7 +179,8 @@ const examples = [
 	{
 		// 8-bp insertion at CBL exon 10
 		pplink:
-			'https://ppr.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG',
+			pphost +
+			'?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG',
 		leftFlank: 'GTACCCTAGGTGGAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGAC',
 		rightFlank: 'TGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGTAAAGCATTTT',
 		seqRef:
@@ -263,7 +265,8 @@ const examples = [
 	{
 		// 3-bp deletion in KIT exon 8
 		pplink:
-			'http://localhost:3001/?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A',
+			pphost +
+			'?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A',
 		seqRef:
 			'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
 		seqMut:
