@@ -140,6 +140,8 @@ export async function match_complexvariant_rust(q, templates_info) {
 		':' +
 		rightflankseq
 
+	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
+
 	//fs.writeFile('test.txt', input_data, function (err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
