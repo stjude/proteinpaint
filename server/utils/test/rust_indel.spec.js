@@ -3,7 +3,31 @@ const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 
 /**************
- Code to test
+examples data structure
+[
+	{
+	pplink: <provide the pplink of this example for manual inspection>
+	leftFlank
+	rightFlank
+	seqRef <reference seq>
+	seqMut <mutated seq>
+	readlen <read length>
+	variant {
+		pos <1-based>
+		ref
+		alt
+	}
+	reads [
+		{
+		n <optional comment on what this read is about>
+		s <read sequence>
+		p <1-based alignment position from BAM file>
+		c <cigar>
+		g <truth, ref/alt/none>
+		}
+	]
+	}
+]
 ***************/
 const rust_indel_bin = '../rust_indel_cargo/target/release/rust_indel_cargo'
 
@@ -32,6 +56,8 @@ tape('rust indel binary', async function(test) {
 function runTest(e, test) {
 	// validate data structure of e
 	if (!e.pplink) throw '.pplink missing'
+	test.pass('Testing ' + e.pplink)
+
 	if (!e.leftFlank) throw '.leftFlank missing'
 	if (!e.rightFlank) throw '.rightFlank missing'
 	if (!e.seqRef) throw '.seqRef missing'
@@ -112,24 +138,28 @@ function runTest(e, test) {
 					.map(Number)
 			}
 		}
+		if (groups.length != indices.length) test.fail('output_cat and output_gID are of different length')
+		if (indices.length != e.reads.length) test.fail('Expecting ' + e.reads.length + ' reads but got ' + indices.length)
+		const results = [] // in the same order as e.reads[]
+		for (let i = 0; i < indices.length; i++) results[indices[i]] = groups[i]
 
 		// detect reads that fail the test
 		let wrongcount = 0
-		for (let i = 0; i < indices.length; i++) {
-			if (e.reads[indices[i]].g != groups[i]) wrongcount++
+		for (let i = 0; i < results.length; i++) {
+			if (e.reads[i].g != results[i]) wrongcount++
 		}
 		if (wrongcount) {
 			const lst = []
 			for (let i = 0; i < e.reads.length; i++) {
 				const truth = e.reads[i].g
-				const result = groups[indices.indexOf(i)]
+				const result = results[i]
 				lst.push(
 					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
 				)
 			}
-			test.fail(`Misassigned ${wrongcount} reads: ${e.pplink}\nRead\tTruth\tResult\n${lst.join('\n')}`)
+			test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
 		} else {
-			test.pass('All passed: ' + e.pplink)
+			test.pass('All passed')
 		}
 	})
 }
@@ -201,8 +231,15 @@ const examples = [
 				p: 119155737,
 				c: '10S65M',
 				g: 'alt'
+			},
+			{
+				n: 'ref',
+				s: 'GAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTG',
+				p: 119155682,
+				c: '75M',
+				g: 'ref'
 			}
-			/*
+			/* adding these reads will break the test
 			{
 				n:'mismatch on left',
 				s:'CCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCT',
@@ -211,13 +248,6 @@ const examples = [
 				g:'alt',
 			},
 
-			{
-				n:'ref',
-				s:'GAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTG',
-				p:119155682,
-				c:'75M',
-				g:'ref'
-			}
 			*/
 		]
 	}
