@@ -1,7 +1,6 @@
 import { event as d3event } from 'd3-selection'
 
 const defaults = {
-	rendered: false,
 	duration: 500, // for apps drawer animation
 	hint_pos: {
 		open: { btm: -42, left: 13 },
@@ -12,7 +11,7 @@ const defaults = {
 	arrow_color: { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
 }
 
-export function drawer_init(app, row, features, overrides = {}) {
+export function drawer_init(app, features, overrides = {}) {
 	const settings = Object.assign({}, defaults, overrides)
 	let examples_rendered = false
 	let drawer_full_height
