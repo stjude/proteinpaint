@@ -4,32 +4,13 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
+import urlmap from './common/urlmap'
 
 /*
 ********************** EXPORTED
 parse()
-url2map()
 get_tklst()
-
 */
-
-export function url2map() {
-	const urlp = new Map()
-	for (const s of decodeURIComponent(location.search.substr(1)).split('&')) {
-		const l = s.split('=')
-		if (l.length == 2) {
-			let key = l[0].toLowerCase()
-			// replace obsolete keys
-			if (key == 'p') {
-				key = 'gene'
-			}
-			urlp.set(key, l[1])
-
-			sessionStorage.setItem('urlp_' + key, l[1])
-		}
-	}
-	return urlp
-}
 
 export async function parse(arg) {
 	/*
@@ -42,11 +23,17 @@ arg
 	.holder
 	.debugmode
 */
-	const urlp = url2map()
+	const urlp = urlmap()
 
 	if (urlp.has('examples')) {
 		const _ = await import('./examples')
 		await _.init_examples(arg)
+		return
+	}
+
+	if (urlp.has('gdcbamslice')) {
+		const _ = await import('./block.tk.bam.gdc')
+		_.bamsliceui(arg.genomes, arg.holder)
 		return
 	}
 

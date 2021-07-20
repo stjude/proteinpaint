@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu, dofetch2 } from '../client'
 import { init as init_legend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import url2map from '../url2map'
+import urlmap from '../common/urlmap'
 
 /*
 ********************** EXPORTED
@@ -89,7 +89,7 @@ export async function makeTk(tk, block) {
 	// parse url parameters applicable to this track
 	// may inhibit this through some settings
 	{
-		const urlp = url2map()
+		const urlp = urlmap()
 		if (urlp.has('hlaachange')) {
 			tk.hlaachange = new Set(urlp.get('hlaachange').split(','))
 		}
