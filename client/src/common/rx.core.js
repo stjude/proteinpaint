@@ -454,10 +454,10 @@ export function copyMerge(base, ...args) {
 	if (Array.isArray(args[args.length - 1])) {
 		replaceKeyVals.push(...args.pop())
 	}
-	const target = typeof base == 'string' ? this.fromJson(base) : base
+	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
-			const source = typeof base == 'string' ? this.fromJson(this.toJson(arg)) : arg
+			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
 			for (const key in source) {
 				if (
 					!target[key] ||
@@ -466,7 +466,7 @@ export function copyMerge(base, ...args) {
 					replaceKeyVals.includes(key)
 				)
 					target[key] = source[key]
-				else this.copyMerge(target[key], source[key], replaceKeyVals)
+				else copyMerge(target[key], source[key], replaceKeyVals)
 			}
 		}
 	}

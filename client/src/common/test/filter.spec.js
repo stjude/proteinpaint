@@ -1456,7 +1456,7 @@ tape('getNormalRoot()', async test => {
 	test.end()
 })
 
-tape('filterJoin()', async test => {
+tape('filterJoin()', test => {
 	test.timeoutAfter(3000)
 	test.plan(7)
 

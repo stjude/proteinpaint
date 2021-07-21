@@ -36,10 +36,9 @@ class TestStore {
 	constructor(app) {
 		this.app = app
 		this.api = rx.getStoreApi(this)
-		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
-		this.fromJson = rx.fromJson // used in store.api.state()
-		this.toJson = rx.toJson // used in store.api.state()
+		this.fromJson = rx.fromJson // used in store.api.copyState()
+		this.toJson = rx.toJson // used in store.api.copyState()
 		this.state = app.opts.state
 			? app.opts.state
 			: {
