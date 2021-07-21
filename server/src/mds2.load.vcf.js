@@ -117,18 +117,39 @@ export async function handle_vcfbyrange(q, genome, ds, result) {
 		result.mlst = []
 	}
 
+	const mockblock = make_mockblock(q.rglst[0])
+	const m_is_filtered = _m_is_filtered(q, result, mockblock)
+
 	for (const r of q.rglst) {
 		if (tk0.viewrangeupperlimit && r.stop - r.start >= tk0.viewrangeupperlimit) {
 			r.rangetoobig = 'Zoom in under ' + common.bplen(tk0.viewrangeupperlimit) + ' to view VCF data'
 			continue
 		}
 
-		const mockblock = make_mockblock(r)
-		const m_is_filtered = _m_is_filtered(q, result, mockblock)
-
 		const coord = (tk0.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
 
-		await utils.get_lines_tabix([tk0.file, coord], tk0.dir, line => {
+		if (tk0.file) {
+			await utils.get_lines_tabix([tk0.file, coord], tk0.dir, linehandler(r))
+		} else if (tk0.chr2bcffile) {
+			const file = tk0.chr2bcffile[r.chr]
+			if (!file) throw 'chr not found in chr2bcffile'
+			await utils.get_lines_tabix(
+				['query', file, '-r', coord, '-f', '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT[%GT\t]\\n'],
+				tk0.dir,
+				linehandler(r),
+				true
+			)
+		} else {
+			throw 'unknown file setting for vcf tk'
+		}
+	}
+
+	await may_apply_fishertest(q)
+
+	vcfbyrange_collect_result(result, q, tk0, ds)
+
+	function linehandler(r) {
+		return line => {
 			if (q.exportgenotype) {
 				// parsing full line is too slow
 				// for each line, only parse first 8 columns
@@ -188,12 +209,8 @@ export async function handle_vcfbyrange(q, genome, ds, result) {
 					r.variants.push(m)
 				}
 			}
-		})
+		}
 	}
-
-	await may_apply_fishertest(q)
-
-	vcfbyrange_collect_result(result, q, tk0, ds)
 }
 
 function set_querymode(q, vcftk, ds) {
@@ -475,6 +492,7 @@ function parseline_AFtest(line, q, vcftk, ds, m_is_filtered) {
 	*/
 	const l = line.split('\t')
 	const [e, mlst, e2] = vcf.vcfparseline(l.slice(0, 8).join('\t'), vcftk)
+	console.log(e)
 	// get those passing filter
 	const mlstpass = mlst.filter(m => !m_is_filtered(m))
 	if (mlstpass.length == 0) {

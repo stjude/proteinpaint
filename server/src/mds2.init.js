@@ -194,21 +194,34 @@ async function may_init_vcf(vcftk, genome, ds) {
 
 	if (vcftk.file) {
 		await utils.init_one_vcf(vcftk, genome)
+	} else if (vcftk.chr2bcffile) {
+		if (typeof vcftk.chr2bcffile != 'object') throw 'chr2bcffile not an object'
+		// conver to full path
+		for (const c in vcftk.chr2bcffile) {
+			vcftk.chr2bcffile[c] = path.join(serverconfig.tpmasterdir, vcftk.chr2bcffile[c])
+		}
+		// all files share the same header, will only parse header for one chr
+		const tmptk = { file: vcftk.chr2bcffile[genome.defaultcoord.chr] }
+		if (!tmptk.file) throw 'default chr missing from chr2bcffile'
+		await utils.init_one_vcf(tmptk, genome, true)
+		vcftk.info = tmptk.info
+		vcftk.format = tmptk.format
+		vcftk.samples = tmptk.samples
+		vcftk.nochr = tmptk.nochr
+	} else {
+		throw 'invalid file setting for vcf'
+	}
+
+	if (vcftk.samples) {
 		// convert vcf string names to integer, per termdb design spec
 		for (const n of vcftk.samples) {
 			const i = Number(n.name)
 			if (!Number.isInteger(i)) throw 'non-integer vcf sample: ' + n.name
 			n.name = i
 		}
-		console.log(
-			vcftk.file +
-				': ' +
-				(vcftk.samples ? vcftk.samples.length + ' samples, ' : '') +
-				(vcftk.nochr ? 'no chr' : 'has chr')
-		)
-	} else if (vcftk.chr2file) {
+		console.log(ds.label + ' vcf: ' + vcftk.samples.length + ' samples')
 	} else {
-		throw 'vcf has no file or chr2file'
+		console.log(ds.label + ' vcf: no samples')
 	}
 
 	if (vcftk.numerical_axis) {

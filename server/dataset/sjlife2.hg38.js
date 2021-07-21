@@ -549,7 +549,34 @@ module.exports = {
 		],
 
 		vcf: {
-			file: 'files/hg38/sjlife/vcf/vcf.gz',
+			//file: 'files/hg38/sjlife/vcf/vcf.gz',
+			chr2bcffile: {
+				// all files MUST share the same header, and the same order of samples
+				chr1: 'files/hg38/sjlife/bcf/withINFO/chr1/1.noAD.gz',
+				chr2: 'files/hg38/sjlife/bcf/withINFO/chr2/2.noAD.gz',
+				chr3: 'files/hg38/sjlife/bcf/withINFO/chr3/3.noAD.gz',
+				chr4: 'files/hg38/sjlife/bcf/withINFO/chr4/4.noAD.gz',
+				chr5: 'files/hg38/sjlife/bcf/withINFO/chr5/5.noAD.gz',
+				chr6: 'files/hg38/sjlife/bcf/withINFO/chr6/6.noAD.gz',
+				chr7: 'files/hg38/sjlife/bcf/withINFO/chr7/7.noAD.gz',
+				chr8: 'files/hg38/sjlife/bcf/withINFO/chr8/8.noAD.gz',
+				chr9: 'files/hg38/sjlife/bcf/withINFO/chr9/9.noAD.gz',
+				chr10: 'files/hg38/sjlife/bcf/withINFO/chr10/10.noAD.gz',
+				chr11: 'files/hg38/sjlife/bcf/withINFO/chr11/11.noAD.gz',
+				chr12: 'files/hg38/sjlife/bcf/withINFO/chr12/12.noAD.gz',
+				chr13: 'files/hg38/sjlife/bcf/withINFO/chr13/13.noAD.gz',
+				chr14: 'files/hg38/sjlife/bcf/withINFO/chr14/14.noAD.gz',
+				chr15: 'files/hg38/sjlife/bcf/withINFO/chr15/15.noAD.gz',
+				chr16: 'files/hg38/sjlife/bcf/withINFO/chr16/16.noAD.gz',
+				chr17: 'files/hg38/sjlife/bcf/withINFO/chr17/17.noAD.gz',
+				chr18: 'files/hg38/sjlife/bcf/withINFO/chr18/18.noAD.gz',
+				chr19: 'files/hg38/sjlife/bcf/withINFO/chr19/19.noAD.gz',
+				chr20: 'files/hg38/sjlife/bcf/withINFO/chr20/20.noAD.gz',
+				chr21: 'files/hg38/sjlife/bcf/withINFO/chr21/21.noAD.gz',
+				chr22: 'files/hg38/sjlife/bcf/withINFO/chr22/22.noAD.gz',
+				chrX: 'files/hg38/sjlife/bcf/withINFO/chrX/X.noAD.gz',
+				chrY: 'files/hg38/sjlife/bcf/withINFO/chrY/Y.noAD.gz'
+			},
 			viewrangeupperlimit: 1000000,
 			numerical_axis: {
 				in_use: true, // to use numerical axis by default
@@ -638,10 +665,15 @@ module.exports = {
 					}
 				}
 			},
+
+			/*
+			TODO enable after adding ADvcffile
 			plot_mafcov: {
 				show_samplename: 1
 				// may allow jwt
 			},
+			*/
+
 			termdb_bygenotype: {
 				// this only works for stratifying samples by vcf genotype
 				// svcnv or svcnv+snv combined may need its own trigger
