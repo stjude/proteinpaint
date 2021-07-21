@@ -658,33 +658,41 @@ async function validate_dictionary(ds) {
 	const dictioary = ds.termdb.dictionary
 	if (!dictioary) return
 	ds.cohort = {}
-	ds.cohort.termdb = await gdc.init_dictionary(dictioary)
+	// more termdb can be generated when server starts, rightnow only 'ssm_occurance' is generated
+	const termdbs = await gdc.init_dictionary(dictioary)
+	const default_vocab = Object.keys(termdbs)[0] // ssm_occurance
+	ds.cohort.termdb = termdbs[default_vocab]
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
 	const cache = new Map()
-	q.getRootTerms = (cohortStr = '') => {
-		const cacheId = cohortStr
+	q.getRootTerms = (vocab = default_vocab) => {
+		const cacheId = vocab
 		if (cache.has(cacheId)) return cache.get(cacheId)
 		const terms = [...ds.cohort.termdb.values()]
+		// find terms without term.parent_id
 		const re = terms.filter(t => t.parent_id == undefined)
 		cache.set(cacheId, re)
 		return re
 	}
 
-	q.getTermChildren = (id, cohortStr = '') => {
-		const cacheId = id + ';;' + cohortStr
+	q.getTermChildren = (id, vocab = default_vocab) => {
+		const cacheId = id + ';;' + vocab
 		if (cache.has(cacheId)) return cache.get(cacheId)
 		const terms = [...ds.cohort.termdb.values()]
+		// find terms which have term.parent_id as clicked term
 		const re = terms.filter(t => t.parent_id == id)
 		cache.set(cacheId, re)
 		return re
 	}
 
-	q.findTermByName = (searchStr, cohortStr = '') => {
-		const cacheId = searchStr + ';;' + cohortStr
+	q.findTermByName = (searchStr, vocab = default_vocab) => {
+		// replace space with _ to match with id of terms
+		if(searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+		const cacheId = searchStr + ';;' + vocab
 		if (cache.has(cacheId)) return cache.get(cacheId)
 		const terms = [...ds.cohort.termdb.values()]
+		// find terms that have term.id containing search string
 		const re = terms.filter(t => t.id.includes(searchStr))
 		cache.set(cacheId, re)
 		return re
@@ -694,6 +702,7 @@ async function validate_dictionary(ds) {
 		if (cache.has(id)) return cache.get(id)
 		const terms = [...ds.cohort.termdb.values()]
 		const search_term = terms.find(t => t.id == id)
+		// ancestor terms are already defined in term.path seperated by '.' 
 		const re = search_term.path ? search_term.path.split('.') : ''
 		cache.set(id, re)
 		return re

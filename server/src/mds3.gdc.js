@@ -782,8 +782,9 @@ function sort_mclass(set) {
 }
 
 export async function init_dictionary(dictioary) {
-	const termdb = new Map()
+	const termdb = {}
 	for (const dict_name in dictioary) {
+		const vocab = new Map()
 		const dict = dictioary[dict_name]
 		if (!dict.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
 		const response = await got(dict.gdcapi.endpoint, {
@@ -801,7 +802,7 @@ export async function init_dictionary(dictioary) {
 		if (!Array.isArray(re.fields)) throw '.fields not array'
 		if (!re.expand) throw 'returned data does not have .expand'
 		if (!Array.isArray(re.expand)) throw '.expand not array'
-		// store termdb dictionary in memory
+		// store gdc dictionary in memory
 		// step 1: add leaf terms
 		for (const i in re.fields) {
 			const term_path_str = re.fields[i]
@@ -816,12 +817,13 @@ export async function init_dictionary(dictioary) {
 				parent_id: term_paths[term_paths.length - 2]
 				// }
 			}
-			termdb.set(term_id, term_obj)
+			vocab.set(term_id, term_obj)
 		}
 		// step 2: add type of leaf terms
-		for (const t of termdb.values()) {
+		for (const t of vocab.values()) {
 			const t_map = re._mapping[dict.gdcapi.mapping_prefix + '.' + t.path]
-			t.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'undefined'
+			if(t_map) t.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
+			else if (t_map == undefined) t.type = 'unknown'
 		}
 		// step 3: add parent  and root terms
 		for (const i in re.expand) {
@@ -835,11 +837,10 @@ export async function init_dictionary(dictioary) {
 				// }
 			}
 			if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
-			termdb.set(term_id, term_obj)
+			vocab.set(term_id, term_obj)
 		}
-		// console.log(termdb.get('demographic'))
-		// console.log(re._mapping['ssm_occurrence_centrics.case.case_id'])
+		termdb[dict_name] = vocab
+		console.log('gdc vocab created for:', dict_name, ' with total terms: ', vocab.size)
 	}
-	// console.log('gdc termdb created with total terms : ', termdb.size)
 	return termdb
 }
