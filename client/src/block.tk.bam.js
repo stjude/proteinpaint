@@ -93,26 +93,28 @@ export async function loadTk(tk, block) {
 		xoff += r.width + block.regionspace
 	}
 
-	if (block.subpanels.length == tk.subpanels.length) {
-		/*
+	console.log('block.subpanels.length:', block.subpanels.length)
+	console.log('tk.subpanels.length:', tk.subpanels.length)
+	//if (block.subpanels.length == tk.subpanels.length) {
+	/*
 		must wait when subpanels are added to tk
 		this is only done when block finishes loading data for main tk
 		*/
-		for (const [idx, r] of block.subpanels.entries()) {
-			xoff += r.leftpad
-			regions.push({
-				chr: r.chr,
-				start: r.start,
-				stop: r.stop,
-				width: r.width,
-				exonsf: r.exonsf,
-				subpanelidx: idx,
-				x: xoff
-			})
-			xoff += r.width
-		}
+	for (const [idx, r] of block.subpanels.entries()) {
+		xoff += r.leftpad
+		regions.push({
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop,
+			width: r.width,
+			exonsf: r.exonsf,
+			subpanelidx: idx,
+			x: xoff
+		})
+		xoff += r.width
 	}
-
+	//}
+	console.log('regions:', regions)
 	tk.regions = regions
 
 	try {
@@ -211,6 +213,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
+	console.log('lst:', lst)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 	if (data.error) throw data.error
 	return data
@@ -678,6 +681,7 @@ function may_add_urlparameter(tk) {
 			tk.downloadgdc = 'TRUE'
 		}
 	}
+	console.log('tk:', tk)
 }
 
 function makeGroup(gd, tk, block, data) {
