@@ -192,10 +192,7 @@ async function may_init_ld(ld, genome, ds) {
 async function may_init_vcf(vcftk, genome, ds) {
 	if (!vcftk) return
 
-	if (vcftk.file) {
-		// single vcf file
-		await utils.init_one_vcf(vcftk, genome)
-	} else if (vcftk.chr2bcffile) {
+	if (vcftk.chr2bcffile) {
 		// one bcf file per chr
 		if (typeof vcftk.chr2bcffile != 'object') throw 'chr2bcffile not an object'
 		// conver to full path
@@ -212,7 +209,32 @@ async function may_init_vcf(vcftk, genome, ds) {
 		vcftk.samples = tmptk.samples
 		vcftk.nochr = tmptk.nochr
 	} else {
-		throw 'invalid file setting for vcf'
+		throw 'vcftk.chr2bcffile is missing'
+	}
+
+	if (vcftk.AD && vcftk.AD.chr2bcffile) {
+		// optional setting
+		if (typeof vcftk.AD.chr2bcffile != 'object') throw 'AD.chr2bcffile not an object'
+		// conver to full path
+		for (const c in vcftk.AD.chr2bcffile) {
+			vcftk.AD.chr2bcffile[c] = path.join(serverconfig.tpmasterdir, vcftk.AD.chr2bcffile[c])
+		}
+		// FIXME for now only parse header of the bcf file of default chr
+		// TODO validate all files
+		const tmptk = { file: vcftk.AD.chr2bcffile[genome.defaultcoord.chr] }
+		if (!tmptk.file) throw 'default chr missing from AD.chr2bcffile'
+		await utils.init_one_vcf(tmptk, genome, true)
+		vcftk.AD.info = tmptk.info
+		vcftk.AD.format = tmptk.format
+		vcftk.AD.samples = tmptk.samples
+		vcftk.AD.nochr = tmptk.nochr
+		console.log(ds.label + ' vcf: AD: ' + vcftk.AD.samples.length + ' samples')
+		// convert string names to integer, per termdb design spec
+		for (const n of vcftk.AD.samples) {
+			const i = Number(n.name)
+			if (!Number.isInteger(i)) throw 'non-integer vcf sample: ' + n.name
+			n.name = i
+		}
 	}
 
 	if (vcftk.samples) {
@@ -243,11 +265,12 @@ async function may_init_vcf(vcftk, genome, ds) {
 	}
 
 	if (vcftk.plot_mafcov) {
-		if (!vcftk.samples) throw '.plot_mafcov enabled but no samples from vcf'
-		if (!vcftk.format) throw '.plot_mafcov enabled but no FORMAT fields from vcf'
-		if (!vcftk.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
-		if (vcftk.format.AD.Number != 'R') throw 'AD FORMAT field Number=R is not true'
-		if (vcftk.format.AD.Type != 'Integer') throw 'AD FORMAT field Type=Integer is not true'
+		if (!vcftk.AD) throw '.plot_mafcov enabled but .AD{} missing from vcf'
+		if (!vcftk.AD.samples) throw '.plot_mafcov enabled but no samples from vcf'
+		if (!vcftk.AD.format) throw '.plot_mafcov enabled but no FORMAT fields from vcf'
+		if (!vcftk.AD.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
+		if (vcftk.AD.format.AD.Number != 'R') throw 'AD FORMAT field Number=R is not true'
+		if (vcftk.AD.format.AD.Type != 'Integer') throw 'AD FORMAT field Type=Integer is not true'
 		if (vcftk.plot_mafcov.overlay_term) {
 			if (!ds.cohort) throw 'ds.cohort missing when plot_mafcov.overlay_term defined'
 			if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing when plot_mafcov.overlay_term defined'

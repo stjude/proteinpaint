@@ -10,6 +10,9 @@ handle_mafcovplot
 */
 
 const unannotated_color = '#aaa'
+const bcfformat = '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\t[%AD\t]\\n'
+// somehow the command generates twice the number of columns
+// bcftools query -r 17:7671461 -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\t[%AD\t]\n'
 
 export async function plot(q, genome, ds, result) {
 	try {
@@ -27,19 +30,29 @@ export async function plot(q, genome, ds, result) {
 		}
 		if (!q.m) throw '.m{} missing'
 
-		const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + (q.m.pos + 1) + '-' + (q.m.pos + 1)
+		if (!tk.AD) throw 'vcf.AD{} missing'
+
+		const coord = (tk.AD.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + (q.m.pos + 1) + '-' + (q.m.pos + 1)
+		const file = tk.AD.chr2bcffile[q.m.chr]
+		if (!file) throw 'chr not in tk.AD.chr2bcffile'
+
 		let m
 
-		await utils.get_lines_tabix([tk.file, coord], tk.dir, line => {
-			const [e, mlst, e2] = vcf.vcfparseline(line, tk)
-			for (const m2 of mlst) {
-				//if( tk.nochr ) m.chr = 'chr'+m.chr
-				if (m2.pos == q.m.pos && m2.ref == q.m.ref && m2.alt == q.m.alt) {
-					m = m2
-					return
+		await utils.get_lines_tabix(
+			['view', '-H', '-r', coord, file],
+			tk.AD.dir,
+			line => {
+				const [e, mlst, e2] = vcf.vcfparseline(line, tk.AD)
+				for (const m2 of mlst) {
+					//if( tk.nochr ) m.chr = 'chr'+m.chr
+					if (m2.pos == q.m.pos && m2.ref == q.m.ref && m2.alt == q.m.alt) {
+						m = m2
+						return
+					}
 				}
-			}
-		})
+			},
+			true
+		)
 
 		if (!m) throw 'variant not found'
 
@@ -108,6 +121,7 @@ export async function plot(q, genome, ds, result) {
 		// conditional, may do server-side rendering instead
 	} catch (e) {
 		result.error = e.message || e
+		if (e.stack) console.log(e.stack)
 	}
 }
 
