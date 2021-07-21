@@ -136,7 +136,7 @@ async function make_multiSampleTable(args) {
 	let current_size = parseInt(size) || default_size
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
-	const pagination = arg.totalcases > 10
+	const pagination = arg.totalcases > cutoff_tableview
 	if (pagination) {
 		arg.size = current_size
 		arg.from = current_from
@@ -147,7 +147,7 @@ async function make_multiSampleTable(args) {
 	arg.numofcases = numofcases
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
-	if (arg.tid2value_orig.size && arg.totalcases < 10) make_sunburst_tidlist(arg, holder)
+	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -466,7 +466,8 @@ async function make_densityplot(holder, data, callabck) {
 		height = 150,
 		xpad = 10,
 		ypad = 20,
-		xaxis_height = 20
+		xaxis_height = 20,
+		default_ticks = 10
 	const svg = holder.append('svg')
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 
@@ -490,7 +491,7 @@ async function make_densityplot(holder, data, callabck) {
 
 	const y_axis = axisLeft()
 		.scale(yscale)
-		.ticks(data.densitymax < 10 ? data.densitymax : 10)
+		.ticks(data.densitymax < default_ticks ? data.densitymax : default_ticks)
 		.tickFormat(format('d'))
 
 	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
@@ -627,7 +628,9 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 function make_pagination(arg, page_doms) {
 	const [page_header, page_footer, list_holder] = page_doms
 	// sample info for pagination
-	const pages = Math.ceil(arg.numofcases / arg.size)
+	const no_trunc_limit = 10 // max page without truncating page buttons
+	const max_page_buttons = 10 // max pages buttons to be rendered 
+	const total_pages = Math.ceil(arg.numofcases / arg.size)
 	const count_start = arg.from + 1
 	const count_end = arg.from + arg.size < arg.numofcases ? arg.from + arg.size : arg.numofcases
 
@@ -686,9 +689,12 @@ function make_pagination(arg, page_doms) {
 		.style('font-size', '.9em')
 		.style('text-align', 'end')
 	const current_page = arg.from == 0 ? 1 : Math.ceil(arg.from / arg.size) + 1
-	const page_start = current_page < 10 ? 1 : current_page - 5
-	const page_truncation = pages > 10 ? true : false
-	const page_end = page_truncation && page_start == 1 ? 10 : page_start + 10 < pages ? page_start + 10 : pages
+	const page_start = current_page < no_trunc_limit ? 1 
+		: current_page - 5 // for large pagination, show current_page and 5 pages before current_page
+	const page_truncation = total_pages > no_trunc_limit ? true : false
+	const page_end = page_truncation && page_start == 1 ? max_page_buttons // if truncation and current_page is 1st page, show pages 1 to 10
+		: page_start + max_page_buttons < total_pages ? page_start + max_page_buttons // if truncation and current_page is not 1 show 10 pages including current_page
+		: total_pages // if no trucation or current_page is less than 10 pages from end, show last few pages
 
 	// first page button, only visible when large sample size and first page button not displayed
 	if (page_truncation && page_start != 1) {
@@ -705,13 +711,13 @@ function make_pagination(arg, page_doms) {
 	}
 
 	// last page button, only visible when large sample size and last page button not displayed
-	if (page_truncation && page_end < pages) {
+	if (page_truncation && page_end < total_pages) {
 		pages_div
 			.append('div')
 			.style('padding', '5px')
 			.style('display', 'inline-block')
 			.text('....')
-		render_page_button('Last page', pages)
+		render_page_button('Last page', total_pages)
 	}
 
 	function render_page_button(text, page_i) {
