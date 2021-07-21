@@ -193,14 +193,17 @@ async function may_init_vcf(vcftk, genome, ds) {
 	if (!vcftk) return
 
 	if (vcftk.file) {
+		// single vcf file
 		await utils.init_one_vcf(vcftk, genome)
 	} else if (vcftk.chr2bcffile) {
+		// one bcf file per chr
 		if (typeof vcftk.chr2bcffile != 'object') throw 'chr2bcffile not an object'
 		// conver to full path
 		for (const c in vcftk.chr2bcffile) {
 			vcftk.chr2bcffile[c] = path.join(serverconfig.tpmasterdir, vcftk.chr2bcffile[c])
 		}
-		// all files share the same header, will only parse header for one chr
+		// FIXME for now only parse header of the bcf file of default chr
+		// TODO validate all files
 		const tmptk = { file: vcftk.chr2bcffile[genome.defaultcoord.chr] }
 		if (!tmptk.file) throw 'default chr missing from chr2bcffile'
 		await utils.init_one_vcf(tmptk, genome, true)
