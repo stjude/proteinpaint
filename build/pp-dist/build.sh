@@ -74,4 +74,5 @@ mv package.json.bak package.json
 TAG="$(node -p "require('./package.json').version")"
 echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --tag ppbase:$REV .
+echo "building ppdist:$REV image, package version=$TAG"
 docker build --file ./build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
