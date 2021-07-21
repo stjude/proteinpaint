@@ -13,6 +13,7 @@ import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { drawer_init } from './app.drawer'
+import urlmap from './common/urlmap'
 
 import * as wrappers from './wrappers/PpReact'
 
@@ -111,7 +112,7 @@ export function runproteinpaint(arg) {
 	} else if (window.location.hostname == 'localhost') {
 		// easily switch server host for testing in developer machine,
 		// for example the rendered data from a docker container vs host machine
-		const urlp = parseurl.url2map()
+		const urlp = urlmap()
 		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
 		else {
 			const hostname = urlp.get('hostname')
@@ -643,7 +644,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 	app.holder0.selectAll('*').remove()
 
 	// may yield tklst from url parameters
-	const urlp = parseurl.url2map()
+	const urlp = urlmap()
 	const tklst = await parseurl.get_tklst(urlp, g)
 
 	const pos = string2pos(str, g)
@@ -1477,26 +1478,11 @@ function launchJunctionbyMatrix(arg, app) {
 function launchgdcbamslice(arg, app) {
 	if (arg.gdcbamslice.uionly) {
 		import('./block.tk.bam.gdc').then(p => {
-			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+			p.bamsliceui(app.genomes, app.holder0)
 		})
 		return
 	}
 }
-
-/*
-function launchjdv(arg, app) {
-	const genomeobj = app.genomes[arg.genome]
-	if(!genomeobj) {
-		app.error0('Invalid genome: '+arg.genome)
-		return
-	}
-	arg.hostURL = app.hostURL
-	arg.genome = genomeobj
-	import('./jdv').then(jdv=>{
-		jdv.jdvparseinput(arg, app.holder0)
-	})
-}
-*/
 
 async function launch_singlecell(arg, app) {
 	try {
