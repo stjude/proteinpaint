@@ -18,6 +18,8 @@ validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
+init_dictionary
+init_termdb_queries
 */
 
 export async function validate_ssm2canonicalisoform(api) {
@@ -782,65 +784,106 @@ function sort_mclass(set) {
 }
 
 export async function init_dictionary(dictioary) {
-	const termdb = {}
-	for (const dict_name in dictioary) {
-		const vocab = new Map()
-		const dict = dictioary[dict_name]
-		if (!dict.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
-		const response = await got(dict.gdcapi.endpoint, {
-			method: 'GET',
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC for variant2samples'
-		}
-		if (!re._mapping) throw 'returned data does not have ._mapping'
-		if (!re.fields) throw 'returned data does not have .fields'
-		if (!Array.isArray(re.fields)) throw '.fields not array'
-		if (!re.expand) throw 'returned data does not have .expand'
-		if (!Array.isArray(re.expand)) throw '.expand not array'
-		// store gdc dictionary in memory
-		// step 1: add leaf terms
-		for (const i in re.fields) {
-			const term_path_str = re.fields[i]
-			const term_paths = term_path_str.split('.')
-			const term_id = term_paths[term_paths.length - 1]
-			const term_obj = {
-				// term : {
-				id: term_id,
-				name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-				path: term_path_str,
-				isleaf: true,
-				parent_id: term_paths[term_paths.length - 2]
-				// }
-			}
-			vocab.set(term_id, term_obj)
-		}
-		// step 2: add type of leaf terms
-		for (const t of vocab.values()) {
-			const t_map = re._mapping[dict.gdcapi.mapping_prefix + '.' + t.path]
-			if(t_map) t.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
-			else if (t_map == undefined) t.type = 'unknown'
-		}
-		// step 3: add parent  and root terms
-		for (const i in re.expand) {
-			const term_str = re.expand[i]
-			const term_levels = term_str.split('.')
-			const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
-			const term_obj = {
-				// term:{
-				id: term_id,
-				name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' ')
-				// }
-			}
-			if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
-			vocab.set(term_id, term_obj)
-		}
-		termdb[dict_name] = vocab
-		console.log('gdc vocab created for:', dict_name, ' with total terms: ', vocab.size)
+	const termdb = new Map()
+	if (!dictioary.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
+	const response = await got(dictioary.gdcapi.endpoint, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for variant2samples'
 	}
+	if (!re._mapping) throw 'returned data does not have ._mapping'
+	if (!re.fields) throw 'returned data does not have .fields'
+	if (!Array.isArray(re.fields)) throw '.fields not array'
+	if (!re.expand) throw 'returned data does not have .expand'
+	if (!Array.isArray(re.expand)) throw '.expand not array'
+	// store gdc dictionary in memory
+	// step 1: add leaf terms
+	for (const i in re.fields) {
+		const term_path_str = re.fields[i]
+		const term_paths = term_path_str.split('.')
+		const term_id = term_paths[term_paths.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
+			path: term_path_str,
+			isleaf: true,
+			parent_id: term_paths[term_paths.length - 2]
+		}
+		termdb.set(term_id, term_obj)
+	}
+	// step 2: add type of leaf terms
+	for (const t of termdb.values()) {
+		const t_map = re._mapping[dictioary.gdcapi.mapping_prefix + '.' + t.path]
+		if(t_map) t.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
+		else if (t_map == undefined) t.type = 'unknown'
+	}
+	// step 3: add parent  and root terms
+	for (const i in re.expand) {
+		const term_str = re.expand[i]
+		const term_levels = term_str.split('.')
+		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' ')
+		}
+		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
+		termdb.set(term_id, term_obj)
+	}
+	init_termdb_queries(termdb)
+	console.log('gdc dictionary created with total terms: ', termdb.size)
 	return termdb
+}
+
+function init_termdb_queries(termdb){
+	const q = (termdb.q = {})
+	const default_vocab = 'ssm_occurance'
+
+	const cache = new Map()
+	q.getRootTerms = (vocab = default_vocab) => {
+		const cacheId = vocab
+		if (cache.has(cacheId)) return cache.get(cacheId)
+		const terms = [...termdb.values()]
+		// find terms without term.parent_id
+		const re = terms.filter(t => t.parent_id == undefined)
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.getTermChildren = (id, vocab = default_vocab) => {
+		const cacheId = id + ';;' + vocab
+		if (cache.has(cacheId)) return cache.get(cacheId)
+		const terms = [...termdb.values()]
+		// find terms which have term.parent_id as clicked term
+		const re = terms.filter(t => t.parent_id == id)
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.findTermByName = (searchStr, vocab = default_vocab) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// replace space with _ to match with id of terms
+		if(searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+		const cacheId = searchStr + ';;' + vocab
+		if (cache.has(cacheId)) return cache.get(cacheId)
+		const terms = [...termdb.values()]
+		// find terms that have term.id containing search string
+		const re = terms.filter(t => t.id.includes(searchStr))
+		cache.set(cacheId, re)
+		return re
+	}
+
+	q.getAncestorIDs = id => {
+		if (cache.has(id)) return cache.get(id)
+		const terms = [...termdb.values()]
+		const search_term = terms.find(t => t.id == id)
+		// ancestor terms are already defined in term.path seperated by '.' 
+		const re = search_term.path ? search_term.path.split('.') : ''
+		cache.set(id, re)
+		return re
+	}
 }

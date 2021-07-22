@@ -1034,7 +1034,7 @@ module.exports = {
 			primary_site: { gdcapi: site_size }
 		},
 		dictionary: {
-			ssm_occurrence: { gdcapi: ssm_occurrences_dictionary }
+			gdcapi: ssm_occurrences_dictionary 
 		}
 	},
 
