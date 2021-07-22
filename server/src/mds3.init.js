@@ -659,6 +659,6 @@ async function init_dictionary(ds) {
 	// 'ssm_occurance' dictioanry from gdc
 	if (dictioary.gdcapi){
 		ds.cohort = {}
-		ds.cohort.termdb = await gdc.init_dictionary(dictioary)
+		await gdc.init_dictionary(ds)
 	}
 }
