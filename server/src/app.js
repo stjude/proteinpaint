@@ -240,6 +240,7 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
 	```
 ***/
+
 pp_init()
 	.then(() => {
 		// no error from server initiation
@@ -260,31 +261,52 @@ pp_init()
 			return
 		}
 
-		const port = serverconfig.port || 3000
-		if (serverconfig.ssl) {
-			const options = {
-				key: fs.readFileSync(serverconfig.ssl.key),
-				cert: fs.readFileSync(serverconfig.ssl.cert)
-			}
-			const server = https.createServer(options, app)
-			server.listen(port, () => {
-				console.log('HTTPS STANDBY AT PORT ' + port)
-			})
-		} else {
-			const server = app.listen(port)
-			console.log('STANDBY AT PORT ' + port)
-		}
+		startServer()
 	})
 	.catch(err => {
-		/* when the app server is monitored by another process via the command line,
-		process.exit(1) is required to stop executiion flow with `set -e`
+		let exitCode = 1
+		if (!fs.existsSync(serverconfig.tpmasterdir)) {
+			const m = serverconfig.maintenance || {}
+			// may override with a non-empty maintenance message
+			if ('start' in m && 'stop' in m && 'tpErrorCode' in m) {
+				// use unix timestamps to simplify comparison
+				const start = +new Date(m.start)
+				const stop = +new Date(m.stop)
+				const currTime = +new Date()
+				if (start <= currTime && currTime <= stop) {
+					exitCode = m.tpErrorCode
+				}
+			}
+		}
+
+		if (err.stack) console.log(err.stack)
+		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
+		else console.log('\n!!!\n' + err + '\n\n')
+		/* 
+		when the app server is monitored by another process via the command line,
+		process.exit(1) is required to stop execution flow with `set -e`
 		and thereby avoid unnecessary endless restarts of an invalid server
 		init with bad config, data, and/or code
 		*/
-		if (err.stack) console.log(err.stack)
-		console.error('\n!!!\n' + err + '\n\n')
-		process.exit(1)
+		process.exit(exitCode)
 	})
+
+function startServer() {
+	const port = serverconfig.port || 3000
+	if (serverconfig.ssl) {
+		const options = {
+			key: fs.readFileSync(serverconfig.ssl.key),
+			cert: fs.readFileSync(serverconfig.ssl.cert)
+		}
+		const server = https.createServer(options, app)
+		server.listen(port, () => {
+			console.log('HTTPS STANDBY AT PORT ' + port)
+		})
+	} else {
+		const server = app.listen(port)
+		console.log('STANDBY AT PORT ' + port)
+	}
+}
 
 function setOptionalRoutes() {
 	// routeSetters is an array of "filepath/name.js"
@@ -436,7 +458,20 @@ async function handle_genomes(req, res) {
 		/* dir is inaccessible
 		return error message as the service is out
 		*/
-		res.send({ error: 'Error with TP directory (' + e.code + ')' })
+		// default error message
+		let message = 'Error with TP directory (' + e.code + ')'
+		const m = serverconfig.maintenance || {}
+		// may override with a non-empty maintenance message
+		if ('start' in m && 'stop' in m && m.tpMessage) {
+			// use unix timestamps to simplify comparison
+			const start = +new Date(m.start)
+			const stop = +new Date(m.stop)
+			const currTime = +new Date()
+			if (start <= currTime && currTime <= stop) {
+				message = m.tpMessage
+			}
+		}
+		res.send({ error: message })
 		return
 	}
 
@@ -7588,11 +7623,15 @@ async function pp_init() {
 	try {
 		await fs.promises.stat(serverconfig.tpmasterdir)
 	} catch (e) {
-		/* dir is inaccessible for some reason
-		do not validate any genome/dataset, allow the server process to boot
-		*/
-		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
-		return
+		/* dir is inaccessible for some reason */
+		const message = 'Error with ' + serverconfig.tpmasterdir + ': ' + e.code
+		if (process.argv[2] == 'validate') {
+			throw message
+		} else {
+			// allow the server process to boot
+			console.log('\n!!! ' + message + '\n')
+			return
+		}
 	}
 	serverconfig.gdcbamsecret = Math.random().toString()
 	codedate = get_codedate()
