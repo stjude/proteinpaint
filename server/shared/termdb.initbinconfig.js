@@ -81,7 +81,7 @@ function roundFractions(binSize, firstBinStop, max) {
 	const eighthBinStop = firstBinStop_rnd + binSize_rnd * 7
 	const eighthBinStop_rnd = Number(eighthBinStop.toFixed(digits))
 	if (max > eighthBinStop_rnd) {
-		lastBinStart = firstBinStop_rnd + binSize_rnd * 6
+		const lastBinStart = firstBinStop_rnd + binSize_rnd * 6
 		lastBinStart_rnd = Number(lastBinStart.toFixed(digits))
 	}
 	const rounding = '.' + digits + 'f'
