@@ -13,6 +13,7 @@ exports.serverconfig = serverconfig
 
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
+const bcftools = serverconfig.bcftools || 'bcftools'
 
 /* p4 ready
 ********************** EXPORTED
@@ -28,6 +29,7 @@ file_not_exist
 file_not_readable
 get_header_tabix
 get_header_vcf
+get_header_bcf
 get_fasta
 connect_db
 loadfile_ssid
@@ -147,14 +149,15 @@ exports.file_is_readable = async file => {
 	}
 }
 
-exports.init_one_vcf = async function(tk, genome) {
+// set "isbcf" to true when tk.file points to a bcf file
+exports.init_one_vcf = async function(tk, genome, isbcf) {
 	let filelocation
 	if (tk.file) {
 		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
 			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
 		}
 		filelocation = tk.file
-		await validate_tabixfile(tk.file)
+		await exports.validate_tabixfile(tk.file)
 	} else if (tk.url) {
 		filelocation = tk.url
 		tk.dir = await utils.cache_index(tk.url, tk.indexURL)
@@ -162,7 +165,9 @@ exports.init_one_vcf = async function(tk, genome) {
 		throw 'no file or url given for vcf file'
 	}
 
-	const [info, format, samples, errors] = await exports.get_header_vcf(filelocation, tk.dir)
+	const [info, format, samples, errors] = isbcf
+		? await exports.get_header_bcf(filelocation, tk.dir)
+		: await exports.get_header_vcf(filelocation, tk.dir)
 	if (errors) {
 		console.log(errors.join('\n'))
 		throw 'got above errors parsing vcf'
@@ -170,16 +175,17 @@ exports.init_one_vcf = async function(tk, genome) {
 	tk.info = info
 	tk.format = format
 	tk.samples = samples
-	if (await tabix_is_nochr(filelocation, tk.dir, genome)) {
+	if (await exports.tabix_is_nochr(filelocation, tk.dir, genome)) {
 		tk.nochr = true
 	}
 }
 
-async function validate_tabixfile(file) {
-	/*
-	file is full path
-	url not accepted
-	*/
+/*
+file is full path
+url not accepted
+also works for bcf
+*/
+exports.validate_tabixfile = async function(file) {
 	if (!file.endsWith('.gz')) throw 'tabix file not ending with .gz'
 	if (await file_not_exist(file)) throw '.gz file not exist'
 	if (await file_not_readable(file)) throw '.gz file not readable'
@@ -195,16 +201,15 @@ async function validate_tabixfile(file) {
 		if (await file_not_readable(tbi)) throw '.tbi index file not readable'
 	}
 }
-exports.validate_tabixfile = validate_tabixfile
 
-async function tabix_is_nochr(file, dir, genome) {
+exports.tabix_is_nochr = async function(file, dir, genome) {
+	// also works for bcf file!
 	const lines = []
-	await get_lines_tabix([file, '-l'], dir, line => {
+	await exports.get_lines_tabix([file, '-l'], dir, line => {
 		lines.push(line)
 	})
 	return common.contigNameNoChr(genome, lines)
 }
-exports.tabix_is_nochr = tabix_is_nochr
 
 function file_not_exist(file) {
 	return new Promise((resolve, reject) => {
@@ -229,18 +234,36 @@ exports.file_not_exist = file_not_exist
 exports.get_header_tabix = async (file, dir) => {
 	// file is full path file or url
 	const lines = []
-	await get_lines_tabix([file, '-H'], dir, line => {
+	await exports.get_lines_tabix([file, '-H'], dir, line => {
 		lines.push(line)
 	})
 	return lines
+}
+exports.get_header_bcf = (file, dir) => {
+	// file is full path or url
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bcftools, ['view', '-h', file], { cwd: dir })
+		const out = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.on('close', () => {
+			resolve(
+				vcf.vcfparsemeta(
+					out
+						.join('')
+						.trim()
+						.split('\n')
+				)
+			)
+		})
+	})
 }
 exports.get_header_vcf = async (file, dir) => {
 	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
 }
 
-function get_lines_tabix(args, dir, callback) {
+exports.get_lines_tabix = function(args, dir, callback, isbcf) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(tabix, args, { cwd: dir })
+		const ps = spawn(isbcf ? bcftools : tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line))
@@ -252,7 +275,6 @@ function get_lines_tabix(args, dir, callback) {
 		})
 	})
 }
-exports.get_lines_tabix = get_lines_tabix
 
 function write_file(file, text) {
 	return new Promise((resolve, reject) => {
