@@ -10,9 +10,7 @@ handle_mafcovplot
 */
 
 const unannotated_color = '#aaa'
-const bcfformat = '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\t[%AD\t]\\n'
-// somehow the command generates twice the number of columns
-// bcftools query -r 17:7671461 -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\t[%AD\t]\n'
+const bcfformat = '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO\t%FORMAT\n'
 
 export async function plot(q, genome, ds, result) {
 	try {
@@ -39,7 +37,7 @@ export async function plot(q, genome, ds, result) {
 		let m
 
 		await utils.get_lines_tabix(
-			['view', '-H', '-r', coord, file],
+			['query', '-r', coord, '-f', bcfformat, file],
 			tk.AD.dir,
 			line => {
 				const [e, mlst, e2] = vcf.vcfparseline(line, tk.AD)

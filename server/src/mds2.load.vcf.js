@@ -44,7 +44,7 @@ get ssid by one m from vcf
 
 	let m
 	await utils.get_lines_tabix(
-		['query', file, '-r', coord, '-f', bcfformatbase + '\t%FORMAT\t[%GT\t]\\n'],
+		['query', file, '-r', coord, '-f', bcfformatbase + '\t%FORMAT\n'],
 		tk.dir,
 		line => {
 			const [e, mlst, e2] = vcf.vcfparseline(line, tk)
@@ -459,11 +459,11 @@ function query_vcf_applymode(vcftk, q) {
 	q.bcfformat = bcfformatbase // the base vcf format so vcfparseline can work
 	if (q.exportgenotype) {
 		// need all gt
-		q.bcfformat += '\t%FORMAT\t[%GT\t]\\n'
+		q.bcfformat += '\t%FORMAT\n'
 	} else if (q.querymode.range_AFtest) {
 		// need all gt
 		// though vcftk.samples is deleted, the sample gt will be parsed in AF test functions
-		q.bcfformat += '\t%FORMAT\t[%GT\t]\\n'
+		q.bcfformat += '\t%FORMAT\n'
 	} else if (q.querymode.range_variantonly) {
 		if (q.querymode.slicecolumnindex) {
 			// TODO add subset of samples by "-s"
