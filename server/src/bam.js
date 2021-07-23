@@ -378,14 +378,13 @@ async function plot_pileup(q, templates) {
 
 	for (const [ridx, r] of q.regions.entries()) {
 		const sf = q.pileupheight / maxValue
-
 		for (const bp of bplst[ridx]) {
 			if (!bp) continue // gap from zoomed out mode
 
-			const x0 = (bp.position - r.start) * r.ntwidth
+			const x0 = (bp.position - r.start) * r.ntwidth + (q.canvaswidth * ridx) / 2
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-			const barwidth = Math.max(1, r.ntwidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
+			const barwidth = Math.max(1, r.ntwidth) / q.regions.length // when in zoomed out mode, each bar is one pixel, thus the width=1
 
 			// total coverage of this bp
 			{
