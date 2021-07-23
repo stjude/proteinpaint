@@ -8,7 +8,17 @@ init_sampletable
 ********************** INTERNAL
 make_singleSampleTable
 make_multiSampleTable
+make_multiSampleSummaryList
 get_list_cells
+get_table_header
+get_table_cell
+make_horizontal_tabs
+update_horizontal_tabs
+make_summary_panel
+make_densityplot
+make_sunburst_tidlist
+make_filter_pill
+make_pagination
 
 using variant2samples
 mlst can be mixture of data types, doesn't matter
