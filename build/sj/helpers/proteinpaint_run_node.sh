@@ -7,7 +7,10 @@ cd /opt/app/pp/active
 # validate the server without triggering app.listen() and  before restarting with forever
 echo "Validating the server configuration against data and code:"
 echo "If you do not see a message for server restart in a few seconds, see validation.log to troubleshoot ..."
-node ./server.js validate >> ../../validate.log 2>&1
+
+echo -e "\n\n$(date '+%Y-%m-%d %H:%M:%S')" >> ../../validate.log
+node ./server.js validate 2>&1 | tee -a ../../validate.log
+
 
 echo "iiq:RESTARTING proteint paint node server."
 
