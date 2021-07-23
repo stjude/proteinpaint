@@ -3,7 +3,7 @@
 set -e
 
 
-if (($# != 3 && $# != 4)); then
+if (($# < 4)); then
 	echo "Usage: $ ./dockrun.sh SRCDIR HOSTPORT IMAGE_NAME APPDIR [ CONTAINER_ID \"pp\" ]
 
 	- SRCDIR: the serverconfig.tpmasterdir as specified in your serverconfig.json
@@ -14,7 +14,7 @@ if (($# != 3 && $# != 4)); then
 	"
 	exit 1
 
-elif (($# == 3)); then
+elif (($# == 4)); then
 	SRCDIR=$1
 	HOSTPORT=$2
 	IMAGE_NAME=$3
@@ -32,15 +32,16 @@ fi
 # docker build --file Dockerfile --tag ppbase:latest .
 
 set +e
-docker stop pp && docker rm pp
+docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
 EXPOSED_PORT=3456
-
+echo "[$SRCDIR] [$HOSTPORT] [$IMAGE_NAME] [$APPDIR] [$CONTAINER_ID]"
 docker run -d \
 	--name $CONTAINER_ID \
 	--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
-	--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
+	--mount type=bind,source=$APPDIR,target=/home/root/pp/active,readonly \
 	--publish $HOSTPORT:$EXPOSED_PORT \
+	-e PP_MODE=container-prod \
 	-e PP_PORT=$EXPOSED_PORT \
 	$IMAGE_NAME
