@@ -15,9 +15,11 @@ module.exports = function(env = {}) {
 		//
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'node',
-		externals: [nodeExternals({ 
-			allowlist: [/\/src\//]
-		})],
+		externals: [
+			nodeExternals({
+				allowlist: [/\/src\//]
+			})
+		],
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
 			path: path.join(__dirname, './'),
@@ -29,8 +31,8 @@ module.exports = function(env = {}) {
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader',
-							options: { presets: [['es2015', { modules: false }]] }
+							loader: 'babel-loader'
+							// babel-loader respects .babelrc, so no need to specify presets and plugins here
 						}
 					]
 				}

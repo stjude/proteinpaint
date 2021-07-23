@@ -41,7 +41,7 @@ tape('vocabInit(), default', test => {
 	test.end()
 })
 
-tape('getVocab(), custom', async test => {
+tape('getVocab(), custom', test => {
 	runpp({
 		state: {
 			vocab: {

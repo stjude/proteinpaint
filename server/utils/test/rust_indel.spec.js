@@ -47,7 +47,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('rust indel binary', async function(test) {
+tape.skip('rust indel binary', async function(test) {
 	for (const e of examples) {
 		await runTest(e, test)
 	}
