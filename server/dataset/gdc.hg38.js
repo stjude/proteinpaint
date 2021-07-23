@@ -475,16 +475,16 @@ const variant2samples = {
 			for (const tid in p.tid2value) {
 				let t = terms.find(i => i.id == tid)
 				// Quick Fix: tid2value from sample table has term.name rather than term.id
-				if (!t) t = terms.find(i => i.name == tid)  
+				if (!t) t = terms.find(i => i.name == tid)
 				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
 						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
 					})
-				} else if (t && t.type == 'integer'){
-					for( const val of p.tid2value[tid]){
+				} else if (t && t.type == 'integer') {
+					for (const val of p.tid2value[tid]) {
 						f.content.push({
-							op : val.op,
+							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
 						})
 					}
@@ -493,6 +493,11 @@ const variant2samples = {
 		}
 		return f
 	}
+}
+
+const ssm_occurrences_dictionary = {
+	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
+	mapping_prefix: 'ssm_occurrence_centrics'
 }
 
 /*
@@ -1027,6 +1032,9 @@ module.exports = {
 			project: { gdcapi: project_size },
 			disease: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
+		},
+		dictionary: {
+			gdcapi: ssm_occurrences_dictionary 
 		}
 	},
 

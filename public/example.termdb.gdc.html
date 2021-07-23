@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=a style="margin:30px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('a'),
+	noheader:1,
+	nobox:true,
+	termdb:{
+		dev:true,
+		state:{
+			dslabel: 'GDC',
+			genome:'hg38',
+			nav: {
+				header_mode: 'search_only'
+			}
+		},
+		tree: {
+			click_term: (term) => { console.log(term.name) }
+		}
+	}
+})
+</script>
+
+</body>
+</html>
