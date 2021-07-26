@@ -18,6 +18,8 @@ validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
+init_dictionary
+init_termdb_queries
 */
 
 export async function validate_ssm2canonicalisoform(api) {
@@ -423,7 +425,7 @@ export async function getSamples_gdcapi(q, ds) {
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
 	// total to display on sample list page
-	// for numerical terms, total is not possible before making GDC query  
+	// for numerical terms, total is not possible before making GDC query
 	const total = re.data.pagination.total
 	const samples = []
 	for (const s of re.data.hits) {
@@ -779,4 +781,122 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
+}
+
+export async function init_dictionary(ds) {
+	ds.cohort.termdb = {}
+	const id2term = (ds.cohort.termdb.id2term = new Map())
+	const dictionary = ds.termdb.dictionary
+	if (!dictionary.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
+	const response = await got(dictionary.gdcapi.endpoint, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for variant2samples'
+	}
+	if (!re._mapping) throw 'returned data does not have ._mapping'
+	if (!re.fields) throw 'returned data does not have .fields'
+	if (!Array.isArray(re.fields)) throw '.fields not array'
+	if (!re.expand) throw 'returned data does not have .expand'
+	if (!Array.isArray(re.expand)) throw '.expand not array'
+	// store gdc dictionary in memory
+	// step 1: add leaf terms
+	for (const i in re.fields) {
+		const term_path_str = re.fields[i]
+		const term_paths = term_path_str.split('.')
+		const term_id = term_paths[term_paths.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
+			path: term_path_str,
+			isleaf: true,
+			parent_id: term_paths[term_paths.length - 2]
+		}
+		// step 2: add type of leaf terms from _mapping:{}
+		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
+		if (t_map)
+			term_obj.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
+		else if (t_map == undefined) term_obj.type = 'unknown'
+		id2term.set(term_id, term_obj)
+	}
+	// step 3: add parent  and root terms
+	for (const i in re.expand) {
+		const term_str = re.expand[i]
+		const term_levels = term_str.split('.')
+		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
+			path: term_str
+		}
+		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
+		id2term.set(term_id, term_obj)
+	}
+	init_termdb_queries(ds.cohort.termdb)
+	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
+}
+
+function init_termdb_queries(termdb) {
+	const q = (termdb.q = {})
+	const default_vocab = 'ssm_occurance'
+
+	{
+		const cache = new Map()
+		q.getRootTerms = (vocab = default_vocab) => {
+			const cacheId = vocab
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const terms = [...termdb.id2term.values()]
+			// find terms without term.parent_id
+			const re = terms.filter(t => t.parent_id == undefined)
+			cache.set(cacheId, re)
+			return re
+		}
+	}
+
+	{
+		const cache = new Map()
+		q.getTermChildren = (id, vocab = default_vocab) => {
+			const cacheId = id + ';;' + vocab
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const terms = [...termdb.id2term.values()]
+			// find terms which have term.parent_id as clicked term
+			const re = terms.filter(t => t.parent_id == id)
+			cache.set(cacheId, re)
+			return re
+		}
+	}
+
+	{
+		const cache = new Map()
+		q.findTermByName = (searchStr, vocab = default_vocab) => {
+			searchStr = searchStr.toLowerCase() // convert to lowercase
+			// replace space with _ to match with id of terms
+			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+			const cacheId = searchStr + ';;' + vocab
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const terms = [...termdb.id2term.values()]
+			// find terms that have term.id containing search string
+			const re = terms.filter(t => t.id.includes(searchStr))
+			cache.set(cacheId, re)
+			return re
+		}
+	}
+
+	{
+		const cache = new Map()
+		q.getAncestorIDs = id => {
+			if (cache.has(id)) return cache.get(id)
+			const terms = [...termdb.id2term.values()]
+			const search_term = terms.find(t => t.id == id)
+			// ancestor terms are already defined in term.path seperated by '.'
+			let re = search_term.path ? search_term.path.split('.') : ['']
+			if (re.length > 1) re.pop()
+			cache.set(id, re)
+			return re
+		}
+	}
 }

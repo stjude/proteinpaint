@@ -33,8 +33,8 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		const par = get_parameter(tk, block)
-		const data = await client.dofetch2('mds3?' + par)
+		const [par, headers] = get_parameter(tk, block)
+		const data = await client.dofetch2('mds3?' + par, { headers })
 		if (data.error) throw data.error
 
 		if (tk.uninitialized) {
@@ -84,6 +84,7 @@ function get_parameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	// instructs server to return data types associated with tracks
 	// including skewer or non-skewer
 	par.push('forTrack=1')
@@ -118,10 +119,7 @@ function get_parameter(tk, block) {
 			// XXX any other possibilities from gdc portal
 			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		}
-		if (tk.token) {
-			// quick fix!!!
-			par.push('token=' + tk.token)
-		}
+		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform
@@ -143,7 +141,7 @@ function get_parameter(tk, block) {
 		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
 	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
-	return par.join('&')
+	return [par.join('&'), headers]
 }
 
 export function rangequery_rglst(tk, block, par) {
