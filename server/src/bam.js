@@ -743,6 +743,7 @@ async function get_q(genome, req) {
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
 		maxntwidth = Math.max(maxntwidth, r.ntwidth)
+		console.log('r.width:', r.width)
 	}
 
 	// max ntwidth determines segment spacing in a stack, across all regions
@@ -1084,35 +1085,34 @@ async function divide_reads_togroups(q) {
 	//if (templates.length == 0) {
 	const templates_info = []
 
+	let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
+	const widths = []
 	for (const r of q.regions) {
 		for (const line of r.lines) {
 			// FIXME to support multi-region
 			// q.regions[0] may need to be modified
 			templates_info.push({ sam_info: line, tempscore: '' })
 		}
-	}
-
-	// Checking if none of the regions contain any reads. Its possible one region contains reads but the other does not, in that case it will still show reads for that region
-	for (const r of q.regions) {
-		let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
 		if (r.lines.length != 0) {
 			// no reads at all, return empty group
 			count_reads_in_regions = true
 		}
+		widths.push(r.width)
+	}
 
-		if (count_reads_in_regions == false) {
-			// This condition will only be true if both regions do not contain any reads
-			return {
-				groups: [
-					{
-						type: bamcommon.type_all,
-						regions: bamcommon.duplicateRegions(q.regions),
-						templates: templates_info,
-						messagerows: [],
-						partstack: q.partstack
-					}
-				]
-			}
+	if (count_reads_in_regions == false) {
+		// This condition will only be true if both regions do not contain any reads
+		return {
+			groups: [
+				{
+					type: bamcommon.type_all,
+					regions: bamcommon.duplicateRegions(q.regions),
+					templates: templates_info,
+					messagerows: [],
+					partstack: q.partstack,
+					widths: widths
+				}
+			]
 		}
 	}
 
@@ -1125,9 +1125,9 @@ async function divide_reads_togroups(q) {
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info)
+				return await rust_match_complexvariant(q, templates_info, widths)
 			} else {
-				return await match_complexvariant(q, templates_info)
+				return await match_complexvariant(q, templates_info, widths)
 			}
 		}
 	}
@@ -1143,7 +1143,8 @@ async function divide_reads_togroups(q) {
 				regions: bamcommon.duplicateRegions(q.regions),
 				templates: templates_info,
 				messagerows: [],
-				partstack: q.partstack
+				partstack: q.partstack,
+				widths: widths
 			}
 		]
 	}
@@ -1868,6 +1869,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	const r = group.regions[segment.ridx] // this region where the segment falls into
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
+	console.log('group:', group)
 
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
