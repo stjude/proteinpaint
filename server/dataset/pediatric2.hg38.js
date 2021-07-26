@@ -197,6 +197,73 @@ module.exports = function(common) {
 						key: 'diagnosis_short'
 					}
 				]
+			},
+
+			mutation_signature: {
+				sets: {
+					pantargetsignature: {
+						name: 'Mutation signature',
+						samples: {
+							file: 'hg19/TARGET/mutationsignature/sample2signature',
+							valuename: 'Number of somatic mutations per MB attributed to each signature',
+							skipzero: true
+						},
+						signatures: {
+							1: {
+								name: 'Accumulation with age (COSMIC 1)',
+								//color: '#1DA850'
+								color: '#676767'
+							},
+							2: {
+								name: 'APOBEC 3A/3B (COSMIC 2)',
+								color: '#F7ACB4'
+							},
+							3: {
+								name: 'Failure of HR repair (COSMIC 3)',
+								//color:'#F7941F',
+								color: '#1CA89E' // from 10
+							},
+							4: {
+								name: 'Accumulation with age (COSMIC 5)',
+								//color:'#12693A',
+								color: '#676767'
+							},
+							5: {
+								name: 'Exposure to UV light (COSMIC 7)',
+								color: '#F7EE20'
+							},
+							6: {
+								name: 'Unknown (COSMIC 8)',
+								color: '#24A9E0'
+							},
+							7: {
+								name: 'APOBEC 3A/3B + REV1 (COSMIC 13)',
+								color: '#F15C47'
+							},
+							8: {
+								name: 'Reactive oxygen species (COSMIC 18)',
+								color: '#2C3590'
+							},
+							9: {
+								name: 'MSI signatures (COSMIC 26)',
+								color: '#8B603D'
+							},
+							10: {
+								name: 'N/A (COSMIC 23)',
+								//color:'#1CA89E',
+								color: '#F7941F' // from 3
+							},
+							11: {
+								name: 'N/A (COSMIC 3)',
+								color: '#652F90'
+							},
+							n: {
+								nodata: 1,
+								color: '#aaa'
+							}
+						}
+					}
+				}
 			}
 		},
 
