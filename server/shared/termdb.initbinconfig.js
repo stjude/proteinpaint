@@ -21,7 +21,7 @@ module.exports = function initBinConfig(data, opts = {}) {
 	const firstBinStop = data[p5idx]
 	// round the bin values
 	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding
-	if (binSize >= 1 && Math.abs(firstBinStop) >= 1) {
+	if (Number.isInteger(Number(binSize.toPrecision(1))) && Number.isInteger(Number(firstBinStop.toPrecision(1)))) {
 		;[binSize_rnd, firstBinStop_rnd, lastBinStart_rnd] = roundIntegers(binSize, firstBinStop, max)
 	} else {
 		;[binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundFractions(binSize, firstBinStop, max)
@@ -49,7 +49,12 @@ module.exports = function initBinConfig(data, opts = {}) {
 function roundIntegers(binSize, firstBinStop, max) {
 	const binSize_rnd = Number(binSize.toPrecision(1))
 	const binSize_log = Math.floor(Math.log10(binSize_rnd))
-	const firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
+	let firstBinStop_log
+	if (firstBinStop === 0) {
+		firstBinStop_log = 0
+	} else {
+		firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
+	}
 	let firstBinStop_rnd
 	if (binSize_log <= firstBinStop_log) {
 		firstBinStop_rnd = Math.round(firstBinStop / 10 ** binSize_log) * 10 ** binSize_log

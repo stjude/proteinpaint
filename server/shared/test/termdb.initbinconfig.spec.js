@@ -3557,10 +3557,9 @@ tape('test data', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.3,
-			first_bin: { stop: -0.7 },
-			last_bin: { start: 1.1 },
-			rounding: '.1f'
+			bin_size: 3,
+			first_bin: { stop: 0 },
+			last_bin: { start: 18 }
 		},
 		'should match expected output'
 	)
