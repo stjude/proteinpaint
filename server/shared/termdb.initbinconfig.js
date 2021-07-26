@@ -48,18 +48,17 @@ module.exports = function initBinConfig(data, opts = {}) {
 
 function roundIntegers(binSize, firstBinStop, max) {
 	const binSize_rnd = Number(binSize.toPrecision(1))
-	const binSize_log = Math.floor(Math.log10(binSize_rnd))
-	let firstBinStop_log
-	if (firstBinStop === 0) {
-		firstBinStop_log = 0
-	} else {
-		firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
-	}
 	let firstBinStop_rnd
-	if (binSize_log <= firstBinStop_log) {
-		firstBinStop_rnd = Math.round(firstBinStop / 10 ** binSize_log) * 10 ** binSize_log
+	if (firstBinStop === 0) {
+		firstBinStop_rnd = 0
 	} else {
-		firstBinStop_rnd = Math.round(firstBinStop / 10 ** firstBinStop_log) * 10 ** firstBinStop_log
+		const firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
+		const binSize_log = Math.floor(Math.log10(binSize_rnd))
+		if (binSize_log <= firstBinStop_log) {
+			firstBinStop_rnd = Math.round(firstBinStop / 10 ** binSize_log) * 10 ** binSize_log
+		} else {
+			firstBinStop_rnd = Math.round(firstBinStop / 10 ** firstBinStop_log) * 10 ** firstBinStop_log
+		}
 	}
 	// if the number of bins is greater than 8 after rounding, set the last bin start to restrict the number of bins to 8
 	let lastBinStart_rnd
@@ -73,14 +72,20 @@ function roundIntegers(binSize, firstBinStop, max) {
 function roundFractions(binSize, firstBinStop, max) {
 	const binSize_rnd = Number(binSize.toPrecision(1))
 	const binSize_log = Math.floor(Math.log10(binSize_rnd))
-	const firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
+	let firstBinStop_rnd
 	let digits
-	if (binSize_log <= firstBinStop_log) {
+	if (firstBinStop === 0) {
+		firstBinStop_rnd = 0
 		digits = Math.abs(binSize_log)
 	} else {
-		digits = Math.abs(firstBinStop_log)
+		const firstBinStop_log = Math.floor(Math.log10(Math.abs(firstBinStop)))
+		if (binSize_log <= firstBinStop_log) {
+			digits = Math.abs(binSize_log)
+		} else {
+			digits = Math.abs(firstBinStop_log)
+		}
+		firstBinStop_rnd = Number(firstBinStop.toFixed(digits))
 	}
-	const firstBinStop_rnd = Number(firstBinStop.toFixed(digits))
 	// if the number of bins is greater than 8 after rounding, set the last bin start to restrict the number of bins to 8
 	let lastBinStart_rnd
 	const eighthBinStop = firstBinStop_rnd + binSize_rnd * 7

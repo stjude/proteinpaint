@@ -158,7 +158,7 @@ tape('JSON string output', function(test) {
 	test.end()
 })
 
-tape('test data', function(test) {
+tape('large test data: integers', function(test) {
 	const input = []
 	// mimic data from an actual variable
 	for (let i = 0; i < 200; i++) input.push(0)
@@ -181,6 +181,38 @@ tape('test data', function(test) {
 			bin_size: 3,
 			first_bin: { stop: 0 },
 			last_bin: { start: 18 }
+		},
+		'should match expected output'
+	)
+	test.end()
+})
+
+tape('large test data: floats', function(test) {
+	const input = []
+	// mimic data from an actual variable
+	for (let i = 0; i < 300; i++) input.push(0)
+	for (let i = 0; i < 100; i++) input.push(0.00804)
+	for (let i = 0; i < 100; i++) input.push(0.0159)
+	for (let i = 0; i < 200; i++) input.push(0.016)
+	for (let i = 0; i < 90; i++) input.push(0.0163)
+	for (let i = 0; i < 70; i++) input.push(0.0324)
+	for (let i = 0; i < 60; i++) input.push(0.149)
+	for (let i = 0; i < 50; i++) input.push(0.423)
+	for (let i = 0; i < 40; i++) input.push(0.809)
+	for (let i = 0; i < 20; i++) input.push(1.07)
+	for (let i = 0; i < 20; i++) input.push(1.56)
+	for (let i = 0; i < 10; i++) input.push(2.14)
+	for (let i = 0; i < 10; i++) input.push(3.8)
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'regular',
+			startinclusive: true,
+			bin_size: 0.5,
+			first_bin: { stop: 0 },
+			last_bin: { start: 3 },
+			rounding: '.1f'
 		},
 		'should match expected output'
 	)
