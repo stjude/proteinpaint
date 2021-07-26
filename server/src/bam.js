@@ -1786,6 +1786,7 @@ function check_mismatch(lst, r, box, boxseq) {
 function plot_template(ctx, template, group, q) {
 	if (group.returntemplatebox) {
 		// one box per template
+		console.log('template.segments[0].segstart:', template.segments[0].segstart)
 		const box = {
 			qname: template.segments[0].qname,
 			x1: template.x1,
@@ -1949,17 +1950,23 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					if (xoff + ntboxwidthincrement < r.width * (segment.ridx + 1) && xoff < r.width * (segment.ridx + 1)) {
+						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					}
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
+						if (xoff + r.ntwidth / 2 < r.width * (segment.ridx + 1) && xoff < r.width * (segment.ridx + 1)) {
+							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
+						}
 					}
 					xoff += r.ntwidth
 				}
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				if (x + ntboxwidthincrement < r.width * (segment.ridx + 1) && x < r.width * (segment.ridx + 1)) {
+					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				}
 			}
 			continue
 		}
@@ -1980,8 +1987,10 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					xoff += r.ntwidth
+					if (xoff + ntboxwidthincrement < r.width * (segment.ridx + 1) && xoff < r.width * (segment.ridx + 1)) {
+						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+						xoff += r.ntwidth
+					}
 				})
 			} else {
 				// not showing qual, one box
@@ -1997,7 +2006,9 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				if (x + ntboxwidthincrement < r.width * (segment.ridx + 1) && x < r.width * (segment.ridx + 1)) {
+					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				}
 			}
 			if (r.to_printnt) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
