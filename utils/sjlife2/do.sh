@@ -26,7 +26,7 @@ node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annot
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 # created "annotation.admix.sjlife" and "annotation.admix.ccss"
 
-node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
+#node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
 # created "keep/termconfig"
 
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/matrix.tree
@@ -35,7 +35,7 @@ node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sjlifectcae.tr
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sn.tree
 # updated files in-place
 
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig 
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix # keep/termconfig 
 # created "keep/termjson"
 # created "diagnostic_messages.txt"
 
