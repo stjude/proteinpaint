@@ -1989,8 +1989,8 @@ function plot_segment(ctx, segment, y, group, q) {
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					if (xoff + ntboxwidthincrement < r.width * (segment.ridx + 1) && xoff < r.width * (segment.ridx + 1)) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-						xoff += r.ntwidth
 					}
+					xoff += r.ntwidth
 				})
 			} else {
 				// not showing qual, one box
