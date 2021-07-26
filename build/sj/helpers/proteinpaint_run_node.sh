@@ -9,7 +9,15 @@ echo "Validating the server configuration against data and code:"
 echo "If you do not see a message for server restart in a few seconds, see validation.log to troubleshoot ..."
 
 echo -e "\n\n$(date '+%Y-%m-%d %H:%M:%S')" >> ../../validate.log
+
+# DO NOT USE: this does not output any validation log to terminal, only to file
+# node ./server.js validate >> ../../validate.log 2>&1
+
+# this logs both to terminal and file, but must reset the pipe
+# to cause the script to fail if there is a validation error
+set -o pipefail
 node ./server.js validate 2>&1 | tee -a ../../validate.log
+set +o pipefail
 
 
 echo "iiq:RESTARTING proteint paint node server."
