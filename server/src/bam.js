@@ -803,6 +803,10 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
+		//let temp_array = templates.map((i) => i.segments[0].ridx)
+		//for (const item of temp_array) {
+		//	console.log('element:', item)
+		//}
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		// read quality is not parsed yet
@@ -1079,10 +1083,13 @@ return {}
 async function divide_reads_togroups(q) {
 	//if (templates.length == 0) {
 	const templates_info = []
-	for (const line of q.regions[0].lines) {
-		// FIXME to support multi-region
-		// q.regions[0] may need to be modified
-		templates_info.push({ sam_info: line, tempscore: '' })
+
+	for (const r of q.regions) {
+		for (const line of r.lines) {
+			// FIXME to support multi-region
+			// q.regions[0] may need to be modified
+			templates_info.push({ sam_info: line, tempscore: '' })
+		}
 	}
 	if (q.regions[0].lines.length == 0) {
 		// no reads at all, return empty group
@@ -1316,12 +1323,10 @@ function parse_one_segment(arg) {
 	}
 
 	// from here, read is mapped
-
 	if (cigarstr == '*') {
 		// why this case?
 		return
 	}
-
 	const boxes = [] // collect plottable segments
 	// as the absolute coord start of each box, will be incremented after parsing a box
 	let pos = segstart
@@ -1873,7 +1878,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
-				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
+				const x2 = Math.min(q.canvaswidth / q.regions.length, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
 					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
@@ -1991,7 +1996,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	if (group.stackheight >= minstackheight2strandarrow) {
 		if (segment.forward) {
 			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= q.canvaswidth + group.stackheight / 2) {
+			if (x <= q.canvaswidth / q.regions.length + group.stackheight / 2) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
 				ctx.moveTo(x - group.stackheight / 2, y)
