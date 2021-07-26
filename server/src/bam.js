@@ -1091,18 +1091,28 @@ async function divide_reads_togroups(q) {
 			templates_info.push({ sam_info: line, tempscore: '' })
 		}
 	}
-	if (q.regions[0].lines.length == 0) {
-		// no reads at all, return empty group
-		return {
-			groups: [
-				{
-					type: bamcommon.type_all,
-					regions: bamcommon.duplicateRegions(q.regions),
-					templates: templates_info,
-					messagerows: [],
-					partstack: q.partstack
-				}
-			]
+
+	// Checking if none of the regions contain any reads. Its possible one region contains reads but the other does not, in that case it will still show reads for that region
+	for (const r of q.regions) {
+		let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
+		if (r.lines.length != 0) {
+			// no reads at all, return empty group
+			count_reads_in_regions = true
+		}
+
+		if (count_reads_in_regions == false) {
+			// This condition will only be true if both regions do not contain any reads
+			return {
+				groups: [
+					{
+						type: bamcommon.type_all,
+						regions: bamcommon.duplicateRegions(q.regions),
+						templates: templates_info,
+						messagerows: [],
+						partstack: q.partstack
+					}
+				]
+			}
 		}
 	}
 
@@ -1111,6 +1121,7 @@ async function divide_reads_togroups(q) {
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
 		//for (const template of templates) {
+
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
@@ -1878,7 +1889,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
-				const x2 = Math.min(q.canvaswidth / q.regions.length, x + b.len * r.ntwidth)
+				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
 					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
@@ -1996,7 +2007,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	if (group.stackheight >= minstackheight2strandarrow) {
 		if (segment.forward) {
 			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= q.canvaswidth / q.regions.length + group.stackheight / 2) {
+			if (x <= q.canvaswidth + group.stackheight / 2) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
 				ctx.moveTo(x - group.stackheight / 2, y)
