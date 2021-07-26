@@ -1,6 +1,6 @@
 import { fillbar, tab2box } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
-import { init_tabs, update_tabs } from '../common/dom/horizontalTabs'
+import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
 
 /*
@@ -286,7 +286,7 @@ async function make_multiSampleSummaryList(arg, holder) {
 	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ label: summary_label, callback: div => tab2box(div, summary_tabs) },
+		{ label: 'Summary', callback: div => tab2box(div, summary_tabs) },
 		{ label: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
 	]
 
