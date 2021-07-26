@@ -19,8 +19,8 @@ input files:
 
 
 output:
-1. json object for all atomic terms
-2. diagnostic messages
+1. diagnostic_messages.txt
+2. keep/termjson
 
 step 1:
 	go over phenotree to initialize json backbone of categorical and numeric terms
@@ -54,6 +54,10 @@ const file_matrix = process.argv[3]
 const file_termconfig = process.argv[4]
 const subcohort_columnidx_str = process.argv[5]
 
+// output files
+const outfile_diagnostic = 'diagnostic_messages.txt'
+const outfile_termjson = 'keep/termjson'
+
 let subcohort_columnidx
 if (subcohort_columnidx_str) {
 	subcohort_columnidx = Number(subcohort_columnidx_str)
@@ -63,6 +67,7 @@ if (subcohort_columnidx_str) {
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
+const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 const bins = {
 	// temporary values; to be deleted after parsing matrix file
@@ -102,7 +107,7 @@ async function main() {
 		step4_applyconfig(key2terms)
 	}
 
-	fs.writeFileSync('keep/termjson', JSON.stringify(key2terms, null, 2))
+	fs.writeFileSync(outfile_termjson, JSON.stringify(key2terms, null, 2))
 }
 
 ///////////////////// helpers
@@ -403,16 +408,13 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 						: '')
 			)
 			// find bin size
-			const range = term.bins._max - term.bins._min
-			{
-				const bs = range / 5
-				if (bs > 1) {
-					term.bins.default.bin_size = Math.ceil(bs)
-				} else {
-					term.bins.default.bin_size = bs
-				}
+			try {
+				term.bins.default = initBinConfig(term.bins._values)
+			} catch (e) {
+				console.log(e)
+				console.log(JSON.stringify(term.bins._values))
+				process.exit()
 			}
-			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
 			delete term.bins._values
@@ -420,7 +422,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			continue
 		}
 	}
-	fs.writeFileSync('diagnostic_messages.txt', lines.join('\n') + '\n')
+	fs.writeFileSync(outfile_diagnostic, lines.join('\n') + '\n')
 }
 
 function step4_applyconfig(key2terms) {
