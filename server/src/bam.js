@@ -1087,6 +1087,7 @@ async function divide_reads_togroups(q) {
 
 	let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
 	const widths = []
+	const region_starts = []
 	for (const r of q.regions) {
 		for (const line of r.lines) {
 			// FIXME to support multi-region
@@ -1097,7 +1098,8 @@ async function divide_reads_togroups(q) {
 			// no reads at all, return empty group
 			count_reads_in_regions = true
 		}
-		widths.push(r.width)
+		widths.push(r.width) // Storing widths of regions
+		region_starts.push(r.x) // Storing start regions of starts
 	}
 
 	if (count_reads_in_regions == false) {
@@ -1110,7 +1112,8 @@ async function divide_reads_togroups(q) {
 					templates: templates_info,
 					messagerows: [],
 					partstack: q.partstack,
-					widths: widths
+					widths: widths,
+					region_starts: region_starts
 				}
 			]
 		}
@@ -1125,9 +1128,9 @@ async function divide_reads_togroups(q) {
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info, widths)
+				return await rust_match_complexvariant(q, templates_info, widths, region_starts)
 			} else {
-				return await match_complexvariant(q, templates_info, widths)
+				return await match_complexvariant(q, templates_info, widths, region_starts)
 			}
 		}
 	}
@@ -1144,7 +1147,8 @@ async function divide_reads_togroups(q) {
 				templates: templates_info,
 				messagerows: [],
 				partstack: q.partstack,
-				widths: widths
+				widths: widths,
+				region_starts: region_starts
 			}
 		]
 	}
@@ -1869,7 +1873,8 @@ function plot_segment(ctx, segment, y, group, q) {
 	const r = group.regions[segment.ridx] // this region where the segment falls into
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
-	console.log('group:', group)
+	r.width = group.widths[segment.ridx]
+	r.region_start = group.region_starts[segment.ridx]
 
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
@@ -1891,7 +1896,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
-				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
+				const x2 = Math.min(r.width, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
 					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
@@ -2009,7 +2014,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	if (group.stackheight >= minstackheight2strandarrow) {
 		if (segment.forward) {
 			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= q.canvaswidth + group.stackheight / 2) {
+			if (x <= r.width + group.stackheight / 2) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
 				ctx.moveTo(x - group.stackheight / 2, y)

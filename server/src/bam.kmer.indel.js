@@ -9,7 +9,7 @@ const fs = require('fs')
 const serverconfig = require('./serverconfig')
 const rust_indel = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
 
-export async function match_complexvariant_rust(q, templates_info, region_widths) {
+export async function match_complexvariant_rust(q, templates_info, region_widths, region_starts) {
 	//const segbplen = templates[0].segments[0].seq.length
 	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
 	// need to verify if the retrieved sequence is showing 1bp offset or not
@@ -267,6 +267,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 					: 'neither reference or mutant alleles')
 		})
 		g.widths = region_widths
+		g.region_starts = region_starts
 		groups.push(g)
 	}
 	return { groups, refalleleerror, max_diff_score, min_diff_score }
@@ -291,7 +292,7 @@ function run_rust_indel_pipeline(input_data) {
 	})
 }
 
-export async function match_complexvariant(q, templates_info, region_widths) {
+export async function match_complexvariant(q, templates_info, region_widths, region_starts) {
 	// TODO
 	// get flanking sequence, suppose that segments are of same length, use segment length
 	//const segbplen = templates[0].segments[0].seq.length
@@ -635,6 +636,7 @@ export async function match_complexvariant(q, templates_info, region_widths) {
 					: 'neither reference or mutant alleles')
 		})
 		g.widths = region_widths
+		g.region_starts = region_starts
 		groups.push(g)
 	}
 	return { groups, refalleleerror, max_diff_score, min_diff_score }
