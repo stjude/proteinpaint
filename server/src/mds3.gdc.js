@@ -395,7 +395,7 @@ export async function getSamples_gdcapi(q, ds) {
 	const fields =
 		q.get == ds.variant2samples.type_sunburst
 			? api.fields_sunburst
-			: q.get == ds.variant2samples.type_summary
+			: (q.get == ds.variant2samples.type_summary) || (q.get == ds.variant2samples.type_update_summary)
 			? api.fields_summary
 			: q.get == ds.variant2samples.type_samples
 			? api.fields_samples
@@ -453,7 +453,8 @@ export async function getSamples_gdcapi(q, ds) {
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id]) sample[id] = sample[id][t.fields[j]]
+					if (sample[id] && Array.isArray(sample[id])) sample[id] = sample[id][0][t.fields[j]]
+					else if (sample[id]) sample[id] = sample[id][t.fields[j]]
 				}
 			}
 		}
@@ -896,6 +897,13 @@ function init_termdb_queries(termdb){
 			if(re.length > 1) re.pop()
 			cache.set(id, re)
 			return re
+		}
+	}
+
+	{
+		q.getTermById = id => {
+			const terms = [...termdb.id2term.values()]
+			return terms.find(i => i.id == id)
 		}
 	}
 }

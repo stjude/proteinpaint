@@ -13,24 +13,20 @@ this function attaches .holder (d3 dom) to each tab of tabs[]
 */
 
 export function init_tabs(holder, tabs) {
-	const tab_holder = holder
+	tabs.holder = holder
 		.append('div')
 		.style('padding', '10px 10px 0 10px')
-		// .style('border-bottom', 'solid 1px #aaa')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
-		tab.tab = tab_holder
+		tab.tab = tabs.holder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + (i == 0 ? ' sj-left-toggle' : ' sj-right-toggle'))
 			.classed('active', tab.active ? true : false)
-			.style('padding', '7px 10px')
+			.style('padding', '5px')
 			.style('display', 'inline-block')
-			// .style('border-top', 'solid 1px #ddd')
-			// .style('border-left', i == 0 ? 'solid 1px #ddd' : '')
-			// .style('border-right', 'solid 1px #ddd')
 			.html(tab.label)
 			.on('click', async () => {
 				const last_active_tab = tabs.find(t => t.active == true)

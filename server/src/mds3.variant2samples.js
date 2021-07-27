@@ -2,6 +2,7 @@ const { stratinput } = require('../shared/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
 const { get_densityplot } = require('./mds3.densityPlot')
+const { client_copy } = require('./mds3.init')
 
 /*
 from one or more variants, get list of samples harboring any of the variants
@@ -34,6 +35,7 @@ module.exports = async (q, ds) => {
 	if (q.get == ds.variant2samples.type_samples) return [ samples, total ]
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
 	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
+	if (q.get == ds.variant2samples.type_update_summary) return update_summary(q, ds)
 	throw 'unknown get type'
 }
 
@@ -99,4 +101,23 @@ async function make_summary(samples, ds) {
 		}
 	}
 	return entries
+}
+
+async function update_summary(q, ds) {
+		// check in gdc dictionary
+		const termid = q.add_term
+		const term_ = ds.cohort.termdb.q.getTermById(termid)
+		const term = {
+			name: term_.name,
+			id: term_.id,
+			type: term_.type
+		}
+		term.fields = term_.path.split('.').slice(1)
+		ds.termdb.terms.push(term)
+		ds.variant2samples.termidlst.push(termid)
+		ds.variant2samples.gdcapi.fields_summary.push(term_.path)
+		ds.variant2samples.gdcapi.fields_samples.push(term_.path)
+		const [ samples, total ] = await get_samples(q, ds)
+		const entires = make_summary(samples, ds)
+		return entires
 }
