@@ -381,7 +381,7 @@ async function plot_pileup(q, templates) {
 		for (const bp of bplst[ridx]) {
 			if (!bp) continue // gap from zoomed out mode
 
-			const x0 = (bp.position - r.start) * r.ntwidth + (q.canvaswidth * ridx) / 2
+			const x0 = (bp.position - r.start) * r.ntwidth + r.x
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
 			const barwidth = Math.max(1, r.ntwidth) / q.regions.length // when in zoomed out mode, each bar is one pixel, thus the width=1
@@ -1902,9 +1902,15 @@ function plot_segment(ctx, segment, y, group, q) {
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
 						ctx.fillStyle = 'white'
-						ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
-						ctx.fillStyle = match_hq
-						ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						if (
+							(x2 + x1) / 2 + tw / 2 < r.width * (segment.ridx + 1) &&
+							(x2 + x1) / 2 - tw / 2 < r.width * (segment.ridx + 1) &&
+							r.region_start < (x2 + x1) / 2 - tw / 2
+						) {
+							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						}
 					}
 				}
 			}
