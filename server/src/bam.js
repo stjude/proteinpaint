@@ -384,7 +384,7 @@ async function plot_pileup(q, templates) {
 			const x0 = (bp.position - r.start) * r.ntwidth + r.x
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-			const barwidth = Math.max(1, r.ntwidth) / q.regions.length // when in zoomed out mode, each bar is one pixel, thus the width=1
+			const barwidth = Math.max(1, r.ntwidth) * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
 
 			// total coverage of this bp
 			{
@@ -1086,19 +1086,19 @@ async function divide_reads_togroups(q) {
 
 	let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
 	const widths = []
-	const region_starts = []
+	let width = 0
 	for (const r of q.regions) {
 		for (const line of r.lines) {
 			// FIXME to support multi-region
 			// q.regions[0] may need to be modified
 			templates_info.push({ sam_info: line, tempscore: '' })
 		}
+		width = r.x + r.width
 		if (r.lines.length != 0) {
 			// no reads at all, return empty group
 			count_reads_in_regions = true
 		}
-		widths.push(r.width) // Storing widths of regions
-		region_starts.push(r.x) // Storing start regions of starts
+		widths.push(width) // Storing widths of regions
 	}
 
 	if (count_reads_in_regions == false) {
@@ -1111,8 +1111,7 @@ async function divide_reads_togroups(q) {
 					templates: templates_info,
 					messagerows: [],
 					partstack: q.partstack,
-					widths: widths,
-					region_starts: region_starts
+					widths: widths
 				}
 			]
 		}
@@ -1127,9 +1126,9 @@ async function divide_reads_togroups(q) {
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info, widths, region_starts)
+				return await rust_match_complexvariant(q, templates_info, widths)
 			} else {
-				return await match_complexvariant(q, templates_info, widths, region_starts)
+				return await match_complexvariant(q, templates_info, widths)
 			}
 		}
 	}
@@ -1146,8 +1145,7 @@ async function divide_reads_togroups(q) {
 				templates: templates_info,
 				messagerows: [],
 				partstack: q.partstack,
-				widths: widths,
-				region_starts: region_starts
+				widths: widths
 			}
 		]
 	}
@@ -1873,7 +1871,6 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 	r.width = group.widths[segment.ridx]
-	r.region_start = group.region_starts[segment.ridx]
 
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
@@ -1902,11 +1899,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
 						ctx.fillStyle = 'white'
-						if (
-							(x2 + x1) / 2 + tw / 2 < r.width * (segment.ridx + 1) &&
-							(x2 + x1) / 2 - tw / 2 < r.width * (segment.ridx + 1) &&
-							r.region_start < (x2 + x1) / 2 - tw / 2
-						) {
+						if ((x2 + x1) / 2 + tw / 2 < r.width && (x2 + x1) / 2 - tw / 2 < r.width && r.x < (x2 + x1) / 2 - tw / 2) {
 							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
 							ctx.fillStyle = match_hq
 							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
@@ -1954,20 +1947,12 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					if (
-						xoff + ntboxwidthincrement < r.width * (segment.ridx + 1) &&
-						xoff < r.width * (segment.ridx + 1) &&
-						r.region_start < xoff + ntboxwidthincrement
-					) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						if (
-							xoff + r.ntwidth / 2 < r.width * (segment.ridx + 1) &&
-							xoff < r.width * (segment.ridx + 1) &&
-							r.region_start < xoff + r.ntwidth / 2
-						) {
+						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x < xoff + r.ntwidth / 2) {
 							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 						}
 					}
@@ -1976,11 +1961,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
-				if (
-					x + ntboxwidthincrement < r.width * (segment.ridx + 1) &&
-					x < r.width * (segment.ridx + 1) &&
-					r.region_start < x + ntboxwidthincrement
-				) {
+				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				}
 			}
@@ -2003,11 +1984,7 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					if (
-						xoff + ntboxwidthincrement < r.width * (segment.ridx + 1) &&
-						xoff < r.width * (segment.ridx + 1) &&
-						r.region_start < xoff + ntboxwidthincrement
-					) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					xoff += r.ntwidth
@@ -2026,11 +2003,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
-				if (
-					x + ntboxwidthincrement < r.width * (segment.ridx + 1) &&
-					x < r.width * (segment.ridx + 1) &&
-					r.region_start < x + ntboxwidthincrement
-				) {
+				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				}
 			}
