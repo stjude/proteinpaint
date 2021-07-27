@@ -39,7 +39,7 @@ class Term1ui {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			plot,
-			displayAsSurvival: plot.term.term.type == 'survival' || (plot.term2 && plot.term2.term.type == 'survival')
+			isVisible: plot.term.term.type != 'survival'
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -47,7 +47,7 @@ class Term1ui {
 		return state
 	}
 	main() {
-		if (this.state.displayAsSurvival) {
+		if (!this.state.isVisible) {
 			this.dom.tr.style('display', 'none')
 			return
 		}
