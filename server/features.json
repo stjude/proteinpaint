@@ -259,7 +259,7 @@
                         "nobox": 1,
                         "noheader": 1,
                         "genome": "hg19",
-                        "position":"chr11:69449264-69475901",
+                        "position":"chr17:7449122-7706842",
                         "tracks":[
                             {
                                 "type":"bedj",
