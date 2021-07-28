@@ -1138,7 +1138,7 @@ thus less things to worry about...
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					j.included_types = i.included_types.split(',')
+					j.included_types = i.included_types ? i.included_types.split(',') : []
 					return j
 				})
 			}
@@ -1150,7 +1150,7 @@ thus less things to worry about...
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
 		const s = {
-			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+			'': cn.prepare('SELECT id,jsondata,included_types FROM terms WHERE name LIKE ?')
 		}
 		const trueFilter = () => true
 		q.findTermByName = (n, limit, cohortStr = '', exclude_types = []) => {
@@ -1233,7 +1233,7 @@ thus less things to worry about...
 	function initCohortJoinFxn(template) {
 		// will hold prepared statements, with object key = one or more comma-separated '?'
 		const s_cohort = {
-			'': cn.prepare(template.replace('JOINCLAUSE', ''))
+			'': cn.prepare(template.replace('JOINCLAUSE', '').replace('INCLUDEDTYPESCOL', ', t.included_types'))
 		}
 		return function getStatement(cohortStr) {
 			const questionmarks = cohortStr ? '?' : ''

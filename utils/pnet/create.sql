@@ -16,7 +16,10 @@ create table terms (
   name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null,
-  child_order integer not null
+  child_order integer not null,
+  type text,
+  isleaf integer,
+  included_types text
 );
 update terms set parent_id=null where parent_id='';
 create index terms_id on terms(id);

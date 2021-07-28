@@ -19,7 +19,10 @@ create table terms (
   name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null,
-  child_order integer not null
+  child_order integer not null,
+  type text,
+  isleaf integer,
+  included_types text
 );
 
 .import termdb terms
@@ -156,7 +159,8 @@ DROP INDEX IF EXISTS subcohort_terms_termid;
 CREATE TABLE subcohort_terms (
  cohort TEXT,
  term_id TEXT,
- count INT
+ count INT,
+ included_types TEXT
 );
 .import term2subcohort subcohort_terms
 

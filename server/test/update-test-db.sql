@@ -69,8 +69,17 @@ select count(*) from survival; -- should be 200, if we have 100 samples
 -- to add columns to the terms table
 ---------------------------------------------
 
-ALTER TABLE terms
-ADD COLUMN type TEXT;
+ALTER TABLE terms ADD COLUMN type TEXT;
+ALTER TABLE terms ADD COLUMN isleaf INTEGER;
+ALTER TABLE terms ADD COLUMN included_types TEXT;
+ALTER TABLE subcohort_terms ADD COLUMN included_types TEXT;
+
+UPDATE terms
+SET isleaf=1 
+WHERE jsondata LIKE '%"isleaf":1%'
+OR jsondata LIKE '%"isleaf": 1%'
+OR jsondata LIKE '%"isleaf":true%'
+OR jsondata LIKE '%"isleaf": true%';
 
 UPDATE terms
 SET type='categorical' 
@@ -92,9 +101,6 @@ UPDATE terms
 SET type='survival' 
 WHERE jsondata LIKE '%"type":"survival"%';
 
-ALTER TABLE subcohort_terms
-ADD COLUMN included_types TEXT;
-
 UPDATE subcohort_terms
 SET included_types=(
 SELECT GROUP_CONCAT(DISTINCT c.type) 
@@ -104,8 +110,13 @@ JOIN subcohort_terms s ON s.cohort = subcohort_terms.cohort AND s.term_id = subc
 );
 
 UPDATE terms
+SET included_types = type
+WHERE isleaf = 1 AND type IS NOT NULL;
+
+UPDATE terms
 SET included_types=(
 SELECT GROUP_CONCAT(DISTINCT c.type) 
 FROM terms c
 JOIN ancestry a ON (terms.id = a.ancestor_id AND a.term_id = c.id) OR (a.term_id = c.id AND terms.id = a.term_id)
-);
+)
+WHERE isleaf IS NULL OR isleaf = 0;

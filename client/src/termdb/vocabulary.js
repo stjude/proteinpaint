@@ -60,7 +60,7 @@ class TermdbVocab {
 	async getTermChildren(term, cohortValuelst) {
 		const lst = [
 			'genome=' + this.vocab.genome,
-			'&dslabel=' + this.vocab.dslabel,
+			'dslabel=' + this.vocab.dslabel,
 			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
 		]
 		if (cohortValuelst) {
