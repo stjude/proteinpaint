@@ -1832,6 +1832,8 @@ function plot_template(ctx, template, group, q) {
 	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
+		const r = group.regions[seg.ridx]
+		r.width = group.widths[seg.ridx]
 		if (i == 0) {
 			// is the first segment, same rendering method no matter in single or paired mode
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1839,6 +1841,8 @@ function plot_template(ctx, template, group, q) {
 		}
 		// after the first segment, this only occurs in paired mode
 		const prevseg = template.segments[i - 1]
+		const prev_r = group.regions[prevseg.ridx]
+		prev_r.width = group.widths[prevseg.ridx]
 		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1846,8 +1850,20 @@ function plot_template(ctx, template, group, q) {
 			ctx.strokeStyle = group.stackheight <= 2 ? split_linecolorfaint : match_hq
 			ctx.setLineDash([5, 3]) // dash for read pairs
 			ctx.beginPath()
-			ctx.moveTo(prevseg.x2, y)
-			ctx.lineTo(seg.x1, y)
+			if (prev_r.x == r.x) {
+				// Check if both segments are in the same region
+				ctx.moveTo(prevseg.x2, y)
+				ctx.lineTo(seg.x1, y)
+			} else if (prev_r.x < prevseg.x2 && prevseg.x2 < prev_r.width && r.x < seg.x1 && seg.x1 < r.width) {
+				ctx.moveTo(prevseg.x2, y)
+				ctx.lineTo(seg.x1, y)
+			} else if (prev_r.x < prevseg.x2 && prevseg.x2 < prev_r.width && r.x >= seg.x1 && seg.x1 < r.width) {
+				ctx.moveTo(prevseg.x2, y)
+				ctx.lineTo(r.x, y)
+			} else if (prev_r.x < prevseg.x2 && prevseg.x2 >= prev_r.width && r.x < seg.x1 && seg.x1 < r.width) {
+				ctx.moveTo(prev_r.width, y)
+				ctx.lineTo(seg.x1, y)
+			}
 			ctx.stroke()
 
 			if (group.overlapRP_hlline) {
