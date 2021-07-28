@@ -1093,7 +1093,7 @@ async function divide_reads_togroups(q) {
 			// q.regions[0] may need to be modified
 			templates_info.push({ sam_info: line, tempscore: '' })
 		}
-		width = r.x + r.width
+		width = r.x + r.width // Storing the extreme right position of every region
 		if (r.lines.length != 0) {
 			// no reads at all, return empty group
 			count_reads_in_regions = true
@@ -1871,7 +1871,6 @@ function plot_segment(ctx, segment, y, group, q) {
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
 	r.width = group.widths[segment.ridx]
-
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
@@ -1899,8 +1898,16 @@ function plot_segment(ctx, segment, y, group, q) {
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
 						ctx.fillStyle = 'white'
-						if ((x2 + x1) / 2 + tw / 2 < r.width && (x2 + x1) / 2 - tw / 2 < r.width && r.x < (x2 + x1) / 2 - tw / 2) {
+						if ((x2 + x1) / 2 + tw / 2 < r.width && r.x < (x2 + x1) / 2 - tw / 2) {
 							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						} else if ((x2 + x1) / 2 + tw / 2 < r.width && r.x >= (x2 + x1) / 2 - tw / 2) {
+							ctx.fillRect(r.x, y, tw + (x2 + x1) / 2 - tw / 2 - r.x, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						} else if ((x2 + x1) / 2 + tw / 2 >= r.width && r.x < (x2 + x1) / 2 - tw / 2) {
+							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, r.width - (x2 + x1) / 2 + tw / 2, group.stackheight)
 							ctx.fillStyle = match_hq
 							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
 						}
@@ -1961,8 +1968,12 @@ function plot_segment(ctx, segment, y, group, q) {
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
-				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x) {
+				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x < x) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
+					ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
+					ctx.fillRect(x, y, r.width - x, group.stackheight)
 				}
 			}
 			continue
@@ -1984,7 +1995,7 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					xoff += r.ntwidth
@@ -2005,6 +2016,10 @@ function plot_segment(ctx, segment, y, group, q) {
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
+					ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
+					ctx.fillRect(x, y, r.width - x, group.stackheight)
 				}
 			}
 			if (r.to_printnt) {
