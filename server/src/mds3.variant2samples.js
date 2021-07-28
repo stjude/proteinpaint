@@ -2,7 +2,6 @@ const { stratinput } = require('../shared/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
 const { get_densityplot } = require('./mds3.densityPlot')
-const { client_copy } = require('./mds3.init')
 
 /*
 from one or more variants, get list of samples harboring any of the variants
@@ -104,8 +103,9 @@ async function make_summary(samples, ds) {
 }
 
 async function update_summary(q, ds) {
-		// check in gdc dictionary
+		// update ds.variant2samples with new term
 		const termid = q.add_term
+		if(ds.termdb.getTermById(termid) != undefined) return
 		const term_ = ds.cohort.termdb.q.getTermById(termid)
 		const term = {
 			name: term_.name,
@@ -118,6 +118,7 @@ async function update_summary(q, ds) {
 		ds.variant2samples.gdcapi.fields_summary.push(term_.path)
 		ds.variant2samples.gdcapi.fields_samples.push(term_.path)
 		const [ samples, total ] = await get_samples(q, ds)
+		console.log('summary table updated with samples: ',total)
 		const entires = make_summary(samples, ds)
 		return entires
 }

@@ -318,16 +318,21 @@ function init_dictionary_ui(holder, summary_holder, arg){
 					genome: arg.block.genome.name,
 					nav: {
 						header_mode: 'search_only'
+					},
+					tree:{
+						expandedTermIds: ['case']
 					}
 				},
 				tree: {
 					click_term: term => {
 						tip.hide()
-						arg.tk.mds.variant2samples.new_term = term.id
-						arg.tk.mds.variant2samples.termidlst.push(term.id)
-						arg.tk.mds.termdb.terms.push(term)
-						make_multiSampleSummaryList(arg, summary_holder, true)
-						delete arg.tk.mds.variant2samples.new_term
+						if(arg.tk.mds.termdb.getTermById(term.id) == undefined){
+							arg.tk.mds.variant2samples.new_term = term.id
+							arg.tk.mds.variant2samples.termidlst.push(term.id)
+							arg.tk.mds.termdb.terms.push(term)
+							make_multiSampleSummaryList(arg, summary_holder, true)
+							delete arg.tk.mds.variant2samples.new_term
+						} 
 					}
 				}
 			})
