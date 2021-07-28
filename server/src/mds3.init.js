@@ -657,7 +657,7 @@ function validate_ssm2canonicalisoform(ds) {
 async function init_dictionary(ds) {
 	const dictioary = ds.termdb.dictionary
 	// 'ssm_occurance' dictioanry from gdc
-	if (dictioary.gdcapi){
+	if (dictioary.gdcapi) {
 		ds.cohort = {}
 		await gdc.init_dictionary(ds)
 	}
