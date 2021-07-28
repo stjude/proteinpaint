@@ -67,7 +67,7 @@
                     },
                     {
                         "name": "Download Data & Processing Pipeline",
-                        "link": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                        "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
                     },
                     {
                         "name": "Data Processing Docs",
@@ -583,7 +583,7 @@
                     "buttons": [
                         {
                             "name": "Download Matrix Script",
-                            "link": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py"
+                            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py.gz"
                         }
                     ]
                 }
@@ -956,7 +956,7 @@
                     "buttons": [
                         {
                             "name": "Download BAM Slicing Script",
-                            "link": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py"
+                            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
                         }
                     ]
                 }
@@ -1275,7 +1275,7 @@
             },
             "ppcalls": [
                 {
-                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/file.json",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/scatterplotDemoData.json.gz",
                     "urlparam": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json",
                     "runargs": {
                         "parseurl": true,

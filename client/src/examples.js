@@ -290,7 +290,7 @@ async function openExample(track, holder) {
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
 		//Creates any custom buttons
-		addButtons(track.sandbox.buttons, track, sandbox_div.body)
+		addButtons(track.sandbox.buttons, sandbox_div.body)
 		//Download data and show runpp() code at the top
 		makeDataDownload(call.download, sandbox_div.body)
 		//Redirects to URL parameter of track
@@ -313,7 +313,7 @@ async function openExample(track, holder) {
 		runproteinpaint(Object.assign(runpp_arg, oneexample))
 
 	} else if (track.ppcalls.length > 1) {
-		addButtons(track.sandbox.buttons, track, sandbox_div.body)
+		addButtons(track.sandbox.buttons, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
 	}
 }
@@ -328,13 +328,12 @@ function showURLLaunch(arg,div){
 	}
 }
 
-//TODO logic for downloading json and script files -> showing up in new tab, not as a download
 function makeDataDownload(arg, div) {
 	if (arg) {
 		const dataBtn = makeButton(div, "Download Track File(s)")
 		dataBtn.on('click', () => {
 			event.stopPropagation();
-			window.open(`${arg}`, '_blank')
+			window.open(`${arg}`, '_self', 'download')
 		})
 	}
 }
@@ -400,7 +399,7 @@ function tabArray(tabs, track){
 			callback: async (div) => {
 				const wait = tab_wait(div)
 				try {
-					await makeTab(track, call, div)
+					makeTab(track, call, div)
 					wait.remove()
 				} catch(e) {
 					wait.text('Error: ' + (e.message || e))
@@ -411,7 +410,7 @@ function tabArray(tabs, track){
 }
 
 function makeTab(track, arg, div) {
-	addButtons(arg.buttons, track, div)
+	addButtons(arg.buttons, div)
 	makeDataDownload(arg.download, div)
 	showURLLaunch(arg.urlparam, div)
 	showCode(track, arg.runargs, div)
@@ -436,14 +435,19 @@ function makeTab(track, arg, div) {
 
 }
 
-function addButtons(arg, track, div){
+function addButtons(arg, div){
 	const buttons = arg
 	if (buttons){
 		buttons.forEach(button => {
 			const sandboxButton = makeButton(div, button.name)
 				sandboxButton.on('click', () => {
-					event.stopPropagation();
-					window.open(`${button.link}`, '_blank')
+					if (button.download){
+						event.stopPropagation();
+						window.open(`${button.download}`, '_self', 'download')
+					} else {
+						event.stopPropagation();
+						window.open(`${button.link}`, '_blank')
+					}
 				})
 			})
 		}
@@ -452,7 +456,7 @@ function addButtons(arg, track, div){
 function makeButton(div, text) {
 	const button = div
 		.append('button')
-		.attr('type', 'button')
+		.attr('type', 'submit')
 		.attr('class', 'sja_menuoption')
 		.style('margin', '20px')
 		.style('padding', '8px')
