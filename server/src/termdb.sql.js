@@ -1053,7 +1053,7 @@ thus less things to worry about...
 
 	{
 		const getStatement = initCohortJoinFxn(
-			`SELECT id,jsondata 
+			`SELECT id, jsondata INCLUDEDTYPESCOL
 			FROM terms t
 			JOINCLAUSE 
 			WHERE parent_id is null
@@ -1068,6 +1068,7 @@ thus less things to worry about...
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
+				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
 				return t
 			})
 			cache.set(cacheId, re)
@@ -1118,7 +1119,7 @@ thus less things to worry about...
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
 	{
-		const getStatement = initCohortJoinFxn(`SELECT id,type,jsondata 
+		const getStatement = initCohortJoinFxn(`SELECT id, type, jsondata INCLUDEDTYPESCOL 
 			FROM terms t
 			JOINCLAUSE 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -1137,7 +1138,7 @@ thus less things to worry about...
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					j.type = i.type
+					j.included_types = i.included_types.split(',')
 					return j
 				})
 			}
@@ -1237,7 +1238,10 @@ thus less things to worry about...
 		return function getStatement(cohortStr) {
 			const questionmarks = cohortStr ? '?' : ''
 			if (!(questionmarks in s_cohort)) {
-				const statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
+				let statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
+				if (cohortStr && template.includes('INCLUDEDTYPESCOL')) {
+					statement = statement.replace('INCLUDEDTYPESCOL', ', s.included_types')
+				}
 				s_cohort[questionmarks] = cn.prepare(statement)
 			}
 			return s_cohort[questionmarks]

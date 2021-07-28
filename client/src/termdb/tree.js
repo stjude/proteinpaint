@@ -270,7 +270,20 @@ function setRenderers(self) {
 		button, optional, the toggle button
 		*/
 		if (!term || !term.terms) return
-		if (!(term.id in self.termsById) || self.state.exclude_types.includes(term.type)) {
+		const included_terms = []
+
+		self.state.exclude_types.length ? term.terms : []
+		if (!self.state.exclude_types.length) {
+			included_terms.push(...term.terms)
+		} else {
+			for (const t of term.terms) {
+				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
+					included_terms.push(t)
+				}
+			}
+		}
+
+		if (!(term.id in self.termsById) || !included_terms.length) {
 			div.style('display', 'none')
 			return
 		}
@@ -289,11 +302,12 @@ function setRenderers(self) {
 		div.style('display', 'block')
 		if (button) button.text('-')
 
-		const childTermIds = new Set(term.terms.map(self.bindKey))
+		const childTermIds = new Set(included_terms.map(self.bindKey))
+
 		const divs = div
 			.selectAll('.' + cls_termdiv)
 			//.filter(t => childTermIds.has(t.id)) // can change based on cohort
-			.data(term.terms, self.bindKey)
+			.data(included_terms, self.bindKey)
 
 		divs.exit().each(self.hideTerm)
 
