@@ -231,7 +231,8 @@
                     }
                 },
                 {
-                    "label": "BED3",
+                    "label": "BED3 Example",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
                     "runargs": {
                         "parseurl": true,
@@ -247,6 +248,29 @@
                             "stackheight": 16,
                             "stackspace": 1
                         }]
+                    }
+                },
+                {
+                    "label": "Numeric Filter Example",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/numericDenomData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position":"chr11:69449264-69475901",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"numeric value",
+                                "file":"proteinpaint_demo/hg19/bedj/value.gz",
+                                "usevalue":{
+                                    "key":"value",
+                                    "dropBelowCutoff":1000
+                                }
+                            }
+                        ]
                     }
                 }
             ],
