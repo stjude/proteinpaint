@@ -1783,15 +1783,46 @@ function check_mismatch(lst, r, box, boxseq) {
 function plot_template(ctx, template, group, q) {
 	if (group.returntemplatebox) {
 		// one box per template
-		const box = {
-			qname: template.segments[0].qname,
-			x1: template.x1,
-			x2: template.x2,
-			y1: template.y,
-			y2: template.y + (template.height || group.stackheight),
-			start: Math.min(...template.segments.map(i => i.segstart)),
-			stop: Math.max(...template.segments.map(i => i.segstop))
+		const r = group.regions[template.segments[0].ridx] // this region where the segment falls into
+		r.width = group.widths[template.segments[0].ridx]
+		//console.log('template.segments[0].segstart:', template.segments[0].segstart)
+		//console.log('template.x1:', template.x1)
+		//console.log('template.x2:', template.x2)
+		//console.log('r.x:', r.x)
+		//console.log('r.width:', r.width)
+		let box
+		if (r.x < template.x1 && template.x2 < r.width) {
+			box = {
+				qname: template.segments[0].qname,
+				x1: template.x1,
+				x2: template.x2,
+				y1: template.y,
+				y2: template.y + (template.height || group.stackheight),
+				start: Math.min(...template.segments.map(i => i.segstart)),
+				stop: Math.max(...template.segments.map(i => i.segstop))
+			}
+		} else if (r.x >= template.x1 && template.x2 < r.width) {
+			box = {
+				qname: template.segments[0].qname,
+				x1: r.x,
+				x2: template.x2,
+				y1: template.y,
+				y2: template.y + (template.height || group.stackheight),
+				start: Math.min(...template.segments.map(i => i.segstart)),
+				stop: Math.max(...template.segments.map(i => i.segstop))
+			}
+		} else if (r.x < template.x1 && template.x2 >= r.width) {
+			box = {
+				qname: template.segments[0].qname,
+				x1: template.x1,
+				x2: r.width,
+				y1: template.y,
+				y2: template.y + (template.height || group.stackheight),
+				start: Math.min(...template.segments.map(i => i.segstart)),
+				stop: Math.max(...template.segments.map(i => i.segstop))
+			}
 		}
+
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
 			if (template.segments[0].isfirst) box.isfirst = true
