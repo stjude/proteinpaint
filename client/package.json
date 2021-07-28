@@ -1,14 +1,14 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "scripts": {
     "dev": "rm -rf ../public/bin && webpack --env.NODE_ENV=development --watch --progress --colors",
     "pretest": "./test/pretest.js",
-    "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
-    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -p [ split-require --out ../public/bin --public /bin ] -o ../public/bin/spec.bundle.js -v",
-    "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js -p [ split-require --out ../public/bin --public /bin ] | tape-run --static ../public",
+    "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js | tape-run --static ../public",
+    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -o ../public/bin/spec.bundle.js -v",
+    "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js | tape-run --static ../public",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",
