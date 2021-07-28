@@ -29,23 +29,23 @@ runproteinpaint({
 				expandedTermIds: [
 					'root',
 					'Cancer-related Variables', 'Diagnosis', 'diaggrp',
-					'Genetic Factors', 'Polygenic Risk Scores', 'prs_PGS000001'
+					//'Genetic Factors', 'Polygenic Risk Scores', 'prs_PGS000001'
 				],
-				visiblePlotIds: ['prs_PGS000001'],
+				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
 						term: {
 							id: 'diaggrp'
 						}
 					},
-					prs_PGS000001: {
+					/*prs_PGS000001: {
 						term: {
 							id: 'prs_PGS000001'
 						},
 						settings: {
 							currViews: ['barchart']
 						}
-					}
+					}*/
 				}
 			},
 			termfilter: {
@@ -72,6 +72,7 @@ runproteinpaint({
 			},
 			nav: {
 				header_mode: 'with_tabs',
+				activeTab: 1
 			},
 			activeCohort:0
 		},
@@ -82,7 +83,7 @@ runproteinpaint({
 })
 
 
-
+/*
 runproteinpaint({
 	holder:document.getElementById('b'),
 	noheader:1,
@@ -191,7 +192,7 @@ runproteinpaint({
 			activeCohort:-1
 		}
 	}
-})
+})*/
 </script>
 
 </body>

@@ -96,6 +96,9 @@ class Overlay {
 				a.activeCohort = s.activeCohort
 			}
 		}
+		if (plot.term.term.type == 'survival') {
+			a.exclude_types = ['survival']
+		}
 		if (plot.term2) {
 			a.term = plot.term2.term
 			a.q = plot.term2.q

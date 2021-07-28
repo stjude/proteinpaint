@@ -1118,7 +1118,7 @@ thus less things to worry about...
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
 	{
-		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
+		const getStatement = initCohortJoinFxn(`SELECT id,type,jsondata 
 			FROM terms t
 			JOINCLAUSE 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -1137,6 +1137,7 @@ thus less things to worry about...
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.type = i.type
 					return j
 				})
 			}
@@ -1150,22 +1151,27 @@ thus less things to worry about...
 		const s = {
 			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
 		}
-		q.findTermByName = (n, limit, cohortStr = '') => {
+		const trueFilter = () => true
+		q.findTermByName = (n, limit, cohortStr = '', exclude_types = []) => {
 			if (!(cohortStr in s)) {
 				s[cohortStr] = cn.prepare(
-					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? WHERE t.name LIKE ?`
+					`SELECT t.id,jsondata,s.included_types FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? WHERE t.name LIKE ?`
 				)
 			}
 			const vals = []
 			if (cohortStr !== '') vals.push(cohortStr)
 			vals.push('%' + n + '%')
+
 			const tmp = s[cohortStr].all(vals)
 			if (tmp) {
 				const lst = []
+				const typeFilter = exclude_types.length ? a => !exclude_types.includes(a) : trueFilter
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					lst.push(j)
+					if (!exclude_types.includes(j.type) && i.included_types.split(',').filter(typeFilter).length) {
+						lst.push(j)
+					}
 					if (lst.length == 10) break
 				}
 				return lst

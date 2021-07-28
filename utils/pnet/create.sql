@@ -124,10 +124,11 @@ CREATE INDEX p_value_for on precomputed(value_for);
 DROP TABLE IF EXISTS subcohort_terms;
 DROP INDEX IF EXISTS subcohort_terms_cohort;
 DROP INDEX IF EXISTS subcohort_terms_termid;
-CREATE TABLE subcohort_terms (
+CREATE TABLE subcohort_terms_2 (
  cohort TEXT,
  term_id TEXT,
- count INT
+ count INT,
+ included_types TEXT
 );
 
 CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);

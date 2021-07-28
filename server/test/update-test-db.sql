@@ -63,3 +63,49 @@ SELECT sample, 'os',  22*(random()/2×9223372036854775808 + 0.5) + 3, abs(random
 FROM samples;
 
 select count(*) from survival; -- should be 200, if we have 100 samples
+
+
+---------------------------------------------
+-- to add columns to the terms table
+---------------------------------------------
+
+ALTER TABLE terms
+ADD COLUMN type TEXT;
+
+UPDATE terms
+SET type='categorical' 
+WHERE jsondata LIKE '%"type":"categorical"%';
+
+UPDATE terms
+SET type='integer' 
+WHERE jsondata LIKE '%"type":"integer"%';
+
+UPDATE terms
+SET type='float' 
+WHERE jsondata LIKE '%"type":"float"%';
+
+UPDATE terms
+SET type='condition' 
+WHERE jsondata LIKE '%"type":"condition"%';
+
+UPDATE terms
+SET type='survival' 
+WHERE jsondata LIKE '%"type":"survival"%';
+
+ALTER TABLE subcohort_terms
+ADD COLUMN included_types TEXT;
+
+UPDATE subcohort_terms
+SET included_types=(
+SELECT GROUP_CONCAT(DISTINCT c.type) 
+FROM terms c
+JOIN ancestry a ON subcohort_terms.term_id IN (a.ancestor_id, a.term_id) AND a.term_id = c.id
+JOIN subcohort_terms s ON s.cohort = subcohort_terms.cohort AND s.term_id = subcohort_terms.term_id
+);
+
+UPDATE terms
+SET included_types=(
+SELECT GROUP_CONCAT(DISTINCT c.type) 
+FROM terms c
+JOIN ancestry a ON (terms.id = a.ancestor_id AND a.term_id = c.id) OR (a.term_id = c.id AND terms.id = a.term_id)
+);

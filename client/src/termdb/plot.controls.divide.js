@@ -83,7 +83,8 @@ class Divide {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id]
+			disable_terms: [plot.term.id],
+			exclude_types: ['survival']
 		}
 		if (plot.term0) {
 			a.term = plot.term0.term

@@ -93,13 +93,16 @@ class TermdbVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr) {
+	async findTerm(str, cohortStr, exclude_types = []) {
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + cohortStr
 		]
+		if (exclude_types.length) {
+			lst.push('exclude_types=' + encodeURIComponent(JSON.stringify(exclude_types)))
+		}
 		const data = await dofetch3('termdb?' + lst.join('&'))
 		if (data.error) throw data.error
 		return data

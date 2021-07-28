@@ -104,7 +104,8 @@ class TdbTree {
 			expandedTermIds: appState.tree.expandedTermIds,
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
-			bar_click_menu: appState.bar_click_menu
+			bar_click_menu: appState.bar_click_menu,
+			exclude_types: appState.tree.exclude_types
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -269,7 +270,7 @@ function setRenderers(self) {
 		button, optional, the toggle button
 		*/
 		if (!term || !term.terms) return
-		if (!(term.id in self.termsById)) {
+		if (!(term.id in self.termsById) || self.state.exclude_types.includes(term.type)) {
 			div.style('display', 'none')
 			return
 		}

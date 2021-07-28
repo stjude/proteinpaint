@@ -78,6 +78,7 @@ class TermSetting {
 				this.term = data.term
 				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
 				this.disable_terms = data.disable_terms
+				this.exclude_types = data.exclude_types
 				this.filter = data.filter
 				if ('activeCohort' in data) this.activeCohort = data.activeCohort
 				// reset methods by term type
@@ -268,6 +269,9 @@ function setInteractivity(self) {
 				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
 				nav: {
 					header_mode: 'search_only'
+				},
+				tree: {
+					exclude_types: self.exclude_types
 				}
 			},
 			tree: {
