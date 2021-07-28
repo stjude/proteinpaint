@@ -11,15 +11,14 @@ drop index if exists terms_id;
 drop index if exists terms_p;
 drop index if exists terms_n;
 drop table if exists terms;
-create table terms (
+create table terms2 (
   id character varying(100) not null,
   name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null,
   child_order integer not null,
   type text,
-  isleaf integer,
-  included_types text
+  isleaf integer
 );
 update terms set parent_id=null where parent_id='';
 create index terms_id on terms(id);

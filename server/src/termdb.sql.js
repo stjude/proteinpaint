@@ -1052,10 +1052,10 @@ thus less things to worry about...
 	}
 
 	{
-		const getStatement = initCohortJoinFxn(
-			`SELECT id, jsondata INCLUDEDTYPESCOL
+		const sql = cn.prepare(
+			`SELECT id, jsondata, s.included_types
 			FROM terms t
-			JOINCLAUSE 
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
 			GROUP BY id
 			ORDER BY child_order ASC`
@@ -1064,7 +1064,7 @@ thus less things to worry about...
 		q.getRootTerms = (cohortStr = '') => {
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr) : getStatement(cohortStr).all()
+			const tmp = sql.all(cohortStr)
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
@@ -1119,20 +1119,20 @@ thus less things to worry about...
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
 	{
-		const getStatement = initCohortJoinFxn(`SELECT id, type, jsondata INCLUDEDTYPESCOL 
+		const sql = cn.prepare(
+			`SELECT id, type, jsondata, s.included_types 
 			FROM terms t
-			JOINCLAUSE 
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
 			GROUP BY id
-			ORDER BY child_order ASC`)
+			ORDER BY child_order ASC`
+		)
 
 		const cache = new Map()
 		q.getTermChildren = (id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			//const values = cohortStr ? [...cohortStr.split(','), id] : id
-			const values = cohortStr ? [cohortStr, id] : id
-			const tmp = getStatement(cohortStr).all(values)
+			const tmp = sql.all([cohortStr, id])
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
@@ -1149,28 +1149,24 @@ thus less things to worry about...
 	{
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
-		const s = {
-			'': cn.prepare('SELECT id,jsondata,included_types FROM terms WHERE name LIKE ?')
-		}
+		const sql = cn.prepare(
+			`SELECT id, jsondata, s.included_types 
+			FROM terms t
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
+			WHERE name LIKE ?`
+		)
 		const trueFilter = () => true
 		q.findTermByName = (n, limit, cohortStr = '', exclude_types = []) => {
-			if (!(cohortStr in s)) {
-				s[cohortStr] = cn.prepare(
-					`SELECT t.id,jsondata,s.included_types FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? WHERE t.name LIKE ?`
-				)
-			}
 			const vals = []
-			if (cohortStr !== '') vals.push(cohortStr)
-			vals.push('%' + n + '%')
-
-			const tmp = s[cohortStr].all(vals)
+			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
 				const lst = []
 				const typeFilter = exclude_types.length ? a => !exclude_types.includes(a) : trueFilter
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					if (!exclude_types.includes(j.type) && i.included_types.split(',').filter(typeFilter).length) {
+					const included_types = i.included_types || ''
+					if (!exclude_types.includes(j.type) && included_types.split(',').filter(typeFilter).length) {
 						lst.push(j)
 					}
 					if (lst.length == 10) break
@@ -1227,24 +1223,6 @@ thus less things to worry about...
 				return j
 			}
 			return undefined
-		}
-	}
-
-	function initCohortJoinFxn(template) {
-		// will hold prepared statements, with object key = one or more comma-separated '?'
-		const s_cohort = {
-			'': cn.prepare(template.replace('JOINCLAUSE', '').replace('INCLUDEDTYPESCOL', ', t.included_types'))
-		}
-		return function getStatement(cohortStr) {
-			const questionmarks = cohortStr ? '?' : ''
-			if (!(questionmarks in s_cohort)) {
-				let statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
-				if (cohortStr && template.includes('INCLUDEDTYPESCOL')) {
-					statement = statement.replace('INCLUDEDTYPESCOL', ', s.included_types')
-				}
-				s_cohort[questionmarks] = cn.prepare(statement)
-			}
-			return s_cohort[questionmarks]
 		}
 	}
 }
