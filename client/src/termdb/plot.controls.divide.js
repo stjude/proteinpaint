@@ -59,7 +59,8 @@ class Divide {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			config: appState.tree.plots[this.id],
+			exclude_types: appState.tree.exclude_types
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -84,7 +85,7 @@ class Divide {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
 			disable_terms: [plot.term.id],
-			exclude_types: ['survival']
+			exclude_types: ['survival', ...this.state.exclude_types]
 		}
 		if (plot.term0) {
 			a.term = plot.term0.term
