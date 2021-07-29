@@ -14,5 +14,5 @@ echo "updating the db file"
 sqlite3 db < $DIR/../termdb/create.sql
 sqlite3 db < $DIR/load.sql
 node $DIR/setterms.js
-sqlite3 db < $DIR/../termdb/set-empty-subcohort.sql
+sqlite3 db < $DIR/../termdb/set-default-subcohort.sql
 sqlite3 db < $DIR/../termdb/set-included-types.sql
