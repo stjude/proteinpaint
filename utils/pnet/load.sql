@@ -16,3 +16,9 @@ insert into terms
 select term_id, term_id, null, '{}', 1
 from annotations
 group by term_id;
+
+insert into ancestry (term_id, ancestor_id)
+values 
+('efs', 'Survival outcome'), 
+('os', 'Survival outcome');
+

@@ -267,3 +267,38 @@ tape('error handling', function(test) {
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
 	}
 })
+
+tape('exclude_types', function(test) {
+	test.timeoutAfter(2000)
+
+	runpp({
+		state: {
+			tree: {
+				exclude_types: ['integer', 'survival'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
+			}
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		const divs = tree.Inner.dom.treeDiv.node().querySelectorAll('.termdiv')
+		test.equal(divs.length, 7, 'should have 7 displayed term divs')
+		const labels = [...tree.Inner.dom.treeDiv.node().querySelectorAll('.termlabel')]
+		test.equal(
+			labels.filter(elem => elem.innerHTML.includes('urvival')).length,
+			0,
+			'should not display any "Survival" term label'
+		)
+		test.equal(
+			labels.filter(elem => elem.innerHTML.includes('Diagnosis Year')).length,
+			0,
+			'should not display any "Diagnosis Year" term label'
+		)
+		test.end()
+	}
+})

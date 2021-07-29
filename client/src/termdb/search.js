@@ -52,7 +52,8 @@ class TermSearch {
 							.sort()
 							.join(','),
 			expandedTermIds: appState.tree.expandedTermIds,
-			plots: appState.tree.plots
+			plots: appState.tree.plots,
+			exclude_types: appState.tree.exclude_types || []
 		}
 	}
 
@@ -63,7 +64,7 @@ class TermSearch {
 			return
 		}
 
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.exclude_types)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
