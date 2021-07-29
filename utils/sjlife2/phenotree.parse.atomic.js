@@ -2,7 +2,7 @@ if (process.argv.length < 4) {
 	console.log(
 		'<phenotree> <matrix> <keep/termconfig, optional> <subcohort column idx in matrix> output two files: keep/termjson, diagnostic_messages.txt'
 	)
-	process.exit()
+	process.exit(1)
 }
 
 /*
@@ -412,8 +412,9 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				term.bins.default = initBinConfig(term.bins._values)
 			} catch (e) {
 				console.log(e)
+				console.log('data for initBinConfig():')
 				console.log(JSON.stringify(term.bins._values))
-				process.exit()
+				process.exit(1)
 			}
 			delete term.bins._min
 			delete term.bins._max
