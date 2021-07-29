@@ -17,5 +17,7 @@ cd clinical
 echo "updating the clinical/db file"
 echo "running load.sql ..."
 sqlite3 db < $DIR/load.sql
+echo "running add.columns.sql ..."
+sqlite3 db < $DIR/add.columns.sql
 echo "running set-included-types.sql ..."
 sqlite3 db < $DIR/../termdb/set-included-types.sql

@@ -1,3 +1,30 @@
+UPDATE terms
+SET isleaf=1 
+WHERE jsondata LIKE '%"isleaf":1%'
+OR jsondata LIKE '%"isleaf": 1%'
+OR jsondata LIKE '%"isleaf":true%'
+OR jsondata LIKE '%"isleaf": true%';
+
+UPDATE terms
+SET type='categorical' 
+WHERE jsondata LIKE '%"type":"categorical"%';
+
+UPDATE terms
+SET type='integer' 
+WHERE jsondata LIKE '%"type":"integer"%';
+
+UPDATE terms
+SET type='float' 
+WHERE jsondata LIKE '%"type":"float"%';
+
+UPDATE terms
+SET type='condition' 
+WHERE jsondata LIKE '%"type":"condition"%';
+
+UPDATE terms
+SET type='survival' 
+WHERE jsondata LIKE '%"type":"survival"%';
+
 UPDATE subcohort_terms
 SET included_types=(
 SELECT GROUP_CONCAT(DISTINCT c.type) 
