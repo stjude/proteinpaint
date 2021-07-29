@@ -17,9 +17,8 @@ tape('integers: round to nearest ones', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 4,
-			first_bin: { stop: 23 },
-			last_bin: { start: 47 }
+			bin_size: 5,
+			first_bin: { stop: 25 }
 		},
 		'should match expected output'
 	)
@@ -35,8 +34,8 @@ tape('integers: round to nearest tens', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 10,
-			first_bin: { stop: 10 },
-			last_bin: { start: 70 }
+			first_bin: { stop: 20 },
+			last_bin: { start: 80 }
 		},
 		'should match expected output'
 	)
@@ -52,8 +51,8 @@ tape('integers: round to nearest hundreds', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 100,
-			first_bin: { stop: 200 },
-			last_bin: { start: 800 }
+			first_bin: { stop: 220 },
+			last_bin: { start: 820 }
 		},
 		'should match expected output'
 	)
@@ -68,9 +67,8 @@ tape('fractions: round to nearest tenths', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.3,
-			first_bin: { stop: 0.2 },
-			last_bin: { start: 2 },
+			bin_size: 0.5,
+			first_bin: { stop: 0.5 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -87,9 +85,8 @@ tape('fractions: round to nearest hundredths', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 0.1,
-			first_bin: { stop: 0.03 },
-			last_bin: { start: 0.63 },
-			rounding: '.2f'
+			first_bin: { stop: 0.5 },
+			rounding: '.1f'
 		},
 		'should match expected output'
 	)
@@ -104,9 +101,8 @@ tape('floats greater than 1', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 8,
-			first_bin: { stop: 25 },
-			last_bin: { start: 73 }
+			bin_size: 10,
+			first_bin: { stop: 25 }
 		},
 		'should match expected output'
 	)
@@ -121,8 +117,8 @@ tape('negative integers', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 4,
-			first_bin: { stop: -12 }
+			bin_size: 5,
+			first_bin: { stop: -10 }
 		},
 		'should match expected output'
 	)
@@ -137,9 +133,8 @@ tape('negative fractions', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.3,
-			first_bin: { stop: -0.7 },
-			last_bin: { start: 1.1 },
+			bin_size: 0.5,
+			first_bin: { stop: -0.5 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -152,7 +147,7 @@ tape('JSON string output', function(test) {
 	const output = initBinConfig(input, { format: 'string' })
 	test.equal(
 		output,
-		'{"type":"regular","startinclusive":true,"bin_size":4,"first_bin":{"stop":23},"last_bin":{"start":47}}',
+		'{"type":"regular","startinclusive":true,"bin_size":5,"first_bin":{"stop":25}}',
 		'should match expected output'
 	)
 	test.end()
@@ -178,9 +173,8 @@ tape('large test data: integers', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 3,
-			first_bin: { stop: 0 },
-			last_bin: { start: 18 }
+			bin_size: 5,
+			first_bin: { stop: 0 }
 		},
 		'should match expected output'
 	)
