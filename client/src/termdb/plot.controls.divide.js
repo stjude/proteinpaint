@@ -60,7 +60,7 @@ class Divide {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id],
-			exclude_types: appState.tree.exclude_types
+			exclude_types: [...appState.tree.exclude_types]
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)

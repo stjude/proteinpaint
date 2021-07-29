@@ -63,7 +63,7 @@ class Overlay {
 			activeCohort: appState.activeCohort,
 			config: appState.tree.plots[this.id],
 			ssid: appState.ssid,
-			exclude_types: appState.tree.exclude_types
+			exclude_types: [...appState.tree.exclude_types]
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
