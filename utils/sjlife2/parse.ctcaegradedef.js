@@ -95,7 +95,21 @@ for (const k in rawgrading.chcs) {
 {
 	const lines = []
 	for (const d of ID2term.values()) {
-		lines.push(d.id + '\t' + d.name + '\t' + d.parentid + '\t' + JSON.stringify(d.json) + '\t' + d.child_order)
+		lines.push(
+			d.id +
+				'\t' +
+				d.name +
+				'\t' +
+				d.parentid +
+				'\t' +
+				JSON.stringify(d.json) +
+				'\t' +
+				d.child_order +
+				'\t' +
+				(d.json.type || '') +
+				'\t' +
+				(d.json.isleaf ? 1 : 0)
+		)
 	}
 	fs.writeFileSync(path.join(dir, 'termdb.updated'), lines.join('\n') + '\n')
 }

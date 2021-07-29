@@ -16,12 +16,16 @@ for (const line of fs
 	.trim()
 	.split('\n')) {
 	const l = line.split('\t')
+
+	// XXX change to 7 after prs pipeline is updated
 	if (l.length != 5) throw 'line not having 5 columns: ' + line
+
+	let j
 	try {
-		JSON.parse(l[3])
+		j = JSON.parse(l[3])
 	} catch (e) {
 		throw 'invalid json: ' + line
 	}
 	if (!Number.isInteger(Number(l[4]))) throw '5th field not integer: ' + line
-	console.log(line)
+	console.log(line + '\t' + (j.type || '') + '\t' + (j.isleaf ? 1 : 0))
 }
