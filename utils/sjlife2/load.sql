@@ -19,10 +19,10 @@ create table terms (
   name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null,
-  child_order integer not null,
-  type text,
-  isleaf integer,
-  included_types text
+  child_order integer not null
+  -- these columns will be added in a separate script, so that tsv data can still line up
+  -- type text,
+  -- isleaf integer
 );
 
 .import termdb terms
@@ -159,8 +159,10 @@ DROP INDEX IF EXISTS subcohort_terms_termid;
 CREATE TABLE subcohort_terms (
  cohort TEXT,
  term_id TEXT,
- count INT,
- included_types TEXT
+ count INT
+ -- this column will be added later in a separate script, 
+ -- so that the precompute script output can still line up
+ -- included_types TEXT
 );
 .import term2subcohort subcohort_terms
 

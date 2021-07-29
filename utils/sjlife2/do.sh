@@ -72,7 +72,8 @@ node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix ann
 #node ~/proteinpaint/utils/sjlife2/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 
 #sqlite3 db < load.sql
-
+#sqlite3 db < add.columns.sql
+#sqlite3 db < ../termdb/set-included-types.sql
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
 # scp db $prp1:~/data-pp/files/hg38/sjlife/clinical/
