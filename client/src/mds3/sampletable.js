@@ -333,8 +333,9 @@ function init_dictionary_ui(holder, summary_holder, arg){
 							arg.tk.mds.termdb.terms.push(term)
 							make_multiSampleSummaryList(arg, summary_holder, true)
 							delete arg.tk.mds.variant2samples.new_term
-						} 
-					}
+						}
+					},
+					disable_terms: arg.tk.mds.variant2samples.termidlst
 				}
 			})
 		})
