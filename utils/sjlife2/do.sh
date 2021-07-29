@@ -26,7 +26,7 @@ node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annot
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 # created "annotation.admix.sjlife" and "annotation.admix.ccss"
 
-node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
+#node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
 # created "keep/termconfig"
 
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/matrix.tree
@@ -35,7 +35,7 @@ node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sjlifectcae.tr
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sn.tree
 # updated files in-place
 
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig 
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix # keep/termconfig 
 # created "keep/termjson"
 # created "diagnostic_messages.txt"
 
@@ -72,7 +72,8 @@ node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix ann
 #node ~/proteinpaint/utils/sjlife2/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 
 #sqlite3 db < load.sql
-
+#sqlite3 db < add.columns.sql
+#sqlite3 db < ../termdb/set-included-types.sql
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
 # scp db $prp1:~/data-pp/files/hg38/sjlife/clinical/

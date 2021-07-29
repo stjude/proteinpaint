@@ -1,6 +1,6 @@
-import { fillbar, tab2box } from '../client'
+import { fillbar, tab2box, Menu } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
-import { init_tabs, update_tabs } from '../common/dom/horizontalTabs'
+import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
 
 /*
@@ -256,10 +256,12 @@ async function make_multiSampleTable(args) {
 	arg.temp_div.style('display', 'none')
 }
 
-async function make_multiSampleSummaryList(arg, holder) {
-	arg.querytype = arg.tk.mds.variant2samples.type_summary
+async function make_multiSampleSummaryList(arg, holder, update) {
+	if (update) arg.querytype = arg.tk.mds.variant2samples.type_update_summary
+	else arg.querytype = arg.tk.mds.variant2samples.type_summary
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
+	holder.selectAll('*').remove()
 
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (arg.tid2value_orig.size) {
@@ -283,15 +285,59 @@ async function make_multiSampleSummaryList(arg, holder) {
 		})
 	}
 
-	const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
+	// TODO: check if # occurance should be displayed in summary tab
+	// const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
+	// const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ label: summary_label, callback: div => tab2box(div, summary_tabs) },
+		{ label: 'Summary', callback: div => tab2box(div, summary_tabs) },
 		{ label: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
 	]
 
 	init_tabs(holder, main_tabs)
+	init_dictionary_ui(main_tabs.holder, holder, arg)
 	arg.temp_div.style('display', 'none')
+}
+
+function init_dictionary_ui(holder, summary_holder, arg){
+	const term_btn = holder.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_filter_tag_btn')
+		.style('margin-left', '20px')
+		.style('border-radius', '6px')
+		.style('padding', '6px 10px')
+		.style('cursor', 'pointer')
+		.text('+ Add fields')
+		.on('click',async ()=>{
+			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
+			const termdb = await import('../termdb/app')
+			tip.clear().showunder(term_btn.node())
+			termdb.appInit(null, {
+				holder: tip.d,
+				state: {
+					dslabel: arg.tk.dslabel,
+					genome: arg.block.genome.name,
+					nav: {
+						header_mode: 'search_only'
+					},
+					tree:{
+						expandedTermIds: ['case']
+					}
+				},
+				tree: {
+					click_term: term => {
+						tip.hide()
+						if(arg.tk.mds.termdb.getTermById(term.id) == undefined){
+							// new query type of 'update_summary' with new term
+							arg.tk.mds.variant2samples.new_term = term.id
+							arg.tk.mds.variant2samples.termidlst.push(term.id)
+							arg.tk.mds.termdb.terms.push(term)
+							make_multiSampleSummaryList(arg, summary_holder, true)
+							delete arg.tk.mds.variant2samples.new_term
+						} 
+					}
+				}
+			})
+		})
 }
 
 async function make_summary_panel(arg, div, category, main_tabs) {

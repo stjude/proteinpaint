@@ -17,9 +17,8 @@ tape('integers: round to nearest ones', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 4,
-			first_bin: { stop: 23 },
-			last_bin: { start: 47 }
+			bin_size: 5,
+			first_bin: { stop: 25 }
 		},
 		'should match expected output'
 	)
@@ -35,8 +34,8 @@ tape('integers: round to nearest tens', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 10,
-			first_bin: { stop: 10 },
-			last_bin: { start: 70 }
+			first_bin: { stop: 20 },
+			last_bin: { start: 80 }
 		},
 		'should match expected output'
 	)
@@ -52,8 +51,8 @@ tape('integers: round to nearest hundreds', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 100,
-			first_bin: { stop: 200 },
-			last_bin: { start: 800 }
+			first_bin: { stop: 220 },
+			last_bin: { start: 820 }
 		},
 		'should match expected output'
 	)
@@ -68,9 +67,8 @@ tape('fractions: round to nearest tenths', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.3,
-			first_bin: { stop: 0.2 },
-			last_bin: { start: 2 },
+			bin_size: 0.5,
+			first_bin: { stop: 0.5 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -87,9 +85,8 @@ tape('fractions: round to nearest hundredths', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 0.1,
-			first_bin: { stop: 0.03 },
-			last_bin: { start: 0.63 },
-			rounding: '.2f'
+			first_bin: { stop: 0.5 },
+			rounding: '.1f'
 		},
 		'should match expected output'
 	)
@@ -104,9 +101,8 @@ tape('floats greater than 1', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 8,
-			first_bin: { stop: 25 },
-			last_bin: { start: 73 }
+			bin_size: 10,
+			first_bin: { stop: 25 }
 		},
 		'should match expected output'
 	)
@@ -121,8 +117,8 @@ tape('negative integers', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 4,
-			first_bin: { stop: -12 }
+			bin_size: 5,
+			first_bin: { stop: -10 }
 		},
 		'should match expected output'
 	)
@@ -137,9 +133,8 @@ tape('negative fractions', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.3,
-			first_bin: { stop: -0.7 },
-			last_bin: { start: 1.1 },
+			bin_size: 0.5,
+			first_bin: { stop: -0.5 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -152,7 +147,67 @@ tape('JSON string output', function(test) {
 	const output = initBinConfig(input, { format: 'string' })
 	test.equal(
 		output,
-		'{"type":"regular","startinclusive":true,"bin_size":4,"first_bin":{"stop":23},"last_bin":{"start":47}}',
+		'{"type":"regular","startinclusive":true,"bin_size":5,"first_bin":{"stop":25}}',
+		'should match expected output'
+	)
+	test.end()
+})
+
+tape('large test data: integers', function(test) {
+	const input = []
+	// mimic data from an actual variable
+	for (let i = 0; i < 200; i++) input.push(0)
+	for (let i = 0; i < 300; i++) input.push(1)
+	for (let i = 0; i < 200; i++) input.push(2)
+	for (let i = 0; i < 100; i++) input.push(3)
+	for (let i = 0; i < 90; i++) input.push(4)
+	for (let i = 0; i < 80; i++) input.push(5)
+	for (let i = 0; i < 70; i++) input.push(6)
+	for (let i = 0; i < 60; i++) input.push(7)
+	for (let i = 0; i < 50; i++) input.push(8)
+	for (let i = 0; i < 40; i++) input.push(9)
+	input.push(...[10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 13, 13, 14, 15, 18, 22])
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'regular',
+			startinclusive: true,
+			bin_size: 5,
+			first_bin: { stop: 0 }
+		},
+		'should match expected output'
+	)
+	test.end()
+})
+
+tape('large test data: floats', function(test) {
+	const input = []
+	// mimic data from an actual variable
+	for (let i = 0; i < 300; i++) input.push(0)
+	for (let i = 0; i < 100; i++) input.push(0.00804)
+	for (let i = 0; i < 100; i++) input.push(0.0159)
+	for (let i = 0; i < 200; i++) input.push(0.016)
+	for (let i = 0; i < 90; i++) input.push(0.0163)
+	for (let i = 0; i < 70; i++) input.push(0.0324)
+	for (let i = 0; i < 60; i++) input.push(0.149)
+	for (let i = 0; i < 50; i++) input.push(0.423)
+	for (let i = 0; i < 40; i++) input.push(0.809)
+	for (let i = 0; i < 20; i++) input.push(1.07)
+	for (let i = 0; i < 20; i++) input.push(1.56)
+	for (let i = 0; i < 10; i++) input.push(2.14)
+	for (let i = 0; i < 10; i++) input.push(3.8)
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'regular',
+			startinclusive: true,
+			bin_size: 0.5,
+			first_bin: { stop: 0 },
+			last_bin: { start: 3 },
+			rounding: '.1f'
+		},
 		'should match expected output'
 	)
 	test.end()

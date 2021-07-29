@@ -901,3 +901,33 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     border-style: none;
     font-style: normal;
 }
+
+.sj-toggle-button {
+    margin: 0;
+    width: 90px;
+    display: inline-block;
+    border: 1px solid #aaa;
+    color: #999;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: 300;
+    text-align: center;
+  }
+
+  .sj-toggle-button.active {
+    pointer-events: none;
+    border: 2px solid #999;
+    color: #000;
+    background-color: #cfe2f3;
+    font-weight: normal;
+  }
+
+  .sj-left-toggle {
+    border-radius: 5px 0px 0px 5px;
+  }
+
+  .sj-right-toggle {
+    margin-left: -2px;
+    border-left: 2px solid #999;
+    border-radius: 0px 5px 5px 0px;
+  }

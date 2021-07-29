@@ -25,6 +25,7 @@ module.exports = function(env = {}) {
 			'react-dom': 'ReactDOM'
 		},
 		module: {
+			strictExportPresence: true,
 			rules: [
 				{
 					test: /\.css$/,

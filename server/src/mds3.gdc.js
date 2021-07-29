@@ -395,7 +395,7 @@ export async function getSamples_gdcapi(q, ds) {
 	const fields =
 		q.get == ds.variant2samples.type_sunburst
 			? api.fields_sunburst
-			: q.get == ds.variant2samples.type_summary
+			: (q.get == ds.variant2samples.type_summary) || (q.get == ds.variant2samples.type_update_summary)
 			? api.fields_summary
 			: q.get == ds.variant2samples.type_samples
 			? api.fields_samples
@@ -453,7 +453,8 @@ export async function getSamples_gdcapi(q, ds) {
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id]) sample[id] = sample[id][t.fields[j]]
+					if (sample[id] && Array.isArray(sample[id])) sample[id] = sample[id][0][t.fields[j]]
+					else if (sample[id]) sample[id] = sample[id][t.fields[j]]
 				}
 			}
 		}
@@ -785,7 +786,7 @@ function sort_mclass(set) {
 
 export async function init_dictionary(ds) {
 	ds.cohort.termdb = {}
-	const id2term = ds.cohort.termdb.id2term = new Map()
+	const id2term = (ds.cohort.termdb.id2term = new Map())
 	const dictionary = ds.termdb.dictionary
 	if (!dictionary.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
 	const response = await got(dictionary.gdcapi.endpoint, {
@@ -818,7 +819,8 @@ export async function init_dictionary(ds) {
 		}
 		// step 2: add type of leaf terms from _mapping:{}
 		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
-		if(t_map) term_obj.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
+		if (t_map)
+			term_obj.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
 		else if (t_map == undefined) term_obj.type = 'unknown'
 		id2term.set(term_id, term_obj)
 	}
@@ -836,10 +838,24 @@ export async function init_dictionary(ds) {
 		id2term.set(term_id, term_obj)
 	}
 	init_termdb_queries(ds.cohort.termdb)
+
+	//step 4: prune the tree
+	const prune_terms = dictionary.gdcapi.prune_terms
+	for( const term_id of prune_terms){
+		if(id2term.has(term_id)){
+			const children = [...id2term.values()].filter(t=>t.path.includes(term_id))
+			if(children.length){
+				for(const child_t of children){
+					id2term.delete(child_t.id)
+				} 
+			}
+			id2term.delete(term_id)
+		}
+	}
 	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
 }
 
-function init_termdb_queries(termdb){
+function init_termdb_queries(termdb) {
 	const q = (termdb.q = {})
 	const default_vocab = 'ssm_occurance'
 
@@ -868,13 +884,13 @@ function init_termdb_queries(termdb){
 			return re
 		}
 	}
-	
+
 	{
 		const cache = new Map()
 		q.findTermByName = (searchStr, vocab = default_vocab) => {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
-			if(searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 			const cacheId = searchStr + ';;' + vocab
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
@@ -891,11 +907,18 @@ function init_termdb_queries(termdb){
 			if (cache.has(id)) return cache.get(id)
 			const terms = [...termdb.id2term.values()]
 			const search_term = terms.find(t => t.id == id)
-			// ancestor terms are already defined in term.path seperated by '.' 
+			// ancestor terms are already defined in term.path seperated by '.'
 			let re = search_term.path ? search_term.path.split('.') : ['']
-			if(re.length > 1) re.pop()
+			if (re.length > 1) re.pop()
 			cache.set(id, re)
 			return re
+		}
+	}
+
+	{
+		q.getTermById = id => {
+			const terms = [...termdb.id2term.values()]
+			return terms.find(i => i.id == id)
 		}
 	}
 }

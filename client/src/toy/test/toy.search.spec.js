@@ -8,6 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('toy', {
 	dslabel: 'TermdbTest',
 	genome: 'hg38',
+	cohortStr: 'SJLIFE',
 	debug: 1,
 	fetchOpts: {
 		serverData: helpers.serverData

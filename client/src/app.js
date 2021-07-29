@@ -779,11 +779,6 @@ async function parseembedthenurl(arg, app) {
 			}
 		}
 	}
-	if (arg.xintest) {
-		// a shortcut to xin's experiments and not to be used in prod
-		launchxintest(arg.xintest, app)
-		return app
-	}
 
 	if (arg.singlecell) {
 		launch_singlecell(arg.singlecell, app)
@@ -1521,9 +1516,4 @@ function launchtermdb(opts, app) {
 	import('./termdb/app').then(_ => {
 		_.appInit(null, opts)
 	})
-}
-
-function launchxintest(opts, app) {
-	opts.holder = app.holder0
-	import('./xin/app').then(_ => _.appInit(null, opts))
 }

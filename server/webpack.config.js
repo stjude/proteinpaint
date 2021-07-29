@@ -26,6 +26,7 @@ module.exports = function(env = {}) {
 			filename: 'server.js'
 		},
 		module: {
+			strictExportPresence: true,
 			rules: [
 				{
 					test: /\.js$/,
