@@ -82,8 +82,9 @@ class ToySearch {
 				this.dom.tip.hide()
 				return
 			}
+			const o = this.app.opts
 			const data = await dofetch3(
-				'termdb?genome=' + this.app.opts.genome + '&dslabel=' + this.app.opts.dslabel + '&findterm=' + value
+				`termdb?genome=${o.genome}&dslabel=${o.dslabel}&findterm=${value}&cohortStr=${o.cohortStr}`
 			)
 			// ready to show query result
 			this.dom.tip.clear().showunder(this.input.node())
