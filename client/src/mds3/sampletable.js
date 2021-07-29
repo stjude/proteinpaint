@@ -327,6 +327,7 @@ function init_dictionary_ui(holder, summary_holder, arg){
 					click_term: term => {
 						tip.hide()
 						if(arg.tk.mds.termdb.getTermById(term.id) == undefined){
+							// new query type of 'update_summary' with new term
 							arg.tk.mds.variant2samples.new_term = term.id
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)

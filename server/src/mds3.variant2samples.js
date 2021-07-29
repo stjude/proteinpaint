@@ -113,12 +113,16 @@ async function update_summary(q, ds) {
 			type: term_.type
 		}
 		term.fields = term_.path.split('.').slice(1)
-		ds.termdb.terms.push(term)
-		ds.variant2samples.termidlst.push(termid)
-		ds.variant2samples.gdcapi.fields_summary.push(term_.path)
-		ds.variant2samples.gdcapi.fields_samples.push(term_.path)
-		const [ samples, total ] = await get_samples(q, ds)
+		// Note: not working becuase of getter and getTermById
+		// need to use better copy function
+		// const ds_copy = JSON.parse(JSON.stringify(ds)) 
+		const ds_copy = {...ds}
+		ds_copy.termdb.terms.push(term)
+		ds_copy.variant2samples.termidlst.push(termid)
+		ds_copy.variant2samples.gdcapi.fields_summary.push(term_.path)
+		ds_copy.variant2samples.gdcapi.fields_samples.push(term_.path)
+		const [ samples, total ] = await get_samples(q, ds_copy)
 		console.log('summary table updated with samples: ',total)
-		const entires = make_summary(samples, ds)
+		const entires = make_summary(samples, ds_copy)
 		return entires
 }
