@@ -19,17 +19,16 @@ create table terms (
   name character varying(100) not null,
   parent_id character varying(100),
   jsondata json not null,
-  child_order integer not null
-  -- these columns will be added in a separate script, so that tsv data can still line up
-  -- type text,
-  -- isleaf integer
+  child_order integer not null,
+  type text,
+  isleaf integer
 );
 
 .import termdb terms
 
 -- only do this if cohort selection is enabled
 -- using * for parent id of subcohort makes it hidden from the tree (but still searchable by name)
-INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}', 0);
+INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}', 0, NULL, 0);
 
 update terms set parent_id=null where parent_id='';
 create index terms_id on terms(id);
@@ -159,10 +158,8 @@ DROP INDEX IF EXISTS subcohort_terms_termid;
 CREATE TABLE subcohort_terms (
  cohort TEXT,
  term_id TEXT,
- count INT
- -- this column will be added later in a separate script, 
- -- so that the precompute script output can still line up
- -- included_types TEXT
+ count INT,
+ included_types TEXT
 );
 .import term2subcohort subcohort_terms
 

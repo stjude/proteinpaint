@@ -424,7 +424,11 @@ each word is a term
 				'\t' +
 				JSON.stringify(j) +
 				'\t' +
-				p2childorder.get(c2immediatep.get(id) || root_id).indexOf(id)
+				p2childorder.get(c2immediatep.get(id) || root_id).indexOf(id) +
+				'\t' +
+				(j.type || '') +
+				'\t' +
+				(j.isleaf ? 1 : 0)
 		)
 	}
 	return map.size + ' terms, ' + leafcount + ' leaf terms'
@@ -502,27 +506,27 @@ manual inspection:
 
 	{
 		const str = termjson_outputoneset(map1, lines)
-		console.log('ROOT: ' + str)
+		//console.log('ROOT: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map2, lines)
-		console.log('Level 1: ' + str)
+		//console.log('Level 1: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map3, lines)
-		console.log('Level 2: ' + str)
+		//console.log('Level 2: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map4, lines)
-		console.log('Level 3: ' + str)
+		//console.log('Level 3: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map5, lines)
-		console.log('Level 4: ' + str)
+		//console.log('Level 4: ' + str)
 	}
 
 	fs.writeFileSync('termdb', lines.join('\n') + '\n')
