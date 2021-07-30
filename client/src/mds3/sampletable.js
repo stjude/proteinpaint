@@ -258,8 +258,11 @@ async function make_multiSampleTable(args) {
 }
 
 async function make_multiSampleSummaryList(arg, holder, update) {
-	if (update) arg.querytype = arg.tk.mds.variant2samples.type_update_summary
-	else arg.querytype = arg.tk.mds.variant2samples.type_summary
+	if (update) {
+		arg.querytype = arg.tk.mds.variant2samples.type_update_summary
+		// remove size to get all samples if switching between list and summary view
+		delete arg.size
+	} else arg.querytype = arg.tk.mds.variant2samples.type_summary
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
@@ -299,9 +302,10 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 	arg.temp_div.style('display', 'none')
 }
 
-function init_dictionary_ui(main_tabs, summary_holder, arg){
+function init_dictionary_ui(main_tabs, summary_holder, arg) {
 	const holder = main_tabs.holder
-	const term_btn = holder.append('div')
+	const term_btn = holder
+		.append('div')
 		.style('display', 'inline-block')
 		.attr('class', 'sja_filter_tag_btn')
 		.style('margin-left', '20px')
@@ -309,7 +313,7 @@ function init_dictionary_ui(main_tabs, summary_holder, arg){
 		.style('padding', '6px 10px')
 		.style('cursor', 'pointer')
 		.text('+ Add fields')
-		.on('click', async ()=>{
+		.on('click', async () => {
 			const active_tab = main_tabs.find(t => t.active)
 			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
 			const termdb = await import('../termdb/app')
@@ -322,20 +326,20 @@ function init_dictionary_ui(main_tabs, summary_holder, arg){
 					nav: {
 						header_mode: 'search_only'
 					},
-					tree:{
+					tree: {
 						expandedTermIds: ['case']
 					}
 				},
 				tree: {
 					click_term: term => {
 						tip.hide()
-						if(arg.tk.mds.termdb.getTermById(term.id) == undefined){
+						if (arg.tk.mds.termdb.getTermById(term.id) == undefined) {
 							// new query type of 'update_summary' with new term
 							arg.tk.mds.variant2samples.new_term = term.id
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)
 							if (active_tab.label == 'Summary') make_multiSampleSummaryList(arg, summary_holder, true)
-							if (active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder, update:true })
+							if (active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder, update: true })
 							delete arg.tk.mds.variant2samples.new_term
 						}
 					},
