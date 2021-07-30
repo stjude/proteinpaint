@@ -34,7 +34,7 @@ module.exports = async (q, ds) => {
 	if (q.get == ds.variant2samples.type_samples) return [ samples, total ]
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
 	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
-	if (q.get == ds.variant2samples.type_update_summary) return update_summary(q, ds)
+	if (q.get == ds.variant2samples.type_update_summary || q.get == ds.variant2samples.type_update_samples) return update_data(q, ds)
 	throw 'unknown get type'
 }
 
@@ -102,7 +102,7 @@ async function make_summary(samples, ds) {
 	return entries
 }
 
-async function update_summary(q, ds) {
+async function update_data(q, ds) {
 		// update ds.variant2samples with new term
 		const termid = q.add_term
 		if(ds.termdb.getTermById(termid) != undefined) return
@@ -122,7 +122,9 @@ async function update_summary(q, ds) {
 		ds_copy.variant2samples.gdcapi.fields_summary.push(term_.path)
 		ds_copy.variant2samples.gdcapi.fields_samples.push(term_.path)
 		const [ samples, total ] = await get_samples(q, ds_copy)
-		console.log('summary table updated with samples: ',total)
-		const entires = make_summary(samples, ds_copy)
-		return entires
+		if (q.get == ds.variant2samples.type_update_samples) return [samples, total]
+		else if (q.get == ds.variant2samples.type_update_summary){
+			const entires = make_summary(samples, ds_copy)
+			return entires
+		}
 }

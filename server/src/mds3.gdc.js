@@ -397,7 +397,7 @@ export async function getSamples_gdcapi(q, ds) {
 			? api.fields_sunburst
 			: (q.get == ds.variant2samples.type_summary) || (q.get == ds.variant2samples.type_update_summary)
 			? api.fields_summary
-			: q.get == ds.variant2samples.type_samples
+			: (q.get == ds.variant2samples.type_samples) || (q.get == ds.variant2samples.type_update_samples)
 			? api.fields_samples
 			: null
 	if (!fields) throw 'invalid get type of q.get'

@@ -134,8 +134,9 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, filter_term } = args
-	arg.querytype = arg.tk.mds.variant2samples.type_samples
+	const { arg, holder, size, from, filter_term, update } = args
+	if (update) arg.querytype = arg.tk.mds.variant2samples.type_update_samples
+	else arg.querytype = arg.tk.mds.variant2samples.type_samples
 	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	const default_size = 10
 	let current_size = parseInt(size) || default_size
@@ -294,11 +295,12 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 	]
 
 	init_tabs(holder, main_tabs)
-	init_dictionary_ui(main_tabs.holder, holder, arg)
+	init_dictionary_ui(main_tabs, holder, arg)
 	arg.temp_div.style('display', 'none')
 }
 
-function init_dictionary_ui(holder, summary_holder, arg){
+function init_dictionary_ui(main_tabs, summary_holder, arg){
+	const holder = main_tabs.holder
 	const term_btn = holder.append('div')
 		.style('display', 'inline-block')
 		.attr('class', 'sja_filter_tag_btn')
@@ -307,7 +309,8 @@ function init_dictionary_ui(holder, summary_holder, arg){
 		.style('padding', '6px 10px')
 		.style('cursor', 'pointer')
 		.text('+ Add fields')
-		.on('click',async ()=>{
+		.on('click', async ()=>{
+			const active_tab = main_tabs.find(t => t.active)
 			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
 			const termdb = await import('../termdb/app')
 			tip.clear().showunder(term_btn.node())
@@ -331,7 +334,8 @@ function init_dictionary_ui(holder, summary_holder, arg){
 							arg.tk.mds.variant2samples.new_term = term.id
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)
-							make_multiSampleSummaryList(arg, summary_holder, true)
+							if (active_tab.label == 'Summary') make_multiSampleSummaryList(arg, summary_holder, true)
+							if (active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder, update:true })
 							delete arg.tk.mds.variant2samples.new_term
 						}
 					},

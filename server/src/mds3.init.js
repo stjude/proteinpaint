@@ -69,6 +69,7 @@ export function client_copy(ds) {
 			type_summary: ds.variant2samples.type_summary,
 			type_sunburst: ds.variant2samples.type_sunburst,
 			type_update_summary: ds.variant2samples.type_update_summary,
+			type_update_samples: ds.variant2samples.type_update_samples,
 			url: ds.variant2samples.url
 		}
 	}
@@ -123,6 +124,7 @@ function validate_variant2samples(ds) {
 	vs.type_sunburst = 'sunburst'
 	vs.type_summary = 'summary'
 	vs.type_update_summary = 'update_summary'
+	vs.type_update_samples = 'update_samples'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
 	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
