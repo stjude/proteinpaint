@@ -1,10 +1,6 @@
----------------------------------------
--- add the "included_types" column to the "subcohort_terms" table
---------------------------------------
-ALTER TABLE subcohort_terms ADD COLUMN included_types TEXT;
 
 --------------------------------------
--- populate value for the included_types column
+-- populate the included_types column
 --------------------------------------
 UPDATE subcohort_terms
 SET included_types=(
