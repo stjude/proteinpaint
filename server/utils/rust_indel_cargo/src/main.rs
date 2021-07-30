@@ -539,7 +539,10 @@ fn main() {
                     );
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
-                    let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                    let mut diff_score: f64 = 0.0;
+                    if read_ambivalent < 2 {
+                        diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                    }
 
                     let item = read_diff_scores {
                         value: f64::from(diff_score),
@@ -674,7 +677,10 @@ fn main() {
                                 &alt_kmers_data,
                                 alt_kmers_weight,
                             );
-                            let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                            let mut diff_score: f64 = 0.0;
+                            if read_ambivalent < 2 {
+                                diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                            }
                             let item = read_diff_scores {
                                 value: f64::from(diff_score),
                                 abs_value: f64::from(diff_score.abs()),
