@@ -881,18 +881,20 @@ async function parseembedthenurl(arg, app) {
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
-		const err = await parseurl.parse({
-			genomes: app.genomes,
-			hostURL: app.hostURL,
-			variantPageCall_snv: app.variantPageCall_snv,
-			samplecart: app.samplecart,
-			holder: app.holder,
-			selectgenome: app.selectgenome,
-			genome_browser_btn: app.genome_browser_btn,
-			debugmode: app.debugmode
-		})
-		if (err) {
-			app.error0(err)
+		try {
+			await parseurl.parse({
+				genomes: app.genomes,
+				hostURL: app.hostURL,
+				variantPageCall_snv: app.variantPageCall_snv,
+				samplecart: app.samplecart,
+				holder: app.holder,
+				selectgenome: app.selectgenome,
+				genome_browser_btn: app.genome_browser_btn,
+				debugmode: app.debugmode
+			})
+		} catch (e) {
+			app.error0(e.message || e)
+			if (e.stack) console.log(e.stack)
 		}
 	}
 
