@@ -68,7 +68,7 @@ const termdbarg4 = {
 	dslabel:'SJLife',
 	genome:'hg38',
 	tree: {
-		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'Graded Adverse Events' ],
+		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
 		visiblePlotIds: ['Cardiovascular System'],
 		plots: {
 			'Cardiovascular System': {
@@ -85,16 +85,18 @@ const termdbarg4 = {
 	activeCohort:0
 }
 const termdbarg5 = {
-// TODO cumulative incidence plot
 	dslabel:'SJLife',
 	genome:'hg38',
 	tree: {
-		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'Graded Adverse Events' ],
+		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
 		visiblePlotIds: ['Cardiovascular System'],
 		plots: {
 			'Cardiovascular System': {
 				term: {
 					id: 'Cardiovascular System'
+				},
+				settings: {
+					currViews: ['cuminc']
 				}
 			}
 		}
@@ -106,16 +108,21 @@ const termdbarg5 = {
 	activeCohort:0
 }
 const termdbarg6 = {
-// TODO survival curve
-	dslabel:'SJLife',
+	dslabel:'TermdbTest',
 	genome:'hg38',
 	tree: {
-		expandedTermIds: [],
-		visiblePlotIds: [''],
+		expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+		visiblePlotIds: ['diaggrp'],
 		plots: {
-			'': {
+			'diaggrp': {
 				term: {
-					id: ''
+					id: 'diaggrp'
+				},
+				term2: {
+					id: 'efs'
+				},
+				settings: {
+					currViews: ['survival']
 				}
 			}
 		}
