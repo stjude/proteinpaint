@@ -252,7 +252,7 @@ fn main() {
     let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
-    let single_thread_limit: usize = 3000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
+    let single_thread_limit: usize = 100000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
     let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
 
     let left_most_pos = variant_pos - segbplen; // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
