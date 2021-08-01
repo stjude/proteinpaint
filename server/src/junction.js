@@ -59,6 +59,13 @@ async function get_tabix(q, file, dir) {
 }
 
 async function get_rnapeg(q, file) {
+	try {
+		await fs.promises.stat(file)
+	} catch (e) {
+		if (e.code == 'EACCES') throw 'permission denied for rnapeg file'
+		if (e.code == 'ENOENT') throw 'rnapeg file not found'
+		throw 'cannot access rnapeg file (' + e.code + ')'
+	}
 	const items = []
 	for (const r of q.rglst) {
 		const lines = await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop })
