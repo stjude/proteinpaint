@@ -1841,14 +1841,121 @@ function plot_template(ctx, template, group, q) {
 			if (template.segments[0].islast) box.islast = true
 		} else {
 			// In paired end mode
-			box = {
-				qname: template.segments[0].qname,
-				x1: template.x1,
-				x2: template.x2,
-				y1: template.y,
-				y2: template.y + (template.height || group.stackheight),
-				start: Math.min(...template.segments.map(i => i.segstart)),
-				stop: Math.max(...template.segments.map(i => i.segstop))
+			if (template.segments.length == 2) {
+				if (template.segments[0].ridx != template.segments[1].ridx) {
+					// When read pairs are discordant exapanding past expected insert size and possibly in different chromosomes altogether
+					box = {
+						qname: template.segments[0].qname,
+						x1: template.x1,
+						x2: template.x2,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else {
+					if (r.x < template.x1 && template.x2 < r.width) {
+						box = {
+							qname: template.segments[0].qname,
+							x1: template.x1,
+							x2: template.x2,
+							y1: template.y,
+							y2: template.y + (template.height || group.stackheight),
+							start: Math.min(...template.segments.map(i => i.segstart)),
+							stop: Math.max(...template.segments.map(i => i.segstop))
+						}
+					} else if (r.x >= template.x1 && template.x2 < r.width) {
+						box = {
+							qname: template.segments[0].qname,
+							x1: r.x,
+							x2: template.x2,
+							y1: template.y,
+							y2: template.y + (template.height || group.stackheight),
+							start: Math.min(...template.segments.map(i => i.segstart)),
+							stop: Math.max(...template.segments.map(i => i.segstop))
+						}
+					} else if (r.x < template.x1 && template.x2 >= r.width) {
+						box = {
+							qname: template.segments[0].qname,
+							x1: template.x1,
+							x2: r.width,
+							y1: template.y,
+							y2: template.y + (template.height || group.stackheight),
+							start: Math.min(...template.segments.map(i => i.segstart)),
+							stop: Math.max(...template.segments.map(i => i.segstop))
+						}
+					} else if (template.x1 <= r.x && r.width <= template.x2) {
+						box = {
+							qname: template.segments[0].qname,
+							x1: r.x,
+							x2: r.width,
+							y1: template.y,
+							y2: template.y + (template.height || group.stackheight),
+							start: Math.min(...template.segments.map(i => i.segstart)),
+							stop: Math.max(...template.segments.map(i => i.segstop))
+						}
+					} else {
+						console.log('Unaccounted paired-end single-segment case, please check!')
+						console.log('template.segments[0].segstart:', template.segments[0].segstart)
+						console.log('template.x1:', template.x1)
+						console.log('template.x2:', template.x2)
+						console.log('r.x:', r.x)
+						console.log('r.width:', r.width)
+					}
+				}
+			} else {
+				// When template contains a single segment
+				const seg = template.segments[0]
+				const r = group.regions[seg.ridx]
+				r.width = group.widths[seg.ridx]
+				if (r.x < template.x1 && template.x2 < r.width) {
+					box = {
+						qname: template.segments[0].qname,
+						x1: template.x1,
+						x2: template.x2,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else if (r.x >= template.x1 && template.x2 < r.width) {
+					box = {
+						qname: template.segments[0].qname,
+						x1: r.x,
+						x2: template.x2,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else if (r.x < template.x1 && template.x2 >= r.width) {
+					box = {
+						qname: template.segments[0].qname,
+						x1: template.x1,
+						x2: r.width,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else if (template.x1 <= r.x && r.width <= template.x2) {
+					box = {
+						qname: template.segments[0].qname,
+						x1: r.x,
+						x2: r.width,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else {
+					console.log('Unaccounted paired-end case, please check!')
+					console.log('template.segments[0].segstart:', template.segments[0].segstart)
+					console.log('template.x1:', template.x1)
+					console.log('template.x2:', template.x2)
+					console.log('r.x:', r.x)
+					console.log('r.width:', r.width)
+				}
 			}
 		}
 		group.returntemplatebox.push(box)
@@ -1878,12 +1985,15 @@ function plot_template(ctx, template, group, q) {
 				ctx.moveTo(prevseg.x2, y)
 				ctx.lineTo(seg.x1, y)
 			} else if (prev_r.x < prevseg.x2 && prevseg.x2 < prev_r.width && r.x < seg.x1 && seg.x1 < r.width) {
+				// When both segments are completely in two different regions
 				ctx.moveTo(prevseg.x2, y)
 				ctx.lineTo(seg.x1, y)
 			} else if (prev_r.x < prevseg.x2 && prevseg.x2 < prev_r.width && r.x >= seg.x1 && seg.x1 < r.width) {
+				// When current segment is at the border of the region
 				ctx.moveTo(prevseg.x2, y)
 				ctx.lineTo(r.x, y)
 			} else if (prev_r.x < prevseg.x2 && prevseg.x2 >= prev_r.width && r.x < seg.x1 && seg.x1 < r.width) {
+				// When previous segment is at the border of the region
 				ctx.moveTo(prev_r.width, y)
 				ctx.lineTo(seg.x1, y)
 			}
@@ -1917,8 +2027,33 @@ function plot_template(ctx, template, group, q) {
 					ctx.strokeStyle = overlapreadhlcolor
 					ctx.setLineDash([])
 					ctx.beginPath()
-					ctx.moveTo(seg.x1, y)
-					ctx.lineTo(prevseg.x2, y)
+					//if (prev_r.x == r.x) {
+					//	// Check if both segments are in the same region
+					//	ctx.moveTo(seg.x1, y)
+					//	ctx.lineTo(prevseg.x2, y)
+					//} else
+					if (prev_r.x <= prevseg.x2 && prevseg.x2 <= prev_r.width && r.x <= seg.x1 && seg.x1 <= r.width) {
+						ctx.moveTo(seg.x1, y)
+						ctx.lineTo(prevseg.x2, y)
+					} else if (prev_r.x < prevseg.x2 && prevseg.x2 < prev_r.width && r.x >= seg.x1 && seg.x1 < r.width) {
+						// When current segment is at the border of the region
+						ctx.moveTo(prevseg.x2, y)
+						ctx.lineTo(r.x, y)
+					} else if (prev_r.x < prevseg.x2 && prevseg.x2 >= prev_r.width && r.x < seg.x1 && seg.x1 < r.width) {
+						// When previous segment is at the border of the region
+						ctx.moveTo(prev_r.width, y)
+						ctx.lineTo(seg.x1, y)
+					} else {
+						console.log('Case not accounted')
+						console.log('seg.x1:', seg.x1)
+						console.log('prevseg.x2:', prevseg.x2)
+						console.log('r.x:', r.x)
+						console.log('r.width:', r.width)
+						console.log('prev_r.x:', prev_r.x)
+						console.log('prev_r.width:', prev_r.width)
+						console.log('seg.ridx:', seg.ridx)
+						console.log('prevseg.ridx:', prevseg.ridx)
+					}
 					ctx.stroke()
 				}
 			} else {
