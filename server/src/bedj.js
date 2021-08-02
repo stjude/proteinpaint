@@ -132,6 +132,8 @@ async function do_query(req, genomes) {
 	const thinpad = Math.ceil(stackheight / 4) - 1
 
 	if (flag_onerow || items.length >= 400) {
+		// render all items in a single row
+		// do not show names
 		// may render strand
 		const notmanyitem = items.length < 200
 		const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
@@ -194,6 +196,13 @@ async function do_query(req, genomes) {
 			height: stackheight,
 			mapisoform: mapisoform
 		}
+	}
+
+	////////// render normally
+
+	if (req.query.hideItemNames) {
+		// delete item names to prevent them from showing
+		for (const i of items) delete i.name
 	}
 
 	let returngmdata = null
@@ -304,7 +313,7 @@ async function do_query(req, genomes) {
 		let boxstop = itemstoppx
 		if (packfull) {
 			// check item name
-			const namestr = item.name ? item.name : null
+			const namestr = item.name
 			if (namestr) {
 				item.canvas.namestr = namestr
 				const namewidth = ctx.measureText(namestr).width

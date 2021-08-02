@@ -3138,9 +3138,7 @@ seekrange(chr,start,stop) {
 	}
 
 	tkarg_bedj(tk) {
-		// TODO may append regulatory regions as rgleft[] rgright[]
 		const par = {
-			jwt: this.jwt,
 			name: tk.name,
 			genome: this.genome.name,
 			rglst: this.tkarg_rglst(),
@@ -3162,6 +3160,7 @@ seekrange(chr,start,stop) {
 		if (tk.onerow) par.onerow = 1
 		if (tk.usevalue) par.usevalue = tk.usevalue
 		if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
+		if (tk.hideItemNames) par.hideItemNames = tk.hideItemNames
 		if (this.usegm && this.gmmode != client.gmmode.genomic) {
 			// important, will render a gene in a single row across rglst
 			par.gmregion = this.tkarg_maygm(tk)[0]

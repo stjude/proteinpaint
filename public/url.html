@@ -20,7 +20,7 @@ tr>:first-child {
 
 <script>
 
-///// helper stuff
+/////////////////////// helper stuff
 const termdbarg1 = {dslabel:'SJLife',genome:'hg38',nav:{header_mode:'with_tabs'}}
 const termdbarg2 = {
 	dslabel:'SJLife',
@@ -64,7 +64,6 @@ const termdbarg3 = {
 	activeCohort:0
 }
 const termdbarg4 = {
-// XXX this example tries to load the Cardiovascular System chart by default but doesn't work
 	dslabel:'SJLife',
 	genome:'hg38',
 	tree: {
@@ -177,8 +176,10 @@ const termdbarg7 = {
 	},
 	activeCohort:0
 }
+/////////////////////// END of helper stuff
 
-/*******************************
+/*
+call the makeURL() to make URLs
 each element defines one type of feature showing in a row
 with a number of URLs demonstrating different examples of this feature
 .name: string
@@ -227,6 +228,12 @@ makeURL([
 		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
 		['hic tk','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
 		['bed arc','?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc%20Track,proteinpaint_demo/hg19/arc/mango.gz'],
+	]
+},
+{name:'bedj',
+	links:[
+		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
+		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz']
 	]
 },
 {name:'termdb',
