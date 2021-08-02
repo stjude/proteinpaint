@@ -11,6 +11,7 @@ make_singleSampleTable
 make_multiSampleTable
 make_multiSampleSummaryList
 make_summary_panel
+init_dictionary_ui
 make_sunburst_tidlist
 make_filter_pill
 make_pagination
@@ -48,10 +49,10 @@ export async function init_sampletable(arg) {
 			await make_singleSampleTable(arg, holder)
 		} else if (numofcases < cutoff_tableview) {
 			// few cases
-			await make_multiSampleTable({ arg, holder })
+			await make_multiSampleTable({ arg, holder, no_tabs: true })
 		} else {
 			// more cases, show summary
-			await make_multiSampleSummaryList(arg, holder)
+			await make_multiSampleSummaryList({ arg, holder })
 		}
 		arg.temp_div.style('display', 'none')
 	} catch (e) {
@@ -134,7 +135,7 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, filter_term, update } = args
+	const { arg, holder, size, from, filter_term, update, no_tabs } = args
 	if (update) arg.querytype = arg.tk.mds.variant2samples.type_update_samples
 	else arg.querytype = arg.tk.mds.variant2samples.type_samples
 	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
@@ -154,6 +155,7 @@ async function make_multiSampleTable(args) {
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
+	if (no_tabs) init_dictionary_ui(holder, arg)
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -257,7 +259,8 @@ async function make_multiSampleTable(args) {
 	arg.temp_div.style('display', 'none')
 }
 
-async function make_multiSampleSummaryList(arg, holder, update) {
+async function make_multiSampleSummaryList(args) {
+	const { arg, holder, update } = args
 	if (update) {
 		arg.querytype = arg.tk.mds.variant2samples.type_update_summary
 		// remove size to get all samples if switching between list and summary view
@@ -298,12 +301,12 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 	]
 
 	init_tabs(holder, main_tabs)
-	init_dictionary_ui(main_tabs, holder, arg)
+	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')
 }
 
-function init_dictionary_ui(main_tabs, summary_holder, arg) {
-	const holder = main_tabs.holder
+function init_dictionary_ui(holder, arg, main_tabs) {
+	const main_holder = arg.div.select('.sj_sampletable_holder')
 	const term_btn = holder
 		.append('div')
 		.style('display', 'inline-block')
@@ -314,7 +317,7 @@ function init_dictionary_ui(main_tabs, summary_holder, arg) {
 		.style('cursor', 'pointer')
 		.text('+ Add fields')
 		.on('click', async () => {
-			const active_tab = main_tabs.find(t => t.active)
+			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
 			const termdb = await import('../termdb/app')
 			tip.clear().showunder(term_btn.node())
@@ -338,8 +341,9 @@ function init_dictionary_ui(main_tabs, summary_holder, arg) {
 							arg.tk.mds.variant2samples.new_term = term.id
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)
-							if (active_tab.label == 'Summary') make_multiSampleSummaryList(arg, summary_holder, true)
-							if (active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder, update: true })
+							if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder, update: true })
+							else if (active_tab && active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder, update: true })
+							else make_multiSampleTable({arg, holder, update: true, no_tabs: true})
 							delete arg.tk.mds.variant2samples.new_term
 						}
 					},
