@@ -468,6 +468,7 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 			t.bins = {
 				default: initBinConfig(t.computableVals)
 			}
+			delete t.computableVals
 		}
 	}
 
