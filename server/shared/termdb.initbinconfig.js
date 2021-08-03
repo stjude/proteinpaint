@@ -21,7 +21,7 @@ module.exports = function initBinConfig(data, opts = {}) {
 	const firstBinStop = data[p5idx]
 	// round the bin values based on whether the dataset contains mostly integers or fractions
 	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding
-	const integers = data.filter(x => Number.isInteger(Number(x.toPrecision(1))))
+	const integers = data.filter(x => Math.abs(x) >= 1)
 	if (integers.length / data.length > 0.5) {
 		;[binSize_rnd, firstBinStop_rnd, lastBinStart_rnd] = roundIntegers(binSize, firstBinStop, max)
 	} else {
