@@ -176,6 +176,43 @@ const termdbarg7 = {
 	},
 activeCohort:0
 }
+const termdb_pnet = {
+	dslabel: 'PNET',
+	genome: 'hg19',
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: 1,
+	},
+	tree: {
+		expandedTermIds: [
+			'root',
+			'Age',
+			'Gender'
+		],
+		visiblePlotIds: ['Age', 'Gender'],
+		plots: {
+			Age: {
+				term: {
+					id: 'Age'
+				},
+				term2: {
+					id: 'Event-free survival'
+				},
+				settings: {
+					currViews: ['barchart']
+				}
+			},
+			Gender: {
+				term: {
+					id: 'Gender'
+				},
+				settings: {
+					//currViews: ['survival']
+				}
+			}
+		}
+	}
+}
 /////////////////////// END of helper stuff
 
 /*
@@ -250,6 +287,7 @@ makeURL([
 		['cuminc','?termdb='+JSON.stringify(termdbarg5)],
 		['survival','?termdb='+JSON.stringify(termdbarg6)],
 		['filter','?termdb='+JSON.stringify(termdbarg7)],
+		['pnet','?termdb='+JSON.stringify(termdb_pnet)],
 		// TODO add filter combinations
 	]
 },
