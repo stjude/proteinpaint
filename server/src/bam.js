@@ -378,14 +378,13 @@ async function plot_pileup(q, templates) {
 
 	for (const [ridx, r] of q.regions.entries()) {
 		const sf = q.pileupheight / maxValue
-
 		for (const bp of bplst[ridx]) {
 			if (!bp) continue // gap from zoomed out mode
 
-			const x0 = (bp.position - r.start) * r.ntwidth
+			const x0 = (bp.position - r.start) * r.ntwidth + r.x
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-			const barwidth = Math.max(1, r.ntwidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
+			const barwidth = Math.max(1, r.ntwidth) * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
 
 			// total coverage of this bp
 			{
@@ -804,6 +803,10 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
+		//let temp_array = templates.map((i) => i.segments[0].ridx)
+		//for (const item of temp_array) {
+		//	console.log('element:', item)
+		//}
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		await poststack_adjustq(group, q) // add .allowpartstack
 		// read quality is not parsed yet
@@ -1080,13 +1083,26 @@ return {}
 async function divide_reads_togroups(q) {
 	//if (templates.length == 0) {
 	const templates_info = []
-	for (const line of q.regions[0].lines) {
-		// FIXME to support multi-region
-		// q.regions[0] may need to be modified
-		templates_info.push({ sam_info: line, tempscore: '' })
+
+	let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
+	const widths = []
+	let width = 0
+	for (const r of q.regions) {
+		for (const line of r.lines) {
+			// FIXME to support multi-region
+			// q.regions[0] may need to be modified
+			templates_info.push({ sam_info: line, tempscore: '' })
+		}
+		width = r.x + r.width // Storing the extreme right position of every region
+		if (r.lines.length != 0) {
+			// no reads at all, return empty group
+			count_reads_in_regions = true
+		}
+		widths.push(width) // Storing widths of regions
 	}
-	if (q.regions[0].lines.length == 0) {
-		// no reads at all, return empty group
+
+	if (count_reads_in_regions == false) {
+		// This condition will only be true if both regions do not contain any reads
 		return {
 			groups: [
 				{
@@ -1094,7 +1110,8 @@ async function divide_reads_togroups(q) {
 					regions: bamcommon.duplicateRegions(q.regions),
 					templates: templates_info,
 					messagerows: [],
-					partstack: q.partstack
+					partstack: q.partstack,
+					widths: widths
 				}
 			]
 		}
@@ -1105,12 +1122,13 @@ async function divide_reads_togroups(q) {
 		//const lst = may_match_snv(templates, q)
 		//if (lst) return { groups: lst }
 		//for (const template of templates) {
+
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info)
+				return await rust_match_complexvariant(q, templates_info, widths)
 			} else {
-				return await match_complexvariant(q, templates_info)
+				return await match_complexvariant(q, templates_info, widths)
 			}
 		}
 	}
@@ -1126,7 +1144,8 @@ async function divide_reads_togroups(q) {
 				regions: bamcommon.duplicateRegions(q.regions),
 				templates: templates_info,
 				messagerows: [],
-				partstack: q.partstack
+				partstack: q.partstack,
+				widths: widths
 			}
 		]
 	}
@@ -1317,12 +1336,10 @@ function parse_one_segment(arg) {
 	}
 
 	// from here, read is mapped
-
 	if (cigarstr == '*') {
 		// why this case?
 		return
 	}
-
 	const boxes = [] // collect plottable segments
 	// as the absolute coord start of each box, will be incremented after parsing a box
 	let pos = segstart
@@ -1766,24 +1783,70 @@ function check_mismatch(lst, r, box, boxseq) {
 function plot_template(ctx, template, group, q) {
 	if (group.returntemplatebox) {
 		// one box per template
-		const box = {
-			qname: template.segments[0].qname,
-			x1: template.x1,
-			x2: template.x2,
-			y1: template.y,
-			y2: template.y + (template.height || group.stackheight),
-			start: Math.min(...template.segments.map(i => i.segstart)),
-			stop: Math.max(...template.segments.map(i => i.segstop))
-		}
+		const r = group.regions[template.segments[0].ridx] // this region where the segment falls into
+		r.width = group.widths[template.segments[0].ridx]
+		let box
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
+			box = {
+				qname: template.segments[0].qname,
+				x1: Math.max(r.x, template.x1),
+				x2: Math.min(template.x2, r.width),
+				y1: template.y,
+				y2: template.y + (template.height || group.stackheight),
+				start: Math.min(...template.segments.map(i => i.segstart)),
+				stop: Math.max(...template.segments.map(i => i.segstop))
+			}
+
 			if (template.segments[0].isfirst) box.isfirst = true
 			if (template.segments[0].islast) box.islast = true
+		} else {
+			// In paired end mode
+			if (template.segments.length == 2) {
+				if (template.segments[0].ridx != template.segments[1].ridx) {
+					// When read pairs are discordant exapanding past expected insert size and possibly in different chromosomes altogether
+					box = {
+						qname: template.segments[0].qname,
+						x1: template.x1,
+						x2: template.x2,
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				} else {
+					box = {
+						qname: template.segments[0].qname,
+						x1: Math.max(r.x, template.x1),
+						x2: Math.min(template.x2, r.width),
+						y1: template.y,
+						y2: template.y + (template.height || group.stackheight),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
+					}
+				}
+			} else {
+				// When template contains a single segment
+				const seg = template.segments[0]
+				const r = group.regions[seg.ridx]
+				r.width = group.widths[seg.ridx]
+				box = {
+					qname: template.segments[0].qname,
+					x1: Math.max(r.x, template.x1),
+					x2: Math.min(template.x2, r.width),
+					y1: template.y,
+					y2: template.y + (template.height || group.stackheight),
+					start: Math.min(...template.segments.map(i => i.segstart)),
+					stop: Math.max(...template.segments.map(i => i.segstop))
+				}
+			}
 		}
 		group.returntemplatebox.push(box)
 	}
 	for (let i = 0; i < template.segments.length; i++) {
 		const seg = template.segments[i]
+		const r = group.regions[seg.ridx]
+		r.width = group.widths[seg.ridx]
 		if (i == 0) {
 			// is the first segment, same rendering method no matter in single or paired mode
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1791,6 +1854,8 @@ function plot_template(ctx, template, group, q) {
 		}
 		// after the first segment, this only occurs in paired mode
 		const prevseg = template.segments[i - 1]
+		const prev_r = group.regions[prevseg.ridx]
+		prev_r.width = group.widths[prevseg.ridx]
 		if (prevseg.x2 <= seg.x1) {
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
@@ -1798,8 +1863,14 @@ function plot_template(ctx, template, group, q) {
 			ctx.strokeStyle = group.stackheight <= 2 ? split_linecolorfaint : match_hq
 			ctx.setLineDash([5, 3]) // dash for read pairs
 			ctx.beginPath()
-			ctx.moveTo(prevseg.x2, y)
-			ctx.lineTo(seg.x1, y)
+			if (prev_r.x == r.x) {
+				// Check if both segments are in the same region
+				ctx.moveTo(prevseg.x2, y)
+				ctx.lineTo(seg.x1, y)
+			} else if (prev_r.x < prevseg.x2 && seg.x1 < r.width) {
+				ctx.moveTo(Math.min(prevseg.x2, prev_r.width), y)
+				ctx.lineTo(Math.max(seg.x1, r.x), y)
+			}
 			ctx.stroke()
 
 			if (group.overlapRP_hlline) {
@@ -1830,8 +1901,10 @@ function plot_template(ctx, template, group, q) {
 					ctx.strokeStyle = overlapreadhlcolor
 					ctx.setLineDash([])
 					ctx.beginPath()
-					ctx.moveTo(seg.x1, y)
-					ctx.lineTo(prevseg.x2, y)
+					if (prev_r.x <= prevseg.x2 && seg.x1 <= r.width) {
+						ctx.moveTo(Math.max(seg.x1, r.x), y)
+						ctx.lineTo(Math.min(prevseg.x2, prev_r.width), y)
+					}
 					ctx.stroke()
 				}
 			} else {
@@ -1853,7 +1926,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	const r = group.regions[segment.ridx] // this region where the segment falls into
 	// what if segment spans multiple regions
 	// a box is always within a region, so get r at box level
-
+	r.width = group.widths[segment.ridx]
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
 		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
@@ -1874,16 +1947,26 @@ function plot_segment(ctx, segment, y, group, q) {
 			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
 				const x1 = Math.max(0, x)
-				const x2 = Math.min(q.canvaswidth, x + b.len * r.ntwidth)
+				const x2 = Math.min(r.width, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
 					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
 					const tw = ctx.measureText(b.len + ' bp').width
 					if (tw < x2 - x1 - 20) {
 						ctx.fillStyle = 'white'
-						ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
-						ctx.fillStyle = match_hq
-						ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						if ((x2 + x1) / 2 + tw / 2 < r.width && r.x < (x2 + x1) / 2 - tw / 2) {
+							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, tw, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						} else if ((x2 + x1) / 2 + tw / 2 < r.width && r.x >= (x2 + x1) / 2 - tw / 2) {
+							ctx.fillRect(r.x, y, tw + (x2 + x1) / 2 - tw / 2 - r.x, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						} else if ((x2 + x1) / 2 + tw / 2 >= r.width && r.x < (x2 + x1) / 2 - tw / 2) {
+							ctx.fillRect((x2 + x1) / 2 - tw / 2, y, r.width - (x2 + x1) / 2 + tw / 2, group.stackheight)
+							ctx.fillStyle = match_hq
+							ctx.fillText(b.len + ' bp', (x2 + x1) / 2, y + group.stackheight / 2)
+						}
 					}
 				}
 			}
@@ -1927,17 +2010,27 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
+						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					}
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
+						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x < xoff + r.ntwidth / 2) {
+							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
+						}
 					}
 					xoff += r.ntwidth
 				}
 			} else {
 				// not using quality or there ain't such data
 				ctx.fillStyle = b.opr == 'S' ? softclipbg_hq : mismatchbg_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x < x) {
+					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
+					ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
+					ctx.fillRect(x, y, r.width - x, group.stackheight)
+				}
 			}
 			continue
 		}
@@ -1958,7 +2051,9 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x < xoff) {
+						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					}
 					xoff += r.ntwidth
 				})
 			} else {
@@ -1975,7 +2070,13 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
-				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
+					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
+					ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
+					ctx.fillRect(x, y, r.width - x, group.stackheight)
+				}
 			}
 			if (r.to_printnt) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
@@ -1992,7 +2093,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	if (group.stackheight >= minstackheight2strandarrow) {
 		if (segment.forward) {
 			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= q.canvaswidth + group.stackheight / 2) {
+			if (x <= r.width + group.stackheight / 2) {
 				ctx.fillStyle = 'white'
 				ctx.beginPath()
 				ctx.moveTo(x - group.stackheight / 2, y)
