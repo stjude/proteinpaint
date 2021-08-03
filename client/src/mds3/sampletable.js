@@ -263,7 +263,7 @@ async function make_multiSampleTable(args) {
 }
 
 async function make_multiSampleSummaryList(args) {
-	const { arg, holder } = args
+	const { arg, holder, new_term } = args
 	// remove size to get all samples if switching between list and summary view
 	delete arg.size
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
@@ -289,7 +289,8 @@ async function make_multiSampleSummaryList(args) {
 					? `<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`
 					: ``
 			}`,
-			callback: div => make_summary_panel(arg, div, category, main_tabs)
+			callback: div => make_summary_panel(arg, div, category, main_tabs),
+			active: new_term && category.name == new_term.name
 		})
 	}
 
@@ -341,7 +342,8 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 						if (arg.tk.mds.termdb.getTermById(term.id) == undefined) {
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)
-							if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder })
+							if (active_tab && active_tab.label == 'Summary')
+								make_multiSampleSummaryList({ arg, holder: main_holder, new_term: term })
 							else if (active_tab && active_tab.label == 'List')
 								make_multiSampleTable({ arg, holder: active_tab.holder })
 							else make_multiSampleTable({ arg, holder, no_tabs: true })
