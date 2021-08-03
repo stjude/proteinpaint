@@ -1,5 +1,6 @@
 const ds = require('../../server/dataset/pnet.hg19.js')
 const bettersqlite = require('better-sqlite3')
+const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 const cn = new bettersqlite('db', {
 	readonly: false,
@@ -33,32 +34,15 @@ for (const sample of survSamples) {
 const annoTerms = cn.prepare(`SELECT distinct(term_id) as id FROM annotations`).all()
 
 for (const term of annoTerms) {
-	const values = cn.prepare(`SELECT distinct(value) FROM annotations WHERE term_id=?`).all([term.id])
+	const values = cn.prepare(`SELECT value FROM annotations WHERE term_id=?`).all([term.id])
+	// for pnet, for now assume that there are no uncomputable values, except when not numeric
 	if (values.filter(v => isNumeric(v.value)).length == values.length) {
-		let maxDecimals = 0
-		values.forEach(v => {
-			v.value = Number(v.value)
-			const numDecimals = v.value.toString().split('.')[1]
-			if (numDecimals && numDecimals.length > maxDecimals) {
-				maxDecimals = numDecimals.length
-			}
-		})
-
-		const type = values.filter(v => Number.isInteger(v.value)).length == values.length ? 'integer' : 'float'
-		values.sort(numericSorter)
-		const bin_size = (values[values.length - 1].value - values[0].value) / 6
+		const vals = values.map(v => Number(v.value))
 		const bins = {
-			default: {
-				type: 'regular',
-				bin_size,
-				first_bin: {
-					stop: values[0].value + bin_size
-				},
-				rounding: `.${maxDecimals}f`
-			}
+			default: initBinConfig(vals)
 		}
 		const jsondata = JSON.stringify({
-			type,
+			type: vals.filter(Number.isInteger).length == vals.length ? 'integer' : 'float',
 			name: term.id,
 			bins,
 			isleaf: true

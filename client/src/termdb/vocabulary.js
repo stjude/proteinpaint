@@ -4,6 +4,7 @@ import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
+import initBinConfig from '../../shared/termdb.initbinconfig'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
 
@@ -431,6 +432,9 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 			if (!('parent_id' in t)) t.parent_id = null
 			if (!('values' in t)) t.values = {}
 			if (!('isleaf' in t)) t.isleaf = true
+			if (!t.computableVals && (t.type == 'float' || t.type == 'integer')) {
+				t.computableVals = [] // will be used to initialize binconfig for numeric terms
+			}
 
 			const value = a.s[key]
 			if (t.type == 'categorical') {
@@ -448,13 +452,7 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 					if (!isNumeric(a.s[key])) throw `non-numeric term value='${value}' for term='${key}'`
 					a.s[key] = Number(a.s[key])
 					const val = a.s[key]
-					if (!('min' in t) || val < t.min) t.min = val
-					if (!('max' in t) || val > t.max) t.max = val
-					if (!('maxdecimals' in t)) t.maxdecimals = 0
-					const numdecimals = a.s[key].toString().split('.')[1]
-					if (numdecimals && numdecimals.length > t.maxdecimals) {
-						t.maxdecimals = numdecimals.length
-					}
+					t.computableVals.push(val)
 				}
 			} else if (t.type == 'condition') {
 				//TODO: add logic for conditional terms
@@ -466,16 +464,11 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 
 	for (const key in terms) {
 		const t = terms[key]
-		if (t.type !== 'categorical') {
-			const bin_size = (t.max - t.min) / 10
+		if ((t.type == 'integer' || t.type == 'float') && !t.bins) {
 			t.bins = {
-				default: {
-					bin_size,
-					stopinclusive: true,
-					first_bin: { startunbounded: true, stop: t.min + bin_size, stopinclusive: true },
-					rounding: '.' + t.maxdecimals + 'f'
-				}
+				default: initBinConfig(t.computableVals)
 			}
+			delete t.computableVals
 		}
 	}
 
