@@ -1517,7 +1517,9 @@ function parse_one_segment(arg) {
 		segment.discord_unmapped2 = true
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
-		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
+		(flag & 0x1 && flag & 0x2 && flag & 0x80) || // 131
+		(flag & 0x1 && flag & 0x40) || // 65 (technically wrong insert size AND wrong orientation)
+		(flag & 0x1 && flag & 0x80) // 129 (technically wrong insert size AND wrong orientation)
 	) {
 		// Mapped within insert size but incorrect orientation
 		segment.discord_orientation = true
