@@ -433,6 +433,22 @@ tape('compute_bins() unbounded', function(test) {
 		'should override start_percentile or start with startunbounded'
 	)
 
+	test.deepEqual(
+		b.compute_bins({ bin_size: 1, first_bin: { stop: 22, startinclusive: true } }, get_summary),
+		[
+			{
+				startunbounded: true,
+				start: undefined,
+				stop: 22,
+				startinclusive: 1,
+				stopinclusive: 0,
+				stopunbounded: true,
+				label: '<22'
+			}
+		],
+		'should have a valid bin.stop when there is only one bin (first bin === last bin)'
+	)
+
 	test.end()
 })
 
