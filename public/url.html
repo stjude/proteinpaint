@@ -174,7 +174,7 @@ const termdbarg7 = {
 		header_mode: 'with_tabs',
 		activeTab: 1
 	},
-	activeCohort:0
+activeCohort:0
 }
 /////////////////////// END of helper stuff
 
@@ -190,9 +190,14 @@ makeURL([
 { name: 'BAM',
 	links: [
 		[ 'WES 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
-		[ 'kmer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+		[ 'k-mer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
 		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
-		['kmer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['complex mutation','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
+		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
+		['ETV6 WGS', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
+		['CBFB WGS','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 	]
 },
 { name:'GDC BAM slice',
