@@ -498,7 +498,8 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm']
+	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
+	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
 /*
@@ -908,13 +909,13 @@ any possibility of dynamically querying terms from api??
 const terms = [
 	{
 		name: 'Project',
-		id: 'project',
+		id: 'project_id',
 		type: 'categorical',
 		fields: ['project', 'project_id']
 	},
 	{
 		name: 'Disease',
-		id: 'disease',
+		id: 'disease_type',
 		type: 'categorical',
 		fields: ['disease_type']
 	},
@@ -1030,8 +1031,8 @@ module.exports = {
 		terms,
 		termid2totalsize: {
 			// keys are term ids
-			project: { gdcapi: project_size },
-			disease: { gdcapi: disease_size },
+			project_id: { gdcapi: project_size },
+			disease_type: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
 		},
 		dictionary: {
@@ -1047,8 +1048,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
-		sunburst_ids: ['project', 'disease'], // term id
+		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
+		sunburst_ids: ['project_id', 'disease_type'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
@@ -1086,7 +1087,7 @@ module.exports = {
 	sampleSummaries2: {
 		get_number: { gdcapi: isoform2casesummary },
 		get_mclassdetail: { gdcapi: [samplesummary2_getvariant, samplesummary2_getcase] },
-		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site', label2: 'disease' }]
+		lst: [{ label1: 'project_id', label2: 'disease_type' }, { label1: 'primary_site', label2: 'disease_type' }]
 	},
 
 	queries: {
