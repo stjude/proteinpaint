@@ -284,20 +284,31 @@ makeURL([
 },
 {name:'termdb',
 	links:[
-		['sjlife tree','?termdb='+JSON.stringify(termdbarg1)],
-		['categorical','?termdb='+JSON.stringify(termdbarg2)],
-		['numerical','?termdb='+JSON.stringify(termdbarg3)],
-		['condition','?termdb='+JSON.stringify(termdbarg4)],
-		['cuminc','?termdb='+JSON.stringify(termdbarg5)],
-		['survival','?termdb='+JSON.stringify(termdbarg6)],
-		['filter','?termdb='+JSON.stringify(termdbarg7)],
-		['pnet','?termdb='+JSON.stringify(termdb_pnet)],
+		['sjlife tree','?noheader=1&termdb='+JSON.stringify(termdbarg1)],
+		['categorical','?noheader=1&termdb='+JSON.stringify(termdbarg2)],
+		['numerical','?noheader=1&termdb='+JSON.stringify(termdbarg3)],
+		['condition','?noheader=1&termdb='+JSON.stringify(termdbarg4)],
+		['cuminc','?noheader=1&termdb='+JSON.stringify(termdbarg5)],
+		['survival','?noheader=1&termdb='+JSON.stringify(termdbarg6)],
+		['filter','?noheader=1&termdb='+JSON.stringify(termdbarg7)],
+		['pnet','?noheader=1&termdb='+JSON.stringify(termdb_pnet)],
 		// TODO add filter combinations
 	]
 },
 {name:'scatterplot',
 	links:[
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
+	]
+},
+{name:'MASS UI',
+	links:[
+		['simple', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'TermdbTest',
+			plots: {
+				
+			}
+		})]
 	]
 },
 ]

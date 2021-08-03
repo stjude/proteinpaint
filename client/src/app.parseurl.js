@@ -58,6 +58,18 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('mass')) {
+		const str = urlp.get('mass')
+		const state = JSON.parse(str)
+		const opts = {
+			holder: arg.holder,
+			state
+		}
+		const _ = await import('./mass/app')
+		_.appInit(opts)
+		return
+	}
+
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
 		const genome_options = [...arg.selectgenome.node().childNodes]

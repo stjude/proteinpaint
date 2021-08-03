@@ -8,5 +8,31 @@
 const wpServer = require('./server/webpack.config.js')
 const wpClient = require('./client/webpack.config.js')
 
-module.exports = [wpServer, wpClient]
+function modClient(env) {
+	const config = wpClient(env)
+	// when exporting multiple configs,
+	// babel-loader and/or webpack does not seem to
+	// apply .babelrc to each config in the array
+	// so need to repeat this options here, for now
+	config.module.rules[1].use[0].options = {
+		presets: [
+			[
+				'@babel/preset-env',
+				{
+					modules: 'umd'
+				}
+			],
+			'@babel/preset-react'
+		],
+		plugins: [
+			'@babel/plugin-proposal-optional-chaining',
+			'@babel/plugin-proposal-export-namespace-from',
+			'@babel/plugin-syntax-dynamic-import',
+			'@babel/plugin-transform-runtime'
+		]
+	}
+	return config
+}
+
+module.exports = [wpServer, modClient]
 process.traceDeprecation = true

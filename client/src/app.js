@@ -181,7 +181,7 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			if (!arg.noheader) {
+			if (!arg.noheader && !window.location.search.includes('noheader')) {
 				makeheader(app, data, arg.jwt)
 			}
 
@@ -764,6 +764,9 @@ async function parseembedthenurl(arg, app) {
 
 	if (arg.gdcbamslice) {
 		launchgdcbamslice(arg, app)
+	}
+	if (arg.mass) {
+		launchmass(arg.mass, app)
 	}
 }
 
@@ -1366,4 +1369,13 @@ function launchtermdb(opts, app) {
 	import('./termdb/app').then(_ => {
 		_.appInit(null, opts)
 	})
+}
+
+function launchmass(opts, app) {
+	console.log([1526])
+	if (!opts.holder) opts.holder = app.holder0
+	if (!opts.callbacks) opts.callbacks = {}
+	/*import('./mass/app').then(_ => {
+		_.appInit(opts)
+	})*/
 }
