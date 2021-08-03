@@ -12,6 +12,7 @@ make_multiSampleTable
 make_multiSampleSummaryList
 make_summary_panel
 init_dictionary_ui
+init_remove_terms
 make_sunburst_tidlist
 make_filter_pill
 make_pagination
@@ -154,7 +155,10 @@ async function make_multiSampleTable(args) {
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
-	if (no_tabs) init_dictionary_ui(holder, arg)
+	if (no_tabs) {
+		init_dictionary_ui(holder, arg)
+		init_remove_terms(holder, arg)
+	}
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -200,7 +204,7 @@ async function make_multiSampleTable(args) {
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		if (arg.tid2value_orig.has(term.name.toLowerCase())) continue
+		if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
@@ -299,12 +303,13 @@ async function make_multiSampleSummaryList(args) {
 
 	init_tabs(holder, main_tabs)
 	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
+	init_remove_terms(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')
 }
 
 function init_dictionary_ui(holder, arg, main_tabs) {
 	const main_holder = arg.div.select('.sj_sampletable_holder')
-	const term_btn = holder
+	const add_btn = holder
 		.append('div')
 		.style('display', 'inline-block')
 		.attr('class', 'sja_filter_tag_btn')
@@ -315,9 +320,9 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 		.text('+ Add fields')
 		.on('click', async () => {
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
-			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
+			const tip = new Menu({ padding: '5px', parent_menu: add_btn })
 			const termdb = await import('../termdb/app')
-			tip.clear().showunder(term_btn.node())
+			tip.clear().showunder(add_btn.node())
 			termdb.appInit(null, {
 				holder: tip.d,
 				state: {
@@ -340,12 +345,84 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 							else if (active_tab && active_tab.label == 'List')
 								make_multiSampleTable({ arg, holder: active_tab.holder })
 							else make_multiSampleTable({ arg, holder, no_tabs: true })
-							delete arg.tk.mds.variant2samples.new_term
 						}
 					},
 					disable_terms: arg.tk.mds.variant2samples.termidlst
 				}
 			})
+		})
+}
+
+function init_remove_terms(holder, arg, main_tabs) {
+	const remove_btn = holder
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_filter_tag_btn')
+		.style('margin-left', '20px')
+		.style('border-radius', '6px')
+		.style('padding', '6px 10px')
+		.style('cursor', 'pointer')
+		.text('- Remove fields')
+		.on('click', async () => {
+			const termidlst = arg.tk.mds.variant2samples.termidlst
+			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
+			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
+			tip.clear().showunder(remove_btn.node())
+
+			let terms_remove = []
+
+			const fields_list = tip.d
+				.append('div')
+				.style('margin', '20px')
+				.style('font-size', '.9em')
+				.style('display', 'grid')
+				.style('grid-row-gap', '3px')
+				.style('grid-template-columns', 'auto auto')
+				.style('align-items', 'center')
+				.style('justify-items', 'left')
+
+			for (const id of termidlst) {
+				const term = arg.tk.mds.termdb.getTermById(id)
+				const checkbox_div = fields_list.append('div')
+
+				const check = checkbox_div
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', id)
+					.on('change', () => {
+						if (check.node().checked) terms_remove.push(id)
+						else terms_remove = terms_remove.filter(t => t != id)
+						submit_btn.property('disabled', terms_remove.length ? false : true)
+					})
+
+				fields_list
+					.append('div')
+					.append('label')
+					.style('padding', '2px 5px')
+					.attr('for', id)
+					.text(term.name)
+			}
+
+			const submit_btn = tip.d
+				.append('button')
+				.style('padding', '5px')
+				.style('border-radius', '5px')
+				.style('margin', 'auto')
+				.style('display', 'inline-block')
+				.property('disabled', terms_remove.length ? false : true)
+				.style('border', 'solid 1px #ddd')
+				.text('Remove')
+				.on('click', () => {
+					tip.hide()
+					if (terms_remove.length) {
+						const main_holder = arg.div.select('.sj_sampletable_holder')
+						arg.tk.mds.variant2samples.termidlst = termidlst.filter(t => !terms_remove.includes(t))
+						arg.tk.mds.termdb.terms = arg.tk.mds.termdb.terms.filter(t => !terms_remove.includes(t.id))
+						if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder })
+						else if (active_tab && active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder })
+						else make_multiSampleTable({ arg, holder, no_tabs: true })
+					}
+				})
 		})
 }
 
@@ -443,8 +520,9 @@ function make_sunburst_tidlist(arg, holder) {
 		.style('justrify-content', 'start')
 
 	for (const termid of arg.tid2value_orig) {
+		const term = arg.tk.mds.termdb.getTermById(termid)
 		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text(termid)
+		cell1.text(term.name)
 		cell2
 			.style('width', 'auto')
 			.style('justify-self', 'stretch')
