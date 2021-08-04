@@ -276,8 +276,9 @@ function configpanel(tk, block) {
 			.append('div')
 			.style('margin', '0px 0px 10px 25px')
 			.style('display', tk.filterByName ? 'block' : 'none')
-		const ta = div.append('textarea')
+		const ta = div.append('textarea').property('rows', 4)
 		if (tk.filterByName) ta.property('value', tk.filterByName)
+		ta.property('placeholder', 'One name per row. Case sensitive. Use isoform names for gene track.')
 		div
 			.append('button')
 			.style('display', 'block')
