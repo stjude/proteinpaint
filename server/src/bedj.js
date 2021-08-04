@@ -87,6 +87,12 @@ async function do_query(req, genomes) {
 
 	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
 
+	let filterByName
+	if (req.query.filterByName) {
+		filterByName = new Set(req.query.filterByName.split(/[,\s\n]/))
+		console.log(filterByName)
+	}
+
 	const items = []
 
 	// apply filtering
@@ -103,6 +109,16 @@ async function do_query(req, genomes) {
 			}
 			if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
 				continue
+			}
+			if (filterByName) {
+				if (i.isoform) {
+					if (!filterByName.has(i.isoform)) continue
+				} else if (i.name) {
+					if (!filterByName.has(i.name)) continue
+				} else {
+					// do not show nameless items in this case
+					continue
+				}
 			}
 			items.push(i)
 		}
