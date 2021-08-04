@@ -84,9 +84,10 @@ tape('fractions: round to nearest hundredths', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.1,
-			first_bin: { stop: 0.5 },
-			rounding: '.1f'
+			bin_size: 0.11,
+			first_bin: { stop: 0.03 },
+			last_bin: { start: 0.69 },
+			rounding: '.2f'
 		},
 		'should match expected output'
 	)
