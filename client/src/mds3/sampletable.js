@@ -17,6 +17,7 @@ init_remove_terms
 make_sunburst_tidlist
 make_filter_pill
 make_pagination
+make_column_showhide
 
 using variant2samples
 mlst can be mixture of data types, doesn't matter
@@ -272,8 +273,7 @@ async function make_multiSampleTable(args) {
 	let columns = []
 	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
 	column_nodes.forEach(n => columns.push(n.innerText))
-	make_column_edit(arg, columns, header_div, grid_div)
-	console.log(arg.tk.mds.variant2samples.visibleterms)
+	make_column_showhide(arg, columns, header_div, grid_div)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -733,7 +733,7 @@ function make_pagination(arg, page_doms) {
 	}
 }
 
-function make_column_edit(arg, columns, header_div, sample_table){
+function make_column_showhide(arg, columns, header_div, sample_table){
 	const column_edit_btn = header_div.append('div')
 		.style('display', 'inline-block')
 		.style('font-size', '.9em')
