@@ -9,6 +9,8 @@ COPY $PKGTGZ .
 
 WORKDIR /home/root/pp/app
 RUN npm install ../$PKGTGZ
-ENV PP_MODE container-dev
-ADD server/dataset ./dataset
-CMD [ "npx", "proteinpaint"]
+
+COPY ./build/pp-dist/setup.sh .
+
+EXPOSE 3456
+CMD [ "sh", "-c", "./setup.sh && PP_MODE=container-prod npx proteinpaint"]

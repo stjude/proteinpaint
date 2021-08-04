@@ -30,6 +30,11 @@ tape('term search, default behavior', function(test) {
 	test.timeoutAfter(10000)
 
 	runpp({
+		state: {
+			tree: {
+				exclude_types: ['survival']
+			}
+		},
 		search: {
 			callbacks: {
 				'postRender.test': runTests
@@ -48,7 +53,9 @@ tape('term search, default behavior', function(test) {
 			.to(testFirstSearch)
 			.use(triggerClickResult_firstSearch)
 			.to(testClickResult_firstSearch, { arg: tree, bus: tree, eventType: 'postRender' })
-			.use(triggerSecondSearch_samebranchas1st)
+			//.use(triggerSecondSearch_samebranchas1st)
+			.use(triggerSearchExcludedType)
+			.to(testExcludedTypeResult)
 			.done(test)
 	}
 
@@ -93,9 +100,18 @@ tape('term search, default behavior', function(test) {
 	}
 
 	// second search, on the same branch as the first search
-	function triggerSecondSearch_samebranchas1st(search) {
-		// somehow this function doesn't run
+	/*function triggerSecondSearch_samebranchas1st(search) {
+		// somehow this function doesn't run when triggered with rideInit.use()?
 		search.Inner.doSearch('asthma')
+	}*/
+
+	function triggerSearchExcludedType(search) {
+		search.Inner.doSearch('survival')
+	}
+
+	function testExcludedTypeResult(search) {
+		const div = search.Inner.dom.resultDiv.select('div').node()
+		test.equal(div && div.innerHTML, 'No match', 'should not show excluded types in results')
 	}
 })
 

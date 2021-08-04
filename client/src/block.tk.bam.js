@@ -3,7 +3,7 @@ import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './dom'
-import url2map from './url2map'
+import urlmap from './common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -93,26 +93,19 @@ export async function loadTk(tk, block) {
 		xoff += r.width + block.regionspace
 	}
 
-	if (block.subpanels.length == tk.subpanels.length) {
-		/*
-		must wait when subpanels are added to tk
-		this is only done when block finishes loading data for main tk
-		*/
-		for (const [idx, r] of block.subpanels.entries()) {
-			xoff += r.leftpad
-			regions.push({
-				chr: r.chr,
-				start: r.start,
-				stop: r.stop,
-				width: r.width,
-				exonsf: r.exonsf,
-				subpanelidx: idx,
-				x: xoff
-			})
-			xoff += r.width
-		}
+	for (const [idx, r] of block.subpanels.entries()) {
+		xoff += r.leftpad
+		regions.push({
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop,
+			width: r.width,
+			exonsf: r.exonsf,
+			subpanelidx: idx,
+			x: xoff
+		})
+		xoff += r.width
 	}
-
 	tk.regions = regions
 
 	try {
@@ -622,7 +615,7 @@ function makeTk(tk, block) {
 
 // may add additional parameters from url that specifically apply to the bam track
 function may_add_urlparameter(tk) {
-	const u2p = url2map()
+	const u2p = urlmap()
 
 	if (u2p.has('variant')) {
 		/* XXX only a quick fix!

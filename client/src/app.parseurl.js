@@ -4,32 +4,13 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
+import urlmap from './common/urlmap'
 
 /*
 ********************** EXPORTED
 parse()
-url2map()
 get_tklst()
-
 */
-
-export function url2map() {
-	const urlp = new Map()
-	for (const s of decodeURIComponent(location.search.substr(1)).split('&')) {
-		const l = s.split('=')
-		if (l.length == 2) {
-			let key = l[0].toLowerCase()
-			// replace obsolete keys
-			if (key == 'p') {
-				key = 'gene'
-			}
-			urlp.set(key, l[1])
-
-			sessionStorage.setItem('urlp_' + key, l[1])
-		}
-	}
-	return urlp
-}
 
 export async function parse(arg) {
 	/*
@@ -41,8 +22,10 @@ arg
 	.samplecart
 	.holder
 	.debugmode
+
+upon error, throw err message as a string
 */
-	const urlp = url2map()
+	const urlp = urlmap()
 
 	if (urlp.has('examples')) {
 		const _ = await import('./examples')
@@ -50,10 +33,28 @@ arg
 		return
 	}
 
+	if (urlp.has('gdcbamslice')) {
+		const _ = await import('./block.tk.bam.gdc')
+		_.bamsliceui(arg.genomes, arg.holder)
+		return
+	}
+
 	if (urlp.has('mdsjsonform')) {
 		const _ = await import('./mdsjsonform')
 		await _.init_mdsjsonform(arg)
 		// will not process other url parameters
+		return
+	}
+
+	if (urlp.has('termdb')) {
+		const str = urlp.get('termdb')
+		const state = JSON.parse(str)
+		const opts = {
+			holder: arg.holder,
+			state
+		}
+		const _ = await import('./termdb/app')
+		_.appInit(null, opts)
 		return
 	}
 
@@ -74,9 +75,9 @@ arg
 			url = urlp.get('hicurl')
 		}
 		const gn = urlp.get('genome')
-		if (!gn) return 'genome is required for hic'
+		if (!gn) throw 'genome is required for hic'
 		const genome = arg.genomes[gn]
-		if (!genome) return 'invalid genome'
+		if (!genome) throw 'invalid genome'
 		const hic = {
 			genome,
 			file,
@@ -86,129 +87,109 @@ arg
 			enzyme: urlp.get('enzyme'),
 			holder: arg.holder
 		}
-		import('./hic.straw').then(_ => {
-			_.hicparsefile(hic)
-		})
+		const _ = await import('./hic.straw')
+		_.hicparsefile(hic)
 		return
 	}
 
 	if (urlp.has('singlecell')) {
-		if (!urlp.has('genome')) return '"genome" is required for "singlecell"'
+		if (!urlp.has('genome')) throw '"genome" is required for "singlecell"'
 		const genomename = urlp.get('genome')
 		const genomeobj = arg.genomes[genomename]
-		if (!genomeobj) return 'invalid genome: ' + genomename
+		if (!genomeobj) throw 'invalid genome: ' + genomename
 
-		client
-			.add_scriptTag('/static/js/three.js')
-			.then(() => {
-				return client.add_scriptTag('/static/js/loaders/PCDLoader.js')
-			})
-			.then(() => {
-				return client.add_scriptTag('/static/js/controls/TrackballControls.js')
-			})
-			.then(() => {
-				return client.add_scriptTag('/static/js/WebGL.js')
-			})
-			.then(() => {
-				return client.add_scriptTag('/static/js/libs/stats.min.js')
-			})
-			.then(() => {
-				import('./singlecell').then(_ => {
-					_.init(
-						{
-							genome: genomeobj,
-							jsonfile: urlp.get('singlecell')
-						},
-						arg.holder
-					)
-				})
-			})
+		await client.add_scriptTag('/static/js/three.js')
+		await client.add_scriptTag('/static/js/loaders/PCDLoader.js')
+		await client.add_scriptTag('/static/js/controls/TrackballControls.js')
+		await client.add_scriptTag('/static/js/WebGL.js')
+		await client.add_scriptTag('/static/js/libs/stats.min.js')
+		const _ = await import('./singlecell')
+		_.init(
+			{
+				genome: genomeobj,
+				jsonfile: urlp.get('singlecell')
+			},
+			arg.holder
+		)
 		return
 	}
 
 	if (urlp.has('mavbfile')) {
-		if (!urlp.has('genome')) return '"genome" is required for "mavb"'
+		if (!urlp.has('genome')) throw '"genome" is required for "mavb"'
 		const genomename = urlp.get('genome')
 		const genome = arg.genomes[genomename]
-		if (!genome) return 'invalid genome: ' + genomename
-		import('./mavb').then(p => {
-			p.mavbparseinput(
-				{
-					genome,
-					hostURL: arg.hostURL,
-					file: urlp.get('mavbfile')
-				},
-				() => {},
-				arg.holder,
-				arg.jwt
-			)
-		})
+		if (!genome) throw 'invalid genome: ' + genomename
+		const _ = await import('./mavb')
+		_.mavbparseinput(
+			{
+				genome,
+				hostURL: arg.hostURL,
+				file: urlp.get('mavbfile')
+			},
+			() => {},
+			arg.holder,
+			arg.jwt
+		)
 		return
 	}
 
 	if (urlp.has('mavburl')) {
-		if (!urlp.has('genome')) return '"genome" is required for "mavb"'
+		if (!urlp.has('genome')) throw '"genome" is required for "mavb"'
 		const genomename = urlp.get('genome')
 		const genome = arg.genomes[genomename]
-		if (!genome) return 'invalid genome: ' + genomename
-		import('./mavb').then(p => {
-			p.mavbparseinput(
-				{
-					genome,
-					hostURL: arg.hostURL,
-					url: urlp.get('mavburl')
-				},
-				() => {},
-				arg.holder,
-				arg.jwt
-			)
-		})
+		if (!genome) throw 'invalid genome: ' + genomename
+		const _ = await import('./mavb')
+		_.mavbparseinput(
+			{
+				genome,
+				hostURL: arg.hostURL,
+				url: urlp.get('mavburl')
+			},
+			() => {},
+			arg.holder,
+			arg.jwt
+		)
 		return
 	}
 
 	if (urlp.has('scatterplot')) {
-		if (!urlp.has('genome')) return '"genome" is required for "scatterplot"'
+		// FIXME to refactor this design
+		if (!urlp.has('genome')) throw '"genome" is required for "scatterplot"'
 		const genomename = urlp.get('genome')
 		const genome = arg.genomes[genomename]
-		if (!genome) return 'invalid genome: ' + genomename
+		if (!genome) throw 'invalid genome: ' + genomename
+
 		let plot_data
-		try {
-			if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
-				const url_str = urlp.get('mdsjsonurl')
-				const file_str = urlp.get('mdsjson')
-				plot_data = await mdsjson.get_scatterplot_data(file_str, url_str)
-			}
-			if (urlp.has('tsnejson')) {
-				const file_str = urlp.get('tsnejson')
-				const data = await client.dofetch('textfile', { file: file_str })
-				if (data.error) throw tmp.error
-				else if (data.text) {
-					plot_data = {
-						mdssamplescatterplot: {
-							analysisdata: JSON.parse(data.text)
-						}
+		if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
+			const url_str = urlp.get('mdsjsonurl')
+			const file_str = urlp.get('mdsjson')
+			plot_data = await mdsjson.get_scatterplot_data(file_str, url_str)
+		}
+		if (urlp.has('tsnejson')) {
+			const file_str = urlp.get('tsnejson')
+			const data = await client.dofetch('textfile', { file: file_str })
+			if (data.error) throw tmp.error
+			else if (data.text) {
+				plot_data = {
+					mdssamplescatterplot: {
+						analysisdata: JSON.parse(data.text)
 					}
 				}
 			}
-		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			return e.message || e
 		}
+
 		// if genome is defined in url, pass it to samplescatterplot
 		plot_data.mdssamplescatterplot.genome = genome
-		await import('./mds.samplescatterplot').then(_ => {
-			_.init(plot_data.mdssamplescatterplot, arg.holder, false)
-		})
+		const _ = await import('./mds.samplescatterplot')
+		_.init(plot_data.mdssamplescatterplot, arg.holder, false)
 		return
 	}
 
 	if (urlp.has('block')) {
-		if (!urlp.has('genome')) {
-			return 'missing genome for block'
-		}
+		if (!urlp.has('genome')) throw 'missing genome for block'
 		const genomename = urlp.get('genome')
 		const genomeobj = arg.genomes[genomename]
-		if (!genomeobj) return 'invalid genome: ' + genomename
+		if (!genomeobj) throw 'invalid genome: ' + genomename
 
 		const par = {
 			nobox: 1,
@@ -228,9 +209,7 @@ arg
 			const chr = ll[0]
 			const start = Number.parseInt(ll[1])
 			const stop = Number.parseInt(ll[2])
-			if (Number.isNaN(start) || Number.isNaN(stop)) {
-				return 'Invalid start/stop value in position'
-			}
+			if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
 			position = { chr: chr, start: start, stop: stop }
 		}
 		if (urlp.has('regions')) {
@@ -241,9 +220,7 @@ arg
 				const chr = l[0]
 				const start = Number.parseInt(l[1])
 				const stop = Number.parseInt(l[2])
-				if (Number.isNaN(start) || Number.isNaN(stop)) {
-					return 'Invalid start/stop value in regions'
-				}
+				if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in regions'
 				rglst.push({ chr: l[0], start: start, stop: stop })
 			}
 		}
@@ -277,23 +254,17 @@ arg
 
 		par.datasetqueries = may_get_officialmds(urlp)
 
-		try {
-			par.tklst = await get_tklst(urlp, genomeobj)
-		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			return e.message || e
-		}
+		par.tklst = await get_tklst(urlp, genomeobj)
 
 		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
-		import('./block').then(b => new b.Block(par))
+		const b = await import('./block')
+		new b.Block(par)
 		return
 	}
 
 	if (urlp.has('gene')) {
 		const str = urlp.get('gene')
-		if (str.length == 0) {
-			return 'zero length query string'
-		}
+		if (str.length == 0) throw 'zero length query string'
 		const par = {
 			hostURL: arg.hostURL,
 			query: str,
@@ -313,9 +284,9 @@ arg
 			if (urlp.has('genome')) {
 				genomename = urlp.get('genome')
 			}
-			if (!genomename) return 'No genome, and none set as default'
+			if (!genomename) throw 'No genome, and none set as default'
 			par.genome = arg.genomes[genomename]
-			if (!par.genome) return 'invalid genome: ' + genomename
+			if (!par.genome) throw 'invalid genome: ' + genomename
 		}
 		let ds = null
 		if (urlp.has('dataset')) {
@@ -328,12 +299,7 @@ arg
 			}
 		}
 
-		try {
-			par.tklst = await get_tklst(urlp, par.genome)
-		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			return e.message || e
-		}
+		par.tklst = await get_tklst(urlp, par.genome)
 
 		par.datasetqueries = may_get_officialmds(urlp)
 		blockinit(par)

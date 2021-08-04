@@ -228,7 +228,7 @@ tape('empty cohort, then selected', function(test) {
 	}
 })
 
-tape('filter subheader and tab', async function(test) {
+tape('filter subheader and tab', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {

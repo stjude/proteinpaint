@@ -19,29 +19,233 @@ tr>:first-child {
 
 
 <script>
-makeURL([
+
+/////////////////////// helper stuff
+const termdbarg1 = {dslabel:'SJLife',genome:'hg38',nav:{header_mode:'with_tabs'}}
+const termdbarg2 = {
+	dslabel:'SJLife',
+	genome:'hg38',
+	tree: {
+		//exclude_types: ['integer'],
+		expandedTermIds: [ 'root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp' ],
+		visiblePlotIds: ['diaggrp'],
+		plots: {
+			diaggrp: {
+				term: {
+					id: 'diaggrp'
+				}
+			}
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: -1 // close all tabs
+	},
+	activeCohort:0
+}
+const termdbarg3 = {
+	dslabel:'SJLife',
+	genome:'hg38',
+	tree: {
+		expandedTermIds: [ 'root', 'Cancer-related Variables', 'Diagnosis','yeardx' ],
+		visiblePlotIds: ['yeardx'],
+		plots: {
+			yeardx: {
+				term: {
+					id: 'yeardx'
+				}
+			}
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: -1
+	},
+	activeCohort:0
+}
+const termdbarg4 = {
+	dslabel:'SJLife',
+	genome:'hg38',
+	tree: {
+		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
+		visiblePlotIds: ['Cardiovascular System'],
+		plots: {
+			'Cardiovascular System': {
+				term: {
+					id: 'Cardiovascular System'
+				}
+			}
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: -1
+	},
+	activeCohort:0
+}
+const termdbarg5 = {
+	dslabel:'SJLife',
+	genome:'hg38',
+	tree: {
+		expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
+		visiblePlotIds: ['Cardiovascular System'],
+		plots: {
+			'Cardiovascular System': {
+				term: {
+					id: 'Cardiovascular System'
+				},
+				settings: {
+					currViews: ['cuminc']
+				}
+			}
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: -1
+	},
+	activeCohort:0
+}
+const termdbarg6 = {
+	dslabel:'TermdbTest',
+	genome:'hg38',
+	tree: {
+		expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+		visiblePlotIds: ['diaggrp'],
+		plots: {
+			'diaggrp': {
+				term: {
+					id: 'diaggrp'
+				},
+				term2: {
+					id: 'efs'
+				},
+				settings: {
+					currViews: ['survival']
+				}
+			}
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: -1
+	},
+	activeCohort:0
+}
+const termdbarg7 = {
+	dslabel:'SJLife',
+	genome:'hg38',
+	tree: {
+		expandedTermIds: [
+			'root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'
+		],
+		visiblePlotIds: ['diaggrp'],
+		plots: {
+			diaggrp: {
+				term: {
+					id: 'diaggrp'
+				}
+			}
+		}
+	},
+	termfilter: {
+		filter:{
+			type:'tvslst',
+			join:'',
+			in:true,
+			lst:[
+				{type:'tvs',tvs: {
+					term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+						"values":{
+							"0": { "label":"Not exposed", "uncomputable":true },
+							"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+							"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+						}
+					},
+					ranges: [
+						{ value: '0', label: "Not exposed"},
+						{startunbounded:true,stop:2000,stopinclusive:true}
+					]
+				}}
+			]
+		}
+	},
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: 1
+	},
+activeCohort:0
+}
+const termdb_pnet = {
+	dslabel: 'PNET',
+	genome: 'hg19',
+	nav: {
+		header_mode: 'with_tabs',
+		activeTab: 1,
+	},
+	tree: {
+		expandedTermIds: [
+			'root',
+			'Age',
+			'Gender'
+		],
+		visiblePlotIds: ['Age', 'Gender'],
+		plots: {
+			Age: {
+				term: {
+					id: 'Age'
+				},
+				term2: {
+					id: 'Event-free survival'
+				},
+				settings: {
+					currViews: ['barchart']
+				}
+			},
+			Gender: {
+				term: {
+					id: 'Gender'
+				},
+				settings: {
+					//currViews: ['survival']
+				}
+			}
+		}
+	}
+}
+/////////////////////// END of helper stuff
+
 /*
+call the makeURL() to make URLs
 each element defines one type of feature showing in a row
 with a number of URLs demonstrating different examples of this feature
 .name: string
 .links: []
    each element: [0]: URL label, [1]: URL path name
 */
+makeURL([
 { name: 'BAM',
 	links: [
 		[ 'WES 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
-		[ 'kmer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+		[ 'k-mer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
 		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
-		['kmer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['complex mutation','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
+		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
+		['ETV6 WGS', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
+		['CBFB WGS','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 	]
 },
 { name:'GDC BAM slice',
 	links:[
-		['GBM EGFR','example.gdc.bamslice.html?gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
-		['AKT1 E17K','example.gdc.bamslice.html?gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780213.C.T'],
-		['KRAS G12D','example.gdc.bamslice.html?gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245349.C.T'],
-		['NPM1 exon12 insertion','example.gdc.bamslice.html?gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410538.C.CTCTG'],
-		['MYC 3bp del','example.gdc.bamslice.html?gdc_id=d15a8749-e497-495d-a0a5-d21e79f4e172&gdc_var=chr8.127740425.ATGT.A']
+		['GBM EGFR','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
+		['AKT1 E17K','?gdcbamslice=1&gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780214.C.T'],
+		['KRAS G12D','?gdcbamslice=1&gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245350.C.T'],
+		['NPM1 exon12 insertion','?gdcbamslice=1&gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410539.C.CTCTG'],
+		['MYC 3bp del','?gdcbamslice=1&gdc_id=d15a8749-e497-495d-a0a5-d21e79f4e172&gdc_var=chr8.127740426.ATGT.A'],
+		['ACVR2A K329fs','?gdcbamslice=1&gdc_id=ad5639d2-f715-4da9-9b02-700f0d1b3fca&gdc_var=chr2.147926116.TA.T'],
+		['IDH1 R132H','?gdcbamslice=1&gdc_id=4c28173b-45ec-4a67-a055-3958981e1765&gdc_var=chr2.208248388.C.T'],
 	]
 },
 {name:'mds3',
@@ -49,6 +253,7 @@ with a number of URLs demonstrating different examples of this feature
 		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],
 		['TP53','?genome=hg38&gene=ENST00000269305&mds3=GDC'],
 		['KRAS','?genome=hg38&gene=ENST00000256078&mds3=GDC'],
+		['IDH1','?genome=hg38&gene=ENST00000345146&mds3=GDC'],
 	]
 },
 {name:'junction',
@@ -66,7 +271,31 @@ with a number of URLs demonstrating different examples of this feature
 		['hic tk','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
 		['bed arc','?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc%20Track,proteinpaint_demo/hg19/arc/mango.gz'],
 	]
-}
+},
+{name:'bedj',
+	links:[
+		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
+		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz']
+	]
+},
+{name:'termdb',
+	links:[
+		['sjlife tree','?termdb='+JSON.stringify(termdbarg1)],
+		['categorical','?termdb='+JSON.stringify(termdbarg2)],
+		['numerical','?termdb='+JSON.stringify(termdbarg3)],
+		['condition','?termdb='+JSON.stringify(termdbarg4)],
+		['cuminc','?termdb='+JSON.stringify(termdbarg5)],
+		['survival','?termdb='+JSON.stringify(termdbarg6)],
+		['filter','?termdb='+JSON.stringify(termdbarg7)],
+		['pnet','?termdb='+JSON.stringify(termdb_pnet)],
+		// TODO add filter combinations
+	]
+},
+{name:'scatterplot',
+	links:[
+		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
+	]
+},
 ]
 )
 
@@ -100,6 +329,7 @@ function makeURL(rows) {
 		}
 	}
 }
+
 </script>
 
 </body>

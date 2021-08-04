@@ -1,8 +1,11 @@
 const tape = require('tape')
 const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
+const serverconfig = require('../../src/serverconfig')
 
 /**************
+requires a compiled rust code, see rust_indel_bin below 
+
 examples data structure
 [
 	{
@@ -29,7 +32,8 @@ examples data structure
 	}
 ]
 ***************/
-const rust_indel_bin = '../rust_indel_cargo/target/release/rust_indel_cargo'
+const rust_indel_bin = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
+const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 
 // these are constants. can be overwritten by the same settings in the examples
 const kmer_length = 6,
@@ -56,7 +60,7 @@ tape('rust indel binary', async function(test) {
 function runTest(e, test) {
 	// validate data structure of e
 	if (!e.pplink) throw '.pplink missing'
-	test.pass('Testing ' + e.pplink)
+	test.pass(`Testing "${e.comment}" at ${e.pplink}`)
 
 	if (!e.leftFlank) throw '.leftFlank missing'
 	if (!e.rightFlank) throw '.rightFlank missing'
@@ -165,7 +169,7 @@ function runTest(e, test) {
 				}
 				test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
 			} else {
-				test.pass('All passed')
+				test.pass(`all passed`)
 			}
 
 			resolve() // this is necessary to end the test in the async call
@@ -176,9 +180,10 @@ function runTest(e, test) {
 const examples = [
 	// one object for each example
 	{
-		// 8-bp insertion at CBL exon 10
+		comment: '8-bp insertion at CBL exon 10',
 		pplink:
-			'https://ppr.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG',
+			pphost +
+			'?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG',
 		leftFlank: 'GTACCCTAGGTGGAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGAC',
 		rightFlank: 'TGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGTAAAGCATTTT',
 		seqRef:
@@ -261,9 +266,10 @@ const examples = [
 		]
 	},
 	{
-		// 3-bp deletion in KIT exon 8
+		comment: '3-bp deletion in KIT exon 8',
 		pplink:
-			'http://localhost:3001/?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A',
+			pphost +
+			'?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A',
 		seqRef:
 			'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
 		seqMut:

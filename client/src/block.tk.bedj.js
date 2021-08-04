@@ -2,6 +2,7 @@ import * as client from './client'
 import { bplen } from '../shared/common'
 import { event as d3event } from 'd3-selection'
 import { legend_newrow } from './block.legend'
+import { make_one_checkbox } from './common/dom/checkbox'
 
 /*
 bedj can only be loaded from POST but not GET
@@ -210,8 +211,9 @@ function configpanel(tk, block) {
 		row.append('span').html('Item height&nbsp;')
 		row
 			.append('input')
+			.attr('type', 'number')
 			.property('value', tk.stackheight)
-			.attr('size', 5)
+			.style('width', '50px')
 			.on('keyup', () => {
 				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
 				const s = d3event.target.value
@@ -227,7 +229,7 @@ function configpanel(tk, block) {
 	}
 	if (!tk.categories) {
 		// color
-		const row = holder.append('div')
+		const row = holder.append('div').style('margin-bottom', '10px')
 		row.append('span').html('Color&nbsp;')
 		row
 			.append('input')
@@ -237,5 +239,18 @@ function configpanel(tk, block) {
 				tk.color = d3event.target.value
 				bedjload(tk, block)
 			})
+	}
+	{
+		// hide names
+		const row = holder.append('div').style('margin-bottom', '10px')
+		make_one_checkbox({
+			holder: row,
+			labeltext: 'Hide item names',
+			checked: tk.hideItemNames,
+			callback: () => {
+				tk.hideItemNames = !tk.hideItemNames
+				bedjload(tk, block)
+			}
+		})
 	}
 }

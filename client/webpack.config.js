@@ -2,16 +2,13 @@ const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
 
 module.exports = function(env = {}) {
-	const publicPath = (env.url || '') + '/bin/'
-	const outputPath = path.join(__dirname, '../public/bin')
-
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
-			path: outputPath,
-			publicPath,
+			path: path.join(__dirname, '../public/bin'),
+			publicPath: (env.url || '') + '/bin/',
 			filename: 'proteinpaint.js',
 			jsonpFunction: 'ppJsonp',
 			// the library name exposed by this bundle
@@ -28,32 +25,18 @@ module.exports = function(env = {}) {
 			'react-dom': 'ReactDOM'
 		},
 		module: {
+			strictExportPresence: true,
 			rules: [
-				/*
-			{
-				test:/\.js$/,
-				exclude:/node_modules/,
-				loader:'babel-loader',
-			},
-			*/
 				{
 					test: /\.css$/,
-					use: [
-						{
-							loader: 'style-loader'
-						},
-						{
-							loader: 'css-loader'
-						}
-					]
+					use: ['style-loader', 'css-loader']
 				},
-
 				{
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader',
-							options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
+							loader: 'babel-loader'
+							// babel-loader respects .babelrc, so no need to specify presets and plugins here
 						}
 					]
 				}

@@ -62,7 +62,8 @@ class Overlay {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config: appState.tree.plots[this.id],
-			ssid: appState.ssid
+			ssid: appState.ssid,
+			exclude_types: [...appState.tree.exclude_types]
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -87,7 +88,8 @@ class Overlay {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id]
+			disable_terms: [plot.term.id],
+			exclude_types: this.state.exclude_types
 		}
 		{
 			// if cohort selection is enabled
@@ -95,6 +97,10 @@ class Overlay {
 			if (s.activeCohort != undefined) {
 				a.activeCohort = s.activeCohort
 			}
+		}
+
+		if (plot.term.term.type == 'survival') {
+			a.exclude_types.push('survival')
 		}
 		if (plot.term2) {
 			a.term = plot.term2.term

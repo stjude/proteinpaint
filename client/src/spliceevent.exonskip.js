@@ -361,7 +361,7 @@ v: list of events
 	return eventsetlst
 }
 
-function findjunctionbystartstop(lst, p1, p2) {
+export function findjunctionbystartstop(lst, p1, p2) {
 	const start = Math.min(p1, p2)
 	const stop = Math.max(p1, p2)
 	for (const j of lst) {
@@ -370,9 +370,7 @@ function findjunctionbystartstop(lst, p1, p2) {
 	return null
 }
 
-exports.findjunctionbystartstop = findjunctionbystartstop
-
-function findjunctionAlst(junctions, gm, exonbegin, exonend) {
+export function findjunctionAlst(junctions, gm, exonbegin, exonend) {
 	/*
 	find canonical junctions skipped by junction B
 	by the order of exons
@@ -399,9 +397,7 @@ function findjunctionAlst(junctions, gm, exonbegin, exonend) {
 	return lst
 }
 
-exports.findjunctionAlst = findjunctionAlst
-
-function findupdown1junction4exonskip(evt, gm, junctions) {
+export function findupdown1junction4exonskip(evt, gm, junctions) {
 	/*
 	find up1 and down1 junction for a exon skipping event on the same isoform, for graphing
 	*/
@@ -435,7 +431,6 @@ function findupdown1junction4exonskip(evt, gm, junctions) {
 		evt.down1junction = findjunctionbystartstop(junctions, p1, p2)
 	}
 }
-exports.findupdown1junction4exonskip = findupdown1junction4exonskip
 
 function checkexoncodingutr(exonidlst, gm) {
 	/*

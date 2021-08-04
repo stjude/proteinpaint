@@ -5,6 +5,14 @@ const ds = require('./sjlife2.hg38.js')
 
 const copy = JSON.parse(JSON.stringify(ds))
 delete copy.track.ld
+copy.track.vcf.chr2bcffile = {
+	chr10: removeTpPrefix(copy.track.vcf.chr2bcffile.chr10),
+	chr17: removeTpPrefix(copy.track.vcf.chr2bcffile.chr17)
+}
+copy.track.vcf.AD.chr2bcffile = {
+	chr17: removeTpPrefix(copy.track.vcf.AD.chr2bcffile.chr17)
+}
+
 copy.track.vcf.termdb_bygenotype.sex_chrs = ['chrX', 'chrY']
 
 const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
@@ -16,6 +24,10 @@ copy.cohort.db.file = 'files/hg38/TermdbTest/db2'
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, copy.cohort.db.file)
 fs.copyFileSync(srcdb, destdb)
+
+function removeTpPrefix(filename) {
+	return filename.replace(serverconfig.tpmasterdir, '')
+}
 
 /*
 const vcfname = 'vcf.gz'

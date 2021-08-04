@@ -202,7 +202,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		// force a computed last bin to have stopunbounded true
 		if (currBin.stop >= max) {
 			currBin.stopunbounded = true
-			delete currBin.stop
+			if (bins.length > 1) {
+				delete currBin.stop
+			}
 		}
 		currBin.label = get_bin_label(currBin, bc)
 		if (currBin.stopunbounded) break
@@ -240,7 +242,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		}
 	}
 	delete bc.binLabelFormatter
-	delete bins[bins.length - 1].stop
+	if (bins.length > 1) {
+		delete bins[bins.length - 1].stop
+	}
 	return bins
 }
 

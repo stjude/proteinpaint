@@ -16,6 +16,7 @@ const defaultState = {
 	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
 	tree: {
+		exclude_types: [],
 		expandedTermIds: [],
 		visiblePlotIds: [],
 		plots: {}

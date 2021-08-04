@@ -1,5 +1,4 @@
 {
-  "version": "1.8.3",
   "name": "@stjude/proteinpaint",
   "bin": "server/bin.js",
   "main": "client/dist/app.js",
@@ -14,7 +13,7 @@
     "public/index.html",
     "public/bin",
     "server/bin.js",
-    "server/dataset/clinvar.*.js",
+    "server/dataset/clinvar*.js",
     "server/dataset/gdc*.js",
     "server/genome",
     "server/src/serverconfig.js",

@@ -5,6 +5,7 @@ set -o pipefail
 ###############################################
 # procedures to build database table files
 # on mac, run `brew install csvkit` first to get the "csvformat" command
+# illustrated at https://docs.google.com/drawings/d/1iaiMRt4YWyheGU_w-uZytNXBImdbrB-GfzZBYaAXaps/edit
 
 node ~/proteinpaint/utils/sjlife2/update2matrix.js raw/updatematrix.csv > matrix.stringID
 # created "matrix.stringID"
@@ -26,16 +27,13 @@ node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/sjlife.admix 0 > annot
 node ~/proteinpaint/utils/sjlife2/replace.sampleid.js raw/ccss.admix 0 > annotation.admix.ccss
 # created "annotation.admix.sjlife" and "annotation.admix.ccss"
 
-node ~/proteinpaint/utils/sjlife2/binconfig.ageterms.js termdb keep/manual.termconfig > keep/termconfig
-# created "keep/termconfig"
-
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/matrix.tree
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/ccssctcae.tree
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sjlifectcae.tree
 node ~/proteinpaint/utils/sjlife2/remove.doublequote.js phenotree/sn.tree
 # updated files in-place
 
-node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix keep/termconfig 
+node ~/proteinpaint/utils/sjlife2/phenotree.parse.atomic.js phenotree/matrix.tree matrix
 # created "keep/termjson"
 # created "diagnostic_messages.txt"
 
@@ -47,7 +45,7 @@ node ~/proteinpaint/utils/sjlife2/phenotree.2phewastermlist.js phenotree/entire.
 
 node ~/proteinpaint/utils/sjlife2/phenotree.parse.term2term.js phenotree/entire.tree keep/termjson
 # created "ancestry"
-# overwritten "termdb"
+# created "termdb"
 
 cat PRS/ancestry.prs >> ancestry
 node ~/proteinpaint/utils/sjlife2/subcohort.validateancestry.js ancestry
@@ -71,8 +69,9 @@ node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix ann
 #node ~/proteinpaint/utils/sjlife2/phewas.precompute.url.js
 #node ~/proteinpaint/utils/sjlife2/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 
+### before running following sqlite commands, softlink the sql scripts to the "clinical/" folder
 #sqlite3 db < load.sql
-
+#sqlite3 db < set-included-types.sql
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
 # scp db $prp1:~/data-pp/files/hg38/sjlife/clinical/

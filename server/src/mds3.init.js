@@ -18,6 +18,7 @@ export async function init(ds, genome, _servconfig) {
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
 	validate_ssm2canonicalisoform(ds)
+	init_dictionary(ds)
 }
 
 export function client_copy(ds) {
@@ -67,6 +68,7 @@ export function client_copy(ds) {
 			type_samples: ds.variant2samples.type_samples,
 			type_summary: ds.variant2samples.type_summary,
 			type_sunburst: ds.variant2samples.type_sunburst,
+			type_update_summary: ds.variant2samples.type_update_summary,
 			url: ds.variant2samples.url
 		}
 	}
@@ -120,6 +122,7 @@ function validate_variant2samples(ds) {
 	vs.type_samples = 'samples'
 	vs.type_sunburst = 'sunburst'
 	vs.type_summary = 'summary'
+	vs.type_update_summary = 'update_summary'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
 	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
@@ -651,4 +654,13 @@ function validate_ssm2canonicalisoform(ds) {
 	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
 	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
+}
+
+async function init_dictionary(ds) {
+	const dictioary = ds.termdb.dictionary
+	// 'ssm_occurance' dictioanry from gdc
+	if (dictioary.gdcapi) {
+		ds.cohort = {}
+		await gdc.init_dictionary(ds)
+	}
 }
