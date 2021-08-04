@@ -1516,12 +1516,36 @@ function parse_one_segment(arg) {
 		// Mate of read is unmapped
 		segment.discord_unmapped2 = true
 	} else if (
+		(flag & 0x1 && flag & 0x10 && flag & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
+		(flag & 0x1 && flag & 0x20 && flag & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
+	) {
+		// Discordant reads with wrong insert size where reads are oriented correctly
+		console.log('flag wrong insert size:', flag)
+		if (segment.isfirst) {
+			console.log('segment.isfirst')
+		} else if (segment.islast) {
+			console.log('segment.islast')
+		}
+		segment.discord_wrong_insertsize = true
+		if (keepmatepos) {
+			// for displaying mate position (on same chr) in details panel
+			segment.pnext = pnext
+		}
+	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) || // 131
 		(flag & 0x1 && flag & 0x40) || // 65 (technically wrong insert size AND wrong orientation)
-		(flag & 0x1 && flag & 0x80) // 129 (technically wrong insert size AND wrong orientation)
+		(flag & 0x1 && flag & 0x80) || // 129 (technically wrong insert size AND wrong orientation)
+		(flag & 0x1 && flag & 0x10 && flag & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
+		(flag & 0x1 && flag & 0x20 && flag & 0x80 && segment.islast == true) // 161 only if its the last segment of the template
 	) {
 		// Mapped within insert size but incorrect orientation
+		console.log('flag wrong orientation:', flag)
+		if (segment.isfirst) {
+			console.log('segment.isfirst')
+		} else if (segment.islast) {
+			console.log('segment.islast')
+		}
 		segment.discord_orientation = true
 		if (keepmatepos) {
 			// for displaying mate position (on same chr) in details panel
@@ -1529,6 +1553,7 @@ function parse_one_segment(arg) {
 		}
 	} else {
 		// Discordant reads in same chr but not within the insert size
+		console.log('flag wrong insert size:', flag)
 		segment.discord_wrong_insertsize = true
 		if (keepmatepos) {
 			// for displaying mate position (on same chr) in details panel
