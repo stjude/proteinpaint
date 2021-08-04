@@ -2,6 +2,7 @@ import { fillbar, tab2box, Menu } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
 import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
+import { select as d3select } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -144,6 +145,7 @@ async function make_multiSampleTable(args) {
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
 	const pagination = arg.totalcases > cutoff_tableview
+	arg.tk.mds.variant2samples.visibleterms = arg.tk.mds.variant2samples.termidlst
 	if (pagination) {
 		arg.size = current_size
 		arg.from = current_from
@@ -185,8 +187,13 @@ async function make_multiSampleTable(args) {
 			.html(`n= ${arg.numofcases} / ${arg.totalcases} Samples`)
 	}
 
+	// header panel with pagination info and column editing
+	const header_div = holder.append('div')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+
 	// top text to display sample per page and total sample size (only for pagination)
-	const page_header = holder.append('div').style('display', 'none')
+	const page_header = header_div.append('div').style('display', 'none')
 
 	const grid_div = holder
 		.append('div')
@@ -259,6 +266,14 @@ async function make_multiSampleTable(args) {
 	// pages and option to change samples per size (only for pagination)
 	const page_footer = holder.append('div').style('display', 'none')
 	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
+
+	// show option for show or hide columns. 
+	// Note: only for visible single table, not across all tables
+	let columns = []
+	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
+	column_nodes.forEach(n => columns.push(n.innerText))
+	make_column_edit(arg, columns, header_div, grid_div)
+	console.log(arg.tk.mds.variant2samples.visibleterms)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -410,7 +425,7 @@ function init_remove_terms(holder, arg, main_tabs) {
 				.style('padding', '5px')
 				.style('border-radius', '5px')
 				.style('margin', 'auto')
-				.style('display', 'inline-block')
+				.style('display', 'flex')
 				.property('disabled', terms_remove.length ? false : true)
 				.style('border', 'solid 1px #ddd')
 				.text('Remove')
@@ -606,8 +621,9 @@ function make_pagination(arg, page_doms) {
 	const count_end = arg.from + arg.size < arg.numofcases ? arg.from + arg.size : arg.numofcases
 
 	page_header
-		.style('display', 'block')
-		.style('padding', '5px 10px')
+		.style('display', 'inline-block')
+		.style('padding', '5px')
+		.style('margin','5px 0')
 		.style('font-size', '.9em')
 		.style('color', '#999')
 		.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${arg.numofcases}</b> Samples`)
@@ -715,4 +731,110 @@ function make_pagination(arg, page_doms) {
 				}
 			})
 	}
+}
+
+function make_column_edit(arg, columns, header_div, sample_table){
+	const column_edit_btn = header_div.append('div')
+		.style('display', 'inline-block')
+		.style('font-size', '.9em')
+		.classed('sja_menuoption', true)
+		.style('margin','10px 20px')
+		.style('border', 'solid 1px #ddd')
+		.style('height','20px')
+		.style('line-height','20px')
+		.text('Show/hide columns')
+		.on('click', async () => {
+			const termidlst = arg.tk.mds.variant2samples.termidlst
+			let visibleterms = arg.tk.mds.variant2samples.visibleterms
+			const tip = new Menu({ padding: '5px', parent_menu: column_edit_btn })
+			tip.clear().showunder(column_edit_btn.node())
+
+			let hidden_terms = termidlst.filter(t=>!visibleterms.includes(t))
+
+			const fields_list = tip.d
+				.append('div')
+				.style('margin', '20px')
+				.style('font-size', '.9em')
+				.style('display', 'grid')
+				.style('grid-row-gap', '3px')
+				.style('grid-template-columns', 'auto auto')
+				.style('align-items', 'center')
+
+			fields_list.append('div')
+				.style('padding', '2px')
+				.style('color','#999')
+				.text('Show')
+
+			fields_list.append('div')
+				.style('padding', '2px 5px')
+				.style('color','#999')
+				.text('Column')	
+
+
+			for (const id of termidlst) {
+				const term = arg.tk.mds.termdb.getTermById(id)
+				const checkbox_div = fields_list.append('div')
+					.style('display','flex')
+					.style('justify-content','center')
+
+
+				const check = checkbox_div
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', id)
+					.attr('checked', hidden_terms.includes(id) ? null : true)
+					.on('change', () => {
+						if (check.node().checked) hidden_terms = hidden_terms.filter(t => t != id)
+						else hidden_terms.push(id)
+						submit_btn.property('disabled', visible_terms_changed)
+					})
+
+				fields_list
+					.append('div')
+					.append('label')
+					.style('padding', '2px 5px')
+					.attr('for', id)
+					.text(term.name)
+			}
+
+			const submit_btn = tip.d
+				.append('button')
+				.style('padding', '5px')
+				.style('border-radius', '5px')
+				.style('margin', 'auto')
+				.style('display', 'flex')
+				.property('disabled', visible_terms_changed)
+				.style('border', 'solid 1px #ddd')
+				.text('Submit')
+				.on('click', () => {
+					tip.hide()
+					if (visible_terms_changed) {
+						let hidden_cols = []
+						hidden_terms.forEach(tid => hidden_cols.push(arg.tk.mds.termdb.getTermById(tid).name))
+						for(const col_name of columns){
+							const col_i = columns.findIndex(c => c==col_name) + 1
+							const cells = sample_table.selectAll(`div:nth-child(${columns.length}n+${col_i})`)
+							if(hidden_cols.includes(col_name)){
+								cells.each(function (){
+									d3select(this).style('visibility','hidden')
+										.style('width','0px')
+										.style('padding','0')
+								})
+							}
+							else{
+								cells.each(function (){
+									d3select(this).style('visibility','visible')
+										.style('width','auto')
+										.style('padding','2px 5px')
+								})
+							}
+						}
+						arg.tk.mds.variant2samples.visibleterms = termidlst.filter(t=>!hidden_terms.includes(t))
+					}
+				})
+
+				function visible_terms_changed(){
+					return termidlst.length  == visibleterms.length + hidden_terms.length
+				}
+		})
 }

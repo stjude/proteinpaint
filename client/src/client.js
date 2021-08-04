@@ -2046,7 +2046,7 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 		tab.box = tdright
 			.append('div')
 			.style('padding', '3px')
-			.style('display', !has_acitve_tab && i == 0 ? 'block' : 'none')
+			.style('display', (!has_acitve_tab && i == 0) || tab.active ? 'block' : 'none')
 
 		if ((runall && tab.callback) || (!has_acitve_tab && i == 0 && tab.callback) || tab.active) {
 			tab.callback(tab.box)
