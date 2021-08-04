@@ -2,7 +2,7 @@ import { fillbar, tab2box, Menu } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
 import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
-import { select as d3select } from 'd3-selection'
+import { select as d3select, event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -13,11 +13,11 @@ make_multiSampleTable
 make_multiSampleSummaryList
 make_summary_panel
 init_dictionary_ui
-init_remove_terms
+init_remove_terms_menu
 make_sunburst_tidlist
 make_filter_pill
 make_pagination
-make_column_showhide
+make_column_showhide_menu
 
 using variant2samples
 mlst can be mixture of data types, doesn't matter
@@ -160,7 +160,7 @@ async function make_multiSampleTable(args) {
 	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
 	if (no_tabs) {
 		init_dictionary_ui(holder, arg)
-		init_remove_terms(holder, arg)
+		init_remove_terms_menu(holder, arg)
 	}
 
 	// use booleen flags to determine table columns based on these samples
@@ -273,7 +273,7 @@ async function make_multiSampleTable(args) {
 	let columns = []
 	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
 	column_nodes.forEach(n => columns.push(n.innerText))
-	make_column_showhide(arg, columns, header_div, grid_div)
+	make_column_showhide_menu(arg, columns, header_div, grid_div)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -319,7 +319,7 @@ async function make_multiSampleSummaryList(args) {
 
 	init_tabs(holder, main_tabs)
 	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
-	init_remove_terms(main_tabs.holder, arg, main_tabs)
+	init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -370,7 +370,7 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 		})
 }
 
-function init_remove_terms(holder, arg, main_tabs) {
+function init_remove_terms_menu(holder, arg, main_tabs) {
 	const remove_btn = holder
 		.append('div')
 		.style('display', 'inline-block')
@@ -385,6 +385,7 @@ function init_remove_terms(holder, arg, main_tabs) {
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
 			tip.clear().showunder(remove_btn.node())
+			tip.d.on('click',()=>event.stopPropagation())
 
 			let terms_remove = []
 
@@ -416,8 +417,11 @@ function init_remove_terms(holder, arg, main_tabs) {
 					.append('div')
 					.append('label')
 					.style('padding', '2px 5px')
-					.attr('for', id)
-					.text(term.name)
+					.text(term.name).on('click',()=>{
+						event.stopPropagation()
+						check.attr('checked',check.node().checked ? null : true)
+						check.node().dispatchEvent(new Event('change'))
+					})
 			}
 
 			const submit_btn = tip.d
@@ -733,7 +737,7 @@ function make_pagination(arg, page_doms) {
 	}
 }
 
-function make_column_showhide(arg, columns, header_div, sample_table){
+function make_column_showhide_menu(arg, columns, header_div, sample_table){
 	const column_edit_btn = header_div.append('div')
 		.style('display', 'inline-block')
 		.style('font-size', '.9em')
@@ -748,6 +752,7 @@ function make_column_showhide(arg, columns, header_div, sample_table){
 			let visibleterms = arg.tk.mds.variant2samples.visibleterms
 			const tip = new Menu({ padding: '5px', parent_menu: column_edit_btn })
 			tip.clear().showunder(column_edit_btn.node())
+			tip.d.on('click',()=>event.stopPropagation())
 
 			let hidden_terms = termidlst.filter(t=>!visibleterms.includes(t))
 
@@ -793,8 +798,12 @@ function make_column_showhide(arg, columns, header_div, sample_table){
 					.append('div')
 					.append('label')
 					.style('padding', '2px 5px')
-					.attr('for', id)
 					.text(term.name)
+					.on('click',()=>{
+						event.stopPropagation()
+						check.attr('checked',check.node().checked ? null : true)
+						check.node().dispatchEvent(new Event('change'))
+					})
 			}
 
 			const submit_btn = tip.d

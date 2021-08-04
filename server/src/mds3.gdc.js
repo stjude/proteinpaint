@@ -604,7 +604,7 @@ export function validate_sampleSummaries2_number(api) {
 			site_set.add(h.case.primary_site)
 		}
 		// hardcoded and are from sampleSummaries2.lst[{label1}]
-		return [{ label1: 'project', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
+		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
 	}
 }
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
