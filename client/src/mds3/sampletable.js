@@ -157,8 +157,8 @@ async function make_multiSampleTable(args) {
 	arg.numofcases = numofcases
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
-	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
 	if (no_tabs) {
+		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
 		init_dictionary_ui(holder, arg)
 		init_remove_terms_menu(holder, arg)
 	}
@@ -294,7 +294,11 @@ async function make_multiSampleSummaryList(args) {
 	const summary_tabs = []
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
-		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
+		let skip_category = false
+		for(const termid of arg.tid2value_orig){
+			if(arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
+		}
+		if(skip_category) continue
 		// if for numeric_term if samplecont is 0,
 		// means no sample have value for that term, skip that term in summary
 		if (category.density_data && !category.density_data.samplecount) continue
@@ -381,7 +385,8 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 		.style('cursor', 'pointer')
 		.text('- Remove fields')
 		.on('click', async () => {
-			const termidlst = arg.tk.mds.variant2samples.termidlst
+			let termidlst = arg.tk.mds.variant2samples.termidlst
+			if(arg.tid2value_orig.size) termidlst = termidlst.filter(tid => !arg.tid2value_orig.has(tid))
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
 			tip.clear().showunder(remove_btn.node())
@@ -437,7 +442,7 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 					tip.hide()
 					if (terms_remove.length) {
 						const main_holder = arg.div.select('.sj_sampletable_holder')
-						arg.tk.mds.variant2samples.termidlst = termidlst.filter(t => !terms_remove.includes(t))
+						arg.tk.mds.variant2samples.termidlst = arg.tk.mds.variant2samples.termidlst.filter(t => !terms_remove.includes(t))
 						arg.tk.mds.termdb.terms = arg.tk.mds.termdb.terms.filter(t => !terms_remove.includes(t.id))
 						if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder })
 						else if (active_tab && active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder })
