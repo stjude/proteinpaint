@@ -3092,7 +3092,10 @@ function handle_mdssvcnv_rnabam_binom_result(pfile, samples) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(pfile, 'utf8', (err, data) => {
 			if (err) reject('cannot read binom pvalue')
-			if (!data) resolve()
+			if (!data) {
+				resolve()
+				return
+			}
 			for (const line of data.trim().split('\n')) {
 				const l = line.split('\t')
 				const tmp = l[0].split('.')
@@ -4775,12 +4778,15 @@ function handle_ase_binom_result(snps, pfile) {
 function handle_ase_binom_test(snpfile) {
 	const pfile = snpfile + '.pvalue'
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['utils/binom.R', snpfile, pfile])
+		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/binom.R'), snpfile, pfile])
 		sp.on('close', () => {
 			resolve(pfile)
 		})
 		sp.on('error', e => {
-			reject('cannot do binom test')
+			reject(`cannot do binom test: ${e}`)
+		})
+		sp.stderr.on('data', e => {
+			reject(`cannot do binom test: ${e}`)
 		})
 	})
 }
