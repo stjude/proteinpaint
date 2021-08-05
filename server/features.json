@@ -1326,27 +1326,36 @@
         {
             "name": "Single Cell",
             "app": "Apps",
-            "hidden": true,
             "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "media": {
-                "urls": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
+                "urls": [
+                    {
+                        "link": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json"
+                    }
+                ],
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },
             "ppcalls": [
                 {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
+                    "urlparam": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json",
                     "runargs": {
-                        "nobox": 1,
                         "noheader": 1,
                         "singlecell": {
-                        "genome": "mm10",
-                        "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
+                            "genome": "hg19",
+                            "jsonfile":"proteinpaint_demo/hg19/singlecell/singlecell.json"
                         }
                     }
                 }
             ],
             "sandbox":{
-                "is_ui": true
+                "buttons": [
+                    {
+                        "name": "Docs",
+                        "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+                    }
+                ]
             },
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },

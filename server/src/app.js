@@ -375,7 +375,6 @@ function handle_gene2canonicalisoform(req, res) {
 async function handle_examples(req, res) {
 	log(req)
 	try {
-		if (!exports.features.examples) throw 'This feature is not enabled on this server.'
 		// more flexibility by reading a file pointed by exports.features.examples
 		const txt = await utils.read_file(serverconfig.examplejson)
 		const json = JSON.parse(txt)

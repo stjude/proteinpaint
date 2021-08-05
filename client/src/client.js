@@ -1409,7 +1409,7 @@ export function newSandboxDiv(sandbox_holder) {
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return { header, body }
+	return { header_row, header, body }
 }
 
 export function to_svg(svg, name, opts = {}) {

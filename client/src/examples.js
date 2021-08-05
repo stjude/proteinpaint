@@ -274,9 +274,9 @@ function makeRibbon(e, text, color) {
 async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header.text(
-		track.name + (track.sandbox.is_ui != undefined && track.sandbox.is_ui == false ? ' Example' : '')
-	)
+	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px 1px 10px')
+	sandbox_div.header.text(track.name)
+	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px')
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
@@ -388,7 +388,7 @@ async function addUpdateMessage(track, div) {
 function makeTabMenu(track, holder){
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(holder.body.style('margin','20px'), tabs)
+	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
 }
 
 function tabArray(tabs, track){
