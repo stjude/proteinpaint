@@ -93,20 +93,7 @@ export function drawer_init(app, features, overrides = {}) {
 	return {
 		apps_sandbox_div: dom.sandbox_div,
 		apps_off,
-		addBtn(headbox, btnLabel, padw_sm, appmenu, jwt) {
-			if (!features.examples) {
-				dom.btn = headbox
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('display', 'inline-block')
-					.style('padding', padw_sm)
-					.style('margin', '0px 5px')
-					.style('border-radius', '5px')
-					.text(btnLabel)
-					.on('click', () => {
-						appmenu(app, headbox, jwt)
-					})
-			} else {
+		addBtn(headbox, btnLabel, padw_sm, jwt) {
 				// NOTE: set app_btn_active to false initially to
 				// make the drawer animation consistent on load,
 				// regardless of whether an app is to be opened right away
@@ -204,7 +191,6 @@ export function drawer_init(app, features, overrides = {}) {
 				// of examples in order to not affect that loading,
 				// otherwise load trigger the loading of examples right away
 				setTimeout(load_examples, app_btn_active ? 0 : 5000)
-			}
 		}
 	}
 }

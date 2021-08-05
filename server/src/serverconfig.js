@@ -141,11 +141,7 @@ if (!serverconfig.features) {
 	serverconfig.features = {}
 }
 
-if (serverconfig.features.examples) {
-	if (!serverconfig.examplejson) {
-		serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
-	}
-}
+serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
 
 //Object.freeze(serverconfig)
 module.exports = serverconfig
