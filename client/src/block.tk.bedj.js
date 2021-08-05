@@ -253,4 +253,41 @@ function configpanel(tk, block) {
 			}
 		})
 	}
+	{
+		// filter items
+		const row = holder.append('div').style('margin-bottom', '10px')
+		make_one_checkbox({
+			holder: row,
+			labeltext: 'Show items by names',
+			checked: tk.filterByName ? true : false,
+			callback: () => {
+				if (div.style('display') == 'none') {
+					// show ui
+					div.style('display', 'block')
+				} else {
+					// hide ui, also disable filtering
+					div.style('display', 'none')
+					delete tk.filterByName
+					bedjload(tk, block)
+				}
+			}
+		})
+		const div = holder
+			.append('div')
+			.style('margin', '0px 0px 10px 25px')
+			.style('display', tk.filterByName ? 'block' : 'none')
+		const ta = div.append('textarea').property('rows', 4)
+		if (tk.filterByName) ta.property('value', tk.filterByName)
+		ta.property('placeholder', 'One name per row. Case sensitive. Use isoform names for gene track.')
+		div
+			.append('button')
+			.style('display', 'block')
+			.text('Submit')
+			.on('click', () => {
+				const v = ta.property('value').trim()
+				if (!v) return
+				tk.filterByName = v
+				bedjload(tk, block)
+			})
+	}
 }
