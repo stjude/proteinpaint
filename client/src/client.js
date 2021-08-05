@@ -2031,6 +2031,7 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 		.style('vertical-align', 'top')
 		.style('border-left', 'solid 1px #aaa')
 		.style('padding', '10px')
+	const has_acitve_tab = tabs.findIndex(t => t.active) == -1 ? false : true
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
 
@@ -2039,18 +2040,19 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('padding', '5px 10px')
 			.style('margin', '0px')
 			.style('border-top', 'solid 1px #ddd')
-			.classed('sja_menuoption', i != 0)
+			.classed('sja_menuoption', !has_acitve_tab && i != 0)
 			.html(tab.label)
 
 		tab.box = tdright
 			.append('div')
 			.style('padding', '3px')
-			.style('display', i == 0 ? 'block' : 'none')
+			.style('display', (!has_acitve_tab && i == 0) || tab.active ? 'block' : 'none')
 
-		if ((runall && tab.callback) || (i == 0 && tab.callback)) {
+		if ((runall && tab.callback) || (!has_acitve_tab && i == 0 && tab.callback) || tab.active) {
 			tab.callback(tab.box)
 			delete tab.callback
 		}
+		if (has_acitve_tab) tab.tab.classed('sja_menuoption', !tab.active)
 
 		tab.tab.on('click', () => {
 			if (tab.box.style('display') != 'none') {

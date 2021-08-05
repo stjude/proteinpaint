@@ -29,19 +29,35 @@ get types:
 
 module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
-	const [ samples, total ] = await get_samples(q, ds)
+	const [samples, total] = await get_samples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samples) return [ samples, total ]
+	if (q.get == ds.variant2samples.type_samples) return [samples, total]
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
-	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
-	if (q.get == ds.variant2samples.type_update_summary) return update_summary(q, ds)
+	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds, q)
 	throw 'unknown get type'
 }
 
 async function get_samples(q, ds) {
 	let samples
 	if (ds.variant2samples.gdcapi) {
-		samples = await getSamples_gdcapi(q, ds)
+		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+		// fields_summary[] generated dynamically using gdc_dictionary
+		let fields_summary = []
+		for (const termid of termidlst) {
+			const term = ds.cohort.termdb.q.getTermById(termid)
+			fields_summary.push(term.path)
+		}
+		const api = ds.variant2samples.gdcapi
+		const fields =
+			q.get == ds.variant2samples.type_sunburst
+				? api.fields_sunburst
+				: q.get == ds.variant2samples.type_summary
+				? fields_summary
+				: q.get == ds.variant2samples.type_samples
+				? // fields_samples[] have few extra fields for table view than fields_summary[]
+				  [...api.fields_samples, ...fields_summary]
+				: null
+		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
 	}
@@ -71,10 +87,21 @@ async function make_sunburst(samples, ds, q) {
 	return nodes
 }
 
-async function make_summary(samples, ds) {
+async function make_summary(samples, ds, q) {
 	const entries = []
-	for (const termid of ds.variant2samples.termidlst) {
-		const term = ds.termdb.getTermById(termid)
+	const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+	for (const termid of termidlst) {
+		let term = ds.termdb.getTermById(termid)
+		// if term is not in serverside termdb, query gdc dictionary
+		if (!term) {
+			const term_ = ds.cohort.termdb.q.getTermById(termid)
+			term = {
+				name: term_.name,
+				id: term_.id,
+				type: term_.type,
+				fields: term_.fields
+			}
+		}
 		if (!term) continue
 		// may skip a term
 		if (term.type == 'categorical') {
@@ -100,29 +127,4 @@ async function make_summary(samples, ds) {
 		}
 	}
 	return entries
-}
-
-async function update_summary(q, ds) {
-		// update ds.variant2samples with new term
-		const termid = q.add_term
-		if(ds.termdb.getTermById(termid) != undefined) return
-		const term_ = ds.cohort.termdb.q.getTermById(termid)
-		const term = {
-			name: term_.name,
-			id: term_.id,
-			type: term_.type
-		}
-		term.fields = term_.path.split('.').slice(1)
-		// Note: not working becuase of getter and getTermById
-		// need to use better copy function
-		// const ds_copy = JSON.parse(JSON.stringify(ds)) 
-		const ds_copy = {...ds}
-		ds_copy.termdb.terms.push(term)
-		ds_copy.variant2samples.termidlst.push(termid)
-		ds_copy.variant2samples.gdcapi.fields_summary.push(term_.path)
-		ds_copy.variant2samples.gdcapi.fields_samples.push(term_.path)
-		const [ samples, total ] = await get_samples(q, ds_copy)
-		console.log('summary table updated with samples: ',total)
-		const entires = make_summary(samples, ds_copy)
-		return entires
 }

@@ -205,9 +205,9 @@ function mayaddGetter_variant2samples(tk, block) {
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		if (tk.mds.variant2samples.new_term) par.push('add_term=' + arg.tk.mds.variant2samples.new_term) // new term to be added to termdb
-		// to distiguish summary query before and after adding new term
-		if (tk.mds.variant2samples.termidlst) par.push('term_count=' + tk.mds.variant2samples.termidlst.length)
+		// pass all termidlst including new termid
+		if (arg.querytype != tk.mds.variant2samples.type_sunburst && tk.mds.variant2samples.termidlst)
+			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		const data = await dofetch2('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
