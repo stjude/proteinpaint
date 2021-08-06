@@ -15,17 +15,13 @@ module.exports = function initBinConfig(data, opts = {}) {
 	const min = data[0]
 	const max = data[l - 1]
 	const binSize = (max - min) / 8
-	// first bin stop will equal the 5th percentile of the dataset
+	// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
 	let p5idx = Math.round(l * 0.05) - 1
 	if (p5idx < 0) p5idx = 0
-	const firstBinStop = data[p5idx]
-	// round the bin values based on whether the dataset contains mostly integers or fractions
-	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding
-	if (binSize >= 1) {
-		;[binSize_rnd, firstBinStop_rnd, lastBinStart_rnd] = roundIntegers(binSize, firstBinStop, max, min)
-	} else {
-		;[binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundFractions(binSize, firstBinStop, max, min)
-	}
+	const p5 = data[p5idx]
+	const firstBinStop = Math.max(min + binSize, p5)
+	// round the bin values
+	let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
 	// generate the bin configuration
 	const binConfig = {
 		type: 'regular',
@@ -46,83 +42,29 @@ module.exports = function initBinConfig(data, opts = {}) {
 	}
 }
 
-function roundIntegers(binSize, firstBinStop, max, min) {
-	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd
-	if (firstBinStop === 0) {
-		const log = Math.floor(Math.log10(binSize))
-		if (log < 1) {
-			binSize_rnd = Math.round(binSize / 5) * 5
-			if (binSize_rnd === 0) binSize_rnd = 1
-		} else {
-			binSize_rnd = Math.round(binSize / 10 ** log) * 10 ** log
-		}
-		firstBinStop_rnd = 0
-	} else {
-		const log = Math.min(Math.floor(Math.log10(binSize)), Math.floor(Math.log10(Math.abs(firstBinStop))))
-		if (log < 1) {
-			binSize_rnd = Math.round(binSize / 5) * 5
-			if (binSize_rnd === 0) binSize_rnd = 1
-			firstBinStop_rnd = Math.round(firstBinStop / 5) * 5
-			if (firstBinStop_rnd < min) firstBinStop_rnd = Math.ceil(firstBinStop / 5) * 5
-		} else {
-			binSize_rnd = Math.round(binSize / 10 ** log) * 10 ** log
-			firstBinStop_rnd = Math.round(firstBinStop / 10 ** log) * 10 ** log
-			if (firstBinStop_rnd < min) firstBinStop_rnd = Math.ceil(firstBinStop / 10 ** log) * 10 ** log
-		}
+function roundBinVals(binSize, firstBinStop, max, min) {
+	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding
+	const log = Math.floor(Math.log10(binSize))
+	binSize_rnd = Math.round(binSize / (5 * 10 ** log)) * (5 * 10 ** log)
+	if (binSize_rnd === 0) binSize_rnd = 1 * 10 ** log
+	firstBinStop_rnd = Math.round(firstBinStop / (5 * 10 ** log)) * (5 * 10 ** log)
+	if (firstBinStop_rnd === 0) firstBinStop_rnd = 1 * 10 ** log
+	if (binSize_rnd === 5 * 10 ** log && firstBinStop_rnd === 1 * 10 ** log) {
+		firstBinStop_rnd = 5 * 10 ** log
 	}
-	// if there are more than 8 bins after rounding, then set the last bin start to restrict the number of bins to 8
+	if (firstBinStop_rnd < min) firstBinStop_rnd = firstBinStop_rnd * 2
+	// if the number of bins is above 8 after rounding, then set the last bin start to restrict the number of bins to 8
 	const eighthBinStop_rnd = firstBinStop_rnd + binSize_rnd * 7
 	if (max > eighthBinStop_rnd) {
 		lastBinStart_rnd = firstBinStop_rnd + binSize_rnd * 6
 	}
-	if (Object.is(firstBinStop_rnd, -0)) firstBinStop_rnd = 0
-	return [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd]
-}
-
-function roundFractions(binSize, firstBinStop, max, min) {
-	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, digits
-	if (firstBinStop === 0) {
-		const log = Math.floor(Math.log10(binSize))
-		digits = Math.abs(log)
-		binSize_rnd = Number((Math.round(binSize / 10 ** log) * 10 ** log).toFixed(digits))
-		firstBinStop_rnd = 0
-		// if there are more than 8 bins after rounding, then set the last bin start to restrict the number of bins to 8
-		const eighthBinStop = firstBinStop_rnd + binSize_rnd * 7
-		if (max > eighthBinStop) {
-			const lastBinStart = firstBinStop_rnd + binSize_rnd * 6
-			lastBinStart_rnd = Number((Math.round(lastBinStart / 10 ** log) * 10 ** log).toFixed(digits))
-			if (lastBinStart_rnd > max) Number((Math.floor(lastBinStart / 10 ** log) * 10 ** log).toFixed(digits))
-		}
-	} else if (Number(binSize.toFixed(1)) > 0.1) {
-		digits = 1
-		binSize_rnd = Number((Math.round(binSize / 0.5) * 0.5).toFixed(digits))
-		if (binSize_rnd === 0) binSize_rnd = 0.1
-		firstBinStop_rnd = Number((Math.round(firstBinStop / 0.5) * 0.5).toFixed(digits))
-		if (firstBinStop_rnd < min) firstBinStop_rnd = Number((Math.ceil(firstBinStop / 0.5) * 0.5).toFixed(digits))
-		// if there are more than 8 bins after rounding, then set the last bin start to restrict the number of bins to 8
-		const eighthBinStop = firstBinStop_rnd + binSize_rnd * 7
-		if (max > eighthBinStop) {
-			const lastBinStart = firstBinStop_rnd + binSize_rnd * 6
-			lastBinStart_rnd = Number((Math.round(lastBinStart / 0.5) * 0.5).toFixed(digits))
-			if (lastBinStart_rnd > max) lastBinStart_rnd = Number((Math.floor(lastBinStart / 0.5) * 0.5).toFixed(digits))
-		}
-	} else {
-		const log = Math.min(Math.floor(Math.log10(binSize)), Math.floor(Math.log10(Math.abs(firstBinStop))))
-		digits = Math.abs(log)
-		binSize_rnd = Number((Math.round(binSize / 10 ** log) * 10 ** log).toFixed(digits))
-		firstBinStop_rnd = Number((Math.round(firstBinStop / 10 ** log) * 10 ** log).toFixed(digits))
-		if (firstBinStop_rnd < min)
-			firstBinStop_rnd = Number((Math.ceil(firstBinStop / 10 ** log) * 10 ** log).toFixed(digits))
-		// if there are more than 8 bins after rounding, then set the last bin start to restrict the number of bins to 8
-		const eighthBinStop = firstBinStop_rnd + binSize_rnd * 7
-		if (max > eighthBinStop) {
-			const lastBinStart = firstBinStop_rnd + binSize_rnd * 6
-			lastBinStart_rnd = Number((Math.round(lastBinStart / 10 ** log) * 10 ** log).toFixed(digits))
-			if (lastBinStart_rnd > max)
-				lastBinStart_rnd = Number((Math.floor(lastBinStart / 10 ** log) * 10 ** log).toFixed(digits))
-		}
+	if (binSize < 1) {
+		const digits = Math.abs(log)
+		binSize_rnd = Number(binSize_rnd.toFixed(digits))
+		firstBinStop_rnd = Number(firstBinStop_rnd.toFixed(digits))
+		if (lastBinStart_rnd) lastBinStart_rnd = Number(lastBinStart_rnd.toFixed(digits))
+		rounding = '.' + digits + 'f'
 	}
-	const rounding = '.' + digits + 'f'
 	if (Object.is(firstBinStop_rnd, -0)) firstBinStop_rnd = 0
 	return [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding]
 }

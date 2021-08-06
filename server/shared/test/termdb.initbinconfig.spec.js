@@ -34,8 +34,7 @@ tape('integers: round to nearest tens', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 10,
-			first_bin: { stop: 20 },
-			last_bin: { start: 80 }
+			first_bin: { stop: 50 }
 		},
 		'should match expected output'
 	)
@@ -51,8 +50,8 @@ tape('integers: round to nearest hundreds', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 100,
-			first_bin: { stop: 220 },
-			last_bin: { start: 820 }
+			first_bin: { stop: 300 },
+			last_bin: { start: 900 }
 		},
 		'should match expected output'
 	)
@@ -84,10 +83,10 @@ tape('fractions: round to nearest hundredths', function(test) {
 		{
 			type: 'regular',
 			startinclusive: true,
-			bin_size: 0.11,
-			first_bin: { stop: 0.03 },
-			last_bin: { start: 0.69 },
-			rounding: '.2f'
+			bin_size: 0.1,
+			first_bin: { stop: 0.1 },
+			last_bin: { start: 0.7 },
+			rounding: '.1f'
 		},
 		'should match expected output'
 	)
@@ -103,7 +102,7 @@ tape('floats greater than 1', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 10,
-			first_bin: { stop: 25 }
+			first_bin: { stop: 35 }
 		},
 		'should match expected output'
 	)
@@ -175,7 +174,7 @@ tape('large test data: integers', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 5,
-			first_bin: { stop: 0 }
+			first_bin: { stop: 5 }
 		},
 		'should match expected output'
 	)
@@ -205,8 +204,7 @@ tape('large test data: floats', function(test) {
 			type: 'regular',
 			startinclusive: true,
 			bin_size: 0.5,
-			first_bin: { stop: 0 },
-			last_bin: { start: 3 },
+			first_bin: { stop: 0.5 },
 			rounding: '.1f'
 		},
 		'should match expected output'
