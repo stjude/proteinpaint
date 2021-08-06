@@ -1498,7 +1498,9 @@ function parse_one_segment(arg) {
 	} else if (
 		// // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
+		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) || //179
+		(flag & 0x1 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 113
+		(flag & 0x1 && flag & 0x10 && flag & 0x20 && flag & 0x80) // 177
 	) {
 		segment.discord_orientation = true
 		if (keepmatepos) {
@@ -1517,7 +1519,9 @@ function parse_one_segment(arg) {
 		segment.discord_unmapped2 = true
 	} else if (
 		(flag & 0x1 && flag & 0x10 && flag & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
-		(flag & 0x1 && flag & 0x20 && flag & 0x80 && segment.islast == true) // 161 only if its the last segment of the template
+		(flag & 0x1 && flag & 0x20 && flag & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
+		(flag & 0x1 && flag & 0x20 && flag & 0x40) || // 97
+		(flag & 0x1 && flag & 0x10 && flag & 0x80) // 145
 		//(flag & 0x1 && flag & 0x10 && flag & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
 		//(flag & 0x1 && flag & 0x20 && flag & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
 	) {
@@ -1535,9 +1539,9 @@ function parse_one_segment(arg) {
 		}
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
-		(flag & 0x1 && flag & 0x2 && flag & 0x80) || // 131
-		(flag & 0x1 && flag & 0x40) || // 65 (technically wrong insert size AND wrong orientation)
-		(flag & 0x1 && flag & 0x80) // 129 (technically wrong insert size AND wrong orientation)
+		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
+		//(flag & 0x1 && flag & 0x40) || // 65 (technically wrong insert size AND wrong orientation)
+		//(flag & 0x1 && flag & 0x80) // 129 (technically wrong insert size AND wrong orientation)
 	) {
 		// Mapped within insert size but incorrect orientation
 		console.log('flag wrong orientation:', flag)
