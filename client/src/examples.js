@@ -274,9 +274,10 @@ function makeRibbon(e, text, color) {
 async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px 1px 10px')
+	// sandbox_div.app_div.style('box-shadow', 'rgb(220 220 220) 5px 2px 10px')
+	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
 	sandbox_div.header.text(track.name)
-	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px')
+	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
 	// creates div for instructions or other messaging about the track
 	if (track.sandbox.intro) {
 		sandbox_div.body
