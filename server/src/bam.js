@@ -1495,8 +1495,38 @@ function parse_one_segment(arg) {
 	} else if (flag == 0 || flag == 16) {
 		// in some cases star-mapped bam can have this kind of nonstandard flag
 		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
-	} else if (
-		// // Mapped within insert size but incorrect orientation
+		// Mapped but incorrect orientation
+	} else if (!(flag & 0x10)) {
+		//read is on positive strand
+		if (!(flag & 0x20)) {
+			//mate is on positive strand
+			segment.discord_orientation = true //orientations: --> -->
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
+		} else {
+			//mate is on negative strand
+			if (pnext < segstart_1based) {
+				//but mate position is upstream
+				segment.discord_orientation = true //orientations: <-- -->
+				if (keepmatepos) segment.pnext = pnext
+			}
+		}
+	} else if (flag & 0x10) {
+		//read is on negative strand
+		if (flag & 0x20) {
+			//mate is on negative strand
+			segment.discord_orientation = true //orientations: <-- <--
+			if (keepmatepos) segment.pnext = pnext
+		} else {
+			//mate is on positive strand
+			if (pnext > segstart_1based) {
+				//but mate position is downstream
+				segment.discord_orientation = true //orientations: <-- -->
+				if (keepmatepos) segment.pnext = pnext
+			}
+		}
+		/*
+    } else if (
+        // // Mapped within insert size but incorrect orientation
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) || //179
 		(flag & 0x1 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 113
@@ -1507,6 +1537,7 @@ function parse_one_segment(arg) {
 			// for displaying mate position (on same chr) in details panel
 			segment.pnext = pnext
 		}
+    */
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
 		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
@@ -1537,6 +1568,7 @@ function parse_one_segment(arg) {
 			// for displaying mate position (on same chr) in details panel
 			segment.pnext = pnext
 		}
+		/*
 	} else if (
 		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
 		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
@@ -1555,6 +1587,7 @@ function parse_one_segment(arg) {
 			// for displaying mate position (on same chr) in details panel
 			segment.pnext = pnext
 		}
+    */
 	} else {
 		// Discordant reads in same chr but not within the insert size
 		console.log('flag wrong insert size:', flag)
