@@ -395,6 +395,26 @@ tape('get_bin_label(), last bin start === stop', test => {
 	test.end()
 })
 
+tape('get_bin_label(), force label_offset == 1', function (test) {
+	const binconfig = {
+		termtype: 'integer',
+		bin_size: 1,
+		startinclusive: true,
+		first_bin: {},
+		label_offset: 1,
+		results: {
+			summary: {
+				min: 0
+			}
+		}
+	}
+
+	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig), '1', 'should force label_offset=1 when type=="integer" && bin_size=1')
+	binconfig.termtype = 'float'
+	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig), '1', 'should NOT force label_offset=1 when type=="float" && bin_size=1')
+	test.end()
+})
+
 tape('compute_bins() unbounded', function(test) {
 	test.deepLooseEqual(
 		b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary),
