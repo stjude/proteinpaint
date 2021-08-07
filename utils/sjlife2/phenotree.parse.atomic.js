@@ -319,7 +319,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 	// finalize terms and print diagnostic messages to stderr
 
 	// diagnostic message is a tabular table and has a header
-	const lines = ['Type\tVariable_ID\tMin/message\tMax\tHidden_categories\tVisible_categories']
+	const lines = ['Type\tVariable_ID\tRange/Message\tHidden_categories\tVisible_categories']
 
 	for (const termID in key2terms) {
 		const term = key2terms[termID]
@@ -363,7 +363,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				if (term.values[k].uncomputable) uncomputable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
 				else computable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
 			}
-			lines.push('CATEGORICAL\t' + termID + '\t\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
+			lines.push('CATEGORICAL\t' + termID + '\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
 			delete term._values_foundinmatrix
 			continue
 		}
@@ -385,11 +385,11 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				continue
 			}
 			lines.push(
-				'NUMERICAL\t' +
-					termID +
-					'\tn=' +
-					term.bins._values.length +
-					',min=' +
+				'NUMERICAL' + // col 1
+				'\t' +
+				termID + // col 2
+				'\t' +
+				'min=' + // col 3
 					term.bins._min +
 					',max=' +
 					term.bins._max +
@@ -397,12 +397,14 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 					getMean(term.bins._values) +
 					',median=' +
 					getMedian(term.bins._values) +
+					',n=' +
+					term.bins._values.length +
 					',' +
 					getValuelst(term.bins._values) +
 					'\t' +
+					// col 4
 					(term.values
-						? '\t' +
-						  Object.keys(term.values)
+						? Object.keys(term.values)
 								.map(i => i + '=' + (term._values_foundinmatrix.get(i) || 0))
 								.join(',')
 						: '')
