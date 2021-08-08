@@ -113,6 +113,43 @@ function validate_termdb(ds) {
 			}
 		}
 	}
+
+	if (tdb.termid2totalsize2) {
+		if (tdb.termid2totalsize2.gdcapi) {
+			// validate gdcapi
+			const gdcapi = tdb.termid2totalsize2.gdcapi
+			if (typeof gdcapi.query != 'function') throw '.query() not function in termid2totalsize2'
+			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
+			if (!gdcapi.filters) throw '.filters is not in termid2totalsize2'
+		} else {
+			throw 'termid2totalsize2 missing gdcapi'
+		}
+		// add getter
+		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
+			// termidlst is from clientside
+			let termpathlst = []
+			for (const termid of termidlst) {
+				const term = ds.cohort.termdb.q.getTermById(termid)
+				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+			}
+			if (tdb.termid2totalsize2.gdcapi) {
+				const tv2counts = await gdc.get_termidlst2total(tdb.termid2totalsize2.gdcapi, ds, termpathlst, q)
+				for (const termid of termidlst) {
+					let term = ds.termdb.getTermById(termid)
+					if (!term) term = ds.cohort.termdb.q.getTermById(termid)
+					const entry = entries.find(e => e.name == term.name)
+					if (term && term.type == 'categorical' && entry !== undefined) {
+						const tv2count = tv2counts.get(term.id)
+						for (const cat of entry.numbycategory) {
+							const vtotal = tv2count.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
+							if (vtotal) cat.push(vtotal[1])
+						}
+					}
+				}
+			}
+			return entries
+		}
+	}
 }
 
 function validate_variant2samples(ds) {
@@ -156,6 +193,13 @@ function validate_variant2samples(ds) {
 			}
 		}
 	}
+	// if(ds.termdb.termid2totalsize2) {
+	// 	vs.getvariant2samplecount = async (entries) => {
+	// 		if (ds.termdb.termid2totalsize2) {
+	// 			await ds.termdb.termid2totalsize2.get(entries)
+	// 		}
+	// 	}
+	// }
 	if (vs.url) {
 		if (!vs.url.base) throw '.variant2samples.url.base missing'
 

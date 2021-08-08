@@ -189,7 +189,8 @@ async function make_multiSampleTable(args) {
 	}
 
 	// header panel with pagination info and column editing
-	const header_div = holder.append('div')
+	const header_div = holder
+		.append('div')
 		.style('display', 'flex')
 		.style('justify-content', 'space-between')
 
@@ -268,7 +269,7 @@ async function make_multiSampleTable(args) {
 	const page_footer = holder.append('div').style('display', 'none')
 	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
 
-	// show option for show or hide columns. 
+	// show option for show or hide columns.
 	// Note: only for visible single table, not across all tables
 	let columns = []
 	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
@@ -295,10 +296,10 @@ async function make_multiSampleSummaryList(args) {
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		let skip_category = false
-		for(const termid of arg.tid2value_orig){
-			if(arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
+		for (const termid of arg.tid2value_orig) {
+			if (arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
 		}
-		if(skip_category) continue
+		if (skip_category) continue
 		// if for numeric_term if samplecont is 0,
 		// means no sample have value for that term, skip that term in summary
 		if (category.density_data && !category.density_data.samplecount) continue
@@ -386,11 +387,11 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 		.text('- Remove fields')
 		.on('click', async () => {
 			let termidlst = arg.tk.mds.variant2samples.termidlst
-			if(arg.tid2value_orig.size) termidlst = termidlst.filter(tid => !arg.tid2value_orig.has(tid))
+			if (arg.tid2value_orig.size) termidlst = termidlst.filter(tid => !arg.tid2value_orig.has(tid))
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
 			tip.clear().showunder(remove_btn.node())
-			tip.d.on('click',()=>event.stopPropagation())
+			tip.d.on('click', () => event.stopPropagation())
 
 			let terms_remove = []
 
@@ -422,9 +423,10 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 					.append('div')
 					.append('label')
 					.style('padding', '2px 5px')
-					.text(term.name).on('click',()=>{
+					.text(term.name)
+					.on('click', () => {
 						event.stopPropagation()
-						check.attr('checked',check.node().checked ? null : true)
+						check.attr('checked', check.node().checked ? null : true)
 						check.node().dispatchEvent(new Event('change'))
 					})
 			}
@@ -442,7 +444,9 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 					tip.hide()
 					if (terms_remove.length) {
 						const main_holder = arg.div.select('.sj_sampletable_holder')
-						arg.tk.mds.variant2samples.termidlst = arg.tk.mds.variant2samples.termidlst.filter(t => !terms_remove.includes(t))
+						arg.tk.mds.variant2samples.termidlst = arg.tk.mds.variant2samples.termidlst.filter(
+							t => !terms_remove.includes(t)
+						)
 						arg.tk.mds.termdb.terms = arg.tk.mds.termdb.terms.filter(t => !terms_remove.includes(t.id))
 						if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder })
 						else if (active_tab && active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder })
@@ -465,10 +469,10 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
-		for (const [category_name, count] of category.numbycategory) {
+		for (const [category_name, count, total] of category.numbycategory) {
 			grid_div
 				.append('div')
-				.html(`<a>${count}</a>`)
+				.html(`<a>${count} / ${total}</a>`)
 				.style('text-align', 'right')
 				.style('padding-right', '10px')
 				.on('mouseover', () => {
@@ -632,7 +636,7 @@ function make_pagination(arg, page_doms) {
 	page_header
 		.style('display', 'inline-block')
 		.style('padding', '5px')
-		.style('margin','5px 0')
+		.style('margin', '5px 0')
 		.style('font-size', '.9em')
 		.style('color', '#999')
 		.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${arg.numofcases}</b> Samples`)
@@ -742,24 +746,25 @@ function make_pagination(arg, page_doms) {
 	}
 }
 
-function make_column_showhide_menu(arg, columns, header_div, sample_table){
-	const column_edit_btn = header_div.append('div')
+function make_column_showhide_menu(arg, columns, header_div, sample_table) {
+	const column_edit_btn = header_div
+		.append('div')
 		.style('display', 'inline-block')
 		.style('font-size', '.9em')
 		.classed('sja_menuoption', true)
-		.style('margin','10px 20px')
+		.style('margin', '10px 20px')
 		.style('border', 'solid 1px #ddd')
-		.style('height','20px')
-		.style('line-height','20px')
+		.style('height', '20px')
+		.style('line-height', '20px')
 		.text('Show/hide columns')
 		.on('click', async () => {
 			const termidlst = arg.tk.mds.variant2samples.termidlst
 			let visibleterms = arg.tk.mds.variant2samples.visibleterms
 			const tip = new Menu({ padding: '5px', parent_menu: column_edit_btn })
 			tip.clear().showunder(column_edit_btn.node())
-			tip.d.on('click',()=>event.stopPropagation())
+			tip.d.on('click', () => event.stopPropagation())
 
-			let hidden_terms = termidlst.filter(t=>!visibleterms.includes(t))
+			let hidden_terms = termidlst.filter(t => !visibleterms.includes(t))
 
 			const fields_list = tip.d
 				.append('div')
@@ -770,23 +775,24 @@ function make_column_showhide_menu(arg, columns, header_div, sample_table){
 				.style('grid-template-columns', 'auto auto')
 				.style('align-items', 'center')
 
-			fields_list.append('div')
+			fields_list
+				.append('div')
 				.style('padding', '2px')
-				.style('color','#999')
+				.style('color', '#999')
 				.text('Show')
 
-			fields_list.append('div')
+			fields_list
+				.append('div')
 				.style('padding', '2px 5px')
-				.style('color','#999')
-				.text('Column')	
-
+				.style('color', '#999')
+				.text('Column')
 
 			for (const id of termidlst) {
 				const term = arg.tk.mds.termdb.getTermById(id)
-				const checkbox_div = fields_list.append('div')
-					.style('display','flex')
-					.style('justify-content','center')
-
+				const checkbox_div = fields_list
+					.append('div')
+					.style('display', 'flex')
+					.style('justify-content', 'center')
 
 				const check = checkbox_div
 					.append('input')
@@ -804,9 +810,9 @@ function make_column_showhide_menu(arg, columns, header_div, sample_table){
 					.append('label')
 					.style('padding', '2px 5px')
 					.text(term.name)
-					.on('click',()=>{
+					.on('click', () => {
 						event.stopPropagation()
-						check.attr('checked',check.node().checked ? null : true)
+						check.attr('checked', check.node().checked ? null : true)
 						check.node().dispatchEvent(new Event('change'))
 					})
 			}
@@ -825,30 +831,31 @@ function make_column_showhide_menu(arg, columns, header_div, sample_table){
 					if (visible_terms_changed) {
 						let hidden_cols = []
 						hidden_terms.forEach(tid => hidden_cols.push(arg.tk.mds.termdb.getTermById(tid).name))
-						for(const col_name of columns){
-							const col_i = columns.findIndex(c => c==col_name) + 1
+						for (const col_name of columns) {
+							const col_i = columns.findIndex(c => c == col_name) + 1
 							const cells = sample_table.selectAll(`div:nth-child(${columns.length}n+${col_i})`)
-							if(hidden_cols.includes(col_name)){
-								cells.each(function (){
-									d3select(this).style('visibility','hidden')
-										.style('width','0px')
-										.style('padding','0')
+							if (hidden_cols.includes(col_name)) {
+								cells.each(function() {
+									d3select(this)
+										.style('visibility', 'hidden')
+										.style('width', '0px')
+										.style('padding', '0')
 								})
-							}
-							else{
-								cells.each(function (){
-									d3select(this).style('visibility','visible')
-										.style('width','auto')
-										.style('padding','2px 5px')
+							} else {
+								cells.each(function() {
+									d3select(this)
+										.style('visibility', 'visible')
+										.style('width', 'auto')
+										.style('padding', '2px 5px')
 								})
 							}
 						}
-						arg.tk.mds.variant2samples.visibleterms = termidlst.filter(t=>!hidden_terms.includes(t))
+						arg.tk.mds.variant2samples.visibleterms = termidlst.filter(t => !hidden_terms.includes(t))
 					}
 				})
 
-				function visible_terms_changed(){
-					return termidlst.length  == visibleterms.length + hidden_terms.length
-				}
+			function visible_terms_changed() {
+				return termidlst.length == visibleterms.length + hidden_terms.length
+			}
 		})
 }

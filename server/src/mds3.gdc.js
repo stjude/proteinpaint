@@ -512,6 +512,39 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
+export async function get_termidlst2total(api, ds, termpathlst, q) {
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for cohortTotal'
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+	}
+	for (const termpath of termpathlst) {
+		if (!Array.isArray(h[termpath]['buckets'])) throw api.keys.join('.') + ' not array'
+	}
+	// return total size here attached to entires
+	const tv2counts = new Map()
+	for (const termpath of termpathlst) {
+		const buckets = h[termpath]['buckets']
+		let values = []
+		for (const bucket of buckets) {
+			values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+		}
+		const term_id = termpath.split('__').length > 1 ? termpath.split('__').pop() : termpath
+		tv2counts.set(term_id, values)
+	}
+	return tv2counts
+}
+
 export async function addCrosstabCount_tonodes(nodes, combinations) {
 	for (const node of nodes) {
 		if (!node.id0) continue // root
