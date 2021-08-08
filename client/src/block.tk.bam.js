@@ -846,6 +846,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mousedown', () => {
 			d3event.preventDefault()
 			group.dom.vslider.box.attr('fill', slider_color_dark)
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -853,15 +854,15 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + deltay <= 0) return
+					if (group.dom.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxy + deltay >= group.data.height - group.dom.vslider.boxh) return
+					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
 				}
 				deltay = d
 				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
 				group.dom.img_partstack.attr(
 					'y',
-					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / group.data.height)
+					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight)
 				)
 				group.dom.box_move.attr('width', 0)
 				group.dom.box_stay.attr('width', 0)
@@ -871,7 +872,7 @@ function makeGroup(gd, tk, block, data) {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxy += deltay
-				const delta = Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				const delta = Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				group.partstack.start += delta
 				group.partstack.stop += delta
 				block.tkcloakon(tk)
@@ -897,6 +898,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mouseout', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -904,10 +906,9 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + deltay <= 0) return
+					if (group.dom.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxh - deltay <= (stackpagesize * group.data.height) / group.data_fullstack.stackcount)
-						return
+					if (group.dom.vslider.boxh - d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
 				}
 				deltay = d
 				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
@@ -920,7 +921,7 @@ function makeGroup(gd, tk, block, data) {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxy += deltay
-				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
@@ -943,6 +944,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mouseout', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -950,10 +952,9 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxh + d <= (stackpagesize * group.data.height) / group.data_fullstack.stackcount)
-						return
+					if (group.dom.vslider.boxh + d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
 				} else {
-					if (group.dom.vslider.boxy + deltay >= group.data.height - group.dom.vslider.boxh) return
+					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
 				}
 				deltay = d
 				group.dom.vslider.box.attr('height', group.dom.vslider.boxh + deltay)
@@ -965,7 +966,7 @@ function makeGroup(gd, tk, block, data) {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxh += deltay
-				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
