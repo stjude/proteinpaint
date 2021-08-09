@@ -1521,84 +1521,80 @@ will set below boolean flags on segment for rendering:
 
 	// for rest of cases, read and mate are on same chr
 
-	/* TODO how to interpret 0x2 (all segments properly aligned)?
-	should it be coded as below:
-	if(f & 0x2) {
-		// logic
+	// should it be coded as below:
+	if (f & 0x2) {
+		// All reads properly aligned
+		if (
+			(f & 0x20 && f & 0x40) || // 99
+			(f & 0x10 && f & 0x80) || // 147
+			(f & 0x10 && f & 0x40) || // 83
+			(f & 0x20 && f & 0x80) //163
+		) {
+			// Read and mate is properly paired
+			return
+		}
 	} else {
 		// logic
-	}
-	*/
 
-	/*
+		/*
     if (flag == 0 || flag == 16) 
 		// in some cases star-mapped bam can have this kind of nonstandard flag
 		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
 	*/
 
-	if (f & 0x8) {
-		// mate unmapped
-		segment.discord_unmapped2 = true
-		return
+		if (f & 0x8) {
+			// mate unmapped
+			segment.discord_unmapped2 = true
+			return
+		}
+
+		// mate is mapped for the rest cases
+
+		if (!(f & 0x10) && !(f & 0x20)) {
+			//read and mate are both on positive strand: --> -->
+			segment.discord_orientation = true
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
+			return
+		}
+
+		if (!(f & 0x10) && f & 0x20 && pnext < segstart_1based) {
+			//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
+			segment.discord_orientation = true
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
+
+		if (f & 0x10 && f & 0x20) {
+			//read and mate are both on negative strand: <-- <--
+			segment.discord_orientation = true
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
+
+		if (f & 0x10 && !(f & 0x20) && pnext > segstart_1based) {
+			//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
+			segment.discord_orientation = true
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
+
+		////////// XXX follow code has not been unmodified. should refactor in the same style as above
+
+		if (
+			(f & 0x10 && f & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
+			(f & 0x20 && f & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
+			(f & 0x20 && f & 0x40) || // 97
+			(f & 0x10 && f & 0x80) // 145
+			//(f & 0x10 && f & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
+			//(f & 0x20 && f & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
+		) {
+			// Discordant reads with wrong insert size where reads are oriented correctly
+			//console.log('flag wrong insert size:', f)
+			segment.discord_wrong_insertsize = true
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
 	}
-
-	// mate is mapped for the rest cases
-
-	if (!(f & 0x10) && !(f & 0x20)) {
-		//read and mate are both on positive strand: --> -->
-		segment.discord_orientation = true
-		if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
-		return
-	}
-
-	if (!(f & 0x10) && f & 0x20 && pnext < segstart_1based) {
-		//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
-		segment.discord_orientation = true
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	if (f & 0x10 && f & 0x20) {
-		//read and mate are both on negative strand: <-- <--
-		segment.discord_orientation = true
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	if (f & 0x10 && !(f & 0x20) && pnext > segstart_1based) {
-		//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
-		segment.discord_orientation = true
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	////////// XXX follow code has not been unmodified. should refactor in the same style as above
-
-	if (
-		(f & 0x2 && f & 0x20 && f & 0x40) || // 99
-		(f & 0x2 && f & 0x10 && f & 0x80) || // 147
-		(f & 0x2 && f & 0x10 && f & 0x40) || // 83
-		(f & 0x2 && f & 0x20 && f & 0x80) //163
-	) {
-		// Read and mate is properly paired
-		return
-	}
-
-	if (
-		(f & 0x10 && f & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
-		(f & 0x20 && f & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
-		(f & 0x20 && f & 0x40) || // 97
-		(f & 0x10 && f & 0x80) // 145
-		//(f & 0x10 && f & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
-		//(f & 0x20 && f & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
-	) {
-		// Discordant reads with wrong insert size where reads are oriented correctly
-		//console.log('flag wrong insert size:', f)
-		segment.discord_wrong_insertsize = true
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
 	// Discordant reads in same chr but not within the insert size
 	console.log('flag wrong insert size:', f)
 	segment.discord_wrong_insertsize = true
