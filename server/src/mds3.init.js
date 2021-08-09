@@ -193,13 +193,7 @@ function validate_variant2samples(ds) {
 			}
 		}
 	}
-	// if(ds.termdb.termid2totalsize2) {
-	// 	vs.getvariant2samplecount = async (entries) => {
-	// 		if (ds.termdb.termid2totalsize2) {
-	// 			await ds.termdb.termid2totalsize2.get(entries)
-	// 		}
-	// 	}
-	// }
+
 	if (vs.url) {
 		if (!vs.url.base) throw '.variant2samples.url.base missing'
 
