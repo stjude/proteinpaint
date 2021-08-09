@@ -282,6 +282,8 @@ async function make_multiSampleSummaryList(args) {
 	const { arg, holder, new_term } = args
 	// remove size to get all samples if switching between list and summary view
 	delete arg.size
+	// reset tid2value to original when new term added, to remove any existing filter
+	if (new_term) arg.tid2value = JSON.parse(JSON.stringify(arg.tid2value_orig))
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
@@ -464,17 +466,17 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			.style('margin', '20px')
 			.style('font-size', '.9em')
 			.style('display', 'inline-grid')
-			.style('grid-template-columns', 'auto auto')
+			.style('grid-template-columns', 'auto auto auto')
 			.style('grid-row-gap', '3px')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
 		for (const [category_name, count, total] of category.numbycategory) {
-			grid_div
+			const cat_div = grid_div
 				.append('div')
-				.html(`<a>${count} / ${total}</a>`)
-				.style('text-align', 'right')
 				.style('padding-right', '10px')
+				.style('cursor', 'pointer')
+				.text(category_name)
 				.on('mouseover', () => {
 					cat_div.style('color', 'blue').style('text-decoration', 'underline')
 				})
@@ -482,11 +484,28 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 					cat_div.style('color', '#000').style('text-decoration', 'none')
 				})
 				.on('click', () => makeFilteredList(category_name))
-			const cat_div = grid_div
+
+			if (total != undefined) {
+				// show percent bar
+				const percent_div = grid_div
+					.append('div')
+					.on('mouseover', () => {
+						cat_div.style('color', 'blue').style('text-decoration', 'underline')
+					})
+					.on('mouseout', () => {
+						cat_div.style('color', '#000').style('text-decoration', 'none')
+					})
+					.on('click', () => makeFilteredList(category_name))
+
+				fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
+			}
+
+			grid_div
 				.append('div')
-				.style('padding-right', '10px')
-				.style('cursor', 'pointer')
-				.text(category_name)
+				.html(count + (total ? ' / ' + total : ''))
+				.style('text-align', 'right')
+				.style('padding', '2px 10px')
+				.style('font-size', '.8em')
 				.on('mouseover', () => {
 					cat_div.style('color', 'blue').style('text-decoration', 'underline')
 				})
