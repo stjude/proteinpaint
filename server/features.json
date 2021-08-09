@@ -588,7 +588,6 @@
                 },
                 {
                     "label":"Matrix",
-                    "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {
