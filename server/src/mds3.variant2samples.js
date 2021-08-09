@@ -126,5 +126,8 @@ async function make_summary(samples, ds, q) {
 			throw 'unknown term type'
 		}
 	}
+	if (ds.termdb.termid2totalsize2) {
+		await ds.termdb.termid2totalsize2.get(termidlst, entries, q)
+	}
 	return entries
 }

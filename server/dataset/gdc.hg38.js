@@ -599,6 +599,42 @@ const site_size = {
 	filters: totalsize_filters
 }
 
+function totalsize_query(termpathlst) {
+	let query_str = ''
+	for (const termpath of termpathlst) {
+		const termpath_q = termpath
+		query_str = query_str.length
+			? `${query_str} 
+			${termpath_q} {buckets { doc_count, key }}`
+			: `${termpath_q} {buckets { doc_count, key }}`
+	}
+
+	// for all terms from termidlst will be added to single query
+	const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					${query_str}
+				}
+			}
+		}
+	}`
+	return query
+}
+
+const termidlst2totalsize = {
+	query: totalsize_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: `{
+		"filters": {
+			"op": "and", 
+			"content": [
+				{ "op": "in", "content": { "field": "cases.available_variation_data", "value": ["ssm"]}}
+			]
+		}
+	}`
+}
+
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
 	$caseAggsFilters: FiltersArgument
 	$ssmTested: FiltersArgument
@@ -1034,6 +1070,9 @@ module.exports = {
 			project_id: { gdcapi: project_size },
 			disease_type: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
+		},
+		termid2totalsize2: {
+			gdcapi: termidlst2totalsize
 		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary
