@@ -1498,21 +1498,19 @@ function parse_one_segment(arg) {
 		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
 	*/
 		// Mapped but incorrect orientation
-		// Positive strand read
-	} else if (!(flag & 0x10) && !(flag & 0x20)) {
+	} else if (!(flag & 0x10) && !(flag & 0x20) && !(flag & 0x8)) {
 		//read and mate are both on positive strand
 		segment.discord_orientation = true //orientations: --> -->
 		if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
-	} else if (!(flag & 0x10) && flag & 0x20 && pnext < segstart_1based) {
+	} else if (!(flag & 0x10) && flag & 0x20 && pnext < segstart_1based && !(flag & 0x8)) {
 		//read is on positive strand, mate is on negative strand, but mate position is upstream
 		segment.discord_orientation = true //orientations: <-- -->
 		if (keepmatepos) segment.pnext = pnext
-		// Negative strand read
-	} else if (flag & 0x10 && flag & 0x20) {
+	} else if (flag & 0x10 && flag & 0x20 && !(flag & 0x8)) {
 		//read and mate are both on negative strand
 		segment.discord_orientation = true //orientations: <-- <--
 		if (keepmatepos) segment.pnext = pnext
-	} else if (flag & 0x10 && !(flag & 0x20) && pnext > segstart_1based) {
+	} else if (flag & 0x10 && !(flag & 0x20) && pnext > segstart_1based && !(flag & 0x8)) {
 		//read is on negative strand, mate is on positive strand, but mate position is downstream
 		segment.discord_orientation = true //orientations: <-- -->
 		if (keepmatepos) segment.pnext = pnext
