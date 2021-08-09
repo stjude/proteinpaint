@@ -274,18 +274,15 @@ function makeRibbon(e, text, color) {
 async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px 1px 10px')
+	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
 	sandbox_div.header.text(track.name)
-	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px')
+	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
+
 	// creates div for instructions or other messaging about the track
-	if (track.sandbox.intro) {
-		sandbox_div.body
-			.append('div')
-			.style('margin', '20px')
-			.html(track.sandbox.intro)
-	}
+	addMessage(track.sandbox.intro, sandbox_div.body)
+
 	// message explaining the update ribbon
-	addUpdateMessage(track, sandbox_div)
+	addUpdateMessage(track, sandbox_div.body)
 
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
@@ -315,6 +312,32 @@ async function openExample(track, holder) {
 	} else if (track.ppcalls.length > 1) {
 		addButtons(track.sandbox.buttons, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
+	}
+}
+
+function addMessage(arg, div) {
+	if (arg) {
+		const message = div
+			.append('div')
+			.style('margin', '20px')
+			.html(arg)
+	}
+}
+
+// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
+async function addUpdateMessage(track, div) {
+	if (track.sandbox.update_message != undefined && !track.update_expire) {
+		console.log('Must provide expiration date: track.update_expire')
+	}
+	if (track.sandbox.update_message != undefined && track.update_expire) {
+		const today = new Date()
+		const update = new Date(track.update_expire)
+		if (update > today) {
+			const message = div
+				.append('div')
+				.style('margin', '20px')
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+		}
 	}
 }
 
@@ -368,23 +391,6 @@ function showCode(track, arg, div) {
 	}
 }
 
-// Update message corresponding to the update ribbon. Expires on the same date as the ribbon
-async function addUpdateMessage(track, div) {
-	if (track.sandbox.update_message != undefined && !track.update_expire) {
-		console.log('Must provide expiration date: track.update_expire')
-	}
-	if (track.sandbox.update_message != undefined && track.update_expire) {
-		const today = new Date()
-		const update = new Date(track.update_expire)
-		if (update > today) {
-			const message = div.body
-				.append('div')
-				.style('margin', '20px')
-				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
-		}
-	}
-}
-
 function makeTabMenu(track, holder){
 	const tabs = []
 	tabArray(tabs, track)
@@ -410,16 +416,11 @@ function tabArray(tabs, track){
 }
 
 function makeTab(track, arg, div) {
+	addMessage(arg.message, div)
 	addButtons(arg.buttons, div)
 	makeDataDownload(arg.download, div)
 	showURLLaunch(arg.urlparam, div)
 	showCode(track, arg.runargs, div)
-
-	if (arg.message) {
-		div.append('div')
-			.style('margin', '20px')
-			.html(arg.message)
-	}
 
 	const runpp_arg = {
 		holder: div
@@ -444,6 +445,8 @@ function addButtons(arg, div){
 					if (button.download){
 						event.stopPropagation();
 						window.open(`${button.download}`, '_self', 'download')
+					} else if (button.arrow) {
+						makeArrowBtn(div)
 					} else {
 						event.stopPropagation();
 						window.open(`${button.link}`, '_blank')
@@ -457,7 +460,7 @@ function makeButton(div, text) {
 	const button = div
 		.append('button')
 		.attr('type', 'submit')
-		.attr('class', 'sja_menuoption')
+		.attr('class', 'sjpp-sandbox-btn')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
@@ -466,4 +469,21 @@ function makeButton(div, text) {
 		.text(text)
 
 	return button
+}
+
+function makeArrowBtn(div) {
+	dropdownDiv(div)
+	if (showHide_div.style('display') == 'none') {
+		showHide_div.style('display', 'block')
+	} else {
+		showHide_div.style('display', 'none')
+	}
+}
+
+function dropdownDiv(div) {
+	const showHide_div = div
+		.append('div')
+		.style('margin', '20px 20px 20px 30px')
+		.style('display', 'none')
+		.html('<p>This works</p>')
 }
