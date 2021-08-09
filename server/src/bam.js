@@ -1522,17 +1522,15 @@ will set below boolean flags on segment for rendering:
 	// for rest of cases, read and mate are on same chr
 
 	// should it be coded as below:
-	if (f & 0x2) {
+	if (
 		// All reads properly aligned
-		if (
-			(f & 0x20 && f & 0x40) || // 99
-			(f & 0x10 && f & 0x80) || // 147
-			(f & 0x10 && f & 0x40) || // 83
-			(f & 0x20 && f & 0x80) //163
-		) {
-			// Read and mate is properly paired
-			return
-		}
+		(f & 0x2 && f & 0x20 && f & 0x40) || // 99
+		(f & 0x2 && f & 0x10 && f & 0x80) || // 147
+		(f & 0x2 && f & 0x10 && f & 0x40) || // 83
+		(f & 0x2 && f & 0x20 && f & 0x80) //163
+	) {
+		// Read and mate is properly paired
+		return
 	} else {
 		// logic
 
