@@ -213,7 +213,7 @@ async function make_multiSampleTable(args) {
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		if (arg.tid2value_orig.has(term.name)) continue
+		if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
@@ -245,7 +245,7 @@ async function make_multiSampleTable(args) {
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
 			const term = arg.tk.mds.termdb.getTermById(termid)
-			if (arg.tid2value_orig.has(term.name)) continue
+			if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid] || 'N/A')
 		}
@@ -299,8 +299,8 @@ async function make_multiSampleSummaryList(args) {
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		let skip_category = false
-		for (const termname of arg.tid2value_orig) {
-			if (termname == category.name) skip_category = true
+		for (const termid of arg.tid2value_orig) {
+			if (arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
 		}
 		if (skip_category) continue
 		// if for numeric_term if samplecont is 0,
@@ -519,10 +519,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 		function makeFilteredList(cat) {
 			if (arg.tid2value == undefined) arg.tid2value = {}
 			else if (arg.filter_term) {
-				delete arg.tid2value[arg.filter_term]
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+				delete arg.tid2value[term.id]
 				delete arg.filter_term
 			}
-			arg.tid2value[category.name] = cat
+			const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+			arg.tid2value[term.id] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_tabs(main_tabs)
@@ -538,10 +540,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			else {
 				if (arg.tid2value == undefined) arg.tid2value = {}
 				else if (arg.filter_term) {
-					delete arg.tid2value[arg.filter_term]
+					const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+					delete arg.tid2value[term.id]
 					delete arg.filter_term
 				}
-				arg.tid2value[category.name] = [
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+				arg.tid2value[term.id] = [
 					{ op: '>=', range: Math.round(range.range_start) },
 					{ op: '<=', range: Math.round(range.range_end) }
 				]
@@ -569,19 +573,20 @@ function make_sunburst_tidlist(arg, holder) {
 		.style('justify-items', 'left')
 		.style('justrify-content', 'start')
 
-	for (const termname of arg.tid2value_orig) {
-		const term = arg.tk.mds.termdb.terms.find(t => t.name == termname)
+	for (const termid of arg.tid2value_orig) {
+		const term = arg.tk.mds.termdb.getTermById(termid)
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text(term.name)
 		cell2
 			.style('width', 'auto')
 			.style('justify-self', 'stretch')
-			.text(arg.tid2value[termname])
+			.text(arg.tid2value[termid])
 	}
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
-	if (arg.tid2value[arg.filter_term] == undefined) return
+	const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+	if (arg.tid2value[term.id] == undefined) return
 	// term
 	filter_holder
 		.append('div')
@@ -611,7 +616,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(get_value(arg.tid2value[arg.filter_term]))
+		.html(get_value(arg.tid2value[term.id]))
 
 	// remove button
 	filter_holder
@@ -625,9 +630,9 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.html('x')
 		.on('click', () => {
 			// don't remove original terms from tid2value (terms from sunburst ring)
-			if (!arg.tid2value_orig.has(arg.filter_term)) {
+			if (!arg.tid2value_orig.has(term.id)) {
 				if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
-				else delete arg.tid2value[arg.filter_term]
+				else delete arg.tid2value[term.id]
 			}
 			// delete from arg as well
 			delete arg.filter_term

@@ -476,10 +476,10 @@ const variant2samples = {
 				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.name]] }
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.id]] }
 					})
 				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[t.name]) {
+					for (const val of p.tid2value[t.id]) {
 						f.content.push({
 							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
@@ -489,7 +489,8 @@ const variant2samples = {
 			}
 		}
 		// Note: all logic for tid2value has been converted termlst, because newly added terms are
-		// not part of terms[], so new term must be added from q. remove following part after confirming
+		// not part of terms[], so new term must be added from q.
+		// TODO: remove following commented part after reviewing
 		// else if (p.tid2value) {
 		// 	for (const tid in p.tid2value) {
 		// 		let t = terms.find(i => i.id == tid)

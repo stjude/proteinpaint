@@ -1014,9 +1014,9 @@ async function click_variants(d, tk, block, tippos) {
 						div: tk.itemtip.d,
 						tid2value: {}
 					}
-					arg.tid2value[tk.mds.termdb.getTermById(d2.data.id0).name] = d2.data.v0
-					if (d2.data.id1) arg.tid2value[tk.mds.termdb.getTermById(d2.data.id1).name] = d2.data.v1
-					if (d2.data.id2) arg.tid2value[tk.mds.termdb.getTermById(d2.data.id2).name] = d2.data.v2
+					arg.tid2value[d2.data.id0] = d2.data.v0
+					if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
+					if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
 
 					/*
 					TEMP FIX to create a mock arg.mlst[]
