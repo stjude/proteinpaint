@@ -1504,19 +1504,13 @@ will set below boolean flags on segment for rendering:
 		return
 	}
 
+	// f & 0x4 should always be true (this read is properly mapped)
+
 	if (f & 0x40) {
 		segment.isfirst = true
 	} else if (f & 0x80) {
 		segment.islast = true
 	}
-
-	if (f & 0x8) {
-		// mate unmapped
-		segment.discord_unmapped2 = true
-		return
-	}
-
-	//from here, read and mate are mapped
 
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
 		// mate is in different chromosome
@@ -1525,32 +1519,86 @@ will set below boolean flags on segment for rendering:
 		return
 	}
 
-	//from here, read and mate are on same chr
+	// for rest of cases, read and mate are on same chr
 
-	if (f & 0x2) {
-		// read and mate are properly paired and mapped
+	// should it be coded as below:
+	if (
+		// All reads properly aligned
+		(f & 0x2 && f & 0x20 && f & 0x40) || // 99
+		(f & 0x2 && f & 0x10 && f & 0x80) || // 147
+		(f & 0x2 && f & 0x10 && f & 0x40) || // 83
+		(f & 0x2 && f & 0x20 && f & 0x80) //163
+	) {
+		// Read and mate is properly paired
 		return
 	} else {
-		// read and mate could have wrong orientation or wrong insert size
-		// check for wrong orientation
-		if (
-			(!(f & 0x10) && !(f & 0x20)) || //both mates on + strand (-> ->)
-			(!(f & 0x10) && f & 0x20 && pnext < segstart_1based) || //read on + strand, mate on - strand, but mate position is upstream (<- ->)
-			(f & 0x10 && f & 0x20) || //both mates on - strand (<- <-)
-			(f & 0x10 && !(f & 0x20) && pnext > segstart_1based) //read on - strand, mate on + strand, but mate position is downstream (<- ->)
-		) {
+		// logic
+
+		/*
+    if (flag == 0 || flag == 16) 
+		// in some cases star-mapped bam can have this kind of nonstandard flag
+		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
+	*/
+
+		if (f & 0x8) {
+			// mate unmapped
+			segment.discord_unmapped2 = true
+			return
+		}
+
+		// mate is mapped for the rest cases
+
+		if (!(f & 0x10) && !(f & 0x20)) {
+			//read and mate are both on positive strand: --> -->
 			segment.discord_orientation = true
+			if ((f & 0x1 && 0x40) || (f & 0x1 && f & 0x80)) {
+				// 65 and 129
+				segment.discord_wrong_insertsize = true
+			}
+			//console.log('wrong orient1:', f)
 			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
 			return
-		} else {
-			// read and mate have wrong insert size
-			segment.discord_wrong_insertsize = true
+		}
+
+		if (!(f & 0x10) && f & 0x20 && pnext < segstart_1based) {
+			//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
+			segment.discord_orientation = true
+			if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
+				// 81, 161 (161 somehow gets classified in this if block but 81 does not)
+				segment.discord_wrong_insertsize = true
+			}
+
+			//console.log('wrong orient2:', f)
 			if (keepmatepos) segment.pnext = pnext
 			return
 		}
-	}
-	////////// XXX follow code has not been unmodified. should refactor in the same style as above
-	/*
+
+		if (f & 0x10 && f & 0x20) {
+			//read and mate are both on negative strand: <-- <--
+			segment.discord_orientation = true
+			if ((f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40) || (f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80)) {
+				// 113 and 177
+				segment.discord_wrong_insertsize = true
+			}
+			//console.log('wrong orient3:', f)
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
+
+		if (f & 0x10 && !(f & 0x20) && pnext > segstart_1based) {
+			//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
+			segment.discord_orientation = true
+			if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
+				// 81, 161 (81 somehow gets classified in this if block but 161 does not)
+				segment.discord_wrong_insertsize = true
+			}
+			//console.log('wrong orient4:', f)
+			if (keepmatepos) segment.pnext = pnext
+			return
+		}
+
+		////////// XXX follow code has not been unmodified. should refactor in the same style as above
+
 		if (
 			(f & 0x10 && f & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
 			(f & 0x20 && f & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
@@ -1570,7 +1618,6 @@ will set below boolean flags on segment for rendering:
 	console.log('flag wrong insert size:', f)
 	segment.discord_wrong_insertsize = true
 	if (keepmatepos) segment.pnext = pnext
-    */
 }
 
 async function poststack_adjustq(group, q) {
