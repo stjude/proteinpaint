@@ -2681,6 +2681,21 @@ async function convertread2html(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
+	}
+	if (seg.discord_wrong_insertsize && seg.discord_orientation) {
+		lst.push(
+			'<li>' +
+				'<span style="background:' +
+				discord_wrong_insertsize_hq +
+				';color:white">Wrong insert size</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>' +
+				'<li><span style="background:' +
+				discord_orientation_hq +
+				';color:white">Segments having wrong orientation</span>' +
+				'</li>'
+		)
 	} else if (seg.discord_wrong_insertsize) {
 		lst.push(
 			'<li>' +
