@@ -959,10 +959,5 @@ function init_termdb_queries(termdb) {
 			const terms = [...termdb.id2term.values()]
 			return terms.find(i => i.id == id)
 		}
-
-		q.getTermByName = name => {
-			const terms = [...termdb.id2term.values()]
-			return terms.find(i => i.name == name)
-		}
 	}
 }
