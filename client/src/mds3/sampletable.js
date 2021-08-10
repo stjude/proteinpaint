@@ -351,6 +351,10 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 				state: {
 					dslabel: arg.tk.dslabel,
 					genome: arg.block.genome.name,
+					treeFilter: {
+						tid2value: arg.tid2value,
+						ssm_id_lst: arg.mlst.map(i => i.ssm_id).join(',')
+					},
 					nav: {
 						header_mode: 'search_only'
 					},
