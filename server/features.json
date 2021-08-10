@@ -67,14 +67,22 @@
                     {
                         "name": "Docs",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
-                    },
+                    }
+                ],
+                "arrowButtons": [
                     {
-                        "name": "Download Data & Processing Pipeline",
-                        "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
-                    },
-                    {
-                        "name": "Data Processing Docs",
-                        "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                        "name": "Data Processing",
+                        "message": "<p>Download the data and data processing scripts from the Download Data & Processing Pipeline link. Please use the Data Processing Docs for instructions</p>",
+                        "links": [
+                            {
+                                "name": "Download Data & Processing Pipeline",
+                                "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                            },
+                            {
+                                "name": "Data Processing Docs",
+                                "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                            }
+                        ]
                     }
                 ]
             },

@@ -293,7 +293,9 @@ async function openExample(track, holder) {
 		//Redirects to URL parameter of track
 		showURLLaunch(call.urlparam, sandbox_div.body)
 		//Shows code used to create sandbox
-		showCode(track, call.runargs, sandbox_div.body)
+		// showCode(track, call.runargs, sandbox_div.body)
+
+		makeDropdownBtns(track, track.sandbox.arrowButtons, call.runargs, sandbox_div.body)
 
 		// template runpp() arg
 		const runpp_arg = {
@@ -316,7 +318,7 @@ async function openExample(track, holder) {
 }
 
 function addMessage(arg, div) {
-	if (arg) {
+	if (arg != undefined && arg) {
 		const message = div
 			.append('div')
 			.style('margin', '20px')
@@ -364,14 +366,14 @@ function makeDataDownload(arg, div) {
 // Creates 'Show Code' button in Sandbox for all examples
 function showCode(track, arg, div) {
 	if (track.sandbox.is_ui != true) {
-		const codeBtn = makeButton(div, "Show Code")
+		const codeBtn = makeButton(div, "Code")
 			codeBtn.on('click', () => {
 				if (code.style('display') == 'none') {
 					code.style('display', 'block') //TODO fadein fn
-					select(event.target).text('Hide')
+					// select(event.target).text('Hide')
 				} else {
 					code.style('display', 'none') //TODO fadeout fn
-					select(event.target).text('Show Code')
+					// select(event.target).text('Show Code')
 				}
 			})
 
@@ -445,8 +447,6 @@ function addButtons(arg, div){
 					if (button.download){
 						event.stopPropagation();
 						window.open(`${button.download}`, '_self', 'download')
-					} else if (button.arrow) {
-						makeArrowBtn(div)
 					} else {
 						event.stopPropagation();
 						window.open(`${button.link}`, '_blank')
@@ -455,6 +455,7 @@ function addButtons(arg, div){
 			})
 		}
 }
+
 
 function makeButton(div, text) {
 	const button = div
@@ -471,19 +472,78 @@ function makeButton(div, text) {
 	return button
 }
 
-function makeArrowBtn(div) {
-	dropdownDiv(div)
-	if (showHide_div.style('display') == 'none') {
-		showHide_div.style('display', 'block')
-	} else {
-		showHide_div.style('display', 'none')
-	}
-}
+function makeDropdownBtns(track, arg1, arg2, div) {
+	// const showHide_div = div.append('div').attr('id', 'showHideDiv')
 
-function dropdownDiv(div) {
-	const showHide_div = div
-		.append('div')
-		.style('margin', '20px 20px 20px 30px')
-		.style('display', 'none')
-		.html('<p>This works</p>')
+	// showHide_div.selectAll('*').remove()
+
+	const arrows = arg1
+	if (arrows){
+		arrows.forEach(arrow => {
+
+			const arrow_btn = makeButton(div, arrow.name)
+			arrow_btn.on('click', () => {
+				if (arrow_div.style('display') == 'none') {
+					arrow_div.style('display', 'block')
+				} else {
+					arrow_div.style('display', 'none')
+				}
+			})
+
+			const arrow_div = div
+				.append('div')
+				// .attr('id', 'showHideDiv')
+				.style('margin', '20px 20px 20px 30px')
+				.style('display', 'none')
+
+			const links = arrow.links
+			arrow_div.html(`
+				${arrow.message ? `<div>${arrow.message}</div>`: ''}
+				${links.map((hyperlink)=>{
+					if(!hyperlink) return ''
+					if (hyperlink.download) {
+						return `<a style="cursor:pointer; margin-left:10px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+					}
+					if(hyperlink.link) {
+						return `<a style="cursor:pointer; margin-left:10px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+					}
+			}).join("")}`)
+
+		// return showHide_div
+		})
+	}
+
+	if (track.sandbox.is_ui != true) {
+		const codeBtn = makeButton(div, "Code")
+		// const code_div = showHide_div.append('div')
+			codeBtn.on('click', () => {
+				if (code.style('display') == 'none') {
+					code.style('display', 'block')
+				} else {
+					code.style('display', 'none')
+				}
+				// if (code.style('display') == 'none') {
+				// 	code.style('display', 'block')
+					// select(event.target).text('Hide')
+				// } else {
+				// 	code.style('display', 'none')
+					// select(event.target).text('Show Code')
+				// }
+			})
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
+		const code = div
+			.append('pre')
+			.append('code')
+			.style('display', 'none')
+			.style('margin', '35px')
+			.style('font-size', '14px')
+			.style('border', '1px solid #aeafb0')
+			.html(highlight(`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+		JSON.stringify(arg2, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
+		`})`, {language:'javascript'}).value)
+	}
+
 }
