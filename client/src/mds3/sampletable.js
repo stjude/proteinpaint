@@ -213,7 +213,7 @@ async function make_multiSampleTable(args) {
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
+		if (arg.tid2value_orig.has(term.name)) continue
 		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
@@ -244,7 +244,8 @@ async function make_multiSampleTable(args) {
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
+			const term = arg.tk.mds.termdb.getTermById(termid)
+			if (arg.tid2value_orig.has(term.name)) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid] || 'N/A')
 		}
@@ -298,8 +299,8 @@ async function make_multiSampleSummaryList(args) {
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
 		let skip_category = false
-		for (const termid of arg.tid2value_orig) {
-			if (arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
+		for (const termname of arg.tid2value_orig) {
+			if (termname == category.name) skip_category = true
 		}
 		if (skip_category) continue
 		// if for numeric_term if samplecont is 0,
@@ -568,14 +569,14 @@ function make_sunburst_tidlist(arg, holder) {
 		.style('justify-items', 'left')
 		.style('justrify-content', 'start')
 
-	for (const termid of arg.tid2value_orig) {
-		const term = arg.tk.mds.termdb.getTermById(termid)
+	for (const termname of arg.tid2value_orig) {
+		const term = arg.tk.mds.termdb.terms.find(t => t.name == termname)
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text(term.name)
 		cell2
 			.style('width', 'auto')
 			.style('justify-self', 'stretch')
-			.text(arg.tid2value[termid])
+			.text(arg.tid2value[termname])
 	}
 }
 

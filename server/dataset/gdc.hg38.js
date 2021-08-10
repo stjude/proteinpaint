@@ -471,18 +471,15 @@ const variant2samples = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
-		if (p.tid2value) {
-			for (const tid in p.tid2value) {
-				let t = terms.find(i => i.id == tid)
-				// Quick Fix: tid2value from sample table has term.name rather than term.id
-				if (!t) t = terms.find(i => i.name == tid)
+		if (p.termlst) {
+			for (const t of p.termlst) {
 				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.name]] }
 					})
 				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[tid]) {
+					for (const val of p.tid2value[t.name]) {
 						f.content.push({
 							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
@@ -491,6 +488,28 @@ const variant2samples = {
 				}
 			}
 		}
+		// Note: all logic for tid2value has been converted termlst, because newly added terms are
+		// not part of terms[], so new term must be added from q. remove following part after confirming
+		// else if (p.tid2value) {
+		// 	for (const tid in p.tid2value) {
+		// 		let t = terms.find(i => i.id == tid)
+		// 		// Quick Fix: tid2value from sample table has term.name rather than term.id
+		// 		if (!t) t = terms.find(i => i.name == tid)
+		// 		if (t && t.type == 'categorical') {
+		// 			f.content.push({
+		// 				op: 'in',
+		// 				content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+		// 			})
+		// 		} else if (t && t.type == 'integer') {
+		// 			for (const val of p.tid2value[tid]) {
+		// 				f.content.push({
+		// 					op: val.op,
+		// 					content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+		// 				})
+		// 			}
+		// 		}
+		// 	}
+		// }
 		return f
 	}
 }
