@@ -1551,9 +1551,13 @@ will set below boolean flags on segment for rendering:
 		if (!(f & 0x10) && !(f & 0x20)) {
 			//read and mate are both on positive strand: --> -->
 			segment.discord_orientation = true
-			if ((f & 0x1 && 0x40) || (f & 0x1 && f & 0x80)) {
-				// 65 and 129
+			if ((f & 0x1 && f & 0x40 && f & 0x2) || (f & 0x1 && f & 0x80 && f & 0x2)) {
+				// 67 and 131
+				//console.log('67,131:', f)
+			} else if ((f & 0x1 && f & 0x40 && !f & 0x2) || (f & 0x1 && f & 0x80 && !f & 0x2)) {
+				// (65 and 129) but NOT (67 and 131)
 				segment.discord_wrong_insertsize = true
+				//console.log('65,129:', f)
 			}
 			//console.log('wrong orient1:', f)
 			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
@@ -1566,6 +1570,7 @@ will set below boolean flags on segment for rendering:
 			if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
 				// 81, 161 (161 somehow gets classified in this if block but 81 does not)
 				segment.discord_wrong_insertsize = true
+				//console.log('81,161:', f)
 			}
 
 			//console.log('wrong orient2:', f)
@@ -1576,9 +1581,16 @@ will set below boolean flags on segment for rendering:
 		if (f & 0x10 && f & 0x20) {
 			//read and mate are both on negative strand: <-- <--
 			segment.discord_orientation = true
-			if ((f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40) || (f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80)) {
-				// 113 and 177
+			if (
+				(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40 && f & 0x2) ||
+				(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80 && f & 0x2)
+			) {
+				// 115 and 179
+				//console.log('115,179:', f)
+			} else if ((f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40) || (f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80)) {
+				// (113 and 177) but NOT (115 and 179)
 				segment.discord_wrong_insertsize = true
+				//console.log('113,177:', f)
 			}
 			//console.log('wrong orient3:', f)
 			if (keepmatepos) segment.pnext = pnext
@@ -1591,6 +1603,7 @@ will set below boolean flags on segment for rendering:
 			if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
 				// 81, 161 (81 somehow gets classified in this if block but 161 does not)
 				segment.discord_wrong_insertsize = true
+				//console.log('81,161:', f)
 			}
 			//console.log('wrong orient4:', f)
 			if (keepmatepos) segment.pnext = pnext
@@ -2693,7 +2706,7 @@ async function convertread2html(seg, genome, query) {
 				'</li>' +
 				'<li><span style="background:' +
 				discord_orientation_hq +
-				';color:white">Segments having wrong orientation</span>' +
+				';color:white">Segments also having wrong orientation</span>' +
 				'</li>'
 		)
 	} else if (seg.discord_wrong_insertsize) {
