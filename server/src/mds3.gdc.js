@@ -413,7 +413,7 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 			'&fields=' +
 			fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.filters(q))), //
+			encodeURIComponent(JSON.stringify(api.filters(q))),
 		{ method: 'GET', headers }
 	)
 	let re
