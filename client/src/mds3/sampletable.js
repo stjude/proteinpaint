@@ -376,7 +376,7 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 							else make_multiSampleTable({ arg, holder, no_tabs: true })
 						}
 					},
-					disable_terms: arg.tk.mds.variant2samples.termidlst
+					disable_terms: JSON.parse(JSON.stringify(arg.tk.mds.variant2samples.termidlst))
 				}
 			})
 		})

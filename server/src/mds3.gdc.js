@@ -915,7 +915,7 @@ function init_termdb_queries(termdb, ds) {
 	{
 		const cache = new Map()
 		q.getTermChildren = async (id, vocab = default_vocab, treeFilter = null) => {
-			const cacheId = id + ';;' + vocab
+			const cacheId = id + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
@@ -933,7 +933,7 @@ function init_termdb_queries(termdb, ds) {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
-			const cacheId = searchStr + ';;' + vocab
+			const cacheId = searchStr + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms that have term.id containing search string
