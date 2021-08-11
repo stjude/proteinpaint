@@ -51,6 +51,9 @@
                                 }
                             }
                         ]
+                    },
+                    "testSpec": { 
+                        "expected": {"rect": 20 }
                     }
                 }
             ],
@@ -132,11 +135,14 @@
                         "genome": "hg19",
                         "nativetracks": "RefGene",
                         "tracks": [{
-                        "type": "bigwig",
-                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
-                        "name": "BigWig Demo",
-                        "height": 100
-                    }]
+                            "type": "bigwig",
+                            "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                            "name": "BigWig Demo",
+                            "height": 100
+                        }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -177,6 +183,9 @@
                             "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
                             "type": "bigwigstranded"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -228,6 +237,9 @@
                             "stackspace": 1,
                             "color": "teal"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 },
                 {
@@ -248,6 +260,9 @@
                             "stackheight": 16,
                             "stackspace": 1
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 },
                 {
@@ -271,6 +286,9 @@
                                 }
                             }
                         ]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 1 }
                     }
                 }
             ],
@@ -315,6 +333,9 @@
                             "file": "proteinpaint_demo/hg19/aicheck/file.gz",
                             "name": "Demo sample tumor allelic imbalance"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -371,6 +392,9 @@
                                 { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample6.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 6", "sampleID": "106" }
                             ]
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -411,6 +435,9 @@
                             "name": "TCGA FPKM demo rank",
                             "sample": "TCGA-GS-A9TQ"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"rect": 5 }
                     }
                 }
             ],
@@ -490,6 +517,9 @@
                         "noheader": 1,
                         "genome": "hg19",
                         "dataset":"Pediatric"
+                    },
+                    "testSpec": { 
+                        "expected": {"circle": 10 }
                     }
                 }
             ],
@@ -534,6 +564,9 @@
                             "name": "RNA splice junction demo",
                             "list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"circle": 15, "line": 15}
                     }
                 }
             ],
@@ -584,11 +617,13 @@
                             "name": "Demo",
                             "file": "proteinpaint_demo/hg19/junction/json.gz"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"circle": 15, "line": 15}
                     }
                 },
                 {
                     "label":"Matrix",
-                    "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {
@@ -609,7 +644,10 @@
                             "name": "Download Matrix Script",
                             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py.gz"
                         }
-                    ]
+                    ],
+                    "testSpec": { 
+                         "expected": {"circle": 15, "line": 15}
+                    }
                 }
             ],
             "sandbox":{
@@ -647,6 +685,9 @@
                         "genome": "hg19",
                         "nativetracks":"refgene",
                         "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -792,6 +833,9 @@
                             "mode_arc": true,
                             "mode_hm": false
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 }
             ],
@@ -900,6 +944,10 @@
                                 }
                             }
                         }]
+                    },
+                    "testSpec": { 
+                        "timeout": 7000,
+                        "expected": { "rect": 20, "line": 20 }
                     }
                 }
             ],
@@ -950,6 +998,9 @@
                             "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
                             "name": "WES KIT exon mutation"
                         }]
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 2 }
                     }
                 },
                 {
@@ -982,7 +1033,10 @@
                             "name": "Download BAM Slicing Script",
                             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
                         }
-                    ]
+                    ],
+                    "testSpec": { 
+                        "expected": {"image": 2 }
+                    }
                 }
             ],
             "sandbox":{
@@ -1012,6 +1066,9 @@
                         "nobox": 1,
                         "noheader": 1,
                         "gdcbamslice": { "uionly": true }
+                    },
+                    "testSpec": { 
+                        "expected": {"image": 1 }
                     }
                 }
             ],
@@ -1309,6 +1366,9 @@
                         "mdssamplescatterplot": {
                             "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
                         }
+                    },
+                    "testSpec": { 
+                        "expected": {"circle": 10 }
                     }
                 }
             ],
@@ -1326,27 +1386,36 @@
         {
             "name": "Single Cell",
             "app": "Apps",
-            "hidden": true,
             "blurb": "single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
             "media": {
-                "urls": "?genome=mm9&singlecell=files/mm10/NEI.AGI.retina/singlecell/neuron2019/view.json",
+                "urls": [
+                    {
+                        "link": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json"
+                    }
+                ],
                 "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
             },
             "ppcalls": [
                 {
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
+                    "urlparam": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json",
                     "runargs": {
-                        "nobox": 1,
                         "noheader": 1,
                         "singlecell": {
-                        "genome": "mm10",
-                        "jsonfile":"mm10/tmp.scrna/E10-P45/data.json"
+                            "genome": "hg19",
+                            "jsonfile":"proteinpaint_demo/hg19/singlecell/singlecell.json"
                         }
                     }
                 }
             ],
             "sandbox":{
-                "is_ui": true
+                "buttons": [
+                    {
+                        "name": "Docs",
+                        "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+                    }
+                ]
             },
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },

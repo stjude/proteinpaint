@@ -3161,6 +3161,7 @@ seekrange(chr,start,stop) {
 		if (tk.usevalue) par.usevalue = tk.usevalue
 		if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
 		if (tk.hideItemNames) par.hideItemNames = tk.hideItemNames
+		if (tk.filterByName) par.filterByName = tk.filterByName
 		if (this.usegm && this.gmmode != client.gmmode.genomic) {
 			// important, will render a gene in a single row across rglst
 			par.gmregion = this.tkarg_maygm(tk)[0]

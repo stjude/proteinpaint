@@ -362,6 +362,8 @@ export function termsetting_fill_q(q, term) {
 			rx.copyMerge(q, term.bins.default)
 		}
 		set_hiddenvalues(q, term)
+		// binconfig.termtype may be used to improve bin labels
+		if (!q.termtype) q.termtype = term.type
 		return
 	}
 	if (term.type == 'categorical' || term.type == 'condition') {

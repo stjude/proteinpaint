@@ -389,18 +389,18 @@ export function validate_query_genecnv(ds) {
 }
 
 // for variant2samples query
-export async function getSamples_gdcapi(q, ds) {
+export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
-	const fields =
-		q.get == ds.variant2samples.type_sunburst
-			? api.fields_sunburst
-			: (q.get == ds.variant2samples.type_summary) || (q.get == ds.variant2samples.type_update_summary)
-			? api.fields_summary
-			: q.get == ds.variant2samples.type_samples
-			? api.fields_samples
-			: null
 	if (!fields) throw 'invalid get type of q.get'
+	if (q.tid2value && Object.keys(q.tid2value).length) {
+		q.termlst = []
+		for (const t of Object.keys(q.tid2value)) {
+			let term = ds.termdb.terms.find(i => i.id == t)
+			if (!term) term = ds.cohort.termdb.q.getTermById(t)
+			if (term) q.termlst.push(term)
+		}
+	}
 
 	const headers = getheaders(q) // will be reused below
 
@@ -448,8 +448,10 @@ export async function getSamples_gdcapi(q, ds) {
 		*/
 		sample.case_uuid = s.case.case_id
 
-		for (const id of ds.variant2samples.termidlst) {
-			const t = ds.termdb.getTermById(id)
+		for (const id of termidlst) {
+			let t = ds.termdb.getTermById(id)
+			// if term is not in serverside termdb, query gdc_dictionary for new term
+			if (!t) t = ds.cohort.termdb.q.getTermById(id)
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
@@ -516,6 +518,39 @@ export async function get_cohortTotal(api, ds, q) {
 		v2count.set(t.key, t.doc_count)
 	}
 	return { v2count, combination: q._combination }
+}
+
+export async function get_termidlst2total(api, ds, termpathlst, q) {
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for cohortTotal'
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+	}
+	for (const termpath of termpathlst) {
+		if (!Array.isArray(h[termpath]['buckets'])) throw api.keys.join('.') + ' not array'
+	}
+	// return total size here attached to entires
+	const tv2counts = new Map()
+	for (const termpath of termpathlst) {
+		const buckets = h[termpath]['buckets']
+		let values = []
+		for (const bucket of buckets) {
+			values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+		}
+		const term_id = termpath.split('__').length > 1 ? termpath.split('__').pop() : termpath
+		tv2counts.set(term_id, values)
+	}
+	return tv2counts
 }
 
 export async function addCrosstabCount_tonodes(nodes, combinations) {
@@ -610,7 +645,7 @@ export function validate_sampleSummaries2_number(api) {
 			site_set.add(h.case.primary_site)
 		}
 		// hardcoded and are from sampleSummaries2.lst[{label1}]
-		return [{ label1: 'project', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
+		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
 	}
 }
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
@@ -808,6 +843,8 @@ export async function init_dictionary(ds) {
 	// step 1: add leaf terms
 	for (const i in re.fields) {
 		const term_path_str = re.fields[i]
+		// skip term if it's present in duplicate_term_skip []
+		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
 		const term_paths = term_path_str.split('.')
 		const term_id = term_paths[term_paths.length - 1]
 		const term_obj = {
@@ -815,7 +852,8 @@ export async function init_dictionary(ds) {
 			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
 			path: term_path_str,
 			isleaf: true,
-			parent_id: term_paths[term_paths.length - 2]
+			parent_id: term_paths[term_paths.length - 2],
+			fields: term_path_str.split('.').slice(1)
 		}
 		// step 2: add type of leaf terms from _mapping:{}
 		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
@@ -832,7 +870,8 @@ export async function init_dictionary(ds) {
 		const term_obj = {
 			id: term_id,
 			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-			path: term_str
+			path: term_str,
+			fields: term_str.split('.').slice(1)
 		}
 		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
@@ -841,13 +880,13 @@ export async function init_dictionary(ds) {
 
 	//step 4: prune the tree
 	const prune_terms = dictionary.gdcapi.prune_terms
-	for( const term_id of prune_terms){
-		if(id2term.has(term_id)){
-			const children = [...id2term.values()].filter(t=>t.path.includes(term_id))
-			if(children.length){
-				for(const child_t of children){
+	for (const term_id of prune_terms) {
+		if (id2term.has(term_id)) {
+			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
+			if (children.length) {
+				for (const child_t of children) {
 					id2term.delete(child_t.id)
-				} 
+				}
 			}
 			id2term.delete(term_id)
 		}

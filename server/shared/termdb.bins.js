@@ -264,8 +264,14 @@ export function get_bin_label(bin, binconfig) {
 		else if (bc.stopinclusive) bin.stopinclusive = true
 	}
 
-	bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
-	const label_offset = 'label_offset' in bc && !bc.label_offset_ignored ? bc.label_offset : 0
+	let label_offset = 0
+	if ('label_offset' in bc) {
+		bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
+		if (!bc.label_offset_ignored) label_offset = bc.label_offset
+	} else if (bc.bin_size === 1 && bc.termtype == 'integer') {
+		label_offset = 1
+	}
+
 	/*
 	  NOTE: The first_bin and last_bin are assigned in compute_bins,
 	  so these min and max values are not needed for generating

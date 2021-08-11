@@ -471,18 +471,15 @@ const variant2samples = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
-		if (p.tid2value) {
-			for (const tid in p.tid2value) {
-				let t = terms.find(i => i.id == tid)
-				// Quick Fix: tid2value from sample table has term.name rather than term.id
-				if (!t) t = terms.find(i => i.name == tid)
+		if (p.termlst) {
+			for (const t of p.termlst) {
 				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.id]] }
 					})
 				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[tid]) {
+					for (const val of p.tid2value[t.id]) {
 						f.content.push({
 							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
@@ -491,6 +488,29 @@ const variant2samples = {
 				}
 			}
 		}
+		// Note: all logic for tid2value has been converted termlst, because newly added terms are
+		// not part of terms[], so new term must be added from q.
+		// TODO: remove following commented part after reviewing
+		// else if (p.tid2value) {
+		// 	for (const tid in p.tid2value) {
+		// 		let t = terms.find(i => i.id == tid)
+		// 		// Quick Fix: tid2value from sample table has term.name rather than term.id
+		// 		if (!t) t = terms.find(i => i.name == tid)
+		// 		if (t && t.type == 'categorical') {
+		// 			f.content.push({
+		// 				op: 'in',
+		// 				content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+		// 			})
+		// 		} else if (t && t.type == 'integer') {
+		// 			for (const val of p.tid2value[tid]) {
+		// 				f.content.push({
+		// 					op: val.op,
+		// 					content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+		// 				})
+		// 			}
+		// 		}
+		// 	}
+		// }
 		return f
 	}
 }
@@ -498,7 +518,8 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm']
+	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
+	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
 /*
@@ -596,6 +617,42 @@ const site_size = {
 }`,
 	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
 	filters: totalsize_filters
+}
+
+function totalsize_query(termpathlst) {
+	let query_str = ''
+	for (const termpath of termpathlst) {
+		const termpath_q = termpath
+		query_str = query_str.length
+			? `${query_str} 
+			${termpath_q} {buckets { doc_count, key }}`
+			: `${termpath_q} {buckets { doc_count, key }}`
+	}
+
+	// for all terms from termidlst will be added to single query
+	const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					${query_str}
+				}
+			}
+		}
+	}`
+	return query
+}
+
+const termidlst2totalsize = {
+	query: totalsize_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: `{
+		"filters": {
+			"op": "and", 
+			"content": [
+				{ "op": "in", "content": { "field": "cases.available_variation_data", "value": ["ssm"]}}
+			]
+		}
+	}`
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -908,13 +965,13 @@ any possibility of dynamically querying terms from api??
 const terms = [
 	{
 		name: 'Project',
-		id: 'project',
+		id: 'project_id',
 		type: 'categorical',
 		fields: ['project', 'project_id']
 	},
 	{
 		name: 'Disease',
-		id: 'disease',
+		id: 'disease_type',
 		type: 'categorical',
 		fields: ['disease_type']
 	},
@@ -1030,9 +1087,12 @@ module.exports = {
 		terms,
 		termid2totalsize: {
 			// keys are term ids
-			project: { gdcapi: project_size },
-			disease: { gdcapi: disease_size },
+			project_id: { gdcapi: project_size },
+			disease_type: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
+		},
+		termid2totalsize2: {
+			gdcapi: termidlst2totalsize
 		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary
@@ -1047,8 +1107,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project', 'disease', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
-		sunburst_ids: ['project', 'disease'], // term id
+		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
+		sunburst_ids: ['project_id', 'disease_type'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
@@ -1086,7 +1146,7 @@ module.exports = {
 	sampleSummaries2: {
 		get_number: { gdcapi: isoform2casesummary },
 		get_mclassdetail: { gdcapi: [samplesummary2_getvariant, samplesummary2_getcase] },
-		lst: [{ label1: 'project', label2: 'disease' }, { label1: 'primary_site', label2: 'disease' }]
+		lst: [{ label1: 'project_id', label2: 'disease_type' }, { label1: 'primary_site', label2: 'disease_type' }]
 	},
 
 	queries: {

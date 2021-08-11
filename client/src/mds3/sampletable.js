@@ -2,6 +2,7 @@ import { fillbar, tab2box, Menu } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
 import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
+import { select as d3select, event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -11,9 +12,12 @@ make_singleSampleTable
 make_multiSampleTable
 make_multiSampleSummaryList
 make_summary_panel
+init_dictionary_ui
+init_remove_terms_menu
 make_sunburst_tidlist
 make_filter_pill
 make_pagination
+make_column_showhide_menu
 
 using variant2samples
 mlst can be mixture of data types, doesn't matter
@@ -48,10 +52,10 @@ export async function init_sampletable(arg) {
 			await make_singleSampleTable(arg, holder)
 		} else if (numofcases < cutoff_tableview) {
 			// few cases
-			await make_multiSampleTable({ arg, holder })
+			await make_multiSampleTable({ arg, holder, no_tabs: true })
 		} else {
 			// more cases, show summary
-			await make_multiSampleSummaryList(arg, holder)
+			await make_multiSampleSummaryList({ arg, holder })
 		}
 		arg.temp_div.style('display', 'none')
 	} catch (e) {
@@ -134,7 +138,7 @@ async function make_singleSampleTable(arg, holder) {
 }
 
 async function make_multiSampleTable(args) {
-	const { arg, holder, size, from, filter_term } = args
+	const { arg, holder, size, from, filter_term, no_tabs } = args
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	const default_size = 10
@@ -142,6 +146,7 @@ async function make_multiSampleTable(args) {
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
 	const pagination = arg.totalcases > cutoff_tableview
+	arg.tk.mds.variant2samples.visibleterms = arg.tk.mds.variant2samples.termidlst
 	if (pagination) {
 		arg.size = current_size
 		arg.from = current_from
@@ -152,7 +157,11 @@ async function make_multiSampleTable(args) {
 	arg.numofcases = numofcases
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
-	if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
+	if (no_tabs) {
+		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
+		init_dictionary_ui(holder, arg)
+		init_remove_terms_menu(holder, arg)
+	}
 
 	// use booleen flags to determine table columns based on these samples
 	const has_sampleid = data.some(i => i.sample_id) // sample_id is hardcoded
@@ -179,8 +188,14 @@ async function make_multiSampleTable(args) {
 			.html(`n= ${arg.numofcases} / ${arg.totalcases} Samples`)
 	}
 
+	// header panel with pagination info and column editing
+	const header_div = holder
+		.append('div')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+
 	// top text to display sample per page and total sample size (only for pagination)
-	const page_header = holder.append('div').style('display', 'none')
+	const page_header = header_div.append('div').style('display', 'none')
 
 	const grid_div = holder
 		.append('div')
@@ -198,7 +213,7 @@ async function make_multiSampleTable(args) {
 	}
 	for (const termid of arg.tk.mds.variant2samples.termidlst) {
 		const term = arg.tk.mds.termdb.getTermById(termid)
-		if (arg.tid2value_orig.has(term.name.toLowerCase())) continue
+		if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 		get_table_header(grid_div, term.name)
 	}
 	if (has_ssm_depth) {
@@ -229,7 +244,8 @@ async function make_multiSampleTable(args) {
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
+			const term = arg.tk.mds.termdb.getTermById(termid)
+			if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid] || 'N/A')
 		}
@@ -253,12 +269,23 @@ async function make_multiSampleTable(args) {
 	// pages and option to change samples per size (only for pagination)
 	const page_footer = holder.append('div').style('display', 'none')
 	if (pagination) make_pagination(arg, [page_header, page_footer, holder])
+
+	// show option for show or hide columns.
+	// Note: only for visible single table, not across all tables
+	let columns = []
+	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
+	column_nodes.forEach(n => columns.push(n.innerText))
+	make_column_showhide_menu(arg, columns, header_div, grid_div)
 	arg.temp_div.style('display', 'none')
 }
 
-async function make_multiSampleSummaryList(arg, holder, update) {
-	if (update) arg.querytype = arg.tk.mds.variant2samples.type_update_summary
-	else arg.querytype = arg.tk.mds.variant2samples.type_summary
+async function make_multiSampleSummaryList(args) {
+	const { arg, holder, new_term } = args
+	// remove size to get all samples if switching between list and summary view
+	delete arg.size
+	// reset tid2value to original when new term added, to remove any existing filter
+	if (new_term) arg.tid2value = JSON.parse(JSON.stringify(arg.tid2value_orig))
+	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
@@ -271,7 +298,11 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 	const summary_tabs = []
 	for (const category of data) {
 		// if tid2values are coming from sunburst ring, don't create summary tab for those terms
-		if (arg.tid2value_orig.has(category.name.toLowerCase())) continue
+		let skip_category = false
+		for (const termid of arg.tid2value_orig) {
+			if (arg.tk.mds.termdb.getTermById(termid).name == category.name) skip_category = true
+		}
+		if (skip_category) continue
 		// if for numeric_term if samplecont is 0,
 		// means no sample have value for that term, skip that term in summary
 		if (category.density_data && !category.density_data.samplecount) continue
@@ -281,7 +312,8 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 					? `<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>n=${category.numbycategory.length}</span>`
 					: ``
 			}`,
-			callback: div => make_summary_panel(arg, div, category, main_tabs)
+			callback: div => make_summary_panel(arg, div, category, main_tabs),
+			active: new_term && category.name == new_term.name
 		})
 	}
 
@@ -294,12 +326,15 @@ async function make_multiSampleSummaryList(arg, holder, update) {
 	]
 
 	init_tabs(holder, main_tabs)
-	init_dictionary_ui(main_tabs.holder, holder, arg)
+	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
+	init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')
 }
 
-function init_dictionary_ui(holder, summary_holder, arg){
-	const term_btn = holder.append('div')
+function init_dictionary_ui(holder, arg, main_tabs) {
+	const main_holder = arg.div.select('.sj_sampletable_holder')
+	const add_btn = holder
+		.append('div')
 		.style('display', 'inline-block')
 		.attr('class', 'sja_filter_tag_btn')
 		.style('margin-left', '20px')
@@ -307,10 +342,11 @@ function init_dictionary_ui(holder, summary_holder, arg){
 		.style('padding', '6px 10px')
 		.style('cursor', 'pointer')
 		.text('+ Add fields')
-		.on('click',async ()=>{
-			const tip = new Menu({ padding: '5px', parent_menu: term_btn })
+		.on('click', async () => {
+			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
+			const tip = new Menu({ padding: '5px', parent_menu: add_btn })
 			const termdb = await import('../termdb/app')
-			tip.clear().showunder(term_btn.node())
+			tip.clear().showunder(add_btn.node())
 			termdb.appInit(null, {
 				holder: tip.d,
 				state: {
@@ -319,24 +355,107 @@ function init_dictionary_ui(holder, summary_holder, arg){
 					nav: {
 						header_mode: 'search_only'
 					},
-					tree:{
+					tree: {
 						expandedTermIds: ['case']
 					}
 				},
 				tree: {
 					click_term: term => {
 						tip.hide()
-						if(arg.tk.mds.termdb.getTermById(term.id) == undefined){
-							// new query type of 'update_summary' with new term
-							arg.tk.mds.variant2samples.new_term = term.id
+						if (arg.tk.mds.termdb.getTermById(term.id) == undefined) {
 							arg.tk.mds.variant2samples.termidlst.push(term.id)
 							arg.tk.mds.termdb.terms.push(term)
-							make_multiSampleSummaryList(arg, summary_holder, true)
-							delete arg.tk.mds.variant2samples.new_term
-						} 
-					}
+							if (active_tab && active_tab.label == 'Summary')
+								make_multiSampleSummaryList({ arg, holder: main_holder, new_term: term })
+							else if (active_tab && active_tab.label == 'List')
+								make_multiSampleTable({ arg, holder: active_tab.holder })
+							else make_multiSampleTable({ arg, holder, no_tabs: true })
+						}
+					},
+					disable_terms: arg.tk.mds.variant2samples.termidlst
 				}
 			})
+		})
+}
+
+function init_remove_terms_menu(holder, arg, main_tabs) {
+	const remove_btn = holder
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_filter_tag_btn')
+		.style('margin-left', '20px')
+		.style('border-radius', '6px')
+		.style('padding', '6px 10px')
+		.style('cursor', 'pointer')
+		.text('- Remove fields')
+		.on('click', async () => {
+			let termidlst = arg.tk.mds.variant2samples.termidlst
+			if (arg.tid2value_orig.size) termidlst = termidlst.filter(tid => !arg.tid2value_orig.has(tid))
+			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
+			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
+			tip.clear().showunder(remove_btn.node())
+			tip.d.on('click', () => event.stopPropagation())
+
+			let terms_remove = []
+
+			const fields_list = tip.d
+				.append('div')
+				.style('margin', '20px')
+				.style('font-size', '.9em')
+				.style('display', 'grid')
+				.style('grid-row-gap', '3px')
+				.style('grid-template-columns', 'auto auto')
+				.style('align-items', 'center')
+				.style('justify-items', 'left')
+
+			for (const id of termidlst) {
+				const term = arg.tk.mds.termdb.getTermById(id)
+				const checkbox_div = fields_list.append('div')
+
+				const check = checkbox_div
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', id)
+					.on('change', () => {
+						if (check.node().checked) terms_remove.push(id)
+						else terms_remove = terms_remove.filter(t => t != id)
+						submit_btn.property('disabled', terms_remove.length ? false : true)
+					})
+
+				fields_list
+					.append('div')
+					.append('label')
+					.style('padding', '2px 5px')
+					.text(term.name)
+					.on('click', () => {
+						event.stopPropagation()
+						check.attr('checked', check.node().checked ? null : true)
+						check.node().dispatchEvent(new Event('change'))
+					})
+			}
+
+			const submit_btn = tip.d
+				.append('button')
+				.style('padding', '5px')
+				.style('border-radius', '5px')
+				.style('margin', 'auto')
+				.style('display', 'flex')
+				.property('disabled', terms_remove.length ? false : true)
+				.style('border', 'solid 1px #ddd')
+				.text('Remove')
+				.on('click', () => {
+					tip.hide()
+					if (terms_remove.length) {
+						const main_holder = arg.div.select('.sj_sampletable_holder')
+						arg.tk.mds.variant2samples.termidlst = arg.tk.mds.variant2samples.termidlst.filter(
+							t => !terms_remove.includes(t)
+						)
+						arg.tk.mds.termdb.terms = arg.tk.mds.termdb.terms.filter(t => !terms_remove.includes(t.id))
+						if (active_tab && active_tab.label == 'Summary') make_multiSampleSummaryList({ arg, holder: main_holder })
+						else if (active_tab && active_tab.label == 'List') make_multiSampleTable({ arg, holder: active_tab.holder })
+						else make_multiSampleTable({ arg, holder, no_tabs: true })
+					}
+				})
 		})
 }
 
@@ -348,24 +467,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			.style('margin', '20px')
 			.style('font-size', '.9em')
 			.style('display', 'inline-grid')
-			.style('grid-template-columns', 'auto auto')
+			.style('grid-template-columns', 'auto auto auto')
 			.style('grid-row-gap', '3px')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
-		for (const [category_name, count] of category.numbycategory) {
-			grid_div
-				.append('div')
-				.html(`<a>${count}</a>`)
-				.style('text-align', 'right')
-				.style('padding-right', '10px')
-				.on('mouseover', () => {
-					cat_div.style('color', 'blue').style('text-decoration', 'underline')
-				})
-				.on('mouseout', () => {
-					cat_div.style('color', '#000').style('text-decoration', 'none')
-				})
-				.on('click', () => makeFilteredList(category_name))
+		for (const [category_name, count, total] of category.numbycategory) {
 			const cat_div = grid_div
 				.append('div')
 				.style('padding-right', '10px')
@@ -378,15 +485,46 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 					cat_div.style('color', '#000').style('text-decoration', 'none')
 				})
 				.on('click', () => makeFilteredList(category_name))
+
+			if (total != undefined) {
+				// show percent bar
+				const percent_div = grid_div
+					.append('div')
+					.on('mouseover', () => {
+						cat_div.style('color', 'blue').style('text-decoration', 'underline')
+					})
+					.on('mouseout', () => {
+						cat_div.style('color', '#000').style('text-decoration', 'none')
+					})
+					.on('click', () => makeFilteredList(category_name))
+
+				fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
+			}
+
+			grid_div
+				.append('div')
+				.html(count + (total ? ' / ' + total : ''))
+				.style('text-align', 'right')
+				.style('padding', '2px 10px')
+				.style('font-size', '.8em')
+				.on('mouseover', () => {
+					cat_div.style('color', 'blue').style('text-decoration', 'underline')
+				})
+				.on('mouseout', () => {
+					cat_div.style('color', '#000').style('text-decoration', 'none')
+				})
+				.on('click', () => makeFilteredList(category_name))
 		}
 
 		function makeFilteredList(cat) {
 			if (arg.tid2value == undefined) arg.tid2value = {}
 			else if (arg.filter_term) {
-				delete arg.tid2value[arg.filter_term]
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+				delete arg.tid2value[term.id]
 				delete arg.filter_term
 			}
-			arg.tid2value[category.name] = cat
+			const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+			arg.tid2value[term.id] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_tabs(main_tabs)
@@ -402,10 +540,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			else {
 				if (arg.tid2value == undefined) arg.tid2value = {}
 				else if (arg.filter_term) {
-					delete arg.tid2value[arg.filter_term]
+					const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+					delete arg.tid2value[term.id]
 					delete arg.filter_term
 				}
-				arg.tid2value[category.name] = [
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+				arg.tid2value[term.id] = [
 					{ op: '>=', range: Math.round(range.range_start) },
 					{ op: '<=', range: Math.round(range.range_end) }
 				]
@@ -434,8 +574,9 @@ function make_sunburst_tidlist(arg, holder) {
 		.style('justrify-content', 'start')
 
 	for (const termid of arg.tid2value_orig) {
+		const term = arg.tk.mds.termdb.getTermById(termid)
 		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text(termid)
+		cell1.text(term.name)
 		cell2
 			.style('width', 'auto')
 			.style('justify-self', 'stretch')
@@ -444,7 +585,8 @@ function make_sunburst_tidlist(arg, holder) {
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
-	if (arg.tid2value[arg.filter_term] == undefined) return
+	const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+	if (arg.tid2value[term.id] == undefined) return
 	// term
 	filter_holder
 		.append('div')
@@ -474,7 +616,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(get_value(arg.tid2value[arg.filter_term]))
+		.html(get_value(arg.tid2value[term.id]))
 
 	// remove button
 	filter_holder
@@ -488,9 +630,9 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.html('x')
 		.on('click', () => {
 			// don't remove original terms from tid2value (terms from sunburst ring)
-			if (!arg.tid2value_orig.has(arg.filter_term)) {
+			if (!arg.tid2value_orig.has(term.id)) {
 				if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
-				else delete arg.tid2value[arg.filter_term]
+				else delete arg.tid2value[term.id]
 			}
 			// delete from arg as well
 			delete arg.filter_term
@@ -517,8 +659,9 @@ function make_pagination(arg, page_doms) {
 	const count_end = arg.from + arg.size < arg.numofcases ? arg.from + arg.size : arg.numofcases
 
 	page_header
-		.style('display', 'block')
-		.style('padding', '5px 10px')
+		.style('display', 'inline-block')
+		.style('padding', '5px')
+		.style('margin', '5px 0')
 		.style('font-size', '.9em')
 		.style('color', '#999')
 		.html(`<p> Showing <b>${count_start} - ${count_end} </b> of <b>${arg.numofcases}</b> Samples`)
@@ -626,4 +769,118 @@ function make_pagination(arg, page_doms) {
 				}
 			})
 	}
+}
+
+function make_column_showhide_menu(arg, columns, header_div, sample_table) {
+	const column_edit_btn = header_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('font-size', '.9em')
+		.classed('sja_menuoption', true)
+		.style('margin', '10px 20px')
+		.style('border', 'solid 1px #ddd')
+		.style('height', '20px')
+		.style('line-height', '20px')
+		.text('Show/hide columns')
+		.on('click', async () => {
+			const termidlst = arg.tk.mds.variant2samples.termidlst
+			let visibleterms = arg.tk.mds.variant2samples.visibleterms
+			const tip = new Menu({ padding: '5px', parent_menu: column_edit_btn })
+			tip.clear().showunder(column_edit_btn.node())
+			tip.d.on('click', () => event.stopPropagation())
+
+			let hidden_terms = termidlst.filter(t => !visibleterms.includes(t))
+
+			const fields_list = tip.d
+				.append('div')
+				.style('margin', '20px')
+				.style('font-size', '.9em')
+				.style('display', 'grid')
+				.style('grid-row-gap', '3px')
+				.style('grid-template-columns', 'auto auto')
+				.style('align-items', 'center')
+
+			fields_list
+				.append('div')
+				.style('padding', '2px')
+				.style('color', '#999')
+				.text('Show')
+
+			fields_list
+				.append('div')
+				.style('padding', '2px 5px')
+				.style('color', '#999')
+				.text('Column')
+
+			for (const id of termidlst) {
+				const term = arg.tk.mds.termdb.getTermById(id)
+				const checkbox_div = fields_list
+					.append('div')
+					.style('display', 'flex')
+					.style('justify-content', 'center')
+
+				const check = checkbox_div
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', id)
+					.attr('checked', hidden_terms.includes(id) ? null : true)
+					.on('change', () => {
+						if (check.node().checked) hidden_terms = hidden_terms.filter(t => t != id)
+						else hidden_terms.push(id)
+						submit_btn.property('disabled', visible_terms_changed)
+					})
+
+				fields_list
+					.append('div')
+					.append('label')
+					.style('padding', '2px 5px')
+					.text(term.name)
+					.on('click', () => {
+						event.stopPropagation()
+						check.attr('checked', check.node().checked ? null : true)
+						check.node().dispatchEvent(new Event('change'))
+					})
+			}
+
+			const submit_btn = tip.d
+				.append('button')
+				.style('padding', '5px')
+				.style('border-radius', '5px')
+				.style('margin', 'auto')
+				.style('display', 'flex')
+				.property('disabled', visible_terms_changed)
+				.style('border', 'solid 1px #ddd')
+				.text('Submit')
+				.on('click', () => {
+					tip.hide()
+					if (visible_terms_changed) {
+						let hidden_cols = []
+						hidden_terms.forEach(tid => hidden_cols.push(arg.tk.mds.termdb.getTermById(tid).name))
+						for (const col_name of columns) {
+							const col_i = columns.findIndex(c => c == col_name) + 1
+							const cells = sample_table.selectAll(`div:nth-child(${columns.length}n+${col_i})`)
+							if (hidden_cols.includes(col_name)) {
+								cells.each(function() {
+									d3select(this)
+										.style('visibility', 'hidden')
+										.style('width', '0px')
+										.style('padding', '0')
+								})
+							} else {
+								cells.each(function() {
+									d3select(this)
+										.style('visibility', 'visible')
+										.style('width', 'auto')
+										.style('padding', '2px 5px')
+								})
+							}
+						}
+						arg.tk.mds.variant2samples.visibleterms = termidlst.filter(t => !hidden_terms.includes(t))
+					}
+				})
+
+			function visible_terms_changed() {
+				return termidlst.length == visibleterms.length + hidden_terms.length
+			}
+		})
 }
