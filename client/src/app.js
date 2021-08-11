@@ -1372,10 +1372,9 @@ function launchtermdb(opts, app) {
 }
 
 function launchmass(opts, app) {
-	console.log([1526])
 	if (!opts.holder) opts.holder = app.holder0
 	if (!opts.callbacks) opts.callbacks = {}
-	/*import('./mass/app').then(_ => {
+	import('./mass/app').then(_ => {
 		_.appInit(opts)
-	})*/
+	})
 }

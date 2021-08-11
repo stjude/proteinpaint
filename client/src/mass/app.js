@@ -1,72 +1,124 @@
 import * as rx from '../common/rx.core'
-import { event } from 'd3-selection'
-import { dofetch } from '../common/dofetch'
+import { select } from 'd3-selection'
 import { storeInit } from './store'
-import { sayerror } from '../common/dom/error'
-//import { plotInit } from './plot.component'
+import { vocabInit } from '../termdb/vocabulary'
+import { navInit } from './nav'
+import { plotInit } from './plot'
+//import { recoverInit } from '../common/recover'
+import { sayerror, Menu } from '../client'
 
 /*
-constructor opts{}:
+opts{}
+.state{}
+	required, will fill-in or override store.defaultState
+.app{} .tree{} etc
+see doc for full spec
+https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
+
 */
 
-class Mass {
+class MassApp {
 	constructor(opts) {
+		//if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
-		this.opts = this.validateOpts(opts)
-		this.initDom()
+		this.opts = this.initOpts(opts)
+		this.tip = new Menu({ padding: '5px' })
+		// the TdbApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.store = storeInit(this.api)
+		this.app = this.api
+		this.api.vocabApi = vocabInit(this.api, this.app.opts)
+
+		this.dom = {
+			holder: opts.holder, // do not modify holder style
+			topbar: opts.holder.append('div'),
+			errdiv: opts.holder.append('div')
+		}
+
 		this.eventTypes = ['postInit', 'postRender']
-		this.store
-			.copyState({ rehydrate: 1 })
-			.then(state => {
-				this.state = state
-				if (this.state.genome.debug) {
-					// debug should be solely defined by server; this requires genome obj to be always hydrated from server and not client-provided
-					window.bb = this
-				}
-				this.components = { plots: [] }
-				this.api.dispatch()
-			})
-			.catch(e => this.error(e))
+
+		// catch initialization error
+		try {
+			this.store = storeInit(this.api)
+			this.store
+				.copyState({ rehydrate: true })
+				.then(state => {
+					this.state = state
+					console.log(45, this.state)
+					this.setComponents()
+				})
+				.then(() => this.api.dispatch())
+				.catch(e => this.printError(e))
+		} catch (e) {
+			this.printError(e)
+		}
 	}
-	validateOpts(o) {
-		if (!o.holder) throw '.holder missing'
-		if (!o.state) throw '.state{} missing'
-		if (!o.state.genome) throw '.state.genome missing'
-		if (typeof o.state.genome != 'string') throw '.state.genome is not string'
+
+	async main() {
+		//console.log(this.state.tree.expandedTermIds)
+		this.api.vocabApi.main()
+
+		for (const plotId in this.state.tree.plots) {
+			if (!(plotId in this.components.plots)) {
+				console.log(62, plotId)
+				const plot = this.state.tree.plots[plotId]
+				this.components.plots[plotId] = plotInit(
+					this.app,
+					{
+						holder: this.dom.holder
+							.append('div')
+							.style('border', '1px solid #ccc')
+							.style('margin', '10px')
+							.style('padding', '5px'),
+						plot
+					},
+					this.opts.plot
+				)
+			}
+		}
+	}
+
+	initOpts(o) {
+		if (!('app' in o)) o.app = {}
 		return o
 	}
-	error(e) {
-		sayerror(this.dom.errordiv, 'Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
-	main() {
-		const plots = this.dom.plotdiv.selectAll('.sjp4-plot-div').data(this.state.plots, d => d.id)
 
-		plots.exit().remove()
-		//plots.each(render)
-		plots
-			.enter()
-			.append('div')
-			.attr('class', 'sjp4-plot-div')
-			.each(config => {
-				const opts = {
-					holder: this.dom.plotdiv.append('div'),
-					config,
-					callbacks: this.opts.plot?.callbacks || {}
-				}
-				//this.components.plots.push(plotInit(this.api, opts))
-			})
+	setComponents() {
+		this.components = {
+			nav: navInit(
+				this.app,
+				{
+					holder: this.dom.topbar,
+					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
+					vocab: this.state.vocab
+				},
+				this.opts.nav
+			),
+
+			//recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
+			plots: {}
+		}
+	}
+
+	printError(e) {
+		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
 	}
 }
 
-export const appInit = rx.getInitFxn(Mass)
+export const appInit = rx.getInitFxn(MassApp)
 
-Mass.prototype.initDom = function() {
-	const holder = this.opts.holder
-	this.dom = {
-		errordiv: holder.append('div'),
-		plotdiv: holder.append('div')
+function setInteractivity(self) {
+	self.downloadView = id => {
+		const components = app.getComponents('tree.plots.' + opts.id)
+		for (const name in self.components) {
+			// the download function in each component will be called,
+			// but should first check inside that function
+			// whether the component view is active before reacting
+			if (typeof self.components[name].download == 'function') {
+				components[name].download()
+			}
+		}
 	}
+
+	self.showTermSrc = showTermSrc
 }
