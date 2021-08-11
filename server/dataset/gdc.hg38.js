@@ -599,7 +599,7 @@ const site_size = {
 	filters: totalsize_filters
 }
 
-function totalsize_query(termpathlst) {
+function termid2size_query(termpathlst) {
 	let query_str = ''
 	for (const termpath of termpathlst) {
 		const termpath_q = termpath
@@ -622,10 +622,8 @@ function totalsize_query(termpathlst) {
 	return query
 }
 
-const termidlst2totalsize = {
-	query: totalsize_query,
-	keys: ['data', 'explore', 'cases', 'aggregations'],
-	filters: `{
+function termid2size_filters(p) {
+	const filters = `{
 		"filters": {
 			"op": "and", 
 			"content": [
@@ -633,6 +631,18 @@ const termidlst2totalsize = {
 			]
 		}
 	}`
+
+	if (p) {
+		// TODO: add ssm)id_lst and tid2values to filter
+	}
+
+	return filters
+}
+
+const termidlst2size = {
+	query: termid2size_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: termid2size_filters
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -1072,7 +1082,7 @@ module.exports = {
 			primary_site: { gdcapi: site_size }
 		},
 		termid2totalsize2: {
-			gdcapi: termidlst2totalsize
+			gdcapi: termidlst2size
 		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary

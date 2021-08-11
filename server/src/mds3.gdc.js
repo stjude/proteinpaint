@@ -515,7 +515,7 @@ export async function get_cohortTotal(api, ds, q) {
 export async function get_termidlst2total(api, ds, termpathlst, q) {
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters })
+		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters() })
 	})
 	let re
 	try {
@@ -905,12 +905,13 @@ function init_termdb_queries(termdb) {
 
 	{
 		const cache = new Map()
-		q.getTermChildren = (id, vocab = default_vocab) => {
+		q.getTermChildren = (id, vocab = default_vocab, treeFilter) => {
 			const cacheId = id + ';;' + vocab
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
 			const re = terms.filter(t => t.parent_id == id)
+			// TODO: query terms with 0 sample count for treeFilter
 			cache.set(cacheId, re)
 			return re
 		}

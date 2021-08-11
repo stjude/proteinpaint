@@ -102,20 +102,20 @@ function trigger_getsamplecount(q, res, ds) {
 	res.send(termdbsql.get_samplecount(q, ds))
 }
 
-function trigger_rootterm(q, res, tdb) {
+async function trigger_rootterm(q, res, tdb) {
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
 	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: tdb.q.getRootTerms(cohortValues, treeFilter) })
+	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
 }
 
-function trigger_children(q, res, tdb) {
+async function trigger_children(q, res, tdb) {
 	/* get children terms
 may apply ssid: a premade sample set
 */
 	if (!q.tid) throw 'no parent term id'
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
 	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: tdb.q.getTermChildren(q.tid, cohortValues, treeFilter).map(copy_term) })
+	res.send({ lst: await tdb.q.getTermChildren(q.tid, cohortValues, treeFilter).map(copy_term) })
 }
 
 export function copy_term(t) {

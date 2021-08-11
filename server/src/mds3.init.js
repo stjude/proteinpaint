@@ -120,7 +120,7 @@ function validate_termdb(ds) {
 			const gdcapi = tdb.termid2totalsize2.gdcapi
 			if (typeof gdcapi.query != 'function') throw '.query() not function in termid2totalsize2'
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
-			if (!gdcapi.filters) throw '.filters is not in termid2totalsize2'
+			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
 			throw 'termid2totalsize2 missing gdcapi'
 		}
