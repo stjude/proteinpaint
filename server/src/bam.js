@@ -1487,15 +1487,20 @@ function parse_one_segment(arg) {
 	return segment
 }
 
-function parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based) {
-	/* parse flag, detect if read is discordant read
+/*
+parse flag, detect if read is discordant read
+the current read is always mapped (0x4 is false)
+
 will set below boolean flags on segment for rendering:
 .isfirst
 .islast
 .rnext
 .pnext (when mate is on different chr)
 .discord_orientation
+
+0x2 alone is not enough to tell if the read is discordant or not
 */
+function parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based) {
 	const f = segment.flag
 
 	if (!(f & 0x1)) {
@@ -1504,7 +1509,7 @@ will set below boolean flags on segment for rendering:
 		return
 	}
 
-	// f & 0x4 should always be true (this read is properly mapped)
+	// f & 0x4 should always be false (this read is properly mapped)
 
 	if (f & 0x40) {
 		segment.isfirst = true
@@ -1527,12 +1532,69 @@ will set below boolean flags on segment for rendering:
 	}
 
 	// mate is mapped for the rest cases
+	// check combination of orientation and insert size status
 
 	if (
-		(f & 0x2 && f & 0x20 && f & 0x40) || // 99
-		(f & 0x2 && f & 0x10 && f & 0x80) || // 147
-		(f & 0x2 && f & 0x10 && f & 0x40) || // 83
-		(f & 0x2 && f & 0x20 && f & 0x80) //163
+		(f & 0x20 && !(f & 0x10) && f & 0x40) || // F1R2
+		(f & 0x10 && !(f & 0x20) && f & 0x80) || // F1R2
+		(f & 0x10 && !(f & 0x20) && f & 0x40) || // F2R1
+		(f & 0x20 && !(f & 0x10) && f & 0x80) // F2R1
+	) {
+		/******** correct orientation ********/
+
+		if (f & 0x2) {
+			// insert size and orientation are both correct, do not set any flags
+		} else {
+			// wrong insert size
+			segment.discord_wrong_insertsize = true
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
+		}
+	} else {
+		/******** wrong orientation ********/
+		segment.discord_orientation = true
+
+		if (keepmatepos) {
+			// to display wrong orientation in details panel
+			if (f & 0x10) {
+				if (f & 0x20) {
+					segment.discord_orientation_direction = 'R1R2'
+				} else {
+					// copies gav's logic
+					if (pnext > segstart_1based) {
+						//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
+						segment.discord_orientation_direction = 'R1F2'
+					}
+				}
+			} else {
+				if (f & 0x20) {
+					// copies gav's logic
+					if (pnext < segstart_1based) {
+						//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
+						segment.discord_orientation_direction = 'R1F2'
+					}
+				} else {
+					segment.discord_orientation_direction = 'F1F2'
+				}
+			}
+		}
+
+		if (f & 0x2) {
+			// insert size correct
+		} else {
+			// insert size and orientation are both wrong
+			segment.discord_wrong_insertsize = true
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
+		}
+	}
+
+	return
+	// remaining code is disabled and can be deleted once above logic is validated
+
+	if (
+		(f & 0x2 && f & 0x20 && f & 0x40) || // 99 F1R2
+		(f & 0x2 && f & 0x10 && f & 0x80) || // 147 F1R2
+		(f & 0x2 && f & 0x10 && f & 0x40) || // 83 F2R1
+		(f & 0x2 && f & 0x20 && f & 0x80) //163 F2R1
 	) {
 		// Read and mate is properly paired
 		// do not set any flags
@@ -1543,6 +1605,7 @@ will set below boolean flags on segment for rendering:
 		//read and mate are both on positive strand: --> -->
 		segment.discord_orientation = true
 		segment.discord_orientation_direction = 'F1F2'
+		/*
 		if ((f & 0x1 && f & 0x40 && f & 0x2) || (f & 0x1 && f & 0x80 && f & 0x2)) {
 			// 67 and 131 (R1R2)
 			// XXX why this case is not discord_orientation??
@@ -1551,7 +1614,10 @@ will set below boolean flags on segment for rendering:
 			// (65 and 129, R1R2) but NOT (67 and 131)
 			segment.discord_wrong_insertsize = true
 		}
-		//console.log('wrong orient1:', f)
+		*/
+		if (!(f & 0x2)) {
+			segment.discord_wrong_insertsize = true
+		}
 		if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
 		return
 	}
