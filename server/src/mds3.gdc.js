@@ -520,7 +520,7 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
-export async function get_termidlst2total(args) {
+export async function get_termidlst2size(args) {
 	const { api, ds, termpathlst, q, treeFilter } = args
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
@@ -919,23 +919,23 @@ function init_termdb_queries(termdb, ds) {
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
-			let re = terms.filter(t => t.parent_id == id)
-			// TODO: query terms with 0 sample count for treeFilter
+			const re = terms.filter(t => t.parent_id == id)
+			// query terms with 0 sample count for treeFilter
 			let termpathlst = []
 			for (const term of re) {
 				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
 			}
-			const tv2counts = await get_termidlst2total({
+			const tv2counts = await get_termidlst2size({
 				api: ds.termdb.termid2totalsize2.gdcapi,
 				ds,
 				termpathlst,
 				treeFilter: JSON.parse(treeFilter)
 			})
+			// add term.disabled if samplesize if zero
 			for (const term of re) {
 				if (term && term.type == 'categorical') {
 					const tv2count = tv2counts.get(term.id)
-					//TODO: hide terms with zero samples
-					// if(!tv2count.length) re = re.filter( t => t.id != term.id)
+					if(!tv2count.length) term.disabled = true
 				}
 			}
 			cache.set(cacheId, re)

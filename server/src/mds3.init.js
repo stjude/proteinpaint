@@ -133,7 +133,7 @@ function validate_termdb(ds) {
 				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
 			}
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termidlst2total({ api: tdb.termid2totalsize2.gdcapi, ds, termpathlst, q })
+				const tv2counts = await gdc.get_termidlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termpathlst, q })
 				for (const termid of termidlst) {
 					let term = ds.termdb.getTermById(termid)
 					if (!term) term = ds.cohort.termdb.q.getTermById(termid)

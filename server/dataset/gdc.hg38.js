@@ -624,8 +624,7 @@ function termid2size_query(termpathlst) {
 	for (const termpath of termpathlst) {
 		const termpath_q = termpath
 		query_str = query_str.length
-			? `${query_str} 
-			${termpath_q} {buckets { doc_count, key }}`
+			? `${query_str} ${termpath_q} {buckets { doc_count, key }}`
 			: `${termpath_q} {buckets { doc_count, key }}`
 	}
 
