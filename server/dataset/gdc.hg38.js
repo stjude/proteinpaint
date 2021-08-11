@@ -619,13 +619,14 @@ const site_size = {
 	filters: totalsize_filters
 }
 
-function termid2size_query(termpathlst) {
+function termid2size_query(termlst) {
 	let query_str = ''
-	for (const termpath of termpathlst) {
-		const termpath_q = termpath
-		query_str = query_str.length
-			? `${query_str} ${termpath_q} {buckets { doc_count, key }}`
-			: `${termpath_q} {buckets { doc_count, key }}`
+	for (const term of termlst) {
+		const key = term.path
+		if(term.type)
+			query_str = query_str.length
+				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
 	}
 
 	// for all terms from termidlst will be added to single query

@@ -127,13 +127,17 @@ function validate_termdb(ds) {
 		// add getter
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
 			// termidlst is from clientside
-			let termpathlst = []
+			let termlst = []
 			for (const termid of termidlst) {
 				const term = ds.cohort.termdb.q.getTermById(termid)
-				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+				if (term) 
+					termlst.push({
+						path: term.path.replace('case.', '').replace('.', '__'),
+						type: term.type
+					})
 			}
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termidlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termpathlst, q })
+				const tv2counts = await gdc.get_termidlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
 				for (const termid of termidlst) {
 					let term = ds.termdb.getTermById(termid)
 					if (!term) term = ds.cohort.termdb.q.getTermById(termid)

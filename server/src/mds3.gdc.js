@@ -521,10 +521,10 @@ export async function get_cohortTotal(api, ds, q) {
 }
 
 export async function get_termidlst2size(args) {
-	const { api, ds, termpathlst, q, treeFilter } = args
+	const { api, ds, termlst, q, treeFilter } = args
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters(treeFilter) })
+		body: JSON.stringify({ query: api.query(termlst), variables: api.filters(treeFilter) })
 	})
 	let re
 	try {
@@ -537,19 +537,30 @@ export async function get_termidlst2size(args) {
 		h = h[api.keys[i]]
 		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
 	}
-	for (const termpath of termpathlst) {
-		if (!Array.isArray(h[termpath]['buckets'])) throw api.keys.join('.') + ' not array'
+	for (const term of termlst) {
+		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets'])) 
+			throw api.keys.join('.') + ' not array'
+		if ((term.type == 'integer' || term.type == 'float') 
+			&& typeof h[term.path]['stats'] != 'object'){
+				throw api.keys.join('.') + ' not object'
+			}
 	}
 	// return total size here attached to entires
 	const tv2counts = new Map()
-	for (const termpath of termpathlst) {
-		const buckets = h[termpath]['buckets']
-		let values = []
-		for (const bucket of buckets) {
-			values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+	for (const term of termlst) {
+		if(term.type == 'categorical'){
+			const buckets = h[term.path]['buckets']
+			let values = []
+			for (const bucket of buckets) {
+				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+			}
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, values)
+		}else if(term.type == 'integer' || term.type == 'float'){
+			const count = h[term.path]['stats']['count']
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, {'total': count})
 		}
-		const term_id = termpath.split('__').length > 1 ? termpath.split('__').pop() : termpath
-		tv2counts.set(term_id, values)
 	}
 	return tv2counts
 }
@@ -967,22 +978,28 @@ function init_termdb_queries(termdb, ds) {
 	}
 
 	async function flag_empty_terms(terms, treeFilter){
-		let termpathlst = []
+		let termlst = []
 		for (const term of terms) {
-			if (term && term.type == 'categorical') 
-				termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+			if (term) 
+				termlst.push({
+					path: term.path.replace('case.', '').replace('.', '__'),
+					type: term.type
+				})
 		}
 		const tv2counts = await get_termidlst2size({
 			api: ds.termdb.termid2totalsize2.gdcapi,
 			ds,
-			termpathlst,
+			termlst,
 			treeFilter: JSON.parse(treeFilter)
 		})
 		// add term.disabled if samplesize if zero
 		for (const term of terms) {
 			if (term) {
 				const tv2count = tv2counts.get(term.id)
-				if(tv2count && !tv2count.length) term.disabled = true
+				if(term.type == 'categorical' && tv2count && !tv2count.length) term.disabled = true
+				else if((term.type == 'integer' || term.type == 'float') && tv2count['total'] == 0){
+					term.disabled = true
+				}
 			}
 		}
 	}
