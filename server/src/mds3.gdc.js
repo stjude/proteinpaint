@@ -914,30 +914,14 @@ function init_termdb_queries(termdb, ds) {
 
 	{
 		const cache = new Map()
-		q.getTermChildren = async (id, vocab = default_vocab, treeFilter) => {
+		q.getTermChildren = async (id, vocab = default_vocab, treeFilter = null) => {
 			const cacheId = id + ';;' + vocab
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
 			const re = terms.filter(t => t.parent_id == id)
 			// query terms with 0 sample count for treeFilter
-			let termpathlst = []
-			for (const term of re) {
-				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
-			}
-			const tv2counts = await get_termidlst2size({
-				api: ds.termdb.termid2totalsize2.gdcapi,
-				ds,
-				termpathlst,
-				treeFilter: JSON.parse(treeFilter)
-			})
-			// add term.disabled if samplesize if zero
-			for (const term of re) {
-				if (term && term.type == 'categorical') {
-					const tv2count = tv2counts.get(term.id)
-					if(!tv2count.length) term.disabled = true
-				}
-			}
+			if(treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -945,7 +929,7 @@ function init_termdb_queries(termdb, ds) {
 
 	{
 		const cache = new Map()
-		q.findTermByName = (searchStr, vocab = default_vocab) => {
+		q.findTermByName = async (searchStr, limit = null, vocab = default_vocab, exclude_types = [], treeFilter = null) => {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
@@ -954,6 +938,8 @@ function init_termdb_queries(termdb, ds) {
 			const terms = [...termdb.id2term.values()]
 			// find terms that have term.id containing search string
 			const re = terms.filter(t => t.id.includes(searchStr))
+			// query terms with 0 sample count for treeFilter
+			if(treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -977,6 +963,27 @@ function init_termdb_queries(termdb, ds) {
 		q.getTermById = id => {
 			const terms = [...termdb.id2term.values()]
 			return terms.find(i => i.id == id)
+		}
+	}
+
+	async function flag_empty_terms(terms, treeFilter){
+		let termpathlst = []
+		for (const term of terms) {
+			if (term && term.type == 'categorical') 
+				termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+		}
+		const tv2counts = await get_termidlst2size({
+			api: ds.termdb.termid2totalsize2.gdcapi,
+			ds,
+			termpathlst,
+			treeFilter: JSON.parse(treeFilter)
+		})
+		// add term.disabled if samplesize if zero
+		for (const term of terms) {
+			if (term) {
+				const tv2count = tv2counts.get(term.id)
+				if(tv2count && !tv2count.length) term.disabled = true
+			}
 		}
 	}
 }

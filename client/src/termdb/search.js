@@ -104,6 +104,8 @@ function setRenderers(self) {
 			.style('opacity', 0.5)
 	}
 	self.showTerms = data => {
+		// add disabled terms to opts.disable_terms
+		data.lst.forEach(t => {if(t.disabled) self.opts.disable_terms.push(t.id)})
 		self.clear()
 		self.dom.resultDiv
 			.append('table')
