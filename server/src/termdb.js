@@ -115,7 +115,8 @@ may apply ssid: a premade sample set
 	if (!q.tid) throw 'no parent term id'
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
 	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: await tdb.q.getTermChildren(q.tid, cohortValues, treeFilter).map(copy_term) })
+	const terms = await tdb.q.getTermChildren(q.tid, cohortValues, treeFilter)
+	res.send({ lst: terms.map(copy_term) })
 }
 
 export function copy_term(t) {

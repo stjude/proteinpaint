@@ -265,7 +265,7 @@ function snvindel_addclass(m, consequence) {
 function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (q.token) h['X-Auth-Token'] = q.token
+	if (q && q.token) h['X-Auth-Token'] = q.token
 	return h
 }
 
@@ -520,10 +520,11 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
-export async function get_termidlst2total(api, ds, termpathlst, q) {
+export async function get_termidlst2total(args) {
+	const { api, ds, termpathlst, q, treeFilter } = args
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters() })
+		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters(treeFilter) })
 	})
 	let re
 	try {
@@ -876,7 +877,7 @@ export async function init_dictionary(ds) {
 		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
 	}
-	init_termdb_queries(ds.cohort.termdb)
+	init_termdb_queries(ds.cohort.termdb, ds)
 
 	//step 4: prune the tree
 	const prune_terms = dictionary.gdcapi.prune_terms
@@ -894,7 +895,7 @@ export async function init_dictionary(ds) {
 	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
 }
 
-function init_termdb_queries(termdb) {
+function init_termdb_queries(termdb, ds) {
 	const q = (termdb.q = {})
 	const default_vocab = 'ssm_occurance'
 
@@ -913,13 +914,30 @@ function init_termdb_queries(termdb) {
 
 	{
 		const cache = new Map()
-		q.getTermChildren = (id, vocab = default_vocab, treeFilter) => {
+		q.getTermChildren = async (id, vocab = default_vocab, treeFilter) => {
 			const cacheId = id + ';;' + vocab
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
-			const re = terms.filter(t => t.parent_id == id)
+			let re = terms.filter(t => t.parent_id == id)
 			// TODO: query terms with 0 sample count for treeFilter
+			let termpathlst = []
+			for (const term of re) {
+				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+			}
+			const tv2counts = await get_termidlst2total({
+				api: ds.termdb.termid2totalsize2.gdcapi,
+				ds,
+				termpathlst,
+				treeFilter: JSON.parse(treeFilter)
+			})
+			for (const term of re) {
+				if (term && term.type == 'categorical') {
+					const tv2count = tv2counts.get(term.id)
+					//TODO: hide terms with zero samples
+					// if(!tv2count.length) re = re.filter( t => t.id != term.id)
+				}
+			}
 			cache.set(cacheId, re)
 			return re
 		}

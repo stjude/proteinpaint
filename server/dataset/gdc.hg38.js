@@ -643,20 +643,32 @@ function termid2size_query(termpathlst) {
 }
 
 function termid2size_filters(p) {
-	const filters = `{
-		"filters": {
-			"op": "and", 
-			"content": [
-				{ "op": "in", "content": { "field": "cases.available_variation_data", "value": ["ssm"]}}
-			]
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
 		}
-	}`
-
-	if (p) {
-		// TODO: add ssm)id_lst and tid2values to filter
 	}
 
-	return filters
+	if (p && p.tid2value) {
+		for (const tid in p.tid2value) {
+			const t = terms.find(i => i.id == tid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	return f
 }
 
 const termidlst2size = {
