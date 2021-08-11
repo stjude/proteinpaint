@@ -244,7 +244,8 @@ async function make_multiSampleTable(args) {
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			if (arg.tid2value_orig.has(termid.toLowerCase())) continue
+			const term = arg.tk.mds.termdb.getTermById(termid)
+			if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid] || 'N/A')
 		}
@@ -522,10 +523,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 		function makeFilteredList(cat) {
 			if (arg.tid2value == undefined) arg.tid2value = {}
 			else if (arg.filter_term) {
-				delete arg.tid2value[arg.filter_term]
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+				delete arg.tid2value[term.id]
 				delete arg.filter_term
 			}
-			arg.tid2value[category.name] = cat
+			const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+			arg.tid2value[term.id] = cat
 			delete main_tabs[0].active
 			main_tabs[1].active = true
 			update_tabs(main_tabs)
@@ -541,10 +544,12 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 			else {
 				if (arg.tid2value == undefined) arg.tid2value = {}
 				else if (arg.filter_term) {
-					delete arg.tid2value[arg.filter_term]
+					const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+					delete arg.tid2value[term.id]
 					delete arg.filter_term
 				}
-				arg.tid2value[category.name] = [
+				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
+				arg.tid2value[term.id] = [
 					{ op: '>=', range: Math.round(range.range_start) },
 					{ op: '<=', range: Math.round(range.range_end) }
 				]
@@ -584,7 +589,8 @@ function make_sunburst_tidlist(arg, holder) {
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
-	if (arg.tid2value[arg.filter_term] == undefined) return
+	const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
+	if (arg.tid2value[term.id] == undefined) return
 	// term
 	filter_holder
 		.append('div')
@@ -614,7 +620,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.style('padding', '6px 6px 3px 6px')
 		.style('font-style', 'italic')
 		.style('cursor', 'default')
-		.html(get_value(arg.tid2value[arg.filter_term]))
+		.html(get_value(arg.tid2value[term.id]))
 
 	// remove button
 	filter_holder
@@ -628,9 +634,9 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 		.html('x')
 		.on('click', () => {
 			// don't remove original terms from tid2value (terms from sunburst ring)
-			if (!arg.tid2value_orig.has(arg.filter_term)) {
+			if (!arg.tid2value_orig.has(term.id)) {
 				if (Object.keys(arg.tid2value).length == 1) delete arg.tid2value
-				else delete arg.tid2value[arg.filter_term]
+				else delete arg.tid2value[term.id]
 			}
 			// delete from arg as well
 			delete arg.filter_term

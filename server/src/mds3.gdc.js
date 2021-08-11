@@ -393,6 +393,14 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
 	if (!fields) throw 'invalid get type of q.get'
+	if (q.tid2value && Object.keys(q.tid2value).length) {
+		q.termlst = []
+		for (const t of Object.keys(q.tid2value)) {
+			let term = ds.termdb.terms.find(i => i.id == t)
+			if (!term) term = ds.cohort.termdb.q.getTermById(t)
+			if (term) q.termlst.push(term)
+		}
+	}
 
 	const headers = getheaders(q) // will be reused below
 
