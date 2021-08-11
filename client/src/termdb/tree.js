@@ -270,6 +270,8 @@ function setRenderers(self) {
 		button, optional, the toggle button
 		*/
 		if (!term || !term.terms) return
+		// add disabled terms to opts.disable_terms
+		term.terms.forEach(t => {if(t.disabled) self.opts.disable_terms.push(t.id)})
 		self.included_terms = []
 		if (!self.state.exclude_types.length) {
 			self.included_terms.push(...term.terms)

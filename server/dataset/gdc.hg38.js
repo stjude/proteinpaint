@@ -518,7 +518,9 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
+	// Quick fix: added 'observation', 'program' to prune_terms 
+	// because gdc query is giving error while querying child terms for thses 2 terms
+	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation', 'program'],
 	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
@@ -619,14 +621,14 @@ const site_size = {
 	filters: totalsize_filters
 }
 
-function totalsize_query(termpathlst) {
+function termid2size_query(termlst) {
 	let query_str = ''
-	for (const termpath of termpathlst) {
-		const termpath_q = termpath
-		query_str = query_str.length
-			? `${query_str} 
-			${termpath_q} {buckets { doc_count, key }}`
-			: `${termpath_q} {buckets { doc_count, key }}`
+	for (const term of termlst) {
+		const key = term.path
+		if(term.type)
+			query_str = query_str.length
+				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
 	}
 
 	// for all terms from termidlst will be added to single query
@@ -642,17 +644,39 @@ function totalsize_query(termpathlst) {
 	return query
 }
 
-const termidlst2totalsize = {
-	query: totalsize_query,
-	keys: ['data', 'explore', 'cases', 'aggregations'],
-	filters: `{
-		"filters": {
-			"op": "and", 
-			"content": [
-				{ "op": "in", "content": { "field": "cases.available_variation_data", "value": ["ssm"]}}
-			]
+function termid2size_filters(p) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
 		}
-	}`
+	}
+
+	if (p && p.tid2value) {
+		for (const tid in p.tid2value) {
+			const t = terms.find(i => i.id == tid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	return f
+}
+
+const termidlst2size = {
+	query: termid2size_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: termid2size_filters
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -1092,7 +1116,7 @@ module.exports = {
 			primary_site: { gdcapi: site_size }
 		},
 		termid2totalsize2: {
-			gdcapi: termidlst2totalsize
+			gdcapi: termidlst2size
 		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary
