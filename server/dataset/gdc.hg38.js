@@ -518,7 +518,9 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
+	// Quick fix: added 'observation', 'program' to prune_terms 
+	// because gdc query is giving error while querying child terms for thses 2 terms
+	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation', 'program'],
 	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
