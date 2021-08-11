@@ -1036,12 +1036,6 @@
                             ]
                         }]
                     },
-                    "buttons": [
-                        {
-                            "name": "Download BAM Slicing Script",
-                            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
-                        }
-                    ],
                     "testSpec": { 
                         "expected": {"image": 2 }
                     }
@@ -1053,6 +1047,10 @@
                     {
                         "name": "Docs",
                         "link": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+                    },
+                    {
+                        "name": "Download BAM Slicing Script",
+                        "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
                     }
                 ]
             },
