@@ -520,7 +520,7 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
-export async function get_termidlst2size(args) {
+export async function get_termlst2size(args) {
 	const { api, ds, termlst, q, treeFilter } = args
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
@@ -986,7 +986,7 @@ function init_termdb_queries(termdb, ds) {
 					type: term.type
 				})
 		}
-		const tv2counts = await get_termidlst2size({
+		const tv2counts = await get_termlst2size({
 			api: ds.termdb.termid2totalsize2.gdcapi,
 			ds,
 			termlst,

@@ -137,7 +137,7 @@ function validate_termdb(ds) {
 					})
 			}
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termidlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
+				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
 				for (const termid of termidlst) {
 					let term = ds.termdb.getTermById(termid)
 					if (!term) term = ds.cohort.termdb.q.getTermById(termid)
