@@ -158,9 +158,11 @@ async function make_multiSampleTable(args) {
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (no_tabs) {
-		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
-		init_dictionary_ui(holder, arg)
-		init_remove_terms_menu(holder, arg)
+		const ring_terms_holder = holder.append('div')
+		const pill_holder = holder.append('div').style('padding', '20px 0')
+		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, ring_terms_holder)
+		init_dictionary_ui(pill_holder, arg)
+		init_remove_terms_menu(pill_holder, arg)
 	}
 
 	// use booleen flags to determine table columns based on these samples
@@ -275,7 +277,9 @@ async function make_multiSampleTable(args) {
 	let columns = []
 	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
 	column_nodes.forEach(n => columns.push(n.innerText))
-	make_column_showhide_menu(arg, columns, header_div, grid_div)
+	// TODO: hide this button for now,
+	// varify after GDC demo and redesigning config menu if this feature will be useful
+	// make_column_showhide_menu(arg, columns, header_div, grid_div)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -377,6 +381,19 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 						}
 					},
 					disable_terms: JSON.parse(JSON.stringify(arg.tk.mds.variant2samples.termidlst))
+				},
+				app: {
+					callbacks: {
+						postRender: () => {
+							// hide 'case' node from the tree
+							const first_termlabel = tip.d.select('.termlabel')._groups[0][0]
+							const first_termbtn = tip.d.select('.termbtn')._groups[0][0]
+							if (first_termlabel.innerText == 'Case') {
+								first_termlabel.style['display'] = 'none'
+								first_termbtn.style['display'] = 'none'
+							}
+						}
+					}
 				}
 			})
 		})
@@ -550,8 +567,8 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 				}
 				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
 				arg.tid2value[term.id] = [
-					{ op: '>=', range: Math.round(range.range_start) },
-					{ op: '<=', range: Math.round(range.range_end) }
+					{ op: '>=', range: Math.round(range.range_start / (term.unit_conversion || 1)) },
+					{ op: '<=', range: Math.round(range.range_end / (term.unit_conversion || 1)) }
 				]
 				delete main_tabs[0].active
 				main_tabs[1].active = true
@@ -586,6 +603,14 @@ function make_sunburst_tidlist(arg, holder) {
 			.style('justify-self', 'stretch')
 			.text(arg.tid2value[termid])
 	}
+
+	// show occurance for sunburst ring
+	const [cell1, cell2] = get_list_cells(grid_div)
+	cell1.text('Occurrence')
+	cell2
+		.style('width', 'auto')
+		.style('justify-self', 'stretch')
+		.text(arg.numofcases)
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
@@ -646,7 +671,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 	function get_value(values) {
 		if (typeof values == 'string') return values
 		else {
-			const vals = values.map(a => a.range)
+			const vals = values.map(a => (a.range * (term.unit_conversion || 1)).toFixed(2))
 			const num_value = Math.min(...vals) + ' <= x <= ' + Math.max(...vals)
 			return num_value
 		}
