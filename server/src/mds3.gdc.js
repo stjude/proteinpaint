@@ -993,7 +993,7 @@ function init_termdb_queries(termdb, ds) {
 		for (const term of terms) {
 			if (term)
 				termlst.push({
-					path: term.path.replace('case.', '').replace('.', '__'),
+					path: term.path.replace('case.', '').replace(/\./g, '__'),
 					type: term.type
 				})
 		}
