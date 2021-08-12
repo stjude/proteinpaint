@@ -900,7 +900,7 @@ export async function init_dictionary(ds) {
 			id2term.delete(term_id)
 		}
 	}
-	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
 function init_termdb_queries(termdb, ds) {
