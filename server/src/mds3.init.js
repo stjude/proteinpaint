@@ -130,9 +130,9 @@ function validate_termdb(ds) {
 			let termlst = []
 			for (const termid of termidlst) {
 				const term = ds.cohort.termdb.q.getTermById(termid)
-				if (term) 
+				if (term)
 					termlst.push({
-						path: term.path.replace('case.', '').replace('.', '__'),
+						path: term.path.replace('case.', '').replace(/\./g, '__'),
 						type: term.type
 					})
 			}
