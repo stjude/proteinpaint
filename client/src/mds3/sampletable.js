@@ -290,6 +290,7 @@ async function make_multiSampleSummaryList(args) {
 	// reset tid2value to original when new term added, to remove any existing filter
 	if (new_term) arg.tid2value = JSON.parse(JSON.stringify(arg.tid2value_orig))
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
+	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
@@ -605,12 +606,14 @@ function make_sunburst_tidlist(arg, holder) {
 	}
 
 	// show occurance for sunburst ring
-	const [cell1, cell2] = get_list_cells(grid_div)
-	cell1.text('Occurrence')
-	cell2
-		.style('width', 'auto')
-		.style('justify-self', 'stretch')
-		.text(arg.numofcases)
+	if (arg.totalcases) {
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text('Occurrence')
+		cell2
+			.style('width', 'auto')
+			.style('justify-self', 'stretch')
+			.text(arg.totalcases)
+	}
 }
 
 function make_filter_pill(arg, filter_holder, page_holder) {
