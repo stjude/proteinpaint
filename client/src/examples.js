@@ -95,21 +95,6 @@ function make_subheader_contents(div, sub_name) {
 	return list
 }
 
-//Preserves alignment for search bar and launch button whilst aligning the first subheaders in each col
-function make_top_fnDiv(div) {
-	const top = div.append('div')
-	top
-		.style('display', 'flex')
-		.style('flex-direction', 'column')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-		.style('background-color', '#f5f5f5')
-		.style('height', '35px')
-		.style('width', '550px')
-
-	return top
-}
-
 //Makes search bar and functionality to search tracks
 function make_searchbar(track_args, page_args, div) {
 	const bar_div = make_top_fnDiv(div)
@@ -275,7 +260,7 @@ async function openExample(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
-	sandbox_div.header.text(track.name)
+	sandbox_div.header.text(track.name).style('padding','5px 10px 10px 10px')
 	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
 
 	// creates div for instructions or other messaging about the track
@@ -284,18 +269,21 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
 
+	const buttons_div = sandbox_div.body.append('div')
+	const collapse_div = sandbox_div.body.append('div')
+
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
 		//Creates any custom buttons
-		addButtons(track.sandbox.buttons, sandbox_div.body)
+		addButtons(track.sandbox.buttons, buttons_div)
 		//Download data and show runpp() code at the top
-		makeDataDownload(call.download, sandbox_div.body)
+		makeDataDownload(call.download, buttons_div)
 		//Redirects to URL parameter of track
-		showURLLaunch(call.urlparam, sandbox_div.body)
+		showURLLaunch(call.urlparam, buttons_div)
 		//Shows code used to create sandbox
-		// showCode(track, call.runargs, sandbox_div.body)
+		showCode(track, call.runargs, buttons_div, collapse_div)
 
-		makeDropdownBtns(track, track.sandbox.arrowButtons, call.runargs, sandbox_div.body)
+		makeArrowBtns(track.sandbox.arrowButtons, buttons_div, collapse_div)
 
 		// template runpp() arg
 		const runpp_arg = {
@@ -364,21 +352,21 @@ function makeDataDownload(arg, div) {
 }
 
 // Creates 'Show Code' button in Sandbox for all examples
-function showCode(track, arg, div) {
+function showCode(track, arg, div, collapseDiv) {
 	if (track.sandbox.is_ui != true) {
-		const codeBtn = makeButton(div, "Code")
+		const codeBtn = makeButton(div, "Code ▼")
 			codeBtn.on('click', () => {
 				if (code.style('display') == 'none') {
 					code.style('display', 'block') //TODO fadein fn
-					// select(event.target).text('Hide')
+					select(event.target).text('Code ▲').style('color','whitesmoke').style('background-color', '#487ba8')
 				} else {
 					code.style('display', 'none') //TODO fadeout fn
-					// select(event.target).text('Show Code')
+					select(event.target).text('Code ▼').style('color', 'black').style('background-color','#cfe2f3')
 				}
 			})
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-		const code = div
+		const code = collapseDiv
 			.append('pre')
 			.append('code')
 			.style('display', 'none')
@@ -419,10 +407,14 @@ function tabArray(tabs, track){
 
 function makeTab(track, arg, div) {
 	addMessage(arg.message, div)
-	addButtons(arg.buttons, div)
-	makeDataDownload(arg.download, div)
-	showURLLaunch(arg.urlparam, div)
-	showCode(track, arg.runargs, div)
+
+	const buttons_div = div.append('div')
+	const collapse_div = div.append('div')
+
+	addButtons(arg.buttons, buttons_div)
+	makeDataDownload(arg.download, buttons_div)
+	showURLLaunch(arg.urlparam, buttons_div)
+	showCode(track, arg.runargs, buttons_div, collapse_div)
 
 	const runpp_arg = {
 		holder: div
@@ -462,6 +454,7 @@ function makeButton(div, text) {
 		.append('button')
 		.attr('type', 'submit')
 		.attr('class', 'sjpp-sandbox-btn')
+		.style('background-color', '#cfe2f3')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
@@ -472,78 +465,37 @@ function makeButton(div, text) {
 	return button
 }
 
-function makeDropdownBtns(track, arg1, arg2, div) {
-	// const showHide_div = div.append('div').attr('id', 'showHideDiv')
-
-	// showHide_div.selectAll('*').remove()
-
-	const arrows = arg1
+function makeArrowBtns(arg, div, collaspeDiv) {
+	const arrows = arg
 	if (arrows){
 		arrows.forEach(arrow => {
-
-			const arrow_btn = makeButton(div, arrow.name)
+			const arrow_btn = makeButton(div, arrow.name + ' ▼')
 			arrow_btn.on('click', () => {
-				if (arrow_div.style('display') == 'none') {
-					arrow_div.style('display', 'block')
+				if (contents.style('display') == 'none') {
+					contents.style('display', 'block')
+					select(event.target).text(arrow.name + ' ▲').style('color','whitesmoke').style('background-color', '#487ba8')
 				} else {
-					arrow_div.style('display', 'none')
+					contents.style('display', 'none')
+					select(event.target).text(arrow.name + ' ▼').style('color', 'black').style('background-color','#cfe2f3')
 				}
 			})
-
-			const arrow_div = div
-				.append('div')
-				// .attr('id', 'showHideDiv')
-				.style('margin', '20px 20px 20px 30px')
-				.style('display', 'none')
-
 			const links = arrow.links
-			arrow_div.html(`
+			const contents = collaspeDiv.append('div')
+			contents
+				.style('display', 'none')
+				.style('border', 'gray solid')
+				.style('border-width', '1px 0px')
+				.html(`<div style="margin:10px">
 				${arrow.message ? `<div>${arrow.message}</div>`: ''}
 				${links.map((hyperlink)=>{
 					if(!hyperlink) return ''
 					if (hyperlink.download) {
-						return `<a style="cursor:pointer; margin-left:10px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
 					}
 					if(hyperlink.link) {
-						return `<a style="cursor:pointer; margin-left:10px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
 					}
-			}).join("")}`)
-
-		// return showHide_div
+			}).join("")}</div>`)
 		})
 	}
-
-	if (track.sandbox.is_ui != true) {
-		const codeBtn = makeButton(div, "Code")
-		// const code_div = showHide_div.append('div')
-			codeBtn.on('click', () => {
-				if (code.style('display') == 'none') {
-					code.style('display', 'block')
-				} else {
-					code.style('display', 'none')
-				}
-				// if (code.style('display') == 'none') {
-				// 	code.style('display', 'block')
-					// select(event.target).text('Hide')
-				// } else {
-				// 	code.style('display', 'none')
-					// select(event.target).text('Show Code')
-				// }
-			})
-
-	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-		const code = div
-			.append('pre')
-			.append('code')
-			.style('display', 'none')
-			.style('margin', '35px')
-			.style('font-size', '14px')
-			.style('border', '1px solid #aeafb0')
-			.html(highlight(`runproteinpaint({
-    host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
-		JSON.stringify(arg2, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-		`})`, {language:'javascript'}).value)
-	}
-
 }

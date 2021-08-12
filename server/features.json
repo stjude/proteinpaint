@@ -65,7 +65,7 @@
                         "link": "https://genomepaint.stjude.cloud/"
                     },
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
                     }
                 ],
@@ -158,7 +158,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
                     }
                 ]
@@ -201,7 +201,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
                     }
                 ]
@@ -304,7 +304,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
                     }
                 ]
@@ -351,7 +351,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
                     }
                 ]
@@ -410,7 +410,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
                     }
                 ]
@@ -453,7 +453,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
                     }
                 ]
@@ -500,7 +500,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
                     }
                 ]
@@ -535,7 +535,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
                     }
                 ]
@@ -582,7 +582,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
                     }
                 ]
@@ -662,7 +662,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
                     }
                 ]
@@ -704,7 +704,7 @@
                 "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
                     }
                 ]
@@ -851,7 +851,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
                     }
                 ]
@@ -963,7 +963,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
                     }
                 ]
@@ -1045,7 +1045,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
                     },
                     {
@@ -1145,7 +1145,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
                     }
                 ]
@@ -1175,7 +1175,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
                     }
                 ]
@@ -1219,7 +1219,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
                     }
                 ]
@@ -1261,7 +1261,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
                     }
                 ]
@@ -1290,7 +1290,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
                     }
                 ]
@@ -1382,7 +1382,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit"
                     }
                 ]
@@ -1418,7 +1418,7 @@
             "sandbox":{
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
                     }
                 ]
