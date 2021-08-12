@@ -455,8 +455,15 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id] && Array.isArray(sample[id])) sample[id] = sample[id][0][t.fields[j]]
-					else if (sample[id]) sample[id] = sample[id][t.fields[j]]
+					if (sample[id] && Array.isArray(sample[id])) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][0][t.fields[j]]
+					} else if (sample[id]) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][t.fields[j]]
+					}
 				}
 			}
 		}
@@ -538,17 +545,15 @@ export async function get_termlst2size(args) {
 		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
 	}
 	for (const term of termlst) {
-		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets'])) 
-			throw api.keys.join('.') + ' not array'
-		if ((term.type == 'integer' || term.type == 'float') 
-			&& typeof h[term.path]['stats'] != 'object'){
-				throw api.keys.join('.') + ' not object'
-			}
+		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets'])) throw api.keys.join('.') + ' not array'
+		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
+			throw api.keys.join('.') + ' not object'
+		}
 	}
 	// return total size here attached to entires
 	const tv2counts = new Map()
 	for (const term of termlst) {
-		if(term.type == 'categorical'){
+		if (term.type == 'categorical') {
 			const buckets = h[term.path]['buckets']
 			let values = []
 			for (const bucket of buckets) {
@@ -556,10 +561,10 @@ export async function get_termlst2size(args) {
 			}
 			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
 			tv2counts.set(term_id, values)
-		}else if(term.type == 'integer' || term.type == 'float'){
+		} else if (term.type == 'integer' || term.type == 'float') {
 			const count = h[term.path]['stats']['count']
 			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
-			tv2counts.set(term_id, {'total': count})
+			tv2counts.set(term_id, { total: count })
 		}
 	}
 	return tv2counts
@@ -932,7 +937,7 @@ function init_termdb_queries(termdb, ds) {
 			// find terms which have term.parent_id as clicked term
 			const re = terms.filter(t => t.parent_id == id)
 			// query terms with 0 sample count for treeFilter
-			if(treeFilter) await flag_empty_terms(re, treeFilter)
+			if (treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -940,7 +945,13 @@ function init_termdb_queries(termdb, ds) {
 
 	{
 		const cache = new Map()
-		q.findTermByName = async (searchStr, limit = null, vocab = default_vocab, exclude_types = [], treeFilter = null) => {
+		q.findTermByName = async (
+			searchStr,
+			limit = null,
+			vocab = default_vocab,
+			exclude_types = [],
+			treeFilter = null
+		) => {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
@@ -950,7 +961,7 @@ function init_termdb_queries(termdb, ds) {
 			// find terms that have term.id containing search string
 			const re = terms.filter(t => t.id.includes(searchStr))
 			// query terms with 0 sample count for treeFilter
-			if(treeFilter) await flag_empty_terms(re, treeFilter)
+			if (treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -977,10 +988,10 @@ function init_termdb_queries(termdb, ds) {
 		}
 	}
 
-	async function flag_empty_terms(terms, treeFilter){
+	async function flag_empty_terms(terms, treeFilter) {
 		let termlst = []
 		for (const term of terms) {
-			if (term) 
+			if (term)
 				termlst.push({
 					path: term.path.replace('case.', '').replace('.', '__'),
 					type: term.type
@@ -996,8 +1007,8 @@ function init_termdb_queries(termdb, ds) {
 		for (const term of terms) {
 			if (term) {
 				const tv2count = tv2counts.get(term.id)
-				if(term.type == 'categorical' && tv2count && !tv2count.length) term.disabled = true
-				else if((term.type == 'integer' || term.type == 'float') && tv2count['total'] == 0){
+				if (term.type == 'categorical' && tv2count && !tv2count.length) term.disabled = true
+				else if ((term.type == 'integer' || term.type == 'float') && tv2count['total'] == 0) {
 					term.disabled = true
 				}
 			}

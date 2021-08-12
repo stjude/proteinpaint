@@ -426,7 +426,7 @@ const variant2samples = {
 		'case.disease_type',
 		'case.primary_site',
 		'case.demographic.gender',
-		'case.demographic.year_of_birth',
+		'case.diagnoses.age_at_diagnosis',
 		'case.demographic.race',
 		'case.demographic.ethnicity'
 	],
@@ -436,7 +436,7 @@ const variant2samples = {
 		'case.disease_type',
 		'case.primary_site',
 		'case.demographic.gender',
-		'case.demographic.year_of_birth',
+		'case.diagnoses.age_at_diagnosis',
 		'case.demographic.race',
 		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
@@ -518,7 +518,7 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	// Quick fix: added 'observation', 'program' to prune_terms 
+	// Quick fix: added 'observation', 'program' to prune_terms
 	// because gdc query is giving error while querying child terms for thses 2 terms
 	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation', 'program'],
 	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
@@ -625,7 +625,7 @@ function termid2size_query(termlst) {
 	let query_str = ''
 	for (const term of termlst) {
 		const key = term.path
-		if(term.type)
+		if (term.type)
 			query_str = query_str.length
 				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
 				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
@@ -1012,11 +1012,12 @@ const terms = [
 		fields: ['demographic', 'gender']
 	},
 	{
-		name: 'Birth year',
-		id: 'year_of_birth',
+		name: 'Age at diagnosis',
+		id: 'age_at_diagnosis',
 		type: 'integer',
-		fields: ['demographic', 'year_of_birth'],
-		unit: 'year'
+		fields: ['diagnoses', 'age_at_diagnosis'],
+		unit_conversion: 0.002739,
+		unit: 'years'
 	},
 	{
 		name: 'Race',
@@ -1131,7 +1132,7 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
+		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
 		sunburst_ids: ['project_id', 'disease_type'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample

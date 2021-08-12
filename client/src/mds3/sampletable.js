@@ -554,8 +554,8 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 				}
 				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
 				arg.tid2value[term.id] = [
-					{ op: '>=', range: Math.round(range.range_start) },
-					{ op: '<=', range: Math.round(range.range_end) }
+					{ op: '>=', range: Math.round(range.range_start / (term.unit_conversion || 1)) },
+					{ op: '<=', range: Math.round(range.range_end / (term.unit_conversion || 1)) }
 				]
 				delete main_tabs[0].active
 				main_tabs[1].active = true
@@ -658,7 +658,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 	function get_value(values) {
 		if (typeof values == 'string') return values
 		else {
-			const vals = values.map(a => a.range)
+			const vals = values.map(a => (a.range * (term.unit_conversion || 1)).toFixed(2))
 			const num_value = Math.min(...vals) + ' <= x <= ' + Math.max(...vals)
 			return num_value
 		}
