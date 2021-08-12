@@ -414,8 +414,8 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	} catch (e) {
 		throw 'invalid JSON from GDC for variant2samples for query :' + query + ' and filter: ' + filter
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
 	// total to display on sample list page
 	// for numerical terms, total is not possible before making GDC query
 	const total = re.data.pagination.total
