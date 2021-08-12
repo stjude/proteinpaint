@@ -419,7 +419,9 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['case.disease_type', 'case.primary_site'],
+	// Note: case.case_id seems extra field just for sunburst,
+	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
+	fields_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
 	fields_summary: [
 		'case.project.project_id',
 		'case.case_id',
