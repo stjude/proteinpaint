@@ -381,6 +381,19 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 						}
 					},
 					disable_terms: JSON.parse(JSON.stringify(arg.tk.mds.variant2samples.termidlst))
+				},
+				app: {
+					callbacks: {
+						postRender: () => {
+							// hide 'case' node from the tree
+							const first_termlabel = tip.d.select('.termlabel')._groups[0][0]
+							const first_termbtn = tip.d.select('.termbtn')._groups[0][0]
+							if (first_termlabel.innerText == 'Case') {
+								first_termlabel.style['display'] = 'none'
+								first_termbtn.style['display'] = 'none'
+							}
+						}
+					}
 				}
 			})
 		})

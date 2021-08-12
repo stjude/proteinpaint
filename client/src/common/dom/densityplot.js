@@ -17,7 +17,7 @@ make_densityplot
 export async function make_densityplot(holder, data, callabck) {
 	const width = 500,
 		height = 150,
-		xpad = 10,
+		xpad = 25,
 		ypad = 20,
 		xaxis_height = 20,
 		default_ticks = 10
@@ -77,9 +77,17 @@ export async function make_densityplot(holder, data, callabck) {
 		.call(x_axis)
 
 	g.append('text')
+		.text(data.unit)
+		.attr('fill', 'black')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
-		.text(data.unit)
+
+	g.append('text')
+		.text('# samples')
+		.attr('transform', `translate(0,  ${height / 2}) rotate(-90)`)
+		.attr('fill', 'black')
+		.attr('font-size', '13px')
+		.attr('text-anchor', 'middle')
 
 	// add brush to select range from the density plot
 	g.call(
