@@ -419,7 +419,7 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
+	fields_sunburst: ['case.disease_type', 'case.primary_site'],
 	fields_summary: [
 		'case.project.project_id',
 		'case.case_id',
@@ -1132,8 +1132,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
-		sunburst_ids: ['project_id', 'disease_type'], // term id
+		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
+		sunburst_ids: ['disease_type', 'primary_site'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
