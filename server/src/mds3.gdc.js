@@ -402,34 +402,26 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		}
 	}
 
+	const query =
+		api.endpoint + '?size=' + (q.size || api.size) + '&from=' + (q.from || 0) + '&fields=' + fields.join(',')
+	const filter = JSON.stringify(api.filters(q))
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(
-		api.endpoint +
-			'?size=' +
-			(q.size || api.size) +
-			'&from=' +
-			(q.from || 0) +
-			'&fields=' +
-			fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.filters(q))),
-		{ method: 'GET', headers }
-	)
+	const response = await got(query + '&filters=' + encodeURIComponent(filter), { method: 'GET', headers })
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples'
+		throw 'invalid JSON from GDC for variant2samples for query :' + query + ' and filter: ' + filter
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
 	// total to display on sample list page
 	// for numerical terms, total is not possible before making GDC query
 	const total = re.data.pagination.total
 	const samples = []
 	for (const s of re.data.hits) {
-		if (!s.case) throw '.case{} missing from a hit'
+		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
 
 		// get printable sample id
@@ -908,7 +900,7 @@ export async function init_dictionary(ds) {
 			id2term.delete(term_id)
 		}
 	}
-	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
 function init_termdb_queries(termdb, ds) {
