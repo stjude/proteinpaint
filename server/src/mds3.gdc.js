@@ -888,7 +888,9 @@ export async function init_dictionary(ds) {
 	init_termdb_queries(ds.cohort.termdb, ds)
 
 	//step 4: prune the tree
-	const prune_terms = dictionary.gdcapi.prune_terms
+	// Quick fix: added 'program' to prune_terms
+	// because gdc query is giving error while querying child terms for this term
+	const prune_terms = ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation']
 	for (const term_id of prune_terms) {
 		if (id2term.has(term_id)) {
 			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
@@ -900,7 +902,12 @@ export async function init_dictionary(ds) {
 			id2term.delete(term_id)
 		}
 	}
-	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+
+	//setp 5: remove 'case' term and modify children
+	id2term.delete('case')
+	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
+	if (children.length) children.forEach(t => (t.parent_id = undefined))
+	// console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
 function init_termdb_queries(termdb, ds) {

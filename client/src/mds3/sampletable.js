@@ -389,9 +389,6 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 					},
 					nav: {
 						header_mode: 'search_only'
-					},
-					tree: {
-						expandedTermIds: ['case']
 					}
 				},
 				tree: {
@@ -404,23 +401,10 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 								make_multiSampleSummaryList({ arg, holder: main_holder, new_term: term })
 							else if (active_tab && active_tab.label == 'List')
 								make_multiSampleTable({ arg, holder: active_tab.holder })
-							else make_multiSampleTable({ arg, holder, no_tabs: true })
+							else make_multiSampleTable({ arg, holder: main_holder, no_tabs: true })
 						}
 					},
 					disable_terms: JSON.parse(JSON.stringify(arg.tk.mds.variant2samples.termidlst))
-				},
-				app: {
-					callbacks: {
-						postRender: () => {
-							// hide 'case' node from the tree
-							const first_termlabel = tip.d.select('.termlabel')._groups[0][0]
-							const first_termbtn = tip.d.select('.termbtn')._groups[0][0]
-							if (first_termlabel.innerText == 'Case') {
-								first_termlabel.style['display'] = 'none'
-								first_termbtn.style['display'] = 'none'
-							}
-						}
-					}
 				}
 			})
 		})
