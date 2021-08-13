@@ -273,7 +273,7 @@ fn main() {
         alt_status = "break_point".to_string();
     }
 
-    let surrounding_region_length: i64 = 25; // Flanking region on both sides upto which it will search for duplicate kmers
+    let surrounding_region_length: i64 = 50; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
     let (
@@ -334,7 +334,7 @@ fn main() {
     //println!("alt_nucleotides_all:{:?}", alt_nucleotides_all);
     drop(rightflank_nucleotides);
     // Select appropriate kmer length
-    let max_kmer_length: i64 = 20; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
+    let max_kmer_length: i64 = 40; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
     let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
     let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
 
@@ -918,7 +918,7 @@ fn assign_final_weights(
     let mut alt_output = refalt_output::new(); // Initializing variable
 
     if ref_length == alt_length && activate_weight_balancing == 0 {
-        println!("case1");
+        //println!("case1");
         ref_output = build_kmers_refalt(
             ref_sequence,
             kmer_length_iter,
@@ -959,7 +959,7 @@ fn assign_final_weights(
         //  println!(&"Indel kmer:{}", kmer);
         //}
     } else if ref_length > alt_length && activate_weight_balancing == 0 {
-        println!("case2");
+        //println!("case2");
         ref_output = build_kmers_refalt(
             ref_sequence,
             kmer_length_iter,
@@ -1497,7 +1497,8 @@ fn preprocess_input(
         || optimized_alt_allele.len() != alt_allele.len()
     {
         optimized_allele = 1;
-        //right_offset_part += (optimized_alt_allele.len() as i64 - alt_allele.len() as i64).abs() as usize;
+        right_offset_part +=
+            (optimized_alt_allele.len() as i64 - alt_allele.len() as i64).abs() as usize;
         // When the alt allele has been optimized, the right offset part needs to be increased
     }
 
@@ -2284,6 +2285,18 @@ fn jaccard_similarity_weights(
 
     if alignment_side == &"left" {
         for i in 0..kmers2_nodups.len() {
+            //if kmers2_nodups[i].to_owned() == "AGCCAC".to_string()
+            //|| kmers2_nodups[i].to_owned() == "GAAACA".to_string()
+            //|| kmers2_nodups[i].to_owned() == "CAAGAA".to_string()
+            //{
+            //    println!("kmer:{}", kmers2_nodups[i].to_owned());
+            //    println!("weight:{}", &kmers2_data[i].kmer_weight);
+            //    println!("left:{}", kmers2_data[i].left_position);
+            //    println!("right:{}", kmers2_data[i].right_position);
+            //    println!("left_most_pos:{}", left_most_pos);
+            //    println!("right_most_pos:{}", right_most_pos + 1);
+            //}
+
             let kmer_start = kmers2_data[i].left_position;
             if kmer_start > left_most_pos && kmer_start + kmer_length <= right_most_pos + 1 {
                 //println!("kmer:{}", kmers2_nodups[i].to_owned());
