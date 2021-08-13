@@ -907,7 +907,7 @@ export async function init_dictionary(ds) {
 	id2term.delete('case')
 	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
 	if (children.length) children.forEach(t => (t.parent_id = undefined))
-	// console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
 function init_termdb_queries(termdb, ds) {
@@ -916,12 +916,13 @@ function init_termdb_queries(termdb, ds) {
 
 	{
 		const cache = new Map()
-		q.getRootTerms = (vocab = default_vocab) => {
-			const cacheId = vocab
+		q.getRootTerms = async (vocab = default_vocab, treeFilter = null) => {
+			const cacheId = vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = [...termdb.id2term.values()]
+			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
 			// find terms without term.parent_id
 			const re = terms.filter(t => t.parent_id == undefined)
+			if (treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -932,7 +933,7 @@ function init_termdb_queries(termdb, ds) {
 		q.getTermChildren = async (id, vocab = default_vocab, treeFilter = null) => {
 			const cacheId = id + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = [...termdb.id2term.values()]
+			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
 			// find terms which have term.parent_id as clicked term
 			const re = terms.filter(t => t.parent_id == id)
 			// query terms with 0 sample count for treeFilter
@@ -956,7 +957,7 @@ function init_termdb_queries(termdb, ds) {
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 			const cacheId = searchStr + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = [...termdb.id2term.values()]
+			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
 			// find terms that have term.id containing search string
 			const re = terms.filter(t => t.id.includes(searchStr))
 			// query terms with 0 sample count for treeFilter
@@ -1006,9 +1007,14 @@ function init_termdb_queries(termdb, ds) {
 		for (const term of terms) {
 			if (term) {
 				const tv2count = tv2counts.get(term.id)
-				if (term.type == 'categorical' && tv2count && !tv2count.length) term.disabled = true
-				else if ((term.type == 'integer' || term.type == 'float') && tv2count['total'] == 0) {
-					term.disabled = true
+				if (term.type == 'categorical' && tv2count) {
+					if (!tv2count.length) {
+						term.disabled = true
+						term.samplecount = 0
+					} else term.samplecount = tv2count.map(c => c[1]).reduce((a, b) => a + b)
+				} else if (term.type == 'integer' || term.type == 'float') {
+					term.samplecount = tv2count['total']
+					if (tv2count['total'] == 0) term.disabled = true
 				}
 			}
 		}

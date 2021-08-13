@@ -271,7 +271,10 @@ function setRenderers(self) {
 		*/
 		if (!term || !term.terms) return
 		// add disabled terms to opts.disable_terms
-		term.terms.forEach(t => {if(t.disabled) self.opts.disable_terms.push(t.id)})
+		if (self.opts.disable_terms)
+			term.terms.forEach(t => {
+				if (t.disabled) self.opts.disable_terms.push(t.id)
+			})
 		self.included_terms = []
 		if (!self.state.exclude_types.length) {
 			self.included_terms.push(...term.terms)
@@ -396,6 +399,18 @@ function setRenderers(self) {
 						.on('click', () => {
 							self.opts.click_term(term)
 						})
+				}
+
+				//show sample count for a term
+				if (term.samplecount !== undefined) {
+					div
+						.append('div')
+						.attr('class', 'sja_mcdot')
+						.style('display', 'inline-block')
+						.style('margin-left', '5px')
+						.style('color', term.samplecount ? '#777' : '#ddd')
+						.style('background-color', term.samplecount ? '#f2f2f2' : '')
+						.text(term.samplecount)
 				}
 			} else if (self.opts.set_custombtns) {
 				self.opts.set_custombtns(term, div.append('div').style('display', 'inline-block'), termIsDisabled, cls_termview)
