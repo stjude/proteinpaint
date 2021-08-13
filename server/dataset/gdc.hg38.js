@@ -419,14 +419,16 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
+	// Note: case.case_id seems extra field just for sunburst,
+	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
+	fields_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
 	fields_summary: [
 		'case.project.project_id',
 		'case.case_id',
 		'case.disease_type',
 		'case.primary_site',
 		'case.demographic.gender',
-		'case.demographic.year_of_birth',
+		'case.diagnoses.age_at_diagnosis',
 		'case.demographic.race',
 		'case.demographic.ethnicity'
 	],
@@ -436,7 +438,7 @@ const variant2samples = {
 		'case.disease_type',
 		'case.primary_site',
 		'case.demographic.gender',
-		'case.demographic.year_of_birth',
+		'case.diagnoses.age_at_diagnosis',
 		'case.demographic.race',
 		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
@@ -518,7 +520,6 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
 	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
@@ -619,14 +620,14 @@ const site_size = {
 	filters: totalsize_filters
 }
 
-function totalsize_query(termpathlst) {
+function termid2size_query(termlst) {
 	let query_str = ''
-	for (const termpath of termpathlst) {
-		const termpath_q = termpath
-		query_str = query_str.length
-			? `${query_str} 
-			${termpath_q} {buckets { doc_count, key }}`
-			: `${termpath_q} {buckets { doc_count, key }}`
+	for (const term of termlst) {
+		const key = term.path
+		if (term.type)
+			query_str = query_str.length
+				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
 	}
 
 	// for all terms from termidlst will be added to single query
@@ -642,17 +643,39 @@ function totalsize_query(termpathlst) {
 	return query
 }
 
-const termidlst2totalsize = {
-	query: totalsize_query,
-	keys: ['data', 'explore', 'cases', 'aggregations'],
-	filters: `{
-		"filters": {
-			"op": "and", 
-			"content": [
-				{ "op": "in", "content": { "field": "cases.available_variation_data", "value": ["ssm"]}}
-			]
+function termid2size_filters(p) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
 		}
-	}`
+	}
+
+	if (p && p.tid2value) {
+		for (const tid in p.tid2value) {
+			const t = terms.find(i => i.id == tid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	return f
+}
+
+const termidlst2size = {
+	query: termid2size_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: termid2size_filters
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -988,11 +1011,12 @@ const terms = [
 		fields: ['demographic', 'gender']
 	},
 	{
-		name: 'Birth year',
-		id: 'year_of_birth',
+		name: 'Age at diagnosis',
+		id: 'age_at_diagnosis',
 		type: 'integer',
-		fields: ['demographic', 'year_of_birth'],
-		unit: 'year'
+		fields: ['diagnoses', 'age_at_diagnosis'],
+		unit_conversion: 0.002739,
+		unit: 'years'
 	},
 	{
 		name: 'Race',
@@ -1092,7 +1116,7 @@ module.exports = {
 			primary_site: { gdcapi: site_size }
 		},
 		termid2totalsize2: {
-			gdcapi: termidlst2totalsize
+			gdcapi: termidlst2size
 		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary
@@ -1107,8 +1131,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
-		sunburst_ids: ['project_id', 'disease_type'], // term id
+		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
+		sunburst_ids: ['disease_type', 'primary_site'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',

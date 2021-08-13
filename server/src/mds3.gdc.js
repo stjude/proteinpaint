@@ -265,7 +265,7 @@ function snvindel_addclass(m, consequence) {
 function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (q.token) h['X-Auth-Token'] = q.token
+	if (q && q.token) h['X-Auth-Token'] = q.token
 	return h
 }
 
@@ -402,34 +402,26 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		}
 	}
 
+	const query =
+		api.endpoint + '?size=' + (q.size || api.size) + '&from=' + (q.from || 0) + '&fields=' + fields.join(',')
+	const filter = JSON.stringify(api.filters(q))
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(
-		api.endpoint +
-			'?size=' +
-			(q.size || api.size) +
-			'&from=' +
-			(q.from || 0) +
-			'&fields=' +
-			fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.filters(q))),
-		{ method: 'GET', headers }
-	)
+	const response = await got(query + '&filters=' + encodeURIComponent(filter), { method: 'GET', headers })
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples'
+		throw 'invalid JSON from GDC for variant2samples for query :' + query + ' and filter: ' + filter
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
 	// total to display on sample list page
 	// for numerical terms, total is not possible before making GDC query
 	const total = re.data.pagination.total
 	const samples = []
 	for (const s of re.data.hits) {
-		if (!s.case) throw '.case{} missing from a hit'
+		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
 
 		// get printable sample id
@@ -455,8 +447,15 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id] && Array.isArray(sample[id])) sample[id] = sample[id][0][t.fields[j]]
-					else if (sample[id]) sample[id] = sample[id][t.fields[j]]
+					if (sample[id] && Array.isArray(sample[id])) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][0][t.fields[j]]
+					} else if (sample[id]) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][t.fields[j]]
+					}
 				}
 			}
 		}
@@ -520,10 +519,11 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
-export async function get_termidlst2total(api, ds, termpathlst, q) {
+export async function get_termlst2size(args) {
+	const { api, ds, termlst, q, treeFilter } = args
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query(termpathlst), variables: api.filters })
+		body: JSON.stringify({ query: api.query(termlst), variables: api.filters(treeFilter) })
 	})
 	let re
 	try {
@@ -536,19 +536,28 @@ export async function get_termidlst2total(api, ds, termpathlst, q) {
 		h = h[api.keys[i]]
 		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
 	}
-	for (const termpath of termpathlst) {
-		if (!Array.isArray(h[termpath]['buckets'])) throw api.keys.join('.') + ' not array'
+	for (const term of termlst) {
+		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets'])) throw api.keys.join('.') + ' not array'
+		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
+			throw api.keys.join('.') + ' not object'
+		}
 	}
 	// return total size here attached to entires
 	const tv2counts = new Map()
-	for (const termpath of termpathlst) {
-		const buckets = h[termpath]['buckets']
-		let values = []
-		for (const bucket of buckets) {
-			values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+	for (const term of termlst) {
+		if (term.type == 'categorical') {
+			const buckets = h[term.path]['buckets']
+			let values = []
+			for (const bucket of buckets) {
+				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+			}
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, values)
+		} else if (term.type == 'integer' || term.type == 'float') {
+			const count = h[term.path]['stats']['count']
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, { total: count })
 		}
-		const term_id = termpath.split('__').length > 1 ? termpath.split('__').pop() : termpath
-		tv2counts.set(term_id, values)
 	}
 	return tv2counts
 }
@@ -876,10 +885,12 @@ export async function init_dictionary(ds) {
 		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
 	}
-	init_termdb_queries(ds.cohort.termdb)
+	init_termdb_queries(ds.cohort.termdb, ds)
 
 	//step 4: prune the tree
-	const prune_terms = dictionary.gdcapi.prune_terms
+	// Quick fix: added 'program' to prune_terms
+	// because gdc query is giving error while querying child terms for this term
+	const prune_terms = ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation']
 	for (const term_id of prune_terms) {
 		if (id2term.has(term_id)) {
 			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
@@ -891,10 +902,15 @@ export async function init_dictionary(ds) {
 			id2term.delete(term_id)
 		}
 	}
-	// console.log('gdc dictionary created with total terms: ', ds.cohort.termdb.id2term.size)
+
+	//setp 5: remove 'case' term and modify children
+	id2term.delete('case')
+	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
+	if (children.length) children.forEach(t => (t.parent_id = undefined))
+	// console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
-function init_termdb_queries(termdb) {
+function init_termdb_queries(termdb, ds) {
 	const q = (termdb.q = {})
 	const default_vocab = 'ssm_occurance'
 
@@ -913,12 +929,14 @@ function init_termdb_queries(termdb) {
 
 	{
 		const cache = new Map()
-		q.getTermChildren = (id, vocab = default_vocab) => {
-			const cacheId = id + ';;' + vocab
+		q.getTermChildren = async (id, vocab = default_vocab, treeFilter = null) => {
+			const cacheId = id + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms which have term.parent_id as clicked term
 			const re = terms.filter(t => t.parent_id == id)
+			// query terms with 0 sample count for treeFilter
+			if (treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -926,15 +944,23 @@ function init_termdb_queries(termdb) {
 
 	{
 		const cache = new Map()
-		q.findTermByName = (searchStr, vocab = default_vocab) => {
+		q.findTermByName = async (
+			searchStr,
+			limit = null,
+			vocab = default_vocab,
+			exclude_types = [],
+			treeFilter = null
+		) => {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
-			const cacheId = searchStr + ';;' + vocab
+			const cacheId = searchStr + ';;' + vocab + ';;' + treeFilter
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const terms = [...termdb.id2term.values()]
 			// find terms that have term.id containing search string
 			const re = terms.filter(t => t.id.includes(searchStr))
+			// query terms with 0 sample count for treeFilter
+			if (treeFilter) await flag_empty_terms(re, treeFilter)
 			cache.set(cacheId, re)
 			return re
 		}
@@ -958,6 +984,33 @@ function init_termdb_queries(termdb) {
 		q.getTermById = id => {
 			const terms = [...termdb.id2term.values()]
 			return terms.find(i => i.id == id)
+		}
+	}
+
+	async function flag_empty_terms(terms, treeFilter) {
+		let termlst = []
+		for (const term of terms) {
+			if (term)
+				termlst.push({
+					path: term.path.replace('case.', '').replace(/\./g, '__'),
+					type: term.type
+				})
+		}
+		const tv2counts = await get_termlst2size({
+			api: ds.termdb.termid2totalsize2.gdcapi,
+			ds,
+			termlst,
+			treeFilter: JSON.parse(treeFilter)
+		})
+		// add term.disabled if samplesize if zero
+		for (const term of terms) {
+			if (term) {
+				const tv2count = tv2counts.get(term.id)
+				if (term.type == 'categorical' && tv2count && !tv2count.length) term.disabled = true
+				else if ((term.type == 'integer' || term.type == 'float') && tv2count['total'] == 0) {
+					term.disabled = true
+				}
+			}
 		}
 	}
 }
