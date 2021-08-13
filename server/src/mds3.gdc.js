@@ -906,11 +906,7 @@ export async function init_dictionary(ds) {
 	//setp 5: remove 'case' term and modify children
 	id2term.delete('case')
 	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
-	if (children.length) {
-		for (const child_t of children) {
-			child_t.parent_id = undefined
-		}
-	}
+	if (children.length) children.forEach(t => (t.parent_id = undefined))
 	// console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 }
 
