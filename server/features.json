@@ -27,7 +27,7 @@
             ],
             "ppcalls":[
                 {
-                    "label":"TCGA DLBC example",
+                    "label":"TCGA DLBC",
                     "note": "IF download data reimplemented later -> https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/GPDemoData.tar.gz",
                     "urlparam":"?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz",
                     "runargs":{
@@ -186,7 +186,7 @@
                         "position": "chr8:128597079-130293343",
                         "nativetracks": "RefGene",
                         "tracks": [{
-                            "name": "Stranded RNA-seq",
+                            "name": "Stranded RNA-seq Demo",
                             "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
                             "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
                             "type": "bigwigstranded"
@@ -239,7 +239,7 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "bedj",
-                            "name": "JSON BED gene track",
+                            "name": "JSON BED gene track demo",
                             "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
                             "stackheight": 16,
                             "stackspace": 1,
@@ -251,7 +251,7 @@
                     }
                 },
                 {
-                    "label": "BED3 Example",
+                    "label": "BED3",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
                     "runargs": {
@@ -263,7 +263,7 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "bedj",
-                            "name": "BED3 Example",
+                            "name": "BED3 demo",
                             "file": "proteinpaint_demo/hg19/bedj/bed3.gz",
                             "stackheight": 16,
                             "stackspace": 1
@@ -274,7 +274,7 @@
                     }
                 },
                 {
-                    "label": "Numeric Filter Example",
+                    "label": "Numeric Filter",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/numericDenomData.tar.gz",
                     "runargs": {
                         "parseurl": true,
@@ -286,7 +286,7 @@
                         "tracks":[
                             {
                                 "type":"bedj",
-                                "name":"numeric value",
+                                "name":"Numeric value demo",
                                 "file":"proteinpaint_demo/hg19/bedj/value.gz",
                                 "usevalue":{
                                     "key":"value",
@@ -440,7 +440,7 @@
                         "tracks": [{
                             "type": "mdsexpressionrank",
                             "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                            "name": "TCGA FPKM demo rank",
+                            "name": "TCGA FPKM demo expression rank",
                             "sample": "TCGA-GS-A9TQ"
                         }]
                     },
@@ -487,7 +487,7 @@
                         "tracks": [{
                             "type": "hicstraw",
                             "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
-                            "name": "Example Hi-C",
+                            "name": "Hi-C Demo",
                             "percentile_max": 95,
                             "mincutoff": 1,
                             "pyramidup": 1,
@@ -622,7 +622,7 @@
                         "nativetracks": "Refgene",
                         "tracks": [{
                             "type": "mdsjunction",
-                            "name": "Demo",
+                            "name": "Cohort splice junction Demo",
                             "file": "proteinpaint_demo/hg19/junction/json.gz"
                         }]
                     },
@@ -643,7 +643,7 @@
                         "nativetracks": "Refgene",
                         "tracks": [{
                             "type": "mdsjunction",
-                            "name": "Demo",
+                            "name": "Cohort matrix splice junction demo",
                             "file2": "proteinpaint_demo/hg19/junction/matrix.gz"
                         }]
                     },
@@ -836,7 +836,7 @@
                         "tracks": [{
                             "type": "hicstraw",
                             "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
-                            "name": "Arc Track Example",
+                            "name": "Arc Track Demo",
                             "percentile_max":99,
                             "mode_arc": true,
                             "mode_hm": false
@@ -881,7 +881,7 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "mdssvcnv",
-                            "name": "Demo ASE",
+                            "name": "ASE Demo",
                             "checkvcf": {
                                 "file": "proteinpaint_demo/hg38/ase/vcf.gz"
                             },
@@ -1004,7 +1004,7 @@
                         "tracks": [{
                             "type": "bam",
                             "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-                            "name": "WES KIT exon mutation"
+                            "name": "WES KIT exon mutation demo"
                         }]
                     },
                     "testSpec": { 
@@ -1025,7 +1025,7 @@
                         "tracks": [{
                             "type": "bam",
                             "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-                            "name": "WES KIT exon mutation with variant",
+                            "name": "WES KIT exon mutation with variant demo",
                             "variants":[
                                 {
                                     "chr": "chr4",
@@ -1113,7 +1113,7 @@
                         "tracks": [{
                             "type": "bampile",
                             "file": "proteinpaint_demo/hg19/bampile/tk.gz",
-                            "name": "Demo Bampile"
+                            "name": "Bampile Demo"
                         }]
                     }
                 }

@@ -11,7 +11,7 @@ export async function init_examples(par) {
 		sayerror(holder.append('div'), re.error)
 		return
 	}
-	const wrapper_div = make_examples_page(holder)
+	const wrapper_div = make_app_drawer(holder)
 	const track_grid = make_main_track_grid(wrapper_div)
 	const gbrowser_col = make_col(track_grid, 'gbrowser')
 	const app_col = make_col(track_grid, 'otherapps')
@@ -41,7 +41,7 @@ export async function init_examples(par) {
 	await loadTracks(track_args, page_args)
 }
 
-function make_examples_page(holder) {
+function make_app_drawer(holder) {
 	const wrapper_div = holder.append('div')
 	wrapper_div
 		.append('div')
@@ -174,7 +174,7 @@ function displayTracks(tracks, holder, page_args) {
 				event.stopPropagation()
 				page_args.apps_off()
 				if (track.ppcalls) {
-					openExample(track, page_args.apps_sandbox_div)
+					openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
 
@@ -223,7 +223,7 @@ function displayTracks(tracks, holder, page_args) {
 									example: button.example
 								}
 							}
-							openExample(btn_args, page_args.apps_sandbox_div)
+							openSandbox(btn_args, page_args.apps_sandbox_div)
 						}
 						// TODO: Add logic if custom button has url or some other link
 					})
@@ -254,9 +254,9 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
-//TODO: styling for the container
-//Opens example of app in landing page container
-async function openExample(track, holder) {
+// ******* Create Sandbox Function ********* Opens a sandbox with track example(s) or app ui with links and other information
+
+async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
@@ -269,11 +269,12 @@ async function openExample(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
 
-	const buttons_div = sandbox_div.body.append('div')
-	const collapse_div = sandbox_div.body.append('div')
-
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
+
+		const buttons_div = sandbox_div.body.append('div').style('border-bottom', '4px darkgray solid')
+		const collapse_div = sandbox_div.body.append('div')
+
 		//Creates any custom buttons
 		addButtons(track.sandbox.buttons, buttons_div)
 		//Download data and show runpp() code at the top
@@ -301,9 +302,12 @@ async function openExample(track, holder) {
 
 	} else if (track.ppcalls.length > 1) {
 		addButtons(track.sandbox.buttons, sandbox_div.body)
+		sandbox_div.body.append('p').text('Examples').style('margin', '7.5px').style('font-weight', '550')
 		makeTabMenu(track, sandbox_div)
 	}
 }
+
+// ******* Sandbox Message Functions *********
 
 function addMessage(arg, div) {
 	if (arg != undefined && arg) {
@@ -331,6 +335,24 @@ async function addUpdateMessage(track, div) {
 	}
 }
 
+function makeButton(div, text) {
+	const button = div
+		.append('button')
+		.attr('type', 'submit')
+		.attr('class', 'sjpp-sandbox-btn')
+		.style('background-color', '#cfe2f3')
+		.style('margin', '20px')
+		.style('padding', '8px')
+		.style('border', 'none')
+		.style('border-radius', '3px')
+		.style('display', 'inline-block')
+		.text(text)
+
+	return button
+}
+
+// ******* Sandbox Button Functions *********
+
 function showURLLaunch(arg,div){
 	if (arg){
 		const URLbtn = makeButton(div, "Run track from URL")
@@ -352,15 +374,18 @@ function makeDataDownload(arg, div) {
 }
 
 // Creates 'Show Code' button in Sandbox for all examples
-function showCode(track, arg, div, collapseDiv) {
+async function showCode(track, arg, div, collapseDiv) {
+	// collapseDiv.selectAll('*').remove()
 	if (track.sandbox.is_ui != true) {
 		const codeBtn = makeButton(div, "Code ▼")
 			codeBtn.on('click', () => {
-				if (code.style('display') == 'none') {
-					code.style('display', 'block') //TODO fadein fn
+				if (collapseDiv.style('display') == 'none') {
+					collapseDiv.style('display', 'block')
+					code.style('display', 'block')
 					select(event.target).text('Code ▲').style('color','whitesmoke').style('background-color', '#487ba8')
 				} else {
-					code.style('display', 'none') //TODO fadeout fn
+					collapseDiv.style('display', 'none')
+					code.style('display', 'block')
 					select(event.target).text('Code ▼').style('color', 'black').style('background-color','#cfe2f3')
 				}
 			})
@@ -369,10 +394,10 @@ function showCode(track, arg, div, collapseDiv) {
 		const code = collapseDiv
 			.append('pre')
 			.append('code')
-			.style('display', 'none')
 			.style('margin', '35px')
 			.style('font-size', '14px')
 			.style('border', '1px solid #aeafb0')
+			.style('display', 'none')
 			.html(highlight(`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
@@ -380,6 +405,62 @@ function showCode(track, arg, div, collapseDiv) {
 		`})`, {language:'javascript'}).value)
 	}
 }
+
+function addButtons(arg, div){
+	const buttons = arg
+	if (buttons){
+		buttons.forEach(button => {
+			const sandboxButton = makeButton(div, button.name)
+				sandboxButton.on('click', () => {
+					if (button.download){
+						event.stopPropagation();
+						window.open(`${button.download}`, '_self', 'download')
+					} else {
+						event.stopPropagation();
+						window.open(`${button.link}`, '_blank')
+					}
+				})
+			})
+		}
+}
+
+async function makeArrowBtns(arg, div, collapseDiv) {
+	collapseDiv.selectAll('*').remove()
+
+	const arrows = arg
+	if (arrows){
+		arrows.forEach(arrow => {
+			const arrow_btn = makeButton(div, arrow.name + ' ▼')
+			arrow_btn.on('click', () => {
+				if (collapseDiv.style('display') == 'none') {
+					collapseDiv.style('display', 'block')
+					contents.style('display', 'block')
+					select(event.target).text(arrow.name + ' ▲').style('color','whitesmoke').style('background-color', '#487ba8')
+				} else {
+					collapseDiv.style('display', 'none')
+					contents.style('display', 'none')
+					select(event.target).text(arrow.name + ' ▼').style('color', 'black').style('background-color','#cfe2f3')
+				}
+			})
+			const links = arrow.links
+			const contents = collapseDiv.append('div')
+				.style('display', 'none')
+				.html(`<div style="margin:10px">
+				${arrow.message ? `<div>${arrow.message}</div>`: ''}
+				${links.map((hyperlink)=>{
+					if(!hyperlink) return ''
+					if (hyperlink.download) {
+						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+					}
+					if(hyperlink.link) {
+						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+					}
+			}).join("")}</div>`)
+		})
+	}
+}
+
+// ******* Tab Menu Functions *********
 
 function makeTabMenu(track, holder){
 	const tabs = []
@@ -408,7 +489,7 @@ function tabArray(tabs, track){
 function makeTab(track, arg, div) {
 	addMessage(arg.message, div)
 
-	const buttons_div = div.append('div')
+	const buttons_div = div.append('div').style('border-bottom', '4px darkgray solid')
 	const collapse_div = div.append('div')
 
 	addButtons(arg.buttons, buttons_div)
@@ -428,74 +509,4 @@ function makeTab(track, arg, div) {
 
 		runproteinpaint(Object.assign(runpp_arg, call))
 
-}
-
-function addButtons(arg, div){
-	const buttons = arg
-	if (buttons){
-		buttons.forEach(button => {
-			const sandboxButton = makeButton(div, button.name)
-				sandboxButton.on('click', () => {
-					if (button.download){
-						event.stopPropagation();
-						window.open(`${button.download}`, '_self', 'download')
-					} else {
-						event.stopPropagation();
-						window.open(`${button.link}`, '_blank')
-					}
-				})
-			})
-		}
-}
-
-
-function makeButton(div, text) {
-	const button = div
-		.append('button')
-		.attr('type', 'submit')
-		.attr('class', 'sjpp-sandbox-btn')
-		.style('background-color', '#cfe2f3')
-		.style('margin', '20px')
-		.style('padding', '8px')
-		.style('border', 'none')
-		.style('border-radius', '3px')
-		.style('display', 'inline-block')
-		.text(text)
-
-	return button
-}
-
-function makeArrowBtns(arg, div, collaspeDiv) {
-	const arrows = arg
-	if (arrows){
-		arrows.forEach(arrow => {
-			const arrow_btn = makeButton(div, arrow.name + ' ▼')
-			arrow_btn.on('click', () => {
-				if (contents.style('display') == 'none') {
-					contents.style('display', 'block')
-					select(event.target).text(arrow.name + ' ▲').style('color','whitesmoke').style('background-color', '#487ba8')
-				} else {
-					contents.style('display', 'none')
-					select(event.target).text(arrow.name + ' ▼').style('color', 'black').style('background-color','#cfe2f3')
-				}
-			})
-			const links = arrow.links
-			const contents = collaspeDiv.append('div')
-			contents
-				.style('display', 'none')
-				.style('border', 'gray solid')
-				.style('border-width', '1px 0px')
-				.html(`<div style="margin:10px">
-				${arrow.message ? `<div>${arrow.message}</div>`: ''}
-				${links.map((hyperlink)=>{
-					if(!hyperlink) return ''
-					if (hyperlink.download) {
-						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
-					}
-					if(hyperlink.link) {
-						return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
-					}
-			}).join("")}</div>`)
-		})
-	}
 }
