@@ -316,8 +316,8 @@ tape('regression.R', async function(test) {
 		.trim()
 		.split('\n')
 	const temp_linear_output = await lines2R('regression.R', temp_linear_input, ['linear'])
-	console.log('\nResults of linear regression analysis:')
-	console.log(temp_linear_output.join('\n'))
+	// console.log('\nResults of linear regression analysis:')
+	// console.log(temp_linear_output.join('\n'))
 	// view logistic regression results
 	const temp_logistic_input = fs
 		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.logistic.pcs.txt'), {
@@ -326,8 +326,8 @@ tape('regression.R', async function(test) {
 		.trim()
 		.split('\n')
 	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])
-	console.log('\nResults of logistic regression analysis:')
-	console.log(temp_logistic_output.join('\n'))
+	// console.log('\nResults of logistic regression analysis:')
+	// console.log(temp_logistic_output.join('\n'))
 	console.log()
 	// test linear regression (dummy data)
 	const linear_input = []
@@ -351,7 +351,11 @@ tape('regression.R', async function(test) {
 		'treatment\t1\t9.862\t7.63431513220405\t12.0896848677959\t0.000336206332751672'
 	]
 	const linear_output = await lines2R('regression.R', linear_input, ['linear'])
-	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
+	test.deepEqual(
+		linear_output.map(normalizeRows),
+		linear_expected.map(normalizeRows),
+		'linear regression should match expected output'
+	)
 	// test logistic regression (dummy data)
 	const logistic_input = []
 	logistic_input.push('outcome\tgender\trace\tage\ttreatment')
@@ -394,6 +398,15 @@ tape('regression.R', async function(test) {
 		'treatment\t1\t7.94423707038977\t0.702295942209158\t224.333845666779\t0.132378414894869'
 	]
 	const logistic_output = await lines2R('regression.R', logistic_input, ['logistic'])
-	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
+
+	test.deepEqual(
+		logistic_output.map(normalizeRows),
+		logistic_expected.map(normalizeRows),
+		'logistic regression should match expected output'
+	)
 	test.end()
 })
+
+function normalizeRows(d, i) {
+	i === 0 ? d : d.split('\t').map((v, j) => (j < 2 ? v : Number(v).toFixed(5)))
+}
