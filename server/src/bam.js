@@ -2173,9 +2173,9 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
 					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement > r.width && r.x < xoff) {
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.width, group.stackheight)
-					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff < r.x) {
+					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
 						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
@@ -2218,9 +2218,9 @@ function plot_segment(ctx, segment, y, group, q) {
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement > r.width && r.x <= xoff) {
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.width, group.stackheight)
-					} else if (xoff < r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
+					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
 						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					xoff += r.ntwidth
