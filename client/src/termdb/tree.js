@@ -405,12 +405,11 @@ function setRenderers(self) {
 				if (term.samplecount !== undefined) {
 					div
 						.append('div')
-						.attr('class', 'sja_mcdot')
+						.style('font-size', '.8em')
 						.style('display', 'inline-block')
 						.style('margin-left', '5px')
 						.style('color', term.samplecount ? '#777' : '#ddd')
-						.style('background-color', term.samplecount ? '#f2f2f2' : '')
-						.text(term.samplecount)
+						.text('n=' + term.samplecount)
 				}
 			} else if (self.opts.set_custombtns) {
 				self.opts.set_custombtns(term, div.append('div').style('display', 'inline-block'), termIsDisabled, cls_termview)

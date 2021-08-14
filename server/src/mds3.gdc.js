@@ -885,12 +885,17 @@ export async function init_dictionary(ds) {
 		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
 	}
-	init_termdb_queries(ds.cohort.termdb, ds)
 
 	//step 4: prune the tree
 	// Quick fix: added 'program' to prune_terms
 	// because gdc query is giving error while querying child terms for this term
-	const prune_terms = ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm', 'observation']
+	const prune_terms = [
+		'ssm_occurrence_autocomplete',
+		'ssm_occurrence_id',
+		'ssm',
+		'observation',
+		'available_variation_data'
+	]
 	for (const term_id of prune_terms) {
 		if (id2term.has(term_id)) {
 			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
@@ -908,75 +913,67 @@ export async function init_dictionary(ds) {
 	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
 	if (children.length) children.forEach(t => (t.parent_id = undefined))
 	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+
+	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
+	Object.freeze(ds.cohort.termdb.id2term)
+	init_termdb_queries(ds.cohort.termdb, ds)
 }
 
 function init_termdb_queries(termdb, ds) {
 	const q = (termdb.q = {})
-	const default_vocab = 'ssm_occurance'
 
 	{
-		const cache = new Map()
-		q.getRootTerms = async (vocab = default_vocab, treeFilter = null) => {
-			const cacheId = vocab + ';;' + treeFilter
-			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
+		q.getRootTerms = async (vocab, treeFilter = null) => {
 			// find terms without term.parent_id
-			const re = terms.filter(t => t.parent_id == undefined)
-			if (treeFilter) await flag_empty_terms(re, treeFilter)
-			cache.set(cacheId, re)
+			const terms = []
+			termdb.id2term.forEach((v, k) => {
+				if (v.parent_id == undefined) terms.push(v)
+			})
+			const re = JSON.parse(JSON.stringify(terms))
+			if (treeFilter) await add_terms_samplecount(re, treeFilter)
 			return re
 		}
 	}
 
 	{
-		const cache = new Map()
-		q.getTermChildren = async (id, vocab = default_vocab, treeFilter = null) => {
-			const cacheId = id + ';;' + vocab + ';;' + treeFilter
-			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
+		q.getTermChildren = async (id, vocab, treeFilter = null) => {
 			// find terms which have term.parent_id as clicked term
-			const re = terms.filter(t => t.parent_id == id)
-			// query terms with 0 sample count for treeFilter
-			if (treeFilter) await flag_empty_terms(re, treeFilter)
-			cache.set(cacheId, re)
+			const terms = []
+			termdb.id2term.forEach((v, k) => {
+				if (v.parent_id == id) terms.push(v)
+			})
+			const re = JSON.parse(JSON.stringify(terms))
+			if (treeFilter) await add_terms_samplecount(re, treeFilter)
 			return re
 		}
 	}
 
 	{
-		const cache = new Map()
-		q.findTermByName = async (
-			searchStr,
-			limit = null,
-			vocab = default_vocab,
-			exclude_types = [],
-			treeFilter = null
-		) => {
+		q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
 			searchStr = searchStr.toLowerCase() // convert to lowercase
 			// replace space with _ to match with id of terms
 			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
-			const cacheId = searchStr + ';;' + vocab + ';;' + treeFilter
-			if (cache.has(cacheId)) return cache.get(cacheId)
-			const terms = JSON.parse(JSON.stringify([...termdb.id2term.values()]))
 			// find terms that have term.id containing search string
-			const re = terms.filter(t => t.id.includes(searchStr))
-			// query terms with 0 sample count for treeFilter
-			if (treeFilter) await flag_empty_terms(re, treeFilter)
-			cache.set(cacheId, re)
+			const terms = []
+			termdb.id2term.forEach((v, k) => {
+				if (v.id.includes(searchStr)) terms.push(v)
+			})
+			const re = JSON.parse(JSON.stringify(terms))
+			// find terms that have term.id containing search string
+			if (treeFilter) await add_terms_samplecount(re, treeFilter)
 			return re
 		}
 	}
 
 	{
-		const cache = new Map()
 		q.getAncestorIDs = id => {
-			if (cache.has(id)) return cache.get(id)
-			const terms = [...termdb.id2term.values()]
-			const search_term = terms.find(t => t.id == id)
+			let search_term
+			termdb.id2term.forEach((v, k) => {
+				if (v.id == id) search_term = v
+			})
 			// ancestor terms are already defined in term.path seperated by '.'
 			let re = search_term.path ? search_term.path.split('.') : ['']
 			if (re.length > 1) re.pop()
-			cache.set(id, re)
 			return re
 		}
 	}
@@ -988,7 +985,7 @@ function init_termdb_queries(termdb, ds) {
 		}
 	}
 
-	async function flag_empty_terms(terms, treeFilter) {
+	async function add_terms_samplecount(terms, treeFilter) {
 		let termlst = []
 		for (const term of terms) {
 			if (term)
