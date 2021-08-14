@@ -1944,6 +1944,8 @@ function plot_template(ctx, template, group, q) {
 		// one box per template
 		const r = group.regions[template.segments[0].ridx] // this region where the segment falls into
 		r.width = group.widths[template.segments[0].ridx]
+		//console.log('r.x:', r.x)
+		//console.log('r.width:', r.width)
 		let box
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
@@ -2210,8 +2212,12 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+						//console.log('xoff:', xoff)
+						//console.log('xoff + r.ntwidth + ntboxwidthincrement:', xoff + r.ntwidth + ntboxwidthincrement)
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement > r.width && r.x <= xoff) {
+						ctx.fillRect(xoff, y, r.width, group.stackheight)
 					}
 					xoff += r.ntwidth
 				})
