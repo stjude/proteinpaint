@@ -105,7 +105,10 @@ function setRenderers(self) {
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
-		data.lst.forEach(t => {if(t.disabled) self.opts.disable_terms.push(t.id)})
+		if (self.opts.disable_terms)
+			data.lst.forEach(t => {
+				if (t.disabled) self.opts.disable_terms.push(t.id)
+			})
 		self.clear()
 		self.dom.resultDiv
 			.append('table')
@@ -145,6 +148,16 @@ function setRenderers(self) {
 						self.clear()
 						self.dom.input.property('value', '')
 					})
+			}
+			//show sample count for a term
+			if (term.samplecount !== undefined) {
+				tr.append('td')
+					.append('div')
+					.style('font-size', '.8em')
+					.style('display', 'inline-block')
+					.style('margin-left', '5px')
+					.style('color', term.samplecount ? '#777' : '#ddd')
+					.text('n=' + term.samplecount)
 			}
 		} else {
 			// as regular button, click to expand tree
