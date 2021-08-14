@@ -2251,7 +2251,9 @@ function plot_segment(ctx, segment, y, group, q) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				for (let i = 0; i < b.s.length; i++) {
-					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
+						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					}
 				}
 			}
 			continue
