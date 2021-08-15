@@ -1944,8 +1944,6 @@ function plot_template(ctx, template, group, q) {
 		// one box per template
 		const r = group.regions[template.segments[0].ridx] // this region where the segment falls into
 		r.width = group.widths[template.segments[0].ridx]
-		//console.log('r.x:', r.x)
-		//console.log('r.width:', r.width)
 		let box
 		if (!q.asPaired) {
 			// single reads are in multiple "templates", tell if its first/last to identify
@@ -2174,7 +2172,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
-						ctx.fillRect(xoff, y, r.width, group.stackheight)
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
 					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
 						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
@@ -2219,9 +2217,9 @@ function plot_segment(ctx, segment, y, group, q) {
 					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
-						ctx.fillRect(xoff, y, r.width, group.stackheight)
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
 					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
-						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
 					xoff += r.ntwidth
 				})
@@ -2239,6 +2237,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
