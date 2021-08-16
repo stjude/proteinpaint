@@ -421,26 +421,11 @@ const variant2samples = {
 	size: 100000,
 	// Note: case.case_id seems extra field just for sunburst,
 	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
-	fields_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
-	fields_summary: [
-		'case.project.project_id',
-		'case.case_id',
-		'case.disease_type',
-		'case.primary_site',
-		'case.demographic.gender',
-		'case.diagnoses.age_at_diagnosis',
-		'case.demographic.race',
-		'case.demographic.ethnicity'
-	],
+	fields_sunburst: ['disease_type', 'primary_site', 'case_id'],
+	// Note: observation node and children terms are removed from gdc dictionary,
+	// so have to use entire path
 	fields_samples: [
-		'case.project.project_id',
 		'case.case_id',
-		'case.disease_type',
-		'case.primary_site',
-		'case.demographic.gender',
-		'case.diagnoses.age_at_diagnosis',
-		'case.demographic.race',
-		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
 		'case.observation.read_depth.t_depth',
 		'case.observation.read_depth.n_depth',
