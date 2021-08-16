@@ -56,6 +56,8 @@ if(regressionType == "linear"){
 }
 
 #Reformat results table
+out[,1:3] <- round(out[,1:3],3)
+out[,4] <- signif(out[,4],4)
 out <- as.data.frame(out)
 names(out)[2:3] <- c("ci_low","ci_high")
 out[,c("variable","category")] <- ""

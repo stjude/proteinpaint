@@ -328,7 +328,8 @@ tape('regression.R', async function(test) {
 	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])
 	// console.log('\nResults of logistic regression analysis:')
 	// console.log(temp_logistic_output.join('\n'))
-	console.log()
+	// console.log()
+
 	// test linear regression (dummy data)
 	const linear_input = []
 	linear_input.push('outcome\tgender\trace\tage\ttreatment')
@@ -344,18 +345,14 @@ tape('regression.R', async function(test) {
 	linear_input.push('2.61\tmale\twhite\t20-30\t0')
 	const linear_expected = [
 		'variable\tcategory\tbeta\tci_low\tci_high\tpvalue',
-		'(Intercept)\t\t5.8888\t2.38063836203155\t9.39696163796845\t0.021713627787497',
-		'gender\tmale\t-3.01866666666667\t-5.59097558284996\t-0.446357750483374\t0.0697667998041969',
-		'race\twhite\t-2.12533333333333\t-4.69764224951662\t0.446975582849958\t0.166288056140928',
-		'age\t20-30\t1.4856\t-0.87196006384395\t3.84316006384395\t0.27167670283677',
-		'treatment\t1\t9.862\t7.63431513220405\t12.0896848677959\t0.000336206332751672'
+		'(Intercept)\t\t5.889\t2.381\t9.397\t0.02171',
+		'gender\tmale\t-3.019\t-5.591\t-0.446\t0.06977',
+		'race\twhite\t-2.125\t-4.698\t0.447\t0.1663',
+		'age\t20-30\t1.486\t-0.872\t3.843\t0.2717',
+		'treatment\t1\t9.862\t7.634\t12.09\t0.0003362'
 	]
 	const linear_output = await lines2R('regression.R', linear_input, ['linear'])
-	test.deepEqual(
-		linear_output.map(normalizeRows),
-		linear_expected.map(normalizeRows),
-		'linear regression should match expected output'
-	)
+	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
 	// test logistic regression (dummy data)
 	const logistic_input = []
 	logistic_input.push('outcome\tgender\trace\tage\ttreatment')
@@ -391,22 +388,14 @@ tape('regression.R', async function(test) {
 	logistic_input.push('0\tmale\twhite\t20-30\t0')
 	const logistic_expected = [
 		'variable\tcategory\tor\tci_low\tci_high\tpvalue',
-		'(Intercept)\t\t1.8456049687327\t0.0581953187371214\t59.3400845171907\t0.720556454533045',
-		'gender\tmale\t0.467366884946827\t0.0332139802436181\t5.91530214371349\t0.545970785381884',
-		'race\twhite\t8.83753634809958\t0.983522668968006\t227.068675248132\t0.0931566773110637',
-		'age\t20-30\t0.0623399264570023\t0.00195082937143074\t0.601979422982988\t0.045555432219403',
-		'treatment\t1\t7.94423707038977\t0.702295942209158\t224.333845666779\t0.132378414894869'
+		'(Intercept)\t\t1.846\t0.058\t59.34\t0.7206',
+		'gender\tmale\t0.467\t0.033\t5.915\t0.546',
+		'race\twhite\t8.838\t0.984\t227.069\t0.09316',
+		'age\t20-30\t0.062\t0.002\t0.602\t0.04556',
+		'treatment\t1\t7.944\t0.702\t224.334\t0.1324'
 	]
 	const logistic_output = await lines2R('regression.R', logistic_input, ['logistic'])
 
-	test.deepEqual(
-		logistic_output.map(normalizeRows),
-		logistic_expected.map(normalizeRows),
-		'logistic regression should match expected output'
-	)
+	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
 	test.end()
 })
-
-function normalizeRows(d, i) {
-	i === 0 ? d : d.split('\t').map((v, j) => (j < 2 ? v : Number(v).toFixed(5)))
-}
