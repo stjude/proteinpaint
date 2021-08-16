@@ -2006,7 +2006,7 @@ export function gmlst2loci(gmlst) {
 	return locs
 }
 
-export function tab2box(holder, tabs, runall) {
+export function tab2box(holder, tabs, runall, tabheader) {
 	/*
 tabs[ tab{} ]
 	.label:
@@ -2032,6 +2032,16 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 		.style('border-left', 'solid 1px #aaa')
 		.style('padding', '10px')
 	const has_acitve_tab = tabs.findIndex(t => t.active) == -1 ? false : true
+
+	if (tabheader) {
+		const tHeader = tdleft
+			.append('div')
+			.style('padding', '5px 10px')
+			.style('margin', '5px 5px 10px 5px')
+			.style('font-weight', '550')
+			.text(tabheader)
+	}
+
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
 

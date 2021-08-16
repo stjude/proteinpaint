@@ -52,7 +52,7 @@
                             }
                         ]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"rect": 20 }
                     }
                 }
@@ -246,6 +246,21 @@
                             "color": "teal"
                         }]
                     },
+                    "arrowButtons": [
+                        {
+                            "name": "Test",
+                            "links": [
+                               {
+                                   "name": "Google",
+                                   "link": "https://www.google.com/"
+                                },
+                                {
+                                    "name": "BBC",
+                                    "link": "https://www.bbc.com/"
+                                }
+                            ]
+                        }
+                    ],
                     "testSpec": { 
                         "expected": {"image": 2 }
                     }
