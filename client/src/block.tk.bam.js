@@ -276,10 +276,10 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.read_limit_text.attr('transform', 'scale(0)')
 	}
 
-	if (tk.gdc) {
-		// XXX delete later
-		may_render_gdc(data, tk, block)
-	}
+	//if (tk.gdc) {
+	//	// XXX delete later
+	//	may_render_gdc(data, tk, block)
+	//}
 
 	may_render_variant(data, tk, block)
 
@@ -338,29 +338,29 @@ function may_render_gdc(data, tk, block) {
 	}
 
 	// will render gdc region box in a row
-	tk.dom.gdc_g
-		.append('rect')
-		.attr('x', x1)
-		.attr('width', x2 - x1)
-		.attr('height', tk.dom.gdcrowheight - 2)
-
-	const gdc_string = 'Query region'
-	// Determining where to place the text. Before, inside or after the box
-	let gdc_start_text_pos = 0
-	const space_param = 10
-	const pad_param = 15
-	if (gdc_string.length * space_param < x1) {
-		gdc_start_text_pos = 0
-	} else {
-		gdc_start_text_pos = x2 + pad_param
-	}
-
-	tk.dom.gdc_g
-		.append('text')
-		.attr('x', gdc_start_text_pos)
-		.attr('y', tk.dom.gdcrowheight)
-		.attr('font-size', tk.dom.gdcrowheight)
-		.text(gdc_string)
+	//tk.dom.gdc_g
+	//	.append('rect')
+	//	.attr('x', x1)
+	//	.attr('width', x2 - x1)
+	//	.attr('height', tk.dom.gdcrowheight - 2)
+	//
+	//const gdc_string = 'Query region'
+	//// Determining where to place the text. Before, inside or after the box
+	//let gdc_start_text_pos = 0
+	//const space_param = 10
+	//const pad_param = 15
+	//if (gdc_string.length * space_param < x1) {
+	//	gdc_start_text_pos = 0
+	//} else {
+	//	gdc_start_text_pos = x2 + pad_param
+	//}
+	//
+	//tk.dom.gdc_g
+	//	.append('text')
+	//	.attr('x', gdc_start_text_pos)
+	//	.attr('y', tk.dom.gdcrowheight)
+	//	.attr('font-size', tk.dom.gdcrowheight)
+	//	.text(gdc_string)
 }
 
 function may_render_variant(data, tk, block) {
@@ -473,10 +473,10 @@ function setTkHeight(tk) {
 		tk.dom.read_limit_text.attr('y', h)
 		h += tk.dom.read_limit_bottompad
 	}
-	if (tk.gdc) {
-		tk.dom.gdc_g.attr('transform', 'translate(0,' + h + ')')
-		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
-	}
+	//if (tk.gdc) {
+	//	tk.dom.gdc_g.attr('transform', 'translate(0,' + h + ')')
+	//	h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	//}
 	if (tk.dom.variantg) {
 		tk.dom.variantg.attr('transform', 'translate(0,' + h + ')')
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
@@ -622,11 +622,11 @@ function makeTk(tk, block) {
 	}
 
 	///////////// row #4: gdc region XXX delete and replace with bedj indicator track
-	if (tk.gdc) {
-		tk.dom.gdc_g = tk.glider.append('g')
-		tk.dom.gdcrowheight = 15
-		tk.dom.gdcrowbottompad = 5
-	}
+	//if (tk.gdc) {
+	//	tk.dom.gdc_g = tk.glider.append('g')
+	//	tk.dom.gdcrowheight = 15
+	//	tk.dom.gdcrowbottompad = 5
+	//}
 
 	///////////// row #5+: one for each group; <g> of a group is added dynamically to glider
 
