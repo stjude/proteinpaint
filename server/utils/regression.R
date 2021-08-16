@@ -55,9 +55,12 @@ if(regressionType == "linear"){
   stop("regression type is not recognized")
 }
 
-#Reformat results table
+#Round the beta/or and ci values to 3 decimal places 
 out[,1:3] <- round(out[,1:3],3)
+#Round the p-values to 4 significant digits
 out[,4] <- signif(out[,4],4)
+
+#Reformat results table
 out <- as.data.frame(out)
 names(out)[2:3] <- c("ci_low","ci_high")
 out[,c("variable","category")] <- ""
