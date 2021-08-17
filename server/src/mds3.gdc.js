@@ -521,25 +521,34 @@ export async function get_cohortTotal(api, ds, q) {
 
 export async function get_termlst2size(args) {
 	const { api, ds, termlst, q, treeFilter } = args
+	const query = api.query(termlst)
+	const filter = api.filters(treeFilter)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query(termlst), variables: api.filters(treeFilter) })
+		body: JSON.stringify({ query, variables: filter })
 	})
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for cohortTotal'
+		throw 'invalid JSON from GDC for cohortTotal for query :' + query + ' and filter: ' + filter
 	}
 	let h = re[api.keys[0]]
 	for (let i = 1; i < api.keys.length; i++) {
 		h = h[api.keys[i]]
-		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
+		if (!h)
+			throw '.' +
+				api.keys[i] +
+				' missing from data structure of termid2totalsize for query :' +
+				query +
+				' and filter: ' +
+				filter
 	}
 	for (const term of termlst) {
-		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets'])) throw api.keys.join('.') + ' not array'
+		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
+			throw api.keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
 		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
-			throw api.keys.join('.') + ' not object'
+			throw api.keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
 		}
 	}
 	// return total size here attached to entires

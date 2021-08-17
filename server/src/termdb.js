@@ -38,9 +38,9 @@ export function handle_request_closure(genomes) {
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
-			if (q.get_children) return trigger_children(q, res, tdb)
-			if (q.findterm) return trigger_findterm(q, res, tdb)
+			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
+			if (q.get_children) return await trigger_children(q, res, tdb)
+			if (q.findterm) return await trigger_findterm(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
