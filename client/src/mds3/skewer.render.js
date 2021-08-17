@@ -31,7 +31,7 @@ const modefold = 0
 const modeshow = 1
 const middlealignshift = 0.3
 const disclabelspacing = 1 // px spacing between disc and label
-const minoccur4sunburst = 5 // minimum occurrence for showing skewer, maybe ds specific
+const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
 
 /*
 sets tk.skewer.maxheight

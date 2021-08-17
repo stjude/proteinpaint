@@ -363,23 +363,30 @@ samplefilterset:
 
 /*
 Stream javascript data into R.
-<Rscript>: name of R script (assumed to be located in server/utils/).
-<lines>: javascript array of data lines.
+<Rscript>: name of R script (assumed to be located in server/utils/)
+<lines>: array of data lines.
+<addArgs>: optional array of additional arguments into R script.
 Data lines are streamed into the standard input of the R script.
 The return value is an array of lines of standard output from the R script.
 */
-exports.lines2R = async function(Rscript, lines) {
+exports.lines2R = async function(Rscript, lines, addArgs) {
 	const RscriptPath = path.join(serverconfig.binpath, 'utils', Rscript)
 	try {
 		await fs.promises.stat(RscriptPath)
 	} catch (e) {
 		throw 'R script not usable'
 	}
+	let args
+	if (addArgs) {
+		args = [RscriptPath, ...addArgs]
+	} else {
+		args = [RscriptPath]
+	}
 	const table = lines.join('\n') + '\n'
 	const stdout = []
 	const stderr = []
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [RscriptPath])
+		const sp = spawn('Rscript', args)
 		Readable.from(table).pipe(sp.stdin)
 		sp.stdout.on('data', data => stdout.push(data))
 		sp.stderr.on('data', data => stderr.push(data))

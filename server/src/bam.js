@@ -2169,12 +2169,16 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
+						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x < xoff + r.ntwidth / 2) {
+						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x <= xoff + r.ntwidth / 2) {
 							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 						}
 					}
@@ -2210,8 +2214,12 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
+						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
 					xoff += r.ntwidth
 				})
@@ -2229,6 +2237,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
@@ -2241,7 +2250,9 @@ function plot_segment(ctx, segment, y, group, q) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				for (let i = 0; i < b.s.length; i++) {
-					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
+						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					}
 				}
 			}
 			continue

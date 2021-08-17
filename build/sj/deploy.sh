@@ -153,9 +153,12 @@ RECENT=$(./help.sh $USERatREMOTE recent)
 if [[ $(echo -e "$RECENT" | grep -l $REV) != "" ]]; then
 	echo -e "\n"
 	echo -e "Build version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
-	echo -e "You can activate it using './help.sh activate $REV' from $REMOTEHOST:$REMOTEDIR."
-	echo -e "\n"
-	exit 1
+	echo -e "Re-activating this build in the remote server ..."
+	ssh -t $USERatREMOTE "
+	cd $REMOTEDIR
+	./helpers/activate.sh $REV
+	"
+	exit 0
 fi
 
 #################################

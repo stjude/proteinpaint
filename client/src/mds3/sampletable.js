@@ -1,4 +1,4 @@
-import { fillbar, tab2box, Menu } from '../client'
+import { fillbar, tab2box, Menu, to_textfile } from '../client'
 import { make_densityplot } from '../common/dom/densityplot'
 import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
 import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
@@ -146,6 +146,7 @@ async function make_multiSampleTable(args) {
 	const default_from = 0
 	let current_from = parseInt(from) || default_from
 	const pagination = arg.totalcases > cutoff_tableview
+	const lines = (arg.download_data = [])
 	arg.tk.mds.variant2samples.visibleterms = arg.tk.mds.variant2samples.termidlst
 	if (pagination) {
 		arg.size = current_size
@@ -158,9 +159,13 @@ async function make_multiSampleTable(args) {
 	holder.selectAll('*').remove()
 	// for tid2values coming from sunburst ring, create list at top of summary & list tabs
 	if (no_tabs) {
-		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, holder)
-		init_dictionary_ui(holder, arg)
-		init_remove_terms_menu(holder, arg)
+		const ring_terms_holder = holder.append('div')
+		const pill_holder = holder.append('div').style('padding', '20px 0')
+		if (arg.tid2value_orig.size) make_sunburst_tidlist(arg, ring_terms_holder)
+		init_dictionary_ui(pill_holder, arg)
+		init_download(pill_holder, arg)
+		// TODO: enable and move later in CONFIG
+		// init_remove_terms_menu(pill_holder, arg)
 	}
 
 	// use booleen flags to determine table columns based on these samples
@@ -222,8 +227,14 @@ async function make_multiSampleTable(args) {
 		get_table_header(grid_div, 'NORMAL DEPTH')
 	}
 
+	let line = []
+	const header_divs = grid_div.selectAll('div')._groups[0]
+	header_divs.forEach(n => line.push(n.innerText))
+	lines.push(line.join('\t'))
+
 	// one row per sample
 	for (const [i, sample] of data.entries()) {
+		let line = []
 		if (has_sampleid) {
 			const cell = get_table_cell(grid_div, i)
 			if (sample.sample_id) {
@@ -241,6 +252,7 @@ async function make_multiSampleTable(args) {
 				} else {
 					cell.text(sample.sample_id)
 				}
+				line.push(sample.sample_id)
 			}
 		}
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
@@ -248,6 +260,7 @@ async function make_multiSampleTable(args) {
 			if (arg.tid2value_orig.has(term.id.toLowerCase())) continue
 			const cell = get_table_cell(grid_div, i)
 			cell.text(sample[termid] || 'N/A')
+			line.push(sample[termid] || 'N/A')
 		}
 		if (has_ssm_depth) {
 			const cell1 = get_table_cell(grid_div, i) // tumor
@@ -262,8 +275,11 @@ async function make_multiSampleTable(args) {
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
 				cell2.text(sm.totalNormal || 'N/A')
+				line.push(sm.altTumor + ' / ' + sm.totalTumor)
+				line.push(sm.totalNormal || 'N/A')
 			}
 		}
+		lines.push(line.join('\t'))
 	}
 
 	// pages and option to change samples per size (only for pagination)
@@ -275,7 +291,9 @@ async function make_multiSampleTable(args) {
 	let columns = []
 	const column_nodes = grid_div.selectAll(`div:nth-child(-n+${col_count})`)._groups[0]
 	column_nodes.forEach(n => columns.push(n.innerText))
-	make_column_showhide_menu(arg, columns, header_div, grid_div)
+	// TODO: hide this button for now,
+	// varify after GDC demo and redesigning config menu if this feature will be useful
+	// make_column_showhide_menu(arg, columns, header_div, grid_div)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -286,6 +304,7 @@ async function make_multiSampleSummaryList(args) {
 	// reset tid2value to original when new term added, to remove any existing filter
 	if (new_term) arg.tid2value = JSON.parse(JSON.stringify(arg.tid2value_orig))
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
+	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
@@ -325,9 +344,21 @@ async function make_multiSampleSummaryList(args) {
 		{ label: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
 	]
 
+	// gather summary data in for download
+	const lines = (arg.download_data = [])
+	for (const entry of data) {
+		if (entry.numbycategory) {
+			for (const [category, count] of entry.numbycategory) {
+				lines.push(entry.name + '\t' + category + '\t' + count)
+			}
+		}
+	}
+
 	init_tabs(holder, main_tabs)
 	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
-	init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
+	init_download(main_tabs.holder, arg, main_tabs)
+	// TODO: enable and move later in CONFIG
+	// init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')
 }
 
@@ -336,12 +367,12 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 	const add_btn = holder
 		.append('div')
 		.style('display', 'inline-block')
-		.attr('class', 'sja_filter_tag_btn')
+		.attr('class', 'sja_menuoption')
 		.style('margin-left', '20px')
 		.style('border-radius', '6px')
 		.style('padding', '6px 10px')
 		.style('cursor', 'pointer')
-		.text('+ Add fields')
+		.text('Add fields')
 		.on('click', async () => {
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: add_btn })
@@ -352,11 +383,12 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 				state: {
 					dslabel: arg.tk.dslabel,
 					genome: arg.block.genome.name,
+					treeFilter: {
+						tid2value: arg.tid2value,
+						ssm_id_lst: arg.mlst.map(i => i.ssm_id).join(',')
+					},
 					nav: {
 						header_mode: 'search_only'
-					},
-					tree: {
-						expandedTermIds: ['case']
 					}
 				},
 				tree: {
@@ -369,12 +401,30 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 								make_multiSampleSummaryList({ arg, holder: main_holder, new_term: term })
 							else if (active_tab && active_tab.label == 'List')
 								make_multiSampleTable({ arg, holder: active_tab.holder })
-							else make_multiSampleTable({ arg, holder, no_tabs: true })
+							else make_multiSampleTable({ arg, holder: main_holder, no_tabs: true })
 						}
 					},
-					disable_terms: arg.tk.mds.variant2samples.termidlst
+					disable_terms: JSON.parse(JSON.stringify(arg.tk.mds.variant2samples.termidlst))
 				}
 			})
+		})
+}
+
+function init_download(holder, arg, main_tabs) {
+	// download button
+	holder
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_menuoption')
+		.style('margin-left', '20px')
+		.style('border-radius', '6px')
+		.style('padding', '6px 10px')
+		.style('cursor', 'pointer')
+		.text('Download')
+		.on('click', () => {
+			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
+			const file_name = active_tab ? active_tab.label : 'List'
+			to_textfile(file_name, arg.download_data.join('\n'))
 		})
 }
 
@@ -546,8 +596,8 @@ async function make_summary_panel(arg, div, category, main_tabs) {
 				}
 				const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
 				arg.tid2value[term.id] = [
-					{ op: '>=', range: Math.round(range.range_start) },
-					{ op: '<=', range: Math.round(range.range_end) }
+					{ op: '>=', range: Math.round(range.range_start / (term.unit_conversion || 1)) },
+					{ op: '<=', range: Math.round(range.range_end / (term.unit_conversion || 1)) }
 				]
 				delete main_tabs[0].active
 				main_tabs[1].active = true
@@ -581,6 +631,16 @@ function make_sunburst_tidlist(arg, holder) {
 			.style('width', 'auto')
 			.style('justify-self', 'stretch')
 			.text(arg.tid2value[termid])
+	}
+
+	// show occurance for sunburst ring
+	if (arg.totalcases) {
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text('Occurrence')
+		cell2
+			.style('width', 'auto')
+			.style('justify-self', 'stretch')
+			.text(arg.totalcases)
 	}
 }
 
@@ -642,7 +702,7 @@ function make_filter_pill(arg, filter_holder, page_holder) {
 	function get_value(values) {
 		if (typeof values == 'string') return values
 		else {
-			const vals = values.map(a => a.range)
+			const vals = values.map(a => (a.range * (term.unit_conversion || 1)).toFixed(2))
 			const num_value = Math.min(...vals) + ' <= x <= ' + Math.max(...vals)
 			return num_value
 		}

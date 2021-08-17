@@ -1,14 +1,8 @@
 const tape = require('tape')
 const fs = require('fs')
 const lines2R = require('../../src/utils').lines2R
-
-/**************
- R scripts
-***************/
-const hweScript = 'hwe.R'
-const fisherScript = 'fisher.R'
-const fisher2x3script = 'fisher.2x3.R'
-const kmScript = 'km.R'
+const serverconfig = require('../../serverconfig')
+const path = require('path')
 
 /**************
  Test sections
@@ -20,19 +14,16 @@ tape('\n', function(test) {
 
 let output
 
-// hwe.R tests
 tape('hwe.R', async function(test) {
-	//Test invalid input
 	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
 	try {
-		output = await lines2R(hweScript, invalidInput)
+		output = await lines2R('hwe.R', invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
 	}
-	//Test valid input
 	const validInput = ['68\t28\t4', '5\t40\t3', '56\t4\t43', '83\t45\t13']
-	output = await lines2R(hweScript, validInput)
+	output = await lines2R('hwe.R', validInput)
 	test.deepEqual(
 		output.map(Number),
 		[0.515367, 0.000006269428, 1.385241e-24, 0.07429809],
@@ -41,17 +32,14 @@ tape('hwe.R', async function(test) {
 	test.end()
 })
 
-// fisher.R tests
 tape('fisher.R', async function(test) {
-	//Test invalid input
 	const invalidInput = 'gene1\t2\t10\t15\t3,gene2\t4\t74\t67\t9,gene3\t12\t17\t1000\t1012,gene4\t13\t25\t37\t19'
 	try {
-		output = await lines2R(fisherScript, invalidInput)
+		output = await lines2R('fisher.R', invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
 	}
-	//Test valid input
 	const validInput = [
 		'chr17.7666870.T.C\t1678\t2828\t25242\t39296',
 		'chr17.7667504.G.C\t179\t4327\t2884\t61648',
@@ -59,7 +47,7 @@ tape('fisher.R', async function(test) {
 		'chr17.7667610.C.T\t3551\t955\t51344\t12996',
 		'chr17.7667611.A.G\t3556\t950\t51358\t12974'
 	]
-	output = await lines2R(fisherScript, validInput)
+	output = await lines2R('fisher.R', validInput)
 	test.deepEqual(
 		output,
 		[
@@ -74,18 +62,15 @@ tape('fisher.R', async function(test) {
 	test.end()
 })
 
-// fisher.2x3.R tests
 tape('fisher.2x3.R', async function(test) {
-	//Test invalid input
 	const invalidInput =
 		'0\t506\t1451\t68\t206\t3\t11,1\t246\t1711\t24\t250\t1\t13,2\t102\t1855\t16\t258\t0\t14,3\t167\t1790\t22\t252\t2\t12,4\t174\t1783\t30\t244\t4\t10'
 	try {
-		output = await lines2R(fisher2x3script, invalidInput)
+		output = await lines2R('fisher.2x3.R', invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
 	}
-	//Test valid input
 	const validInput = [
 		'0\t506\t1451\t68\t206\t3\t11',
 		'1\t246\t1711\t24\t250\t1\t13',
@@ -93,7 +78,7 @@ tape('fisher.2x3.R', async function(test) {
 		'3\t167\t1790\t22\t252\t2\t12',
 		'4\t174\t1783\t30\t244\t4\t10'
 	]
-	output = await lines2R(fisher2x3script, validInput)
+	output = await lines2R('fisher.2x3.R', validInput)
 	test.deepEqual(
 		output,
 		[
@@ -108,17 +93,14 @@ tape('fisher.2x3.R', async function(test) {
 	test.end()
 })
 
-// km.R tests
 tape('km.R', async function(test) {
-	//Test invalid input
 	const invalidInput = 'futime\tfustat\trx,410\t1\t0,443\t0\t0,2819\t0\t0,496\t1\t0,2803\t0\t0,2983\t0\t0'
 	try {
-		output = await lines2R(kmScript, invalidInput)
+		output = await lines2R('km.R', invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
 	}
-	//Test valid input
 	const validInput = [
 		'futime\tfustat\trx',
 		'410\t1\t0',
@@ -202,7 +184,7 @@ tape('km.R', async function(test) {
 		'259\t1\t1',
 		'633\t1\t1'
 	]
-	output = await lines2R(kmScript, validInput)
+	output = await lines2R('km.R', validInput)
 	test.deepEqual(output.map(Number), [0.007], 'should match expected output')
 	test.end()
 })
@@ -322,5 +304,98 @@ tape('survival.R', async function(test) {
 		test.fail(e)
 	}
 
+	test.end()
+})
+
+tape('regression.R', async function(test) {
+	// view linear regression results
+	const temp_linear_input = fs
+		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.linear.pcs.txt'), {
+			encoding: 'utf8'
+		})
+		.trim()
+		.split('\n')
+	const temp_linear_output = await lines2R('regression.R', temp_linear_input, ['linear'])
+	// console.log('\nResults of linear regression analysis:')
+	// console.log(temp_linear_output.join('\n'))
+	// view logistic regression results
+	const temp_logistic_input = fs
+		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.logistic.pcs.txt'), {
+			encoding: 'utf8'
+		})
+		.trim()
+		.split('\n')
+	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])
+	// console.log('\nResults of logistic regression analysis:')
+	// console.log(temp_logistic_output.join('\n'))
+	// console.log()
+
+	// test linear regression (dummy data)
+	const linear_input = []
+	linear_input.push('outcome\tgender\trace\tage\ttreatment')
+	linear_input.push('10.56\tmale\tother\t10-20\t1')
+	linear_input.push('12.21\tmale\twhite\t10-20\t1')
+	linear_input.push('13.10\tfemale\twhite\t10-20\t1')
+	linear_input.push('3.42\tmale\tother\t10-20\t0')
+	linear_input.push('5.23\tfemale\twhite\t20-30\t0')
+	linear_input.push('11.02\tmale\twhite\t20-30\t1')
+	linear_input.push('15.84\tmale\tother\t20-30\t1')
+	linear_input.push('14.17\tfemale\twhite\t10-20\t1')
+	linear_input.push('1.32\tmale\twhite\t20-30\t0')
+	linear_input.push('2.61\tmale\twhite\t20-30\t0')
+	const linear_expected = [
+		'variable\tcategory\tbeta\tci_low\tci_high\tpvalue',
+		'(Intercept)\t\t5.889\t2.381\t9.397\t0.02171',
+		'gender\tmale\t-3.019\t-5.591\t-0.446\t0.06977',
+		'race\twhite\t-2.125\t-4.698\t0.447\t0.1663',
+		'age\t20-30\t1.486\t-0.872\t3.843\t0.2717',
+		'treatment\t1\t9.862\t7.634\t12.09\t0.0003362'
+	]
+	const linear_output = await lines2R('regression.R', linear_input, ['linear'])
+	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
+	// test logistic regression (dummy data)
+	const logistic_input = []
+	logistic_input.push('outcome\tgender\trace\tage\ttreatment')
+	logistic_input.push('1\tmale\tother\t10-20\t1')
+	logistic_input.push('1\tmale\twhite\t10-20\t1')
+	logistic_input.push('1\tfemale\twhite\t10-20\t1')
+	logistic_input.push('0\tmale\tother\t10-20\t0')
+	logistic_input.push('1\tfemale\twhite\t20-30\t1')
+	logistic_input.push('0\tfemale\tother\t20-30\t1')
+	logistic_input.push('0\tmale\tother\t20-30\t1')
+	logistic_input.push('1\tfemale\twhite\t10-20\t1')
+	logistic_input.push('1\tmale\twhite\t20-30\t0')
+	logistic_input.push('0\tmale\twhite\t20-30\t0')
+	logistic_input.push('1\tfemale\tother\t10-20\t1')
+	logistic_input.push('1\tmale\twhite\t10-20\t1')
+	logistic_input.push('1\tfemale\twhite\t10-20\t1')
+	logistic_input.push('1\tmale\tother\t10-20\t0')
+	logistic_input.push('1\tfemale\tother\t20-30\t1')
+	logistic_input.push('0\tmale\twhite\t20-30\t1')
+	logistic_input.push('0\tmale\tother\t20-30\t1')
+	logistic_input.push('1\tfemale\twhite\t10-20\t1')
+	logistic_input.push('1\tmale\tother\t20-30\t1')
+	logistic_input.push('0\tmale\twhite\t20-30\t0')
+	logistic_input.push('1\tmale\tother\t10-20\t1')
+	logistic_input.push('1\tfemale\twhite\t20-30\t1')
+	logistic_input.push('1\tfemale\twhite\t10-20\t1')
+	logistic_input.push('0\tmale\tother\t10-20\t0')
+	logistic_input.push('1\tfemale\twhite\t20-30\t1')
+	logistic_input.push('1\tmale\tother\t20-30\t1')
+	logistic_input.push('0\tmale\tother\t20-30\t1')
+	logistic_input.push('0\tfemale\tother\t20-30\t1')
+	logistic_input.push('1\tmale\twhite\t20-30\t0')
+	logistic_input.push('0\tmale\twhite\t20-30\t0')
+	const logistic_expected = [
+		'variable\tcategory\tor\tci_low\tci_high\tpvalue',
+		'(Intercept)\t\t1.846\t0.058\t59.34\t0.7206',
+		'gender\tmale\t0.467\t0.033\t5.915\t0.546',
+		'race\twhite\t8.838\t0.984\t227.069\t0.09316',
+		'age\t20-30\t0.062\t0.002\t0.602\t0.04556',
+		'treatment\t1\t7.944\t0.702\t224.334\t0.1324'
+	]
+	const logistic_output = await lines2R('regression.R', logistic_input, ['logistic'])
+
+	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
 	test.end()
 })

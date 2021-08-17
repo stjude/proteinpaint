@@ -120,20 +120,24 @@ function validate_termdb(ds) {
 			const gdcapi = tdb.termid2totalsize2.gdcapi
 			if (typeof gdcapi.query != 'function') throw '.query() not function in termid2totalsize2'
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
-			if (!gdcapi.filters) throw '.filters is not in termid2totalsize2'
+			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
 			throw 'termid2totalsize2 missing gdcapi'
 		}
 		// add getter
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
 			// termidlst is from clientside
-			let termpathlst = []
+			let termlst = []
 			for (const termid of termidlst) {
 				const term = ds.cohort.termdb.q.getTermById(termid)
-				if (term && term.type == 'categorical') termpathlst.push(term.path.replace('case.', '').replace('.', '__'))
+				if (term)
+					termlst.push({
+						path: term.path.replace('case.', '').replace(/\./g, '__'),
+						type: term.type
+					})
 			}
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termidlst2total(tdb.termid2totalsize2.gdcapi, ds, termpathlst, q)
+				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
 				for (const termid of termidlst) {
 					let term = ds.termdb.getTermById(termid)
 					if (!term) term = ds.cohort.termdb.q.getTermById(termid)
