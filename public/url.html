@@ -226,17 +226,33 @@ with a number of URLs demonstrating different examples of this feature
 makeURL([
 { name: 'BAM',
 	links: [
-		[ 'WES 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
+		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/tp53.18bpdel.bam' ],
+		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/tp53.18bpdel.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
+
+		['GATA3 complex mutation','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707'],
+		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707&variant=chr10.8100686.CAC.CCCTGCCTGTTGTGAGCTGCTCTACGTGCCCTACGTGCT'],
+
+		['chr7 3mer expansion','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472'],
+		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472&variant=chr7.35473.T.TGCTGCTGCTGCC'],
+
+		['EXOC4 2mer deletion','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361'],
+		['k-mer','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361&variant=chr7.133787370.TGTGTGTGTGTGTGTGTGTGAGAT.TGAT'],
+
+		[ 'KIT 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
 		[ 'k-mer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+
 		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
 		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+
 		['KIT complex mutation','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770'],
 		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
+
 		['BCORL1 complex mutation', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071'],
 		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071&variant=chrX.129150027.GGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAA.GT'],
+
 		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
-		['ETV6 WGS', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
-		['CBFB WGS','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
+		['ETV6 SV', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
+		['CBFB inversion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
 	]
 },
