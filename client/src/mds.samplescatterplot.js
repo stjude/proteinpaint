@@ -248,16 +248,19 @@ async function get_data(obj) {
 		ad.samples = []
 		const headers = lines.shift().split('\t')
 		if (headers.length < 3) throw 'at least 3 columns are required with X, Y and sample name'
-		if (!headers.includes('x') && !headers.includes('X')) throw `tabular data must have 'X' or 'x' column`
-		if (!headers.includes('y') && !headers.includes('Y')) throw `tabular data must have 'Y' or 'y' column`
-		for(const line of lines){
+		let xi = headers.indexOf('x')
+		if (xi == -1) xi = headers.indexOf('X')
+		if (xi == -1) throw '"X" or "x" column missing from tabular data'
+		let yi = headers.indexOf('y')
+		if (yi == -1) yi = headers.indexOf('Y')
+		if (yi == -1) throw '"Y" or "y" column missing from tabular data'
+		for (const line of lines) {
 			const values = line.split('\t')
-			let sample = {}
-			for(const [i, key] of headers.entries()){
-				if(key.toLowerCase() == 'x' || key.toLowerCase() == 'y')
-					sample[key.toLowerCase()] = parseInt(values[i])
-				else
-					sample[key] = values[i]
+			const sample = {}
+			for (const [i, v] of values.entries()) {
+				if (i == xi) sample.x = Number.parseFloat(v)
+				else if (i == yi) sample.y = Number.parseFloat(v)
+				else sample[headers[i]] = v
 			}
 			ad.samples.push(sample)
 		}
