@@ -34,6 +34,8 @@ get_fasta
 connect_db
 loadfile_ssid
 lines2R
+bam_ifnochr
+get_lines_bamdepth
 ********************** INTERNAL
 */
 
@@ -444,4 +446,42 @@ exports.stripJsScript = function stripJsScript(text) {
 
     /gi                globally, case insensitive
 	*/
+}
+
+exports.bam_ifnochr = (file, genome, dir) => {
+	return new Promise((resolve, reject) => {
+		const sp = spawn(samtools, ['view', '-H', file], { cwd: dir })
+		const out = [],
+			out2 = []
+		sp.stdout.on('data', i => out.push(i))
+		sp.stderr.on('data', i => out2.push(i))
+		sp.on('close', () => {
+			const err = out2.join('')
+			if (err) reject(err)
+			const str = out.join('').trim()
+			if (!str) reject('cannot list bam header lines')
+			const chrlst = []
+			for (const line of str.split('\n')) {
+				if (!line.startsWith('@SQ')) continue
+				const tmp = line.split('\t')[1]
+				if (!tmp) reject('2nd field missing from @SQ line')
+				const l = tmp.split(':')
+				if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
+				if (!l[1]) reject('@SQ line no value for SN')
+				chrlst.push(l[1])
+			}
+			resolve(common.contigNameNoChr(genome, chrlst))
+		})
+	})
+}
+
+exports.get_lines_bamdepth = (file, dir, coord, callback) => {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(samtools, ['depth', '-r', coord, '-g', 'DUP', file], { cwd: dir })
+		const rl = readline.createInterface({ input: ps.stdout })
+		rl.on('line', callback)
+		rl.on('close', () => {
+			resolve()
+		})
+	})
 }
