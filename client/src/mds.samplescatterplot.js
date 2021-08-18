@@ -1,11 +1,9 @@
 import * as client from './client'
-import * as common from '../shared/common'
-import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
-import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../shared/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
@@ -243,7 +241,23 @@ async function get_data(obj) {
 		// list
 		if (!Array.isArray(ad.samples)) throw '.analysisdata.samples is not array'
 		obj.dots = ad.samples
-		// may load from tabular data
+	} else if (ad.tabular_data) {
+		// load from tabular data
+		let lines = ad.tabular_data.split('\n')
+		ad.samples = []
+		const headers = lines.shift().split('\t')
+		for(const line of lines){
+			const values = line.split('\t')
+			let sample = {}
+			for(const [i, key] of headers.entries()){
+				if(key.toLowerCase() == 'x' || key.toLowerCase() == 'y')
+					sample[key.toLowerCase()] = parseInt(values[i])
+				else
+					sample[key] = values[i]
+			}
+			ad.samples.push(sample)
+		}
+		obj.dots = ad.samples
 	} else {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
