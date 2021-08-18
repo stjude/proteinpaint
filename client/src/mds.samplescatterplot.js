@@ -1,11 +1,9 @@
 import * as client from './client'
-import * as common from '../shared/common'
-import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
-import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../shared/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
@@ -243,7 +241,30 @@ async function get_data(obj) {
 		// list
 		if (!Array.isArray(ad.samples)) throw '.analysisdata.samples is not array'
 		obj.dots = ad.samples
-		// may load from tabular data
+	} else if (ad.tabular_data) {
+		// load from tabular data
+		let lines = ad.tabular_data.split('\n')
+		if (lines.length < 2) throw 'at least 2 rows, header row + at least 1 sample data must be supplied'
+		ad.samples = []
+		const headers = lines.shift().split('\t')
+		if (headers.length < 3) throw 'at least 3 columns are required with X, Y and sample name'
+		let xi = headers.indexOf('x')
+		if (xi == -1) xi = headers.indexOf('X')
+		if (xi == -1) throw '"X" or "x" column missing from tabular data'
+		let yi = headers.indexOf('y')
+		if (yi == -1) yi = headers.indexOf('Y')
+		if (yi == -1) throw '"Y" or "y" column missing from tabular data'
+		for (const line of lines) {
+			const values = line.split('\t')
+			const sample = {}
+			for (const [i, v] of values.entries()) {
+				if (i == xi) sample.x = Number.parseFloat(v)
+				else if (i == yi) sample.y = Number.parseFloat(v)
+				else sample[headers[i]] = v
+			}
+			ad.samples.push(sample)
+		}
+		obj.dots = ad.samples
 	} else {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
