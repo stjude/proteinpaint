@@ -57,7 +57,6 @@ class MassPlot {
 		)
 
 		this.components = { controls }
-		console.log(opts.plot.chartType)
 		switch (opts.plot.chartType) {
 			case 'barchart':
 				this.components.chart = barInit(
@@ -65,7 +64,6 @@ class MassPlot {
 					{ holder: this.dom.viz.append('div'), id: this.id },
 					Object.assign({ controls }, this.app.opts.barchart)
 				)
-				console.log(67)
 				/*this.components.stattable = statTableInit(
 					this.app, 
 					{ holder: this.dom.viz.append('div'), id: this.id }, 
@@ -117,14 +115,12 @@ class MassPlot {
 	}
 
 	reactsTo(action) {
-		console.log(action.id, this.id)
 		if (action.type == 'plot_edit' || action.type == 'plot_show') {
 			return action.id == this.id
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
-		console.log(124)
 	}
 
 	getState(appState) {
@@ -144,7 +140,6 @@ class MassPlot {
 	}
 
 	async main() {
-		console.log(143)
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		const dataName = this.getDataName(this.state)

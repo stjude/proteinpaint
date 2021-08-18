@@ -1359,7 +1359,7 @@ export function renderSandboxFormDiv(holder, genomes) {
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
-export function newSandboxDiv(sandbox_holder) {
+export function newSandboxDiv(sandbox_holder, close) {
 	// const sandbox_holder = d3select('#pp_sandbox')
 	const app_div = sandbox_holder.insert('div', ':first-child')
 	const header_row = app_div
@@ -1390,7 +1390,10 @@ export function newSandboxDiv(sandbox_holder) {
 			d3event.stopPropagation()
 		})
 		.on('click', () => {
+			// clear event handlers
+			header_row.on('click', null).on('mousedown', null)
 			app_div.selectAll('*').remove()
+			if (typeof close === 'function') close()
 		})
 
 	const header = header_row

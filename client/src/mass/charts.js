@@ -58,7 +58,6 @@ export const chartsInit = rx.getInitFxn(MassCharts)
 
 function setRenderers(self) {
 	self.setTreeMenu = async function(chartType, btn) {
-		console.log(57, chartType)
 		const appState = this.app.getState()
 		if (appState.termdbConfig.selectCohort) {
 			self.activeCohort = appState.activeCohort

@@ -5,7 +5,7 @@ import { vocabInit } from '../termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 //import { recoverInit } from '../common/recover'
-import { sayerror, Menu } from '../client'
+import { sayerror, Menu, newSandboxDiv } from '../client'
 
 /*
 opts{}
@@ -31,7 +31,8 @@ class MassApp {
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
-			errdiv: opts.holder.append('div')
+			errdiv: opts.holder.append('div'),
+			plotDiv: opts.holder.append('div')
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
@@ -43,7 +44,6 @@ class MassApp {
 				.copyState({ rehydrate: true })
 				.then(state => {
 					this.state = state
-					console.log(45, this.state)
 					this.setComponents()
 				})
 				.then(() => this.api.dispatch())
@@ -59,20 +59,28 @@ class MassApp {
 
 		for (const plotId in this.state.tree.plots) {
 			if (!(plotId in this.components.plots)) {
-				console.log(62, plotId)
 				const plot = this.state.tree.plots[plotId]
+				const div = newSandboxDiv(this.dom.plotDiv, () => {
+					this.api.dispatch({
+						type: 'plot_delete',
+						id: plotId
+					})
+				})
+				div.header.html(plot.term.term.name)
 				this.components.plots[plotId] = plotInit(
 					this.app,
 					{
-						holder: this.dom.holder
-							.append('div')
-							.style('border', '1px solid #ccc')
-							.style('margin', '10px')
-							.style('padding', '5px'),
+						holder: div.body,
 						plot
 					},
 					this.opts.plot
 				)
+			}
+		}
+
+		for (const plotId in this.components.plots) {
+			if (!(plotId in this.state.tree.plots)) {
+				delete this.components.plots[plotId]
 			}
 		}
 	}

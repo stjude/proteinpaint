@@ -190,8 +190,8 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-		for (const plotId in this.state.plots) {
-			this.adjustPlotCurrViews(this.state.plots[plotId])
+		for (const plotId in this.state.tree.plots) {
+			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
 		}
 	},
 	tab_set(action) {
@@ -241,12 +241,15 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.tree.plots[action.id]
-		console.log(237, plot)
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
 		}
 		this.adjustPlotCurrViews(plot)
+	},
+
+	plot_delete(action) {
+		delete this.state.tree.plots[action.id]
 	},
 
 	filter_replace(action) {
