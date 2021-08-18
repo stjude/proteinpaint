@@ -1,3 +1,11 @@
+/************************
+a script to test all R scripts at server/utils/
+run this as below
+
+npx tape -r '@babel/register' Rscripts.spec.js
+
+*********************/
+
 const tape = require('tape')
 const fs = require('fs')
 const lines2R = require('../../src/utils').lines2R
