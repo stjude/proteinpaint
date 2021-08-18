@@ -729,10 +729,9 @@ async function get_q(genome, req) {
 		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
 	} else {
 		// info not provided
-		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
+		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir)
 	}
 	if (!req.query.regions) throw '.regions[] missing'
-	//console.log('req.query.regions:', req.query.regions)
 	q.regions = JSON.parse(req.query.regions)
 
 	let maxntwidth = 0
@@ -983,24 +982,13 @@ when region resolution is high (>=1 pixels for each bp), bplst[] has one element
 when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
 should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
 */
-function run_samtools_depth(q, r) {
+async function run_samtools_depth(q, r) {
 	const bplst = []
-	return new Promise((resolve, reject) => {
-		// must use r.start+1 to query bam
-		const ps = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-				'-g',
-				'DUP',
-				q.file || q.url
-			],
-			{ cwd: q.dir }
-		)
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bamdepth(
+		q.file || q.url,
+		q.dir,
+		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+		line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
 			const depth = Number.parseInt(l[2])
@@ -1020,20 +1008,18 @@ function run_samtools_depth(q, r) {
 			}
 			bplst[bpidx].sum += depth
 			bplst[bpidx].count++
-		})
-		rl.on('close', () => {
-			if (r.ntwidth < 1) {
-				// get average for each bin
-				for (const b of bplst) {
-					if (!b) continue // could be undefined elements (gaps)
-					b.total = b.sum / b.count
-					delete b.sum
-					delete b.count
-				}
-			}
-			resolve(bplst)
-		})
-	})
+		}
+	)
+	if (r.ntwidth < 1) {
+		// get average for each bin
+		for (const b of bplst) {
+			if (!b) continue // could be undefined elements (gaps)
+			b.total = b.sum / b.count
+			delete b.sum
+			delete b.count
+		}
+	}
+	return bplst
 }
 
 async function may_checkrefseq4mismatch(templates, q) {
