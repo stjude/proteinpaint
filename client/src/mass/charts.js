@@ -36,7 +36,8 @@ class MassCharts {
 			//{ label: 'Boxplot', chartType: 'boxplot' },
 			//{ label: 'Scatter Plot', chartType: 'scatter' },
 			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
-			{ label: 'Survival', chartType: 'survival' }
+			{ label: 'Survival', chartType: 'survival' },
+			{ label: 'Regression Analysis', chartType: 'regression' }
 		]
 		const self = this
 
@@ -74,9 +75,7 @@ function setRenderers(self) {
 					header_mode: 'search_only'
 				},
 				tree: {
-					// TODO: set these based on chart type
-					// disable_terms: []
-					// exclude_types: []
+					usecase: { target: chartType, detail: 'term1' }
 				}
 			},
 			tree: {
