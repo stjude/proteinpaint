@@ -244,8 +244,12 @@ async function get_data(obj) {
 	} else if (ad.tabular_data) {
 		// load from tabular data
 		let lines = ad.tabular_data.split('\n')
+		if (lines.length < 2) throw 'at least 2 rows, header row + at least 1 sample data must be supplied'
 		ad.samples = []
 		const headers = lines.shift().split('\t')
+		if (headers.length < 3) throw 'at least 3 columns are required with X, Y and sample name'
+		if (!headers.includes('x') && !headers.includes('X')) throw `tabular data must have 'X' or 'x' column`
+		if (!headers.includes('y') && !headers.includes('Y')) throw `tabular data must have 'Y' or 'y' column`
 		for(const line of lines){
 			const values = line.split('\t')
 			let sample = {}
