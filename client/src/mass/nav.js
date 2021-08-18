@@ -82,7 +82,8 @@ class TdbNav {
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
-			expandedTermIds: appState.tree.expandedTermIds
+			expandedTermIds: appState.tree.expandedTermIds,
+			plots: appState.tree.plots
 		}
 	}
 	reactsTo(action) {
@@ -90,6 +91,7 @@ class TdbNav {
 			action.type.startsWith('tab_') ||
 			action.type.startsWith('filter_') ||
 			action.type.startsWith('cohort_') ||
+			action.type.startsWith('plot_') ||
 			action.type == 'app_refresh'
 		)
 	}
@@ -249,7 +251,11 @@ function setRenderers(self) {
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
 				// the column index number for the cohort tab
-				if (d.colNum === 1) {
+				if (d.colNum === 0) {
+					const n = Object.keys(self.state.plots).length
+					if (d.key == 'mid') return !n ? 'NONE' : n
+					else return ''
+				} else if (d.colNum === 1) {
 					if (self.activeCohortName && self.activeCohortName in self.samplecounts) {
 						return d.key == 'top'
 							? this.innerHTML
@@ -259,7 +265,7 @@ function setRenderers(self) {
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
-				} else if (d.colNum === 1) {
+				} else if (d.colNum === 2) {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
