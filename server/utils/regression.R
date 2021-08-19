@@ -23,7 +23,7 @@
 
 #Read in input data
 con <- file("stdin","r")
-dat <- read.table(con, header = T, sep = "\t", quote = "", stringsAsFactors = T)
+dat <- read.table(con, header = T, sep = "\t", quote = "", stringsAsFactors = T, check.names = F)
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1){
   stop("Usage: Rscript regression.R <linear/logistic> < input")

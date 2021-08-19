@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
-import { plotConfig } from '../termdb/plot'
+import { plotConfig, fillTermWrapper } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -228,6 +228,11 @@ TdbStore.prototype.actions = {
 				},
 				await this.api.copyState()
 			)
+			if (action.independent) {
+				this.state.tree.plots[action.id].independent = action.independent.map(term => {
+					return fillTermWrapper({ term })
+				})
+			}
 			this.state.tree.visiblePlotIds.push(action.id)
 		}
 	},

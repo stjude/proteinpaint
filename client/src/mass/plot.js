@@ -8,6 +8,7 @@ import { tableInit } from '../termdb/table'
 //import { scatterInit } from './scatter'
 import { cumincInit } from '../termdb/cuminc'
 import { survivalInit } from '../termdb/survival'
+import { regressionInit } from './regression'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
@@ -109,6 +110,15 @@ class MassPlot {
 					{ holder: this.dom.viz.append('div'), id: this.id },
 					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
 				)
+				break
+
+			case 'regression':
+				console.log(115, 'plot case=regression ', this.id)
+				this.components.chart = regressionInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
+				)
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
@@ -125,6 +135,7 @@ class MassPlot {
 
 	getState(appState) {
 		const config = appState.tree.plots[this.id]
+		console.log(config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}
@@ -135,7 +146,9 @@ class MassPlot {
 			ssid: appState.ssid,
 			config,
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
-			displayAsSurvival: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
+			displayAsSurvival:
+				config.settings.currViews[0] != 'regression' &&
+				(config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'))
 		}
 	}
 
@@ -161,6 +174,20 @@ class MassPlot {
 		} else if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
+		} else if (plot.settings.currViews.includes('regression')) {
+			params.push('getregression=1')
+			if (plot.independent) {
+				params.push(
+					'independent=' +
+						encodeURIComponent(
+							JSON.stringify(
+								plot.independent.map(t => {
+									return { id: t.id, q: t.q }
+								})
+							)
+						)
+				)
+			}
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -236,19 +263,9 @@ export function plotConfig(opts, appState = {}) {
 	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
 
 	// initiate .q{}
-	if (!('id' in opts.term)) opts.term.id = opts.term.term.id
-	if (!opts.term.q) opts.term.q = {}
-	termsetting_fill_q(opts.term.q, opts.term.term)
-	if (opts.term2) {
-		if (!('id' in opts.term2)) opts.term2.id = opts.term2.term.id
-		if (!opts.term2.q) opts.term2.q = {}
-		termsetting_fill_q(opts.term2.q, opts.term2.term)
-	}
-	if (opts.term0) {
-		if (!('id' in opts.term0)) opts.term0.id = opts.term0.term.id
-		if (!opts.term0.q) opts.term0.q = {}
-		termsetting_fill_q(opts.term0.q, opts.term0.term)
-	}
+	fillTermWrapper(opts.term)
+	if (opts.term2) fillTermWrapper(opts.term2)
+	if (opts.term0) fillTermWrapper(opts.term0)
 
 	const config = {
 		id: opts.term.term.id,
@@ -400,4 +417,11 @@ function tvslst_to_parameter(tv) {
 		value_by_computable_grade: tv.value_by_computable_grade,
 		grade_and_child: tv.grade_and_child
 	}
+}
+
+export function fillTermWrapper(wrapper) {
+	if (!('id' in wrapper)) wrapper.id = wrapper.term.id
+	if (!wrapper.q) wrapper.q = {}
+	termsetting_fill_q(wrapper.q, wrapper.term)
+	return wrapper
 }
